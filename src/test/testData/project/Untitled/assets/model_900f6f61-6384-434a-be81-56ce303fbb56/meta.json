@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "lastModified": 1790884341994,
+  "uuid": "900f6f61-6384-434a-be81-56ce303fbb56",
+  "type": "MODEL",
+  "additional": {
+    "file": "model.gltf",
+    "format": "GLTF",
+    "binary": true,
+    "materials": []
+  }
+}

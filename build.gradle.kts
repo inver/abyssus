@@ -15,6 +15,8 @@ plugins {
     id("org.jetbrains.changelog") version "2.5.0"
     // Gradle Kover Plugin
     id("org.jetbrains.kotlinx.kover") version "0.9.11"
+    // Shadow / uber-jar (bundles libGDX + LWJGL classes into the plugin jar)
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 group = properties("pluginGroup").get()
@@ -102,6 +104,10 @@ kover {
 }
 
 tasks {
+    runIde {
+        // Open a project on startup: -PideProject=/path/to/project
+        providers.gradleProperty("ideProject").orNull?.let { args(it) }
+    }
     wrapper {
         gradleVersion = properties("gradleVersion").get()
     }
@@ -139,6 +145,4 @@ tasks {
 
 sourceSets["main"].java {
     srcDirs("src/main/gen")
-    // TODO: Gltf.flex is still the SDK tutorial's properties lexer (references SimpleTypes); rewrite it, regenerate, then drop this exclude
-    exclude("**/lexer/GltfLexer.java")
 }

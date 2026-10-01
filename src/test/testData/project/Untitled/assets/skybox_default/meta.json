@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "lastModified": 1663444124794,
+  "type": "SKYBOX",
+  "additional": {
+    "top": "skybox_default.png",
+    "bottom": "skybox_default.png",
+    "left": "skybox_default.png",
+    "right": "skybox_default.png",
+    "front": "skybox_default.png",
+    "back": "skybox_default.png"
+  }
+}

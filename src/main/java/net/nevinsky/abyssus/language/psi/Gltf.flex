@@ -2,43 +2,44 @@ package net.nevinsky.abyssus.language.lexer;
 
 import com.intellij.lexer.FlexLexer;
 import com.intellij.psi.tree.IElementType;
-import org.intellij.sdk.language.psi.SimpleTypes;
 import com.intellij.psi.TokenType;
+
+import static net.nevinsky.abyssus.language.psi.GltfTypes.*;
 
 %%
 
+%public
 %class GltfLexer
 %implements FlexLexer
 %unicode
 %function advance
 %type IElementType
-%eof{  return;
-%eof}
+%{
+  // referenced by reset() in idea-flex.skeleton but not declared there
+  private boolean zzAtBOL = true;
+%}
 
-CRLF=\R
-WHITE_SPACE=[\ \n\t\f]
-FIRST_VALUE_CHARACTER=[^ \n\f\\] | "\\"{CRLF} | "\\".
-VALUE_CHARACTER=[^\n\f\\] | "\\"{CRLF} | "\\".
-END_OF_LINE_COMMENT=("#"|"!")[^\r\n]*
-SEPARATOR=[:=]
-KEY_CHARACTER=[^:=\ \n\t\f\\] | "\\ "
-
-%state WAITING_VALUE
+WHITE_SPACE=[\ \n\r\t\f]+
+STRING=\"([^\"\\\r\n]|\\.)*\"
+UNTERMINATED_STRING=\"([^\"\\\r\n]|\\.)*
+NUMBER=-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+\-]?[0-9]+)?
 
 %%
 
-<YYINITIAL> {END_OF_LINE_COMMENT}                           { yybegin(YYINITIAL); return SimpleTypes.COMMENT; }
+{WHITE_SPACE}          { return TokenType.WHITE_SPACE; }
 
-<YYINITIAL> {KEY_CHARACTER}+                                { yybegin(YYINITIAL); return SimpleTypes.KEY; }
+"{"                    { return BRACE1; }
+"}"                    { return BRACE2; }
+"["                    { return BRACK1; }
+"]"                    { return BRACK2; }
+":"                    { return COLON; }
+","                    { return COMMA; }
+"true"                 { return TRUE; }
+"false"                { return FALSE; }
+"null"                 { return NULL; }
 
-<YYINITIAL> {SEPARATOR}                                     { yybegin(WAITING_VALUE); return SimpleTypes.SEPARATOR; }
+{STRING}               { return STRING; }
+{NUMBER}               { return NUMBER; }
 
-<WAITING_VALUE> {CRLF}({CRLF}|{WHITE_SPACE})+               { yybegin(YYINITIAL); return TokenType.WHITE_SPACE; }
-
-<WAITING_VALUE> {WHITE_SPACE}+                              { yybegin(WAITING_VALUE); return TokenType.WHITE_SPACE; }
-
-<WAITING_VALUE> {FIRST_VALUE_CHARACTER}{VALUE_CHARACTER}*   { yybegin(YYINITIAL); return SimpleTypes.VALUE; }
-
-({CRLF}|{WHITE_SPACE})+                                     { yybegin(YYINITIAL); return TokenType.WHITE_SPACE; }
-
-[^]                                                         { return TokenType.BAD_CHARACTER; }
+{UNTERMINATED_STRING}  { return TokenType.BAD_CHARACTER; }
+[^]                    { return TokenType.BAD_CHARACTER; }

@@ -24,6 +24,23 @@ This specific section is a source for the [plugin.xml](/src/main/resources/META-
 To keep everything working, do not remove `<!-- ... -->` sections. 
 <!-- Plugin description end -->
 
+## Abyssus view
+
+The Project tool window has an **Abyssus** view listing every `*.scene` and `*.abss` file under the
+content roots (including excluded folders) as a flat list. Matching is exact and case
+sensitive (`.SCENE` and `.scene.bak` are ignored).
+
+- `*.scene` - JSON scene (`id`, `name`, `ambientLight`, `fog`, `skyboxName`, `ecs`, ...). The node
+  expands into those properties; nested objects and the `ecs` tree expand recursively.
+- `*.abss` - JSON project (the top-level node of the view; no folder nodes are shown) (`name`). Its scenes are the `*.scene` files in the `scenes` folder next
+  to it, listed by file name and expandable inline (display only, no navigation).
+- A property gated by an `xxxEnabled` option (e.g. `fog`, `skyboxName`) shows an eye at the right of
+  its row; click it to flip the option in the file (undoable).
+- Unreadable files stay in the tree with a placeholder; nothing else is ever written.
+
+To support another format, implement `net.nevinsky.abyssus.dto.AssetReader` and return it from
+`AssetReader.forExtension`.
+
 ## Installation
 
 - Using IDE built-in plugin system:

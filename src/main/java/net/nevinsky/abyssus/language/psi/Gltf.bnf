@@ -12,9 +12,11 @@
   tokenTypeClass="net.nevinsky.abyssus.language.psi.GltfTokenType"
   tokens = [
     space='regexp:\s+'
-    string = "regexp:\"[^\"]*\"|'[^']*'"
-    number = "regexp:(\+|\-)?\d*"
-    id = "regexp:\p{Alpha}\w*"
+    string = "regexp:\"([^\"\\\r\n]|\\.)*\""
+    number = "regexp:-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?"
+    true = "true"
+    false = "false"
+    null = "null"
     comma = ","
     colon = ":"
     brace1 = "{"
@@ -27,11 +29,11 @@
 
 root ::= json
 json ::= array | object  { hooks=[wsBinders="null, null"] }
-value ::= string | number | json {name="value"}
+value ::= string | number | true | false | null | json {name="value"}
 
 array ::= '[' [!']' item (!']' ',' item) *] ']' {pin(".*")=1 extends=json}
-private item ::= json {recoverWhile=recover}
+private item ::= value {recoverWhile=recover}
 object ::= '{' [!'}' prop (!'}' ',' prop) *] '}' {pin(".*")=1 extends=json}
-prop ::= [] f_name ':' value {pin=1 recoverWhile=recover} // remove [] to make NAME mandatory
-f_name ::= id | string {name="name"}
+prop ::= f_name ':' value {pin=1 recoverWhile=recover}
+f_name ::= string {name="name"}
 private recover ::= !(',' | ']' | '}' | '[' | '{')

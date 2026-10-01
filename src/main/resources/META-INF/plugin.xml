@@ -16,6 +16,20 @@
                 fieldName="INSTANCE"
                 language="GLTF"
                 extensions="gltf"/>
+        <fileType
+                name="Abyssus Scene"
+                implementationClass="net.nevinsky.abyssus.filetype.SceneFileType"
+                fieldName="INSTANCE"
+                extensions="scene"/>
+        <fileType
+                name="Abyssus Project"
+                implementationClass="net.nevinsky.abyssus.filetype.AbyssusProjectFileType"
+                fieldName="INSTANCE"
+                extensions="abss"/>
+        <projectViewPane implementation="net.nevinsky.abyssus.projectView.AbyssusProjectViewPane"/>
+        <lang.parserDefinition
+                language="GLTF"
+                implementationClass="net.nevinsky.abyssus.language.GltfParserDefinition"/>
     </extensions>
 
     <applicationListeners>
