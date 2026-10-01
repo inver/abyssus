@@ -51,6 +51,12 @@ dependencies {
         runtimeOnly("org.lwjgl:lwjgl:$lwjglVersion:$it")
         runtimeOnly("org.lwjgl:lwjgl-opengl:$lwjglVersion:$it")
     }
+
+    // libGDX core (g3d, math) hosted on the AWT GL canvas; only the backend's GL wrapper classes are used
+    val gdxVersion = "1.13.5"
+    implementation("com.badlogicgames.gdx:gdx:$gdxVersion")
+    implementation("com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion") { isTransitive = false }
+    runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop")
 }
 
 // Set the JVM language level used to build the project. IntelliJ 2025.2+ requires Java 21.
