@@ -35,6 +35,8 @@ dependencies {
         create(properties("platformType"), properties("platformVersion"))
         // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file.
         plugins(properties("platformPlugins").map { it.split(',').map(String::trim).filter(String::isNotEmpty) })
+        // JSON language support: .scene files are JSON
+        bundledPlugin("com.intellij.modules.json")
         pluginVerifier()
         zipSigner()
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)

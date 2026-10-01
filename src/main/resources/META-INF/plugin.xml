@@ -5,6 +5,7 @@
     <vendor>inver</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.json</depends>
 
     <resource-bundle>messages.AbyssusBundle</resource-bundle>
 
@@ -20,6 +21,7 @@
                 name="Abyssus Scene"
                 implementationClass="net.nevinsky.abyssus.filetype.SceneFileType"
                 fieldName="INSTANCE"
+                language="JSON"
                 extensions="scene"/>
         <fileType
                 name="Abyssus Project"
@@ -41,6 +43,11 @@
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
     </actions>
+
+    <projectListeners>
+        <listener class="net.nevinsky.abyssus.filetype.SceneFormatListener"
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+    </projectListeners>
 
     <applicationListeners>
         <listener class="net.nevinsky.abyssus.listeners.MyFrameStateListener"

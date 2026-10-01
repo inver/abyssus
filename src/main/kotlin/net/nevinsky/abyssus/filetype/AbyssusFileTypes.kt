@@ -1,6 +1,8 @@
 package net.nevinsky.abyssus.filetype
 
+import com.intellij.json.JsonLanguage
 import com.intellij.openapi.fileTypes.FileType
+import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.util.IconLoader
 import javax.swing.Icon
 
@@ -62,7 +64,13 @@ abstract class AssetFileType(
     override fun isBinary() = false
 }
 
-class SceneFileType private constructor() : AssetFileType("Abyssus Scene", "scene", SceneIcons.FILE) {
+/** Scenes are JSON documents, so the text editor highlights and folds them as JSON. */
+class SceneFileType private constructor() : LanguageFileType(JsonLanguage.INSTANCE) {
+    override fun getName() = "Abyssus Scene"
+    override fun getDescription() = "Abyssus Scene"
+    override fun getDefaultExtension() = "scene"
+    override fun getIcon(): Icon = SceneIcons.FILE
+
     companion object {
         @JvmField
         val INSTANCE = SceneFileType()
