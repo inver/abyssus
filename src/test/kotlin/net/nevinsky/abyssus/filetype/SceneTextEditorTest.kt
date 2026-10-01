@@ -50,9 +50,33 @@ class SceneTextEditorTest : BasePlatformTestCase() {
         assertEquals(bad, FileDocumentManager.getInstance().getDocument(file)!!.text)
     }
 
-    fun testOnlyScenesAreReformatted() {
-        val file = myFixture.addFileToProject("e/Main.abss", minified).virtualFile
+    fun testProjectFilesAreJsonToo() {
+        assertEquals(JsonLanguage.INSTANCE, AbyssusProjectFileType.INSTANCE.language)
+        val psi = myFixture.addFileToProject("a/Untitled.abss", minified)
+        assertEquals(JsonLanguage.INSTANCE, psi.language)
+        assertEquals(AbyssusProjectFileType.INSTANCE, psi.virtualFile.fileType)
+    }
+
+    fun testTextEditorShowsFormattedJsonForProjectFiles() {
+        val file = myFixture.addFileToProject("f/Untitled.abss", minified).virtualFile
         myFixture.configureFromExistingVirtualFile(file)
-        assertEquals(minified, FileDocumentManager.getInstance().getDocument(file)!!.text)
+        val text = FileDocumentManager.getInstance().getDocument(file)!!.text
+        assertTrue(text, text.lines().size > 4)
+        assertTrue(text, text.contains("\n  \"fog\": {"))
+    }
+
+    fun testInvalidProjectJsonIsNotTouched() {
+        val bad = "{ \"mainCamera\": "
+        val file = myFixture.addFileToProject("g/Untitled.abss", bad).virtualFile
+        myFixture.configureFromExistingVirtualFile(file)
+        assertEquals(bad, FileDocumentManager.getInstance().getDocument(file)!!.text)
+    }
+
+    fun testOtherFilesAreNotReformatted() {
+        for (name in listOf("e/Main.json", "e/Main.abss.bak", "e/Main.txt")) {
+            val file = myFixture.addFileToProject(name, minified).virtualFile
+            myFixture.configureFromExistingVirtualFile(file)
+            assertEquals(name, minified, FileDocumentManager.getInstance().getDocument(file)!!.text)
+        }
     }
 }

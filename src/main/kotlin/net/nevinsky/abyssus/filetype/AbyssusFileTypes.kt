@@ -1,7 +1,6 @@
 package net.nevinsky.abyssus.filetype
 
 import com.intellij.json.JsonLanguage
-import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.util.IconLoader
 import javax.swing.Icon
@@ -52,18 +51,6 @@ object AbyssusProjectIcons {
     val FILE: Icon = IconLoader.getIcon("/icons/abss_file_icon.svg", AbyssusProjectIcons::class.java)
 }
 
-abstract class AssetFileType(
-    private val typeName: String,
-    private val extension: String,
-    private val icon: Icon,
-) : FileType {
-    override fun getName() = typeName
-    override fun getDescription() = typeName
-    override fun getDefaultExtension() = extension
-    override fun getIcon() = icon
-    override fun isBinary() = false
-}
-
 /** Scenes are JSON documents, so the text editor highlights and folds them as JSON. */
 class SceneFileType private constructor() : LanguageFileType(JsonLanguage.INSTANCE) {
     override fun getName() = "Abyssus Scene"
@@ -77,8 +64,13 @@ class SceneFileType private constructor() : LanguageFileType(JsonLanguage.INSTAN
     }
 }
 
-class AbyssusProjectFileType private constructor() :
-    AssetFileType("Abyssus Project", "abss", AbyssusProjectIcons.FILE) {
+/** Project files are JSON documents too. */
+class AbyssusProjectFileType private constructor() : LanguageFileType(JsonLanguage.INSTANCE) {
+    override fun getName() = "Abyssus Project"
+    override fun getDescription() = "Abyssus Project"
+    override fun getDefaultExtension() = "abss"
+    override fun getIcon(): Icon = AbyssusProjectIcons.FILE
+
     companion object {
         @JvmField
         val INSTANCE = AbyssusProjectFileType()

@@ -27,6 +27,7 @@
                 name="Abyssus Project"
                 implementationClass="net.nevinsky.abyssus.filetype.AbyssusProjectFileType"
                 fieldName="INSTANCE"
+                language="JSON"
                 extensions="abss"/>
         <postStartupActivity implementation="net.nevinsky.abyssus.projectView.OpenAbyssusViewActivity"/>
         <projectViewPane implementation="net.nevinsky.abyssus.projectView.AbyssusProjectViewPane"/>

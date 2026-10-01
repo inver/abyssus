@@ -9,18 +9,22 @@ import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
-/** Formats a scene's JSON whenever it is shown in the text editor (on open, and when switching from the scene view). */
+/** Formats a scene's or project's JSON whenever it is shown in the text editor (on open, and when switching from the scene view). */
 class SceneFormatListener : FileEditorManagerListener {
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
-        if (isScene(file) && source.getSelectedEditor(file) is TextEditor) format(source.project, file)
+        if (isAsset(file) && source.getSelectedEditor(file) is TextEditor) format(source.project, file)
     }
 
     override fun selectionChanged(event: FileEditorManagerEvent) {
         val file = event.newFile ?: return
-        if (isScene(file) && event.newEditor is TextEditor) format(event.manager.project, file)
+        if (isAsset(file) && event.newEditor is TextEditor) format(event.manager.project, file)
     }
 
-    private fun isScene(file: VirtualFile) = !file.isDirectory && file.extension == "scene"
+    private fun isAsset(file: VirtualFile) = !file.isDirectory && file.extension in FORMATTED_EXTENSIONS
+
+    private companion object {
+        val FORMATTED_EXTENSIONS = setOf("scene", "abss")
+    }
 
     private fun format(project: Project, file: VirtualFile) {
         val document = FileDocumentManager.getInstance().getDocument(file)?.takeIf { it.isWritable } ?: return
