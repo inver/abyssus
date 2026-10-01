@@ -1,29 +1,25 @@
 package net.nevinsky.abyssus.filetype
 
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonElement
-import com.google.gson.JsonParser
+import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.dto.Json
 
 /**
- * Reading and writing of scene JSON. Nulls are kept (Gson drops them by default, and a scene's `"skyboxName": null`
- * is data), key order and number text are unchanged, and HTML characters are not escaped.
+ * Reading and writing of scene JSON. Nulls are kept (a scene's `"skyboxName": null` is data), key order and number
+ * text are unchanged, and HTML characters are not escaped.
  */
 object SceneJson {
-    private val prettyGson = GsonBuilder().setPrettyPrinting().serializeNulls().disableHtmlEscaping().create()
-    private val compactGson = GsonBuilder().serializeNulls().disableHtmlEscaping().create()
+    fun pretty(node: JsonNode): String = Json.writePretty(node) + "\n"
 
-    fun pretty(element: JsonElement): String = prettyGson.toJson(element) + "\n"
+    fun compact(node: JsonNode): String = Json.write(node)
 
-    fun compact(element: JsonElement): String = compactGson.toJson(element)
-
-    /** [element] in the style of [original]: indented when the original spans several lines, else on one line. */
-    fun inStyleOf(original: String, element: JsonElement): String =
-        if (original.contains('\n')) pretty(element) else compact(element)
+    /** [node] in the style of [original]: indented when the original spans several lines, else on one line. */
+    fun inStyleOf(original: String, node: JsonNode): String =
+        if (original.contains('\n')) pretty(node) else compact(node)
 
     /** The scene as indented JSON; null when [text] is not a JSON object (so a half-edited or foreign file is never rewritten). */
     fun pretty(text: String): String? = runCatching {
-        val element = JsonParser.parseString(text)
-        if (!element.isJsonObject) return null
-        pretty(element)
+        val node = Json.parse(text)
+        if (!node.isObject) return null
+        pretty(node)
     }.getOrNull()
 }

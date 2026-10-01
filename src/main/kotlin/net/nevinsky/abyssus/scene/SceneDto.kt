@@ -1,6 +1,6 @@
 package net.nevinsky.abyssus.scene
 
-import com.google.gson.JsonElement
+import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.dto.DtoProperty
 import net.nevinsky.abyssus.dto.DtoSource
 import net.nevinsky.abyssus.dto.DtoValue
@@ -15,7 +15,7 @@ data class SceneDto(
     val fog: FogDto? = null,
     val skyboxEnabled: Boolean? = null,
     val skyboxName: String? = null,
-    val ecs: JsonElement? = null,
+    val ecs: JsonNode? = null,
 ) : DtoSource {
     override fun properties() = listOf(
         DtoProperty("id", DtoValue.Scalar(id)),

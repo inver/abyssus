@@ -101,7 +101,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
     fun testProjectReaderLoadsScenesFolder() {
         val file = fixture().findChild("Untitled.abss")!!
         val root = (ProjectReader.read(file) as AssetReadResult.Success).root
-        assertEquals(listOf("name", "scenes"), root.properties.map { it.name })
+        assertEquals(listOf("name", "scenes", "assets"), root.properties.map { it.name })
         val scenes = root.properties[1].value as DtoValue.Items
         assertEquals(listOf("$fixtureSceneName (0)"), scenes.items.map { (it as DtoValue.Obj).label })
     }

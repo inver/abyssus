@@ -1,10 +1,6 @@
 package net.nevinsky.abyssus.dto
 
-import com.google.gson.JsonArray
-import com.google.gson.JsonElement
-import com.google.gson.JsonNull
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
+import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
 
 /**
@@ -47,6 +43,10 @@ sealed interface DtoValue {
         val label: String? = null,
         /** The file this object was read from, when it is the root of one. */
         val source: VirtualFile? = null,
+        /** Set on a project asset that no scene reaches. */
+        val unused: Boolean = false,
+        /** True for an entry of a project's `assets` list. */
+        val asset: Boolean = false,
     ) : DtoValue
 
     /** A list of DTOs or a generic JSON array, in declaration order. */
@@ -59,10 +59,12 @@ interface DtoSource {
     fun toValue(label: String? = null): DtoValue.Obj = DtoValue.Obj(properties(), label)
 }
 
-fun JsonElement.toDtoValue(): DtoValue = when (this) {
-    is JsonNull -> DtoValue.Scalar(null)
-    is JsonPrimitive -> DtoValue.Scalar(if (isString) asString else if (isBoolean) asBoolean else asNumber)
-    is JsonObject -> DtoValue.Obj(entrySet().map { (k, v) -> DtoProperty(k, v.toDtoValue()) })
-    is JsonArray -> DtoValue.Items(map { it.toDtoValue() })
+fun JsonNode.toDtoValue(): DtoValue = when {
+    isNull || isMissingNode -> DtoValue.Scalar(null)
+    isObject -> DtoValue.Obj(properties().map { (k, v) -> DtoProperty(k, v.toDtoValue()) })
+    isArray -> DtoValue.Items(map { it.toDtoValue() })
+    isTextual -> DtoValue.Scalar(asText())
+    isBoolean -> DtoValue.Scalar(asBoolean())
+    isNumber -> DtoValue.Scalar(numberValue())
     else -> DtoValue.Scalar(toString())
 }

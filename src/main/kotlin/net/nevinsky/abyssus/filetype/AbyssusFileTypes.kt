@@ -46,6 +46,21 @@ object PropertyIcons {
     }
 }
 
+/** Icons of a project's assets, by `meta.json` `type`; an unrecognized or missing type gets [UNKNOWN]. */
+object AssetIcons {
+    private fun load(name: String): Icon = IconLoader.getIcon("/icons/asset_${name}_icon.svg", AssetIcons::class.java)
+
+    @JvmField
+    val UNKNOWN: Icon = load("unknown")
+
+    private val byType: Map<String, Icon> by lazy {
+        listOf("MODEL", "TERRAIN", "SKYBOX", "SKYBOX_HDR", "TEXTURE", "PIXMAP_TEXTURE", "MATERIAL", "SHADER")
+            .associateWith { load(it.lowercase()) }
+    }
+
+    fun forType(type: String?): Icon = type?.let { byType[it] } ?: UNKNOWN
+}
+
 object AbyssusProjectIcons {
     @JvmField
     val FILE: Icon = IconLoader.getIcon("/icons/abss_file_icon.svg", AbyssusProjectIcons::class.java)

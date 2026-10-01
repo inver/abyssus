@@ -1,10 +1,10 @@
 package net.nevinsky.abyssus.sceneview
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
+import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.dto.ProjectReader
+import net.nevinsky.abyssus.dto.Json
 import net.nevinsky.abyssus.scene.SceneDto
 import kotlin.math.exp
 import kotlin.math.pow
@@ -77,12 +77,12 @@ private fun normalized(v: Vec3): Vec3? {
 /** The `mainCamera` of the `.abss` project a scene belongs to. */
 object MainCamera {
     fun parse(abssText: String): CameraParams? = runCatching {
-        val root = JsonParser.parseString(abssText).takeIf { it.isJsonObject }?.asJsonObject ?: return null
-        val cam = root.get("mainCamera")?.takeIf { it.isJsonObject }?.asJsonObject ?: return null
+        val root = Json.parse(abssText).takeIf { it.isObject } ?: return null
+        val cam = root.get("mainCamera")?.takeIf { it.isObject } ?: return null
         val position = cam.vec("position") ?: return null
         val direction = normalized(cam.vec("viewPointPosition") ?: return null) ?: return null
         val defaults = CameraParams.DEFAULT
-        fun number(name: String) = cam.get(name)?.takeIf { it.isJsonPrimitive }?.runCatching { asFloat }?.getOrNull()
+        fun number(name: String) = cam.get(name)?.takeIf { it.isNumber }?.floatValue()
         val near = number("near")?.takeIf { it > 0f && it.isFinite() }
         val far = number("far")?.takeIf { it > 0f && it.isFinite() }
         val invertedClip = near != null && far != null && near >= far
@@ -107,9 +107,9 @@ object MainCamera {
         return runCatching { parse(textOf(abss)) }.getOrNull() ?: CameraParams.DEFAULT
     }
 
-    private fun JsonObject.vec(name: String): Vec3? {
-        val o = get(name)?.takeIf { it.isJsonObject }?.asJsonObject ?: return null
-        fun f(k: String) = o.get(k)?.takeIf { !it.isJsonNull }?.asFloat ?: 0f
+    private fun JsonNode.vec(name: String): Vec3? {
+        val o = get(name)?.takeIf { it.isObject } ?: return null
+        fun f(k: String) = o.get(k)?.takeIf { !it.isNull }?.floatValue() ?: 0f
         return Vec3(f("x"), f("y"), f("z"))
     }
 }

@@ -1,6 +1,6 @@
 package net.nevinsky.abyssus.projectView
 
-import com.google.gson.JsonParser
+import net.nevinsky.abyssus.dto.Json
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.dto.DtoValue
@@ -26,7 +26,7 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
         val after = text(file)
         assertTrue(after, after.lines().size > 5)
         assertTrue(after.contains("\"fogEnabled\": false"))
-        assertEquals(JsonParser.parseString(compact.replace("\"fogEnabled\":true", "\"fogEnabled\":false")), JsonParser.parseString(after))
+        assertEquals(Json.parse(compact.replace("\"fogEnabled\":true", "\"fogEnabled\":false")), Json.parse(after))
         assertTrue("null member kept", after.contains("\"skyboxName\": null"))
     }
 
@@ -42,5 +42,27 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
         val after = text(file)
         assertTrue(after, after.contains("\n  \"name\": \"Forest\""))
         assertTrue(after.contains("\"skyboxName\": null"))
+    }
+
+    fun testTogglingTwiceRestoresTheOriginalBytes() {
+        val original = """{"id":0,"name":"Ololo","fogEnabled":true,"fog":{"density":0.001,"gradient":1.5},"skyboxName":null,"ecs":{"entities":{"0":{"x":-3.035308,"far":100,"fieldOfView":67}},"metadata":{"version":1}}}"""
+        val file = myFixture.addFileToProject("p/Main Scene.scene", original).virtualFile
+        val toggle = { enabled: Boolean ->
+            toggleEnabled(
+                project,
+                DtoEntry("x/fog", "fog", DtoValue.Scalar(null), enabled, "fogEnabled", file, emptyList()),
+            )
+        }
+        assertTrue(toggle(true))
+        assertTrue(text(file).contains("\"fogEnabled\":false"))
+        assertTrue(toggle(false))
+        assertEquals(original, text(file))
+    }
+
+    fun testNumberTextSurvivesAnEdit() {
+        val source = """{"fogEnabled":true,"fog":{"density":1.0E-4,"gradient":2.50,"offset":-0.0,"big":12345678901234567890}}"""
+        val file = myFixture.addFileToProject("p/Numbers.scene", source).virtualFile
+        assertTrue(toggleFog(file))
+        assertEquals(source.replace("\"fogEnabled\":true", "\"fogEnabled\":false"), text(file))
     }
 }

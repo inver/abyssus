@@ -37,6 +37,13 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
 - A property gated by an `xxxEnabled` option (e.g. `fog`, `skyboxName`) shows an eye at the right of
   its row; click it to flip the option in the file (undoable).
 - A scene under a project is labelled `Name (id)`; right-click it and choose **Rename Scene...** to change its name.
+- A project also lists its `assets`: one entry per sub-folder of the `assets` folder next to the `.abss`
+  file, with the `type` and `uuid` from the folder's `meta.json`. An asset no scene reaches is grayed and
+  marked `unused`. A scene reaches an asset by folder name through `assetName` and `shaderKey` values in its
+  `ecs` and through `skyboxName`; a reached asset in turn reaches the assets its `meta.json` references by
+  `uuid` (terrain `splatMap`/`splatBase`/`splatR`/`splatG`/`splatB`/`splatA`, model `materials`).
+  A `shaderKey` with no matching folder is a bundled editor shader and is ignored. Files named inside a
+  `meta.json` (textures of a material, shader sources) are not followed.
 - Unreadable files stay in the tree with a placeholder; nothing else is ever written.
 
 To support another format, implement `net.nevinsky.abyssus.dto.AssetReader` and return it from

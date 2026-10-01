@@ -19,6 +19,7 @@ import net.nevinsky.abyssus.dto.DtoValue
 import net.nevinsky.abyssus.dto.ProjectReader
 import net.nevinsky.abyssus.dto.foldToggles
 import net.nevinsky.abyssus.filetype.AbyssusProjectIcons
+import net.nevinsky.abyssus.filetype.AssetIcons
 import net.nevinsky.abyssus.filetype.PropertyIcons
 import net.nevinsky.abyssus.filetype.SceneIcons
 import net.nevinsky.abyssus.filetype.ScenesIcons
@@ -129,7 +130,8 @@ class DtoEntry(
     // row looks (the toggle state, a scalar's value) must take part, or the row stays stale after a toggle.
     override fun equals(other: Any?) =
         other is DtoEntry && other.path == path && other.enabled == enabled &&
-            (value as? DtoValue.Scalar) == (other.value as? DtoValue.Scalar)
+            (value as? DtoValue.Scalar) == (other.value as? DtoValue.Scalar) &&
+            (value as? DtoValue.Obj)?.unused == (other.value as? DtoValue.Obj)?.unused
     override fun hashCode() = path.hashCode()
 }
 
@@ -137,6 +139,10 @@ private fun entryIcon(entry: DtoEntry): Icon {
     val dto = entry.value
     return when {
         dto is DtoValue.Items && entry.name == "scenes" -> ScenesIcons.LIST
+        dto is DtoValue.Items && entry.name == "assets" -> AllIcons.Nodes.Folder
+        dto is DtoValue.Obj && dto.asset -> AssetIcons.forType(
+            (dto.properties.firstOrNull { it.name == "type" }?.value as? DtoValue.Scalar)?.value as? String,
+        )
         dto is DtoValue.Obj && dto.source?.extension == "scene" -> SceneIcons.FILE
         PropertyIcons.forProperty(entry.name) != null -> PropertyIcons.forProperty(entry.name)!!
         dto is DtoValue.Scalar -> AllIcons.Nodes.Property
@@ -163,10 +169,15 @@ class DtoEntryNode(
         val ownSource = (dto as? DtoValue.Obj)?.source
         // an object read from its own file restarts the key path; otherwise it extends this entry's
         val (src, keys) = if (ownSource != null) ownSource to emptyList() else v.source to (v.parentKeys + v.name)
-        return DtoEntryNode(project!!, v.path, property, src, keys, label, isDisabled)
+        return DtoEntryNode(project!!, v.path, property, src, keys, label, isGray)
     }
 
     private val isDisabled get() = inheritedDisabled || value.enabled == false
+
+    /** A project asset no scene reaches. */
+    private val isUnused get() = (value.value as? DtoValue.Obj)?.unused == true
+
+    private val isGray get() = isDisabled || isUnused
 
     override fun getChildren(): Collection<AbstractTreeNode<*>> {
         val v = value
@@ -186,8 +197,9 @@ class DtoEntryNode(
             is DtoValue.Scalar -> "$shown: ${dto.value ?: AbyssusBundle.message("dtoNullValue")}"
             else -> shown
         }
-        val attrs = if (isDisabled) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES
+        val attrs = if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES
         presentation.addText(text, attrs)
+        if (isUnused) presentation.addText("  " + AbyssusBundle.message("assetUnused"), SimpleTextAttributes.GRAYED_ITALIC_ATTRIBUTES)
         presentation.setIcon(entryIcon(v))
     }
 }
