@@ -26,11 +26,20 @@
                 implementationClass="net.nevinsky.abyssus.filetype.AbyssusProjectFileType"
                 fieldName="INSTANCE"
                 extensions="abss"/>
+        <postStartupActivity implementation="net.nevinsky.abyssus.projectView.OpenAbyssusViewActivity"/>
         <projectViewPane implementation="net.nevinsky.abyssus.projectView.AbyssusProjectViewPane"/>
         <lang.parserDefinition
                 language="GLTF"
                 implementationClass="net.nevinsky.abyssus.language.GltfParserDefinition"/>
     </extensions>
+
+    <actions>
+        <action id="Abyssus.RenameScene"
+                class="net.nevinsky.abyssus.projectView.RenameSceneAction"
+                text="Rename Scene...">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+    </actions>
 
     <applicationListeners>
         <listener class="net.nevinsky.abyssus.listeners.MyFrameStateListener"

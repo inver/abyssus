@@ -10,6 +10,8 @@ import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.dto.DtoValue
 
 private val gson = GsonBuilder().disableHtmlEscaping().serializeNulls().create()
 
@@ -17,6 +19,22 @@ private fun JsonElement.child(key: String): JsonElement? = when (this) {
     is JsonObject -> get(key)
     is JsonArray -> key.toIntOrNull()?.let { if (it in 0 until size()) get(it) else null }
     else -> null
+}
+
+private fun JsonElement.at(keys: List<String>): JsonElement? = keys.fold(this as JsonElement?) { e, k -> e?.child(k) }
+
+/** Parses [file]'s document, lets [mutate] edit the tree (returning false to abort), and saves it undoably. */
+private fun editJson(project: Project, file: VirtualFile, mutate: (JsonElement) -> Boolean): Boolean {
+    val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
+    val root = runCatching { JsonParser.parseString(document.text) }.getOrNull() ?: return false
+    if (!mutate(root)) return false
+    val text = gson.toJson(root)
+    WriteCommandAction.runWriteCommandAction(project) {
+        document.setText(text)
+        FileDocumentManager.getInstance().saveDocument(document)
+    }
+    ProjectView.getInstance(project).getProjectViewPaneById(AbyssusProjectViewPane.ID)?.updateFromRoot(true)
+    return true
 }
 
 /**
@@ -27,16 +45,25 @@ fun toggleEnabled(project: Project, entry: DtoEntry): Boolean {
     val file = entry.source ?: return false
     val toggle = entry.toggleName ?: return false
     val current = entry.enabled ?: return false
-    val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
-    val root = runCatching { JsonParser.parseString(document.text) }.getOrNull() ?: return false
-    val target = entry.parentKeys.fold(root as JsonElement?) { e, k -> e?.child(k) } as? JsonObject ?: return false
-    if (target.get(toggle)?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.isBoolean != true) return false
-    target.add(toggle, JsonPrimitive(!current))
-    val text = gson.toJson(root)
-    WriteCommandAction.runWriteCommandAction(project) {
-        document.setText(text)
-        FileDocumentManager.getInstance().saveDocument(document)
+    return editJson(project, file) { root ->
+        val target = root.at(entry.parentKeys) as? JsonObject ?: return@editJson false
+        if (target.get(toggle)?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.isBoolean != true) return@editJson false
+        target.add(toggle, JsonPrimitive(!current))
+        true
     }
-    ProjectView.getInstance(project).getProjectViewPaneById(AbyssusProjectViewPane.ID)?.updateFromRoot(true)
-    return true
 }
+
+/** The `.scene` file behind a scene entry listed under a project, or null for any other entry. */
+fun sceneFileOf(entry: DtoEntry): VirtualFile? =
+    ((entry.value as? DtoValue.Obj)?.source)?.takeIf { it.extension == "scene" && (entry.value as DtoValue.Obj).label != null }
+
+fun sceneName(entry: DtoEntry): String? =
+    ((entry.value as? DtoValue.Obj)?.properties?.firstOrNull { it.name == "name" }?.value as? DtoValue.Scalar)?.value as? String
+
+/** Sets the top-level `name` of a scene file. */
+fun renameScene(project: Project, file: VirtualFile, newName: String): Boolean =
+    editJson(project, file) { root ->
+        val scene = root as? JsonObject ?: return@editJson false
+        scene.add("name", JsonPrimitive(newName))
+        true
+    }

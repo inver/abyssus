@@ -36,6 +36,7 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   to it, listed by file name and expandable inline (display only, no navigation).
 - A property gated by an `xxxEnabled` option (e.g. `fog`, `skyboxName`) shows an eye at the right of
   its row; click it to flip the option in the file (undoable).
+- A scene under a project is labelled `Name (id)`; right-click it and choose **Rename Scene...** to change its name.
 - Unreadable files stay in the tree with a placeholder; nothing else is ever written.
 
 To support another format, implement `net.nevinsky.abyssus.dto.AssetReader` and return it from

@@ -107,6 +107,8 @@ tasks {
     runIde {
         // Open a project on startup: -PideProject=/path/to/project
         providers.gradleProperty("ideProject").orNull?.let { args(it) }
+        // The sandbox IDE trusts every project (no "Trust project?" dialog) and opens the Abyssus view.
+        jvmArgs("-Didea.trust.all.projects=true", "-Dabyssus.openView=true")
     }
     wrapper {
         gradleVersion = properties("gradleVersion").get()

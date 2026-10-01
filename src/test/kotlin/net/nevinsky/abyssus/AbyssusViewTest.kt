@@ -36,6 +36,11 @@ class AbyssusViewTest : BasePlatformTestCase() {
         return myFixture.findFileInTempDir("Untitled")
     }
 
+    /** The scene's current name: the fixture may have been renamed through the IDE's Rename Scene action. */
+    private val fixtureSceneName: String by lazy {
+        SceneReader.parse(java.io.File("$testDataPath/Untitled/scenes/Main Scene.scene").readText()).name!!
+    }
+
     private fun add(path: String, text: String): VirtualFile = myFixture.addFileToProject(path, text).virtualFile
 
     private fun text(node: AbstractTreeNode<*>): String {
@@ -76,7 +81,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val file = dir.findFileByRelativePath("scenes/Main Scene.scene")!!
         val before = file.contentsToByteArray()
         val scene = SceneReader.readScene(file).getOrThrow()
-        assertEquals("Main Scene", scene.name)
+        assertEquals(fixtureSceneName, scene.name)
         assertEquals(true, scene.fogEnabled)
         assertEquals(0.001f, scene.fog!!.density!!, 0f)
         assertEquals(0.3f, scene.ambientLight!!.intensity!!, 0f)
@@ -98,7 +103,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val root = (ProjectReader.read(file) as AssetReadResult.Success).root
         assertEquals(listOf("name", "scenes"), root.properties.map { it.name })
         val scenes = root.properties[1].value as DtoValue.Items
-        assertEquals(listOf("Main Scene"), scenes.items.map { (it as DtoValue.Obj).label })
+        assertEquals(listOf("$fixtureSceneName (0)"), scenes.items.map { (it as DtoValue.Obj).label })
     }
 
     fun testProjectOrderAndMissingFolder() {
@@ -109,7 +114,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         add("p/scenes/d.scene", "broken")
         val items = ((ProjectReader.read(myFixture.findFileInTempDir("p/a.abss")) as AssetReadResult.Success)
             .root.properties[1].value as DtoValue.Items).items.map { (it as DtoValue.Obj).label }
-        assertEquals(listOf("A", "B", "scenes[2]".let { "scenes[2]" }, "d.scene"), items)
+        assertEquals(listOf("A", "B", "scenes[2]", "d.scene"), items)
         add("q/a.abss", """{"name":"q"}""")
         val none = (ProjectReader.read(myFixture.findFileInTempDir("q/a.abss")) as AssetReadResult.Success).root
         assertTrue((none.properties[1].value as DtoValue.Items).items.isEmpty())
@@ -135,7 +140,8 @@ class AbyssusViewTest : BasePlatformTestCase() {
         fixture()
         val scene = children(children(asset("Untitled.abss")).first { text(it) == "scenes" }).single()
         val top = children(scene).map { text(it) }
-        assertEquals("id: 0", top[0])
+        assertEquals(listOf("ambientLight", "fog", "skyboxName: null", "ecs"), top)
+        assertTrue(top.none { it.startsWith("id") || it.startsWith("name") })
         assertTrue("skyboxName: null" in top)
         assertTrue(top.none { it.endsWith("Enabled: true") || it.endsWith("Enabled: false") })
         val fog = children(scene).first { text(it) == "fog" }
@@ -158,7 +164,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals("name: Untitled", text(props[0]))
         val scenes = props.first { text(it) == "scenes" }
         val items = children(scenes)
-        assertEquals(listOf("Main Scene"), items.map { text(it) })
+        assertEquals(listOf("$fixtureSceneName (0)"), items.map { text(it) })
         assertTrue(children(items.single()).any { text(it) == "fog" })
     }
 
@@ -236,5 +242,43 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val flipped = net.nevinsky.abyssus.projectView.DtoEntry(same.path, same.name, same.value, !same.enabled!!, same.toggleName, same.source, same.parentKeys)
         assertFalse(same == flipped)
         assertEquals(same, net.nevinsky.abyssus.projectView.DtoEntry(same.path, same.name, same.value, same.enabled, same.toggleName, same.source, same.parentKeys))
+    }
+
+    fun testScenesListAndSceneEntriesHaveOwnIcons() {
+        fixture()
+        val scenes = children(asset("Untitled.abss")).first { text(it) == "scenes" }
+        scenes.update()
+        assertSame(net.nevinsky.abyssus.filetype.ScenesIcons.LIST, scenes.presentation.getIcon(false))
+        val scene = children(scenes).single()
+        scene.update()
+        assertSame(SceneIcons.FILE, scene.presentation.getIcon(false))
+        val fog = children(scene).first { text(it) == "fog" }
+        fog.update()
+        assertNotSame(SceneIcons.FILE, fog.presentation.getIcon(false))
+    }
+
+    fun testWellKnownPropertiesHaveOwnIcons() {
+        fixture()
+        val scene = children(children(asset("Untitled.abss")).first { text(it) == "scenes" }).single()
+        fun icon(name: String) = children(scene).first { text(it).startsWith(name) }.let { it.update(); it.presentation.getIcon(false) }
+        assertSame(net.nevinsky.abyssus.filetype.PropertyIcons.LIGHT, icon("ambientLight"))
+        assertSame(net.nevinsky.abyssus.filetype.PropertyIcons.FOG, icon("fog"))
+        assertSame(net.nevinsky.abyssus.filetype.PropertyIcons.SKYBOX, icon("skyboxName"))
+        assertSame(net.nevinsky.abyssus.filetype.PropertyIcons.ECS, icon("ecs"))
+        assertEquals(4, setOf(icon("ambientLight"), icon("fog"), icon("skyboxName"), icon("ecs")).size)
+    }
+
+    fun testSceneLabelShowsIdAndRenameEditsOnlyName() {
+        val dir = fixture()
+        val file = dir.findFileByRelativePath("scenes/Main Scene.scene")!!
+        val original = String(file.contentsToByteArray())
+        fun sceneNode() = children(children(asset("Untitled.abss")).first { text(it) == "scenes" }).single() as DtoEntryNode
+        assertEquals("$fixtureSceneName (0)", text(sceneNode()))
+        val entry = sceneNode().value
+        assertEquals(file, net.nevinsky.abyssus.projectView.sceneFileOf(entry))
+        assertEquals(fixtureSceneName, net.nevinsky.abyssus.projectView.sceneName(entry))
+        assertTrue(net.nevinsky.abyssus.projectView.renameScene(project, file, "Forest"))
+        assertEquals(original.replace("\"name\":\"$fixtureSceneName\"", "\"name\":\"Forest\""), String(file.contentsToByteArray()))
+        assertEquals("Forest (0)", text(sceneNode()))
     }
 }

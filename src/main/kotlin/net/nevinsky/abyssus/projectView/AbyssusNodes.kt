@@ -19,9 +19,14 @@ import net.nevinsky.abyssus.dto.DtoValue
 import net.nevinsky.abyssus.dto.ProjectReader
 import net.nevinsky.abyssus.dto.foldToggles
 import net.nevinsky.abyssus.filetype.AbyssusProjectIcons
+import net.nevinsky.abyssus.filetype.PropertyIcons
 import net.nevinsky.abyssus.filetype.SceneIcons
+import net.nevinsky.abyssus.filetype.ScenesIcons
 import java.util.concurrent.ConcurrentHashMap
 import javax.swing.Icon
+
+/** Shown in a scene entry's label (`name (id)`) and edited via Rename, so not repeated as rows. */
+private val SCENE_HEADER = setOf("id", "name")
 
 /** Exact, case-sensitive, suffix-based match: `.SCENE` and `.scene.bak` are not assets. */
 val ASSET_EXTENSIONS = setOf("scene", "abss")
@@ -121,6 +126,17 @@ class DtoEntry(
     override fun hashCode() = path.hashCode()
 }
 
+private fun entryIcon(entry: DtoEntry): Icon {
+    val dto = entry.value
+    return when {
+        dto is DtoValue.Items && entry.name == "scenes" -> ScenesIcons.LIST
+        dto is DtoValue.Obj && dto.source?.extension == "scene" -> SceneIcons.FILE
+        PropertyIcons.forProperty(entry.name) != null -> PropertyIcons.forProperty(entry.name)!!
+        dto is DtoValue.Scalar -> AllIcons.Nodes.Property
+        else -> AllIcons.Nodes.Class
+    }
+}
+
 class DtoEntryNode(
     project: Project,
     parentPath: String,
@@ -149,7 +165,7 @@ class DtoEntryNode(
         val v = value
         return when (val dto = v.value) {
             is DtoValue.Scalar -> emptyList()
-            is DtoValue.Obj -> dto.properties.foldToggles().map { child(it) }
+            is DtoValue.Obj -> dto.properties.filterNot { sceneFileOf(v) != null && it.name in SCENE_HEADER }.foldToggles().map { child(it) }
             is DtoValue.Items -> dto.items.mapIndexed { i, item ->
                 child(DtoProperty("$i", item), (item as? DtoValue.Obj)?.label ?: AbyssusBundle.message("dtoListElementLabel", v.name, i))
             }
@@ -165,6 +181,6 @@ class DtoEntryNode(
         }
         val attrs = if (isDisabled) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES
         presentation.addText(text, attrs)
-        presentation.setIcon(if (v.value is DtoValue.Scalar) AllIcons.Nodes.Property else AllIcons.Nodes.Class)
+        presentation.setIcon(entryIcon(v))
     }
 }

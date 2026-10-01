@@ -5,7 +5,10 @@ import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.projectView.impl.ProjectAbstractTreeStructureBase
 import com.intellij.ide.projectView.impl.ProjectTreeStructure
 import com.intellij.ide.projectView.impl.ProjectViewPane
+import com.intellij.ide.projectView.impl.ProjectViewRenderer
 import com.intellij.ide.projectView.impl.ProjectViewTree
+import com.intellij.ui.SimpleTextAttributes
+import javax.swing.tree.TreeCellRenderer
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.project.Project
 import com.intellij.util.ui.tree.TreeUtil
@@ -43,8 +46,30 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project) {
     }
 }
 
+/**
+ * The platform repaints every fragment of a selected, focused row in the selection foreground, which
+ * hides the gray of a disabled parameter exactly while it is selected (e.g. right after its eye is
+ * clicked). Keep the gray for those fragments.
+ */
+private class GrayKeepingRenderer : ProjectViewRenderer() {
+    override fun append(fragment: String, attributes: SimpleTextAttributes, isMainText: Boolean) {
+        if (mySelected && attributes.fgColor == SimpleTextAttributes.GRAYED_ATTRIBUTES.fgColor) {
+            mySelected = false
+            try {
+                super.append(fragment, attributes, isMainText)
+            } finally {
+                mySelected = true
+            }
+        } else {
+            super.append(fragment, attributes, isMainText)
+        }
+    }
+}
+
 /** Paints a clickable eye at the right edge of every row whose entry is gated by an `xxxEnabled` toggle. */
 private class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
+    override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
+
     private fun eyeEntry(row: Int): DtoEntry? =
         (TreeUtil.getUserObject(getPathForRow(row)?.lastPathComponent) as? DtoEntryNode)?.value?.takeIf { it.enabled != null }
 
