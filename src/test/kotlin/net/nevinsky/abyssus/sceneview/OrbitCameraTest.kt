@@ -70,4 +70,14 @@ class OrbitCameraTest {
         assertNull(aspectOf(-1, 5))
         assertEquals(2f, aspectOf(200, 100)!!, 0f)
     }
+
+    @Test
+    fun resetReturnsToTheGivenCamera() {
+        val params = CameraParams(Vec3(4.8f, 3.3f, 6.0f), Vec3(-0.9485f, -0.1088f, -0.2975f), 1f, 100f, 67f)
+        val cam = OrbitCamera.from(CameraParams.DEFAULT)
+        cam.orbit(200f, 50f)
+        cam.zoom(3f)
+        cam.reset(params)
+        assertVec(params.position, cam.position(), 0.05f)
+    }
 }

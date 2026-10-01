@@ -2,34 +2,49 @@ package net.nevinsky.abyssus.sceneview
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.thisLogger
 import org.lwjgl.opengl.GL
+import org.lwjgl.opengl.GLCapabilities
 import org.lwjgl.opengl.awt.AWTGLCanvas
 import org.lwjgl.opengl.awt.GLData
 import java.awt.BorderLayout
+import java.awt.Component
+import java.awt.Frame
 import java.awt.Point
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
+import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import javax.swing.Timer
 
+/** Only draw while the panel is on screen and its window is not minimized. */
+fun canRender(component: Component): Boolean {
+    if (!component.isShowing) return false
+    val frame = SwingUtilities.getWindowAncestor(component) as? Frame
+    return frame == null || (frame.extendedState and Frame.ICONIFIED) == 0
+}
+
 /** Swing panel hosting a core-profile GL canvas that renders a scene with libGDX. Read-only; orbit/pan/zoom with the mouse. */
-class SceneViewPanel(initial: SceneRenderParams) : JPanel(BorderLayout()), Disposable {
+class SceneViewPanel(initial: SceneRenderParams) : JPanel(BorderLayout()), SceneView {
 
     private val frame = GdxFrame()
     private val renderer = SceneRenderer().also { it.params = initial }
     private val orbit = OrbitCamera.from(initial.camera)
     private var gdx: GdxContext? = null
 
+    private var lastCamera = initial.camera
+    private var capabilities: GLCapabilities? = null
+
+    override val view: JComponent get() = this
+
     /** Called (on the AWT thread) when rendering fails, e.g. when no GL 3.2 core context can be created. */
-    var onFailure: ((Throwable) -> Unit)? = null
+    override var onFailure: ((Throwable) -> Unit)? = null
 
     private val canvas = object : AWTGLCanvas(glData()) {
         override fun initGL() {
-            GL.createCapabilities()
+            capabilities = GL.createCapabilities()
             val ctx = GdxRuntime.newContext(frame, GdxGlBridge.gl20(), GdxGlBridge.gl30(), Lwjgl3Files())
             gdx = ctx
             GdxRuntime.withContext(ctx) { renderer.create() }
@@ -39,6 +54,7 @@ class SceneViewPanel(initial: SceneRenderParams) : JPanel(BorderLayout()), Dispo
         override fun disposeGL() {
             val ctx = gdx ?: return
             gdx = null
+            capabilities?.let { GL.setCapabilities(it) }
             try {
                 GdxRuntime.withContext(ctx) { renderer.dispose() }
             } catch (e: Throwable) {
@@ -48,6 +64,7 @@ class SceneViewPanel(initial: SceneRenderParams) : JPanel(BorderLayout()), Dispo
 
         override fun paintGL() {
             val ctx = gdx ?: return
+            capabilities?.let { GL.setCapabilities(it) }
             frame.tick(framebufferWidth, framebufferHeight)
             GdxRuntime.withContext(ctx) { renderer.render(frame.width, frame.height, orbit) }
             swapBuffers()
@@ -55,6 +72,7 @@ class SceneViewPanel(initial: SceneRenderParams) : JPanel(BorderLayout()), Dispo
     }
 
     private val timer: Timer = Timer(FRAME_MILLIS) {
+        if (!canRender(this)) return@Timer
         try {
             canvas.render()
         } catch (e: Throwable) {
@@ -92,8 +110,12 @@ class SceneViewPanel(initial: SceneRenderParams) : JPanel(BorderLayout()), Dispo
         canvas.addMouseWheelListener(input)
     }
 
-    fun setParams(params: SceneRenderParams) {
+    override fun setParams(params: SceneRenderParams) {
         renderer.params = params
+        if (params.camera != lastCamera) {
+            lastCamera = params.camera
+            orbit.reset(params.camera)
+        }
     }
 
     override fun addNotify() {
@@ -120,6 +142,7 @@ class SceneViewPanel(initial: SceneRenderParams) : JPanel(BorderLayout()), Dispo
             profile = GLData.Profile.CORE
             forwardCompatible = true
             depthSize = 24
+            swapInterval = 0 // the Swing timer paces frames; a vsync-blocked swap would stall the IDE thread
         }
     }
 }

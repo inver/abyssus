@@ -39,6 +39,14 @@ class OrbitCamera(var target: Vec3, var distance: Float, var yaw: Float, var pit
         )
     }
 
+    fun reset(camera: CameraParams) {
+        val fresh = from(camera)
+        target = fresh.target
+        distance = fresh.distance
+        yaw = fresh.yaw
+        pitch = fresh.pitch
+    }
+
     fun zoom(wheelClicks: Float) {
         distance = (distance * ZOOM_BASE.pow(wheelClicks)).coerceIn(MIN_DISTANCE, MAX_DISTANCE)
     }

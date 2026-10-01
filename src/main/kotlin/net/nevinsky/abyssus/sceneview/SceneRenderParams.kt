@@ -2,8 +2,12 @@ package net.nevinsky.abyssus.sceneview
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.dto.ProjectReader
 import net.nevinsky.abyssus.scene.SceneDto
+import kotlin.math.exp
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 data class Vec3(val x: Float, val y: Float, val z: Float)
@@ -23,7 +27,18 @@ data class CameraParams(
     }
 }
 
-data class FogParams(val color: Rgba, val near: Float, val far: Float, val exponent: Float)
+/**
+ * Mundus fog: the fog share at distance `d` is `1 - exp(-(d * density)^gradient)`.
+ * g3d's default shader fogs with a fixed quadratic ramp, so only [density] can be matched, at its characteristic
+ * distance `1 / density`; [gradient] shapes [amount] but not the on-screen curve.
+ */
+data class FogParams(val color: Rgba, val density: Float, val gradient: Float) {
+    fun amount(distance: Float): Float =
+        (1.0 - exp(-(distance.coerceAtLeast(0f) * density).toDouble().pow(gradient.toDouble()))).toFloat().coerceIn(0f, 1f)
+
+    /** Multiplier for g3d's `dot(d, d) * k` fog term that reaches [amount] at `1 / density` for any gradient. */
+    val shaderCoefficient: Float get() = ((1.0 - exp(-1.0)) * density.toDouble() * density).toFloat()
+}
 
 data class SceneRenderParams(val clear: Rgba, val ambient: Rgba?, val fog: FogParams?, val camera: CameraParams) {
     companion object {
@@ -43,14 +58,13 @@ data class SceneRenderParams(val clear: Rgba, val ambient: Rgba?, val fog: FogPa
             return Rgba(c.r * k, c.g * k, c.b * k, 1f)
         }
 
-        /** Mundus fog is `exp(-(d * density)^gradient)`; the view approximates it with a ramp reaching full fog at `2 / density`. */
         private fun fogOf(scene: SceneDto): FogParams? {
             if (scene.fogEnabled != true) return null
             val fog = scene.fog ?: return null
             val c = fog.color ?: return null
             val density = fog.density?.takeIf { it > 0f && it.isFinite() } ?: return null
             val gradient = fog.gradient?.takeIf { it > 0f && it.isFinite() } ?: 1f
-            return FogParams(Rgba(c.r, c.g, c.b, 1f), 0f, 2f / density, gradient)
+            return FogParams(Rgba(c.r, c.g, c.b, 1f), density, gradient)
         }
     }
 }
@@ -68,19 +82,29 @@ object MainCamera {
         val position = cam.vec("position") ?: return null
         val direction = normalized(cam.vec("viewPointPosition") ?: return null) ?: return null
         val defaults = CameraParams.DEFAULT
+        fun number(name: String) = cam.get(name)?.takeIf { it.isJsonPrimitive }?.runCatching { asFloat }?.getOrNull()
+        val near = number("near")?.takeIf { it > 0f && it.isFinite() }
+        val far = number("far")?.takeIf { it > 0f && it.isFinite() }
+        val invertedClip = near != null && far != null && near >= far
         CameraParams(
             position,
             direction,
-            cam.get("near")?.asFloat?.takeIf { it > 0f } ?: defaults.near,
-            cam.get("far")?.asFloat?.takeIf { it > 0f } ?: defaults.far,
-            cam.get("fieldOfView")?.asFloat?.takeIf { it > 0f && it < 180f } ?: defaults.fieldOfView,
+            if (invertedClip) defaults.near else near ?: defaults.near,
+            if (invertedClip) defaults.far else far ?: defaults.far,
+            number("fieldOfView")?.takeIf { it > 0f && it < 180f } ?: defaults.fieldOfView,
         )
     }.getOrNull()
 
-    /** The camera of the `.abss` beside the scene's `scenes` folder; the default camera when there is none or it is unreadable. */
+    /** The `.abss` of the project a scene belongs to: the one beside the scene's `scenes` folder. */
+    fun abssFor(sceneFile: VirtualFile): VirtualFile? {
+        val dir = sceneFile.parent?.takeIf { it.name == ProjectReader.SCENES_DIR } ?: return null
+        return dir.parent?.children?.firstOrNull { it.extension == "abss" }
+    }
+
+    /** The project's main camera, from unsaved editor text if any; the default camera when there is none or it is unreadable. */
     fun forScene(sceneFile: VirtualFile): CameraParams {
-        val abss = sceneFile.parent?.parent?.children?.firstOrNull { it.extension == "abss" } ?: return CameraParams.DEFAULT
-        return runCatching { parse(String(abss.contentsToByteArray(), abss.charset)) }.getOrNull() ?: CameraParams.DEFAULT
+        val abss = abssFor(sceneFile) ?: return CameraParams.DEFAULT
+        return runCatching { parse(textOf(abss)) }.getOrNull() ?: CameraParams.DEFAULT
     }
 
     private fun JsonObject.vec(name: String): Vec3? {
@@ -89,3 +113,7 @@ object MainCamera {
         return Vec3(f("x"), f("y"), f("z"))
     }
 }
+
+/** The editor's unsaved text when the file has an open document, else the file's content. */
+fun textOf(file: VirtualFile): String =
+    FileDocumentManager.getInstance().getCachedDocument(file)?.text ?: String(file.contentsToByteArray(), file.charset)

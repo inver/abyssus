@@ -2,6 +2,10 @@ package net.nevinsky.abyssus.sceneview
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.thisLogger
+import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorLocation
 import com.intellij.openapi.fileEditor.FileEditorPolicy
@@ -39,10 +43,14 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
     }
 }
 
-/** Read-only live view of a `.scene`; re-reads the scene when the file changes. */
-class SceneFileEditor(project: Project, private val file: VirtualFile) : UserDataHolderBase(), FileEditor {
+/** Read-only live view of a `.scene`; re-reads the scene (and its project's camera) as the files are edited or change on disk. */
+class SceneFileEditor(
+    project: Project,
+    private val file: VirtualFile,
+    private val viewFactory: (SceneRenderParams) -> SceneView = { SceneViewPanel(it) },
+) : UserDataHolderBase(), FileEditor {
     private val content = JPanel(BorderLayout()).apply { isFocusable = true }
-    private var panel: SceneViewPanel? = null
+    private var view: SceneView? = null
 
     /** Non-null while the tab shows a message instead of a render. */
     internal var statusText: String? = null
@@ -52,35 +60,44 @@ class SceneFileEditor(project: Project, private val file: VirtualFile) : UserDat
         reload()
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
-                if (events.any { it is VFileContentChangeEvent && it.file == file }) {
+                if (events.any { it is VFileContentChangeEvent && isSource(it.file) }) {
                     ApplicationManager.getApplication().invokeLater { if (!Disposer.isDisposed(this@SceneFileEditor)) reload() }
                 }
             }
         })
+        // unsaved edits in the text tabs of the scene or of its project file
+        EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
+            override fun documentChanged(event: DocumentEvent) {
+                val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
+                if (isSource(changed)) reload()
+            }
+        }, this)
     }
 
+    private fun isSource(changed: VirtualFile) = changed == file || changed == MainCamera.abssFor(file)
+
     private fun reload() {
-        val params = SceneReader.readScene(file).map { SceneRenderParams.from(it, MainCamera.forScene(file)) }
+        val params = runCatching { SceneReader.parse(textOf(file)) }.map { SceneRenderParams.from(it, MainCamera.forScene(file)) }
         params.onSuccess { showScene(it) }
             .onFailure { showStatus(AbyssusBundle.message("sceneViewParseError", it.message ?: it.javaClass.simpleName)) }
     }
 
     private fun showScene(params: SceneRenderParams) {
-        panel?.let {
+        view?.let {
             it.setParams(params)
             return
         }
         val created = try {
-            SceneViewPanel(params)
+            viewFactory(params)
         } catch (e: Throwable) {
             thisLogger().warn("Failed to create OpenGL scene view", e)
             showStatus(AbyssusBundle.message("glUnavailable", e.message ?: e.javaClass.simpleName))
             return
         }
         created.onFailure = { e -> ApplicationManager.getApplication().invokeLater { showGlFailure(e) } }
-        panel = created
+        view = created
         statusText = null
-        setContent(created)
+        setContent(created.view)
     }
 
     internal fun showGlFailure(e: Throwable) {
@@ -89,8 +106,8 @@ class SceneFileEditor(project: Project, private val file: VirtualFile) : UserDat
     }
 
     private fun showStatus(text: String) {
-        panel?.let { Disposer.dispose(it) }
-        panel = null
+        view?.let { Disposer.dispose(it) }
+        view = null
         statusText = text
         setContent(JBLabel(text, SwingConstants.CENTER))
     }
@@ -114,7 +131,7 @@ class SceneFileEditor(project: Project, private val file: VirtualFile) : UserDat
     override fun getCurrentLocation(): FileEditorLocation? = null
 
     override fun dispose() {
-        panel?.let { Disposer.dispose(it) }
-        panel = null
+        view?.let { Disposer.dispose(it) }
+        view = null
     }
 }

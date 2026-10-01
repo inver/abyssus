@@ -52,4 +52,94 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             editor.dispose()
         }
     }
+
+    private class FakeView(var current: SceneRenderParams) : SceneView {
+        val component = javax.swing.JPanel()
+        var disposed = false
+        var updates = 0
+        override var onFailure: ((Throwable) -> Unit)? = null
+        override val view: javax.swing.JComponent get() = component
+        override fun setParams(params: SceneRenderParams) {
+            current = params
+            updates++
+        }
+        override fun dispose() {
+            disposed = true
+        }
+    }
+
+    private fun fakeEditor(path: String, text: String, views: MutableList<FakeView>): Pair<SceneFileEditor, com.intellij.openapi.vfs.VirtualFile> {
+        val f = file(path, text)
+        return SceneFileEditor(project, f) { p -> FakeView(p).also { views += it } } to f
+    }
+
+    private fun setText(f: com.intellij.openapi.vfs.VirtualFile, text: String) {
+        val doc = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(f)!!
+        com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) { doc.setText(text) }
+    }
+
+    fun testRendersAndUpdatesInPlaceOnUnsavedEdits() {
+        val views = mutableListOf<FakeView>()
+        val (editor, f) = fakeEditor("live/a.scene", """{"name":"a"}""", views)
+        try {
+            assertEquals(1, views.size)
+            assertNull(editor.statusText)
+            setText(f, """{"name":"a","fogEnabled":true,"fog":{"color":{"r":1,"g":0,"b":0,"a":1},"density":0.5}}""")
+            assertEquals(1, views.size)
+            assertEquals(1, views[0].updates)
+            assertNotNull(views[0].current.fog)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
+    fun testBadEditDisposesViewThenFixRecreatesIt() {
+        val views = mutableListOf<FakeView>()
+        val (editor, f) = fakeEditor("live/b.scene", """{"name":"b"}""", views)
+        try {
+            setText(f, "{ nope")
+            assertTrue(views[0].disposed)
+            assertTrue(editor.statusText!!.startsWith("Cannot read scene"))
+            setText(f, """{"name":"b"}""")
+            assertEquals(2, views.size)
+            assertFalse(views[1].disposed)
+            assertNull(editor.statusText)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
+    fun testDisposingEditorDisposesView() {
+        val views = mutableListOf<FakeView>()
+        val (editor, _) = fakeEditor("live/c.scene", """{"name":"c"}""", views)
+        com.intellij.openapi.util.Disposer.dispose(editor)
+        assertTrue(views.single().disposed)
+    }
+
+    fun testViewFailureShowsGlUnavailableAndDisposesView() {
+        val views = mutableListOf<FakeView>()
+        val (editor, _) = fakeEditor("live/d.scene", """{"name":"d"}""", views)
+        try {
+            views[0].onFailure!!.invoke(RuntimeException("no GL"))
+            com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+            assertTrue(editor.statusText!!, editor.statusText!!.startsWith("OpenGL scene is unavailable"))
+            assertTrue(views[0].disposed)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
+    fun testAbssEditRefreshesCamera() {
+        val views = mutableListOf<FakeView>()
+        val abss = myFixture.addFileToProject("Q/Q.abss", """{"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3}}}""").virtualFile
+        val scene = file("Q/scenes/a.scene", """{"name":"a"}""")
+        val editor = SceneFileEditor(project, scene) { p -> FakeView(p).also { views += it } }
+        try {
+            assertEquals(1f, views[0].current.camera.position.x, 0f)
+            setText(abss, """{"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":5,"y":2,"z":3}}}""")
+            assertEquals(5f, views[0].current.camera.position.x, 0f)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
 }

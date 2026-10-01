@@ -24,9 +24,8 @@ class SceneRenderParamsTest {
         val p = SceneRenderParams.from(scene(full), CameraParams.DEFAULT)
         assertEquals(Rgba(0.2f, 0.3f, 0.4f, 1f), p.clear)
         val fog = p.fog!!
-        assertEquals(0f, fog.near, 0f)
-        assertEquals(200f, fog.far, 1e-3f)
-        assertEquals(1.5f, fog.exponent, 0f)
+        assertEquals(0.01f, fog.density, 0f)
+        assertEquals(1.5f, fog.gradient, 0f)
     }
 
     @Test
@@ -57,7 +56,7 @@ class SceneRenderParamsTest {
     @Test
     fun invalidFogGradientFallsBackToOne() {
         val json = """{"fogEnabled":true,"fog":{"color":{"r":1,"g":1,"b":1,"a":1},"density":0.5,"gradient":0}}"""
-        assertEquals(1f, SceneRenderParams.from(scene(json), CameraParams.DEFAULT).fog!!.exponent, 0f)
+        assertEquals(1f, SceneRenderParams.from(scene(json), CameraParams.DEFAULT).fog!!.gradient, 0f)
     }
 
     @Test
@@ -96,5 +95,43 @@ class SceneRenderParamsTest {
     fun defaultCameraIsUsable() {
         assertNotNull(CameraParams.DEFAULT)
         assertTrue(CameraParams.DEFAULT.far > CameraParams.DEFAULT.near)
+    }
+
+    @Test
+    fun shaderCoefficientMatchesMundusFogAtCharacteristicDistance() {
+        for (gradient in listOf(0.5f, 1f, 1.5f, 3f)) {
+            val fog = FogParams(Rgba(1f, 1f, 1f, 1f), 0.02f, gradient)
+            val d = 1f / fog.density
+            val expected = 1f - kotlin.math.exp(-1f)
+            assertEquals(expected, fog.amount(d), 1e-5f)
+            assertEquals(expected, fog.shaderCoefficient * d * d, 1e-4f)
+        }
+    }
+
+    @Test
+    fun fogAmountGrowsWithDistanceAndStaysInRange() {
+        val fog = FogParams(Rgba(1f, 1f, 1f, 1f), 0.01f, 1.5f)
+        assertEquals(0f, fog.amount(0f), 0f)
+        assertTrue(fog.amount(50f) < fog.amount(150f))
+        assertTrue(fog.amount(1e9f) <= 1f)
+    }
+
+    @Test
+    fun nullNearKeepsTheRestOfTheCamera() {
+        val abss = """{"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3},"near":null,"far":50.0}}"""
+        val cam = MainCamera.parse(abss)!!
+        assertEquals(Vec3(1f, 2f, 3f), cam.position)
+        assertEquals(CameraParams.DEFAULT.near, cam.near, 0f)
+        assertEquals(50f, cam.far, 0f)
+    }
+
+    @Test
+    fun nearNotBelowFarFallsBackToDefaultClipRange() {
+        for ((near, far) in listOf(10 to 10, 100 to 1)) {
+            val abss = """{"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3},"near":$near,"far":$far}}"""
+            val cam = MainCamera.parse(abss)!!
+            assertEquals(CameraParams.DEFAULT.near, cam.near, 0f)
+            assertEquals(CameraParams.DEFAULT.far, cam.far, 0f)
+        }
     }
 }

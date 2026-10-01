@@ -27,8 +27,11 @@ class SceneRenderer : Disposable {
     private val camera = PerspectiveCamera()
     private val environment = Environment()
 
+    @Volatile
+    private var fogCoefficient: Float? = null
+
     fun create() {
-        batch = ModelBatch()
+        batch = ModelBatch(FogShaderProvider { fogCoefficient })
         gridModel = buildGrid().also { grid = ModelInstance(it) }
     }
 
@@ -60,7 +63,7 @@ class SceneRenderer : Disposable {
         batch.end()
     }
 
-    /** g3d's default shader fogs with a fixed equation from the fog color; density/gradient are not applied in this version. */
+    /** Fog color comes from the environment; density through [FogShader] (see [FogParams] for what cannot be matched). */
     private fun applyEnvironment(p: SceneRenderParams) {
         val ambient = p.ambient
         if (ambient != null) {
@@ -71,8 +74,10 @@ class SceneRenderer : Disposable {
         val fog = p.fog
         if (fog != null) {
             environment.set(ColorAttribute(ColorAttribute.Fog, fog.color.r, fog.color.g, fog.color.b, 1f))
+            fogCoefficient = fog.shaderCoefficient
         } else {
             environment.remove(ColorAttribute.Fog)
+            fogCoefficient = null
         }
     }
 
