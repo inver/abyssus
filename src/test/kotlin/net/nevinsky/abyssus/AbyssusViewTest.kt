@@ -204,9 +204,9 @@ class AbyssusViewTest : BasePlatformTestCase() {
 
         assertTrue(toggleEnabled(project, fog().value))
         val flipped = String(file.contentsToByteArray())
-        assertTrue(flipped.contains("\"fogEnabled\":false"))
+        assertTrue(Regex("\"fogEnabled\":\\s*false").containsMatchIn(flipped))
         assertEquals(false, fog().value.enabled)
-        assertEquals(original.replace("\"fogEnabled\":true", "\"fogEnabled\":false"), flipped)
+        assertEquals(original.replace(Regex("\"fogEnabled\":(\\s*)true"), "\"fogEnabled\":$1false"), flipped)
 
         assertTrue(toggleEnabled(project, fog().value))
         assertEquals(original, String(file.contentsToByteArray()))
@@ -278,7 +278,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals(file, net.nevinsky.abyssus.projectView.sceneFileOf(entry))
         assertEquals(fixtureSceneName, net.nevinsky.abyssus.projectView.sceneName(entry))
         assertTrue(net.nevinsky.abyssus.projectView.renameScene(project, file, "Forest"))
-        assertEquals(original.replace("\"name\":\"$fixtureSceneName\"", "\"name\":\"Forest\""), String(file.contentsToByteArray()))
+        assertEquals(original.replace(Regex("\"name\":(\\s*)\"$fixtureSceneName\""), "\"name\":$1\"Forest\""), String(file.contentsToByteArray()))
         assertEquals("Forest (0)", text(sceneNode()))
     }
 }

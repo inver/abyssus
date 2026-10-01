@@ -48,4 +48,18 @@ class SceneJsonTest {
         assertNull(SceneJson.pretty("42"))
         assertNotNull(SceneJson.pretty("{}"))
     }
+
+    @Test
+    fun keepsNullMembersAtEveryLevel() {
+        val withNulls = """{"skyboxName":null,"fog":{"gradient":null,"color":{"r":1}},"list":[null,{"a":null}]}"""
+        val pretty = SceneJson.pretty(withNulls)!!
+        assertTrue(pretty, pretty.contains("\"skyboxName\": null"))
+        assertEquals(JsonParser.parseString(withNulls), JsonParser.parseString(pretty))
+    }
+
+    @Test
+    fun compactKeepsNullsAndStaysOnOneLine() {
+        val element = JsonParser.parseString("""{"a":null,"b":{"c":null},"d":"<x>"}""")
+        assertEquals("""{"a":null,"b":{"c":null},"d":"<x>"}""", SceneJson.compact(element))
+    }
 }

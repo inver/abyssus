@@ -1,6 +1,5 @@
 package net.nevinsky.abyssus.projectView
 
-import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -12,8 +11,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.dto.DtoValue
-
-private val gson = GsonBuilder().disableHtmlEscaping().serializeNulls().create()
+import net.nevinsky.abyssus.filetype.SceneJson
 
 private fun JsonElement.child(key: String): JsonElement? = when (this) {
     is JsonObject -> get(key)
@@ -28,7 +26,7 @@ private fun editJson(project: Project, file: VirtualFile, mutate: (JsonElement) 
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
     val root = runCatching { JsonParser.parseString(document.text) }.getOrNull() ?: return false
     if (!mutate(root)) return false
-    val text = gson.toJson(root)
+    val text = SceneJson.inStyleOf(document.text, root)
     WriteCommandAction.runWriteCommandAction(project) {
         document.setText(text)
         FileDocumentManager.getInstance().saveDocument(document)
