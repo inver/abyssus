@@ -10,6 +10,7 @@ import org.lwjgl.opengl.awt.GLData
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Frame
+import java.awt.Graphics
 import java.awt.Point
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -19,11 +20,17 @@ import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import javax.swing.Timer
 
-/** Only draw while the panel is on screen and its window is not minimized. */
+/**
+ * Only touch GL while the surface is on screen, non-empty and its window is not minimized. On macOS a zero-sized
+ * surface makes Metal reject the backing texture and abort the whole JVM (e.g. when switching to the Text tab).
+ */
+fun canRender(showing: Boolean, width: Int, height: Int, minimized: Boolean) =
+    showing && width > 0 && height > 0 && !minimized
+
 fun canRender(component: Component): Boolean {
-    if (!component.isShowing) return false
     val frame = SwingUtilities.getWindowAncestor(component) as? Frame
-    return frame == null || (frame.extendedState and Frame.ICONIFIED) == 0
+    val minimized = frame != null && (frame.extendedState and Frame.ICONIFIED) != 0
+    return canRender(component.isShowing, component.width, component.height, minimized)
 }
 
 /** Swing panel hosting a core-profile GL canvas that renders a scene with libGDX. Read-only; orbit/pan/zoom with the mouse. */
@@ -62,6 +69,29 @@ class SceneViewPanel(initial: SceneRenderParams) : JPanel(BorderLayout()), Scene
             }
         }
 
+        // AWT repaints the canvas itself (layout, tab switches); those paints must obey the same rule as the timer
+        override fun paint(g: Graphics) {
+            if (canRender(this)) super.paint(g)
+        }
+
+        override fun update(g: Graphics) {
+            if (canRender(this)) super.update(g)
+        }
+
+        /**
+         * Disposing the GL context makes it current, which aborts the JVM on a hidden/empty surface (see [canRender]).
+         * In that case the context is abandoned (leaked) instead.
+         */
+        override fun removeNotify() {
+            if (context != 0L && !canRender(this)) {
+                thisLogger().warn("Scene view removed while hidden; abandoning its GL context instead of disposing it")
+                gdx = null
+                context = 0L
+                initCalled = false
+            }
+            super.removeNotify()
+        }
+
         override fun paintGL() {
             val ctx = gdx ?: return
             capabilities?.let { GL.setCapabilities(it) }
@@ -72,7 +102,7 @@ class SceneViewPanel(initial: SceneRenderParams) : JPanel(BorderLayout()), Scene
     }
 
     private val timer: Timer = Timer(FRAME_MILLIS) {
-        if (!canRender(this)) return@Timer
+        if (!canRender(canvas)) return@Timer
         try {
             canvas.render()
         } catch (e: Throwable) {
