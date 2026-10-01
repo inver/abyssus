@@ -2,7 +2,7 @@ package net.nevinsky.abyssus.toolWindow
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.thisLogger
-import org.lwjgl.opengl.awt.AWTGLCanvas
+import net.nevinsky.abyssus.sceneview.GuardedGLCanvas
 import org.lwjgl.opengl.awt.GLData
 import java.awt.BorderLayout
 import javax.swing.JPanel
@@ -14,7 +14,7 @@ class GlScenePanel : JPanel(BorderLayout()), Disposable {
     private val scene = ExampleScene()
     private var angle = 0f
 
-    private val canvas = object : AWTGLCanvas(GLData()) {
+    private val canvas = object : GuardedGLCanvas(GLData()) {
         override fun initGL() = scene.init()
 
         override fun paintGL() {
@@ -24,6 +24,7 @@ class GlScenePanel : JPanel(BorderLayout()), Disposable {
     }
 
     private val timer: Timer = Timer(16) {
+        if (!canvas.glSafe()) return@Timer
         angle = (angle + 1f) % 360f
         try {
             canvas.render()
