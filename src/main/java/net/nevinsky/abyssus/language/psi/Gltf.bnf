@@ -1,0 +1,37 @@
+{
+  parserClass="net.nevinsky.abyssus.language.parser.GltfParser"
+  extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+  psiClassPrefix="Gltf"
+  psiImplClassSuffix="Impl"
+  psiPackage="net.nevinsky.abyssus.language.psi"
+  psiImplPackage="net.nevinsky.abyssus.language.psi.impl"
+
+  elementTypeHolderClass="net.nevinsky.abyssus.language.psi.GltfTypes"
+  elementTypeClass="net.nevinsky.abyssus.language.psi.GltfElementType"
+  tokenTypeClass="net.nevinsky.abyssus.language.psi.GltfTokenType"
+  tokens = [
+    space='regexp:\s+'
+    string = "regexp:\"[^\"]*\"|'[^']*'"
+    number = "regexp:(\+|\-)?\d*"
+    id = "regexp:\p{Alpha}\w*"
+    comma = ","
+    colon = ":"
+    brace1 = "{"
+    brace2 = "}"
+    brack1 = "["
+    brack2 = "]"
+  ]
+  extends("array|object|json")=value
+}
+
+root ::= json
+json ::= array | object  { hooks=[wsBinders="null, null"] }
+value ::= string | number | json {name="value"}
+
+array ::= '[' [!']' item (!']' ',' item) *] ']' {pin(".*")=1 extends=json}
+private item ::= json {recoverWhile=recover}
+object ::= '{' [!'}' prop (!'}' ',' prop) *] '}' {pin(".*")=1 extends=json}
+prop ::= [] f_name ':' value {pin=1 recoverWhile=recover} // remove [] to make NAME mandatory
+f_name ::= id | string {name="name"}
+private recover ::= !(',' | ']' | '}' | '[' | '{')
