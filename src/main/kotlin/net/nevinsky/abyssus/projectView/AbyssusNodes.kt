@@ -40,6 +40,13 @@ fun isProjectScene(file: VirtualFile): Boolean {
     return dir.name == ProjectReader.SCENES_DIR && dir.parent?.children?.any { it.extension == "abss" } == true
 }
 
+/** The `.scene` a project-view node can open in the scene view (a standalone scene or a project's scene entry), else null. */
+fun viewableSceneFile(node: Any?): VirtualFile? = when (node) {
+    is AbyssusAssetNode -> node.virtualFile.takeIf { it.extension == "scene" }
+    is DtoEntryNode -> sceneFileOf(node.value)
+    else -> null
+}
+
 fun findTopLevelAssets(project: Project): List<VirtualFile> {
     val found = mutableListOf<VirtualFile>()
     for (root in ProjectRootManager.getInstance(project).contentRoots) {

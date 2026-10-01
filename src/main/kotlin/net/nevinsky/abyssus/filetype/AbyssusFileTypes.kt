@@ -9,6 +9,11 @@ object SceneIcons {
     val FILE: Icon = IconLoader.getIcon("/icons/scene_file_icon.svg", SceneIcons::class.java)
 }
 
+object SceneViewIcons {
+    @JvmField
+    val VIEW: Icon = IconLoader.getIcon("/icons/view_scene.svg", SceneViewIcons::class.java)
+}
+
 object ScenesIcons {
     /** The `scenes` list of a project; individual scenes use [SceneIcons.FILE]. */
     @JvmField

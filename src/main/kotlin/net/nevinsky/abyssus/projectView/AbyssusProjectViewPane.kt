@@ -15,6 +15,9 @@ import com.intellij.util.ui.tree.TreeUtil
 import com.intellij.ui.tree.TreeVisitor
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.filetype.SceneIcons
+import net.nevinsky.abyssus.filetype.SceneViewIcons
+import net.nevinsky.abyssus.sceneview.openSceneView
+import javax.swing.ToolTipManager
 import java.awt.Cursor
 import java.awt.Graphics
 import java.awt.Rectangle
@@ -66,44 +69,63 @@ private class GrayKeepingRenderer : ProjectViewRenderer() {
     }
 }
 
-/** Paints a clickable eye at the right edge of every row whose entry is gated by an `xxxEnabled` toggle. */
+private class RowAction(val icon: Icon, val tooltip: String?, val run: (row: Int) -> Unit)
+
+/**
+ * Paints one clickable icon at the right edge of rows that have an action: the eye on entries gated by an
+ * `xxxEnabled` toggle, and "View" on scenes.
+ */
 private class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
 
-    private fun eyeEntry(row: Int): DtoEntry? =
-        (TreeUtil.getUserObject(getPathForRow(row)?.lastPathComponent) as? DtoEntryNode)?.value?.takeIf { it.enabled != null }
+    private fun actionFor(row: Int): RowAction? {
+        val node = TreeUtil.getUserObject(getPathForRow(row)?.lastPathComponent)
+        viewableSceneFile(node)?.let { file ->
+            return RowAction(SceneViewIcons.VIEW, AbyssusBundle.message("viewSceneTooltip")) { openSceneView(project, file) }
+        }
+        val entry = (node as? DtoEntryNode)?.value?.takeIf { it.enabled != null } ?: return null
+        val icon = if (entry.enabled == true) AllIcons.Actions.Show else AllIcons.Actions.ToggleVisibility
+        return RowAction(icon, null) { r ->
+            val wasExpanded = isExpanded(getPathForRow(r))
+            if (toggleEnabled(project, entry)) reselect(entry.path, wasExpanded)
+        }
+    }
 
-    private fun eyeIcon(entry: DtoEntry) = if (entry.enabled == true) AllIcons.Actions.Show else AllIcons.Actions.ToggleVisibility
-
-    private fun eyeBounds(row: Int, icon: Icon): Rectangle {
+    private fun iconBounds(row: Int, icon: Icon): Rectangle {
         val bounds = getRowBounds(row)
-        val x = visibleRect.let { it.x + it.width } - icon.iconWidth - EYE_GAP
+        val x = visibleRect.let { it.x + it.width } - icon.iconWidth - ICON_GAP
         return Rectangle(x, bounds.y + (bounds.height - icon.iconHeight) / 2, icon.iconWidth, icon.iconHeight)
     }
 
-    private fun eyeAt(e: MouseEvent): DtoEntry? {
+    private fun rowOf(e: MouseEvent): Int? {
         val row = getClosestRowForLocation(e.x, e.y)
-        if (row < 0 || getRowBounds(row)?.let { e.y in it.y until it.y + it.height } != true) return null
-        val entry = eyeEntry(row) ?: return null
-        return entry.takeIf { eyeBounds(row, eyeIcon(it)).contains(e.point) }
+        return row.takeIf { it >= 0 && getRowBounds(it)?.let { b -> e.y in b.y until b.y + b.height } == true }
+    }
+
+    private fun actionAt(e: MouseEvent): Pair<Int, RowAction>? {
+        val row = rowOf(e) ?: return null
+        val action = actionFor(row) ?: return null
+        return (row to action).takeIf { iconBounds(row, action.icon).contains(e.point) }
     }
 
     init {
+        ToolTipManager.sharedInstance().registerComponent(this)
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
                 if (e.button != MouseEvent.BUTTON1) return
-                val entry = eyeAt(e) ?: return
+                val (row, action) = actionAt(e) ?: return
                 e.consume()
-                val wasExpanded = isExpanded(getPathForRow(getClosestRowForLocation(e.x, e.y)))
-                if (toggleEnabled(project, entry)) reselect(entry.path, wasExpanded)
+                action.run(row)
             }
         })
         addMouseMotionListener(object : MouseAdapter() {
             override fun mouseMoved(e: MouseEvent) {
-                cursor = if (eyeAt(e) != null) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
+                cursor = if (actionAt(e) != null) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
             }
         })
     }
+
+    override fun getToolTipText(event: MouseEvent): String? = actionAt(event)?.second?.tooltip ?: super.getToolTipText(event)
 
     /**
      * A toggled row changes identity (see [DtoEntry.equals]), so the refresh drops the selection onto
@@ -132,14 +154,13 @@ private class EyeTree(model: DefaultTreeModel, private val project: Project) : P
         val first = getClosestRowForLocation(0, clip.y)
         val last = getClosestRowForLocation(0, clip.y + clip.height)
         for (row in first..last) {
-            val entry = eyeEntry(row) ?: continue
-            val icon = eyeIcon(entry)
-            val r = eyeBounds(row, icon)
-            icon.paintIcon(this, g, r.x, r.y)
+            val action = actionFor(row) ?: continue
+            val r = iconBounds(row, action.icon)
+            action.icon.paintIcon(this, g, r.x, r.y)
         }
     }
 
     private companion object {
-        const val EYE_GAP = 8
+        const val ICON_GAP = 8
     }
 }
