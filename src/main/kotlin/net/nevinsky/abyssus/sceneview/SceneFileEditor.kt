@@ -77,9 +77,15 @@ class SceneFileEditor(project: Project, private val file: VirtualFile) : UserDat
             showStatus(AbyssusBundle.message("glUnavailable", e.message ?: e.javaClass.simpleName))
             return
         }
+        created.onFailure = { e -> ApplicationManager.getApplication().invokeLater { showGlFailure(e) } }
         panel = created
         statusText = null
         setContent(created)
+    }
+
+    internal fun showGlFailure(e: Throwable) {
+        if (Disposer.isDisposed(this)) return
+        showStatus(AbyssusBundle.message("glUnavailable", e.message ?: e.javaClass.simpleName))
     }
 
     private fun showStatus(text: String) {

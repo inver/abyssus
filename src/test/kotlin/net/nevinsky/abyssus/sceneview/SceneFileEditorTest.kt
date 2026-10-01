@@ -40,4 +40,16 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         assertNotNull(editor.component)
         editor.dispose()
     }
+
+    fun testLateGlFailureReplacesTabWithGlUnavailableMessage() {
+        val editor = provider.createEditor(project, file("late/Main.scene", """{"name":"x"}""")) as SceneFileEditor
+        try {
+            editor.showGlFailure(RuntimeException("no GL 3.2"))
+            val status = editor.statusText
+            assertNotNull(status)
+            assertTrue(status!!, status.startsWith("OpenGL scene is unavailable") && status.contains("no GL 3.2"))
+        } finally {
+            editor.dispose()
+        }
+    }
 }

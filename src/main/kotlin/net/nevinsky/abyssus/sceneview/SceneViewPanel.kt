@@ -24,12 +24,26 @@ class SceneViewPanel(initial: SceneRenderParams) : JPanel(BorderLayout()), Dispo
     private val orbit = OrbitCamera.from(initial.camera)
     private var gdx: GdxContext? = null
 
+    /** Called (on the AWT thread) when rendering fails, e.g. when no GL 3.2 core context can be created. */
+    var onFailure: ((Throwable) -> Unit)? = null
+
     private val canvas = object : AWTGLCanvas(glData()) {
         override fun initGL() {
             GL.createCapabilities()
             val ctx = GdxRuntime.newContext(frame, GdxGlBridge.gl20(), GdxGlBridge.gl30(), Lwjgl3Files())
             gdx = ctx
             GdxRuntime.withContext(ctx) { renderer.create() }
+        }
+
+        /** Runs once per GL context, with it current: on `removeNotify` and on `disposeCanvas`. */
+        override fun disposeGL() {
+            val ctx = gdx ?: return
+            gdx = null
+            try {
+                GdxRuntime.withContext(ctx) { renderer.dispose() }
+            } catch (e: Throwable) {
+                thisLogger().warn("Failed to release scene view GL resources", e)
+            }
         }
 
         override fun paintGL() {
@@ -46,6 +60,7 @@ class SceneViewPanel(initial: SceneRenderParams) : JPanel(BorderLayout()), Dispo
         } catch (e: Throwable) {
             thisLogger().warn("Scene render failed, stopping the view", e)
             stopLoop()
+            onFailure?.invoke(e)
         }
     }
 
@@ -93,11 +108,7 @@ class SceneViewPanel(initial: SceneRenderParams) : JPanel(BorderLayout()), Dispo
 
     override fun dispose() {
         stopLoop()
-        val ctx = gdx
-        if (ctx != null) {
-            canvas.runInContext { GdxRuntime.withContext(ctx) { renderer.dispose() } }
-        }
-        canvas.disposeCanvas()
+        canvas.disposeCanvas() // releases GL resources through disposeGL while the context is still current
     }
 
     private companion object {
