@@ -1,16 +1,14 @@
 package net.nevinsky.abyssus.toolWindow
 
-import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBPanel
 import com.intellij.ui.content.ContentFactory
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.services.MyProjectService
-import javax.swing.JButton
+import javax.swing.JComponent
 
 
 class MyToolWindowFactory : ToolWindowFactory {
@@ -29,19 +27,13 @@ class MyToolWindowFactory : ToolWindowFactory {
 
     override fun shouldBeAvailable(project: Project) = true
 
-    class MyToolWindow(toolWindow: ToolWindow) {
+    class MyToolWindow(private val toolWindow: ToolWindow) {
 
-        private val service = toolWindow.project.service<MyProjectService>()
-
-        fun getContent() = JBPanel<JBPanel<*>>().apply {
-            val label = JBLabel(AbyssusBundle.message("randomLabel", "?"))
-
-            add(label)
-            add(JButton(AbyssusBundle.message("shuffle")).apply {
-                addActionListener {
-                    label.text = AbyssusBundle.message("randomLabel", service.getRandomNumber())
-                }
-            })
+        fun getContent(): JComponent = try {
+            GlScenePanel().also { Disposer.register(toolWindow.disposable, it) }
+        } catch (e: Throwable) {
+            thisLogger().warn("Failed to create OpenGL panel", e)
+            JBLabel(AbyssusBundle.message("glUnavailable", e.message ?: e.javaClass.simpleName))
         }
     }
 }

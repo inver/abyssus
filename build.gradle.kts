@@ -38,6 +38,17 @@ dependencies {
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
     testImplementation("junit:junit:4.13.2")
+
+    // LWJGL 3 + AWT bridge for the OpenGL scene panel
+    val lwjglVersion = "3.4.3"
+    val lwjglNatives = listOf("natives-macos-arm64", "natives-macos", "natives-windows", "natives-linux")
+    implementation("org.lwjglx:lwjgl3-awt:0.2.5")
+    implementation("org.lwjgl:lwjgl:$lwjglVersion")
+    implementation("org.lwjgl:lwjgl-opengl:$lwjglVersion")
+    lwjglNatives.forEach {
+        runtimeOnly("org.lwjgl:lwjgl:$lwjglVersion:$it")
+        runtimeOnly("org.lwjgl:lwjgl-opengl:$lwjglVersion:$it")
+    }
 }
 
 // Set the JVM language level used to build the project. IntelliJ 2025.2+ requires Java 21.
