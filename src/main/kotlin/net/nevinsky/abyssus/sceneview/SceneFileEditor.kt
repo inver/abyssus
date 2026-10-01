@@ -41,7 +41,7 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
 
 /** Read-only live view of a `.scene`; re-reads the scene when the file changes. */
 class SceneFileEditor(project: Project, private val file: VirtualFile) : UserDataHolderBase(), FileEditor {
-    private val content = JPanel(BorderLayout())
+    private val content = JPanel(BorderLayout()).apply { isFocusable = true }
     private var panel: SceneViewPanel? = null
 
     /** Non-null while the tab shows a message instead of a render. */
@@ -103,7 +103,7 @@ class SceneFileEditor(project: Project, private val file: VirtualFile) : UserDat
     }
 
     override fun getComponent(): JComponent = content
-    override fun getPreferredFocusedComponent(): JComponent? = null
+    override fun getPreferredFocusedComponent(): JComponent = content
     override fun getName() = AbyssusBundle.message("sceneViewEditorName")
     override fun getFile(): VirtualFile = file
     override fun setState(state: FileEditorState) {}

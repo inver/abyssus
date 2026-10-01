@@ -1,6 +1,9 @@
 package net.nevinsky.abyssus.projectView
 
 import com.intellij.icons.AllIcons
+import com.intellij.ide.SelectInTarget
+import com.intellij.ide.impl.ProjectViewSelectInTarget
+import com.intellij.openapi.project.DumbAware
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.projectView.impl.ProjectAbstractTreeStructureBase
 import com.intellij.ide.projectView.impl.ProjectTreeStructure
@@ -33,7 +36,7 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project) {
 
     override fun getIcon(): Icon = SceneIcons.FILE
 
-    override fun getWeight(): Int = 100
+    override fun getWeight(): Int = WEIGHT
 
     override fun createStructure(): ProjectAbstractTreeStructureBase = object : ProjectTreeStructure(myProject, ID) {
         override fun createRoot(project: Project, settings: ViewSettings): AbstractTreeNode<*> =
@@ -42,10 +45,14 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project) {
         override fun isToBuildChildrenInBackground(element: Any) = true
     }
 
+    // The platform requires the target's minor view id to equal the pane id; the inherited one is "ProjectPane".
+    override fun createSelectInTarget(): SelectInTarget = AbyssusSelectInTarget(myProject)
+
     override fun createTree(treeModel: DefaultTreeModel): ProjectViewTree = EyeTree(treeModel, myProject)
 
     companion object {
         const val ID = "Abyssus"
+        const val WEIGHT = 100
     }
 }
 
@@ -67,6 +74,15 @@ private class GrayKeepingRenderer : ProjectViewRenderer() {
             super.append(fragment, attributes, isMainText)
         }
     }
+}
+
+/** "Select in Abyssus view": selects the current file in this pane. */
+private class AbyssusSelectInTarget(project: Project) : ProjectViewSelectInTarget(project), DumbAware {
+    override fun toString(): String = AbyssusProjectViewPane.ID
+
+    override fun getMinorViewId(): String = AbyssusProjectViewPane.ID
+
+    override fun getWeight(): Float = AbyssusProjectViewPane.WEIGHT.toFloat()
 }
 
 private class RowAction(val icon: Icon, val tooltip: String?, val run: (row: Int) -> Unit)
