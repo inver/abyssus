@@ -110,7 +110,7 @@ class SceneRenderGlTest {
         assertEquals("skybox_default", p.content.skybox)
         val withSky = GlHarness.render(p, 200)
         assertNull(withSky.error)
-        val noSky = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
+        val noSky = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.putNull("skyboxName") } }
         val without = GlHarness.render(noSky, 200)
         // the top-left corner is sky in one and plain clear color in the other
         assertTrue(withSky.image.getRGB(2, 2) != without.image.getRGB(2, 2))
@@ -154,9 +154,9 @@ class SceneRenderGlTest {
             }
         }
         assertNull(r.error)
-        // entities 0, 2 and 6 are models, 1 is the terrain (see Main Scene.scene)
+        // entities 0, 2 and 6 are models, 1 is the terrain, 4 is the camera (see Main Scene.scene)
         assertTrue("picked only $found", found.containsAll(setOf("0", "2", "6", "1")))
-        assertTrue("picked something else: $found", (found - setOf("0", "2", "6", "1")).isEmpty())
+        assertTrue("picked something else: $found", (found - setOf("0", "2", "6", "1", "4")).isEmpty())
     }
 
     @Test
@@ -225,5 +225,41 @@ class SceneRenderGlTest {
         }
         assertNull(r.error)
         assertTrue("the longest frame took ${worst / 1_000_000} ms", worst < 450_000_000L)
+    }
+
+    @Test
+    fun mainSceneDrawsItsCameraMarker() {
+        val p = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
+        var markers = -1
+        val r = GlHarness.render(p, 60) { renderer, _ -> markers = renderer.drawnCameraMarkers }
+        assertNull(r.error)
+        assertEquals(1, markers)
+    }
+
+    @Test
+    fun aSelectedModelRendersItsGizmoWithoutErrors() {
+        val p = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
+        for (mode in net.nevinsky.abyssus.sceneview.gizmo.GizmoMode.entries) {
+            var gizmo = false
+            val r = GlHarness.render(p, 120) { renderer, _ ->
+                renderer.selectedId = "0"
+                renderer.gizmoMode = mode
+                gizmo = renderer.drewGizmo
+            }
+            assertNull(r.error)
+            assertTrue("no $mode gizmo drawn", gizmo)
+        }
+    }
+
+    @Test
+    fun lookingThroughTheCameraHidesItsOwnMarker() {
+        val p = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
+        var markers = -1
+        val r = GlHarness.render(p, 60) { renderer, _ ->
+            renderer.viewCamera = "4"
+            markers = renderer.drawnCameraMarkers
+        }
+        assertNull(r.error)
+        assertEquals(0, markers)
     }
 }

@@ -18,6 +18,9 @@ package net.nevinsky.abyssus.sceneview
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.thisLogger
+import com.intellij.openapi.command.undo.DocumentReference
+import com.intellij.openapi.command.undo.DocumentReferenceManager
+import com.intellij.openapi.command.undo.DocumentReferenceProvider
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -40,6 +43,7 @@ import com.intellij.ui.components.JBLabel
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.projectView.editSceneJson
 import net.nevinsky.abyssus.projectView.selectEntityInAbyssusView
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
@@ -62,7 +66,8 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
 }
 
 /**
- * Read-only live view of a `.scene`; re-reads it through [paramsSource] as its sources are edited or change on disk.
+ * Live view of a `.scene`; re-reads it through [paramsSource] as its sources are edited or change on disk. Moving or
+ * rotating an object in the view writes the scene as one undoable edit, and Undo in this tab reaches it.
  * The view comes from [viewFactory], so tests can replace the GL panel.
  */
 class SceneFileEditor(
@@ -70,7 +75,7 @@ class SceneFileEditor(
     private val file: VirtualFile,
     private val paramsSource: SceneParamsSource = SceneParamsSource.EDITOR_TEXT,
     private val viewFactory: (SceneRenderParams) -> SceneView = { SceneViewPanel(it) },
-) : UserDataHolderBase(), FileEditor {
+) : UserDataHolderBase(), FileEditor, DocumentReferenceProvider {
     private val content = JPanel(BorderLayout()).apply { isFocusable = true }
     private var view: SceneView? = null
 
@@ -120,9 +125,22 @@ class SceneFileEditor(
         }
         created.onFailure = { e -> ApplicationManager.getApplication().invokeLater { showGlFailure(e) } }
         created.onPick = { entityId -> selectEntityInAbyssusView(project, file, entityId) }
+        created.onTransform = ::applyTransform
         view = created
         statusText = null
         setContent(created.view)
+    }
+
+    /** Writes [edit] to the entity [entityId] of the scene as one undoable command; false when nothing changed. */
+    internal fun applyTransform(entityId: String, edit: TransformEdit): Boolean {
+        val command = AbyssusBundle.message(if (edit.rotation != null) "commandRotateEntity" else "commandMoveEntity")
+        return editSceneJson(project, file, command) { root -> SceneTransformWriter.apply(root, entityId, edit) }
+    }
+
+    /** The scene's document, so that Undo and Redo in this tab reach the edits made here. */
+    override fun getDocumentReferences(): Collection<DocumentReference> {
+        val document = FileDocumentManager.getInstance().getDocument(file) ?: return emptyList()
+        return listOf(DocumentReferenceManager.getInstance().create(document))
     }
 
     internal fun showGlFailure(e: Throwable) {

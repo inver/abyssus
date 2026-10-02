@@ -55,6 +55,29 @@ data class LightPlacement(
     val position: Vec3,
     val direction: Vec3,
     val range: Float = DEFAULT_LIGHT_RANGE,
+    val rotation: Quat = Quat.IDENTITY,
+)
+
+/** libGDX `PerspectiveCamera` defaults, used for the fields a camera entity leaves out. */
+const val DEFAULT_CAMERA_NEAR = 1f
+const val DEFAULT_CAMERA_FAR = 100f
+const val DEFAULT_CAMERA_FOV = 67f
+
+/**
+ * A camera entity. [direction] is the view direction from `viewPointPosition` (as in the file, not yet normalized);
+ * it is overridden by the position of [lookAtId] while that resolves. [name] is the entity's `NameComponent` name,
+ * or its id when unnamed.
+ */
+data class CameraPlacement(
+    val entityId: String,
+    val name: String,
+    val position: Vec3,
+    val direction: Vec3,
+    val lookAtId: String?,
+    val near: Float = DEFAULT_CAMERA_NEAR,
+    val far: Float = DEFAULT_CAMERA_FAR,
+    val fieldOfView: Float = DEFAULT_CAMERA_FOV,
+    val rotation: Quat = Quat.IDENTITY,
 )
 
 /** What a scene shows besides its environment. */
@@ -64,6 +87,9 @@ data class SceneContent(
     val lights: List<LightPlacement> = emptyList(),
     /** The skybox asset folder to draw, or null when the scene has no enabled, named skybox. */
     val skybox: String? = null,
+    val cameras: List<CameraPlacement> = emptyList(),
+    /** `localPosition` of every entity with a `PositionComponent` (entity id to position), for look-at targets. */
+    val entityPositions: Map<String, Vec3> = emptyMap(),
 ) {
     companion object {
         val EMPTY = SceneContent()
@@ -73,21 +99,25 @@ data class SceneContent(
             val models = mutableListOf<AssetPlacement>()
             val terrains = mutableListOf<AssetPlacement>()
             val lights = mutableListOf<LightPlacement>()
+            val cameras = mutableListOf<CameraPlacement>()
+            val positions = linkedMapOf<String, Vec3>()
             entities?.properties()?.forEach { (id, entity) ->
                 val components = entity.obj("components") ?: return@forEach
                 runCatchingKeepingCancellation {
                     val transform = transformOf(components.opt("PositionComponent"))
+                    if (components.opt("PositionComponent") != null) positions[id] = transform.position
                     val asset = components.opt("RenderComponent")?.opt("renderable")?.opt("asset")
                     val assetName = asset?.text("assetName")
                     when {
                         assetName != null && asset.text("type") == "MODEL" -> models += AssetPlacement(id, assetName, transform)
                         assetName != null && asset.text("type") == "TERRAIN" -> terrains += AssetPlacement(id, assetName, transform)
+                        components.opt("CameraComponent") != null -> cameras += cameraOf(id, components, transform)
                         else -> lightOf(id, components, transform)?.let { lights += it }
                     }
                 }
             }
             val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled == true && it.isNotBlank() }
-            return SceneContent(models, terrains, lights, skybox)
+            return SceneContent(models, terrains, lights, skybox, cameras, positions)
         }
 
         private fun number(node: JsonNode?, name: String, default: Float) = node?.float(name) ?: default
@@ -102,6 +132,32 @@ data class SceneContent(
                 vec(position.opt("localPosition"), 0f),
                 Quat(number(rotation, "x", 0f), number(rotation, "y", 0f), number(rotation, "z", 0f), number(rotation, "w", 1f)),
                 vec(position.opt("localScale"), 1f),
+            )
+        }
+
+        /**
+         * A camera entity has a `CameraComponent` whose `camera` object holds the view; a missing one leaves libGDX
+         * defaults. The position is the entity's own, else the camera's.
+         */
+        private fun cameraOf(id: String, components: JsonNode, transform: PlacementTransform): CameraPlacement {
+            val camera = components.opt("CameraComponent")?.obj("camera")
+            val position = components.opt("PositionComponent")?.opt("localPosition")
+            val placed = if (position != null || camera?.obj("position") == null) transform.position else vec(camera.obj("position"), 0f)
+            val direction = camera?.obj("viewPointPosition")?.let { vec(it, 0f) } ?: Vec3(0f, 0f, -1f)
+            val lookAt = components.opt("PositionComponent")?.opt("lookAtId")?.let {
+                when {
+                    it.isIntegralNumber -> it.asLong().takeIf { n -> n >= 0 }?.toString()
+                    it.isTextual -> it.asText().takeIf { t -> t.isNotBlank() && t != "-1" }
+                    else -> null
+                }
+            }
+            val name = components.opt("NameComponent")?.text("name")?.takeIf { it.isNotBlank() } ?: id
+            return CameraPlacement(
+                id, name, placed, direction, lookAt,
+                number(camera, "near", DEFAULT_CAMERA_NEAR),
+                number(camera, "far", DEFAULT_CAMERA_FAR),
+                number(camera, "fieldOfView", DEFAULT_CAMERA_FOV),
+                transform.rotation,
             )
         }
 
@@ -123,11 +179,11 @@ data class SceneContent(
             val rgba = Rgba(number(color, "r", 1f), number(color, "g", 1f), number(color, "b", 1f), 1f)
             val intensity = number(light, "intensity", 0.3f).coerceAtLeast(0f)
             val range = number(light, "range", DEFAULT_LIGHT_RANGE)
-            return LightPlacement(id, kind, rgba, intensity, transform.position, forward(transform.rotation), range)
+            return LightPlacement(id, kind, rgba, intensity, transform.position, forward(transform.rotation), range, transform.rotation)
         }
 
         /** The libGDX forward axis (-Z) rotated by [q]. */
-        private fun forward(q: Quat): Vec3 {
+        internal fun forward(q: Quat): Vec3 {
             val len = kotlin.math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w)
             if (len < 1e-6f) return Vec3(0f, 0f, -1f)
             val x = q.x / len

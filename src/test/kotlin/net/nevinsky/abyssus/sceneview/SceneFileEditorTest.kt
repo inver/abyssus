@@ -75,6 +75,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         var updates = 0
         override var onFailure: ((Throwable) -> Unit)? = null
         override var onPick: ((String) -> Unit)? = null
+        override var onTransform: ((String, TransformEdit) -> Boolean)? = null
         override val view: javax.swing.JComponent get() = component
         override fun setParams(params: SceneRenderParams) {
             current = params
@@ -170,6 +171,63 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             assertEquals(1f, views[0].current.camera.position.x, 0f)
             setText(abss, """{"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":5,"y":2,"z":3}}}""")
             assertEquals(5f, views[0].current.camera.position.x, 0f)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
+    private val mainScene get() = java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
+
+    private fun textOf(f: com.intellij.openapi.vfs.VirtualFile) =
+        com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(f)!!.text
+
+    fun testMovingAnEntityWritesOnlyItsPositionAndUndoRestoresTheFile() {
+        val views = mutableListOf<FakeView>()
+        val (editor, f) = fakeEditor("move/Main Scene.scene", mainScene, views)
+        try {
+            val before = textOf(f)
+            val old = views[0].current.content.models.first { it.entityId == "0" }.transform.position
+            val moved = Vec3(old.x + 2f, old.y, old.z)
+            assertTrue(views[0].onTransform!!.invoke("0", TransformEdit(position = moved)))
+            val after = textOf(f)
+            val changed = before.lines().indices.filter { before.lines()[it] != after.lines()[it] }
+            assertEquals(1, changed.size)
+            assertEquals(moved.x, views[0].current.content.models.first { it.entityId == "0" }.transform.position.x, 1e-5f)
+            // the scene view tab's own Undo reaches the edit
+            val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
+            assertTrue(undo.isUndoAvailable(editor))
+            undo.undo(editor)
+            assertEquals(before, textOf(f))
+            assertEquals(old.x, views[0].current.content.models.first { it.entityId == "0" }.transform.position.x, 1e-5f)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
+    fun testATransformThatChangesNothingIsNotWritten() {
+        val views = mutableListOf<FakeView>()
+        val (editor, f) = fakeEditor("same/Main Scene.scene", mainScene, views)
+        try {
+            val before = textOf(f)
+            val old = views[0].current.content.models.first { it.entityId == "0" }.transform.position
+            assertFalse(views[0].onTransform!!.invoke("0", TransformEdit(position = old)))
+            assertFalse(views[0].onTransform!!.invoke("99", TransformEdit(position = Vec3(1f, 1f, 1f))))
+            assertEquals(before, textOf(f))
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
+    fun testRotatingIsUndoable() {
+        val views = mutableListOf<FakeView>()
+        val (editor, f) = fakeEditor("rot/Main Scene.scene", mainScene, views)
+        try {
+            val before = textOf(f)
+            assertTrue(views[0].onTransform!!.invoke("0", TransformEdit(rotation = Quat(0f, 0.7071f, 0f, 0.7071f))))
+            assertTrue(textOf(f).contains("localRotation"))
+            val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
+            undo.undo(editor)
+            assertEquals(before, textOf(f))
         } finally {
             com.intellij.openapi.util.Disposer.dispose(editor)
         }

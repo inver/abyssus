@@ -1,0 +1,88 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package net.nevinsky.abyssus.projectView
+
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.Color
+import java.awt.Rectangle
+import java.awt.image.BufferedImage
+import javax.swing.JLabel
+
+class RowActionsTest : BasePlatformTestCase() {
+    private val host = JLabel("x")
+
+    private fun entryOf(unused: Boolean) =
+        DtoEntry("/p/assets/0", "0", net.nevinsky.abyssus.dto.AssetInfo("a", "u", "SKYBOX", emptyList(), unused), null, null, null, emptyList())
+
+    private fun paint(action: RowAction): BufferedImage {
+        val w = action.width(host)
+        val h = action.height(host)
+        val image = BufferedImage(w + 4, h + 4, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        action.paint(g, Rectangle(2, 2, w, h), host)
+        g.dispose()
+        return image
+    }
+
+    private fun opaquePixels(image: BufferedImage, test: (Color) -> Boolean) =
+        (0 until image.width).sumOf { x -> (0 until image.height).count { y -> Color(image.getRGB(x, y), true).let { it.alpha > 128 && test(it) } } }
+
+    fun testOnlyUnusedAssetsGetTheBadge() {
+        assertTrue(unusedBadgeFor(entryOf(true)) is UnusedBadge)
+        assertNull(unusedBadgeFor(entryOf(false)))
+        assertNull(unusedBadgeFor(DtoEntry("/p/x", "x", "text", null, null, null, emptyList())))
+    }
+
+    fun testBadgeIsAnEighteenPixelAmberOutlineWithAmberText() {
+        val badge = UnusedBadge()
+        assertEquals(18, badge.height(host))
+        assertNull(badge.run)
+        assertNull(badge.tooltip)
+        val image = paint(badge)
+        assertTrue("outline is drawn", opaquePixels(image) { it.rgb == UnusedBadge.BORDER.rgb } > 20)
+        assertTrue("text is drawn in amber", opaquePixels(image) { Math.abs(it.red - UnusedBadge.TEXT.red) < 40 && Math.abs(it.green - UnusedBadge.TEXT.green) < 40 && it.blue < 120 } > 5)
+    }
+
+    fun testChooseButtonIsATwentyFourPixelOutlinedClickableButton() {
+        var clicked = -1
+        val choose = ChooseButton("Choose skybox...") { clicked = it }
+        assertEquals(24, choose.height(host))
+        assertEquals("Choose skybox...", choose.tooltip)
+        choose.run!!.invoke(3)
+        assertEquals(3, clicked)
+        assertTrue(choose.width(host) > 24 + host.getFontMetrics(host.font).stringWidth("Choose"))
+        val image = paint(choose)
+        assertTrue("outline is drawn", opaquePixels(image) { it.rgb == ChooseButton.BORDER.rgb } > 30)
+        assertTrue("icon and label are drawn", opaquePixels(image) { it.rgb != ChooseButton.BORDER.rgb } > 20)
+    }
+
+    fun testActionsSitRightToLeftWithGapsAndAreCentredOnTheRow() {
+        val eye = IconAction(net.nevinsky.abyssus.filetype.EyeIcons.ON, null) { }
+        val choose = ChooseButton(null) { }
+        val badge = UnusedBadge()
+        val row = Rectangle(0, 100, 400, 28)
+        val bounds = layoutActions(row, 400, listOf(eye, choose, badge), host)
+        assertEquals(400 - 8 - 16, bounds[0].x)
+        assertEquals(bounds[0].x - 8 - choose.width(host), bounds[1].x)
+        assertEquals(bounds[1].x - 8 - badge.width(host), bounds[2].x)
+        assertTrue("the badge is the leftmost", bounds[2].x < bounds[1].x && bounds[1].x < bounds[0].x)
+        bounds.forEachIndexed { i, b ->
+            assertTrue("action $i is centred", Math.abs((row.y + row.height / 2) - (b.y + b.height / 2)) <= 1)
+            if (i > 0) assertTrue("no overlap", b.x + b.width <= bounds[i - 1].x)
+        }
+    }
+}

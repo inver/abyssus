@@ -124,4 +124,57 @@ class SceneContentTest {
     fun noEcsIsEmpty() {
         assertEquals(SceneContent.EMPTY, content("{}"))
     }
+
+    @Test
+    fun mainSceneHasTheFixtureCamera() {
+        val c = content(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
+        val cam = c.cameras.single()
+        assertEquals("4", cam.entityId)
+        assertEquals("Camera 4", cam.name)
+        assertEquals(-17.7f, cam.position.x, 0.05f)
+        assertEquals(6.1f, cam.position.y, 0.05f)
+        assertEquals(0.6f, cam.position.z, 0.05f)
+        assertEquals("3", cam.lookAtId)
+        assertEquals(1f, cam.near, 0f)
+        assertEquals(100f, cam.far, 0f)
+        assertEquals(67f, cam.fieldOfView, 0f)
+        assertEquals(Vec3(0f, 0f, 0f), c.entityPositions["3"])
+        assertTrue(c.lights.isEmpty())
+        assertEquals(3, c.models.size)
+    }
+
+    @Test
+    fun cameraWithoutCameraObjectGetsDefaults() {
+        val cam = content(entity("""{"CameraComponent":{},"PositionComponent":{"localPosition":{"x":1,"y":2,"z":3}}}""")).cameras.single()
+        assertEquals(Vec3(1f, 2f, 3f), cam.position)
+        assertEquals(Vec3(0f, 0f, -1f), cam.direction)
+        assertEquals(DEFAULT_CAMERA_NEAR, cam.near, 0f)
+        assertEquals(DEFAULT_CAMERA_FAR, cam.far, 0f)
+        assertEquals(DEFAULT_CAMERA_FOV, cam.fieldOfView, 0f)
+        assertEquals("7", cam.name)
+        assertNull(cam.lookAtId)
+    }
+
+    @Test
+    fun cameraWithoutLookAtKeepsViewPoint() {
+        val cam = content(entity("""{"CameraComponent":{"camera":{"viewPointPosition":{"x":1,"y":0,"z":0}}},
+            "PositionComponent":{"lookAtId":-1}}""")).cameras.single()
+        assertNull(cam.lookAtId)
+        assertEquals(Vec3(1f, 0f, 0f), cam.direction)
+    }
+
+    @Test
+    fun cameraPositionFallsBackToTheCameraObject() {
+        val cam = content(entity("""{"CameraComponent":{"camera":{"position":{"x":4,"y":5,"z":6}}}}""")).cameras.single()
+        assertEquals(Vec3(4f, 5f, 6f), cam.position)
+    }
+
+    @Test
+    fun camerasAreNeitherLightsNorModels() {
+        val c = content(entity("""{"TypeComponent":{"type":"CAMERA"},"CameraComponent":{"camera":{}},
+            "RenderComponent":{"renderable":{"class":"x"}}}"""))
+        assertEquals(1, c.cameras.size)
+        assertTrue(c.lights.isEmpty())
+        assertTrue(c.models.isEmpty())
+    }
 }

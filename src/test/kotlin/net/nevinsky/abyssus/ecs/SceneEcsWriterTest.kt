@@ -27,8 +27,10 @@ class SceneEcsWriterTest {
     private fun assertSameJson(path: String, expected: JsonNode, actual: JsonNode) {
         when {
             expected.isObject -> {
-                assertEquals("keys at $path", expected.fieldNames().asSequence().toSet(), actual.fieldNames().asSequence().toSet())
-                expected.fields().forEach { (k, v) -> assertSameJson("$path/$k", v, actual[k]) }
+                // the writer leaves out a zero number (a default), which Mundus may have written out explicitly
+                val kept = expected.fieldNames().asSequence().filter { k -> actual.has(k) || !(expected[k].isNumber && expected[k].doubleValue() == 0.0) }.toSet()
+                assertEquals("keys at $path", kept, actual.fieldNames().asSequence().toSet())
+                kept.forEach { k -> assertSameJson("$path/$k", expected[k], actual[k]) }
             }
             expected.isArray -> {
                 assertEquals("size at $path", expected.size(), actual.size())

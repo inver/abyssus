@@ -93,7 +93,7 @@ data class SceneRenderParams(
     }
 }
 
-private fun normalized(v: Vec3): Vec3? {
+internal fun normalized(v: Vec3): Vec3? {
     val len = sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
     return if (len > 1e-6f && len.isFinite()) Vec3(v.x / len, v.y / len, v.z / len) else null
 }

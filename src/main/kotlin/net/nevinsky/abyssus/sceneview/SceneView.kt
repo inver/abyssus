@@ -29,5 +29,11 @@ interface SceneView : Disposable {
     /** Called on the AWT thread with the id (key under `ecs/entities`) of the entity the user clicked. */
     var onPick: ((String) -> Unit)?
 
+    /**
+     * Called on the AWT thread when a drag of a gizmo handle ends with the entity moved or rotated, with the entity's id
+     * (key under `ecs/entities`) and the change. Returns whether it was written to the scene.
+     */
+    var onTransform: ((String, TransformEdit) -> Boolean)?
+
     fun setParams(params: SceneRenderParams)
 }

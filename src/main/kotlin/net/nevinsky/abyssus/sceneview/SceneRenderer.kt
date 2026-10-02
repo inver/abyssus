@@ -31,12 +31,21 @@ import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder.VertexInfo
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
+import com.badlogic.gdx.math.collision.Ray
 import com.intellij.openapi.Disposable
 import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.core.model.Model as ContentModel
 import net.nevinsky.abyssus.core.shader.DefaultShaderProvider
 import net.nevinsky.abyssus.core.shader.ShaderProvider
 import net.nevinsky.abyssus.sceneview.fog.FogShaderProvider
+import net.nevinsky.abyssus.sceneview.gizmo.DragResult
+import net.nevinsky.abyssus.sceneview.gizmo.GizmoAxis
+import net.nevinsky.abyssus.sceneview.gizmo.GizmoDrag
+import net.nevinsky.abyssus.sceneview.gizmo.GizmoDraw
+import net.nevinsky.abyssus.sceneview.gizmo.GizmoHandles
+import net.nevinsky.abyssus.sceneview.gizmo.GizmoHit
+import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
+import net.nevinsky.abyssus.sceneview.gizmo.canRotate
 import net.nevinsky.abyssus.sceneview.model.ModelLoader
 import net.nevinsky.abyssus.sceneview.model.PreparedModel
 import net.nevinsky.abyssus.sceneview.skybox.PreparedSkybox
@@ -68,6 +77,33 @@ class SceneRenderer(
     @Volatile
     var params: SceneRenderParams = SceneRenderParams.DEFAULT
 
+    /** The entity id the view highlights and shows a gizmo on, or null. */
+    @Volatile
+    var selectedId: String? = null
+
+    @Volatile
+    var gizmoMode: GizmoMode = GizmoMode.MOVE
+
+    /** The gizmo handle under the cursor, drawn brighter. */
+    @Volatile
+    var hoveredAxis: GizmoAxis? = null
+
+    /** The camera entity the viewport renders from instead of the orbit view, or null. */
+    @Volatile
+    var viewCamera: String? = null
+
+    /** Transforms shown over the scene's own while a gizmo drag is in progress (entity id to where it is now). */
+    @Volatile
+    var preview: Map<String, DragResult> = emptyMap()
+
+    /** The scene's content with [preview] applied. */
+    internal val content: SceneContent
+        get() {
+            val c = params.content
+            val p = preview
+            return if (p.isEmpty()) c else ScenePreview.apply(c, p)
+        }
+
     private var batch: ModelBatch? = null
     private var contentBatch: ContentBatch? = null
     private var contentShaders: DefaultShaderProvider? = null
@@ -78,6 +114,7 @@ class SceneRenderer(
     private var overlay: LoadingOverlay? = null
     private var lightsKey: Pair<List<LightPlacement>, Vec3>? = null
     private var lights = LightSet.NONE
+    private var lineBatch: LineBatch? = null
     private var gridModel: Model? = null
     private var grid: ModelInstance? = null
     private val camera = PerspectiveCamera()
@@ -101,6 +138,12 @@ class SceneRenderer(
 
     internal val drawnTerrains: Collection<TerrainEntity> get() = terrains.drawn
 
+    /** How many camera markers and whether a gizmo were drawn in the last frame (for tests). */
+    internal var drawnCameraMarkers = 0
+        private set
+    internal var drewGizmo = false
+        private set
+
     /**
      * The entity under the pixel ([screenX], [screenY]) of a [width] x [height] view, as of the last rendered frame;
      * null when there is none. Uses CPU-side data only, so it needs no GL context.
@@ -111,10 +154,42 @@ class SceneRenderer(
         val boxes = models.drawn.map { e ->
             // the model's bounds moved into the world
             BoxTarget(e.placement.entityId, BoundingBox(e.localBounds).mul(e.instance.transform))
-        }
+        } + SceneMarkers.targets(content, viewCamera)
         val grounds = terrains.drawn.map { TerrainTarget(it.placement.entityId, it.terrain.data, it.world) }
         return ScenePicker.pick(ray, boxes, grounds, camera.far)
     }
+
+    /** The ray through the pixel ([screenX], [screenY]) of a [width] x [height] view, as of the last rendered frame. */
+    fun rayAt(screenX: Int, screenY: Int, width: Int, height: Int): Ray? =
+        if (width <= 0 || height <= 0) null else ScenePicker.pickRay(camera, screenX, screenY, width, height)
+
+    /** The gizmo of the selected entity for a view [height] pixels tall, or null when nothing is selected or it has no handles. */
+    internal fun gizmoHandles(height: Int): GizmoHandles? {
+        val id = selectedId ?: return null
+        val c = content
+        if (gizmoMode == GizmoMode.ROTATE && !canRotate(c, id)) return null
+        val selected = ScenePreview.selected(c, id) ?: return null
+        val eye = Vec3(camera.position.x, camera.position.y, camera.position.z)
+        return GizmoHandles.of(selected.transform.position, gizmoMode, eye, camera.fieldOfView, height)
+    }
+
+    /** The handle of the selected entity's gizmo under the pixel, or null. Uses CPU-side data only. */
+    fun gizmoHit(screenX: Int, screenY: Int, width: Int, height: Int): GizmoAxis? {
+        val handles = gizmoHandles(height) ?: return null
+        val ray = rayAt(screenX, screenY, width, height) ?: return null
+        return GizmoHit.find(ray, handles)
+    }
+
+    /** A drag of the [axis] handle of the selected entity's gizmo, started at the pixel; null when it cannot start. */
+    fun beginDrag(axis: GizmoAxis, screenX: Int, screenY: Int, width: Int, height: Int): GizmoDrag? {
+        val id = selectedId ?: return null
+        val selected = ScenePreview.selected(content, id) ?: return null
+        val ray = rayAt(screenX, screenY, width, height) ?: return null
+        return GizmoDrag(gizmoMode, axis, selected.transform, ray, selected.direction).takeIf { it.isUsable }
+    }
+
+    /** The camera as of the last frame (for tests). */
+    internal val frameCamera: PerspectiveCamera get() = camera
 
     /**
      * Starts with a clean slate. When the previous GL context was abandoned instead of released (the view was hidden),
@@ -128,6 +203,7 @@ class SceneRenderer(
         terrainShader = TerrainShader()
         skybox = SceneSkybox(executor, loaders.skyboxes)
         overlay = LoadingOverlay()
+        lineBatch = LineBatch()
         gridModel = buildGrid().also { grid = ModelInstance(it) }
     }
 
@@ -145,16 +221,7 @@ class SceneRenderer(
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
 
-        val eye = orbit.position()
-        camera.viewportWidth = width.toFloat()
-        camera.viewportHeight = height.toFloat()
-        camera.fieldOfView = p.camera.fieldOfView
-        camera.near = p.camera.near
-        camera.far = p.camera.far
-        camera.position.set(eye.x, eye.y, eye.z)
-        camera.up.set(Vector3.Y)
-        camera.lookAt(orbit.target.x, orbit.target.y, orbit.target.z)
-        camera.update()
+        updateCamera(width, height, orbit)
 
         skybox?.draw(camera, p.content.skybox, p.projectDir)
 
@@ -163,30 +230,108 @@ class SceneRenderer(
         batch.end()
 
         renderContent(p, orbit, deltaSeconds)
+        drawOverlays(width, height)
 
         // grayed out with a spinner for as long as the scene's assets are on their way
         loading = (skybox?.isLoading ?: false) || models.isLoading || terrains.isLoading
         if (loading) overlay?.draw(width, height, deltaSeconds)
     }
 
+    /**
+     * Sets the frame's camera: from the camera entity [viewCamera] when the scene has it, else from [orbit]. Needs no GL,
+     * so tests can call it directly.
+     */
+    internal fun updateCamera(width: Int, height: Int, orbit: OrbitCamera) {
+        val p = params
+        val c = content
+        val through = viewCamera?.let { id -> c.cameras.firstOrNull { it.entityId == id } }
+        camera.viewportWidth = width.toFloat()
+        camera.viewportHeight = height.toFloat()
+        if (through != null) {
+            val direction = CameraFrustum.directionOf(through, c.entityPositions)
+            camera.fieldOfView = through.fieldOfView.takeIf { it > 0f && it < 180f } ?: DEFAULT_CAMERA_FOV
+            camera.near = through.near.coerceAtLeast(MIN_NEAR)
+            camera.far = through.far.coerceAtLeast(camera.near + MIN_NEAR)
+            camera.position.set(through.position.x, through.position.y, through.position.z)
+            camera.direction.set(direction.x, direction.y, direction.z)
+            camera.up.set(if (kotlin.math.abs(direction.y) > 0.999f) Vector3.Z else Vector3.Y)
+            camera.normalizeUp()
+        } else {
+            val eye = orbit.position()
+            camera.fieldOfView = p.camera.fieldOfView
+            camera.near = p.camera.near
+            camera.far = p.camera.far
+            camera.position.set(eye.x, eye.y, eye.z)
+            camera.up.set(Vector3.Y)
+            camera.lookAt(orbit.target.x, orbit.target.y, orbit.target.z)
+        }
+        camera.update()
+    }
+
+    /** Camera markers and light markers in the scene, then the selection's highlight and gizmo on top of everything. */
+    private fun drawOverlays(width: Int, height: Int) {
+        val lines = lineBatch ?: return
+        val c = content
+        drewGizmo = false
+        drawnCameraMarkers = c.cameras.count { it.entityId != viewCamera }
+        lines.begin(camera, depthTest = true)
+        SceneMarkers.draw(lines, c, aspectOf(width, height) ?: return, viewCamera)
+        lines.end()
+        val id = selectedId ?: return
+        lines.begin(camera, depthTest = false)
+        boundsOf(c, id)?.let { drawBox(lines, it) }
+        gizmoHandles(height)?.let {
+            GizmoDraw.draw(lines, it, hoveredAxis)
+            drewGizmo = true
+        }
+        lines.end()
+    }
+
+    /** The world bounds of the entity [id] as the last frame drew it. */
+    internal fun boundsOf(c: SceneContent, id: String): BoundingBox? {
+        models.drawn.firstOrNull { it.placement.entityId == id }?.let { return BoundingBox(it.localBounds).mul(it.instance.transform) }
+        terrains.drawn.firstOrNull { it.placement.entityId == id }?.let {
+            val data = it.terrain.data
+            val local = BoundingBox(
+                Vector3(0f, data.heights.min(), 0f),
+                Vector3(data.size.toFloat(), data.heights.max(), data.size.toFloat()),
+            )
+            return local.mul(it.world)
+        }
+        return SceneMarkers.boundsOf(c, id)
+    }
+
+    private fun drawBox(out: LineSink, box: BoundingBox) {
+        val a = box.min
+        val b = box.max
+        val p = { x: Float, y: Float, z: Float -> Vec3(x, y, z) }
+        val corners = listOf(
+            p(a.x, a.y, a.z), p(b.x, a.y, a.z), p(b.x, a.y, b.z), p(a.x, a.y, b.z),
+            p(a.x, b.y, a.z), p(b.x, b.y, a.z), p(b.x, b.y, b.z), p(a.x, b.y, b.z),
+        )
+        for (ring in 0..1) for (i in 0 until 4) out.line(corners[ring * 4 + i], corners[ring * 4 + (i + 1) % 4], HIGHLIGHT)
+        for (i in 0 until 4) out.line(corners[i], corners[4 + i], HIGHLIGHT)
+    }
+
     private fun renderContent(p: SceneRenderParams, orbit: OrbitCamera, deltaSeconds: Float) {
         val contentBatch = contentBatch ?: return
-        applyLights(p, orbit)
-        terrains.update(p.content.terrains, p.projectDir)
+        val c = content
+        applyLights(c, orbit)
+        terrains.update(c.terrains, p.projectDir)
         terrainShader?.draw(camera, terrains.drawn, p.ambient, p.fog, lights)
-        models.update(p.content.models, p.projectDir, deltaSeconds)
+        models.update(c.models, p.projectDir, deltaSeconds)
         contentBatch.begin(camera)
         for (entity in models.drawn) contentBatch.render(entity.instance, environment, ShaderProvider.DEFAULT_SHADER_KEY)
         contentBatch.end()
     }
 
     /** Recomputed only when the scene's lights or the orbit target (which decides the nearest point lights) change. */
-    private fun applyLights(p: SceneRenderParams, orbit: OrbitCamera) {
+    private fun applyLights(c: SceneContent, orbit: OrbitCamera) {
         val target = Vec3(orbit.target.x, orbit.target.y, orbit.target.z)
-        val key = p.content.lights to target
+        val key = c.lights to target
         if (key == lightsKey) return
         lightsKey = key
-        lights = LightSet.of(p.content.lights, target)
+        lights = LightSet.of(c.lights, target)
         lights.applyTo(environment)
     }
 
@@ -235,6 +380,8 @@ class SceneRenderer(
         terrainShader = null
         skybox?.dispose()
         skybox = null
+        lineBatch?.dispose()
+        lineBatch = null
         overlay?.dispose()
         overlay = null
         contentShaders?.dispose()
@@ -249,5 +396,7 @@ class SceneRenderer(
 
     private companion object {
         const val GRID_HALF_EXTENT = 50
+        const val MIN_NEAR = 0.01f
+        val HIGHLIGHT = Rgba(1f, 0.72f, 0.15f, 1f)
     }
 }

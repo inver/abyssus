@@ -76,7 +76,13 @@
               "r": 1
             }
           },
-          "PositionComponent": {},
+          "PositionComponent": {
+            "localPosition": {
+              "x": -38.25267,
+              "y": 0.0,
+              "z": -32.7754
+            }
+          },
           "RenderComponent": {
             "renderable": {
               "class": "com.mbrlabs.mundus.commons.core.ecs.delegate.RenderableObjectDelegate",
@@ -108,13 +114,15 @@
           },
           "PositionComponent": {
             "localRotation": {
-              "w": 0.71441036,
-              "x": -0.6997239
+              "w": -0.6457829,
+              "x": 0.63250726,
+              "y": 0.30553034,
+              "z": 0.29924944
             },
             "localPosition": {
               "x": -5.250234,
-              "y": 1.2409551,
-              "z": 6.3497133
+              "y": 2.462766,
+              "z": 6.35708
             }
           },
           "RenderComponent": {
@@ -172,7 +180,7 @@
               },
               "position": {
                 "x": -17.706646,
-                "y": 6.1317816,
+                "y": 6.467805,
                 "z": 0.57453203
               },
               "far": 100,
@@ -207,7 +215,7 @@
             "lookAtId": 3,
             "localPosition": {
               "x": -17.706646,
-              "y": 6.1317816,
+              "y": 6.467805,
               "z": 0.57453203
             }
           },
@@ -250,7 +258,19 @@
               "r": 6
             }
           },
-          "PositionComponent": {},
+          "PositionComponent": {
+            "localPosition": {
+              "x": 9.440927,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "localRotation": {
+              "x": 0.0,
+              "y": 0.49121734,
+              "z": 0.0,
+              "w": -0.87103707
+            }
+          },
           "RenderComponent": {
             "renderable": {
               "class": "com.mbrlabs.mundus.commons.core.ecs.delegate.RenderableObjectDelegate",

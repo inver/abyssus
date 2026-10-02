@@ -27,6 +27,7 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.scene.SceneDto
@@ -39,16 +40,19 @@ private fun JsonNode.child(key: String): JsonNode? = when (this) {
 
 private fun JsonNode.at(keys: List<String>): JsonNode? = keys.fold(this as JsonNode?) { e, k -> e?.child(k) }
 
-/** Parses [file]'s document, lets [mutate] edit the tree (returning false to abort), and saves it undoably. */
-private fun editJson(project: Project, file: VirtualFile, mutate: (JsonNode) -> Boolean): Boolean {
+/**
+ * Parses [file]'s document, lets [mutate] edit the tree (returning false to abort), and saves it in the file's own
+ * style as one undoable command named [commandName]. Returns whether anything was written.
+ */
+fun editSceneJson(project: Project, file: VirtualFile, commandName: String, mutate: (JsonNode) -> Boolean): Boolean {
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
     val root = runCatching { SceneJson.parse(document.text) }.getOrNull() ?: return false
     if (!mutate(root)) return false
     val text = SceneJson.inStyleOf(document.text, root)
-    WriteCommandAction.runWriteCommandAction(project) {
+    WriteCommandAction.runWriteCommandAction(project, commandName, null, {
         document.setText(text)
         FileDocumentManager.getInstance().saveDocument(document)
-    }
+    })
     ProjectView.getInstance(project).getProjectViewPaneById(AbyssusProjectViewPane.ID)?.updateFromRoot(true)
     return true
 }
@@ -61,9 +65,9 @@ fun toggleEnabled(project: Project, entry: DtoEntry): Boolean {
     val file = entry.source ?: return false
     val toggle = entry.toggleName ?: return false
     val current = entry.enabled ?: return false
-    return editJson(project, file) { root ->
-        val target = root.at(entry.parentKeys) as? ObjectNode ?: return@editJson false
-        if (target.get(toggle)?.isBoolean != true) return@editJson false
+    return editSceneJson(project, file, AbyssusBundle.message("commandToggleEnabled")) { root ->
+        val target = root.at(entry.parentKeys) as? ObjectNode ?: return@editSceneJson false
+        if (target.get(toggle)?.isBoolean != true) return@editSceneJson false
         target.set<JsonNode>(toggle, BooleanNode.valueOf(!current))
         true
     }
@@ -77,10 +81,10 @@ fun sceneName(entry: DtoEntry): String? = (entry.value as? SceneDto)?.name
 
 /** Sets the scene's `skyboxName` to [name] (an asset folder, or null for none); false, writing nothing, when it already is. */
 fun setSkybox(project: Project, file: VirtualFile, name: String?): Boolean =
-    editJson(project, file) { root ->
-        val scene = root as? ObjectNode ?: return@editJson false
+    editSceneJson(project, file, AbyssusBundle.message("commandSetSkybox")) { root ->
+        val scene = root as? ObjectNode ?: return@editSceneJson false
         val value: JsonNode = name?.let(TextNode::valueOf) ?: NullNode.instance
-        if ((scene.get(SKYBOX_KEY) ?: NullNode.instance) == value) return@editJson false
+        if ((scene.get(SKYBOX_KEY) ?: NullNode.instance) == value) return@editSceneJson false
         scene.set<JsonNode>(SKYBOX_KEY, value)
         true
     }
@@ -89,8 +93,8 @@ fun setSkybox(project: Project, file: VirtualFile, name: String?): Boolean =
 const val SKYBOX_KEY = "skyboxName"
 
 fun renameScene(project: Project, file: VirtualFile, newName: String): Boolean =
-    editJson(project, file) { root ->
-        val scene = root as? ObjectNode ?: return@editJson false
+    editSceneJson(project, file, AbyssusBundle.message("commandRenameScene")) { root ->
+        val scene = root as? ObjectNode ?: return@editSceneJson false
         scene.set<JsonNode>("name", TextNode.valueOf(newName))
         true
     }
