@@ -46,6 +46,16 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   `meta.json` (textures of a material, shader sources) are not followed.
 - Unreadable files stay in the tree with a placeholder; nothing else is ever written.
 
+## Abyssus Properties panel
+
+The **Abyssus Properties** tool window (right side) shows the Meta of the asset selected in the Abyssus view, read only:
+a header with the asset's type icon, name and `<type> asset · read-only`, then a Name / Value table of its `meta.json`
+(`version`, `lastModified` as a date-time, `uuid`, `type`, then the fields of `additional` under an `additional` heading).
+Every field in the file is listed, whatever the asset type; a list shows its item count. A skybox also shows its six
+faces under **Face previews**. Selecting anything that is not an asset (a scene, the project file, an entity) shows a
+"Nothing to show" message. The panel refreshes when the asset's `meta.json` or a face image changes, and never writes
+a file.
+
 ## Scene view
 
 Open a `*.scene` and switch to its **Abyssus scene view** tab (or click *View* in the Abyssus view). Read-only; the

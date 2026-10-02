@@ -39,7 +39,7 @@ class SceneContentTest {
         assertEquals(listOf("0", "2", "6"), c.models.map { it.entityId })
         assertEquals(listOf("terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), c.terrains.map { it.assetName })
         assertTrue(c.lights.isEmpty())
-        assertNull(c.skybox)
+        assertEquals("skybox_default", c.skybox)
     }
 
     @Test

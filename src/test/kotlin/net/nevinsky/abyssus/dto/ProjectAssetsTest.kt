@@ -70,8 +70,8 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         assertEquals("SKYBOX", type(assets.single { it.folder == "skybox_default" }))
         assertEquals("TERRAIN", type(assets.single { it.folder.startsWith("terrain_") }))
         assertEquals(4, assets.count { type(it) == "MODEL" && it.folder.startsWith("model_") })
-        // Main Scene names four of them directly; the skybox, `tree` and one model are not reached
-        assertEquals(setOf("skybox_default", "tree", "model_828d51e4-8427-4769-bcb6-13f8f21f23e9"), assets.filter { it.unused }.map { it.folder }.toSet())
+        // Main Scene names four of them directly; `tree` and one model are not reached; the skybox is named by the scene
+        assertEquals(setOf("tree", "model_828d51e4-8427-4769-bcb6-13f8f21f23e9"), assets.filter { it.unused }.map { it.folder }.toSet())
     }
 
     fun testProjectWithoutAssetsFolderHasEmptyList() {

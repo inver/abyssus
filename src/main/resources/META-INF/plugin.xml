@@ -31,6 +31,10 @@
         <postStartupActivity implementation="net.nevinsky.abyssus.projectView.OpenAbyssusViewActivity"/>
         <projectViewPane implementation="net.nevinsky.abyssus.projectView.AbyssusProjectViewPane"/>
         <fileEditorProvider implementation="net.nevinsky.abyssus.sceneview.SceneFileEditorProvider"/>
+        <toolWindow id="Abyssus Properties"
+                    anchor="right"
+                    canCloseContents="false"
+                    factoryClass="net.nevinsky.abyssus.properties.AbyssusPropertiesToolWindowFactory"/>
         <lang.parserDefinition
                 language="GLTF"
                 implementationClass="net.nevinsky.abyssus.language.GltfParserDefinition"/>

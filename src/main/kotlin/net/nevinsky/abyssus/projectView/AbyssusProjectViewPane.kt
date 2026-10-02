@@ -43,6 +43,7 @@ import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.Icon
+import javax.swing.JTree
 import javax.swing.tree.DefaultTreeModel
 
 class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project) {
@@ -64,11 +65,19 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project) {
     // The platform requires the target's minor view id to equal the pane id; the inherited one is "ProjectPane".
     override fun createSelectInTarget(): SelectInTarget = AbyssusSelectInTarget(myProject)
 
-    override fun createTree(treeModel: DefaultTreeModel): ProjectViewTree = EyeTree(treeModel, myProject)
+    override fun createTree(treeModel: DefaultTreeModel): ProjectViewTree =
+        EyeTree(treeModel, myProject).also { publishSelectionOf(it, myProject) }
 
     companion object {
         const val ID = "Abyssus"
         const val WEIGHT = 100
+    }
+}
+
+/** Publishes the user object of [tree]'s selected node (null when nothing is selected) as the Abyssus selection of [project]. */
+internal fun publishSelectionOf(tree: JTree, project: Project) {
+    tree.addTreeSelectionListener { e ->
+        AbyssusSelection.of(project).select(e.newLeadSelectionPath?.let { TreeUtil.getUserObject(it.lastPathComponent) })
     }
 }
 

@@ -96,7 +96,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
         val choice = loadSkyboxChoices(project, abss)!!.single()
         assertEquals("skybox_default", choice.name)
         assertEquals("6 faces · png", choice.detail)
-        assertTrue(choice.unused)
-        assertEquals(0, choice.sceneCount)
+        assertFalse(choice.unused)
+        assertEquals(1, choice.sceneCount)
     }
 }
