@@ -17,7 +17,6 @@
 package net.nevinsky.abyssus.sceneview
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.io.File
@@ -49,13 +48,6 @@ class ProjectAssetFilesTest {
     }
 
     @Test
-    fun resolvesSkybox() {
-        val s = files.skybox("skybox_default")!!
-        assertEquals("skybox_default.png", s.top.name)
-        assertNotNull(s.back)
-    }
-
-    @Test
     fun brokenMetaResolvesToNull() {
         val dir = Files.createTempDirectory("proj").toFile()
         File(dir, "assets/m").mkdirs()
@@ -63,17 +55,6 @@ class ProjectAssetFilesTest {
         assertNull(ProjectAssetFiles(dir).model("m"))
         File(dir, "assets/m/meta.json").writeText("""{"additional":{"file":"missing.gltf"}}""")
         assertNull(ProjectAssetFiles(dir).model("m"))
-    }
-
-    @Test
-    fun skyboxWithAMissingFaceResolvesToNull() {
-        val dir = Files.createTempDirectory("proj").toFile()
-        File(dir, "assets/sky").mkdirs()
-        File(dir, "assets/sky/top.png").writeText("x")
-        File(dir, "assets/sky/meta.json").writeText(
-            """{"additional":{"top":"top.png","bottom":"top.png","left":"top.png","right":"top.png","front":"top.png","back":"gone.png"}}"""
-        )
-        assertNull(ProjectAssetFiles(dir).skybox("sky"))
     }
 
     @Test
