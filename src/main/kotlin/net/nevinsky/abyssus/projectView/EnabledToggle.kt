@@ -26,10 +26,9 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.dto.DtoValue
-import net.nevinsky.abyssus.dto.Json
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.scene.SceneDto
 
 private fun JsonNode.child(key: String): JsonNode? = when (this) {
     is ObjectNode -> get(key)
@@ -42,7 +41,7 @@ private fun JsonNode.at(keys: List<String>): JsonNode? = keys.fold(this as JsonN
 /** Parses [file]'s document, lets [mutate] edit the tree (returning false to abort), and saves it undoably. */
 private fun editJson(project: Project, file: VirtualFile, mutate: (JsonNode) -> Boolean): Boolean {
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
-    val root = runCatching { Json.parse(document.text) }.getOrNull() ?: return false
+    val root = runCatching { SceneJson.parse(document.text) }.getOrNull() ?: return false
     if (!mutate(root)) return false
     val text = SceneJson.inStyleOf(document.text, root)
     WriteCommandAction.runWriteCommandAction(project) {
@@ -71,12 +70,10 @@ fun toggleEnabled(project: Project, entry: DtoEntry): Boolean {
 
 /** The `.scene` file behind a scene entry listed under a project, or null for any other entry. */
 fun sceneFileOf(entry: DtoEntry): VirtualFile? =
-    (entry.value as? DtoValue.Obj)?.takeIf { it.label != null }?.source?.takeIf { it.extension == ProjectLayout.SCENE_EXTENSION }
+    (entry.value as? SceneDto)?.file?.takeIf { it.extension == ProjectLayout.SCENE_EXTENSION }
 
-fun sceneName(entry: DtoEntry): String? =
-    ((entry.value as? DtoValue.Obj)?.properties?.firstOrNull { it.name == "name" }?.value as? DtoValue.Scalar)?.value as? String
+fun sceneName(entry: DtoEntry): String? = (entry.value as? SceneDto)?.name
 
-/** Sets the top-level `name` of a scene file. */
 fun renameScene(project: Project, file: VirtualFile, newName: String): Boolean =
     editJson(project, file) { root ->
         val scene = root as? ObjectNode ?: return@editJson false

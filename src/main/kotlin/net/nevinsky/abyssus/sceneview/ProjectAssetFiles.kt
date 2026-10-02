@@ -17,25 +17,21 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.dto.Json
-import net.nevinsky.abyssus.dto.ProjectLayout
-import net.nevinsky.abyssus.dto.float
-import net.nevinsky.abyssus.dto.obj
-import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.dto.text
+import com.fasterxml.jackson.databind.ObjectMapper
+import net.nevinsky.abyssus.dto.*
+import net.nevinsky.abyssus.filetype.SceneJson
+import org.apache.commons.lang3.StringUtils
 import java.io.File
 
 /** The files of a terrain asset: [data] is the height data, [splat] the splat textures present (by `meta.json` field). */
 data class TerrainFiles(val data: File, val size: Int, val uv: Float, val splat: Map<String, File>)
 
-/** The six faces of a skybox asset, in `meta.json` order. */
-data class SkyboxFiles(val top: File, val bottom: File, val left: File, val right: File, val front: File, val back: File)
 
 /**
  * Finds the files an asset folder under `<project>/assets` names in its `meta.json`. Pure file access, so it can run
  * on any thread; every lookup returns null for a missing folder, unreadable `meta.json` or missing file.
  */
-class ProjectAssetFiles(projectDir: File) {
+class ProjectAssetFiles(projectDir: File, private val mapper: ObjectMapper = SceneJson.mapper) {
     /** Absolute: texture paths the model loader derives from the model file must not depend on the working directory. */
     val projectDir: File = projectDir.absoluteFile
     private val assetsDir = File(this.projectDir, ProjectLayout.ASSETS_DIR)
@@ -52,13 +48,14 @@ class ProjectAssetFiles(projectDir: File) {
         else File(assetsDir, assetName).takeIf { it.isDirectory }
 
     private fun meta(folder: File): JsonNode? = runCatchingKeepingCancellation {
-        File(folder, ProjectLayout.META_FILE).takeIf { it.isFile }?.let { Json.parseObject(it.readText()) }
+        File(folder, ProjectLayout.META_FILE).takeIf { it.isFile }?.let { SceneJson.parseObject(it.readText()) }
     }.getOrNull()
 
     private fun additional(folder: File) = meta(folder)?.obj("additional")
 
-    private fun file(folder: File, name: String?): File? =
-        name?.takeIf { it.isNotBlank() }?.let { File(folder, it) }?.takeIf { it.isFile && it.canonicalPath.startsWith(folder.canonicalPath) }
+    fun file(folder: File, name: String?): File? =
+        name?.takeIf { it.isNotBlank() }?.let { File(folder, it) }
+            ?.takeIf { it.isFile && it.canonicalPath.startsWith(folder.canonicalPath) }
 
     fun model(assetName: String): File? {
         val dir = folder(assetName) ?: return null
@@ -81,13 +78,21 @@ class ProjectAssetFiles(projectDir: File) {
             file(dir, additional(dir)?.text("file"))?.let { field to it }
         }.toMap()
 
-    fun skybox(assetName: String): SkyboxFiles? {
+    private fun <T, M : MetaBase<T>> loadMeta(clazz: Class<M>, folder: File): M? = runCatchingKeepingCancellation {
+        File(folder, ProjectLayout.META_FILE)
+            .takeIf { it.isFile }
+            ?.let { mapper.readValue(it.readText(), clazz) }
+    }.getOrNull()
+
+    fun loadFile(assetName: String, fileName: String?): File? {
+        if (StringUtils.isBlank(fileName)) return null
         val dir = folder(assetName) ?: return null
-        val a = additional(dir) ?: return null
-        fun face(name: String) = file(dir, a.text(name))
-        return SkyboxFiles(
-            face("top") ?: return null, face("bottom") ?: return null, face("left") ?: return null,
-            face("right") ?: return null, face("front") ?: return null, face("back") ?: return null,
-        )
+        return file(dir, fileName)
+    }
+
+    fun <T, M : MetaBase<T>> loadAsset(clazz: Class<M>, name: String): Asset<T>? {
+        val dir = folder(name) ?: return null
+        val meta = loadMeta(clazz, dir) ?: return null
+        return Asset(meta, dir)
     }
 }

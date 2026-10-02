@@ -16,8 +16,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.filetype.SceneJson
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.dto.Json
 import net.nevinsky.abyssus.dto.SceneReader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -40,7 +40,7 @@ class SceneRenderGlTest {
         return SceneRenderParams.from(SceneReader.parse(text), CameraParams.DEFAULT, dir)
     }
 
-    private fun edit(text: String, change: (ObjectNode) -> Unit): String = Json.write(Json.parseObject(text).also(change))
+    private fun edit(text: String, change: (ObjectNode) -> Unit): String = SceneJson.compact(SceneJson.parseObject(text).also(change))
 
     private fun noFog(root: ObjectNode) {
         root.put("fogEnabled", false)
@@ -123,7 +123,7 @@ class SceneRenderGlTest {
         val lit = params("Untitled", "Main Scene.scene") {
             edit(it) { root ->
                 noFog(root)
-                (root.get("ecs").get("entities") as ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>("99", Json.parse(light))
+                (root.get("ecs").get("entities") as ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>("99", SceneJson.parse(light))
             }
         }
         assertEquals(1, lit.content.lights.size)

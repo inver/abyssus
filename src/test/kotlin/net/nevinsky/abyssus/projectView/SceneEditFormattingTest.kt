@@ -16,10 +16,8 @@
 
 package net.nevinsky.abyssus.projectView
 
-import net.nevinsky.abyssus.dto.Json
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.dto.DtoValue
 import net.nevinsky.abyssus.filetype.SceneJson
 
 class SceneEditFormattingTest : BasePlatformTestCase() {
@@ -27,7 +25,7 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
 
     private fun toggleFog(file: VirtualFile): Boolean {
         val entry = DtoEntry(
-            path = "x/fog", name = "fog", value = DtoValue.Scalar(null),
+            path = "x/fog", name = "fog", value = null,
             enabled = true, toggleName = "fogEnabled", source = file, parentKeys = emptyList(),
         )
         return toggleEnabled(project, entry)
@@ -42,7 +40,7 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
         val after = text(file)
         assertTrue(after, after.lines().size > 5)
         assertTrue(after.contains("\"fogEnabled\": false"))
-        assertEquals(Json.parse(compact.replace("\"fogEnabled\":true", "\"fogEnabled\":false")), Json.parse(after))
+        assertEquals(SceneJson.parse(compact.replace("\"fogEnabled\":true", "\"fogEnabled\":false")), SceneJson.parse(after))
         assertTrue("null member kept", after.contains("\"skyboxName\": null"))
     }
 
@@ -66,7 +64,7 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
         val toggle = { enabled: Boolean ->
             toggleEnabled(
                 project,
-                DtoEntry("x/fog", "fog", DtoValue.Scalar(null), enabled, "fogEnabled", file, emptyList()),
+                DtoEntry("x/fog", "fog", null, enabled, "fogEnabled", file, emptyList()),
             )
         }
         assertTrue(toggle(true))

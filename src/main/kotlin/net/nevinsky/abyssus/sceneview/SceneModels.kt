@@ -21,6 +21,7 @@ import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.core.AnimationController
 import net.nevinsky.abyssus.core.ModelInstance
 import net.nevinsky.abyssus.core.model.Model
+import net.nevinsky.abyssus.sceneview.model.PreparedModel
 import java.io.File
 import java.util.concurrent.Executor
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.sceneview.model
 
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
@@ -23,6 +23,25 @@ import net.nevinsky.abyssus.core.loader.AssimpModelLoader
 import net.nevinsky.abyssus.core.loader.PreloadedTextureProvider
 import net.nevinsky.abyssus.core.model.Model
 import net.nevinsky.abyssus.core.model.ModelData
+import net.nevinsky.abyssus.sceneview.AssetLoader
+import net.nevinsky.abyssus.sceneview.ProjectAssetFiles
+
+
+/** Model assets through Assimp: parsed and their images decoded off the GL thread, textures uploaded one per frame. */
+class ModelLoader(private val assimp: AssimpModelLoader = AssimpModelLoader()) : AssetLoader<PreparedModel, Model> {
+    override fun prepare(files: ProjectAssetFiles, name: String): PreparedModel? {
+        val handle = FileHandle(files.model(name) ?: return null)
+        val data = assimp.loadData(handle)
+        return PreparedModel(data, handle, assimp.decodeTextures(data, handle))
+    }
+
+    override fun upload(prepared: PreparedModel) = prepared.uploadNext()
+
+    override fun build(prepared: PreparedModel): Model =
+        assimp.build(prepared.data, prepared.file, prepared.textures).also { prepared.dispose() }
+
+    override fun discard(prepared: PreparedModel) = prepared.dispose()
+}
 
 /** A parsed model waiting for its GL resources; [file] is where its textures are resolved from. */
 class PreparedModel(val data: ModelData, val file: FileHandle, private val pixmaps: MutableMap<String, Pixmap>) {
@@ -43,20 +62,4 @@ class PreparedModel(val data: ModelData, val file: FileHandle, private val pixma
         textures.values.forEach(Texture::dispose)
         textures.clear()
     }
-}
-
-/** Model assets through Assimp: parsed and their images decoded off the GL thread, textures uploaded one per frame. */
-class ModelLoader(private val assimp: AssimpModelLoader = AssimpModelLoader()) : AssetLoader<PreparedModel, Model> {
-    override fun prepare(files: ProjectAssetFiles, name: String): PreparedModel? {
-        val handle = FileHandle(files.model(name) ?: return null)
-        val data = assimp.loadData(handle)
-        return PreparedModel(data, handle, assimp.decodeTextures(data, handle))
-    }
-
-    override fun upload(prepared: PreparedModel) = prepared.uploadNext()
-
-    override fun build(prepared: PreparedModel): Model =
-        assimp.build(prepared.data, prepared.file, prepared.textures).also { prepared.dispose() }
-
-    override fun discard(prepared: PreparedModel) = prepared.dispose()
 }

@@ -14,22 +14,18 @@
  * limitations under the License.
  */
 
-package net.nevinsky.abyssus.scene
+package net.nevinsky.abyssus.dto
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.JsonNode
-import com.intellij.openapi.vfs.VirtualFile
 
-data class SceneDto(
-    val id: Long? = null,
-    val name: String? = null,
-    val ambientLightEnabled: Boolean? = null,
-    val ambientLight: BaseLightDto? = null,
-    val fogEnabled: Boolean? = null,
-    val fog: FogDto? = null,
-    val skyboxEnabled: Boolean? = null,
-    val skyboxName: String? = null,
-    val ecs: JsonNode? = null,
-    /** The file this scene was read from: where a toggle is written back and what "open scene" shows. Never a row. */
-    @get:JsonIgnore val file: VirtualFile? = null,
-)
+/** The child [name] unless it is absent or an explicit JSON null. */
+fun JsonNode.opt(name: String): JsonNode? = get(name)?.takeIf { !it.isNull && !it.isMissingNode }
+
+/** The child [name] when it is a string. */
+fun JsonNode.text(name: String): String? = opt(name)?.takeIf { it.isTextual }?.asText()
+
+/** The child [name] when it is a finite number. */
+fun JsonNode.float(name: String): Float? = opt(name)?.takeIf { it.isNumber }?.floatValue()?.takeIf { it.isFinite() }
+
+/** The child [name] when it is an object. */
+fun JsonNode.obj(name: String): JsonNode? = opt(name)?.takeIf { it.isObject }

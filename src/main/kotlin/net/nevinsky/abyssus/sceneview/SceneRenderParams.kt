@@ -16,8 +16,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.filetype.SceneJson
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.dto.Json
 import net.nevinsky.abyssus.dto.float
 import net.nevinsky.abyssus.dto.obj
 import net.nevinsky.abyssus.scene.SceneDto
@@ -101,7 +101,7 @@ private fun normalized(v: Vec3): Vec3? {
 /** The `mainCamera` of the `.abss` project a scene belongs to. */
 object MainCamera {
     fun parse(abssText: String): CameraParams? = runCatching {
-        val root = Json.parse(abssText).takeIf { it.isObject } ?: return null
+        val root = SceneJson.parse(abssText).takeIf { it.isObject } ?: return null
         val cam = root.obj("mainCamera") ?: return null
         val position = cam.vec("position") ?: return null
         val direction = normalized(cam.vec("viewPointPosition") ?: return null) ?: return null

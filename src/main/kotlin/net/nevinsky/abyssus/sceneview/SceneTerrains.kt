@@ -18,6 +18,8 @@ package net.nevinsky.abyssus.sceneview
 
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.Disposable
+import net.nevinsky.abyssus.sceneview.terrain.PreparedTerrain
+import net.nevinsky.abyssus.sceneview.terrain.TerrainMesh
 import java.io.File
 import java.util.concurrent.Executor
 

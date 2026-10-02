@@ -16,15 +16,27 @@
 
 package net.nevinsky.abyssus.dto
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.scene.SceneDto
 
 /**
- * One folder under a project's `assets`. [references] are the `uuid`s its `meta.json` holds in the fields Mundus
- * resolves to other assets; files named in `meta.json` live in the asset's own folder and are not references.
+ * One folder under a project's `assets`. `uuid` and `type` are bound from its `meta.json` and are all the view shows.
+ * [name] is the folder, [references] the `uuid`s `meta.json` holds in the fields Mundus resolves to other assets (files
+ * named in `meta.json` live in the asset's own folder and are not references) and [unused] marks an asset no scene
+ * reaches; none of those three is a row.
  */
-data class AssetInfo(val name: String, val uuid: String?, val type: String?, val references: List<String>)
+@JsonPropertyOrder("type", "uuid")
+data class AssetInfo(
+    @get:JsonIgnore val name: String = "",
+    val uuid: String? = null,
+    val type: String? = null,
+    @get:JsonIgnore val references: List<String> = emptyList(),
+    @get:JsonIgnore val unused: Boolean = false,
+)
 
 object ProjectAssets {
     /** Fields holding a list of asset `uuid`s (`ModelMeta.materials`). */
@@ -37,7 +49,7 @@ object ProjectAssets {
         }
 
     fun read(abss: VirtualFile): List<AssetInfo> = ProjectLayout.assetFolders(abss).map { dir ->
-        val meta = runCatchingKeepingCancellation { dir.findChild(ProjectLayout.META_FILE)?.let { Json.parseObject(it.text()) } }.getOrNull()
+        val meta = runCatchingKeepingCancellation { dir.findChild(ProjectLayout.META_FILE)?.let { SceneJson.parseObject(it.text()) } }.getOrNull()
         parse(dir.name, meta)
     }
 
@@ -47,12 +59,8 @@ object ProjectAssets {
             ProjectLayout.SPLAT_FIELDS.mapNotNull { a.text(it) } +
                 REFERENCE_LISTS.flatMap { f -> a.opt(f)?.takeIf { it.isArray }?.mapNotNull { it.takeIf(JsonNode::isTextual)?.asText() } ?: emptyList() }
         } ?: emptyList()
-        return AssetInfo(
-            name,
-            meta?.text("uuid"),
-            meta?.text("type"),
-            references,
-        )
+        val bound = meta?.let { runCatchingKeepingCancellation { SceneJson.bind(it, AssetInfo::class.java) }.getOrNull() }
+        return (bound ?: AssetInfo()).copy(name = name, references = references)
     }
 
     /**

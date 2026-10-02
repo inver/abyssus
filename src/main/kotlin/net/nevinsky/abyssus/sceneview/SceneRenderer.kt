@@ -36,6 +36,16 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.core.model.Model as ContentModel
 import net.nevinsky.abyssus.core.shader.DefaultShaderProvider
 import net.nevinsky.abyssus.core.shader.ShaderProvider
+import net.nevinsky.abyssus.sceneview.fog.FogShaderProvider
+import net.nevinsky.abyssus.sceneview.model.ModelLoader
+import net.nevinsky.abyssus.sceneview.model.PreparedModel
+import net.nevinsky.abyssus.sceneview.skybox.PreparedSkybox
+import net.nevinsky.abyssus.sceneview.skybox.SkyboxCube
+import net.nevinsky.abyssus.sceneview.skybox.SkyboxLoader
+import net.nevinsky.abyssus.sceneview.terrain.PreparedTerrain
+import net.nevinsky.abyssus.sceneview.terrain.TerrainLoader
+import net.nevinsky.abyssus.sceneview.terrain.TerrainMesh
+import net.nevinsky.abyssus.sceneview.terrain.TerrainShader
 import java.util.concurrent.Executor
 import net.nevinsky.abyssus.core.ModelBatch as ContentBatch
 
@@ -180,7 +190,7 @@ class SceneRenderer(
         lights.applyTo(environment)
     }
 
-    /** Fog color comes from the environment; density through [FogShader] (see [FogParams] for what cannot be matched). */
+    /** Fog color comes from the environment; density through [net.nevinsky.abyssus.sceneview.fog.FogShader] (see [FogParams] for what cannot be matched). */
     private fun applyEnvironment(p: SceneRenderParams) {
         val ambient = p.ambient
         if (ambient != null) {

@@ -16,20 +16,17 @@
 
 package net.nevinsky.abyssus.dto
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.scene.BaseLightDto
-import net.nevinsky.abyssus.scene.ColorDto
-import net.nevinsky.abyssus.scene.FogDto
+import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.scene.SceneDto
 
 sealed interface AssetReadResult {
-    data class Success(val root: DtoValue.Obj) : AssetReadResult
+    /** [root] is the bound DTO: a [SceneDto] or a [ProjectDto]. */
+    data class Success(val root: Any) : AssetReadResult
     data class Failure(val message: String) : AssetReadResult
 }
 
-/** Reads one asset file into its DTO property tree. Never writes and never throws. */
+/** Reads one asset file into its DTO. Never writes and never throws. */
 interface AssetReader {
     fun read(file: VirtualFile): AssetReadResult
 
@@ -50,34 +47,13 @@ private inline fun <T> guarded(block: () -> T): Result<T> = runCatchingKeepingCa
 /** The file's saved content (not unsaved editor text). */
 fun VirtualFile.text() = String(contentsToByteArray(), charset)
 
-private fun JsonNode.color(name: String): ColorDto? = opt(name)?.takeIf { it.isObject }?.let {
-    ColorDto(it.opt("r")?.floatValue() ?: 0f, it.opt("g")?.floatValue() ?: 0f, it.opt("b")?.floatValue() ?: 0f, it.opt("a")?.floatValue() ?: 0f)
-}
-
 object SceneReader : AssetReader {
-    fun parse(text: String): SceneDto {
-        val o = Json.parseObject(text)
-        return SceneDto(
-            id = o.opt("id")?.asLong(),
-            name = o.opt("name")?.asText(),
-            ambientLightEnabled = o.opt("ambientLightEnabled")?.asBoolean(),
-            ambientLight = o.opt("ambientLight")?.takeIf { it.isObject }?.let {
-                BaseLightDto(it.color("color"), it.opt("intensity")?.floatValue())
-            },
-            fogEnabled = o.opt("fogEnabled")?.asBoolean(),
-            fog = o.opt("fog")?.takeIf { it.isObject }?.let {
-                FogDto(it.color("color"), it.opt("density")?.floatValue(), it.opt("gradient")?.floatValue())
-            },
-            skyboxEnabled = o.opt("skyboxEnabled")?.asBoolean(),
-            skyboxName = o.opt("skyboxName")?.asText(),
-            ecs = o.opt("ecs"),
-        )
-    }
+    fun parse(text: String): SceneDto = SceneJson.bind(SceneJson.parseObject(text), SceneDto::class.java)
 
-    fun readScene(file: VirtualFile): Result<SceneDto> = guarded { parse(file.text()) }
+    fun readScene(file: VirtualFile): Result<SceneDto> = guarded { parse(file.text()).copy(file = file) }
 
     override fun read(file: VirtualFile): AssetReadResult = readScene(file).fold(
-        { AssetReadResult.Success(it.toValue().copy(source = file)) },
+        { AssetReadResult.Success(it) },
         { AssetReadResult.Failure(it.message ?: it.javaClass.simpleName) },
     )
 }
@@ -87,40 +63,18 @@ object ProjectReader : AssetReader {
         ProjectLayout.sceneFiles(file).fold(file.modificationStamp) { acc, f -> acc * 31 + f.modificationStamp } * 31 + ProjectAssets.stamp(file)
 
     override fun read(file: VirtualFile): AssetReadResult = guarded {
-        val name = Json.parseObject(file.text()).opt("name")?.asText() ?: file.nameWithoutExtension
+        val name = SceneJson.parseObject(file.text()).opt("name")?.asText() ?: file.nameWithoutExtension
         val scenes = ProjectLayout.sceneFiles(file).map { it to SceneReader.readScene(it) }
-        val entries = scenes.mapIndexed { i, (f, result) ->
-            result.fold(
-                { it.toValue(sceneLabel(it, i)).copy(source = f) },
-                { DtoValue.Obj(listOf(DtoProperty("error", DtoValue.Scalar(it.message))), f.name) },
-            )
-        }
         val assets = ProjectAssets.read(file)
         val roots = scenes.flatMap { (_, result) -> result.getOrNull()?.let(ProjectAssets::sceneReferences) ?: emptySet() }.toSet()
         val used = ProjectAssets.usedAssets(assets, roots)
-        val assetEntries = assets.map { a ->
-            DtoValue.Obj(
-                listOf(DtoProperty("type", DtoValue.Scalar(a.type)), DtoProperty("uuid", DtoValue.Scalar(a.uuid))),
-                a.name,
-                unused = a.name !in used,
-                asset = true,
-            )
-        }
-        DtoValue.Obj(
-            listOf(
-                DtoProperty("name", DtoValue.Scalar(name)),
-                DtoProperty("scenes", DtoValue.Items(entries)),
-                DtoProperty("assets", DtoValue.Items(assetEntries)),
-            ),
+        ProjectDto(
+            name,
+            scenes.map { (f, result) -> result.getOrElse { SceneError(f, it.message) } },
+            assets.map { it.copy(unused = it.name !in used) },
         )
     }.fold(
         { AssetReadResult.Success(it) },
         { AssetReadResult.Failure(it.message ?: it.javaClass.simpleName) },
     )
-}
-
-/** `Main Scene (6275127)`: the scene name followed by its id; the index stands in for a missing name. */
-private fun sceneLabel(scene: SceneDto, index: Int): String {
-    val name = scene.name?.takeIf { it.isNotBlank() } ?: AbyssusBundle.message("dtoListElementLabel", "scenes", index)
-    return scene.id?.let { "$name ($it)" } ?: name
 }

@@ -21,6 +21,8 @@ import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.Disposable
+import net.nevinsky.abyssus.sceneview.skybox.PreparedSkybox
+import net.nevinsky.abyssus.sceneview.skybox.SkyboxCube
 import java.io.File
 import java.util.concurrent.Executor
 

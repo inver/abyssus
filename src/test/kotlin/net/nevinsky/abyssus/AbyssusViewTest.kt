@@ -26,10 +26,14 @@ import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.TestDataPath
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.dto.AssetReadResult
-import net.nevinsky.abyssus.dto.DtoValue
+import net.nevinsky.abyssus.dto.ProjectDto
+import net.nevinsky.abyssus.dto.SceneError
+import net.nevinsky.abyssus.projectView.childrenOf
+import net.nevinsky.abyssus.projectView.elementLabel
 import net.nevinsky.abyssus.dto.ProjectReader
 import net.nevinsky.abyssus.dto.SceneReader
-import net.nevinsky.abyssus.dto.foldToggles
+import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.projectView.foldToggles
 import net.nevinsky.abyssus.filetype.AbyssusProjectFileType
 import net.nevinsky.abyssus.filetype.AbyssusProjectIcons
 import net.nevinsky.abyssus.filetype.SceneFileType
@@ -103,23 +107,44 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals(0.3f, scene.ambientLight!!.intensity!!, 0f)
         assertNull(scene.skyboxName)
         assertEquals(listOf("id", "name", "ambientLightEnabled", "ambientLight", "fogEnabled", "fog", "skyboxEnabled", "skyboxName", "ecs"),
-            scene.properties().map { it.name })
+            childrenOf(scene).map { it.name })
         assertEquals(before.toList(), file.contentsToByteArray().toList())
+    }
+
+    fun testRowNamesAndOrderAreStable() {
+        assertEquals(listOf("name", "scenes", "assets"), childrenOf(ProjectDto("n", emptyList(), emptyList())).map { it.name })
+        assertEquals(listOf("type", "uuid"), childrenOf(net.nevinsky.abyssus.dto.AssetInfo("a", "u", "MODEL", listOf("r"), true)).map { it.name })
+        assertEquals(listOf("error"), childrenOf(SceneError(add("e.scene", "x"), "boom")).map { it.name })
+        val fog = SceneReader.parse("""{"fog":{"color":{"r":1,"g":2,"b":3,"a":4},"density":0.5}}""").fog!!
+        assertEquals(listOf("color", "density", "gradient"), childrenOf(fog).map { it.name })
+        assertEquals(listOf("r", "g", "b", "a"), childrenOf(fog.color).map { it.name })
+    }
+
+    fun testMistypedFieldFailsOnlyThatScene() {
+        add("m/a.abss", """{"name":"m"}""")
+        add("m/scenes/good.scene", """{"name":"Good"}""")
+        add("m/scenes/bad.scene", """{"name":"Bad","fogEnabled":"nope"}""")
+        val project = (ProjectReader.read(myFixture.findFileInTempDir("m/a.abss")) as AssetReadResult.Success).root as ProjectDto
+        assertEquals(2, project.scenes.size)
+        assertEquals("Good", (project.scenes.single { it is SceneDto } as SceneDto).name)
+        assertNotNull((project.scenes.single { it is SceneError } as SceneError).error)
     }
 
     fun testEmptyScene() {
         assertTrue(SceneReader.read(add("empty.scene", "")) is AssetReadResult.Failure)
         assertTrue(SceneReader.read(add("bad.scene", "{oops")) is AssetReadResult.Failure)
-        val props = SceneReader.parse("{}").properties()
-        assertEquals(9, props.size)
+        val scene = SceneReader.parse("{}")
+        assertEquals(SceneDto(), scene)
+        assertEquals(9, childrenOf(scene).size)
+        assertTrue(childrenOf(scene).all { it.value == null })
     }
 
     fun testProjectReaderLoadsScenesFolder() {
         val file = fixture().findChild("Untitled.abss")!!
         val root = (ProjectReader.read(file) as AssetReadResult.Success).root
-        assertEquals(listOf("name", "scenes", "assets"), root.properties.map { it.name })
-        val scenes = root.properties[1].value as DtoValue.Items
-        assertEquals(listOf("$fixtureSceneName (0)"), scenes.items.map { (it as DtoValue.Obj).label })
+        assertEquals(listOf("name", "scenes", "assets"), childrenOf(root).map { it.name })
+        val scenes = (root as ProjectDto).scenes
+        assertEquals(listOf("$fixtureSceneName (0)"), scenes.mapIndexed { i, it -> elementLabel("scenes", it, i) })
     }
 
     fun testProjectOrderAndMissingFolder() {
@@ -129,11 +154,11 @@ class AbyssusViewTest : BasePlatformTestCase() {
         add("p/scenes/c.scene", """{}""")
         add("p/scenes/d.scene", "broken")
         val items = ((ProjectReader.read(myFixture.findFileInTempDir("p/a.abss")) as AssetReadResult.Success)
-            .root.properties[1].value as DtoValue.Items).items.map { (it as DtoValue.Obj).label }
+            .root as ProjectDto).scenes.mapIndexed { i, it -> elementLabel("scenes", it, i) }
         assertEquals(listOf("A", "B", "scenes[2]", "d.scene"), items)
         add("q/a.abss", """{"name":"q"}""")
         val none = (ProjectReader.read(myFixture.findFileInTempDir("q/a.abss")) as AssetReadResult.Success).root
-        assertTrue((none.properties[1].value as DtoValue.Items).items.isEmpty())
+        assertTrue((none as ProjectDto).scenes.isEmpty())
         assertTrue(ProjectReader.read(add("bad.abss", "")) is AssetReadResult.Failure)
     }
 
@@ -203,7 +228,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
     }
 
     fun testFoldToggles() {
-        val props = SceneReader.parse("""{"fogEnabled":false,"fog":{},"skyboxEnabled":true,"skyboxName":"s","lonelyEnabled":true}""").properties()
+        val props = childrenOf(SceneReader.parse("""{"fogEnabled":false,"fog":{},"skyboxEnabled":true,"skyboxName":"s","lonelyEnabled":true}"""))
         val folded = props.foldToggles()
         assertEquals(false, folded.first { it.name == "fog" }.enabled)
         assertEquals(true, folded.first { it.name == "skyboxName" }.enabled)

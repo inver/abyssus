@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.sceneview.terrain
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
@@ -23,6 +23,11 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.math.Matrix3
 import com.badlogic.gdx.utils.Disposable
+import net.nevinsky.abyssus.sceneview.FogParams
+import net.nevinsky.abyssus.sceneview.LightSet
+import net.nevinsky.abyssus.sceneview.Rgba
+import net.nevinsky.abyssus.sceneview.Shaders
+import net.nevinsky.abyssus.sceneview.TerrainEntity
 
 /**
  * Draws terrains: splat-blended textures with the scene's ambient, directional and point lights and fog. A small

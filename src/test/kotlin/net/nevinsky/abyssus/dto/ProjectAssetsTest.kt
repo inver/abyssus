@@ -16,6 +16,7 @@
 
 package net.nevinsky.abyssus.dto
 
+import net.nevinsky.abyssus.filetype.SceneJson
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.vfs.VirtualFile
@@ -29,9 +30,9 @@ class ProjectAssetsTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
 
     private fun asset(name: String, uuid: String, type: String, additional: String = "{}") =
-        AssetInfo(name, uuid, type, ProjectAssets.parse(name, Json.parse("""{"uuid":"$uuid","type":"$type","additional":$additional}""")).references)
+        AssetInfo(name, uuid, type, ProjectAssets.parse(name, SceneJson.parse("""{"uuid":"$uuid","type":"$type","additional":$additional}""")).references)
 
-    private val DtoValue.Obj.folder get() = label!!
+    private val AssetInfo.folder get() = name
 
     private fun add(path: String, text: String): VirtualFile = myFixture.addFileToProject(path, text).virtualFile
 
@@ -42,10 +43,8 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         return abss
     }
 
-    private fun readAssets(abss: VirtualFile): List<DtoValue.Obj> {
-        val root = (ProjectReader.read(abss) as AssetReadResult.Success).root
-        return ((root.properties.single { it.name == "assets" }.value) as DtoValue.Items).items.map { it as DtoValue.Obj }
-    }
+    private fun readAssets(abss: VirtualFile): List<AssetInfo> =
+        ((ProjectReader.read(abss) as AssetReadResult.Success).root as ProjectDto).assets
 
     private fun ecs(vararg refs: String) =
         """{"ecs":{"entities":{${refs.mapIndexed { i, r -> "\"$i\":{\"components\":{\"RenderComponent\":{\"renderable\":$r}}}" }.joinToString(",")}}}}"""
@@ -67,7 +66,7 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         val assets = readAssets(myFixture.findFileInTempDir("$dir/Untitled.abss"))
         assertEquals(7, assets.size)
         assertEquals(assets.map { it.folder }.sorted(), assets.map { it.folder })
-        fun type(a: DtoValue.Obj) = (a.properties.first { it.name == "type" }.value as DtoValue.Scalar).value
+        fun type(a: AssetInfo) = a.type
         assertEquals("SKYBOX", type(assets.single { it.folder == "skybox_default" }))
         assertEquals("TERRAIN", type(assets.single { it.folder.startsWith("terrain_") }))
         assertEquals(4, assets.count { type(it) == "MODEL" && it.folder.startsWith("model_") })
@@ -77,15 +76,15 @@ class ProjectAssetsTest : BasePlatformTestCase() {
 
     fun testProjectWithoutAssetsFolderHasEmptyList() {
         val abss = add("none/P.abss", """{"name":"P"}""")
-        assertEquals(emptyList<DtoValue.Obj>(), readAssets(abss))
+        assertEquals(emptyList<AssetInfo>(), readAssets(abss))
     }
 
     fun testBrokenMetaStillListsTheAssetWithUnknownType() {
         val abss = project(emptyMap(), mapOf("good" to meta("MODEL", "u1"), "bad" to "{ nope", "empty" to ""), "broken")
         val assets = readAssets(abss).associateBy { it.folder }
         assertEquals(setOf("bad", "empty", "good"), assets.keys)
-        assertEquals(DtoValue.Scalar(null), assets.getValue("bad").properties.first { it.name == "type" }.value)
-        assertEquals(DtoValue.Scalar("MODEL"), assets.getValue("good").properties.first { it.name == "type" }.value)
+        assertNull(assets.getValue("bad").type)
+        assertEquals("MODEL", assets.getValue("good").type)
     }
 
     fun testStrayFilesInAssetsAreNotAssets() {

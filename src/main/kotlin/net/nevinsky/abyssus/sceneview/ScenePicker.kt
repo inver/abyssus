@@ -22,6 +22,7 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
+import net.nevinsky.abyssus.sceneview.terrain.TerrainData
 
 /** A model entity as seen by picking: its world-space bounds. */
 class BoxTarget(val entityId: String, val bounds: BoundingBox)

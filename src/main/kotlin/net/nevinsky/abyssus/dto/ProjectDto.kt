@@ -14,6 +14,14 @@
  * limitations under the License.
  */
 
-package net.nevinsky.abyssus.scene
+package net.nevinsky.abyssus.dto
 
-data class ColorDto(val r: Float = 0f, val g: Float = 0f, val b: Float = 0f, val a: Float = 0f)
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.scene.SceneDto
+
+/** A `.abss` project as the view shows it. [scenes] holds [SceneDto]s, and a [SceneError] for each that failed to read. */
+data class ProjectDto(val name: String?, val scenes: List<Any>, val assets: List<AssetInfo>)
+
+/** A scene file that could not be read; shown as an `error` row under the scene's file name. */
+data class SceneError(@get:JsonIgnore val file: VirtualFile, val error: String?)

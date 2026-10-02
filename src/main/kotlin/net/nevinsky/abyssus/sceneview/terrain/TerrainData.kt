@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.sceneview.terrain
 
 import java.io.DataInputStream
 import java.io.File
@@ -62,21 +62,21 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
         out[at + 2] = nz / len
     }
 
-    fun indices(): ShortArray {
+    fun indices(): IntArray {
         val cells = resolution - 1
-        val out = ShortArray(cells * cells * 6)
+        val out = IntArray(cells * cells * 6)
         var i = 0
         for (z in 0 until cells) for (x in 0 until cells) {
             val c00 = z * resolution + x
             val c10 = c00 + 1
             val c01 = c00 + resolution
             val c11 = c10 + resolution
-            out[i++] = c11.toShort()
-            out[i++] = c10.toShort()
-            out[i++] = c00.toShort()
-            out[i++] = c00.toShort()
-            out[i++] = c01.toShort()
-            out[i++] = c11.toShort()
+            out[i++] = c11
+            out[i++] = c10
+            out[i++] = c00
+            out[i++] = c00
+            out[i++] = c01
+            out[i++] = c11
         }
         return out
     }

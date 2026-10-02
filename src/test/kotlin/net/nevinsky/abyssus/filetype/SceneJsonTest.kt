@@ -16,7 +16,6 @@
 
 package net.nevinsky.abyssus.filetype
 
-import net.nevinsky.abyssus.dto.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -53,7 +52,7 @@ class SceneJsonTest {
 
     @Test
     fun roundTripsToTheSameDocument() {
-        assertEquals(Json.parse(minified), Json.parse(SceneJson.pretty(minified)!!))
+        assertEquals(SceneJson.parse(minified), SceneJson.parse(SceneJson.pretty(minified)!!))
     }
 
     @Test
@@ -70,12 +69,12 @@ class SceneJsonTest {
         val withNulls = """{"skyboxName":null,"fog":{"gradient":null,"color":{"r":1}},"list":[null,{"a":null}]}"""
         val pretty = SceneJson.pretty(withNulls)!!
         assertTrue(pretty, pretty.contains("\"skyboxName\": null"))
-        assertEquals(Json.parse(withNulls), Json.parse(pretty))
+        assertEquals(SceneJson.parse(withNulls), SceneJson.parse(pretty))
     }
 
     @Test
     fun compactKeepsNullsAndStaysOnOneLine() {
-        val element = Json.parse("""{"a":null,"b":{"c":null},"d":"<x>"}""")
+        val element = SceneJson.parse("""{"a":null,"b":{"c":null},"d":"<x>"}""")
         assertEquals("""{"a":null,"b":{"c":null},"d":"<x>"}""", SceneJson.compact(element))
     }
 }
