@@ -17,7 +17,12 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.readText
+import net.nevinsky.abyssus.JsonProcessor
 import net.nevinsky.abyssus.dto.*
 import net.nevinsky.abyssus.filetype.SceneJson
 import org.apache.commons.lang3.StringUtils
@@ -31,9 +36,14 @@ data class TerrainFiles(val data: File, val size: Int, val uv: Float, val splat:
  * Finds the files an asset folder under `<project>/assets` names in its `meta.json`. Pure file access, so it can run
  * on any thread; every lookup returns null for a missing folder, unreadable `meta.json` or missing file.
  */
-class ProjectAssetFiles(projectDir: File, private val mapper: ObjectMapper = SceneJson.mapper) {
-    /** Absolute: texture paths the model loader derives from the model file must not depend on the working directory. */
-    val projectDir: File = projectDir.absoluteFile
+@Service(Service.Level.PROJECT)
+class ProjectAssetFiles private constructor(val projectDir: File, private val project: Project?) {
+    /** The platform's project service. */
+    constructor(project: Project) : this(File(project.projectFilePath), project)
+
+    /** For code that has only the project folder. */
+    constructor(projectDir: File) : this(projectDir, null)
+
     private val assetsDir = File(this.projectDir, ProjectLayout.ASSETS_DIR)
 
     /** Asset folders by the `uuid` in their `meta.json` (the first folder by name wins); read once, on first use. */
@@ -81,7 +91,7 @@ class ProjectAssetFiles(projectDir: File, private val mapper: ObjectMapper = Sce
     private fun <T, M : MetaBase<T>> loadMeta(clazz: Class<M>, folder: File): M? = runCatchingKeepingCancellation {
         File(folder, ProjectLayout.META_FILE)
             .takeIf { it.isFile }
-            ?.let { mapper.readValue(it.readText(), clazz) }
+            ?.let { service<JsonProcessor>().parse(it.readText(), clazz) }
     }.getOrNull()
 
     fun loadFile(assetName: String, fileName: String?): File? {
@@ -93,6 +103,33 @@ class ProjectAssetFiles(projectDir: File, private val mapper: ObjectMapper = Sce
     fun <T, M : MetaBase<T>> loadAsset(clazz: Class<M>, name: String): Asset<T>? {
         val dir = folder(name) ?: return null
         val meta = loadMeta(clazz, dir) ?: return null
-        return Asset(meta, dir)
+        return Asset(name, meta, dir)
+    }
+
+    /** One [Asset] per folder under the `assets` next to [abss]; a folder without a readable `meta.json` is skipped. */
+    fun loadShortAssets(abss: VirtualFile): List<Asset<Any>> {
+        val service = service<JsonProcessor>()
+        return ProjectLayout.assetFolders(abss).mapNotNull { dir ->
+            runCatchingKeepingCancellation {
+                val text = dir.findChild(ProjectLayout.META_FILE)?.readText() ?: return@runCatchingKeepingCancellation null
+
+                @Suppress("UNCHECKED_CAST")
+                val parsedMeta = service.parse(text, MetaBase::class.java) as MetaBase<Any>
+                val references = runCatchingKeepingCancellation { references(SceneJson.parseObject(text)) }
+                    .getOrDefault(emptyList())
+                Asset(dir.name, parsedMeta, File(dir.path), references)
+            }.getOrNull()
+        }
+    }
+
+    /**
+     * The `uuid`s a `meta.json` holds in the fields Mundus resolves to other assets: the splat textures and the
+     * `materials` list. Files named in `meta.json` live in the asset's own folder and are not references.
+     */
+    private fun references(meta: JsonNode): List<String> {
+        val additional = meta.obj("additional") ?: return emptyList()
+        val materials = additional.opt("materials")?.takeIf { it.isArray }
+            ?.mapNotNull { it.takeIf(JsonNode::isTextual)?.asText() }.orEmpty()
+        return ProjectLayout.SPLAT_FIELDS.mapNotNull { additional.text(it) } + materials
     }
 }

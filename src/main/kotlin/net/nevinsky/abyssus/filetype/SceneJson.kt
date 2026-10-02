@@ -27,16 +27,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.json.JsonMapper
-import com.fasterxml.jackson.databind.node.BigIntegerNode
-import com.fasterxml.jackson.databind.node.BooleanNode
-import com.fasterxml.jackson.databind.node.DoubleNode
-import com.fasterxml.jackson.databind.node.IntNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.node.LongNode
-import com.fasterxml.jackson.databind.node.NullNode
-import com.fasterxml.jackson.databind.node.NumericNode
-import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.databind.node.TextNode
+import com.fasterxml.jackson.databind.node.*
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -125,6 +116,7 @@ object SceneJson {
                 o.set<JsonNode>(name, read(p, p.nextToken()))
             }
         }
+
         JsonToken.START_ARRAY -> nodes.arrayNode().also { a ->
             var next = p.nextToken()
             while (next != JsonToken.END_ARRAY) {
@@ -132,12 +124,14 @@ object SceneJson {
                 next = p.nextToken()
             }
         }
+
         JsonToken.VALUE_STRING -> TextNode.valueOf(p.text)
         JsonToken.VALUE_NUMBER_INT -> when (p.numberType) {
             JsonParser.NumberType.INT -> IntNode.valueOf(p.intValue)
             JsonParser.NumberType.LONG -> LongNode.valueOf(p.longValue)
             else -> BigIntegerNode.valueOf(p.bigIntegerValue)
         }
+
         JsonToken.VALUE_NUMBER_FLOAT -> RawNumberNode(p.text)
         JsonToken.VALUE_TRUE -> BooleanNode.TRUE
         JsonToken.VALUE_FALSE -> BooleanNode.FALSE

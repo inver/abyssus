@@ -21,9 +21,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.AssetReadResult
-import net.nevinsky.abyssus.dto.ProjectAssets
 import net.nevinsky.abyssus.dto.ProjectDto
 import net.nevinsky.abyssus.dto.ProjectLayout
+import net.nevinsky.abyssus.dto.sceneReferences
 import net.nevinsky.abyssus.dto.obj
 import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.text
@@ -68,8 +68,8 @@ data class SkyboxChoice(
 
 /** The project's `SKYBOX` assets by folder name; [metas] holds each folder's parsed `meta.json` (absent or null when unreadable). */
 fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>): List<SkyboxChoice> {
-    val references = project.scenes.filterIsInstance<SceneDto>().map(ProjectAssets::sceneReferences)
-    return project.assets.filter { it.type == SKYBOX_TYPE }.sortedBy { it.name }.map { asset ->
+    val references = project.scenes.filterIsInstance<SceneDto>().map(::sceneReferences)
+    return project.assets.filter { it.meta.type.name == SKYBOX_TYPE }.sortedBy { it.name }.map { asset ->
         val additional = metas[asset.name]?.obj("additional")
         val files = FACE_KEYS.mapNotNull { key -> additional?.text(key)?.takeIf { it.isNotBlank() } }
         val formats = files.mapNotNull { f -> f.substringAfterLast('.', "").lowercase().takeIf { it.isNotEmpty() } }.distinct().sorted()
@@ -81,8 +81,8 @@ fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>): List<Skyb
 
 /** The skybox choices of the `.abss` project [abss], read as the Abyssus view reads it; null when the project cannot be read. */
 fun loadSkyboxChoices(project: Project, abss: VirtualFile): List<SkyboxChoice>? {
-    val dto = (AssetReadCache.of(project).read(abss) as? AssetReadResult.Success)?.root as? ProjectDto ?: return null
-    val skyboxes = dto.assets.filter { it.type == SKYBOX_TYPE }.map { it.name }.toSet()
+    val dto = AssetReadCache.of(project).read(abss)?.obj as? ProjectDto ?: return null
+    val skyboxes = dto.assets.filter { it.meta.type.name == SKYBOX_TYPE }.map { it.name }.toSet()
     val metas = ProjectLayout.assetFolders(abss).filter { it.name in skyboxes }.associate { dir ->
         dir.name to runCatchingKeepingCancellation {
             dir.findChild(ProjectLayout.META_FILE)?.let { SceneJson.parseObject(it.text()) }

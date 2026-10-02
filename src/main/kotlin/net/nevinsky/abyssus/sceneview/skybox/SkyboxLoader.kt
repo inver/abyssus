@@ -30,7 +30,7 @@ class SkyboxLoader : AssetLoader<PreparedSkybox, SkyboxCube> {
      */
     override fun prepare(files: ProjectAssetFiles, name: String): PreparedSkybox? {
         val assetData = files.loadAsset(SkyboxMeta::class.java, name) ?: return null
-        val additional: SkyboxAdditional = assetData.metaBase.additional
+        val additional = assetData.meta.additional
         val faces = ArrayList<Pixmap>(6)
         try {
             for (f in listOf(

@@ -19,6 +19,7 @@ package net.nevinsky.abyssus.sceneview
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.dto.ProjectLayout
+import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.dto.SceneReader
 import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
 
@@ -38,7 +39,7 @@ fun interface SceneParamsSource {
             val camera = ProjectLayout.abssFor(file)?.let { abss ->
                 runCatchingKeepingCancellation { MainCamera.parse(textOf(abss)) }.getOrNull()
             } ?: CameraParams.DEFAULT
-            SceneRenderParams.from(SceneReader.parse(textOf(file)), camera, ProjectLayout.projectDirFor(file))
+            SceneRenderParams.from(service<SceneReader>().parse(textOf(file)), camera, ProjectLayout.projectDirFor(file))
         }
     }
 }

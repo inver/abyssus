@@ -21,7 +21,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.Topic
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.dto.AssetInfo
+import net.nevinsky.abyssus.sceneview.Asset
 import net.nevinsky.abyssus.dto.ProjectLayout
 
 fun interface AbyssusSelectionListener {
@@ -51,10 +51,10 @@ class AbyssusSelection(private val project: Project) {
     }
 }
 
-/** The asset folder behind a selected asset row (an [AssetInfo] entry under a project's `assets`), else null. */
+/** The asset folder behind a selected asset row (an [Asset] entry under a project's `assets`), else null. */
 fun assetFolderOf(node: Any?): VirtualFile? {
     val entry = (node as? DtoEntryNode)?.value ?: return null
-    val info = entry.value as? AssetInfo ?: return null
+    val info = entry.value as? Asset<*> ?: return null
     val abss = entry.source?.takeIf { it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION } ?: return null
     return ProjectLayout.assetFolders(abss).firstOrNull { it.name == info.name }
 }

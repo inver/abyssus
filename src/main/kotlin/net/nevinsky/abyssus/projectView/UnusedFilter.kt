@@ -25,7 +25,7 @@ import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.dto.AssetInfo
+import net.nevinsky.abyssus.sceneview.Asset
 
 /** The "Show Only Unused Assets" choice of a project's Abyssus view; off by default and remembered per project. */
 object UnusedFilter {
@@ -40,7 +40,7 @@ object UnusedFilter {
         if (!isOn(project)) return rows
         return rows.map { row ->
             val assets = row.value as? List<*>
-            if (row.name == "assets" && assets != null) row.copy(value = assets.filter { (it as? AssetInfo)?.unused == true }) else row
+            if (row.name == "assets" && assets != null) row.copy(value = assets.filter { (it as? Asset<*>)?.unused == true }) else row
         }
     }
 }

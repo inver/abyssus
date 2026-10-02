@@ -18,7 +18,7 @@ package net.nevinsky.abyssus.projectView
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.dto.AssetInfo
+import net.nevinsky.abyssus.sceneview.Asset
 import net.nevinsky.abyssus.dto.SceneError
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.scene.SceneDto
@@ -107,7 +107,7 @@ fun sceneLabel(scene: SceneDto, index: Int): String {
 /** What a list element is called in the tree: a scene's label, an asset's folder, a failed scene's file, else `parent[i]`. */
 fun elementLabel(parentName: String, element: Any?, index: Int): String = when (element) {
     is SceneDto -> sceneLabel(element, index)
-    is AssetInfo -> element.name
+    is Asset<*> -> element.name
     is SceneError -> element.file.name
     else -> AbyssusBundle.message("dtoListElementLabel", parentName, index)
 }

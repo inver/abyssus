@@ -29,9 +29,9 @@ class SkyboxMetaTest {
     fun skyboxMetaBindsFromTheAssetFolder() {
         val asset = ProjectAssetFiles(projectDir).loadAsset(SkyboxMeta::class.java, "skybox_default")
         assertNotNull("meta.json of skybox_default must bind to SkyboxMeta", asset)
-        assertEquals("skybox_default.png", asset!!.metaBase.additional.top)
-        assertEquals("skybox_default.png", asset.metaBase.additional.back)
-        assertEquals(MetaType.SKYBOX, asset.metaBase.type)
+        assertEquals("skybox_default.png", asset!!.meta.additional.top)
+        assertEquals("skybox_default.png", asset.meta.additional.back)
+        assertEquals(MetaType.SKYBOX, asset.meta.type)
     }
 
     @Test

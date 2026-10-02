@@ -60,7 +60,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
 
     // JSON reading/writing for asset files; the platform does not ship jackson-databind, so it is bundled
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.1")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.22.3")
 
     // LWJGL 3 + AWT bridge for the OpenGL scene panel
     val lwjglVersion = properties("lwjglVersion").get()

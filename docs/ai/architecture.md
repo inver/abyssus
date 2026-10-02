@@ -103,7 +103,7 @@ checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the proper
 ## Extension points
 
 - **A new asset file format:** implement `AssetReader` and return it from `AssetReader.forExtension`
-  (`src/main/kotlin/net/nevinsky/abyssus/dto/AssetReader.kt`). Add the extension to `ProjectLayout.ASSET_EXTENSIONS`.
+  (`../../src/main/kotlin/net/nevinsky/abyssus/dto/ConfigFileReader.kt`). Add the extension to `ProjectLayout.ASSET_EXTENSIONS`.
 - **A new ECS component:** write a `ComponentCodec` and add it to `ComponentCodecs`
   (`src/main/kotlin/net/nevinsky/abyssus/ecs/scene/ComponentCodecs.kt`).
 - **A new asset kind drawn in the scene view:** an `AssetLoader` for `SceneAssets`, and a placement in `SceneContent`.

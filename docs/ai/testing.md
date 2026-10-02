@@ -64,5 +64,9 @@ an object was dragged.
   `SkyboxPickerModel` holds its logic.
 - **Properties panel:** `PanelState`, `readAssetState` and `readEntityState` hold its logic without Swing. Entity editors are
   found by component name in `EntityPropertiesPanelTest` (`field-<Kind>-<field>`, `remove-<Kind>`, `add-component`).
+- **Design screenshots:** `DesignScreenshotTest` paints the tree, the properties panel states, the skybox chooser rows and
+  an icon sheet to `build/screenshots/*.png`, and writes what differs from the design canvas ("Abyssus Panel Design": icon
+  colours, chooser row height) to `build/screenshots/<name>-diff.txt`. The design is HTML, so pixels are not compared. The test
+  fails on a difference only with `-Dabyssus.designStrict=true`.
 - **Component edits:** `ComponentEditorTest` runs on JSON trees; `SceneComponentEditsTest` checks the undoable writes;
   `ComponentActionsTest` subclasses the tree actions to supply the selected node.

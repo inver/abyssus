@@ -66,14 +66,21 @@ fun addComponentGroup(project: Project, file: VirtualFile, entityId: String, kin
 
                     override fun actionPerformed(e: AnActionEvent) = reportRejection(
                         project,
-                        SceneComponentEdits.add(project, file, entityId, name, mapOf("assetType" to asset.type, "assetName" to asset.name)),
+                        SceneComponentEdits.add(
+                            project,
+                            file,
+                            entityId,
+                            name,
+                            mapOf("assetType" to asset.type, "assetName" to asset.name)
+                        ),
                     )
                 })
             }
             group.add(sub)
         } else {
             group.add(object : AnAction(label) {
-                override fun actionPerformed(e: AnActionEvent) = reportRejection(project, SceneComponentEdits.add(project, file, entityId, name))
+                override fun actionPerformed(e: AnActionEvent) =
+                    reportRejection(project, SceneComponentEdits.add(project, file, entityId, name))
             })
         }
     }
@@ -82,7 +89,8 @@ fun addComponentGroup(project: Project, file: VirtualFile, entityId: String, kin
 
 private fun selectedNode(e: AnActionEvent): Any? {
     val project = e.project ?: return null
-    val pane = ProjectView.getInstance(project).currentProjectViewPane?.takeIf { it.id == AbyssusProjectViewPane.ID } ?: return null
+    val pane = ProjectView.getInstance(project).currentProjectViewPane?.takeIf { it.id == AbyssusProjectViewPane.ID }
+        ?: return null
     return TreeUtil.getUserObject(pane.selectedPath?.lastPathComponent)
 }
 
@@ -111,7 +119,13 @@ open class AddComponentAction : AnAction(), DumbAware {
         val target = target(e) ?: return
         val group = choices(project, target)
         JBPopupFactory.getInstance()
-            .createActionGroupPopup(AbyssusBundle.message("addComponentTitle"), group, e.dataContext, JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true)
+            .createActionGroupPopup(
+                AbyssusBundle.message("addComponentTitle"),
+                group,
+                e.dataContext,
+                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+                true
+            )
             .showInBestPositionFor(e.dataContext)
     }
 }

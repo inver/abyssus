@@ -123,6 +123,7 @@ object AbyssusProjectIcons {
 class SceneFileType private constructor() : LanguageFileType(JsonLanguage.INSTANCE) {
     override fun getName() = "Abyssus Scene"
     override fun getDescription() = "Abyssus Scene"
+    override fun getDisplayName() = "Abyssus Scene"
     override fun getDefaultExtension() = "scene"
     override fun getIcon(): Icon = SceneIcons.FILE
 
@@ -136,6 +137,7 @@ class SceneFileType private constructor() : LanguageFileType(JsonLanguage.INSTAN
 class AbyssusProjectFileType private constructor() : LanguageFileType(JsonLanguage.INSTANCE) {
     override fun getName() = "Abyssus Project"
     override fun getDescription() = "Abyssus Project"
+    override fun getDisplayName() = "Abyssus Project"
     override fun getDefaultExtension() = "abss"
     override fun getIcon(): Icon = AbyssusProjectIcons.FILE
 

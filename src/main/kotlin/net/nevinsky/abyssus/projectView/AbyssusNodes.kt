@@ -30,7 +30,7 @@ import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.ui.SimpleTextAttributes
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.AssetReadResult
-import net.nevinsky.abyssus.dto.AssetInfo
+import net.nevinsky.abyssus.sceneview.Asset
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.filetype.AbyssusProjectIcons
 import net.nevinsky.abyssus.filetype.AssetIcons
@@ -89,17 +89,19 @@ class AbyssusAssetNode(project: Project, file: VirtualFile, settings: ViewSettin
 
     override fun getChildren(): Collection<AbstractTreeNode<*>> =
         when (val result = AssetReadCache.of(project!!).read(value)) {
-            is AssetReadResult.Success -> UnusedFilter.apply(project!!, childrenOf(result.root)).foldToggles().map {
-                DtoEntryNode(project!!, value.path, it, (result.root as? SceneDto)?.file ?: value, emptyList())
-            }
-            else -> emptyList()
+            null -> emptyList()
+            else -> result.obj?.let { root ->
+                UnusedFilter.apply(project!!, childrenOf(root)).foldToggles().map {
+                    DtoEntryNode(project!!, value.path, it, (root as? SceneDto)?.file ?: value, emptyList())
+                }
+            } ?: emptyList()
         }
 
     override fun update(presentation: PresentationData) {
         presentation.addText(value.name, SimpleTextAttributes.REGULAR_ATTRIBUTES)
         presentation.setIcon(assetIcon(value))
-        (AssetReadCache.of(project!!).read(value) as? AssetReadResult.Failure)?.let {
-            presentation.addText("  " + AbyssusBundle.message("assetParseError", it.message), SimpleTextAttributes.ERROR_ATTRIBUTES)
+        AssetReadCache.of(project!!).read(value)?.takeIf { !it.success }?.let {
+            presentation.addText("  " + AbyssusBundle.message("assetParseError", it.message.orEmpty()), SimpleTextAttributes.ERROR_ATTRIBUTES)
         }
     }
 }
@@ -123,7 +125,7 @@ class DtoEntry(
     override fun equals(other: Any?) =
         other is DtoEntry && other.path == path && other.enabled == enabled && rowText(other) == rowText(this) &&
             (if (isScalar(value)) scalarOf(value) == scalarOf(other.value) else !isScalar(other.value)) &&
-            (value as? AssetInfo)?.unused == (other.value as? AssetInfo)?.unused
+            (value as? Asset<*>)?.unused == (other.value as? Asset<*>)?.unused
     override fun hashCode() = path.hashCode()
 }
 
@@ -132,7 +134,7 @@ private fun entryIcon(entry: DtoEntry): Icon {
     return when {
         dto is List<*> && entry.name == "scenes" -> ScenesIcons.LIST
         dto is List<*> && entry.name == "assets" -> AllIcons.Nodes.Folder
-        dto is AssetInfo -> AssetIcons.forType(dto.type)
+        dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
         isEntityEntry(entry) -> PropertyIcons.ECS
         isComponentEntry(entry) -> ComponentIcons.forComponent(entry.name)
         dto is SceneDto && dto.file?.extension == ProjectLayout.SCENE_EXTENSION -> SceneIcons.FILE
@@ -169,7 +171,7 @@ class DtoEntryNode(
     private val isDisabled get() = inheritedDisabled || value.enabled == false
 
     /** A project asset no scene reaches. */
-    private val isUnused get() = (value.value as? AssetInfo)?.unused == true
+    private val isUnused get() = (value.value as? Asset<*>)?.unused == true
 
     private val isGray get() = isDisabled || isUnused
 

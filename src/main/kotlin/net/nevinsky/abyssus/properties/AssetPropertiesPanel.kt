@@ -43,7 +43,7 @@ import net.nevinsky.abyssus.projectView.AbyssusSelectionListener
 import net.nevinsky.abyssus.projectView.DtoEntryNode
 import net.nevinsky.abyssus.projectView.assetFolderOf
 import net.nevinsky.abyssus.projectView.componentTargetOf
-import net.nevinsky.abyssus.dto.AssetInfo
+import net.nevinsky.abyssus.sceneview.Asset
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Color
@@ -137,7 +137,7 @@ class AssetPropertiesPanel(
         }
     }
 
-    private fun Any?.isAssetRow() = (this as? DtoEntryNode)?.value?.value is AssetInfo
+    private fun Any?.isAssetRow() = (this as? DtoEntryNode)?.value?.value is Asset<*>
 
     private fun apply(newState: PanelState) {
         state = newState
