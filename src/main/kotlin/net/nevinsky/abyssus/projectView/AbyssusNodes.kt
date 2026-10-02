@@ -175,7 +175,7 @@ class DtoEntryNode(
 
     override fun update(presentation: PresentationData) {
         val v = value
-        val shown = label ?: v.name
+        val shown = label ?: displayName(v.name)
         val text = if (isScalar(v.value)) "$shown: ${scalarOf(v.value) ?: AbyssusBundle.message("dtoNullValue")}" else shown
         val attrs = if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES
         presentation.addText(text, attrs)

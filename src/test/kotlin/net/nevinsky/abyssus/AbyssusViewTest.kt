@@ -181,13 +181,13 @@ class AbyssusViewTest : BasePlatformTestCase() {
         fixture()
         val scene = children(children(asset("Untitled.abss")).first { text(it) == "scenes" }).single()
         val top = children(scene).map { text(it) }
-        assertEquals(listOf("ambientLight", "fog", "skyboxName: null", "ecs"), top)
+        assertEquals(listOf("ambientLight", "fog", "skybox: null", "ecs"), top)
         assertTrue(top.none { it.startsWith("id") || it.startsWith("name") })
-        assertTrue("skyboxName: null" in top)
+        assertTrue("skybox: null" in top)
         assertTrue(top.none { it.endsWith("Enabled: true") || it.endsWith("Enabled: false") })
         val fog = children(scene).first { text(it) == "fog" }
         assertEquals(true, (fog as DtoEntryNode).value.enabled)
-        val sky = children(scene).first { text(it).startsWith("skyboxName") } as DtoEntryNode
+        val sky = children(scene).first { text(it).startsWith("skybox: ") } as DtoEntryNode
         assertNotNull(sky.value.enabled) // skyboxEnabled's value may have been flipped in the fixture via the eye
         assertEquals(listOf("color", "density: 0.001", "gradient: 1.5"), children(fog).map { text(it) })
         val color = children(fog).first()
@@ -304,9 +304,9 @@ class AbyssusViewTest : BasePlatformTestCase() {
         fun icon(name: String) = children(scene).first { text(it).startsWith(name) }.let { it.update(); it.presentation.getIcon(false) }
         assertSame(net.nevinsky.abyssus.filetype.PropertyIcons.LIGHT, icon("ambientLight"))
         assertSame(net.nevinsky.abyssus.filetype.PropertyIcons.FOG, icon("fog"))
-        assertSame(net.nevinsky.abyssus.filetype.PropertyIcons.SKYBOX, icon("skyboxName"))
+        assertSame(net.nevinsky.abyssus.filetype.PropertyIcons.SKYBOX, icon("skybox: "))
         assertSame(net.nevinsky.abyssus.filetype.PropertyIcons.ECS, icon("ecs"))
-        assertEquals(4, setOf(icon("ambientLight"), icon("fog"), icon("skyboxName"), icon("ecs")).size)
+        assertEquals(4, setOf(icon("ambientLight"), icon("fog"), icon("skybox: "), icon("ecs")).size)
     }
 
     fun testSceneLabelShowsIdAndRenameEditsOnlyName() {

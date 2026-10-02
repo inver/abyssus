@@ -34,6 +34,12 @@ data class DtoRow(
     val toggleName: String? = null,
 )
 
+/** Rows shown under another name than their property; the file keeps the property name. */
+private val DISPLAY_NAMES = mapOf("skyboxName" to "skybox")
+
+/** What the view calls the property [name]. */
+fun displayName(name: String): String = DISPLAY_NAMES[name] ?: name
+
 /** True for a value shown as `name: value`; everything else is a node with children. */
 fun isScalar(value: Any?): Boolean = when (value) {
     null, is String, is Number, is Boolean, is Enum<*> -> true

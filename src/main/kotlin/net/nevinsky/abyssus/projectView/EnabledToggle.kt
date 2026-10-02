@@ -19,6 +19,7 @@ package net.nevinsky.abyssus.projectView
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.BooleanNode
+import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import com.intellij.ide.projectView.ProjectView
@@ -73,6 +74,19 @@ fun sceneFileOf(entry: DtoEntry): VirtualFile? =
     (entry.value as? SceneDto)?.file?.takeIf { it.extension == ProjectLayout.SCENE_EXTENSION }
 
 fun sceneName(entry: DtoEntry): String? = (entry.value as? SceneDto)?.name
+
+/** Sets the scene's `skyboxName` to [name] (an asset folder, or null for none); false, writing nothing, when it already is. */
+fun setSkybox(project: Project, file: VirtualFile, name: String?): Boolean =
+    editJson(project, file) { root ->
+        val scene = root as? ObjectNode ?: return@editJson false
+        val value: JsonNode = name?.let(TextNode::valueOf) ?: NullNode.instance
+        if ((scene.get(SKYBOX_KEY) ?: NullNode.instance) == value) return@editJson false
+        scene.set<JsonNode>(SKYBOX_KEY, value)
+        true
+    }
+
+/** The scene property holding the skybox asset folder. */
+const val SKYBOX_KEY = "skyboxName"
 
 fun renameScene(project: Project, file: VirtualFile, newName: String): Boolean =
     editJson(project, file) { root ->

@@ -104,28 +104,44 @@ private class AbyssusSelectInTarget(project: Project) : ProjectViewSelectInTarge
 private class RowAction(val icon: Icon, val tooltip: String?, val run: (row: Int) -> Unit)
 
 /**
- * Paints one clickable icon at the right edge of rows that have an action: the eye on entries gated by an
- * `xxxEnabled` toggle, and "View" on scenes.
+ * Paints clickable icons at the right edge of rows that have actions: the eye on entries gated by an `xxxEnabled`
+ * toggle, "View" on scenes, and "..." left of the eye on a project scene's skybox.
  */
 private class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
 
-    private fun actionFor(row: Int): RowAction? {
+    /** The row's actions, rightmost first. */
+    private fun actionsFor(row: Int): List<RowAction> {
         val node = TreeUtil.getUserObject(getPathForRow(row)?.lastPathComponent)
         viewableSceneFile(node)?.let { file ->
-            return RowAction(SceneViewIcons.VIEW, AbyssusBundle.message("viewSceneTooltip")) { openSceneView(project, file) }
+            return listOf(RowAction(SceneViewIcons.VIEW, AbyssusBundle.message("viewSceneTooltip")) { openSceneView(project, file) })
         }
-        val entry = (node as? DtoEntryNode)?.value?.takeIf { it.enabled != null } ?: return null
-        val icon = if (entry.enabled == true) AllIcons.Actions.Show else AllIcons.Actions.ToggleVisibility
+        val entry = (node as? DtoEntryNode)?.value ?: return emptyList()
+        return listOfNotNull(eyeAction(entry), skyboxAction(entry))
+    }
+
+    private fun eyeAction(entry: DtoEntry): RowAction? {
+        if (entry.enabled == null) return null
+        val icon = if (entry.enabled) AllIcons.Actions.Show else AllIcons.Actions.ToggleVisibility
         return RowAction(icon, null) { r ->
             val wasExpanded = isExpanded(getPathForRow(r))
             if (toggleEnabled(project, entry)) reselect(entry.path, wasExpanded)
         }
     }
 
-    private fun iconBounds(row: Int, icon: Icon): Rectangle {
+    private fun skyboxAction(entry: DtoEntry): RowAction? {
+        val abss = skyboxProjectOf(entry) ?: return null
+        return RowAction(AllIcons.Actions.More, AbyssusBundle.message("skyboxChooserTooltip")) {
+            if (chooseSkybox(project, entry, abss)) reselect(entry.path, false)
+        }
+    }
+
+    /** The icon [index] places from the right edge, [ICON_GAP] apart. */
+    private fun iconBounds(row: Int, actions: List<RowAction>, index: Int): Rectangle {
         val bounds = getRowBounds(row)
-        val x = visibleRect.let { it.x + it.width } - icon.iconWidth - ICON_GAP
+        var x = visibleRect.let { it.x + it.width }
+        for (i in 0..index) x -= actions[i].icon.iconWidth + ICON_GAP
+        val icon = actions[index].icon
         return Rectangle(x, bounds.y + (bounds.height - icon.iconHeight) / 2, icon.iconWidth, icon.iconHeight)
     }
 
@@ -136,8 +152,8 @@ private class EyeTree(model: DefaultTreeModel, private val project: Project) : P
 
     private fun actionAt(e: MouseEvent): Pair<Int, RowAction>? {
         val row = rowOf(e) ?: return null
-        val action = actionFor(row) ?: return null
-        return (row to action).takeIf { iconBounds(row, action.icon).contains(e.point) }
+        val actions = actionsFor(row)
+        return actions.indices.firstOrNull { iconBounds(row, actions, it).contains(e.point) }?.let { row to actions[it] }
     }
 
     init {
@@ -186,9 +202,11 @@ private class EyeTree(model: DefaultTreeModel, private val project: Project) : P
         val first = getClosestRowForLocation(0, clip.y)
         val last = getClosestRowForLocation(0, clip.y + clip.height)
         for (row in first..last) {
-            val action = actionFor(row) ?: continue
-            val r = iconBounds(row, action.icon)
-            action.icon.paintIcon(this, g, r.x, r.y)
+            val actions = actionsFor(row)
+            actions.forEachIndexed { i, action ->
+                val r = iconBounds(row, actions, i)
+                action.icon.paintIcon(this, g, r.x, r.y)
+            }
         }
     }
 

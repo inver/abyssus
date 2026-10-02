@@ -73,6 +73,42 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
         assertEquals(original, text(file))
     }
 
+    fun testSkyboxEyeKeepsTheSkyboxNameKey() {
+        val source = """{"skyboxEnabled":true,"skyboxName":"sky"}"""
+        val file = myFixture.addFileToProject("p/Sky.scene", source).virtualFile
+        val entry = DtoEntry("x/skyboxName", "skyboxName", "sky", true, "skyboxEnabled", file, emptyList())
+        assertTrue(toggleEnabled(project, entry))
+        assertEquals("""{"skyboxEnabled":false,"skyboxName":"sky"}""", text(file))
+        assertNull(SceneJson.parse(text(file)).get("skybox"))
+    }
+
+    fun testSettingASkyboxKeepsFormattingAndTheEnabledFlag() {
+        val source = """{"id":0,"name":"Main","skyboxEnabled":false,"skyboxName":null,"fogEnabled":true,"fog":{"density":0.001}}"""
+        val file = myFixture.addFileToProject("p/SetSky.scene", SceneJson.pretty(source)!!).virtualFile
+        assertTrue(setSkybox(project, file, "skybox_default"))
+        val after = text(file)
+        assertTrue(after, after.lines().size > 5)
+        assertTrue(after.contains("\"skyboxName\": \"skybox_default\""))
+        assertEquals(SceneJson.parse(source.replace("\"skyboxName\":null", "\"skyboxName\":\"skybox_default\"")), SceneJson.parse(after))
+    }
+
+    fun testClearingTheSkyboxWritesNull() {
+        val file = myFixture.addFileToProject("p/Clear.scene", """{"skyboxEnabled":true,"skyboxName":"skybox_default"}""").virtualFile
+        assertTrue(setSkybox(project, file, null))
+        assertEquals("""{"skyboxEnabled":true,"skyboxName":null}""", text(file))
+    }
+
+    fun testSettingTheSameSkyboxWritesNothing() {
+        val source = """{"skyboxName":"sky"}"""
+        val file = myFixture.addFileToProject("p/Same.scene", source).virtualFile
+        val stamp = file.modificationStamp
+        assertFalse(setSkybox(project, file, "sky"))
+        assertEquals(stamp, file.modificationStamp)
+        val noKey = myFixture.addFileToProject("p/NoKey.scene", "{}").virtualFile
+        assertFalse("a missing key already means no skybox", setSkybox(project, noKey, null))
+        assertEquals(source, text(file))
+    }
+
     fun testNumberTextSurvivesAnEdit() {
         val source = """{"fogEnabled":true,"fog":{"density":1.0E-4,"gradient":2.50,"offset":-0.0,"big":12345678901234567890}}"""
         val file = myFixture.addFileToProject("p/Numbers.scene", source).virtualFile
