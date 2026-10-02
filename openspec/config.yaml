@@ -1,0 +1,62 @@
+schema: spec-driven
+
+# Constraints an agent cannot infer from the code. Facts about the code itself live in AGENTS.md and docs/ai/;
+# read those for commands, layout and conventions.
+context: |
+  Abyssus is an IntelliJ Platform plugin (IC 2025.2.4+) for Mundus game projects. Start from AGENTS.md; the docs index
+  is docs/README.md.
+
+  File-format compatibility:
+  - .scene, .abss and asset meta.json files are Mundus's format, read and written by the Mundus editor too.
+  - Never rename, drop or reorder their keys. Never write values Mundus does not write.
+  - Keep defaults omitted as Mundus does. Change only the values an edit is about.
+  - A display-only rename in the UI (as skyboxName is shown as "skybox") must leave the file key alone.
+
+  Writes and module boundary:
+  - Every write to a scene or project file goes through editSceneJson: one undoable command that keeps the file's
+    formatting and number text.
+  - A plan that needs another write path must say why.
+  - gdx-model stays a plain JVM library with no IntelliJ or plugin imports; it is meant to be reusable in other libGDX
+    projects.
+
+  Specs and docs:
+  - openspec/specs/ is the source of truth for required behavior. Read the affected capabilities before planning and
+    reuse their exact paths.
+  - When a change contradicts a requirement in another open change's delta spec, amend that delta in a task rather
+    than ignoring it.
+  - A change that makes AGENTS.md, docs/ai/*.md, a package README.md or the user sections of README.md wrong must
+    update them in the same change.
+
+  Verification:
+  - Some behavior can only be checked by hand in ./gradlew runIde: GL rendering, mouse and keyboard interaction,
+    dialogs, undo from a non-text editor.
+  - Never open src/test/testData/project/Untitled as the runIde project: edits made there change the fixtures tests
+    assert on. Use a copy.
+  - GL tests run only with -Dabyssus.glTests=true on a machine with a display.
+
+rules:
+  proposal:
+    - "Name the Mundus file fields the change reads or writes, and say whether the file format changes (it should not)."
+    - "State what is out of scope, especially features a design board or reference shows that this change does not build."
+  specs:
+    - "Use the Untitled fixture (src/test/testData/project/Untitled) in scenarios where it fits, with its real entity ids, names and values."
+    - "Requirements describe what the user sees and what lands in the file; keep class names, threads and libraries out."
+  design:
+    - "Keep logic that can be tested (math, hit tests, list and filter models, JSON edits) in classes free of Swing, GL and the platform, and say which ones."
+    - "Say which thread each new piece runs on. libGDX calls happen only inside GdxRuntime.withContext on the AWT thread that renders the canvas."
+  tasks:
+    - "Each task names its verification: a test class and case, a command, or a numbered runIde check."
+    - "Split code a headless test can cover from behavior only runIde can show, so a task is not left unchecked for want of a manual check."
+    - "Run single tests with ./gradlew :test --tests '<class>' (plain test --tests also runs gdx-model and fails there)."
+    - "End with a task that runs ./gradlew check and scripts/check-docs.sh."
+
+operations:
+  apply:
+    guidance:
+      - "Check a task's box only when its stated verification passed; for a runIde check you could not perform, leave it open and list exact steps for the user."
+      - "Re-read the fixtures before trusting coordinates or names in tests; a fixture edited in the IDE breaks tests that pin values."
+      - "If ./gradlew check fails for reasons outside the change, report the failing tests and their cause instead of fixing them silently."
+  archive:
+    guidance:
+      - "Sync delta specs into openspec/specs/ unless the change declares skip_specs."
+      - "List open tasks and known test failures in the archive summary."
