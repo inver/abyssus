@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.nevinsky.abyssus.dto
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -11,39 +27,30 @@ import net.nevinsky.abyssus.scene.SceneDto
 data class AssetInfo(val name: String, val uuid: String?, val type: String?, val references: List<String>)
 
 object ProjectAssets {
-    const val ASSETS_DIR = "assets"
-    const val META_FILE = "meta.json"
-
-    /** `meta.json` fields of an asset's `additional` block that hold another asset's `uuid` (`TerrainMeta`). */
-    private val REFERENCE_FIELDS = listOf("splatMap", "splatBase", "splatR", "splatG", "splatB", "splatA")
-
     /** Fields holding a list of asset `uuid`s (`ModelMeta.materials`). */
     private val REFERENCE_LISTS = listOf("materials")
 
-    fun assetFolders(abss: VirtualFile): List<VirtualFile> =
-        abss.parent?.findChild(ASSETS_DIR)?.children?.filter { it.isDirectory }?.sortedBy { it.name } ?: emptyList()
-
     /** Changes when an asset folder is added, removed or renamed, or any `meta.json` changes. */
     fun stamp(abss: VirtualFile): Long =
-        assetFolders(abss).fold(0L) { acc, dir ->
-            (acc * 31 + dir.name.hashCode()) * 31 + (dir.findChild(META_FILE)?.modificationStamp ?: 0L)
+        ProjectLayout.assetFolders(abss).fold(0L) { acc, dir ->
+            (acc * 31 + dir.name.hashCode()) * 31 + (dir.findChild(ProjectLayout.META_FILE)?.modificationStamp ?: 0L)
         }
 
-    fun read(abss: VirtualFile): List<AssetInfo> = assetFolders(abss).map { dir ->
-        val meta = runCatching { dir.findChild(META_FILE)?.let { Json.parseObject(String(it.contentsToByteArray(), it.charset)) } }.getOrNull()
+    fun read(abss: VirtualFile): List<AssetInfo> = ProjectLayout.assetFolders(abss).map { dir ->
+        val meta = runCatchingKeepingCancellation { dir.findChild(ProjectLayout.META_FILE)?.let { Json.parseObject(it.text()) } }.getOrNull()
         parse(dir.name, meta)
     }
 
     fun parse(name: String, meta: JsonNode?): AssetInfo {
-        val additional = meta?.opt("additional")?.takeIf { it.isObject }
+        val additional = meta?.obj("additional")
         val references = additional?.let { a ->
-            REFERENCE_FIELDS.mapNotNull { a.opt(it)?.takeIf(JsonNode::isTextual)?.asText() } +
+            ProjectLayout.SPLAT_FIELDS.mapNotNull { a.text(it) } +
                 REFERENCE_LISTS.flatMap { f -> a.opt(f)?.takeIf { it.isArray }?.mapNotNull { it.takeIf(JsonNode::isTextual)?.asText() } ?: emptyList() }
         } ?: emptyList()
         return AssetInfo(
             name,
-            meta?.opt("uuid")?.takeIf(JsonNode::isTextual)?.asText(),
-            meta?.opt("type")?.takeIf(JsonNode::isTextual)?.asText(),
+            meta?.text("uuid"),
+            meta?.text("type"),
             references,
         )
     }

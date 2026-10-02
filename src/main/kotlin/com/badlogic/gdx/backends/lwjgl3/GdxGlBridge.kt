@@ -1,11 +1,40 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.badlogic.gdx.backends.lwjgl3
 
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GL30
+import org.lwjgl.opengl.GL30C
 
 /** Lives in libGDX's package only because `Lwjgl3GL20/GL30` are package-private; they wrap LWJGL's GL calls and need no GLFW. */
 object GdxGlBridge {
-    fun gl20(): GL20 = Lwjgl3GL20()
+    fun gl20(): GL20 = CoreProfileGL20()
 
-    fun gl30(): GL30 = Lwjgl3GL30()
+    fun gl30(): GL30 = CoreProfileGL30()
+}
+
+/**
+ * libGDX's `glGenerateMipmap` goes through `EXTFramebufferObject`, which a core profile context does not have (the
+ * JVM aborts); the core `glGenerateMipmap` does the same job.
+ */
+private class CoreProfileGL20 : Lwjgl3GL20() {
+    override fun glGenerateMipmap(target: Int) = GL30C.glGenerateMipmap(target)
+}
+
+private class CoreProfileGL30 : Lwjgl3GL30() {
+    override fun glGenerateMipmap(target: Int) = GL30C.glGenerateMipmap(target)
 }

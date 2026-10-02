@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "lastModified": 1,
+  "uuid": "anim-1",
+  "type": "MODEL",
+  "additional": {
+    "file": "model.gltf",
+    "format": "GLTF",
+    "binary": false,
+    "materials": []
+  }
+}

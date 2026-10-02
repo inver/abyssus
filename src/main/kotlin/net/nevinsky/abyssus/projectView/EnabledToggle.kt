@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.nevinsky.abyssus.projectView
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -12,6 +28,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.dto.DtoValue
 import net.nevinsky.abyssus.dto.Json
+import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.filetype.SceneJson
 
 private fun JsonNode.child(key: String): JsonNode? = when (this) {
@@ -54,7 +71,7 @@ fun toggleEnabled(project: Project, entry: DtoEntry): Boolean {
 
 /** The `.scene` file behind a scene entry listed under a project, or null for any other entry. */
 fun sceneFileOf(entry: DtoEntry): VirtualFile? =
-    ((entry.value as? DtoValue.Obj)?.source)?.takeIf { it.extension == "scene" && (entry.value as DtoValue.Obj).label != null }
+    (entry.value as? DtoValue.Obj)?.takeIf { it.label != null }?.source?.takeIf { it.extension == ProjectLayout.SCENE_EXTENSION }
 
 fun sceneName(entry: DtoEntry): String? =
     ((entry.value as? DtoValue.Obj)?.properties?.firstOrNull { it.name == "name" }?.value as? DtoValue.Scalar)?.value as? String

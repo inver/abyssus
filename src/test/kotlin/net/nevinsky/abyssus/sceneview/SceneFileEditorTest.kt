@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.nevinsky.abyssus.sceneview
 
 import com.intellij.openapi.fileEditor.FileEditorPolicy
@@ -58,6 +74,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         var disposed = false
         var updates = 0
         override var onFailure: ((Throwable) -> Unit)? = null
+        override var onPick: ((String) -> Unit)? = null
         override val view: javax.swing.JComponent get() = component
         override fun setParams(params: SceneRenderParams) {
             current = params
@@ -76,6 +93,21 @@ class SceneFileEditorTest : BasePlatformTestCase() {
     private fun setText(f: com.intellij.openapi.vfs.VirtualFile, text: String) {
         val doc = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(f)!!
         com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) { doc.setText(text) }
+    }
+
+    fun testSceneContentFollowsEdits() {
+        val views = mutableListOf<FakeView>()
+        val entity = """{"ecs":{"entities":{"1":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"m"}}}}}}}}"""
+        val (editor, f) = fakeEditor("content/a.scene", "{}", views)
+        try {
+            assertTrue(views[0].current.content.models.isEmpty())
+            setText(f, entity)
+            assertEquals(listOf("m"), views[0].current.content.models.map { it.assetName })
+            setText(f, "{}")
+            assertTrue(views[0].current.content.models.isEmpty())
+        } finally {
+            editor.dispose()
+        }
     }
 
     fun testRendersAndUpdatesInPlaceOnUnsavedEdits() {

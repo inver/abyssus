@@ -10,7 +10,6 @@
     <resource-bundle>messages.AbyssusBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="net.nevinsky.abyssus.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
         <fileType
                 name="Gltf File"
                 implementationClass="net.nevinsky.abyssus.language.GltfFileType"
@@ -49,9 +48,4 @@
         <listener class="net.nevinsky.abyssus.filetype.SceneFormatListener"
                   topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
     </projectListeners>
-
-    <applicationListeners>
-        <listener class="net.nevinsky.abyssus.listeners.MyFrameStateListener"
-                  topic="com.intellij.ide.FrameStateListener"/>
-    </applicationListeners>
 </idea-plugin>

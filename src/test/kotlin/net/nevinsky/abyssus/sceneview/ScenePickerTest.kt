@@ -1,0 +1,133 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package net.nevinsky.abyssus.sceneview
+
+import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.math.collision.BoundingBox
+import com.badlogic.gdx.math.collision.Ray
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class ScenePickerTest {
+    private fun box(id: String, x: Float, y: Float, z: Float, half: Float = 1f) =
+        BoxTarget(id, BoundingBox(Vector3(x - half, y - half, z - half), Vector3(x + half, y + half, z + half)))
+
+    private fun ray(from: Vector3, to: Vector3) = Ray(from, Vector3(to).sub(from).nor())
+
+    private val flat = TerrainData(3, FloatArray(9), 100, 1f)
+
+    @Test
+    fun hitsTheBoxUnderTheRay() {
+        val r = ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f))
+        assertEquals("a", ScenePicker.pick(r, listOf(box("a", 0f, 0f, 0f), box("b", 5f, 0f, 0f)), emptyList(), 100f))
+    }
+
+    @Test
+    fun missesWhenNothingIsUnderTheRay() {
+        val r = ray(Vector3(0f, 0f, 10f), Vector3(20f, 0f, 0f))
+        assertNull(ScenePicker.pick(r, listOf(box("a", 0f, 0f, 0f)), emptyList(), 100f))
+    }
+
+    @Test
+    fun theNearestBoxWins() {
+        val r = ray(Vector3(0f, 0f, 20f), Vector3(0f, 0f, 0f))
+        val boxes = listOf(box("far", 0f, 0f, -5f), box("near", 0f, 0f, 5f))
+        assertEquals("near", ScenePicker.pick(r, boxes, emptyList(), 100f))
+    }
+
+    @Test
+    fun terrainIsHitWhereNoModelIsInFront() {
+        val t = TerrainTarget("ground", flat, Matrix4())
+        val r = ray(Vector3(50f, 10f, 50f), Vector3(50f, 0f, 60f))
+        assertEquals("ground", ScenePicker.pick(r, listOf(box("m", 80f, 1f, 80f)), listOf(t), 1000f))
+    }
+
+    @Test
+    fun aModelInFrontOfTheTerrainWins() {
+        val t = TerrainTarget("ground", flat, Matrix4())
+        val r = ray(Vector3(50f, 10f, 50f), Vector3(50f, 0f, 50f))
+        assertEquals("m", ScenePicker.pick(r, listOf(box("m", 50f, 5f, 50f)), listOf(t), 1000f))
+    }
+
+    @Test
+    fun terrainBehindTheModelLosesAndTerrainBeyondTheRangeIsIgnored() {
+        val t = TerrainTarget("ground", flat, Matrix4())
+        val r = ray(Vector3(50f, 10f, 50f), Vector3(50f, 0f, 50f))
+        assertNull(ScenePicker.pick(r, emptyList(), listOf(t), 5f))
+        assertNotNull(ScenePicker.pick(r, emptyList(), listOf(t), 50f))
+    }
+
+    @Test
+    fun rayAboveOrOutsideTheTerrainMisses() {
+        val t = TerrainTarget("ground", flat, Matrix4())
+        assertNull(ScenePicker.pick(ray(Vector3(50f, 10f, 50f), Vector3(50f, 20f, 60f)), emptyList(), listOf(t), 1000f))
+        assertNull(ScenePicker.pick(ray(Vector3(500f, 10f, 500f), Vector3(500f, 0f, 510f)), emptyList(), listOf(t), 1000f))
+    }
+
+    @Test
+    fun terrainTransformIsHonoured() {
+        val moved = TerrainTarget("ground", flat, Matrix4().setToTranslation(1000f, 0f, 0f))
+        assertNull(ScenePicker.pick(ray(Vector3(50f, 10f, 50f), Vector3(50f, 0f, 60f)), emptyList(), listOf(moved), 5000f))
+        assertEquals("ground", ScenePicker.pick(ray(Vector3(1050f, 10f, 50f), Vector3(1050f, 0f, 60f)), emptyList(), listOf(moved), 5000f))
+    }
+
+    @Test
+    fun hillsAreHitAtTheirSurface() {
+        // a ridge of height 10 along the middle: a ray coming in low hits the ridge side, not the floor behind it
+        val heights = floatArrayOf(0f, 10f, 0f, 0f, 10f, 0f, 0f, 10f, 0f)
+        val t = TerrainTarget("hill", TerrainData(3, heights, 100, 1f), Matrix4())
+        val r = ray(Vector3(-20f, 5f, 50f), Vector3(40f, 5f, 50f))
+        assertEquals("hill", ScenePicker.pick(r, emptyList(), listOf(t), 1000f))
+        val d = ScenePicker.terrainDistance(r, t, 1000f)!!
+        // the surface at height 5 is x = 25 (first slope reaches 10 at x = 50), so the hit is 45 away
+        assertEquals(45f, d, 1.5f)
+    }
+}
+
+class PickRayTest {
+    init {
+        com.badlogic.gdx.utils.GdxNativesLoader.load()
+    }
+
+    private fun camera() = com.badlogic.gdx.graphics.PerspectiveCamera(67f, 800f, 600f).apply {
+        position.set(0f, 0f, 10f)
+        lookAt(0f, 0f, 0f)
+        near = 0.1f
+        far = 100f
+        update()
+    }
+
+    @Test
+    fun worksWithoutAnyGdxGlobals() {
+        // clicks arrive outside GdxRuntime.withContext, where Gdx.graphics is null
+        org.junit.Assert.assertNull(com.badlogic.gdx.Gdx.graphics)
+        val ray = ScenePicker.pickRay(camera(), 400, 300, 800, 600)
+        assertEquals(0f, ray.direction.x, 1e-4f)
+        assertEquals(0f, ray.direction.y, 1e-4f)
+        assertEquals(-1f, ray.direction.z, 1e-4f)
+    }
+
+    @Test
+    fun topLeftPixelLooksUpAndLeft() {
+        val ray = ScenePicker.pickRay(camera(), 0, 0, 800, 600)
+        org.junit.Assert.assertTrue(ray.direction.x < 0f)
+        org.junit.Assert.assertTrue(ray.direction.y > 0f)
+    }
+}

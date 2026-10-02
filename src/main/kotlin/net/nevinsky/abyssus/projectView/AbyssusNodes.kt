@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.nevinsky.abyssus.projectView
 
 import com.intellij.icons.AllIcons
@@ -13,37 +29,23 @@ import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.ui.SimpleTextAttributes
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.AssetReadResult
-import net.nevinsky.abyssus.dto.AssetReader
 import net.nevinsky.abyssus.dto.DtoProperty
 import net.nevinsky.abyssus.dto.DtoValue
-import net.nevinsky.abyssus.dto.ProjectReader
+import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.foldToggles
 import net.nevinsky.abyssus.filetype.AbyssusProjectIcons
 import net.nevinsky.abyssus.filetype.AssetIcons
 import net.nevinsky.abyssus.filetype.PropertyIcons
 import net.nevinsky.abyssus.filetype.SceneIcons
 import net.nevinsky.abyssus.filetype.ScenesIcons
-import java.util.concurrent.ConcurrentHashMap
 import javax.swing.Icon
 
 /** Shown in a scene entry's label (`name (id)`) and edited via Rename, so not repeated as rows. */
 private val SCENE_HEADER = setOf("id", "name")
 
-/** Exact, case-sensitive, suffix-based match: `.SCENE` and `.scene.bak` are not assets. */
-val ASSET_EXTENSIONS = setOf("scene", "abss")
-
-fun isAssetFile(file: VirtualFile) = !file.isDirectory && file.extension in ASSET_EXTENSIONS
-
-/** A scene in the `scenes` folder next to an `.abss` is shown inside that project, not on its own. */
-fun isProjectScene(file: VirtualFile): Boolean {
-    if (file.extension != "scene") return false
-    val dir = file.parent ?: return false
-    return dir.name == ProjectReader.SCENES_DIR && dir.parent?.children?.any { it.extension == "abss" } == true
-}
-
 /** The `.scene` a project-view node can open in the scene view (a standalone scene or a project's scene entry), else null. */
 fun viewableSceneFile(node: Any?): VirtualFile? = when (node) {
-    is AbyssusAssetNode -> node.virtualFile.takeIf { it.extension == "scene" }
+    is AbyssusAssetNode -> node.virtualFile.takeIf(ProjectLayout::isScene)
     is DtoEntryNode -> sceneFileOf(node.value)
     else -> null
 }
@@ -53,29 +55,16 @@ fun findTopLevelAssets(project: Project): List<VirtualFile> {
     for (root in ProjectRootManager.getInstance(project).contentRoots) {
         VfsUtilCore.visitChildrenRecursively(root, object : VirtualFileVisitor<Unit>() {
             override fun visitFile(file: VirtualFile): Boolean {
-                if (isAssetFile(file) && !isProjectScene(file)) found += file
+                if (ProjectLayout.isAssetFile(file) && !ProjectLayout.isProjectScene(file)) found += file
                 return true
             }
         })
     }
-    return found.distinct().sortedWith(compareBy({ it.extension != "abss" }, { it.path }))
-}
-
-private object AssetCache {
-    private data class Entry(val stamp: Long, val result: AssetReadResult)
-
-    private val cache = ConcurrentHashMap<VirtualFile, Entry>()
-
-    fun read(file: VirtualFile): AssetReadResult? {
-        val reader = AssetReader.forExtension(file.extension) ?: return null
-        val stamp = reader.stamp(file)
-        cache[file]?.takeIf { it.stamp == stamp }?.let { return it.result }
-        return reader.read(file).also { cache[file] = Entry(stamp, it) }
-    }
+    return found.distinct().sortedWith(compareBy({ it.extension != ProjectLayout.PROJECT_EXTENSION }, { it.path }))
 }
 
 private fun assetIcon(file: VirtualFile): Icon =
-    if (file.extension == "abss") AbyssusProjectIcons.FILE else SceneIcons.FILE
+    if (file.extension == ProjectLayout.PROJECT_EXTENSION) AbyssusProjectIcons.FILE else SceneIcons.FILE
 
 /** Top level of the view: every `.abss` project (and any scene outside a project), with no folder nodes. */
 class AbyssusRootNode(project: Project, settings: ViewSettings?) :
@@ -98,7 +87,7 @@ class AbyssusAssetNode(project: Project, file: VirtualFile, settings: ViewSettin
     override fun getVirtualFile(): VirtualFile = value
 
     override fun getChildren(): Collection<AbstractTreeNode<*>> =
-        when (val result = AssetCache.read(value)) {
+        when (val result = AssetReadCache.of(project!!).read(value)) {
             is AssetReadResult.Success -> result.root.properties.foldToggles().map { DtoEntryNode(project!!, value.path, it, result.root.source ?: value, emptyList()) }
             else -> emptyList()
         }
@@ -106,7 +95,7 @@ class AbyssusAssetNode(project: Project, file: VirtualFile, settings: ViewSettin
     override fun update(presentation: PresentationData) {
         presentation.addText(value.name, SimpleTextAttributes.REGULAR_ATTRIBUTES)
         presentation.setIcon(assetIcon(value))
-        (AssetCache.read(value) as? AssetReadResult.Failure)?.let {
+        (AssetReadCache.of(project!!).read(value) as? AssetReadResult.Failure)?.let {
             presentation.addText("  " + AbyssusBundle.message("assetParseError", it.message), SimpleTextAttributes.ERROR_ATTRIBUTES)
         }
     }
@@ -143,7 +132,7 @@ private fun entryIcon(entry: DtoEntry): Icon {
         dto is DtoValue.Obj && dto.asset -> AssetIcons.forType(
             (dto.properties.firstOrNull { it.name == "type" }?.value as? DtoValue.Scalar)?.value as? String,
         )
-        dto is DtoValue.Obj && dto.source?.extension == "scene" -> SceneIcons.FILE
+        dto is DtoValue.Obj && dto.source?.extension == ProjectLayout.SCENE_EXTENSION -> SceneIcons.FILE
         PropertyIcons.forProperty(entry.name) != null -> PropertyIcons.forProperty(entry.name)!!
         dto is DtoValue.Scalar -> AllIcons.Nodes.Property
         else -> AllIcons.Nodes.Class

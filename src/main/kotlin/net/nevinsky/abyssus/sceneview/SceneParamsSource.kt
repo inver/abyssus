@@ -1,0 +1,48 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package net.nevinsky.abyssus.sceneview
+
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.dto.ProjectLayout
+import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+
+/** Reads what the scene view shows for a `.scene` file; throws when the scene cannot be read. */
+fun interface SceneParamsSource {
+    fun read(sceneFile: VirtualFile): SceneRenderParams
+
+    /** [read]s through this source, plus every other file whose change must refresh the view of [sceneFile]. */
+    fun sources(sceneFile: VirtualFile): Set<VirtualFile> = setOfNotNull(sceneFile, ProjectLayout.abssFor(sceneFile))
+
+    companion object {
+        /**
+         * The scene and its project's main camera as the editors show them (unsaved text included); the default camera
+         * when the scene has no project or its camera is unreadable.
+         */
+        val EDITOR_TEXT = SceneParamsSource { file ->
+            val camera = ProjectLayout.abssFor(file)?.let { abss ->
+                runCatchingKeepingCancellation { MainCamera.parse(textOf(abss)) }.getOrNull()
+            } ?: CameraParams.DEFAULT
+            SceneRenderParams.from(SceneReader.parse(textOf(file)), camera, ProjectLayout.projectDirFor(file))
+        }
+    }
+}
+
+/** The editor's unsaved text when the file has an open document, else the file's content. */
+fun textOf(file: VirtualFile): String =
+    FileDocumentManager.getInstance().getCachedDocument(file)?.text ?: String(file.contentsToByteArray(), file.charset)

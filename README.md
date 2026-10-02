@@ -46,6 +46,27 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   `meta.json` (textures of a material, shader sources) are not followed.
 - Unreadable files stay in the tree with a placeholder; nothing else is ever written.
 
+## Scene view
+
+Open a `*.scene` and switch to its **Abyssus scene view** tab (or click *View* in the Abyssus view). Read-only; the
+left mouse button orbits, the right button pans, the wheel zooms. It draws, from the project's `assets` folder
+beside the `.abss`:
+
+- the scene's **models** (`RenderComponent` entities of type `MODEL`), textured, at each entity's position,
+  rotation and scale; a model that has animations plays its first one on a loop;
+- the scene's **terrain** (height data and splat textures of a `TERRAIN` asset);
+- the **skybox** named by `skyboxName` when `skyboxEnabled`;
+- the **light entities** (directional and point; a spot light is drawn as a point light) on top of the scene's
+  ambient light and fog.
+
+A click (without dragging) on a model or the terrain selects that entity's row (`ecs/entities/<id>`) in the Abyssus
+view. An asset that is missing or cannot be read is skipped and logged; the rest of the scene still draws.
+
+The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `gdx-model` module, a
+trimmed fork of Mundus' `lib-core` and `lib-assets` with no IntelliJ dependency, reusable in other libGDX projects;
+see `gdx-model/README.md` for its origin and license. The plugin does not depend on Mundus at build or run time. The GL
+render tests are opt-in: `./gradlew test -Dabyssus.glTests=true` (opens a window).
+
 To support another format, implement `net.nevinsky.abyssus.dto.AssetReader` and return it from
 `AssetReader.forExtension`.
 
@@ -61,6 +82,13 @@ To support another format, implement `net.nevinsky.abyssus.dto.AssetReader` and 
   Download the [latest release](https://github.com/inver/abyssus/releases/latest) and install it manually using
   <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
 
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE).
+
+Files under `gdx-model` derived from [libGDX](https://github.com/libgdx/libgdx) retain their original
+Apache 2.0 headers.
 
 ---
 Plugin based on the [IntelliJ Platform Plugin Template][template].

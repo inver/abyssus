@@ -1,0 +1,50 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package net.nevinsky.abyssus.core.loader
+
+import com.badlogic.gdx.graphics.Pixmap
+import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g3d.utils.TextureProvider
+
+/**
+ * Hands out textures that were uploaded earlier (one per frame, so a big model does not stall the render loop). Names
+ * it has no texture for go to `fallback`, which decodes and uploads on the calling thread. A texture handed
+ * out belongs to the caller; the rest stay in the map for the owner to dispose.
+ */
+class PreloadedTextureProvider(
+    private val textures: MutableMap<String, Texture>,
+    private val fallback: TextureProvider
+) : TextureProvider {
+    override fun load(fileName: String?): Texture? {
+        val texture = textures.remove(fileName)
+        return if (texture != null) texture else fallback.load(fileName)
+    }
+
+    companion object {
+        /** Uploads a decoded image the way the model textures are set up. The pixmap is disposed.  */
+        fun upload(pixmap: Pixmap): Texture {
+            try {
+                val result = Texture(pixmap, false)
+                result.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
+                result.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat)
+                return result
+            } finally {
+                pixmap.dispose()
+            }
+        }
+    }
+}

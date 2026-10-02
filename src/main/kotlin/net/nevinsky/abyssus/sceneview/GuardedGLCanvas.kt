@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.nevinsky.abyssus.sceneview
 
 import com.intellij.openapi.diagnostic.thisLogger
@@ -57,17 +73,25 @@ abstract class GuardedGLCanvas(data: GLData) : AWTGLCanvas(data) {
         if (glSafe()) super.update(g)
     }
 
-    /** Called when the GL context had to be abandoned instead of disposed; drop any state that refers to it. */
+    /** Called when the GL context had to be dropped without being made current; drop any state that refers to it. */
     protected open fun onContextAbandoned() {}
 
     /**
-     * Disposing makes the context current, which aborts the JVM on a hidden/empty surface. Then the context is
-     * abandoned (leaked) instead.
+     * Disposing makes the context current, which aborts the JVM on a hidden/empty surface. Then the context and its
+     * native view are deleted without ever being made current (so GL objects in it cannot be released, but nothing is
+     * left on screen).
      */
     override fun disposeCanvas() {
         if (context != 0L && !canRender(this)) {
-            thisLogger().warn("GL canvas disposed while hidden; abandoning its context instead of releasing it")
+            thisLogger().warn("GL canvas disposed while hidden; releasing its context without making it current")
             onContextAbandoned()
+            // Leaving the native view and layer alive would leave the last frame on screen, in the old place, long
+            // after the component is gone. Deleting the context tears them down and needs no current context.
+            try {
+                platformCanvas.deleteContext(context)
+            } catch (e: Throwable) {
+                thisLogger().warn("Failed to delete the GL context of a hidden canvas", e)
+            }
             context = 0L
             initCalled = false
         }

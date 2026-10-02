@@ -1,8 +1,24 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.nevinsky.abyssus.dto
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.project.sceneLabel
+import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.scene.BaseLightDto
 import net.nevinsky.abyssus.scene.ColorDto
 import net.nevinsky.abyssus.scene.FogDto
@@ -22,16 +38,17 @@ interface AssetReader {
 
     companion object {
         fun forExtension(extension: String?): AssetReader? = when (extension) {
-            "scene" -> SceneReader
-            "abss" -> ProjectReader
+            ProjectLayout.SCENE_EXTENSION -> SceneReader
+            ProjectLayout.PROJECT_EXTENSION -> ProjectReader
             else -> null
         }
     }
 }
 
-private inline fun <T> guarded(block: () -> T): Result<T> = runCatching(block)
+private inline fun <T> guarded(block: () -> T): Result<T> = runCatchingKeepingCancellation(block)
 
-private fun VirtualFile.text() = String(contentsToByteArray(), charset)
+/** The file's saved content (not unsaved editor text). */
+fun VirtualFile.text() = String(contentsToByteArray(), charset)
 
 private fun JsonNode.color(name: String): ColorDto? = opt(name)?.takeIf { it.isObject }?.let {
     ColorDto(it.opt("r")?.floatValue() ?: 0f, it.opt("g")?.floatValue() ?: 0f, it.opt("b")?.floatValue() ?: 0f, it.opt("a")?.floatValue() ?: 0f)
@@ -66,20 +83,12 @@ object SceneReader : AssetReader {
 }
 
 object ProjectReader : AssetReader {
-    const val SCENES_DIR = "scenes"
-
-    fun sceneFiles(file: VirtualFile): List<VirtualFile> =
-        file.parent?.findChild(SCENES_DIR)?.children
-            ?.filter { !it.isDirectory && it.extension == "scene" }
-            ?.sortedBy { it.name }
-            ?: emptyList()
-
     override fun stamp(file: VirtualFile): Long =
-        sceneFiles(file).fold(file.modificationStamp) { acc, f -> acc * 31 + f.modificationStamp } * 31 + ProjectAssets.stamp(file)
+        ProjectLayout.sceneFiles(file).fold(file.modificationStamp) { acc, f -> acc * 31 + f.modificationStamp } * 31 + ProjectAssets.stamp(file)
 
     override fun read(file: VirtualFile): AssetReadResult = guarded {
         val name = Json.parseObject(file.text()).opt("name")?.asText() ?: file.nameWithoutExtension
-        val scenes = sceneFiles(file).map { it to SceneReader.readScene(it) }
+        val scenes = ProjectLayout.sceneFiles(file).map { it to SceneReader.readScene(it) }
         val entries = scenes.mapIndexed { i, (f, result) ->
             result.fold(
                 { it.toValue(sceneLabel(it, i)).copy(source = f) },
@@ -108,4 +117,10 @@ object ProjectReader : AssetReader {
         { AssetReadResult.Success(it) },
         { AssetReadResult.Failure(it.message ?: it.javaClass.simpleName) },
     )
+}
+
+/** `Main Scene (6275127)`: the scene name followed by its id; the index stands in for a missing name. */
+private fun sceneLabel(scene: SceneDto, index: Int): String {
+    val name = scene.name?.takeIf { it.isNotBlank() } ?: AbyssusBundle.message("dtoListElementLabel", "scenes", index)
+    return scene.id?.let { "$name ($it)" } ?: name
 }

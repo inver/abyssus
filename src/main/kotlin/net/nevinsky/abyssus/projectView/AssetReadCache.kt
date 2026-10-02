@@ -1,0 +1,64 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package net.nevinsky.abyssus.projectView
+
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.vfs.newvfs.BulkFileListener
+import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
+import net.nevinsky.abyssus.dto.AssetReadResult
+import net.nevinsky.abyssus.dto.AssetReader
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * The parsed asset files the Abyssus view shows, re-read when a file's [AssetReader.stamp] changes. Lives with the
+ * project; files that are deleted or moved are forgotten.
+ */
+@Service(Service.Level.PROJECT)
+class AssetReadCache(project: Project) : Disposable {
+    private data class Entry(val stamp: Long, val result: AssetReadResult)
+
+    private val cache = ConcurrentHashMap<VirtualFile, Entry>()
+
+    init {
+        project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
+            override fun after(events: List<VFileEvent>) {
+                for (e in events) if (e is VFileDeleteEvent || e is VFileMoveEvent) e.file?.let(cache::remove)
+            }
+        })
+    }
+
+    /** Null for a file no reader handles. */
+    fun read(file: VirtualFile): AssetReadResult? {
+        val reader = AssetReader.forExtension(file.extension) ?: return null
+        val stamp = reader.stamp(file)
+        cache[file]?.takeIf { it.stamp == stamp }?.let { return it.result }
+        return reader.read(file).also { cache[file] = Entry(stamp, it) }
+    }
+
+    override fun dispose() = cache.clear()
+
+    companion object {
+        fun of(project: Project): AssetReadCache = project.service()
+    }
+}

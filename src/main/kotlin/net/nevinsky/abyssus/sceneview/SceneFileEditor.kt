@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.nevinsky.abyssus.sceneview
 
 import com.intellij.openapi.application.ApplicationManager
@@ -22,7 +38,9 @@ import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.components.JBLabel
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.dto.ProjectLayout
+import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.projectView.selectEntityInAbyssusView
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
@@ -30,7 +48,7 @@ import javax.swing.JPanel
 import javax.swing.SwingConstants
 
 class SceneFileEditorProvider : FileEditorProvider, DumbAware {
-    override fun accept(project: Project, file: VirtualFile) = !file.isDirectory && file.extension == "scene"
+    override fun accept(project: Project, file: VirtualFile) = ProjectLayout.isScene(file)
 
     override fun createEditor(project: Project, file: VirtualFile): FileEditor = SceneFileEditor(project, file)
 
@@ -43,14 +61,20 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
     }
 }
 
-/** Read-only live view of a `.scene`; re-reads the scene (and its project's camera) as the files are edited or change on disk. */
+/**
+ * Read-only live view of a `.scene`; re-reads it through [paramsSource] as its sources are edited or change on disk.
+ * The view comes from [viewFactory], so tests can replace the GL panel.
+ */
 class SceneFileEditor(
-    project: Project,
+    private val project: Project,
     private val file: VirtualFile,
+    private val paramsSource: SceneParamsSource = SceneParamsSource.EDITOR_TEXT,
     private val viewFactory: (SceneRenderParams) -> SceneView = { SceneViewPanel(it) },
 ) : UserDataHolderBase(), FileEditor {
     private val content = JPanel(BorderLayout()).apply { isFocusable = true }
     private var view: SceneView? = null
+
+    private var disposed = false
 
     /** Non-null while the tab shows a message instead of a render. */
     internal var statusText: String? = null
@@ -61,7 +85,7 @@ class SceneFileEditor(
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 if (events.any { it is VFileContentChangeEvent && isSource(it.file) }) {
-                    ApplicationManager.getApplication().invokeLater { if (!Disposer.isDisposed(this@SceneFileEditor)) reload() }
+                    ApplicationManager.getApplication().invokeLater { if (!disposed) reload() }
                 }
             }
         })
@@ -74,11 +98,11 @@ class SceneFileEditor(
         }, this)
     }
 
-    private fun isSource(changed: VirtualFile) = changed == file || changed == MainCamera.abssFor(file)
+    private fun isSource(changed: VirtualFile) = changed in paramsSource.sources(file)
 
     private fun reload() {
-        val params = runCatching { SceneReader.parse(textOf(file)) }.map { SceneRenderParams.from(it, MainCamera.forScene(file)) }
-        params.onSuccess { showScene(it) }
+        runCatchingKeepingCancellation { paramsSource.read(file) }
+            .onSuccess { showScene(it) }
             .onFailure { showStatus(AbyssusBundle.message("sceneViewParseError", it.message ?: it.javaClass.simpleName)) }
     }
 
@@ -95,13 +119,14 @@ class SceneFileEditor(
             return
         }
         created.onFailure = { e -> ApplicationManager.getApplication().invokeLater { showGlFailure(e) } }
+        created.onPick = { entityId -> selectEntityInAbyssusView(project, file, entityId) }
         view = created
         statusText = null
         setContent(created.view)
     }
 
     internal fun showGlFailure(e: Throwable) {
-        if (Disposer.isDisposed(this)) return
+        if (disposed) return
         showStatus(AbyssusBundle.message("glUnavailable", e.message ?: e.javaClass.simpleName))
     }
 
@@ -131,6 +156,7 @@ class SceneFileEditor(
     override fun getCurrentLocation(): FileEditorLocation? = null
 
     override fun dispose() {
+        disposed = true
         view?.let { Disposer.dispose(it) }
         view = null
     }

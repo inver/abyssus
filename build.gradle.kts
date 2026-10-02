@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 
@@ -47,7 +63,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.22.1")
 
     // LWJGL 3 + AWT bridge for the OpenGL scene panel
-    val lwjglVersion = "3.4.3"
+    val lwjglVersion = properties("lwjglVersion").get()
     val lwjglNatives = listOf("natives-macos-arm64", "natives-macos", "natives-windows", "natives-linux")
     implementation("org.lwjglx:lwjgl3-awt:0.2.5")
     implementation("org.lwjgl:lwjgl:$lwjglVersion")
@@ -58,10 +74,16 @@ dependencies {
     }
 
     // libGDX core (g3d, math) hosted on the AWT GL canvas; only the backend's GL wrapper classes are used
-    val gdxVersion = "1.13.5"
+    val gdxVersion = properties("gdxVersion").get()
     implementation("com.badlogicgames.gdx:gdx:$gdxVersion")
     implementation("com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion") { isTransitive = false }
     runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop")
+
+    // Model runtime + Assimp importer (brings lwjgl-assimp and its natives); the IDE provides Kotlin and SLF4J
+    implementation(project(":gdx-model")) {
+        exclude(group = "org.jetbrains.kotlin")
+        exclude(group = "org.slf4j")
+    }
 }
 
 // Set the JVM language level used to build the project. IntelliJ 2025.2+ requires Java 21.
@@ -115,6 +137,10 @@ kover {
 }
 
 tasks {
+    test {
+        // GL render tests open a real window: opt in with -Dabyssus.glTests=true
+        System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
+    }
     runIde {
         // Open a project on startup: -PideProject=/path/to/project
         providers.gradleProperty("ideProject").orNull?.let { args(it) }
