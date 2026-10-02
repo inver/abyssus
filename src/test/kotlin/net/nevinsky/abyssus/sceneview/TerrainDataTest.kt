@@ -72,7 +72,7 @@ class TerrainDataTest {
     fun indicesCoverEveryCellWithTwoTriangles() {
         val idx = TerrainData(3, FloatArray(9), 8, 1f).indices()
         assertEquals(4 * 6, idx.size)
-        assertArrayEquals(shortArrayOf(4, 1, 0, 0, 3, 4), idx.copyOfRange(0, 6))
+        assertArrayEquals(intArrayOf(4, 1, 0, 0, 3, 4), idx.copyOfRange(0, 6))
         assertTrue(idx.all { it in 0..8 })
     }
 

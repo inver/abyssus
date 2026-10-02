@@ -1,0 +1,76 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package net.nevinsky.abyssus.ecs
+
+import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.core.ModelInstance
+import net.nevinsky.abyssus.core.model.Model
+import net.nevinsky.abyssus.ecs.component.ParentComponent
+import net.nevinsky.abyssus.ecs.component.Point2PointPositionComponent
+import net.nevinsky.abyssus.ecs.component.PositionComponent
+import net.nevinsky.abyssus.ecs.render.AssetReference
+import net.nevinsky.abyssus.ecs.render.AssetType
+import net.nevinsky.abyssus.ecs.render.RenderableObjectDelegate
+import net.nevinsky.abyssus.ecs.render.RenderableSceneObject
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
+import org.junit.Test
+
+class ComponentsTest {
+    @Test
+    fun defaults() {
+        val position = PositionComponent()
+        assertEquals(Vector3(), position.localPosition)
+        assertEquals(1f, position.localRotation.w, 0f)
+        assertEquals(Vector3(1f, 1f, 1f), position.localScale)
+        assertEquals(-1, position.lookAtId)
+        assertEquals(-1, ParentComponent().parentEntityId)
+        assertEquals(-1, Point2PointPositionComponent().entity1Id)
+        assertEquals(-1, Point2PointPositionComponent().entity2Id)
+    }
+
+    @Test
+    fun transformAndTranslate() {
+        val position = PositionComponent(1f, 2f, 3f)
+        position.translate(1f, 1f, 1f)
+        position.translate(Vector3(1f, 0f, 0f))
+        assertEquals(Vector3(3f, 3f, 4f), position.getPosition(Vector3()))
+        assertEquals(Vector3(3f, 3f, 4f), position.getLocalPosition(Vector3()))
+        assertArrayEquals(Matrix4().setToTranslation(3f, 3f, 4f).values, position.getTransform().values, 0f)
+    }
+
+    @Test
+    fun delegateSetsTransformAndWrapsAsComponent() {
+        val instance = ModelInstance(Model())
+        val asset = object : RenderableSceneObject by AssetReference("m", AssetType.MODEL) {
+            override val modelInstance = instance
+        }
+        val delegate = RenderableObjectDelegate(asset, "defaultShader")
+        delegate.setPosition(Matrix4().setToTranslation(1f, 2f, 3f))
+        assertEquals(Vector3(1f, 2f, 3f), instance.transform!!.getTranslation(Vector3()))
+        assertSame(delegate, delegate.asComponent().renderable)
+        assertNull(delegate.asComponent().raw)
+    }
+
+    @Test
+    fun referenceHasNoGeometry() {
+        assertNull(AssetReference("m", AssetType.TERRAIN).modelInstance)
+    }
+}
