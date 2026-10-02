@@ -17,7 +17,7 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoAxis
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
 import org.junit.Assert.assertEquals
@@ -37,7 +37,7 @@ class SceneInteractionTest {
     }
 
     private val mainParams = SceneRenderParams.from(
-        SceneReader.parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
+        parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
         CameraParams.DEFAULT,
     )
 
@@ -115,7 +115,7 @@ class SceneInteractionTest {
     fun theSelectorListsFreeCameraAndTheSceneCamerasByName() {
         assertEquals(listOf("Free camera", "Camera 4"), cameraChoices(mainParams.content, "Free camera").map { it.label })
         assertEquals(listOf(null, "4"), cameraChoices(mainParams.content, "Free camera").map { it.id })
-        val unnamed = SceneContent.of(SceneReader.parse("""{"ecs":{"entities":{"8":{"components":{"CameraComponent":{}}}}}}"""))
+        val unnamed = SceneContent.of(parseScene("""{"ecs":{"entities":{"8":{"components":{"CameraComponent":{}}}}}}"""))
         assertEquals("8", cameraChoices(unnamed, "Free camera")[1].label)
     }
 

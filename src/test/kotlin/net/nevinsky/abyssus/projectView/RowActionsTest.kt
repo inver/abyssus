@@ -26,7 +26,7 @@ class RowActionsTest : BasePlatformTestCase() {
     private val host = JLabel("x")
 
     private fun entryOf(unused: Boolean) =
-        DtoEntry("/p/assets/0", "0", net.nevinsky.abyssus.dto.AssetInfo("a", "u", "SKYBOX", emptyList(), unused), null, null, null, emptyList())
+        DtoEntry("/p/assets/0", "0", net.nevinsky.abyssus.testAsset("a", "u", "SKYBOX", emptyList(), unused), null, null, null, emptyList())
 
     private fun paint(action: RowAction): BufferedImage {
         val w = action.width(host)

@@ -48,9 +48,9 @@ import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
 import net.nevinsky.abyssus.sceneview.gizmo.canRotate
 import net.nevinsky.abyssus.sceneview.model.ModelLoader
 import net.nevinsky.abyssus.sceneview.model.PreparedModel
-import net.nevinsky.abyssus.sceneview.skybox.PreparedSkybox
-import net.nevinsky.abyssus.sceneview.skybox.SkyboxCube
-import net.nevinsky.abyssus.sceneview.skybox.SkyboxLoader
+import net.nevinsky.abyssus.sceneview.skybox.PreparedSky
+import net.nevinsky.abyssus.sceneview.skybox.SkyLoader
+import net.nevinsky.abyssus.sceneview.skybox.SunDirection
 import net.nevinsky.abyssus.sceneview.terrain.PreparedTerrain
 import net.nevinsky.abyssus.sceneview.terrain.TerrainLoader
 import net.nevinsky.abyssus.sceneview.terrain.TerrainMesh
@@ -62,7 +62,7 @@ import net.nevinsky.abyssus.core.ModelBatch as ContentBatch
 class SceneLoaders(
     val models: AssetLoader<PreparedModel, ContentModel> = ModelLoader(),
     val terrains: AssetLoader<PreparedTerrain, TerrainMesh> = TerrainLoader(),
-    val skyboxes: AssetLoader<PreparedSkybox, SkyboxCube> = SkyboxLoader(),
+    val skyboxes: AssetLoader<PreparedSky, com.badlogic.gdx.utils.Disposable> = SkyLoader(),
 )
 
 /**
@@ -223,7 +223,7 @@ class SceneRenderer(
 
         updateCamera(width, height, orbit)
 
-        skybox?.draw(camera, p.content.skybox, p.projectDir)
+        skybox?.draw(camera, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights))
 
         batch.begin(camera)
         batch.render(grid, environment)

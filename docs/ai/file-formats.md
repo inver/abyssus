@@ -42,7 +42,7 @@ Top level, bound to `SceneDto` (`src/main/kotlin/net/nevinsky/abyssus/scene/Scen
 | `id`, `name` | Shown as `name (id)`; `name` is changed by Rename Scene |
 | `ambientLightEnabled` / `ambientLight` | `color` + `intensity` |
 | `fogEnabled` / `fog` | `color`, `density`, `gradient` |
-| `skyboxEnabled` / `skyboxName` | `skyboxName` is a `SKYBOX` asset folder name, or `null` |
+| `skyboxEnabled` / `skyboxName` | `skyboxName` is a `SKYBOX` or `SKYBOX_PROCEDURAL` asset folder name, or `null` |
 | `ecs` | Entities, kept as raw JSON (`JsonNode`) |
 
 **Toggles:** an `<x>Enabled` boolean gates `<x>` (or `<x>Name`). The tree folds it into an eye on the gated row. The
@@ -87,13 +87,22 @@ empty `PositionComponent: {}` is valid. Writers add fields when they change them
 | `MODEL` | `file`, `format`, `binary`, `materials` (material asset `uuid`s) |
 | `TERRAIN` | `terrainFile`, `size`, `uv`, `splatMap`, `splatBase`, `splatR`, `splatG`, `splatB`, `splatA` (texture asset `uuid`s) |
 | `SKYBOX` | `top`, `bottom`, `left`, `right`, `front`, `back` (image files in the folder) |
+| `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults) |
 | `SKYBOX_HDR`, `TEXTURE`, `PIXMAP_TEXTURE`, `MATERIAL`, `SHADER` | Recognized for icons; not drawn by the scene view |
 
 `uuid` can be missing (the fixture's `skybox_default` and `tree` have none).
 
+**`SKYBOX_PROCEDURAL` is a plugin-only type.** Mundus does not define it and will not load such an asset. The scene view
+draws it as a fullscreen triangle with the folder's own shaders (single-scattering Rayleigh + Mie, ray-marched per
+pixel; the fixture is `assets/skybox_physical`). The plugin supplies these uniforms: `u_invViewProj` (vertex),
+`u_sunDir` (unit vector toward the brightest directional light's opposite; a default 45 degree sun without one),
+`u_cameraHeight`, `u_planetRadius`, `u_atmosphereRadius`, `u_betaRayleigh`, `u_betaMie`, `u_heightRayleigh`,
+`u_heightMie`, `u_mieG`, `u_sunIntensity`. The vertex shader takes `attribute vec2 a_position` (the three corners of
+the triangle). A missing file or a compile error skips that sky and logs it.
+
 ### Reachability ("unused")
 
-`ProjectAssets` (`src/main/kotlin/net/nevinsky/abyssus/dto/ProjectAssets.kt`) decides which assets are used:
+`ProjectReader` (`src/main/kotlin/net/nevinsky/abyssus/dto/ProjectReader.kt`) decides which assets are used:
 
 - **Roots:** a scene reaches asset folders by name through every `assetName` and `shaderKey` in its `ecs`, and its
   `skyboxName`.

@@ -30,8 +30,14 @@ import net.nevinsky.abyssus.dto.text
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.scene.SceneDto
 
-/** The `meta.json` type of an asset a scene's `skyboxName` can name. */
+/** The `meta.json` type of a skybox made of six face images. */
 const val SKYBOX_TYPE = "SKYBOX"
+
+/** The `meta.json` type of a sky computed by the asset's own shaders. */
+const val PROCEDURAL_SKY_TYPE = "SKYBOX_PROCEDURAL"
+
+/** The `meta.json` types of the assets a scene's `skyboxName` can name. */
+private val SKY_TYPES = setOf(SKYBOX_TYPE, PROCEDURAL_SKY_TYPE)
 
 /** The `additional` keys of a skybox's `meta.json` that name its face images. */
 private val FACE_KEYS = listOf("top", "bottom", "left", "right", "front", "back")
@@ -43,12 +49,13 @@ private val THUMB_ORDER = listOf("left", "right", "top", "bottom", "front", "bac
  * A skybox asset as the skybox chooser lists it: its folder [name], how many face images its `meta.json` names and their
  * file extensions, how many of the project's scenes reference it and whether the Abyssus view marks it unused.
  */
-data class SkyboxChoice(
+data class SkyboxChoice @JvmOverloads constructor(
     val name: String,
     val faces: Int,
     val formats: List<String>,
     val sceneCount: Int,
     val unused: Boolean,
+    val procedural: Boolean = false,
 ) {
     /** The asset folder; null for a choice that was not read from disk. */
     var folder: VirtualFile? = null
@@ -62,18 +69,20 @@ data class SkyboxChoice(
 
     /** `6 faces · png`; just the count when no face names an extension. */
     val detail: String
-        get() = if (formats.isEmpty()) AbyssusBundle.message("skyboxFaces", faces)
+        get() = if (procedural) AbyssusBundle.message("skyboxProcedural")
+        else if (formats.isEmpty()) AbyssusBundle.message("skyboxFaces", faces)
         else AbyssusBundle.message("skyboxFacesFormats", faces, formats.joinToString(", "))
 }
 
-/** The project's `SKYBOX` assets by folder name; [metas] holds each folder's parsed `meta.json` (absent or null when unreadable). */
+/** The project's `SKYBOX` and `SKYBOX_PROCEDURAL` assets by folder name; [metas] holds each folder's parsed `meta.json` (absent or null when unreadable). */
 fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>): List<SkyboxChoice> {
     val references = project.scenes.filterIsInstance<SceneDto>().map(::sceneReferences)
-    return project.assets.filter { it.meta.type.name == SKYBOX_TYPE }.sortedBy { it.name }.map { asset ->
+    return project.assets.filter { it.meta.type.name in SKY_TYPES }.sortedBy { it.name }.map { asset ->
         val additional = metas[asset.name]?.obj("additional")
         val files = FACE_KEYS.mapNotNull { key -> additional?.text(key)?.takeIf { it.isNotBlank() } }
         val formats = files.mapNotNull { f -> f.substringAfterLast('.', "").lowercase().takeIf { it.isNotEmpty() } }.distinct().sorted()
-        SkyboxChoice(asset.name, files.size, formats, references.count { asset.name in it }, asset.unused).also { choice ->
+        val procedural = asset.meta.type.name == PROCEDURAL_SKY_TYPE
+        SkyboxChoice(asset.name, files.size, formats, references.count { asset.name in it }, asset.unused, procedural).also { choice ->
             choice.faceFiles = THUMB_ORDER.map { key -> additional?.text(key)?.takeIf { it.isNotBlank() } }
         }
     }
@@ -82,7 +91,7 @@ fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>): List<Skyb
 /** The skybox choices of the `.abss` project [abss], read as the Abyssus view reads it; null when the project cannot be read. */
 fun loadSkyboxChoices(project: Project, abss: VirtualFile): List<SkyboxChoice>? {
     val dto = AssetReadCache.of(project).read(abss)?.obj as? ProjectDto ?: return null
-    val skyboxes = dto.assets.filter { it.meta.type.name == SKYBOX_TYPE }.map { it.name }.toSet()
+    val skyboxes = dto.assets.filter { it.meta.type.name in SKY_TYPES }.map { it.name }.toSet()
     val metas = ProjectLayout.assetFolders(abss).filter { it.name in skyboxes }.associate { dir ->
         dir.name to runCatchingKeepingCancellation {
             dir.findChild(ProjectLayout.META_FILE)?.let { SceneJson.parseObject(it.text()) }

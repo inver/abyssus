@@ -106,10 +106,13 @@ class ProjectAssetFiles private constructor(val projectDir: File, private val pr
         return Asset(name, meta, dir)
     }
 
-    /** One [Asset] per folder under the `assets` next to [abss]; a folder without a readable `meta.json` is skipped. */
+    /**
+     * One [Asset] per folder under the `assets` next to [abss]. A folder whose `meta.json` is missing, malformed or of a
+     * type this plugin does not know is still listed, as [MetaType.UNKNOWN] with no references.
+     */
     fun loadShortAssets(abss: VirtualFile): List<Asset<Any>> {
         val service = service<JsonProcessor>()
-        return ProjectLayout.assetFolders(abss).mapNotNull { dir ->
+        return ProjectLayout.assetFolders(abss).map { dir ->
             runCatchingKeepingCancellation {
                 val text = dir.findChild(ProjectLayout.META_FILE)?.readText() ?: return@runCatchingKeepingCancellation null
 
@@ -118,7 +121,7 @@ class ProjectAssetFiles private constructor(val projectDir: File, private val pr
                 val references = runCatchingKeepingCancellation { references(SceneJson.parseObject(text)) }
                     .getOrDefault(emptyList())
                 Asset(dir.name, parsedMeta, File(dir.path), references)
-            }.getOrNull()
+            }.getOrNull() ?: Asset(dir.name, MetaBase(0, 0L, MetaType.UNKNOWN, Any()), File(dir.path))
         }
     }
 

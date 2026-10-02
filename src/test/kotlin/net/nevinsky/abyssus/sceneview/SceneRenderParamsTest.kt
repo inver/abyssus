@@ -16,7 +16,7 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -24,7 +24,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SceneRenderParamsTest {
-    private fun scene(json: String) = SceneReader.parse(json)
+    private fun scene(json: String) = parseScene(json)
 
     private val full = """{"ambientLightEnabled":true,"ambientLight":{"color":{"r":1.0,"g":0.5,"b":0.0,"a":1.0},"intensity":0.5},
         "fogEnabled":true,"fog":{"color":{"r":0.2,"g":0.3,"b":0.4,"a":1.0},"density":0.01,"gradient":1.5}}"""

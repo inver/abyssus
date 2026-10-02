@@ -15,6 +15,7 @@ class JsonProcessor {
     private val mapper: JsonMapper = JsonMapper.builder()
         .addModule(KotlinModule.Builder().build())
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
         .disable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
         .build()
 

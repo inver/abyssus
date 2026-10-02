@@ -23,7 +23,7 @@
     "gradient": 1.5
   },
   "skyboxEnabled": true,
-  "skyboxName": "skybox_default",
+  "skyboxName": "skybox_physical",
   "ecs": {
     "entities": {
       "0": {

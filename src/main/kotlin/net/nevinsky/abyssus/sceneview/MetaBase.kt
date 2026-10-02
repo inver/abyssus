@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.sceneview
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import java.util.*
 
 open class MetaBase<T>(
@@ -11,7 +12,16 @@ open class MetaBase<T>(
 )
 
 enum class MetaType {
+    /** A type this plugin does not know, or a `meta.json` that could not be bound. */
+    @JsonEnumDefaultValue
+    UNKNOWN,
     SKYBOX,
+    SKYBOX_PROCEDURAL,
+    SKYBOX_HDR,
+    TEXTURE,
+    PIXMAP_TEXTURE,
+    MATERIAL,
+    SHADER,
     MODEL,
     TERRAIN
 }

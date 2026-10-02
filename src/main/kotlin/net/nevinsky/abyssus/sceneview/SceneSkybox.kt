@@ -21,16 +21,18 @@ import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.sceneview.skybox.PreparedSkybox
+import net.nevinsky.abyssus.sceneview.skybox.PreparedSky
+import net.nevinsky.abyssus.sceneview.skybox.ProceduralSky
 import net.nevinsky.abyssus.sceneview.skybox.SkyboxCube
+import net.nevinsky.abyssus.sceneview.skybox.SunDirection
 import java.io.File
 import java.util.concurrent.Executor
 
 /**
- * The scene's skybox, drawn first with depth testing and writing off, following the camera's orientation but not its
+ * The scene's skybox (a cube of faces or a procedural sky), drawn first with depth testing and writing off, following the camera's orientation but not its
  * position, so everything else is always in front of it. Call only on the GL thread with the context current.
  */
-class SceneSkybox(executor: Executor, loader: AssetLoader<PreparedSkybox, SkyboxCube>) : Disposable {
+class SceneSkybox(executor: Executor, loader: AssetLoader<PreparedSky, Disposable>) : Disposable {
     private val assets = SceneAssets(executor, loader)
 
     val isLoading: Boolean get() = assets.isLoading
@@ -38,20 +40,28 @@ class SceneSkybox(executor: Executor, loader: AssetLoader<PreparedSkybox, Skybox
     private val program = Shaders.load("skybox")
     private val viewProj = Matrix4()
 
-    /** Draws the skybox named [name] if it is loaded (and starts loading it); nothing for null. */
-    fun draw(camera: Camera, name: String?, projectDir: File?) {
+    /**
+     * Draws the skybox named [name] if it is loaded (and starts loading it); nothing for null. A procedural sky is lit
+     * by the sun toward [sun].
+     */
+    fun draw(camera: Camera, name: String?, projectDir: File?, sun: Vec3 = SunDirection.DEFAULT) {
         assets.update(projectDir, setOfNotNull(name))
-        val cube = name?.let(assets::get) ?: return
+        val sky = name?.let(assets::get) ?: return
 
-        viewProj.set(camera.view)
-        viewProj.setTranslation(0f, 0f, 0f)
-        viewProj.mulLeft(camera.projection)
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
         Gdx.gl.glDepthMask(false)
         Gdx.gl.glDisable(GL20.GL_CULL_FACE)
-        program.bind()
-        program.setUniformMatrix("u_viewProj", viewProj)
-        cube.draw(program)
+        when (sky) {
+            is SkyboxCube -> {
+                viewProj.set(camera.view)
+                viewProj.setTranslation(0f, 0f, 0f)
+                viewProj.mulLeft(camera.projection)
+                program.bind()
+                program.setUniformMatrix("u_viewProj", viewProj)
+                sky.draw(program)
+            }
+            is ProceduralSky -> sky.draw(camera, sun)
+        }
         Gdx.gl.glDepthMask(true)
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
     }

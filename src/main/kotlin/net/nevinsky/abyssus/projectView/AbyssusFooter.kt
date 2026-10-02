@@ -49,15 +49,15 @@ fun footerCounts(project: Project): FooterCounts {
     var assets = 0
     var unused = 0
     for (file in findTopLevelAssets(project)) {
-//        when (val root = (AssetReadCache.of(project).read(file) as? AssetReadResult.Success)?.root) {
-//            is ProjectDto -> {
-//                scenes += root.scenes.size
-//                assets += root.assets.size
-//                unused += root.assets.count { it.unused }
-//            }
-//            is SceneDto -> scenes++
-//            else -> if (file.extension == ProjectLayout.SCENE_EXTENSION) scenes++
-//        }
+        when (val root = AssetReadCache.of(project).read(file)?.takeIf { it.success }?.obj) {
+            is ProjectDto -> {
+                scenes += root.scenes.size
+                assets += root.assets.size
+                unused += root.assets.count { it.unused }
+            }
+            is SceneDto -> scenes++
+            else -> if (file.extension == ProjectLayout.SCENE_EXTENSION) scenes++
+        }
     }
     return FooterCounts(scenes, assets, unused)
 }

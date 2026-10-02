@@ -17,9 +17,9 @@
 package net.nevinsky.abyssus.projectView
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.dto.AssetInfo
+import net.nevinsky.abyssus.testAsset
 import net.nevinsky.abyssus.dto.ProjectDto
-import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.filetype.SceneJson
 
 class SkyboxChoicesTest : BasePlatformTestCase() {
@@ -30,21 +30,46 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
         return """{"type":"SKYBOX","additional":{${files.mapIndexed { i, f -> "\"${keys[i]}\":\"$f\"" }.joinToString(",")}}}"""
     }
 
-    private fun scene(sky: String?) = SceneReader.parse("""{"skyboxName":${sky?.let { "\"$it\"" } ?: "null"}}""")
+    private fun scene(sky: String?) = parseScene("""{"skyboxName":${sky?.let { "\"$it\"" } ?: "null"}}""")
 
     fun testOnlySkyboxAssetsInNameOrder() {
         val dto = ProjectDto("P", emptyList(), listOf(
-            AssetInfo("nebula", "1", "SKYBOX"),
-            AssetInfo("hdr", "2", "SKYBOX_HDR"),
-            AssetInfo("reef", "3", "MODEL"),
-            AssetInfo("dusk", "4", "SKYBOX"),
-            AssetInfo("caustics", "5", "SHADER"),
+            testAsset("nebula", "1", "SKYBOX"),
+            testAsset("hdr", "2", "SKYBOX_HDR"),
+            testAsset("reef", "3", "MODEL"),
+            testAsset("dusk", "4", "SKYBOX"),
+            testAsset("caustics", "5", "SHADER"),
         ))
         assertEquals(listOf("dusk", "nebula"), skyboxChoices(dto, emptyMap()).map { it.name })
     }
 
+    fun testListsBothSkyboxKinds() {
+        val dto = ProjectDto("P", emptyList(), listOf(
+            testAsset("skybox_physical", "1", "SKYBOX_PROCEDURAL"),
+            testAsset("skybox_default", "2", "SKYBOX"),
+            testAsset("hdr", "3", "SKYBOX_HDR"),
+        ))
+        assertEquals(listOf("skybox_default", "skybox_physical"), skyboxChoices(dto, emptyMap()).map { it.name })
+    }
+
+    fun testProceduralDetailLine() {
+        val dto = ProjectDto("P", emptyList(), listOf(testAsset("skybox_physical", "1", "SKYBOX_PROCEDURAL")))
+        val choice = skyboxChoices(dto, emptyMap()).single()
+        assertTrue(choice.procedural)
+        assertEquals("procedural sky", choice.detail)
+    }
+
+    fun testFixtureProjectOffersBothSkies() {
+        val abss = myFixture.copyFileToProject("Untitled/Untitled.abss", "Untitled/Untitled.abss")
+        myFixture.copyFileToProject("Untitled/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
+        java.io.File("$testDataPath/Untitled/assets").listFiles { f -> f.isDirectory }!!.forEach {
+            myFixture.copyFileToProject("Untitled/assets/${it.name}/meta.json", "Untitled/assets/${it.name}/meta.json")
+        }
+        assertEquals(listOf("skybox_default", "skybox_physical"), loadSkyboxChoices(project, abss)!!.map { it.name })
+    }
+
     fun testDetailLineCountsFacesAndSortsFormats() {
-        val dto = ProjectDto("P", emptyList(), listOf(AssetInfo("sky", "1", "SKYBOX")))
+        val dto = ProjectDto("P", emptyList(), listOf(testAsset("sky", "1", "SKYBOX")))
         val meta = SceneJson.parse(faces("a.png", "b.PNG", "c.jpg", "d.png", "e.jpg", "f.png"))
         val choice = skyboxChoices(dto, mapOf("sky" to meta)).single()
         assertEquals(6, choice.faces)
@@ -53,7 +78,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
     }
 
     fun testMissingFacesAndMetaDoNotFail() {
-        val dto = ProjectDto("P", emptyList(), listOf(AssetInfo("partial", "1", "SKYBOX"), AssetInfo("bare", "2", "SKYBOX")))
+        val dto = ProjectDto("P", emptyList(), listOf(testAsset("partial", "1", "SKYBOX"), testAsset("bare", "2", "SKYBOX")))
         val choices = skyboxChoices(dto, mapOf("partial" to SceneJson.parse(faces("a.png", "", "c.png")), "bare" to null))
         val partial = choices.first { it.name == "partial" }
         assertEquals(2, partial.faces)
@@ -67,7 +92,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
         val dto = ProjectDto(
             "P",
             listOf(scene("nebula"), scene("nebula"), scene(null)),
-            listOf(AssetInfo("nebula", "1", "SKYBOX"), AssetInfo("dusk", "2", "SKYBOX", unused = true)),
+            listOf(testAsset("nebula", "1", "SKYBOX"), testAsset("dusk", "2", "SKYBOX", unused = true)),
         )
         val byName = skyboxChoices(dto, emptyMap()).associateBy { it.name }
         assertEquals(2, byName.getValue("nebula").sceneCount)

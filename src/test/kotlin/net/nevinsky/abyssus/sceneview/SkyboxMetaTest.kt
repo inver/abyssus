@@ -17,16 +17,13 @@
 package net.nevinsky.abyssus.sceneview
 
 import net.nevinsky.abyssus.sceneview.skybox.SkyboxMeta
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Test
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.io.File
 
-class SkyboxMetaTest {
+class SkyboxMetaTest : BasePlatformTestCase() {
     private val projectDir = File("src/test/testData/project/Untitled")
 
-    @Test
-    fun skyboxMetaBindsFromTheAssetFolder() {
+    fun testSkyboxMetaBindsFromTheAssetFolder() {
         val asset = ProjectAssetFiles(projectDir).loadAsset(SkyboxMeta::class.java, "skybox_default")
         assertNotNull("meta.json of skybox_default must bind to SkyboxMeta", asset)
         assertEquals("skybox_default.png", asset!!.meta.additional.top)
@@ -34,8 +31,7 @@ class SkyboxMetaTest {
         assertEquals(MetaType.SKYBOX, asset.meta.type)
     }
 
-    @Test
-    fun loaderDecodesAllSixFaces() {
+    fun testLoaderDecodesAllSixFaces() {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
         val prepared = net.nevinsky.abyssus.sceneview.skybox.SkyboxLoader().prepare(ProjectAssetFiles(projectDir), "skybox_default")
         assertNotNull("skybox_default must prepare", prepared)

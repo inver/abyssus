@@ -73,7 +73,8 @@ object EyeIcons {
 
 /** Icons of an entity's components, by component name without the `Component` suffix; anything else gets [GENERIC]. */
 object ComponentIcons {
-    private fun load(name: String): Icon = IconLoader.getIcon("/icons/component_${name}_icon.svg", ComponentIcons::class.java)
+    private fun load(name: String): Icon =
+        IconLoader.getIcon("/icons/component_${name}_icon.svg", ComponentIcons::class.java)
 
     @JvmField
     val GENERIC: Icon = load("generic")
@@ -108,7 +109,7 @@ object AssetIcons {
 
     private val byType: Map<String, Icon> by lazy {
         listOf("MODEL", "TERRAIN", "SKYBOX", "SKYBOX_HDR", "TEXTURE", "PIXMAP_TEXTURE", "MATERIAL", "SHADER")
-            .associateWith { load(it.lowercase()) }
+            .associateWith { load(it.lowercase()) } + ("SKYBOX_PROCEDURAL" to load("skybox"))
     }
 
     fun forType(type: String?): Icon = type?.let { byType[it] } ?: UNKNOWN

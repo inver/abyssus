@@ -56,7 +56,7 @@ class SceneTransformWriterTest {
         val c = components(root, "4")
         assertEquals(moved.y, c.get("PositionComponent").get("localPosition").get("y").floatValue(), 1e-5f)
         assertEquals(moved.y, c.get("CameraComponent").get("camera").get("position").get("y").floatValue(), 1e-5f)
-        assertEquals(6.1317816f + 1f, moved.y, 1e-5f)
+        assertEquals(12.318308f + 1f, moved.y, 1e-5f)
     }
 
     @Test

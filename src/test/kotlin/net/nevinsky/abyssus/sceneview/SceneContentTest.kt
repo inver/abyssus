@@ -16,7 +16,7 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -24,7 +24,7 @@ import org.junit.Test
 import java.io.File
 
 class SceneContentTest {
-    private fun content(json: String) = SceneContent.of(SceneReader.parse(json))
+    private fun content(json: String) = SceneContent.of(parseScene(json))
 
     private fun entity(components: String) = """{"ecs":{"entities":{"7":{"archetype":1,"components":$components}}}}"""
 
@@ -131,9 +131,9 @@ class SceneContentTest {
         val cam = c.cameras.single()
         assertEquals("4", cam.entityId)
         assertEquals("Camera 4", cam.name)
-        assertEquals(-17.7f, cam.position.x, 0.05f)
-        assertEquals(6.1f, cam.position.y, 0.05f)
-        assertEquals(0.6f, cam.position.z, 0.05f)
+        assertEquals(-23.57f, cam.position.x, 0.05f)
+        assertEquals(12.32f, cam.position.y, 0.05f)
+        assertEquals(-0.84f, cam.position.z, 0.05f)
         assertEquals("3", cam.lookAtId)
         assertEquals(1f, cam.near, 0f)
         assertEquals(100f, cam.far, 0f)

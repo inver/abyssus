@@ -16,7 +16,7 @@
 
 package net.nevinsky.abyssus.sceneview.gizmo
 
-import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.sceneview.SceneContent
 import net.nevinsky.abyssus.sceneview.Vec3
 import org.junit.Assert.assertEquals
@@ -42,7 +42,7 @@ class GizmoHandlesTest {
         assertEquals(0f, h.tip(GizmoAxis.X).y, 0f)
     }
 
-    private fun content(text: String) = SceneContent.of(SceneReader.parse(text))
+    private fun content(text: String) = SceneContent.of(parseScene(text))
 
     @Test
     fun lookAtCameraAndPointLightCannotRotate() {

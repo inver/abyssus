@@ -19,7 +19,7 @@ package net.nevinsky.abyssus.sceneview
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
-import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -34,9 +34,9 @@ class SceneMarkersTest {
         }
     }
 
-    private fun main() = SceneContent.of(SceneReader.parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()))
+    private fun main() = SceneContent.of(parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()))
 
-    private fun content(entities: String) = SceneContent.of(SceneReader.parse("""{"ecs":{"entities":{$entities}}}"""))
+    private fun content(entities: String) = SceneContent.of(parseScene("""{"ecs":{"entities":{$entities}}}"""))
 
     private fun light(id: String, type: String, x: Float = 0f) =
         """"$id":{"components":{"TypeComponent":{"type":"$type"},"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":$x}}}}"""

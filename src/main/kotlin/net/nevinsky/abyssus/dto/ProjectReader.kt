@@ -53,7 +53,7 @@ class ProjectReader(val project: Project) : ConfigFileReader<ProjectDto> {
 
 
     /** Folder names of the assets reachable from [roots] (folder names) through `uuid` references, transitively. */
-    private fun usedAssets(assets: List<Asset<Any>>, roots: Set<String>): Set<String> {
+    fun usedAssets(assets: List<Asset<Any>>, roots: Set<String>): Set<String> {
         val byName = assets.associateBy { it.name }
         val byUuid = assets.filter { it.meta.uuid != null }.associateBy { it.meta.uuid.toString() }
         val used = mutableSetOf<String>()

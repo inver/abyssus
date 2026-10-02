@@ -18,7 +18,7 @@ package net.nevinsky.abyssus.sceneview
 
 import net.nevinsky.abyssus.filetype.SceneJson
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
@@ -37,7 +37,7 @@ class SceneRenderGlTest {
     private fun params(project: String, scene: String, patch: (String) -> String = { it }): SceneRenderParams {
         val dir = File("src/test/testData/project/$project")
         val text = patch(File(dir, "scenes/$scene").readText())
-        return SceneRenderParams.from(SceneReader.parse(text), CameraParams.DEFAULT, dir)
+        return SceneRenderParams.from(parseScene(text), CameraParams.DEFAULT, dir)
     }
 
     private fun edit(text: String, change: (ObjectNode) -> Unit): String = SceneJson.compact(SceneJson.parseObject(text).also(change))
@@ -114,6 +114,18 @@ class SceneRenderGlTest {
         val without = GlHarness.render(noSky, 200)
         // the top-left corner is sky in one and plain clear color in the other
         assertTrue(withSky.image.getRGB(2, 2) != without.image.getRGB(2, 2))
+    }
+
+    @Test
+    fun proceduralSkyCompilesAndDraws() {
+        val p = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.put("skyboxName", "skybox_physical") } }
+        val withSky = GlHarness.render(p, 200)
+        assertNull(withSky.error)
+        val noSky = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.putNull("skyboxName") } }
+        val without = GlHarness.render(noSky, 200)
+        assertTrue(withSky.image.getRGB(2, 2) != without.image.getRGB(2, 2))
+        val top = withSky.image.getRGB(withSky.image.width / 2, 2)
+        assertTrue("the sky near the top should be bluer than red: ${Integer.toHexString(top)}", (top and 0xff) > ((top shr 16) and 0xff))
     }
 
     @Test

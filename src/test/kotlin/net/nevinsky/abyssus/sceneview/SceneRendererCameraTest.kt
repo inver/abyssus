@@ -17,7 +17,7 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.sceneview.gizmo.DragResult
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoAxis
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
@@ -38,7 +38,7 @@ class SceneRendererCameraTest {
 
     private fun renderer(): SceneRenderer {
         val params = SceneRenderParams.from(
-            SceneReader.parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
+            parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
             CameraParams.DEFAULT,
         )
         return SceneRenderer(executor = { it.run() }).also { it.params = params }
@@ -52,9 +52,9 @@ class SceneRendererCameraTest {
         r.viewCamera = "4"
         r.updateCamera(width, height, OrbitCamera.from(CameraParams.DEFAULT))
         val cam = r.frameCamera
-        assertEquals(-17.706646f, cam.position.x, 1e-4f)
-        assertEquals(6.1317816f, cam.position.y, 1e-4f)
-        assertEquals(0.57453203f, cam.position.z, 1e-4f)
+        assertEquals(-23.56657f, cam.position.x, 1e-4f)
+        assertEquals(12.318308f, cam.position.y, 1e-4f)
+        assertEquals(-0.84287655f, cam.position.z, 1e-4f)
         // looking at entity 3, at the origin
         val toTarget = Vector3(0f, 0f, 0f).sub(cam.position).nor()
         assertEquals(toTarget.x, cam.direction.x, 1e-4f)

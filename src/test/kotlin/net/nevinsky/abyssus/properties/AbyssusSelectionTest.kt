@@ -91,7 +91,7 @@ class AbyssusSelectionTest : BasePlatformTestCase() {
 
     fun testEveryAssetRowResolves() {
         copyProject()
-        assertEquals(7, assetNodes().size)
+        assertEquals(8, assetNodes().size)
         assertTrue(assetNodes().all { assetFolderOf(it) != null })
     }
 

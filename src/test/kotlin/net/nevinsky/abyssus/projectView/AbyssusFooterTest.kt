@@ -40,7 +40,7 @@ class AbyssusFooterTest : BasePlatformTestCase() {
             val ecs = if (i == 1 && used.isNotEmpty()) """{"ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":[$used]}}}}}}""" else "{}"
             myFixture.addFileToProject("$root/scenes/S$i.scene", ecs)
         }
-        for (name in assets.keys) myFixture.addFileToProject("$root/assets/$name/meta.json", """{"uuid":"u-$name","type":"MODEL","additional":{}}""")
+        for (name in assets.keys) myFixture.addFileToProject("$root/assets/$name/meta.json", """{"version":1,"lastModified":1,"uuid":"${java.util.UUID.nameUUIDFromBytes(name.toByteArray())}","type":"MODEL","additional":{}}""")
     }
 
     fun testCountsOneProject() {

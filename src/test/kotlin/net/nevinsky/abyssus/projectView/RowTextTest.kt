@@ -17,7 +17,7 @@
 package net.nevinsky.abyssus.projectView
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.dto.AssetInfo
+import net.nevinsky.abyssus.sceneview.Asset
 import net.nevinsky.abyssus.filetype.SceneJson
 
 class RowTextTest : BasePlatformTestCase() {
@@ -28,7 +28,7 @@ class RowTextTest : BasePlatformTestCase() {
 
     fun testFoldersAreLabelledAndCounted() {
         assertEquals(RowText("Scenes", "2"), rowText(entry("scenes", listOf(1, 2))))
-        assertEquals(RowText("Assets", "0"), rowText(entry("assets", emptyList<AssetInfo>())))
+        assertEquals(RowText("Assets", "0"), rowText(entry("assets", emptyList<Asset<Any>>())))
     }
 
     fun testEcsShowsItsEntityCount() {

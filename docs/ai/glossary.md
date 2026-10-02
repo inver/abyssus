@@ -15,7 +15,7 @@
 | **Abyssus Properties** | The tool window showing the selected asset's `meta.json` (read only), or the components of the selected entity, whose fields are editable. |
 | **Scene view** | The second editor tab of a `.scene`: a libGDX render on an LWJGL3-AWT GL canvas. |
 | **Eye toggle** | The eye icon on a row gated by an `<x>Enabled` boolean. A click flips the boolean in the file. |
-| **Skybox chooser** | The "Choose" button on a project scene's `skybox` row. It opens a dialog listing the project's `SKYBOX` assets. |
+| **Skybox chooser** | The "Choose" button on a project scene's `skybox` row. It opens a dialog listing the project's `SKYBOX` and `SKYBOX_PROCEDURAL` assets. |
 | **Gizmo** | The handles on the object selected in the scene view: X/Y/Z arrows (Move, key W) or rings (Rotate, key E). A drag previews live and writes on release. |
 | **Look-through camera** | Rendering the scene view from a camera entity, chosen in the view's camera selector, instead of the free orbit camera. |
 | **Marker** | The line drawing of a camera (body and frustum) or a light (octahedron and direction line), which makes them visible and clickable. |

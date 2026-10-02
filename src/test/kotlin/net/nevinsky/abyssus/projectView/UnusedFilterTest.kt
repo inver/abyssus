@@ -29,7 +29,7 @@ class UnusedFilterTest : BasePlatformTestCase() {
         myFixture.addFileToProject("p/P.abss", """{"name":"P"}""")
         myFixture.addFileToProject("p/scenes/S.scene", """{"ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"used"}}}}}}}}""")
         for ((name, uuid) in listOf("used" to "u1", "dead1" to "u2", "dead2" to "u3", "dead3" to "u4")) {
-            myFixture.addFileToProject("p/assets/$name/meta.json", """{"uuid":"$uuid","type":"MODEL","additional":{}}""")
+            myFixture.addFileToProject("p/assets/$name/meta.json", """{"version":1,"lastModified":1,"uuid":"${java.util.UUID.nameUUIDFromBytes(uuid.toByteArray())}","type":"MODEL","additional":{}}""")
         }
     }
 

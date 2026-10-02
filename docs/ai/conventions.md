@@ -34,7 +34,7 @@
 
 ## Writing files
 
-Readers never write (`AssetReader` "Never writes and never throws"). Only these edit files, all through
+Readers never write (`ConfigFileReader` implementations never write and never throw). Only these edit files, all through
 `editSceneJson` as named undoable commands:
 - the eye toggle,
 - Rename Scene,

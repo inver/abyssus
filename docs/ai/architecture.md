@@ -28,11 +28,11 @@ All in `src/main/resources/META-INF/plugin.xml`:
 
 1. `findTopLevelAssets` (`projectView/AbyssusNodes.kt`) lists every `.abss`, and every `.scene` outside a project,
    under the content roots.
-2. `AssetReadCache` reads each through `AssetReader.forExtension` (`SceneReader`, `ProjectReader` in
-   `dto/AssetReader.kt`). It re-reads when the reader's `stamp` changes. A project's stamp folds in its scene files
+2. `AssetReadCache` reads each through a `ConfigFileReader` chosen by extension (`SceneReader`, `ProjectReader` in
+   `dto/`). It re-reads when the reader's `stamp` changes. A project's stamp folds in its scene files
    and asset folders.
 3. `ProjectReader` builds a `ProjectDto`: the scenes from the `scenes` folder, and the assets from the `assets`
-   folder with their `unused` flag (`ProjectAssets.usedAssets`, see `docs/ai/file-formats.md`).
+   folder with their `unused` flag (`ProjectReader.usedAssets`, see `docs/ai/file-formats.md`).
 4. `childrenOf` / `foldToggles` (`projectView/DtoTree.kt`) turn DTOs into rows. `DtoEntryNode` renders them, and
    `RowActions.kt` paints the eye, the scene "View" icon and the skybox "Choose" button.
 
@@ -102,8 +102,8 @@ checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the proper
 
 ## Extension points
 
-- **A new asset file format:** implement `AssetReader` and return it from `AssetReader.forExtension`
-  (`../../src/main/kotlin/net/nevinsky/abyssus/dto/ConfigFileReader.kt`). Add the extension to `ProjectLayout.ASSET_EXTENSIONS`.
+- **A new asset file format:** implement `ConfigFileReader` and return it from `AssetReadCache.readerFor`
+  (`src/main/kotlin/net/nevinsky/abyssus/dto/ConfigFileReader.kt`). Add the extension to `ProjectLayout.ASSET_EXTENSIONS`.
 - **A new ECS component:** write a `ComponentCodec` and add it to `ComponentCodecs`
   (`src/main/kotlin/net/nevinsky/abyssus/ecs/scene/ComponentCodecs.kt`).
 - **A new asset kind drawn in the scene view:** an `AssetLoader` for `SceneAssets`, and a placement in `SceneContent`.
