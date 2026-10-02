@@ -185,6 +185,24 @@ tasks {
 
 }
 
+// Sandbox IDE with the robot-server plugin for UI tests (run configuration "Run IDE for UI Tests", run-ui-tests.yml)
+val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
+    task {
+        jvmArgumentProviders += CommandLineArgumentProvider {
+            listOf(
+                "-Drobot-server.port=8082",
+                "-Dide.mac.message.dialogs.as.sheets=false",
+                "-Djb.privacy.policy.text=<!--999.999-->",
+                "-Djb.consents.confirmation.enabled=false",
+                "-Didea.trust.all.projects=true",
+            )
+        }
+    }
+    plugins {
+        robotServerPlugin()
+    }
+}
+
 sourceSets["main"].java {
     srcDirs("src/main/gen")
 }
