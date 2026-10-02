@@ -4,7 +4,7 @@ An Ashley-based model of a Mundus scene's `ecs` block: components, the systems M
 that round-trip the scene file. Required behavior: `openspec/specs/scene-ecs-components` and
 `openspec/specs/scene-ecs-systems`.
 
-**Only tests use this package so far.** The scene view and the tree read the `ecs` JSON directly (`SceneContent`,
+**Only tests use the engine, loader, writer and systems so far; the plugin uses `scene/ComponentEditor.kt`.** The scene view and the tree read the `ecs` JSON directly (`SceneContent`,
 `DtoTree.kt`), and gizmo drags write it with `SceneTransformWriter`. Moving those onto this engine is future work.
 
 ## Pieces
@@ -16,6 +16,7 @@ that round-trip the scene file. Required behavior: `openspec/specs/scene-ecs-com
 | `system/Systems.kt` | `LookAtSystem`, `SynchronizeRenderComponentSystem`, `SynchronizeCameraComponentSystem`, `SynchronizeRenderPoint2PointSystem`, `RenderComponentSystem` |
 | `scene/SceneEcsLoader.kt` | `ecs` JSON → `SceneEngine` + `SceneEcsDocument` |
 | `scene/SceneEcsWriter.kt` | `SceneEngine` + `SceneEcsDocument` → `ecs` JSON in Mundus' format |
+| `scene/ComponentEditor.kt` | Adds, updates and removes a modeled component in the scene JSON (`ecs.entities.<id>.components`): field tables per kind, defaults from the codecs, reference and cycle checks, and only the differing keys rewritten. Used by the plugin, unlike the rest of this package |
 | `scene/ComponentCodecs.kt` | One `ComponentCodec` per modeled component, registered in `ComponentCodecs` |
 | `EcsConfigurator.kt` | Builds an engine with the systems at Mundus' priorities (look-at 0, render sync 1, camera sync 2, point-to-point 3, render 4) and loads a scene into it |
 

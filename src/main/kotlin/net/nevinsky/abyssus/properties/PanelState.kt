@@ -20,6 +20,13 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.ecs.scene.ComponentEditor
+import net.nevinsky.abyssus.ecs.scene.FieldKind
+import net.nevinsky.abyssus.ecs.scene.FieldValue
+import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.projectView.ComponentTarget
+import net.nevinsky.abyssus.projectView.SceneComponentEdits
+import net.nevinsky.abyssus.sceneview.textOf
 import net.nevinsky.abyssus.projectView.describeNonAsset
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
@@ -32,7 +39,21 @@ sealed interface PanelState {
     data class Empty(val message: String, val hint: String?) : PanelState
 
     data class Details(val name: String, val meta: AssetMeta.Loaded, val faces: List<FaceCell>?) : PanelState
+
+    /**
+     * An entity of [target]'s scene, or only its component when `target.kind` is set. [addable] names the modeled kinds the
+     * entity lacks (offered when the whole entity is shown).
+     */
+    data class EntityDetails(
+        val target: ComponentTarget,
+        val name: String,
+        val sections: List<ComponentSection>,
+        val addable: List<String>,
+    ) : PanelState
 }
+
+/** One component of an entity: its [fields] when the plugin edits it, else the file's JSON as [raw] text, read only. */
+data class ComponentSection(val kind: String, val label: String, val fields: List<FieldValue>, val raw: String?)
 
 /** One face of a skybox: [file] is what `meta.json` names (or `null`), [image] its thumbnail, null when it cannot be shown. */
 data class FaceCell(val face: String, val file: String, val image: BufferedImage?)
@@ -56,6 +77,33 @@ fun readAssetState(folder: VirtualFile): PanelState {
         is AssetMeta.Failed -> PanelState.Empty(meta.message, null)
         is AssetMeta.Loaded -> PanelState.Details(folder.name, meta, if (meta.type == SKYBOX) faces(folder, meta) else null)
     }
+}
+
+/**
+ * Reads the entity (or component) of [target] from the scene's current text for display. Safe off the EDT. The state is
+ * `Empty` with a message when the scene cannot be read or the entity or component is gone.
+ */
+fun readEntityState(target: ComponentTarget): PanelState {
+    val root = runCatchingKeepingCancellation { SceneJson.parse(runReadAction { textOf(target.file) }) }
+        .getOrElse { return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.message ?: it.javaClass.simpleName), null) }
+    val entity = root.get("ecs")?.get("entities")?.get(target.entityId)?.takeIf { it.isObject }
+        ?: return PanelState.Empty(AbyssusBundle.message("propertiesEntityGone", target.entityId), null)
+    val components = entity.get("components")?.takeIf { it.isObject }
+    val kinds = target.kind?.let { listOf(it) } ?: components?.fieldNames()?.asSequence()?.toList().orEmpty()
+    val assets = SceneComponentEdits.renderAssets(target.file).map { it.name }
+    val sections = kinds.map { kind ->
+        val modeled = ComponentEditor.kindOf(kind)
+        val fields = ComponentEditor.read(root, target.entityId, kind)
+        when {
+            components?.has(kind) != true ->
+                return PanelState.Empty(AbyssusBundle.message("propertiesComponentGone", target.entityId, kind.removeSuffix("Component")), null)
+            modeled == null || fields == null -> ComponentSection(kind, kind.removeSuffix("Component").ifEmpty { kind }, emptyList(), SceneJson.pretty(components!![kind]))
+            else -> ComponentSection(kind, modeled.label, fields.map { if (it.kind == FieldKind.ASSET_NAME) it.copy(choices = (assets + it.value).filter(String::isNotEmpty).distinct()) else it }, null)
+        }
+    }
+    val name = components?.get("NameComponent")?.get("name")?.takeIf { it.isTextual }?.asText()?.takeIf { it.isNotBlank() } ?: target.entityId
+    val addable = if (target.kind == null) ComponentEditor.missingKinds(root, target.entityId).map { it.name } else emptyList()
+    return PanelState.EntityDetails(target, name, sections, addable)
 }
 
 private fun faces(folder: VirtualFile, meta: AssetMeta.Loaded): List<FaceCell> {

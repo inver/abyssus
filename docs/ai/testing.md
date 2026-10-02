@@ -62,4 +62,7 @@ an object was dragged.
   `SceneMarkers`, `ScenePreview` and `sceneview/gizmo/` are plain math.
 - **Dialogs:** `SkyboxChooserDialog` can be built in a platform test and driven through its internal test hooks;
   `SkyboxPickerModel` holds its logic.
-- **Properties panel:** `PanelState` and `readAssetState` hold its logic without Swing.
+- **Properties panel:** `PanelState`, `readAssetState` and `readEntityState` hold its logic without Swing. Entity editors are
+  found by component name in `EntityPropertiesPanelTest` (`field-<Kind>-<field>`, `remove-<Kind>`, `add-component`).
+- **Component edits:** `ComponentEditorTest` runs on JSON trees; `SceneComponentEditsTest` checks the undoable writes;
+  `ComponentActionsTest` subclasses the tree actions to supply the selected node.

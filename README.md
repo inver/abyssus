@@ -45,8 +45,11 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
 - The view's toolbar options have **Show Only Unused Assets**, which limits the `Assets` list to unused assets
   (remembered per project). Under the tree a footer reads `N scenes · N assets · N unused`, summed over the projects
   shown and unaffected by that filter.
-- Unreadable files stay in the tree with a placeholder. The eye, **Rename Scene...** and **Choose** are the only tree
-  actions that write a file.
+- Unreadable files stay in the tree with a placeholder. Right-click an entity and choose **Add Component...** to add a
+  component it lacks (Name, Type, Parent, Position, Camera, Light, Point2Point or Render; a Render component asks for a
+  model or terrain of the project), or right-click a component and choose **Remove Component**. Components the plugin
+  does not model (`Pickable`, `Dependencies`, ...) cannot be removed. The eye, **Rename Scene...**, **Choose**, and
+  these two actions are the tree actions that write a file; each is one undoable edit.
 
 ## Abyssus Properties panel
 
@@ -54,9 +57,16 @@ The **Abyssus Properties** tool window (right side) shows the Meta of the asset 
 a header with the asset's type icon, name and `<type> asset · read-only`, then a Name / Value table of its `meta.json`
 (`version`, `lastModified` as a date-time, `uuid`, `type`, then the fields of `additional` under an `additional` heading).
 Every field in the file is listed, whatever the asset type; a list shows its item count. A skybox also shows its six
-faces under **Face previews**. Selecting anything that is not an asset (a scene, the project file, an entity) shows a
-"Nothing to show" message. The panel refreshes when the asset's `meta.json` or a face image changes, and never writes
-a file.
+faces under **Face previews**. Selecting anything that is neither an asset, an entity nor a component (a scene, the
+project file) shows a "Nothing to show" message. The panel refreshes when the asset's `meta.json` or a face image changes,
+and never writes an asset file.
+
+Select an **entity** to see all its components, or one **component** to see only that one. Each component the plugin
+models lists its fields with an editor: type a value and press Enter (or leave the field) to save it, or pick from the
+list. A value that does not fit (text for a number, an unknown entity, a parent that would make a loop) goes back to the
+old value with the reason beside the field and the file is not touched. **Add component** lists the kinds the entity
+lacks and each section has a **Remove** button. Unmodeled components are shown as read-only JSON. Every change is one
+undoable edit of the scene file.
 
 ## Scene view
 

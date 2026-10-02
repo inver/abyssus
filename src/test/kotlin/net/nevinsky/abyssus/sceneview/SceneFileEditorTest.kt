@@ -181,6 +181,20 @@ class SceneFileEditorTest : BasePlatformTestCase() {
     private fun textOf(f: com.intellij.openapi.vfs.VirtualFile) =
         com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(f)!!.text
 
+    fun testComponentEditsReachTheOpenView() {
+        val views = mutableListOf<FakeView>()
+        val (editor, f) = fakeEditor("edit/Main Scene.scene", mainScene, views)
+        try {
+            val old = views[0].current.content.models.first { it.entityId == "0" }.transform.position
+            val result = net.nevinsky.abyssus.projectView.SceneComponentEdits
+                .update(project, f, "0", "PositionComponent", "localPosition.x", (old.x + 3f).toString())
+            assertEquals(net.nevinsky.abyssus.ecs.scene.EditResult.Changed, result)
+            assertEquals(old.x + 3f, views[0].current.content.models.first { it.entityId == "0" }.transform.position.x, 1e-4f)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
     fun testMovingAnEntityWritesOnlyItsPositionAndUndoRestoresTheFile() {
         val views = mutableListOf<FakeView>()
         val (editor, f) = fakeEditor("move/Main Scene.scene", mainScene, views)

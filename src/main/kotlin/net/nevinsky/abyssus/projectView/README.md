@@ -13,6 +13,8 @@ The **Abyssus** pane of the Project tool window: the project / scene / entity / 
 | `DtoTree.kt` | DTO → rows: `childrenOf`, `foldToggles` (`<x>Enabled` → eye), display names (`skyboxName` → `skybox`), labels |
 | `AssetReadCache` | Parsed files per project, re-read when the reader's `stamp` changes |
 | `RowActions.kt` | What a row paints at its right edge: eye, "View", the `unused` tag, the skybox **Choose** button |
+| `SceneComponentEdits.kt` | Add, update and remove a component as undoable `editSceneJson` commands; also lists a project's model and terrain assets |
+| `ComponentActions.kt`, `ComponentTarget.kt` | The **Add Component...** / **Remove Component** tree actions and the entity or component a row stands for |
 | `EnabledToggle.kt` | `editSceneJson`, plus the writes built on it: `toggleEnabled`, `renameScene`, `setSkybox` |
 | `RenameSceneAction` | Right-click **Rename Scene...** |
 | `SkyboxChoices.kt`, `SkyboxPickerModel`, `SkyboxChooserDialog` | The skybox list, its filter and selection logic, and the dialog |

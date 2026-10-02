@@ -5,6 +5,7 @@
 ## [Unreleased]
 ### Added
 - Abyssus view: `Scenes` / `Assets` rows with counts, entities listed by name with their components, per-kind icons, a "Show Only Unused Assets" option and a scenes / assets / unused counts footer
+- Create, edit and remove an entity's components: **Add Component...** and **Remove Component** in the Abyssus view, and editable fields, **Add component** and **Remove** for a selected entity or component in the Abyssus Properties window (each change is one undoable edit of the scene file)
 - Abyssus Properties tool window showing the `meta.json` of the asset selected in the Abyssus view (read only), with face previews for skyboxes
 - Scene view draws the scene's models, terrain, skybox and light entities, plays model animations, and a click on an entity selects it in the Abyssus view
 - Contributor and coding-agent docs: `AGENTS.md` (with `CLAUDE.md`), `docs/ai/` reference pages, package notes, and `scripts/check-docs.sh` to catch stale paths; README describes the plugin instead of the template

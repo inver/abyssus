@@ -12,7 +12,7 @@
 | **Component codec** | A `ComponentCodec`: reads one Mundus component into an Ashley component and writes it back. Components without a codec are carried raw. |
 | **Placement** | What the scene view draws for an entity (`AssetPlacement`, `LightPlacement`, `CameraPlacement` in `SceneContent`), taken directly from the `ecs` JSON. |
 | **Abyssus view** | The Abyssus pane of the Project tool window: the project / scene / asset tree. |
-| **Abyssus Properties** | The tool window showing the selected asset's `meta.json`, read only. |
+| **Abyssus Properties** | The tool window showing the selected asset's `meta.json` (read only), or the components of the selected entity, whose fields are editable. |
 | **Scene view** | The second editor tab of a `.scene`: a libGDX render on an LWJGL3-AWT GL canvas. |
 | **Eye toggle** | The eye icon on a row gated by an `<x>Enabled` boolean. A click flips the boolean in the file. |
 | **Skybox chooser** | The "Choose" button on a project scene's `skybox` row. It opens a dialog listing the project's `SKYBOX` assets. |

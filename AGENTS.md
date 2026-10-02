@@ -30,7 +30,8 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   - `projectView/`: the Abyssus tree, eye toggles, Rename Scene, skybox chooser, and `editSceneJson`.
   - `properties/`: the Abyssus Properties tool window.
   - `sceneview/`: the scene view: GL canvas, renderer, picking, cameras, gizmos, transform write-back.
-  - `ecs/`: Ashley components, systems and a scene ECS loader/writer. Only tests use it so far.
+  - `ecs/`: Ashley components, systems and a scene ECS loader/writer. Only tests use those; `ecs/scene/ComponentEditor.kt`
+    (add, update and remove a component in the scene JSON) is the part the plugin uses.
   - `filetype/`, `language/`: file types, icons, scene JSON, the GLTF PSI.
 - `gdx-model/`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import), forked from Mundus.
   See `gdx-model/README.md`.

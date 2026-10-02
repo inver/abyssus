@@ -46,6 +46,16 @@
                 text="Rename Scene...">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
+        <action id="Abyssus.AddComponent"
+                class="net.nevinsky.abyssus.projectView.AddComponentAction"
+                text="Add Component...">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.RemoveComponent"
+                class="net.nevinsky.abyssus.projectView.RemoveComponentAction"
+                text="Remove Component">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
     </actions>
 
     <projectListeners>

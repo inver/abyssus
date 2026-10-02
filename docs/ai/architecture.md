@@ -67,7 +67,7 @@ the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows
 
 ### Every write
 
-The eye toggle, Rename Scene, the skybox chooser and gizmo drags all go through `editSceneJson`
+The eye toggle, Rename Scene, the skybox chooser, gizmo drags and component add, edit and remove (`SceneComponentEdits`) all go through `editSceneJson`
 (`projectView/EnabledToggle.kt`):
 
 1. Parse the document with `SceneJson`.
@@ -80,7 +80,9 @@ The eye toggle, Rename Scene, the skybox chooser and gizmo drags all go through 
 
 `SceneEcsLoader` reads a scene's `ecs` block into an Ashley `SceneEngine`, through one `ComponentCodec` per modeled
 component. Components it doesn't model are carried raw. `SceneEcsWriter` writes the engine back in Mundus' format.
-Systems are in `ecs/system/Systems.kt`. Only tests use this package today. See
+Systems are in `ecs/system/Systems.kt`. Only tests use the loader, writer and systems today; `ComponentEditor` is used by
+the plugin: it adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
+checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the properties panel and the tree actions. See
 `src/main/kotlin/net/nevinsky/abyssus/ecs/README.md`.
 
 ## Threading

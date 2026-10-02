@@ -1,0 +1,71 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package net.nevinsky.abyssus.projectView
+
+import com.fasterxml.jackson.databind.JsonNode
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.AbyssusBundle
+import net.nevinsky.abyssus.dto.ProjectLayout
+import net.nevinsky.abyssus.ecs.scene.ComponentEditor
+import net.nevinsky.abyssus.ecs.scene.EditResult
+import net.nevinsky.abyssus.properties.AssetMeta
+import net.nevinsky.abyssus.properties.loadAssetMeta
+
+/** A model or terrain a render component may show: [type] is `MODEL` or `TERRAIN`, [name] its asset folder. */
+data class RenderAsset(val type: String, val name: String)
+
+/**
+ * Adds, changes and removes components of a scene's entities as undoable commands on the scene file. The rules are
+ * [ComponentEditor]'s; nothing is written unless an edit comes back [EditResult.Changed].
+ */
+object SceneComponentEdits {
+    /** The models and terrains of the project [sceneFile] belongs to; empty for a scene outside a project. */
+    fun renderAssets(sceneFile: VirtualFile): List<RenderAsset> {
+        val abss = ProjectLayout.abssFor(sceneFile) ?: return emptyList()
+        return ProjectLayout.assetFolders(abss).mapNotNull { folder ->
+            val type = (loadAssetMeta(folder) as? AssetMeta.Loaded)?.type
+            if (type == "MODEL" || type == "TERRAIN") RenderAsset(type, folder.name) else null
+        }.sortedBy { it.name }
+    }
+
+    private fun assetNames(sceneFile: VirtualFile): Set<String>? =
+        ProjectLayout.abssFor(sceneFile)?.let { renderAssets(sceneFile).mapTo(HashSet()) { it.name } }
+
+    private fun run(project: Project, file: VirtualFile, command: String, edit: (JsonNode) -> EditResult): EditResult {
+        var result: EditResult = EditResult.Rejected(AbyssusBundle.message("componentSceneUnreadable"))
+        editSceneJson(project, file, command) { root ->
+            result = edit(root)
+            result == EditResult.Changed
+        }
+        return result
+    }
+
+    fun add(
+        project: Project, file: VirtualFile, entityId: String, kindName: String, initial: Map<String, String> = emptyMap(),
+    ): EditResult = run(project, file, AbyssusBundle.message("commandAddComponent")) {
+        ComponentEditor.add(it, entityId, kindName, initial, assetNames(file))
+    }
+
+    fun update(project: Project, file: VirtualFile, entityId: String, kindName: String, field: String, text: String): EditResult =
+        run(project, file, AbyssusBundle.message("commandEditComponent")) {
+            ComponentEditor.update(it, entityId, kindName, field, text, assetNames(file))
+        }
+
+    fun remove(project: Project, file: VirtualFile, entityId: String, kindName: String): EditResult =
+        run(project, file, AbyssusBundle.message("commandRemoveComponent")) { ComponentEditor.remove(it, entityId, kindName) }
+}

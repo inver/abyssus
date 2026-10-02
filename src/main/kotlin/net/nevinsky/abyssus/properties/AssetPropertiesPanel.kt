@@ -42,6 +42,7 @@ import net.nevinsky.abyssus.projectView.AbyssusSelection
 import net.nevinsky.abyssus.projectView.AbyssusSelectionListener
 import net.nevinsky.abyssus.projectView.DtoEntryNode
 import net.nevinsky.abyssus.projectView.assetFolderOf
+import net.nevinsky.abyssus.projectView.componentTargetOf
 import net.nevinsky.abyssus.dto.AssetInfo
 import java.awt.BorderLayout
 import java.awt.CardLayout
@@ -59,7 +60,8 @@ import javax.swing.JPanel
 import javax.swing.SwingConstants
 
 /**
- * The Abyssus Properties panel: the Meta of the asset selected in the Abyssus view, read only. [background] and [ui] say
+ * The Abyssus Properties panel: the Meta of the asset selected in the Abyssus view (read only), or the components of the
+ * selected entity, whose fields can be edited. [background] and [ui] say
  * where the asset is read and where the result is shown, so tests can run both inline.
  */
 class AssetPropertiesPanel(
@@ -74,6 +76,7 @@ class AssetPropertiesPanel(
 
     private var selected: Any? = null
     private var folder: VirtualFile? = null
+    private var scene: VirtualFile? = null
     private var generation = 0
     private var disposed = false
 
@@ -101,8 +104,10 @@ class AssetPropertiesPanel(
 
     /** True when [file] is the shown asset's folder or a file in it (its `meta.json` or a face image). */
     private fun touches(file: VirtualFile?): Boolean {
+        if (file == null) return false
+        if (file == scene) return true
         val shown = folder ?: return false
-        return file != null && (file == shown || file.parent == shown)
+        return file == shown || file.parent == shown
     }
 
     private fun refresh() = show(selected)
@@ -113,6 +118,15 @@ class AssetPropertiesPanel(
         val token = ++generation
         val assetFolder = assetFolderOf(node)
         folder = assetFolder
+        val entity = if (assetFolder == null) componentTargetOf(node) else null
+        scene = entity?.file
+        if (entity != null) {
+            background {
+                val result = readEntityState(entity)
+                ui { if (token == generation && !disposed) apply(result) }
+            }
+            return
+        }
         if (assetFolder == null) {
             apply(if (node.isAssetRow()) emptyState(null) else emptyState(node))
             return
@@ -131,6 +145,11 @@ class AssetPropertiesPanel(
             is PanelState.Empty -> {
                 fillEmpty(newState)
                 cards.show(this, EMPTY)
+            }
+            is PanelState.EntityDetails -> {
+                content.removeAll()
+                content.add(JBScrollPane(EntityDetailsView(project, newState)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
+                cards.show(this, DETAILS)
             }
             is PanelState.Details -> {
                 content.removeAll()
