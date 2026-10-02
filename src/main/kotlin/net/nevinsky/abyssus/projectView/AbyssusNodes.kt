@@ -16,6 +16,7 @@
 
 package net.nevinsky.abyssus.projectView
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.icons.AllIcons
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ProjectViewNode
@@ -33,6 +34,7 @@ import net.nevinsky.abyssus.dto.AssetInfo
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.filetype.AbyssusProjectIcons
 import net.nevinsky.abyssus.filetype.AssetIcons
+import net.nevinsky.abyssus.filetype.ComponentIcons
 import net.nevinsky.abyssus.filetype.PropertyIcons
 import net.nevinsky.abyssus.filetype.SceneIcons
 import net.nevinsky.abyssus.filetype.ScenesIcons
@@ -87,7 +89,7 @@ class AbyssusAssetNode(project: Project, file: VirtualFile, settings: ViewSettin
 
     override fun getChildren(): Collection<AbstractTreeNode<*>> =
         when (val result = AssetReadCache.of(project!!).read(value)) {
-            is AssetReadResult.Success -> childrenOf(result.root).foldToggles().map {
+            is AssetReadResult.Success -> UnusedFilter.apply(project!!, childrenOf(result.root)).foldToggles().map {
                 DtoEntryNode(project!!, value.path, it, (result.root as? SceneDto)?.file ?: value, emptyList())
             }
             else -> emptyList()
@@ -119,7 +121,7 @@ class DtoEntry(
     // The tree keeps an existing node when a refreshed one is equal, so anything that changes how the
     // row looks (the toggle state, a scalar's value) must take part, or the row stays stale after a toggle.
     override fun equals(other: Any?) =
-        other is DtoEntry && other.path == path && other.enabled == enabled &&
+        other is DtoEntry && other.path == path && other.enabled == enabled && rowText(other) == rowText(this) &&
             (if (isScalar(value)) scalarOf(value) == scalarOf(other.value) else !isScalar(other.value)) &&
             (value as? AssetInfo)?.unused == (other.value as? AssetInfo)?.unused
     override fun hashCode() = path.hashCode()
@@ -131,6 +133,8 @@ private fun entryIcon(entry: DtoEntry): Icon {
         dto is List<*> && entry.name == "scenes" -> ScenesIcons.LIST
         dto is List<*> && entry.name == "assets" -> AllIcons.Nodes.Folder
         dto is AssetInfo -> AssetIcons.forType(dto.type)
+        isEntityEntry(entry) -> PropertyIcons.ECS
+        isComponentEntry(entry) -> ComponentIcons.forComponent(entry.name)
         dto is SceneDto && dto.file?.extension == ProjectLayout.SCENE_EXTENSION -> SceneIcons.FILE
         PropertyIcons.forProperty(entry.name) != null -> PropertyIcons.forProperty(entry.name)!!
         isScalar(dto) -> AllIcons.Nodes.Property
@@ -155,8 +159,11 @@ class DtoEntryNode(
         val v = value
         val ownSource = (v.value as? SceneDto)?.file
         // an object read from its own file restarts the key path; otherwise it extends this entry's
-        val (src, keys) = if (ownSource != null) ownSource to emptyList() else v.source to (v.parentKeys + v.name)
-        return DtoEntryNode(project!!, v.path, row, src, keys, label, isGray)
+        val (src, baseKeys) = if (ownSource != null) ownSource to emptyList() else v.source to (v.parentKeys + v.name)
+        // keys the view skips (`entities`, `components`) stay in the path and the key path, so they still name the real location
+        val keys = baseKeys + row.via
+        val parentPath = row.via.fold(v.path) { acc, key -> "$acc/$key" }
+        return DtoEntryNode(project!!, parentPath, row, src, keys, label, isGray)
     }
 
     private val isDisabled get() = inheritedDisabled || value.enabled == false
@@ -169,17 +176,26 @@ class DtoEntryNode(
     override fun getChildren(): Collection<AbstractTreeNode<*>> {
         val v = value
         val dto = v.value
-        val rows = childrenOf(dto).filterNot { sceneFileOf(v) != null && it.name in SCENE_HEADER }.foldToggles()
+        val rows = when {
+            isEcsEntry(v) -> ecsRows(dto as JsonNode)
+            isEntityEntry(v) -> entityRows(dto as JsonNode)
+            else -> childrenOf(dto)
+        }.filterNot { sceneFileOf(v) != null && it.name in SCENE_HEADER }.foldToggles()
         return rows.mapIndexed { i, row -> child(row, if (dto is List<*>) elementLabel(v.name, row.value, i) else null) }
     }
 
     override fun update(presentation: PresentationData) {
         val v = value
-        val shown = label ?: displayName(v.name)
-        val text = if (isScalar(v.value)) "$shown: ${scalarOf(v.value) ?: AbyssusBundle.message("dtoNullValue")}" else shown
+        val shown = rowText(v, label)
         val attrs = if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES
-        presentation.addText(text, attrs)
-        if (isUnused) presentation.addText("  " + AbyssusBundle.message("assetUnused"), SimpleTextAttributes.GRAYED_ITALIC_ATTRIBUTES)
+        val secondaryAttrs = if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.GRAY_ATTRIBUTES
+        if (isScalar(v.value)) {
+            presentation.addText("${shown.label}: ", attrs)
+            presentation.addText((scalarOf(v.value) ?: AbyssusBundle.message("dtoNullValue")).toString(), secondaryAttrs)
+        } else {
+            presentation.addText(shown.label, attrs)
+            shown.secondary?.let { presentation.addText("  $it", secondaryAttrs) }
+        }
         presentation.setIcon(entryIcon(v))
     }
 }

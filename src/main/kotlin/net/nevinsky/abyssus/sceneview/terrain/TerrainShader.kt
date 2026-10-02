@@ -67,8 +67,10 @@ class TerrainShader : Disposable {
         }
         val pos = FloatArray(MAX * 3)
         val pointColors = FloatArray(MAX * 3)
+        val pointRanges = FloatArray(MAX)
         lights.point.forEachIndexed { i, p ->
             pos[i * 3] = p.position.x; pos[i * 3 + 1] = p.position.y; pos[i * 3 + 2] = p.position.z
+            pointRanges[i] = p.range
             pointColors[i * 3] = p.color.r; pointColors[i * 3 + 1] = p.color.g; pointColors[i * 3 + 2] = p.color.b
         }
         program.setUniformi("u_numDirectional", lights.directional.size)
@@ -77,6 +79,7 @@ class TerrainShader : Disposable {
         program.setUniformi("u_numPoint", lights.point.size)
         program.setUniform3fv("u_pointPosition", pos, 0, MAX * 3)
         program.setUniform3fv("u_pointColor", pointColors, 0, MAX * 3)
+        program.setUniform1fv("u_pointRange", pointRanges, 0, MAX)
     }
 
     override fun dispose() {

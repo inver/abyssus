@@ -99,6 +99,13 @@ class SceneContentTest {
         assertEquals(LightKind.POINT, l.kind)
         assertEquals(0.2f, l.color.r, 0f)
         assertEquals(2f, l.intensity, 0f)
+        assertEquals(DEFAULT_LIGHT_RANGE, l.range, 0f)
+    }
+
+    @Test
+    fun pointLightRangeIsRead() {
+        val c = content(entity("""{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{"range":12.5}}}"""))
+        assertEquals(12.5f, c.lights.single().range, 0f)
     }
 
     @Test

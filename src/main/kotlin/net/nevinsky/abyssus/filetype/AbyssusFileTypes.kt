@@ -62,6 +62,43 @@ object PropertyIcons {
     }
 }
 
+/** The enable / disable eye at the right of a row: teal when enabled, gray and crossed out when disabled. */
+object EyeIcons {
+    @JvmField
+    val ON: Icon = IconLoader.getIcon("/icons/eye_on_icon.svg", EyeIcons::class.java)
+
+    @JvmField
+    val OFF: Icon = IconLoader.getIcon("/icons/eye_off_icon.svg", EyeIcons::class.java)
+}
+
+/** Icons of an entity's components, by component name without the `Component` suffix; anything else gets [GENERIC]. */
+object ComponentIcons {
+    private fun load(name: String): Icon = IconLoader.getIcon("/icons/component_${name}_icon.svg", ComponentIcons::class.java)
+
+    @JvmField
+    val GENERIC: Icon = load("generic")
+
+    @JvmField
+    val TRANSFORM: Icon = load("transform")
+
+    @JvmField
+    val PHYSICS: Icon = load("physics")
+
+    @JvmField
+    val PARTICLES: Icon = load("particles")
+
+    fun forComponent(name: String): Icon = when (name.removeSuffix("Component")) {
+        "Position", "Rotation", "Scale", "Transform" -> TRANSFORM
+        "Render", "Model", "Mesh" -> AssetIcons.forType("MODEL")
+        "Terrain" -> AssetIcons.forType("TERRAIN")
+        "Material" -> AssetIcons.forType("MATERIAL")
+        "Physics", "RigidBody", "Collider" -> PHYSICS
+        "Particles", "ParticleSystem" -> PARTICLES
+        "Light", "AmbientLight" -> PropertyIcons.LIGHT
+        else -> GENERIC
+    }
+}
+
 /** Icons of a project's assets, by `meta.json` `type`; an unrecognized or missing type gets [UNKNOWN]. */
 object AssetIcons {
     private fun load(name: String): Icon = IconLoader.getIcon("/icons/asset_${name}_icon.svg", AssetIcons::class.java)

@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 ### Added
+- Abyssus view: `Scenes` / `Assets` rows with counts, entities listed by name with their components, per-kind icons, a "Show Only Unused Assets" option and a scenes / assets / unused counts footer
 - Abyssus Properties tool window showing the `meta.json` of the asset selected in the Abyssus view (read only), with face previews for skyboxes
 - Scene view draws the scene's models, terrain, skybox and light entities, plays model animations, and a click on an entity selects it in the Abyssus view
 - Initial scaffold created from [IntelliJ Platform Plugin Template](https://github.com/JetBrains/intellij-platform-plugin-template)

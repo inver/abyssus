@@ -36,6 +36,7 @@ uniform vec3 u_dirColor[5];
 uniform int u_numPoint;
 uniform vec3 u_pointPosition[5];
 uniform vec3 u_pointColor[5];
+uniform float u_pointRange[5];
 varying vec3 v_normal;
 varying vec3 v_world;
 varying vec2 v_uv;
@@ -61,7 +62,7 @@ void main() {
         if (i >= u_numPoint) break;
         vec3 toLight = u_pointPosition[i] - v_world;
         float dist = length(toLight);
-        light += u_pointColor[i] * max(dot(n, toLight / max(dist, 0.0001)), 0.0) * (100.0 / (1.0 + dist * dist));
+        light += u_pointColor[i] * max(dot(n, toLight / max(dist, 0.0001)), 0.0) * (u_pointRange[i] / (1.0 + dist * dist)) * (1.0 - smoothstep(0.75 * u_pointRange[i], u_pointRange[i], dist));
     }
     vec3 rgb = color.rgb * light;
     gl_FragColor = vec4(mix(rgb, u_fogColor, v_fog), 1.0);

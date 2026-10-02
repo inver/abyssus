@@ -50,9 +50,8 @@ class EntitySelectionTest : BasePlatformTestCase() {
         val scenes = children(abss).single { label(it) == "scenes" }
         val sceneNode = children(scenes).single()
         val ecs = children(sceneNode).single { label(it) == "ecs" }
-        val entities = children(ecs).single { label(it) == "entities" }
-        val entity = children(entities).single { label(it) == entityId }
-        return listOf(root, abss, scenes, sceneNode, ecs, entities, entity)
+        val entity = children(ecs).single { label(it) == entityId }
+        return listOf(root, abss, scenes, sceneNode, ecs, entity)
     }
 
     fun testWalkingDownFindsTheEntityRow() {

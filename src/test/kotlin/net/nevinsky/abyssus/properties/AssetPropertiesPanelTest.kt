@@ -111,7 +111,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         assertEquals("skybox_default", details.name)
         val shown = texts(p)
         assertTrue(shown.toString(), shown.contains("skybox_default"))
-        assertTrue(shown.contains("skybox asset · read-only") || shown.contains("SKYBOX asset · read-only"))
+        assertTrue(shown.contains("skybox asset · read-only"))
         assertTrue(shown.contains("NAME") && shown.contains("VALUE"))
         assertTrue(shown.contains("additional"))
         assertEquals(12, shown.count { it == "skybox_default.png" }) // six rows and six face captions
@@ -125,7 +125,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         p.show(node)
         val details = p.state as PanelState.Details
         assertNull(details.faces)
-        assertTrue(texts(p).contains("WIDGET asset · read-only"))
+        assertTrue(texts(p).contains("widget asset · read-only"))
         assertSame(net.nevinsky.abyssus.filetype.AssetIcons.UNKNOWN, net.nevinsky.abyssus.filetype.AssetIcons.forType(details.meta.type))
     }
 

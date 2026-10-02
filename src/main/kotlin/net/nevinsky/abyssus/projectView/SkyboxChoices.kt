@@ -36,6 +36,9 @@ const val SKYBOX_TYPE = "SKYBOX"
 /** The `additional` keys of a skybox's `meta.json` that name its face images. */
 private val FACE_KEYS = listOf("top", "bottom", "left", "right", "front", "back")
 
+/** The faces as the chooser's thumbnail strip shows them. */
+private val THUMB_ORDER = listOf("left", "right", "top", "bottom", "front", "back")
+
 /**
  * A skybox asset as the skybox chooser lists it: its folder [name], how many face images its `meta.json` names and their
  * file extensions, how many of the project's scenes reference it and whether the Abyssus view marks it unused.
@@ -47,6 +50,16 @@ data class SkyboxChoice(
     val sceneCount: Int,
     val unused: Boolean,
 ) {
+    /** The asset folder; null for a choice that was not read from disk. */
+    var folder: VirtualFile? = null
+
+    /** The face file names in thumbnail order (left, right, top, bottom, front, back); null where `meta.json` names none. */
+    var faceFiles: List<String?> = emptyList()
+
+    /** Face thumbnails by [faceFiles], filled in after the dialog opened; null where a face cannot be shown. */
+    @Volatile
+    var thumbs: List<java.awt.image.BufferedImage?> = emptyList()
+
     /** `6 faces · png`; just the count when no face names an extension. */
     val detail: String
         get() = if (formats.isEmpty()) AbyssusBundle.message("skyboxFaces", faces)
@@ -60,7 +73,9 @@ fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>): List<Skyb
         val additional = metas[asset.name]?.obj("additional")
         val files = FACE_KEYS.mapNotNull { key -> additional?.text(key)?.takeIf { it.isNotBlank() } }
         val formats = files.mapNotNull { f -> f.substringAfterLast('.', "").lowercase().takeIf { it.isNotEmpty() } }.distinct().sorted()
-        SkyboxChoice(asset.name, files.size, formats, references.count { asset.name in it }, asset.unused)
+        SkyboxChoice(asset.name, files.size, formats, references.count { asset.name in it }, asset.unused).also { choice ->
+            choice.faceFiles = THUMB_ORDER.map { key -> additional?.text(key)?.takeIf { it.isNotBlank() } }
+        }
     }
 }
 
@@ -73,7 +88,8 @@ fun loadSkyboxChoices(project: Project, abss: VirtualFile): List<SkyboxChoice>? 
             dir.findChild(ProjectLayout.META_FILE)?.let { SceneJson.parseObject(it.text()) }
         }.getOrNull()
     }
-    return skyboxChoices(dto, metas)
+    val folders = ProjectLayout.assetFolders(abss).associateBy { it.name }
+    return skyboxChoices(dto, metas).onEach { it.folder = folders[it.name] }
 }
 
 /** The `.abss` project of a scene's own `skyboxName` row, which is what gets the chooser; null for any other row. */

@@ -57,6 +57,17 @@ class SceneLightingTest {
     }
 
     @Test
+    fun pointRangeReachesTheEnvironmentAndBadRangeIsSkipped() {
+        val good = LightPlacement("1", LightKind.POINT, Rgba(1f, 1f, 1f, 1f), 1f, origin, origin, range = 12f)
+        val bad = good.copy(entityId = "2", range = 0f)
+        val set = LightSet.of(listOf(good, bad), origin)
+        assertEquals(listOf(12f), set.point.map { it.range })
+        val env = Environment()
+        set.applyTo(env)
+        assertEquals(12f, env.get(PointLightsAttribute::class.java, PointLightsAttribute.Type)!!.lights.first().intensity, 0f)
+    }
+
+    @Test
     fun spotLightsFallBackToPointLights() {
         val set = LightSet.of(listOf(light(LightKind.SPOT, position = Vec3(1f, 2f, 3f))), origin)
         assertTrue(set.directional.isEmpty())

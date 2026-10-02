@@ -28,7 +28,7 @@ import kotlin.math.sqrt
 data class DirectionalSource(val direction: Vec3, val color: Rgba)
 
 /** A point light: [color] already multiplied by the light's intensity. */
-data class PointSource(val position: Vec3, val color: Rgba)
+data class PointSource(val position: Vec3, val color: Rgba, val range: Float = DEFAULT_LIGHT_RANGE)
 
 /**
  * The light entities of a scene as the renderers use them, limited to what the shaders support
@@ -45,16 +45,13 @@ class LightSet(val directional: List<DirectionalSource>, val point: List<PointSo
             environment.add(DirectionalLight().set(Color(d.color.r, d.color.g, d.color.b, 1f), d.direction.x, d.direction.y, d.direction.z))
         }
         for (p in point) {
-            environment.add(PointLight().set(Color(p.color.r, p.color.g, p.color.b, 1f), p.position.x, p.position.y, p.position.z, POINT_RANGE))
+            environment.add(PointLight().set(Color(p.color.r, p.color.g, p.color.b, 1f), p.position.x, p.position.y, p.position.z, p.range))
         }
     }
 
     companion object {
         const val MAX_DIRECTIONAL = 2
         const val MAX_POINT = 5
-
-        /** Intensity (the divisor of g3d's point light attenuation) used for every point light. */
-        private const val POINT_RANGE = 100f
 
         val NONE = LightSet(emptyList(), emptyList())
 
@@ -67,11 +64,11 @@ class LightSet(val directional: List<DirectionalSource>, val point: List<PointSo
             val point = lights.filter { it.kind != LightKind.DIRECTIONAL && usable(it) }
                 .sortedBy { distance(it.position, target) }
                 .take(MAX_POINT)
-                .map { PointSource(it.position, scaled(it)) }
+                .map { PointSource(it.position, scaled(it), it.range) }
             return LightSet(directional, point)
         }
 
-        private fun usable(l: LightPlacement) = l.intensity > 0f && l.intensity.isFinite() &&
+        private fun usable(l: LightPlacement) = l.intensity > 0f && l.intensity.isFinite() && l.range > 0f && l.range.isFinite() &&
             listOf(l.color.r, l.color.g, l.color.b, l.position.x, l.position.y, l.position.z, l.direction.x, l.direction.y, l.direction.z)
                 .all { it.isFinite() }
 

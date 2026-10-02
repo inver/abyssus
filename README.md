@@ -44,6 +44,12 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   `uuid` (terrain `splatMap`/`splatBase`/`splatR`/`splatG`/`splatB`/`splatA`, model `materials`).
   A `shaderKey` with no matching folder is a bundled editor shader and is ignored. Files named inside a
   `meta.json` (textures of a material, shader sources) are not followed.
+- A project's `scenes` and `assets` rows are labelled `Scenes` and `Assets` with their count. In a scene, `ecs` shows its
+  entity count and lists its entities directly, each named by its `NameComponent` (the id when it has none) with its
+  component count; an entity expands into its components (`Position`, `Render`, ...), each with its own icon.
+- The view's toolbar options have **Show Only Unused Assets**, which limits the `Assets` list to unused assets
+  (remembered per project). Under the tree a footer reads `N scenes · N assets · N unused`, summed over the projects
+  shown and unaffected by that filter.
 - Unreadable files stay in the tree with a placeholder; nothing else is ever written.
 
 ## Abyssus Properties panel

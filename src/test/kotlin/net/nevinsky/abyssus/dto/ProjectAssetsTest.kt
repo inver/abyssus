@@ -193,11 +193,13 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         project(mapOf("S" to ecs(modelRef("used"))), mapOf("used" to meta("MODEL", "u1"), "dead" to meta("MODEL", "u2")), "render")
         val root = AbyssusRootNode(project, ViewSettings.DEFAULT)
         val projectNode = root.children.single { it is AbyssusAssetNode }
-        val assetsNode = projectNode.children.map { it as AbstractTreeNode<*> }.single { text(it) == "assets" }
+        val assetsNode = projectNode.children.map { it as AbstractTreeNode<*> }.single { text(it).startsWith("Assets") }
         val rows = assetsNode.children.map { it as AbstractTreeNode<*> }.associateBy { text(it).substringBefore("  ") }
         assertEquals(setOf("dead", "used"), rows.keys)
-        assertTrue(text(rows.getValue("dead")).endsWith("unused"))
-        assertFalse(text(rows.getValue("used")).contains("unused"))
+        // the badge is painted at the right edge of the row, not part of its text
+        assertFalse(text(rows.getValue("dead")).contains("unused"))
+        assertNotNull(net.nevinsky.abyssus.projectView.unusedBadgeFor((rows.getValue("dead") as net.nevinsky.abyssus.projectView.DtoEntryNode).value))
+        assertNull(net.nevinsky.abyssus.projectView.unusedBadgeFor((rows.getValue("used") as net.nevinsky.abyssus.projectView.DtoEntryNode).value))
         fun gray(n: AbstractTreeNode<*>) = n.presentation.coloredText.all {
             it.attributes == SimpleTextAttributes.GRAYED_ATTRIBUTES || it.attributes == SimpleTextAttributes.GRAYED_ITALIC_ATTRIBUTES
         }
@@ -224,7 +226,7 @@ class ProjectAssetsTest : BasePlatformTestCase() {
             "icons",
         )
         val projectNode = AbyssusRootNode(project, ViewSettings.DEFAULT).children.single { it is AbyssusAssetNode }
-        val assetsNode = projectNode.children.map { it as AbstractTreeNode<*> }.single { text(it) == "assets" }
+        val assetsNode = projectNode.children.map { it as AbstractTreeNode<*> }.single { text(it).startsWith("Assets") }
         val icons = assetsNode.children.map { it as AbstractTreeNode<*> }.associate { text(it).substringBefore("  ") to it.presentation.getIcon(false) }
         assertSame(AssetIcons.forType("MODEL"), icons["m"])
         assertSame(AssetIcons.forType("TERRAIN"), icons["t"])

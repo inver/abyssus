@@ -1,0 +1,78 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package net.nevinsky.abyssus.projectView
+
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.dto.AssetInfo
+import net.nevinsky.abyssus.filetype.SceneJson
+
+class RowTextTest : BasePlatformTestCase() {
+    private fun entry(name: String, value: Any?, vararg keys: String) =
+        DtoEntry("/p/$name", name, value, null, null, null, keys.toList())
+
+    private fun json(text: String) = SceneJson.parse(text)
+
+    fun testFoldersAreLabelledAndCounted() {
+        assertEquals(RowText("Scenes", "2"), rowText(entry("scenes", listOf(1, 2))))
+        assertEquals(RowText("Assets", "0"), rowText(entry("assets", emptyList<AssetInfo>())))
+    }
+
+    fun testEcsShowsItsEntityCount() {
+        assertEquals(RowText("ecs", "2 entities"), rowText(entry("ecs", json("""{"entities":{"0":{},"1":{}}}"""))))
+        assertEquals("1 entity", rowText(entry("ecs", json("""{"entities":{"0":{}}}"""))).secondary)
+        assertEquals("0 entities", rowText(entry("ecs", json("""{}"""))).secondary)
+    }
+
+    fun testEntityUsesItsNameAndComponentCount() {
+        val e = entry("0", json("""{"components":{"NameComponent":{"name":"Model 0"},"TypeComponent":{}}}"""), "ecs", "entities")
+        assertEquals(RowText("Model 0", "2 components"), rowText(e))
+    }
+
+    fun testUnnamedEntityFallsBackToItsId() {
+        val e = entry("5", json("""{"components":{"TypeComponent":{}}}"""), "ecs", "entities")
+        assertEquals(RowText("5", "1 component"), rowText(e))
+        val blank = entry("6", json("""{"components":{"NameComponent":{"name":" "}}}"""), "ecs", "entities")
+        assertEquals("6", rowText(blank).label)
+    }
+
+    fun testComponentsLoseTheComponentSuffix() {
+        val c = entry("PositionComponent", json("""{}"""), "ecs", "entities", "0", "components")
+        assertEquals(RowText("Position"), rowText(c))
+    }
+
+    fun testOtherRowsAreUnchanged() {
+        assertEquals(RowText("fog"), rowText(entry("fog", json("""{"a":1}"""))))
+        assertEquals(RowText("Custom"), rowText(entry("fog", json("""{}""")), "Custom"))
+        // a nested `ecs`-named key is not the scene's ecs
+        assertEquals(RowText("ecs"), rowText(entry("ecs", json("""{"entities":{"0":{}}}"""), "fog")))
+        assertEquals(RowText("scenes"), rowText(entry("scenes", "x")))
+    }
+
+    fun testEcsRowsListEntitiesThenTheOtherKeys() {
+        val rows = ecsRows(json("""{"entities":{"0":{},"1":{}},"metadata":{"version":1}}"""))
+        assertEquals(listOf("0", "1", "metadata"), rows.map { it.name })
+        assertEquals(listOf("entities"), rows[0].via)
+        assertEquals(emptyList<String>(), rows[2].via)
+    }
+
+    fun testEntityRowsAreItsComponentsOnly() {
+        val rows = entityRows(json("""{"archetype":1,"components":{"A":{},"B":{}}}"""))
+        assertEquals(listOf("A", "B"), rows.map { it.name })
+        assertTrue(rows.all { it.via == listOf("components") })
+        assertTrue(entityRows(json("""{"archetype":1}""")).isEmpty())
+    }
+}

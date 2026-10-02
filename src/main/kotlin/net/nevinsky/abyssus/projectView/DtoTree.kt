@@ -32,6 +32,8 @@ data class DtoRow(
     val value: Any?,
     val enabled: Boolean? = null,
     val toggleName: String? = null,
+    /** JSON keys the view skips between the parent and this row (`entities` above an entity), so paths and writes still name the real location. */
+    val via: List<String> = emptyList(),
 )
 
 /** Rows shown under another name than their property; the file keeps the property name. */
@@ -109,3 +111,45 @@ fun elementLabel(parentName: String, element: Any?, index: Int): String = when (
     is SceneError -> element.file.name
     else -> AbyssusBundle.message("dtoListElementLabel", parentName, index)
 }
+
+/** What a row shows: its [label] and, in gray after it, [secondary] (a count). */
+data class RowText(val label: String, val secondary: String? = null)
+
+private const val ECS = "ecs"
+private const val ENTITIES = "entities"
+private const val COMPONENTS = "components"
+private const val COMPONENT_SUFFIX = "Component"
+
+/** The scene's `ecs` object: a top-level entry named `ecs` holding a JSON object. */
+fun isEcsEntry(entry: DtoEntry) = entry.name == ECS && entry.parentKeys.isEmpty() && (entry.value as? JsonNode)?.isObject == true
+
+/** An entity row, listed directly under `ecs`; its JSON key path is `ecs/entities`. */
+fun isEntityEntry(entry: DtoEntry) = entry.parentKeys == listOf(ECS, ENTITIES) && (entry.value as? JsonNode)?.isObject == true
+
+/** A component row of an entity: its JSON key path ends in `components`. */
+fun isComponentEntry(entry: DtoEntry) = entry.parentKeys.size == 4 && entry.parentKeys[0] == ECS && entry.parentKeys[1] == ENTITIES && entry.parentKeys[3] == COMPONENTS
+
+private fun entityName(entry: DtoEntry): String =
+    (entry.value as JsonNode).get(COMPONENTS)?.get("NameComponent")?.get("name")?.takeIf { it.isTextual }?.asText()?.takeIf { it.isNotBlank() } ?: entry.name
+
+/** The label and secondary text of [entry]; [label] is what its parent already named it (a list element). */
+fun rowText(entry: DtoEntry, label: String? = null): RowText {
+    val v = entry.value
+    return when {
+        v is List<*> && entry.name == "scenes" -> RowText(AbyssusBundle.message("treeScenes"), v.size.toString())
+        v is List<*> && entry.name == "assets" -> RowText(AbyssusBundle.message("treeAssets"), v.size.toString())
+        isEcsEntry(entry) -> RowText(ECS, AbyssusBundle.message("treeEntities", (v as JsonNode).get(ENTITIES)?.size() ?: 0))
+        isEntityEntry(entry) -> RowText(entityName(entry), AbyssusBundle.message("treeComponents", (v as JsonNode).get(COMPONENTS)?.size() ?: 0))
+        isComponentEntry(entry) -> RowText(entry.name.removeSuffix(COMPONENT_SUFFIX).ifEmpty { entry.name })
+        else -> RowText(label ?: displayName(entry.name))
+    }
+}
+
+/** The children of an `ecs` object: its entities directly (the `entities` level is skipped), then its other keys. */
+fun ecsRows(ecs: JsonNode): List<DtoRow> =
+    (ecs.get(ENTITIES)?.takeIf { it.isObject }?.properties()?.map { (id, e) -> DtoRow(id, e, via = listOf(ENTITIES)) } ?: emptyList()) +
+        ecs.properties().filter { it.key != ENTITIES || !it.value.isObject }.map { (k, v) -> DtoRow(k, v) }
+
+/** The children of an entity: its components (the `components` level is skipped); its other fields are not rows. */
+fun entityRows(entity: JsonNode): List<DtoRow> =
+    entity.get(COMPONENTS)?.takeIf { it.isObject }?.properties()?.map { (name, c) -> DtoRow(name, c, via = listOf(COMPONENTS)) } ?: emptyList()

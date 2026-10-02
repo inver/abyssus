@@ -179,9 +179,9 @@ class AbyssusViewTest : BasePlatformTestCase() {
 
     fun testNodeTree() {
         fixture()
-        val scene = children(children(asset("Untitled.abss")).first { text(it) == "scenes" }).single()
+        val scene = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()
         val top = children(scene).map { text(it) }
-        assertEquals(listOf("ambientLight", "fog", "skybox: skybox_default", "ecs"), top)
+        assertEquals(listOf("ambientLight", "fog", "skybox: skybox_default", "ecs  7 entities"), top)
         assertTrue(top.none { it.startsWith("id") || it.startsWith("name") })
         assertTrue("skybox: skybox_default" in top)
         assertTrue(top.none { it.endsWith("Enabled: true") || it.endsWith("Enabled: false") })
@@ -192,10 +192,12 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals(listOf("color", "density: 0.001", "gradient: 1.5"), children(fog).map { text(it) })
         val color = children(fog).first()
         assertEquals(listOf("r: 1.0", "g: 1.0", "b: 1.0", "a: 1.0"), children(color).map { text(it) })
-        val ecs = children(scene).first { text(it) == "ecs" }
-        val entities = children(ecs).first { text(it) == "entities" }
-        assertTrue(children(entities).isNotEmpty())
-        assertTrue(children(children(entities).first()).any { text(it) == "components" })
+        val ecs = children(scene).first { text(it).startsWith("ecs") }
+        val entities = children(ecs)
+        assertTrue(entities.none { text(it) == "entities" })
+        assertTrue(entities.isNotEmpty())
+        assertEquals("Model 0  5 components", text(entities.first()))
+        assertTrue(children(entities.first()).any { text(it) == "Name" })
     }
 
     fun testProjectNodeExpandsScenesInline() {
@@ -203,7 +205,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val project = asset("Untitled.abss")
         val props = children(project)
         assertEquals("name: Untitled", text(props[0]))
-        val scenes = props.first { text(it) == "scenes" }
+        val scenes = props.first { text(it).startsWith("Scenes") }
         val items = children(scenes)
         assertEquals(listOf("$fixtureSceneName (0)"), items.map { text(it) })
         assertTrue(children(items.single()).any { text(it) == "fog" })
@@ -240,7 +242,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val dir = fixture()
         val file = dir.findFileByRelativePath("scenes/Main Scene.scene")!!
         val original = String(file.contentsToByteArray())
-        fun fog() = children(children(asset("Untitled.abss")).first { text(it) == "scenes" }).single()
+        fun fog() = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()
             .let { children(it).first { n -> text(n) == "fog" } as DtoEntryNode }
 
         assertTrue(toggleEnabled(project, fog().value))
@@ -262,7 +264,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
     fun testDisabledParameterAndItsChildrenAreGray() {
         val dir = fixture()
         val file = dir.findFileByRelativePath("scenes/Main Scene.scene")!!
-        fun fog() = children(children(asset("Untitled.abss")).first { text(it) == "scenes" }).single()
+        fun fog() = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()
             .let { children(it).first { n -> text(n) == "fog" } as DtoEntryNode }
         fun gray(n: AbstractTreeNode<*>): Boolean {
             n.update()
@@ -278,7 +280,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
 
     fun testEntryIdentityChangesWithToggleState() {
         fixture()
-        val fog = children(children(children(asset("Untitled.abss")).first { text(it) == "scenes" }).single()).first { text(it) == "fog" } as DtoEntryNode
+        val fog = children(children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()).first { text(it) == "fog" } as DtoEntryNode
         val same = fog.value
         val flipped = net.nevinsky.abyssus.projectView.DtoEntry(same.path, same.name, same.value, !same.enabled!!, same.toggleName, same.source, same.parentKeys)
         assertFalse(same == flipped)
@@ -287,7 +289,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
 
     fun testScenesListAndSceneEntriesHaveOwnIcons() {
         fixture()
-        val scenes = children(asset("Untitled.abss")).first { text(it) == "scenes" }
+        val scenes = children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }
         scenes.update()
         assertSame(net.nevinsky.abyssus.filetype.ScenesIcons.LIST, scenes.presentation.getIcon(false))
         val scene = children(scenes).single()
@@ -300,7 +302,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
 
     fun testWellKnownPropertiesHaveOwnIcons() {
         fixture()
-        val scene = children(children(asset("Untitled.abss")).first { text(it) == "scenes" }).single()
+        val scene = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()
         fun icon(name: String) = children(scene).first { text(it).startsWith(name) }.let { it.update(); it.presentation.getIcon(false) }
         assertSame(net.nevinsky.abyssus.filetype.PropertyIcons.LIGHT, icon("ambientLight"))
         assertSame(net.nevinsky.abyssus.filetype.PropertyIcons.FOG, icon("fog"))
@@ -313,7 +315,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val dir = fixture()
         val file = dir.findFileByRelativePath("scenes/Main Scene.scene")!!
         val original = String(file.contentsToByteArray())
-        fun sceneNode() = children(children(asset("Untitled.abss")).first { text(it) == "scenes" }).single() as DtoEntryNode
+        fun sceneNode() = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single() as DtoEntryNode
         assertEquals("$fixtureSceneName (0)", text(sceneNode()))
         val entry = sceneNode().value
         assertEquals(file, net.nevinsky.abyssus.projectView.sceneFileOf(entry))

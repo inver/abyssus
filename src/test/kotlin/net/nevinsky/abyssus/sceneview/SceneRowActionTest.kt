@@ -54,14 +54,14 @@ class SceneRowActionTest : BasePlatformTestCase() {
         projectFixture()
         val projectNode = projectNode()
         assertNull(viewableSceneFile(projectNode))
-        val scenes = children(projectNode).single { text(it).startsWith("scenes") }
+        val scenes = children(projectNode).single { text(it).startsWith("Scenes") }
         assertNull(viewableSceneFile(scenes))
         assertNull(viewableSceneFile(children(projectNode).single { text(it).startsWith("name") }))
     }
 
     fun testSceneEntryInsideProjectHasViewTarget() {
         val dir = projectFixture()
-        val scenes = children(projectNode()).single { text(it).startsWith("scenes") }
+        val scenes = children(projectNode()).single { text(it).startsWith("Scenes") }
         val sceneNode = children(scenes).single()
         assertEquals(dir.findFileByRelativePath("scenes/Main Scene.scene"), viewableSceneFile(sceneNode))
     }

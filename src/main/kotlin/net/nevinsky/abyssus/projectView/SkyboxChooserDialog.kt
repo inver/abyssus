@@ -34,7 +34,17 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.filetype.AssetIcons
 import java.awt.BorderLayout
 import java.awt.Component
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
+import net.nevinsky.abyssus.properties.smallThumbnail
+import java.awt.Dimension
+import java.awt.FlowLayout
 import java.awt.Font
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
+import java.awt.geom.RoundRectangle2D
+import java.awt.image.BufferedImage
 import java.awt.event.MouseEvent
 import javax.swing.BoxLayout
 import javax.swing.JComponent
@@ -43,6 +53,8 @@ import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
 import javax.swing.event.DocumentEvent
+
+private const val THUMB_PIXELS = 56
 
 /**
  * "Choose a skybox": the project's skyboxes after a None entry, a name filter, and Cancel / Assign. Nothing is written
@@ -83,8 +95,23 @@ class SkyboxChooserDialog(project: Project, choices: List<SkyboxChoice>, current
         filter.addDocumentListener(object : DocumentAdapter() {
             override fun textChanged(e: DocumentEvent) = applyFilter()
         })
+        filter.textEditor.emptyText.text = AbyssusBundle.message("skyboxFilterPlaceholder")
+        list.fixedCellHeight = -1
         init()
         refreshList()
+        loadThumbnails(choices)
+    }
+
+    /** Decodes the face images off the EDT and repaints the list when they are ready; rows without a folder keep empty cells. */
+    private fun loadThumbnails(choices: List<SkyboxChoice>) {
+        if (choices.none { it.folder != null }) return
+        ApplicationManager.getApplication().executeOnPooledThread {
+            for (choice in choices) {
+                val dir = choice.folder ?: continue
+                choice.thumbs = choice.faceFiles.map { name -> name?.let { smallThumbnail(dir, it, THUMB_PIXELS) } }
+            }
+            ApplicationManager.getApplication().invokeLater({ if (!isDisposed) list.repaint() }, ModalityState.any())
+        }
     }
 
     private fun applyFilter() {
@@ -146,16 +173,93 @@ class SkyboxChooserDialog(project: Project, choices: List<SkyboxChoice>, current
         applyFilter()
     }
 
+    /** The component the list draws for row [index], for tests. */
+    internal fun renderedRow(index: Int, selected: Boolean): JComponent =
+        list.cellRenderer.getListCellRendererComponent(list, listModel.getElementAt(index), index, selected, selected) as JComponent
+
     internal fun clickRow(index: Int) {
         list.selectedIndex = index
     }
 }
 
-/** Two lines per row: icon, name over a detail line, and on the right the unused badge or the scene count. */
+/** The six face thumbnails of a row; a face still loading or unreadable is an empty bordered cell. */
+private class ThumbStrip : JComponent() {
+    var images: List<BufferedImage?> = emptyList()
+
+    override fun getPreferredSize() = Dimension(FACES * JBUI.scale(CELL) + (FACES - 1) * JBUI.scale(GAP), JBUI.scale(CELL))
+
+    override fun getMinimumSize() = preferredSize
+
+    override fun getMaximumSize() = preferredSize
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+            val cell = JBUI.scale(CELL)
+            val arc = JBUI.scale(4)
+            for (i in 0 until FACES) {
+                val x = i * (cell + JBUI.scale(GAP))
+                val image = images.getOrNull(i)
+                if (image != null) {
+                    val clip = g2.clip
+                    g2.clip(RoundRectangle2D.Float(x.toFloat(), 0f, cell.toFloat(), cell.toFloat(), arc.toFloat(), arc.toFloat()))
+                    g2.drawImage(image, x, 0, cell, cell, null)
+                    g2.clip = clip
+                }
+                g2.color = JBColor.border()
+                g2.drawRoundRect(x, 0, cell - 1, cell - 1, arc, arc)
+            }
+        } finally {
+            g2.dispose()
+        }
+    }
+
+    companion object {
+        const val FACES = 6
+        const val CELL = 28
+        const val GAP = 3
+    }
+}
+
+/** A list row with the design's highlight: a rounded block inset from the list edges. */
+private class SkyboxRow : JPanel(BorderLayout(JBUI.scale(12), 0)) {
+    var selected = false
+
+    init {
+        isOpaque = false
+        border = JBUI.Borders.empty(0, 18)
+    }
+
+    override fun getPreferredSize() = super.getPreferredSize().also { it.height = maxOf(it.height, JBUI.scale(ROW_HEIGHT)) }
+
+    override fun paintComponent(g: Graphics) {
+        if (selected) {
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.color = DesignColors.SELECTION
+                val inset = JBUI.scale(6)
+                g2.fillRoundRect(inset, 0, width - 2 * inset, height, JBUI.scale(12), JBUI.scale(12))
+            } finally {
+                g2.dispose()
+            }
+        }
+        super.paintComponent(g)
+    }
+
+    private companion object {
+        const val ROW_HEIGHT = 56
+    }
+}
+
+/** One row: icon, name over a detail line, the face thumbnails, and on the right the unused badge or the scene count. */
 private class SkyboxCellRenderer : ListCellRenderer<SkyboxChoice?> {
     private val iconLabel = JBLabel()
     private val nameLabel = JBLabel()
     private val detailLabel = JBLabel().apply { font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size - 1) }
+    private val strip = ThumbStrip()
     private val badge = JBLabel()
     private val texts = JPanel().apply {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -163,11 +267,15 @@ private class SkyboxCellRenderer : ListCellRenderer<SkyboxChoice?> {
         add(nameLabel)
         add(detailLabel)
     }
-    private val panel = JPanel(BorderLayout(JBUI.scale(10), 0)).apply {
-        border = JBUI.Borders.empty(6, 10)
+    private val right = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(10), 0)).apply {
+        isOpaque = false
+        add(strip)
+        add(badge)
+    }
+    private val row = SkyboxRow().apply {
         add(iconLabel, BorderLayout.WEST)
         add(texts, BorderLayout.CENTER)
-        add(badge, BorderLayout.EAST)
+        add(right, BorderLayout.EAST)
     }
 
     override fun getListCellRendererComponent(
@@ -177,33 +285,35 @@ private class SkyboxCellRenderer : ListCellRenderer<SkyboxChoice?> {
         isSelected: Boolean,
         cellHasFocus: Boolean,
     ): Component {
-        val fg = UIUtil.getListForeground(isSelected, cellHasFocus)
-        val secondary = if (isSelected) fg else UIUtil.getContextHelpForeground()
-        panel.background = UIUtil.getListBackground(isSelected, cellHasFocus)
+        val fg = UIUtil.getListForeground(false, true)
+        row.selected = isSelected
         nameLabel.foreground = fg
-        detailLabel.foreground = secondary
+        detailLabel.foreground = UIUtil.getContextHelpForeground()
         nameLabel.font = UIUtil.getLabelFont().deriveFont(Font.BOLD)
         if (value == null) {
             iconLabel.icon = AllIcons.General.Remove
             nameLabel.text = AbyssusBundle.message("skyboxNone")
             detailLabel.text = AbyssusBundle.message("skyboxNoneDetail")
+            strip.isVisible = false
             badge.text = ""
             badge.border = null
         } else {
             iconLabel.icon = AssetIcons.forType(SKYBOX_TYPE)
             nameLabel.text = value.name
             detailLabel.text = value.detail
+            strip.images = value.thumbs
+            strip.isVisible = value.faceFiles.isNotEmpty()
             if (value.unused) {
                 badge.text = AbyssusBundle.message("skyboxUnused")
-                badge.foreground = if (isSelected) fg else UNUSED_COLOR
+                badge.foreground = UNUSED_COLOR
                 badge.border = JBUI.Borders.compound(RoundedLineBorder(UNUSED_COLOR, JBUI.scale(6)), JBUI.Borders.empty(0, 6))
             } else {
                 badge.text = AbyssusBundle.message("skyboxUsedBy", value.sceneCount)
-                badge.foreground = secondary
+                badge.foreground = UIUtil.getContextHelpForeground()
                 badge.border = null
             }
         }
-        return panel
+        return row
     }
 
     private companion object {

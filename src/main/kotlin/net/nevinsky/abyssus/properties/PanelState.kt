@@ -66,14 +66,14 @@ private fun faces(folder: VirtualFile, meta: AssetMeta.Loaded): List<FaceCell> {
     }
 }
 
-private fun thumbnail(folder: VirtualFile, fileName: String): BufferedImage? = runCatchingKeepingCancellation {
+private fun thumbnail(folder: VirtualFile, fileName: String, maxWidth: Int = THUMBNAIL_WIDTH, maxHeight: Int = THUMBNAIL_HEIGHT): BufferedImage? = runCatchingKeepingCancellation {
     val file = folder.takeIf { it.isValid }?.findChild(fileName)?.takeIf { it.isValid && !it.isDirectory } ?: return@runCatchingKeepingCancellation null
     val source = ImageIO.read(ByteArrayInputStream(file.contentsToByteArray())) ?: return@runCatchingKeepingCancellation null
-    scaled(source)
+    scaled(source, maxWidth, maxHeight)
 }.getOrNull()
 
-private fun scaled(source: BufferedImage): BufferedImage {
-    val ratio = minOf(THUMBNAIL_WIDTH.toDouble() / source.width, THUMBNAIL_HEIGHT.toDouble() / source.height, 1.0)
+private fun scaled(source: BufferedImage, maxWidth: Int, maxHeight: Int): BufferedImage {
+    val ratio = minOf(maxWidth.toDouble() / source.width, maxHeight.toDouble() / source.height, 1.0)
     val w = maxOf(1, (source.width * ratio).toInt())
     val h = maxOf(1, (source.height * ratio).toInt())
     val out = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
@@ -84,3 +84,6 @@ private fun scaled(source: BufferedImage): BufferedImage {
     }
     return out
 }
+
+/** A small square-bounded thumbnail of the image [fileName] in [folder], or null when it is absent or cannot be decoded. Safe off the EDT. */
+fun smallThumbnail(folder: VirtualFile, fileName: String, size: Int): BufferedImage? = thumbnail(folder, fileName, size, size)

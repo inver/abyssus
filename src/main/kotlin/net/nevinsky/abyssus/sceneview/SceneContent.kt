@@ -44,6 +44,9 @@ data class AssetPlacement(val entityId: String, val assetName: String, val trans
 enum class LightKind { DIRECTIONAL, POINT, SPOT }
 
 /** [direction] is the unit vector the light shines along (directional and spot); [position] matters for point and spot. */
+/** Reach of a point or spot light that does not name one. */
+const val DEFAULT_LIGHT_RANGE = 100f
+
 data class LightPlacement(
     val entityId: String,
     val kind: LightKind,
@@ -51,6 +54,7 @@ data class LightPlacement(
     val intensity: Float,
     val position: Vec3,
     val direction: Vec3,
+    val range: Float = DEFAULT_LIGHT_RANGE,
 )
 
 /** What a scene shows besides its environment. */
@@ -118,7 +122,8 @@ data class SceneContent(
             val color = light?.opt("color")
             val rgba = Rgba(number(color, "r", 1f), number(color, "g", 1f), number(color, "b", 1f), 1f)
             val intensity = number(light, "intensity", 0.3f).coerceAtLeast(0f)
-            return LightPlacement(id, kind, rgba, intensity, transform.position, forward(transform.rotation))
+            val range = number(light, "range", DEFAULT_LIGHT_RANGE)
+            return LightPlacement(id, kind, rgba, intensity, transform.position, forward(transform.rotation), range)
         }
 
         /** The libGDX forward axis (-Z) rotated by [q]. */

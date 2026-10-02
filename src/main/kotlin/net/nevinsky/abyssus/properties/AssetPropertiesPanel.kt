@@ -166,7 +166,7 @@ class AssetPropertiesPanel(
     private fun header(d: PanelState.Details): JComponent {
         val text = JPanel(VerticalLayout(JBUI.scale(2))).apply {
             add(JBLabel(d.name).apply { font = JBFont.label().asBold().biggerOn(1f) })
-            add(JBLabel(AbyssusBundle.message("propertiesSubtitle", d.meta.type ?: AbyssusBundle.message("propertiesUnknownType"))).apply { foreground = secondary() })
+            add(JBLabel(AbyssusBundle.message("propertiesSubtitle", (d.meta.type ?: AbyssusBundle.message("propertiesUnknownType")).lowercase())).apply { foreground = secondary() })
         }
         return JPanel(BorderLayout(JBUI.scale(10), 0)).apply {
             border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0), JBUI.Borders.empty(12, 16))
@@ -181,7 +181,7 @@ class AssetPropertiesPanel(
     ).apply { border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0), JBUI.Borders.empty(6, 16)) }
 
     private fun rowOf(row: PropertyRow): JComponent = when (row.kind) {
-        RowKind.HEADING -> twoColumns(JBLabel(row.name).apply { foreground = JBUI.CurrentTheme.Link.Foreground.ENABLED }, JBLabel("")).apply {
+        RowKind.HEADING -> twoColumns(JBLabel(row.name).apply { foreground = ACCENT }, JBLabel("")).apply {
             border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 1, 0, 0, 0), JBUI.Borders.empty(10, 16, 4, 16))
         }
         else -> {
@@ -223,6 +223,9 @@ class AssetPropertiesPanel(
         private const val DETAILS = "details"
         private const val EMPTY = "empty"
         private const val NAME_COLUMN = 150
+
+        /** The accent of the design canvas (`#3fb8c9` on dark), darkened for light themes. */
+        private val ACCENT = JBColor(Color(0x1E8A99), Color(0x3FB8C9))
     }
 }
 

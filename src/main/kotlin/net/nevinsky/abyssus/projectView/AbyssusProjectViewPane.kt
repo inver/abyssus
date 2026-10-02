@@ -17,6 +17,7 @@
 package net.nevinsky.abyssus.projectView
 
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.ide.SelectInTarget
 import com.intellij.ide.impl.ProjectViewSelectInTarget
 import com.intellij.openapi.project.DumbAware
@@ -33,17 +34,25 @@ import com.intellij.openapi.project.Project
 import com.intellij.util.ui.tree.TreeUtil
 import com.intellij.ui.tree.TreeVisitor
 import net.nevinsky.abyssus.AbyssusBundle
+import net.nevinsky.abyssus.filetype.EyeIcons
 import net.nevinsky.abyssus.filetype.SceneIcons
 import net.nevinsky.abyssus.filetype.SceneViewIcons
 import net.nevinsky.abyssus.sceneview.openSceneView
 import javax.swing.ToolTipManager
+import com.intellij.ui.render.RenderingUtil
+import java.awt.Color
 import java.awt.Cursor
+import java.util.function.Supplier
 import java.awt.Graphics
+import java.awt.Graphics2D
 import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.Icon
+import javax.swing.JComponent
+import javax.swing.JPanel
 import javax.swing.JTree
+import java.awt.BorderLayout
 import javax.swing.tree.DefaultTreeModel
 
 class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project) {
@@ -64,6 +73,24 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project) {
 
     // The platform requires the target's minor view id to equal the pane id; the inherited one is "ProjectPane".
     override fun createSelectInTarget(): SelectInTarget = AbyssusSelectInTarget(myProject)
+
+    private var wrapped: JComponent? = null
+
+    /** The platform's tree component with the counts footer under it; the platform caches its own component, so the wrapper is cached too. */
+    override fun createComponent(): JComponent {
+        val inner = super.createComponent()
+        wrapped?.let { return it }
+        return JPanel(BorderLayout()).also {
+            it.add(inner, BorderLayout.CENTER)
+            it.add(AbyssusFooter(myProject, this), BorderLayout.SOUTH)
+            wrapped = it
+        }
+    }
+
+    override fun addToolbarActions(actionGroup: DefaultActionGroup) {
+        super.addToolbarActions(actionGroup)
+        actionGroup.add(UnusedFilterAction())
+    }
 
     override fun createTree(treeModel: DefaultTreeModel): ProjectViewTree =
         EyeTree(treeModel, myProject).also { publishSelectionOf(it, myProject) }
@@ -110,8 +137,6 @@ private class AbyssusSelectInTarget(project: Project) : ProjectViewSelectInTarge
     override fun getWeight(): Float = AbyssusProjectViewPane.WEIGHT.toFloat()
 }
 
-private class RowAction(val icon: Icon, val tooltip: String?, val run: (row: Int) -> Unit)
-
 /**
  * Paints clickable icons at the right edge of rows that have actions: the eye on entries gated by an `xxxEnabled`
  * toggle, "View" on scenes, and "..." left of the eye on a project scene's skybox.
@@ -123,16 +148,16 @@ private class EyeTree(model: DefaultTreeModel, private val project: Project) : P
     private fun actionsFor(row: Int): List<RowAction> {
         val node = TreeUtil.getUserObject(getPathForRow(row)?.lastPathComponent)
         viewableSceneFile(node)?.let { file ->
-            return listOf(RowAction(SceneViewIcons.VIEW, AbyssusBundle.message("viewSceneTooltip")) { openSceneView(project, file) })
+            return listOf(IconAction(SceneViewIcons.VIEW, AbyssusBundle.message("viewSceneTooltip")) { openSceneView(project, file) })
         }
         val entry = (node as? DtoEntryNode)?.value ?: return emptyList()
-        return listOfNotNull(eyeAction(entry), skyboxAction(entry))
+        return listOfNotNull(eyeAction(entry), skyboxAction(entry), unusedBadgeFor(entry))
     }
 
     private fun eyeAction(entry: DtoEntry): RowAction? {
         if (entry.enabled == null) return null
-        val icon = if (entry.enabled) AllIcons.Actions.Show else AllIcons.Actions.ToggleVisibility
-        return RowAction(icon, null) { r ->
+        val icon = if (entry.enabled) EyeIcons.ON else EyeIcons.OFF
+        return IconAction(icon, null) { r ->
             val wasExpanded = isExpanded(getPathForRow(r))
             if (toggleEnabled(project, entry)) reselect(entry.path, wasExpanded)
         }
@@ -140,19 +165,14 @@ private class EyeTree(model: DefaultTreeModel, private val project: Project) : P
 
     private fun skyboxAction(entry: DtoEntry): RowAction? {
         val abss = skyboxProjectOf(entry) ?: return null
-        return RowAction(AllIcons.Actions.More, AbyssusBundle.message("skyboxChooserTooltip")) {
+        return ChooseButton(AbyssusBundle.message("skyboxChooserTooltip")) {
             if (chooseSkybox(project, entry, abss)) reselect(entry.path, false)
         }
     }
 
-    /** The icon [index] places from the right edge, [ICON_GAP] apart. */
-    private fun iconBounds(row: Int, actions: List<RowAction>, index: Int): Rectangle {
-        val bounds = getRowBounds(row)
-        var x = visibleRect.let { it.x + it.width }
-        for (i in 0..index) x -= actions[i].icon.iconWidth + ICON_GAP
-        val icon = actions[index].icon
-        return Rectangle(x, bounds.y + (bounds.height - icon.iconHeight) / 2, icon.iconWidth, icon.iconHeight)
-    }
+    /** Where [actions] of [row] sit: from the right edge of the visible area, rightmost first, [ACTION_GAP] apart. */
+    private fun actionBounds(row: Int, actions: List<RowAction>): List<Rectangle> =
+        layoutActions(getRowBounds(row), visibleRect.let { it.x + it.width }, actions, this)
 
     private fun rowOf(e: MouseEvent): Int? {
         val row = getClosestRowForLocation(e.x, e.y)
@@ -162,17 +182,20 @@ private class EyeTree(model: DefaultTreeModel, private val project: Project) : P
     private fun actionAt(e: MouseEvent): Pair<Int, RowAction>? {
         val row = rowOf(e) ?: return null
         val actions = actionsFor(row)
-        return actions.indices.firstOrNull { iconBounds(row, actions, it).contains(e.point) }?.let { row to actions[it] }
+        val bounds = actionBounds(row, actions)
+        return actions.indices.firstOrNull { actions[it].run != null && bounds[it].contains(e.point) }?.let { row to actions[it] }
     }
 
     init {
+        // the design's selection highlight; the platform paints it (rounded in the new UI) with this colour
+        putClientProperty(RenderingUtil.CUSTOM_SELECTION_BACKGROUND, Supplier<Color> { DesignColors.SELECTION })
         ToolTipManager.sharedInstance().registerComponent(this)
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
                 if (e.button != MouseEvent.BUTTON1) return
                 val (row, action) = actionAt(e) ?: return
                 e.consume()
-                action.run(row)
+                action.run?.invoke(row)
             }
         })
         addMouseMotionListener(object : MouseAdapter() {
@@ -212,14 +235,14 @@ private class EyeTree(model: DefaultTreeModel, private val project: Project) : P
         val last = getClosestRowForLocation(0, clip.y + clip.height)
         for (row in first..last) {
             val actions = actionsFor(row)
-            actions.forEachIndexed { i, action ->
-                val r = iconBounds(row, actions, i)
-                action.icon.paintIcon(this, g, r.x, r.y)
+            val bounds = actionBounds(row, actions)
+            val g2 = g.create() as Graphics2D
+            try {
+                actions.forEachIndexed { i, action -> action.paint(g2, bounds[i], this) }
+            } finally {
+                g2.dispose()
             }
         }
     }
 
-    private companion object {
-        const val ICON_GAP = 8
-    }
 }
