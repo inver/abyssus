@@ -6,3 +6,4 @@
 rootProject.name = "abyssus"
 include(":gdx-model")
 include(":core")
+include(":raytracing")

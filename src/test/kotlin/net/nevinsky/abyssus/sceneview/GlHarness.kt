@@ -38,6 +38,7 @@ object GlHarness {
         frames: Int,
         orbit: OrbitCamera = OrbitCamera.from(params.camera),
         executor: java.util.concurrent.Executor? = null,
+        framebufferSize: Pair<Int, Int>? = null,
         afterFrame: (SceneRenderer, Int) -> Unit = { _, _ -> },
     ): Result {
         val done = CountDownLatch(1)
@@ -75,7 +76,14 @@ object GlHarness {
             window = JFrame("abyssus GL test").apply {
                 layout = BorderLayout()
                 add(canvas, BorderLayout.CENTER)
-                setSize(640, 400)
+                if (framebufferSize == null) setSize(640, 400)
+                else {
+                    val scale = graphicsConfiguration.defaultTransform
+                    canvas.preferredSize = java.awt.Dimension(
+                        (framebufferSize.first / scale.scaleX).toInt(), (framebufferSize.second / scale.scaleY).toInt()
+                    )
+                    pack()
+                }
                 isVisible = true
             }
             timer = Timer(16) {

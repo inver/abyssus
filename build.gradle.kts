@@ -86,6 +86,9 @@ dependencies {
         exclude(group = "org.jetbrains.kotlin")
         exclude(group = "org.slf4j")
     }
+    implementation(project(":raytracing")) {
+        exclude(group = "org.jetbrains.kotlin")
+    }
 }
 
 // Set the JVM language level used to build the project. IntelliJ 2025.2+ requires Java 21.
@@ -142,10 +145,12 @@ tasks {
     test {
         // GL render tests open a real window: opt in with -Dabyssus.glTests=true
         System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
+        System.getProperty("abyssus.rayTimingTests")?.let { systemProperty("abyssus.rayTimingTests", it) }
     }
     runIde {
         // Open a project on startup: -PideProject=/path/to/project
         providers.gradleProperty("ideProject").orNull?.let { args(it) }
+        providers.gradleProperty("rayExperiment").orNull?.let { jvmArgs("-Dabyssus.raytracing.experiment=$it") }
         // The sandbox IDE trusts every project (no "Trust project?" dialog) and opens the Abyssus view.
         jvmArgs("-Didea.trust.all.projects=true", "-Dabyssus.openView=true")
     }

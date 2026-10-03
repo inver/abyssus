@@ -7,11 +7,22 @@
 | root (`src/`) | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.10) | `:core`, `:gdx-model`, Jackson, libGDX, LWJGL3-AWT |
 | `core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline, and the models, terrains and skies it builds | `:gdx-model`, Jackson, libGDX |
 | `gdx-model/` | Plain JVM library: libGDX model runtime with 32-bit mesh indices and an Assimp importer | libGDX, LWJGL Assimp |
+| `raytracing/` | Plain JVM backend contracts, immutable linear host frames and a native Metal feasibility slice; editor integration is pending | Kotlin stdlib |
 
 `gdx-model` and `core` must not import IntelliJ or plugin code (see their READMEs). `core` is wired by constructors:
 its composition root `AssetLoading` takes a `JsonProcessor`, an `AssetLog`, an executor and the sky `ShaderSource`; in
 the IDE the light application service `AbyssusCore` builds one (IDE log, IDE pool) and hands it to every scene view.
 The plugin does not depend on Mundus.
+
+`raytracing` has an optional, constructor-owned Metal backend. Its device/queue/pipeline
+serve independent view sessions on one owner worker; ordinary provider construction
+does not load JNI. Completed linear RGBA/depth frames are immutable copies. The native
+slice can be displayed through the developer-only Metal feasibility preview in
+SceneViewPanel. RayFeasibilityLoop owns its native worker with one in-flight and
+one replaceable pending request; RayFramePresenter uploads host color/depth only
+inside the safe canvas context on EDT. The preview uses synthetic geometry, not
+project assets. Full editor integration remains pending. See `raytracing/README.md`
+for its toolchain, opt-in GPU tests and current limits.
 
 ## What the plugin registers
 

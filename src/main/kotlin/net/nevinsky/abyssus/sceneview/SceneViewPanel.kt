@@ -71,6 +71,10 @@ class SceneViewPanel(
     private val cameraCombo = ComboBox<CameraChoice>()
     private var choices: List<CameraChoice> = emptyList()
     private var updatingControls = false
+    private val experimentButton = if (java.lang.Boolean.getBoolean("abyssus.raytracing.experiment"))
+        JToggleButton(AbyssusBundle.message("sceneViewRayExperiment")) else null
+    private val experiment = experimentButton?.let { RayFeasibilityPreview { message -> thisLogger().info(message) } }
+    private val experimenting: Boolean get() = experimentButton?.isSelected == true
 
     init {
         renderer.params = initial
@@ -96,13 +100,14 @@ class SceneViewPanel(
             gdx = null
             capabilities?.let { GL.setCapabilities(it) }
             try {
-                GdxRuntime.withContext(ctx) { renderer.dispose() }
+                GdxRuntime.withContext(ctx) { experiment?.dispose(); renderer.dispose() }
             } catch (e: Throwable) {
                 thisLogger().warn("Failed to release scene view GL resources", e)
             }
         }
 
         override fun onContextAbandoned() {
+            experiment?.abandon()
             renderer.abandonShadows()
             gdx = null
             abandoned = true
@@ -112,8 +117,14 @@ class SceneViewPanel(
             val ctx = gdx ?: return
             capabilities?.let { GL.setCapabilities(it) }
             frame.tick(framebufferWidth, framebufferHeight)
-            GdxRuntime.withContext(ctx) { renderer.render(frame.width, frame.height, orbit, frame.deltaSeconds) }
-            interaction.frameRendered()
+            GdxRuntime.withContext(ctx) {
+                if (experimenting) experiment?.draw(frame.width, frame.height)
+                else renderer.render(frame.width, frame.height, orbit, frame.deltaSeconds)
+            }
+            if (!experimenting) interaction.frameRendered()
+            experimentButton?.toolTipText = experiment?.failure?.let {
+                AbyssusBundle.message("sceneViewRayExperimentFailure", it.message ?: it.javaClass.simpleName)
+            } ?: AbyssusBundle.message("sceneViewRayExperimentTooltip")
             swapBuffers()
         }
     }
@@ -178,6 +189,14 @@ class SceneViewPanel(
             add(dropButton)
             add(addLightButton)
             add(cameraCombo)
+            experimentButton?.let { button ->
+                button.isFocusable = false
+                button.addActionListener {
+                    experiment?.stop()
+                    syncControls()
+                }
+                add(button)
+            }
         }
     }
 
@@ -188,8 +207,8 @@ class SceneViewPanel(
     private fun bindKeys() {
         fun bind(key: Int, action: () -> Unit) {
             val stroke = KeyStroke.getKeyStroke(key, 0)
-            registerKeyboardAction({ action() }, stroke, WHEN_FOCUSED)
-            registerKeyboardAction({ action() }, stroke, WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+            registerKeyboardAction({ if (!experimenting) action() }, stroke, WHEN_FOCUSED)
+            registerKeyboardAction({ if (!experimenting) action() }, stroke, WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
         }
         bind(KeyEvent.VK_W) { interaction.mode = GizmoMode.MOVE }
         bind(KeyEvent.VK_E) { interaction.mode = GizmoMode.ROTATE }
@@ -203,8 +222,11 @@ class SceneViewPanel(
         try {
             moveButton.isSelected = interaction.mode == GizmoMode.MOVE
             rotateButton.isSelected = interaction.mode == GizmoMode.ROTATE
-            dropButton.isEnabled = interaction.canDrop
-            addLightButton.isEnabled = lightActions != null && canAddLight()
+            moveButton.isEnabled = !experimenting
+            rotateButton.isEnabled = !experimenting
+            cameraCombo.isEnabled = !experimenting
+            dropButton.isEnabled = !experimenting && interaction.canDrop
+            addLightButton.isEnabled = !experimenting && lightActions != null && canAddLight()
             cameraCombo.selectedItem = choices.firstOrNull { it.id == interaction.viewCamera } ?: choices.firstOrNull()
         } finally {
             updatingControls = false
@@ -235,28 +257,42 @@ class SceneViewPanel(
             interaction.size = ViewSize(target.width, target.height, target.framebufferWidth, target.framebufferHeight)
         }
         val input = object : MouseAdapter() {
+            private var experimentX = 0
+            private var experimentY = 0
             override fun mousePressed(e: MouseEvent) {
                 requestFocusInWindow()
+                if (experimenting) { experimentX = e.x; experimentY = e.y; return }
                 sync()
                 interaction.pressed(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
             }
 
             override fun mouseReleased(e: MouseEvent) {
+                if (experimenting) return
                 sync()
                 interaction.released(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
             }
 
             override fun mouseDragged(e: MouseEvent) {
+                if (experimenting) {
+                    val dx = (e.x - experimentX).toFloat()
+                    val dy = (e.y - experimentY).toFloat()
+                    experimentX = e.x; experimentY = e.y
+                    if (SwingUtilities.isLeftMouseButton(e)) experiment?.orbit?.orbit(dx, dy)
+                    else experiment?.orbit?.pan(dx, dy)
+                    return
+                }
                 sync()
                 interaction.dragged(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
             }
 
             override fun mouseMoved(e: MouseEvent) {
+                if (experimenting) return
                 sync()
                 interaction.moved(e.x, e.y)
             }
 
             override fun mouseWheelMoved(e: MouseWheelEvent) {
+                if (experimenting) { experiment?.orbit?.zoom(e.preciseWheelRotation.toFloat()); return }
                 interaction.wheel(e.preciseWheelRotation.toFloat())
             }
         }
@@ -313,11 +349,13 @@ class SceneViewPanel(
 
     override fun removeNotify() {
         stopLoop()
+        experiment?.stop()
         super.removeNotify()
     }
 
     override fun dispose() {
         stopLoop()
+        experiment?.stop()
         canvas.disposeCanvas() // releases GL resources through disposeGL while the context is still current
     }
 
