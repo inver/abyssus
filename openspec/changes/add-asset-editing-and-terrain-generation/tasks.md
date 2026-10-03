@@ -31,9 +31,9 @@
 
 ## 5. Undoable terrain file commands
 
-- [ ] 5.1 Add immutable byte snapshots and staged plugin AssetFileCommand commits for regeneration, creation and folder/file absence, with expected-state checks and rollback; verify AssetFileCommandTest with injected failures before/after each file write, late cancellation, stale source data, unsaved metadata conflicts and no success event on failure with `./gradlew :test --tests 'net.nevinsky.abyssus.properties.AssetFileCommandTest'`.
+- [x] 5.1 Add immutable byte snapshots and staged plugin AssetFileCommand commits for regeneration, creation and folder/file absence, with expected-state checks and rollback; verify AssetFileCommandTest with injected failures before/after each file write, late cancellation, stale source data, unsaved metadata conflicts and no success event on failure with `./gradlew :test --tests 'net.nevinsky.abyssus.properties.AssetFileCommandTest'`.
 - [ ] 5.2 Register binary/file UndoableActions and properties/creation command contexts; verify AssetFileCommandTest for exact height/recipe restoration, previously absent recipe, same UUID on Redo, external byte changes, new folder collisions, newly added files and new saved/unsaved scene references blocking creation Undo; verify manual checks M2/M4 for initiating-UI behavior.
-- [ ] 5.3 Update docs/ai/conventions.md and architecture.md to describe the justified binary/new-file write path, application rollback and crash limitation; verify `scripts/check-docs.sh` and ensure all existing scene/project edits still use editSceneJson.
+- [x] 5.3 Update docs/ai/conventions.md and architecture.md to describe the justified binary/new-file write path, application rollback and crash limitation; verify `scripts/check-docs.sh` and ensure all existing scene/project edits still use editSceneJson.
 
 ## 6. Regeneration panel and new terrain creation
 

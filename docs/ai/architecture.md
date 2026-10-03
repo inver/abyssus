@@ -109,6 +109,11 @@ The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and componen
 4. Replace the text in a `WriteCommandAction` and save.
 5. Refresh the Abyssus pane.
 
+Terrain regeneration and creation are the exception (binary heights, new files and folders cannot be a document edit):
+they go through `AssetFileCommand` (`assetfiles/AssetFileCommand.kt`), described in `docs/ai/conventions.md`, with
+`AssetTransactionEngine` holding the file logic (checks, ordered writes, rollback) apart from the platform so a test can
+fail it between any two writes. No scene or project file is written that way.
+
 ### The `ecs` package
 
 `SceneEcsLoader` reads a scene's `ecs` block into an Ashley `SceneEngine`, through one `ComponentCodec` per modeled
