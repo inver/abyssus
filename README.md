@@ -12,7 +12,8 @@ Work on [Mundus](https://github.com/mbrlabs/Mundus) game projects in the IDE.
 - **Abyssus view**: a project tree of `.abss` projects, their scenes, entities and assets, with unused assets marked.
   Toggle scene options, rename scenes and choose a scene's skybox from the tree.
 - **Abyssus Properties**: the `meta.json` of the selected asset, with skybox face previews; terrain size, texture
-  repetition and textures, cube skybox faces and procedural sky parameters can be edited.
+  repetition and textures, cube skybox faces and procedural sky parameters can be edited, terrain heights can be generated
+  from seeded noise, and **New Terrain** on the Assets node creates a terrain asset.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
 <!-- Plugin description end -->
@@ -77,6 +78,34 @@ value with the reason beside the field, and the file is not touched. Identity fi
 `lastModified`), file names and every other asset type (models, HDR skies, and so on) stay read only. Each change is one
 undoable edit of that asset's `meta.json` that keeps its formatting and every other value; the **Undo** and **Redo**
 buttons in the header (or Ctrl+Z / Ctrl+Shift+Z with the panel focused) apply it.
+
+### Generating terrain
+
+A terrain's properties end with **Terrain generation**: its resolution (read only: regenerating never changes it), the
+state of its recipe, and the settings of the noise: **Seed**, **Feature size** (world units of the biggest hills),
+**Min height** and **Max height**, **Octaves** (1 to 8), **Persistence** (0 to 1) and **Lacunarity** (1 to 4).
+**Regenerate preview** draws the heights as a grayscale picture (black is the minimum height, white the maximum) without
+writing anything; **Randomize seed** only changes the seed. Changing any setting discards the preview, and **Apply**
+is enabled only for a finished preview of exactly the current settings. **Apply** replaces the terrain's height data and
+writes the recipe beside it, as one undoable edit (Undo and Redo in the properties header); the terrain's `meta.json`,
+resolution, size, textures and the scenes that use it are left alone, and no object moves, so objects placed at the old
+height may need Drop. **Cancel**, selecting something else or closing the panel discards the draft without writing.
+The preview refuses to be applied if the terrain's files or unsaved metadata changed meanwhile: generate a new one.
+
+The same seed and settings always give the same heights, at any resolution. The settings are saved as a recipe,
+`abyssus-terrain.recipe.json`, in the terrain's folder: only Abyssus reads it, Mundus ignores it, and a terrain loads
+without it. The panel restores the settings from a recipe that still matches the heights, and shows why when it does not
+(missing, malformed, an unknown version, or heights, size or resolution that changed) and offers the defaults instead.
+Heights that are not a square grid of 2 to 255 per side cannot be regenerated.
+
+### New Terrain
+
+Right-click an **Assets** node and choose **New Terrain...**: pick a folder name (it must be new and stay inside
+`assets`), the world size, a resolution from 2 to 255 and the noise settings, generate a preview and **Create**. The
+terrain is written as a Mundus terrain asset (`meta.json` with a fresh `uuid`, `terrain.data`, and the recipe), the view
+refreshes and the new asset is selected. Nothing is placed in a scene and no scene or project file is changed, so the asset
+is marked unused until you add it to a scene. Undo removes the asset again, and Redo brings back the same files and
+`uuid`; Undo refuses while a scene or another asset uses it, or something was added to its folder.
 
 Select an **entity** to see all its components, or one **component** to see only that one. Each component the plugin
 models lists its fields with an editor: type a value and press Enter (or leave the field) to save it, or pick from the

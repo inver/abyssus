@@ -30,11 +30,22 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 
 /** A square grayscale picture of a heightmap; a bordered blank square when there is no preview. */
-internal class HeightmapView(val image: HeightmapImage?) : JComponent() {
-    private val picture: BufferedImage? = image?.let { img ->
-        BufferedImage(img.width, img.height, BufferedImage.TYPE_BYTE_GRAY).also { out ->
-            out.raster.setDataElements(0, 0, img.width, img.height, img.pixels)
+internal class HeightmapView(image: HeightmapImage? = null) : JComponent() {
+    var image: HeightmapImage? = image
+        set(value) {
+            field = value
+            picture = value?.let { img ->
+                BufferedImage(img.width, img.height, BufferedImage.TYPE_BYTE_GRAY).also { out ->
+                    out.raster.setDataElements(0, 0, img.width, img.height, img.pixels)
+                }
+            }
+            repaint()
         }
+
+    private var picture: BufferedImage? = null
+
+    init {
+        this.image = image
     }
 
     init {

@@ -37,6 +37,7 @@ class AbyssusCore {
     val heightEncoder = TerrainHeightEncoder()
     val terrainWriter = TerrainAssetWriter(json, heightEncoder)
     val terrainRecipes = TerrainRecipeCodec(json)
+    val newTerrains = net.nevinsky.abyssus.terrain.NewTerrainFactory(json, terrainWriter, heightEncoder, terrainRecipes)
 
     /** The scene view's own GLSL (grid lines, overlay, terrain), from the plugin's resources. */
     val sceneShaders = ShaderSource("/shader/scene", AbyssusCore::class.java)

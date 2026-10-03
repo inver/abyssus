@@ -16,7 +16,6 @@ import net.nevinsky.abyssus.assetfiles.FileChange
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.assets.terrain.generation.MismatchReason
-import net.nevinsky.abyssus.assets.terrain.generation.PreviewRequest
 import net.nevinsky.abyssus.assets.terrain.generation.RecipeStatus
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationDraft
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationSettings
@@ -26,7 +25,6 @@ import net.nevinsky.abyssus.assets.terrain.generation.TerrainRecipe
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainRecipeCodec
 import net.nevinsky.abyssus.assets.terrain.generation.sha256Hex
 import java.io.File
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 
 /**
@@ -42,8 +40,8 @@ class TerrainGenerationController(
     private val generator: TerrainGenerator,
     private val encoder: TerrainHeightEncoder,
     private val recipes: TerrainRecipeCodec,
-    private val background: (Runnable) -> Unit,
-    private val ui: (Runnable) -> Unit,
+    background: (Runnable) -> Unit,
+    ui: (Runnable) -> Unit,
     private val readCurrent: () -> TerrainSource,
     private val random: Random = Random.Default,
 ) {
@@ -57,10 +55,7 @@ class TerrainGenerationController(
     var message: String? = null
         private set
 
-    @Volatile
-    private var activeToken = -1L
-
-    @Volatile
+    private val runner = TerrainPreviewRunner(generator, background, ui)
     private var disposed = false
 
     val resolution: Int get() = source.resolution
@@ -84,14 +79,14 @@ class TerrainGenerationController(
 
     fun update(settings: TerrainGenerationSettings) {
         draft.updateSettings(settings)
-        activeToken = -1
+        runner.invalidate()
         message = null
         onChange()
     }
 
     fun randomizeSeed() {
         draft.randomizeSeed(random)
-        activeToken = -1
+        runner.invalidate()
         message = null
         onChange()
     }
@@ -99,41 +94,22 @@ class TerrainGenerationController(
     /** Starts a background preview of the current settings; nothing is written. */
     fun preview() {
         if (!canPreview) return
-        val request: PreviewRequest = draft.begin() ?: return
-        activeToken = request.token
-        message = AbyssusBundle.message("terrainGenerating")
-        onChange()
-        background {
-            val result = runCatching {
-                generator.generate(request.resolution, request.size, request.settings) {
-                    if (disposed || activeToken != request.token) throw CancellationException("superseded")
-                }
+        val started = runner.start(draft) { outcome ->
+            message = when (outcome) {
+                PreviewOutcome.Ready -> AbyssusBundle.message("terrainPreviewReady")
+                is PreviewOutcome.Failed -> AbyssusBundle.message("terrainPreviewFailed", outcome.message)
             }
-            ui {
-                if (disposed) return@ui
-                result.fold(
-                    onSuccess = { heights ->
-                        if (draft.complete(request, heights)) {
-                            message = AbyssusBundle.message("terrainPreviewReady")
-                            onChange()
-                        }
-                    },
-                    onFailure = { e ->
-                        if (e is CancellationException) return@ui
-                        draft.fail(request)
-                        if (activeToken == request.token) {
-                            message = AbyssusBundle.message("terrainPreviewFailed", e.message ?: e.javaClass.simpleName)
-                            onChange()
-                        }
-                    },
-                )
-            }
+            onChange()
+        }
+        if (started) {
+            message = AbyssusBundle.message("terrainGenerating")
+            onChange()
         }
     }
 
     /** Discards the pending request and preview, and puts the settings back to what the terrain's recipe (or the defaults) say. */
     fun cancel() {
-        activeToken = -1
+        runner.invalidate()
         draft.cancel()
         draft = newDraft(recipes.draftSettings(source.recipe), source)
         message = null
@@ -143,7 +119,7 @@ class TerrainGenerationController(
     /** The panel re-read the terrain: a changed source (heights, recipe or metadata text) invalidates the draft's preview. */
     fun sourceRead(fresh: TerrainSource.Ready) {
         if (fresh.source == source.source) return
-        activeToken = -1
+        runner.invalidate()
         val keep = draft.settings
         draft.cancel()
         source = fresh
@@ -154,7 +130,7 @@ class TerrainGenerationController(
 
     fun dispose() {
         disposed = true
-        activeToken = -1
+        runner.dispose()
         draft.cancel()
     }
 
