@@ -1,6 +1,8 @@
 package net.nevinsky.abyssus.sceneview.skybox
 
 import net.nevinsky.abyssus.sceneview.MetaType
+import net.nevinsky.abyssus.sceneview.skybox.procedural.AtmosphereParams
+import net.nevinsky.abyssus.sceneview.skybox.procedural.ProceduralSkyMeta
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

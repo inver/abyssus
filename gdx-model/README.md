@@ -18,6 +18,11 @@ libGDX's own `g3d` meshes use 16-bit indices, so one mesh can address at most 65
   is under `resources/shader`.
 - `net.nevinsky.abyssus.core.model.PBR*Attribute`: the PBR material attributes. They use the same aliases as gdx-gltf,
   without depending on it.
+- `net.nevinsky.abyssus.core.shader.EnvironmentLightAttribute`: image based light for an `Environment` (an irradiance
+  cube, a prefiltered specular cube and six axis colors), set in place of `ColorAttribute.AmbientLight`. `PbrShader`
+  then compiles with `environmentLightFlag` and samples both cubes; `DefaultShader` uses the six colors as its ambient
+  cubemap. An environment without it compiles and renders as before. The cubes are any `GLTexture`; building them
+  (from an HDR image) is up to the caller.
 - `net.nevinsky.abyssus.core.loader.AssimpModelLoader`:
   - `loadData` parses a file without a GL context.
   - `decodeTextures` decodes the textures off the GL thread.

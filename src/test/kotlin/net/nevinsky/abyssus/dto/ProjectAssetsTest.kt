@@ -62,7 +62,7 @@ class ProjectAssetsTest : BasePlatformTestCase() {
 
     // 2.1 listing
 
-    fun testFixtureProjectListsEightAssetsInNameOrderWithTypes() {
+    fun testFixtureProjectListsNineAssetsInNameOrderWithTypes() {
         val dir = "Untitled"
         myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
@@ -70,15 +70,16 @@ class ProjectAssetsTest : BasePlatformTestCase() {
             myFixture.copyFileToProject("$dir/assets/${it.name}/meta.json", "$dir/assets/${it.name}/meta.json")
         }
         val assets = readAssets(myFixture.findFileInTempDir("$dir/Untitled.abss"))
-        assertEquals(8, assets.size)
+        assertEquals(9, assets.size)
         assertEquals(assets.map { it.name }.sorted(), assets.map { it.name })
         fun type(a: Asset<Any>) = a.meta.type.name
         assertEquals("SKYBOX", type(assets.single { it.name == "skybox_default" }))
         assertEquals("SKYBOX_PROCEDURAL", type(assets.single { it.name == "skybox_physical" }))
+        assertEquals("SKYBOX_HDR", type(assets.single { it.name == "skybox_hdr" }))
         assertEquals("TERRAIN", type(assets.single { it.name.startsWith("terrain_") }))
         assertEquals(4, assets.count { type(it) == "MODEL" && it.name.startsWith("model_") })
         // Main Scene names four of them directly; `tree` and one model are not reached; the skybox is named by the scene
-        assertEquals(setOf("skybox_physical", "tree", "model_828d51e4-8427-4769-bcb6-13f8f21f23e9"), assets.filter { it.unused }.map { it.name }.toSet())
+        assertEquals(setOf("skybox_hdr", "skybox_physical", "tree", "model_828d51e4-8427-4769-bcb6-13f8f21f23e9"), assets.filter { it.unused }.map { it.name }.toSet())
     }
 
     fun testProjectWithoutAssetsFolderHasEmptyList() {

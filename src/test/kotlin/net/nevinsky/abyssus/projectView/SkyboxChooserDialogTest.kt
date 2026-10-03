@@ -20,6 +20,8 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class SkyboxChooserDialogTest : BasePlatformTestCase() {
+    override fun getTestDataPath() = "src/test/testData/project"
+
     private val choices = listOf(
         SkyboxChoice("abyss-night", 6, listOf("png"), 0, true),
         SkyboxChoice("dusk", 6, listOf("png"), 0, true),
@@ -49,6 +51,20 @@ class SkyboxChooserDialogTest : BasePlatformTestCase() {
         assertEquals(listOf<SkyboxChoice?>(null), d.rows)
         assertEquals("0 found", d.foundLabel)
         assertTrue(d.noMatchShown)
+    }
+
+    fun testHdrEntryShowsOneThumbnail() {
+        myFixture.copyFileToProject("Untitled/assets/skybox_hdr/sky.hdr", "sky/sky.hdr")
+        val hdr = SkyboxChoice("sky", 0, emptyList(), 0, true, hdr = HdrSkyInfo("sky.hdr", 64, 32)).also {
+            it.folder = myFixture.findFileInTempDir("sky")
+            it.faceFiles = listOf("sky.hdr")
+        }
+        val d = SkyboxChooserDialog(project, listOf(hdr), null).also { Disposer.register(testRootDisposable, it.disposable) }
+        assertEquals(listOf(null, "sky"), d.rows.map { it?.name })
+        com.intellij.testFramework.PlatformTestUtil.waitWithEventsDispatching("HDR thumbnail", { hdr.thumbs.isNotEmpty() }, 10)
+        assertEquals(1, hdr.thumbs.size)
+        val thumb = hdr.thumbs.single()!!
+        assertEquals(2 * thumb.height, thumb.width)
     }
 
     fun testClickingSelectsWithoutClosing() {

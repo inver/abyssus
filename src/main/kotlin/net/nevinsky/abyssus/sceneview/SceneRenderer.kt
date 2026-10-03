@@ -36,6 +36,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.core.model.Model as ContentModel
 import net.nevinsky.abyssus.core.shader.DefaultShaderProvider
+import net.nevinsky.abyssus.core.shader.EnvironmentLightAttribute
 import net.nevinsky.abyssus.core.shader.ShaderProvider
 import net.nevinsky.abyssus.sceneview.fog.FogShaderProvider
 import net.nevinsky.abyssus.sceneview.gizmo.DragResult
@@ -317,8 +318,15 @@ class SceneRenderer(
         val contentBatch = contentBatch ?: return
         val c = content
         applyLights(c, orbit)
+        // after the grid: a built HDR sky replaces the ambient color for the content only (applyEnvironment undoes it)
+        val ambient = SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) }
+        val sky = (ambient as? SceneAmbient.Sky)?.environment
+        if (sky != null) {
+            environment.remove(ColorAttribute.AmbientLight)
+            environment.set(EnvironmentLightAttribute(sky.specular, sky.irradiance, sky.levels, sky.ambient))
+        }
         terrains.update(c.terrains, p.projectDir)
-        terrainShader?.draw(camera, terrains.drawn, p.ambient, p.fog, lights)
+        terrainShader?.draw(camera, terrains.drawn, p.ambient, p.fog, lights, sky?.irradiance)
         models.update(c.models, p.projectDir, deltaSeconds)
         contentBatch.begin(camera)
         for (entity in models.drawn) contentBatch.render(entity.instance, environment, ShaderProvider.DEFAULT_SHADER_KEY)
@@ -337,6 +345,7 @@ class SceneRenderer(
 
     /** Fog color comes from the environment; density through [net.nevinsky.abyssus.sceneview.fog.FogShader] (see [FogParams] for what cannot be matched). */
     private fun applyEnvironment(p: SceneRenderParams) {
+        environment.remove(EnvironmentLightAttribute.Type)
         val ambient = p.ambient
         if (ambient != null) {
             environment.set(ColorAttribute(ColorAttribute.AmbientLight, ambient.r, ambient.g, ambient.b, 1f))

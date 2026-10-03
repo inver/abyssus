@@ -20,9 +20,12 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
 
 /** The scene view's own GLSL programs, from `/shader/scene/<name>.vert` and `.frag`. GL context required. */
 object Shaders {
-    fun load(name: String): ShaderProgram {
-        val program = ShaderProgram(source("$name.vert"), source("$name.frag"))
-        check(program.isCompiled) { "Shader '$name' failed to compile: ${program.log}" }
+    fun load(name: String): ShaderProgram = load("$name.vert", "$name.frag")
+
+    /** A program from the file [vertex] and the files [fragment] joined in order (shared functions first). */
+    fun load(vertex: String, vararg fragment: String): ShaderProgram {
+        val program = ShaderProgram(source(vertex), fragment.joinToString("\n", transform = ::source))
+        check(program.isCompiled) { "Shader '${fragment.last()}' failed to compile: ${program.log}" }
         return program
     }
 

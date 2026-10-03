@@ -19,6 +19,7 @@ package net.nevinsky.abyssus.sceneview.terrain
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.GLTexture
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.math.Matrix3
@@ -40,13 +41,18 @@ class TerrainShader : Disposable {
     /** Bound to the sampler units of the layers a terrain does not have, so no sampler is left without a texture. */
     private val blank = Texture(Pixmap(1, 1, Pixmap.Format.RGBA8888).also { it.setColor(1f, 1f, 1f, 1f); it.fill() }, false)
 
-    fun draw(camera: Camera, terrains: Collection<TerrainEntity>, ambient: Rgba?, fog: FogParams?, lights: LightSet) {
+    /** With [irradiance] (a built HDR sky's irradiance cube), terrains take their ambient from it instead of [ambient]. */
+    fun draw(camera: Camera, terrains: Collection<TerrainEntity>, ambient: Rgba?, fog: FogParams?, lights: LightSet, irradiance: GLTexture? = null) {
         if (terrains.isEmpty()) return
         program.bind()
         program.setUniformMatrix("u_projViewTrans", camera.combined)
         program.setUniformf("u_cameraPos", camera.position)
         val a = ambient
         program.setUniformf("u_ambient", a?.r ?: 0f, a?.g ?: 0f, a?.b ?: 0f)
+        // always on its own unit: a samplerCube left on unit 0 would share it with a 2D splat texture, which GL forbids
+        program.setUniformi("u_irradiance", IRRADIANCE_UNIT)
+        program.setUniformi("u_hasSky", if (irradiance != null) 1 else 0)
+        irradiance?.bind(IRRADIANCE_UNIT)
         program.setUniformf("u_fogColor", fog?.color?.r ?: 0f, fog?.color?.g ?: 0f, fog?.color?.b ?: 0f)
         program.setUniformf("u_fogK", fog?.shaderCoefficient ?: 0f)
         setLights(lights)
@@ -89,5 +95,6 @@ class TerrainShader : Disposable {
 
     private companion object {
         const val MAX = 5 // at least LightSet.MAX_POINT and MAX_DIRECTIONAL; the array size in terrain.frag
+        const val IRRADIANCE_UNIT = 7 // after the splat units (0 to TerrainMesh.SPLAT_UNIT)
     }
 }

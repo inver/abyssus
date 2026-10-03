@@ -21,15 +21,17 @@ import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.Disposable
+import net.nevinsky.abyssus.sceneview.skybox.HdrEnvironment
+import net.nevinsky.abyssus.sceneview.skybox.HdrSky
 import net.nevinsky.abyssus.sceneview.skybox.PreparedSky
-import net.nevinsky.abyssus.sceneview.skybox.ProceduralSky
-import net.nevinsky.abyssus.sceneview.skybox.SkyboxCube
+import net.nevinsky.abyssus.sceneview.skybox.procedural.ProceduralSky
+import net.nevinsky.abyssus.sceneview.skybox.cube.SkyboxCube
 import net.nevinsky.abyssus.sceneview.skybox.SunDirection
 import java.io.File
 import java.util.concurrent.Executor
 
 /**
- * The scene's skybox (a cube of faces or a procedural sky), drawn first with depth testing and writing off, following the camera's orientation but not its
+ * The scene's skybox (a cube of faces, a procedural sky or an HDR sky), drawn first with depth testing and writing off, following the camera's orientation but not its
  * position, so everything else is always in front of it. Call only on the GL thread with the context current.
  */
 class SceneSkybox(executor: Executor, loader: AssetLoader<PreparedSky, Disposable>) : Disposable {
@@ -61,10 +63,14 @@ class SceneSkybox(executor: Executor, loader: AssetLoader<PreparedSky, Disposabl
                 sky.draw(program)
             }
             is ProceduralSky -> sky.draw(camera, sun)
+            is HdrSky -> sky.draw(camera)
         }
         Gdx.gl.glDepthMask(true)
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
     }
+
+    /** The lighting environment of the HDR sky [name] once it is built; null for any other sky or while it builds. */
+    fun environment(name: String?): HdrEnvironment? = (name?.let(assets::get) as? HdrSky)?.environment
 
     override fun dispose() {
         assets.dispose()

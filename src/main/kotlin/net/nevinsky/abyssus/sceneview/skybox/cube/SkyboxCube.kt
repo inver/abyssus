@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.sceneview.skybox
+package net.nevinsky.abyssus.sceneview.skybox.cube
 
 import com.badlogic.gdx.graphics.Cubemap
 import com.badlogic.gdx.graphics.GL20

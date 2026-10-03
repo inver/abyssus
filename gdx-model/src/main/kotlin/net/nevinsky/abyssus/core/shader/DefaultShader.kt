@@ -837,7 +837,7 @@ open class DefaultShader(requestedConfig: ShaderConfig, renderable: Renderable) 
         val uVTransformUniform: Int
     )
 
-    private class ACubemapSetter(private val dirLightsOffset: Int, private val pointLightsOffset: Int) : LocalSetter() {
+    internal class ACubemapSetter(private val dirLightsOffset: Int, private val pointLightsOffset: Int) : LocalSetter() {
         private val cacheAmbientCubemap = AmbientCubemap()
 
 
@@ -851,9 +851,7 @@ open class DefaultShader(requestedConfig: ShaderConfig, renderable: Renderable) 
             }
 
             renderable.worldTransform.getTranslation(tmpV1)
-            if (combinedAttributes!!.has(ColorAttribute.AmbientLight)) {
-                cacheAmbientCubemap.set((combinedAttributes.get(ColorAttribute.AmbientLight) as ColorAttribute).color)
-            }
+            setAmbientBase(cacheAmbientCubemap, combinedAttributes!!)
 
             if (combinedAttributes.has(DirectionalLightsAttribute.Type)) {
                 val lights = (combinedAttributes
@@ -882,6 +880,20 @@ open class DefaultShader(requestedConfig: ShaderConfig, renderable: Renderable) 
         }
 
         companion object {
+            /**
+             * Starts [cubemap] from the sky's six irradiance colors when [attributes] has an [EnvironmentLightAttribute]
+             * (it replaces the ambient color), else from the ambient color when there is one; otherwise leaves it as it
+             * is. Lights beyond the shader's count are added after this.
+             */
+            fun setAmbientBase(cubemap: AmbientCubemap, attributes: Attributes) {
+                val sky = attributes.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute?
+                if (sky != null) {
+                    cubemap.set(sky.ambient)
+                } else if (attributes.has(ColorAttribute.AmbientLight)) {
+                    cubemap.set((attributes.get(ColorAttribute.AmbientLight) as ColorAttribute).color)
+                }
+            }
+
             private val ones: FloatArray =
                 floatArrayOf(1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f)
             private val tmpV1 = Vector3()

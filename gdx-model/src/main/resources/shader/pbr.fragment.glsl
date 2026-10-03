@@ -14,8 +14,8 @@
 
 // PBR (metallic-roughness) fragment shader. Pair it with default.vertex.glsl.
 //
-// Cook-Torrance GGX for directional and point lights, ambient from the environment ambient cubemap (no image based
-// lighting). Light units and the color space (linear, no gamma/tone mapping) are the same as in the default shader,
+// Cook-Torrance GGX for directional and point lights, ambient from the environment ambient cubemap, or, with
+// environmentLightFlag, image based lighting from an irradiance cube and a prefiltered specular cube. Light units and the color space (linear, no gamma/tone mapping) are the same as in the default shader,
 // so a white dielectric lit head on looks the same in both. Spot lights are not implemented.
 
 #if !defined(normalFlag)
@@ -120,6 +120,17 @@ uniform vec4 u_cameraPosition;
 #ifdef ambientCubemapFlag
 uniform vec3 u_ambientCubemap[6];
 #endif // ambientCubemapFlag
+
+#ifdef environmentLightFlag
+uniform samplerCube u_envIrradiance;
+uniform samplerCube u_envSpecular;
+uniform float u_envMaxLod;
+#if __VERSION__ >= 130
+#define textureCubeLodCompat textureLod
+#else
+#define textureCubeLodCompat textureCubeLod
+#endif
+#endif // environmentLightFlag
 
 #if numDirectionalLights > 0
 struct DirectionalLight
@@ -341,7 +352,14 @@ void main() {
 		vec4 r = roughness * c0 + c1;
 		float a004 = min(r.x * r.x, exp2(-9.28 * NdotV)) * r.x + r.y;
 		vec2 envBrdf = vec2(-1.04, 1.04) * a004 + r.zw;
-		vec3 ambientSpecular = ambient * (f0 * envBrdf.x + envBrdf.y);
+		#ifdef environmentLightFlag
+			// the sky replaces the ambient: diffuse by normal, specular by reflection at the roughness's mip
+			ambient = textureCube(u_envIrradiance, normal).rgb;
+			vec3 prefiltered = textureCubeLodCompat(u_envSpecular, reflect(-V, normal), roughness * u_envMaxLod).rgb;
+			vec3 ambientSpecular = prefiltered * (f0 * envBrdf.x + envBrdf.y);
+		#else
+			vec3 ambientSpecular = ambient * (f0 * envBrdf.x + envBrdf.y);
+		#endif // environmentLightFlag
 
 		gl_FragColor.rgb = direct + (ambient * diffuseColor + ambientSpecular) * occlusion + emissive;
 	#endif //lightingFlag

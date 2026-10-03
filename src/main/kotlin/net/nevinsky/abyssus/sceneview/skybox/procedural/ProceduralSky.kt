@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.nevinsky.abyssus.sceneview.skybox
+package net.nevinsky.abyssus.sceneview.skybox.procedural
 
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
@@ -31,6 +31,8 @@ import net.nevinsky.abyssus.sceneview.Vec3
  * when the shaders do not compile, which the asset cache logs once and remembers.
  */
 class ProceduralSky(prepared: PreparedProceduralSky) : Disposable {
+    private val CAMERA_HEIGHT = 100.0
+
     private val params = prepared.params
     private val program = ShaderProgram(prepared.vertex, prepared.fragment).also {
         if (!it.isCompiled) {
@@ -53,7 +55,7 @@ class ProceduralSky(prepared: PreparedProceduralSky) : Disposable {
         program.bind()
         program.setUniformMatrix("u_invViewProj", invViewProj)
         program.setUniformf("u_sunDir", sun.x, sun.y, sun.z)
-        program.setUniformf("u_cameraHeight", AtmosphereModel.CAMERA_HEIGHT.toFloat())
+        program.setUniformf("u_cameraHeight", CAMERA_HEIGHT.toFloat())
         program.setUniformf("u_planetRadius", params.planetRadius)
         program.setUniformf("u_atmosphereRadius", params.atmosphereRadius)
         program.setUniformf("u_betaRayleigh", params.betaRayleigh[0], params.betaRayleigh[1], params.betaRayleigh[2])

@@ -67,6 +67,18 @@ class PbrShader(config: ShaderConfig, renderable: Renderable?) : DefaultShader(w
         )
         u_occlusionTexture = registerTexture("u_occlusionTexture", PBRTextureAttribute.OcclusionTexture)
         u_occlusionUVTransform = registerUvTransform("u_occlusionUVTransform", PBRTextureAttribute.OcclusionTexture)
+        registerUniformLocal("u_envIrradiance", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
+            val sky = attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
+            shader!!.set(inputID, shader.context!!.textureBinder.bind(sky.irradiance))
+        }
+        registerUniformLocal("u_envSpecular", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
+            val sky = attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
+            shader!!.set(inputID, shader.context!!.textureBinder.bind(sky.specular))
+        }
+        registerUniformLocal("u_envMaxLod", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
+            val sky = attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
+            shader!!.set(inputID, (sky.levels - 1).toFloat())
+        }
     }
 
     private fun registerTexture(alias: String?, attribute: Long): Int {
@@ -95,25 +107,36 @@ class PbrShader(config: ShaderConfig, renderable: Renderable?) : DefaultShader(w
     override fun preprocessShaderContents(renderable: Renderable) {
         super.preprocessShaderContents(renderable)
 
-        val mask = if (renderable.material == null) 0 else renderable.material!!.getMask()
-        val sb = StringBuilder()
-        if ((mask and PBRFloatAttribute.Metallic) == PBRFloatAttribute.Metallic) {
-            sb.append("#define metallicFactorFlag\n")
-        }
-        if ((mask and PBRFloatAttribute.Roughness) == PBRFloatAttribute.Roughness) {
-            sb.append("#define roughnessFactorFlag\n")
-        }
-        if ((mask and PBRTextureAttribute.MetallicRoughnessTexture) == PBRTextureAttribute.MetallicRoughnessTexture) {
-            sb.append("#define metallicRoughnessTextureFlag\n")
-        }
-        if ((mask and PBRTextureAttribute.OcclusionTexture) == PBRTextureAttribute.OcclusionTexture) {
-            sb.append("#define occlusionTextureFlag\n")
-        }
-        vertexShader = sb.toString() + vertexShader
-        fragmentShader = sb.toString() + fragmentShader
+        val defines = pbrDefines(renderable.material?.getMask() ?: 0, renderable.environment)
+        vertexShader = defines + vertexShader
+        fragmentShader = defines + fragmentShader
     }
 
     companion object {
+        /**
+         * The `#define` lines this shader adds for a material of [mask] in [environment]; `environmentLightFlag`
+         * only when the environment has an [EnvironmentLightAttribute].
+         */
+        fun pbrDefines(mask: Long, environment: Attributes?): String {
+            val sb = StringBuilder()
+            if ((mask and PBRFloatAttribute.Metallic) == PBRFloatAttribute.Metallic) {
+                sb.append("#define metallicFactorFlag\n")
+            }
+            if ((mask and PBRFloatAttribute.Roughness) == PBRFloatAttribute.Roughness) {
+                sb.append("#define roughnessFactorFlag\n")
+            }
+            if ((mask and PBRTextureAttribute.MetallicRoughnessTexture) == PBRTextureAttribute.MetallicRoughnessTexture) {
+                sb.append("#define metallicRoughnessTextureFlag\n")
+            }
+            if ((mask and PBRTextureAttribute.OcclusionTexture) == PBRTextureAttribute.OcclusionTexture) {
+                sb.append("#define occlusionTextureFlag\n")
+            }
+            if (EnvironmentLightAttribute.has(environment)) {
+                sb.append("#define environmentLightFlag\n")
+            }
+            return sb.toString()
+        }
+
         /**
          * @return `true` if the renderable has a PBR material (metallic or roughness set), so this shader is the
          * right one

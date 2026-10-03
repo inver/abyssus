@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Splat-blended terrain layers lit by the ambient, up to 5 directional and 5 point lights, then fogged.
+// Splat-blended terrain layers lit by the ambient (or an HDR sky's irradiance), up to 5 directional and 5 point lights, then fogged.
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -29,6 +29,8 @@ uniform int u_has_splatG;
 uniform int u_has_splatB;
 uniform int u_has_splatA;
 uniform vec3 u_ambient;
+uniform samplerCube u_irradiance; // a built HDR sky's irradiance; replaces u_ambient when u_hasSky is 1
+uniform int u_hasSky;
 uniform vec3 u_fogColor;
 uniform int u_numDirectional;
 uniform vec3 u_dirDirection[5];
@@ -53,7 +55,7 @@ void main() {
         if (u_has_splatA == 1) color = mix(color, texture2D(u_splatA, v_uv), s.a);
     }
     vec3 n = normalize(v_normal);
-    vec3 light = u_ambient;
+    vec3 light = u_hasSky == 1 ? textureCube(u_irradiance, n).rgb : u_ambient;
     for (int i = 0; i < 5; i++) {
         if (i >= u_numDirectional) break;
         light += u_dirColor[i] * max(dot(n, -normalize(u_dirDirection[i])), 0.0);

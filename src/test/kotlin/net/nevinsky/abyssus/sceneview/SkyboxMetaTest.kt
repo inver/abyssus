@@ -16,8 +16,9 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.sceneview.skybox.SkyboxMeta
+import net.nevinsky.abyssus.sceneview.skybox.cube.SkyboxMeta
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.sceneview.skybox.cube.SkyboxLoader
 import java.io.File
 
 class SkyboxMetaTest : BasePlatformTestCase() {
@@ -33,7 +34,7 @@ class SkyboxMetaTest : BasePlatformTestCase() {
 
     fun testLoaderDecodesAllSixFaces() {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
-        val prepared = net.nevinsky.abyssus.sceneview.skybox.SkyboxLoader().prepare(ProjectAssetFiles(projectDir), "skybox_default")
+        val prepared = SkyboxLoader().prepare(ProjectAssetFiles(projectDir), "skybox_default")
         assertNotNull("skybox_default must prepare", prepared)
         try {
             assertEquals(6, prepared!!.faces.size)

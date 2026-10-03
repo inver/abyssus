@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.nevinsky.abyssus.sceneview.skybox
+package net.nevinsky.abyssus.sceneview.skybox.procedural
 
 import net.nevinsky.abyssus.sceneview.MetaBase
 import net.nevinsky.abyssus.sceneview.MetaType
@@ -58,4 +58,29 @@ class ProceduralSkyAdditional(
                 sunIntensity = sunIntensity ?: d.sunIntensity,
             )
         }
+}
+
+data class AtmosphereParams(
+    val planetRadius: Float,
+    val atmosphereRadius: Float,
+    val betaRayleigh: List<Float>,
+    val betaMie: Float,
+    val heightRayleigh: Float,
+    val heightMie: Float,
+    val mieG: Float,
+    val sunIntensity: Float,
+) {
+    companion object {
+        /** Earth: the Nishita / Scratchapixel values. */
+        val EARTH = AtmosphereParams(
+            planetRadius = 6360e3f,
+            atmosphereRadius = 6420e3f,
+            betaRayleigh = listOf(5.8e-6f, 13.5e-6f, 33.1e-6f),
+            betaMie = 21e-6f,
+            heightRayleigh = 8e3f,
+            heightMie = 1.2e3f,
+            mieG = 0.76f,
+            sunIntensity = 20f,
+        )
+    }
 }

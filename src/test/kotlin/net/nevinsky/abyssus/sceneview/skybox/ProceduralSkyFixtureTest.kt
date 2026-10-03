@@ -3,6 +3,7 @@ package net.nevinsky.abyssus.sceneview.skybox
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.sceneview.MetaType
 import net.nevinsky.abyssus.sceneview.ProjectAssetFiles
+import net.nevinsky.abyssus.sceneview.skybox.procedural.ProceduralSkyMeta
 import java.io.File
 
 class ProceduralSkyFixtureTest : BasePlatformTestCase() {

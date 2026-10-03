@@ -36,6 +36,7 @@ import java.awt.BorderLayout
 import java.awt.Component
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import net.nevinsky.abyssus.properties.hdrThumbnail
 import net.nevinsky.abyssus.properties.smallThumbnail
 import java.awt.Dimension
 import java.awt.FlowLayout
@@ -108,7 +109,8 @@ class SkyboxChooserDialog(project: Project, choices: List<SkyboxChoice>, current
         ApplicationManager.getApplication().executeOnPooledThread {
             for (choice in choices) {
                 val dir = choice.folder ?: continue
-                choice.thumbs = choice.faceFiles.map { name -> name?.let { smallThumbnail(dir, it, THUMB_PIXELS) } }
+                choice.thumbs = if (choice.hdr != null) listOf(choice.hdr.file?.let { hdrThumbnail(dir, it, THUMB_PIXELS) })
+                else choice.faceFiles.map { name -> name?.let { smallThumbnail(dir, it, THUMB_PIXELS) } }
             }
             ApplicationManager.getApplication().invokeLater({ if (!isDisposed) list.repaint() }, ModalityState.any())
         }
@@ -182,9 +184,13 @@ class SkyboxChooserDialog(project: Project, choices: List<SkyboxChoice>, current
     }
 }
 
-/** The six face thumbnails of a row; a face still loading or unreadable is an empty bordered cell. */
+/**
+ * The six face thumbnails of a row, or for an HDR sky ([panorama]) one 2:1 cell; a face or image still loading or
+ * unreadable is an empty bordered cell.
+ */
 private class ThumbStrip : JComponent() {
     var images: List<BufferedImage?> = emptyList()
+    var panorama = false
 
     override fun getPreferredSize() = Dimension(FACES * JBUI.scale(CELL) + (FACES - 1) * JBUI.scale(GAP), JBUI.scale(CELL))
 
@@ -199,6 +205,18 @@ private class ThumbStrip : JComponent() {
             g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
             val cell = JBUI.scale(CELL)
             val arc = JBUI.scale(4)
+            if (panorama) {
+                val w = cell * 2
+                images.firstOrNull()?.let { image ->
+                    val clip = g2.clip
+                    g2.clip(RoundRectangle2D.Float(0f, 0f, w.toFloat(), cell.toFloat(), arc.toFloat(), arc.toFloat()))
+                    g2.drawImage(image, 0, 0, w, cell, null)
+                    g2.clip = clip
+                }
+                g2.color = JBColor.border()
+                g2.drawRoundRect(0, 0, w - 1, cell - 1, arc, arc)
+                return
+            }
             for (i in 0 until FACES) {
                 val x = i * (cell + JBUI.scale(GAP))
                 val image = images.getOrNull(i)
@@ -298,11 +316,13 @@ private class SkyboxCellRenderer : ListCellRenderer<SkyboxChoice?> {
             badge.text = ""
             badge.border = null
         } else {
-            iconLabel.icon = AssetIcons.forType(SKYBOX_TYPE)
+            iconLabel.icon = AssetIcons.forType(value.type)
             nameLabel.text = value.name
             detailLabel.text = value.detail
             strip.images = value.thumbs
-            strip.isVisible = value.faceFiles.isNotEmpty()
+            strip.panorama = value.hdr != null
+            // an HDR sky always shows its one cell: a placeholder when its image cannot be read
+            strip.isVisible = value.faceFiles.isNotEmpty() || value.hdr != null
             if (value.unused) {
                 badge.text = AbyssusBundle.message("skyboxUnused")
                 badge.foreground = UNUSED_COLOR

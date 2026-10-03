@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.nevinsky.abyssus.sceneview.skybox
+package net.nevinsky.abyssus.sceneview.skybox.cube
 
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap

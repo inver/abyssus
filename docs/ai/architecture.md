@@ -50,6 +50,12 @@ the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows
 3. `SceneViewPanel` hosts a `GuardedGLCanvas`. A Swing `Timer` renders frames through
    `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each backed
    by an `AssetCache`) and draws markers (`SceneMarkers`) and gizmos (`sceneview/gizmo/`).
+4. An HDR sky also lights the content. `HdrSkyLoader` decodes the `.hdr` on the pool thread, then
+   `HdrEnvironmentBuild` builds a specular cube, an irradiance cube and six axis colors on the GPU, one step per
+   frame. Once built, `SceneSkybox.environment` hands them to `SceneRenderer`, which (`SceneAmbient.of`) swaps
+   `ColorAttribute.AmbientLight` for `gdx-model`'s `EnvironmentLightAttribute` after drawing the grid: the PBR shader
+   samples both cubes, the default shader takes the six colors as its ambient cubemap, and `TerrainShader` samples the
+   irradiance cube. Without a built HDR sky the content is lit by the ambient color exactly as before.
 
 ### Clicks, drags and writes
 
@@ -93,7 +99,8 @@ checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the proper
   (`Gdx.app`, `Gdx.graphics`, `Gdx.gl*`, `Gdx.files`) under a lock, then restores the previous values. All libGDX
   calls happen inside it.
 - **Asset loading:** `AssetCache.prepare` runs on a pool thread and does file IO and decoding, no GL. Building GPU
-  objects happens on the render thread in `pump`, sliced per frame for big textures.
+  objects happens on the render thread in `pump`, sliced per frame for big textures and for an HDR sky's
+  environment passes (`HdrEnvironmentBuild`, which restores the framebuffer, viewport and state it changes).
 - **GL safety:** `GuardedGLCanvas` refuses GL until the canvas has been on screen with a non-zero size for 250 ms.
   When disposed while hidden, it drops the context without making it current, because on macOS that would abort the
   JVM.

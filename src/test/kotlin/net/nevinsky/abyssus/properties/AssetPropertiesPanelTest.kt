@@ -53,7 +53,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
         File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
-            d.listFiles { f -> f.isFile }!!.filter { it.extension in setOf("json", "png") }.forEach {
+            d.listFiles { f -> f.isFile }!!.filter { it.extension in setOf("json", "png", "hdr") }.forEach {
                 myFixture.copyFileToProject("$dir/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
             }
         }
@@ -186,6 +186,52 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         assertNull(faces.getValue("left").image)
         assertEquals("gone.png", faces.getValue("left").file)
         assertNotNull(faces.getValue("right").image)
+    }
+
+    // HDR skies
+
+    fun testHdrHeaderShowsTheHdrIcon() {
+        copyProject()
+        val p = panel()
+        p.show(asset("skybox_hdr"))
+        val details = p.state as PanelState.Details
+        assertTrue(texts(p).contains("skybox_hdr asset · read-only"))
+        assertSame(net.nevinsky.abyssus.filetype.AssetIcons.forType("SKYBOX_HDR"), net.nevinsky.abyssus.filetype.AssetIcons.forType(details.meta.type))
+        assertNotSame(net.nevinsky.abyssus.filetype.AssetIcons.UNKNOWN, net.nevinsky.abyssus.filetype.AssetIcons.forType(details.meta.type))
+    }
+
+    fun testHdrShowsOnePreviewLabelledWithSize() {
+        copyProject()
+        val p = panel()
+        p.show(asset("skybox_hdr"))
+        val hdr = (p.state as PanelState.Details).hdr!!
+        assertEquals("sky.hdr · 64 × 32", hdr.label)
+        assertEquals(2 * hdr.image!!.height, hdr.image!!.width)
+        val shown = texts(p)
+        assertTrue(shown.toString(), shown.contains("PREVIEW") && shown.contains("sky.hdr · 64 × 32"))
+    }
+
+    fun testHdrShowsNoFacePreviews() {
+        copyProject()
+        val p = panel()
+        p.show(asset("skybox_hdr"))
+        assertNull((p.state as PanelState.Details).faces)
+        assertFalse(texts(p).contains("FACE PREVIEWS"))
+    }
+
+    fun testUnreadableHdrShowsAPlaceholderAndRows() {
+        myFixture.addFileToProject("p/P.abss", "{}")
+        myFixture.addFileToProject("p/assets/broken/meta.json", """{"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+        val bytes = File("$testDataPath/Untitled/assets/skybox_hdr/sky.hdr").readBytes()
+        val vf = myFixture.addFileToProject("p/assets/broken/sky.hdr", "").virtualFile
+        WriteCommandAction.runWriteCommandAction(project) { vf.setBinaryContent(bytes.copyOf(bytes.size / 2)) }
+        val node = children(children(abss()).single { label(it) == "assets" }).single()
+        val p = panel()
+        p.show(node)
+        val details = p.state as PanelState.Details
+        assertNull(details.hdr!!.image)
+        assertTrue(details.hdr!!.label, details.hdr!!.label.startsWith("Cannot read sky.hdr: ") && details.hdr!!.label.contains("truncated"))
+        assertTrue("the Meta rows are still shown", texts(p).contains("SKYBOX_HDR"))
     }
 
     fun testModelAndTerrainHaveNoPreviewSection() {

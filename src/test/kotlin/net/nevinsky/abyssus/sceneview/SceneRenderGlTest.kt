@@ -28,6 +28,7 @@ import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
+import kotlin.math.abs
 
 /** Real GL rendering of the test projects. Opt-in: `./gradlew test -Dabyssus.glTests=true`. */
 class SceneRenderGlTest {
@@ -126,6 +127,160 @@ class SceneRenderGlTest {
         assertTrue(withSky.image.getRGB(2, 2) != without.image.getRGB(2, 2))
         val top = withSky.image.getRGB(withSky.image.width / 2, 2)
         assertTrue("the sky near the top should be bluer than red: ${Integer.toHexString(top)}", (top and 0xff) > ((top shr 16) and 0xff))
+    }
+
+    /** A copy of `Main Scene` in a temp project whose only asset is an HDR sky of uniform [radiance], named `sky`. */
+    private fun uniformHdrSky(radiance: Float, block: (SceneRenderParams) -> Unit) {
+        val dir = java.nio.file.Files.createTempDirectory("hdrscene").toFile()
+        try {
+            val sky = File(dir, "assets/sky")
+            net.nevinsky.abyssus.sceneview.skybox.HdrFixtures.write(File(sky, "sky.hdr"), 64, 32, pixel = net.nevinsky.abyssus.sceneview.skybox.HdrFixtures.uniform(radiance))
+            File(sky, "meta.json").writeText("""{"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+            val text = edit(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()) { root ->
+                noFog(root); root.put("skyboxEnabled", true); root.put("skyboxName", "sky")
+            }
+            block(SceneRenderParams.from(parseScene(text), CameraParams.DEFAULT, dir))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    /** The grey level of the sky near the top centre of the view, above the horizon and the grid. */
+    private fun skyGrey(radiance: Float): Int {
+        var grey = -1
+        uniformHdrSky(radiance) { p ->
+            val r = GlHarness.render(p, 120)
+            assertNull(r.error)
+            val rgb = r.image.getRGB(r.image.width / 2, r.image.height / 10)
+            grey = (rgb shr 8) and 0xff
+        }
+        return grey
+    }
+
+    @Test
+    fun hdrMidGreyDrawsAt140() {
+        val grey = skyGrey(0.18f)
+        assertTrue("mid grey drawn at $grey", grey in 137..143)
+    }
+
+    @Test
+    fun hdrHighlightsAreDistinct() {
+        val (a, b, c) = listOf(1f, 2f, 4f).map(::skyGrey)
+        assertTrue("1, 2, 4 drawn at $a, $b, $c", a < b && b < c && c < 255)
+        assertTrue("1, 2, 4 drawn at $a, $b, $c", abs(a - 231) <= 3 && abs(b - 245) <= 3 && abs(c - 252) <= 3)
+    }
+
+    @Test
+    fun hdrSkyStaysBehindModels() {
+        fun sky(root: ObjectNode) {
+            noFog(root); root.put("skyboxEnabled", true); root.put("skyboxName", "skybox_hdr")
+        }
+        val p = params("Untitled", "Main Scene.scene") { edit(it, ::sky) }
+        var models = 0
+        val withSky = GlHarness.render(p, 240) { renderer, _ -> models = renderer.drawnModels.size }
+        assertNull(withSky.error)
+        assertEquals(3, models)
+        // the same view with no entities shows the sky alone; without a sky it shows where the content is
+        val skyOnly = GlHarness.render(params("Untitled", "Main Scene.scene") { edit(it) { root -> sky(root); (root.get("ecs") as ObjectNode).putObject("entities") } }, 240)
+        val noSky = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.putNull("skyboxName") } }
+        val without = GlHarness.render(noSky, 240)
+        val c = noSky.clear
+        val clear = (Math.round(c.r * 255) shl 16) or (Math.round(c.g * 255) shl 8) or Math.round(c.b * 255)
+        var content = 0
+        var covered = 0
+        for (y in 0 until without.image.height) for (x in 0 until without.image.width) {
+            if (without.image.getRGB(x, y) and 0xFFFFFF == clear) continue
+            content++
+            if (withSky.image.getRGB(x, y) != skyOnly.image.getRGB(x, y)) covered++
+        }
+        assertTrue("no content drawn", content > 1000)
+        assertTrue("the sky hid content: $covered of $content content pixels differ from the sky alone", covered > content * 0.9)
+    }
+
+    /**
+     * Renders `Main Scene` (no fog, its grey ambient) from a temp copy of `Untitled` whose extra asset `sky` is an HDR sky of
+     * [pixel], once per [variants] patch; returns the images. [keep] lists the entity ids to keep (all when null).
+     */
+    private fun renderWithHdrSky(pixel: (Int, Int) -> FloatArray, keep: Set<String>?, vararg variants: (ObjectNode) -> Unit): List<java.awt.image.BufferedImage> {
+        val dir = java.nio.file.Files.createTempDirectory("hdrlit").toFile()
+        try {
+            val source = File("src/test/testData/project/Untitled")
+            File(source, "assets").copyRecursively(File(dir, "assets"))
+            val sky = File(dir, "assets/sky")
+            net.nevinsky.abyssus.sceneview.skybox.HdrFixtures.write(File(sky, "sky.hdr"), 64, 32, pixel = pixel)
+            File(sky, "meta.json").writeText("""{"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+            val text = File(source, "scenes/Main Scene.scene").readText()
+            return variants.map { variant ->
+                val patched = edit(text) { root ->
+                    noFog(root) // the fixture's ambient light is an enabled grey 0.3
+                    val entities = root.get("ecs").get("entities") as ObjectNode
+                    if (keep != null) entities.fieldNames().asSequence().toList().filter { it !in keep }.forEach(entities::remove)
+                    variant(root)
+                }
+                val r = GlHarness.render(SceneRenderParams.from(parseScene(patched), CameraParams.DEFAULT, dir), 240)
+                assertNull(r.error)
+                r.image
+            }
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    private val litBySky: (ObjectNode) -> Unit = { it.put("skyboxEnabled", true); it.put("skyboxName", "sky") }
+    private val noSkyAtAll: (ObjectNode) -> Unit = { it.putNull("skyboxName") }
+    private val noEntities: (ObjectNode) -> Unit = { it.putNull("skyboxName"); (it.get("ecs") as ObjectNode).putObject("entities") }
+
+    /** Pixels drawn by the content: where the scene without a sky differs from the grid alone. */
+    private fun contentPixels(scene: java.awt.image.BufferedImage, gridOnly: java.awt.image.BufferedImage): List<Pair<Int, Int>> = buildList {
+        for (y in 0 until scene.height) for (x in 0 until scene.width) if (scene.getRGB(x, y) != gridOnly.getRGB(x, y)) add(x to y)
+    }
+
+    private fun channels(rgb: Int) = Triple((rgb shr 16) and 0xff, (rgb shr 8) and 0xff, rgb and 0xff)
+
+    @Test
+    fun aBlueSkyTintsTheTerrain() {
+        val blue = { _: Int, _: Int -> floatArrayOf(0f, 0f, 1f) }
+        val (lit, plain, grid) = renderWithHdrSky(blue, setOf("1"), litBySky, noSkyAtAll, noEntities)
+        val terrain = contentPixels(plain, grid)
+        assertTrue("terrain drew almost nothing: ${terrain.size}", terrain.size > 1000)
+        val blueOnly = terrain.count { (x, y) -> channels(lit.getRGB(x, y)).let { (r, g, b) -> b > 8 && r <= b / 8 && g <= b / 8 } }
+        assertTrue("$blueOnly of ${terrain.size} terrain pixels are blue with no grey", blueOnly > terrain.size * 0.9)
+    }
+
+    @Test
+    fun aRedSkyReplacesTheAmbientOnAModel() {
+        val red = { _: Int, _: Int -> floatArrayOf(1f, 0f, 0f) }
+        // Model 0 and Model 2 use the default shader
+        val (lit, plain, grid) = renderWithHdrSky(red, setOf("0", "2"), litBySky, noSkyAtAll, noEntities)
+        val models = contentPixels(plain, grid)
+        assertTrue("models drew almost nothing: ${models.size}", models.size > 200)
+        val redOnly = models.count { (x, y) -> channels(lit.getRGB(x, y)).let { (r, g, b) -> r > 8 && g <= r / 8 && b <= r / 8 } }
+        assertTrue("$redOnly of ${models.size} model pixels are red with no grey", redOnly > models.size * 0.9)
+    }
+
+    @Test
+    fun pbrModelIsBrighterUnderAnUpperSkyThanUnderALowerOne() {
+        // Model 6 uses the PBR shader; the camera looks down on it, so most of what is seen faces up
+        val upper = { _: Int, y: Int -> if (y < 16) floatArrayOf(2f, 2f, 2f) else floatArrayOf(0f, 0f, 0f) }
+        val lower = { _: Int, y: Int -> if (y < 16) floatArrayOf(0f, 0f, 0f) else floatArrayOf(2f, 2f, 2f) }
+        val (litAbove, plain, grid) = renderWithHdrSky(upper, setOf("6"), litBySky, noSkyAtAll, noEntities)
+        val (litBelow) = renderWithHdrSky(lower, setOf("6"), litBySky)
+        val model = contentPixels(plain, grid)
+        assertTrue("Model 6 drew almost nothing: ${model.size}", model.size > 200)
+        fun brightness(img: java.awt.image.BufferedImage) = model.sumOf { (x, y) -> channels(img.getRGB(x, y)).let { (r, g, b) -> (r + g + b).toLong() } }
+        assertTrue("upper ${brightness(litAbove)} vs lower ${brightness(litBelow)}", brightness(litAbove) > brightness(litBelow) * 1.2)
+    }
+
+    @Test
+    fun mainSceneIsUnchangedByADisabledHdrSky() {
+        val p = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.putNull("skyboxName") } }
+        val disabled = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.put("skyboxEnabled", false); root.put("skyboxName", "skybox_hdr") } }
+        val a = GlHarness.render(p, 240)
+        val b = GlHarness.render(disabled, 240)
+        assertNull(a.error ?: b.error)
+        var differing = 0
+        for (y in 0 until a.image.height) for (x in 0 until a.image.width) if (a.image.getRGB(x, y) != b.image.getRGB(x, y)) differing++
+        assertEquals(0, differing)
     }
 
     @Test

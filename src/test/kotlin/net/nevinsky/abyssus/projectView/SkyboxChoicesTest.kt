@@ -40,16 +40,16 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
             testAsset("dusk", "4", "SKYBOX"),
             testAsset("caustics", "5", "SHADER"),
         ))
-        assertEquals(listOf("dusk", "nebula"), skyboxChoices(dto, emptyMap()).map { it.name })
+        assertEquals(listOf("dusk", "hdr", "nebula"), skyboxChoices(dto, emptyMap()).map { it.name })
     }
 
-    fun testListsBothSkyboxKinds() {
+    fun testListsAllThreeSkyboxKinds() {
         val dto = ProjectDto("P", emptyList(), listOf(
             testAsset("skybox_physical", "1", "SKYBOX_PROCEDURAL"),
             testAsset("skybox_default", "2", "SKYBOX"),
             testAsset("hdr", "3", "SKYBOX_HDR"),
         ))
-        assertEquals(listOf("skybox_default", "skybox_physical"), skyboxChoices(dto, emptyMap()).map { it.name })
+        assertEquals(listOf("hdr", "skybox_default", "skybox_physical"), skyboxChoices(dto, emptyMap()).map { it.name })
     }
 
     fun testProceduralDetailLine() {
@@ -59,13 +59,44 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
         assertEquals("procedural sky", choice.detail)
     }
 
-    fun testFixtureProjectOffersBothSkies() {
+    fun testFixtureProjectOffersAllThreeSkies() {
         val abss = myFixture.copyFileToProject("Untitled/Untitled.abss", "Untitled/Untitled.abss")
         myFixture.copyFileToProject("Untitled/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
         java.io.File("$testDataPath/Untitled/assets").listFiles { f -> f.isDirectory }!!.forEach {
             myFixture.copyFileToProject("Untitled/assets/${it.name}/meta.json", "Untitled/assets/${it.name}/meta.json")
         }
-        assertEquals(listOf("skybox_default", "skybox_physical"), loadSkyboxChoices(project, abss)!!.map { it.name })
+        assertEquals(listOf("skybox_default", "skybox_hdr", "skybox_physical"), loadSkyboxChoices(project, abss)!!.map { it.name })
+    }
+
+    fun testListsTheHdrFixture() {
+        val abss = myFixture.copyFileToProject("Untitled/Untitled.abss", "Untitled/Untitled.abss")
+        myFixture.copyFileToProject("Untitled/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
+        myFixture.copyFileToProject("Untitled/assets/skybox_hdr/meta.json", "Untitled/assets/skybox_hdr/meta.json")
+        myFixture.copyFileToProject("Untitled/assets/skybox_hdr/sky.hdr", "Untitled/assets/skybox_hdr/sky.hdr")
+        val choice = loadSkyboxChoices(project, abss)!!.single { it.name == "skybox_hdr" }
+        assertEquals("SKYBOX_HDR", choice.type)
+        assertEquals(HdrSkyInfo("sky.hdr", 64, 32), choice.hdr)
+        assertEquals(listOf("sky.hdr"), choice.faceFiles)
+        assertTrue(choice.unused)
+    }
+
+    fun testHdrDetailLine() {
+        val dto = ProjectDto("P", emptyList(), listOf(testAsset("sky", "1", "SKYBOX_HDR")))
+        val choice = skyboxChoices(dto, emptyMap(), mapOf("sky" to HdrSkyInfo("sky.hdr", 4096, 2048))).single()
+        // sizes are not grouped ("4,096") whatever the locale
+        assertEquals("HDR · 4096 × 2048", choice.detail)
+        assertFalse(choice.procedural)
+    }
+
+    fun testUnreadableHdrDetailIsHdr() {
+        val abss = myFixture.addFileToProject("p/P.abss", """{"name":"P"}""").virtualFile
+        myFixture.addFileToProject("p/assets/broken/meta.json", """{"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+        myFixture.addFileToProject("p/assets/broken/sky.hdr", "this is not an image")
+        val choice = loadSkyboxChoices(project, abss)!!.single()
+        assertEquals(HdrSkyInfo("sky.hdr", 0, 0), choice.hdr)
+        assertEquals("HDR", choice.detail)
+        // an HDR sky with no image at all is still listed, with no thumbnail cell to fill
+        assertEquals("HDR", skyboxChoices(ProjectDto("P", emptyList(), listOf(testAsset("bare", "1", "SKYBOX_HDR"))), emptyMap()).single().detail)
     }
 
     fun testDetailLineCountsFacesAndSortsFormats() {

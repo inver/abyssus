@@ -179,6 +179,7 @@ class AssetPropertiesPanel(
         for (row in d.meta.rows) rows.add(rowOf(row))
         box.add(rows)
         d.faces?.let { box.add(previews(it)) }
+        d.hdr?.let { box.add(hdrPreview(it)) }
         return JPanel(BorderLayout()).apply { add(box, BorderLayout.NORTH) }
     }
 
@@ -223,6 +224,16 @@ class AssetPropertiesPanel(
             add(JBLabel(AbyssusBundle.message("propertiesFacePreviews").uppercase()).apply { foreground = secondary(); font = JBFont.small() })
             add(grid)
         }
+    }
+
+    private fun hdrPreview(cell: HdrCell): JComponent = JPanel(VerticalLayout(JBUI.scale(8))).apply {
+        border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 1, 0, 0, 0), JBUI.Borders.empty(12, 16, 16, 16))
+        add(JBLabel(AbyssusBundle.message("propertiesHdrPreview").uppercase()).apply { foreground = secondary(); font = JBFont.small() })
+        add(Thumbnail(cell.image).apply {
+            name = "hdr-preview"
+            preferredSize = Dimension(JBUI.scale(288), JBUI.scale(144))
+        })
+        add(JBLabel(cell.label).apply { foreground = secondary(); font = Font(Font.MONOSPACED, Font.PLAIN, JBFont.small().size) })
     }
 
     private fun faceCell(f: FaceCell): JComponent {

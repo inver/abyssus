@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.sceneview.skybox
+package net.nevinsky.abyssus.sceneview.skybox.cube
 
 import net.nevinsky.abyssus.sceneview.MetaBase
 import net.nevinsky.abyssus.sceneview.MetaType

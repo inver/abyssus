@@ -17,12 +17,8 @@
 package net.nevinsky.abyssus.sceneview.skybox
 
 import net.nevinsky.abyssus.sceneview.Vec3
-import kotlin.math.PI
-import kotlin.math.exp
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.pow
-import kotlin.math.sqrt
+import net.nevinsky.abyssus.sceneview.skybox.procedural.AtmosphereParams
+import kotlin.math.*
 
 /**
  * A CPU twin of the sky fragment shader's scattering (the same sample counts and constants), so the physics can be
@@ -33,10 +29,9 @@ object AtmosphereModel {
     const val LIGHT = 8
     const val KM = 1000.0
     const val GROUND_ALBEDO = 0.04
-    const val CAMERA_HEIGHT = 100.0
 
     /** Linear RGB radiance looking along [view] with the sun toward [sun] (both unit vectors, Y up). */
-    fun radiance(view: Vec3, sun: Vec3, p: AtmosphereParams, cameraHeight: Double = CAMERA_HEIGHT): DoubleArray {
+    fun radiance(view: Vec3, sun: Vec3, p: AtmosphereParams, cameraHeight: Double = 100.0): DoubleArray {
         val r = p.planetRadius / KM
         val ra = p.atmosphereRadius / KM
         val hR = p.heightRayleigh / KM
@@ -57,7 +52,8 @@ object AtmosphereModel {
         val mu = dot(d, s)
         val g = p.mieG.toDouble()
         val phaseR = 3.0 / (16.0 * PI) * (1.0 + mu * mu)
-        val phaseM = 3.0 / (8.0 * PI) * ((1.0 - g * g) * (1.0 + mu * mu)) / ((2.0 + g * g) * (1.0 + g * g - 2.0 * g * mu).pow(1.5))
+        val phaseM =
+            3.0 / (8.0 * PI) * ((1.0 - g * g) * (1.0 + mu * mu)) / ((2.0 + g * g) * (1.0 + g * g - 2.0 * g * mu).pow(1.5))
 
         val sumR = DoubleArray(3)
         val sumM = DoubleArray(3)

@@ -1,6 +1,7 @@
 package net.nevinsky.abyssus.sceneview.skybox
 
 import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.sceneview.skybox.procedural.AtmosphereParams
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

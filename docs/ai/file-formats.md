@@ -42,7 +42,7 @@ Top level, bound to `SceneDto` (`src/main/kotlin/net/nevinsky/abyssus/scene/Scen
 | `id`, `name` | Shown as `name (id)`; `name` is changed by Rename Scene |
 | `ambientLightEnabled` / `ambientLight` | `color` + `intensity` |
 | `fogEnabled` / `fog` | `color`, `density`, `gradient` |
-| `skyboxEnabled` / `skyboxName` | `skyboxName` is a `SKYBOX` or `SKYBOX_PROCEDURAL` asset folder name, or `null` |
+| `skyboxEnabled` / `skyboxName` | `skyboxName` is a `SKYBOX`, `SKYBOX_PROCEDURAL` or `SKYBOX_HDR` asset folder name, or `null` |
 | `ecs` | Entities, kept as raw JSON (`JsonNode`) |
 
 **Toggles:** an `<x>Enabled` boolean gates `<x>` (or `<x>Name`). The tree folds it into an eye on the gated row. The
@@ -88,7 +88,8 @@ empty `PositionComponent: {}` is valid. Writers add fields when they change them
 | `TERRAIN` | `terrainFile`, `size`, `uv`, `splatMap`, `splatBase`, `splatR`, `splatG`, `splatB`, `splatA` (texture asset `uuid`s) |
 | `SKYBOX` | `top`, `bottom`, `left`, `right`, `front`, `back` (image files in the folder) |
 | `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults) |
-| `SKYBOX_HDR`, `TEXTURE`, `PIXMAP_TEXTURE`, `MATERIAL`, `SHADER` | Recognized for icons; not drawn by the scene view |
+| `SKYBOX_HDR` | Any; a text value naming a `.hdr` file in the folder is used, otherwise the folder's `.hdr` is found by extension |
+| `TEXTURE`, `PIXMAP_TEXTURE`, `MATERIAL`, `SHADER` | Recognized for icons; not drawn by the scene view |
 
 `uuid` can be missing (the fixture's `skybox_default` and `tree` have none).
 
@@ -99,6 +100,14 @@ pixel; the fixture is `assets/skybox_physical`). The plugin supplies these unifo
 `u_cameraHeight`, `u_planetRadius`, `u_atmosphereRadius`, `u_betaRayleigh`, `u_betaMie`, `u_heightRayleigh`,
 `u_heightMie`, `u_mieG`, `u_sunIntensity`. The vertex shader takes `attribute vec2 a_position` (the three corners of
 the triangle). A missing file or a compile error skips that sky and logs it.
+
+**`SKYBOX_HDR` is a plugin-only type** in the same sense: the plugin does not assume Mundus loads it. The folder holds a
+Radiance `.hdr` image: a `.hdr` named by any `additional` text value, else the only `.hdr`, else the first by name
+(logged). Supported: header `#?RADIANCE` or `#?RGBE`, `FORMAT=32-bit_rle_rgbe` or none, resolution line
+`-Y <height> +X <width>` only, flat or new-style run-length scanlines; `EXPOSURE` and other header lines are ignored.
+The image must be equirectangular (width = 2 x height, height at most 4096); one wider than 4096 is halved while
+reading. The horizontal centre faces `-Z`, the top row `+Y`. The fixture is `assets/skybox_hdr` (64 x 32, written by
+the test helper `HdrFixtures`).
 
 ### Reachability ("unused")
 

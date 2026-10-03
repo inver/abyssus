@@ -25,7 +25,10 @@ import net.nevinsky.abyssus.ecs.scene.FieldKind
 import net.nevinsky.abyssus.ecs.scene.FieldValue
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.projectView.ComponentTarget
+import net.nevinsky.abyssus.projectView.HDR_SKY_TYPE
+import net.nevinsky.abyssus.projectView.hdrSkyInfo
 import net.nevinsky.abyssus.projectView.SceneComponentEdits
+import net.nevinsky.abyssus.sceneview.skybox.HdrPreview
 import net.nevinsky.abyssus.sceneview.textOf
 import net.nevinsky.abyssus.projectView.describeNonAsset
 import java.awt.RenderingHints
@@ -38,7 +41,7 @@ sealed interface PanelState {
     /** No asset to describe: [message], and under it [hint] when there is one. */
     data class Empty(val message: String, val hint: String?) : PanelState
 
-    data class Details(val name: String, val meta: AssetMeta.Loaded, val faces: List<FaceCell>?) : PanelState
+    data class Details(val name: String, val meta: AssetMeta.Loaded, val faces: List<FaceCell>?, val hdr: HdrCell? = null) : PanelState
 
     /**
      * An entity of [target]'s scene, or only its component when `target.kind` is set. [addable] names the modeled kinds the
@@ -58,6 +61,9 @@ data class ComponentSection(val kind: String, val label: String, val fields: Lis
 /** One face of a skybox: [file] is what `meta.json` names (or `null`), [image] its thumbnail, null when it cannot be shown. */
 data class FaceCell(val face: String, val file: String, val image: BufferedImage?)
 
+/** An HDR sky's preview: the tone-mapped [image] and its [label] (file and size), or a null image and the [label] saying why. */
+data class HdrCell(val label: String, val image: BufferedImage?)
+
 val SKYBOX_FACES = listOf("top", "bottom", "left", "right", "front", "back")
 
 private const val SKYBOX = "SKYBOX"
@@ -70,13 +76,30 @@ fun emptyState(node: Any?): PanelState.Empty {
     return PanelState.Empty(AbyssusBundle.message("propertiesNothingToShow", name, kind), hint)
 }
 
-/** Reads the asset in [folder] for display: its Meta and, for a skybox, the face thumbnails. Safe off the EDT. */
+/** Reads the asset in [folder] for display: its Meta and, for a skybox, the face thumbnails or the HDR preview. Safe off the EDT. */
 fun readAssetState(folder: VirtualFile): PanelState {
     val meta = runReadAction { loadAssetMeta(folder) }
     return when (meta) {
         is AssetMeta.Failed -> PanelState.Empty(meta.message, null)
-        is AssetMeta.Loaded -> PanelState.Details(folder.name, meta, if (meta.type == SKYBOX) faces(folder, meta) else null)
+        is AssetMeta.Loaded -> PanelState.Details(
+            folder.name, meta,
+            if (meta.type == SKYBOX) faces(folder, meta) else null,
+            if (meta.type == HDR_SKY_TYPE) hdrCell(folder, meta) else null,
+        )
     }
+}
+
+/** The preview of an HDR sky: its image decoded and tone mapped here, so off the EDT like the rest of the state. */
+private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded): HdrCell {
+    val info = hdrSkyInfo(folder, meta.json)
+    val file = info.file ?: return HdrCell(AbyssusBundle.message("propertiesHdrNoFile"), null)
+    val image = runCatchingKeepingCancellation {
+        folder.findChild(file)?.inputStream?.buffered()?.use { HdrPreview.image(it, THUMBNAIL_WIDTH) } ?: error("missing")
+    }
+    return image.fold(
+        { HdrCell(AbyssusBundle.message("propertiesHdrLabel", file, info.width.toString(), info.height.toString()), it) },
+        { HdrCell(AbyssusBundle.message("propertiesHdrUnreadable", file, it.message ?: it.javaClass.simpleName), null) },
+    )
 }
 
 /**
@@ -132,6 +155,12 @@ private fun scaled(source: BufferedImage, maxWidth: Int, maxHeight: Int): Buffer
     }
     return out
 }
+
+/** A tone-mapped thumbnail at most [width] wide of the Radiance image [fileName] in [folder], or null when it is absent or unreadable. Off the EDT. */
+fun hdrThumbnail(folder: VirtualFile, fileName: String, width: Int): BufferedImage? = runCatchingKeepingCancellation {
+    val file = folder.takeIf { it.isValid }?.findChild(fileName)?.takeIf { it.isValid && !it.isDirectory } ?: return@runCatchingKeepingCancellation null
+    file.inputStream.buffered().use { HdrPreview.image(it, width) }
+}.getOrNull()
 
 /** A small square-bounded thumbnail of the image [fileName] in [folder], or null when it is absent or cannot be decoded. Safe off the EDT. */
 fun smallThumbnail(folder: VirtualFile, fileName: String, size: Int): BufferedImage? = thumbnail(folder, fileName, size, size)

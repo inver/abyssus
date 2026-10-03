@@ -29,6 +29,8 @@ import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.text
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.sceneview.skybox.HdrSkyFiles
+import net.nevinsky.abyssus.sceneview.skybox.RadianceHeader
 
 /** The `meta.json` type of a skybox made of six face images. */
 const val SKYBOX_TYPE = "SKYBOX"
@@ -36,8 +38,14 @@ const val SKYBOX_TYPE = "SKYBOX"
 /** The `meta.json` type of a sky computed by the asset's own shaders. */
 const val PROCEDURAL_SKY_TYPE = "SKYBOX_PROCEDURAL"
 
+/** The `meta.json` type of a sky read from a Radiance `.hdr` image. */
+const val HDR_SKY_TYPE = "SKYBOX_HDR"
+
 /** The `meta.json` types of the assets a scene's `skyboxName` can name. */
-private val SKY_TYPES = setOf(SKYBOX_TYPE, PROCEDURAL_SKY_TYPE)
+private val SKY_TYPES = setOf(SKYBOX_TYPE, PROCEDURAL_SKY_TYPE, HDR_SKY_TYPE)
+
+/** What the chooser shows of an HDR sky: its image [file] (null when the folder has none) and size (0 when unreadable). */
+data class HdrSkyInfo(val file: String?, val width: Int = 0, val height: Int = 0)
 
 /** The `additional` keys of a skybox's `meta.json` that name its face images. */
 private val FACE_KEYS = listOf("top", "bottom", "left", "right", "front", "back")
@@ -56,6 +64,7 @@ data class SkyboxChoice @JvmOverloads constructor(
     val sceneCount: Int,
     val unused: Boolean,
     val procedural: Boolean = false,
+    val hdr: HdrSkyInfo? = null,
 ) {
     /** The asset folder; null for a choice that was not read from disk. */
     var folder: VirtualFile? = null
@@ -67,23 +76,35 @@ data class SkyboxChoice @JvmOverloads constructor(
     @Volatile
     var thumbs: List<java.awt.image.BufferedImage?> = emptyList()
 
-    /** `6 faces · png`; just the count when no face names an extension. */
+    /** The asset's `meta.json` type, which picks the row's icon. */
+    val type: String get() = if (hdr != null) HDR_SKY_TYPE else if (procedural) PROCEDURAL_SKY_TYPE else SKYBOX_TYPE
+
+    /** `6 faces · png`; just the count when no face names an extension; `HDR · 64 × 32` or `HDR` for an HDR sky. */
     val detail: String
-        get() = if (procedural) AbyssusBundle.message("skyboxProcedural")
+        get() = if (hdr != null) {
+            if (hdr.width > 0) AbyssusBundle.message("skyboxHdrSize", hdr.width.toString(), hdr.height.toString())
+            else AbyssusBundle.message("skyboxHdr")
+        } else if (procedural) AbyssusBundle.message("skyboxProcedural")
         else if (formats.isEmpty()) AbyssusBundle.message("skyboxFaces", faces)
         else AbyssusBundle.message("skyboxFacesFormats", faces, formats.joinToString(", "))
 }
 
-/** The project's `SKYBOX` and `SKYBOX_PROCEDURAL` assets by folder name; [metas] holds each folder's parsed `meta.json` (absent or null when unreadable). */
-fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>): List<SkyboxChoice> {
+/**
+ * The project's `SKYBOX`, `SKYBOX_PROCEDURAL` and `SKYBOX_HDR` assets by folder name; [metas] holds each folder's parsed
+ * `meta.json` (absent or null when unreadable) and [hdr] what was read of each HDR sky's image (absent: nothing).
+ */
+@JvmOverloads
+fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>, hdr: Map<String, HdrSkyInfo> = emptyMap()): List<SkyboxChoice> {
     val references = project.scenes.filterIsInstance<SceneDto>().map(::sceneReferences)
     return project.assets.filter { it.meta.type.name in SKY_TYPES }.sortedBy { it.name }.map { asset ->
         val additional = metas[asset.name]?.obj("additional")
         val files = FACE_KEYS.mapNotNull { key -> additional?.text(key)?.takeIf { it.isNotBlank() } }
         val formats = files.mapNotNull { f -> f.substringAfterLast('.', "").lowercase().takeIf { it.isNotEmpty() } }.distinct().sorted()
         val procedural = asset.meta.type.name == PROCEDURAL_SKY_TYPE
-        SkyboxChoice(asset.name, files.size, formats, references.count { asset.name in it }, asset.unused, procedural).also { choice ->
-            choice.faceFiles = THUMB_ORDER.map { key -> additional?.text(key)?.takeIf { it.isNotBlank() } }
+        val hdrInfo = if (asset.meta.type.name == HDR_SKY_TYPE) hdr[asset.name] ?: HdrSkyInfo(null) else null
+        SkyboxChoice(asset.name, files.size, formats, references.count { asset.name in it }, asset.unused, procedural, hdrInfo).also { choice ->
+            choice.faceFiles = if (hdrInfo != null) listOfNotNull(hdrInfo.file)
+            else THUMB_ORDER.map { key -> additional?.text(key)?.takeIf { it.isNotBlank() } }
         }
     }
 }
@@ -98,7 +119,18 @@ fun loadSkyboxChoices(project: Project, abss: VirtualFile): List<SkyboxChoice>? 
         }.getOrNull()
     }
     val folders = ProjectLayout.assetFolders(abss).associateBy { it.name }
-    return skyboxChoices(dto, metas).onEach { it.folder = folders[it.name] }
+    val hdr = dto.assets.filter { it.meta.type.name == HDR_SKY_TYPE }.mapNotNull { asset ->
+        folders[asset.name]?.let { asset.name to hdrSkyInfo(it, metas[asset.name]) }
+    }.toMap()
+    return skyboxChoices(dto, metas, hdr).onEach { it.folder = folders[it.name] }
+}
+
+/** The image an HDR sky folder uses and the size its header declares; size 0 when the header cannot be read. */
+fun hdrSkyInfo(folder: VirtualFile, meta: JsonNode?): HdrSkyInfo {
+    val named = meta?.obj("additional")?.properties()?.mapNotNull { it.value.takeIf(JsonNode::isTextual)?.asText() }.orEmpty()
+    val file = HdrSkyFiles.choose(folder.children.filter { !it.isDirectory }.map { it.name }, named)?.file ?: return HdrSkyInfo(null)
+    val header = runCatchingKeepingCancellation { folder.findChild(file)?.inputStream?.buffered()?.use(RadianceHeader::read) }.getOrNull()
+    return HdrSkyInfo(file, header?.width ?: 0, header?.height ?: 0)
 }
 
 /** The `.abss` project of a scene's own `skyboxName` row, which is what gets the chooser; null for any other row. */

@@ -34,7 +34,8 @@ Two kinds of tests:
 `src/test/testData/project/`:
 - **`Untitled/`:** a Mundus project with `Untitled.abss` and `scenes/Main Scene.scene`. The scene has models,
   terrain, a skybox, `Camera 4` looking at entity 3, and a parented entity. `assets/` holds 4 models, `tree`, a
-  terrain and `skybox_default`.
+  terrain, `skybox_default`, `skybox_physical` (a procedural sky) and `skybox_hdr` (a 64 x 32 Radiance sky that the
+  test helper `HdrFixtures` wrote; tests build other HDR skies with it in temp folders).
 - **`Animated/`:** `scenes/Main.scene` with one animated model (`assets/model_anim`). It has no `.abss`.
 
 **Size limit:** the binary assets exceed the test VFS size limit, so platform tests copy only what they need (the

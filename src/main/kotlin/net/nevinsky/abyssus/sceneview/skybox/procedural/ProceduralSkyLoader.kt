@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.nevinsky.abyssus.sceneview.skybox
+package net.nevinsky.abyssus.sceneview.skybox.procedural
 
 import net.nevinsky.abyssus.sceneview.AssetLoader
 import net.nevinsky.abyssus.sceneview.MetaType

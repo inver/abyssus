@@ -2,6 +2,8 @@ package net.nevinsky.abyssus.sceneview.skybox
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.sceneview.ProjectAssetFiles
+import net.nevinsky.abyssus.sceneview.skybox.procedural.AtmosphereParams
+import net.nevinsky.abyssus.sceneview.skybox.procedural.ProceduralSkyLoader
 import java.io.File
 import java.nio.file.Files
 

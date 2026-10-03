@@ -15,7 +15,7 @@ picking, camera markers, look-through and move/rotate gizmos. Required behavior:
 | `SceneInteraction` | Mouse and key logic without Swing or GL: click → pick/select, drag → gizmo or orbit/pan |
 | `SceneRenderer` | One frame: environment, skybox, grid, terrains, models, markers, highlight, gizmo; `pick` |
 | `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind asset loading and per-entity instances on top of `SceneAssets` / `AssetCache` |
-| `skybox/` | `SkyLoader` picks `SkyboxLoader` (six faces, drawn on a cube) or `ProceduralSkyLoader` (the asset's own GLSL, drawn on a fullscreen triangle) by `meta.json` type; `SunDirection`, `AtmosphereParams` and `AtmosphereModel` (a CPU twin of the sky shader) hold the testable parts |
+| `skybox/` | `SkyLoader` picks `SkyboxLoader` (six faces, drawn on a cube), `ProceduralSkyLoader` (the asset's own GLSL, drawn on a fullscreen triangle) or `HdrSkyLoader` (a Radiance `.hdr`, drawn on a fullscreen triangle and built into a lighting environment by `HdrEnvironmentBuild`, one GPU step per frame) by `meta.json` type; `SunDirection`, `AtmosphereParams`, `AtmosphereModel` (a CPU twin of the sky shader), `RadianceDecoder`, `HdrSkyFiles`, `Equirect` and `HdrToneMap` hold the testable parts |
 | `SceneMarkers`, `CameraFrustum` | Camera body and frustum, light markers, and their pick bounds |
 | `ScenePicker` | Ray from a pixel, nearest hit over boxes and terrain heights |
 | `ScenePreview` | Applies an in-progress drag over the placements |
