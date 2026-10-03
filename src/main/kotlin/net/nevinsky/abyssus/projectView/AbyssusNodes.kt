@@ -30,7 +30,7 @@ import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.ui.SimpleTextAttributes
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.AssetReadResult
-import net.nevinsky.abyssus.sceneview.Asset
+import net.nevinsky.abyssus.assets.files.Asset
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.filetype.AbyssusProjectIcons
 import net.nevinsky.abyssus.filetype.AssetIcons

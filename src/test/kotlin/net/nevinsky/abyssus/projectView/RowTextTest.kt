@@ -17,7 +17,7 @@
 package net.nevinsky.abyssus.projectView
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.sceneview.Asset
+import net.nevinsky.abyssus.assets.files.Asset
 import net.nevinsky.abyssus.filetype.SceneJson
 
 class RowTextTest : BasePlatformTestCase() {

@@ -148,11 +148,17 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
         myFixture.copyFileToProject("Untitled/Untitled.abss", "Untitled/Untitled.abss")
         myFixture.copyFileToProject("Untitled/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
         myFixture.copyFileToProject("Untitled/assets/skybox_default/meta.json", "Untitled/assets/skybox_default/meta.json")
+        myFixture.copyFileToProject("Untitled/assets/skybox_physical/meta.json", "Untitled/assets/skybox_physical/meta.json")
         val abss = myFixture.findFileInTempDir("Untitled/Untitled.abss")
-        val choice = loadSkyboxChoices(project, abss)!!.single()
-        assertEquals("skybox_default", choice.name)
-        assertEquals("6 faces · png", choice.detail)
-        assertFalse(choice.unused)
-        assertEquals(1, choice.sceneCount)
+        val choices = loadSkyboxChoices(project, abss)!!.associateBy { it.name }
+        // Main Scene names skybox_physical; skybox_default is in the project but used by no scene
+        val physical = choices.getValue("skybox_physical")
+        assertEquals("procedural sky", physical.detail)
+        assertFalse(physical.unused)
+        assertEquals(1, physical.sceneCount)
+        val default = choices.getValue("skybox_default")
+        assertEquals("6 faces · png", default.detail)
+        assertTrue(default.unused)
+        assertEquals(0, default.sceneCount)
     }
 }

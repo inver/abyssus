@@ -1,9 +1,10 @@
 package net.nevinsky.abyssus
 
+import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.scene.SceneDto
-import net.nevinsky.abyssus.sceneview.Asset
-import net.nevinsky.abyssus.sceneview.MetaBase
-import net.nevinsky.abyssus.sceneview.MetaType
+import net.nevinsky.abyssus.assets.files.Asset
+import net.nevinsky.abyssus.assets.files.MetaBase
+import net.nevinsky.abyssus.assets.files.MetaType
 import java.io.File
 import java.util.UUID
 

@@ -26,7 +26,7 @@ import net.nevinsky.abyssus.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.projectView.AbyssusRootNode
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.sceneview.Asset
+import net.nevinsky.abyssus.assets.files.Asset
 import net.nevinsky.abyssus.testAsset
 import java.util.UUID
 
@@ -78,8 +78,8 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         assertEquals("SKYBOX_HDR", type(assets.single { it.name == "skybox_hdr" }))
         assertEquals("TERRAIN", type(assets.single { it.name.startsWith("terrain_") }))
         assertEquals(4, assets.count { type(it) == "MODEL" && it.name.startsWith("model_") })
-        // Main Scene names four of them directly; `tree` and one model are not reached; the skybox is named by the scene
-        assertEquals(setOf("skybox_hdr", "skybox_physical", "tree", "model_828d51e4-8427-4769-bcb6-13f8f21f23e9"), assets.filter { it.unused }.map { it.name }.toSet())
+        // Main Scene names four of them directly, its skybox is `skybox_physical`; `tree`, one model and the other two skyboxes are not reached
+        assertEquals(setOf("skybox_hdr", "skybox_default", "tree", "model_828d51e4-8427-4769-bcb6-13f8f21f23e9"), assets.filter { it.unused }.map { it.name }.toSet())
     }
 
     fun testProjectWithoutAssetsFolderHasEmptyList() {

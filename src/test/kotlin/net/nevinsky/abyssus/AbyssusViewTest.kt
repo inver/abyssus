@@ -105,7 +105,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals(true, scene.fogEnabled)
         assertEquals(0.001f, scene.fog!!.density!!, 0f)
         assertEquals(0.3f, scene.ambientLight!!.intensity!!, 0f)
-        assertEquals("skybox_default", scene.skyboxName)
+        assertEquals("skybox_physical", scene.skyboxName)
         assertEquals(listOf("id", "name", "ambientLightEnabled", "ambientLight", "fogEnabled", "fog", "skyboxEnabled", "skyboxName", "ecs"),
             childrenOf(scene).map { it.name })
         assertEquals(before.toList(), file.contentsToByteArray().toList())
@@ -180,9 +180,9 @@ class AbyssusViewTest : BasePlatformTestCase() {
         fixture()
         val scene = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()
         val top = children(scene).map { text(it) }
-        assertEquals(listOf("ambientLight", "fog", "skybox: skybox_default", "ecs  7 entities"), top)
+        assertEquals(listOf("ambientLight", "fog", "skybox: skybox_physical", "ecs  7 entities"), top)
         assertTrue(top.none { it.startsWith("id") || it.startsWith("name") })
-        assertTrue("skybox: skybox_default" in top)
+        assertTrue("skybox: skybox_physical" in top)
         assertTrue(top.none { it.endsWith("Enabled: true") || it.endsWith("Enabled: false") })
         val fog = children(scene).first { text(it) == "fog" }
         assertEquals(true, (fog as DtoEntryNode).value.enabled)

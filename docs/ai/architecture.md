@@ -4,10 +4,14 @@
 
 | Module | What | Depends on |
 |---|---|---|
-| root (`src/`) | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.10) | `:gdx-model`, Jackson, libGDX, LWJGL3-AWT |
+| root (`src/`) | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.10) | `:core`, `:gdx-model`, Jackson, libGDX, LWJGL3-AWT |
+| `core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline, and the models, terrains and skies it builds | `:gdx-model`, Jackson, libGDX |
 | `gdx-model/` | Plain JVM library: libGDX model runtime with 32-bit mesh indices and an Assimp importer | libGDX, LWJGL Assimp |
 
-`gdx-model` must not import IntelliJ or plugin code (see `gdx-model/README.md`). The plugin does not depend on Mundus.
+`gdx-model` and `core` must not import IntelliJ or plugin code (see their READMEs). `core` is wired by constructors:
+its composition root `AssetLoading` takes a `JsonProcessor`, an `AssetLog`, an executor and the sky `ShaderSource`; in
+the IDE the light application service `AbyssusCore` builds one (IDE log, IDE pool) and hands it to every scene view.
+The plugin does not depend on Mundus.
 
 ## What the plugin registers
 
@@ -48,9 +52,10 @@ the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows
 2. `SceneRenderParams.from` → `SceneContent.of` turns the `ecs` JSON into placements: `models`, `terrains`,
    `lights`, `cameras`, plus the skybox name. The view reads the JSON directly; it does not use the `ecs` package.
 3. `SceneViewPanel` hosts a `GuardedGLCanvas`. A Swing `Timer` renders frames through
-   `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each backed
-   by an `AssetCache`) and draws markers (`SceneMarkers`) and gizmos (`sceneview/gizmo/`).
-4. An HDR sky also lights the content. `HdrSkyLoader` decodes the `.hdr` on the pool thread, then
+   `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each holding a
+   `core` `SceneAssets` from `AssetLoading`, backed by an `AssetCache`) and draws markers (`SceneMarkers`) and gizmos
+   (`sceneview/gizmo/`).
+4. An HDR sky also lights the content. `core`'s `HdrSkyLoader` decodes the `.hdr` on the pool thread, then
    `HdrEnvironmentBuild` builds a specular cube, an irradiance cube and six axis colors on the GPU, one step per
    frame. Once built, `SceneSkybox.environment` hands them to `SceneRenderer`, which (`SceneAmbient.of`) swaps
    `ColorAttribute.AmbientLight` for `gdx-model`'s `EnvironmentLightAttribute` after drawing the grid: the PBR shader
@@ -113,4 +118,5 @@ checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the proper
   (`src/main/kotlin/net/nevinsky/abyssus/dto/ConfigFileReader.kt`). Add the extension to `ProjectLayout.ASSET_EXTENSIONS`.
 - **A new ECS component:** write a `ComponentCodec` and add it to `ComponentCodecs`
   (`src/main/kotlin/net/nevinsky/abyssus/ecs/scene/ComponentCodecs.kt`).
-- **A new asset kind drawn in the scene view:** an `AssetLoader` for `SceneAssets`, and a placement in `SceneContent`.
+- **A new asset kind drawn in the scene view:** an `AssetLoader` in `core` (built in `AssetLoading`), and a placement in
+  `SceneContent`.

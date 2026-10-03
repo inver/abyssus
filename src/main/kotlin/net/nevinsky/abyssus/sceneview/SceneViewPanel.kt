@@ -16,6 +16,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.AbyssusCore
+import com.intellij.openapi.components.service
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
 import com.intellij.openapi.diagnostic.thisLogger
@@ -54,7 +56,7 @@ fun cameraChoices(content: SceneContent, freeLabel: String): List<CameraChoice> 
  */
 class SceneViewPanel(
     initial: SceneRenderParams,
-    private val renderer: SceneRenderer = SceneRenderer(),
+    private val renderer: SceneRenderer = service<AbyssusCore>().let { SceneRenderer(it.loading, it.sceneShaders) },
 ) : JPanel(BorderLayout()), SceneView {
 
     private val frame = GdxFrame()

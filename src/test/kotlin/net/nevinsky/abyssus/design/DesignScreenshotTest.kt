@@ -36,7 +36,7 @@ import java.awt.GridLayout
 import javax.swing.JPanel
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
-import net.nevinsky.abyssus.sceneview.Asset
+import net.nevinsky.abyssus.assets.files.Asset
 import net.nevinsky.abyssus.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.projectView.AbyssusRootNode
 import net.nevinsky.abyssus.projectView.DtoEntry

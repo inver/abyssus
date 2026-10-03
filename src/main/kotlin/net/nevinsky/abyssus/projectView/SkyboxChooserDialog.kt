@@ -16,6 +16,9 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.assets.sky.hdr.HdrPreview
+import net.nevinsky.abyssus.AbyssusCore
+import com.intellij.openapi.components.service
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
@@ -61,7 +64,12 @@ private const val THUMB_PIXELS = 56
  * "Choose a skybox": the project's skyboxes after a None entry, a name filter, and Cancel / Assign. Nothing is written
  * here; after [showAndGet] returns true, [chosen] is the folder to assign (`null` for None).
  */
-class SkyboxChooserDialog(project: Project, choices: List<SkyboxChoice>, current: String?) : DialogWrapper(project) {
+class SkyboxChooserDialog(
+    project: Project,
+    choices: List<SkyboxChoice>,
+    current: String?,
+    private val hdrPreview: HdrPreview = service<AbyssusCore>().loading.hdrPreview,
+) : DialogWrapper(project) {
     private val model = SkyboxPickerModel(choices, current)
     private val listModel = CollectionListModel(model.entries)
     private val list = JBList(listModel)
@@ -109,7 +117,7 @@ class SkyboxChooserDialog(project: Project, choices: List<SkyboxChoice>, current
         ApplicationManager.getApplication().executeOnPooledThread {
             for (choice in choices) {
                 val dir = choice.folder ?: continue
-                choice.thumbs = if (choice.hdr != null) listOf(choice.hdr.file?.let { hdrThumbnail(dir, it, THUMB_PIXELS) })
+                choice.thumbs = if (choice.hdr != null) listOf(choice.hdr.file?.let { hdrThumbnail(dir, it, THUMB_PIXELS, hdrPreview) })
                 else choice.faceFiles.map { name -> name?.let { smallThumbnail(dir, it, THUMB_PIXELS) } }
             }
             ApplicationManager.getApplication().invokeLater({ if (!isDisposed) list.repaint() }, ModalityState.any())

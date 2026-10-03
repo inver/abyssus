@@ -13,13 +13,14 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | Everything CI runs (tests, verification) | `./gradlew check` |
 | Plugin tests only | `./gradlew :test` |
 | `gdx-model` tests only | `./gradlew :gdx-model:test` |
+| `core` tests only | `./gradlew :core:test` (one class: `./gradlew :core:test --tests 'net.nevinsky.abyssus.assets.files.AssetFilesTest'`) |
 | One test class | `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.OrbitCameraTest'` |
 | Also run GL tests (open a window) | add `-Dabyssus.glTests=true` |
 | Sandbox IDE | `./gradlew runIde` (open a project with `-PideProject=/path/to/project`) |
 | Plugin zip | `./gradlew buildPlugin` (to `build/distributions/`) |
 | Docs path check | `scripts/check-docs.sh` |
 
-Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` and fails there with
+Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` and `core` and fails there with
 "No tests found".
 
 ## Layout
@@ -29,20 +30,30 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   - `scene/`: the scene DTOs (`SceneDto`, fog, lights).
   - `projectView/`: the Abyssus tree, eye toggles, Rename Scene, skybox chooser, and `editSceneJson`.
   - `properties/`: the Abyssus Properties tool window.
-  - `sceneview/`: the scene view: GL canvas, renderer, picking, cameras, gizmos, transform write-back.
+  - `sceneview/`: the scene view: GL canvas, renderer, picking, cameras, gizmos, transform write-back. Asset loading
+    itself is in `core`.
   - `ecs/`: Ashley components, systems and a scene ECS loader/writer. Only tests use those; `ecs/scene/ComponentEditor.kt`
     (add, update and remove a component in the scene JSON) is the part the plugin uses.
   - `filetype/`, `language/`: file types, icons, scene JSON, the GLTF PSI.
 - `gdx-model/`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import), forked from Mundus.
   See `gdx-model/README.md`.
+- `core/`: a plain JVM library, root package `net.nevinsky.abyssus.assets`: asset folders and `meta.json`
+  (`AssetFiles`, `JsonProcessor`), the loading pipeline (`AssetLoader`, `AssetCache`, `SceneAssets`), and the loaders
+  with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).
+  `AssetLoading` wires it; the plugin builds one in `AbyssusCore`. See `core/README.md`.
 - `src/main/java/`: only the grammar sources `Gltf.bnf` / `Gltf.flex`; `src/main/gen` is generated from them.
-- `src/test/kotlin/`, `gdx-model/src/test/kotlin/`: tests. Fixtures in `src/test/testData/project/`.
+- `src/test/kotlin/`, `gdx-model/src/test/kotlin/`, `core/src/test/kotlin/`: tests. Fixtures in `src/test/testData/project/`
+  (shared with `core`'s tests). Test helpers shared across modules live in `testFixtures` source sets
+  (`gdx-model`: `TestGl`; `core`: `HdrFixtures`).
 - `openspec/`: specs and changes (see Workflow). `docs/superpowers/`: one historic design and plan.
 
 ## Hard rules
 
 - **Don't edit `src/main/gen`.** It is git-ignored and regenerated from `Gltf.bnf` / `Gltf.flex`.
 - **`gdx-model` stays a plain JVM library**: no IntelliJ or plugin imports, so other libGDX projects can use it.
+- **`core` stays a plain JVM library wired by constructors**: no IntelliJ or plugin imports, and no `object` or
+  `companion object` in `core/src/main` (a `data object` case of a sealed type is fine). Pass collaborators in;
+  `./gradlew :core:checkNoSingletons` (part of `check`) fails otherwise.
 - **Write scene files only through `editSceneJson`** (`src/main/kotlin/net/nevinsky/abyssus/projectView/EnabledToggle.kt`).
   It edits the document as one undoable command and keeps the file's formatting and number text. The only other
   writer is `SceneFormatListener`, which pretty-prints a `.scene` / `.abss` opened in the text editor.

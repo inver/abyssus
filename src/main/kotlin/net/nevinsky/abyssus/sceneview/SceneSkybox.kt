@@ -19,28 +19,25 @@ package net.nevinsky.abyssus.sceneview
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.sceneview.skybox.HdrEnvironment
-import net.nevinsky.abyssus.sceneview.skybox.HdrSky
-import net.nevinsky.abyssus.sceneview.skybox.PreparedSky
-import net.nevinsky.abyssus.sceneview.skybox.procedural.ProceduralSky
-import net.nevinsky.abyssus.sceneview.skybox.cube.SkyboxCube
+import net.nevinsky.abyssus.assets.loading.SceneAssets
+import net.nevinsky.abyssus.assets.sky.PreparedSky
+import net.nevinsky.abyssus.assets.sky.Sky
+import net.nevinsky.abyssus.assets.sky.hdr.HdrEnvironment
+import net.nevinsky.abyssus.assets.sky.hdr.HdrSky
 import net.nevinsky.abyssus.sceneview.skybox.SunDirection
 import java.io.File
-import java.util.concurrent.Executor
 
 /**
- * The scene's skybox (a cube of faces, a procedural sky or an HDR sky), drawn first with depth testing and writing off, following the camera's orientation but not its
- * position, so everything else is always in front of it. Call only on the GL thread with the context current.
+ * The scene's skybox (a cube of faces, a procedural sky or an HDR sky), drawn first with depth testing and writing off,
+ * following the camera's orientation but not its position, so everything else is always in front of it. Call only on
+ * the GL thread with the context current.
  */
-class SceneSkybox(executor: Executor, loader: AssetLoader<PreparedSky, Disposable>) : Disposable {
-    private val assets = SceneAssets(executor, loader)
-
+class SceneSkybox(private val assets: SceneAssets<PreparedSky, Sky>) : Disposable {
     val isLoading: Boolean get() = assets.isLoading
 
-    private val program = Shaders.load("skybox")
-    private val viewProj = Matrix4()
+    private val sunDirection = Vector3()
 
     /**
      * Draws the skybox named [name] if it is loaded (and starts loading it); nothing for null. A procedural sky is lit
@@ -53,18 +50,7 @@ class SceneSkybox(executor: Executor, loader: AssetLoader<PreparedSky, Disposabl
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
         Gdx.gl.glDepthMask(false)
         Gdx.gl.glDisable(GL20.GL_CULL_FACE)
-        when (sky) {
-            is SkyboxCube -> {
-                viewProj.set(camera.view)
-                viewProj.setTranslation(0f, 0f, 0f)
-                viewProj.mulLeft(camera.projection)
-                program.bind()
-                program.setUniformMatrix("u_viewProj", viewProj)
-                sky.draw(program)
-            }
-            is ProceduralSky -> sky.draw(camera, sun)
-            is HdrSky -> sky.draw(camera)
-        }
+        sky.draw(camera, sunDirection.set(sun.x, sun.y, sun.z))
         Gdx.gl.glDepthMask(true)
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
     }
@@ -74,6 +60,5 @@ class SceneSkybox(executor: Executor, loader: AssetLoader<PreparedSky, Disposabl
 
     override fun dispose() {
         assets.dispose()
-        program.dispose()
     }
 }

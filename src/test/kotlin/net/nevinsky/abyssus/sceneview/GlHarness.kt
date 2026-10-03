@@ -56,7 +56,7 @@ object GlHarness {
         var error: Throwable? = null
         val pool = Executors.newCachedThreadPool { r -> Thread(r).also { it.isDaemon = true } }
         val frame = GdxFrame()
-        val renderer = SceneRenderer(executor ?: pool).also { it.params = params }
+        val renderer = testRenderer(executor ?: pool).also { it.params = params }
         var count = 0
         lateinit var timer: Timer
         lateinit var window: JFrame

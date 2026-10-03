@@ -16,6 +16,7 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.assets.files.Asset
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
@@ -114,7 +115,7 @@ internal class ChooseButton(tooltip: String?, run: (row: Int) -> Unit) : RowActi
 internal const val ACTION_GAP = 8
 
 /** The unused badge of an asset row, or null for any other row. */
-internal fun unusedBadgeFor(entry: DtoEntry): RowAction? = if ((entry.value as? net.nevinsky.abyssus.sceneview.Asset<*>)?.unused == true) UnusedBadge() else null
+internal fun unusedBadgeFor(entry: DtoEntry): RowAction? = if ((entry.value as? Asset<*>)?.unused == true) UnusedBadge() else null
 
 /**
  * The bounds of [actions] (rightmost first) on the row [row], each vertically centred, placed leftwards from

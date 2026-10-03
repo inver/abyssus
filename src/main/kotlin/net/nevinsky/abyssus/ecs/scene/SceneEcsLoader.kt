@@ -19,7 +19,7 @@ package net.nevinsky.abyssus.ecs.scene
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.dto.obj
+import net.nevinsky.abyssus.assets.json.obj
 import net.nevinsky.abyssus.ecs.NO_ENTITY
 import net.nevinsky.abyssus.ecs.component.IdComponent
 import net.nevinsky.abyssus.ecs.component.ParentComponent

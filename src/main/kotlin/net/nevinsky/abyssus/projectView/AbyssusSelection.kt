@@ -21,7 +21,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.Topic
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.sceneview.Asset
+import net.nevinsky.abyssus.assets.files.Asset
 import net.nevinsky.abyssus.dto.ProjectLayout
 
 fun interface AbyssusSelectionListener {

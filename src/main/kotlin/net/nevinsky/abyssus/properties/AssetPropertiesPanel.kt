@@ -43,7 +43,7 @@ import net.nevinsky.abyssus.projectView.AbyssusSelectionListener
 import net.nevinsky.abyssus.projectView.DtoEntryNode
 import net.nevinsky.abyssus.projectView.assetFolderOf
 import net.nevinsky.abyssus.projectView.componentTargetOf
-import net.nevinsky.abyssus.sceneview.Asset
+import net.nevinsky.abyssus.assets.files.Asset
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Color

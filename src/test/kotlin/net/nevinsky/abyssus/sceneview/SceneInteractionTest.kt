@@ -47,7 +47,7 @@ class SceneInteractionTest {
     }
 
     private fun setup(orbit: OrbitCamera = OrbitCamera.from(CameraParams.DEFAULT)): Setup {
-        val renderer = SceneRenderer(executor = { it.run() }).also { it.params = mainParams }
+        val renderer = testRenderer().also { it.params = mainParams }
         val interaction = SceneInteraction(renderer, orbit)
         interaction.size = ViewSize(width, height, width, height)
         renderer.updateCamera(width, height, orbit)

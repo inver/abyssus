@@ -11,7 +11,8 @@
 | One method | `./gradlew :test --tests 'net.nevinsky.abyssus.AbyssusViewTest.testNodeTree'` |
 | GL tests too | add `-Dabyssus.glTests=true` (opens a window; needs a display) |
 
-**Use `:test` with `--tests`.** Plain `test --tests X` also runs `:gdx-model:test`, which fails with "No tests found".
+**Use `:test` with `--tests`.** Plain `test --tests X` also runs `:gdx-model:test` and `:core:test`, which fail with
+"No tests found". For `core`, use `./gradlew :core:test --tests '<class>'`.
 Results are in `build/test-results/test/*.xml`, and a later run overwrites them.
 
 ## Layout
@@ -19,6 +20,12 @@ Results are in `build/test-results/test/*.xml`, and a later run overwrites them.
 - `src/test/kotlin/net/nevinsky/abyssus/`: plugin tests, mirroring the main packages (`projectView/`, `sceneview/`,
   `ecs/`, `properties/`, `dto/`, `filetype/`).
 - `gdx-model/src/test/kotlin/`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`).
+- `core/src/test/kotlin/`: asset reading and loading tests, plain JUnit with no IntelliJ classes. They read the shared
+  fixtures through `testProject(name)` (Gradle passes the folder as `abyssus.testData`) and build the loading graph
+  with `testLoading(log, executor)`. `AssetLoadingGlTest` covers the `asset-loading` spec on real GL.
+- Shared test helpers live in `testFixtures` source sets: `gdx-model`'s `TestGl` (a GL 3.2 core context for one
+  block) and `core`'s `HdrFixtures` (Radiance files from a pixel function). Plugin GL tests build their renderer with
+  `testRenderer()` (`sceneview/TestRendering.kt`), wired the way `AbyssusCore` wires it in the IDE.
 - Plugin tests use JUnit 4 (`junit:junit:4.13.2`) and the IntelliJ test framework.
 
 Two kinds of tests:
@@ -48,7 +55,7 @@ an object was dragged.
 
 ## GL tests
 
-- **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `LargeMeshGlTest`) run only with
+- **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `LargeMeshGlTest`, `core`'s `*GlTest`) run only with
   `-Dabyssus.glTests=true` on a machine with a display. Otherwise `GlHarness.enabled` is false and they are skipped
   (counted as skipped, not failed).
 - **Harness:** `GlHarness` (`src/test/kotlin/net/nevinsky/abyssus/sceneview/GlHarness.kt`) renders a few frames on

@@ -28,7 +28,9 @@ import net.nevinsky.abyssus.projectView.ComponentTarget
 import net.nevinsky.abyssus.projectView.HDR_SKY_TYPE
 import net.nevinsky.abyssus.projectView.hdrSkyInfo
 import net.nevinsky.abyssus.projectView.SceneComponentEdits
-import net.nevinsky.abyssus.sceneview.skybox.HdrPreview
+import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.AbyssusCore
+import net.nevinsky.abyssus.assets.sky.hdr.HdrPreview
 import net.nevinsky.abyssus.sceneview.textOf
 import net.nevinsky.abyssus.projectView.describeNonAsset
 import java.awt.RenderingHints
@@ -91,10 +93,11 @@ fun readAssetState(folder: VirtualFile): PanelState {
 
 /** The preview of an HDR sky: its image decoded and tone mapped here, so off the EDT like the rest of the state. */
 private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded): HdrCell {
-    val info = hdrSkyInfo(folder, meta.json)
+    val loading = service<AbyssusCore>().loading
+    val info = hdrSkyInfo(folder, meta.json, loading.hdrFiles, loading.decoder)
     val file = info.file ?: return HdrCell(AbyssusBundle.message("propertiesHdrNoFile"), null)
     val image = runCatchingKeepingCancellation {
-        folder.findChild(file)?.inputStream?.buffered()?.use { HdrPreview.image(it, THUMBNAIL_WIDTH) } ?: error("missing")
+        folder.findChild(file)?.inputStream?.buffered()?.use { loading.hdrPreview.image(it, THUMBNAIL_WIDTH) } ?: error("missing")
     }
     return image.fold(
         { HdrCell(AbyssusBundle.message("propertiesHdrLabel", file, info.width.toString(), info.height.toString()), it) },
@@ -157,9 +160,9 @@ private fun scaled(source: BufferedImage, maxWidth: Int, maxHeight: Int): Buffer
 }
 
 /** A tone-mapped thumbnail at most [width] wide of the Radiance image [fileName] in [folder], or null when it is absent or unreadable. Off the EDT. */
-fun hdrThumbnail(folder: VirtualFile, fileName: String, width: Int): BufferedImage? = runCatchingKeepingCancellation {
+fun hdrThumbnail(folder: VirtualFile, fileName: String, width: Int, preview: HdrPreview): BufferedImage? = runCatchingKeepingCancellation {
     val file = folder.takeIf { it.isValid }?.findChild(fileName)?.takeIf { it.isValid && !it.isDirectory } ?: return@runCatchingKeepingCancellation null
-    file.inputStream.buffered().use { HdrPreview.image(it, width) }
+    file.inputStream.buffered().use { preview.image(it, width) }
 }.getOrNull()
 
 /** A small square-bounded thumbnail of the image [fileName] in [folder], or null when it is absent or cannot be decoded. Safe off the EDT. */

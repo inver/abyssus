@@ -13,7 +13,7 @@ needs them.
 | `docs/ai/glossary.md` | Mundus and Abyssus terms | What a word means here |
 | `docs/ai/conventions.md` | JSON, writing files, errors, UI text, code style | How code is written |
 | `docs/ai/testing.md` | Test layout, fixtures, GL tests, seams | How to test |
-| Package `README.md`s (`sceneview`, `projectView`, `ecs`, `gdx-model`) | The non-obvious parts of one package | That package's internals |
+| Package `README.md`s (`sceneview`, `projectView`, `ecs`, `gdx-model`, `core`) | The non-obvious parts of one package | That package's internals |
 | `openspec/specs/` | One spec per capability (13 today) | **Required behavior.** Read the capability before changing a feature |
 | `openspec/changes/` | Changes in progress: proposal, delta specs, design, tasks | What is being changed and why |
 | `openspec/changes/archive/` | Finished changes, dated | Why past decisions were made |

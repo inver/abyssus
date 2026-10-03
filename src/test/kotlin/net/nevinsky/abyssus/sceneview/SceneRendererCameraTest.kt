@@ -41,7 +41,7 @@ class SceneRendererCameraTest {
             parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
             CameraParams.DEFAULT,
         )
-        return SceneRenderer(executor = { it.run() }).also { it.params = params }
+        return testRenderer().also { it.params = params }
     }
 
     private fun orbitAt(target: Vec3) = OrbitCamera(target, 10f, 0f, 0f)

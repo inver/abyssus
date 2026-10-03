@@ -4,12 +4,11 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.JsonProcessor
+import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.dto.ProjectLayout.SCENES_DIR
 import net.nevinsky.abyssus.dto.ProjectLayout.isScene
 import net.nevinsky.abyssus.scene.SceneDto
-import net.nevinsky.abyssus.sceneview.Asset
-import net.nevinsky.abyssus.sceneview.ProjectAssetFiles
+import net.nevinsky.abyssus.assets.files.Asset
 
 @Service(Service.Level.PROJECT)
 class ProjectReader(val project: Project) : ConfigFileReader<ProjectDto> {
@@ -25,7 +24,7 @@ class ProjectReader(val project: Project) : ConfigFileReader<ProjectDto> {
     }
 
     override fun read(file: VirtualFile): AssetReadResult<ProjectDto> = runCatchingKeepingCancellation {
-        val name = service<JsonProcessor>().parse(file.text(), ProjectDto::class.java).name
+        val name = service<AbyssusCore>().json.parse(file.text(), ProjectDto::class.java).name
         val scenes = sceneFiles(file).map { it to service<SceneReader>().read(it) }
         val roots = scenes.flatMap { (_, result) -> result.obj?.let(::sceneReferences) ?: emptySet() }
             .toSet()
@@ -42,7 +41,7 @@ class ProjectReader(val project: Project) : ConfigFileReader<ProjectDto> {
     )
 
     private fun readAssets(abss: VirtualFile): List<Asset<Any>> = runCatchingKeepingCancellation {
-        return project.getService(ProjectAssetFiles::class.java).loadShortAssets(abss)
+        return ProjectAssetListing(service<AbyssusCore>().json).list(abss)
     }.getOrElse { emptyList() }
 
     private fun sceneFiles(projectFile: VirtualFile): List<VirtualFile> =

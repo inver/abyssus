@@ -58,10 +58,12 @@ dependencies {
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
     testImplementation("junit:junit:4.13.2")
+    // HdrFixtures: Radiance test images from a pixel function
+    testImplementation(testFixtures(project(":core")))
 
     // JSON reading/writing for asset files; the platform does not ship jackson-databind, so it is bundled
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.22.3")
+    implementation("com.fasterxml.jackson.core:jackson-databind:${properties("jacksonVersion").get()}")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:${properties("jacksonVersion").get()}")
 
     // LWJGL 3 + AWT bridge for the OpenGL scene panel
     val lwjglVersion = properties("lwjglVersion").get()
@@ -85,6 +87,11 @@ dependencies {
 
     // Model runtime + Assimp importer (brings lwjgl-assimp and its natives); the IDE provides Kotlin and SLF4J
     implementation(project(":gdx-model")) {
+        exclude(group = "org.jetbrains.kotlin")
+        exclude(group = "org.slf4j")
+    }
+    // Asset reading and loading (plain JVM, see core/README.md); the IDE provides Kotlin and SLF4J here too
+    implementation(project(":core")) {
         exclude(group = "org.jetbrains.kotlin")
         exclude(group = "org.slf4j")
     }

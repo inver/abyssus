@@ -18,8 +18,8 @@ package net.nevinsky.abyssus.sceneview
 
 import net.nevinsky.abyssus.filetype.SceneJson
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.dto.float
-import net.nevinsky.abyssus.dto.obj
+import net.nevinsky.abyssus.assets.json.float
+import net.nevinsky.abyssus.assets.json.obj
 import net.nevinsky.abyssus.scene.SceneDto
 import java.io.File
 import kotlin.math.exp

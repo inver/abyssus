@@ -16,6 +16,9 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.assets.AssetLoading
+import java.io.File
+import net.nevinsky.abyssus.assets.ShaderSource
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
@@ -33,7 +36,6 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
 import com.intellij.openapi.Disposable
-import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.core.model.Model as ContentModel
 import net.nevinsky.abyssus.core.shader.DefaultShaderProvider
 import net.nevinsky.abyssus.core.shader.EnvironmentLightAttribute
@@ -47,33 +49,19 @@ import net.nevinsky.abyssus.sceneview.gizmo.GizmoHandles
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoHit
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
 import net.nevinsky.abyssus.sceneview.gizmo.canRotate
-import net.nevinsky.abyssus.sceneview.model.ModelLoader
-import net.nevinsky.abyssus.sceneview.model.PreparedModel
-import net.nevinsky.abyssus.sceneview.skybox.PreparedSky
-import net.nevinsky.abyssus.sceneview.skybox.SkyLoader
 import net.nevinsky.abyssus.sceneview.skybox.SunDirection
-import net.nevinsky.abyssus.sceneview.terrain.PreparedTerrain
-import net.nevinsky.abyssus.sceneview.terrain.TerrainLoader
-import net.nevinsky.abyssus.sceneview.terrain.TerrainMesh
+import net.nevinsky.abyssus.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.sceneview.terrain.TerrainShader
-import java.util.concurrent.Executor
 import net.nevinsky.abyssus.core.ModelBatch as ContentBatch
-
-/** How the scene view turns asset folders into GPU objects; replaceable in tests. */
-class SceneLoaders(
-    val models: AssetLoader<PreparedModel, ContentModel> = ModelLoader(),
-    val terrains: AssetLoader<PreparedTerrain, TerrainMesh> = TerrainLoader(),
-    val skyboxes: AssetLoader<PreparedSky, com.badlogic.gdx.utils.Disposable> = SkyLoader(),
-)
 
 /**
  * Draws a scene's environment, a ground grid and the content the scene places (skybox, terrains, models), and picks
- * entities under the cursor. Assets are prepared on [executor] by [loaders]. Call only inside [GdxRuntime.withContext]
+ * entities under the cursor. Assets come from [assetLoading]; the grid, overlay and terrain programs from [shaders]. Call only inside [GdxRuntime.withContext]
  * with the GL context current, except [pick].
  */
 class SceneRenderer(
-    private val executor: Executor = AppExecutorUtil.getAppExecutorService(),
-    private val loaders: SceneLoaders = SceneLoaders(),
+    private val assetLoading: AssetLoading,
+    private val shaders: ShaderSource,
 ) : Disposable {
     @Volatile
     var params: SceneRenderParams = SceneRenderParams.DEFAULT
@@ -108,8 +96,8 @@ class SceneRenderer(
     private var batch: ModelBatch? = null
     private var contentBatch: ContentBatch? = null
     private var contentShaders: DefaultShaderProvider? = null
-    private val models = SceneModels(executor, loaders.models)
-    private val terrains = SceneTerrains(executor, loaders.terrains)
+    private val models = SceneModels(assetLoading.assets(assetLoading.models))
+    private val terrains = SceneTerrains(assetLoading.assets(assetLoading.terrains))
     private var terrainShader: TerrainShader? = null
     private var skybox: SceneSkybox? = null
     private var overlay: LoadingOverlay? = null
@@ -201,10 +189,10 @@ class SceneRenderer(
         terrains.abandon()
         batch = ModelBatch(FogShaderProvider { fogCoefficient })
         contentShaders = DefaultShaderProvider().also { contentBatch = ContentBatch(it) }
-        terrainShader = TerrainShader()
-        skybox = SceneSkybox(executor, loaders.skyboxes)
-        overlay = LoadingOverlay()
-        lineBatch = LineBatch()
+        terrainShader = TerrainShader(shaders)
+        skybox = SceneSkybox(assetLoading.assets(assetLoading.skies))
+        overlay = LoadingOverlay(shaders)
+        lineBatch = LineBatch(shaders)
         gridModel = buildGrid().also { grid = ModelInstance(it) }
     }
 

@@ -16,14 +16,14 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.assets.loading.SceneAssets
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.core.AnimationController
 import net.nevinsky.abyssus.core.ModelInstance
 import net.nevinsky.abyssus.core.model.Model
-import net.nevinsky.abyssus.sceneview.model.PreparedModel
+import net.nevinsky.abyssus.assets.model.PreparedModel
 import java.io.File
-import java.util.concurrent.Executor
 
 /** One drawn entity: its own instance, its animation (null for a static model) and what it was built from. */
 class ModelEntity(
@@ -42,8 +42,7 @@ class ModelEntity(
  * The model entities of the scene. Each entity gets its own instance of the shared model, so entities using one asset
  * animate and move independently. GL thread only.
  */
-class SceneModels(executor: Executor, loader: AssetLoader<PreparedModel, Model>) : Disposable {
-    private val assets = SceneAssets(executor, loader)
+class SceneModels(private val assets: SceneAssets<PreparedModel, Model>) : Disposable {
     private val entities = PlacedEntities<Model, ModelEntity> { p, model, previous ->
         // a moved entity keeps its instance and animation
         val instance = previous?.instance ?: ModelInstance(model)

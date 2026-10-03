@@ -18,6 +18,7 @@
 // Plain JVM library: no IntelliJ dependency, so other libGDX projects can use it.
 plugins {
     `java-library`
+    `java-test-fixtures`
     id("org.jetbrains.kotlin.jvm")
 }
 
@@ -41,12 +42,14 @@ dependencies {
     }
 
     testImplementation("junit:junit:4.13.2")
-    // GL tests: an AWT GL canvas (works from the AWT thread on every OS) and libGDX's LWJGL3 GL wrappers
-    testImplementation("org.lwjglx:lwjgl3-awt:0.2.5")
-    testImplementation("org.lwjgl:lwjgl-opengl:$lwjglVersion")
-    testImplementation("com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion") { isTransitive = false }
-    lwjglNatives.forEach { testRuntimeOnly("org.lwjgl:lwjgl-opengl:$lwjglVersion:$it") }
-    testRuntimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop")
+    // GL tests (TestGl, shared with :core's tests as a test fixture): an AWT GL canvas (works from the AWT thread on
+    // every OS) and libGDX's LWJGL3 GL wrappers
+    testFixturesImplementation(kotlin("stdlib"))
+    testFixturesApi("org.lwjglx:lwjgl3-awt:0.2.5")
+    testFixturesApi("org.lwjgl:lwjgl-opengl:$lwjglVersion")
+    testFixturesApi("com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion") { isTransitive = false }
+    lwjglNatives.forEach { testFixturesRuntimeOnly("org.lwjgl:lwjgl-opengl:$lwjglVersion:$it") }
+    testFixturesRuntimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop")
 }
 
 java {

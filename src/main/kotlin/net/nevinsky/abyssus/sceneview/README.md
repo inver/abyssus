@@ -14,8 +14,8 @@ picking, camera markers, look-through and move/rotate gizmos. Required behavior:
 | `SceneViewPanel` | Swing panel: GL canvas, Swing `Timer` frame loop, toolbar, keys (W / E / Esc) |
 | `SceneInteraction` | Mouse and key logic without Swing or GL: click → pick/select, drag → gizmo or orbit/pan |
 | `SceneRenderer` | One frame: environment, skybox, grid, terrains, models, markers, highlight, gizmo; `pick` |
-| `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind asset loading and per-entity instances on top of `SceneAssets` / `AssetCache` |
-| `skybox/` | `SkyLoader` picks `SkyboxLoader` (six faces, drawn on a cube), `ProceduralSkyLoader` (the asset's own GLSL, drawn on a fullscreen triangle) or `HdrSkyLoader` (a Radiance `.hdr`, drawn on a fullscreen triangle and built into a lighting environment by `HdrEnvironmentBuild`, one GPU step per frame) by `meta.json` type; `SunDirection`, `AtmosphereParams`, `AtmosphereModel` (a CPU twin of the sky shader), `RadianceDecoder`, `HdrSkyFiles`, `Equirect` and `HdrToneMap` hold the testable parts |
+| `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (a `core` `SceneAssets` each, from `AssetLoading`) and per-entity instances (`PlacedEntities`) |
+| `skybox/` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights. The sky loaders, the HDR environment and the sky shaders are in `core` (`net.nevinsky.abyssus.assets.sky`) |
 | `SceneMarkers`, `CameraFrustum` | Camera body and frustum, light markers, and their pick bounds |
 | `ScenePicker` | Ray from a pixel, nearest hit over boxes and terrain heights |
 | `ScenePreview` | Applies an in-progress drag over the placements |
@@ -33,9 +33,10 @@ picking, camera markers, look-through and move/rotate gizmos. Required behavior:
   stable for 250 ms. On macOS a zero-sized surface aborts the JVM. A canvas disposed while hidden drops its context
   without making it current, so its GL objects can't be released. macOS also stops sizing that canvas's native
   surface with the component, so `SceneViewPanel` replaces such an "abandoned" canvas when the view is shown again.
-- **Asset loading has two steps.** `AssetCache.prepare` runs on a pool thread (IO and decoding, no GL). `build`, and
-  `advance` for big textures, run on the render thread one slice per frame. A new project gets a new cache, so a pool
-  thread never prepares from a stale project. A failed asset is remembered and logged once.
+- **Asset loading lives in `core`** (`core/README.md`). `AssetCache.prepare` runs on a pool thread (IO and decoding,
+  no GL). `build`, and `advance` for big textures, run on the render thread one slice per frame, inside this package's
+  `GdxRuntime.withContext`. A new project gets a new cache, so a pool thread never prepares from a stale project. A
+  failed asset is remembered and logged once, through the `AssetLog` `AbyssusCore` gives `AssetLoading`.
 - **The view reads JSON, not the ECS engine.** Placements come straight from the `ecs` JSON. `ParentComponent` is
   ignored, and `local*` values are drawn as world values; drags write them the same way.
 - **Drags preview, then write once.** During a drag `ScenePreview` overrides the dragged entity's placement. On release

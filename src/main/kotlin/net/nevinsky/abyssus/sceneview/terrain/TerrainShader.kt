@@ -16,6 +16,7 @@
 
 package net.nevinsky.abyssus.sceneview.terrain
 
+import net.nevinsky.abyssus.assets.ShaderSource
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
@@ -27,15 +28,14 @@ import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.sceneview.FogParams
 import net.nevinsky.abyssus.sceneview.LightSet
 import net.nevinsky.abyssus.sceneview.Rgba
-import net.nevinsky.abyssus.sceneview.Shaders
 import net.nevinsky.abyssus.sceneview.TerrainEntity
 
 /**
  * Draws terrains: splat-blended textures with the scene's ambient, directional and point lights and fog. A small
  * program of its own, since the terrain material is not something the model shaders know.
  */
-class TerrainShader : Disposable {
-    private val program = Shaders.load("terrain")
+class TerrainShader(shaders: ShaderSource) : Disposable {
+    private val program = shaders.program("terrain")
     private val normalMatrix = Matrix3()
 
     /** Bound to the sampler units of the layers a terrain does not have, so no sampler is left without a texture. */
@@ -95,6 +95,6 @@ class TerrainShader : Disposable {
 
     private companion object {
         const val MAX = 5 // at least LightSet.MAX_POINT and MAX_DIRECTIONAL; the array size in terrain.frag
-        const val IRRADIANCE_UNIT = 7 // after the splat units (0 to TerrainMesh.SPLAT_UNIT)
+        const val IRRADIANCE_UNIT = 7 // after the splat units (0 to assets.terrain.SPLAT_UNIT)
     }
 }

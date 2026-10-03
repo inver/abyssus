@@ -24,13 +24,16 @@ import net.nevinsky.abyssus.dto.AssetReadResult
 import net.nevinsky.abyssus.dto.ProjectDto
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.sceneReferences
-import net.nevinsky.abyssus.dto.obj
+import net.nevinsky.abyssus.assets.json.obj
 import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.text
+import net.nevinsky.abyssus.assets.json.text
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.scene.SceneDto
-import net.nevinsky.abyssus.sceneview.skybox.HdrSkyFiles
-import net.nevinsky.abyssus.sceneview.skybox.RadianceHeader
+import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.AbyssusCore
+import net.nevinsky.abyssus.assets.sky.hdr.HdrSkyFiles
+import net.nevinsky.abyssus.assets.sky.hdr.RadianceDecoder
 
 /** The `meta.json` type of a skybox made of six face images. */
 const val SKYBOX_TYPE = "SKYBOX"
@@ -120,16 +123,17 @@ fun loadSkyboxChoices(project: Project, abss: VirtualFile): List<SkyboxChoice>? 
     }
     val folders = ProjectLayout.assetFolders(abss).associateBy { it.name }
     val hdr = dto.assets.filter { it.meta.type.name == HDR_SKY_TYPE }.mapNotNull { asset ->
-        folders[asset.name]?.let { asset.name to hdrSkyInfo(it, metas[asset.name]) }
+        val loading = service<AbyssusCore>().loading
+        folders[asset.name]?.let { asset.name to hdrSkyInfo(it, metas[asset.name], loading.hdrFiles, loading.decoder) }
     }.toMap()
     return skyboxChoices(dto, metas, hdr).onEach { it.folder = folders[it.name] }
 }
 
 /** The image an HDR sky folder uses and the size its header declares; size 0 when the header cannot be read. */
-fun hdrSkyInfo(folder: VirtualFile, meta: JsonNode?): HdrSkyInfo {
+fun hdrSkyInfo(folder: VirtualFile, meta: JsonNode?, hdrFiles: HdrSkyFiles, decoder: RadianceDecoder): HdrSkyInfo {
     val named = meta?.obj("additional")?.properties()?.mapNotNull { it.value.takeIf(JsonNode::isTextual)?.asText() }.orEmpty()
-    val file = HdrSkyFiles.choose(folder.children.filter { !it.isDirectory }.map { it.name }, named)?.file ?: return HdrSkyInfo(null)
-    val header = runCatchingKeepingCancellation { folder.findChild(file)?.inputStream?.buffered()?.use(RadianceHeader::read) }.getOrNull()
+    val file = hdrFiles.choose(folder.children.filter { !it.isDirectory }.map { it.name }, named)?.file ?: return HdrSkyInfo(null)
+    val header = runCatchingKeepingCancellation { folder.findChild(file)?.inputStream?.buffered()?.use(decoder::header) }.getOrNull()
     return HdrSkyInfo(file, header?.width ?: 0, header?.height ?: 0)
 }
 

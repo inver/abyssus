@@ -16,20 +16,19 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.assets.loading.SceneAssets
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.sceneview.terrain.PreparedTerrain
-import net.nevinsky.abyssus.sceneview.terrain.TerrainMesh
+import net.nevinsky.abyssus.assets.terrain.PreparedTerrain
+import net.nevinsky.abyssus.assets.terrain.TerrainMesh
 import java.io.File
-import java.util.concurrent.Executor
 
 class TerrainEntity(override val placement: AssetPlacement, val terrain: TerrainMesh, val world: Matrix4) : PlacedEntity<TerrainMesh> {
     override val asset: TerrainMesh get() = terrain
 }
 
 /** The terrain entities of the scene, loaded like [SceneModels]. GL thread only. */
-class SceneTerrains(executor: Executor, loader: AssetLoader<PreparedTerrain, TerrainMesh>) : Disposable {
-    private val assets = SceneAssets(executor, loader)
+class SceneTerrains(private val assets: SceneAssets<PreparedTerrain, TerrainMesh>) : Disposable {
     private val entities = PlacedEntities<TerrainMesh, TerrainEntity> { p, terrain, _ -> TerrainEntity(p, terrain, p.transform.toMatrix()) }
 
     val drawn: Collection<TerrainEntity> get() = entities.drawn

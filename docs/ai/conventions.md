@@ -27,7 +27,7 @@
   property declaration order is the order the tree shows.
 - **Non-row fields:** mark them `@get:JsonIgnore` (for example `SceneDto.file`, `AssetInfo.unused`) so the tree
   doesn't list them.
-- **Optional values:** read them from a `JsonNode` with the helpers in `src/main/kotlin/net/nevinsky/abyssus/dto/JsonNodes.kt`
+- **Optional values:** read them from a `JsonNode` with the helpers in `core/src/main/kotlin/net/nevinsky/abyssus/assets/json/JsonNodes.kt`
   (`opt`, `text`, `float`, `obj`), which treat absent and JSON `null` alike.
 - **Writing a file:** use `editSceneJson`, re-serialized with `SceneJson.inStyleOf`, so a pretty file stays pretty
   and a compact one stays compact.
