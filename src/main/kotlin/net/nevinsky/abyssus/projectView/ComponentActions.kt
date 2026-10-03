@@ -87,7 +87,7 @@ fun addComponentGroup(project: Project, file: VirtualFile, entityId: String, kin
     return group
 }
 
-private fun selectedNode(e: AnActionEvent): Any? {
+internal fun selectedNode(e: AnActionEvent): Any? {
     val project = e.project ?: return null
     val pane = ProjectView.getInstance(project).currentProjectViewPane?.takeIf { it.id == AbyssusProjectViewPane.ID }
         ?: return null

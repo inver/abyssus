@@ -69,6 +69,26 @@ class ComponentCodecsTest {
     }
 
     @Test
+    fun rangeRoundTripsInBothShapesAndDefaultIsOmitted() {
+        for (text in listOf(
+            """{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1,"range":30}}""",
+            """{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1,"range":30}""",
+        )) {
+            val node = json(text)
+            val codec = LightCodec()
+            val light = codec.read(node)
+            assertEquals(30f, light.light.range, 0f)
+            assertEquals(text, codec.write(light).toString())
+            light.light.range = 100f
+            val written = codec.write(light)
+            val values = written.get("light") ?: written
+            assertFalse(values.has("range"))
+            assertEquals(100f, codec.read(written).light.range, 0f)
+            assertEquals(written.toString(), codec.write(codec.read(written)).toString())
+        }
+    }
+
+    @Test
     fun positionDefaultsAndRoundTrip() {
         val empty = PositionCodec().read(json("{}"))
         assertEquals(Vector3(), empty.localPosition)

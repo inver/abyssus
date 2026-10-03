@@ -49,7 +49,7 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   component it lacks (Name, Type, Parent, Position, Camera, Light, Point2Point or Render; a Render component asks for a
   model or terrain of the project), or right-click a component and choose **Remove Component**. Components the plugin
   does not model (`Pickable`, `Dependencies`, ...) cannot be removed. The eye, **Rename Scene...**, **Choose**, and
-  these two actions are the tree actions that write a file; each is one undoable edit.
+  these component actions and **Add Light** on a scene row write the file as undoable edits.
 
 ## Abyssus Properties panel
 
@@ -92,6 +92,11 @@ view's toolbar. Dragging a handle moves or rotates the object along that world a
 `PositionComponent` `localPosition` / `localRotation` (and a camera's `position` / `viewPointPosition`) to the scene
 file as one undoable edit, keeping the file's formatting. Esc cancels a drag. A camera aimed at a `lookAtId` entity
 and a point light have no rotate rings. Dragging anywhere else orbits or pans as usual.
+
+**Add Light** in the toolbar creates a Directional light, Sun or Spot at the current orbit target and selects it.
+The same menu on a scene row places it at the origin; Spot sits 5 units above that point. A Sun starts warm and
+brighter, with a low direction. Its light component's **Range** field sets a positive reach (default 100).
+Each creation is one undoable scene edit. These new light entities use the plugin's own component structure.
 
 The toolbar's camera selector (**Free camera** and the scene's cameras by name) renders the view through a camera
 entity; orbit, pan and zoom pause until **Free camera** is chosen again.

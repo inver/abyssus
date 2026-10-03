@@ -16,6 +16,9 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import net.nevinsky.abyssus.AbyssusCore
 import com.intellij.openapi.components.service
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
@@ -58,6 +61,8 @@ fun cameraChoices(content: SceneContent, freeLabel: String): List<CameraChoice> 
 class SceneViewPanel(
     initial: SceneRenderParams,
     private val renderer: SceneRenderer = service<AbyssusCore>().let { SceneRenderer(it.loading, it.sceneShaders) },
+    private val lightActions: ((() -> Vec3) -> DefaultActionGroup)? = null,
+    private val canAddLight: () -> Boolean = { lightActions != null },
 ) : JPanel(BorderLayout()), SceneView {
 
     private val frame = GdxFrame()
@@ -73,6 +78,7 @@ class SceneViewPanel(
     private val moveButton = JToggleButton(AbyssusBundle.message("sceneViewMove"), true)
     private val rotateButton = JToggleButton(AbyssusBundle.message("sceneViewRotate"))
     private val dropButton = JButton(AbyssusBundle.message("sceneViewDrop"))
+    private val addLightButton = JButton(AbyssusBundle.message("addLightTitle")).apply { name = "add-light" }
     private val cameraCombo = ComboBox<CameraChoice>()
     private var choices: List<CameraChoice> = emptyList()
     private var updatingControls = false
@@ -160,6 +166,15 @@ class SceneViewPanel(
         dropButton.isFocusable = false
         dropButton.toolTipText = AbyssusBundle.message("sceneViewDropTooltip")
         dropButton.addActionListener { interaction.drop() }
+        addLightButton.isFocusable = false
+        addLightButton.toolTipText = AbyssusBundle.message("addLightTooltip")
+        addLightButton.addActionListener {
+            val actions = lightChoices() ?: return@addActionListener
+            JBPopupFactory.getInstance().createActionGroupPopup(
+                AbyssusBundle.message("addLightTitle"), actions, DataManager.getInstance().getDataContext(this),
+                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
+            ).showUnderneathOf(addLightButton)
+        }
         cameraCombo.isFocusable = false
         cameraCombo.toolTipText = AbyssusBundle.message("sceneViewCameraTooltip")
         cameraCombo.addActionListener {
@@ -171,9 +186,13 @@ class SceneViewPanel(
             add(moveButton)
             add(rotateButton)
             add(dropButton)
+            add(addLightButton)
             add(cameraCombo)
         }
     }
+
+    /** Choices retain a supplier so placement follows the current orbit target at the moment of creation. */
+    internal fun lightChoices(): DefaultActionGroup? = if (canAddLight()) lightActions?.invoke { orbit.target } else null
 
     /** W/E switch the gizmo, D drops the selection, Esc cancels a drag, with focus anywhere in the view. */
     private fun bindKeys() {
@@ -192,6 +211,7 @@ class SceneViewPanel(
             moveButton.isSelected = interaction.mode == GizmoMode.MOVE
             rotateButton.isSelected = interaction.mode == GizmoMode.ROTATE
             dropButton.isEnabled = interaction.canDrop
+            addLightButton.isEnabled = lightActions != null && canAddLight()
             cameraCombo.selectedItem = choices.firstOrNull { it.id == interaction.viewCamera } ?: choices.firstOrNull()
         } finally {
             updatingControls = false
@@ -272,6 +292,11 @@ class SceneViewPanel(
         set(value) {
             interaction.onTransform = value
         }
+
+    override fun selectEntity(entityId: String) {
+        renderer.selectedId = entityId
+        syncControls()
+    }
 
     override fun setParams(params: SceneRenderParams) {
         renderer.params = params

@@ -58,3 +58,10 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
   for a changed version and notifies controls only when availability flips. Scene params, selection, camera and drag
   changes also refresh availability. Params invalidate the next frame's query as well, because a transform update
   leaves drawn entity ids unchanged.
+
+## Add Light
+
+The toolbar's Add Light menu offers Directional, Sun and Spot through `AddLightGroup`. `SceneFileEditor` supplies
+the scene file and availability check; the panel supplies its current orbit target when a choice is made.
+The new entity is written as one Add Light command and selected in the Abyssus tree. Spot adds 5 to placement Y.
+Unreadable scene text disables creation (and the editor shows its existing parse-error state).

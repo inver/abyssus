@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 ### Added
+- Add Light menus in the Scene view toolbar and on scene rows, with Directional, Sun and Spot presets, selection and single-step Undo; editable positive light range in the properties panel
 - Abyssus view: `Scenes` / `Assets` rows with counts, entities listed by name with their components, per-kind icons, a "Show Only Unused Assets" option and a scenes / assets / unused counts footer
 - Create, edit and remove an entity's components: **Add Component...** and **Remove Component** in the Abyssus view, and editable fields, **Add component** and **Remove** for a selected entity or component in the Abyssus Properties window (each change is one undoable edit of the scene file)
 - Abyssus Properties tool window showing the `meta.json` of the asset selected in the Abyssus view (read only), with face previews for skyboxes

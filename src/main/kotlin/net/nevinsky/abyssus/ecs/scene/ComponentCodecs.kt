@@ -175,14 +175,16 @@ class LightCodec : ComponentCodec<LightComponent> {
         val light = LightData(
             readColor(values.obj("color"), defaults.color),
             values.float("intensity") ?: defaults.intensity,
+            values.float("range") ?: defaults.range,
         )
-        return LightComponent(light, nested = nestedNode != null || node.obj("color") == null)
+        return LightComponent(light, nested = nestedNode != null || listOf("color", "intensity", "range").none(node::has))
     }
 
     override fun write(component: LightComponent): JsonNode {
         val values = nodes.objectNode()
         values.set<JsonNode>("color", colorNode(component.light.color))
         values.set<JsonNode>("intensity", number(component.light.intensity))
+        if (component.light.range != 100f) values.set<JsonNode>("range", number(component.light.range))
         return if (component.nested) nodes.objectNode().set("light", values) else values
     }
 }

@@ -44,6 +44,10 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.projectView.editSceneJson
+import net.nevinsky.abyssus.projectView.AddLightGroup
+import net.nevinsky.abyssus.projectView.canAddLight
+import net.nevinsky.abyssus.projectView.AbyssusSelectionListener
+import net.nevinsky.abyssus.projectView.componentTargetOf
 import net.nevinsky.abyssus.projectView.selectEntityInAbyssusView
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
@@ -74,7 +78,9 @@ class SceneFileEditor(
     private val project: Project,
     private val file: VirtualFile,
     private val paramsSource: SceneParamsSource = SceneParamsSource.EDITOR_TEXT,
-    private val viewFactory: (SceneRenderParams) -> SceneView = { SceneViewPanel(it) },
+    private val viewFactory: (SceneRenderParams) -> SceneView = {
+        SceneViewPanel(it, lightActions = { position -> AddLightGroup(project, file, position) }, canAddLight = { canAddLight(file) })
+    },
 ) : UserDataHolderBase(), FileEditor, DocumentReferenceProvider {
     private val content = JPanel(BorderLayout()).apply { isFocusable = true }
     private var view: SceneView? = null
@@ -87,6 +93,9 @@ class SceneFileEditor(
 
     init {
         reload()
+        project.messageBus.connect(this).subscribe(AbyssusSelectionListener.TOPIC, AbyssusSelectionListener { node ->
+            componentTargetOf(node)?.takeIf { it.file == file }?.let { view?.selectEntity(it.entityId) }
+        })
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 if (events.any { it is VFileContentChangeEvent && isSource(it.file) }) {

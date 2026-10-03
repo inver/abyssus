@@ -189,6 +189,18 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         assertFalse("LightComponent" in after.addable)
     }
 
+    fun testLightRangeEditorWritesThirty() {
+        copyProject()
+        net.nevinsky.abyssus.projectView.SceneComponentEdits.add(project, sceneFile(), "0", "LightComponent")
+        val p = panel()
+        p.show(entity("0"))
+        val field = named(p, "field-LightComponent-range") as JBTextField
+        assertEquals("100", field.text)
+        field.text = "30"
+        field.postActionEvent()
+        assertEquals(30, components(sceneFile(), "0")["LightComponent"]["light"]["range"].asInt())
+    }
+
     fun testRemoveFromThePanelDropsTheSection() {
         copyProject()
         val p = panel()

@@ -31,10 +31,10 @@ import java.io.File
 class ComponentActionsTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
 
-    private fun copyProject() {
+    private fun copyProject(sceneFixture: String = "Untitled/scenes/Main Scene.scene") {
         val dir = "Untitled"
         myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
-        myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
+        myFixture.copyFileToProject(sceneFixture, "$dir/scenes/Main Scene.scene")
         File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
             d.listFiles { f -> f.isFile }!!.filter { it.extension == "json" }.forEach {
                 myFixture.copyFileToProject("$dir/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
@@ -67,6 +67,29 @@ class ComponentActionsTest : BasePlatformTestCase() {
 
     private fun scene() = componentTargetOf(entity("0"))!!.file
     private fun components(id: String) = SceneJson.parse(FileDocumentManager.getInstance().getDocument(scene())!!.text)["ecs"]["entities"][id]["components"]
+
+    private class LightOn(val node: Any?) : AddLightAction() {
+        override fun selected(e: AnActionEvent) = node
+    }
+
+    fun testLightChoicesOnSceneOnlyAndSpotAtOrigin() {
+        copyProject("Lights/scenes/Creation Baseline.scene")
+        val sceneNode = children(descend(abss(), "scenes")).single()
+        val action = LightOn(sceneNode)
+        assertTrue(visible(action))
+        assertFalse(visible(LightOn(entity("0"))))
+        assertFalse(visible(LightOn(abss())))
+        assertTrue(ActionManager.getInstance().getAction("Abyssus.AddLight") is AddLightAction)
+        var selected: String? = null
+        val choices = AddLightGroup(project, scene(), { net.nevinsky.abyssus.sceneview.Vec3(0f, 0f, 0f) }, { selected = it }).getChildren(null)
+        assertEquals(listOf("Directional", "Sun", "Spot"), choices.map { it.templatePresentation.text })
+        choices[2].actionPerformed(TestActionEvent.createTestEvent(choices[2]))
+        assertEquals("7", selected)
+        val position = components("7")["PositionComponent"]["localPosition"]
+        assertEquals(5, position["y"].asInt())
+        assertEquals(0, position.path("x").asInt())
+        assertEquals(0, position.path("z").asInt())
+    }
 
     fun testActionsAreRegisteredInTheProjectViewMenu() {
         val manager = ActionManager.getInstance()

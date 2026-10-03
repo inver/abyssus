@@ -21,8 +21,15 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
+import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.dto.SceneReader
+import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.ecs.scene.ComponentEditor
 import net.nevinsky.abyssus.ecs.scene.EditResult
+import net.nevinsky.abyssus.ecs.scene.AddedLight
+import net.nevinsky.abyssus.ecs.scene.LightEntities
+import net.nevinsky.abyssus.ecs.scene.LightPreset
+import net.nevinsky.abyssus.sceneview.Vec3
 import net.nevinsky.abyssus.properties.AssetMeta
 import net.nevinsky.abyssus.properties.loadAssetMeta
 
@@ -53,6 +60,16 @@ object SceneComponentEdits {
             result == EditResult.Changed
         }
         return result
+    }
+
+    fun addLight(project: Project, file: VirtualFile, preset: LightPreset, position: Vec3): AddedLight {
+        var added = AddedLight(EditResult.Rejected(AbyssusBundle.message("componentSceneUnreadable")))
+        editSceneJson(project, file, AbyssusBundle.message("commandAddLight")) { root ->
+            if (runCatchingKeepingCancellation { service<SceneReader>().parse(root.toString()) }.isFailure) return@editSceneJson false
+            added = LightEntities.add(root, preset, position)
+            added.result == EditResult.Changed
+        }
+        return added
     }
 
     fun add(

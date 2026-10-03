@@ -35,5 +35,8 @@ interface SceneView : Disposable {
      */
     var onTransform: ((String, TransformEdit) -> Boolean)?
 
+    /** Selects an entity after creation or a selection in the Abyssus tree. */
+    fun selectEntity(entityId: String) {}
+
     fun setParams(params: SceneRenderParams)
 }

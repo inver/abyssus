@@ -153,6 +153,7 @@ object ComponentEditor {
                 floatField("color.b", { it.light.color.b }, { c, v -> c.light.color = c.light.color.copy(b = v) }),
                 floatField("color.a", { it.light.color.a }, { c, v -> c.light.color = c.light.color.copy(a = v) }),
                 floatField("intensity", { it.light.intensity }, { c, v -> c.light.intensity = v }),
+                floatField("range", { it.light.range }, { c, v -> c.light.range = v }),
             ),
         ) { LightComponent() },
         kind<Point2PointPositionComponent>(
@@ -325,7 +326,12 @@ object ComponentEditor {
         val label = "${kind.label} ${field.name}"
         val value = text.trim()
         return when (field.kind) {
-            FieldKind.FLOAT -> if (value.toFloatOrNull()?.isFinite() == true) null else reject("componentNotANumber", label, text)
+            FieldKind.FLOAT -> when {
+                value.toFloatOrNull()?.isFinite() != true -> reject("componentNotANumber", label, text)
+                kind.name == "LightComponent" && field.name == "range" && value.toFloat() <= 0f ->
+                    reject("componentNotPositive", label, text)
+                else -> null
+            }
             FieldKind.TEXT -> null
             FieldKind.CHOICE ->
                 if (value in field.choices || (field.optional && value.isEmpty())) null

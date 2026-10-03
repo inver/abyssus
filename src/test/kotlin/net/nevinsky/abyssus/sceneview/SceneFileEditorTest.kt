@@ -73,6 +73,8 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val component = javax.swing.JPanel()
         var disposed = false
         var updates = 0
+        var selected: String? = null
+        override fun selectEntity(entityId: String) { selected = entityId }
         override var onFailure: ((Throwable) -> Unit)? = null
         override var onPick: ((String) -> Unit)? = null
         override var onTransform: ((String, TransformEdit) -> Boolean)? = null
@@ -109,6 +111,29 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         } finally {
             editor.dispose()
         }
+    }
+
+    fun testAddedLightSelectsInViewEvenWithoutATreeRow() {
+        val views = mutableListOf<FakeView>()
+        val (editor, file) = fakeEditor("selection/new-light.scene", """{"ecs":{"entities":{}}}""", views)
+        try {
+            val actions = net.nevinsky.abyssus.projectView.AddLightGroup(project, file, { Vec3(0f, 0f, 0f) }).getChildren(null)
+            actions[0].actionPerformed(com.intellij.testFramework.TestActionEvent.createTestEvent(actions[0]))
+            assertEquals("0", views.single().selected)
+            assertEquals("0", net.nevinsky.abyssus.projectView.componentTargetOf(net.nevinsky.abyssus.projectView.AbyssusSelection.of(project).current)?.entityId)
+        } finally { editor.dispose() }
+    }
+
+    fun testTreeSelectionReachesSceneView() {
+        val views = mutableListOf<FakeView>()
+        val text = """{"ecs":{"entities":{"7":{"components":{"PositionComponent":{}}}}}}"""
+        val (editor, file) = fakeEditor("selection/a.scene", text, views)
+        try {
+            val entry = net.nevinsky.abyssus.projectView.DtoRow("7", net.nevinsky.abyssus.filetype.SceneJson.parse(text)["ecs"]["entities"]["7"])
+            val node = net.nevinsky.abyssus.projectView.DtoEntryNode(project, file.path, entry, file, listOf("ecs", "entities"))
+            net.nevinsky.abyssus.projectView.AbyssusSelection.of(project).select(node)
+            assertEquals("7", views.single().selected)
+        } finally { editor.dispose() }
     }
 
     fun testRendersAndUpdatesInPlaceOnUnsavedEdits() {

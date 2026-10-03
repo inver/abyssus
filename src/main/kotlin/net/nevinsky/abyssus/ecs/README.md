@@ -37,3 +37,12 @@ that round-trip the scene file. Required behavior: `openspec/specs/scene-ecs-com
 - **Derived state is not written.** The combined transform and the light instance are rebuilt, not saved.
 - **New component:** add a component class and a `ComponentCodec`, register the codec in `ComponentCodecs`, and add
   round-trip cases to `ComponentCodecsTest` / `SceneEcsWriterTest`.
+
+## Creating lights
+
+`scene/LightEntities.kt` adds a plugin-defined entity with Name, Type, Position and Light components to a JSON tree.
+`LightPreset` supplies Directional (white, intensity 1, -45 degrees X), Sun (warm, intensity 1.2, -30 degrees X),
+and Spot (white, intensity 1, -90 degrees X, 5 units above placement). Sun uses `LIGHT_DIRECTIONAL`.
+The new id is one above the highest numeric entity id, or zero in an empty scene. A matching four-component
+archetype is reused or appended; missing component identifiers are added. Existing entities and bookkeeping are
+preserved. The caller writes through `SceneComponentEdits.addLight` and `editSceneJson` as one undoable edit.

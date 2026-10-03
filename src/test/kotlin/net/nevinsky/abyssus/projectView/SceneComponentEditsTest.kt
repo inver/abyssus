@@ -33,10 +33,38 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
 
     private fun components(f: VirtualFile, id: String) = SceneJson.parse(textOf(f))["ecs"]["entities"][id]["components"]
 
-    private fun open(path: String): Pair<VirtualFile, TextEditor> {
-        val f = myFixture.addFileToProject(path, original).virtualFile
+    private fun open(path: String, text: String = original): Pair<VirtualFile, TextEditor> {
+        val f = myFixture.addFileToProject(path, text).virtualFile
         myFixture.openFileInEditor(f)
         return f to TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+    }
+
+    fun testAddLightIsOneUndoStep() {
+        val (f, editor) = open("c/Lights.scene", File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
+        val start = textOf(f)
+        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.ecs.scene.LightPreset.SUN, net.nevinsky.abyssus.sceneview.Vec3(10f, 0f, -4f))
+        assertEquals(EditResult.Changed, result.result)
+        assertEquals("7", result.entityId)
+        assertEquals("Sun 7", components(f, "7")["NameComponent"]["name"].asText())
+        UndoManager.getInstance(project).undo(editor)
+        assertEquals(start, textOf(f))
+    }
+
+    fun testMalformedSceneFieldsRejectLightWithoutWrite() {
+        val text = """{"name":[],"ecs":{"entities":{}}}"""
+        val f = myFixture.addFileToProject("c/bad-name.scene", text).virtualFile
+        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.ecs.scene.LightPreset.SUN, net.nevinsky.abyssus.sceneview.Vec3(0f, 0f, 0f))
+        assertTrue(result.result is EditResult.Rejected)
+        assertFalse(canAddLight(f))
+        assertEquals(text, textOf(f))
+    }
+
+    fun testUnreadableSceneRejectsLightWithoutWrite() {
+        val f = myFixture.addFileToProject("c/bad-light.scene", "not json").virtualFile
+        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.ecs.scene.LightPreset.SPOT, net.nevinsky.abyssus.sceneview.Vec3(0f, 0f, 0f))
+        assertTrue(result.result is EditResult.Rejected)
+        assertNull(result.entityId)
+        assertEquals("not json", textOf(f))
     }
 
     fun testAddUpdateRemoveEachUndoAsOneStep() {

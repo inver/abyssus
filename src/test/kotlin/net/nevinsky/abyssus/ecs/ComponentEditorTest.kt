@@ -44,9 +44,39 @@ class ComponentEditorTest {
         assertEquals(listOf("parentEntityId"), names["ParentComponent"])
         assertEquals(11, names["PositionComponent"]!!.size)
         assertTrue("camera.fieldOfView" in names["CameraComponent"]!!)
-        assertEquals(listOf("color.r", "color.g", "color.b", "color.a", "intensity"), names["LightComponent"])
+        assertEquals(listOf("color.r", "color.g", "color.b", "color.a", "intensity", "range"), names["LightComponent"])
         assertEquals(listOf("entity1Id", "entity2Id"), names["Point2PointPositionComponent"])
         assertEquals(listOf("assetType", "assetName", "shaderKey"), names["RenderComponent"])
+    }
+
+    @Test
+    fun lightRangeChangesOnlyRangeAndDropsDefault() {
+        val root = scene(entity(0, """"LightComponent":{"light":{"color":{"r":1.00,"g":1,"b":1,"a":1},"intensity":1.0}}"""))
+        val before = root.toString()
+        assertEquals(EditResult.Unchanged, ComponentEditor.update(root, "0", "LightComponent", "range", "100"))
+        assertEquals(before, root.toString())
+        assertEquals(EditResult.Changed, ComponentEditor.update(root, "0", "LightComponent", "range", "30"))
+        assertEquals(30, components(root, 0)["LightComponent"]["light"]["range"].asInt())
+        assertEquals(EditResult.Changed, ComponentEditor.update(root, "0", "LightComponent", "range", "100"))
+        assertEquals(before, root.toString())
+        for (invalid in listOf("0", "-1", "abc", "NaN", "Infinity")) {
+            val result = ComponentEditor.update(root, "0", "LightComponent", "range", invalid)
+            assertRejected(result)
+            assertTrue((result as EditResult.Rejected).reason.contains("range"))
+            assertEquals(before, root.toString())
+        }
+    }
+
+    @Test
+    fun directRangeWithoutColorStaysDirect() {
+        val root = scene(entity(0, """"LightComponent":{"range":30,"other":1.00}"""))
+        assertEquals(EditResult.Changed, ComponentEditor.update(root, "0", "LightComponent", "range", "40"))
+        val light = components(root, 0)["LightComponent"]
+        assertEquals(40, light["range"].asInt())
+        assertFalse(light.has("light"))
+        assertEquals("1.00", light["other"].asText())
+        assertEquals(EditResult.Changed, ComponentEditor.update(root, "0", "LightComponent", "range", "100"))
+        assertEquals("""{"other":1.00}""", light.toString())
     }
 
     @Test
