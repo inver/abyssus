@@ -30,10 +30,6 @@ import static net.nevinsky.abyssus.language.psi.GltfTypes.*;
 %unicode
 %function advance
 %type IElementType
-%{
-  // referenced by reset() in idea-flex.skeleton but not declared there
-  private boolean zzAtBOL = true;
-%}
 
 WHITE_SPACE=[\ \n\r\t\f]+
 STRING=\"([^\"\\\r\n]|\\.)*\"

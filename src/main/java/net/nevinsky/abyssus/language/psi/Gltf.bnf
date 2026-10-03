@@ -2,6 +2,7 @@
   parserClass="net.nevinsky.abyssus.language.parser.GltfParser"
   extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
 
+  generateTokenAccessors=true
   psiClassPrefix="Gltf"
   psiImplClassSuffix="Impl"
   psiPackage="net.nevinsky.abyssus.language.psi"

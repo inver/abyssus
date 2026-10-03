@@ -4,7 +4,7 @@
 
 - **Kotlin everywhere.** The only Java sources are the GLTF grammar inputs in
   `src/main/java/net/nevinsky/abyssus/language/psi/` (`Gltf.bnf`, `Gltf.flex`).
-- **Generated code:** the lexer and parser are generated into `src/main/gen`, which is git-ignored. Never edit it;
+- **Generated code:** the lexer and parser are generated into `src/main/gen` by the `generateGltfParser` / `generateGltfLexer` Gradle tasks (run before compiling), and the directory is git-ignored. Never edit it;
   change the grammar instead.
 - **Package-private libGDX code:** `com.badlogic.gdx.backends.lwjgl3.GdxGlBridge` lives in libGDX's package on
   purpose, to reach backend code that is package-private.

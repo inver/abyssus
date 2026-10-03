@@ -69,15 +69,15 @@ class PbrShader(config: ShaderConfig, renderable: Renderable?) : DefaultShader(w
         u_occlusionUVTransform = registerUvTransform("u_occlusionUVTransform", PBRTextureAttribute.OcclusionTexture)
         registerUniformLocal("u_envIrradiance", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
             val sky = attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
-            shader!!.set(inputID, shader.context!!.textureBinder.bind(sky.irradiance))
+            shader.set(inputID, shader.context!!.textureBinder.bind(sky.irradiance))
         }
         registerUniformLocal("u_envSpecular", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
             val sky = attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
-            shader!!.set(inputID, shader.context!!.textureBinder.bind(sky.specular))
+            shader.set(inputID, shader.context!!.textureBinder.bind(sky.specular))
         }
         registerUniformLocal("u_envMaxLod", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
             val sky = attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
-            shader!!.set(inputID, (sky.levels - 1).toFloat())
+            shader.set(inputID, (sky.levels - 1).toFloat())
         }
     }
 
