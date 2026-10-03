@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.loading.SceneAssets
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.Disposable
@@ -27,6 +28,12 @@ class SceneTerrains(private val assets: SceneAssets<PreparedTerrain, TerrainMesh
     fun update(placements: List<AssetPlacement>, projectDir: File?) {
         assets.update(projectDir, placements.mapTo(HashSet()) { it.assetName })
         entities.update(placements, assets::get)
+    }
+
+    /** Loads [names] again from [files], the project's refreshed snapshot; the old assets stay drawn until each replacement is built. */
+    fun revise(files: AssetFiles, names: Set<String>) {
+        assets.replaceFiles(files)
+        assets.invalidate(names)
     }
 
     /** Forgets everything without GL calls; see [AssetCache.abandon]. */

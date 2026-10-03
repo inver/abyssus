@@ -6,6 +6,12 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.components.service
+import com.intellij.util.concurrency.AppExecutorUtil
+import net.nevinsky.abyssus.AbyssusCore
+import net.nevinsky.abyssus.assets.ASSETS_DIR
+import java.io.File
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.command.undo.DocumentReference
 import com.intellij.openapi.command.undo.DocumentReferenceManager
@@ -76,12 +82,38 @@ class SceneFileEditor(
 
     private var disposed = false
 
+    /** Reloads assets that change on disk or in an editor; null for a scene outside a project. */
+    private val assetRefresh: AssetRefresh? = ProjectLayout.projectDirFor(file)?.let { dir ->
+        AssetRefresh(
+            dir, service<AbyssusCore>().json,
+            unsavedMeta = { unsavedAssetMeta(dir) },
+            background = { AppExecutorUtil.getAppExecutorService().execute(it) },
+            ui = { ApplicationManager.getApplication().invokeLater({ if (!disposed) it.run() }, ModalityState.any()) },
+            deliver = { revision -> view?.refreshAssets(revision) },
+        )
+    }
+
     /** Non-null while the tab shows a message instead of a render. */
     internal var statusText: String? = null
         private set
 
     init {
         reload()
+        assetRefresh?.let { refresh ->
+            val assetsPath = File(ProjectLayout.projectDirFor(file)!!.absoluteFile, ASSETS_DIR).path + File.separator
+            refresh.start()
+            project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
+                override fun after(events: List<VFileEvent>) {
+                    if (events.any { (File(it.path).path + File.separator).startsWith(assetsPath) }) refresh.changed()
+                }
+            })
+            EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
+                override fun documentChanged(event: DocumentEvent) {
+                    val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
+                    if (changed.name == ProjectLayout.META_FILE && File(changed.path).path.startsWith(assetsPath)) refresh.changed()
+                }
+            }, this)
+        }
         project.messageBus.connect(this).subscribe(AbyssusSelectionListener.TOPIC, AbyssusSelectionListener { node ->
             componentTargetOf(node)?.takeIf { it.file == file }?.let { view?.selectEntity(it.entityId) }
         })
@@ -173,7 +205,22 @@ class SceneFileEditor(
 
     override fun dispose() {
         disposed = true
+        assetRefresh?.dispose()
         view?.let { Disposer.dispose(it) }
         view = null
     }
+}
+
+/**
+ * The text of every asset `meta.json` of the project in [projectDir] that has unsaved changes in an editor, by file. Read
+ * on the UI thread, so the background read of the assets never touches documents.
+ */
+internal fun unsavedAssetMeta(projectDir: File): Map<File, String> {
+    val assetsPath = File(projectDir.absoluteFile, ASSETS_DIR).path + File.separator
+    val manager = FileDocumentManager.getInstance()
+    return manager.unsavedDocuments.mapNotNull { document ->
+        val file = manager.getFile(document)?.takeIf { it.name == ProjectLayout.META_FILE } ?: return@mapNotNull null
+        val io = File(file.path).absoluteFile
+        if (io.path.startsWith(assetsPath)) io to document.text else null
+    }.toMap()
 }
