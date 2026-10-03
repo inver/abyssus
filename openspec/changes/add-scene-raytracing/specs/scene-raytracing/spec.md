@@ -34,6 +34,40 @@ Ray Tracing SHALL be available on macOS, Windows and Linux when a compatible GPU
 - **WHEN** initialization or rendering reports a recoverable backend failure
 - **THEN** the view resumes its existing renderer, preserves editing state and displays a non-modal explanation
 
+#### Scenario: Vulkan runtime missing
+- **WHEN** a Windows or Linux machine has no Vulkan loader or driver installed
+- **THEN** the scene renders normally, the plugin and IDE start without errors, and the disabled toggle explains that
+  the Vulkan runtime was not found
+
+#### Scenario: Device lost
+- **WHEN** the GPU device is lost while Ray Tracing is active (a driver reset or timeout)
+- **THEN** the view resumes its existing renderer within one second without freezing or crashing the IDE, keeps the
+  camera, selection and any drag, and offers a retry
+
+### Requirement: Backend selection and diagnostics
+
+The plugin SHALL choose the ray-tracing backend by probing the backends available for the operating system in a fixed
+order, using the first one that is usable. A JVM system property `abyssus.raytracing.backend` with the value `auto`
+(the default), `vulkan`, `metal` or `off` SHALL force that backend or turn the mode off. The toggle's tooltip SHALL name
+the active backend and GPU, or the reason none is usable.
+
+#### Scenario: Automatic choice on macOS
+- **WHEN** Ray Tracing is enabled on a Mac whose Vulkan implementation lacks the required ray-tracing features but whose
+  GPU supports Metal ray tracing
+- **THEN** the Metal backend is used and the tooltip names Metal and the GPU
+
+#### Scenario: Forced backend
+- **WHEN** the IDE starts with `-Dabyssus.raytracing.backend=vulkan` on a machine where Vulkan is not usable
+- **THEN** Ray Tracing is unavailable and the tooltip gives Vulkan's reason; no other backend is tried
+
+#### Scenario: Turned off
+- **WHEN** the IDE starts with `-Dabyssus.raytracing.backend=off`
+- **THEN** the toggle is disabled with that reason and no ray-tracing native library is loaded
+
+#### Scenario: Diagnostics
+- **WHEN** the user hovers over an enabled Ray Tracing toggle
+- **THEN** the tooltip names the backend (Vulkan or Metal) and the GPU in use
+
 ### Requirement: Ray-traced shadows
 
 Opaque and alpha-tested models and terrain SHALL cast and receive ray-traced shadows from selected supported directional, point and spot lights. Each shadow SHALL attenuate only its own light, preserving other lights, ambient/HDR diffuse lighting and emission. Cutout holes SHALL remain open; alpha-blended surfaces SHALL receive shadows but not cast them.
