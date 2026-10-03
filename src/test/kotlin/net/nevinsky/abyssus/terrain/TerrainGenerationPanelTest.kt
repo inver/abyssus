@@ -83,14 +83,14 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
     fun testApplyIsEnabledOnlyForAMatchingPreview() {
         val p = shown()
         button(p, "terrain-preview").doClick()
-        assertTrue(button(p, "terrain-apply").isEnabled)
-        assertTrue(label(p, "terrain-message")!!.contains("Preview ready"))
+        assertTrue("apply after preview: ${label(p, "terrain-message")}", button(p, "terrain-apply").isEnabled)
+        assertTrue("step1 ${label(p, "terrain-message")}/${label(p, "terrain-problems")}", label(p, "terrain-message")!!.contains("Preview ready"))
         type(field(p, "seed"), "99")
         assertFalse("changing a setting invalidates the preview", button(p, "terrain-apply").isEnabled)
         button(p, "terrain-preview").doClick()
-        assertTrue(button(p, "terrain-apply").isEnabled)
+        assertTrue("step2 ${label(p, "terrain-message")}/${label(p, "terrain-problems")}", button(p, "terrain-apply").isEnabled)
         button(p, "terrain-randomize").doClick()
-        assertFalse(button(p, "terrain-apply").isEnabled)
+        assertFalse("step3 ${label(p, "terrain-message")}/${label(p, "terrain-problems")}", button(p, "terrain-apply").isEnabled)
         assertNotSame("99", field(p, "seed").text)
     }
 

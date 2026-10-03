@@ -94,6 +94,8 @@ class TerrainGenerationController(
     /** Starts a background preview of the current settings; nothing is written. */
     fun preview() {
         if (!canPreview) return
+        // said before the start: an executor that runs the work at once reports its outcome from inside start()
+        message = AbyssusBundle.message("terrainGenerating")
         val started = runner.start(draft) { outcome ->
             message = when (outcome) {
                 PreviewOutcome.Ready -> AbyssusBundle.message("terrainPreviewReady")
@@ -102,8 +104,9 @@ class TerrainGenerationController(
             onChange()
         }
         if (started) {
-            message = AbyssusBundle.message("terrainGenerating")
-            onChange()
+            if (draft.generating) onChange()
+        } else {
+            message = null
         }
     }
 
