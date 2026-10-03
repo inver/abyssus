@@ -32,7 +32,14 @@ sealed interface PanelState {
     /** No asset to describe: [message], and under it [hint] when there is one. */
     data class Empty(val message: String, val hint: String?) : PanelState
 
-    data class Details(val name: String, val meta: AssetMeta.Loaded, val faces: List<FaceCell>?, val hdr: HdrCell? = null) : PanelState
+    /** An asset's Meta; [fields] are its editable properties (empty for a type without editors, which stays read only). */
+    data class Details(
+        val name: String,
+        val meta: AssetMeta.Loaded,
+        val faces: List<FaceCell>?,
+        val hdr: HdrCell? = null,
+        val fields: List<AssetFieldState> = emptyList(),
+    ) : PanelState
 
     /**
      * An entity of [target]'s scene, or only its component when `target.kind` is set. [addable] names the modeled kinds the
@@ -76,6 +83,7 @@ fun readAssetState(folder: VirtualFile): PanelState {
             folder.name, meta,
             if (meta.type == SKYBOX) faces(folder, meta) else null,
             if (meta.type == HDR_SKY_TYPE) hdrCell(folder, meta) else null,
+            readFieldStates(folder, meta.type, meta.json),
         )
     }
 }

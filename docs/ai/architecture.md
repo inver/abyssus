@@ -91,7 +91,8 @@ the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows
 
 ### Every write
 
-The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) all go through `editSceneJson`
+The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) and asset property edits (`AssetMetaEdits`, over `core`'s
+`AssetMetaEditor`; reference and face choices come from `properties/AssetReferenceChoices.kt`) all go through `editSceneJson`
 (`projectView/EnabledToggle.kt`):
 
 1. Parse the document with `SceneJson`.

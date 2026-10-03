@@ -12,7 +12,27 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.components.service
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
+import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.openapi.command.undo.UndoManager
+import com.intellij.openapi.fileEditor.TextEditor
+import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
+import net.nevinsky.abyssus.dto.ProjectLayout
+import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import java.awt.FlowLayout
+import javax.swing.JButton
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.ComboBox
+import com.intellij.ui.SimpleListCellRenderer
+import com.intellij.ui.components.JBTextField
+import net.nevinsky.abyssus.AbyssusCore
+import net.nevinsky.abyssus.assets.edit.FieldKind
+import net.nevinsky.abyssus.assets.edit.FieldValue
+import net.nevinsky.abyssus.assets.edit.ParseOutcome
+import java.awt.event.FocusAdapter
+import java.awt.event.FocusEvent
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
@@ -58,7 +78,7 @@ class AssetPropertiesPanel(
     parent: Disposable,
     private val background: (Runnable) -> Unit = { AppExecutorUtil.getAppExecutorService().execute(it) },
     private val ui: (Runnable) -> Unit = { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
-) : JPanel(CardLayout()) {
+) : JPanel(CardLayout()), UiDataProvider {
     private val cards = layout as CardLayout
     private val content = JPanel(BorderLayout())
     private val empty = JPanel(GridBagLayout())
@@ -68,6 +88,13 @@ class AssetPropertiesPanel(
     private var scene: VirtualFile? = null
     private var generation = 0
     private var disposed = false
+
+    /**
+     * A text editor on the shown asset's `meta.json`, never displayed: it is what the platform's Undo and Redo act on, so
+     * they work with focus in this panel, and what the panel's own Undo and Redo buttons use.
+     */
+    private var undoEditor: TextEditor? = null
+    private var undoFile: VirtualFile? = null
 
     /** What the panel currently shows. */
     internal var state: PanelState = emptyState(null)
@@ -87,7 +114,7 @@ class AssetPropertiesPanel(
                 if (touches(FileDocumentManager.getInstance().getFile(event.document))) refresh()
             }
         }, parent)
-        Disposable { disposed = true }.also { com.intellij.openapi.util.Disposer.register(parent, it) }
+        Disposable { disposed = true; useUndoEditor(null) }.also { com.intellij.openapi.util.Disposer.register(parent, it) }
         show(AbyssusSelection.of(project).current)
     }
 
@@ -101,11 +128,27 @@ class AssetPropertiesPanel(
 
     private fun refresh() = show(selected)
 
+    override fun uiDataSnapshot(sink: DataSink) {
+        undoEditor?.let { sink[PlatformCoreDataKeys.FILE_EDITOR] = it }
+    }
+
+    private fun useUndoEditor(file: VirtualFile?) {
+        if (file == undoFile && (file == null || undoEditor != null)) return
+        undoEditor?.let(com.intellij.openapi.util.Disposer::dispose)
+        undoEditor = null
+        undoFile = file
+        if (file == null || !file.isValid) return
+        undoEditor = runCatchingKeepingCancellation { TextEditorProvider.getInstance().createEditor(project, file) as? TextEditor }.getOrNull()
+    }
+
+    /** Shows the asset in [assetFolder] directly, without a tree row; for tests whose files must be on disk. */
+    internal fun showFolder(assetFolder: VirtualFile) = show(assetFolder)
+
     /** Shows [node]: an asset row's Meta, else the empty state. Reads the asset in the background. */
     fun show(node: Any?) {
         selected = node
         val token = ++generation
-        val assetFolder = assetFolderOf(node)
+        val assetFolder = (node as? VirtualFile)?.takeIf { it.isDirectory } ?: assetFolderOf(node)
         folder = assetFolder
         val entity = if (assetFolder == null) componentTargetOf(node) else null
         scene = entity?.file
@@ -132,15 +175,18 @@ class AssetPropertiesPanel(
         state = newState
         when (newState) {
             is PanelState.Empty -> {
+                useUndoEditor(null)
                 fillEmpty(newState)
                 cards.show(this, EMPTY)
             }
             is PanelState.EntityDetails -> {
+                useUndoEditor(null)
                 content.removeAll()
                 content.add(JBScrollPane(EntityDetailsView(project, newState)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)
             }
             is PanelState.Details -> {
+                useUndoEditor(if (newState.fields.isEmpty()) null else newState.meta.folder.findChild(ProjectLayout.META_FILE))
                 content.removeAll()
                 content.add(JBScrollPane(details(newState)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)
@@ -165,7 +211,15 @@ class AssetPropertiesPanel(
         box.add(header(d))
         box.add(columnHeader())
         val rows = JPanel(VerticalLayout(0)).apply { border = JBUI.Borders.empty(4, 0) }
-        for (row in d.meta.rows) rows.add(rowOf(row))
+        val editable = d.fields.associateBy { it.key }
+        val shown = HashSet<String>()
+        for (row in d.meta.rows) {
+            val field = editable[row.name]?.takeIf { row.kind == RowKind.ADDITIONAL }
+            if (field != null) shown += field.key
+            rows.add(if (field != null) fieldRow(d, field) else rowOf(row))
+        }
+        // supported fields a file omits (procedural sky defaults) are listed with their effective value
+        if (d.meta.rows.any { it.kind == RowKind.HEADING }) d.fields.filter { it.key !in shown }.forEach { rows.add(fieldRow(d, it)) }
         box.add(rows)
         d.faces?.let { box.add(previews(it)) }
         d.hdr?.let { box.add(hdrPreview(it)) }
@@ -175,12 +229,35 @@ class AssetPropertiesPanel(
     private fun header(d: PanelState.Details): JComponent {
         val text = JPanel(VerticalLayout(JBUI.scale(2))).apply {
             add(JBLabel(d.name).apply { font = JBFont.label().asBold().biggerOn(1f) })
-            add(JBLabel(AbyssusBundle.message("propertiesSubtitle", (d.meta.type ?: AbyssusBundle.message("propertiesUnknownType")).lowercase())).apply { foreground = secondary() })
+            val type = (d.meta.type ?: AbyssusBundle.message("propertiesUnknownType")).lowercase()
+            if (d.fields.isEmpty()) {
+                add(JBLabel(AbyssusBundle.message("propertiesSubtitle", type)).apply { foreground = secondary() })
+            } else {
+                add(JBLabel(AbyssusBundle.message("propertiesSubtitleEditable", type)).apply { foreground = secondary() })
+                add(JBLabel(AbyssusBundle.message("propertiesSharedNote")).apply { foreground = secondary(); font = JBFont.small(); name = "shared-asset-note" })
+            }
         }
         return JPanel(BorderLayout(JBUI.scale(10), 0)).apply {
             border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0), JBUI.Borders.empty(12, 16))
             add(JBLabel(AssetIcons.forType(d.meta.type)), BorderLayout.WEST)
             add(text, BorderLayout.CENTER)
+            if (d.fields.isNotEmpty()) add(undoButtons(), BorderLayout.EAST)
+        }
+    }
+
+    /** Undo and Redo for edits made here: the platform commands on this asset's `meta.json`. */
+    private fun undoButtons(): JComponent {
+        val manager = UndoManager.getInstance(project)
+        val editor = undoEditor
+        fun button(key: String, label: String, available: () -> Boolean, run: () -> Unit) = JButton(label).apply {
+            name = key
+            isEnabled = editor != null && available()
+            addActionListener { run() }
+        }
+        return JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(4), 0)).apply {
+            isOpaque = false
+            add(button("asset-undo", AbyssusBundle.message("propertiesUndo"), { manager.isUndoAvailable(editor) }) { manager.undo(editor); refresh() })
+            add(button("asset-redo", AbyssusBundle.message("propertiesRedo"), { manager.isRedoAvailable(editor) }) { manager.redo(editor); refresh() })
         }
     }
 
@@ -197,6 +274,79 @@ class AssetPropertiesPanel(
             val indent = if (row.kind == RowKind.ADDITIONAL) "    " else ""
             val value = JBLabel(row.value).apply { font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size); toolTipText = row.value.ifEmpty { null } }
             twoColumns(JBLabel(indent + row.name), value).apply { border = JBUI.Borders.empty(4, 16) }
+        }
+    }
+
+    /** The editor of one supported property; a refused value goes back to what the file holds, with the reason beside it. */
+    private fun fieldRow(d: PanelState.Details, state: AssetFieldState): JComponent {
+        val error = JBLabel("").apply { foreground = JBColor.RED; name = "asset-error-${state.key}" }
+        val editor = fieldEditor(d, state, error)
+        editor.name = "asset-field-${state.key}"
+        val editorAndError = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
+            isOpaque = false
+            add(editor, BorderLayout.CENTER)
+            add(error, BorderLayout.EAST)
+        }
+        return twoColumns(JBLabel("    " + state.key), editorAndError).apply { border = JBUI.Borders.empty(4, 16) }
+    }
+
+    private fun fieldEditor(d: PanelState.Details, state: AssetFieldState, error: JBLabel): JComponent {
+        if (state.field.kind == FieldKind.ASSET_REFERENCE || state.field.kind == FieldKind.LOCAL_FILE) {
+            val combo = ComboBox(state.choices.toTypedArray())
+            combo.renderer = SimpleListCellRenderer.create("") { choiceLabel(it) }
+            combo.selectedItem = state.choices.firstOrNull { it.value == (state.value as? FieldValue.Text)?.value }
+            combo.addActionListener {
+                val chosen = combo.selectedItem as? AssetChoice ?: return@addActionListener
+                val value = chosen.value?.let { FieldValue.Text(it) } ?: FieldValue.None
+                if (value != state.value) commitField(d, state, value, error) {
+                    combo.selectedItem = state.choices.firstOrNull { it.value == (state.value as? FieldValue.Text)?.value }
+                }
+            }
+            return combo
+        }
+        val field = JBTextField(state.text)
+        field.font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size)
+        val save = save@{
+            if (field.text == state.text) return@save
+            when (val parsed = service<AbyssusCore>().assetEditor.parse(state.field, field.text)) {
+                is ParseOutcome.Failed -> {
+                    error.text = editErrorMessage(parsed.error)
+                    field.text = state.text
+                }
+                is ParseOutcome.Parsed -> commitField(d, state, parsed.value, error) { field.text = state.text }
+            }
+        }
+        field.addActionListener { save() }
+        field.addFocusListener(object : FocusAdapter() {
+            override fun focusLost(e: FocusEvent) = save()
+        })
+        return field
+    }
+
+    private fun commitField(d: PanelState.Details, state: AssetFieldState, value: FieldValue, error: JBLabel, revert: () -> Unit) {
+        val folder = this.folder ?: return
+        when (val result = AssetMetaEdits.update(project, folder, state.key, state.value, value)) {
+            AssetEditResult.Changed -> {
+                error.text = ""
+                refresh() // the document listener ran inside the command, before Undo became available
+            }
+            AssetEditResult.Unchanged -> {
+                error.text = ""
+                revert()
+            }
+            is AssetEditResult.Rejected -> {
+                error.text = editErrorMessage(result.error)
+                revert()
+            }
+            is AssetEditResult.Conflict -> {
+                error.text = AbyssusBundle.message("assetFieldConflict")
+                revert()
+                refresh()
+            }
+            AssetEditResult.Unreadable -> {
+                error.text = AbyssusBundle.message("assetFieldUnreadable")
+                revert()
+            }
         }
     }
 
