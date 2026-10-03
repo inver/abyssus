@@ -43,7 +43,7 @@
           "PositionComponent": {
             "localPosition": {
               "x": -3.035308,
-              "y": 0.9123962,
+              "y": 1.358942,
               "z": -3.2570944
             }
           },
@@ -121,7 +121,7 @@
             },
             "localPosition": {
               "x": -5.250234,
-              "y": 2.462766,
+              "y": 1.3647921,
               "z": 6.35708
             }
           },
@@ -261,7 +261,7 @@
           "PositionComponent": {
             "localPosition": {
               "x": 9.440927,
-              "y": 0.0,
+              "y": 5.7804585E-4,
               "z": 0.0
             },
             "localRotation": {
