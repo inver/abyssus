@@ -86,6 +86,9 @@ data class SceneContent(
     /** The ids of entities whose `TypeComponent.type` is `HANDLE` (the direction handles of look-at lights). */
     val handleIds: Set<String> = emptySet(),
 ) {
+    /** The id of the direction handle (a `HANDLE` entity) [light] looks at, or null when it looks at none. */
+    fun aimHandleOf(light: LightPlacement): String? = light.lookAtId?.takeIf { it in handleIds }
+
     companion object {
         val EMPTY = SceneContent()
 
@@ -147,13 +150,7 @@ data class SceneContent(
             val position = components.opt("PositionComponent")?.opt("localPosition")
             val placed = if (position != null || camera?.obj("position") == null) transform.position else vec(camera.obj("position"), 0f)
             val direction = camera?.obj("viewPointPosition")?.let { vec(it, 0f) } ?: Vec3(0f, 0f, -1f)
-            val lookAt = components.opt("PositionComponent")?.opt("lookAtId")?.let {
-                when {
-                    it.isIntegralNumber -> it.asLong().takeIf { n -> n >= 0 }?.toString()
-                    it.isTextual -> it.asText().takeIf { t -> t.isNotBlank() && t != "-1" }
-                    else -> null
-                }
-            }
+            val lookAt = lookAtIdOf(components)
             val name = components.opt("NameComponent")?.text("name")?.takeIf { it.isNotBlank() } ?: id
             return CameraPlacement(
                 id, name, placed, direction, lookAt,
@@ -182,18 +179,22 @@ data class SceneContent(
             val rgba = Rgba(number(color, "r", 1f), number(color, "g", 1f), number(color, "b", 1f), 1f)
             val intensity = number(light, "intensity", 0.3f).coerceAtLeast(0f)
             val range = number(light, "range", DEFAULT_LIGHT_RANGE)
-            val lookAt = components.opt("PositionComponent")?.opt("lookAtId")?.let {
+            val lookAt = lookAtIdOf(components)
+            return LightPlacement(
+                id, kind, rgba, intensity, transform.position, forward(transform.rotation), range, transform.rotation,
+                number(light, "coneAngle", 45f), number(light, "edgeSoftness", 0.2f), lookAt,
+            )
+        }
+
+        /** `PositionComponent.lookAtId` as an entity id, or null when it is missing or `-1` (no target). */
+        private fun lookAtIdOf(components: JsonNode): String? =
+            components.opt("PositionComponent")?.opt("lookAtId")?.let {
                 when {
                     it.isIntegralNumber -> it.asLong().takeIf { n -> n >= 0 }?.toString()
                     it.isTextual -> it.asText().takeIf { t -> t.isNotBlank() && t != "-1" }
                     else -> null
                 }
             }
-            return LightPlacement(
-                id, kind, rgba, intensity, transform.position, forward(transform.rotation), range, transform.rotation,
-                number(light, "coneAngle", 45f), number(light, "edgeSoftness", 0.2f), lookAt,
-            )
-        }
 
         /** The libGDX forward axis (-Z) rotated by [q]. */
         internal fun forward(q: Quat): Vec3 {

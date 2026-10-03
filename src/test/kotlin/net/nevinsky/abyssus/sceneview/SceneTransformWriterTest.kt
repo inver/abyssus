@@ -160,4 +160,24 @@ class SceneTransformWriterTest {
             .set<JsonNode>("localPosition", components(root, "0").get("PositionComponent").get("localPosition"))
         assertEquals(SceneJson.compact(expected), SceneJson.compact(root))
     }
+
+    @Test
+    fun aHandleMoveToAMissingEntityLeavesTheTreeAsItWas() {
+        val mundus = File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()
+        val root = SceneJson.parse(mundus)
+        val edit = TransformEdit(rotation = Quat(0f, 1f, 0f, 0f), target = TargetMove("99", Vec3(0f, 10f, -10f)))
+        assertFalse(SceneTransformWriter.apply(root, "1", edit))
+        assertEquals(SceneJson.compact(SceneJson.parse(mundus)), SceneJson.compact(root))
+    }
+
+    @Test
+    fun aHandleMoveToAnEntityWithABadPositionComponentLeavesTheTreeAsItWas() {
+        val text = """{"ecs":{"entities":{
+            "h":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":5}},
+            "l":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"PositionComponent":{"lookAtId":"h"}}}}}}"""
+        val root = SceneJson.parse(text)
+        val edit = TransformEdit(rotation = Quat(0f, 1f, 0f, 0f), target = TargetMove("h", Vec3(0f, 0f, -1f)))
+        assertFalse(SceneTransformWriter.apply(root, "l", edit))
+        assertEquals(SceneJson.compact(SceneJson.parse(text)), SceneJson.compact(root))
+    }
 }

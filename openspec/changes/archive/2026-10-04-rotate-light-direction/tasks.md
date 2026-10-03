@@ -25,7 +25,7 @@
   `ScenePreview.apply`, move that handle's `entityPositions` entry during a rotate preview. During a move preview,
   re-aim a look-at light at its unmoved target. Verify with a new `ScenePreviewTest`:
   `turningAHandleAimedLightMovesItsHandle` (light `1`, turned to (0, 0, -1): its direction is (0, 0, -1) and handle `0`
-  is at (0, 10, -10)), `movingALookAtLightReAimsIt`, and `aLightWithoutTargetUsesTheDraggedDirection`.
+  is at (0, 10, -10)), `movingALookAtLightReAimsItAtItsUnmovedTarget`, and `aLightWithoutTargetUsesTheDraggedDirection`.
   Run `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.ScenePreviewTest'`.
 
 ## 4. Edit and write
@@ -46,8 +46,8 @@
 
 ## 5. Integration
 
-- [x] 5.1 Run the plugin test suite: `./gradlew :test`. (26 failures are pre-existing: the `Untitled` fixture was
-  edited in the IDE before this change; none are introduced by it.)
+- [x] 5.1 Run the plugin test suite: `./gradlew :test`. (14 failures are pre-existing: the same 14 fail on `main`
+  before this change, mostly because the `Untitled` fixture was edited in the IDE; none are introduced by it.)
 
 ## 6. Docs
 
@@ -74,6 +74,6 @@ Use a **copy** of `src/test/testData/project/Lights` as the `runIde` project, ne
 
 ## 8. Final check
 
-- [x] 8.1 Run `./gradlew :compileKotlin` and the new test classes. Both pass; the full `./gradlew :test` has 10
-  failures, all pre-existing (the `Untitled` fixture was edited in the IDE before this change; the same set fails on
-  `git stash` with no changes). `scripts/check-docs.sh` passes.
+- [x] 8.1 Run `./gradlew check && scripts/check-docs.sh`. `check` fails only in `:test`, with the same 14 failures
+  as `main` (see 5.1); every other task, including `:core:test`, `:gdx-model:test` and the new test classes, passes.
+  `scripts/check-docs.sh` passes.

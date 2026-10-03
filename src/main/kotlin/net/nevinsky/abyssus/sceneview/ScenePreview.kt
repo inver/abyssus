@@ -10,17 +10,16 @@ import net.nevinsky.abyssus.sceneview.gizmo.DragResult
 /** The entity a gizmo acts on: where it is, and the direction it faces when it has one (a camera, a directional or spot light). */
 class Selected(val transform: PlacementTransform, val direction: Vec3?)
 
-/**
- * Where a rotate drag on a handle-aimed light must put its handle: the light's position plus the turned direction times
- * the start distance from the light to its handle (1 when that distance is 0). Null when [entityId] is not a
- * handle-aimed light or has no turned direction, so callers can leave the handle where it is.
- */
+/** Applies the transform an in-progress drag proposes over the scene's placements, and finds the selection's transform. No GL needed. */
 object ScenePreview {
-    /** The new position of a handle-aimed light's direction handle for a rotate [result], or null when none applies. */
+    /**
+     * Where a rotate drag on a handle-aimed light must put its handle: the light's position plus the turned direction
+     * times the start distance from the light to its handle (1 when that distance is 0). Null when [entityId] is not a
+     * handle-aimed light or has no turned direction, so callers can leave the handle where it is.
+     */
     fun aimedTarget(content: SceneContent, entityId: String, result: DragResult): Vec3? {
         val light = content.lights.firstOrNull { it.entityId == entityId } ?: return null
-        val handleId = light.lookAtId ?: return null
-        if (handleId !in content.handleIds) return null
+        val handleId = content.aimHandleOf(light) ?: return null
         val handle = content.entityPositions[handleId] ?: return null
         val direction = result.direction ?: return null
         val dx = handle.x - light.position.x
@@ -35,12 +34,12 @@ object ScenePreview {
     fun apply(content: SceneContent, entityId: String, result: DragResult): SceneContent {
         val t = result.transform
         val light = content.lights.firstOrNull { it.entityId == entityId }
-        val handleAimed = light != null && light.lookAtId != null && light.lookAtId in content.handleIds
         // A rotate drag keeps the light's position and turns its direction; it moves the handle. A move drag changes the
         // position and re-aims a look-at light at its unmoved target. The two are told apart by whether the position moved.
-        val rotatingHandleAimed = handleAimed && t.position == light!!.position && result.direction != null
+        val handleId = light?.let(content::aimHandleOf)?.takeIf { t.position == light.position }
+        val handleAt = handleId?.let { aimedTarget(content, entityId, result) }
         val moved = content.entityPositions + (entityId to t.position)
-        val positions = if (rotatingHandleAimed) moved + (light!!.lookAtId to aimedTarget(content, entityId, result)!!) else moved
+        val positions = if (handleId != null && handleAt != null) moved + (handleId to handleAt) else moved
         return content.copy(
             models = content.models.map { if (it.entityId == entityId) it.copy(transform = t) else it },
             terrains = content.terrains.map { if (it.entityId == entityId) it.copy(transform = t) else it },

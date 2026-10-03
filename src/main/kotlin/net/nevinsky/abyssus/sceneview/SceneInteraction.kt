@@ -185,12 +185,10 @@ class SceneInteraction(
     private fun editOf(id: String, result: DragResult): TransformEdit {
         if (renderer.gizmoMode == GizmoMode.MOVE) return TransformEdit(position = result.transform.position)
         val content = renderer.params.content
-        val light = content.lights.firstOrNull { it.entityId == id }
+        val handleId = content.lights.firstOrNull { it.entityId == id }?.let(content::aimHandleOf)
         // A rotate drag on a light aimed at a direction handle moves the handle instead of the light's own rotation.
-        if (light != null && light.lookAtId != null && light.lookAtId in content.handleIds && result.direction != null) {
-            val target = ScenePreview.aimedTarget(content, id, result) ?: return TransformEdit(rotation = result.transform.rotation)
-            return TransformEdit(target = TargetMove(light.lookAtId, target))
-        }
+        val handleAt = handleId?.let { ScenePreview.aimedTarget(content, id, result) }
+        if (handleId != null && handleAt != null) return TransformEdit(target = TargetMove(handleId, handleAt))
         return TransformEdit(rotation = result.transform.rotation, direction = result.direction.takeIf { ScenePreview.isCamera(content, id) })
     }
 

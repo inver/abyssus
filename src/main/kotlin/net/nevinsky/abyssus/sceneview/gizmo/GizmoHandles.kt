@@ -65,5 +65,5 @@ fun canRotate(content: SceneContent, entityId: String): Boolean {
     val light = content.lights.firstOrNull { it.entityId == entityId } ?: return true
     if (light.kind == LightKind.POINT) return false
     val lookAt = light.lookAtId ?: return true
-    return lookAt !in content.entityPositions || lookAt in content.handleIds
+    return lookAt !in content.entityPositions || content.aimHandleOf(light) != null
 }
