@@ -118,7 +118,8 @@ data class SceneContent(
                 }
             }
             val resolved = lights.map { light ->
-                val target = light.lookAtId?.let(positions::get)
+                // A point light shines every way, so only directional and spot lights face a look-at target.
+                val target = light.lookAtId?.takeIf { light.kind != LightKind.POINT }?.let(positions::get)
                 val direction = if (target != null) aim(light.position, target) ?: forward(light.rotation) else forward(light.rotation)
                 light.copy(direction = direction)
             }

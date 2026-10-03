@@ -101,6 +101,8 @@ a point light.
   the ported `LookAtSystem` treats them. If some Mundus version stored handle positions relative to the parent, both
   the read and the write would be off by the light's position. Mitigation: runIde check 7.3 opens the edited copy in
   Mundus, or compares with a Mundus-saved file, when one is at hand. Otherwise it is listed as unverified.
+  Resolved: the `inver/Mundus` `develop` source (`LookAtSystem`) compares the two raw `localPosition`s, ignoring
+  `ParentComponent`, so the frames agree.
 - [Writing an empty `PositionComponent`] The handle's `{}` becomes `{"localPosition": {x, y, z}}`. That is what Mundus
   writes for a moved handle, and what the writer already does for any entity.
 

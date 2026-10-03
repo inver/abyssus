@@ -46,8 +46,9 @@
 
 ## 5. Integration
 
-- [x] 5.1 Run the plugin test suite: `./gradlew :test`. (14 failures are pre-existing: the same 14 fail on `main`
-  before this change, mostly because the `Untitled` fixture was edited in the IDE; none are introduced by it.)
+- [x] 5.1 Run the plugin test suite: `./gradlew :test`. (The `Untitled` fixture had been edited in the IDE, which
+  failed 10 tests on `main` too; it is restored to its state before those edits. 4 icon tests fail only in a headless
+  Linux container, where plugin SVG icons load as 1×1; none are introduced by this change.)
 
 ## 6. Docs
 
@@ -71,9 +72,13 @@ Use a **copy** of `src/test/testData/project/Lights` as the `runIde` project, ne
 - [ ] 7.3 If a Mundus editor is at hand, open the edited copy in it. Check that light `1` faces the direction it was
   turned to in Abyssus. If no Mundus editor is available, leave this unchecked and list it as unverified (see the
   "Handle coordinates" risk in design.md).
+  Checked against the source instead (`inver/Mundus`, branch `develop`): `LookAtSystem` aims from the light's
+  `localPosition` to the handle's `localPosition` and ignores `ParentComponent`, and `LightService` creates a light at
+  (0, 10, 0) with its handle at (0, 0, 0). So handle positions are read and written in the same frame as the light's,
+  as this change assumes. Opening an edited file in the editor is still not done.
 
 ## 8. Final check
 
-- [x] 8.1 Run `./gradlew check && scripts/check-docs.sh`. `check` fails only in `:test`, with the same 14 failures
-  as `main` (see 5.1); every other task, including `:core:test`, `:gdx-model:test` and the new test classes, passes.
+- [x] 8.1 Run `./gradlew check && scripts/check-docs.sh`. `check` fails only on the 4 icon tests of 5.1 in a headless
+  Linux container; every other test, including `:core:test`, `:gdx-model:test` and the new test classes, passes.
   `scripts/check-docs.sh` passes.

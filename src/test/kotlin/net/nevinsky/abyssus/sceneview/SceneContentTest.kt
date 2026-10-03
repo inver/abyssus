@@ -172,6 +172,15 @@ class SceneContentTest {
     }
 
     @Test
+    fun aPointLightIgnoresItsLookAtTarget() {
+        val c = content("""{"ecs":{"entities":{
+            "0":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{}}},
+            "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{},
+                "PositionComponent":{"lookAtId":0,"localPosition":{"y":10}}}}}}}""")
+        assertEquals(Vec3(0f, 0f, -1f), c.lights.single().direction)
+    }
+
+    @Test
     fun cameraWithoutCameraObjectGetsDefaults() {
         val cam = content(entity("""{"CameraComponent":{},"PositionComponent":{"localPosition":{"x":1,"y":2,"z":3}}}""")).cameras.single()
         assertEquals(Vec3(1f, 2f, 3f), cam.position)
