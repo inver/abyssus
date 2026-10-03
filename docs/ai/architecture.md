@@ -45,6 +45,14 @@ All in `src/main/resources/META-INF/plugin.xml`:
 `AbyssusSelection` publishes the selected node on `AbyssusSelectionListener.TOPIC`. `AssetPropertiesPanel` reads
 the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows it. It never writes.
 
+### Changed assets to the scene view
+
+`SceneFileEditor` watches the project's `assets` (VFS events and `meta.json` documents). `AssetRefresh` diffs snapshots of
+effective asset revisions off the EDT (unsaved metadata text is captured on the EDT first), and a real change reaches
+`SceneRenderer.queueAssetRevision` as an `AssetRevisionBatch`. The next safe frame invalidates the changed names in each
+`AssetCache` and swaps old assets for new ones as they finish building. See
+`src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md`.
+
 ### A scene file to the scene view
 
 1. `SceneFileEditor` reads the scene and its project's `mainCamera` through `SceneParamsSource.EDITOR_TEXT`. It uses
@@ -120,6 +128,8 @@ checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the proper
 - **Asset loading:** `AssetCache.prepare` runs on a pool thread and does file IO and decoding, no GL. Building GPU
   objects happens on the render thread in `pump`, sliced per frame for big textures and for an HDR sky's
   environment passes (`HdrEnvironmentBuild`, which restores the framebuffer, viewport and state it changes).
+  Reloading a changed asset follows the same split: `AssetRefresh` reads on the pool and delivers on the EDT, and
+  invalidation, disposal, build and upload happen only inside `withContext` on a frame `GuardedGLCanvas` allows.
 - **GL safety:** `GuardedGLCanvas` refuses GL until the canvas has been on screen with a non-zero size for 250 ms.
   When disposed while hidden, it drops the context without making it current, because on macOS that would abort the
   JVM.
