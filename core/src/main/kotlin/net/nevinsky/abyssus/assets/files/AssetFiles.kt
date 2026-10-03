@@ -19,12 +19,26 @@ import java.io.File
 /** The files of a terrain asset: [data] is the height data, [splat] the splat textures present (by `meta.json` field). */
 data class TerrainFiles(val data: File, val size: Int, val uv: Float, val splat: Map<String, File>)
 
+/** Reads a `meta.json` file as text; null when there is none. The default reads the file from disk. */
+fun interface MetaTextSource {
+    fun read(metaFile: File): String?
+}
+
+/** The default [MetaTextSource]: the file's content on disk. */
+class DiskMetaText : MetaTextSource {
+    override fun read(metaFile: File): String? = metaFile.takeIf { it.isFile }?.readText()
+}
+
 /**
  * Finds the files an asset folder under `<projectDir>/assets` names in its `meta.json`, parsing with [json]. Pure file
  * access, so it can run on any thread; every lookup returns null for a missing folder, unreadable `meta.json` or
  * missing file.
+ *
+ * An instance is a snapshot: the `uuid` index is read once, on first use, and never updated. When assets may have
+ * been added, removed or renamed, make a new instance ([refreshed]). Metadata is read through [metaText], so a caller
+ * can substitute text that is not on disk yet (unsaved editor content) with an immutable snapshot.
  */
-class AssetFiles(projectDir: File, private val json: JsonProcessor) {
+class AssetFiles(projectDir: File, private val json: JsonProcessor, private val metaText: MetaTextSource = DiskMetaText()) {
     val projectDir: File = projectDir.absoluteFile
 
     private val assetsDir = File(this.projectDir, ASSETS_DIR)
@@ -40,8 +54,11 @@ class AssetFiles(projectDir: File, private val json: JsonProcessor) {
         if (assetName.isEmpty() || assetName.contains('/') || assetName.contains('\\') || assetName == ".." || assetName == ".") null
         else File(assetsDir, assetName).takeIf { it.isDirectory }
 
+    /** A new snapshot of the same project, reading the assets again (a changed `uuid` index, added or removed folders). */
+    fun refreshed(metaText: MetaTextSource = this.metaText): AssetFiles = AssetFiles(projectDir, json, metaText)
+
     private fun meta(folder: File): JsonNode? = runCatchingKeepingCancellation {
-        File(folder, META_FILE).takeIf { it.isFile }?.let { json.readObject(it.readText()) }
+        metaText.read(File(folder, META_FILE))?.let { json.readObject(it) }
     }.getOrNull()
 
     private fun additional(folder: File) = meta(folder)?.obj("additional")
@@ -73,7 +90,7 @@ class AssetFiles(projectDir: File, private val json: JsonProcessor) {
         }.toMap()
 
     private fun <T, M : MetaBase<T>> loadMeta(clazz: Class<M>, folder: File): M? = runCatchingKeepingCancellation {
-        File(folder, META_FILE).takeIf { it.isFile }?.let { json.parse(it.readText(), clazz) }
+        metaText.read(File(folder, META_FILE))?.let { json.parse(it, clazz) }
     }.getOrNull()
 
     fun loadFile(assetName: String, fileName: String?): File? {

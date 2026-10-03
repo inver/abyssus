@@ -19,6 +19,11 @@ import java.util.concurrent.Executor
  *
  * GPU work that is slow (uploading big textures) can be split: [advance] is called with the prepared data before
  * [build], once per [pump] step, and does one slice of it; the asset is built when it returns true.
+ *
+ * [invalidate] marks names as changed on disk. A loaded asset stays in use until its replacement is built, then the
+ * two are swapped in one step, so a consumer never sees a half-replaced asset; a name that was loading or failed is
+ * forgotten and loaded again by the next [request]. A load that finishes for a superseded request is discarded and
+ * can never replace the latest one.
  */
 class AssetCache<D : Any, T : Disposable>(
     private val executor: Executor,
@@ -32,12 +37,17 @@ class AssetCache<D : Any, T : Disposable>(
         /** One per request: a result is only taken while its request is still the current state of its name. */
         class Loading : State
         data object Failed : State
-        class Ready<T>(val value: T) : State
+
+        /** A built asset; [pending] is the request that will replace it, [stale] that one must be started. */
+        class Ready<T>(val value: T, var pending: Loading? = null, var stale: Boolean = false) : State
     }
 
     private class Prepared<D>(val name: String, val request: State.Loading, val data: D?, val error: Throwable?)
 
     private val states = HashMap<String, State>()
+
+    /** How many assets were published under each name; changes exactly when [get] starts returning another asset. */
+    private val versions = HashMap<String, Long>()
     private val prepared = ConcurrentLinkedQueue<Prepared<D>>()
 
     /** Requests still wanted; pool threads skip or drop the work of the others (forgotten, abandoned or disposed). */
@@ -47,13 +57,48 @@ class AssetCache<D : Any, T : Disposable>(
     private val waiting = ArrayDeque<Prepared<D>>()
 
     /** True while any requested asset has not finished loading (neither built nor failed). */
-    fun isLoading(): Boolean = states.values.any { it is State.Loading }
+    fun isLoading(): Boolean = states.values.any { it is State.Loading || (it as? State.Ready<*>)?.let { r -> r.pending != null || r.stale } == true }
 
-    /** Starts loading [name] unless it is already loading, loaded or failed. */
+    /** The number of assets built under [name] so far: another value means [get] returns a new asset. */
+    fun version(name: String): Long = versions[name] ?: 0L
+
+    /**
+     * Marks [names] as changed. A loaded asset is replaced once the next [request] has loaded and built its new
+     * revision (the old one is disposed then); a loading request is dropped and a failed name forgotten, so the next
+     * [request] loads it again from the current files. Unknown names and every other asset are untouched.
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun invalidate(names: Set<String>) {
+        for (name in names) {
+            when (val state = states[name] ?: continue) {
+                is State.Loading -> {
+                    live -= state
+                    states.remove(name)
+                }
+
+                State.Failed -> states.remove(name)
+                is State.Ready<*> -> {
+                    state.pending?.let { live -= it }
+                    state.pending = null
+                    state.stale = true
+                }
+            }
+        }
+    }
+
+    /** Starts loading [name] unless it is already loading, loaded and current, or failed. */
     fun request(name: String) {
-        if (states.containsKey(name)) return
+        val existing = states[name]
         val request = State.Loading()
-        states[name] = request
+        when {
+            existing == null -> states[name] = request
+            existing is State.Ready<*> && existing.stale -> {
+                existing.stale = false
+                existing.pending = request
+            }
+
+            else -> return
+        }
         live += request
         executor.execute {
             if (request !in live) return@execute
@@ -78,7 +123,7 @@ class AssetCache<D : Any, T : Disposable>(
         var steps = 0
         while (steps < maxSteps) {
             val p = waiting.removeFirstOrNull() ?: break
-            if (states[p.name] !== p.request) { // forgotten while loading
+            if (!isCurrent(p.name, p.request)) { // forgotten, or superseded by a newer revision, while loading
                 p.data?.let(discard)
                 continue
             }
@@ -98,7 +143,7 @@ class AssetCache<D : Any, T : Disposable>(
                 changed = true
                 live -= p.request
                 val value = build(p.name, data)
-                if (value == null) fail(p.name, null) else states[p.name] = State.Ready(value)
+                if (value == null) fail(p.name, null) else publish(p.name, value)
             } catch (e: Throwable) {
                 changed = true
                 live -= p.request
@@ -109,7 +154,25 @@ class AssetCache<D : Any, T : Disposable>(
         return changed
     }
 
+    @Suppress("UNCHECKED_CAST")
+    private fun isCurrent(name: String, request: State.Loading): Boolean = when (val state = states[name]) {
+        is State.Loading -> state === request
+        is State.Ready<*> -> state.pending === request
+        else -> false
+    }
+
+    /** Makes [value] the asset of [name] and disposes the one it replaces. */
+    @Suppress("UNCHECKED_CAST")
+    private fun publish(name: String, value: T) {
+        val old = (states[name] as? State.Ready<T>)?.value
+        states[name] = State.Ready(value)
+        versions[name] = version(name) + 1
+        old?.dispose()
+    }
+
+    @Suppress("UNCHECKED_CAST")
     private fun fail(name: String, error: Throwable?) {
+        (states[name] as? State.Ready<T>)?.value?.dispose() // a revision that cannot load replaces the old one with nothing
         states[name] = State.Failed
         if (error != null) log.warn("Failed to load asset '$name'", error) else log.warn("Asset '$name' is missing or unreadable", null)
     }
@@ -126,7 +189,10 @@ class AssetCache<D : Any, T : Disposable>(
             if (name in names) continue
             it.remove()
             if (state is State.Loading) live -= state
-            (state as? State.Ready<T>)?.value?.dispose()
+            (state as? State.Ready<T>)?.let { ready ->
+                ready.pending?.let { live -= it }
+                ready.value.dispose()
+            }
         }
     }
 
@@ -136,6 +202,7 @@ class AssetCache<D : Any, T : Disposable>(
      */
     fun abandon() {
         states.clear()
+        versions.clear()
         live.clear()
         discardPending()
     }

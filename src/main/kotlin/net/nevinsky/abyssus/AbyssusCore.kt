@@ -11,6 +11,8 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.assets.AssetLoading
 import net.nevinsky.abyssus.assets.AssetLog
 import net.nevinsky.abyssus.assets.ShaderSource
+import net.nevinsky.abyssus.assets.edit.AssetFieldDescriptions
+import net.nevinsky.abyssus.assets.edit.AssetMetaEditor
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 
 /**
@@ -20,6 +22,10 @@ import net.nevinsky.abyssus.assets.json.JsonProcessor
 @Service(Service.Level.APP)
 class AbyssusCore {
     val json = JsonProcessor()
+
+    /** The editable `meta.json` fields of each asset type and the editor that changes them one at a time. */
+    val assetFields = AssetFieldDescriptions()
+    val assetEditor = AssetMetaEditor(assetFields)
 
     /** The scene view's own GLSL (grid lines, overlay, terrain), from the plugin's resources. */
     val sceneShaders = ShaderSource("/shader/scene", AbyssusCore::class.java)
