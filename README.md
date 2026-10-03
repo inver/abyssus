@@ -11,7 +11,8 @@ Work on [Mundus](https://github.com/mbrlabs/Mundus) game projects in the IDE.
 
 - **Abyssus view**: a project tree of `.abss` projects, their scenes, entities and assets, with unused assets marked.
   Toggle scene options, rename scenes and choose a scene's skybox from the tree.
-- **Abyssus Properties**: the `meta.json` of the selected asset, with skybox face previews.
+- **Abyssus Properties**: the `meta.json` of the selected asset, with skybox face previews; terrain size, texture
+  repetition and textures, cube skybox faces and procedural sky parameters can be edited.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
 <!-- Plugin description end -->
@@ -53,13 +54,29 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
 
 ## Abyssus Properties panel
 
-The **Abyssus Properties** tool window (right side) shows the Meta of the asset selected in the Abyssus view, read only:
-a header with the asset's type icon, name and `<type> asset · read-only`, then a Name / Value table of its `meta.json`
-(`version`, `lastModified` as a date-time, `uuid`, `type`, then the fields of `additional` under an `additional` heading).
-Every field in the file is listed, whatever the asset type; a list shows its item count. A skybox also shows its six
-faces under **Face previews**. Selecting anything that is neither an asset, an entity nor a component (a scene, the
-project file) shows a "Nothing to show" message. The panel refreshes when the asset's `meta.json` or a face image changes,
-and never writes an asset file.
+The **Abyssus Properties** tool window (right side) shows the Meta of the asset selected in the Abyssus view: a header
+with the asset's type icon, name and `<type> asset`, then a Name / Value table of its `meta.json` (`version`,
+`lastModified` as a date-time, `uuid`, `type`, then the fields of `additional` under an `additional` heading). Every
+field in the file is listed, whatever the asset type; a list shows its item count. A skybox also shows its six faces
+under **Face previews**. Selecting anything that is neither an asset, an entity nor a component (a scene, the project
+file) shows a "Nothing to show" message. The panel refreshes when the asset's `meta.json` or a face image changes, and
+selecting an asset never writes a file.
+
+Some properties are editable, and the header then says that an edit changes every instance that uses the asset:
+
+- **Terrain:** `size` (a whole number above zero), `uv` (a number above zero) and the six texture references
+  (`splatMap`, `splatBase`, `splatR`, `splatG`, `splatB`, `splatA`), chosen from the project's textures or **None**.
+- **Cube skybox:** the six faces `top`, `bottom`, `left`, `right`, `front`, `back`, chosen from the images inside the
+  asset's own folder.
+- **Procedural sky:** `planetRadius`, `atmosphereRadius`, `betaRayleigh` (three numbers), `betaMie`, `heightRayleigh`,
+  `heightMie`, `mieG` and `sunIntensity`. A parameter the file omits shows its default and stays omitted until you
+  change it. The atmosphere radius must exceed the planet radius, `mieG` lies between -1 and 1.
+
+Type a value and press Enter (or leave the field), or pick from the list. A value that does not fit goes back to the old
+value with the reason beside the field, and the file is not touched. Identity fields (`uuid`, `type`, `version`,
+`lastModified`), file names and every other asset type (models, HDR skies, and so on) stay read only. Each change is one
+undoable edit of that asset's `meta.json` that keeps its formatting and every other value; the **Undo** and **Redo**
+buttons in the header (or Ctrl+Z / Ctrl+Shift+Z with the panel focused) apply it.
 
 Select an **entity** to see all its components, or one **component** to see only that one. Each component the plugin
 models lists its fields with an editor: type a value and press Enter (or leave the field) to save it, or pick from the

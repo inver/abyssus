@@ -13,6 +13,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.ToolWindowEP
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBTextField
 import net.nevinsky.abyssus.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.projectView.AbyssusRootNode
 import net.nevinsky.abyssus.projectView.AbyssusSelection
@@ -61,6 +62,17 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         if (c is Container) c.components.forEach { addAll(texts(it)) }
     }
 
+    private fun find(c: Component, name: String): Component? =
+        if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+
+    private fun field(p: Component, key: String) = find(p, "asset-field-$key")
+    private fun errorOf(p: Component, key: String) = (find(p, "asset-error-$key") as JBLabel).text
+    private fun metaText(path: String) = FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!.text
+    private fun type(c: JBTextField, text: String) {
+        c.text = text
+        c.postActionEvent()
+    }
+
     private fun thumbnails(c: Component): List<Thumbnail> = buildList {
         if (c is Thumbnail) add(c)
         if (c is Container) c.components.forEach { addAll(thumbnails(it)) }
@@ -100,10 +112,11 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         assertEquals("skybox_default", details.name)
         val shown = texts(p)
         assertTrue(shown.toString(), shown.contains("skybox_default"))
-        assertTrue(shown.contains("skybox asset · read-only"))
+        assertTrue(shown.contains("skybox asset"))
+        assertTrue(shown.contains("Edits change every instance that uses this asset."))
         assertTrue(shown.contains("NAME") && shown.contains("VALUE"))
         assertTrue(shown.contains("additional"))
-        assertEquals(12, shown.count { it == "skybox_default.png" }) // six rows and six face captions
+        assertEquals(6, shown.count { it == "skybox_default.png" }) // the six face captions; the rows are choosers
     }
 
     fun testUnknownTypeUsesTheGenericIconAndTypeText() {
@@ -260,5 +273,183 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         com.intellij.testFramework.PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
         assertNotNull(before)
         assertNull((p.state as PanelState.Details).faces!!.first().image)
+    }
+
+    // typed asset properties (2.1, 2.2)
+
+    private val terrain = "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
+
+    fun testTerrainShowsTypedEditorsWithItsValues() {
+        copyProject()
+        val p = panel()
+        p.show(asset(terrain))
+        assertEquals("1600", (field(p, "size") as JBTextField).text)
+        assertEquals("60.0", (field(p, "uv") as JBTextField).text)
+        for (key in listOf("splatMap", "splatBase", "splatR", "splatG", "splatB", "splatA")) assertTrue(key, field(p, key) is com.intellij.openapi.ui.ComboBox<*>)
+        assertNull("terrainFile is not editable", field(p, "terrainFile"))
+        assertNull(field(p, "uuid"))
+        assertTrue(texts(p).contains("terrain asset"))
+        assertTrue(texts(p).contains("Edits change every instance that uses this asset."))
+    }
+
+    fun testCubeSkyboxHasSixFaceChoosers() {
+        copyProject()
+        val p = panel()
+        p.show(asset("skybox_default"))
+        for (face in SKYBOX_FACES) {
+            val combo = field(p, face) as com.intellij.openapi.ui.ComboBox<*>
+            assertEquals("skybox_default.png", (combo.selectedItem as net.nevinsky.abyssus.properties.AssetChoice).value)
+        }
+    }
+
+    fun testProceduralSkyShowsEffectiveDefaultsForOmittedFields() {
+        myFixture.addFileToProject("p/P.abss", "{}")
+        myFixture.addFileToProject("p/assets/sky/meta.json", """{"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f"}}""")
+        val p = panel()
+        p.show(children(children(abss()).single { label(it) == "assets" }).single())
+        assertEquals("20.0", (field(p, "sunIntensity") as JBTextField).text)
+        assertEquals("0.76", (field(p, "mieG") as JBTextField).text)
+        assertEquals("6360000.0", (field(p, "planetRadius") as JBTextField).text)
+        assertEquals("5.8E-6, 1.35E-5, 3.31E-5", (field(p, "betaRayleigh") as JBTextField).text)
+        assertEquals("the file still omits them", """{"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f"}}""", metaText("p/assets/sky/meta.json"))
+    }
+
+    fun testUnsupportedAssetsStayReadOnly() {
+        copyProject()
+        val p = panel()
+        p.show(asset("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"))
+        assertTrue((p.state as PanelState.Details).fields.isEmpty())
+        assertTrue(texts(p).contains("model asset · read-only"))
+        assertFalse(texts(p).contains("Edits change every instance that uses this asset."))
+        p.show(asset("skybox_hdr"))
+        assertTrue(texts(p).contains("skybox_hdr asset · read-only"))
+        assertNull(field(p, "file"))
+    }
+
+    fun testSelectingAnAssetWritesNothing() {
+        copyProject()
+        val path = "Untitled/assets/$terrain/meta.json"
+        val before = myFixture.findFileInTempDir(path).modificationStamp
+        val text = metaText(path)
+        val p = panel()
+        p.show(asset(terrain))
+        p.show(asset("skybox_default"))
+        p.show(asset(terrain))
+        assertEquals(text, metaText(path))
+        assertEquals(before, myFixture.findFileInTempDir(path).modificationStamp)
+    }
+
+    fun testEditingSizeWritesOnlyThatValueAndRefreshesTheRow() {
+        copyProject()
+        val path = "Untitled/assets/$terrain/meta.json"
+        val before = metaText(path)
+        val p = panel()
+        p.show(asset(terrain))
+        type(field(p, "size") as JBTextField, "800")
+        assertEquals(before.replace("\"size\":1600", "\"size\":800"), metaText(path))
+        assertEquals("800", (field(p, "size") as JBTextField).text)
+        assertEquals("", errorOf(p, "size"))
+    }
+
+    fun testInvalidValuesRevertAndExplainWithoutWriting() {
+        copyProject()
+        val path = "Untitled/assets/$terrain/meta.json"
+        val before = metaText(path)
+        val p = panel()
+        p.show(asset(terrain))
+        for ((text, reason) in listOf("0" to "Must be greater than zero.", "abc" to "Enter a number.", "12.5" to "Enter a whole number.")) {
+            type(field(p, "size") as JBTextField, text)
+            assertEquals(reason, errorOf(p, "size"))
+            assertEquals("1600", (field(p, "size") as JBTextField).text)
+        }
+        assertEquals(before, metaText(path))
+    }
+
+    fun testAtmosphereRadiiAreValidatedTogether() {
+        copyProject()
+        val path = "Untitled/assets/skybox_physical/meta.json"
+        val before = metaText(path)
+        val p = panel()
+        p.show(asset("skybox_physical"))
+        type(field(p, "atmosphereRadius") as JBTextField, "6000000")
+        assertEquals("Atmosphere radius must be greater than planet radius.", errorOf(p, "atmosphereRadius"))
+        assertEquals(before, metaText(path))
+        type(field(p, "sunIntensity") as JBTextField, "25")
+        assertTrue(metaText(path).contains("\"sunIntensity\": 25.0"))
+    }
+
+    /** A copy of the skybox fixture on the real file system, where the chooser lists files with java.io. */
+    private fun diskSkybox(): VirtualFile {
+        val dir = com.intellij.openapi.util.io.FileUtil.createTempDirectory("abyssus-sky", null)
+        val sky = File(dir, "assets/skybox_default").apply { mkdirs() }
+        File("$testDataPath/Untitled/assets/skybox_default").listFiles()!!.forEach { it.copyTo(File(sky, it.name)) }
+        File(sky, "other.png").writeBytes(File(sky, "skybox_default.png").readBytes())
+        return com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByIoFile(sky)!!
+    }
+
+    fun testChoosingAFaceChangesOnlyThatKey() {
+        val folder = diskSkybox()
+        val meta = folder.findChild("meta.json")!!
+        val before = FileDocumentManager.getInstance().getDocument(meta)!!.text
+        val p = panel()
+        p.showFolder(folder)
+        @Suppress("UNCHECKED_CAST")
+        val combo = field(p, "left") as com.intellij.openapi.ui.ComboBox<net.nevinsky.abyssus.properties.AssetChoice>
+        val other = (0 until combo.itemCount).map { combo.getItemAt(it) }.single { it.value == "other.png" }
+        combo.selectedItem = other
+        val after = FileDocumentManager.getInstance().getDocument(meta)!!.text
+        assertEquals(before.replaceFirst("\"left\": \"skybox_default.png\"", "\"left\": \"other.png\""), after.trimEnd())
+        assertEquals("other.png", (p.state as PanelState.Details).faces!!.single { it.face == "left" }.file)
+    }
+
+    private fun click(p: Component, name: String) = (find(p, name) as javax.swing.JButton).doClick()
+
+    fun testUndoAndRedoFromThePanelRestoreAndReapplyAnEdit() {
+        copyProject()
+        val path = "Untitled/assets/$terrain/meta.json"
+        val original = metaText(path)
+        val p = panel()
+        p.show(asset(terrain))
+        assertFalse("nothing to undo yet", find(p, "asset-undo")!!.isEnabled)
+        type(field(p, "uv") as JBTextField, "30")
+        val edited = metaText(path)
+        assertTrue(edited, edited.contains("\"uv\":30.0"))
+        assertTrue(find(p, "asset-undo")!!.isEnabled)
+        click(p, "asset-undo")
+        assertEquals(original, metaText(path))
+        assertEquals("60.0", (field(p, "uv") as JBTextField).text)
+        assertTrue(find(p, "asset-redo")!!.isEnabled)
+        click(p, "asset-redo")
+        assertEquals(edited, metaText(path))
+        assertEquals("30.0", (field(p, "uv") as JBTextField).text)
+    }
+
+    private fun providedEditor(p: AssetPropertiesPanel): com.intellij.openapi.fileEditor.FileEditor? {
+        var found: Any? = null
+        p.uiDataSnapshot(object : com.intellij.openapi.actionSystem.DataSink {
+            override fun <T : Any> set(key: com.intellij.openapi.actionSystem.DataKey<T>, data: T?) {
+                if (key == com.intellij.openapi.actionSystem.PlatformCoreDataKeys.FILE_EDITOR) found = data
+            }
+
+            override fun <T : Any> setNull(key: com.intellij.openapi.actionSystem.DataKey<T>) {}
+            override fun <T : Any> lazy(key: com.intellij.openapi.actionSystem.DataKey<T>, data: () -> T?) {}
+            override fun <T : Any> lazyNull(key: com.intellij.openapi.actionSystem.DataKey<T>) {}
+            override fun uiDataSnapshot(provider: com.intellij.openapi.actionSystem.UiDataProvider) {}
+            override fun dataSnapshot(provider: com.intellij.openapi.actionSystem.DataSnapshotProvider) {}
+            override fun uiDataSnapshot(provider: com.intellij.openapi.actionSystem.DataProvider) {}
+            override fun <T : Any> lazyValue(key: com.intellij.openapi.actionSystem.DataKey<T>, data: (com.intellij.openapi.actionSystem.DataMap) -> T?) {}
+        })
+        return found as? com.intellij.openapi.fileEditor.FileEditor
+    }
+
+    fun testThePanelProvidesAnEditorForThePlatformUndo() {
+        copyProject()
+        val p = panel()
+        p.show(asset(terrain))
+        assertEquals("meta.json", providedEditor(p)!!.file.name)
+        p.show(asset("skybox_hdr"))
+        assertNull(providedEditor(p))
+        p.show(null)
+        assertNull(providedEditor(p))
     }
 }

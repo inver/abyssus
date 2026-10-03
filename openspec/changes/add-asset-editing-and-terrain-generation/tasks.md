@@ -9,7 +9,7 @@
 
 ## 2. Typed asset properties UI
 
-- [ ] 2.1 Add typed asset rows, shared-asset note and supported/unsupported header handling, sharing only useful editor widgets with EntityDetailsView; verify AssetPropertiesPanelTest for terrain editors, six cube faces, atmosphere defaults, unsupported metadata inspection, validation reversion, selection without writes and unchanged entity editing with `./gradlew :test --tests 'net.nevinsky.abyssus.properties.*PropertiesPanelTest'`.
+- [x] 2.1 Add typed asset rows, shared-asset note and supported/unsupported header handling, sharing only useful editor widgets with EntityDetailsView; verify AssetPropertiesPanelTest for terrain editors, six cube faces, atmosphere defaults, unsupported metadata inspection, validation reversion, selection without writes and unchanged entity editing with `./gradlew :test --tests 'net.nevinsky.abyssus.properties.*PropertiesPanelTest'`.
 - [ ] 2.2 Add localized field labels, errors, shared scope and command text, and properties-panel Undo context for metadata edits; verify AssetPropertiesPanelTest for error/refresh behavior and manual check M1 below.
 - [ ] 2.3 Update README properties instructions while preserving Plugin description markers; verify `scripts/check-docs.sh` and manual check M1 against the documented behavior.
 
