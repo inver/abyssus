@@ -39,6 +39,8 @@ sealed interface PanelState {
         val faces: List<FaceCell>?,
         val hdr: HdrCell? = null,
         val fields: List<AssetFieldState> = emptyList(),
+        /** For a terrain: what regeneration works from, or why it cannot. */
+        val terrain: net.nevinsky.abyssus.terrain.TerrainSource? = null,
     ) : PanelState
 
     /**
@@ -84,6 +86,7 @@ fun readAssetState(folder: VirtualFile): PanelState {
             if (meta.type == SKYBOX) faces(folder, meta) else null,
             if (meta.type == HDR_SKY_TYPE) hdrCell(folder, meta) else null,
             readFieldStates(folder, meta.type, meta.json),
+            if (meta.type == "TERRAIN") readTerrainNow(folder, meta) else null,
         )
     }
 }
@@ -164,3 +167,15 @@ fun hdrThumbnail(folder: VirtualFile, fileName: String, width: Int, preview: Hdr
 
 /** A small square-bounded thumbnail of the image [fileName] in [folder], or null when it is absent or cannot be decoded. Safe off the EDT. */
 fun smallThumbnail(folder: VirtualFile, fileName: String, size: Int): BufferedImage? = thumbnail(folder, fileName, size, size)
+
+private fun readTerrainNow(folder: VirtualFile, meta: AssetMeta.Loaded): net.nevinsky.abyssus.terrain.TerrainSource {
+    val core = service<AbyssusCore>()
+    val text = folder.findChild(net.nevinsky.abyssus.dto.ProjectLayout.META_FILE)?.let { runReadAction { textOf(it) } } ?: ""
+    return net.nevinsky.abyssus.terrain.readTerrainSource(java.io.File(folder.path), text, meta.json, AssetReferenceChoices(core.json), core.terrainRecipes)
+}
+
+/** The terrain of [folder] as it is now, for the checks Apply makes just before it writes. UI thread. */
+fun readTerrainSourceNow(folder: VirtualFile): net.nevinsky.abyssus.terrain.TerrainSource {
+    val meta = loadAssetMeta(folder) as? AssetMeta.Loaded ?: return net.nevinsky.abyssus.terrain.TerrainSource.Unusable("meta.json")
+    return readTerrainNow(folder, meta)
+}

@@ -28,6 +28,10 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.components.JBTextField
 import net.nevinsky.abyssus.AbyssusCore
+import net.nevinsky.abyssus.terrain.TerrainGenerationController
+import net.nevinsky.abyssus.terrain.TerrainGenerationSection
+import net.nevinsky.abyssus.terrain.TerrainSource
+import net.nevinsky.abyssus.terrain.terrainUnusableNote
 import net.nevinsky.abyssus.assets.edit.FieldKind
 import net.nevinsky.abyssus.assets.edit.FieldValue
 import net.nevinsky.abyssus.assets.edit.ParseOutcome
@@ -96,6 +100,11 @@ class AssetPropertiesPanel(
     private var undoEditor: TextEditor? = null
     private var undoFile: VirtualFile? = null
 
+    /** The regeneration controls' logic for the terrain shown; kept across refreshes of the same terrain so a draft survives them. */
+    private var terrainController: TerrainGenerationController? = null
+    private var terrainFolder: VirtualFile? = null
+    private var rendering = false
+
     /** What the panel currently shows. */
     internal var state: PanelState = emptyState(null)
         private set
@@ -114,7 +123,7 @@ class AssetPropertiesPanel(
                 if (touches(FileDocumentManager.getInstance().getFile(event.document))) refresh()
             }
         }, parent)
-        Disposable { disposed = true; useUndoEditor(null) }.also { com.intellij.openapi.util.Disposer.register(parent, it) }
+        Disposable { disposed = true; useUndoEditor(null); useTerrain(null) }.also { com.intellij.openapi.util.Disposer.register(parent, it) }
         show(AbyssusSelection.of(project).current)
     }
 
@@ -150,6 +159,7 @@ class AssetPropertiesPanel(
         val token = ++generation
         val assetFolder = (node as? VirtualFile)?.takeIf { it.isDirectory } ?: assetFolderOf(node)
         folder = assetFolder
+        if (assetFolder != terrainFolder) useTerrain(null) // another selection: its draft and pending preview are discarded
         val entity = if (assetFolder == null) componentTargetOf(node) else null
         scene = entity?.file
         if (entity != null) {
@@ -171,21 +181,57 @@ class AssetPropertiesPanel(
 
     private fun Any?.isAssetRow() = (this as? DtoEntryNode)?.value?.value is Asset<*>
 
+    /** Keeps the controller of the terrain in [details] (a new one for another terrain), or drops it for none. */
+    private fun useTerrain(details: PanelState.Details?) {
+        val ready = details?.terrain as? TerrainSource.Ready
+        val folder = details?.meta?.folder
+        if (ready == null || folder == null) {
+            terrainController?.dispose()
+            terrainController = null
+            terrainFolder = null
+            return
+        }
+        val existing = terrainController
+        if (existing != null && terrainFolder == folder) {
+            existing.sourceRead(ready)
+            return
+        }
+        existing?.dispose()
+        val core = service<AbyssusCore>()
+        terrainFolder = folder
+        terrainController = TerrainGenerationController(
+            project, folder, ready, core.terrainGenerator, core.heightEncoder, core.terrainRecipes, background, ui,
+            readCurrent = { readTerrainSourceNow(folder) },
+        ).also { controller -> controller.onChange = { if (!rendering && !disposed) apply(state) } }
+    }
+
     private fun apply(newState: PanelState) {
         state = newState
+        rendering = true
+        try {
+            render(newState)
+        } finally {
+            rendering = false
+        }
+    }
+
+    private fun render(newState: PanelState) {
         when (newState) {
             is PanelState.Empty -> {
+                useTerrain(null)
                 useUndoEditor(null)
                 fillEmpty(newState)
                 cards.show(this, EMPTY)
             }
             is PanelState.EntityDetails -> {
+                useTerrain(null)
                 useUndoEditor(null)
                 content.removeAll()
                 content.add(JBScrollPane(EntityDetailsView(project, newState)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)
             }
             is PanelState.Details -> {
+                useTerrain(newState)
                 useUndoEditor(if (newState.fields.isEmpty()) null else newState.meta.folder.findChild(ProjectLayout.META_FILE))
                 content.removeAll()
                 content.add(JBScrollPane(details(newState)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
@@ -221,6 +267,11 @@ class AssetPropertiesPanel(
         // supported fields a file omits (procedural sky defaults) are listed with their effective value
         if (d.meta.rows.any { it.kind == RowKind.HEADING }) d.fields.filter { it.key !in shown }.forEach { rows.add(fieldRow(d, it)) }
         box.add(rows)
+        when (val terrain = d.terrain) {
+            is TerrainSource.Unusable -> box.add(terrainUnusableNote(terrain.reason))
+            is TerrainSource.Ready -> terrainController?.let { box.add(TerrainGenerationSection(it)) }
+            null -> {}
+        }
         d.faces?.let { box.add(previews(it)) }
         d.hdr?.let { box.add(hdrPreview(it)) }
         return JPanel(BorderLayout()).apply { add(box, BorderLayout.NORTH) }
