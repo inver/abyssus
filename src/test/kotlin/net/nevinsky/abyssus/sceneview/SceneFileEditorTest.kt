@@ -218,6 +218,35 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         }
     }
 
+    fun testDroppingAnEntityIsOneMoveCommandAndUndoRestoresTheViewAndFile() {
+        val views = mutableListOf<FakeView>()
+        val (editor, f) = fakeEditor("drop/Main Scene.scene", mainScene, views)
+        val connection = project.messageBus.connect()
+        val commands = mutableListOf<String?>()
+        connection.subscribe(com.intellij.openapi.command.CommandListener.TOPIC, object : com.intellij.openapi.command.CommandListener {
+            override fun commandFinished(event: com.intellij.openapi.command.CommandEvent) {
+                if (event.project == project) commands += event.commandName
+            }
+        })
+        try {
+            val before = textOf(f)
+            val old = views[0].current.content.models.first { it.entityId == "0" }.transform.position
+            val dropped = old.copy(y = old.y + 1.5f)
+            assertTrue(editor.applyTransform("0", TransformEdit(position = dropped)))
+            assertEquals(listOf("Move Entity"), commands)
+            assertEquals(1, before.lines().indices.count { before.lines()[it] != textOf(f).lines()[it] })
+            assertEquals(dropped, views[0].current.content.models.first { it.entityId == "0" }.transform.position)
+            val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
+            assertTrue(undo.isUndoAvailable(editor))
+            undo.undo(editor)
+            assertEquals(before, textOf(f))
+            assertEquals(old, views[0].current.content.models.first { it.entityId == "0" }.transform.position)
+        } finally {
+            connection.disconnect()
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
     fun testATransformThatChangesNothingIsNotWritten() {
         val views = mutableListOf<FakeView>()
         val (editor, f) = fakeEditor("same/Main Scene.scene", mainScene, views)

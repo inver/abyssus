@@ -33,6 +33,7 @@ import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
+import javax.swing.JButton
 import javax.swing.ButtonGroup
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -71,6 +72,7 @@ class SceneViewPanel(
 
     private val moveButton = JToggleButton(AbyssusBundle.message("sceneViewMove"), true)
     private val rotateButton = JToggleButton(AbyssusBundle.message("sceneViewRotate"))
+    private val dropButton = JButton(AbyssusBundle.message("sceneViewDrop"))
     private val cameraCombo = ComboBox<CameraChoice>()
     private var choices: List<CameraChoice> = emptyList()
     private var updatingControls = false
@@ -115,6 +117,7 @@ class SceneViewPanel(
             capabilities?.let { GL.setCapabilities(it) }
             frame.tick(framebufferWidth, framebufferHeight)
             GdxRuntime.withContext(ctx) { renderer.render(frame.width, frame.height, orbit, frame.deltaSeconds) }
+            interaction.frameRendered()
             swapBuffers()
         }
     }
@@ -154,6 +157,9 @@ class SceneViewPanel(
         rotateButton.isFocusable = false
         moveButton.addActionListener { if (!updatingControls) interaction.mode = GizmoMode.MOVE }
         rotateButton.addActionListener { if (!updatingControls) interaction.mode = GizmoMode.ROTATE }
+        dropButton.isFocusable = false
+        dropButton.toolTipText = AbyssusBundle.message("sceneViewDropTooltip")
+        dropButton.addActionListener { interaction.drop() }
         cameraCombo.isFocusable = false
         cameraCombo.toolTipText = AbyssusBundle.message("sceneViewCameraTooltip")
         cameraCombo.addActionListener {
@@ -164,16 +170,18 @@ class SceneViewPanel(
         return JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply {
             add(moveButton)
             add(rotateButton)
+            add(dropButton)
             add(cameraCombo)
         }
     }
 
-    /** W and E switch the gizmo, Esc cancels a drag, whenever the focus is anywhere in the view. */
+    /** W/E switch the gizmo, D drops the selection, Esc cancels a drag, with focus anywhere in the view. */
     private fun bindKeys() {
         fun bind(key: Int, action: () -> Unit) =
             registerKeyboardAction({ action() }, KeyStroke.getKeyStroke(key, 0), WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
         bind(KeyEvent.VK_W) { interaction.mode = GizmoMode.MOVE }
         bind(KeyEvent.VK_E) { interaction.mode = GizmoMode.ROTATE }
+        bind(KeyEvent.VK_D) { interaction.drop() }
         bind(KeyEvent.VK_ESCAPE) { interaction.escape() }
     }
 
@@ -183,6 +191,7 @@ class SceneViewPanel(
         try {
             moveButton.isSelected = interaction.mode == GizmoMode.MOVE
             rotateButton.isSelected = interaction.mode == GizmoMode.ROTATE
+            dropButton.isEnabled = interaction.canDrop
             cameraCombo.selectedItem = choices.firstOrNull { it.id == interaction.viewCamera } ?: choices.firstOrNull()
         } finally {
             updatingControls = false

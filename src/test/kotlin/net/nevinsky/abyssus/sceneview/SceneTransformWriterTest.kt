@@ -31,6 +31,32 @@ class SceneTransformWriterTest {
     private fun components(root: JsonNode, id: String) = root.get("ecs").get("entities").get(id).get("components")
 
     @Test
+    fun droppingAModelChangesOnlyYAndPreservesNumberText() {
+        val text = """{"ecs":{"entities":{"0":{"components":{"PositionComponent":{"localPosition":{"x":1.230000,"y":5.000,"z":-2.34000}}}}}}}"""
+        val root = SceneJson.parse(text)
+        assertTrue(SceneTransformWriter.apply(root, "0", TransformEdit(position = Vec3(1.23f, 1f, -2.34f))))
+        assertEquals(text.replace("5.000", "1.0"), SceneJson.compact(root))
+    }
+
+    @Test
+    fun droppingACameraChangesOnlyBothYsAndPreservesTheRest() {
+        val root = SceneJson.parse(text)
+        val before = SceneJson.parse(text)
+        val c = components(root, "4")
+        val local = c["PositionComponent"]["localPosition"] as com.fasterxml.jackson.databind.node.ObjectNode
+        val camera = c["CameraComponent"]["camera"]["position"] as com.fasterxml.jackson.databind.node.ObjectNode
+        assertEquals(local, camera)
+        val p = Vec3(local["x"].floatValue(), local["y"].floatValue() - 5f, local["z"].floatValue())
+        assertTrue(SceneTransformWriter.apply(root, "4", TransformEdit(position = p)))
+        assertEquals(p.y, local["y"].floatValue(), 0f)
+        assertEquals(p.y, camera["y"].floatValue(), 0f)
+        // Restoring the two changed values reproduces every key, value and original number text exactly.
+        local.set<JsonNode>("y", components(before, "4")["PositionComponent"]["localPosition"]["y"])
+        camera.set<JsonNode>("y", components(before, "4")["CameraComponent"]["camera"]["position"]["y"])
+        assertEquals(SceneJson.compact(before), SceneJson.compact(root))
+    }
+
+    @Test
     fun movingAnEntityChangesOnlyItsLocalPositionX() {
         val root = SceneJson.parse(text)
         val before = components(root, "0").get("PositionComponent").get("localPosition")

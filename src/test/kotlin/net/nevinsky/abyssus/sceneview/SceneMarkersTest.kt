@@ -68,7 +68,7 @@ class SceneMarkersTest {
     }
 
     @Test
-    fun theLookedThroughCameraIsNotPickable() {
+    fun theViewCameraHasNoMarkerTarget() {
         val c = main()
         assertTrue(SceneMarkers.targets(c, skipCamera = "4").isEmpty())
         assertNull(ScenePicker.pick(ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f)), SceneMarkers.targets(c, "4"), emptyList(), 100f))

@@ -66,6 +66,11 @@ an object was dragged.
 - **`SceneView` interface:** `SceneFileEditor` takes a `viewFactory`, so tests pass a fake view and check the params
   it receives and the edits it triggers (`SceneFileEditorTest`).
 - **`SceneParamsSource`:** this is how the editor reads a scene; tests can supply their own.
+- **Drop:** `ScenePickerTest` covers rotated footprints, box support, transformed bilinear terrain maxima and
+  tolerance; `SceneInteractionTest` covers availability, loading events, previews and Y-only edits without GL.
+  `SceneTransformWriterTest` and `SceneFileEditorTest` verify preserved number text, one Move Entity command and Undo.
+  `SceneRenderGlTest` covers loaded bounds, fixture resting heights and drawn-list versions on real GL. Toolbar/key
+  focus and the complete drop interaction still need the sandbox IDE check in the OpenSpec change.
 - **Picking and gizmos:** `SceneRenderer.pick` and the gizmo hit tests use CPU data only. `ScenePicker`,
   `SceneMarkers`, `ScenePreview` and `sceneview/gizmo/` are plain math.
 - **Dialogs:** `SkyboxChooserDialog` can be built in a platform test and driven through its internal test hooks;

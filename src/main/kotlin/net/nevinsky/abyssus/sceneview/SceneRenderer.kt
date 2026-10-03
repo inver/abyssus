@@ -32,6 +32,7 @@ import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder.VertexInfo
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
@@ -57,7 +58,7 @@ import net.nevinsky.abyssus.core.ModelBatch as ContentBatch
 /**
  * Draws a scene's environment, a ground grid and the content the scene places (skybox, terrains, models), and picks
  * entities under the cursor. Assets come from [assetLoading]; the grid, overlay and terrain programs from [shaders]. Call only inside [GdxRuntime.withContext]
- * with the GL context current, except [pick].
+ * with the GL context current; picking, ground queries and interaction geometry use CPU data only.
  */
 class SceneRenderer(
     private val assetLoading: AssetLoading,
@@ -81,7 +82,7 @@ class SceneRenderer(
     @Volatile
     var viewCamera: String? = null
 
-    /** Transforms shown over the scene's own while a gizmo drag is in progress (entity id to where it is now). */
+    /** Transforms shown over the scene's own while a gizmo drag or completed drop is previewed (entity id to where it is now). */
     @Volatile
     var preview: Map<String, DragResult> = emptyMap()
 
@@ -140,12 +141,42 @@ class SceneRenderer(
     fun pick(screenX: Int, screenY: Int, width: Int, height: Int): String? {
         if (width <= 0 || height <= 0) return null
         val ray = ScenePicker.pickRay(camera, screenX, screenY, width, height)
+        val targets = targets()
+        return ScenePicker.pick(ray, targets.boxes.map { BoxTarget(it.id, BoundingBox(it.local).mul(it.world)) }, targets.terrains, camera.far)
+    }
+
+    private class DrawnBox(val id: String, val local: BoundingBox, val world: Matrix4) {
+        fun oriented() = OrientedBox(local, world)
+    }
+    private class Targets(val boxes: List<DrawnBox>, val terrains: List<TerrainTarget>)
+
+    /** Shared input list: picking derives axis-aligned boxes, Drop retains the actual rotated corners. */
+    private fun targets(): Targets {
         val boxes = models.drawn.map { e ->
-            // the model's bounds moved into the world
-            BoxTarget(e.placement.entityId, BoundingBox(e.localBounds).mul(e.instance.transform))
-        } + SceneMarkers.targets(content, viewCamera)
-        val grounds = terrains.drawn.map { TerrainTarget(it.placement.entityId, it.terrain.data, it.world) }
-        return ScenePicker.pick(ray, boxes, grounds, camera.far)
+            val world = preview[e.placement.entityId]?.transform?.toMatrix() ?: e.instance.transform!!
+            DrawnBox(e.placement.entityId, e.localBounds, world)
+        } + SceneMarkers.targets(content, viewCamera).map { DrawnBox(it.entityId, it.bounds, Matrix4()) }
+        return Targets(boxes, terrains.drawn.map { TerrainTarget(it.placement.entityId, it.terrain.data, it.world) })
+    }
+
+    /** CPU-only query over the last frame's loaded geometry; terrains and the looked-through camera cannot drop. */
+    fun groundBelow(entityId: String): Float? {
+        if (entityId == viewCamera || content.terrains.any { it.entityId == entityId }) return null
+        val targets = targets()
+        val footprint = targets.boxes.firstOrNull { it.id == entityId }?.oriented() ?: return null
+        return ScenePicker.restHeight(footprint, targets.boxes.filter { it.id != entityId }.map { it.oriented() }, targets.terrains)
+    }
+
+    internal fun lowestPoint(entityId: String): Float? = targets().boxes.firstOrNull { it.id == entityId }?.oriented()?.bottom
+
+    /** Changes only when a model or terrain enters or leaves the drawn lists, including context replacement. */
+    var drawnVersion: Long = 0
+        private set
+    private var drawnIds: Pair<Set<String>, Set<String>> = emptySet<String>() to emptySet()
+
+    private fun updateDrawnVersion() {
+        val fresh = models.drawn.mapTo(HashSet()) { it.placement.entityId } to terrains.drawn.mapTo(HashSet()) { it.placement.entityId }
+        if (fresh != drawnIds) { drawnIds = fresh; drawnVersion++ }
     }
 
     /** The ray through the pixel ([screenX], [screenY]) of a [width] x [height] view, as of the last rendered frame. */
@@ -187,6 +218,7 @@ class SceneRenderer(
     fun create() {
         models.abandon()
         terrains.abandon()
+        updateDrawnVersion()
         batch = ModelBatch(FogShaderProvider { fogCoefficient })
         contentShaders = DefaultShaderProvider().also { contentBatch = ContentBatch(it) }
         terrainShader = TerrainShader(shaders)
@@ -316,6 +348,7 @@ class SceneRenderer(
         terrains.update(c.terrains, p.projectDir)
         terrainShader?.draw(camera, terrains.drawn, p.ambient, p.fog, lights, sky?.irradiance)
         models.update(c.models, p.projectDir, deltaSeconds)
+        updateDrawnVersion()
         contentBatch.begin(camera)
         for (entity in models.drawn) contentBatch.render(entity.instance, environment, ShaderProvider.DEFAULT_SHADER_KEY)
         contentBatch.end()
@@ -373,6 +406,7 @@ class SceneRenderer(
     override fun dispose() {
         models.dispose()
         terrains.dispose()
+        updateDrawnVersion()
         terrainShader?.dispose()
         terrainShader = null
         skybox?.dispose()

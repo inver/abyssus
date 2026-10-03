@@ -19,6 +19,7 @@ package net.nevinsky.abyssus.sceneview
 import net.nevinsky.abyssus.filetype.SceneJson
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.parseScene
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
@@ -49,6 +50,107 @@ class SceneRenderGlTest {
 
     private fun untilLoaded(want: (SceneRenderer) -> Boolean): (SceneRenderer, Int) -> Unit = { r, _ ->
         if (!want(r)) Thread.sleep(10)
+    }
+
+    @Test
+    fun groundBelowUsesDrawnModelsAndTerrains() {
+        val p = params("Untitled", "Main Scene.scene")
+        var checked = false
+        val result = GlHarness.render(p, 200) { renderer, frame ->
+            if (frame == 199) {
+                val ground = renderer.drawnTerrains.single()
+                val terrain = TerrainTarget("1", ground.terrain.data, ground.world)
+                for (id in listOf("0", "2")) {
+                    val entity = renderer.drawnModels.first { it.placement.entityId == id }
+                    val footprint = OrientedBox(entity.localBounds, entity.instance.transform!!)
+                    val height = ScenePicker.restHeight(footprint, emptyList(), listOf(terrain))!!
+                    println("Model $id: terrain=$height lowest=${footprint.bottom}")
+                    assertEquals(0f, height, 1e-5f)
+                    assertTrue(!ScenePicker.isResting(footprint.bottom, height))
+                }
+                assertEquals(0f, renderer.groundBelow("0")!!, 1e-5f)
+                assertNull(renderer.groundBelow("1"))
+                assertNull(renderer.groundBelow("missing"))
+                renderer.viewCamera = "4"
+                assertNull(renderer.groundBelow("4"))
+                checked = true
+            }
+        }
+        assertNull(result.error)
+        assertTrue(checked)
+    }
+
+    @Test
+    fun drawnVersionTracksLoadingAndRemovalButNotAnUnchangedFrame() {
+        val p = params("Untitled", "Main Scene.scene")
+        var previous = 0L
+        var ids = emptySet<String>()
+        var loaded = false
+        var removed = false
+        val result = GlHarness.render(p, 220) { renderer, frame ->
+            val now = renderer.drawnModels.map { "m:" + it.placement.entityId }.toSet() +
+                renderer.drawnTerrains.map { "t:" + it.placement.entityId }
+            if (now != ids) assertTrue(renderer.drawnVersion > previous)
+            else assertEquals(previous, renderer.drawnVersion)
+            ids = now
+            previous = renderer.drawnVersion
+            if (frame == 180) {
+                loaded = now.size == 4
+                renderer.params = p.copy(content = SceneContent.EMPTY)
+            }
+            if (frame == 219) removed = now.isEmpty()
+        }
+        assertNull(result.error)
+        assertTrue(loaded)
+        assertTrue(removed)
+    }
+
+    @Test
+    fun restoringAModelAfterDropRefreshesAvailabilityWithTheSameDrawnIds() {
+        val p = params("Untitled", "Main Scene.scene")
+        var interaction: SceneInteraction? = null
+        var stage = 0
+        var written = 0
+        var version = 0L
+        val result = GlHarness.render(p, 220) { renderer, _ ->
+            val input = interaction ?: SceneInteraction(renderer, OrbitCamera.from(p.camera)).also {
+                interaction = it
+                renderer.selectedId = "0"
+                it.onTransform = { id, edit ->
+                    val selected = ScenePreview.selected(renderer.content, id)!!
+                    val moved = net.nevinsky.abyssus.sceneview.gizmo.DragResult(selected.transform.copy(position = edit.position!!), selected.direction)
+                    renderer.params = p.copy(content = ScenePreview.apply(p.content, id, moved))
+                    it.paramsChanged(renderer.params)
+                    written++
+                    true
+                }
+            }
+            input.frameRendered()
+            if (renderer.drawnModels.size == 3 && renderer.drawnTerrains.size == 1) when (stage) {
+                0 -> {
+                    assertTrue(input.canDrop)
+                    version = renderer.drawnVersion
+                    input.drop()
+                    assertFalse(input.canDrop)
+                    input.drop()
+                    assertEquals(1, written)
+                    stage++
+                }
+                1 -> {
+                    assertFalse(input.canDrop)
+                    renderer.params = p // a document re-read after Undo restores the original position
+                    input.paramsChanged(p)
+                    stage++
+                }
+                2 -> {
+                    assertEquals(version, renderer.drawnVersion)
+                    assertTrue(input.canDrop)
+                    stage++
+                }
+            }
+        }
+        assertNull(result.error)
+        assertEquals(3, stage)
     }
 
     @Test

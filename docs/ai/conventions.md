@@ -39,7 +39,7 @@ Readers never write (`ConfigFileReader` implementations never write and never th
 - the eye toggle,
 - Rename Scene,
 - the skybox chooser,
-- scene view gizmo drags.
+- scene view gizmo drags and Drop (the same Move Entity command).
 
 `SceneFormatListener` is the one other writer: it pretty-prints a `.scene` / `.abss` document when it opens in the
 text editor. A new writer goes through `editSceneJson` and gets a command name in the message bundle.

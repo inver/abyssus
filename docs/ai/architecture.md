@@ -69,6 +69,12 @@ the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows
   the tree.
 - **Drags:** a drag on a gizmo handle runs a `GizmoDrag`, and `ScenePreview` shows the result live. Esc cancels.
   Any other drag orbits or pans `OrbitCamera`.
+- **Drop:** the toolbar button or D calls `SceneInteraction.drop`. `ScenePicker.restHeight` queries the highest
+  surface under the selection's oriented-box footprint, using box tops and transformed bilinear terrain cells.
+  It moves only Y, previews the result, and uses the same `applyTransform` callback and Move Entity command as a
+  move drag. No surface or an already-resting object produces no edit. `drawnVersion` triggers an availability
+  re-check after loading changes, outside the GL context. New scene params also invalidate the next frame's query
+  so changed transforms and Undo update availability even when the drawn entity ids stay the same.
 - **On release:** `SceneFileEditor.applyTransform` calls `editSceneJson` with
   `SceneTransformWriter.apply`, which writes only the changed `localPosition` / `localRotation`, plus the camera's
   `position` / `viewPointPosition`. The document change triggers the re-read above.
@@ -78,7 +84,7 @@ the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows
 
 ### Every write
 
-The eye toggle, Rename Scene, the skybox chooser, gizmo drags and component add, edit and remove (`SceneComponentEdits`) all go through `editSceneJson`
+The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) all go through `editSceneJson`
 (`projectView/EnabledToggle.kt`):
 
 1. Parse the document with `SceneJson`.

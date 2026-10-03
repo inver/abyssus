@@ -1,26 +1,27 @@
 # sceneview
 
 The **Scene View** editor tab of a `.scene`: a libGDX render on an LWJGL3-AWT GL canvas inside a Swing panel, with
-picking, camera markers, look-through and move/rotate gizmos. Required behavior: `openspec/specs/scene-*`.
+picking, camera markers, look-through, move/rotate gizmos and Drop. Required behavior: `openspec/specs/scene-*`.
 
 ## Pieces
 
 | Class | Role |
 |---|---|
-| `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params on document/VFS changes; writes drags via `editSceneJson`; `DocumentReferenceProvider` for undo |
+| `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params on document/VFS changes; writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
 | `SceneContent` | `ecs` JSON → placements: models, terrains, lights, cameras, skybox |
 | `SceneView` | Interface of the view, so tests can pass a fake (`viewFactory`) |
-| `SceneViewPanel` | Swing panel: GL canvas, Swing `Timer` frame loop, toolbar, keys (W / E / Esc) |
-| `SceneInteraction` | Mouse and key logic without Swing or GL: click → pick/select, drag → gizmo or orbit/pan |
+| `SceneViewPanel` | Swing panel: GL canvas, Swing `Timer` frame loop, toolbar, keys (W / E / D / Esc) |
+| `SceneInteraction` | Mouse and key logic without Swing or GL: click → pick/select, drag → gizmo or orbit/pan, Drop → a Y-only move |
 | `SceneRenderer` | One frame: environment, skybox, grid, terrains, models, markers, highlight, gizmo; `pick` |
 | `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (a `core` `SceneAssets` each, from `AssetLoading`) and per-entity instances (`PlacedEntities`) |
 | `skybox/` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights. The sky loaders, the HDR environment and the sky shaders are in `core` (`net.nevinsky.abyssus.assets.sky`) |
 | `SceneMarkers`, `CameraFrustum` | Camera body and frustum, light markers, and their pick bounds |
 | `ScenePicker` | Ray from a pixel, nearest hit over boxes and terrain heights |
-| `ScenePreview` | Applies an in-progress drag over the placements |
+| Drop: `OrientedBox`, `TerrainRestHeight`, `ScenePicker.restHeight` | Highest surface under a rotated box footprint; CPU-only bilinear terrain-cell maxima |
+| `ScenePreview` | Applies a drag or drop preview over the placements |
 | `gizmo/` | Handle geometry (`GizmoHandles`), hit tests (`GizmoHit`), drag math (`GizmoDrag`), drawing (`GizmoDraw`) |
-| `SceneTransformWriter` | A finished drag → `PositionComponent` (and camera) fields in the scene JSON |
+| `SceneTransformWriter` | A finished transform → `PositionComponent` (and camera) fields in the scene JSON |
 | `GdxRuntime`, `GuardedGLCanvas` | The `Gdx.*` shim, and the canvas that refuses unsafe GL |
 
 ## Things that are not obvious
@@ -45,3 +46,15 @@ picking, camera markers, look-through and move/rotate gizmos. Required behavior:
 - **Objects without rotation.** A camera whose `lookAtId` resolves, and a point light, get Move handles only.
 - **HiDPI:** mouse positions are Swing pixels; the framebuffer can be larger. `ViewSize` converts between them for
   picking and gizmo hits.
+
+- **Drop is an area query.** The button and D key ask for the highest surface under an oriented-box footprint,
+  using other oriented boxes and transformed bilinear terrain cells. This cannot use `pickRay`: picking returns
+  one entity at one point, `intersectRayBounds` reports the ray origin when it starts inside a box, and the terrain
+  march is bounded by `camera.far` and assumes uniform scale. Drop has no fallback ground. A sunk object rises;
+  terrains and the looked-through camera cannot drop. Heights within 0.0001 world units count as equal, so repeated
+  drops are idempotent. The edit uses the existing Move Entity command and changes only Y.
+- **Drop availability follows loading.** `SceneRenderer.drawnVersion` changes when models or terrains enter or leave
+  the drawn lists. After rendering, outside `GdxRuntime.withContext`, `SceneInteraction.frameRendered` queries once
+  for a changed version and notifies controls only when availability flips. Scene params, selection, camera and drag
+  changes also refresh availability. Params invalidate the next frame's query as well, because a transform update
+  leaves drawn entity ids unchanged.

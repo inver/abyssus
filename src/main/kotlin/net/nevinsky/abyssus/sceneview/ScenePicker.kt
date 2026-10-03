@@ -32,6 +32,24 @@ class TerrainTarget(val entityId: String, val data: TerrainData, val world: Matr
 
 /** Finds the entity under a ray: the nearest hit among model bounding boxes and terrain surfaces. No GL needed. */
 object ScenePicker {
+    const val REST_EPS = 0.0001f
+
+    fun isResting(lowest: Float, height: Float): Boolean = kotlin.math.abs(height - lowest) < REST_EPS
+
+    /** Highest real surface under the projected box; no invented ground plane or ray-distance limit. */
+    fun restHeight(footprint: OrientedBox, boxes: List<OrientedBox>, terrains: List<TerrainTarget>): Float? {
+        var best: Float? = null
+        for (box in boxes) {
+            if (box.bottom < footprint.bottom + REST_EPS && footprint.overlaps(box))
+                best = best?.let { maxOf(it, box.top) } ?: box.top
+        }
+        for (terrain in terrains) {
+            val height = TerrainRestHeight().height(footprint, terrain) ?: continue
+            best = best?.let { maxOf(it, height) } ?: height
+        }
+        return best
+    }
+
     /**
      * The ray through the pixel ([x], [y]) (origin top-left) of a [width] x [height] view. Does the unprojection
      * itself: libGDX's `Camera.getPickRay` reads `Gdx.graphics`, which is only installed inside

@@ -34,6 +34,114 @@ class ScenePickerTest {
 
     private val flat = TerrainData(3, FloatArray(9), 100, 1f)
 
+    private fun oriented(x: Float = 0f, bottom: Float = 5f, z: Float = 0f, half: Float = 1f,
+                         world: Matrix4 = Matrix4()) = OrientedBox(
+        BoundingBox(Vector3(x - half, bottom, z - half), Vector3(x + half, bottom + 2f, z + half)), world)
+
+    @Test fun anIdentityMatrixLeavesTheCornersUnmoved() {
+        val b = oriented()
+        assertEquals(8, b.corners.size)
+        assertEquals(setOf(-1f, 1f), b.corners.map { it.x }.toSet())
+        assertEquals(setOf(5f, 7f), b.corners.map { it.y }.toSet())
+    }
+
+    @Test fun rotatingTheBoxRotatesItsCorners() {
+        val b = oriented(world = Matrix4().rotate(Vector3.Y, 90f))
+        assertEquals(-1f, b.corners[0].x, 1e-5f)
+        assertEquals(1f, b.corners[0].z, 1e-5f)
+    }
+
+    @Test fun bottomAndTopUseAllEightCorners() {
+        val b = oriented(bottom = 0f, world = Matrix4().rotate(Vector3.X, 45f))
+        assertEquals(-0.7071068f, b.bottom, 1e-5f)
+        assertEquals(2.1213203f, b.top, 1e-5f)
+    }
+
+    @Test fun overlappingHullsOverlap() {
+        org.junit.Assert.assertTrue(oriented().overlaps(oriented(x = 1f)))
+        org.junit.Assert.assertFalse(oriented().overlaps(oriented(x = 5f)))
+    }
+
+    @Test fun aRotatedBarDoesNotOverlapABoxOnlyItsAxisAlignedBoundsReach() {
+        val bar = OrientedBox(BoundingBox(Vector3(-5f, 0f, -0.1f), Vector3(5f, 1f, 0.1f)), Matrix4().rotate(Vector3.Y, 45f))
+        org.junit.Assert.assertFalse(bar.overlaps(oriented(x = 3f, z = 3f, half = 0.2f)))
+        org.junit.Assert.assertTrue(bar.overlaps(oriented(x = 3f, z = -3f, half = 0.2f)))
+    }
+
+    private fun rest(footprint: OrientedBox = oriented(), vararg boxes: OrientedBox) =
+        ScenePicker.restHeight(footprint, boxes.toList(), emptyList())
+
+    @Test fun restsOnTheHighestBoxBelow() { assertEquals(4f, rest(oriented(), oriented(bottom = 0f), oriented(bottom = 2f))!!, 0f) }
+    @Test fun aBoxWhollyAboveIsIgnored() { assertNull(rest(oriented(), oriented(bottom = 8f))) }
+    @Test fun aSunkObjectRisesOntoTheBox() { assertEquals(6f, rest(oriented(), oriented(bottom = 4f))!!, 0f) }
+    @Test fun aWideFootprintOverANarrowBoxRestsOnIt() { assertEquals(2f, rest(oriented(half = 5f), oriented(bottom = 0f, half = 0.2f))!!, 0f) }
+    @Test fun noSurfaceBelowReturnsNull() { assertNull(rest(oriented(), oriented(x = 10f, bottom = 0f))) }
+
+    private fun terrainRest(footprint: OrientedBox = oriented(x = 2f, z = 2f),
+                            data: TerrainData = TerrainData(3, FloatArray(9) { 3f }, 4, 1f),
+                            world: Matrix4 = Matrix4(), boxes: List<OrientedBox> = emptyList()) =
+        ScenePicker.restHeight(footprint, boxes, listOf(TerrainTarget("t", data, world)))
+
+    @Test fun restsOnTheTerrainHeightUnderTheFootprint() { assertEquals(3f, terrainRest()!!, 1e-5f) }
+    @Test fun restsOnTheHigherOfTerrainAndBox() { assertEquals(4f, terrainRest(boxes = listOf(oriented(x = 2f, bottom = 2f, z = 2f)))!!, 1e-5f) }
+    @Test fun findsABumpBetweenTheCorners() {
+        val heights = FloatArray(25).also { it[12] = 10f }
+        assertEquals(10f, terrainRest(oriented(x = 2.1f, z = 2.1f, half = 1.4f), TerrainData(5, heights, 4, 1f))!!, 1e-5f)
+    }
+    @Test fun staysExactUnderANonUniformTerrainScale() {
+        val world = Matrix4().setToTranslation(10f, 7f, 20f).scale(2f, 3f, 4f)
+        assertEquals(16f, terrainRest(oriented(x = 14f, z = 28f), world = world)!!, 1e-5f)
+    }
+    @Test fun aFootprintOffTheTerrainGetsNoTerrainHeight() { assertNull(terrainRest(oriented(x = 20f, z = 20f))) }
+    @Test fun anObjectUnderTheTerrainRisesToItsSurface() { assertEquals(3f, terrainRest(oriented(x = 2f, bottom = -10f, z = 2f))!!, 1e-5f) }
+    @Test fun aTiltedTerrainUsesTheActualWorldColumn() {
+        // Rotation shifts positive local heights toward negative world Z. The plane is y = z + 2*sqrt(2).
+        val data = TerrainData(2, FloatArray(4) { 2f }, 10, 1f)
+        val world = Matrix4().rotate(Vector3.X, -45f)
+        assertEquals(2f + 2f * kotlin.math.sqrt(2f), terrainRest(oriented(x = 3f, z = 1f), data, world)!!, 1e-5f)
+    }
+    @Test fun aClippedBilinearCellIncludesItsBoundaryMaximum() {
+        // h = x*z; the diagonal footprint edge x+z=1 has an interior maximum of 0.25.
+        val footprint = OrientedBox(BoundingBox(Vector3(-1f, 5f, -1f), Vector3(1f, 7f, 1f)),
+            Matrix4().rotate(Vector3.Y, 45f).scale(1f / kotlin.math.sqrt(2f), 1f, 1f / kotlin.math.sqrt(2f)))
+        assertEquals(0.25f, terrainRest(footprint, TerrainData(2, floatArrayOf(0f, 0f, 0f, 1f), 1, 1f))!!, 1e-5f)
+    }
+    @Test fun aSingularTerrainOffersNoSurface() { assertNull(terrainRest(world = Matrix4().scale(1f, 0f, 1f))) }
+
+    @Test fun fixtureTerrainAndCameraAreValidForDrop() {
+        val dir = java.io.File("src/test/testData/project/Untitled")
+        val content = SceneContent.of(net.nevinsky.abyssus.parseScene(java.io.File(dir, "scenes/Main Scene.scene").readText()))
+        val placement = content.terrains.single()
+        val asset = java.io.File(dir, "assets/" + placement.assetName)
+        val meta = net.nevinsky.abyssus.filetype.SceneJson.parse(java.io.File(asset, "meta.json").readText())["additional"]
+        val data = net.nevinsky.abyssus.assets.terrain.TerrainDataReader().read(java.io.File(asset, meta["terrainFile"].asText()), meta["size"].asInt(), meta["uv"].floatValue())
+        org.junit.Assert.assertTrue(data.heights.all { it == 0f })
+        val camera = content.cameras.single()
+        val ground = ScenePicker.restHeight(OrientedBox(SceneMarkers.cameraBounds(camera.position), Matrix4()), emptyList(), listOf(TerrainTarget("1", data, placement.transform.toMatrix())))!!
+        println("Camera 4: terrain=$ground lowest=${camera.position.y - 0.5f}")
+        org.junit.Assert.assertTrue(kotlin.math.abs(camera.position.y - 0.5f - ground) > ScenePicker.REST_EPS)
+        val root = net.nevinsky.abyssus.filetype.SceneJson.parse(java.io.File(dir, "scenes/Main Scene.scene").readText())
+        val components = root["ecs"]["entities"]["4"]["components"]
+        assertEquals(components["PositionComponent"]["localPosition"], components["CameraComponent"]["camera"]["position"])
+    }
+
+    @Test fun aRestHeightWithinEpsAboveIsResting() {
+        org.junit.Assert.assertTrue(ScenePicker.isResting(5f, rest(oriented(), oriented(bottom = 3.00005f))!!))
+    }
+    @Test fun aRestHeightWithinEpsBelowIsResting() {
+        org.junit.Assert.assertTrue(ScenePicker.isResting(5f, rest(oriented(), oriented(bottom = 2.99995f))!!))
+    }
+    @Test fun aSecondDropAfterARotatedFirstDropIsANoOp() {
+        val local = BoundingBox(Vector3(-1f, -1f, -1f), Vector3(1f, 1f, 1f))
+        val world = Matrix4().setToTranslation(0f, 10f, 0f).rotate(Vector3.X, 37f).rotate(Vector3.Y, 29f)
+        val first = OrientedBox(local, world)
+        val surface = oriented(bottom = -2f)
+        val height = rest(first, surface)!!
+        world.`val`[Matrix4.M13] += height - first.bottom
+        val settled = OrientedBox(local, world)
+        org.junit.Assert.assertTrue(ScenePicker.isResting(settled.bottom, rest(settled, surface)!!))
+    }
+
     @Test
     fun hitsTheBoxUnderTheRay() {
         val r = ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f))
