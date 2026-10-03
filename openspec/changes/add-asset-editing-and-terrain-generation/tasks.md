@@ -3,9 +3,9 @@
 ## 1. Asset edit model and metadata commands
 
 - [x] 1.1 Add core field descriptions and AssetMetaEditor for terrain size/uv/splat fields, cube faces and procedural atmosphere fields, including omitted effective defaults, identity protection, no-op detection and expected-value conflicts; verify core `AssetMetaEditorTest` cases for all value kinds, unchanged unknown fields, invalid numeric ranges and coupled atmosphere radii with `./gradlew :core:test`.
-- [ ] 1.2 Add project texture/image choice models with UUID storage, readable image filtering, unresolved-current-value display and canonical path containment; verify `AssetReferenceChoicesTest` for null, missing UUIDs, wrong types, symlink escapes and folder boundary cases with `./gradlew :test --tests 'net.nevinsky.abyssus.properties.AssetReferenceChoicesTest'`.
-- [ ] 1.3 Wire metadata commits through editSceneJson and retain optimistic conflict checking; verify `AssetMetaEditsTest` for one-field edits, exact Undo/Redo, `60.0` preservation, omitted defaults, unchanged lastModified, malformed input and stale field rejection with `./gradlew :test --tests 'net.nevinsky.abyssus.properties.AssetMetaEditsTest'`.
-- [ ] 1.4 Update docs/ai/conventions.md and architecture.md for asset metadata edits and editor models; verify `scripts/check-docs.sh` and check the documented write path matches 1.3.
+- [x] 1.2 Add project texture/image choice models with UUID storage, readable image filtering, unresolved-current-value display and canonical path containment; verify `AssetReferenceChoicesTest` for null, missing UUIDs, wrong types, symlink escapes and folder boundary cases with `./gradlew :test --tests 'net.nevinsky.abyssus.properties.AssetReferenceChoicesTest'`.
+- [x] 1.3 Wire metadata commits through editSceneJson and retain optimistic conflict checking; verify `AssetMetaEditsTest` for one-field edits, exact Undo/Redo, `60.0` preservation, omitted defaults, unchanged lastModified, malformed input and stale field rejection with `./gradlew :test --tests 'net.nevinsky.abyssus.properties.AssetMetaEditsTest'`.
+- [x] 1.4 Update docs/ai/conventions.md and architecture.md for asset metadata edits and editor models; verify `scripts/check-docs.sh` and check the documented write path matches 1.3.
 
 ## 2. Typed asset properties UI
 

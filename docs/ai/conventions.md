@@ -39,7 +39,11 @@ Readers never write (`ConfigFileReader` implementations never write and never th
 - the eye toggle,
 - Rename Scene,
 - the skybox chooser,
-- scene view gizmo drags and Drop (the same Move Entity command).
+- scene view gizmo drags and Drop (the same Move Entity command),
+- asset property edits in the properties panel (`AssetMetaEdits` in `properties/AssetMetaEdits.kt`): one `additional` key
+  of an asset's `meta.json` per command, named Edit Asset Property. The rules (which keys, validation, defaults, stale
+  values) are `AssetMetaEditor`'s in `core`, which works on any JSON tree and never touches `version`, `uuid`, `type`,
+  `lastModified` or unknown keys.
 
 `SceneFormatListener` is the one other writer: it pretty-prints a `.scene` / `.abss` document when it opens in the
 text editor. A new writer goes through `editSceneJson` and gets a command name in the message bundle.
