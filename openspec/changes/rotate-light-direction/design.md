@@ -2,136 +2,120 @@
 
 ## Context
 
-See proposal.md for motivation. The current state that shapes the approach:
+See proposal.md for motivation. The current code:
 
-- A rotate drag already produces `DragResult(transform, direction)` where `transform.rotation` is the
-  turned rotation and `direction` is the start direction turned by the same delta. Both are computed in
-  `GizmoDrag` (CPU, no GL).
-- On release, `SceneInteraction.editOf` builds the `TransformEdit` that is written. It keeps
-  `direction` only when the entity is a camera:
-  `TransformEdit(rotation = result.transform.rotation, direction = result.direction.takeIf { ScenePreview.isCamera(...) })`.
-  For lights, `direction` is dropped, so the file keeps the old rotation.
-- While the drag is in progress, `ScenePreview.apply` recomputes the previewed light's direction as
-  `result.direction ?: SceneContent.forward(t.rotation)`. Because the light's `result.direction` is
-  always present during a rotate drag, the preview already shows the exact dragged direction — but only
-  because of the `?:` fallback branch, not because the code intends it. The fallback is used for
-  non-rotate edits (e.g. a move) where `result.direction` is null.
-- The shared "which entities have a facing direction" question is answered ad hoc: `canRotate`
-  (SceneContent.kt) checks cameras-without-lookAt and non-point lights; `ScenePreview.selected` returns
-  a null `direction` for models/terrains/point-lights; `editOf` checks `ScenePreview.isCamera`. Three
-  slightly different predicates answer the same question.
+- `SceneContent.of` reads every light with `direction = forward(localRotation)` and does not read `lookAtId` for
+  lights. It already collects `entityPositions` (every entity with a `PositionComponent`, handles included) and does
+  read `lookAtId` for cameras. `CameraFrustum.directionOf` turns a camera toward its resolving target.
+- Every consumer of a light's direction reads `LightPlacement.direction`: `SceneLighting` (shading, spot cones),
+  `SceneMarkers` (direction line), `ScenePreview.selected` (the gizmo's start direction).
+- `canRotate` (`gizmo/GizmoHandles.kt`) refuses look-at cameras and point lights, and accepts every other light.
+- A rotate drag yields `DragResult(transform, direction)`. `GizmoDrag` builds the rotation as `delta * start` and the
+  direction as `delta(startDirection)`, so the two agree exactly when the start direction is `forward(start)`.
+- `SceneInteraction.editOf` sends `TransformEdit(rotation, direction = camera ? direction : null)`.
+  `SceneTransformWriter.apply` writes `localRotation` for any entity and uses `direction` only for a camera's
+  `viewPointPosition`. So a light without `lookAtId` already round-trips. Only look-at lights are wrong.
+- Mundus (and the port in `ecs/system/Systems.kt`, `LookAtSystem`) sets the light's `localRotation` from
+  `target.localPosition - light.localPosition` and treats `localPosition` as world coordinates. The scene view already
+  ignores `ParentComponent` and does the same.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Write the turned rotation of a directional/spot light to the file on a completed rotate drag.
-- Show the exact dragged direction in the preview while the drag is in progress.
-- Use one shared predicate for "this entity has a facing direction" so the preview and the write path
-  agree.
+- Show a look-at light facing its target, matching Mundus.
+- Make a rotate drag on a light aimed at a direction handle stick: move the handle, in the same undoable edit.
+- Refuse rotate rings for a light aimed at something other than a handle.
 
-**Non-Goals:**
-
-- No new file field for the light's direction; the direction stays derived from `localRotation`.
-- No change to point lights (no rotate handles, no direction written).
-- No change to spot cones, light range, or other light properties.
-- No change to the camera path (already correct).
+**Non-Goals:** see proposal.md, "Out of scope".
 
 ## Decisions
 
-### 1. Keep the direction on the write path for directional and spot lights
+### 1. Resolve a light's look-at target when the scene is read
 
-`SceneInteraction.editOf` currently gates `direction` on `ScenePreview.isCamera`. Extend the gate to
-also pass the direction through when the entity is a directional or spot light. The written
-`TransformEdit` then carries `direction`, and `SceneTransformWriter` already writes the rotation into
-`PositionComponent.localRotation` for any entity; the `direction` field on the edit is what tells the
-preview (and any future consumer) that this light's direction is the turned one.
+`SceneContent.of` keeps, for each light, its `lookAtId` (as `LightPlacement.lookAtId`). It also builds a set of the
+entity ids whose `TypeComponent.type` is `HANDLE` (`SceneContent.handleIds`). After the entity pass, so that every
+position is known, each directional or spot light whose `lookAtId` names an entity in `entityPositions` gets
+`direction = normalize(target - position)`. A light at its target's position (zero vector) falls back to
+`forward(rotation)`.
 
-Alternative considered: write a new `direction` key into `LightComponent`. Rejected — it would add a
-Mundus file field that Mundus does not write, violating the file-format compatibility constraint. The
-direction is derivable from `localRotation`, which is what Mundus writes.
+Resolving at read time gives every existing consumer (lighting, cones, markers, gizmo start direction) the right
+direction without changing them. The rule is the one `CameraFrustum.directionOf` applies. The vector math moves into
+a shared helper in `SceneContent` (for example `SceneContent.aim(from, to): Vec3?`), and both use it.
 
-### 2. Prefer the exact dragged direction in the preview
+Alternative: resolve in each consumer, as cameras do through `CameraFrustum.directionOf`. Rejected: lights have three
+consumers, and a direction that is already resolved can't be forgotten in one of them.
 
-`ScenePreview.apply`'s light branch currently computes
-`direction = result.direction ?: SceneContent.forward(t.rotation)`. The `?:` already prefers
-`result.direction` when present, so the preview already shows the exact dragged direction during a
-rotate drag. Make this explicit and robust by changing the branch to use `result.direction` whenever it
-is non-null (the rotate case) and only fall back to `forward(t.rotation)` when it is null (the move
-case, where the rotation is unchanged and `forward` of the unchanged rotation is the correct direction).
-This is a no-op behaviorally for the rotate case but documents intent and protects against a future
-change to `GizmoDrag` that stops populating `direction`.
+### 2. Which lights get rotate rings
 
-Alternative considered: leave the `?:` as is. Rejected — the current code works but the fallback branch
-is not obviously "the move case"; a reader might think the fallback is a bug. Making the preference
-explicit costs nothing.
+`canRotate` returns false for a light whose `lookAtId` resolves to an entity that is not in `handleIds`. A light
+aimed at a handle, and a light with no resolving `lookAtId`, keep their rings. A point light still has none. The
+function stays the single place that answers "does this entity get rotate rings".
 
-### 3. One shared predicate for "has a facing direction"
+### 3. The edit a rotate drag on a handle-aimed light produces
 
-Add a small function in `SceneContent` (next to `canRotate` and `forward`) that answers "does this
-entity have a facing direction the user can turn?" and returns true for directional and spot lights and
-for cameras (excluding cameras whose `lookAtId` resolves, whose direction is not user-controlled). Use
-it in:
+`TransformEdit` gets an optional `target: TargetMove(entityId, position)`. For a rotate drag on a light whose
+`lookAtId` names a handle, `SceneInteraction.editOf` builds:
 
-- `canRotate` (already encodes this for the rotate-gizmo availability).
-- `SceneInteraction.editOf` (to decide whether to keep `direction` in the written edit).
-- `ScenePreview.selected` (to decide whether to return a non-null `direction`).
+- `rotation = null`: the light's own `localRotation` is left as it is (Mundus recomputes it).
+- `target = TargetMove(handleId, lightPosition + turnedDirection * distance)`, where `distance` is the light-to-handle
+  distance when the drag started. A distance of zero (a degenerate handle) uses 1.
 
-This replaces the three ad-hoc predicates with one. The predicate is CPU-only, no GL, no Swing, so it
-belongs in the same file as the existing `forward` and `canRotate` helpers.
+For every other entity `editOf` is unchanged. The computation is a pure function (`ScenePreview.aimedTarget(content,
+id, result)` or similar). `editOf` and the preview both call it, so they agree.
 
-Alternative considered: keep `ScenePreview.isCamera` and add a parallel `ScenePreview.isDirectionalOrSpotLight`. Rejected — two predicates that must be kept in sync are a maintenance hazard; one predicate is clearer.
+`SceneTransformWriter.apply(root, entityId, edit)` writes `edit.target` as the target entity's
+`PositionComponent.localPosition`, using the existing `setVec` (only the differing fields when the object exists; all
+three when it is missing). It returns true when anything changed. The whole edit is still one `editSceneJson` command,
+"Rotate Entity" (because the command name keys on a rotate, `SceneFileEditor.applyTransform` checks
+`edit.rotation != null || edit.target != null`).
 
-### 4. The `RotateLight` fixture
+Alternative: write the light's `localRotation` as Mundus's look-at system would compute it, as well as the handle.
+Rejected: Mundus overwrites it on load, and the project rule is to change only the values an edit is about.
 
-Create `src/test/testData/project/RotateLight/` with a single `.scene` file (the `RotateLight.abss`
-project file references it) containing:
+Alternative: give look-at lights no rotate rings, like look-at cameras. Rejected: every light Mundus creates has a
+handle, so Mundus lights could never be turned in Abyssus.
 
-- A ground model at the origin.
-- A directional light at `(0, 10, 0)`, identity rotation, no `lookAtId`.
-- A spot light at `(0, 5, 0)`, identity rotation, no `lookAtId`.
-- A point light at `(0, 7, 0)`, identity rotation, no `lookAtId`.
+### 4. The preview
 
-No `lookAtId` on any light: the `Lights` fixture uses `lookAtId` to point the lights at handle
-entities, which would make their direction not user-controlled and would block the rotate gizmo.
-Identity rotation gives a known start value (`forward(identity) = (0, 0, -1)`) for tests that rotate the
-light and assert on the result.
+`ScenePreview.apply` for a light already takes `result.direction` when it is non-null. For a handle-aimed light it
+also moves the handle's entry in `entityPositions` to the target position from Decision 3, so anything that reads
+target positions during the drag agrees with the drawn direction. During a Move drag (`result.direction` comes from
+the start), a look-at light is re-aimed from its new position at its unmoved target. That is what the file will
+say after release, so the light doesn't jump on release.
 
-The fixture is a new directory, not a change to `Lights` or `Untitled`, so existing tests that pin
-values in those fixtures are unaffected.
+### 5. Fixture
+
+Tests use `src/test/testData/project/Lights/scenes/Mundus Lights.scene` as is: real Mundus output. Directional light
+`1` is at (0, 10, 0) and looks at handle `0` at (0, 0, 0). Spot light `4` is at (0, 5, 0) and looks at handle `3` at
+(0, 0, 0). Both handles have an empty `PositionComponent`. Tests parse it into memory and never write it back. A
+light aimed at a non-handle entity is built from inline JSON in the test, as `SceneInteractionTest` already does for
+a point light.
 
 ## Risks / Trade-offs
 
-- [The written rotation and the turned direction disagree by a second-order amount] The file stores
-  `localRotation`; a re-parse derives the direction as `forward(localRotation)`. Because the rotation is
-  `startRotation * delta` and the direction is `delta.transform(startDirection)`, the two agree up to
-  the non-commutativity of quaternion rotation in 3D. The difference is below rendering precision and is
-  the same pragmatic stance cameras already take (cameras store `viewPointPosition` directly, so they
-  round-trip exactly; lights cannot without a new file field). Mitigation: document this in the spec
-  ("within rendering precision") and in the fixture notes.
-- [A future change to `GizmoDrag` that stops populating `direction` would silently regress the
-  preview] The explicit preference in `ScenePreview.apply` (Decision 2) makes the fallback branch
-  visible, so a regression would be caught in code review.
-- [The new predicate could drift from `canRotate` if one is updated and not the other] By having
-  `canRotate` call the shared predicate, they cannot drift.
+- [Moving a Mundus light now re-aims it] Today a moved Mundus light keeps facing along -Z. After this change it
+  keeps facing its handle, so its direction changes as it moves. This matches Mundus, where the handle stays put
+  under the same rule. Moving the handle with the light is out of scope.
+- [Handle coordinates] The fixture's handles are children (`ParentComponent`) with world-valued `localPosition`, as
+  the ported `LookAtSystem` treats them. If some Mundus version stored handle positions relative to the parent, both
+  the read and the write would be off by the light's position. Mitigation: runIde check 7.3 opens the edited copy in
+  Mundus, or compares with a Mundus-saved file, when one is at hand. Otherwise it is listed as unverified.
+- [Writing an empty `PositionComponent`] The handle's `{}` becomes `{"localPosition": {x, y, z}}`. That is what Mundus
+  writes for a moved handle, and what the writer already does for any entity.
 
 ## Threads
 
-All new logic is CPU-only and runs on the AWT thread that renders the canvas, inside the existing
-interaction callbacks (`SceneInteraction.pressed`/`dragged`/`released`) and the preview
-(`ScenePreview.apply`). No new GL calls are introduced; the light's marker line is already drawn from
-the preview content in `SceneRenderer.drawOverlays`. No new thread is created.
+Everything new is CPU-only, with no GL and no Swing: `SceneContent.of` (wherever the scene is parsed today),
+`canRotate`, `ScenePreview` and the edit computation (on the AWT thread that renders the canvas, inside the existing
+`SceneInteraction` callbacks), and `SceneTransformWriter` (inside the `editSceneJson` command, as today). No GL call
+is added: the marker and lights are drawn from `LightPlacement.direction` as before.
 
 ## Verification
 
-- Headless: `SceneTransformWriterTest` (or a new case) asserts that a `TransformEdit` with a rotation
-  and a direction writes the rotation into `PositionComponent.localRotation` and leaves the rest of the
-  file untouched.
-- Headless: a `SceneInteractionTest` case asserts that a rotate drag on a directional light in
-  `RotateLight` produces a `TransformEdit` whose `rotation` is the turned rotation and whose `direction`
-  is the turned direction.
-- Headless: a `ScenePreviewTest` case asserts that a previewed light shows the exact `result.direction`
-  when present.
-- runIde: open `RotateLight`, select the directional light, switch to rotate mode, drag a ring, release;
-  confirm the direction line moved and the scene file now has the new `localRotation`. Confirm the same
-  for the spot light. Confirm the point light has no rotate handles.
+- Headless: `SceneContentTest` checks the look-at directions read from `Mundus Lights.scene`.
+- Headless: `GizmoHandlesTest` checks `canRotate`.
+- Headless: a new `ScenePreviewTest` checks the preview, including the moved handle.
+- Headless: `SceneInteractionTest` checks the edit a rotate drag produces.
+- Headless: `SceneTransformWriterTest` checks the write.
+- runIde: tasks 7.x.

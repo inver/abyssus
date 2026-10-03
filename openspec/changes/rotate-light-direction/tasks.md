@@ -1,76 +1,76 @@
-## 1. Fixture
+## 1. Reading look-at lights
 
-- [ ] 1.1 Create `src/test/testData/project/RotateLight/` with a `.abss` project file and a `.scene`
-  file containing: a ground model `0`, a directional light `1` at `(0, 10, 0)` with identity rotation and
-  no `lookAtId`, a spot light `4` at `(0, 5, 0)` with identity rotation and no `lookAtId`, and a point
-  light `8` at `(0, 7, 0)` with identity rotation and no `lookAtId`. All lights have a `LightComponent`
-  with a non-default `intensity`. Verify by opening the scene in `SceneContentTest` (or a new
-  `RotateLightFixtureTest`) and asserting the three lights parse with the expected positions and that
-  `ScenePreview.selected` returns a non-null `direction` for `1` and `4` and a null `direction` for `8`.
-  Run `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.*'`.
+- [ ] 1.1 In `SceneContent.kt`, keep each light's `lookAtId` (`LightPlacement.lookAtId`) and collect the ids of
+  entities whose `TypeComponent.type` is `HANDLE` (`SceneContent.handleIds`). After the entity pass, give each
+  directional or spot light whose `lookAtId` is in `entityPositions` the direction from its position to the target's.
+  Fall back to `forward(rotation)` when the two positions coincide. Move the aim math into a shared helper that
+  `CameraFrustum.directionOf` also uses. Verify with new `SceneContentTest` cases:
+  `mundusLightsFaceTheirHandles` (`Lights/scenes/Mundus Lights.scene`: lights `1` and `4` have direction
+  (0, -1, 0), and `handleIds` holds `0` and `3`), `aLightWithAMissingTargetFacesAlongItsRotation`, and
+  `aLightAtItsTargetFacesAlongItsRotation`. Existing camera tests stay green.
+  Run `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneContentTest'` and
+  `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.CameraFrustumTest'`.
 
-## 2. Shared "has a facing direction" predicate
+## 2. Rotate rings
 
-- [ ] 2.1 Add a function in `SceneContent.kt` (next to `canRotate` and `forward`) that returns true for
-  directional and spot lights and for cameras whose `lookAtId` does not resolve to an entity; false for
-  point lights, models, and terrains. Refactor `canRotate` to call this function. Verify by running the
-  existing `canRotate`-related tests and adding a case to `SceneContentTest` that asserts the predicate
-  is true for a directional light, a spot light, and a camera without `lookAtId`, and false for a point
-  light, a model, and a camera with a resolving `lookAtId`. Run
-  `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneContentTest'`.
+- [ ] 2.1 In `gizmo/GizmoHandles.kt`, make `canRotate` return false for a light whose `lookAtId` resolves to an
+  entity not in `handleIds`. Verify with new `GizmoHandlesTest` cases: true for lights `1` and `4` of
+  `Mundus Lights.scene`, false for an inline light aimed at a model, true for a light without `lookAtId`, false for
+  a point light. Run `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.gizmo.GizmoHandlesTest'`.
 
-## 3. Write path
+## 3. Preview
 
-- [ ] 3.1 In `SceneInteraction.editOf`, change the `direction` gate from
-  `ScenePreview.isCamera(...)` to the new shared predicate from task 2.1, so a rotate drag on a
-  directional or spot light carries the turned `direction` into the written `TransformEdit`. Verify by
-  adding a case to `SceneInteractionTest` that drives a rotate drag on a directional light in
-  `RotateLight` and asserts the `TransformEdit` emitted to `onTransform` has the turned `rotation` and
-  the turned `direction`. Run
-  `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneInteractionTest'`.
+- [ ] 3.1 Add the pure function that gives the new handle position for a rotate result on a handle-aimed light: the
+  light position plus the turned direction times the start distance, with 1 when that distance is 0. In
+  `ScenePreview.apply`, move that handle's `entityPositions` entry during a rotate preview. During a move preview,
+  re-aim a look-at light at its unmoved target. Verify with a new `ScenePreviewTest`:
+  `turningAHandleAimedLightMovesItsHandle` (light `1`, turned to (0, 0, -1): its direction is (0, 0, -1) and handle `0`
+  is at (0, 10, -10)), `movingALookAtLightReAimsIt`, and `aLightWithoutTargetUsesTheDraggedDirection`.
+  Run `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.ScenePreviewTest'`.
 
-## 4. Preview path
+## 4. Edit and write
 
-- [ ] 4.1 In `ScenePreview.apply`, make the light branch explicitly prefer `result.direction` when it is
-  non-null and fall back to `SceneContent.forward(t.rotation)` only when it is null, so the previewed
-  light shows the exact dragged direction during a rotate drag. Verify by adding a case to a
-  `ScenePreviewTest` (new file) that applies a `DragResult` with a non-null `direction` to a content
-  containing a directional light and asserts the previewed light's `direction` equals the dragged one,
-  and a second case that applies a move-only `DragResult` (null `direction`) and asserts the previewed
-  light's `direction` equals `forward(rotation)`. Run
-  `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.ScenePreviewTest'`.
+- [ ] 4.1 Add `target: TargetMove?` to `TransformEdit`. In `SceneInteraction.editOf`, a rotate drag on a handle-aimed
+  light produces `TransformEdit(target = TargetMove(handleId, newPosition))` with no `rotation`; other entities are
+  unchanged. Verify with a new `SceneInteractionTest` case, `rotatingAHandleAimedLightEmitsAHandleMove`, which drives
+  an X-ring drag on light `1` of `Mundus Lights.scene` and checks that the emitted edit has a null `rotation` and a
+  `target` for `0` at distance 10 from (0, 10, 0) along the previewed direction. The existing
+  `rotatingARingWritesTheRotation` stays green.
+  Run `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneInteractionTest'`.
+- [ ] 4.2 In `SceneTransformWriter.apply`, write `edit.target` into the target entity's
+  `PositionComponent.localPosition`. In `SceneFileEditor.applyTransform`, name such an edit "Rotate Entity". Verify
+  with new `SceneTransformWriterTest` cases on `Mundus Lights.scene`: `aHandleMoveWritesTheHandlePosition` (handle `0`
+  gets `localPosition` (0, 10, -10), light `1` and every other entity are unchanged, no key is added to any
+  `LightComponent`) and `aHandleMoveToTheSamePlaceChangesNothing` (returns false).
+  Run `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneTransformWriterTest'`.
 
-## 5. File write
+## 5. Integration
 
-- [ ] 5.1 Verify that `SceneTransformWriter.apply` writes the rotation from a `TransformEdit` carrying
-  both a `rotation` and a `direction` into `PositionComponent.localRotation` of the entity and into
-  `CameraComponent.camera.viewPointPosition` only when the entity has a camera, and leaves all other keys
-  of the scene file untouched. Add a case to `SceneTransformWriterTest` using the `RotateLight` fixture
-  that applies a `TransformEdit(rotation = ..., direction = ...)` to light `1` and asserts the
-  `localRotation` field is the new quaternion, no new key was added to `LightComponent`, and the other
-  entities are byte-identical. Run
-  `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneTransformWriterTest'`.
+- [ ] 5.1 Run the plugin test suite: `./gradlew :test`.
 
-## 6. Integration
+## 6. Docs
 
-- [ ] 6.1 Run the full plugin test suite and confirm no regressions:
-  `./gradlew :test`.
+- [ ] 6.1 Update `docs/ai/file-formats.md` (the `PositionComponent` row: `lookAtId` for cameras and lights, and a
+  light that looks at a `HANDLE` stores its aim in the handle's position). Update
+  `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` ("Objects without rotation": a light aimed at a non-handle
+  entity; plus a note that turning a handle-aimed light moves the handle). Run `scripts/check-docs.sh`.
 
 ## 7. Manual verification (runIde)
 
-- [ ] 7.1 In a `runIde` session opened on a **copy** of `RotateLight` (never the fixture itself), select
-  the directional light `1`, switch the gizmo to rotate mode, drag one of the rings, and release.
-  Confirm the light's direction line moved to the turned direction and the scene file on disk now has
-  the new `PositionComponent.localRotation`. Leave this task unchecked if the check could not be
-  performed, and list the exact steps for the user.
-- [ ] 7.2 Repeat task 7.1 for the spot light `4`. Confirm the same behavior.
-- [ ] 7.3 Select the point light `8` in rotate mode and confirm no rotate handles are drawn and no
-  rotate drag can start.
+Use a **copy** of `src/test/testData/project/Lights` as the `runIde` project, never the fixture itself.
 
-## 8. Docs and final check
+- [ ] 7.1 Open `Mundus Lights`. Check that directional light `1` and spot light `4` both point straight down (direction
+  lines and cone). Select light `1`, press E, drag the X ring about a quarter turn and release. Check that the
+  direction line and shading follow during the drag and stay after release. Check that in the copy's `.scene` file,
+  entity `0` now has a `localPosition` about 10 units from (0, 10, 0) along the new direction, and entity `1`'s
+  `PositionComponent` is unchanged. Press Undo, and check that the handle's `PositionComponent` is `{}` again and the
+  light points down.
+- [ ] 7.2 Repeat 7.1 for spot light `4`: the cone follows the drag and stays after release. Start another drag and
+  press Esc: the cone goes back and nothing is written.
+- [ ] 7.3 If a Mundus editor is at hand, open the edited copy in it. Check that light `1` faces the direction it was
+  turned to in Abyssus. If no Mundus editor is available, leave this unchecked and list it as unverified (see the
+  "Handle coordinates" risk in design.md).
 
-- [ ] 8.1 If `docs/ai/architecture.md`, `docs/ai/glossary.md`, or any package `README.md` under
-  `src/main/kotlin/net/nevinsky/abyssus/sceneview/` describes the rotate-gizmo behavior or the
-  "which entities have a direction" rule, update it in the same change to reflect that directional and
-  spot lights now keep the turned direction. Run `scripts/check-docs.sh` and confirm it passes.
-- [ ] 8.2 Run the full verification: `./gradlew check && scripts/check-docs.sh`. Confirm both pass.
+## 8. Final check
+
+- [ ] 8.1 Run `./gradlew check && scripts/check-docs.sh`. Confirm both pass.
