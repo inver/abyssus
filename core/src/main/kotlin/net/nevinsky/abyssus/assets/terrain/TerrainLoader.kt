@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.assets.terrain
 
 import net.nevinsky.abyssus.assets.loading.AssetLoader
+import net.nevinsky.abyssus.assets.loading.TextureUploadQueue
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
@@ -49,37 +50,29 @@ class PreparedTerrain(val data: TerrainData, splatMap: Pixmap?, layers: Map<Stri
     val vertices = data.vertices()
     val indices = data.indices()
 
-    private val pixmaps = LinkedHashMap<String, Pixmap>().also { m ->
-        splatMap?.let { m[SPLAT_MAP] = it }
-        m.putAll(layers)
-    }
-    val textures = HashMap<String, Texture>()
+    private val uploads = TextureUploadQueue(
+        LinkedHashMap<String, Pixmap>().also { m ->
+            splatMap?.let { m[SPLAT_MAP] = it }
+            m.putAll(layers)
+        },
+        ::makeTexture,
+    )
+    val textures: MutableMap<String, Texture> get() = uploads.textures
 
     /** Uploads one more image; true when every image is on the GPU. */
-    fun uploadNext(): Boolean {
-        val name = pixmaps.keys.firstOrNull() ?: return true
-        val pixmap = pixmaps.remove(name)!!
-        textures[name] = try {
-            if (name == SPLAT_MAP) Texture(pixmap).also {
-                it.setFilter(
-                    Texture.TextureFilter.Linear,
-                    Texture.TextureFilter.Linear
-                )
-            }
-            else Texture(pixmap, true).also {
-                it.setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear)
-                it.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat)
-            }
-        } finally {
-            pixmap.dispose()
-        }
-        return pixmaps.isEmpty()
-    }
+    fun uploadNext(): Boolean = uploads.uploadNext()
 
-    fun dispose() {
-        pixmaps.values.forEach(Pixmap::dispose)
-        pixmaps.clear()
-        textures.values.forEach(Texture::dispose)
-        textures.clear()
+    fun dispose() = uploads.dispose()
+
+    private fun makeTexture(name: String, pixmap: Pixmap): Texture = try {
+        if (name == SPLAT_MAP) Texture(pixmap).also {
+            it.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
+        }
+        else Texture(pixmap, true).also {
+            it.setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear)
+            it.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat)
+        }
+    } finally {
+        pixmap.dispose()
     }
 }

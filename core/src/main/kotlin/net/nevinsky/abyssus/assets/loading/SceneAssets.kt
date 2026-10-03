@@ -42,9 +42,7 @@ class SceneAssets<P : Any, T : Disposable>(
     private fun newCache(files: AssetFiles) = AssetCache<P, T>(
         executor,
         prepare = { name -> loader.prepare(files, name) },
-        build = { _, p -> loader.build(p) },
-        advance = loader::upload,
-        discard = loader::discard,
+        loader = loader,
         log = log,
     )
 

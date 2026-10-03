@@ -14,14 +14,25 @@ import net.nevinsky.abyssus.assets.sky.hdr.HdrSky
 import net.nevinsky.abyssus.assets.sky.hdr.PreparedHdrSky
 import net.nevinsky.abyssus.assets.sky.procedural.PreparedProceduralSky
 import net.nevinsky.abyssus.assets.sky.procedural.ProceduralSky
-import net.nevinsky.abyssus.assets.sky.procedural.ProceduralSkyMeta
 
-/** What a scene's `skyboxName` was loaded as: a cube of six faces, a procedural sky or an HDR sky. */
-sealed interface PreparedSky {
-    class Cube(val prepared: PreparedSkybox) : PreparedSky
-    class Procedural(val prepared: PreparedProceduralSky) : PreparedSky
-    class Hdr(val prepared: PreparedHdrSky) : PreparedSky
+/**
+ * What a scene's `skyboxName` was loaded as: the [prepared] data of whichever loader read it (a cube, a procedural sky
+ * or an HDR sky) together with that loader, which uploads, builds and discards it.
+ */
+class PreparedSky internal constructor(
+    /** What the sky's own loader prepared. */
+    val prepared: Any,
+    private val loader: AssetLoader<Any, out Sky>,
+) {
+    internal fun upload(): Boolean = loader.upload(prepared)
+    internal fun build(): Sky = loader.build(prepared)
+    internal fun discard() = loader.discard(prepared)
 }
+
+/** Pairs [prepared] with the [loader] that made it; the one place the sky kinds are erased. */
+@Suppress("UNCHECKED_CAST")
+private fun <P : Any> preparedSky(loader: AssetLoader<P, out Sky>, prepared: P?): PreparedSky? =
+    prepared?.let { PreparedSky(it, loader as AssetLoader<Any, out Sky>) }
 
 /**
  * Loads whichever kind of sky the named asset folder holds, by its `meta.json` type, through [cube], [procedural] or
@@ -32,30 +43,16 @@ class SkyLoader(
     private val procedural: AssetLoader<PreparedProceduralSky, ProceduralSky>,
     private val hdr: AssetLoader<PreparedHdrSky, HdrSky>,
 ) : AssetLoader<PreparedSky, Sky> {
-    override fun prepare(files: AssetFiles, name: String): PreparedSky? {
-        val asset = files.loadAsset(ProceduralSkyMeta::class.java, name) ?: return null
-        return when (asset.meta.type) {
-            MetaType.SKYBOX_PROCEDURAL -> procedural.prepare(files, name)?.let(PreparedSky::Procedural)
-            MetaType.SKYBOX_HDR -> hdr.prepare(files, name)?.let(PreparedSky::Hdr)
-            else -> cube.prepare(files, name)?.let(PreparedSky::Cube)
+    override fun prepare(files: AssetFiles, name: String): PreparedSky? =
+        when (files.metaType(name) ?: return null) {
+            MetaType.SKYBOX_PROCEDURAL -> preparedSky(procedural, procedural.prepare(files, name))
+            MetaType.SKYBOX_HDR -> preparedSky(hdr, hdr.prepare(files, name))
+            else -> preparedSky(cube, cube.prepare(files, name))
         }
-    }
 
-    override fun upload(prepared: PreparedSky): Boolean = when (prepared) {
-        is PreparedSky.Cube -> cube.upload(prepared.prepared)
-        is PreparedSky.Procedural -> procedural.upload(prepared.prepared)
-        is PreparedSky.Hdr -> hdr.upload(prepared.prepared)
-    }
+    override fun upload(prepared: PreparedSky): Boolean = prepared.upload()
 
-    override fun build(prepared: PreparedSky): Sky = when (prepared) {
-        is PreparedSky.Cube -> cube.build(prepared.prepared)
-        is PreparedSky.Procedural -> procedural.build(prepared.prepared)
-        is PreparedSky.Hdr -> hdr.build(prepared.prepared)
-    }
+    override fun build(prepared: PreparedSky): Sky = prepared.build()
 
-    override fun discard(prepared: PreparedSky) = when (prepared) {
-        is PreparedSky.Cube -> cube.discard(prepared.prepared)
-        is PreparedSky.Procedural -> procedural.discard(prepared.prepared)
-        is PreparedSky.Hdr -> hdr.discard(prepared.prepared)
-    }
+    override fun discard(prepared: PreparedSky) = prepared.discard()
 }

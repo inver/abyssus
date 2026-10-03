@@ -58,7 +58,7 @@ in a task. Single plugin tests: `./gradlew :test --tests '<class>'`. Single `cor
 
 ## 3. `meta.json` reading and `MetaType` (M4, D6, D7, D10)
 
-- [ ] 3.1 Add `AssetMetaReader` / `MetaDocument` in `core`, parsing once, and use them in `AssetFiles`. Move
+- [x] 3.1 Add `AssetMetaReader` / `MetaDocument` in `core`, parsing once, and use them in `AssetFiles`. Move
   `SKYBOX_FACES` next to `SkyboxAdditional`. Verify with `./gradlew :core:test --tests
   'net.nevinsky.abyssus.assets.files.AssetFilesTest'` plus a new case asserting that one `meta.json` read serves both
   the JSON and the typed lookups.
@@ -72,12 +72,12 @@ in a task. Single plugin tests: `./gradlew :test --tests '<class>'`. Single `cor
 
 ## 4. `core` loading simplifications (M6, M7, M8)
 
-- [ ] 4.1 Make `AssetCache` take an `AssetLoader`, and simplify `SceneAssets`. Verify with
+- [x] 4.1 Make `AssetCache` take an `AssetLoader`, and simplify `SceneAssets`. Verify with
   `./gradlew :core:test --tests 'net.nevinsky.abyssus.assets.loading.AssetCacheTest'`, with the test's fake lambdas
   turned into a fake loader.
-- [ ] 4.2 Rework `SkyLoader` / `PreparedSky` so each prepared sky carries its loader, and choose the kind through
+- [x] 4.2 Rework `SkyLoader` / `PreparedSky` so each prepared sky carries its loader, and choose the kind through
   `AssetMetaReader`. Verify with the `core` sky tests (`./gradlew :core:test`).
-- [ ] 4.3 Add `TextureUploadQueue` and use it in `PreparedModel` and `PreparedTerrain`. Add a `TextureUploadQueueTest`
+- [x] 4.3 Add `TextureUploadQueue` and use it in `PreparedModel` and `PreparedTerrain`. Add a `TextureUploadQueueTest`
   with a fake texture factory: it uploads one image per call, `dispose` releases both the remaining pixmaps and the
   uploaded textures, and it is safe to call twice.
 - [ ] 4.4 Add `FullscreenTriangle.create()` / `rotationOnlyViewProj` (`core/.../sky/SkyGeometry.kt`) and use them in

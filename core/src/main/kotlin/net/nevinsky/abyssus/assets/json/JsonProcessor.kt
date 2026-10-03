@@ -45,5 +45,8 @@ class JsonProcessor {
         return mapper.readValue(text, clazz)
     }
 
+    /** Binds an already parsed [node] to [clazz], with the same rules as [parse]. */
+    fun <T> bind(node: JsonNode, clazz: Class<T>): T = mapper.treeToValue(node, clazz)
+
     fun pretty(obj: Any): String = mapper.writer(prettyPrinter).writeValueAsString(obj) + "\n"
 }

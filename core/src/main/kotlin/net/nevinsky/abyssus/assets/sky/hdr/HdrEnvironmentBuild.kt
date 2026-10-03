@@ -6,13 +6,12 @@
 package net.nevinsky.abyssus.assets.sky.hdr
 
 import net.nevinsky.abyssus.assets.ShaderSource
+import net.nevinsky.abyssus.assets.sky.createFullscreenTriangle
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GL30
 import com.badlogic.gdx.graphics.GLTexture
 import com.badlogic.gdx.graphics.Mesh
-import com.badlogic.gdx.graphics.VertexAttribute
-import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
@@ -205,10 +204,7 @@ class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: Shad
 
     /** Draws [program] once per face into [level] of [target], [size] pixels square; [bind] sets the pass's inputs. */
     private fun render(target: GpuTexture, level: Int, size: Int, program: ShaderProgram, bind: () -> Unit) {
-        val quad = mesh ?: Mesh(true, 3, 0, VertexAttribute(Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)).also {
-            it.setVertices(floatArrayOf(-1f, -1f, 3f, -1f, -1f, 3f))
-            mesh = it
-        }
+        val quad = mesh ?: createFullscreenTriangle().also { mesh = it }
         withFramebuffer {
             Gdx.gl.glViewport(0, 0, size, size)
             program.bind()
