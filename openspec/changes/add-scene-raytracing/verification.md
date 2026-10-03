@@ -171,3 +171,43 @@ Task 1.8 remains open until the sandbox IDE moving-instance/camera check and dep
 inspection are actually performed. Automated GL transfer/timing do not substitute
 for that check. Tasks 1.3, 1.4, 1.5, 1.7 and 1.9 retain their unperformed platform
 requirements; skipping Vulkan does not mark those requirements complete.
+
+## Vulkan backend (tasks 1.3, 1.4, 1.7)
+
+The user chose to implement Vulkan after the Metal-only run. This host is Linux x86_64 with no GPU. Vulkan ran on
+Mesa lavapipe (llvmpipe, Vulkan 1.4.318, software), which exposes `VK_KHR_ray_query`,
+`VK_KHR_acceleration_structure` and `VK_KHR_deferred_host_operations`. It is a conformance check of the
+implementation, not a hardware-device result.
+
+Added `VulkanDevice.kt`, `VulkanRayBackend.kt`, `src/main/glsl/slice.comp` (compiled to SPIR-V by `compileSpirv`),
+`VulkanRayBackendTest` (extends `RayBackendConformanceKit`), `VulkanNativePackagingTest` and
+`VulkanRuntimeMissingTest`. The Gradle module now depends on `lwjgl`, `lwjgl-vulkan` and `lwjgl-vma`.
+
+Results on lavapipe:
+- `VulkanRayBackendTest`: 11/11 kit cases passed (primary visibility and depth, instance motion, directional shadow,
+  mirror hit/miss, request replacement, stale generation/resize rejection, two sessions, dispose in flight,
+  injected loss).
+- With `-Dabyssus.raytracing.validation=true` the Khronos validation layer was confirmed active, and the same 11
+  cases passed with no validation errors. The first validation run found a real defect: after a loss injected
+  through `RayDeviceHealth`, teardown skipped its fence wait and destroyed in-use resources. Teardown now skips waits
+  only after Vulkan itself reports `VK_ERROR_DEVICE_LOST`; the rerun was clean.
+- `verifyVulkanPackaging`: SPIR-V present with the right magic number, no shaderc on the classpath, `lwjgl-vma` and
+  `lwjgl` natives for linux/windows/macos/macos-arm64, `lwjgl-vulkan` natives for macOS only, and a probe with a
+  nonexistent loader returned `RUNTIME_NOT_FOUND` (twice in one JVM). The packaged-jar render case passed with
+  `-Dabyssus.vulkanTests=true`. Passed without the flag with the render case skipped.
+- `:raytracing:test` without device flags: all Vulkan device cases skipped; the fake backend suite still passes.
+
+Not performed, so these tasks stay open:
+- 1.3: `VulkanRayBackendTest` exists and passes on a software device, but the task requires running it on its
+  platforms. No Windows run, and no hardware device on Linux.
+- 1.4: `verifyNativePackaging` checks the module jar and runtime classpath, not the final plugin zip.
+  `./gradlew buildPlugin` could not run here (data.services.jetbrains.com is blocked by the egress proxy). Not run
+  on Windows, macOS arm64 or macOS x86_64.
+- 1.7: needs compatible Windows and Linux hardware devices. MoltenVK on macOS is unverified (it may not expose
+  ray queries; the probe reports the missing feature).
+- 1.9 documentation: the module README has a Vulkan section, but docs/ai/architecture.md is not updated and the
+  documented commands were verified only on this host.
+
+CI: `build.yml` and `release.yml` install `glslang-tools` and pass `-Pabyssus.requireShaders=true`. The UI-test
+workflow does not; without a compiler the shader task warns and the Vulkan backend reports itself unavailable.
+Not exercised on GitHub runners.

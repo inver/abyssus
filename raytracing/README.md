@@ -1,4 +1,4 @@
-# Ray tracing foundation and Metal feasibility slice
+# Ray tracing foundation and Metal/Vulkan feasibility slices
 
 Plain JVM module without IntelliJ, Swing or libGDX dependencies. Its internal backend
 protocol has no extension point or binary compatibility promise. A provider probes
@@ -104,3 +104,47 @@ timing test completes the manual runIde gate. Hide/close stops the native worker
 GL resources are released only with the canvas context current, or abandoned with
 the old context. This temporary experiment owns its own device, rather than the
 application service required for the completed feature.
+
+## Vulkan backend (Windows, Linux; macOS through MoltenVK)
+
+`VulkanRayBackendFactory` is the Vulkan counterpart of the Metal provider, built on LWJGL
+(`lwjgl-vulkan`, `lwjgl-vma`) with compute-shader ray queries. It is headless: no GLFW, surface or
+swapchain, and the instance enables no window extensions. Nothing Vulkan-related loads until `probe`.
+`lwjgl-vulkan` publishes natives only for macOS (MoltenVK); Windows and Linux use the system loader
+(`vulkan-1.dll` / `libvulkan.so.1`). A missing loader is reported as `RUNTIME_NOT_FOUND`, never thrown.
+
+A device qualifies from measured features, never from its name: Vulkan 1.2, `bufferDeviceAddress`,
+`timelineSemaphore`, descriptor indexing, `VK_KHR_acceleration_structure`, `VK_KHR_deferred_host_operations`,
+`VK_KHR_ray_query`, a compute queue, and storage-image support for `R16G16B16A16_SFLOAT` (color) and
+`R32_SFLOAT` (depth). The per-device reason is in the `Unavailable.detail` text.
+
+Memory comes from VMA. Bottom-level structures are built once per mesh and survive transform-only
+submissions; the top-level structure is rebuilt in each frame's command buffer. Frames are split into
+dispatches of at most 2^19 rays, each in its own command buffer, so no single submission approaches a
+driver timeout. Completion is polled with a fence from the owner worker; `submit` and `poll` never wait.
+Geometry upload and session disposal do wait on the owner worker. After `VK_ERROR_DEVICE_LOST` teardown skips
+every wait. A loss injected through `RayDeviceHealth` leaves the device healthy, so teardown still waits.
+
+The shader is `src/main/glsl/slice.comp`, compiled to SPIR-V at build time by the `compileSpirv` task
+into `native/vulkan/slice.spv`. No `lwjgl-shaderc` is packaged. The task uses `glslangValidator` or `glslc`
+from `PATH` (or `-Pabyssus.glslc=/path/to/tool`). Without either it warns and ships no SPIR-V, and the backend
+then reports `INITIALIZATION_FAILED`; `-Pabyssus.requireShaders=true` (used by the release and CI builds) turns
+that into a build error.
+
+```sh
+./gradlew :raytracing:test                                    # Vulkan cases skip without a device flag
+./gradlew :raytracing:test --tests '*VulkanRayBackendTest' -Dabyssus.vulkanTests=true
+./gradlew :raytracing:test -Dabyssus.vulkanTests=true -Dabyssus.raytracing.validation=true
+./gradlew :raytracing:verifyVulkanPackaging                   # jar-based; add -Dabyssus.vulkanTests=true to render
+./gradlew :raytracing:verifyNativePackaging                   # Vulkan, plus Metal on a Mac
+```
+
+`-Dabyssus.raytracing.validation=true` enables the Khronos validation layer (and `VK_EXT_debug_utils`) and
+makes `VulkanRayBackendTest` fail on any validation error. It is a developer flag and is never on by default.
+`verifyVulkanPackaging` checks the SPIR-V in the jar, that no shaderc is on the runtime classpath, the
+`lwjgl-vma` natives for every target, MoltenVK for macOS only, and that a probe without a loader returns
+`RUNTIME_NOT_FOUND` (one JVM per test class, because LWJGL's library choice is process-global). Metal
+packaging moved to `verifyMetalPackaging`; `verifyNativePackaging` runs both where they apply.
+
+On a machine without a GPU, Mesa's software driver (lavapipe, `mesa-vulkan-drivers`) exposes ray queries and
+runs the whole suite: `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json`.
