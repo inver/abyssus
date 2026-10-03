@@ -19,8 +19,11 @@ Abyssus as if they were built in.
 - **Registration is explicit.** The game passes its component classes to the scene loader. There is no classpath
   scanning. Built-in codecs keep precedence for Mundus's own component names.
 - **In the scene file.** A declared component is stored under `ecs.entities.<id>.components.<ShortName>`. Adding one
-  to an entity also adds its class to `componentIdentifiers` and updates the entity's archetype entry in
-  `archetypes`, the way Mundus records its own components.
+  to an entity also adds its class to `componentIdentifiers` when it is not there yet. `archetypes` and the entity's
+  `archetype` id are left as they are, as adding a built-in component already does; the spike below decides whether a
+  follow-up must maintain them.
+- **One encoding.** How each field type looks in JSON is defined once, by the schema, in `runtime`. The game's
+  reflective codec and the plugin's editor (which never loads game classes) both read and write through it.
 - **Schema export.** `runtime` provides an entry point that writes the registered components' schema (names, fields,
   types, defaults, limits, groups) to `<mundus project>/abyssus/components.schema.json`. A game wires it as a Gradle
   task. The plugin never loads game classes.
@@ -37,11 +40,11 @@ Abyssus as if they were built in.
   project with an `abyssus/` folder. The finding is recorded in `docs/ai/file-formats.md`.
 
 **Mundus files.**
-- **Read:** `ecs.entities.<id>.components`, `ecs.componentIdentifiers` and `ecs.archetypes`, plus the new
+- **Read:** `ecs.entities.<id>.components` and `ecs.componentIdentifiers`, plus the new
   `abyssus/components.schema.json`.
-- **Written:** declared components under `components.<ShortName>`, new entries in `componentIdentifiers`, and the
-  affected `archetypes` entries. **The file format changes on purpose:** scenes can hold component classes Mundus does
-  not have. Mundus's own keys, their order and their defaults are unchanged.
+- **Written:** declared components under `components.<ShortName>` and new entries in `componentIdentifiers`.
+  **The file format changes on purpose:** scenes can hold component classes Mundus does not have. Mundus's own keys,
+  their order and their defaults are unchanged.
 
 **Out of scope.**
 
@@ -56,15 +59,15 @@ Abyssus as if they were built in.
 ### New Capabilities
 
 - `custom-scene-components`: declaring game components in code and reading and writing them in a scene's `ecs`
-  block, including `componentIdentifiers` / `archetypes` bookkeeping and the default-omission rule.
-- `component-schema-export`: writing the registered components' schema to the project, as data the editor reads.
+  block, including the `componentIdentifiers` entry and the default-omission rule.
+- `component-schemas`: the schema file: what it declares, how a game exports it, and how Abyssus reads it.
 - `abyssus-extension-points`: the extension points Abyssus offers other plugins, starting with `componentSchemas`.
 
 ### Modified Capabilities
 
 - `scene-component-editing`: add, update and remove extend from the modeled kinds to schema-declared components,
   with the same validation, undo and "leave everything else as it was" rules. Adding one also records its class in
-  `componentIdentifiers` and `archetypes`.
+  `componentIdentifiers`.
 - `object-properties-panel`: schema-declared components are shown with editors per field type and grouped by
   `@Field` group, and "Add component" lists them.
 
@@ -74,8 +77,8 @@ Abyssus as if they were built in.
   `ComponentEditor`, properties panel, schema loading and `plugin.xml` (the new extension point).
 - **Process:** the `openspec/config.yaml` rule change described above, made in a task after the owner confirms the
   wording.
-- **Tests:** codec round trips for every field type, default omission, `componentIdentifiers` / `archetypes` updates,
-  schema export, and panel editing of a schema component against a fixture project that holds an exported schema.
+- **Tests:** codec round trips for every field type, default omission, the `componentIdentifiers` entry, schema
+  export, and panel editing of a schema component against a fixture project that holds an exported schema.
 - **Docs:** `AGENTS.md` (the compatibility rule), `docs/ai/file-formats.md` (custom components, the schema file and
   the spike's finding), `docs/ai/architecture.md` (extension points), `runtime/README.md`, `ecs/README.md`.
 - **Depends on:** `extract-scene-runtime`.

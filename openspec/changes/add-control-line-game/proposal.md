@@ -14,14 +14,16 @@ tuning a plane is an edit in Abyssus, not a code change.
   `runtime` and `physics`, with its own bundled Mundus project (a flying field with terrain, a sky, the pilot circle
   and the planes parked beside it).
 - **Game components,** declared with `@SceneComponent` / `@Field` and editable in Abyssus:
-  - `PilotComponent`: handle position and height, line spacing at the handle.
-  - `PlaneComponent`: display name and class, line length and diameter, leadout anchors, engine thrust and fuel time,
-    aerodynamic coefficients (wing area, lift slope, zero-lift drag, tail and elevator effect), tip weight.
+  - `PilotComponent`: handle height and line spacing at the handle.
+  - `PlaneComponent`: class, line length and diameter, leadout anchors, engine thrust and fuel time, aerodynamic
+    coefficients (wing area, lift slope, zero-lift drag, elevator effect, pitch damping), rudder and engine offset.
+  - A plane's display name is its Mundus `NameComponent`, and its mass and collider are the physics components from
+    `add-jolt-physics`.
 - **Flight.** The plane is a dynamic Jolt body. At takeoff, game code creates two lines from the pilot's handle (a
   kinematic body) to the plane's leadouts as distance constraints of 0 to L, so they pull when taut and go slack.
   The elevator follows the handle tilt only through taut lines. Each physics step adds thrust, lift, drag, the
-  elevator moment and line drag. The ground is a height field built from the field's terrain. Line tension is read
-  from the constraints for the HUD.
+  elevator moment and line drag. The ground is a height field built from the field's terrain. Line tension comes
+  from the physics library's rope tension readout and drives the HUD.
 - **Ending a flight.** The flight ends in GAME OVER on ground contact at speed or with the plane inverted. Lines slack
   past a time limit also end it. Fuel running out is not a crash: a landing that touches down gently scores a bonus
   and ends the flight.
