@@ -61,6 +61,13 @@ the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows
    `ColorAttribute.AmbientLight` for `gdx-model`'s `EnvironmentLightAttribute` after drawing the grid: the PBR shader
    samples both cubes, the default shader takes the six colors as its ambient cubemap, and `TerrainShader` samples the
    irradiance cube. Without a built HDR sky the content is lit by the ambient color exactly as before.
+5. `SceneShadows` captures model and terrain renderables after their single animation/transform update, then draws
+   bounded depth tiles before the color passes. Its per-canvas `ShadowResources` restores framebuffer and render
+   state and falls back to direct lighting if allocation or depth rendering fails. Default/PBR models and terrain
+   apply atlas visibility per light; ambient, HDR and emissive terms remain independent. The 4096-square atlas supports sixteen views,
+   shared by one directional, two six-face point and three spot shadows; small sets use larger tiles. Resources use the same
+   safe AWT context lifecycle as assets, including CPU-only abandonment after context loss. See
+   `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for fitting, budgets, sampler units and material limits.
 
 ### Clicks, drags and writes
 
@@ -69,6 +76,12 @@ the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows
   the tree.
 - **Drags:** a drag on a gizmo handle runs a `GizmoDrag`, and `ScenePreview` shows the result live. Esc cancels.
   Any other drag orbits or pans `OrbitCamera`.
+- **Drop:** the toolbar button or D calls `SceneInteraction.drop`. `ScenePicker.restHeight` queries the highest
+  surface under the selection's oriented-box footprint, using box tops and transformed bilinear terrain cells.
+  It moves only Y, previews the result, and uses the same `applyTransform` callback and Move Entity command as a
+  move drag. No surface or an already-resting object produces no edit. `drawnVersion` triggers an availability
+  re-check after loading changes, outside the GL context. New scene params also invalidate the next frame's query
+  so changed transforms and Undo update availability even when the drawn entity ids stay the same.
 - **On release:** `SceneFileEditor.applyTransform` calls `editSceneJson` with
   `SceneTransformWriter.apply`, which writes only the changed `localPosition` / `localRotation`, plus the camera's
   `position` / `viewPointPosition`. The document change triggers the re-read above.
@@ -78,7 +91,7 @@ the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows
 
 ### Every write
 
-The eye toggle, Rename Scene, the skybox chooser, gizmo drags and component add, edit and remove (`SceneComponentEdits`) all go through `editSceneJson`
+The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) all go through `editSceneJson`
 (`projectView/EnabledToggle.kt`):
 
 1. Parse the document with `SceneJson`.

@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.ecs
@@ -69,6 +58,26 @@ class ComponentCodecsTest {
     }
 
     @Test
+    fun rangeRoundTripsInBothShapesAndDefaultIsOmitted() {
+        for (text in listOf(
+            """{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1,"range":30}}""",
+            """{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1,"range":30}""",
+        )) {
+            val node = json(text)
+            val codec = LightCodec()
+            val light = codec.read(node)
+            assertEquals(30f, light.light.range, 0f)
+            assertEquals(text, codec.write(light).toString())
+            light.light.range = 100f
+            val written = codec.write(light)
+            val values = written.get("light") ?: written
+            assertFalse(values.has("range"))
+            assertEquals(100f, codec.read(written).light.range, 0f)
+            assertEquals(written.toString(), codec.write(codec.read(written)).toString())
+        }
+    }
+
+    @Test
     fun positionDefaultsAndRoundTrip() {
         val empty = PositionCodec().read(json("{}"))
         assertEquals(Vector3(), empty.localPosition)
@@ -81,5 +90,33 @@ class ComponentCodecsTest {
         assertEquals(Vector3(-3.5f, 0f, 2f), position.localPosition)
         assertEquals(3, position.lookAtId)
         assertEquals(node, PositionCodec().write(position))
+    }
+
+    @Test
+    fun beamDefaultsAndSavedValuesRoundTripWithoutLosingUnknownData() {
+        val codec = LightCodec()
+        val defaults = codec.read(json("{}"))
+        assertEquals(45f, defaults.light.coneAngle, 0f)
+        assertEquals(0.2f, defaults.light.edgeSoftness, 0f)
+        val defaultValues = codec.write(defaults)["light"]
+        assertFalse(defaultValues.has("coneAngle"))
+        assertFalse(defaultValues.has("edgeSoftness"))
+        for (nested in listOf(true, false)) {
+            val values = """{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1,"coneAngle":60,"edgeSoftness":0.2500,"future":1.23400}"""
+            val text = if (nested) """{"outerUnknown":7.000,"light":$values}""" else values
+            val light = codec.read(json(text))
+            assertEquals(nested, light.nested)
+            assertEquals(60f, light.light.coneAngle, 0f)
+            assertEquals(0.25f, light.light.edgeSoftness, 0f)
+            assertEquals(text, codec.write(light).toString())
+            light.light.coneAngle = 45f
+            light.light.edgeSoftness = 0.2f
+            val written = codec.write(light)
+            val saved = written["light"] ?: written
+            assertFalse(saved.has("coneAngle"))
+            assertFalse(saved.has("edgeSoftness"))
+            assertEquals("1.23400", saved["future"].toString())
+            if (nested) assertEquals("7.000", written["outerUnknown"].toString())
+        }
     }
 }

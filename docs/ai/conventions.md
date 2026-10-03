@@ -4,7 +4,7 @@
 
 - **Kotlin everywhere.** The only Java sources are the GLTF grammar inputs in
   `src/main/java/net/nevinsky/abyssus/language/psi/` (`Gltf.bnf`, `Gltf.flex`).
-- **Generated code:** the lexer and parser are generated into `src/main/gen`, which is git-ignored. Never edit it;
+- **Generated code:** the lexer and parser are generated into `src/main/gen` by the `generateGltfParser` / `generateGltfLexer` Gradle tasks (run before compiling), and the directory is git-ignored. Never edit it;
   change the grammar instead.
 - **Package-private libGDX code:** `com.badlogic.gdx.backends.lwjgl3.GdxGlBridge` lives in libGDX's package on
   purpose, to reach backend code that is package-private.
@@ -39,7 +39,7 @@ Readers never write (`ConfigFileReader` implementations never write and never th
 - the eye toggle,
 - Rename Scene,
 - the skybox chooser,
-- scene view gizmo drags.
+- scene view gizmo drags and Drop (the same Move Entity command).
 
 `SceneFormatListener` is the one other writer: it pretty-prints a `.scene` / `.abss` document when it opens in the
 text editor. A new writer goes through `editSceneJson` and gets a command name in the message bundle.

@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import org.jetbrains.changelog.Changelog
@@ -27,6 +16,8 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "2.4.10"
     // IntelliJ Platform Gradle Plugin
     id("org.jetbrains.intellij.platform") version "2.19.0"
+    // Generates the GLTF lexer and parser from Gltf.flex / Gltf.bnf
+    id("org.jetbrains.grammarkit") version "2022.3.2.2"
     // Gradle Changelog Plugin
     id("org.jetbrains.changelog") version "2.5.0"
     // Gradle Kover Plugin
@@ -214,3 +205,22 @@ val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
 sourceSets["main"].java {
     srcDirs("src/main/gen")
 }
+
+val gltfGrammarDir = "src/main/java/net/nevinsky/abyssus/language/psi"
+
+val generateGltfParser by tasks.registering(org.jetbrains.grammarkit.tasks.GenerateParserTask::class) {
+    sourceFile.set(file("$gltfGrammarDir/Gltf.bnf"))
+    targetRootOutputDir.set(file("src/main/gen"))
+    pathToParser.set("/net/nevinsky/abyssus/language/parser/GltfParser.java")
+    pathToPsiRoot.set("/net/nevinsky/abyssus/language/psi")
+    purgeOldFiles.set(true)
+}
+
+val generateGltfLexer by tasks.registering(org.jetbrains.grammarkit.tasks.GenerateLexerTask::class) {
+    sourceFile.set(file("$gltfGrammarDir/Gltf.flex"))
+    targetOutputDir.set(file("src/main/gen/net/nevinsky/abyssus/language/lexer"))
+    purgeOldFiles.set(true)
+}
+
+tasks.named("compileKotlin") { dependsOn(generateGltfParser, generateGltfLexer) }
+tasks.named("compileJava") { dependsOn(generateGltfParser, generateGltfLexer) }

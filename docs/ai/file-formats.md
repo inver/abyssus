@@ -65,7 +65,7 @@ The components the plugin reads:
 | `PositionComponent` | `localPosition`, `localRotation` (quaternion `x y z w`) and `localScale`; plus `lookAtId` for cameras |
 | `RenderComponent.renderable` | `asset.assetName` + `asset.type` (`MODEL` / `TERRAIN`) and `shaderKey`. Editor-only renderables have a `class` but no `asset` |
 | `CameraComponent.camera` | `position`, `viewPointPosition` (the view direction), `near`, `far`, `fieldOfView` |
-| `LightComponent` | `color`, `intensity`, either directly or under `light` |
+| `LightComponent` | `color`, `intensity`, `range` (positive reach, default 100 omitted), either directly or under `light` |
 | `Point2PointPositionComponent` | `entity1Id` / `entity2Id` |
 | `ParentComponent` | Read by the ECS loader; the scene view ignores parents and uses `local*` as world values |
 
@@ -119,3 +119,20 @@ the test helper `HdrFixtures`).
   Files named inside `meta.json` are not followed.
 - **Unused:** an asset reached by no scene of the project is unused.
 - **Bundled shaders:** a `shaderKey` naming no folder is a bundled shader and is ignored.
+
+## Plugin-created light entities
+
+New lights use Name, Type, Position and Light components. The type is `LIGHT_DIRECTIONAL` (Directional and Sun)
+or `LIGHT_SPOT` (Spot); Sun differs only in its initial color, intensity and rotation. Light values are nested under
+`LightComponent.light`: color and intensity are written, while positive `range` is written only when it differs from
+100. No editor icon or direction-handle entities are created. Mundus compatibility is not required for this structure.
+`ecs.archetypes` reuses or appends the exact four-component set, and missing `componentIdentifiers` entries are added.
+
+Spotlight beam settings are Abyssus extensions: `coneAngle` is the full cone width in degrees (finite, greater than
+0 and less than 180; default 45), and `edgeSoftness` is the fraction of the angular radius used for the inward fade
+(finite, 0 through 1; default 0.2). The properties panel expresses softness as percent. Both keys sit under
+`LightComponent.light` for nested components, or directly in an existing flat LightComponent. Missing fields use the
+defaults without writing the scene; resetting a default removes its key. Unknown fields and unrelated number text
+are preserved. The inspected Mundus light implementation is transient and its saved spotlight fixture contains an
+empty LightComponent, so native equivalents were not established. Mundus rendering and retention of these extensions
+are unverified; saving through another editor may lose them.

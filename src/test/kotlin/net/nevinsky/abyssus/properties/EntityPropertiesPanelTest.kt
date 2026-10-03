@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.properties
@@ -187,6 +176,55 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         assertTrue(after.sections.any { it.kind == "LightComponent" })
         assertNotNull(named(p, "field-LightComponent-intensity"))
         assertFalse("LightComponent" in after.addable)
+    }
+
+    fun testLightRangeEditorWritesThirty() {
+        copyProject()
+        net.nevinsky.abyssus.projectView.SceneComponentEdits.add(project, sceneFile(), "0", "LightComponent")
+        val p = panel()
+        p.show(entity("0"))
+        val field = named(p, "field-LightComponent-range") as JBTextField
+        assertEquals("100", field.text)
+        field.text = "30"
+        field.postActionEvent()
+        assertEquals(30, components(sceneFile(), "0")["LightComponent"]["light"]["range"].asInt())
+    }
+
+    fun testBeamEditorsAreSpotlightOnlyAndUsePercent() {
+        copyProject()
+        val f = sceneFile()
+        val edits = net.nevinsky.abyssus.projectView.SceneComponentEdits
+        edits.add(project, f, "0", "LightComponent")
+        val p = panel()
+        for (type in listOf("LIGHT_POINT", "LIGHT_DIRECTIONAL", "LIGHT_SPOT")) {
+            edits.update(project, f, "0", "TypeComponent", "type", type)
+            p.show(component("0", "LightComponent"))
+            if (type != "LIGHT_SPOT") {
+                assertNull(named(p, "field-LightComponent-coneAngle"))
+                assertNull(named(p, "field-LightComponent-edgeSoftness"))
+            } else {
+                assertEquals("45", (named(p, "field-LightComponent-coneAngle") as JBTextField).text)
+                assertEquals("20", (named(p, "field-LightComponent-edgeSoftness") as JBTextField).text)
+                assertTrue(all(p, JBLabel::class.java).any { it.text == "Cone angle (degrees)" })
+                assertTrue(all(p, JBLabel::class.java).any { it.text == "Edge softness (%)" })
+                val field = named(p, "field-LightComponent-edgeSoftness") as JBTextField
+                field.text = "25"
+                field.postActionEvent()
+                assertEquals(0.25f, components(f, "0")["LightComponent"]["light"]["edgeSoftness"].floatValue())
+                val angle = named(p, "field-LightComponent-coneAngle") as JBTextField
+                val before = text(f)
+                angle.text = "180"
+                angle.postActionEvent()
+                assertEquals("45", angle.text)
+                assertEquals(before, text(f))
+                assertTrue((named(p, "error-LightComponent-coneAngle") as JBLabel).text.contains("180"))
+                val doc = FileDocumentManager.getInstance().getDocument(f)!!
+                val root = SceneJson.parse(doc.text)
+                (root["ecs"]["entities"]["0"]["components"]["LightComponent"]["light"] as com.fasterxml.jackson.databind.node.ObjectNode).put("coneAngle", 60)
+                WriteCommandAction.runWriteCommandAction(project) { doc.setText(SceneJson.inStyleOf(doc.text, root)) }
+                assertEquals("60", (named(p, "field-LightComponent-coneAngle") as JBTextField).text)
+            }
+        }
     }
 
     fun testRemoveFromThePanelDropsTheSection() {

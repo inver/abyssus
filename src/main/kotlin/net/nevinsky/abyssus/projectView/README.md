@@ -39,3 +39,10 @@ The **Abyssus** pane of the Project tool window: the project / scene / entity / 
   because toggle folding, icons and write-back match on it.
 - **Painting a selected disabled row:** the platform repaints selected rows in the selection colour.
   `GrayKeepingRenderer` keeps the gray on disabled rows so they still read as disabled while selected.
+
+## Add Light
+
+`AddLightAction` offers Directional, Sun and Spot on scene rows only, including standalone scene files.
+`AddLightGroup` is shared with the Scene view toolbar. Tree placement is the origin; Spot is 5 units above it.
+`SceneComponentEdits.addLight` writes through `editSceneJson` as one undoable Add Light command, then the action
+selects the new entity through `selectEntityInAbyssusView`. Invalid scene text disables creation.

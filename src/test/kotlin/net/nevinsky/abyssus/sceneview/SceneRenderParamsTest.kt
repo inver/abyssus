@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.sceneview
@@ -25,6 +14,21 @@ import org.junit.Test
 
 class SceneRenderParamsTest {
     private fun scene(json: String) = parseScene(json)
+
+    @Test
+    fun spotlightBeamValuesReachRenderContentInBothRepresentations() {
+        for (fields in listOf("", "\"coneAngle\":60,\"edgeSoftness\":0.25,")) {
+            for (nested in listOf(true, false)) {
+                val values = """{$fields"future":1.23400}"""
+                val light = if (nested) """{"light":$values}""" else values
+                val text = """{"ecs":{"entities":{"4":{"components":{"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":$light}}}}}"""
+                val p = SceneRenderParams.from(scene(text), CameraParams.DEFAULT).content.lights.single()
+                assertEquals(LightKind.SPOT, p.kind)
+                assertEquals(if (fields.isEmpty()) 45f else 60f, p.coneAngle, 0f)
+                assertEquals(if (fields.isEmpty()) 0.2f else 0.25f, p.edgeSoftness, 0f)
+            }
+        }
+    }
 
     private val full = """{"ambientLightEnabled":true,"ambientLight":{"color":{"r":1.0,"g":0.5,"b":0.0,"a":1.0},"intensity":0.5},
         "fogEnabled":true,"fog":{"color":{"r":0.2,"g":0.3,"b":0.4,"a":1.0},"density":0.01,"gradient":1.5}}"""

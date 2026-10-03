@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.ecs.scene
@@ -153,6 +142,9 @@ object ComponentEditor {
                 floatField("color.b", { it.light.color.b }, { c, v -> c.light.color = c.light.color.copy(b = v) }),
                 floatField("color.a", { it.light.color.a }, { c, v -> c.light.color = c.light.color.copy(a = v) }),
                 floatField("intensity", { it.light.intensity }, { c, v -> c.light.intensity = v }),
+                floatField("range", { it.light.range }, { c, v -> c.light.range = v }),
+                floatField("coneAngle", { it.light.coneAngle }, { c, v -> c.light.coneAngle = v }),
+                floatField("edgeSoftness", { it.light.edgeSoftness * 100f }, { c, v -> c.light.edgeSoftness = v / 100f }),
             ),
         ) { LightComponent() },
         kind<Point2PointPositionComponent>(
@@ -201,7 +193,9 @@ object ComponentEditor {
     fun read(root: JsonNode, entityId: String, kindName: String): List<FieldValue>? {
         val kind = byName[kindName] ?: return null
         val node = componentsOf(root, entityId)?.get(kindName) ?: return null
-        return readFields(kind, node)
+        val fields = readFields(kind, node)
+        val spotlight = componentsOf(root, entityId)?.get("TypeComponent")?.get("type")?.asText() == "LIGHT_SPOT"
+        return if (kindName == "LightComponent" && !spotlight) fields.filterNot { it.field in listOf("coneAngle", "edgeSoftness") } else fields
     }
 
     private fun <C : Component> readFields(kind: ComponentKind<C>, node: JsonNode): List<FieldValue> {
@@ -325,7 +319,16 @@ object ComponentEditor {
         val label = "${kind.label} ${field.name}"
         val value = text.trim()
         return when (field.kind) {
-            FieldKind.FLOAT -> if (value.toFloatOrNull()?.isFinite() == true) null else reject("componentNotANumber", label, text)
+            FieldKind.FLOAT -> when {
+                value.toFloatOrNull()?.isFinite() != true -> reject("componentNotANumber", label, text)
+                kind.name == "LightComponent" && field.name == "range" && value.toFloat() <= 0f ->
+                    reject("componentNotPositive", label, text)
+                kind.name == "LightComponent" && field.name == "coneAngle" && (value.toFloat() <= 0f || value.toFloat() >= 180f) ->
+                    reject("componentConeAngleInvalid", label, text)
+                kind.name == "LightComponent" && field.name == "edgeSoftness" && value.toFloat() !in 0f..100f ->
+                    reject("componentSoftnessInvalid", label, text)
+                else -> null
+            }
             FieldKind.TEXT -> null
             FieldKind.CHOICE ->
                 if (value in field.choices || (field.optional && value.isEmpty())) null

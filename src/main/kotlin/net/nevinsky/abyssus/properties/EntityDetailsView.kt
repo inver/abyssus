@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.properties
@@ -114,7 +103,16 @@ internal class EntityDetailsView(private val project: Project, private val state
         val error = JBLabel("").apply { foreground = JBColor.RED; name = "error-${section.kind}-${field.field}" }
         val editor = editorFor(section, field, error)
         editor.name = "field-${section.kind}-${field.field}"
-        val label = JBLabel(field.field).apply { preferredSize = Dimension(JBUI.scale(LABEL_WIDTH), preferredSize.height) }
+        val labelKey = if (section.kind == "LightComponent") when (field.field) {
+            "range" -> "lightRangeLabel"
+            "coneAngle" -> "lightConeAngleLabel"
+            "edgeSoftness" -> "lightEdgeSoftnessLabel"
+            else -> null
+        } else null
+        val label = JBLabel(labelKey?.let { AbyssusBundle.message(it) } ?: field.field).apply {
+            preferredSize = Dimension(JBUI.scale(LABEL_WIDTH), preferredSize.height)
+        }
+        if (section.kind == "LightComponent" && field.field == "range") editor.toolTipText = AbyssusBundle.message("lightRangeTooltip")
         return JPanel(GridBagLayout()).apply {
             border = JBUI.Borders.empty(2, 0)
             add(label, GridBagConstraints().apply { gridx = 0; anchor = GridBagConstraints.WEST })

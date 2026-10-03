@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.sceneview
@@ -34,7 +23,11 @@ class ViewSize(val width: Int, val height: Int, val framebufferWidth: Int, val f
  * dragging gizmo handles and cancelling a drag. Mouse positions are Swing pixels of the view described by [size].
  * Everything else the view shows is held by the [renderer].
  */
-class SceneInteraction(private val renderer: SceneRenderer, private val orbit: OrbitCamera) {
+class SceneInteraction(
+    private val renderer: SceneRenderer,
+    private val orbit: OrbitCamera,
+    private val groundBelow: (String) -> Float? = renderer::groundBelow,
+) {
     var size = ViewSize(0, 0, 0, 0)
 
     /** Called with the entity id of a click that selected something. */
@@ -56,14 +49,14 @@ class SceneInteraction(private val renderer: SceneRenderer, private val orbit: O
         get() = renderer.gizmoMode
         set(value) {
             renderer.gizmoMode = value
-            onStateChanged?.invoke()
+            stateChanged()
         }
 
     var viewCamera: String?
         get() = renderer.viewCamera
         set(value) {
             renderer.viewCamera = value
-            onStateChanged?.invoke()
+            stateChanged()
         }
 
     private val click = ClickGesture()
@@ -78,6 +71,54 @@ class SceneInteraction(private val renderer: SceneRenderer, private val orbit: O
 
     val isDragging: Boolean get() = drag != null
 
+    private var lastDrawnVersion = -1L
+    private var lastCanDrop = false
+    private var refreshDropAfterFrame = false
+
+    val canDrop: Boolean get() = dropPosition() != null
+
+    private fun dropPosition(): Vec3? {
+        val id = selectedId ?: return null
+        if (isDragging || id == viewCamera || renderer.content.terrains.any { it.entityId == id }) return null
+        val selected = ScenePreview.selected(renderer.content, id) ?: return null
+        val lowest = renderer.lowestPoint(id) ?: return null
+        val height = groundBelow(id) ?: return null
+        if (!height.isFinite() || ScenePicker.isResting(lowest, height)) return null
+        val p = selected.transform.position
+        return Vec3(p.x, (p.y.toDouble() + height.toDouble() - lowest.toDouble()).toFloat(), p.z)
+    }
+
+    /** A drop uses the move's preview and write callback, including its rejected-write behaviour. */
+    fun drop() {
+        val id = selectedId ?: return
+        val position = dropPosition() ?: return
+        val selected = ScenePreview.selected(renderer.content, id) ?: return
+        val result = DragResult(selected.transform.copy(position = position), selected.direction)
+        renderer.preview = mapOf(id to result)
+        val written = onTransform?.invoke(id, TransformEdit(position = position)) ?: false
+        // A synchronous document re-read can clear the preview during the callback. Keep the accepted result
+        // until the renderer has another frame; a second key press must use the newly settled box immediately.
+        renderer.preview = if (written) mapOf(id to result) else emptyMap()
+        stateChanged()
+    }
+
+    private fun stateChanged() {
+        lastCanDrop = canDrop
+        onStateChanged?.invoke()
+    }
+
+    /** Called outside GL after a frame; loading or params changes need one query, unchanged frames need none. */
+    fun frameRendered(drawnVersion: Long = renderer.drawnVersion) {
+        if (drawnVersion == lastDrawnVersion && !refreshDropAfterFrame) return
+        refreshDropAfterFrame = false
+        lastDrawnVersion = drawnVersion
+        val available = canDrop
+        if (available != lastCanDrop) {
+            lastCanDrop = available
+            onStateChanged?.invoke()
+        }
+    }
+
     fun pressed(x: Int, y: Int, left: Boolean) {
         lastX = x
         lastY = y
@@ -91,6 +132,7 @@ class SceneInteraction(private val renderer: SceneRenderer, private val orbit: O
         dragEntity = id
         dragResult = null
         renderer.hoveredAxis = axis
+        stateChanged()
     }
 
     fun dragged(x: Int, y: Int, left: Boolean) {
@@ -124,6 +166,7 @@ class SceneInteraction(private val renderer: SceneRenderer, private val orbit: O
         renderer.hoveredAxis = null
         if (cancelled) {
             cancelled = false
+            stateChanged()
             return
         }
         if (active != null && id != null) {
@@ -133,6 +176,7 @@ class SceneInteraction(private val renderer: SceneRenderer, private val orbit: O
             } else {
                 renderer.preview = emptyMap()
             }
+            stateChanged()
             return
         }
         if (left && wasClick) pickAt(x, y)
@@ -161,6 +205,7 @@ class SceneInteraction(private val renderer: SceneRenderer, private val orbit: O
         cancelled = true
         renderer.preview = emptyMap()
         renderer.hoveredAxis = null
+        stateChanged()
     }
 
     private fun pickAt(x: Int, y: Int) {
@@ -169,11 +214,12 @@ class SceneInteraction(private val renderer: SceneRenderer, private val orbit: O
         val changed = hit != selectedId
         selectedId = hit
         if (hit != null) onPick?.invoke(hit)
-        if (changed) onStateChanged?.invoke()
+        if (changed) stateChanged()
     }
 
     /** New scene params arrived: drops the preview and a selection or camera the scene no longer has. */
     fun paramsChanged(params: SceneRenderParams) {
+        refreshDropAfterFrame = true
         renderer.preview = emptyMap()
         var changed = false
         selectedId?.let { if (!ScenePreview.contains(params.content, it)) { selectedId = null; changed = true } }
@@ -184,6 +230,6 @@ class SceneInteraction(private val renderer: SceneRenderer, private val orbit: O
             dragResult = null
             cancelled = true
         }
-        if (changed) onStateChanged?.invoke()
+        if (changed || canDrop != lastCanDrop) stateChanged()
     }
 }

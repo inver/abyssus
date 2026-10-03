@@ -49,7 +49,7 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   component it lacks (Name, Type, Parent, Position, Camera, Light, Point2Point or Render; a Render component asks for a
   model or terrain of the project), or right-click a component and choose **Remove Component**. Components the plugin
   does not model (`Pickable`, `Dependencies`, ...) cannot be removed. The eye, **Rename Scene...**, **Choose**, and
-  these two actions are the tree actions that write a file; each is one undoable edit.
+  these component actions and **Add Light** on a scene row write the file as undoable edits.
 
 ## Abyssus Properties panel
 
@@ -93,6 +93,16 @@ view's toolbar. Dragging a handle moves or rotates the object along that world a
 file as one undoable edit, keeping the file's formatting. Esc cancels a drag. A camera aimed at a `lookAtId` entity
 and a point light have no rotate rings. Dragging anywhere else orbits or pans as usual.
 
+**Add Light** in the toolbar creates a Directional light, Sun or Spot at the current orbit target and selects it.
+The same menu on a scene row places it at the origin; Spot sits 5 units above that point. A Sun starts warm and
+brighter, with a low direction. Its light component's **Range** field sets a positive reach (default 100).
+Each creation is one undoable scene edit. These new light entities use the plugin's own component structure.
+
+For a spotlight, Properties also offers **Cone angle (degrees)** for its full beam width and **Edge softness (%)**
+for the inward edge fade. Defaults are 45 degrees and 20 percent. Each accepted edit is saved in the scene and can
+be undone; resetting a default omits its saved field. These beam fields are Abyssus extensions. Mundus support and
+preservation are unverified, so saving the scene in another editor may lose them.
+
 The toolbar's camera selector (**Free camera** and the scene's cameras by name) renders the view through a camera
 entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
@@ -119,7 +129,7 @@ To support another format, implement `net.nevinsky.abyssus.dto.AssetReader` and 
 
 ## License
 
-Licensed under the [Apache License, Version 2.0](LICENSE).
+Licensed under [Apache-2.0](LICENSE) (SPDX-License-Identifier: Apache-2.0).
 
 Files under `gdx-model` derived from [libGDX](https://github.com/libgdx/libgdx) retain their original
 Apache 2.0 headers.

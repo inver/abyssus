@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.projectView
@@ -141,7 +130,7 @@ private class AbyssusSelectInTarget(project: Project) : ProjectViewSelectInTarge
  * Paints clickable icons at the right edge of rows that have actions: the eye on entries gated by an `xxxEnabled`
  * toggle, "View" on scenes, and "..." left of the eye on a project scene's skybox.
  */
-private class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
+internal class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
 
     /** The row's actions, rightmost first. */
@@ -171,8 +160,10 @@ private class EyeTree(model: DefaultTreeModel, private val project: Project) : P
     }
 
     /** Where [actions] of [row] sit: from the right edge of the visible area, rightmost first, [ACTION_GAP] apart. */
-    private fun actionBounds(row: Int, actions: List<RowAction>): List<Rectangle> =
-        layoutActions(getRowBounds(row), visibleRect.let { it.x + it.width }, actions, this)
+    private fun actionBounds(row: Int, actions: List<RowAction>): List<Rectangle>? {
+        val rowBounds = getRowBounds(row) ?: return null
+        return layoutActions(rowBounds, visibleRect.let { it.x + it.width }, actions, this)
+    }
 
     private fun rowOf(e: MouseEvent): Int? {
         val row = getClosestRowForLocation(e.x, e.y)
@@ -182,7 +173,7 @@ private class EyeTree(model: DefaultTreeModel, private val project: Project) : P
     private fun actionAt(e: MouseEvent): Pair<Int, RowAction>? {
         val row = rowOf(e) ?: return null
         val actions = actionsFor(row)
-        val bounds = actionBounds(row, actions)
+        val bounds = actionBounds(row, actions) ?: return null
         return actions.indices.firstOrNull { actions[it].run != null && bounds[it].contains(e.point) }?.let { row to actions[it] }
     }
 
@@ -233,9 +224,10 @@ private class EyeTree(model: DefaultTreeModel, private val project: Project) : P
         val clip = g.clipBounds ?: return
         val first = getClosestRowForLocation(0, clip.y)
         val last = getClosestRowForLocation(0, clip.y + clip.height)
+        if (first < 0) return
         for (row in first..last) {
             val actions = actionsFor(row)
-            val bounds = actionBounds(row, actions)
+            val bounds = actionBounds(row, actions) ?: continue
             val g2 = g.create() as Graphics2D
             try {
                 actions.forEachIndexed { i, action -> action.paint(g2, bounds[i], this) }

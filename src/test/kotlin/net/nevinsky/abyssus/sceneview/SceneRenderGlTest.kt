@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.sceneview
@@ -19,6 +8,7 @@ package net.nevinsky.abyssus.sceneview
 import net.nevinsky.abyssus.filetype.SceneJson
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.parseScene
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
@@ -52,6 +42,114 @@ class SceneRenderGlTest {
     }
 
     @Test
+    fun groundBelowUsesDrawnModelsAndTerrains() {
+        val fixture = params("Untitled", "Main Scene.scene")
+        val p = fixture.copy(content = fixture.content.copy(
+            models = fixture.content.models.filter { it.entityId in listOf("0", "2") }.mapIndexed { index, model ->
+                val position = model.transform.position
+                model.copy(transform = model.transform.copy(position = Vec3(index * 100f, position.y + 10f, position.z)))
+            },
+            lights = emptyList(),
+            cameras = emptyList(),
+        ))
+        var checked = false
+        val result = GlHarness.render(p, 200) { renderer, frame ->
+            if (frame == 199) {
+                val ground = renderer.drawnTerrains.single()
+                val terrain = TerrainTarget("1", ground.terrain.data, ground.world)
+                for (id in listOf("0", "2")) {
+                    val entity = renderer.drawnModels.first { it.placement.entityId == id }
+                    val footprint = OrientedBox(entity.localBounds, entity.instance.transform!!)
+                    val height = ScenePicker.restHeight(footprint, emptyList(), listOf(terrain))!!
+                    assertEquals(0f, height, 1e-5f)
+                    assertTrue(!ScenePicker.isResting(footprint.bottom, height))
+                }
+                assertEquals(0f, renderer.groundBelow("0")!!, 1e-5f)
+                assertNull(renderer.groundBelow("1"))
+                assertNull(renderer.groundBelow("missing"))
+                renderer.viewCamera = "4"
+                assertNull(renderer.groundBelow("4"))
+                checked = true
+            }
+        }
+        assertNull(result.error)
+        assertTrue(checked)
+    }
+
+    @Test
+    fun drawnVersionTracksLoadingAndRemovalButNotAnUnchangedFrame() {
+        val p = params("Untitled", "Main Scene.scene")
+        var previous = 0L
+        var ids = emptySet<String>()
+        var loaded = false
+        var removed = false
+        val result = GlHarness.render(p, 220) { renderer, frame ->
+            val now = renderer.drawnModels.map { "m:" + it.placement.entityId }.toSet() +
+                renderer.drawnTerrains.map { "t:" + it.placement.entityId }
+            if (now != ids) assertTrue(renderer.drawnVersion > previous)
+            else assertEquals(previous, renderer.drawnVersion)
+            ids = now
+            previous = renderer.drawnVersion
+            if (frame == 180) {
+                loaded = now.size == 4
+                renderer.params = p.copy(content = SceneContent.EMPTY)
+            }
+            if (frame == 219) removed = now.isEmpty()
+        }
+        assertNull(result.error)
+        assertTrue(loaded)
+        assertTrue(removed)
+    }
+
+    @Test
+    fun restoringAModelAfterDropRefreshesAvailabilityWithTheSameDrawnIds() {
+        val p = params("Untitled", "Main Scene.scene")
+        var interaction: SceneInteraction? = null
+        var stage = 0
+        var written = 0
+        var version = 0L
+        val result = GlHarness.render(p, 220) { renderer, _ ->
+            val input = interaction ?: SceneInteraction(renderer, OrbitCamera.from(p.camera)).also {
+                interaction = it
+                renderer.selectedId = "0"
+                it.onTransform = { id, edit ->
+                    val selected = ScenePreview.selected(renderer.content, id)!!
+                    val moved = net.nevinsky.abyssus.sceneview.gizmo.DragResult(selected.transform.copy(position = edit.position!!), selected.direction)
+                    renderer.params = p.copy(content = ScenePreview.apply(p.content, id, moved))
+                    it.paramsChanged(renderer.params)
+                    written++
+                    true
+                }
+            }
+            input.frameRendered()
+            if (renderer.drawnModels.size == 3 && renderer.drawnTerrains.size == 1) when (stage) {
+                0 -> {
+                    assertTrue(input.canDrop)
+                    version = renderer.drawnVersion
+                    input.drop()
+                    assertFalse(input.canDrop)
+                    input.drop()
+                    assertEquals(1, written)
+                    stage++
+                }
+                1 -> {
+                    assertFalse(input.canDrop)
+                    renderer.params = p // a document re-read after Undo restores the original position
+                    input.paramsChanged(p)
+                    stage++
+                }
+                2 -> {
+                    assertEquals(version, renderer.drawnVersion)
+                    assertTrue(input.canDrop)
+                    stage++
+                }
+            }
+        }
+        assertNull(result.error)
+        assertEquals(3, stage)
+    }
+
+    @Test
     fun mainSceneDrawsModelsAndTerrain() {
         val p = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
         var models = 0
@@ -64,6 +162,8 @@ class SceneRenderGlTest {
         assertEquals(3, models)
         assertEquals(1, terrains)
         assertTrue("scene drew almost nothing: ${GlHarness.coverage(r.image, p)}", GlHarness.coverage(r.image, p) > 0.2)
+        val folder = File("build/screenshots/shadows").also { it.mkdirs() }
+        GlHarness.save(r.image, File(folder, "main-scene.png"))
     }
 
     @Test
@@ -275,17 +375,24 @@ class SceneRenderGlTest {
     fun mainSceneIsUnchangedByADisabledHdrSky() {
         val p = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.putNull("skyboxName") } }
         val disabled = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.put("skyboxEnabled", false); root.put("skyboxName", "skybox_hdr") } }
+        assertEquals(p, disabled)
         val a = GlHarness.render(p, 240)
         val b = GlHarness.render(disabled, 240)
         assertNull(a.error ?: b.error)
         var differing = 0
         for (y in 0 until a.image.height) for (x in 0 until a.image.width) if (a.image.getRGB(x, y) != b.image.getRGB(x, y)) differing++
+        if (differing > 0) {
+            val folder = File("build/screenshots/shadows").also { it.mkdirs() }
+            GlHarness.save(a.image, File(folder, "no-sky.png"))
+            GlHarness.save(b.image, File(folder, "disabled-sky.png"))
+        }
         assertEquals(0, differing)
     }
 
     @Test
     fun lightEntitiesChangeTheShading() {
-        val base = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
+        val fixture = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
+        val base = fixture.copy(content = fixture.content.copy(lights = emptyList()))
         val light = """{"archetype":1,"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1.0}},"PositionComponent":{"localRotation":{"x":-0.7071,"w":0.7071}}}}"""
         val lit = params("Untitled", "Main Scene.scene") {
             edit(it) { root ->
@@ -293,9 +400,10 @@ class SceneRenderGlTest {
                 (root.get("ecs").get("entities") as ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>("99", SceneJson.parse(light))
             }
         }
-        assertEquals(1, lit.content.lights.size)
+        val isolated = lit.copy(content = lit.content.copy(lights = lit.content.lights.filter { it.entityId == "99" }))
+        assertEquals(1, isolated.content.lights.size)
         val a = GlHarness.render(base, 200)
-        val b = GlHarness.render(lit, 200)
+        val b = GlHarness.render(isolated, 200)
         assertNull(a.error)
         assertNull(b.error)
         fun brightness(img: java.awt.image.BufferedImage): Long {
@@ -307,6 +415,115 @@ class SceneRenderGlTest {
             return sum
         }
         assertTrue("a directional light should brighten the scene", brightness(b.image) > brightness(a.image))
+    }
+
+    @Test
+    fun spotlightConeAndSoftEdgeAffectModelsAndTerrainPixels() {
+        val fixture = params("Untitled", "Main Scene.scene")
+        for (id in listOf("0", "6", "1")) {
+            val placement = (fixture.content.models + fixture.content.terrains).single { it.entityId == id }
+            val center = if (id == "1") Vec3(0f, 0f, 0f) else placement.transform.position
+            val content = SceneContent(
+                models = fixture.content.models.filter { it.entityId == id },
+                terrains = fixture.content.terrains.filter { it.entityId == id },
+            )
+            val base = fixture.copy(content = content, ambient = Rgba(0.05f, 0.05f, 0.05f, 1f), fog = null)
+            val light = LightPlacement("99", LightKind.SPOT, Rgba(1f, 1f, 1f, 1f), 2f,
+                Vec3(center.x, center.y + 20f, center.z), Vec3(0f, -1f, 0f), coneAngle = 60f, edgeSoftness = 0f)
+            fun image(l: LightPlacement) = GlHarness.render(base.copy(content = content.copy(lights = listOf(l))), 200).also { assertNull(it.error) }.image
+            val inside = image(light)
+            val outside = image(light.copy(direction = Vec3(0f, 1f, 0f)))
+            val soft = image(light.copy(edgeSoftness = 1f))
+            fun brightness(img: java.awt.image.BufferedImage): Long {
+                var sum = 0L
+                for (y in 0 until img.height) for (x in 0 until img.width) {
+                    val (r, g, b) = channels(img.getRGB(x, y))
+                    sum += r + g + b
+                }
+                return sum
+            }
+            assertTrue("entity $id: cone did not light pixels", brightness(inside) > brightness(outside) + 1000)
+            assertTrue("entity $id: softness did not reduce edge pixels", brightness(inside) > brightness(soft) + 100)
+            assertTrue("entity $id: soft cone lost all lighting", brightness(soft) > brightness(outside) + 100)
+        }
+    }
+
+    @Test
+    fun modelsAndTerrainCastOntoEachOtherAndSecondLightFillsShadows() {
+        val fixture = params("Untitled", "Main Scene.scene")
+        val asset = fixture.content.models.first { it.entityId == "0" }
+        val terrain = fixture.content.terrains.single()
+        for (terrainReceives in listOf(true, false)) {
+            val model = asset.copy(transform = PlacementTransform.IDENTITY.copy(position = Vec3(0f, if (terrainReceives) 4f else 1f, 0f)))
+            val ground = terrain.copy(transform = PlacementTransform.IDENTITY.copy(
+                position = Vec3(-8f, if (terrainReceives) 0f else 5f, -8f), scale = Vec3(0.01f, 1f, 0.01f)))
+            val content = SceneContent(models = listOf(model), terrains = listOf(ground))
+            val base = fixture.copy(content = content, ambient = Rgba(0.05f, 0.05f, 0.05f, 1f), fog = null)
+            val receiver = if (terrainReceives) terrain.entityId else model.entityId
+            val mask = mutableListOf<Pair<Int, Int>>()
+            // Only one directional light receives a tile. Changing ids moves that tile between an emitting
+            // light and a black light without changing geometry or the unshadowed illumination.
+            fun image(shadowRed: Boolean, fill: Boolean = false): java.awt.image.BufferedImage {
+                val red = LightPlacement(if (shadowRed) "a" else "z", LightKind.DIRECTIONAL, Rgba(1f, 0f, 0f, 1f), 1f,
+                    Vec3(0f, 0f, 0f), Vec3(0f, -1f, 0f))
+                val other = red.copy(entityId = if (shadowRed) "z" else "a", color = Rgba(0f, if (fill) 1f else 0f, 0f, 1f))
+                val orbit = OrbitCamera(Vec3(0f, 1f, -2f), 14f, 0.7f, if (terrainReceives) 0.65f else 0.04f)
+                val result = GlHarness.render(base.copy(content = content.copy(lights = listOf(red, other))), 160, orbit) { r, frame ->
+                    if (frame == 159 && mask.isEmpty()) {
+                        assertEquals(setOf("a"), r.shadowedLightIds)
+                        for (y in 0 until r.lastHeight step 2) for (x in 0 until r.lastWidth step 2)
+                            if (r.pick(x, y, r.lastWidth, r.lastHeight) == receiver) mask += x to y
+                    }
+                }
+                assertNull(result.error)
+                return result.image
+            }
+            val lit = image(false)
+            val shadow = image(true)
+            val filled = image(true, true)
+            val darkened = mask.filter { (x, y) -> channels(lit.getRGB(x, y)).first > channels(shadow.getRGB(x, y)).first + 10 }
+            assertTrue("receiver $receiver has no cast shadow (${mask.size} sampled pixels)", darkened.size > 20)
+            assertTrue("second light must fill receiver $receiver independently", darkened.count { (x, y) ->
+                channels(filled.getRGB(x, y)).second > channels(shadow.getRGB(x, y)).second + 10
+            } > 20)
+        }
+    }
+
+    @Test
+    fun shadowRecordsFollowLightRemovalAndContextRebuild() {
+        val fixture = params("Untitled", "Main Scene.scene")
+        val light = LightPlacement("shadow", LightKind.DIRECTIONAL, Rgba(1f, 1f, 1f, 1f), 1f,
+            Vec3(0f, 0f, 0f), Vec3(0f, -1f, 0f))
+        val base = fixture.copy(content = fixture.content.copy(lights = listOf(light)))
+        var removed = false
+        var rebuilt = false
+        val result = GlHarness.render(base, 180) { renderer, frame ->
+            when (frame) {
+                100 -> {
+                    assertEquals(setOf("shadow"), renderer.shadowedLightIds)
+                    renderer.params = base.copy(content = base.content.copy(lights = emptyList()))
+                }
+                101 -> {
+                    assertTrue(renderer.shadowedLightIds.isEmpty())
+                    removed = true
+                    renderer.params = base
+                }
+                102 -> {
+                    assertEquals(setOf("shadow"), renderer.shadowedLightIds)
+                    renderer.abandonShadows()
+                    assertTrue(renderer.shadowedLightIds.isEmpty())
+                    renderer.create()
+                    assertTrue(renderer.shadowedLightIds.isEmpty())
+                }
+                179 -> {
+                    assertFalse(renderer.loading)
+                    assertEquals(setOf("shadow"), renderer.shadowedLightIds)
+                    rebuilt = true
+                }
+            }
+        }
+        assertNull(result.error)
+        assertTrue(removed && rebuilt)
     }
 
     @Test

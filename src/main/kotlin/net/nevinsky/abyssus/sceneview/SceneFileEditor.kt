@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.sceneview
@@ -44,6 +33,10 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.projectView.editSceneJson
+import net.nevinsky.abyssus.projectView.AddLightGroup
+import net.nevinsky.abyssus.projectView.canAddLight
+import net.nevinsky.abyssus.projectView.AbyssusSelectionListener
+import net.nevinsky.abyssus.projectView.componentTargetOf
 import net.nevinsky.abyssus.projectView.selectEntityInAbyssusView
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
@@ -74,7 +67,9 @@ class SceneFileEditor(
     private val project: Project,
     private val file: VirtualFile,
     private val paramsSource: SceneParamsSource = SceneParamsSource.EDITOR_TEXT,
-    private val viewFactory: (SceneRenderParams) -> SceneView = { SceneViewPanel(it) },
+    private val viewFactory: (SceneRenderParams) -> SceneView = {
+        SceneViewPanel(it, lightActions = { position -> AddLightGroup(project, file, position) }, canAddLight = { canAddLight(file) })
+    },
 ) : UserDataHolderBase(), FileEditor, DocumentReferenceProvider {
     private val content = JPanel(BorderLayout()).apply { isFocusable = true }
     private var view: SceneView? = null
@@ -87,6 +82,9 @@ class SceneFileEditor(
 
     init {
         reload()
+        project.messageBus.connect(this).subscribe(AbyssusSelectionListener.TOPIC, AbyssusSelectionListener { node ->
+            componentTargetOf(node)?.takeIf { it.file == file }?.let { view?.selectEntity(it.entityId) }
+        })
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 if (events.any { it is VFileContentChangeEvent && isSource(it.file) }) {

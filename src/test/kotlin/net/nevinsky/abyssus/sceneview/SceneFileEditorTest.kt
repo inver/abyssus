@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.sceneview
@@ -73,6 +62,8 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val component = javax.swing.JPanel()
         var disposed = false
         var updates = 0
+        var selected: String? = null
+        override fun selectEntity(entityId: String) { selected = entityId }
         override var onFailure: ((Throwable) -> Unit)? = null
         override var onPick: ((String) -> Unit)? = null
         override var onTransform: ((String, TransformEdit) -> Boolean)? = null
@@ -109,6 +100,29 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         } finally {
             editor.dispose()
         }
+    }
+
+    fun testAddedLightSelectsInViewEvenWithoutATreeRow() {
+        val views = mutableListOf<FakeView>()
+        val (editor, file) = fakeEditor("selection/new-light.scene", """{"ecs":{"entities":{}}}""", views)
+        try {
+            val actions = net.nevinsky.abyssus.projectView.AddLightGroup(project, file, { Vec3(0f, 0f, 0f) }).getChildren(null)
+            actions[0].actionPerformed(com.intellij.testFramework.TestActionEvent.createTestEvent(actions[0]))
+            assertEquals("0", views.single().selected)
+            assertEquals("0", net.nevinsky.abyssus.projectView.componentTargetOf(net.nevinsky.abyssus.projectView.AbyssusSelection.of(project).current)?.entityId)
+        } finally { editor.dispose() }
+    }
+
+    fun testTreeSelectionReachesSceneView() {
+        val views = mutableListOf<FakeView>()
+        val text = """{"ecs":{"entities":{"7":{"components":{"PositionComponent":{}}}}}}"""
+        val (editor, file) = fakeEditor("selection/a.scene", text, views)
+        try {
+            val entry = net.nevinsky.abyssus.projectView.DtoRow("7", net.nevinsky.abyssus.filetype.SceneJson.parse(text)["ecs"]["entities"]["7"])
+            val node = net.nevinsky.abyssus.projectView.DtoEntryNode(project, file.path, entry, file, listOf("ecs", "entities"))
+            net.nevinsky.abyssus.projectView.AbyssusSelection.of(project).select(node)
+            assertEquals("7", views.single().selected)
+        } finally { editor.dispose() }
     }
 
     fun testRendersAndUpdatesInPlaceOnUnsavedEdits() {
@@ -214,6 +228,35 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             assertEquals(before, textOf(f))
             assertEquals(old.x, views[0].current.content.models.first { it.entityId == "0" }.transform.position.x, 1e-5f)
         } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
+    fun testDroppingAnEntityIsOneMoveCommandAndUndoRestoresTheViewAndFile() {
+        val views = mutableListOf<FakeView>()
+        val (editor, f) = fakeEditor("drop/Main Scene.scene", mainScene, views)
+        val connection = project.messageBus.connect()
+        val commands = mutableListOf<String?>()
+        connection.subscribe(com.intellij.openapi.command.CommandListener.TOPIC, object : com.intellij.openapi.command.CommandListener {
+            override fun commandFinished(event: com.intellij.openapi.command.CommandEvent) {
+                if (event.project == project) commands += event.commandName
+            }
+        })
+        try {
+            val before = textOf(f)
+            val old = views[0].current.content.models.first { it.entityId == "0" }.transform.position
+            val dropped = old.copy(y = old.y + 1.5f)
+            assertTrue(editor.applyTransform("0", TransformEdit(position = dropped)))
+            assertEquals(listOf("Move Entity"), commands)
+            assertEquals(1, before.lines().indices.count { before.lines()[it] != textOf(f).lines()[it] })
+            assertEquals(dropped, views[0].current.content.models.first { it.entityId == "0" }.transform.position)
+            val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
+            assertTrue(undo.isUndoAvailable(editor))
+            undo.undo(editor)
+            assertEquals(before, textOf(f))
+            assertEquals(old, views[0].current.content.models.first { it.entityId == "0" }.transform.position)
+        } finally {
+            connection.disconnect()
             com.intellij.openapi.util.Disposer.dispose(editor)
         }
     }

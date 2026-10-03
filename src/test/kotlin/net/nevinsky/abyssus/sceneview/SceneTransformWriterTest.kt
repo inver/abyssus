@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.sceneview
@@ -29,6 +18,32 @@ class SceneTransformWriterTest {
     private val text = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
 
     private fun components(root: JsonNode, id: String) = root.get("ecs").get("entities").get(id).get("components")
+
+    @Test
+    fun droppingAModelChangesOnlyYAndPreservesNumberText() {
+        val text = """{"ecs":{"entities":{"0":{"components":{"PositionComponent":{"localPosition":{"x":1.230000,"y":5.000,"z":-2.34000}}}}}}}"""
+        val root = SceneJson.parse(text)
+        assertTrue(SceneTransformWriter.apply(root, "0", TransformEdit(position = Vec3(1.23f, 1f, -2.34f))))
+        assertEquals(text.replace("5.000", "1.0"), SceneJson.compact(root))
+    }
+
+    @Test
+    fun droppingACameraChangesOnlyBothYsAndPreservesTheRest() {
+        val root = SceneJson.parse(text)
+        val before = SceneJson.parse(text)
+        val c = components(root, "4")
+        val local = c["PositionComponent"]["localPosition"] as com.fasterxml.jackson.databind.node.ObjectNode
+        val camera = c["CameraComponent"]["camera"]["position"] as com.fasterxml.jackson.databind.node.ObjectNode
+        assertEquals(local, camera)
+        val p = Vec3(local["x"].floatValue(), local["y"].floatValue() - 5f, local["z"].floatValue())
+        assertTrue(SceneTransformWriter.apply(root, "4", TransformEdit(position = p)))
+        assertEquals(p.y, local["y"].floatValue(), 0f)
+        assertEquals(p.y, camera["y"].floatValue(), 0f)
+        // Restoring the two changed values reproduces every key, value and original number text exactly.
+        local.set<JsonNode>("y", components(before, "4")["PositionComponent"]["localPosition"]["y"])
+        camera.set<JsonNode>("y", components(before, "4")["CameraComponent"]["camera"]["position"]["y"])
+        assertEquals(SceneJson.compact(before), SceneJson.compact(root))
+    }
 
     @Test
     fun movingAnEntityChangesOnlyItsLocalPositionX() {

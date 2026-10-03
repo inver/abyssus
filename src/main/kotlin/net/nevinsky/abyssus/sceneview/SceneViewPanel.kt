@@ -1,21 +1,13 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.sceneview
 
+import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import net.nevinsky.abyssus.AbyssusCore
 import com.intellij.openapi.components.service
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
@@ -33,6 +25,7 @@ import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
+import javax.swing.JButton
 import javax.swing.ButtonGroup
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -57,6 +50,8 @@ fun cameraChoices(content: SceneContent, freeLabel: String): List<CameraChoice> 
 class SceneViewPanel(
     initial: SceneRenderParams,
     private val renderer: SceneRenderer = service<AbyssusCore>().let { SceneRenderer(it.loading, it.sceneShaders) },
+    private val lightActions: ((() -> Vec3) -> DefaultActionGroup)? = null,
+    private val canAddLight: () -> Boolean = { lightActions != null },
 ) : JPanel(BorderLayout()), SceneView {
 
     private val frame = GdxFrame()
@@ -71,6 +66,8 @@ class SceneViewPanel(
 
     private val moveButton = JToggleButton(AbyssusBundle.message("sceneViewMove"), true)
     private val rotateButton = JToggleButton(AbyssusBundle.message("sceneViewRotate"))
+    private val dropButton = JButton(AbyssusBundle.message("sceneViewDrop"))
+    private val addLightButton = JButton(AbyssusBundle.message("addLightTitle")).apply { name = "add-light" }
     private val cameraCombo = ComboBox<CameraChoice>()
     private var choices: List<CameraChoice> = emptyList()
     private var updatingControls = false
@@ -106,6 +103,7 @@ class SceneViewPanel(
         }
 
         override fun onContextAbandoned() {
+            renderer.abandonShadows()
             gdx = null
             abandoned = true
         }
@@ -115,6 +113,7 @@ class SceneViewPanel(
             capabilities?.let { GL.setCapabilities(it) }
             frame.tick(framebufferWidth, framebufferHeight)
             GdxRuntime.withContext(ctx) { renderer.render(frame.width, frame.height, orbit, frame.deltaSeconds) }
+            interaction.frameRendered()
             swapBuffers()
         }
     }
@@ -154,6 +153,18 @@ class SceneViewPanel(
         rotateButton.isFocusable = false
         moveButton.addActionListener { if (!updatingControls) interaction.mode = GizmoMode.MOVE }
         rotateButton.addActionListener { if (!updatingControls) interaction.mode = GizmoMode.ROTATE }
+        dropButton.isFocusable = false
+        dropButton.toolTipText = AbyssusBundle.message("sceneViewDropTooltip")
+        dropButton.addActionListener { interaction.drop() }
+        addLightButton.isFocusable = false
+        addLightButton.toolTipText = AbyssusBundle.message("addLightTooltip")
+        addLightButton.addActionListener {
+            val actions = lightChoices() ?: return@addActionListener
+            JBPopupFactory.getInstance().createActionGroupPopup(
+                AbyssusBundle.message("addLightTitle"), actions, DataManager.getInstance().getDataContext(this),
+                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
+            ).showUnderneathOf(addLightButton)
+        }
         cameraCombo.isFocusable = false
         cameraCombo.toolTipText = AbyssusBundle.message("sceneViewCameraTooltip")
         cameraCombo.addActionListener {
@@ -164,16 +175,25 @@ class SceneViewPanel(
         return JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply {
             add(moveButton)
             add(rotateButton)
+            add(dropButton)
+            add(addLightButton)
             add(cameraCombo)
         }
     }
 
-    /** W and E switch the gizmo, Esc cancels a drag, whenever the focus is anywhere in the view. */
+    /** Choices retain a supplier so placement follows the current orbit target at the moment of creation. */
+    internal fun lightChoices(): DefaultActionGroup? = if (canAddLight()) lightActions?.invoke { orbit.target } else null
+
+    /** W/E switch the gizmo, D drops the selection, Esc cancels a drag, with focus anywhere in the view. */
     private fun bindKeys() {
-        fun bind(key: Int, action: () -> Unit) =
-            registerKeyboardAction({ action() }, KeyStroke.getKeyStroke(key, 0), WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+        fun bind(key: Int, action: () -> Unit) {
+            val stroke = KeyStroke.getKeyStroke(key, 0)
+            registerKeyboardAction({ action() }, stroke, WHEN_FOCUSED)
+            registerKeyboardAction({ action() }, stroke, WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+        }
         bind(KeyEvent.VK_W) { interaction.mode = GizmoMode.MOVE }
         bind(KeyEvent.VK_E) { interaction.mode = GizmoMode.ROTATE }
+        bind(KeyEvent.VK_D) { interaction.drop() }
         bind(KeyEvent.VK_ESCAPE) { interaction.escape() }
     }
 
@@ -183,6 +203,8 @@ class SceneViewPanel(
         try {
             moveButton.isSelected = interaction.mode == GizmoMode.MOVE
             rotateButton.isSelected = interaction.mode == GizmoMode.ROTATE
+            dropButton.isEnabled = interaction.canDrop
+            addLightButton.isEnabled = lightActions != null && canAddLight()
             cameraCombo.selectedItem = choices.firstOrNull { it.id == interaction.viewCamera } ?: choices.firstOrNull()
         } finally {
             updatingControls = false
@@ -205,12 +227,16 @@ class SceneViewPanel(
     }
 
     private fun attachInput(target: GuardedGLCanvas) {
+        // The panel takes focus instead of the canvas: a heavyweight AWT canvas as the focus owner breaks IDE popups
+        // ("Unexpected component for dataContext"), which need a JComponent.
+        target.isFocusable = false
+        isFocusable = true
         fun sync() {
             interaction.size = ViewSize(target.width, target.height, target.framebufferWidth, target.framebufferHeight)
         }
         val input = object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
-                target.requestFocusInWindow()
+                requestFocusInWindow()
                 sync()
                 interaction.pressed(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
             }
@@ -263,6 +289,11 @@ class SceneViewPanel(
         set(value) {
             interaction.onTransform = value
         }
+
+    override fun selectEntity(entityId: String) {
+        renderer.selectedId = entityId
+        syncControls()
+    }
 
     override fun setParams(params: SceneRenderParams) {
         renderer.params = params

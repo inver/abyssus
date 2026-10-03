@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.sceneview
@@ -56,6 +45,8 @@ data class LightPlacement(
     val direction: Vec3,
     val range: Float = DEFAULT_LIGHT_RANGE,
     val rotation: Quat = Quat.IDENTITY,
+    val coneAngle: Float = 45f,
+    val edgeSoftness: Float = 0.2f,
 )
 
 /** libGDX `PerspectiveCamera` defaults, used for the fields a camera entity leaves out. */
@@ -179,7 +170,10 @@ data class SceneContent(
             val rgba = Rgba(number(color, "r", 1f), number(color, "g", 1f), number(color, "b", 1f), 1f)
             val intensity = number(light, "intensity", 0.3f).coerceAtLeast(0f)
             val range = number(light, "range", DEFAULT_LIGHT_RANGE)
-            return LightPlacement(id, kind, rgba, intensity, transform.position, forward(transform.rotation), range, transform.rotation)
+            return LightPlacement(
+                id, kind, rgba, intensity, transform.position, forward(transform.rotation), range, transform.rotation,
+                number(light, "coneAngle", 45f), number(light, "edgeSoftness", 0.2f),
+            )
         }
 
         /** The libGDX forward axis (-Z) rotated by [q]. */

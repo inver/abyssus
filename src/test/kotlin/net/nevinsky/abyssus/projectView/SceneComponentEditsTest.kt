@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.projectView
@@ -33,10 +22,56 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
 
     private fun components(f: VirtualFile, id: String) = SceneJson.parse(textOf(f))["ecs"]["entities"][id]["components"]
 
-    private fun open(path: String): Pair<VirtualFile, TextEditor> {
-        val f = myFixture.addFileToProject(path, original).virtualFile
+    private fun open(path: String, text: String = original): Pair<VirtualFile, TextEditor> {
+        val f = myFixture.addFileToProject(path, text).virtualFile
         myFixture.openFileInEditor(f)
         return f to TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+    }
+
+    fun testAddLightIsOneUndoStep() {
+        val (f, editor) = open("c/Lights.scene", File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
+        val start = textOf(f)
+        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.ecs.scene.LightPreset.SUN, net.nevinsky.abyssus.sceneview.Vec3(10f, 0f, -4f))
+        assertEquals(EditResult.Changed, result.result)
+        assertEquals("7", result.entityId)
+        assertEquals("Sun 7", components(f, "7")["NameComponent"]["name"].asText())
+        UndoManager.getInstance(project).undo(editor)
+        assertEquals(start, textOf(f))
+    }
+
+    fun testSpotlightBeamEditsEachUndoAndPreserveUnrelatedText() {
+        val text = """{"ecs":{"entities":{"0":{"components":{"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":{"light":{"intensity":1.000,"unknown":2.3400}}}}}}}"""
+        val (f, editor) = open("c/Beam.scene", text)
+        val before = textOf(f)
+        assertEquals(EditResult.Unchanged, SceneComponentEdits.update(project, f, "0", "LightComponent", "coneAngle", "45"))
+        assertTrue(SceneComponentEdits.update(project, f, "0", "LightComponent", "edgeSoftness", "101") is EditResult.Rejected)
+        assertEquals(before, textOf(f))
+        assertEquals(EditResult.Changed, SceneComponentEdits.update(project, f, "0", "LightComponent", "coneAngle", "60"))
+        val angle = textOf(f)
+        assertEquals("2.3400", components(f, "0")["LightComponent"]["light"]["unknown"].toString())
+        assertEquals(EditResult.Changed, SceneComponentEdits.update(project, f, "0", "LightComponent", "edgeSoftness", "25"))
+        assertEquals(0.25f, components(f, "0")["LightComponent"]["light"]["edgeSoftness"].floatValue())
+        UndoManager.getInstance(project).undo(editor)
+        assertEquals(angle, textOf(f))
+        UndoManager.getInstance(project).undo(editor)
+        assertEquals(before, textOf(f))
+    }
+
+    fun testMalformedSceneFieldsRejectLightWithoutWrite() {
+        val text = """{"name":[],"ecs":{"entities":{}}}"""
+        val f = myFixture.addFileToProject("c/bad-name.scene", text).virtualFile
+        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.ecs.scene.LightPreset.SUN, net.nevinsky.abyssus.sceneview.Vec3(0f, 0f, 0f))
+        assertTrue(result.result is EditResult.Rejected)
+        assertFalse(canAddLight(f))
+        assertEquals(text, textOf(f))
+    }
+
+    fun testUnreadableSceneRejectsLightWithoutWrite() {
+        val f = myFixture.addFileToProject("c/bad-light.scene", "not json").virtualFile
+        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.ecs.scene.LightPreset.SPOT, net.nevinsky.abyssus.sceneview.Vec3(0f, 0f, 0f))
+        assertTrue(result.result is EditResult.Rejected)
+        assertNull(result.entityId)
+        assertEquals("not json", textOf(f))
     }
 
     fun testAddUpdateRemoveEachUndoAsOneStep() {

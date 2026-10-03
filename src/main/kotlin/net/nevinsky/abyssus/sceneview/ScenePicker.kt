@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.sceneview
@@ -32,6 +21,24 @@ class TerrainTarget(val entityId: String, val data: TerrainData, val world: Matr
 
 /** Finds the entity under a ray: the nearest hit among model bounding boxes and terrain surfaces. No GL needed. */
 object ScenePicker {
+    const val REST_EPS = 0.0001f
+
+    fun isResting(lowest: Float, height: Float): Boolean = kotlin.math.abs(height - lowest) < REST_EPS
+
+    /** Highest real surface under the projected box; no invented ground plane or ray-distance limit. */
+    fun restHeight(footprint: OrientedBox, boxes: List<OrientedBox>, terrains: List<TerrainTarget>): Float? {
+        var best: Float? = null
+        for (box in boxes) {
+            if (box.bottom < footprint.bottom + REST_EPS && footprint.overlaps(box))
+                best = best?.let { maxOf(it, box.top) } ?: box.top
+        }
+        for (terrain in terrains) {
+            val height = TerrainRestHeight().height(footprint, terrain) ?: continue
+            best = best?.let { maxOf(it, height) } ?: height
+        }
+        return best
+    }
+
     /**
      * The ray through the pixel ([x], [y]) (origin top-left) of a [width] x [height] view. Does the unprojection
      * itself: libGDX's `Camera.getPickRay` reads `Gdx.graphics`, which is only installed inside

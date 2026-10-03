@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.sceneview.terrain
@@ -29,6 +18,8 @@ import net.nevinsky.abyssus.sceneview.FogParams
 import net.nevinsky.abyssus.sceneview.LightSet
 import net.nevinsky.abyssus.sceneview.Rgba
 import net.nevinsky.abyssus.sceneview.TerrainEntity
+import net.nevinsky.abyssus.core.shader.ShadowAtlasAttribute
+import net.nevinsky.abyssus.core.shader.ShadowAtlasBindings
 
 /**
  * Draws terrains: splat-blended textures with the scene's ambient, directional and point lights and fog. A small
@@ -37,12 +28,13 @@ import net.nevinsky.abyssus.sceneview.TerrainEntity
 class TerrainShader(shaders: ShaderSource) : Disposable {
     private val program = shaders.program("terrain")
     private val normalMatrix = Matrix3()
+    private val atlasBindings = ShadowAtlasBindings()
 
     /** Bound to the sampler units of the layers a terrain does not have, so no sampler is left without a texture. */
     private val blank = Texture(Pixmap(1, 1, Pixmap.Format.RGBA8888).also { it.setColor(1f, 1f, 1f, 1f); it.fill() }, false)
 
     /** With [irradiance] (a built HDR sky's irradiance cube), terrains take their ambient from it instead of [ambient]. */
-    fun draw(camera: Camera, terrains: Collection<TerrainEntity>, ambient: Rgba?, fog: FogParams?, lights: LightSet, irradiance: GLTexture? = null) {
+    fun draw(camera: Camera, terrains: Collection<TerrainEntity>, ambient: Rgba?, fog: FogParams?, lights: LightSet, irradiance: GLTexture? = null, atlas: ShadowAtlasAttribute? = null) {
         if (terrains.isEmpty()) return
         program.bind()
         program.setUniformMatrix("u_projViewTrans", camera.combined)
@@ -56,6 +48,10 @@ class TerrainShader(shaders: ShaderSource) : Disposable {
         program.setUniformf("u_fogColor", fog?.color?.r ?: 0f, fog?.color?.g ?: 0f, fog?.color?.b ?: 0f)
         program.setUniformf("u_fogK", fog?.shaderCoefficient ?: 0f)
         setLights(lights)
+        (atlas?.atlas ?: blank).bind(SHADOW_UNIT)
+        fun record(id: String) = atlas?.records?.firstOrNull { it.lightId == id }
+        atlasBindings.bind(program, atlas, lights.directional.map { record(it.entityId) },
+            lights.point.map { record(it.entityId) }, lights.spot.map { record(it.entityId) }, SHADOW_UNIT)
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
         for (t in terrains) {
             program.setUniformMatrix("u_worldTrans", t.world)
@@ -86,6 +82,26 @@ class TerrainShader(shaders: ShaderSource) : Disposable {
         program.setUniform3fv("u_pointPosition", pos, 0, MAX * 3)
         program.setUniform3fv("u_pointColor", pointColors, 0, MAX * 3)
         program.setUniform1fv("u_pointRange", pointRanges, 0, MAX)
+        val spotPos = FloatArray(MAX * 3)
+        val spotDir = FloatArray(MAX * 3)
+        val spotColors = FloatArray(MAX * 3)
+        val spotRange = FloatArray(MAX)
+        val outer = FloatArray(MAX)
+        val inner = FloatArray(MAX)
+        lights.spot.forEachIndexed { i, s ->
+            spotPos[i * 3] = s.position.x; spotPos[i * 3 + 1] = s.position.y; spotPos[i * 3 + 2] = s.position.z
+            spotDir[i * 3] = s.direction.x; spotDir[i * 3 + 1] = s.direction.y; spotDir[i * 3 + 2] = s.direction.z
+            spotColors[i * 3] = s.color.r; spotColors[i * 3 + 1] = s.color.g; spotColors[i * 3 + 2] = s.color.b
+            spotRange[i] = s.range
+            outer[i] = s.cone.outerCos; inner[i] = s.cone.innerCos
+        }
+        program.setUniformi("u_numSpot", lights.spot.size)
+        program.setUniform3fv("u_spotPosition", spotPos, 0, MAX * 3)
+        program.setUniform3fv("u_spotDirection", spotDir, 0, MAX * 3)
+        program.setUniform3fv("u_spotColor", spotColors, 0, MAX * 3)
+        program.setUniform1fv("u_spotRange", spotRange, 0, MAX)
+        program.setUniform1fv("u_spotOuter", outer, 0, MAX)
+        program.setUniform1fv("u_spotInner", inner, 0, MAX)
     }
 
     override fun dispose() {
@@ -96,5 +112,6 @@ class TerrainShader(shaders: ShaderSource) : Disposable {
     private companion object {
         const val MAX = 5 // at least LightSet.MAX_POINT and MAX_DIRECTIONAL; the array size in terrain.frag
         const val IRRADIANCE_UNIT = 7 // after the splat units (0 to assets.terrain.SPLAT_UNIT)
+        const val SHADOW_UNIT = 6 // 2D atlas between splat (0..5) and HDR cube (7)
     }
 }

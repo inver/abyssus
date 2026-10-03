@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.sceneview
@@ -32,6 +21,7 @@ import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder.VertexInfo
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
@@ -52,12 +42,14 @@ import net.nevinsky.abyssus.sceneview.gizmo.canRotate
 import net.nevinsky.abyssus.sceneview.skybox.SunDirection
 import net.nevinsky.abyssus.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.sceneview.terrain.TerrainShader
+import net.nevinsky.abyssus.sceneview.shadows.SceneShadows
+import net.nevinsky.abyssus.core.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.core.ModelBatch as ContentBatch
 
 /**
  * Draws a scene's environment, a ground grid and the content the scene places (skybox, terrains, models), and picks
  * entities under the cursor. Assets come from [assetLoading]; the grid, overlay and terrain programs from [shaders]. Call only inside [GdxRuntime.withContext]
- * with the GL context current, except [pick].
+ * with the GL context current; picking, ground queries and interaction geometry use CPU data only.
  */
 class SceneRenderer(
     private val assetLoading: AssetLoading,
@@ -81,7 +73,7 @@ class SceneRenderer(
     @Volatile
     var viewCamera: String? = null
 
-    /** Transforms shown over the scene's own while a gizmo drag is in progress (entity id to where it is now). */
+    /** Transforms shown over the scene's own while a gizmo drag or completed drop is previewed (entity id to where it is now). */
     @Volatile
     var preview: Map<String, DragResult> = emptyMap()
 
@@ -99,6 +91,9 @@ class SceneRenderer(
     private val models = SceneModels(assetLoading.assets(assetLoading.models))
     private val terrains = SceneTerrains(assetLoading.assets(assetLoading.terrains))
     private var terrainShader: TerrainShader? = null
+    private var shadows: SceneShadows? = null
+    internal var shadowedLightIds: Set<String> = emptySet()
+        private set
     private var skybox: SceneSkybox? = null
     private var overlay: LoadingOverlay? = null
     private var lightsKey: Pair<List<LightPlacement>, Vec3>? = null
@@ -140,12 +135,42 @@ class SceneRenderer(
     fun pick(screenX: Int, screenY: Int, width: Int, height: Int): String? {
         if (width <= 0 || height <= 0) return null
         val ray = ScenePicker.pickRay(camera, screenX, screenY, width, height)
+        val targets = targets()
+        return ScenePicker.pick(ray, targets.boxes.map { BoxTarget(it.id, BoundingBox(it.local).mul(it.world)) }, targets.terrains, camera.far)
+    }
+
+    private class DrawnBox(val id: String, val local: BoundingBox, val world: Matrix4) {
+        fun oriented() = OrientedBox(local, world)
+    }
+    private class Targets(val boxes: List<DrawnBox>, val terrains: List<TerrainTarget>)
+
+    /** Shared input list: picking derives axis-aligned boxes, Drop retains the actual rotated corners. */
+    private fun targets(): Targets {
         val boxes = models.drawn.map { e ->
-            // the model's bounds moved into the world
-            BoxTarget(e.placement.entityId, BoundingBox(e.localBounds).mul(e.instance.transform))
-        } + SceneMarkers.targets(content, viewCamera)
-        val grounds = terrains.drawn.map { TerrainTarget(it.placement.entityId, it.terrain.data, it.world) }
-        return ScenePicker.pick(ray, boxes, grounds, camera.far)
+            val world = preview[e.placement.entityId]?.transform?.toMatrix() ?: e.instance.transform!!
+            DrawnBox(e.placement.entityId, e.localBounds, world)
+        } + SceneMarkers.targets(content, viewCamera).map { DrawnBox(it.entityId, it.bounds, Matrix4()) }
+        return Targets(boxes, terrains.drawn.map { TerrainTarget(it.placement.entityId, it.terrain.data, it.world) })
+    }
+
+    /** CPU-only query over the last frame's loaded geometry; terrains and the looked-through camera cannot drop. */
+    fun groundBelow(entityId: String): Float? {
+        if (entityId == viewCamera || content.terrains.any { it.entityId == entityId }) return null
+        val targets = targets()
+        val footprint = targets.boxes.firstOrNull { it.id == entityId }?.oriented() ?: return null
+        return ScenePicker.restHeight(footprint, targets.boxes.filter { it.id != entityId }.map { it.oriented() }, targets.terrains)
+    }
+
+    internal fun lowestPoint(entityId: String): Float? = targets().boxes.firstOrNull { it.id == entityId }?.oriented()?.bottom
+
+    /** Changes only when a model or terrain enters or leaves the drawn lists, including context replacement. */
+    var drawnVersion: Long = 0
+        private set
+    private var drawnIds: Pair<Set<String>, Set<String>> = emptySet<String>() to emptySet()
+
+    private fun updateDrawnVersion() {
+        val fresh = models.drawn.mapTo(HashSet()) { it.placement.entityId } to terrains.drawn.mapTo(HashSet()) { it.placement.entityId }
+        if (fresh != drawnIds) { drawnIds = fresh; drawnVersion++ }
     }
 
     /** The ray through the pixel ([screenX], [screenY]) of a [width] x [height] view, as of the last rendered frame. */
@@ -185,10 +210,15 @@ class SceneRenderer(
      * the models and terrains cached from it are invalid in the new context and must be loaded again.
      */
     fun create() {
+        abandonShadows()
+        shadows = SceneShadows()
         models.abandon()
         terrains.abandon()
+        updateDrawnVersion()
         batch = ModelBatch(FogShaderProvider { fogCoefficient })
-        contentShaders = DefaultShaderProvider().also { contentBatch = ContentBatch(it) }
+        contentShaders = DefaultShaderProvider(net.nevinsky.abyssus.core.shader.ShaderConfig().apply {
+            numSpotLights = LightSet.MAX_POINT
+        }).also { contentBatch = ContentBatch(it) }
         terrainShader = TerrainShader(shaders)
         skybox = SceneSkybox(assetLoading.assets(assetLoading.skies))
         overlay = LoadingOverlay(shaders)
@@ -205,12 +235,18 @@ class SceneRenderer(
         lastHeight = height
 
         applyEnvironment(p)
+        updateCamera(width, height, orbit)
+        val c = content
+        applyLights(c, orbit)
+        models.update(c.models, p.projectDir, deltaSeconds)
+        terrains.update(c.terrains, p.projectDir)
+        updateDrawnVersion()
+        val atlas = shadows?.render(camera, lights, environment, models.drawn, terrains.drawn)
+        shadowedLightIds = atlas?.records?.mapTo(HashSet()) { it.lightId } ?: emptySet()
         Gdx.gl.glViewport(0, 0, width, height)
         Gdx.gl.glClearColor(p.clear.r, p.clear.g, p.clear.b, p.clear.a)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
-
-        updateCamera(width, height, orbit)
 
         skybox?.draw(camera, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights))
 
@@ -218,7 +254,7 @@ class SceneRenderer(
         batch.render(grid, environment)
         batch.end()
 
-        renderContent(p, orbit, deltaSeconds)
+        renderContent(p, c, atlas)
         drawOverlays(width, height)
 
         // grayed out with a spinner for as long as the scene's assets are on their way
@@ -302,10 +338,8 @@ class SceneRenderer(
         for (i in 0 until 4) out.line(corners[i], corners[4 + i], HIGHLIGHT)
     }
 
-    private fun renderContent(p: SceneRenderParams, orbit: OrbitCamera, deltaSeconds: Float) {
+    private fun renderContent(p: SceneRenderParams, c: SceneContent, atlas: ShadowAtlasAttribute?) {
         val contentBatch = contentBatch ?: return
-        val c = content
-        applyLights(c, orbit)
         // after the grid: a built HDR sky replaces the ambient color for the content only (applyEnvironment undoes it)
         val ambient = SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) }
         val sky = (ambient as? SceneAmbient.Sky)?.environment
@@ -313,9 +347,8 @@ class SceneRenderer(
             environment.remove(ColorAttribute.AmbientLight)
             environment.set(EnvironmentLightAttribute(sky.specular, sky.irradiance, sky.levels, sky.ambient))
         }
-        terrains.update(c.terrains, p.projectDir)
-        terrainShader?.draw(camera, terrains.drawn, p.ambient, p.fog, lights, sky?.irradiance)
-        models.update(c.models, p.projectDir, deltaSeconds)
+        if (atlas != null) environment.set(atlas)
+        terrainShader?.draw(camera, terrains.drawn, p.ambient, p.fog, lights, sky?.irradiance, atlas)
         contentBatch.begin(camera)
         for (entity in models.drawn) contentBatch.render(entity.instance, environment, ShaderProvider.DEFAULT_SHADER_KEY)
         contentBatch.end()
@@ -333,6 +366,7 @@ class SceneRenderer(
 
     /** Fog color comes from the environment; density through [net.nevinsky.abyssus.sceneview.fog.FogShader] (see [FogParams] for what cannot be matched). */
     private fun applyEnvironment(p: SceneRenderParams) {
+        environment.remove(ShadowAtlasAttribute.Type)
         environment.remove(EnvironmentLightAttribute.Type)
         val ambient = p.ambient
         if (ambient != null) {
@@ -370,9 +404,22 @@ class SceneRenderer(
         return builder.end()
     }
 
+    /** No GL calls: used immediately when a hidden canvas loses its context, including final editor disposal. */
+    internal fun abandonShadows() {
+        shadows?.abandon()
+        shadows = null
+        shadowedLightIds = emptySet()
+        environment.remove(ShadowAtlasAttribute.Type)
+    }
+
     override fun dispose() {
+        shadows?.dispose()
+        shadows = null
+        shadowedLightIds = emptySet()
+        environment.remove(ShadowAtlasAttribute.Type)
         models.dispose()
         terrains.dispose()
+        updateDrawnVersion()
         terrainShader?.dispose()
         terrainShader = null
         skybox?.dispose()
