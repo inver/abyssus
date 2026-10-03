@@ -1,17 +1,6 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.sceneview
@@ -196,8 +185,11 @@ class SceneViewPanel(
 
     /** W/E switch the gizmo, D drops the selection, Esc cancels a drag, with focus anywhere in the view. */
     private fun bindKeys() {
-        fun bind(key: Int, action: () -> Unit) =
-            registerKeyboardAction({ action() }, KeyStroke.getKeyStroke(key, 0), WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+        fun bind(key: Int, action: () -> Unit) {
+            val stroke = KeyStroke.getKeyStroke(key, 0)
+            registerKeyboardAction({ action() }, stroke, WHEN_FOCUSED)
+            registerKeyboardAction({ action() }, stroke, WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+        }
         bind(KeyEvent.VK_W) { interaction.mode = GizmoMode.MOVE }
         bind(KeyEvent.VK_E) { interaction.mode = GizmoMode.ROTATE }
         bind(KeyEvent.VK_D) { interaction.drop() }
@@ -234,12 +226,16 @@ class SceneViewPanel(
     }
 
     private fun attachInput(target: GuardedGLCanvas) {
+        // The panel takes focus instead of the canvas: a heavyweight AWT canvas as the focus owner breaks IDE popups
+        // ("Unexpected component for dataContext"), which need a JComponent.
+        target.isFocusable = false
+        isFocusable = true
         fun sync() {
             interaction.size = ViewSize(target.width, target.height, target.framebufferWidth, target.framebufferHeight)
         }
         val input = object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
-                target.requestFocusInWindow()
+                requestFocusInWindow()
                 sync()
                 interaction.pressed(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
             }

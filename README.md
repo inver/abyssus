@@ -124,7 +124,7 @@ To support another format, implement `net.nevinsky.abyssus.dto.AssetReader` and 
 
 ## License
 
-Licensed under the [Apache License, Version 2.0](LICENSE).
+Licensed under [Apache-2.0](LICENSE) (SPDX-License-Identifier: Apache-2.0).
 
 Files under `gdx-model` derived from [libGDX](https://github.com/libgdx/libgdx) retain their original
 Apache 2.0 headers.

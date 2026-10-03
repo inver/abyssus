@@ -43,7 +43,7 @@ Compared with upstream:
   variants and the managed-mesh registry were removed
 - gdx-gltf was replaced by the module's own attributes
 
-Mundus and libGDX are Apache-2.0 licensed, and libGDX-derived files keep their original headers.
+Mundus and libGDX are Apache-2.0 licensed (SPDX-License-Identifier: Apache-2.0), and libGDX-derived files keep their original headers.
 
 ## Tests
 

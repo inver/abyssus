@@ -1,22 +1,13 @@
 /*
  * Copyright 2023-2026 Alexey Nevinsky
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package net.nevinsky.abyssus.projectView
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
@@ -144,7 +135,11 @@ fun skyboxProjectOf(entry: DtoEntry): VirtualFile? =
 /** Opens the skybox chooser for [entry] and writes the assigned skybox; true when the scene file changed. */
 fun chooseSkybox(project: Project, entry: DtoEntry, abss: VirtualFile): Boolean {
     val file = entry.source ?: return false
-    val choices = loadSkyboxChoices(project, abss) ?: return false
+    // reads meta.json files and HDR headers, which the EDT must not do
+    val choices = ProgressManager.getInstance().runProcessWithProgressSynchronously<List<SkyboxChoice>?, RuntimeException>(
+        { runReadAction { loadSkyboxChoices(project, abss) } },
+        AbyssusBundle.message("skyboxChooserLoading"), true, project,
+    ) ?: return false
     val dialog = SkyboxChooserDialog(project, choices, scalarOf(entry.value) as? String)
     return dialog.showAndGet() && setSkybox(project, file, dialog.chosen)
 }
