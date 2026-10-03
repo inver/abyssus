@@ -25,7 +25,7 @@ in a task. Single plugin tests: `./gradlew :test --tests '<class>'`. Single `cor
   `WorldUtils` and keep the `Engine.getFromWorld` extension. Move `textOf` to `dto/` (L5). Make `SkyboxChoice` a plain
   class (L2). Verify with `SkyboxChoicesTest`, `SkyboxChooserDialogTest`, `SystemsTest` and `./gradlew :test`.
 
-## 2. One interpretation of component values (H1; spec `abyssus-scene-entity-values`)
+## 2. One interpretation of component values (H1; spec `scene-entity-lights`)
 
 - [ ] 2.1 Add `ecs/component/ComponentDefaults.kt` and use it in `LightData`, `CameraComponent`, `LightCodec.write`
   and the `sceneview` placements (replacing `DEFAULT_LIGHT_RANGE` / `DEFAULT_CAMERA_*`). Verify with
@@ -41,14 +41,13 @@ in a task. Single plugin tests: `./gradlew :test --tests '<class>'`. Single `cor
   - Change `SceneContentTest.lightColorAndIntensityMayBeFlat_andPointKindIsRecognised` to expect g 0 / b 0.
   - Add `SceneContentTest` cases for a missing `intensity` (expect 1) and a missing `color` (expect white).
   - Add `SceneEntityParityTest`, which loads the Untitled `Main Scene` and asserts that each light, camera and model
-    placement equals the values `ComponentEditor.read` returns for the same entity (spec: *One interpretation of
-    component values*).
+    placement equals the values `ComponentEditor.read` returns for the same entity (spec: *Stated values agree*).
 - [ ] 2.5 Add a test that `SceneTransformWriter` output is byte-identical to before for a move, a rotation and a camera
-  move on the Untitled fixture, comparing against stored expected text in `SceneTransformWriterTest` (spec: *Transform
-  number text is unchanged by this change*). Verify that `SceneFileEditorTest` passes, including
+  move on the Untitled fixture, comparing against stored expected text in `SceneTransformWriterTest` (the `scene-object-transform`
+  requirement that a write changes nothing else). Verify that `SceneFileEditorTest` passes, including
   `testMovingAnEntityWritesOnlyItsPositionAndUndoRestoresTheFile` and `testATransformThatChangesNothingIsNotWritten`.
 - [ ] 2.6 Add a test that opening `Main Scene` in the scene view and selecting entities `7` and `8` leaves the file
-  byte-identical (spec: *Defaults stay omitted*), in `SceneFileEditorTest`.
+  byte-identical (spec: *Omitted spotlight values*), in `SceneFileEditorTest`.
 - [ ] 2.7 Document the light defaults in `docs/ai/file-formats.md`, including the visible change for lights without
   `intensity`. Verify with `scripts/check-docs.sh`.
 - [ ] 2.8 Run the runIde check, using a copy of `Untitled` (not the fixture itself):
@@ -102,7 +101,7 @@ in a task. Single plugin tests: `./gradlew :test --tests '<class>'`. Single `cor
   `docs/ai/conventions.md` (the new writer location, the event topic and `checkNoRunCatching`). Verify with
   `scripts/check-docs.sh`.
 
-## 6. Live updates and the scene document cache (H3; spec `abyssus-scene-view-updates`)
+## 6. Live updates and the scene document cache (H3; specs `scene-model-rendering`, `scene-light-creation`)
 
 - [ ] 6.1 Add a `SceneDocumentCache` project service keyed by document modification stamp, and use it in
   `canAddLight`, `AddComponentAction.choices` and the `SceneComponentEdits.addLight` validation. Add a
@@ -110,7 +109,7 @@ in a task. Single plugin tests: `./gradlew :test --tests '<class>'`. Single `cor
   - Repeated reads of an unchanged document parse once.
   - An edit invalidates the entry.
   - A delete or move drops the entry.
-  - An invalid text reports unreadable, so Add Light is disabled (spec: *Unreadable scene disables Add Light*).
+  - An invalid text reports unreadable, so Add Light is disabled (spec: `scene-light-creation` *Unreadable scene*).
 - [ ] 6.2 Add a pure `ReloadPolicy` with a `ReloadPolicyTest`:
   - A document change is delayed.
   - A VFS change, `AbyssusSceneEdited` or an undo/redo reloads now.
@@ -161,7 +160,7 @@ in a task. Single plugin tests: `./gradlew :test --tests '<class>'`. Single `cor
 
 ## 9. Integration
 
-- [ ] 9.1 Fix the three broken `openspec/specs/` paths `scripts/check-docs.sh` reports. Verify that the script exits 0.
+- [ ] 9.1 Verify that `scripts/check-docs.sh` exits 0 with the docs updated in groups 2, 5 and 8.
 - [ ] 9.2 Verify that `./gradlew check` passes (tests, `checkNoSingletons`, `checkNoRunCatching`, plugin verification),
   and that the GL tests pass with `-Dabyssus.glTests=true` on a machine with a display.
 - [ ] 9.3 Verify that `openspec validate design-review-refactor --strict` passes and that `docs/reviews/design-review-2026-10.md`

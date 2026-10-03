@@ -48,7 +48,7 @@ Fixing these now, before more scene-editing features land, keeps each later chan
   - `AssetCache` takes an `AssetLoader` directly.
   - `SkyLoader` dispatches without repeated `when` blocks.
 - **Docs:** update `docs/ai/architecture.md`, `docs/ai/conventions.md`, `docs/ai/file-formats.md` (light defaults) and
-  `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md`. Fix the three broken paths `scripts/check-docs.sh` reports.
+  `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md`.
 
 **Mundus fields read or written:**
 - **Read:** `ecs.entities.<id>.components` — `PositionComponent` (`localPosition`, `localRotation`, `localScale`,
@@ -72,16 +72,22 @@ Fixing these now, before more scene-editing features land, keeps each later chan
 ## Capabilities
 
 ### New Capabilities
-- `abyssus-scene-entity-values`: how a scene's entity component values, including omitted defaults, are interpreted
-  the same way by the scene view, the properties panel and edits. Also covers what an edit leaves unchanged in the file.
-- `abyssus-scene-view-updates`: when the scene view picks up changes to the scene and project files (unsaved text
-  edits, edits made through the plugin, changes on disk), and how responsive scene actions' availability stays.
+
+None.
 
 ### Modified Capabilities
+- `scene-entity-lights`:
+  - New requirement: the view uses the same light values, including omitted defaults, that the Properties panel shows.
+  - "Light limits and failures" now says that a missing or malformed color or position falls back to the defaults.
+    This is what the view already does; the old scenario said such a light is skipped.
+- `scene-model-rendering`: the view follows unsaved text edits after a short pause, and plugin edits and Undo at once.
+  Both are new requirements next to "View follows scene changes".
+- `scene-light-creation`: "Add Light offers directional, sun and spot" adds that availability is judged from the
+  current text without re-reading an unchanged scene.
 
-None. `openspec/specs/` has no main specs yet. The open change `show-project-assets` (`abyssus-project-assets`) must
-keep its behavior when the `meta.json` readers are merged. Its scenarios are used as regression checks, and its delta
-spec does not change.
+Unchanged and used as regression checks: `scene-object-transform` (transform writes), `scene-component-editing`,
+`object-properties-panel`, `asset-loading` and `abyssus-project-view`, and the open change `show-project-assets`
+(`abyssus-project-assets`), which must keep its behavior when the `meta.json` readers are merged.
 
 ## Impact
 

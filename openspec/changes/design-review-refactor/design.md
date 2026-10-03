@@ -13,6 +13,10 @@ Constraints that shape the approach:
 - **`core`:** no `object` / `companion object`, and no IntelliJ imports. Collaborators are passed through constructors.
 - **Open change `show-project-assets`:** `ProjectAssetListing` must keep listing an unreadable or unknown `meta.json` as
   `MetaType.UNKNOWN` with no references, and must keep the unused rule.
+- **Other open changes:** `add-realistic-water`, `add-scene-raytracing` and `add-asset-editing-and-terrain-generation`
+  plan code in `SceneRenderer`, `SceneContent`, `SceneFileEditor`, `editSceneJson`, `AssetCache` and `AssetFiles`. None
+  of their delta specs touch the capabilities this change modifies, but their code will conflict with phases 5–8.
+  Whichever change lands second rebases onto the new structure.
 - **Existing tests** pin today's behavior: `SceneContentTest`, `ComponentCodecsTest`, `SceneFileEditorTest`,
   `SceneComponentEditsTest`, `SceneInteraction*` tests and `core` tests. They are the safety net for the refactors.
 
@@ -67,7 +71,7 @@ again. A parity test (task 2.4) guards the shared one.
 
 ### D-3. `SceneTransformWriter` keeps its output, changes its plumbing (H1)
 It uses `SceneEcsPaths` to find the components, and keeps its `setFields` diff and `FloatNode` output, so the file
-output stays byte-identical (spec: *Transform number text is unchanged by this change*). Routing it through
+output stays byte-identical (the `scene-object-transform` requirement that a write changes nothing else). Routing it through
 `PositionCodec` + `number()` would change number text, so it is deferred.
 
 ### D-4. Split `SceneRenderer` (M1, M9)
@@ -104,11 +108,11 @@ terrain shader before replacing them (L3), mirroring models and terrains.
   - It uses `runCatchingKeepingCancellation`.
   - It publishes `AbyssusSceneEdited.TOPIC` (file) after the command, instead of calling the pane.
 - `AbyssusProjectViewPane` subscribes to the topic and calls `updateFromRoot(true)`, which is today's behavior.
-  `SceneFileEditor` subscribes too and reloads at once (spec: *Plugin edits update the view at once*).
+  `SceneFileEditor` subscribes too and reloads at once (spec: `scene-model-rendering` *Plugin edits are shown at once*).
 - **`SceneDocumentCache`** (project service, EDT and read actions) maps `(file, document modificationStamp)` to the
   parsed `ObjectNode` and the bind result. Callers get a deep copy when they intend to change it. `canAddLight`,
-  `AddComponentAction.choices` and `SceneComponentEdits.addLight`'s validation read from it (spec: *Unchanged scene
-  is not re-read*). Entries go when the file is deleted or moved, like `AssetReadCache`.
+  `AddComponentAction.choices` and `SceneComponentEdits.addLight`'s validation read from it (spec: `scene-light-creation`
+  *Unchanged scene is not re-read*). Entries go when the file is deleted or moved, like `AssetReadCache`.
 - **Undo:** an undo emits no `AbyssusSceneEdited`. It is a document change, which gets the same immediate reload
   because `SceneFileEditor` reloads at once when the change happens inside an undo/redo
   (`UndoManager.isUndoOrRedoInProgress`). Other document changes go through the debounce below.
@@ -196,6 +200,9 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
   path cannot be affected.
 - **Merging the `meta.json` readers could change the `show-project-assets` behavior.** → Its tests run unchanged; the
   type fallback stays `UNKNOWN`.
+- **Other open changes edit the same classes.** → Phases 1–4 are small and mechanical, so land them first. Agree on a
+  merge order with the owners of `add-realistic-water`, `add-scene-raytracing` and
+  `add-asset-editing-and-terrain-generation` before phases 5–8.
 - **The change is large.** → Phases 1–5 have no behavior change and can each be merged separately. Phases 6–8 depend
   on 1–2.
 
