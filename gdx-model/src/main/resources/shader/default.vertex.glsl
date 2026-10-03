@@ -164,12 +164,12 @@ uniform mat4 u_bones[numBones];
 #ifdef blendedFlag
 uniform float u_opacity;
 varying float v_opacity;
+#endif // blendedFlag
 
 #ifdef alphaTestFlag
 uniform float u_alphaTest;
 varying float v_alphaTest;
 #endif //alphaTestFlag
-#endif // blendedFlag
 
 #ifdef cameraPositionFlag
 uniform vec4 u_cameraPosition;
@@ -215,10 +215,10 @@ void main() {
 
 	#ifdef blendedFlag
 		v_opacity = u_opacity;
-		#ifdef alphaTestFlag
-			v_alphaTest = u_alphaTest;
-		#endif //alphaTestFlag
 	#endif // blendedFlag
+	#ifdef alphaTestFlag
+		v_alphaTest = u_alphaTest;
+	#endif //alphaTestFlag
 
 	#ifdef skinningFlag
 		mat4 skinning = mat4(0.0);

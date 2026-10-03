@@ -39,6 +39,24 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
         assertEquals(start, textOf(f))
     }
 
+    fun testSpotlightBeamEditsEachUndoAndPreserveUnrelatedText() {
+        val text = """{"ecs":{"entities":{"0":{"components":{"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":{"light":{"intensity":1.000,"unknown":2.3400}}}}}}}"""
+        val (f, editor) = open("c/Beam.scene", text)
+        val before = textOf(f)
+        assertEquals(EditResult.Unchanged, SceneComponentEdits.update(project, f, "0", "LightComponent", "coneAngle", "45"))
+        assertTrue(SceneComponentEdits.update(project, f, "0", "LightComponent", "edgeSoftness", "101") is EditResult.Rejected)
+        assertEquals(before, textOf(f))
+        assertEquals(EditResult.Changed, SceneComponentEdits.update(project, f, "0", "LightComponent", "coneAngle", "60"))
+        val angle = textOf(f)
+        assertEquals("2.3400", components(f, "0")["LightComponent"]["light"]["unknown"].toString())
+        assertEquals(EditResult.Changed, SceneComponentEdits.update(project, f, "0", "LightComponent", "edgeSoftness", "25"))
+        assertEquals(0.25f, components(f, "0")["LightComponent"]["light"]["edgeSoftness"].floatValue())
+        UndoManager.getInstance(project).undo(editor)
+        assertEquals(angle, textOf(f))
+        UndoManager.getInstance(project).undo(editor)
+        assertEquals(before, textOf(f))
+    }
+
     fun testMalformedSceneFieldsRejectLightWithoutWrite() {
         val text = """{"name":[],"ecs":{"entities":{}}}"""
         val f = myFixture.addFileToProject("c/bad-name.scene", text).virtualFile

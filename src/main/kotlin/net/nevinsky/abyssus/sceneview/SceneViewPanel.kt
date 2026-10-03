@@ -103,6 +103,7 @@ class SceneViewPanel(
         }
 
         override fun onContextAbandoned() {
+            renderer.abandonShadows()
             gdx = null
             abandoned = true
         }

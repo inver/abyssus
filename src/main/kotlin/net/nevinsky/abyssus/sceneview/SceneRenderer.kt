@@ -42,6 +42,8 @@ import net.nevinsky.abyssus.sceneview.gizmo.canRotate
 import net.nevinsky.abyssus.sceneview.skybox.SunDirection
 import net.nevinsky.abyssus.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.sceneview.terrain.TerrainShader
+import net.nevinsky.abyssus.sceneview.shadows.SceneShadows
+import net.nevinsky.abyssus.core.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.core.ModelBatch as ContentBatch
 
 /**
@@ -89,6 +91,9 @@ class SceneRenderer(
     private val models = SceneModels(assetLoading.assets(assetLoading.models))
     private val terrains = SceneTerrains(assetLoading.assets(assetLoading.terrains))
     private var terrainShader: TerrainShader? = null
+    private var shadows: SceneShadows? = null
+    internal var shadowedLightIds: Set<String> = emptySet()
+        private set
     private var skybox: SceneSkybox? = null
     private var overlay: LoadingOverlay? = null
     private var lightsKey: Pair<List<LightPlacement>, Vec3>? = null
@@ -205,11 +210,15 @@ class SceneRenderer(
      * the models and terrains cached from it are invalid in the new context and must be loaded again.
      */
     fun create() {
+        abandonShadows()
+        shadows = SceneShadows()
         models.abandon()
         terrains.abandon()
         updateDrawnVersion()
         batch = ModelBatch(FogShaderProvider { fogCoefficient })
-        contentShaders = DefaultShaderProvider().also { contentBatch = ContentBatch(it) }
+        contentShaders = DefaultShaderProvider(net.nevinsky.abyssus.core.shader.ShaderConfig().apply {
+            numSpotLights = LightSet.MAX_POINT
+        }).also { contentBatch = ContentBatch(it) }
         terrainShader = TerrainShader(shaders)
         skybox = SceneSkybox(assetLoading.assets(assetLoading.skies))
         overlay = LoadingOverlay(shaders)
@@ -226,12 +235,18 @@ class SceneRenderer(
         lastHeight = height
 
         applyEnvironment(p)
+        updateCamera(width, height, orbit)
+        val c = content
+        applyLights(c, orbit)
+        models.update(c.models, p.projectDir, deltaSeconds)
+        terrains.update(c.terrains, p.projectDir)
+        updateDrawnVersion()
+        val atlas = shadows?.render(camera, lights, environment, models.drawn, terrains.drawn)
+        shadowedLightIds = atlas?.records?.mapTo(HashSet()) { it.lightId } ?: emptySet()
         Gdx.gl.glViewport(0, 0, width, height)
         Gdx.gl.glClearColor(p.clear.r, p.clear.g, p.clear.b, p.clear.a)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
-
-        updateCamera(width, height, orbit)
 
         skybox?.draw(camera, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights))
 
@@ -239,7 +254,7 @@ class SceneRenderer(
         batch.render(grid, environment)
         batch.end()
 
-        renderContent(p, orbit, deltaSeconds)
+        renderContent(p, c, atlas)
         drawOverlays(width, height)
 
         // grayed out with a spinner for as long as the scene's assets are on their way
@@ -323,10 +338,8 @@ class SceneRenderer(
         for (i in 0 until 4) out.line(corners[i], corners[4 + i], HIGHLIGHT)
     }
 
-    private fun renderContent(p: SceneRenderParams, orbit: OrbitCamera, deltaSeconds: Float) {
+    private fun renderContent(p: SceneRenderParams, c: SceneContent, atlas: ShadowAtlasAttribute?) {
         val contentBatch = contentBatch ?: return
-        val c = content
-        applyLights(c, orbit)
         // after the grid: a built HDR sky replaces the ambient color for the content only (applyEnvironment undoes it)
         val ambient = SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) }
         val sky = (ambient as? SceneAmbient.Sky)?.environment
@@ -334,10 +347,8 @@ class SceneRenderer(
             environment.remove(ColorAttribute.AmbientLight)
             environment.set(EnvironmentLightAttribute(sky.specular, sky.irradiance, sky.levels, sky.ambient))
         }
-        terrains.update(c.terrains, p.projectDir)
-        terrainShader?.draw(camera, terrains.drawn, p.ambient, p.fog, lights, sky?.irradiance)
-        models.update(c.models, p.projectDir, deltaSeconds)
-        updateDrawnVersion()
+        if (atlas != null) environment.set(atlas)
+        terrainShader?.draw(camera, terrains.drawn, p.ambient, p.fog, lights, sky?.irradiance, atlas)
         contentBatch.begin(camera)
         for (entity in models.drawn) contentBatch.render(entity.instance, environment, ShaderProvider.DEFAULT_SHADER_KEY)
         contentBatch.end()
@@ -355,6 +366,7 @@ class SceneRenderer(
 
     /** Fog color comes from the environment; density through [net.nevinsky.abyssus.sceneview.fog.FogShader] (see [FogParams] for what cannot be matched). */
     private fun applyEnvironment(p: SceneRenderParams) {
+        environment.remove(ShadowAtlasAttribute.Type)
         environment.remove(EnvironmentLightAttribute.Type)
         val ambient = p.ambient
         if (ambient != null) {
@@ -392,7 +404,19 @@ class SceneRenderer(
         return builder.end()
     }
 
+    /** No GL calls: used immediately when a hidden canvas loses its context, including final editor disposal. */
+    internal fun abandonShadows() {
+        shadows?.abandon()
+        shadows = null
+        shadowedLightIds = emptySet()
+        environment.remove(ShadowAtlasAttribute.Type)
+    }
+
     override fun dispose() {
+        shadows?.dispose()
+        shadows = null
+        shadowedLightIds = emptySet()
+        environment.remove(ShadowAtlasAttribute.Type)
         models.dispose()
         terrains.dispose()
         updateDrawnVersion()

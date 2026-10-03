@@ -6,6 +6,9 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.utils.Disposable
+import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.graphics.g3d.Material
+import net.nevinsky.abyssus.core.Renderable
 import net.nevinsky.abyssus.core.mesh.Mesh
 import net.nevinsky.abyssus.assets.SPLAT_LAYERS
 import net.nevinsky.abyssus.assets.SPLAT_MAP
@@ -21,6 +24,7 @@ class TerrainMesh(prepared: PreparedTerrain) : Disposable {
     private val mesh: Mesh
     private val splat: Texture?
     private val layers: Map<String, Texture>
+    private val depthMaterial = Material()
 
     init {
         val vertices = prepared.vertices
@@ -53,6 +57,14 @@ class TerrainMesh(prepared: PreparedTerrain) : Disposable {
         (splat ?: blank).bind(SPLAT_UNIT)
         mesh.render(shader, GL20.GL_TRIANGLES, 0, indexCount)
         Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0)
+    }
+
+    /** The same indexed geometry as the color pass, with an opaque material for the caller's depth shader. */
+    fun depthRenderable(world: Matrix4, out: Renderable): Renderable = out.apply {
+        worldTransform.set(world)
+        meshPart.set("terrain", mesh, 0, indexCount, GL20.GL_TRIANGLES)
+        material = depthMaterial
+        bones = null
     }
 
     override fun dispose() {

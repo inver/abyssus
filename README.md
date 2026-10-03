@@ -98,6 +98,11 @@ The same menu on a scene row places it at the origin; Spot sits 5 units above th
 brighter, with a low direction. Its light component's **Range** field sets a positive reach (default 100).
 Each creation is one undoable scene edit. These new light entities use the plugin's own component structure.
 
+For a spotlight, Properties also offers **Cone angle (degrees)** for its full beam width and **Edge softness (%)**
+for the inward edge fade. Defaults are 45 degrees and 20 percent. Each accepted edit is saved in the scene and can
+be undone; resetting a default omits its saved field. These beam fields are Abyssus extensions. Mundus support and
+preservation are unverified, so saving the scene in another editor may lose them.
+
 The toolbar's camera selector (**Free camera** and the scene's cameras by name) renders the view through a camera
 entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 

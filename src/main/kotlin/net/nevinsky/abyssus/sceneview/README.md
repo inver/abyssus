@@ -10,6 +10,8 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 | `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params on document/VFS changes; writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
 | `SceneContent` | `ecs` JSON → placements: models, terrains, lights, cameras, skybox |
+| `LightSet`, `SpotCone` | Deterministic light selection and CPU cone/range attenuation math |
+| `shadows/` | Per-context atlas, stable tile allocation, fitted light cameras and shared model/terrain depth pass |
 | `SceneView` | Interface of the view, so tests can pass a fake (`viewFactory`) |
 | `SceneViewPanel` | Swing panel: GL canvas, Swing `Timer` frame loop, toolbar, keys (W / E / D / Esc) |
 | `SceneInteraction` | Mouse and key logic without Swing or GL: click → pick/select, drag → gizmo or orbit/pan, Drop → a Y-only move |
@@ -65,3 +67,51 @@ The toolbar's Add Light menu offers Directional, Sun and Spot through `AddLightG
 the scene file and availability check; the panel supplies its current orbit target when a choice is made.
 The new entity is written as one Add Light command and selected in the Abyssus tree. Spot adds 5 to placement Y.
 Unreadable scene text disables creation (and the editor shows its existing parse-error state).
+
+## Spotlight illumination
+
+`LightSet` retains each light's entity id and separates directional, point and spot sources. It selects at most two
+directional lights and five local lights total (point and spot share that limit), nearest the orbit target with
+entity-id tie-breaking. Invalid light values are skipped. The model shader configuration supports five spot slots;
+the shared selection ceiling keeps the total selected local lights bounded.
+
+Default models, PBR models and terrain use the spotlight's rotated -Z axis, saved full cone angle and edge softness.
+`SpotCone` computes outer and inner half-angle cosines; the inner angle is the outer angle times one minus softness.
+Zero softness gives a sharp edge; positive softness gives a smooth inward fade without changing the outer boundary.
+All local lights fade from 75 percent of their range to zero at the range limit. Missing beam values use 45 degrees
+and 0.2 softness without writing the scene. Properties displays softness as percent; storage and compatibility
+limits are documented in `docs/ai/file-formats.md`.
+
+## Scene shadows
+
+After applying drag previews, each frame updates model poses and terrain transforms once. `SceneShadows` captures
+their renderables, renders the depth atlas, and restores the caller's framebuffer, viewport and depth/blend/scissor
+state before the sky, grid and color passes. Color uses those same poses and transforms. Models and terrain both
+cast and receive; markers, grid, sky, selection outlines and gizmos do not cast. Each light's visibility multiplies
+only its direct contribution, leaving other lights, ambient, HDR environment lighting and emissive output intact.
+`ShadowCasterBounds` caches per-bone mesh boxes and transforms them with the current pose and node transform for
+fitting and culling, so movement outside a model's initial pose does not clip its shadows. Skin weights use the
+model runtime's normalized-weight convention.
+
+The atlas is RGBA8888 with a depth buffer, 4096 square, with at most sixteen views. A single shadow uses a
+4096-square tile; two to four views use 2048-square tiles, five to nine use 1365-square tiles, and larger sets use
+1024-square tiles. The grid grows when needed and keeps its size until all shadow lights are removed, preserving
+surviving tile positions after deletion. Among selected
+lights, stable entity-id order assigns shadows to one directional light, two point lights (six faces each), and
+three spots. Additional selected lights still illuminate. Point faces store radial distance; spot projection uses
+the saved full cone and range. Directional fitting clips receivers to an 80-unit camera region, includes upstream
+casters overlapping that region in light space, and snaps to texels. Four bilinear PCF samples (sixteen depth comparisons) smooth edges while clamping to actual tile texel centers.
+Receiver-plane depth gradients correct each tap for surface slope, with a small numerical bias rather than a large
+detaching offset. Packed depth uses base-255 digits matched to RGBA8 quantization, with dithering and sRGB output
+disabled during depth rendering. Coverage outside a projection remains lit.
+
+The depth shader supports the custom 32-bit mesh indices, posed bones and diffuse alpha-test cutouts. Materials
+with active alpha blending do not cast. Terrain uses its color mesh and transform as an opaque depth renderable.
+See `gdx-model/README.md` for the reusable atlas attribute and provider API.
+
+Resources belong to one canvas and are created, rendered and disposed inside `GdxRuntime.withContext` on the
+safe AWT render thread. A lost/hidden context abandons references without GL calls; recreation builds a fresh atlas
+and depth shaders. Missing framebuffer support, insufficient texture size or fewer than twelve fragment texture
+units disables shadows while keeping lighting. A failed depth pass disables shadows until recreation. Terrain
+reserves unit 6 for the atlas, between its six layer textures and irradiance on unit 7; model shaders use their
+texture binder. Atlas allocation and tile passes restore GL state even on failure.

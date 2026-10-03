@@ -9,10 +9,16 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g3d.Material
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute
+import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute
+import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute
+import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.utils.TextureDescriptor
 import net.nevinsky.abyssus.core.model.PBRColorAttribute
 import net.nevinsky.abyssus.core.model.PBRFloatAttribute
 import net.nevinsky.abyssus.core.model.PBRTextureAttribute
+import net.nevinsky.abyssus.core.model.Model
+import net.nevinsky.abyssus.core.model.ModelData
+import net.nevinsky.abyssus.core.model.PbrModelMaterial
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -20,6 +26,23 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PbrAttributesTest {
+    @Test
+    fun importedMaskWithNonUnitAlphaRemainsACutoutCaster() {
+        val input = PbrModelMaterial().apply {
+            id = "mask"
+            alphaMode = PbrModelMaterial.AlphaMode.MASK
+            baseColor = Color(1f, 1f, 1f, 0.6f)
+            opacity = 0.6f
+        }
+        val model = Model(ModelData().also { it.materials.add(input) })
+        try {
+            val material = model.materials.getValue("mask")
+            assertTrue(material.has(FloatAttribute.AlphaTest))
+            assertFalse(material.has(BlendingAttribute.Type))
+            assertEquals(0.6f, (material.get(ColorAttribute.Diffuse) as ColorAttribute).color.a, 0f)
+        } finally { model.dispose() }
+    }
+
     @Test
     fun ownTypesAreDistinct() {
         val own = listOf(

@@ -61,6 +61,13 @@ the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows
    `ColorAttribute.AmbientLight` for `gdx-model`'s `EnvironmentLightAttribute` after drawing the grid: the PBR shader
    samples both cubes, the default shader takes the six colors as its ambient cubemap, and `TerrainShader` samples the
    irradiance cube. Without a built HDR sky the content is lit by the ambient color exactly as before.
+5. `SceneShadows` captures model and terrain renderables after their single animation/transform update, then draws
+   bounded depth tiles before the color passes. Its per-canvas `ShadowResources` restores framebuffer and render
+   state and falls back to direct lighting if allocation or depth rendering fails. Default/PBR models and terrain
+   apply atlas visibility per light; ambient, HDR and emissive terms remain independent. The 4096-square atlas supports sixteen views,
+   shared by one directional, two six-face point and three spot shadows; small sets use larger tiles. Resources use the same
+   safe AWT context lifecycle as assets, including CPU-only abandonment after context loss. See
+   `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for fitting, budgets, sampler units and material limits.
 
 ### Clicks, drags and writes
 

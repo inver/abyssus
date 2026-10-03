@@ -91,4 +91,32 @@ class ComponentCodecsTest {
         assertEquals(3, position.lookAtId)
         assertEquals(node, PositionCodec().write(position))
     }
+
+    @Test
+    fun beamDefaultsAndSavedValuesRoundTripWithoutLosingUnknownData() {
+        val codec = LightCodec()
+        val defaults = codec.read(json("{}"))
+        assertEquals(45f, defaults.light.coneAngle, 0f)
+        assertEquals(0.2f, defaults.light.edgeSoftness, 0f)
+        val defaultValues = codec.write(defaults)["light"]
+        assertFalse(defaultValues.has("coneAngle"))
+        assertFalse(defaultValues.has("edgeSoftness"))
+        for (nested in listOf(true, false)) {
+            val values = """{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1,"coneAngle":60,"edgeSoftness":0.2500,"future":1.23400}"""
+            val text = if (nested) """{"outerUnknown":7.000,"light":$values}""" else values
+            val light = codec.read(json(text))
+            assertEquals(nested, light.nested)
+            assertEquals(60f, light.light.coneAngle, 0f)
+            assertEquals(0.25f, light.light.edgeSoftness, 0f)
+            assertEquals(text, codec.write(light).toString())
+            light.light.coneAngle = 45f
+            light.light.edgeSoftness = 0.2f
+            val written = codec.write(light)
+            val saved = written["light"] ?: written
+            assertFalse(saved.has("coneAngle"))
+            assertFalse(saved.has("edgeSoftness"))
+            assertEquals("1.23400", saved["future"].toString())
+            if (nested) assertEquals("7.000", written["outerUnknown"].toString())
+        }
+    }
 }

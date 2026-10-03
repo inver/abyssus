@@ -30,11 +30,11 @@ class SceneLightingTest {
     }
 
     @Test
-    fun directionalLightsAreCappedKeepingTheBrightest() {
-        val lights = (1..5).map { light(LightKind.DIRECTIONAL, intensity = it.toFloat(), id = "$it") }
+    fun directionalLightsAreCappedKeepingTheNearest() {
+        val lights = (1..5).map { light(LightKind.DIRECTIONAL, intensity = it.toFloat(), position = Vec3(it.toFloat(), 0f, 0f), id = "$it") }
         val set = LightSet.of(lights, origin)
         assertEquals(LightSet.MAX_DIRECTIONAL, set.directional.size)
-        assertEquals(listOf(5f, 4f), set.directional.map { it.color.r })
+        assertEquals(listOf(1f, 2f), set.directional.map { it.color.r })
     }
 
     @Test
@@ -57,10 +57,28 @@ class SceneLightingTest {
     }
 
     @Test
-    fun spotLightsFallBackToPointLights() {
+    fun spotLightsKeepTheirIdentityAndBeamParameters() {
         val set = LightSet.of(listOf(light(LightKind.SPOT, position = Vec3(1f, 2f, 3f))), origin)
         assertTrue(set.directional.isEmpty())
-        assertEquals(Vec3(1f, 2f, 3f), set.point.single().position)
+        assertTrue(set.point.isEmpty())
+        assertEquals(Vec3(1f, 2f, 3f), set.spot.single().position)
+        assertEquals("1", set.spot.single().entityId)
+        assertEquals(45f, set.spot.single().cone.angle, 0f)
+        assertEquals(0.2f, set.spot.single().cone.softness, 0f)
+    }
+
+    @Test
+    fun localBudgetIsSharedWithStableIdentityTiesAndInvalidBeamsSkipped() {
+        val lights = (1..8).map { light(if (it % 2 == 0) LightKind.SPOT else LightKind.POINT, id = "$it") }
+        val a = LightSet.of(lights, origin)
+        val b = LightSet.of(lights.reversed(), origin)
+        assertEquals(5, a.point.size + a.spot.size)
+        assertEquals(listOf("1", "3", "5"), a.point.map { it.entityId })
+        assertEquals(listOf("2", "4"), a.spot.map { it.entityId })
+        assertEquals(a.point, b.point)
+        assertEquals(a.spot.map { it.entityId }, b.spot.map { it.entityId })
+        val invalid = listOf(light(LightKind.SPOT).copy(coneAngle = 180f), light(LightKind.SPOT).copy(edgeSoftness = Float.NaN))
+        assertTrue(LightSet.of(invalid, origin).spot.isEmpty())
     }
 
     @Test

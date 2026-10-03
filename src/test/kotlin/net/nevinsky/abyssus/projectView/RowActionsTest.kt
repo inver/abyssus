@@ -10,9 +10,28 @@ import java.awt.Color
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import javax.swing.JLabel
+import javax.swing.tree.DefaultTreeModel
+import javax.swing.tree.DefaultMutableTreeNode
 
 class RowActionsTest : BasePlatformTestCase() {
     private val host = JLabel("x")
+
+    fun testEmptyTreePaintsWithoutRowBounds() {
+        val tree = EyeTree(DefaultTreeModel(DefaultMutableTreeNode("root")), project)
+        tree.isRootVisible = false
+        tree.setSize(400, 200)
+        assertEquals(0, tree.rowCount)
+        assertNull(tree.getRowBounds(-1))
+        val image = BufferedImage(400, 200, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        try {
+            g.setClip(0, 0, 400, 200)
+            tree.paint(g)
+        } finally {
+            g.dispose()
+            javax.swing.ToolTipManager.sharedInstance().unregisterComponent(tree)
+        }
+    }
 
     private fun entryOf(unused: Boolean) =
         DtoEntry("/p/assets/0", "0", net.nevinsky.abyssus.testAsset("a", "u", "SKYBOX", emptyList(), unused), null, null, null, emptyList())

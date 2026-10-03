@@ -23,6 +23,15 @@ libGDX's own `g3d` meshes use 16-bit indices, so one mesh can address at most 65
   then compiles with `environmentLightFlag` and samples both cubes; `DefaultShader` uses the six colors as its ambient
   cubemap. An environment without it compiles and renders as before. The cubes are any `GLTexture`; building them
   (from an HDR image) is up to the caller.
+- `net.nevinsky.abyssus.core.shader.ShadowAtlasAttribute`: one packed-depth atlas plus light-identity keyed records.
+  Each record owns copies of its projection matrices and atlas UV rectangles while retaining the light object identity
+  used to match it to environment lights. `ModelDepthShaderProvider` supplies a reusable depth shader for this module's
+  32-bit indexed meshes, posed bone weights and diffuse alpha-test cutouts. Alpha-blended materials do not cast in this
+  first pass. Callers own atlas allocation, tile rendering, render-state restoration and attachment of the attribute to
+  each environment; the legacy `Environment.shadowMap` path remains supported independently.
+  The atlas depth format uses base-255 RGBA8 digits (least significant in R) to match channel quantization. Disable
+  color dithering and sRGB output while writing it and use nearest texture filtering. The receivers interpolate PCF
+  comparisons and correct sample depths using receiver-plane gradients; the atlas's UV rectangles may vary in size.
 - `net.nevinsky.abyssus.core.loader.AssimpModelLoader`:
   - `loadData` parses a file without a GL context.
   - `decodeTextures` decodes the textures off the GL thread.

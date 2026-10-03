@@ -130,7 +130,7 @@ private class AbyssusSelectInTarget(project: Project) : ProjectViewSelectInTarge
  * Paints clickable icons at the right edge of rows that have actions: the eye on entries gated by an `xxxEnabled`
  * toggle, "View" on scenes, and "..." left of the eye on a project scene's skybox.
  */
-private class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
+internal class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
 
     /** The row's actions, rightmost first. */
@@ -161,7 +161,7 @@ private class EyeTree(model: DefaultTreeModel, private val project: Project) : P
 
     /** Where [actions] of [row] sit: from the right edge of the visible area, rightmost first, [ACTION_GAP] apart. */
     private fun actionBounds(row: Int, actions: List<RowAction>): List<Rectangle>? {
-        val rowBounds: Rectangle = getRowBounds(row) ?: return null // not a visible row, e.g. while the tree refreshes
+        val rowBounds = getRowBounds(row) ?: return null
         return layoutActions(rowBounds, visibleRect.let { it.x + it.width }, actions, this)
     }
 

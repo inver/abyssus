@@ -33,7 +33,7 @@ class ComponentEditorTest {
         assertEquals(listOf("parentEntityId"), names["ParentComponent"])
         assertEquals(11, names["PositionComponent"]!!.size)
         assertTrue("camera.fieldOfView" in names["CameraComponent"]!!)
-        assertEquals(listOf("color.r", "color.g", "color.b", "color.a", "intensity", "range"), names["LightComponent"])
+        assertEquals(listOf("color.r", "color.g", "color.b", "color.a", "intensity", "range", "coneAngle", "edgeSoftness"), names["LightComponent"])
         assertEquals(listOf("entity1Id", "entity2Id"), names["Point2PointPositionComponent"])
         assertEquals(listOf("assetType", "assetName", "shaderKey"), names["RenderComponent"])
     }
@@ -52,6 +52,42 @@ class ComponentEditorTest {
             val result = ComponentEditor.update(root, "0", "LightComponent", "range", invalid)
             assertRejected(result)
             assertTrue((result as EditResult.Rejected).reason.contains("range"))
+            assertEquals(before, root.toString())
+        }
+    }
+
+    @Test
+    fun spotlightEditsValidateBoundariesPreserveTextAndOmitDefaults() {
+        for (nested in listOf(true, false)) {
+            val values = """{"intensity":1.000,"future":2.3400}"""
+            val light = if (nested) """{"light":$values,"outer":7.00}""" else values
+            val root = scene(entity(0, """"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":$light"""))
+            val before = root.toString()
+            for ((field, default) in listOf("coneAngle" to "45", "edgeSoftness" to "20")) {
+                assertEquals(EditResult.Unchanged, ComponentEditor.update(root, "0", "LightComponent", field, default))
+            }
+            for ((field, invalid) in listOf("coneAngle" to listOf("0", "180", "-1", "181", "NaN", "Infinity", "abc"),
+                "edgeSoftness" to listOf("-1", "101", "NaN", "Infinity", "abc"))) {
+                for (value in invalid) {
+                    val result = ComponentEditor.update(root, "0", "LightComponent", field, value)
+                    assertRejected(result)
+                    assertTrue((result as EditResult.Rejected).reason.contains(field))
+                    assertEquals(before, root.toString())
+                }
+            }
+            assertEquals(EditResult.Changed, ComponentEditor.update(root, "0", "LightComponent", "coneAngle", "60"))
+            assertEquals(EditResult.Changed, ComponentEditor.update(root, "0", "LightComponent", "edgeSoftness", "25"))
+            val c = components(root, 0)["LightComponent"]
+            val saved = c["light"] ?: c
+            assertEquals(60f, saved["coneAngle"].floatValue(), 0f)
+            assertEquals(0.25f, saved["edgeSoftness"].floatValue(), 0f)
+            assertEquals("1.000", saved["intensity"].toString())
+            assertEquals("2.3400", saved["future"].toString())
+            for (softness in listOf("0", "100")) {
+                assertEquals(EditResult.Changed, ComponentEditor.update(root, "0", "LightComponent", "edgeSoftness", softness))
+            }
+            assertEquals(EditResult.Changed, ComponentEditor.update(root, "0", "LightComponent", "coneAngle", "45"))
+            assertEquals(EditResult.Changed, ComponentEditor.update(root, "0", "LightComponent", "edgeSoftness", "20"))
             assertEquals(before, root.toString())
         }
     }

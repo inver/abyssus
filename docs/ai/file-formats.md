@@ -127,3 +127,12 @@ or `LIGHT_SPOT` (Spot); Sun differs only in its initial color, intensity and rot
 `LightComponent.light`: color and intensity are written, while positive `range` is written only when it differs from
 100. No editor icon or direction-handle entities are created. Mundus compatibility is not required for this structure.
 `ecs.archetypes` reuses or appends the exact four-component set, and missing `componentIdentifiers` entries are added.
+
+Spotlight beam settings are Abyssus extensions: `coneAngle` is the full cone width in degrees (finite, greater than
+0 and less than 180; default 45), and `edgeSoftness` is the fraction of the angular radius used for the inward fade
+(finite, 0 through 1; default 0.2). The properties panel expresses softness as percent. Both keys sit under
+`LightComponent.light` for nested components, or directly in an existing flat LightComponent. Missing fields use the
+defaults without writing the scene; resetting a default removes its key. Unknown fields and unrelated number text
+are preserved. The inspected Mundus light implementation is transient and its saved spotlight fixture contains an
+empty LightComponent, so native equivalents were not established. Mundus rendering and retention of these extensions
+are unverified; saving through another editor may lose them.

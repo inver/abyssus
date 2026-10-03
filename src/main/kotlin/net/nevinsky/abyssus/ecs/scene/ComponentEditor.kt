@@ -143,6 +143,8 @@ object ComponentEditor {
                 floatField("color.a", { it.light.color.a }, { c, v -> c.light.color = c.light.color.copy(a = v) }),
                 floatField("intensity", { it.light.intensity }, { c, v -> c.light.intensity = v }),
                 floatField("range", { it.light.range }, { c, v -> c.light.range = v }),
+                floatField("coneAngle", { it.light.coneAngle }, { c, v -> c.light.coneAngle = v }),
+                floatField("edgeSoftness", { it.light.edgeSoftness * 100f }, { c, v -> c.light.edgeSoftness = v / 100f }),
             ),
         ) { LightComponent() },
         kind<Point2PointPositionComponent>(
@@ -191,7 +193,9 @@ object ComponentEditor {
     fun read(root: JsonNode, entityId: String, kindName: String): List<FieldValue>? {
         val kind = byName[kindName] ?: return null
         val node = componentsOf(root, entityId)?.get(kindName) ?: return null
-        return readFields(kind, node)
+        val fields = readFields(kind, node)
+        val spotlight = componentsOf(root, entityId)?.get("TypeComponent")?.get("type")?.asText() == "LIGHT_SPOT"
+        return if (kindName == "LightComponent" && !spotlight) fields.filterNot { it.field in listOf("coneAngle", "edgeSoftness") } else fields
     }
 
     private fun <C : Component> readFields(kind: ComponentKind<C>, node: JsonNode): List<FieldValue> {
@@ -319,6 +323,10 @@ object ComponentEditor {
                 value.toFloatOrNull()?.isFinite() != true -> reject("componentNotANumber", label, text)
                 kind.name == "LightComponent" && field.name == "range" && value.toFloat() <= 0f ->
                     reject("componentNotPositive", label, text)
+                kind.name == "LightComponent" && field.name == "coneAngle" && (value.toFloat() <= 0f || value.toFloat() >= 180f) ->
+                    reject("componentConeAngleInvalid", label, text)
+                kind.name == "LightComponent" && field.name == "edgeSoftness" && value.toFloat() !in 0f..100f ->
+                    reject("componentSoftnessInvalid", label, text)
                 else -> null
             }
             FieldKind.TEXT -> null

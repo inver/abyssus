@@ -103,11 +103,16 @@ internal class EntityDetailsView(private val project: Project, private val state
         val error = JBLabel("").apply { foreground = JBColor.RED; name = "error-${section.kind}-${field.field}" }
         val editor = editorFor(section, field, error)
         editor.name = "field-${section.kind}-${field.field}"
-        val isRange = section.kind == "LightComponent" && field.field == "range"
-        val label = JBLabel(if (isRange) AbyssusBundle.message("lightRangeLabel") else field.field).apply {
+        val labelKey = if (section.kind == "LightComponent") when (field.field) {
+            "range" -> "lightRangeLabel"
+            "coneAngle" -> "lightConeAngleLabel"
+            "edgeSoftness" -> "lightEdgeSoftnessLabel"
+            else -> null
+        } else null
+        val label = JBLabel(labelKey?.let { AbyssusBundle.message(it) } ?: field.field).apply {
             preferredSize = Dimension(JBUI.scale(LABEL_WIDTH), preferredSize.height)
         }
-        if (isRange) editor.toolTipText = AbyssusBundle.message("lightRangeTooltip")
+        if (section.kind == "LightComponent" && field.field == "range") editor.toolTipText = AbyssusBundle.message("lightRangeTooltip")
         return JPanel(GridBagLayout()).apply {
             border = JBUI.Borders.empty(2, 0)
             add(label, GridBagConstraints().apply { gridx = 0; anchor = GridBagConstraints.WEST })

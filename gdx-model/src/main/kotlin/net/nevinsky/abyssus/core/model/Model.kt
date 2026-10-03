@@ -340,7 +340,7 @@ class Model() : Disposable {
         if (mtl.shininess > 0f) {
             result.set(FloatAttribute(FloatAttribute.Shininess, mtl.shininess))
         }
-        if (mtl.opacity != 1f) {
+        if (mtl.opacity != 1f && (mtl !is PbrModelMaterial || mtl.alphaMode != AlphaMode.MASK)) {
             result.set(BlendingAttribute(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA, mtl.opacity))
         }
 

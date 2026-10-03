@@ -165,16 +165,27 @@ class LightCodec : ComponentCodec<LightComponent> {
             readColor(values.obj("color"), defaults.color),
             values.float("intensity") ?: defaults.intensity,
             values.float("range") ?: defaults.range,
+            values.float("coneAngle") ?: defaults.coneAngle,
+            values.float("edgeSoftness") ?: defaults.edgeSoftness,
         )
-        return LightComponent(light, nested = nestedNode != null || listOf("color", "intensity", "range").none(node::has))
+        return LightComponent(light, nested = nestedNode != null || listOf("color", "intensity", "range", "coneAngle", "edgeSoftness").none(node::has))
+            .also { it.source = node.deepCopy() }
     }
 
     override fun write(component: LightComponent): JsonNode {
-        val values = nodes.objectNode()
-        values.set<JsonNode>("color", colorNode(component.light.color))
-        values.set<JsonNode>("intensity", number(component.light.intensity))
-        if (component.light.range != 100f) values.set<JsonNode>("range", number(component.light.range))
-        return if (component.nested) nodes.objectNode().set("light", values) else values
+        val root = (component.source as? ObjectNode)?.deepCopy() ?: nodes.objectNode()
+        val values = if (component.nested) root.obj("light")?.deepCopy() ?: nodes.objectNode() else root
+        val previous = component.source?.let { read(it).light }
+        if (previous == null || previous.color != component.light.color) values.set<JsonNode>("color", colorNode(component.light.color))
+        if (previous == null || previous.intensity != component.light.intensity) values.set<JsonNode>("intensity", number(component.light.intensity))
+        fun optional(key: String, value: Float, default: Float, old: Float?) {
+            if (value == default) values.remove(key)
+            else if (old != value) values.set<JsonNode>(key, number(value))
+        }
+        optional("range", component.light.range, 100f, previous?.range)
+        optional("coneAngle", component.light.coneAngle, 45f, previous?.coneAngle)
+        optional("edgeSoftness", component.light.edgeSoftness, 0.2f, previous?.edgeSoftness)
+        return if (component.nested) root.set("light", values) else values
     }
 }
 

@@ -190,6 +190,43 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         assertEquals(30, components(sceneFile(), "0")["LightComponent"]["light"]["range"].asInt())
     }
 
+    fun testBeamEditorsAreSpotlightOnlyAndUsePercent() {
+        copyProject()
+        val f = sceneFile()
+        val edits = net.nevinsky.abyssus.projectView.SceneComponentEdits
+        edits.add(project, f, "0", "LightComponent")
+        val p = panel()
+        for (type in listOf("LIGHT_POINT", "LIGHT_DIRECTIONAL", "LIGHT_SPOT")) {
+            edits.update(project, f, "0", "TypeComponent", "type", type)
+            p.show(component("0", "LightComponent"))
+            if (type != "LIGHT_SPOT") {
+                assertNull(named(p, "field-LightComponent-coneAngle"))
+                assertNull(named(p, "field-LightComponent-edgeSoftness"))
+            } else {
+                assertEquals("45", (named(p, "field-LightComponent-coneAngle") as JBTextField).text)
+                assertEquals("20", (named(p, "field-LightComponent-edgeSoftness") as JBTextField).text)
+                assertTrue(all(p, JBLabel::class.java).any { it.text == "Cone angle (degrees)" })
+                assertTrue(all(p, JBLabel::class.java).any { it.text == "Edge softness (%)" })
+                val field = named(p, "field-LightComponent-edgeSoftness") as JBTextField
+                field.text = "25"
+                field.postActionEvent()
+                assertEquals(0.25f, components(f, "0")["LightComponent"]["light"]["edgeSoftness"].floatValue())
+                val angle = named(p, "field-LightComponent-coneAngle") as JBTextField
+                val before = text(f)
+                angle.text = "180"
+                angle.postActionEvent()
+                assertEquals("45", angle.text)
+                assertEquals(before, text(f))
+                assertTrue((named(p, "error-LightComponent-coneAngle") as JBLabel).text.contains("180"))
+                val doc = FileDocumentManager.getInstance().getDocument(f)!!
+                val root = SceneJson.parse(doc.text)
+                (root["ecs"]["entities"]["0"]["components"]["LightComponent"]["light"] as com.fasterxml.jackson.databind.node.ObjectNode).put("coneAngle", 60)
+                WriteCommandAction.runWriteCommandAction(project) { doc.setText(SceneJson.inStyleOf(doc.text, root)) }
+                assertEquals("60", (named(p, "field-LightComponent-coneAngle") as JBTextField).text)
+            }
+        }
+    }
+
     fun testRemoveFromThePanelDropsTheSection() {
         copyProject()
         val p = panel()
