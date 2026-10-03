@@ -4,9 +4,9 @@
 
 Abyssus is meant to be the editor for libGDX games built on Mundus projects, and a game has to load the scenes it
 edits. Today the code that does that lives in the plugin. The Ashley ECS (`ecs/`: components, codecs, loader, writer,
-systems) is almost free of the IDE: only `SceneEcsWarnings` logs through IntelliJ's `Logger`, and `LightEntities`
-borrows `Vec3` from `sceneview`. Reading a project and its scenes (`dto/ProjectReader`, `SceneReader`,
-`ProjectLayout`, `scene/SceneDto`) works on `VirtualFile` and IntelliJ services. A game, a test, or the out-of-process
+systems) is almost free of the IDE: only `SceneEcsWarnings` logs through IntelliJ's `Logger`. Reading a project and
+its scenes (`dto/ProjectReader`, `SceneReader`, `ProjectLayout`, `scene/SceneDto`) works on `VirtualFile` and
+IntelliJ services. A game, a test, or the out-of-process
 play host planned in `add-jolt-physics` cannot use either. Moving both into a plain JVM module, wired by constructors
 like `core`, gives the editor and the games one scene runtime.
 
@@ -17,21 +17,22 @@ like `core`, gives the editor and the games one scene runtime.
   `checkNoSingletons` check as `core`). The plugin depends on it.
 - Moved into `runtime`, behavior unchanged:
   - the ECS: `ecs/component/`, `ecs/render/`, `ecs/system/`, `EcsConfigurator`, and from `ecs/scene/` the
-    `SceneEngine`, `SceneEcsLoader`, `SceneEcsWriter`, `ComponentCodecs`, `LightEntities` and the warnings;
-  - the scene DTOs (`SceneDto`, `ColorDto`, `FogDto`, the light DTOs) and the vector type the light code uses;
+    `SceneEngine`, `SceneEcsLoader`, `SceneEcsWriter`, `ComponentCodecs` and the warnings;
+  - the scene DTOs (`SceneDto` without its `VirtualFile`, `ColorDto`, `FogDto`, the light DTOs);
   - project and scene reading over `java.nio.file.Path`: the `.abss` project file, its scene list and each `.scene`
     file, from a project folder.
 - Problems met while loading are reported to a log the caller passes in. The plugin's implementation writes the IDE
   log as today.
 - The plugin keeps everything that edits or shows scenes: `ComponentEditor` (it uses `SceneJson` and
-  `AbyssusBundle`), `editSceneJson`, the tree, the properties panel and the scene view. Thin `VirtualFile` adapters
-  over the `runtime` readers replace the readers' file access, and `ProjectReader` / `SceneReader` stay IntelliJ
-  services only as those adapters.
+  `AbyssusBundle`), `LightEntities` (it builds new light entities for an edit), `editSceneJson`, the tree, the
+  properties panel and the scene view. Thin `VirtualFile` adapters over the `runtime` readers replace the readers'
+  file access, and `ProjectReader` / `SceneReader` stay IntelliJ services only as those adapters.
 - **BREAKING (internal API only):** the moved classes change package and module. No user-visible change.
 
-**Mundus files.** Read exactly as today: the `.abss` project file (`scenes`, `currentSceneName`, `mainCamera`) and the
-`.scene` file's `ecs` block (`entities`, `archetypes`, `componentIdentifiers`, `metadata`) with every modeled
-component. Nothing new is written, and the file format does not change.
+**Mundus files.** Read exactly as today: the `.abss` project file (`name`, `mainCamera`), the `.scene` files in the
+project's `scenes` folder, and each scene's top-level fields and `ecs` block (`entities`, `archetypes`,
+`componentIdentifiers`, `metadata`) with every modeled component. Nothing new is written, and the file format does
+not change.
 
 **Out of scope.**
 
@@ -57,9 +58,10 @@ None. `scene-ecs-components` and `scene-ecs-systems` keep their requirements; on
 - **Build:** `settings.gradle.kts` includes `:runtime`; new `runtime/build.gradle.kts`; Ashley moves from the
   plugin's dependencies to `runtime`; the plugin gains `implementation(project(":runtime"))`. `./gradlew check` runs
   `:runtime:test` and `:runtime:checkNoSingletons`.
-- **Code moved:** the files listed above. Their tests (`ComponentCodecsTest`, `ComponentsTest`, `LightEntitiesTest`,
+- **Code moved:** the files listed above. Their tests (`ComponentCodecsTest`, `ComponentsTest`,
   `SceneEcsLoaderTest`, `SceneEcsWriterTest`, `SystemsTest`) move to `runtime/src/test` and read the shared
-  `src/test/testData/project` fixtures the way `core`'s tests do. `ComponentEditorTest` stays in the plugin.
+  `src/test/testData/project` fixtures the way `core`'s tests do. `ComponentEditorTest` and
+  `LightEntitiesTest` stay in the plugin.
 - **Plugin callers updated:** `ComponentEditor`, the properties panel (`EntityDetailsView`, `PanelState`),
   `projectView` actions that use the ECS (`ComponentActions`, `SceneComponentEdits`, `AddLightAction`), and the `dto`
   readers.

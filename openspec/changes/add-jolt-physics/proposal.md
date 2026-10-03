@@ -14,8 +14,9 @@ and users who never need it never load native physics code into their IDE. The c
   Jolt through **jolt-jni** (the proposed binding; xJolt is the alternative if a web build is ever needed, and the
   choice is confirmed in design). It builds a Jolt world from the physics components of an Ashley engine, steps it at
   a fixed rate, writes poses back to `PositionComponent`, and releases every native object on dispose. It exposes the
-  world to game systems, so a game can add forces and create constraints at run time. Shapes and values are
-  validated before they reach native code.
+  world to game systems, so a game can add forces and create constraints at run time, and reports each rope's
+  tension (jolt-jni 6.1.1 does not expose a constraint's impulse, so tension is measured from the bodies' motion).
+  Shapes and values are validated before they reach native code.
 - **Physics components,** declared with `@SceneComponent` / `@Field` from `add-custom-components`:
   - `RigidBodyComponent`: motion type (static, kinematic, dynamic), mass, friction, restitution, damping.
   - `ColliderComponent`: box, sphere, capsule, a convex hull from the entity's model, or a height field from the
@@ -39,7 +40,7 @@ and users who never need it never load native physics code into their IDE. The c
   `<mundus project>/abyssus/play.json`: the game's `PlayModule` class (components to register, systems to add, input
   mapping), the resolved classpath and the protocol version. Abyssus Physics launches that classpath, so Play runs the
   game's own code. Without `play.json` it uses its built-in classpath and runs physics only. `PlayModule` is a small
-  API in `runtime`.
+  API in `physics`.
 
 **Mundus files.**
 - **Read:** the scene's `ecs` block, `RenderComponent` asset references (for hulls and height fields), terrain
