@@ -11,20 +11,29 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 
 /**
  * What a drag changes about an entity: any of its [position], its [rotation] and, for a camera, its view [direction].
- * A null part is left as it is.
+ * A null part is left as it is. [target] moves another entity (a light's direction handle) instead of the light itself.
  */
-data class TransformEdit(val position: Vec3? = null, val rotation: Quat? = null, val direction: Vec3? = null)
+data class TransformEdit(
+    val position: Vec3? = null,
+    val rotation: Quat? = null,
+    val direction: Vec3? = null,
+    val target: TargetMove? = null,
+)
+
+/** A move of another entity's `PositionComponent.localPosition`: [entityId] is the target, [position] is its new position. */
+data class TargetMove(val entityId: String, val position: Vec3)
 
 /** Writes a [TransformEdit] into a scene's JSON tree, touching only the values that change. */
 object SceneTransformWriter {
     /**
      * Sets `PositionComponent.localPosition` / `localRotation` of the entity [entityId] under `ecs.entities`, adding
      * missing objects and fields. For an entity with a `CameraComponent.camera` object it also sets that object's
-     * `position` and `viewPointPosition`. Returns false, leaving [root] as it was, when the entity is missing or no
-     * value differs.
+     * `position` and `viewPointPosition`. [target] is written as the target entity's `PositionComponent.localPosition`.
+     * Returns false, leaving [root] as it was, when the entity is missing or no value differs.
      */
     fun apply(root: JsonNode, entityId: String, edit: TransformEdit): Boolean {
-        val components = root.get("ecs")?.get("entities")?.get(entityId)?.get("components") as? ObjectNode ?: return false
+        val entities = root.get("ecs")?.get("entities") ?: return false
+        val components = entities.get(entityId)?.get("components") as? ObjectNode ?: return false
         var changed = false
         if (edit.position != null || edit.rotation != null) {
             val existing = components.get("PositionComponent")
@@ -40,6 +49,16 @@ object SceneTransformWriter {
         if (camera != null) {
             edit.position?.let { changed = setVec(camera, "position", it) or changed }
             edit.direction?.let { changed = setVec(camera, "viewPointPosition", it) or changed }
+        }
+        edit.target?.let { target ->
+            val targetComponents = entities.get(target.entityId)?.get("components") as? ObjectNode ?: return false
+            val existing = targetComponents.get("PositionComponent")
+            val placement = when {
+                existing == null || existing.isNull -> targetComponents.putObject("PositionComponent")
+                existing is ObjectNode -> existing
+                else -> return false
+            }
+            changed = setVec(placement, "localPosition", target.position) or changed
         }
         return changed
     }

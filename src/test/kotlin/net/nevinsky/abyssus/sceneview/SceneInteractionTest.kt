@@ -336,6 +336,40 @@ class SceneInteractionTest {
     }
 
     @Test
+    fun rotatingAHandleAimedLightEmitsAHandleMove() {
+        val params = SceneRenderParams.from(
+            parseScene(File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()),
+            CameraParams.DEFAULT,
+        )
+        val lightPos = params.content.lights.first { it.entityId == "1" }.position
+        val s = setup(OrbitCamera(lightPos, 12f, 0.4f, 0f))
+        s.renderer.params = params
+        s.renderer.updateCamera(width, height, s.orbit)
+        s.renderer.selectedId = "1"
+        s.interaction.mode = GizmoMode.ROTATE
+        val handles = s.renderer.gizmoHandles(height)!!
+        val o = handles.origin
+        // a quarter turn about X on the X ring: from +Y to +Z
+        val from = screenOf(s.renderer, Vec3(o.x, o.y + handles.size, o.z))
+        val to = screenOf(s.renderer, Vec3(o.x, o.y, o.z + handles.size))
+        s.interaction.pressed(from.first, from.second, true)
+        s.interaction.dragged(to.first, to.second, true)
+        s.interaction.released(to.first, to.second, true)
+        val (id, edit) = s.transforms.single()
+        assertEquals("1", id)
+        assertNull(edit.position)
+        assertNull(edit.rotation)
+        val target = edit.target!!
+        assertEquals("0", target.entityId)
+        // distance 10 from (0, 10, 0) along the turned direction (about (0, 0, -1)); screen projection truncates
+        // the ring pixels, so the drag lands near a quarter turn rather than exactly on it.
+        assertEquals(0f, target.position.x, 0.5f)
+        assertEquals(10f, target.position.y, 0.5f)
+        assertEquals(-10f, target.position.z, 1.5f)
+        assertTrue("turned toward -Z: ${target.position}", target.position.z < -8f && kotlin.math.abs(target.position.x) < 1f)
+    }
+
+    @Test
     fun lookingThroughACameraFreezesOrbitPanAndZoomButNotSelection() {
         val s = setup(OrbitCamera(cameraPosition, 10f, 0f, 0f))
         s.interaction.viewCamera = "4"

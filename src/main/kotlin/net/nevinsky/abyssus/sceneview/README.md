@@ -9,7 +9,7 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 |---|---|
 | `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params on document/VFS changes; writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
-| `SceneContent` | `ecs` JSON → placements: models, terrains, lights, cameras, skybox |
+| `SceneContent` | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
 | `LightSet`, `SpotCone` | Deterministic light selection and CPU cone/range attenuation math |
 | `shadows/` | Per-context atlas, stable tile allocation, fitted light cameras and shared model/terrain depth pass |
 | `SceneView` | Interface of the view, so tests can pass a fake (`viewFactory`) |
@@ -45,7 +45,10 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 - **Drags preview, then write once.** During a drag `ScenePreview` overrides the dragged entity's placement. On release
   one `editSceneJson` command ("Move Entity" / "Rotate Entity") writes it. The document change re-reads params, and
   the override stays until they arrive so the object doesn't jump back.
-- **Objects without rotation.** A camera whose `lookAtId` resolves, and a point light, get Move handles only.
+- **Objects without rotation.** A camera whose `lookAtId` resolves, a point light, and a light aimed at anything
+  other than a direction handle get Move handles only. A directional or spot light aimed at a `HANDLE` entity keeps
+  its rings, but a rotate drag on it turns the direction and moves the handle (`ScenePreview.aimedTarget`), writing
+  the handle's `PositionComponent`; a move drag re-aims the light at its unmoved handle.
 - **HiDPI:** mouse positions are Swing pixels; the framebuffer can be larger. `ViewSize` converts between them for
   picking and gizmo hits.
 

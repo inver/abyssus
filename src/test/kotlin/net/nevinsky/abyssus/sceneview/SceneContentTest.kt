@@ -133,6 +133,45 @@ class SceneContentTest {
     }
 
     @Test
+    fun mundusLightsFaceTheirHandles() {
+        val c = content(File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText())
+        assertEquals(setOf("0", "3"), c.handleIds)
+        val byId = c.lights.associateBy { it.entityId }
+        val directional = byId["1"]!!
+        assertEquals(LightKind.DIRECTIONAL, directional.kind)
+        assertEquals(Vec3(0f, 10f, 0f), directional.position)
+        assertEquals(Vec3(0f, -1f, 0f), directional.direction)
+        assertEquals("0", directional.lookAtId)
+        val spot = byId["4"]!!
+        assertEquals(LightKind.SPOT, spot.kind)
+        assertEquals(Vec3(0f, 5f, 0f), spot.position)
+        assertEquals(Vec3(0f, -1f, 0f), spot.direction)
+        assertEquals("3", spot.lookAtId)
+    }
+
+    @Test
+    fun aLightWithAMissingTargetFacesAlongItsRotation() {
+        val s = Math.sqrt(0.5).toFloat()
+        val c = content(entity("""{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
+            "PositionComponent":{"lookAtId":99,"localRotation":{"y":$s,"w":$s}}}"""))
+        val l = c.lights.single()
+        assertEquals("99", l.lookAtId)
+        assertEquals(-1f, l.direction.x, 1e-5f)
+        assertEquals(0f, l.direction.y, 1e-5f)
+        assertEquals(0f, l.direction.z, 1e-5f)
+    }
+
+    @Test
+    fun aLightAtItsTargetFacesAlongItsRotation() {
+        val c = content("""{"ecs":{"entities":{
+            "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
+                "PositionComponent":{"localPosition":{"x":3}}}},
+            "2":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
+                "PositionComponent":{"lookAtId":1,"localPosition":{"x":3}}}}}}}""")
+        assertEquals(Vec3(0f, 0f, -1f), c.lights.single { it.entityId == "2" }.direction)
+    }
+
+    @Test
     fun cameraWithoutCameraObjectGetsDefaults() {
         val cam = content(entity("""{"CameraComponent":{},"PositionComponent":{"localPosition":{"x":1,"y":2,"z":3}}}""")).cameras.single()
         assertEquals(Vec3(1f, 2f, 3f), cam.position)

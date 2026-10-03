@@ -47,6 +47,8 @@ data class LightPlacement(
     val rotation: Quat = Quat.IDENTITY,
     val coneAngle: Float = 45f,
     val edgeSoftness: Float = 0.2f,
+    /** The `PositionComponent.lookAtId` of the light, or null when it does not name a target. */
+    val lookAtId: String? = null,
 )
 
 /** libGDX `PerspectiveCamera` defaults, used for the fields a camera entity leaves out. */
@@ -81,6 +83,8 @@ data class SceneContent(
     val cameras: List<CameraPlacement> = emptyList(),
     /** `localPosition` of every entity with a `PositionComponent` (entity id to position), for look-at targets. */
     val entityPositions: Map<String, Vec3> = emptyMap(),
+    /** The ids of entities whose `TypeComponent.type` is `HANDLE` (the direction handles of look-at lights). */
+    val handleIds: Set<String> = emptySet(),
 ) {
     companion object {
         val EMPTY = SceneContent()
@@ -92,11 +96,14 @@ data class SceneContent(
             val lights = mutableListOf<LightPlacement>()
             val cameras = mutableListOf<CameraPlacement>()
             val positions = linkedMapOf<String, Vec3>()
+            val handleIds = mutableSetOf<String>()
             entities?.properties()?.forEach { (id, entity) ->
                 val components = entity.obj("components") ?: return@forEach
                 runCatchingKeepingCancellation {
                     val transform = transformOf(components.opt("PositionComponent"))
                     if (components.opt("PositionComponent") != null) positions[id] = transform.position
+                    val type = components.opt("TypeComponent")?.text("type")
+                    if (type == "HANDLE") handleIds += id
                     val asset = components.opt("RenderComponent")?.opt("renderable")?.opt("asset")
                     val assetName = asset?.text("assetName")
                     when {
@@ -107,8 +114,13 @@ data class SceneContent(
                     }
                 }
             }
+            val resolved = lights.map { light ->
+                val target = light.lookAtId?.let(positions::get)
+                val direction = if (target != null) aim(light.position, target) ?: forward(light.rotation) else forward(light.rotation)
+                light.copy(direction = direction)
+            }
             val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled == true && it.isNotBlank() }
-            return SceneContent(models, terrains, lights, skybox, cameras, positions)
+            return SceneContent(models, terrains, resolved, skybox, cameras, positions, handleIds)
         }
 
         private fun number(node: JsonNode?, name: String, default: Float) = node?.float(name) ?: default
@@ -170,9 +182,16 @@ data class SceneContent(
             val rgba = Rgba(number(color, "r", 1f), number(color, "g", 1f), number(color, "b", 1f), 1f)
             val intensity = number(light, "intensity", 0.3f).coerceAtLeast(0f)
             val range = number(light, "range", DEFAULT_LIGHT_RANGE)
+            val lookAt = components.opt("PositionComponent")?.opt("lookAtId")?.let {
+                when {
+                    it.isIntegralNumber -> it.asLong().takeIf { n -> n >= 0 }?.toString()
+                    it.isTextual -> it.asText().takeIf { t -> t.isNotBlank() && t != "-1" }
+                    else -> null
+                }
+            }
             return LightPlacement(
                 id, kind, rgba, intensity, transform.position, forward(transform.rotation), range, transform.rotation,
-                number(light, "coneAngle", 45f), number(light, "edgeSoftness", 0.2f),
+                number(light, "coneAngle", 45f), number(light, "edgeSoftness", 0.2f), lookAt,
             )
         }
 
@@ -186,6 +205,20 @@ data class SceneContent(
             val w = q.w / len
             // q * (0, 0, -1) * q^-1
             return Vec3(0f - 2f * (x * z + w * y), 0f - 2f * (y * z - w * x), 0f - (1f - 2f * (x * x + y * y)))
+        }
+
+        /**
+         * The unit direction from [from] toward [to], or null when the two are (almost) the same point. Shared by
+         * look-at lights and look-at cameras so the two can't drift apart.
+         */
+        internal fun aim(from: Vec3, to: Vec3): Vec3? {
+            val dx = to.x - from.x
+            val dy = to.y - from.y
+            val dz = to.z - from.z
+            val len2 = dx * dx + dy * dy + dz * dz
+            if (len2 < 1e-12f || !len2.isFinite()) return null
+            val len = kotlin.math.sqrt(len2)
+            return Vec3(dx / len, dy / len, dz / len)
         }
     }
 }

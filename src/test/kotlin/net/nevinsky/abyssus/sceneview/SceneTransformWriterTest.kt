@@ -117,4 +117,47 @@ class SceneTransformWriterTest {
         assertFalse(SceneTransformWriter.apply(root, "0", TransformEdit(rotation = Quat.IDENTITY)))
         assertEquals(SceneJson.parse(text), root)
     }
+
+    @Test
+    fun aHandleMoveWritesTheHandlePosition() {
+        val mundus = File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()
+        val root = SceneJson.parse(mundus)
+        val handle = components(root, "0").get("PositionComponent")
+        // The fixture's handle has an empty PositionComponent and no localPosition.
+        assertFalse(handle.has("localPosition"))
+        assertTrue(SceneTransformWriter.apply(root, "1", TransformEdit(target = TargetMove("0", Vec3(0f, 10f, -10f)))))
+        val written = components(root, "0").get("PositionComponent")
+        assertEquals(0f, written.get("localPosition").get("x").floatValue(), 0f)
+        assertEquals(10f, written.get("localPosition").get("y").floatValue(), 0f)
+        assertEquals(-10f, written.get("localPosition").get("z").floatValue(), 0f)
+        // The light's own PositionComponent is unchanged: only lookAtId and localPosition.y.
+        val light = components(root, "1").get("PositionComponent")
+        assertEquals(0, light.get("lookAtId").intValue())
+        assertEquals(10f, light.get("localPosition").get("y").floatValue(), 0f)
+        assertEquals(1, light.get("localPosition").size())
+        assertFalse(light.has("localRotation"))
+        // No key is added to any LightComponent.
+        val lightComponent = components(root, "1").get("LightComponent")
+        assertEquals(0, lightComponent.size())
+        // Every other entity is untouched.
+        val untouched = SceneJson.parse(mundus)
+        (components(untouched, "0").get("PositionComponent") as com.fasterxml.jackson.databind.node.ObjectNode)
+            .set<JsonNode>("localPosition", written.get("localPosition"))
+        assertEquals(SceneJson.compact(untouched), SceneJson.compact(root))
+    }
+
+    @Test
+    fun aHandleMoveToTheSamePlaceChangesNothing() {
+        val mundus = File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()
+        val root = SceneJson.parse(mundus)
+        val same = Vec3(0f, 10f, -10f)
+        assertTrue(SceneTransformWriter.apply(root, "1", TransformEdit(target = TargetMove("0", same))))
+        // Writing the same value again changes nothing.
+        assertFalse(SceneTransformWriter.apply(root, "1", TransformEdit(target = TargetMove("0", same))))
+        // The final state is the fixture with the handle's localPosition set and nothing else changed.
+        val expected = SceneJson.parse(mundus)
+        (components(expected, "0").get("PositionComponent") as com.fasterxml.jackson.databind.node.ObjectNode)
+            .set<JsonNode>("localPosition", components(root, "0").get("PositionComponent").get("localPosition"))
+        assertEquals(SceneJson.compact(expected), SceneJson.compact(root))
+    }
 }

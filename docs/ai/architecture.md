@@ -50,7 +50,10 @@ the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows
 1. `SceneFileEditor` reads the scene and its project's `mainCamera` through `SceneParamsSource.EDITOR_TEXT`. It uses
    the unsaved editor text when there is any. It re-reads on every document or VFS change of those files.
 2. `SceneRenderParams.from` → `SceneContent.of` turns the `ecs` JSON into placements: `models`, `terrains`,
-   `lights`, `cameras`, plus the skybox name. The view reads the JSON directly; it does not use the `ecs` package.
+    `lights`, `cameras`, plus the skybox name. The view reads the JSON directly; it does not use the `ecs` package.
+    A light's or camera's direction resolves its `PositionComponent.lookAtId` to an entity's `localPosition` when that
+    target exists and is not at the entity itself; otherwise it uses the entity's `localRotation`. `handleIds` records
+    the `HANDLE` entities that a light may be aimed at.
 3. `SceneViewPanel` hosts a `GuardedGLCanvas`. A Swing `Timer` renders frames through
    `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each holding a
    `core` `SceneAssets` from `AssetLoading`, backed by an `AssetCache`) and draws markers (`SceneMarkers`) and gizmos
