@@ -45,5 +45,8 @@ class JsonProcessor {
         return mapper.readValue(text, clazz)
     }
 
+    /** [obj] as one line of JSON, with no trailing newline. */
+    fun compact(obj: Any): String = mapper.writeValueAsString(obj)
+
     fun pretty(obj: Any): String = mapper.writer(prettyPrinter).writeValueAsString(obj) + "\n"
 }
