@@ -11,6 +11,7 @@ import net.nevinsky.abyssus.assets.files.Asset
 import net.nevinsky.abyssus.dto.SceneError
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.ecs.scene.SceneEcsPaths
 
 /**
  * A named, ordered child of a DTO as shown by the Abyssus view. [enabled] is set when the row is gated by an
@@ -119,7 +120,7 @@ fun isEntityEntry(entry: DtoEntry) = entry.parentKeys == listOf(ECS, ENTITIES) &
 fun isComponentEntry(entry: DtoEntry) = entry.parentKeys.size == 4 && entry.parentKeys[0] == ECS && entry.parentKeys[1] == ENTITIES && entry.parentKeys[3] == COMPONENTS
 
 private fun entityName(entry: DtoEntry): String =
-    (entry.value as JsonNode).get(COMPONENTS)?.get("NameComponent")?.get("name")?.takeIf { it.isTextual }?.asText()?.takeIf { it.isNotBlank() } ?: entry.name
+    SceneEcsPaths.entityName((entry.value as JsonNode).get(COMPONENTS), entry.name)
 
 /** The label and secondary text of [entry]; [label] is what its parent already named it (a list element). */
 fun rowText(entry: DtoEntry, label: String? = null): RowText {

@@ -21,7 +21,11 @@ class SceneAssets<P : Any, T : Disposable>(
     private val filesOf: (File) -> AssetFiles,
     private val log: Logger,
 ) : Disposable {
-    private var files: AssetFiles? = null
+    /** The files one cache prepares from: read by its pool threads, replaced on the GL thread by [replaceFiles]. */
+    private class FilesRef(@Volatile var files: AssetFiles)
+
+    private var ref: FilesRef? = null
+    private val files: AssetFiles? get() = ref?.files
     private var cache: AssetCache<P, T>? = null
 
     val isLoading: Boolean get() = cache?.isLoading() ?: false
@@ -31,8 +35,8 @@ class SceneAssets<P : Any, T : Disposable>(
         if (projectDir?.absoluteFile != files?.projectDir) {
             cache?.dispose()
             log.info("Loading assets of ${projectDir?.absolutePath ?: "no project"}")
-            files = projectDir?.let(filesOf)
-            cache = files?.let(::newCache)
+            ref = projectDir?.let { FilesRef(filesOf(it)) }
+            cache = ref?.let(::newCache)
         }
         val cache = cache ?: return
         names.forEach(cache::request)
@@ -40,27 +44,43 @@ class SceneAssets<P : Any, T : Disposable>(
         cache.pump()
     }
 
-    private fun newCache(files: AssetFiles) = AssetCache<P, T>(
+    /**
+     * Makes [fresh] (a snapshot of the same project, see [AssetFiles.refreshed]) what later loads read, without touching
+     * any loaded asset: invalidate the names it changes. Ignored for another project or when there is no cache.
+     */
+    fun replaceFiles(fresh: AssetFiles) {
+        val current = ref ?: return
+        if (cache != null && fresh.projectDir == current.files.projectDir) current.files = fresh
+    }
+
+    private fun newCache(source: FilesRef) = AssetCache<P, T>(
         executor,
-        prepare = { name -> loader.prepare(files, name) },
-        build = { _, p -> loader.build(p) },
-        advance = loader::upload,
-        discard = loader::discard,
+        // the snapshot current when the pool thread starts the load, and always of this cache's own project
+        prepare = { name -> loader.prepare(source.files, name) },
+        loader = loader,
         log = log,
     )
 
     fun get(name: String): T? = cache?.get(name)
 
+    /** How many assets were built under [name]; see [AssetCache.version]. */
+    fun version(name: String): Long = cache?.version(name) ?: 0L
+
+    /** Marks [names] of this project as changed on disk; see [AssetCache.invalidate]. */
+    fun invalidate(names: Set<String>) {
+        cache?.invalidate(names)
+    }
+
     /** Forgets everything without GL calls; see [AssetCache.abandon]. */
     fun abandon() {
         cache?.abandon()
         cache = null
-        files = null
+        ref = null
     }
 
     override fun dispose() {
         cache?.dispose()
         cache = null
-        files = null
+        ref = null
     }
 }

@@ -107,7 +107,7 @@ object ComponentEditor {
         kind<PositionComponent>(
             "PositionComponent",
             listOf(
-                refField("lookAtId", { it.lookAtId }, { c, v -> c.lookAtId = v }),
+                refField("lookAtId", { it.lookAtId }, { c, v -> c.lookAtId = v; c.lookAtRef = v.takeIf { it >= 0 }?.toString() }),
                 floatField("localPosition.x", { it.localPosition.x }, { c, v -> c.localPosition.x = v }),
                 floatField("localPosition.y", { it.localPosition.y }, { c, v -> c.localPosition.y = v }),
                 floatField("localPosition.z", { it.localPosition.z }, { c, v -> c.localPosition.z = v }),
@@ -178,10 +178,9 @@ object ComponentEditor {
 
     fun kindOf(name: String): ComponentKind<*>? = byName[name]
 
-    private fun entities(root: JsonNode): JsonNode? = root.get("ecs")?.get("entities")?.takeIf { it.isObject }
+    private fun entities(root: JsonNode): JsonNode? = SceneEcsPaths.entities(root)
 
-    private fun componentsOf(root: JsonNode, entityId: String): ObjectNode? =
-        entities(root)?.get(entityId)?.get("components") as? ObjectNode
+    private fun componentsOf(root: JsonNode, entityId: String): ObjectNode? = SceneEcsPaths.components(root, entityId)
 
     /** The modeled kinds [entityId] lacks, in the order the view lists them; empty when the entity is missing. */
     fun missingKinds(root: JsonNode, entityId: String): List<ComponentKind<*>> {
@@ -303,7 +302,7 @@ object ComponentEditor {
         val wanted = entityId.toIntOrNull() ?: return null
         for ((id, entity) in entities(root)?.properties().orEmpty()) {
             if (id == entityId) continue
-            val c = entity.get("components") ?: continue
+            val c = SceneEcsPaths.componentsOf(entity) ?: continue
             val refs = listOf(
                 c.get("PositionComponent")?.get("lookAtId"), c.get("ParentComponent")?.get("parentEntityId"),
                 c.get("Point2PointPositionComponent")?.get("entity1Id"), c.get("Point2PointPositionComponent")?.get("entity2Id"),
@@ -354,7 +353,7 @@ object ComponentEditor {
             var current: Int = target
             val seen = HashSet<Int>()
             while (current != NO_ENTITY && seen.add(current)) {
-                val next = entities.get(current.toString())?.get("components")?.get("ParentComponent")?.get("parentEntityId")?.asInt(NO_ENTITY) ?: NO_ENTITY
+                val next = SceneEcsPaths.componentsOf(entities.get(current.toString()))?.get("ParentComponent")?.get("parentEntityId")?.asInt(NO_ENTITY) ?: NO_ENTITY
                 if (next.toString() == entityId) return reject("componentParentCycle", label, target, entityId)
                 current = next
             }

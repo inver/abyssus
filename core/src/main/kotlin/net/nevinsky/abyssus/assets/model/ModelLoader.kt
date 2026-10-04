@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.assets.model
 
 import net.nevinsky.abyssus.assets.loading.AssetLoader
+import net.nevinsky.abyssus.assets.loading.TextureUploadQueue
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
@@ -46,22 +47,15 @@ class ModelLoader(
 }
 
 /** A parsed model waiting for its GL resources; [file] is where its textures are resolved from. */
-class PreparedModel(val data: ModelData, val file: FileHandle, private val pixmaps: MutableMap<String, Pixmap>) {
+class PreparedModel(val data: ModelData, val file: FileHandle, pixmaps: MutableMap<String, Pixmap>) {
+    private val uploads = TextureUploadQueue(pixmaps) { _, pixmap -> PreloadedTextureProvider.upload(pixmap) }
+
     /** The textures uploaded so far, by the name the model's materials use. */
-    val textures = HashMap<String, Texture>()
+    val textures: MutableMap<String, Texture> get() = uploads.textures
 
     /** Uploads one more texture; true when every texture is on the GPU. This is the slow part of building a model. */
-    fun uploadNext(): Boolean {
-        val name = pixmaps.keys.firstOrNull() ?: return true
-        textures[name] = PreloadedTextureProvider.upload(pixmaps.remove(name)!!)
-        return pixmaps.isEmpty()
-    }
+    fun uploadNext(): Boolean = uploads.uploadNext()
 
     /** Releases whatever the model did not take. Safe to call more than once. */
-    fun dispose() {
-        pixmaps.values.forEach(Pixmap::dispose)
-        pixmaps.clear()
-        textures.values.forEach(Texture::dispose)
-        textures.clear()
-    }
+    fun dispose() = uploads.dispose()
 }

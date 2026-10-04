@@ -25,7 +25,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         var selected: String? = null
         val panel = SceneViewPanel(params, testRenderer(),
             lightActions = { position -> AddLightGroup(project, file, position, { selected = it }) },
-            canAddLight = { canAddLight(file) })
+            canAddLight = { canAddLight(file, net.nevinsky.abyssus.dto.SceneDocumentCache.of(project)) })
         try {
             val button = named(panel, "add-light") as JButton
             assertTrue(button.isEnabled)

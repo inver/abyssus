@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import net.nevinsky.abyssus.assets.sky.PreparedSky
+import net.nevinsky.abyssus.assets.sky.cube.PreparedSkybox
 import net.nevinsky.abyssus.assets.testLoading
 import net.nevinsky.abyssus.assets.testProject
 import net.nevinsky.abyssus.assets.json.JsonProcessor
@@ -54,8 +54,8 @@ class ProceduralSkyLoaderTest {
         val procedural = loader.prepare(files, "skybox_physical")
         val cube = loader.prepare(files, "skybox_default")
         try {
-            assertTrue(procedural is PreparedSky.Procedural)
-            assertTrue(cube is PreparedSky.Cube)
+            assertTrue(procedural!!.prepared is PreparedProceduralSky)
+            assertTrue(cube!!.prepared is PreparedSkybox)
             assertNull(loader.prepare(files, "nope"))
         } finally {
             cube?.let(loader::discard)

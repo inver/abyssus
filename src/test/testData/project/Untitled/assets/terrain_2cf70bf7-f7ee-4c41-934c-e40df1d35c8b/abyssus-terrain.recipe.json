@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "generator": {
+    "id": "opensimplex2-fbm-v1",
+    "sourceRevision": "7ccfbc16eb1c932568f177d63a9ba51d89bbe516"
+  },
+  "settings": {
+    "seed": -956189611,
+    "featureSize": 200.0,
+    "minHeight": 0.0,
+    "maxHeight": 1.0,
+    "octaves": 5,
+    "persistence": 0.5,
+    "lacunarity": 2.0
+  },
+  "size": 1600,
+  "resolution": 180,
+  "heightsSha256": "8f5d2184e4fad93537ef91c0d0a21b31a5210b8dda153be870cb9f21fab12675"
+}

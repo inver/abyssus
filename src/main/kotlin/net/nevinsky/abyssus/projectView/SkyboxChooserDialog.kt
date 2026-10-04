@@ -57,7 +57,7 @@ class SkyboxChooserDialog(
     project: Project,
     choices: List<SkyboxChoice>,
     current: String?,
-    private val hdrPreview: HdrPreview = service<AbyssusCore>().loading.hdrPreview,
+    private val hdrPreview: HdrPreview,
 ) : DialogWrapper(project) {
     private val model = SkyboxPickerModel(choices, current)
     private val listModel = CollectionListModel(model.entries)

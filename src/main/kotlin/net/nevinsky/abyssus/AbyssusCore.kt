@@ -13,7 +13,14 @@ import net.nevinsky.abyssus.core.ModelLogging
 import net.nevinsky.abyssus.log.IntellijLoggerFactory
 import org.slf4j.ILoggerFactory
 import net.nevinsky.abyssus.assets.ShaderSource
+import net.nevinsky.abyssus.assets.edit.AssetFieldDescriptions
+import net.nevinsky.abyssus.assets.edit.AssetMetaEditor
 import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.assets.terrain.generation.TerrainAssetWriter
+import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerator
+import net.nevinsky.abyssus.assets.terrain.generation.TerrainHeightEncoder
+import net.nevinsky.abyssus.assets.terrain.generation.TerrainRecipeCodec
+import net.nevinsky.abyssus.assets.terrain.noise.FastNoiseSamplerFactory
 import net.nevinsky.abyssus.raytracing.MetalRayBackendFactory
 import net.nevinsky.abyssus.raytracing.VulkanRayBackendFactory
 import net.nevinsky.abyssus.sceneview.RayBackendSelector
@@ -28,6 +35,18 @@ import java.util.concurrent.Executors
 @Service(Service.Level.APP)
 class AbyssusCore : Disposable {
     val json = JsonProcessor()
+    val metaFiles = net.nevinsky.abyssus.dto.MetaFiles(net.nevinsky.abyssus.assets.files.AssetMetaReader(json))
+
+    /** The editable `meta.json` fields of each asset type and the editor that changes them one at a time. */
+    val assetFields = AssetFieldDescriptions()
+    val assetEditor = AssetMetaEditor(assetFields)
+
+    /** Terrain generation: seeded heights, their file encoding, new terrain files and the Abyssus-only recipe. */
+    val terrainGenerator = TerrainGenerator(FastNoiseSamplerFactory())
+    val heightEncoder = TerrainHeightEncoder()
+    val terrainWriter = TerrainAssetWriter(json, heightEncoder)
+    val terrainRecipes = TerrainRecipeCodec(json)
+    val newTerrains = net.nevinsky.abyssus.terrain.NewTerrainFactory(json, terrainWriter, heightEncoder, terrainRecipes)
 
     /**
      * The one logging interface of every module is SLF4J: this factory hands `gdx-model`, `core` and `raytracing` loggers
@@ -49,6 +68,13 @@ class AbyssusCore : Disposable {
         AppExecutorUtil.getAppExecutorService(),
         ShaderSource("/shader/sky", AssetLoading::class.java),
     )
+
+    /** The loading pipeline's Radiance sky pieces, for the chooser and the Properties panel. */
+    val hdrPreviews: net.nevinsky.abyssus.projectView.HdrPreviewSource = object : net.nevinsky.abyssus.projectView.HdrPreviewSource {
+        override val files get() = loading.hdrFiles
+        override val decoder get() = loading.decoder
+        override val preview get() = loading.hdrPreview
+    }
 
     private val rayServiceHolder = lazy {
         val rayLog = loggers.getLogger("ray")

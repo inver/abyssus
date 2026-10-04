@@ -1,0 +1,93 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package net.nevinsky.abyssus.assets.files
+
+import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.assets.META_FILE
+import net.nevinsky.abyssus.assets.SPLAT_FIELDS
+import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.assets.json.obj
+import net.nevinsky.abyssus.assets.json.text
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.terrain.generation.sha256Hex
+import java.io.File
+
+/** What a file looked like when a snapshot was taken; a replaced file changes at least one of them. */
+data class FileStamp(val length: Long, val lastModified: Long)
+
+/**
+ * Everything about one asset folder that can change what it draws: the hash of its `meta.json` text, the stamps of the
+ * files that text names ([files], by name; null for a file that is missing), and for a terrain the asset folder each
+ * splat field resolves to through its texture's `uuid` ([references], null where nothing resolves).
+ */
+data class AssetRevision(
+    val name: String,
+    val uuid: String?,
+    val type: String?,
+    val metaHash: String?,
+    val files: Map<String, FileStamp?>,
+    val references: Map<String, String?>,
+)
+
+/** The revisions of every asset folder of a project at one moment, by folder name. */
+class ProjectRevisions(val assets: Map<String, AssetRevision>)
+
+/**
+ * Takes [ProjectRevisions] snapshots and says which assets differ between two of them. A terrain also differs when a
+ * texture it references changes (its metadata or its image), and, conservatively, whenever the folder one of its splat
+ * `uuid`s resolves to changes (a texture added, removed or given another `uuid`), so a late or repaired texture shows
+ * up. Assets that did not change and reference nothing that changed are not reported: their drawables are kept.
+ */
+class AssetRevisionTracker(private val json: JsonProcessor) {
+    /** A snapshot of the assets under [assetsDir], reading each `meta.json` through [metaText] (unsaved text, say). */
+    fun snapshot(assetsDir: File, metaText: MetaTextSource = DiskMetaText()): ProjectRevisions {
+        val folders = assetsDir.listFiles { f -> f.isDirectory }?.sortedBy { it.name }.orEmpty()
+        val parsed = folders.map { dir ->
+            val text = runCatchingKeepingCancellation { metaText.read(File(dir, META_FILE)) }.getOrNull()
+            val tree = text?.let { runCatchingKeepingCancellation { json.readObject(it) }.getOrNull() }
+            Triple(dir, text, tree)
+        }
+        val byUuid = buildMap { for ((dir, _, tree) in parsed) tree?.text("uuid")?.let { putIfAbsent(it, dir.name) } }
+        val assets = parsed.associate { (dir, text, tree) ->
+            dir.name to AssetRevision(
+                name = dir.name,
+                uuid = tree?.text("uuid"),
+                type = tree?.text("type"),
+                metaHash = text?.let { sha256Hex(it.toByteArray()) },
+                files = tree?.let { stamps(dir, it) }.orEmpty(),
+                references = if (tree?.text("type") == MetaType.TERRAIN.name) references(tree, byUuid) else emptyMap(),
+            )
+        }
+        return ProjectRevisions(assets)
+    }
+
+    /** The files a `meta.json` names directly in its `additional` text values that are files of the folder. */
+    private fun stamps(dir: File, tree: JsonNode): Map<String, FileStamp?> {
+        val additional = tree.obj("additional") ?: return emptyMap()
+        return additional.fields().asSequence()
+            .filter { (key, value) -> value.isTextual && key !in SPLAT_FIELDS && value.asText().isNotBlank() }
+            .map { (_, value) -> value.asText() }
+            .distinct().sorted()
+            .associateWith { name -> File(dir, name).takeIf { it.isFile }?.let { FileStamp(it.length(), it.lastModified()) } }
+    }
+
+    private fun references(tree: JsonNode, byUuid: Map<String, String>): Map<String, String?> {
+        val additional = tree.obj("additional") ?: return emptyMap()
+        return SPLAT_FIELDS.mapNotNull { field -> additional.text(field)?.let { field to byUuid[it] } }.toMap()
+    }
+
+    /** The folder names of assets that must be loaded again going from [old] to [new]. */
+    fun changed(old: ProjectRevisions, new: ProjectRevisions): Set<String> {
+        val direct = buildSet {
+            for ((name, revision) in new.assets) if (old.assets[name] != revision) add(name)
+            for (name in old.assets.keys) if (name !in new.assets) add(name)
+        }
+        val dependents = new.assets.values
+            .filter { it.name !in direct && it.references.values.any { folder -> folder != null && folder in direct } }
+            .map { it.name }
+        return direct + dependents
+    }
+}

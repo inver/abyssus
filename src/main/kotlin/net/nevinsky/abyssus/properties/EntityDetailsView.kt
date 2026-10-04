@@ -38,13 +38,14 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JTextArea
+import net.nevinsky.abyssus.dto.MetaFiles
 
 /**
  * An entity (or one component) of a scene with an editor for every field of the components the plugin models. Editors
  * are named `field-<Kind>-<field>` (their message `error-<Kind>-<field>`), a section's Remove button `remove-<Kind>` and
  * the Add button `add-component`, which is how tests reach them.
  */
-internal class EntityDetailsView(private val project: Project, private val state: PanelState.EntityDetails) : JPanel(BorderLayout()) {
+internal class EntityDetailsView(private val project: Project, private val state: PanelState.EntityDetails, private val metaFiles: MetaFiles) : JPanel(BorderLayout()) {
     private val target = state.target
 
     init {
@@ -124,7 +125,7 @@ internal class EntityDetailsView(private val project: Project, private val state
     /** Saves [text] for [field]; a refused value goes back to what the file holds, with the reason beside the field. */
     private fun commit(section: ComponentSection, field: FieldValue, text: String, error: JBLabel, revert: () -> Unit) {
         if (text == field.value) return
-        when (val result = SceneComponentEdits.update(project, target.file, target.entityId, section.kind, field.field, text)) {
+        when (val result = SceneComponentEdits.update(project, target.file, target.entityId, section.kind, field.field, text, metaFiles)) {
             is EditResult.Rejected -> {
                 error.text = result.reason
                 revert()
@@ -165,7 +166,7 @@ internal class EntityDetailsView(private val project: Project, private val state
             isEnabled = state.addable.isNotEmpty()
             toolTipText = if (state.addable.isEmpty()) AbyssusBundle.message("propertiesNothingToAdd") else null
             addActionListener {
-                val group = addComponentGroup(project, target.file, target.entityId, state.addable)
+                val group = addComponentGroup(project, target.file, target.entityId, state.addable, metaFiles)
                 JBPopupFactory.getInstance()
                     .createActionGroupPopup(null, group, DataManager.getInstance().getDataContext(this), JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true)
                     .showUnderneathOf(this)

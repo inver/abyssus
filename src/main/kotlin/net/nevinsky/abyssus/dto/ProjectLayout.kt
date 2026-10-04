@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.dto
 
 import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.assets.ASSETS_DIR
 import java.io.File
 
 /**
@@ -16,19 +17,9 @@ object ProjectLayout {
     const val PROJECT_EXTENSION = "abss"
     const val SCENE_EXTENSION = "scene"
     const val SCENES_DIR = "scenes"
-    const val ASSETS_DIR = net.nevinsky.abyssus.assets.ASSETS_DIR
-    const val META_FILE = net.nevinsky.abyssus.assets.META_FILE
 
     /** Exact, case-sensitive, suffix-based match: `.SCENE` and `.scene.bak` are not asset files. */
     val ASSET_EXTENSIONS = setOf(SCENE_EXTENSION, PROJECT_EXTENSION)
-
-    /** The terrain `meta.json` field naming the splat map texture asset (`TerrainMeta`). */
-    const val SPLAT_MAP = net.nevinsky.abyssus.assets.SPLAT_MAP
-
-    /** The terrain `meta.json` fields naming the base and the four channel layer textures, in shader unit order. */
-    val SPLAT_LAYERS = net.nevinsky.abyssus.assets.SPLAT_LAYERS
-
-    val SPLAT_FIELDS = net.nevinsky.abyssus.assets.SPLAT_FIELDS
 
     fun isAssetFile(file: VirtualFile) = !file.isDirectory && file.extension in ASSET_EXTENSIONS
 

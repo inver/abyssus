@@ -28,4 +28,7 @@ interface SceneView : Disposable {
     fun selectEntity(entityId: String) {}
 
     fun setParams(params: SceneRenderParams)
+
+    /** Loads the assets of [revision] again once the view can safely draw; a hidden view keeps it until it is shown. */
+    fun refreshAssets(revision: AssetRevisionBatch) {}
 }

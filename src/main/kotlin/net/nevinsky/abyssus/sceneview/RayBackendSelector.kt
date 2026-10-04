@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.raytracing.*

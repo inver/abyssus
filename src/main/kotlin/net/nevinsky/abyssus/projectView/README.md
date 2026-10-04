@@ -1,7 +1,7 @@
 # projectView
 
 The **Abyssus** pane of the Project tool window: the project / scene / entity / asset tree, its row actions, and
-`editSceneJson`, the write path every scene edit uses. Required behavior: `openspec/specs/abyssus-project-view` and
+the row actions that call `editSceneJson` (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneDocumentWriter.kt`), the write path every scene edit uses. Required behavior: `openspec/specs/abyssus-project-view` and
 `openspec/specs/abyssus-scene-skybox`.
 
 ## Pieces
@@ -15,7 +15,7 @@ The **Abyssus** pane of the Project tool window: the project / scene / entity / 
 | `RowActions.kt` | What a row paints at its right edge: eye, "View", the `unused` tag, the skybox **Choose** button |
 | `SceneComponentEdits.kt` | Add, update and remove a component as undoable `editSceneJson` commands; also lists a project's model and terrain assets |
 | `ComponentActions.kt`, `ComponentTarget.kt` | The **Add Component...** / **Remove Component** tree actions and the entity or component a row stands for |
-| `EnabledToggle.kt` | `editSceneJson`, plus the writes built on it: `toggleEnabled`, `renameScene`, `setSkybox` |
+| `EnabledToggle.kt` | The writes built on `editSceneJson`: `toggleEnabled`, `renameScene`, `setSkybox` |
 | `RenameSceneAction` | Right-click **Rename Scene...** |
 | `SkyboxChoices.kt`, `SkyboxPickerModel`, `SkyboxChooserDialog` | The skybox list, its filter and selection logic, and the dialog |
 | `EntitySelection.kt` | Selects an entity's row when the scene view picks it |
@@ -32,7 +32,7 @@ The **Abyssus** pane of the Project tool window: the project / scene / entity / 
   onto the parent. `reselect` walks back to the same path and restores its expansion.
 - **Every write goes through `editSceneJson`.** It parses the document with `SceneJson`, lets the caller mutate the
   tree (returning false writes nothing), re-serializes in the file's style, replaces the text in a named
-  `WriteCommandAction`, saves, and refreshes this pane. A new writer should use it and add a `command*` message.
+  `WriteCommandAction`, saves, and publishes `AbyssusSceneEdited.TOPIC`, on which this pane refreshes itself. A new writer should use it and add a `command*` message.
 - **Where an entry writes back.** An entry knows its `source` file and the `parentKeys` leading to its container. A
   scene listed under a project writes to its own `.scene` file, not the `.abss`.
 - **Display names are labels only.** `displayName` changes what a row shows. `DtoEntry.name` stays the JSON key,

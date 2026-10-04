@@ -35,11 +35,16 @@ class SceneInteractionTest {
         val transforms = mutableListOf<Pair<String, TransformEdit>>()
     }
 
+    /** The real picking queries over what a headless frame published, except that the height below can be stated. */
+    private class FakeQueries(private val real: SceneQueries, private val ground: ((String) -> Float?)?) : SceneQueries by real {
+        override fun groundBelow(entityId: String): Float? = if (ground != null) ground.invoke(entityId) else real.groundBelow(entityId)
+    }
+
     private fun setup(orbit: OrbitCamera = OrbitCamera.from(CameraParams.DEFAULT), ground: ((String) -> Float?)? = null): Setup {
         val renderer = testRenderer().also { it.params = mainParams }
-        val interaction = SceneInteraction(renderer, orbit, ground ?: renderer::groundBelow)
-        interaction.size = ViewSize(width, height, width, height)
         renderer.updateCamera(width, height, orbit)
+        val interaction = SceneInteraction(renderer.state, FakeQueries(renderer.queries, ground), orbit)
+        interaction.size = ViewSize(width, height, width, height)
         return Setup(renderer, orbit, interaction).also { s ->
             interaction.onPick = { s.picked += it }
             interaction.onTransform = { id, edit -> s.transforms.add(id to edit); true }
@@ -58,12 +63,12 @@ class SceneInteractionTest {
     private fun movingModel(ground: ((String) -> Float?)? = null): Setup {
         val target = mainParams.content.models.first { it.entityId == "0" }.transform.position
         val s = setup(OrbitCamera(target, 12f, 0.4f, 0.4f), ground)
-        s.renderer.selectedId = "0"
+        s.renderer.state.selectedId = "0"
         s.renderer.updateCamera(width, height, s.orbit)
         return s
     }
 
-    private fun droppingCamera(height: Float?): Setup = setup(ground = { height }).also { it.renderer.selectedId = "4" }
+    private fun droppingCamera(height: Float?): Setup = setup(ground = { height }).also { it.renderer.state.selectedId = "4" }
 
     @Test fun canDropIsFalseWithNothingSelected() { assertFalse(setup(ground = { 0f }).interaction.canDrop) }
     @Test fun canDropIsFalseWithNothingBelow() { assertFalse(droppingCamera(null).interaction.canDrop) }
@@ -72,7 +77,7 @@ class SceneInteractionTest {
     }
     @Test fun canDropIsFalseDuringADrag() {
         val s = movingModel { 0f }
-        val tip = screenOf(s.renderer, s.renderer.gizmoHandles(height)!!.tip(GizmoAxis.X))
+        val tip = screenOf(s.renderer, s.renderer.queries.gizmoHandles(height)!!.tip(GizmoAxis.X))
         s.interaction.pressed(tip.first, tip.second, true)
         assertTrue(s.interaction.isDragging)
         assertFalse(s.interaction.canDrop)
@@ -81,7 +86,7 @@ class SceneInteractionTest {
         assertTrue(s.transforms.isEmpty())
     }
     @Test fun dropWithNothingBelowReportsNoTransform() {
-        val s = droppingCamera(null); s.interaction.drop(); assertTrue(s.transforms.isEmpty()); assertTrue(s.renderer.preview.isEmpty())
+        val s = droppingCamera(null); s.interaction.drop(); assertTrue(s.transforms.isEmpty()); assertTrue(s.renderer.state.preview.isEmpty())
     }
     @Test fun anAlreadyRestingObjectReportsNoTransform() {
         val s = droppingCamera(cameraPosition.y - 0.5f); s.interaction.drop(); assertTrue(s.transforms.isEmpty())
@@ -106,13 +111,13 @@ class SceneInteractionTest {
     @Test fun terrainsAndTheViewCameraCannotDrop() {
         val s = droppingCamera(0f)
         s.interaction.viewCamera = "4"; assertFalse(s.interaction.canDrop); s.interaction.drop()
-        s.interaction.viewCamera = null; s.renderer.selectedId = "1"; assertFalse(s.interaction.canDrop); s.interaction.drop()
+        s.interaction.viewCamera = null; s.renderer.state.selectedId = "1"; assertFalse(s.interaction.canDrop); s.interaction.drop()
         assertTrue(s.transforms.isEmpty())
     }
     @Test fun aLightDropsUsingItsMarkerBottom() {
         val s = setup(ground = { 2f })
         val light = SceneContent.of(parseScene("""{"ecs":{"entities":{"9":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":1,"y":8,"z":3}}}}}}}"""))
-        s.renderer.params = mainParams.copy(content = light); s.renderer.selectedId = "9"
+        s.renderer.params = mainParams.copy(content = light); s.renderer.state.selectedId = "9"
         assertTrue(s.interaction.canDrop)
         s.interaction.drop()
         val position = s.transforms.single().second.position!!
@@ -123,7 +128,7 @@ class SceneInteractionTest {
 
     @Test fun aRejectedDropDiscardsItsPreview() {
         val s = droppingCamera(0f); s.interaction.onTransform = { _, _ -> false }; s.interaction.drop()
-        assertTrue(s.renderer.preview.isEmpty())
+        assertTrue(s.renderer.state.preview.isEmpty())
     }
     @Test fun aSynchronousDocumentRefreshKeepsTheDroppedPreview() {
         val s = droppingCamera(0f)
@@ -137,7 +142,7 @@ class SceneInteractionTest {
     }
     @Test fun aParamsChangeRechecksDropAfterTheNextFrameEvenWithUnchangedDrawnIds() {
         var ground: Float? = null
-        val s = setup(ground = { ground }); s.renderer.selectedId = "4"
+        val s = setup(ground = { ground }); s.renderer.state.selectedId = "4"
         var changes = 0; s.interaction.onStateChanged = { changes++ }
         s.interaction.frameRendered(1L)
         s.interaction.paramsChanged(mainParams) // query still sees last frame's geometry
@@ -160,7 +165,7 @@ class SceneInteractionTest {
 
     @Test fun canDropTurnsOnWhenTheDrawnListsChange() {
         var ground: Float? = null
-        val s = setup(ground = { ground }); s.renderer.selectedId = "4"
+        val s = setup(ground = { ground }); s.renderer.state.selectedId = "4"
         var changes = 0; s.interaction.onStateChanged = { changes++ }
         s.interaction.frameRendered(0L); assertFalse(s.interaction.canDrop)
         ground = 0f; s.interaction.frameRendered(1L)
@@ -170,7 +175,7 @@ class SceneInteractionTest {
     }
     @Test fun anUnchangedDrawnVersionFiresNoStateChange() {
         var lookups = 0
-        val s = setup(ground = { lookups++; null }); s.renderer.selectedId = "4"
+        val s = setup(ground = { lookups++; null }); s.renderer.state.selectedId = "4"
         var changes = 0; s.interaction.onStateChanged = { changes++ }
         s.interaction.frameRendered(1L)
         val before = lookups
@@ -190,7 +195,7 @@ class SceneInteractionTest {
     @Test
     fun aClickOnEmptySpaceClearsTheSelection() {
         val s = setup(OrbitCamera(cameraPosition, 10f, 0f, 0f))
-        s.renderer.selectedId = "4"
+        s.renderer.state.selectedId = "4"
         s.interaction.pressed(5, 5, true)
         s.interaction.released(5, 5, true)
         assertNull(s.interaction.selectedId)
@@ -200,7 +205,7 @@ class SceneInteractionTest {
     @Test
     fun aSelectedEntityThatLeavesTheSceneIsDeselected() {
         val s = setup()
-        s.renderer.selectedId = "0"
+        s.renderer.state.selectedId = "0"
         s.interaction.paramsChanged(SceneRenderParams.DEFAULT)
         assertNull(s.interaction.selectedId)
     }
@@ -210,9 +215,9 @@ class SceneInteractionTest {
         val s = setup()
         assertEquals(GizmoMode.MOVE, s.interaction.mode)
         s.interaction.mode = GizmoMode.ROTATE
-        assertEquals(GizmoMode.ROTATE, s.renderer.gizmoMode)
+        assertEquals(GizmoMode.ROTATE, s.renderer.state.gizmoMode)
         s.interaction.mode = GizmoMode.MOVE
-        assertEquals(GizmoMode.MOVE, s.renderer.gizmoMode)
+        assertEquals(GizmoMode.MOVE, s.renderer.state.gizmoMode)
     }
 
     @Test
@@ -237,7 +242,7 @@ class SceneInteractionTest {
     @Test
     fun draggingAMoveArrowMovesTheObjectAndWritesOnceOnRelease() {
         val s = movingModel()
-        val handles = s.renderer.gizmoHandles(height)!!
+        val handles = s.renderer.queries.gizmoHandles(height)!!
         val origin = handles.origin
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
         val farther = screenOf(s.renderer, Vec3(origin.x + 2 * handles.size, origin.y, origin.z))
@@ -278,18 +283,18 @@ class SceneInteractionTest {
     @Test
     fun aPressAndReleaseOnAHandleWithoutMovingWritesNothing() {
         val s = movingModel()
-        val tip = screenOf(s.renderer, s.renderer.gizmoHandles(height)!!.tip(GizmoAxis.X))
+        val tip = screenOf(s.renderer, s.renderer.queries.gizmoHandles(height)!!.tip(GizmoAxis.X))
         s.interaction.pressed(tip.first, tip.second, true)
         s.interaction.released(tip.first, tip.second, true)
         assertTrue(s.transforms.isEmpty())
         assertEquals("0", s.interaction.selectedId)
-        assertTrue(s.renderer.preview.isEmpty())
+        assertTrue(s.renderer.state.preview.isEmpty())
     }
 
     @Test
     fun escapeCancelsADragAndWritesNothing() {
         val s = movingModel()
-        val handles = s.renderer.gizmoHandles(height)!!
+        val handles = s.renderer.queries.gizmoHandles(height)!!
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
         val farther = screenOf(s.renderer, Vec3(handles.origin.x + 2 * handles.size, handles.origin.y, handles.origin.z))
         val start = mainParams.content.models.first { it.entityId == "0" }.transform.position
@@ -308,20 +313,20 @@ class SceneInteractionTest {
     fun aRejectedWriteDropsThePreview() {
         val s = movingModel()
         s.interaction.onTransform = { _, _ -> false }
-        val handles = s.renderer.gizmoHandles(height)!!
+        val handles = s.renderer.queries.gizmoHandles(height)!!
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
         val farther = screenOf(s.renderer, Vec3(handles.origin.x + 2 * handles.size, handles.origin.y, handles.origin.z))
         s.interaction.pressed(tip.first, tip.second, true)
         s.interaction.dragged(farther.first, farther.second, true)
         s.interaction.released(farther.first, farther.second, true)
-        assertTrue(s.renderer.preview.isEmpty())
+        assertTrue(s.renderer.state.preview.isEmpty())
     }
 
     @Test
     fun rotatingARingWritesTheRotation() {
         val s = movingModel()
         s.interaction.mode = GizmoMode.ROTATE
-        val handles = s.renderer.gizmoHandles(height)!!
+        val handles = s.renderer.queries.gizmoHandles(height)!!
         val o = handles.origin
         // a quarter turn about Y: from +X on the ring to +Z... in screen terms, between two points of the Y ring
         val from = screenOf(s.renderer, Vec3(o.x + handles.size, o.y, o.z))
@@ -333,6 +338,40 @@ class SceneInteractionTest {
         assertNull(edit.position)
         val q = edit.rotation!!
         assertTrue("rotated about Y: $q", kotlin.math.abs(q.y) > 0.5f && kotlin.math.abs(q.x) < 0.2f && kotlin.math.abs(q.z) < 0.2f)
+    }
+
+    @Test
+    fun rotatingAHandleAimedLightEmitsAHandleMove() {
+        val params = SceneRenderParams.from(
+            parseScene(File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()),
+            CameraParams.DEFAULT,
+        )
+        val lightPos = params.content.lights.first { it.entityId == "1" }.position
+        val s = setup(OrbitCamera(lightPos, 12f, 0.4f, 0f))
+        s.renderer.params = params
+        s.renderer.updateCamera(width, height, s.orbit)
+        s.renderer.state.selectedId = "1"
+        s.interaction.mode = GizmoMode.ROTATE
+        val handles = s.renderer.queries.gizmoHandles(height)!!
+        val o = handles.origin
+        // a quarter turn about X on the X ring: from +Y to +Z
+        val from = screenOf(s.renderer, Vec3(o.x, o.y + handles.size, o.z))
+        val to = screenOf(s.renderer, Vec3(o.x, o.y, o.z + handles.size))
+        s.interaction.pressed(from.first, from.second, true)
+        s.interaction.dragged(to.first, to.second, true)
+        s.interaction.released(to.first, to.second, true)
+        val (id, edit) = s.transforms.single()
+        assertEquals("1", id)
+        assertNull(edit.position)
+        assertNull(edit.rotation)
+        val target = edit.target!!
+        assertEquals("0", target.entityId)
+        // distance 10 from (0, 10, 0) along the turned direction (about (0, 0, -1)); screen projection truncates
+        // the ring pixels, so the drag lands near a quarter turn rather than exactly on it.
+        assertEquals(0f, target.position.x, 0.5f)
+        assertEquals(10f, target.position.y, 0.5f)
+        assertEquals(-10f, target.position.z, 1.5f)
+        assertTrue("turned toward -Z: ${target.position}", target.position.z < -8f && kotlin.math.abs(target.position.x) < 1f)
     }
 
     @Test

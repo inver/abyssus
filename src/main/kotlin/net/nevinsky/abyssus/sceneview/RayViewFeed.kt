@@ -7,11 +7,12 @@ package net.nevinsky.abyssus.sceneview
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.assets.model.RayModelSkinning
 import net.nevinsky.abyssus.assets.sky.RaySkySnapshot
-import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import net.nevinsky.abyssus.assets.displayMessage
 
 /**
  * Connects one scene view's renderer to its [RayViewRuntime]. [frame] runs on the render thread once per frame: it
@@ -64,7 +65,7 @@ internal class RayViewFeed(
         when (val state = assets.poll()) {
             is RaySceneAssetState.Preparing -> return null
             is RaySceneAssetState.Failed -> {
-                runtime.fail(state.failures.entries.joinToString { "${it.key}: ${it.value.message ?: it.value.javaClass.simpleName}" })
+                runtime.fail(state.failures.entries.joinToString { "${it.key}: ${it.value.displayMessage()}" })
                 return null
             }
             is RaySceneAssetState.Ready -> post(context, state)
@@ -109,7 +110,7 @@ internal class RayViewFeed(
                 if (job.epoch != epoch) continue
                 runCatchingKeepingCancellation { convert(job) }.onFailure { failure ->
                     reportFailure(failure)
-                    runtime.fail(failure.message ?: failure.javaClass.simpleName)
+                    runtime.fail(failure.displayMessage())
                 }
             }
         } finally {

@@ -13,7 +13,7 @@ import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.core.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.core.shader.ShadowLightRecord
-import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 
 /** GL resources belong to one active canvas context. Construct, render, and dispose only on its safe GL thread. */
 class ShadowResources(private val size: Int = ShadowLayout.ATLAS_SIZE) : Disposable {

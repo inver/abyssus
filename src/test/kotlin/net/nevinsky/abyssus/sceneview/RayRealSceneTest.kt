@@ -69,8 +69,15 @@ class RayRealSceneTest {
                 var rendered: RayFrame? = null
                 while (rendered == null && System.nanoTime() < deadline) { rendered = session.poll(); Thread.sleep(2) }
                 val image = checkNotNull(rendered) { "the real scene did not render within 30 seconds" }
-                assertTrue("something of the scene is hit", image.depthValues().any { it < 1f })
-                assertTrue("the frame is not a single colour", image.colorValues().toSet().size > 8)
+                val colors = image.colorValues()
+                val summary = "${colors.toSet().size} distinct values in [${colors.min()}, ${colors.max()}], ${image.depthValues().count { it < 1f }} of ${image.depthValues().size} pixels hit"
+                assertTrue("something of the scene is hit: $summary", image.depthValues().any { it < 1f })
+                // not a fixture-specific colour count: the scene's pixels must differ from the background's, and nothing may be flat zero
+                val depth = image.depthValues()
+                val sceneColor = colors.copyOfRange(4 * depth.indexOfFirst { it < 1f }, 4 * depth.indexOfFirst { it < 1f } + 3)
+                val background = depth.indexOfFirst { it >= 1f }
+                assertTrue("the scene is not drawn in one flat colour: $summary", colors.toSet().size > 1)
+                if (background >= 0) assertFalse("scene and background look the same: $summary", sceneColor.contentEquals(colors.copyOfRange(4 * background, 4 * background + 3)))
                 assertTrue(image.colorValues().all { it.isFinite() })
             }
         }

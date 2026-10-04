@@ -11,6 +11,10 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import net.nevinsky.abyssus.ecs.component.LIGHT_RANGE
+import net.nevinsky.abyssus.ecs.component.CAMERA_NEAR
+import net.nevinsky.abyssus.ecs.component.CAMERA_FAR
+import net.nevinsky.abyssus.ecs.component.CAMERA_FOV
 
 class SceneContentTest {
     private fun content(json: String) = SceneContent.of(parseScene(json))
@@ -87,8 +91,39 @@ class SceneContentTest {
         val l = c.lights.single()
         assertEquals(LightKind.POINT, l.kind)
         assertEquals(0.2f, l.color.r, 0f)
+        assertEquals(0f, l.color.g, 0f)
+        assertEquals(0f, l.color.b, 0f)
         assertEquals(2f, l.intensity, 0f)
-        assertEquals(DEFAULT_LIGHT_RANGE, l.range, 0f)
+        assertEquals(LIGHT_RANGE, l.range, 0f)
+    }
+
+    @Test
+    fun aMissingIntensityIsOneAndAMissingColorIsWhite() {
+        val noIntensity = content(entity("""{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{"color":{"r":1,"g":1,"b":1,"a":1}}}}"""))
+        assertEquals(1f, noIntensity.lights.single().intensity, 0f)
+        val noColor = content(entity("""{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{"intensity":0.5}}}""")).lights.single()
+        assertEquals(Rgba(1f, 1f, 1f, 1f), noColor.color)
+        assertEquals(0.5f, noColor.intensity, 0f)
+    }
+
+    @Test
+    fun aSpotlightWithoutRangeConeOrSoftnessUsesTheDefaults() {
+        val l = content(entity("""{"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":{"light":{"intensity":1}}}""")).lights.single()
+        assertEquals(100f, l.range, 0f)
+        assertEquals(45f, l.coneAngle, 0f)
+        assertEquals(0.2f, l.edgeSoftness, 0f)
+    }
+
+    @Test
+    fun aTextualLookAtTargetIsKept() {
+        val c = content("""{"ecs":{"entities":{
+            "h":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}},
+            "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
+                "PositionComponent":{"lookAtId":"h","localPosition":{"y":5}}}}}}}""")
+        val l = c.lights.single()
+        assertEquals("h", l.lookAtId)
+        assertEquals("h", c.aimHandleOf(l))
+        assertEquals(Vec3(0f, -1f, 0f), l.direction)
     }
 
     @Test
@@ -133,13 +168,61 @@ class SceneContentTest {
     }
 
     @Test
+    fun mundusLightsFaceTheirHandles() {
+        val c = content(File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText())
+        assertEquals(setOf("0", "3"), c.handleIds)
+        val byId = c.lights.associateBy { it.entityId }
+        val directional = byId["1"]!!
+        assertEquals(LightKind.DIRECTIONAL, directional.kind)
+        assertEquals(Vec3(0f, 10f, 0f), directional.position)
+        assertEquals(Vec3(0f, -1f, 0f), directional.direction)
+        assertEquals("0", directional.lookAtId)
+        val spot = byId["4"]!!
+        assertEquals(LightKind.SPOT, spot.kind)
+        assertEquals(Vec3(0f, 5f, 0f), spot.position)
+        assertEquals(Vec3(0f, -1f, 0f), spot.direction)
+        assertEquals("3", spot.lookAtId)
+    }
+
+    @Test
+    fun aLightWithAMissingTargetFacesAlongItsRotation() {
+        val s = Math.sqrt(0.5).toFloat()
+        val c = content(entity("""{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
+            "PositionComponent":{"lookAtId":99,"localRotation":{"y":$s,"w":$s}}}"""))
+        val l = c.lights.single()
+        assertEquals("99", l.lookAtId)
+        assertEquals(-1f, l.direction.x, 1e-5f)
+        assertEquals(0f, l.direction.y, 1e-5f)
+        assertEquals(0f, l.direction.z, 1e-5f)
+    }
+
+    @Test
+    fun aLightAtItsTargetFacesAlongItsRotation() {
+        val c = content("""{"ecs":{"entities":{
+            "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
+                "PositionComponent":{"localPosition":{"x":3}}}},
+            "2":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
+                "PositionComponent":{"lookAtId":1,"localPosition":{"x":3}}}}}}}""")
+        assertEquals(Vec3(0f, 0f, -1f), c.lights.single { it.entityId == "2" }.direction)
+    }
+
+    @Test
+    fun aPointLightIgnoresItsLookAtTarget() {
+        val c = content("""{"ecs":{"entities":{
+            "0":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{}}},
+            "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{},
+                "PositionComponent":{"lookAtId":0,"localPosition":{"y":10}}}}}}}""")
+        assertEquals(Vec3(0f, 0f, -1f), c.lights.single().direction)
+    }
+
+    @Test
     fun cameraWithoutCameraObjectGetsDefaults() {
         val cam = content(entity("""{"CameraComponent":{},"PositionComponent":{"localPosition":{"x":1,"y":2,"z":3}}}""")).cameras.single()
         assertEquals(Vec3(1f, 2f, 3f), cam.position)
         assertEquals(Vec3(0f, 0f, -1f), cam.direction)
-        assertEquals(DEFAULT_CAMERA_NEAR, cam.near, 0f)
-        assertEquals(DEFAULT_CAMERA_FAR, cam.far, 0f)
-        assertEquals(DEFAULT_CAMERA_FOV, cam.fieldOfView, 0f)
+        assertEquals(CAMERA_NEAR, cam.near, 0f)
+        assertEquals(CAMERA_FAR, cam.far, 0f)
+        assertEquals(CAMERA_FOV, cam.fieldOfView, 0f)
         assertEquals("7", cam.name)
         assertNull(cam.lookAtId)
     }

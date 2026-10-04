@@ -12,8 +12,8 @@ class LightComponent(val light: LightData = LightData(), var nested: Boolean = t
 /** A light's color, intensity and reach; the light kind lives on [TypeComponent]. */
 data class LightData(
     var color: ColorDto = ColorDto(1f, 1f, 1f, 1f),
-    var intensity: Float = 1f,
-    var range: Float = 100f,
-    var coneAngle: Float = 45f,
-    var edgeSoftness: Float = 0.2f,
+    var intensity: Float = LIGHT_INTENSITY,
+    var range: Float = LIGHT_RANGE,
+    var coneAngle: Float = LIGHT_CONE_ANGLE,
+    var edgeSoftness: Float = LIGHT_EDGE_SOFTNESS,
 )

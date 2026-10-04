@@ -8,24 +8,29 @@ package net.nevinsky.abyssus.properties
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.ecs.scene.ComponentEditor
 import net.nevinsky.abyssus.ecs.scene.FieldKind
 import net.nevinsky.abyssus.ecs.scene.FieldValue
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.projectView.ComponentTarget
-import net.nevinsky.abyssus.projectView.HDR_SKY_TYPE
 import net.nevinsky.abyssus.projectView.hdrSkyInfo
 import net.nevinsky.abyssus.projectView.SceneComponentEdits
 import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.assets.sky.hdr.HdrPreview
-import net.nevinsky.abyssus.sceneview.textOf
+import net.nevinsky.abyssus.dto.textOf
 import net.nevinsky.abyssus.projectView.describeNonAsset
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
+import net.nevinsky.abyssus.assets.META_FILE
+import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.ecs.scene.SceneEcsPaths
+import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.assets.sky.cube.SKYBOX_FACES
+import net.nevinsky.abyssus.projectView.HdrPreviewSource
 
 /** What the panel shows. */
 sealed interface PanelState {
@@ -35,7 +40,16 @@ sealed interface PanelState {
     /** A scene row: the scene's runtime view settings, currently its Ray Tracing switch. Reads no file. */
     data class SceneDetails(val file: VirtualFile, val name: String) : PanelState
 
-    data class Details(val name: String, val meta: AssetMeta.Loaded, val faces: List<FaceCell>?, val hdr: HdrCell? = null) : PanelState
+    /** An asset's Meta; [fields] are its editable properties (empty for a type without editors, which stays read only). */
+    data class Details(
+        val name: String,
+        val meta: AssetMeta.Loaded,
+        val faces: List<FaceCell>?,
+        val hdr: HdrCell? = null,
+        val fields: List<AssetFieldState> = emptyList(),
+        /** For a terrain: what regeneration works from, or why it cannot. */
+        val terrain: net.nevinsky.abyssus.terrain.TerrainSource? = null,
+    ) : PanelState
 
     /**
      * An entity of [target]'s scene, or only its component when `target.kind` is set. [addable] names the modeled kinds the
@@ -58,9 +72,6 @@ data class FaceCell(val face: String, val file: String, val image: BufferedImage
 /** An HDR sky's preview: the tone-mapped [image] and its [label] (file and size), or a null image and the [label] saying why. */
 data class HdrCell(val label: String, val image: BufferedImage?)
 
-val SKYBOX_FACES = listOf("top", "bottom", "left", "right", "front", "back")
-
-private const val SKYBOX = "SKYBOX"
 private const val THUMBNAIL_WIDTH = 320
 private const val THUMBNAIL_HEIGHT = 144
 
@@ -71,29 +82,30 @@ fun emptyState(node: Any?): PanelState.Empty {
 }
 
 /** Reads the asset in [folder] for display: its Meta and, for a skybox, the face thumbnails or the HDR preview. Safe off the EDT. */
-fun readAssetState(folder: VirtualFile): PanelState {
-    val meta = runReadAction { loadAssetMeta(folder) }
+fun readAssetState(folder: VirtualFile, services: PanelServices): PanelState {
+    val meta = runReadAction { loadAssetMeta(folder, services.metaFiles) }
     return when (meta) {
         is AssetMeta.Failed -> PanelState.Empty(meta.message, null)
         is AssetMeta.Loaded -> PanelState.Details(
             folder.name, meta,
-            if (meta.type == SKYBOX) faces(folder, meta) else null,
-            if (meta.type == HDR_SKY_TYPE) hdrCell(folder, meta) else null,
+            if (meta.type == MetaType.SKYBOX) faces(folder, meta) else null,
+            if (meta.type == MetaType.SKYBOX_HDR) hdrCell(folder, meta, services.hdr) else null,
+            readFieldStates(folder, meta.type, meta.json, services),
+            if (meta.type == MetaType.TERRAIN) readTerrainNow(folder, meta, services) else null,
         )
     }
 }
 
 /** The preview of an HDR sky: its image decoded and tone mapped here, so off the EDT like the rest of the state. */
-private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded): HdrCell {
-    val loading = service<AbyssusCore>().loading
-    val info = hdrSkyInfo(folder, meta.json, loading.hdrFiles, loading.decoder)
+private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreviewSource): HdrCell {
+    val info = hdrSkyInfo(folder, meta.json, hdr)
     val file = info.file ?: return HdrCell(AbyssusBundle.message("propertiesHdrNoFile"), null)
     val image = runCatchingKeepingCancellation {
-        folder.findChild(file)?.inputStream?.buffered()?.use { loading.hdrPreview.image(it, THUMBNAIL_WIDTH) } ?: error("missing")
+        folder.findChild(file)?.inputStream?.buffered()?.use { hdr.preview.image(it, THUMBNAIL_WIDTH) } ?: error("missing")
     }
     return image.fold(
         { HdrCell(AbyssusBundle.message("propertiesHdrLabel", file, info.width.toString(), info.height.toString()), it) },
-        { HdrCell(AbyssusBundle.message("propertiesHdrUnreadable", file, it.message ?: it.javaClass.simpleName), null) },
+        { HdrCell(AbyssusBundle.message("propertiesHdrUnreadable", file, it.displayMessage()), null) },
     )
 }
 
@@ -101,14 +113,14 @@ private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded): HdrCell {
  * Reads the entity (or component) of [target] from the scene's current text for display. Safe off the EDT. The state is
  * `Empty` with a message when the scene cannot be read or the entity or component is gone.
  */
-fun readEntityState(target: ComponentTarget): PanelState {
+fun readEntityState(target: ComponentTarget, services: PanelServices): PanelState {
     val root = runCatchingKeepingCancellation { SceneJson.parse(runReadAction { textOf(target.file) }) }
-        .getOrElse { return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.message ?: it.javaClass.simpleName), null) }
-    val entity = root.get("ecs")?.get("entities")?.get(target.entityId)?.takeIf { it.isObject }
+        .getOrElse { return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.displayMessage()), null) }
+    val entity = SceneEcsPaths.entities(root)?.get(target.entityId)?.takeIf { it.isObject }
         ?: return PanelState.Empty(AbyssusBundle.message("propertiesEntityGone", target.entityId), null)
     val components = entity.get("components")?.takeIf { it.isObject }
     val kinds = target.kind?.let { listOf(it) } ?: components?.fieldNames()?.asSequence()?.toList().orEmpty()
-    val assets = SceneComponentEdits.renderAssets(target.file).map { it.name }
+    val assets = SceneComponentEdits.renderAssets(target.file, services.metaFiles).map { it.name }
     val sections = kinds.map { kind ->
         val modeled = ComponentEditor.kindOf(kind)
         val fields = ComponentEditor.read(root, target.entityId, kind)
@@ -119,7 +131,7 @@ fun readEntityState(target: ComponentTarget): PanelState {
             else -> ComponentSection(kind, modeled.label, fields.map { if (it.kind == FieldKind.ASSET_NAME) it.copy(choices = (assets + it.value).filter(String::isNotEmpty).distinct()) else it }, null)
         }
     }
-    val name = components?.get("NameComponent")?.get("name")?.takeIf { it.isTextual }?.asText()?.takeIf { it.isNotBlank() } ?: target.entityId
+    val name = SceneEcsPaths.entityName(components, target.entityId)
     val addable = if (target.kind == null) ComponentEditor.missingKinds(root, target.entityId).map { it.name } else emptyList()
     return PanelState.EntityDetails(target, name, sections, addable)
 }
@@ -132,8 +144,12 @@ private fun faces(folder: VirtualFile, meta: AssetMeta.Loaded): List<FaceCell> {
     }
 }
 
+/** The file [fileName] in [folder], or null when the folder is gone or holds no such file (a directory does not count). */
+private fun imageFile(folder: VirtualFile, fileName: String): VirtualFile? =
+    folder.takeIf { it.isValid }?.findChild(fileName)?.takeIf { it.isValid && !it.isDirectory }
+
 private fun thumbnail(folder: VirtualFile, fileName: String, maxWidth: Int = THUMBNAIL_WIDTH, maxHeight: Int = THUMBNAIL_HEIGHT): BufferedImage? = runCatchingKeepingCancellation {
-    val file = folder.takeIf { it.isValid }?.findChild(fileName)?.takeIf { it.isValid && !it.isDirectory } ?: return@runCatchingKeepingCancellation null
+    val file = imageFile(folder, fileName) ?: return@runCatchingKeepingCancellation null
     val source = ImageIO.read(ByteArrayInputStream(file.contentsToByteArray())) ?: return@runCatchingKeepingCancellation null
     scaled(source, maxWidth, maxHeight)
 }.getOrNull()
@@ -153,9 +169,20 @@ private fun scaled(source: BufferedImage, maxWidth: Int, maxHeight: Int): Buffer
 
 /** A tone-mapped thumbnail at most [width] wide of the Radiance image [fileName] in [folder], or null when it is absent or unreadable. Off the EDT. */
 fun hdrThumbnail(folder: VirtualFile, fileName: String, width: Int, preview: HdrPreview): BufferedImage? = runCatchingKeepingCancellation {
-    val file = folder.takeIf { it.isValid }?.findChild(fileName)?.takeIf { it.isValid && !it.isDirectory } ?: return@runCatchingKeepingCancellation null
+    val file = imageFile(folder, fileName) ?: return@runCatchingKeepingCancellation null
     file.inputStream.buffered().use { preview.image(it, width) }
 }.getOrNull()
 
 /** A small square-bounded thumbnail of the image [fileName] in [folder], or null when it is absent or cannot be decoded. Safe off the EDT. */
 fun smallThumbnail(folder: VirtualFile, fileName: String, size: Int): BufferedImage? = thumbnail(folder, fileName, size, size)
+
+private fun readTerrainNow(folder: VirtualFile, meta: AssetMeta.Loaded, services: PanelServices): net.nevinsky.abyssus.terrain.TerrainSource {
+    val text = folder.findChild(META_FILE)?.let { runReadAction { textOf(it) } } ?: ""
+    return net.nevinsky.abyssus.terrain.readTerrainSource(java.io.File(folder.path), text, meta.json, AssetReferenceChoices(services.json), services.terrainRecipes)
+}
+
+/** The terrain of [folder] as it is now, for the checks Apply makes just before it writes. UI thread. */
+fun readTerrainSourceNow(folder: VirtualFile, services: PanelServices): net.nevinsky.abyssus.terrain.TerrainSource {
+    val meta = loadAssetMeta(folder, services.metaFiles) as? AssetMeta.Loaded ?: return net.nevinsky.abyssus.terrain.TerrainSource.Unusable("meta.json")
+    return readTerrainNow(folder, meta, services)
+}

@@ -295,3 +295,17 @@ read can run `ScenePreview.apply`. `canDrop` also builds `targets()` twice (`low
 
 Steps 1–5 are mechanical and covered by the existing tests. Following `AGENTS.md`, steps 7–8 change behavior-adjacent
 structure, so they should go through an OpenSpec change.
+
+---
+
+## Status
+
+The `design-review-refactor` change closed every finding above except these:
+
+- **L1** (Ashley code that only tests use): a non-goal of that change; the classes are untouched.
+- **L8** (`DtoEntry.equals`): needs its own tree-refresh decision.
+- **The number-text question** (transform writes use `1.0`, component writes use `1`): deferred until it is checked against
+  what the Mundus editor writes.
+- **L9** (`scripts/check-docs.sh` failing): already fixed before that change.
+- **`TerrainPreviewRunner`** keeps its own `try`/`catch` instead of `runCatchingKeepingCancellation`: its "superseded"
+  cancellation is the run's outcome, so it must be captured.

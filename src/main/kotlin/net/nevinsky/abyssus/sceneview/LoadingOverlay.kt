@@ -6,11 +6,9 @@
 package net.nevinsky.abyssus.sceneview
 
 import net.nevinsky.abyssus.assets.ShaderSource
+import net.nevinsky.abyssus.assets.sky.createFullscreenTriangle
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.Mesh
-import com.badlogic.gdx.graphics.VertexAttribute
-import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.utils.Disposable
 import kotlin.math.PI
 
@@ -21,10 +19,7 @@ import kotlin.math.PI
 class LoadingOverlay(shaders: ShaderSource) : Disposable {
     private val program = shaders.program("overlay")
 
-    // one triangle covering the whole viewport
-    private val triangle = Mesh(true, 3, 0, VertexAttribute(VertexAttributes.Usage.Position, 2, "a_position")).also {
-        it.setVertices(floatArrayOf(-1f, -1f, 3f, -1f, -1f, 3f))
-    }
+    private val triangle = createFullscreenTriangle()
 
     private var seconds = 0f
 

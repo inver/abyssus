@@ -13,6 +13,8 @@ import net.nevinsky.abyssus.filetype.EyeIcons
 import java.awt.Color
 import java.awt.image.BufferedImage
 import javax.swing.JComponent
+import net.nevinsky.abyssus.testMetaFiles
+import net.nevinsky.abyssus.testCore
 
 class DesignLookTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
@@ -28,7 +30,7 @@ class DesignLookTest : BasePlatformTestCase() {
         return image
     }
 
-    private fun dialog(choices: List<SkyboxChoice>) = SkyboxChooserDialog(project, choices, null).also { Disposer.register(testRootDisposable, it.disposable) }
+    private fun dialog(choices: List<SkyboxChoice>) = SkyboxChooserDialog(project, choices, null, testCore.hdrPreviews.preview).also { Disposer.register(testRootDisposable, it.disposable) }
 
     private val choices = listOf(SkyboxChoice("nebula", 6, listOf("png"), 1, false), SkyboxChoice("dusk", 6, listOf("png"), 0, true))
 
@@ -73,7 +75,7 @@ class DesignLookTest : BasePlatformTestCase() {
         myFixture.addFileToProject("p/assets/sky/meta.json", """{"type":"SKYBOX","additional":{"top":"skybox_default.png","bottom":"skybox_default.png","left":"skybox_default.png","right":"skybox_default.png","front":"skybox_default.png","back":"missing.png"}}""")
         val abss = myFixture.findFileInTempDir("p/P.abss")
         myFixture.addFileToProject("p/scenes/S.scene", "{}")
-        val loaded = loadSkyboxChoices(project, abss)!!
+        val loaded = loadSkyboxChoices(project, abss, testMetaFiles(), testCore.hdrPreviews)!!
         val sky = loaded.single()
         assertEquals(listOf("skybox_default.png", "skybox_default.png", "skybox_default.png", "skybox_default.png", "skybox_default.png", "missing.png"), sky.faceFiles)
         dialog(loaded)

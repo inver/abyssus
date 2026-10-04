@@ -7,6 +7,9 @@ package net.nevinsky.abyssus.sceneview
 
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.dto.textOf
+import net.nevinsky.abyssus.testPanelServices
+import net.nevinsky.abyssus.testMetaFiles
 
 class SceneFileEditorTest : BasePlatformTestCase() {
     private val provider = SceneFileEditorProvider()
@@ -79,13 +82,16 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     private fun fakeEditor(path: String, text: String, views: MutableList<FakeView>): Pair<SceneFileEditor, com.intellij.openapi.vfs.VirtualFile> {
         val f = file(path, text)
-        return SceneFileEditor(project, f) { p -> FakeView(p).also { views += it } } to f
+        return newSceneEditor(project, f) { p -> FakeView(p).also { views += it } } to f
     }
 
     private fun setText(f: com.intellij.openapi.vfs.VirtualFile, text: String) {
         val doc = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(f)!!
         com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) { doc.setText(text) }
     }
+
+    /** Typing in a text tab is shown after a pause: this runs the re-read that is waiting for it. */
+    private fun SceneFileEditor.afterThePause() = flushPendingReload()
 
     fun testSceneContentFollowsEdits() {
         val views = mutableListOf<FakeView>()
@@ -94,8 +100,10 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         try {
             assertTrue(views[0].current.content.models.isEmpty())
             setText(f, entity)
+            editor.afterThePause()
             assertEquals(listOf("m"), views[0].current.content.models.map { it.assetName })
             setText(f, "{}")
+            editor.afterThePause()
             assertTrue(views[0].current.content.models.isEmpty())
         } finally {
             editor.dispose()
@@ -132,6 +140,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             assertEquals(1, views.size)
             assertNull(editor.statusText)
             setText(f, """{"name":"a","fogEnabled":true,"fog":{"color":{"r":1,"g":0,"b":0,"a":1},"density":0.5}}""")
+            editor.afterThePause()
             assertEquals(1, views.size)
             assertEquals(1, views[0].updates)
             assertNotNull(views[0].current.fog)
@@ -145,9 +154,11 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val (editor, f) = fakeEditor("live/b.scene", """{"name":"b"}""", views)
         try {
             setText(f, "{ nope")
+            editor.afterThePause()
             assertTrue(views[0].disposed)
             assertTrue(editor.statusText!!.startsWith("Cannot read scene"))
             setText(f, """{"name":"b"}""")
+            editor.afterThePause()
             assertEquals(2, views.size)
             assertFalse(views[1].disposed)
             assertNull(editor.statusText)
@@ -180,10 +191,11 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val views = mutableListOf<FakeView>()
         val abss = myFixture.addFileToProject("Q/Q.abss", """{"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3}}}""").virtualFile
         val scene = file("Q/scenes/a.scene", """{"name":"a"}""")
-        val editor = SceneFileEditor(project, scene) { p -> FakeView(p).also { views += it } }
+        val editor = newSceneEditor(project, scene) { p -> FakeView(p).also { views += it } }
         try {
             assertEquals(1f, views[0].current.camera.position.x, 0f)
             setText(abss, """{"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":5,"y":2,"z":3}}}""")
+            editor.afterThePause()
             assertEquals(5f, views[0].current.camera.position.x, 0f)
         } finally {
             com.intellij.openapi.util.Disposer.dispose(editor)
@@ -201,7 +213,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         try {
             val old = views[0].current.content.models.first { it.entityId == "0" }.transform.position
             val result = net.nevinsky.abyssus.projectView.SceneComponentEdits
-                .update(project, f, "0", "PositionComponent", "localPosition.x", (old.x + 3f).toString())
+                .update(project, f, "0", "PositionComponent", "localPosition.x", (old.x + 3f).toString(), testMetaFiles())
             assertEquals(net.nevinsky.abyssus.ecs.scene.EditResult.Changed, result)
             assertEquals(old.x + 3f, views[0].current.content.models.first { it.entityId == "0" }.transform.position.x, 1e-4f)
         } finally {
@@ -288,5 +300,95 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         } finally {
             com.intellij.openapi.util.Disposer.dispose(editor)
         }
+    }
+
+    /** A copy of Untitled's `Main Scene` (the shared fixture is not touched) with a LightComponent on 7 and a spotlight 8. */
+    private fun sceneWithOmittedLightValues(): String {
+        val root = net.nevinsky.abyssus.filetype.SceneJson.parse(
+            java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText(),
+        ) as com.fasterxml.jackson.databind.node.ObjectNode
+        val entities = root.get("ecs").get("entities") as com.fasterxml.jackson.databind.node.ObjectNode
+        (entities.get("7").get("components") as com.fasterxml.jackson.databind.node.ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>(
+            "LightComponent",
+            net.nevinsky.abyssus.filetype.SceneJson.parse("""{"light":{"color":{"r":1,"g":0.96,"b":0.84,"a":1},"intensity":1.2}}"""),
+        )
+        entities.set<com.fasterxml.jackson.databind.JsonNode>(
+            "8",
+            net.nevinsky.abyssus.filetype.SceneJson.parse(
+                """{"archetype":1,"components":{"NameComponent":{"name":"Spot Light 8"},"TypeComponent":{"type":"LIGHT_SPOT"},
+                "PositionComponent":{"localPosition":{"x":1,"y":5,"z":2}},
+                "LightComponent":{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1}}}}""",
+            ),
+        )
+        return net.nevinsky.abyssus.filetype.SceneJson.compact(root)
+    }
+
+    fun testOpeningTheViewAndSelectingLightsWithOmittedValuesLeavesTheTextAsItWas() {
+        val views = mutableListOf<FakeView>()
+        val prepared = sceneWithOmittedLightValues()
+        val (editor, f) = fakeEditor("omitted/Main Scene.scene", prepared, views)
+        try {
+            val lights = views.single().current.content.lights.associateBy { it.entityId }
+            assertEquals(1.2f, lights.getValue("7").intensity, 0f)
+            assertEquals(100f, lights.getValue("8").range, 0f)
+            assertEquals(45f, lights.getValue("8").coneAngle, 0f)
+            assertEquals(0.2f, lights.getValue("8").edgeSoftness, 0f)
+            for (id in listOf("7", "8")) {
+                val entry = net.nevinsky.abyssus.projectView.DtoRow(id, net.nevinsky.abyssus.filetype.SceneJson.parse(prepared)["ecs"]["entities"][id])
+                val node = net.nevinsky.abyssus.projectView.DtoEntryNode(project, f.path, entry, f, listOf("ecs", "entities"))
+                net.nevinsky.abyssus.projectView.AbyssusSelection.of(project).select(node)
+                assertEquals(id, views.single().selected)
+                // the Properties panel reads the same entity: opening it must not write either
+                net.nevinsky.abyssus.properties.readEntityState(net.nevinsky.abyssus.projectView.ComponentTarget(f, id, null), testPanelServices(project))
+            }
+            assertEquals(prepared, textOf(f))
+            assertFalse(com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().isFileModified(f))
+        } finally {
+            editor.dispose()
+        }
+    }
+
+    fun testTypingBurstReloadsOnce() {
+        val views = mutableListOf<FakeView>()
+        val (editor, f) = fakeEditor("burst/a.scene", """{"name":"a"}""", views)
+        try {
+            val before = views[0].updates
+            for (i in 1..10) setText(f, """{"skyboxEnabled":true,"skyboxName":"s$i"}""")
+            assertEquals("nothing is re-read while typing", before, views[0].updates)
+            editor.afterThePause()
+            assertEquals(before + 1, views[0].updates)
+            assertEquals("s10", views[0].current.content.skybox)
+            editor.afterThePause()
+            assertEquals("a pause with nothing pending reads nothing", before + 1, views[0].updates)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
+    fun testInvalidIntermediateTextNeverShowsError() {
+        val views = mutableListOf<FakeView>()
+        val (editor, f) = fakeEditor("burst/b.scene", """{"name":"a"}""", views)
+        try {
+            setText(f, """{"name":""")
+            assertNull("the half-typed text is not read", editor.statusText)
+            setText(f, """{"skyboxEnabled":true,"skyboxName":"fixed"}""")
+            editor.afterThePause()
+            assertNull(editor.statusText)
+            assertFalse(views[0].disposed)
+            assertEquals("fixed", views[0].current.content.skybox)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
+    fun testDisposingWithAPendingReloadDeliversNothing() {
+        val views = mutableListOf<FakeView>()
+        val (editor, f) = fakeEditor("burst/c.scene", """{"name":"a"}""", views)
+        val updates = views[0].updates
+        setText(f, """{"name":"late"}""")
+        com.intellij.openapi.util.Disposer.dispose(editor)
+        editor.afterThePause()
+        assertEquals(updates, views[0].updates)
+        assertTrue(views[0].disposed)
     }
 }

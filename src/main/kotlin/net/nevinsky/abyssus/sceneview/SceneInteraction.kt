@@ -16,17 +16,23 @@ class ViewSize(val width: Int, val height: Int, val framebufferWidth: Int, val f
     fun fx(x: Int): Int = x * framebufferWidth / width
 
     fun fy(y: Int): Int = y * framebufferHeight / height
+
+    /** The Swing pixel ([x], [y]) in framebuffer pixels. */
+    fun toFramebuffer(x: Int, y: Int) = FramebufferPoint(fx(x), fy(y))
 }
+
+/** A pixel of the framebuffer. */
+data class FramebufferPoint(val x: Int, val y: Int)
 
 /**
  * What the mouse and keys do in the scene view, apart from Swing and GL: selecting by click, orbiting and panning,
- * dragging gizmo handles and cancelling a drag. Mouse positions are Swing pixels of the view described by [size].
- * Everything else the view shows is held by the [renderer].
+ * dragging gizmo handles and cancelling a drag. Mouse positions are Swing pixels of the view described by [size]. The
+ * user's choices live in [state]; what is under the cursor and where things would rest come from [queries].
  */
 class SceneInteraction(
-    private val renderer: SceneRenderer,
+    private val state: SceneViewState,
+    private val queries: SceneQueries,
     private val orbit: OrbitCamera,
-    private val groundBelow: (String) -> Float? = renderer::groundBelow,
 ) {
     var size = ViewSize(0, 0, 0, 0)
 
@@ -40,36 +46,45 @@ class SceneInteraction(
     var onStateChanged: (() -> Unit)? = null
 
     var selectedId: String?
-        get() = renderer.selectedId
+        get() = state.selectedId
         private set(value) {
-            renderer.selectedId = value
+            state.selectedId = value
         }
 
     var mode: GizmoMode
-        get() = renderer.gizmoMode
+        get() = state.gizmoMode
         set(value) {
-            renderer.gizmoMode = value
+            state.gizmoMode = value
             stateChanged()
         }
 
     var viewCamera: String?
-        get() = renderer.viewCamera
+        get() = state.viewCamera
         set(value) {
-            renderer.viewCamera = value
+            state.viewCamera = value
             stateChanged()
         }
+
+    /** Where the current press-drag-release stands. */
+    private sealed interface Gesture {
+        /** Nothing special: a drag orbits or pans, a release without a drag is a click. */
+        data object Idle : Gesture
+
+        /** A gizmo handle of [entityId] is being dragged; [result] is where it is now. */
+        class Dragging(val drag: GizmoDrag, val entityId: String) : Gesture {
+            var result: DragResult? = null
+        }
+
+        /** Set by Esc (or by the dragged entity leaving the scene): the rest of the gesture, up to the release, does nothing. */
+        data object Cancelled : Gesture
+    }
 
     private val click = ClickGesture()
     private var lastX = 0
     private var lastY = 0
-    private var drag: GizmoDrag? = null
-    private var dragEntity: String? = null
-    private var dragResult: DragResult? = null
+    private var gesture: Gesture = Gesture.Idle
 
-    /** Set by Esc: the rest of the gesture, up to the release, does nothing. */
-    private var cancelled = false
-
-    val isDragging: Boolean get() = drag != null
+    val isDragging: Boolean get() = gesture is Gesture.Dragging
 
     private var lastDrawnVersion = -1L
     private var lastCanDrop = false
@@ -79,10 +94,11 @@ class SceneInteraction(
 
     private fun dropPosition(): Vec3? {
         val id = selectedId ?: return null
-        if (isDragging || id == viewCamera || renderer.content.terrains.any { it.entityId == id }) return null
-        val selected = ScenePreview.selected(renderer.content, id) ?: return null
-        val lowest = renderer.lowestPoint(id) ?: return null
-        val height = groundBelow(id) ?: return null
+        val content = queries.content
+        if (isDragging || id == state.viewCamera || content.terrains.any { it.entityId == id }) return null
+        val selected = ScenePreview.selected(content, id) ?: return null
+        val lowest = queries.lowestPoint(id) ?: return null
+        val height = queries.groundBelow(id) ?: return null
         if (!height.isFinite() || ScenePicker.isResting(lowest, height)) return null
         val p = selected.transform.position
         return Vec3(p.x, (p.y.toDouble() + height.toDouble() - lowest.toDouble()).toFloat(), p.z)
@@ -92,13 +108,13 @@ class SceneInteraction(
     fun drop() {
         val id = selectedId ?: return
         val position = dropPosition() ?: return
-        val selected = ScenePreview.selected(renderer.content, id) ?: return
+        val selected = ScenePreview.selected(queries.content, id) ?: return
         val result = DragResult(selected.transform.copy(position = position), selected.direction)
-        renderer.preview = mapOf(id to result)
+        state.preview = mapOf(id to result)
         val written = onTransform?.invoke(id, TransformEdit(position = position)) ?: false
         // A synchronous document re-read can clear the preview during the callback. Keep the accepted result
         // until the renderer has another frame; a second key press must use the newly settled box immediately.
-        renderer.preview = if (written) mapOf(id to result) else emptyMap()
+        state.preview = if (written) mapOf(id to result) else emptyMap()
         stateChanged()
     }
 
@@ -108,7 +124,7 @@ class SceneInteraction(
     }
 
     /** Called outside GL after a frame; loading or params changes need one query, unchanged frames need none. */
-    fun frameRendered(drawnVersion: Long = renderer.drawnVersion) {
+    fun frameRendered(drawnVersion: Long = queries.drawnVersion) {
         if (drawnVersion == lastDrawnVersion && !refreshDropAfterFrame) return
         refreshDropAfterFrame = false
         lastDrawnVersion = drawnVersion
@@ -122,16 +138,15 @@ class SceneInteraction(
     fun pressed(x: Int, y: Int, left: Boolean) {
         lastX = x
         lastY = y
-        cancelled = false
+        gesture = Gesture.Idle
         click.pressed(x, y)
         val id = selectedId
         if (!left || id == null || size.isEmpty) return
-        val axis = renderer.gizmoHit(size.fx(x), size.fy(y), size.framebufferWidth, size.framebufferHeight) ?: return
-        val started = renderer.beginDrag(axis, size.fx(x), size.fy(y), size.framebufferWidth, size.framebufferHeight) ?: return
-        drag = started
-        dragEntity = id
-        dragResult = null
-        renderer.hoveredAxis = axis
+        val at = size.toFramebuffer(x, y)
+        val axis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
+        val started = queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
+        gesture = Gesture.Dragging(started, id)
+        state.hoveredAxis = axis
         stateChanged()
     }
 
@@ -141,76 +156,78 @@ class SceneInteraction(
         val dy = (y - lastY).toFloat()
         lastX = x
         lastY = y
-        if (cancelled || size.isEmpty) return
-        val active = drag
-        val id = dragEntity
-        if (active != null && id != null) {
-            val ray = renderer.rayAt(size.fx(x), size.fy(y), size.framebufferWidth, size.framebufferHeight) ?: return
-            val result = active.update(ray)
-            dragResult = result
-            renderer.preview = mapOf(id to result)
-            return
+        if (size.isEmpty) return
+        when (val g = gesture) {
+            Gesture.Cancelled -> return
+            is Gesture.Dragging -> {
+                val at = size.toFramebuffer(x, y)
+                val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
+                val result = g.drag.update(ray)
+                g.result = result
+                state.preview = mapOf(g.entityId to result)
+            }
+            Gesture.Idle -> {
+                if (state.viewCamera != null) return
+                if (left) orbit.orbit(dx, dy) else orbit.pan(dx, dy)
+            }
         }
-        if (viewCamera != null) return
-        if (left) orbit.orbit(dx, dy) else orbit.pan(dx, dy)
     }
 
     fun released(x: Int, y: Int, left: Boolean) {
         val wasClick = click.released(x, y)
-        val active = drag
-        val id = dragEntity
-        val result = dragResult
-        drag = null
-        dragEntity = null
-        dragResult = null
-        renderer.hoveredAxis = null
-        if (cancelled) {
-            cancelled = false
-            stateChanged()
-            return
-        }
-        if (active != null && id != null) {
-            if (result != null && result.transform != active.start) {
-                val written = onTransform?.invoke(id, editOf(id, result)) ?: false
-                if (!written) renderer.preview = emptyMap()
-            } else {
-                renderer.preview = emptyMap()
+        val ended = gesture
+        gesture = Gesture.Idle
+        state.hoveredAxis = null
+        when (ended) {
+            Gesture.Cancelled -> stateChanged()
+            is Gesture.Dragging -> {
+                val result = ended.result
+                if (result != null && result.transform != ended.drag.start) {
+                    val written = onTransform?.invoke(ended.entityId, editOf(ended.entityId, result)) ?: false
+                    if (!written) state.preview = emptyMap()
+                } else {
+                    state.preview = emptyMap()
+                }
+                stateChanged()
             }
-            stateChanged()
-            return
+            Gesture.Idle -> if (left && wasClick) pickAt(x, y)
         }
-        if (left && wasClick) pickAt(x, y)
     }
 
-    private fun editOf(id: String, result: DragResult): TransformEdit =
-        if (renderer.gizmoMode == GizmoMode.MOVE) TransformEdit(position = result.transform.position)
-        else TransformEdit(rotation = result.transform.rotation, direction = result.direction.takeIf { ScenePreview.isCamera(renderer.params.content, id) })
+    private fun editOf(id: String, result: DragResult): TransformEdit {
+        if (state.gizmoMode == GizmoMode.MOVE) return TransformEdit(position = result.transform.position)
+        val content = queries.sceneContent
+        val handleId = content.lights.firstOrNull { it.entityId == id }?.let(content::aimHandleOf)
+        // A rotate drag on a light aimed at a direction handle moves the handle instead of the light's own rotation.
+        val handleAt = handleId?.let { ScenePreview.aimedTarget(content, id, result) }
+        if (handleId != null && handleAt != null) return TransformEdit(target = TargetMove(handleId, handleAt))
+        return TransformEdit(rotation = result.transform.rotation, direction = result.direction.takeIf { ScenePreview.isCamera(content, id) })
+    }
 
     /** The cursor moved without a button: brightens the handle under it. */
     fun moved(x: Int, y: Int) {
-        if (size.isEmpty || drag != null) return
-        renderer.hoveredAxis = renderer.gizmoHit(size.fx(x), size.fy(y), size.framebufferWidth, size.framebufferHeight)
+        if (size.isEmpty || isDragging) return
+        val at = size.toFramebuffer(x, y)
+        state.hoveredAxis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
     }
 
     fun wheel(clicks: Float) {
-        if (viewCamera == null) orbit.zoom(clicks)
+        if (state.viewCamera == null) orbit.zoom(clicks)
     }
 
     /** Esc: puts the dragged object back and ends the drag without writing anything. */
     fun escape() {
-        if (drag == null) return
-        drag = null
-        dragEntity = null
-        dragResult = null
-        cancelled = true
-        renderer.preview = emptyMap()
-        renderer.hoveredAxis = null
+        if (!isDragging) return
+        gesture = Gesture.Cancelled
+        state.preview = emptyMap()
+        state.hoveredAxis = null
         stateChanged()
     }
 
     private fun pickAt(x: Int, y: Int) {
         if (size.isEmpty) return
-        val hit = renderer.pick(size.fx(x), size.fy(y), size.framebufferWidth, size.framebufferHeight)
+        val at = size.toFramebuffer(x, y)
+        val hit = queries.pick(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
         val changed = hit != selectedId
         selectedId = hit
         if (hit != null) onPick?.invoke(hit)
@@ -220,16 +237,12 @@ class SceneInteraction(
     /** New scene params arrived: drops the preview and a selection or camera the scene no longer has. */
     fun paramsChanged(params: SceneRenderParams) {
         refreshDropAfterFrame = true
-        renderer.preview = emptyMap()
+        state.preview = emptyMap()
         var changed = false
         selectedId?.let { if (!ScenePreview.contains(params.content, it)) { selectedId = null; changed = true } }
-        viewCamera?.let { id -> if (params.content.cameras.none { it.entityId == id }) { renderer.viewCamera = null; changed = true } }
-        if (drag != null && dragEntity?.let { ScenePreview.contains(params.content, it) } != true) {
-            drag = null
-            dragEntity = null
-            dragResult = null
-            cancelled = true
-        }
+        state.viewCamera?.let { id -> if (params.content.cameras.none { it.entityId == id }) { state.viewCamera = null; changed = true } }
+        val dragging = gesture as? Gesture.Dragging
+        if (dragging != null && !ScenePreview.contains(params.content, dragging.entityId)) gesture = Gesture.Cancelled
         if (changed || canDrop != lastCanDrop) stateChanged()
     }
 }
