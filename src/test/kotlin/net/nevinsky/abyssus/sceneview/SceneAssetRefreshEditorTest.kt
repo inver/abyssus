@@ -50,7 +50,7 @@ class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
     }
 
     private fun editor(view: FakeView): SceneFileEditor =
-        SceneFileEditor(project, scene, SceneParamsSource { SceneRenderParams.DEFAULT }, { view }).also { Disposer.register(testRootDisposable, it) }
+        newSceneEditor(project, scene, SceneParamsSource { SceneRenderParams.DEFAULT }, { view }).also { Disposer.register(testRootDisposable, it) }
 
     /** Lets the background read and its UI continuation run. */
     private fun settle() {

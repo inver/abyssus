@@ -25,6 +25,7 @@ import java.awt.Color
 import java.awt.FlowLayout
 import javax.swing.BorderFactory
 import javax.swing.JPanel
+import net.nevinsky.abyssus.assets.META_FILE
 
 /** The numbers under the tree. */
 data class FooterCounts(val scenes: Int, val assets: Int, val unused: Int)
@@ -80,7 +81,7 @@ class AbyssusFooter(private val project: Project, private val parent: Disposable
 
     private fun relevant(event: VFileEvent): Boolean {
         val name = event.path.substringAfterLast('/')
-        return name == ProjectLayout.META_FILE || name.substringAfterLast('.', "") in ProjectLayout.ASSET_EXTENSIONS ||
+        return name == META_FILE || name.substringAfterLast('.', "") in ProjectLayout.ASSET_EXTENSIONS ||
             event.file?.isDirectory == true || event.file == null
     }
 

@@ -10,7 +10,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import net.nevinsky.abyssus.assets.ASSETS_DIR
 import net.nevinsky.abyssus.assets.META_FILE
 import net.nevinsky.abyssus.dto.ProjectLayout
-import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.filetype.SceneJson
 import java.io.File
 

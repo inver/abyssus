@@ -34,6 +34,7 @@ import java.util.concurrent.Executors
 @Service(Service.Level.APP)
 class AbyssusCore : Disposable {
     val json = JsonProcessor()
+    val metaFiles = net.nevinsky.abyssus.dto.MetaFiles(net.nevinsky.abyssus.assets.files.AssetMetaReader(json))
 
     /** The editable `meta.json` fields of each asset type and the editor that changes them one at a time. */
     val assetFields = AssetFieldDescriptions()
@@ -56,6 +57,13 @@ class AbyssusCore : Disposable {
         AppExecutorUtil.getAppExecutorService(),
         ShaderSource("/shader/sky", AssetLoading::class.java),
     )
+
+    /** The loading pipeline's Radiance sky pieces, for the chooser and the Properties panel. */
+    val hdrPreviews: net.nevinsky.abyssus.projectView.HdrPreviewSource = object : net.nevinsky.abyssus.projectView.HdrPreviewSource {
+        override val files get() = loading.hdrFiles
+        override val decoder get() = loading.decoder
+        override val preview get() = loading.hdrPreview
+    }
 
     private val rayServiceHolder = lazy {
         RayBackendService(RayBackendSelector.fromStartup(providers = mapOf(

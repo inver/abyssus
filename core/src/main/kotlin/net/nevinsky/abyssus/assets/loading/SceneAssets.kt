@@ -56,9 +56,7 @@ class SceneAssets<P : Any, T : Disposable>(
         executor,
         // the snapshot current when the pool thread starts the load, and always of this cache's own project
         prepare = { name -> loader.prepare(source.files, name) },
-        build = { _, p -> loader.build(p) },
-        advance = loader::upload,
-        discard = loader::discard,
+        loader = loader,
         log = log,
     )
 

@@ -13,12 +13,12 @@ import java.util.concurrent.Executor
 
 /**
  * Loads assets named by the scene in two steps: [prepare] runs on [executor] (file IO, parsing; no GL), [build] runs
- * on the GL thread from [pump] and creates the GPU resources. Every name is loaded once and shared by all entities
+ * on the GL thread from [pump] and creates the GPU resources, both through [loader]. Every name is loaded once and shared by all entities
  * using it; a name that fails is remembered as failed (and logged once) so it is not retried every frame.
  * Everything except [prepare] must be called on the GL thread.
  *
- * GPU work that is slow (uploading big textures) can be split: [advance] is called with the prepared data before
- * [build], once per [pump] step, and does one slice of it; the asset is built when it returns true.
+ * GPU work that is slow (uploading big textures) can be split: [AssetLoader.upload] is called with the prepared data
+ * before [AssetLoader.build], once per [pump] step, and does one slice of it; the asset is built when it returns true.
  *
  * [invalidate] marks names as changed on disk. A loaded asset stays in use until its replacement is built, then the
  * two are swapped in one step, so a consumer never sees a half-replaced asset; a name that was loading or failed is
@@ -28,9 +28,7 @@ import java.util.concurrent.Executor
 class AssetCache<D : Any, T : Disposable>(
     private val executor: Executor,
     private val prepare: (String) -> D?,
-    private val build: (String, D) -> T?,
-    private val advance: (D) -> Boolean = { true },
-    private val discard: (D) -> Unit = {},
+    private val loader: AssetLoader<D, T>,
     private val log: AssetLog,
 ) : Disposable {
     private sealed interface State {
@@ -109,12 +107,12 @@ class AssetCache<D : Any, T : Disposable>(
             }
             prepared.add(result)
             // dropped meanwhile: nothing on the GL thread may ever see it again, so release it here
-            if (request !in live && prepared.remove(result)) result.data?.let(discard)
+            if (request !in live && prepared.remove(result)) result.data?.let(loader::discard)
         }
     }
 
     /**
-     * Does up to [maxSteps] slices of GPU work: [advance] for the asset that has waited longest, and its [build] once
+     * Does up to [maxSteps] slices of GPU work: [AssetLoader.upload] for the asset that has waited longest, and its [AssetLoader.build] once
      * that has no work left. Returns true when at least one asset changed state.
      */
     fun pump(maxSteps: Int = 1): Boolean {
@@ -124,7 +122,7 @@ class AssetCache<D : Any, T : Disposable>(
         while (steps < maxSteps) {
             val p = waiting.removeFirstOrNull() ?: break
             if (!isCurrent(p.name, p.request)) { // forgotten, or superseded by a newer revision, while loading
-                p.data?.let(discard)
+                p.data?.let(loader::discard)
                 continue
             }
             val data = p.data
@@ -136,18 +134,17 @@ class AssetCache<D : Any, T : Disposable>(
             }
             steps++
             try {
-                if (!advance(data)) {
+                if (!loader.upload(data)) {
                     waiting.addLast(p) // more to do next time; others get their turn first
                     continue
                 }
                 changed = true
                 live -= p.request
-                val value = build(p.name, data)
-                if (value == null) fail(p.name, null) else publish(p.name, value)
+                publish(p.name, loader.build(data))
             } catch (e: Throwable) {
                 changed = true
                 live -= p.request
-                data.let(discard)
+                loader.discard(data)
                 fail(p.name, e)
             }
         }
@@ -208,8 +205,8 @@ class AssetCache<D : Any, T : Disposable>(
     }
 
     private fun discardPending() {
-        while (true) prepared.poll()?.data?.let(discard) ?: break
-        while (waiting.isNotEmpty()) waiting.removeFirst().data?.let(discard)
+        while (true) prepared.poll()?.data?.let(loader::discard) ?: break
+        while (waiting.isNotEmpty()) waiting.removeFirst().data?.let(loader::discard)
     }
 
     override fun dispose() {

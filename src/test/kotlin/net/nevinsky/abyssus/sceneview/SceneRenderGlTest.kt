@@ -64,11 +64,11 @@ class SceneRenderGlTest {
                     assertEquals(0f, height, 1e-5f)
                     assertTrue(!ScenePicker.isResting(footprint.bottom, height))
                 }
-                assertEquals(0f, renderer.groundBelow("0")!!, 1e-5f)
-                assertNull(renderer.groundBelow("1"))
-                assertNull(renderer.groundBelow("missing"))
-                renderer.viewCamera = "4"
-                assertNull(renderer.groundBelow("4"))
+                assertEquals(0f, renderer.queries.groundBelow("0")!!, 1e-5f)
+                assertNull(renderer.queries.groundBelow("1"))
+                assertNull(renderer.queries.groundBelow("missing"))
+                renderer.state.viewCamera = "4"
+                assertNull(renderer.queries.groundBelow("4"))
                 checked = true
             }
         }
@@ -109,9 +109,9 @@ class SceneRenderGlTest {
         var written = 0
         var version = 0L
         val result = GlHarness.render(p, 220) { renderer, _ ->
-            val input = interaction ?: SceneInteraction(renderer, OrbitCamera.from(p.camera)).also {
+            val input = interaction ?: SceneInteraction(renderer.state, renderer.queries, OrbitCamera.from(p.camera)).also {
                 interaction = it
-                renderer.selectedId = "0"
+                renderer.state.selectedId = "0"
                 it.onTransform = { id, edit ->
                     val selected = ScenePreview.selected(renderer.content, id)!!
                     val moved = net.nevinsky.abyssus.sceneview.gizmo.DragResult(selected.transform.copy(position = edit.position!!), selected.direction)
@@ -472,7 +472,7 @@ class SceneRenderGlTest {
                     if (frame == 159 && mask.isEmpty()) {
                         assertEquals(setOf("a"), r.shadowedLightIds)
                         for (y in 0 until r.lastHeight step 2) for (x in 0 until r.lastWidth step 2)
-                            if (r.pick(x, y, r.lastWidth, r.lastHeight) == receiver) mask += x to y
+                            if (r.queries.pick(x, y, r.lastWidth, r.lastHeight) == receiver) mask += x to y
                     }
                 }
                 assertNull(result.error)
@@ -534,7 +534,7 @@ class SceneRenderGlTest {
             if (frame == 239) {
                 val w = renderer.lastWidth
                 val h = renderer.lastHeight
-                for (y in 0 until h step h / 25) for (x in 0 until w step w / 40) renderer.pick(x, y, w, h)?.let { found += it }
+                for (y in 0 until h step h / 25) for (x in 0 until w step w / 40) renderer.queries.pick(x, y, w, h)?.let { found += it }
             }
         }
         assertNull(r.error)
@@ -626,8 +626,8 @@ class SceneRenderGlTest {
         for (mode in net.nevinsky.abyssus.sceneview.gizmo.GizmoMode.entries) {
             var gizmo = false
             val r = GlHarness.render(p, 120) { renderer, _ ->
-                renderer.selectedId = "0"
-                renderer.gizmoMode = mode
+                renderer.state.selectedId = "0"
+                renderer.state.gizmoMode = mode
                 gizmo = renderer.drewGizmo
             }
             assertNull(r.error)
@@ -640,7 +640,7 @@ class SceneRenderGlTest {
         val p = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
         var markers = -1
         val r = GlHarness.render(p, 60) { renderer, _ ->
-            renderer.viewCamera = "4"
+            renderer.state.viewCamera = "4"
             markers = renderer.drawnCameraMarkers
         }
         assertNull(r.error)

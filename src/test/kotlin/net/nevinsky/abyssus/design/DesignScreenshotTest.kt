@@ -41,6 +41,8 @@ import java.io.File
 import javax.imageio.ImageIO
 import javax.swing.Icon
 import javax.swing.JComponent
+import net.nevinsky.abyssus.testPanelServices
+import net.nevinsky.abyssus.testCore
 
 /**
  * Screenshots of the plugin's components, written to `build/screenshots/`, and the measurable parts of the design canvas
@@ -194,7 +196,7 @@ class DesignScreenshotTest : BasePlatformTestCase() {
         }
     }
 
-    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, { it.run() }, { it.run() })
+    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
 
     fun testPropertiesPanelStates() {
         copyProject()
@@ -220,7 +222,7 @@ class DesignScreenshotTest : BasePlatformTestCase() {
             SkyboxChoice("dusk", 6, listOf("png"), 0, true),
             SkyboxChoice("abyss-night", 6, listOf("png"), 0, true),
         )
-        val d = SkyboxChooserDialog(project, choices, "nebula")
+        val d = SkyboxChooserDialog(project, choices, "nebula", testCore.hdrPreviews.preview)
         Disposer.register(testRootDisposable, d.disposable)
         val rows = JPanel(GridLayout(0, 1))
         choices.indices.forEach { rows.add(d.renderedRow(it + 1, selected = it == 0)) }

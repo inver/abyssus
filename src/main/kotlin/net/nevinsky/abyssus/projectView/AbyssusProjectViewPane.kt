@@ -43,8 +43,16 @@ import javax.swing.JPanel
 import javax.swing.JTree
 import java.awt.BorderLayout
 import javax.swing.tree.DefaultTreeModel
+import net.nevinsky.abyssus.filetype.AbyssusSceneEdited
+import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.AbyssusCore
 
 class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project) {
+    init {
+        // a plugin edit of a scene or project file changes what the tree shows (names, toggles, counts)
+        project.messageBus.connect(this).subscribe(AbyssusSceneEdited.TOPIC, AbyssusSceneEdited { updateFromRoot(true) })
+    }
+
     override fun getTitle(): String = AbyssusBundle.message("abyssusViewName")
 
     override fun getId(): String = ID
@@ -155,7 +163,8 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
     private fun skyboxAction(entry: DtoEntry): RowAction? {
         val abss = skyboxProjectOf(entry) ?: return null
         return ChooseButton(AbyssusBundle.message("skyboxChooserTooltip")) {
-            if (chooseSkybox(project, entry, abss)) reselect(entry.path, false)
+            val core = service<AbyssusCore>()
+            if (chooseSkybox(project, entry, abss, core.metaFiles, core.hdrPreviews)) reselect(entry.path, false)
         }
     }
 

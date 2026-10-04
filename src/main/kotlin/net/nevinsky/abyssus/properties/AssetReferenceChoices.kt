@@ -71,8 +71,8 @@ class AssetReferenceChoices(private val json: JsonProcessor) {
 
     /** The file [name] under [folder] when its canonical path stays strictly inside the canonical [folder], else null. */
     fun inside(folder: File, name: String): File? {
-        val root = runCatching { folder.canonicalFile.toPath() }.getOrNull() ?: return null
-        val file = runCatching { File(folder, name).canonicalFile }.getOrNull() ?: return null
+        val root = runCatchingKeepingCancellation { folder.canonicalFile.toPath() }.getOrNull() ?: return null
+        val file = runCatchingKeepingCancellation { File(folder, name).canonicalFile }.getOrNull() ?: return null
         // Path.startsWith compares whole path elements, so `skybox2` is not inside `skybox`
         return file.takeIf { it.toPath() != root && it.toPath().startsWith(root) }
     }

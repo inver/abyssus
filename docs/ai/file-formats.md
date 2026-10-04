@@ -73,6 +73,16 @@ The components the plugin reads:
 empty `PositionComponent: {}` is valid. Writers add fields when they change them (`SceneTransformWriter`,
 `PositionCodec`).
 
+**Light defaults** (`ecs/component/ComponentDefaults.kt`). A light that leaves a value out has: `intensity` 1; the
+whole `color` object missing means white, but a channel missing inside a `color` object is 0 (the alpha channel never
+affects lighting); `range` 100; `coneAngle` 45 and `edgeSoftness` 0.2. The scene view, the Properties panel and edits
+all read lights through the same codecs, so they show and use these values alike. The file is never rewritten to state
+them. (Before this, the view drew a missing `intensity` as 0.3 and a missing channel as 1; the panel always showed
+1 and 0.)
+
+**`lookAtId` may be an integer or text** (`3`, `"3"`, `"-1"`, `"h"`). The decoded reference is used by the view, and an
+edit of another field keeps the original node; an edit of `lookAtId` itself writes an integer.
+
 **Cameras have two positions:** a camera's position is stored both in `PositionComponent.localPosition` and in
 `CameraComponent.camera.position`. Gizmo moves write both.
 

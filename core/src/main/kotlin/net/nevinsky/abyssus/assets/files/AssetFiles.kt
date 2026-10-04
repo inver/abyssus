@@ -15,6 +15,7 @@ import net.nevinsky.abyssus.assets.json.obj
 import net.nevinsky.abyssus.assets.json.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /** The files of a terrain asset: [data] is the height data, [splat] the splat textures present (by `meta.json` field). */
 data class TerrainFiles(val data: File, val size: Int, val uv: Float, val splat: Map<String, File>)
@@ -54,12 +55,33 @@ class AssetFiles(projectDir: File, private val json: JsonProcessor, private val 
         if (assetName.isEmpty() || assetName.contains('/') || assetName.contains('\\') || assetName == ".." || assetName == ".") null
         else File(assetsDir, assetName).takeIf { it.isDirectory }
 
+    private val metaReader = AssetMetaReader(json)
+
     /** A new snapshot of the same project, reading the assets again (a changed `uuid` index, added or removed folders). */
     fun refreshed(metaText: MetaTextSource = this.metaText): AssetFiles = AssetFiles(projectDir, json, metaText)
 
-    private fun meta(folder: File): JsonNode? = runCatchingKeepingCancellation {
-        metaText.read(File(folder, META_FILE))?.let { json.readObject(it) }
-    }.getOrNull()
+    /** A folder's `meta.json` as last read: the file stamp (disk source) and the text it was parsed from. */
+    private class CachedMeta(val stamp: Pair<Long, Long>?, val text: String, val document: MetaDocument?)
+
+    private val metas = ConcurrentHashMap<File, CachedMeta>()
+
+    /**
+     * The parsed `meta.json` of [folder], or null when it is missing or unreadable. One read serves every lookup: from
+     * disk it is read again when the file changes, from another source when the text differs.
+     */
+    private fun metaDocument(folder: File): MetaDocument? {
+        val file = File(folder, META_FILE)
+        val stamp = if (metaText is DiskMetaText && file.isFile) file.lastModified() to file.length() else null
+        val cached = metas[folder]
+        if (stamp != null && cached?.stamp == stamp) return cached.document
+        val text = runCatchingKeepingCancellation { metaText.read(file) }.getOrNull() ?: return null
+        if (cached != null && cached.text == text) return cached.document
+        val document = runCatchingKeepingCancellation { metaReader.read(text) }.getOrNull()
+        metas[folder] = CachedMeta(stamp, text, document)
+        return document
+    }
+
+    private fun meta(folder: File): JsonNode? = metaDocument(folder)?.json
 
     private fun additional(folder: File) = meta(folder)?.obj("additional")
 
@@ -89,9 +111,10 @@ class AssetFiles(projectDir: File, private val json: JsonProcessor, private val 
             file(dir, additional(dir)?.text("file"))?.let { field to it }
         }.toMap()
 
-    private fun <T, M : MetaBase<T>> loadMeta(clazz: Class<M>, folder: File): M? = runCatchingKeepingCancellation {
-        metaText.read(File(folder, META_FILE))?.let { json.parse(it, clazz) }
-    }.getOrNull()
+    private fun <T, M : MetaBase<T>> loadMeta(clazz: Class<M>, folder: File): M? = metaDocument(folder)?.typed(clazz)
+
+    /** The `type` of [name]'s `meta.json`; null when there is no readable one. */
+    fun metaType(name: String): MetaType? = folder(name)?.let(::metaDocument)?.type
 
     fun loadFile(assetName: String, fileName: String?): File? {
         if (fileName.isNullOrBlank()) return null

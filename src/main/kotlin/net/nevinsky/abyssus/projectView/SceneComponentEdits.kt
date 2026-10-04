@@ -10,7 +10,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
-import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.SceneReader
 import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.ecs.scene.ComponentEditor
@@ -21,6 +21,10 @@ import net.nevinsky.abyssus.ecs.scene.LightPreset
 import net.nevinsky.abyssus.sceneview.Vec3
 import net.nevinsky.abyssus.properties.AssetMeta
 import net.nevinsky.abyssus.properties.loadAssetMeta
+import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.filetype.editSceneJson
+import net.nevinsky.abyssus.dto.MetaFiles
+import net.nevinsky.abyssus.dto.SceneDocumentCache
 
 /** A model or terrain a render component may show: [type] is `MODEL` or `TERRAIN`, [name] its asset folder. */
 data class RenderAsset(val type: String, val name: String)
@@ -31,16 +35,16 @@ data class RenderAsset(val type: String, val name: String)
  */
 object SceneComponentEdits {
     /** The models and terrains of the project [sceneFile] belongs to; empty for a scene outside a project. */
-    fun renderAssets(sceneFile: VirtualFile): List<RenderAsset> {
+    fun renderAssets(sceneFile: VirtualFile, metaFiles: MetaFiles): List<RenderAsset> {
         val abss = ProjectLayout.abssFor(sceneFile) ?: return emptyList()
         return ProjectLayout.assetFolders(abss).mapNotNull { folder ->
-            val type = (loadAssetMeta(folder) as? AssetMeta.Loaded)?.type
-            if (type == "MODEL" || type == "TERRAIN") RenderAsset(type, folder.name) else null
+            val type = (loadAssetMeta(folder, metaFiles) as? AssetMeta.Loaded)?.type
+            if (type == MetaType.MODEL || type == MetaType.TERRAIN) RenderAsset(type.name, folder.name) else null
         }.sortedBy { it.name }
     }
 
-    private fun assetNames(sceneFile: VirtualFile): Set<String>? =
-        ProjectLayout.abssFor(sceneFile)?.let { renderAssets(sceneFile).mapTo(HashSet()) { it.name } }
+    private fun assetNames(sceneFile: VirtualFile, metaFiles: MetaFiles): Set<String>? =
+        ProjectLayout.abssFor(sceneFile)?.let { renderAssets(sceneFile, metaFiles).mapTo(HashSet()) { it.name } }
 
     private fun run(project: Project, file: VirtualFile, command: String, edit: (JsonNode) -> EditResult): EditResult {
         var result: EditResult = EditResult.Rejected(AbyssusBundle.message("componentSceneUnreadable"))
@@ -51,10 +55,10 @@ object SceneComponentEdits {
         return result
     }
 
-    fun addLight(project: Project, file: VirtualFile, preset: LightPreset, position: Vec3): AddedLight {
+    fun addLight(project: Project, file: VirtualFile, preset: LightPreset, position: Vec3, cache: SceneDocumentCache): AddedLight {
         var added = AddedLight(EditResult.Rejected(AbyssusBundle.message("componentSceneUnreadable")))
         editSceneJson(project, file, AbyssusBundle.message("commandAddLight")) { root ->
-            if (runCatchingKeepingCancellation { service<SceneReader>().parse(root.toString()) }.isFailure) return@editSceneJson false
+            if (cache.read(file) == null) return@editSceneJson false
             added = LightEntities.add(root, preset, position)
             added.result == EditResult.Changed
         }
@@ -62,14 +66,17 @@ object SceneComponentEdits {
     }
 
     fun add(
-        project: Project, file: VirtualFile, entityId: String, kindName: String, initial: Map<String, String> = emptyMap(),
+        project: Project, file: VirtualFile, entityId: String, kindName: String, metaFiles: MetaFiles,
+        initial: Map<String, String> = emptyMap(),
     ): EditResult = run(project, file, AbyssusBundle.message("commandAddComponent")) {
-        ComponentEditor.add(it, entityId, kindName, initial, assetNames(file))
+        ComponentEditor.add(it, entityId, kindName, initial, assetNames(file, metaFiles))
     }
 
-    fun update(project: Project, file: VirtualFile, entityId: String, kindName: String, field: String, text: String): EditResult =
+    fun update(
+        project: Project, file: VirtualFile, entityId: String, kindName: String, field: String, text: String, metaFiles: MetaFiles,
+    ): EditResult =
         run(project, file, AbyssusBundle.message("commandEditComponent")) {
-            ComponentEditor.update(it, entityId, kindName, field, text, assetNames(file))
+            ComponentEditor.update(it, entityId, kindName, field, text, assetNames(file, metaFiles))
         }
 
     fun remove(project: Project, file: VirtualFile, entityId: String, kindName: String): EditResult =

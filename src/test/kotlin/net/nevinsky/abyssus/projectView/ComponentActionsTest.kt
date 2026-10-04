@@ -16,6 +16,7 @@ import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.filetype.SceneJson
 import java.io.File
+import net.nevinsky.abyssus.testMetaFiles
 
 class ComponentActionsTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
@@ -117,7 +118,7 @@ class ComponentActionsTest : BasePlatformTestCase() {
         val target = componentTargetOf(entity("6"))!!
         val render = AddOn(null).choices(project, target).getChildren(null)
             .filterIsInstance<com.intellij.openapi.actionSystem.ActionGroup>().single { it.templatePresentation.text == "Render" }
-        val assets = SceneComponentEdits.renderAssets(scene())
+        val assets = SceneComponentEdits.renderAssets(scene(), testMetaFiles())
         assertTrue(assets.isNotEmpty())
         assertTrue(assets.all { it.type == "MODEL" || it.type == "TERRAIN" })
         val items = render.getChildren(null)

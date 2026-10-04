@@ -7,21 +7,20 @@ package net.nevinsky.abyssus.assets.sky.procedural
 
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.Mesh
-import com.badlogic.gdx.graphics.VertexAttribute
-import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.assets.sky.Sky
+import net.nevinsky.abyssus.assets.sky.createFullscreenTriangle
+import net.nevinsky.abyssus.assets.sky.rotationOnlyViewProj
+
+private const val CAMERA_HEIGHT = 100.0
 
 /**
  * A sky computed per pixel by the asset's own GLSL: one fullscreen triangle, no cube. Built on the GL thread; throws
  * when the shaders do not compile, which the asset cache logs once and remembers.
  */
 class ProceduralSky(prepared: PreparedProceduralSky) : Sky {
-    private val CAMERA_HEIGHT = 100.0
-
     private val params = prepared.params
     private val program = ShaderProgram(prepared.vertex, prepared.fragment).also {
         if (!it.isCompiled) {
@@ -30,17 +29,12 @@ class ProceduralSky(prepared: PreparedProceduralSky) : Sky {
             throw IllegalStateException("Procedural sky shader failed to compile: $log")
         }
     }
-    private val mesh = Mesh(true, 3, 0, VertexAttribute(Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)).also {
-        it.setVertices(floatArrayOf(-1f, -1f, 3f, -1f, -1f, 3f))
-    }
+    private val mesh = createFullscreenTriangle()
     private val invViewProj = Matrix4()
 
     /** Draws the atmosphere seen from [camera]'s orientation with the sun toward [sun]. The caller sets depth and cull state. */
     override fun draw(camera: Camera, sun: Vector3) {
-        invViewProj.set(camera.view)
-        invViewProj.setTranslation(0f, 0f, 0f)
-        invViewProj.mulLeft(camera.projection)
-        invViewProj.inv()
+        rotationOnlyViewProj(camera, invViewProj).inv()
         program.bind()
         program.setUniformMatrix("u_invViewProj", invViewProj)
         program.setUniformf("u_sunDir", sun.x, sun.y, sun.z)

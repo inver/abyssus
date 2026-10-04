@@ -10,7 +10,9 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class SceneParamsSourceTest : BasePlatformTestCase() {
-    private fun cameraOf(scene: com.intellij.openapi.vfs.VirtualFile) = SceneParamsSource.EDITOR_TEXT.read(scene).camera
+    private val editorText get() = SceneParamsSource.editorText(com.intellij.openapi.components.service<net.nevinsky.abyssus.dto.SceneReader>())
+
+    private fun cameraOf(scene: com.intellij.openapi.vfs.VirtualFile) = editorText.read(scene).camera
 
     private fun abss(x: Int) =
         """{"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":$x,"y":2,"z":3}},"name":"P"}"""
@@ -38,7 +40,7 @@ class SceneParamsSourceTest : BasePlatformTestCase() {
     fun testProjectDirAndSourcesFollowTheLayout() {
         val abss = myFixture.addFileToProject("P/P.abss", abss(7)).virtualFile
         val scene = myFixture.addFileToProject("P/scenes/a.scene", "{}").virtualFile
-        assertEquals(abss.parent.path, SceneParamsSource.EDITOR_TEXT.read(scene).projectDir!!.path)
-        assertEquals(setOf(scene, abss), SceneParamsSource.EDITOR_TEXT.sources(scene))
+        assertEquals(abss.parent.path, editorText.read(scene).projectDir!!.path)
+        assertEquals(setOf(scene, abss), editorText.sources(scene))
     }
 }

@@ -5,45 +5,25 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.loading.SceneAssets
 import com.badlogic.gdx.math.Matrix4
-import com.badlogic.gdx.utils.Disposable
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.math.collision.BoundingBox
 import net.nevinsky.abyssus.assets.terrain.PreparedTerrain
 import net.nevinsky.abyssus.assets.terrain.TerrainMesh
-import java.io.File
 
 class TerrainEntity(override val placement: AssetPlacement, val terrain: TerrainMesh, val world: Matrix4) : PlacedEntity<TerrainMesh> {
     override val asset: TerrainMesh get() = terrain
+
+    /** The terrain's bounds in its own space, computed on first use (the heights are scanned once, not per click). */
+    val localBounds: BoundingBox by lazy {
+        val data = terrain.data
+        BoundingBox(Vector3(0f, data.heights.min(), 0f), Vector3(data.size.toFloat(), data.heights.max(), data.size.toFloat()))
+    }
 }
 
 /** The terrain entities of the scene, loaded like [SceneModels]. GL thread only. */
-class SceneTerrains(private val assets: SceneAssets<PreparedTerrain, TerrainMesh>) : Disposable {
-    private val entities = PlacedEntities<TerrainMesh, TerrainEntity> { p, terrain, _ -> TerrainEntity(p, terrain, p.transform.toMatrix()) }
-
-    val drawn: Collection<TerrainEntity> get() = entities.drawn
-
-    val isLoading: Boolean get() = assets.isLoading
-
-    fun update(placements: List<AssetPlacement>, projectDir: File?) {
-        assets.update(projectDir, placements.mapTo(HashSet()) { it.assetName })
-        entities.update(placements, assets::get)
-    }
-
-    /** Loads [names] again from [files], the project's refreshed snapshot; the old assets stay drawn until each replacement is built. */
-    fun revise(files: AssetFiles, names: Set<String>) {
-        assets.replaceFiles(files)
-        assets.invalidate(names)
-    }
-
-    /** Forgets everything without GL calls; see [AssetCache.abandon]. */
-    fun abandon() {
-        entities.clear()
-        assets.abandon()
-    }
-
-    override fun dispose() {
-        entities.clear()
-        assets.dispose()
-    }
-}
+class SceneTerrains(assets: SceneAssets<PreparedTerrain, TerrainMesh>) : PlacedAssets<PreparedTerrain, TerrainMesh, TerrainEntity>(
+    assets,
+    { p, terrain, _ -> TerrainEntity(p, terrain, p.transform.toMatrix()) },
+)

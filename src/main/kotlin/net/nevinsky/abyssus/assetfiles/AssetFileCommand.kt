@@ -14,6 +14,7 @@ import com.intellij.openapi.command.undo.UnexpectedUndoException
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.assets.displayMessage
 
 /**
  * Applies an [AssetTransaction] to a [AssetFileStore], forward or in reverse, as far as the files allow: every
@@ -156,7 +157,7 @@ class AssetFileUndoAction(
             is AssetCommandResult.Collision -> throw UnexpectedUndoException("${txn.name}: ${result.path} already exists")
             is AssetCommandResult.Blocked -> throw UnexpectedUndoException(result.reason)
             AssetCommandResult.Cancelled -> throw UnexpectedUndoException("${txn.name}: cancelled")
-            is AssetCommandResult.Failed -> throw UnexpectedUndoException("${txn.name}: ${result.cause.message ?: result.cause.javaClass.simpleName}")
+            is AssetCommandResult.Failed -> throw UnexpectedUndoException("${txn.name}: ${result.cause.displayMessage()}")
         }
     }
 }

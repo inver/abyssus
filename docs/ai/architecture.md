@@ -60,7 +60,9 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 
 ### Clicks, drags and writes
 
-- **Mouse and keys:** `SceneInteraction` handles them. A click picks (`ScenePicker` over model bounds, terrain
+- **Mouse and keys:** `SceneInteraction` handles them, over the `SceneViewState` (selection, gizmo mode, preview,
+  camera looked through; owned by the panel) and `SceneQueries` (`SnapshotSceneQueries` over the `FrameSnapshot` the
+  renderer publishes after each frame). A click picks (`ScenePicker` over model bounds, terrain
   heights and marker bounds). It selects in the view, and `selectEntityInAbyssusView` selects the entity's row in
   the tree.
 - **Drags:** a drag on a gizmo handle runs a `GizmoDrag`, and `ScenePreview` shows the result live. Esc cancels.
@@ -82,13 +84,13 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 
 The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) and asset property edits (`AssetMetaEdits`, over `core`'s
 `AssetMetaEditor`; reference and face choices come from `properties/AssetReferenceChoices.kt`) all go through `editSceneJson`
-(`projectView/EnabledToggle.kt`):
+(`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneDocumentWriter.kt`):
 
 1. Parse the document with `SceneJson`.
 2. Mutate the tree.
 3. Re-serialize with `SceneJson.inStyleOf`, which keeps indentation, key order and number text.
 4. Replace the text in a `WriteCommandAction` and save.
-5. Refresh the Abyssus pane.
+5. Publish `AbyssusSceneEdited.TOPIC` (the file). The Abyssus pane listens and refreshes itself; the writer knows no UI.
 
 Terrain regeneration and creation are the exception (binary heights, new files and folders cannot be a document edit):
 they go through `AssetFileCommand` (`assetfiles/AssetFileCommand.kt`), described in `docs/ai/conventions.md`, with
@@ -133,6 +135,10 @@ and bounds, and `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for t
   context). Scene conversion and skin deformation run on one converter thread fed by a latest-wins mailbox; native
   preparation, submission, completion polling and disposal run on the ray service's serial worker. Mode transitions
   publish to the EDT; a late result after hide, close, retry or a replaced context is discarded by its revision.
+- **Wiring:** classes get their collaborators through constructors (`PanelServices` for the Properties panel, a view
+  factory and `SceneParamsSource` for the scene tab). Service lookups (`service<...>()`) appear only in actions, editor
+  and file-type providers, tool window factories, the pane and the `@Service` constructors that build a service from
+  others, so the rest can be tested without the IDE.
 - **Off the EDT:** properties panel reads (`readAssetState`), `AssetReadCache` reads in the background tree builder,
   and asset `prepare`.
 

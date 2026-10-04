@@ -14,7 +14,9 @@ import net.nevinsky.abyssus.assets.edit.EditError
 import net.nevinsky.abyssus.assets.edit.EditOutcome
 import net.nevinsky.abyssus.assets.edit.FieldValue
 import net.nevinsky.abyssus.dto.ProjectLayout
-import net.nevinsky.abyssus.projectView.editSceneJson
+import net.nevinsky.abyssus.filetype.editSceneJson
+import net.nevinsky.abyssus.assets.META_FILE
+import net.nevinsky.abyssus.assets.edit.AssetMetaEditor
 
 /** What came of one asset property edit. Only [Changed] wrote anything. */
 sealed interface AssetEditResult {
@@ -38,9 +40,8 @@ sealed interface AssetEditResult {
  * `AssetMetaEditor`'s; the document text (saved or not) is what is compared with the value the editor was filled from.
  */
 object AssetMetaEdits {
-    fun update(project: Project, assetFolder: VirtualFile, key: String, expected: FieldValue, value: FieldValue): AssetEditResult {
-        val file = assetFolder.takeIf { it.isValid }?.findChild(ProjectLayout.META_FILE) ?: return AssetEditResult.Unreadable
-        val editor = service<AbyssusCore>().assetEditor
+    fun update(project: Project, assetFolder: VirtualFile, key: String, expected: FieldValue, value: FieldValue, editor: AssetMetaEditor): AssetEditResult {
+        val file = assetFolder.takeIf { it.isValid }?.findChild(META_FILE) ?: return AssetEditResult.Unreadable
         var result: AssetEditResult = AssetEditResult.Unreadable
         editSceneJson(project, file, AbyssusBundle.message("commandEditAssetMeta")) { root ->
             result = when (val outcome = editor.edit(root, key, expected, value)) {

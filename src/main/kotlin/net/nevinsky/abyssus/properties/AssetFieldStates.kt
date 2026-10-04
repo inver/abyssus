@@ -50,15 +50,13 @@ fun choiceLabel(choice: AssetChoice): String = when {
  * The editable properties of the asset in [folder] for a `meta.json` of [type], with their current values from [json] and,
  * for references, the choices found on disk. Empty for a type without editors. Reads files, so off the EDT.
  */
-fun readFieldStates(folder: VirtualFile, type: String?, json: JsonNode): List<AssetFieldState> {
-    val core = service<AbyssusCore>()
-    val metaType = MetaType.entries.firstOrNull { it.name == type } ?: return emptyList()
-    val fields = core.assetFields.fields(metaType)
+fun readFieldStates(folder: VirtualFile, type: MetaType, json: JsonNode, services: PanelServices): List<AssetFieldState> {
+    val fields = services.assetFields.fields(type)
     if (fields.isEmpty()) return emptyList()
-    val choices = AssetReferenceChoices(core.json)
+    val choices = AssetReferenceChoices(services.json)
     val assetsDir = folder.parent?.path?.let(::File)
     return fields.map { field ->
-        val value = core.assetEditor.current(json, field)
+        val value = services.assetEditor.current(json, field)
         val current = (value as? FieldValue.Text)?.value
         val offered = when (field.kind) {
             FieldKind.ASSET_REFERENCE -> assetsDir?.let { choices.textures(it, current) } ?: emptyList()

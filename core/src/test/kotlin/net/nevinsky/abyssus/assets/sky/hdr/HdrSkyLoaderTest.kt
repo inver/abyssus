@@ -5,7 +5,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import net.nevinsky.abyssus.assets.skyShaders
-import net.nevinsky.abyssus.assets.sky.PreparedSky
+import net.nevinsky.abyssus.assets.sky.cube.PreparedSkybox
 import net.nevinsky.abyssus.assets.testLoading
 import net.nevinsky.abyssus.assets.testProject
 import java.io.File
@@ -87,8 +87,8 @@ class HdrSkyLoaderTest {
         val hdr = loader.prepare(files, "skybox_hdr")
         val cube = loader.prepare(files, "skybox_default")
         try {
-            assertTrue(hdr is PreparedSky.Hdr)
-            assertTrue(cube is PreparedSky.Cube)
+            assertTrue(hdr!!.prepared is PreparedHdrSky)
+            assertTrue(cube!!.prepared is PreparedSkybox)
         } finally {
             cube?.let(loader::discard)
         }

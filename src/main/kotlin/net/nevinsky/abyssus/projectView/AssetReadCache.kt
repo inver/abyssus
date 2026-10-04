@@ -28,7 +28,14 @@ import java.util.concurrent.ConcurrentHashMap
  * project; files that are deleted or moved are forgotten.
  */
 @Service(Service.Level.PROJECT)
-class AssetReadCache(val project: Project) : Disposable {
+class AssetReadCache(
+    val project: Project,
+    private val sceneReader: ConfigFileReader<*>,
+    private val projectReader: ConfigFileReader<*>,
+) : Disposable {
+    /** What the platform creates: the one place this service looks up its readers. */
+    constructor(project: Project) : this(project, service<SceneReader>(), project.service<ProjectReader>())
+
     private data class Entry(val stamp: Long, val result: AssetReadResult<*>)
 
     private val cache = ConcurrentHashMap<VirtualFile, Entry>()
@@ -56,8 +63,8 @@ class AssetReadCache(val project: Project) : Disposable {
     }
 
     private fun readerFor(extension: String?): ConfigFileReader<*>? = when (extension) {
-        ProjectLayout.SCENE_EXTENSION -> service<SceneReader>()
-        ProjectLayout.PROJECT_EXTENSION -> project.service<ProjectReader>()
+        ProjectLayout.SCENE_EXTENSION -> sceneReader
+        ProjectLayout.PROJECT_EXTENSION -> projectReader
         else -> null
     }
 

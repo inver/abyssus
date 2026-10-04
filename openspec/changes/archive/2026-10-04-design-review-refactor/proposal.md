@@ -85,7 +85,8 @@ None.
 - `scene-model-rendering`: the view follows unsaved text edits after a short pause, and plugin edits and Undo at once.
   Both are new requirements next to "View follows scene changes".
 - `scene-light-creation`: "Add Light offers directional, sun and spot" adds that availability is judged from the
-  current text without re-reading an unchanged scene.
+  current text without re-reading an unchanged scene, and that fixing invalid text in the text tab re-enables Add
+  Light without saving.
 
 Unchanged and used as regression checks: `scene-object-transform` (transform writes), `scene-component-editing`,
 `object-properties-panel`, `asset-loading`, `abyssus-project-view` and the main `abyssus-project-assets` capability

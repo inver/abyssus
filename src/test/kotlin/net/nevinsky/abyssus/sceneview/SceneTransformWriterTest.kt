@@ -180,4 +180,34 @@ class SceneTransformWriterTest {
         assertFalse(SceneTransformWriter.apply(root, "l", edit))
         assertEquals(SceneJson.compact(SceneJson.parse(text)), SceneJson.compact(root))
     }
+
+    // Byte-for-byte: the expected text is the fixture's own text with only the intended values replaced. The values were
+    // first produced by the writer before it read entities through SceneEcsPaths, so the move is a pure refactor.
+    private fun written(id: String, edit: TransformEdit): String {
+        val root = SceneJson.parse(text)
+        assertTrue(SceneTransformWriter.apply(root, id, edit))
+        return SceneJson.compact(root)
+    }
+
+    private fun original() = SceneJson.compact(SceneJson.parse(text))
+
+    @Test
+    fun aMoveWritesExactlyTheNewXAndNothingElse() {
+        val expected = original().replace(""""x":-3.035308""", """"x":-1.5""")
+        assertEquals(expected, written("0", TransformEdit(position = Vec3(-1.5f, 0.9123962f, -3.2570944f))))
+    }
+
+    @Test
+    fun aRotationAppendsFourRotationFieldsAndNothingElse() {
+        val expected = original().replace(
+            """"z":-3.2570944}},"Render""", """"z":-3.2570944},"localRotation":{"x":0.0,"y":0.7071,"z":0.0,"w":0.7071}},"Render""",
+        )
+        assertEquals(expected, written("0", TransformEdit(rotation = Quat(0f, 0.7071f, 0f, 0.7071f))))
+    }
+
+    @Test
+    fun aCameraMoveWritesBothPositionsAndNothingElse() {
+        val expected = original().replace(""""x":-23.56657""", """"x":-20.5""")
+        assertEquals(expected, written("4", TransformEdit(position = Vec3(-20.5f, 12.318308f, -0.84287655f))))
+    }
 }

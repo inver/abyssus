@@ -21,6 +21,8 @@ import net.nevinsky.abyssus.projectView.DtoEntryNode
 import java.awt.Component
 import java.awt.Container
 import java.io.File
+import net.nevinsky.abyssus.assets.sky.cube.SKYBOX_FACES
+import net.nevinsky.abyssus.testPanelServices
 
 class AssetPropertiesPanelTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
@@ -55,7 +57,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     private fun asset(name: String) =
         children(children(abss()).single { label(it) == "assets" }).single { (it as DtoEntryNode).label == name }
 
-    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, { it.run() }, { it.run() })
+    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
 
     private fun texts(c: Component): List<String> = buildList {
         if (c is JBLabel && c.text != null) add(c.text)

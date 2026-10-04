@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.projectView
 
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.testCore
 
 class SkyboxChooserDialogTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
@@ -17,7 +18,7 @@ class SkyboxChooserDialogTest : BasePlatformTestCase() {
         SkyboxChoice("nebula", 6, listOf("png"), 1, false),
     )
 
-    private fun dialog(current: String?) = SkyboxChooserDialog(project, choices, current).also {
+    private fun dialog(current: String?) = SkyboxChooserDialog(project, choices, current, testCore.hdrPreviews.preview).also {
         Disposer.register(testRootDisposable, it.disposable)
     }
 
@@ -48,7 +49,7 @@ class SkyboxChooserDialogTest : BasePlatformTestCase() {
             it.folder = myFixture.findFileInTempDir("sky")
             it.faceFiles = listOf("sky.hdr")
         }
-        val d = SkyboxChooserDialog(project, listOf(hdr), null).also { Disposer.register(testRootDisposable, it.disposable) }
+        val d = SkyboxChooserDialog(project, listOf(hdr), null, testCore.hdrPreviews.preview).also { Disposer.register(testRootDisposable, it.disposable) }
         assertEquals(listOf(null, "sky"), d.rows.map { it?.name })
         com.intellij.testFramework.PlatformTestUtil.waitWithEventsDispatching("HDR thumbnail", { hdr.thumbs.isNotEmpty() }, 10)
         assertEquals(1, hdr.thumbs.size)

@@ -43,15 +43,10 @@ open class EcsConfigurator(private val resolver: AssetResolver = AssetResolver {
     }
 }
 
-object WorldUtils {
-    /** Converts every entity with a [clazz] component, given its file id and the component. */
-    fun <R, C : Component> getFromWorld(engine: Engine, clazz: Class<C>, converter: (Int, C) -> R): List<R> =
-        engine.entities.mapNotNull { entity ->
-            val component = entity.getComponent(clazz) ?: return@mapNotNull null
-            val id = entity.getComponent(IdComponent::class.java)?.id ?: return@mapNotNull null
-            converter(id, component)
-        }
-}
-
+/** Converts every entity with a [clazz] component, given its file id and the component. */
 fun <R, C : Component> Engine.getFromWorld(clazz: Class<C>, converter: (Int, C) -> R): List<R> =
-    WorldUtils.getFromWorld(this, clazz, converter)
+    entities.mapNotNull { entity ->
+        val component = entity.getComponent(clazz) ?: return@mapNotNull null
+        val id = entity.getComponent(IdComponent::class.java)?.id ?: return@mapNotNull null
+        converter(id, component)
+    }

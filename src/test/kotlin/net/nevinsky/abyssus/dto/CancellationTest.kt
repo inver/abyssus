@@ -6,11 +6,13 @@
 package net.nevinsky.abyssus.dto
 
 import com.intellij.openapi.progress.ProcessCanceledException
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
+/** The helper lives in `core`; this test stays here because it needs IntelliJ's `ProcessCanceledException`. */
 class CancellationTest {
     @Test
     fun ordinaryFailuresAreCaptured() {

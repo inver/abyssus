@@ -8,6 +8,7 @@ package net.nevinsky.abyssus.sceneview
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.FloatNode
 import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.ecs.scene.SceneEcsPaths
 
 /**
  * What a drag changes about an entity: any of its [position], its [rotation] and, for a camera, its view [direction].
@@ -33,11 +34,10 @@ object SceneTransformWriter {
      * `PositionComponent` that is not an object, or no value differs.
      */
     fun apply(root: JsonNode, entityId: String, edit: TransformEdit): Boolean {
-        val entities = root.get("ecs")?.get("entities") ?: return false
-        val components = entities.get(entityId)?.get("components") as? ObjectNode ?: return false
+        val components = SceneEcsPaths.components(root, entityId) ?: return false
         // Check every entity the edit touches before writing anything, so a rejected edit leaves [root] as it was.
         if ((edit.position != null || edit.rotation != null) && !holdsPlacement(components)) return false
-        val targetComponents = edit.target?.let { entities.get(it.entityId)?.get("components") as? ObjectNode ?: return false }
+        val targetComponents = edit.target?.let { SceneEcsPaths.components(root, it.entityId) ?: return false }
         if (targetComponents != null && !holdsPlacement(targetComponents)) return false
         var changed = false
         if (edit.position != null || edit.rotation != null) {

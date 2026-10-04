@@ -14,8 +14,11 @@ Constraints that shape the approach:
 - **Main capability `abyssus-project-assets`:** `ProjectAssetListing` must keep listing an unreadable or unknown `meta.json` as
   `MetaType.UNKNOWN` with no references, and must keep the unused rule.
 - **Other open changes:** `add-realistic-water`, `add-scene-raytracing` and `add-asset-editing-and-terrain-generation`
-  plan code in `SceneRenderer`, `SceneContent`, `SceneFileEditor`, `editSceneJson`, `AssetCache` and `AssetFiles`. None
-  of their delta specs touch the capabilities this change modifies, but their code will conflict with phases 5–8.
+  plan code in `SceneRenderer`, `SceneContent`, `SceneFileEditor`, `editSceneJson`, `AssetCache` and `AssetFiles`.
+  `add-custom-components` plans code in `ComponentCodecs`, `PanelState` and `editSceneJson` (phases 2 and 5), and
+  `add-sky-clouds` / `add-cloud-scene-lighting` in the renderer's light and sky passes (phase 8). Only `add-sky-clouds`
+  has a delta on a capability this change modifies (`scene-entity-lights`); it adds a requirement and does not touch
+  the one modified here. Their code will still conflict with phases 2 and 5–8.
   Whichever change lands second rebases onto the new structure. `extract-scene-runtime` explicitly follows this
   change; its later move changes the defaults/codecs' package and test module. `add-project-fps-counter` also touches
   editor/view binding: preserve its project preference delivery and completed-frame measurement boundary if it lands
@@ -156,6 +159,8 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
   Keep `MetaTextSource` injection and `refreshed` snapshots: cached metadata belongs only to that snapshot, and a new
   snapshot observes changed disk or unsaved text, changed UUIDs and added/removed folders. Preserve failure fallback
   and prevent duplicate concurrent preparation from corrupting the cache. Do not add a process-wide metadata cache.
+  Within a snapshot, a disk `meta.json` is re-read when its stamp (modified time and size) changes; text from another
+  `MetaTextSource` is re-parsed only when it differs. The `uuid` index stays a snapshot until `refreshed`.
   `SKYBOX_FACES` moves to `core`, next to `SkyboxAdditional`.
 - **Plugin:** `ProjectAssetListing`, `AssetMeta` and the skybox chooser read through a VFS adapter (`text` from
   `textOf`) into the same reader.
@@ -167,13 +172,16 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
 
 ### D-10. `core` loading simplifications (M6, M7, M8)
 - **`AssetCache`:** takes `(executor, prepare: (String) -> P?, loader: AssetLoader<P, T>, log)`. The `build` name
-  argument goes, and `SceneAssets` passes its loader straight through.
+  argument goes, and `SceneAssets` passes its loader straight through. `AssetCache` keeps the revision behavior from
+  `add-asset-editing-and-terrain-generation` (`invalidate`, `version`; a load that finishes for a superseded request is
+  discarded), and `SceneAssets` keeps `replaceFiles`.
 - **`SkyLoader`:** `PreparedSky` becomes `class PreparedSky<P>(val loader: AssetLoader<P, out Sky>, val prepared: P)`
   behind a star-projected helper, so `upload` / `build` / `discard` delegate in one line. Only `prepare` chooses by
   `MetaType`, using `AssetMetaReader` instead of binding `ProceduralSkyMeta` to read the type.
 - **`TextureUploadQueue`:** `TextureUploadQueue(pixmaps, makeTexture: (String, Pixmap) -> Texture)` is shared by
   `PreparedModel` and `PreparedTerrain`. The terrain passes its splat/layer filter choice as `makeTexture`. The upload
   still runs on the GL thread inside `pump`, and the release still runs on any thread that `discard` already uses.
+  It exposes a read-only `pending` view of the images not yet uploaded, which the ray terrain snapshot reads.
 - **Sky drawing:** `createFullscreenTriangle()` and `rotationOnlyViewProj(camera, out)` are top-level functions in
   `core/.../sky/SkyGeometry.kt`, used by `SkyboxCube`, `ProceduralSky`, `HdrSky`, `HdrEnvironmentBuild` and the
   plugin's `LoadingOverlay`.
@@ -182,10 +190,12 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
 
 ### D-11. Small shared helpers (H2, D1–D3, D9, D11, D14, L2, L5, L6)
 - **Cancellation:** delete `dto/Cancellation.kt`. The plugin imports `net.nevinsky.abyssus.assets.runCatchingKeepingCancellation`
-  (verified in task 1.1 that `ProcessCanceledException` is a `CancellationException` on 252). Keep that compatibility
+  (task 1.1 verifies that `ProcessCanceledException` is a `CancellationException` on 252). Keep that compatibility
   test in the plugin because it imports IntelliJ; ordinary failure and cancellation cases can also test the helper
   in `core`. Replace all direct `runCatching` calls in the checked roots, currently eleven, including the newer
   asset-editing, terrain and ray integration sites.
+  The one exception in behavior is `TerrainPreviewRunner`: its own "superseded" `CancellationException` must be captured
+  as the run's outcome, so it uses an explicit `try`/`catch` there instead of either helper.
 - **Build check:** a `checkNoRunCatching` Gradle task (a regex over `src/main` and `core/src/main`, as
   `checkNoSingletons` does) wired into `check`.
 - **JSON setup:** a `JsonFormat` in `core` (a class, no object) builds the shared `JsonMapper.Builder` settings and the
@@ -221,17 +231,19 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
 - **Merging the `meta.json` readers could change the `abyssus-project-assets` behavior.** → Its tests run unchanged; the
   type fallback stays `UNKNOWN`.
 - **Other open changes edit the same classes.** → Phases 1–4 are small and mechanical, so land them first. Agree on a
-  merge order with the owners of `add-realistic-water`, `add-scene-raytracing` and
-  `add-asset-editing-and-terrain-generation` before phases 5–8.
-- **The change is large.** → Phases 1, 3, 4, 5 and 7 preserve behavior; phase 2 changes light defaults and phase 6
-  changes typing reload timing. Land in task order, keeping each phase verified. Coordinate phases 5–8 with the
+  merge order with the owners of `add-realistic-water`, `add-scene-raytracing`,
+  `add-asset-editing-and-terrain-generation`, `add-custom-components`, `add-sky-clouds` and `add-cloud-scene-lighting`
+  before phases 5–8 (and before phase 2 for `add-custom-components`).
+- **The change is large.** → Phases 1, 3, 4, 5, 7 and 8 preserve behavior (phase 8 ports `SceneInteractionTest` to a
+  fake `SceneQueries`, so its tests change shape); phase 2 changes light defaults and phase 6 changes typing reload
+  timing. Land in task order, keeping each phase verified. Coordinate phases 5–8 with the
   overlapping changes; runtime extraction follows this change.
 
 ## Migration Plan
 
 There is no data migration, and no file is rewritten. Each phase in `tasks.md` leaves `./gradlew check` green and can
-be shipped on its own. Rollback is a revert of the phase's commits. Phase 2's only user-visible effect (the light
-defaults) is reverted by restoring the view-side defaults in `ComponentDefaults` usage.
+be shipped on its own. Rollback is a revert of the phase's commits. Reverting phase 2 restores its only user-visible
+effect: the view again draws an omitted `intensity` as 0.3 and an omitted color channel as 1.
 
 ## Open Questions
 

@@ -119,4 +119,26 @@ class ComponentCodecsTest {
             if (nested) assertEquals("7.000", written["outerUnknown"].toString())
         }
     }
+
+    @Test
+    fun lookAtIdIsReadAsAnIntegerOrTextAndWrittenBackAsItWas() {
+        data class Case(val node: String, val id: Int, val ref: String?)
+        for ((node, id, ref) in listOf(
+            Case("3", 3, "3"), Case("\"3\"", 3, "3"), Case("\"-1\"", -1, null), Case("\"h\"", -1, "h"), Case("-1", -1, null),
+        )) {
+            val source = json("""{"lookAtId":$node,"localPosition":{"x":2}}""")
+            val position = PositionCodec().read(source)
+            assertEquals(node, id, position.lookAtId)
+            assertEquals(node, ref, position.lookAtRef)
+            assertEquals(node, source.get("lookAtId"), PositionCodec().write(position).get("lookAtId"))
+        }
+    }
+
+    @Test
+    fun aChangedLookAtIdIsWrittenAsAnInteger() {
+        val position = PositionCodec().read(json("""{"lookAtId":"h"}"""))
+        position.lookAtId = 7
+        position.lookAtRef = "7"
+        assertEquals(json("7"), PositionCodec().write(position).get("lookAtId"))
+    }
 }

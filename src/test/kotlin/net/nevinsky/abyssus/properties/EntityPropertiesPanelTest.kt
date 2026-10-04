@@ -28,6 +28,8 @@ import java.io.File
 import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JTextArea
+import net.nevinsky.abyssus.testMetaFiles
+import net.nevinsky.abyssus.testPanelServices
 
 class EntityPropertiesPanelTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
@@ -68,7 +70,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
 
     private fun component(id: String, kind: String) = descend(entity(id), kind)
 
-    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, { it.run() }, { it.run() })
+    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
 
     private fun <T : Component> all(c: Component, type: Class<T>): List<T> = buildList {
         if (type.isInstance(c)) add(type.cast(c))
@@ -168,7 +170,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.show(entity("0"))
         val state = p.state as PanelState.EntityDetails
-        val group = addComponentGroup(project, sceneFile(), "0", state.addable)
+        val group = addComponentGroup(project, sceneFile(), "0", state.addable, testMetaFiles())
         val light: AnAction = group.getChildren(null).first { it.templatePresentation.text == "Light" }
         light.actionPerformed(TestActionEvent.createTestEvent(light))
         assertTrue(components(sceneFile(), "0").has("LightComponent"))
@@ -180,7 +182,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
 
     fun testLightRangeEditorWritesThirty() {
         copyProject()
-        net.nevinsky.abyssus.projectView.SceneComponentEdits.add(project, sceneFile(), "0", "LightComponent")
+        net.nevinsky.abyssus.projectView.SceneComponentEdits.add(project, sceneFile(), "0", "LightComponent", testMetaFiles())
         val p = panel()
         p.show(entity("0"))
         val field = named(p, "field-LightComponent-range") as JBTextField
@@ -194,10 +196,10 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         copyProject()
         val f = sceneFile()
         val edits = net.nevinsky.abyssus.projectView.SceneComponentEdits
-        edits.add(project, f, "0", "LightComponent")
+        edits.add(project, f, "0", "LightComponent", testMetaFiles())
         val p = panel()
         for (type in listOf("LIGHT_POINT", "LIGHT_DIRECTIONAL", "LIGHT_SPOT")) {
-            edits.update(project, f, "0", "TypeComponent", "type", type)
+            edits.update(project, f, "0", "TypeComponent", "type", type, testMetaFiles())
             p.show(component("0", "LightComponent"))
             if (type != "LIGHT_SPOT") {
                 assertNull(named(p, "field-LightComponent-coneAngle"))

@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.assets.AssetLog
+import net.nevinsky.abyssus.assets.files.AssetFiles
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -30,8 +31,28 @@ class AssetCacheTest {
     private val prepares = mutableListOf<String>()
     private val builds = mutableListOf<String>()
 
-    private fun cache(prepare: (String) -> String? = { it }, build: (String, String) -> Res? = { n, _ -> Res(n) }) =
-        AssetCache(executor, { prepares += it; prepare(it) }, { n, d -> builds += n; build(n, d) }, log = log)
+    /** Prepared data is the asset name itself, so `build` / `upload` / `discard` receive the name. */
+    private inner class FakeLoader(
+        val build: (String) -> Res = { Res(it) },
+        val upload: (String) -> Boolean = { true },
+        val discarded: MutableList<String> = mutableListOf(),
+    ) : AssetLoader<String, Res> {
+        override fun prepare(files: AssetFiles, name: String): String? = error("the cache prepares through its own lambda")
+        override fun upload(prepared: String): Boolean = upload.invoke(prepared)
+        override fun build(prepared: String): Res {
+            builds += prepared
+            return build.invoke(prepared)
+        }
+
+        override fun discard(prepared: String) {
+            discarded += prepared
+        }
+    }
+
+    private fun cache(
+        prepare: (String) -> String? = { it },
+        loader: AssetLoader<String, Res> = FakeLoader(),
+    ) = AssetCache(executor, { prepares += it; prepare(it) }, loader, log)
 
     private fun runBackground() {
         while (queue.isNotEmpty()) queue.removeFirst().run()
@@ -94,7 +115,7 @@ class AssetCacheTest {
 
     @Test
     fun buildFailureDoesNotStopOthers() {
-        val c = cache(build = { n, _ -> if (n == "x") error("boom") else Res(n) })
+        val c = cache(loader = FakeLoader(build = { n -> if (n == "x") error("boom") else Res(n) }))
         c.request("x")
         c.request("y")
         runBackground()
@@ -136,9 +157,10 @@ class AssetCacheTest {
 
     @Test
     fun forgottenWhilePreparingIsDiscardedWithoutReachingTheGlThread() {
-        val discarded = mutableListOf<String>()
+        val loader = FakeLoader()
+        val discarded = loader.discarded
         lateinit var c: AssetCache<String, Res>
-        c = AssetCache(executor, { c.retain(emptySet()); it }, { n, _ -> Res(n) }, discard = { discarded += it }, log = log)
+        c = AssetCache(executor, { c.retain(emptySet()); it }, loader, log)
         c.request("a")
         runBackground()
         assertEquals(listOf("a"), discarded)
@@ -148,9 +170,10 @@ class AssetCacheTest {
 
     @Test
     fun aResultArrivingAfterDisposeIsReleased() {
-        val discarded = mutableListOf<String>()
+        val loader = FakeLoader()
+        val discarded = loader.discarded
         lateinit var c: AssetCache<String, Res>
-        c = AssetCache(executor, { c.dispose(); it }, { n, _ -> Res(n) }, discard = { discarded += it }, log = log)
+        c = AssetCache(executor, { c.dispose(); it }, loader, log)
         c.request("a")
         runBackground()
         assertEquals(listOf("a"), discarded)
@@ -158,14 +181,15 @@ class AssetCacheTest {
 
     @Test
     fun aResultArrivingAfterAbandonIsReleasedAndTheNextRequestLoadsAgain() {
-        val discarded = mutableListOf<String>()
+        val loader = FakeLoader()
+        val discarded = loader.discarded
         var abandonNext = true
         lateinit var c: AssetCache<String, Res>
         c = AssetCache(executor, {
             if (abandonNext) c.abandon()
             abandonNext = false
             it
-        }, { n, _ -> Res(n) }, discard = { discarded += it }, log = log)
+        }, loader, log)
         c.request("a")
         runBackground()
         assertEquals(listOf("a"), discarded)
@@ -221,9 +245,9 @@ class AssetCacheTest {
     @Test
     fun slowGpuWorkIsSpreadOverSeveralSteps() {
         val slices = mutableMapOf<String, Int>()
-        val c = AssetCache<String, Res>(
-            executor, { it }, { n, _ -> builds += n; Res(n) },
-            advance = { d -> val n = (slices[d] ?: 0) + 1; slices[d] = n; n >= 3 }, log = log,
+        val c = AssetCache(
+            executor, { it },
+            FakeLoader(upload = { d -> val n = (slices[d] ?: 0) + 1; slices[d] = n; n >= 3 }), log,
         )
         c.request("big")
         c.request("small")
@@ -245,11 +269,9 @@ class AssetCacheTest {
 
     @Test
     fun anAssetThatFailsInTheMiddleIsDiscardedAndRemembered() {
-        val discarded = mutableListOf<String>()
-        val c = AssetCache<String, Res>(
-            executor, { it }, { n, _ -> Res(n) }, advance = { error("upload failed") },
-            discard = { discarded += it }, log = log,
-        )
+        val loader = FakeLoader(upload = { error("upload failed") })
+        val discarded = loader.discarded
+        val c = AssetCache(executor, { it }, loader, log)
         c.request("x")
         runBackground()
         c.pump()
@@ -268,9 +290,10 @@ class AssetCacheTest {
         val c = AssetCache<String, Res>(
             executor,
             prepare = { n -> val r = ++revision; current[n] = r; if (r in fail) null else "$n#$r" },
-            build = { n, d -> builds += d; Res(d) },
-            advance = { d -> val k = (progress[d] ?: 0) + 1; progress[d] = k; k >= slices },
-            discard = { discarded += it },
+            loader = FakeLoader(
+                upload = { d -> val k = (progress[d] ?: 0) + 1; progress[d] = k; k >= slices },
+                discarded = discarded,
+            ),
             log = log,
         )
         return Triple(c, { runBackground() }, progress)

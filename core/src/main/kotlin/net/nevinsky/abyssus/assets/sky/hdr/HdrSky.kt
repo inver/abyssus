@@ -8,13 +8,12 @@ package net.nevinsky.abyssus.assets.sky.hdr
 import net.nevinsky.abyssus.assets.ShaderSource
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.Mesh
-import com.badlogic.gdx.graphics.VertexAttribute
-import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.assets.sky.Sky
+import net.nevinsky.abyssus.assets.sky.createFullscreenTriangle
+import net.nevinsky.abyssus.assets.sky.rotationOnlyViewProj
 
 /**
  * A built HDR sky: draws its equirectangular image as the background, tone mapped by [curve], and holds
@@ -22,17 +21,12 @@ import net.nevinsky.abyssus.assets.sky.Sky
  */
 class HdrSky(val environment: HdrEnvironment, shaders: ShaderSource, private val curve: ToneCurve) : Sky {
     private val program = shaders.program("hdrsky.vert", "hdr_common.glsl", "hdrsky.frag")
-    private val mesh = Mesh(true, 3, 0, VertexAttribute(Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)).also {
-        it.setVertices(floatArrayOf(-1f, -1f, 3f, -1f, -1f, 3f))
-    }
+    private val mesh = createFullscreenTriangle()
     private val invViewProj = Matrix4()
 
     /** Draws the sky seen from [camera]'s orientation. The caller sets depth and cull state. */
     override fun draw(camera: Camera, sun: Vector3) {
-        invViewProj.set(camera.view)
-        invViewProj.setTranslation(0f, 0f, 0f)
-        invViewProj.mulLeft(camera.projection)
-        invViewProj.inv()
+        rotationOnlyViewProj(camera, invViewProj).inv()
         program.bind()
         environment.equirect.bind(0)
         program.setUniformi("u_equirect", 0)

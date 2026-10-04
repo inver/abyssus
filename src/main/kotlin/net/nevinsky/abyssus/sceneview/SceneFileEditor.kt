@@ -37,8 +37,8 @@ import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.components.JBLabel
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
-import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.projectView.editSceneJson
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.filetype.editSceneJson
 import net.nevinsky.abyssus.projectView.AddLightGroup
 import net.nevinsky.abyssus.projectView.canAddLight
 import net.nevinsky.abyssus.projectView.AbyssusSelectionListener
@@ -49,11 +49,37 @@ import java.beans.PropertyChangeListener
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
+import net.nevinsky.abyssus.assets.META_FILE
+import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.dto.SceneDocumentCache
+import com.intellij.openapi.command.undo.UndoManager
+import com.intellij.util.Alarm
+import com.intellij.util.ui.update.MergingUpdateQueue
+import com.intellij.util.ui.update.Update
+import net.nevinsky.abyssus.filetype.AbyssusSceneEdited
 
 class SceneFileEditorProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile) = ProjectLayout.isScene(file)
 
-    override fun createEditor(project: Project, file: VirtualFile): FileEditor = SceneFileEditor(project, file)
+    override fun createEditor(project: Project, file: VirtualFile): FileEditor {
+        val core = service<AbyssusCore>()
+        val reader = service<SceneReader>()
+        val documents = project.service<SceneDocumentCache>()
+        // Ray tracing is optional: a missing service (e.g. a test without the application services) leaves raster only.
+        val ray = runCatchingKeepingCancellation { RayIntegration.of(core) }.getOrNull()
+        return SceneFileEditor(
+            project, file, core.json, project.service<SceneRayControls>(), SceneParamsSource.editorText(reader),
+        ) { params ->
+            SceneViewPanel(
+                params, SceneRenderer(core.loading, core.sceneShaders),
+                lightActions = { position -> AddLightGroup(project, file, position) },
+                canAddLight = { canAddLight(file, documents) },
+                ray = ray,
+            )
+        }
+    }
 
     override fun getEditorTypeId() = EDITOR_TYPE_ID
 
@@ -64,28 +90,34 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
     }
 }
 
+/** How long typing must pause before the view re-reads the scene; the view then catches up within 300 ms of the last keystroke. */
+private const val RELOAD_PAUSE_MS = 200
+
 /**
  * Live view of a `.scene`; re-reads it through [paramsSource] as its sources are edited or change on disk. Moving or
  * rotating an object in the view writes the scene as one undoable edit, and Undo in this tab reaches it.
- * The view comes from [viewFactory], so tests can replace the GL panel.
+ * The view comes from [viewFactory], so tests can replace the GL panel; [json] reads asset metadata and [rayControls]
+ * registers the view's Ray Tracing switch.
  */
 class SceneFileEditor(
     private val project: Project,
     private val file: VirtualFile,
-    private val paramsSource: SceneParamsSource = SceneParamsSource.EDITOR_TEXT,
-    private val viewFactory: (SceneRenderParams) -> SceneView = {
-        SceneViewPanel(it, lightActions = { position -> AddLightGroup(project, file, position) }, canAddLight = { canAddLight(file) })
-    },
+    private val json: JsonProcessor,
+    private val rayControls: SceneRayControls,
+    private val paramsSource: SceneParamsSource,
+    private val viewFactory: (SceneRenderParams) -> SceneView,
 ) : UserDataHolderBase(), FileEditor, DocumentReferenceProvider {
     private val content = JPanel(BorderLayout()).apply { isFocusable = true }
     private var view: SceneView? = null
+    private val reloads = ReloadPolicy()
+    private val reloadQueue = MergingUpdateQueue("abyssus-scene-reload", RELOAD_PAUSE_MS, true, content, this, null, Alarm.ThreadToUse.SWING_THREAD)
 
     private var disposed = false
 
     /** Reloads assets that change on disk or in an editor; null for a scene outside a project. */
     private val assetRefresh: AssetRefresh? = ProjectLayout.projectDirFor(file)?.let { dir ->
         AssetRefresh(
-            dir, service<AbyssusCore>().json,
+            dir, json,
             unsavedMeta = { unsavedAssetMeta(dir) },
             background = { AppExecutorUtil.getAppExecutorService().execute(it) },
             ui = { ApplicationManager.getApplication().invokeLater({ if (!disposed) it.run() }, ModalityState.any()) },
@@ -110,7 +142,7 @@ class SceneFileEditor(
             EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
                 override fun documentChanged(event: DocumentEvent) {
                     val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
-                    if (changed.name == ProjectLayout.META_FILE && File(changed.path).path.startsWith(assetsPath)) refresh.changed()
+                    if (changed.name == META_FILE && File(changed.path).path.startsWith(assetsPath)) refresh.changed()
                 }
             }, this)
         }
@@ -120,25 +152,51 @@ class SceneFileEditor(
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 if (events.any { it is VFileContentChangeEvent && isSource(it.file) }) {
-                    ApplicationManager.getApplication().invokeLater { if (!disposed) reload() }
+                    ApplicationManager.getApplication().invokeLater { if (!disposed) reloadNow() }
                 }
             }
         })
-        // unsaved edits in the text tabs of the scene or of its project file
+        // a plugin edit (gizmo, panel, tree, Add Light, ...) is shown at once, not after the typing pause
+        project.messageBus.connect(this).subscribe(AbyssusSceneEdited.TOPIC, AbyssusSceneEdited { edited ->
+            if (isSource(edited)) reloadNow()
+        })
+        // unsaved edits in the text tabs of the scene or of its project file: typing waits for a pause, Undo and Redo do not
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
                 val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
-                if (isSource(changed)) reload()
+                if (!isSource(changed)) return
+                val undoing = UndoManager.getInstance(project).let { it.isUndoInProgress || it.isRedoInProgress }
+                if (undoing) reloadNow() else reloadAfterPause()
             }
         }, this)
     }
+
+    /** Typing in a text tab: one re-read of the final text once the typing pauses. */
+    private fun reloadAfterPause() {
+        if (reloads.typing() != Reload.LATER) return
+        reloadQueue.queue(object : Update("reload") {
+            override fun run() {
+                if (reloads.due() && !disposed) reload()
+            }
+        })
+    }
+
+    /** A change that must show at once; it also covers any re-read still waiting for the pause. */
+    private fun reloadNow() {
+        if (reloads.immediate() != Reload.NOW) return
+        reloadQueue.cancelAllUpdates()
+        reload()
+    }
+
+    /** Runs the re-read that is waiting for the typing pause, if any, without waiting; for tests. */
+    internal fun flushPendingReload() = reloadQueue.flush()
 
     private fun isSource(changed: VirtualFile) = changed in paramsSource.sources(file)
 
     private fun reload() {
         runCatchingKeepingCancellation { paramsSource.read(file) }
             .onSuccess { showScene(it) }
-            .onFailure { showStatus(AbyssusBundle.message("sceneViewParseError", it.message ?: it.javaClass.simpleName)) }
+            .onFailure { showStatus(AbyssusBundle.message("sceneViewParseError", it.displayMessage())) }
     }
 
     private fun showScene(params: SceneRenderParams) {
@@ -150,13 +208,13 @@ class SceneFileEditor(
             viewFactory(params)
         } catch (e: Throwable) {
             thisLogger().warn("Failed to create OpenGL scene view", e)
-            showStatus(AbyssusBundle.message("glUnavailable", e.message ?: e.javaClass.simpleName))
+            showStatus(AbyssusBundle.message("glUnavailable", e.displayMessage()))
             return
         }
         created.onFailure = { e -> ApplicationManager.getApplication().invokeLater { showGlFailure(e) } }
         created.onPick = { entityId -> selectEntityInAbyssusView(project, file, entityId) }
         created.onTransform = ::applyTransform
-        (created as? RayControlProvider)?.rayControl?.let { project.getService(SceneRayControls::class.java).register(file, it, created) }
+        (created as? RayControlProvider)?.rayControl?.let { rayControls.register(file, it, created) }
         view = created
         statusText = null
         setContent(created.view)
@@ -177,7 +235,7 @@ class SceneFileEditor(
 
     internal fun showGlFailure(e: Throwable) {
         if (disposed) return
-        showStatus(AbyssusBundle.message("glUnavailable", e.message ?: e.javaClass.simpleName))
+        showStatus(AbyssusBundle.message("glUnavailable", e.displayMessage()))
     }
 
     private fun showStatus(text: String) {
@@ -207,6 +265,8 @@ class SceneFileEditor(
 
     override fun dispose() {
         disposed = true
+        reloads.dispose()
+        reloadQueue.cancelAllUpdates()
         assetRefresh?.dispose()
         view?.let { Disposer.dispose(it) }
         view = null
@@ -221,7 +281,7 @@ internal fun unsavedAssetMeta(projectDir: File): Map<File, String> {
     val assetsPath = File(projectDir.absoluteFile, ASSETS_DIR).path + File.separator
     val manager = FileDocumentManager.getInstance()
     return manager.unsavedDocuments.mapNotNull { document ->
-        val file = manager.getFile(document)?.takeIf { it.name == ProjectLayout.META_FILE } ?: return@mapNotNull null
+        val file = manager.getFile(document)?.takeIf { it.name == META_FILE } ?: return@mapNotNull null
         val io = File(file.path).absoluteFile
         if (io.path.startsWith(assetsPath)) io to document.text else null
     }.toMap()

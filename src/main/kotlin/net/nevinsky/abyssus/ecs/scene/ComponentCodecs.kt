@@ -113,17 +113,37 @@ class PositionCodec : ComponentCodec<PositionComponent> {
     override val name = "PositionComponent"
     override val type = PositionComponent::class.java
 
-    override fun read(node: JsonNode) = PositionComponent(node.opt("lookAtId")?.asInt(NO_ENTITY) ?: NO_ENTITY).also {
-        readVector(node.obj("localPosition"), it.localPosition)
-        readQuaternion(node.obj("localRotation"), it.localRotation)
-        readVector(node.obj("localScale"), it.localScale, 1f)
+    override fun read(node: JsonNode): PositionComponent {
+        val lookAt = node.opt("lookAtId")
+        val (id, ref) = decodeLookAt(lookAt)
+        return PositionComponent(id).also {
+            it.lookAtRef = ref
+            it.lookAtSource = lookAt?.deepCopy()
+            readVector(node.obj("localPosition"), it.localPosition)
+            readQuaternion(node.obj("localRotation"), it.localRotation)
+            readVector(node.obj("localScale"), it.localScale, 1f)
+        }
     }
 
-    override fun write(component: PositionComponent): JsonNode = nodes.objectNode()
-        .putIf("localRotation", quaternionDiff(component.localRotation))
-        .putId("lookAtId", component.lookAtId)
-        .putIf("localPosition", vectorDiff(component.localPosition))
-        .putIf("localScale", vectorDiff(component.localScale, 1f))
+    override fun write(component: PositionComponent): JsonNode {
+        val out = nodes.objectNode()
+            .putIf("localRotation", quaternionDiff(component.localRotation))
+        // the file's own node while the reference is as it was read (`"3"`, `"-1"`, `"h"`, `3`); an edit writes an integer
+        val source = component.lookAtSource
+        if (source != null && decodeLookAt(source) == (component.lookAtId to component.lookAtRef)) out.set<JsonNode>("lookAtId", source.deepCopy())
+        else out.putId("lookAtId", component.lookAtId)
+        return out
+            .putIf("localPosition", vectorDiff(component.localPosition))
+            .putIf("localScale", vectorDiff(component.localScale, 1f))
+    }
+
+    /** A `lookAtId` node as the numeric id (`-1` when none or not a number) and the reference text (null for none or `-1`). */
+    private fun decodeLookAt(node: JsonNode?): Pair<Int, String?> = when {
+        node == null -> NO_ENTITY to null
+        node.isIntegralNumber -> node.asInt(NO_ENTITY).let { it to if (it == NO_ENTITY || it < 0) null else it.toString() }
+        node.isTextual -> node.asText().let { t -> (t.trim().toIntOrNull() ?: NO_ENTITY) to t.takeIf { it.isNotBlank() && it != "-1" } }
+        else -> node.asInt(NO_ENTITY) to null
+    }
 }
 
 class CameraCodec : ComponentCodec<CameraComponent> {
@@ -182,9 +202,9 @@ class LightCodec : ComponentCodec<LightComponent> {
             if (value == default) values.remove(key)
             else if (old != value) values.set<JsonNode>(key, number(value))
         }
-        optional("range", component.light.range, 100f, previous?.range)
-        optional("coneAngle", component.light.coneAngle, 45f, previous?.coneAngle)
-        optional("edgeSoftness", component.light.edgeSoftness, 0.2f, previous?.edgeSoftness)
+        optional("range", component.light.range, LIGHT_RANGE, previous?.range)
+        optional("coneAngle", component.light.coneAngle, LIGHT_CONE_ANGLE, previous?.coneAngle)
+        optional("edgeSoftness", component.light.edgeSoftness, LIGHT_EDGE_SOFTNESS, previous?.edgeSoftness)
         return if (component.nested) root.set("light", values) else values
     }
 }
@@ -263,4 +283,8 @@ class ComponentCodecs(
     private val byName = all.associateBy { it.name }
 
     operator fun get(name: String): ComponentCodec<*>? = byName[name]
+
+    /** The component [name] read from [node]; [C] must be the component class of that codec. */
+    @Suppress("UNCHECKED_CAST")
+    fun <C : Component> read(name: String, node: JsonNode): C = (byName.getValue(name) as ComponentCodec<C>).read(node)
 }

@@ -60,6 +60,9 @@ class SceneSkybox(private val assets: SceneAssets<PreparedSky, Sky>) : Disposabl
     /** The lighting environment of the HDR sky [name] once it is built; null for any other sky or while it builds. */
     fun environment(name: String?): HdrEnvironment? = (name?.let(assets::get) as? HdrSky)?.environment
 
+    /** Forgets every sky without GL calls: the context they were built in is gone (see [SceneAssets.abandon]). */
+    fun abandon() = assets.abandon()
+
     override fun dispose() {
         assets.dispose()
     }

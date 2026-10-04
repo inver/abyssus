@@ -8,17 +8,14 @@ package net.nevinsky.abyssus.filetype
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
-import com.fasterxml.jackson.core.util.DefaultIndenter
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
-import com.fasterxml.jackson.core.util.Separators
-import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.node.*
 import java.math.BigDecimal
 import java.math.BigInteger
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.json.JsonFormat
 
 /**
  * A floating-point literal that remembers its source text, so `2.50`, `-0.0` and `1.0E-4` are written back exactly
@@ -52,23 +49,13 @@ private class RawNumberNode(val text: String) : NumericNode() {
  */
 object SceneJson {
     /** Unknown fields are ignored and properties keep declaration order, so a DTO lists its fields as the file does. */
-    val mapper: JsonMapper = JsonMapper.builder()
-        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-        .disable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
-        .build()
+    private val format = JsonFormat()
+
+    val mapper: JsonMapper = format.mapperBuilder().build()
 
     private val nodes = JsonNodeFactory.instance
 
-    private val prettyPrinter: DefaultPrettyPrinter = DefaultPrettyPrinter(
-        Separators.createDefaultInstance()
-            .withObjectFieldValueSpacing(Separators.Spacing.AFTER)
-            .withObjectEmptySeparator("")
-            .withArrayEmptySeparator(""),
-    ).also {
-        val indenter = DefaultIndenter("  ", "\n")
-        it.indentObjectsWith(indenter)
-        it.indentArraysWith(indenter)
-    }
+    private val prettyPrinter = format.prettyPrinter
 
     /** Parses [text] as exactly one JSON document; throws on malformed, empty or trailing input. */
     fun parse(text: String): JsonNode = mapper.createParser(text).use { p ->
@@ -92,7 +79,7 @@ object SceneJson {
         if (original.contains('\n')) pretty(node) else compact(node)
 
     /** The scene as indented JSON; null when [text] is not a JSON object (so a half-edited or foreign file is never rewritten). */
-    fun pretty(text: String): String? = runCatching {
+    fun pretty(text: String): String? = runCatchingKeepingCancellation {
         val node = parse(text)
         if (!node.isObject) return null
         pretty(node)

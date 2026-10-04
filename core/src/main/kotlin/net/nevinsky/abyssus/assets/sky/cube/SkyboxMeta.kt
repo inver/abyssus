@@ -20,3 +20,6 @@ class SkyboxAdditional(
     val front: String?,
     val back: String?,
 )
+
+/** The faces of a skybox in `meta.json`'s order: the property names of [SkyboxAdditional]. */
+val SKYBOX_FACES = listOf("top", "bottom", "left", "right", "front", "back")

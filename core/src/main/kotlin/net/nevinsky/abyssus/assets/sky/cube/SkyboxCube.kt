@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.assets.sky.Sky
+import net.nevinsky.abyssus.assets.sky.rotationOnlyViewProj
 
 /** A six-face skybox on a cube mesh, drawn with [program] (`skybox.vert` / `skybox.frag`), which it owns. */
 class SkyboxCube(prepared: PreparedSkybox, private val program: ShaderProgram) : Sky {
@@ -17,30 +18,8 @@ class SkyboxCube(prepared: PreparedSkybox, private val program: ShaderProgram) :
     private val mesh = Mesh(true, 8, 36, VertexAttribute.Position()).also {
         it.setVertices(
             floatArrayOf(
-                -1f,
-                -1f,
-                -1f,
-                1f,
-                -1f,
-                -1f,
-                1f,
-                1f,
-                -1f,
-                -1f,
-                1f,
-                -1f,
-                -1f,
-                -1f,
-                1f,
-                1f,
-                -1f,
-                1f,
-                1f,
-                1f,
-                1f,
-                -1f,
-                1f,
-                1f
+                -1f, -1f, -1f, 1f, -1f, -1f, 1f, 1f, -1f, -1f, 1f, -1f,
+                -1f, -1f, 1f, 1f, -1f, 1f, 1f, 1f, 1f, -1f, 1f, 1f,
             )
         )
         it.setIndices(
@@ -56,9 +35,7 @@ class SkyboxCube(prepared: PreparedSkybox, private val program: ShaderProgram) :
     }
 
     override fun draw(camera: Camera, sun: Vector3) {
-        viewProj.set(camera.view)
-        viewProj.setTranslation(0f, 0f, 0f)
-        viewProj.mulLeft(camera.projection)
+        rotationOnlyViewProj(camera, viewProj)
         program.bind()
         program.setUniformMatrix("u_viewProj", viewProj)
         cubemap.bind(0)

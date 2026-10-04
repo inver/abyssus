@@ -9,6 +9,7 @@ import com.intellij.json.JsonLanguage
 import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.util.IconLoader
 import javax.swing.Icon
+import net.nevinsky.abyssus.assets.files.MetaType
 
 object SceneIcons {
     @JvmField
@@ -102,6 +103,8 @@ object AssetIcons {
     }
 
     fun forType(type: String?): Icon = type?.let { byType[it] } ?: UNKNOWN
+
+    fun forType(type: MetaType): Icon = forType(type.name)
 }
 
 object AbyssusProjectIcons {

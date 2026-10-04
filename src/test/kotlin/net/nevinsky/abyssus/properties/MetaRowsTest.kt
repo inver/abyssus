@@ -9,6 +9,9 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.filetype.SceneJson
 import java.io.File
 import java.time.ZoneOffset
+import net.nevinsky.abyssus.testMetaFiles
+
+private fun load(folder: com.intellij.openapi.vfs.VirtualFile) = loadAssetMeta(folder, testMetaFiles())
 
 class MetaRowsTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
@@ -77,24 +80,24 @@ class MetaRowsTest : BasePlatformTestCase() {
     }
 
     fun testLoadsAValidMeta() {
-        val loaded = loadAssetMeta(asset("""{"type":"SKYBOX","additional":{"top":"t.png"}}""")) as AssetMeta.Loaded
-        assertEquals("SKYBOX", loaded.type)
+        val loaded = load(asset("""{"type":"SKYBOX","additional":{"top":"t.png"}}""")) as AssetMeta.Loaded
+        assertEquals(net.nevinsky.abyssus.assets.files.MetaType.SKYBOX, loaded.type)
         assertEquals(listOf("type", "additional", "top"), loaded.rows.map { it.name })
     }
 
     fun testMissingMetaFailsWithTheFolderName() {
-        val failed = loadAssetMeta(asset(null)) as AssetMeta.Failed
+        val failed = load(asset(null)) as AssetMeta.Failed
         assertTrue(failed.message, failed.message.contains("a") && failed.message.contains("meta.json"))
     }
 
     fun testMalformedMetaFailsWithTheReason() {
-        val failed = loadAssetMeta(asset("{not json")) as AssetMeta.Failed
+        val failed = load(asset("{not json")) as AssetMeta.Failed
         assertTrue(failed.message, failed.message.startsWith("Cannot read the asset's meta: "))
         assertTrue(failed.message.length > "Cannot read the asset's meta: ".length)
     }
 
     fun testNonObjectMetaFails() {
-        assertTrue(loadAssetMeta(asset("[1]")) is AssetMeta.Failed)
+        assertTrue(load(asset("[1]")) is AssetMeta.Failed)
     }
 
     fun testUnsavedEditorTextWinsOverTheFile() {
@@ -102,6 +105,6 @@ class MetaRowsTest : BasePlatformTestCase() {
         val file = folder.findChild("meta.json")!!
         val doc = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!
         com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) { doc.setText("""{"type":"TERRAIN"}""") }
-        assertEquals("TERRAIN", (loadAssetMeta(folder) as AssetMeta.Loaded).type)
+        assertEquals(net.nevinsky.abyssus.assets.files.MetaType.TERRAIN, (load(folder) as AssetMeta.Loaded).type)
     }
 }

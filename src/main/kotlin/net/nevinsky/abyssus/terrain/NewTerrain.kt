@@ -55,8 +55,8 @@ fun checkFolderName(assetsDir: File, name: String): FolderNameError? {
 
 private fun escapes(assetsDir: File, name: String): Boolean {
     if (!assetsDir.exists()) return false
-    val root = runCatching { assetsDir.canonicalFile }.getOrNull() ?: return true
-    val parent = runCatching { File(assetsDir, name).canonicalFile.parentFile }.getOrNull() ?: return true
+    val root = runCatchingKeepingCancellation { assetsDir.canonicalFile }.getOrNull() ?: return true
+    val parent = runCatchingKeepingCancellation { File(assetsDir, name).canonicalFile.parentFile }.getOrNull() ?: return true
     return parent != root
 }
 

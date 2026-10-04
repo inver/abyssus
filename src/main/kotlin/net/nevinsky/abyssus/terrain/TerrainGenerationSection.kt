@@ -28,6 +28,7 @@ import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
+import net.nevinsky.abyssus.dto.textOf
 
 /** A square grayscale picture of a heightmap; a bordered blank square when there is no preview. */
 internal class HeightmapView(image: HeightmapImage? = null) : JComponent() {
