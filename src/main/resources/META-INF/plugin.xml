@@ -46,6 +46,11 @@
                 text="Rename Scene...">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
+        <action id="Abyssus.NewTerrain"
+                class="net.nevinsky.abyssus.projectView.NewTerrainAction"
+                text="New Terrain...">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
         <action id="Abyssus.AddLight" class="net.nevinsky.abyssus.projectView.AddLightAction" text="Add Light">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
         </action>

@@ -392,6 +392,8 @@ class SceneViewPanel(
         refreshCameraChoices(params)
     }
 
+    override fun refreshAssets(revision: AssetRevisionBatch) = renderer.queueAssetRevision(revision)
+
     override fun addNotify() {
         replaceAbandonedCanvas()
         super.addNotify()

@@ -85,4 +85,14 @@ class TerrainDataTest {
         assertThrows(IllegalArgumentException::class.java) { reader.read(truncated, 1600, 60f) }
         assertThrows(IllegalArgumentException::class.java) { TerrainData(256, FloatArray(256 * 256), 1, 1f) }
     }
+
+    @Test
+    fun readsWhatTheHeightEncoderWrites() {
+        val heights = FloatArray(9) { it * 1.25f - 3f }
+        val file = Files.createTempFile("terrain", ".data").toFile()
+        file.writeBytes(net.nevinsky.abyssus.assets.terrain.generation.TerrainHeightEncoder().encode(heights))
+        val t = reader.read(file, 100, 1f)
+        assertEquals(3, t.resolution)
+        assertArrayEquals(heights, t.heights, 0f)
+    }
 }

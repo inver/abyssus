@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.sceneview
 
 import net.nevinsky.abyssus.assets.AssetLoading
+import net.nevinsky.abyssus.assets.files.AssetFiles
 import java.io.File
 import net.nevinsky.abyssus.assets.ShaderSource
 import com.badlogic.gdx.Gdx
@@ -88,8 +89,16 @@ class SceneRenderer(
     private var batch: ModelBatch? = null
     private var contentBatch: ContentBatch? = null
     private var contentShaders: DefaultShaderProvider? = null
-    private val models = SceneModels(assetLoading.assets(assetLoading.models))
-    private val terrains = SceneTerrains(assetLoading.assets(assetLoading.terrains))
+    /** The project's newest asset snapshot (unsaved metadata included); a rebuilt cache starts from it instead of from disk. */
+    private var latestFiles: AssetFiles? = null
+    private fun filesFor(projectDir: File): AssetFiles =
+        latestFiles?.takeIf { it.projectDir == projectDir.absoluteFile } ?: assetLoading.files(projectDir)
+
+    /** Asset changes waiting for a frame that can safely replace GL resources; merged until [render] takes them. */
+    private val pendingRevision = PendingAssetRevision()
+
+    private val models = SceneModels(assetLoading.assets(assetLoading.models, ::filesFor))
+    private val terrains = SceneTerrains(assetLoading.assets(assetLoading.terrains, ::filesFor))
     private var terrainShader: TerrainShader? = null
     private var shadows: SceneShadows? = null
     internal var shadowedLightIds: Set<String> = emptySet()
@@ -173,10 +182,14 @@ class SceneRenderer(
     var drawnVersion: Long = 0
         private set
     private var drawnIds: Pair<Set<String>, Set<String>> = emptySet<String>() to emptySet()
+    private var drawnAssets: List<Pair<String, Int>> = emptyList()
 
     private fun updateDrawnVersion() {
         val fresh = models.drawn.mapTo(HashSet()) { it.placement.entityId } to terrains.drawn.mapTo(HashSet()) { it.placement.entityId }
-        if (fresh != drawnIds) { drawnIds = fresh; drawnVersion++ }
+        // a replaced asset (new heights under the same entity) changes what the entities are standing on
+        val assets = models.drawn.map { it.placement.entityId to System.identityHashCode(it.model) } +
+            terrains.drawn.map { it.placement.entityId to System.identityHashCode(it.terrain) }
+        if (fresh != drawnIds || assets != drawnAssets) { drawnIds = fresh; drawnAssets = assets; drawnVersion++ }
     }
 
     /** The ray through the pixel ([screenX], [screenY]) of a [width] x [height] view, as of the last rendered frame. */
@@ -231,16 +244,35 @@ class SceneRenderer(
             numSpotLights = LightSet.MAX_POINT
         }).also { contentBatch = ContentBatch(it) }
         terrainShader = TerrainShader(shaders)
-        skybox = SceneSkybox(assetLoading.assets(assetLoading.skies))
+        skybox = SceneSkybox(assetLoading.assets(assetLoading.skies, ::filesFor))
         overlay = LoadingOverlay(shaders)
         lineBatch = LineBatch(shaders)
         gridModel = buildGrid().also { grid = ModelInstance(it) }
+    }
+
+    /**
+     * Asks for the assets of [revision] to be loaded again. Any thread; nothing is touched until the next [render], which
+     * only runs while the canvas can safely draw, so a hidden view applies it when it is shown again. Revisions made
+     * meanwhile are merged.
+     */
+    fun queueAssetRevision(revision: AssetRevisionBatch) {
+        pendingRevision.queue(revision)
+    }
+
+    /** Applies the queued revision on the GL thread: new snapshot for later loads, then the changed names reload. */
+    private fun applyPendingRevision() {
+        val revision = pendingRevision.take() ?: return
+        latestFiles = revision.files
+        models.revise(revision.files, revision.names)
+        terrains.revise(revision.files, revision.names)
+        skybox?.revise(revision.files, revision.names)
     }
 
     fun render(width: Int, height: Int, orbit: OrbitCamera, deltaSeconds: Float = 0f) {
         val batch = batch ?: return
         val grid = grid ?: return
         aspectOf(width, height) ?: return
+        applyPendingRevision()
         val p = params
         lastWidth = width
         lastHeight = height

@@ -67,5 +67,12 @@ class AssetLoading(
     fun files(projectDir: File): AssetFiles = AssetFiles(projectDir, json)
 
     /** A new per-project cache over [loader]: prepares on the executor, builds on the GL thread, logs to [log]. */
-    fun <P : Any, T : Disposable> assets(loader: AssetLoader<P, T>): SceneAssets<P, T> = SceneAssets(executor, loader, ::files, log)
+    fun <P : Any, T : Disposable> assets(loader: AssetLoader<P, T>): SceneAssets<P, T> = assets(loader, ::files)
+
+    /**
+     * Like [assets], with [filesOf] making the [AssetFiles] snapshot of a project when its cache is (re)created: a caller
+     * that has refreshed snapshots (reading unsaved metadata) passes them on, so a rebuilt cache does not fall back to disk.
+     */
+    fun <P : Any, T : Disposable> assets(loader: AssetLoader<P, T>, filesOf: (File) -> AssetFiles): SceneAssets<P, T> =
+        SceneAssets(executor, loader, filesOf, log)
 }

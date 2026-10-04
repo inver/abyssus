@@ -35,8 +35,9 @@ white when the `color` object is missing, 0 for a channel missing inside a prese
 
 #### Scenario: Stated values agree
 
-- **WHEN** the Untitled fixture's `Main Scene` is open in the scene view and entity `7` (`LIGHT_DIRECTIONAL`, whose
-  `LightComponent.light` has color r 1, g 0.96, b 0.84 and intensity 1.2) is selected in the Abyssus view
+- **WHEN** a test copy of Untitled's `Main Scene` has a `LightComponent` added to existing entity `7`
+  (`Directional Light 7`, `LIGHT_DIRECTIONAL`) with `light.color` r 1, g 0.96, b 0.84, a 1 and `light.intensity` 1.2,
+  and that entity is selected while the scene view is open
 - **THEN** the Properties panel shows color 1 / 0.96 / 0.84 and intensity 1.2
 - **AND** the view lights the scene with that color and intensity
 
@@ -58,7 +59,9 @@ white when the `color` object is missing, 0 for a channel missing inside a prese
 
 #### Scenario: Omitted spotlight values
 
-- **WHEN** entity `8` (`Spot Light 8`, `LIGHT_SPOT`) of `Main Scene` omits `range`, `coneAngle` and `edgeSoftness`
+- **WHEN** a test copy of Untitled's `Main Scene` has a new entity `8` named `Spot Light 8`, with type `LIGHT_SPOT`,
+  a position and `LightComponent.light` holding white color and intensity 1 but omitting `range`, `coneAngle` and
+  `edgeSoftness`, and the user opens the view and selects that entity
 - **THEN** the panel shows range 100, cone angle 45 and edge softness 20 (percent)
 - **AND** the view draws the spot with reach 100, a 45 degree cone and softness 0.2
-- **AND** `Main Scene.scene` is unchanged by opening the view and selecting the entity
+- **AND** the prepared copy of `Main Scene.scene` is unchanged by opening the view and selecting the entity

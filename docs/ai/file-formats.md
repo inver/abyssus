@@ -103,6 +103,34 @@ direction (`SceneContent`).
 
 `uuid` can be missing (the fixture's `skybox_default` and `tree` have none).
 
+### Terrain data and the generation recipe
+
+A terrain folder holds `meta.json` and the height file named by `additional.terrainFile` (`terrain.data`): no header,
+each height a big-endian 32-bit float, a square grid row after row (z-major), so the resolution is the square root of
+the float count (the fixture's is 180). Generating a terrain changes none of this: it writes the same two files.
+
+New terrain metadata is one compact line in Mundus's order (`version` 1, `lastModified`, `uuid`, `type` `TERRAIN`,
+`additional` with `terrainFile`, `size`, `uv` 1.0 and the six splat fields null); see `TerrainAssetWriter` in
+`core/src/main/kotlin/net/nevinsky/abyssus/assets/terrain/generation/TerrainAssetEncoding.kt`.
+
+How generated heights were made is kept apart from Mundus's files, in a recipe file beside the
+heights (`TERRAIN_RECIPE_FILE`; Mundus never reads it, and a terrain loads without it):
+
+```json
+// abyssus-terrain.recipe.json
+{ "schemaVersion": 1,
+  "generator": { "id": "opensimplex2-fbm-v1", "sourceRevision": "<FastNoiseLite commit>" },
+  "settings": { "seed": 12345, "featureSize": 200.0, "minHeight": 0.0, "maxHeight": 120.0, "octaves": 5, "persistence": 0.5, "lacunarity": 2.0 },
+  "size": 1600, "resolution": 180, "heightsSha256": "<SHA-256 of terrain.data>" }
+```
+
+The recipe is a fingerprint, not a source of truth: if the size, the resolution or the height bytes no longer match,
+or the schema or generator identifier is unknown, or the file is malformed, the terrain stays usable, the panel shows
+why, and a draft starts from the defaults above. An identifier is never reinterpreted: new noise gets a new
+identifier. Heights come from world-local OpenSimplex2 fractal noise (`x / (resolution - 1) * size`), mapped onto
+`minHeight..maxHeight`, so a height means the same at any resolution.
+
+
 **`SKYBOX_PROCEDURAL` is a plugin-only type.** Mundus does not define it and will not load such an asset. The scene view
 draws it as a fullscreen triangle with the folder's own shaders (single-scattering Rayleigh + Mie, ray-marched per
 pixel; the fixture is `assets/skybox_physical`). The plugin supplies these uniforms: `u_invViewProj` (vertex),

@@ -23,6 +23,14 @@ probed when ray tracing is switched on, once per IDE session, and `-Dabyssus.ray
 on the next explicit Retry. The backend owns one device and queue, and each view gets its own session (scene structures,
 command pools, output images) that is disposed on the owner worker.
 
+### Changed assets to the scene view
+
+`SceneFileEditor` watches the project's `assets` (VFS events and `meta.json` documents). `AssetRefresh` diffs snapshots of
+effective asset revisions off the EDT (unsaved metadata text is captured on the EDT first), and a real change reaches
+`SceneRenderer.queueAssetRevision` as an `AssetRevisionBatch`. The next safe frame invalidates the changed names in each
+`AssetCache` and swaps old assets for new ones as they finish building. See
+`src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md`.
+
 ### A scene file to the scene view
 
 1. `SceneFileEditor` reads the scene and its project's `mainCamera` through `SceneParamsSource.EDITOR_TEXT`. It uses
@@ -72,7 +80,8 @@ command pools, output images) that is disposed on the owner worker.
 
 ### Every write
 
-The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) all go through `editSceneJson`
+The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) and asset property edits (`AssetMetaEdits`, over `core`'s
+`AssetMetaEditor`; reference and face choices come from `properties/AssetReferenceChoices.kt`) all go through `editSceneJson`
 (`projectView/EnabledToggle.kt`):
 
 1. Parse the document with `SceneJson`.
@@ -80,6 +89,11 @@ The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and componen
 3. Re-serialize with `SceneJson.inStyleOf`, which keeps indentation, key order and number text.
 4. Replace the text in a `WriteCommandAction` and save.
 5. Refresh the Abyssus pane.
+
+Terrain regeneration and creation are the exception (binary heights, new files and folders cannot be a document edit):
+they go through `AssetFileCommand` (`assetfiles/AssetFileCommand.kt`), described in `docs/ai/conventions.md`, with
+`AssetTransactionEngine` holding the file logic (checks, ordered writes, rollback) apart from the platform so a test can
+fail it between any two writes. No scene or project file is written that way.
 
 ### The `ecs` package
 
@@ -110,6 +124,8 @@ and bounds, and `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for t
 - **Asset loading:** `AssetCache.prepare` runs on a pool thread and does file IO and decoding, no GL. Building GPU
   objects happens on the render thread in `pump`, sliced per frame for big textures and for an HDR sky's
   environment passes (`HdrEnvironmentBuild`, which restores the framebuffer, viewport and state it changes).
+  Reloading a changed asset follows the same split: `AssetRefresh` reads on the pool and delivers on the EDT, and
+  invalidation, disposal, build and upload happen only inside `withContext` on a frame `GuardedGLCanvas` allows.
 - **GL safety:** `GuardedGLCanvas` refuses GL until the canvas has been on screen with a non-zero size for 250 ms.
   When disposed while hidden, it drops the context without making it current, because on macOS that would abort the
   JVM.

@@ -40,6 +40,18 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
   no GL). `build`, and `advance` for big textures, run on the render thread one slice per frame, inside this package's
   `GdxRuntime.withContext`. A new project gets a new cache, so a pool thread never prepares from a stale project. A
   failed asset is remembered and logged once, through the `AssetLog` `AbyssusCore` gives `AssetLoading`.
+- **Changed assets reload without reopening the view.** `AssetRefresh` (UI thread, reads on the pool) compares
+  snapshots of the project's effective asset revisions: each `meta.json` as the editors hold it (unsaved text is captured
+  on the UI thread by `unsavedAssetMeta` and handed in as immutable text, so pool threads never touch documents) plus the
+  stamps of the files it names. Only a real difference produces an `AssetRevisionBatch` (names plus a fresh `AssetFiles`
+  snapshot), so saving shown text, or Undo back to loaded text, costs nothing. A texture change also names the terrains
+  that use it. `SceneFileEditor` feeds it VFS and document events and passes the batch to `SceneView.refreshAssets`;
+  `SceneRenderer.queueAssetRevision` keeps batches (merged, in `PendingAssetRevision`) until `render` takes them, and
+  `render` only runs while the canvas is safely on screen, so a hidden view reloads when it is shown. On the render
+  thread the batch gives each `SceneAssets` the new snapshot and invalidates the names (`AssetCache.invalidate`): the old
+  asset keeps drawing until its replacement is built, then is disposed once; a superseded load is discarded. A terrain's
+  mesh and CPU height data come from one `TerrainMesh`, so drawing, picking, Drop and shadows all see the same
+  replacement (`drawnVersion` changes when an asset is replaced so Drop re-measures). Nothing moves entities.
 - **The view reads JSON, not the ECS engine.** Placements come straight from the `ecs` JSON. `ParentComponent` is
   ignored, and `local*` values are drawn as world values; drags write them the same way.
 - **Drags preview, then write once.** During a drag `ScenePreview` overrides the dragged entity's placement. On release
