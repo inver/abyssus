@@ -10,8 +10,9 @@ be edited without writing component JSON by hand and without disturbing anything
 ### Requirement: Add a component to an entity
 
 The plugin SHALL add a component of any modeled kind (Name, Type, Parent, Position, Camera, Light,
-Point2Point, Render) to an entity of a scene file, initialized with the defaults a scene load gives
-that kind. An entity SHALL NOT receive a second component of a kind it already has.
+Point2Point, Render), or of any kind a known component schema declares, to an entity of a scene file, initialized
+with the defaults a scene load gives that kind. An entity SHALL NOT receive a second component of a kind it already
+has.
 
 #### Scenario: Add a light
 
@@ -31,12 +32,19 @@ that kind. An entity SHALL NOT receive a second component of a kind it already h
 #### Scenario: Unmodeled kind is not offered
 
 - **WHEN** the user opens the list of components that can be added
-- **THEN** it holds only modeled kinds the entity lacks, and never `PickableComponent` or `DependenciesComponent`
+- **THEN** it holds only modeled and schema-declared kinds the entity lacks, and never `PickableComponent` or
+  `DependenciesComponent`
+
+#### Scenario: Add a schema-declared component
+
+- **WHEN** a `PlaneComponent`, declared by the `Custom` project's schema, is added to entity `1` of its scene
+- **THEN** entity `1` gains `"PlaneComponent": {}` and nothing else in the file changes
 
 ### Requirement: Update a component field
 
-The plugin SHALL change one field of a modeled component of an entity and write only that change into the
-file. A value that does not fit the field SHALL be rejected with a message and leave the file unchanged.
+The plugin SHALL change one field of a modeled or schema-declared component of an entity and write only that change
+into the file. A value that does not fit the field, including one outside a schema field's declared limits or not
+among its choices, SHALL be rejected with a message and leave the file unchanged.
 
 #### Scenario: Change a camera field
 
@@ -58,10 +66,21 @@ file. A value that does not fit the field SHALL be rejected with a message and l
 - **WHEN** a field is set to the value it already has
 - **THEN** the file is not modified
 
+#### Scenario: Change a schema-declared field
+
+- **WHEN** entity `0`'s `PlaneComponent` `lineLength` in the `Custom` scene is set to `25`
+- **THEN** the file holds `25` for it and the plane's other fields are unchanged
+
+#### Scenario: Outside a declared limit
+
+- **WHEN** `lineLength`, declared with a minimum of `5`, is set to `2`
+- **THEN** the file is unchanged and a message names the field and its minimum
+
 ### Requirement: References between entities stay valid
 
-An update that sets a look-at, parent or point-to-point entity SHALL accept only the id of an entity of the
-scene or `-1` (none), and SHALL reject an entity as its own parent and any parent chain that would loop.
+An update that sets a look-at, parent or point-to-point entity, or an entity-reference field of a schema-declared
+component, SHALL accept only the id of an entity of the scene or `-1` (none), and SHALL reject an entity as its own
+parent and any parent chain that would loop.
 
 #### Scenario: Unknown target
 
@@ -78,9 +97,14 @@ scene or `-1` (none), and SHALL reject an entity as its own parent and any paren
 - **WHEN** a look-at target is set to `-1`
 - **THEN** the file no longer holds a `lookAtId` for that entity
 
+#### Scenario: Schema entity reference
+
+- **WHEN** the `pilot` field of entity `0`'s `PlaneComponent` is set to `99` and the scene has no entity `99`
+- **THEN** the value is rejected and the file is unchanged
+
 ### Requirement: Remove a component
 
-The plugin SHALL remove a modeled component from an entity. Removing the `PositionComponent` of an entity
+The plugin SHALL remove a modeled or schema-declared component from an entity. Removing the `PositionComponent` of an entity
 that another entity looks at, has as parent or uses as a point-to-point endpoint SHALL be refused while
 anything refers to it.
 
@@ -98,6 +122,11 @@ anything refers to it.
 
 - **WHEN** the user selects a `PickableComponent`
 - **THEN** no remove action is offered for it
+
+#### Scenario: Remove a schema-declared component
+
+- **WHEN** entity `0`'s `PlaneComponent` is removed
+- **THEN** the entity no longer has it, keeps its other components in their order, and nothing else in the file changes
 
 ### Requirement: Edits preserve the rest of the scene file
 

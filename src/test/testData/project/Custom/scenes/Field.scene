@@ -1,0 +1,50 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "id": 0,
+  "name": "Field",
+  "ecs": {
+    "entities": {
+      "0": {
+        "components": {
+          "NameComponent": {
+            "name": "Plane"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 18,
+              "y": 1.5
+            }
+          },
+          "RenderComponent": {
+            "renderable": {
+              "kind": "asset",
+              "asset": {
+                "type": "MODEL",
+                "assetName": "tree"
+              }
+            }
+          },
+          "PlaneComponent": {
+            "lineLength": 22,
+            "kind": "STUNT"
+          }
+        }
+      },
+      "1": {
+        "components": {
+          "NameComponent": {
+            "name": "Pilot"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {}
+        }
+      }
+    }
+  }
+}

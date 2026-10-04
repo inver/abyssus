@@ -110,6 +110,15 @@ Systems are in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/system/
 the plugin: it adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
 checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the properties panel and the tree actions. See
 `src/main/kotlin/net/nevinsky/abyssus/ecs/README.md`.
+
+**Component schemas.** `ComponentEditor` is built per scene by the `ComponentSchemas` project service
+(`src/main/kotlin/net/nevinsky/abyssus/schema/ComponentSchemas.kt`): the built-in kinds plus one kind per component of
+the merged schemas, the scene project's `abyssus/components.schema.json` winning per name over the `componentSchemas`
+contributions (`SchemaMerge`, a pure function). Values of those components go through `runtime`'s `SchemaJson`, the
+same encoding the game's `ReflectiveCodec` uses. Snapshots are cached per project folder; a VFS event on a schema file
+or a plugin load/unload drops them and publishes `ComponentSchemasListener.TOPIC`, which makes the Properties panel
+re-read (in the background, where the parsing then happens). Problems are reported once each as a notification.
+
 Per frame, on the EDT, `RayViewFeed` reads the renderer's current preview-applied content, camera, lights and animation
 poses (`RayModelPoses`), freezes them into a job and offers it to a one-slot mailbox; a converter thread turns the newest
 job into an immutable `RaySceneSnapshot` (`RaySceneSnapshots`, including CPU skin deformation) and offers it to the view's
@@ -167,7 +176,15 @@ an asset. A rejected file is never imported, formatted or edited; supported sibl
 
 - **A new asset file format:** implement `ConfigFileReader` and return it from `AssetReadCache.readerFor`
   (`src/main/kotlin/net/nevinsky/abyssus/dto/ConfigFileReader.kt`). Add the extension to `ProjectLayout.ASSET_EXTENSIONS`.
-- **A new ECS component:** write a `ComponentCodec` and add it to `ComponentCodecs`
-  (`runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/scene/ComponentCodecs.kt`).
+- **A new built-in ECS component:** write a `ComponentCodec` and add it to `ComponentCodecs`
+  (`runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/scene/ComponentCodecs.kt`) and its name to
+  `BUILT_IN_COMPONENTS`.
+- **A game component:** annotate the class (`@SceneComponent`, `@Field`), register it through a `ComponentRegistry`
+  passed to `SceneLoading`, and export its schema; no plugin change. See `runtime/README.md`.
+- **`net.nevinsky.abyssus.componentSchemas` (IDE extension point, dynamic):** another plugin contributes a component
+  schema file from its jar: `<componentSchemas resource="/schemas/markers.json"/>` in
+  `<extensions defaultExtensionNs="net.nevinsky.abyssus">` (bean `ComponentSchemaBean`). Its components are edited in
+  every project like the project's own; a project schema that declares the same name wins, with one notification.
+  Unloading the plugin turns its components into read-only JSON; no scene file changes.
 - **A new asset kind drawn in the scene view:** an `AssetLoader` in `core` (built in `AssetLoading`), and a placement in
   `SceneContent`.

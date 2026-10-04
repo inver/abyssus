@@ -120,7 +120,7 @@ class SceneTransformWriterTest {
 
     @Test
     fun aHandleMoveWritesTheHandlePosition() {
-        val mundus = File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()
+        val mundus = File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()
         val root = SceneJson.parse(mundus)
         val handle = components(root, "0").get("PositionComponent")
         // The fixture's handle has an empty PositionComponent and no localPosition.
@@ -148,7 +148,7 @@ class SceneTransformWriterTest {
 
     @Test
     fun aHandleMoveToTheSamePlaceChangesNothing() {
-        val mundus = File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()
+        val mundus = File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()
         val root = SceneJson.parse(mundus)
         val same = Vec3(0f, 10f, -10f)
         assertTrue(SceneTransformWriter.apply(root, "1", TransformEdit(target = TargetMove("0", same))))
@@ -163,7 +163,7 @@ class SceneTransformWriterTest {
 
     @Test
     fun aHandleMoveToAMissingEntityLeavesTheTreeAsItWas() {
-        val mundus = File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()
+        val mundus = File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()
         val root = SceneJson.parse(mundus)
         val edit = TransformEdit(rotation = Quat(0f, 1f, 0f, 0f), target = TargetMove("99", Vec3(0f, 10f, -10f)))
         assertFalse(SceneTransformWriter.apply(root, "1", edit))

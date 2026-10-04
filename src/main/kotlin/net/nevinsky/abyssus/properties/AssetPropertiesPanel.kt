@@ -126,6 +126,9 @@ class AssetPropertiesPanel(
                 if (events.any { touches(it.file) }) ui { if (!disposed) refresh() }
             }
         })
+        // a changed component schema turns a scene's components editable or read only
+        project.messageBus.connect(parentDisposable).subscribe(net.nevinsky.abyssus.schema.ComponentSchemasListener.TOPIC,
+            net.nevinsky.abyssus.schema.ComponentSchemasListener { ui { if (!disposed && scene != null) refresh() } })
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
                 if (touches(FileDocumentManager.getInstance().getFile(event.document))) refresh()

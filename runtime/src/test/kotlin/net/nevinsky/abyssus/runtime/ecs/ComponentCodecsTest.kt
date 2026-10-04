@@ -13,7 +13,15 @@ import net.nevinsky.abyssus.runtime.testJson
 import net.nevinsky.abyssus.runtime.testProject
 import net.nevinsky.abyssus.assets.AssetLog
 import net.nevinsky.abyssus.runtime.scene.ColorDto
+import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.runtime.SceneLoading
+import net.nevinsky.abyssus.runtime.ecs.scene.ComponentCodecs
+import net.nevinsky.abyssus.runtime.schema.ComponentRegistrationException
+import net.nevinsky.abyssus.runtime.schema.ComponentRegistry
+import net.nevinsky.abyssus.runtime.schema.GameComponents
+import net.nevinsky.abyssus.runtime.schema.SceneComponent
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -36,6 +44,19 @@ class ComponentCodecsTest {
     }
 
     private fun json(text: String) = testJson(text)
+
+    @SceneComponent("NameComponent")
+    class FakeName : com.badlogic.ashley.core.Component
+
+    @Test fun aGameCannotTakeABuiltInName() {
+        val registry = ComponentRegistry { listOf(FakeName::class.java) }
+        val error = assertThrows(ComponentRegistrationException::class.java) { ComponentCodecs(game = GameComponents(registry)) }
+        assertTrue(error.message, error.message!!.contains("NameComponent is a built-in component"))
+        val loading = assertThrows(ComponentRegistrationException::class.java) {
+            SceneLoading(JsonProcessor(), AssetLog { _, _ -> }, registry = registry)
+        }
+        assertEquals(error.message, loading.message)
+    }
 
     @Test
     fun cameraRoundTrip() {

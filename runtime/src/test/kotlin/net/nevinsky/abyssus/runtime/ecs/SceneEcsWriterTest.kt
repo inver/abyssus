@@ -7,6 +7,13 @@ package net.nevinsky.abyssus.runtime.ecs
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsWriter
+import java.io.File
+import net.nevinsky.abyssus.runtime.ecs.scene.ComponentCodecs
+import net.nevinsky.abyssus.runtime.schema.GameComponents
+import net.nevinsky.abyssus.runtime.schema.PlaneComponent
+import net.nevinsky.abyssus.runtime.schema.PlaneRegistry
+import net.nevinsky.abyssus.runtime.testJson
+import net.nevinsky.abyssus.runtime.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
@@ -54,6 +61,29 @@ class SceneEcsWriterTest {
         val second = configurator.load(written)
         assertSameJson("ecs", written, SceneEcsWriter().write(second.engine, second.document))
         assertEquals(first.engine.entities.size(), second.engine.entities.size())
+    }
+
+    private fun customEcs() = testJson(File(testProject("Custom"), "scenes/Field.scene").readText())["ecs"]
+
+    @Test
+    fun declaredComponentWritesNoIdentifierTable() {
+        val game = GameComponents(PlaneRegistry())
+        val scene = EcsConfigurator(game = game).load(customEcs())
+        scene.engine.ids[1]!!.add(PlaneComponent())
+        val written = SceneEcsWriter(ComponentCodecs(game = game)).write(scene.engine, scene.document)
+        assertEquals("{}", written["entities"]["1"]["components"]["PlaneComponent"].toString())
+        assertEquals("""{"lineLength":22,"kind":"STUNT"}""", written["entities"]["0"]["components"]["PlaneComponent"].toString())
+        assertEquals(listOf("entities"), written.fieldNames().asSequence().toList())
+        assertFalse(written.toString().contains("componentIdentifiers"))
+        assertFalse(written.toString().contains(PlaneComponent::class.java.name))
+    }
+
+    @Test
+    fun unregisteredGameComponentIsWrittenBackAsItWas() {
+        val ecs = customEcs()
+        val scene = EcsConfigurator().load(ecs)
+        val written = SceneEcsWriter().write(scene.engine, scene.document)
+        assertEquals(ecs["entities"]["0"]["components"]["PlaneComponent"], written["entities"]["0"]["components"]["PlaneComponent"])
     }
 
     @Test

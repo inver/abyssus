@@ -59,7 +59,7 @@ class GizmoHandlesTest {
 
     @Test
     fun handleLightsCanRotateAndALightAimedAtAModelCannot() {
-        val mundus = content(File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText())
+        val mundus = content(File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText())
         // A directional or spot light that looks at a direction handle keeps its rings.
         assertTrue(canRotate(mundus, "1"))
         assertTrue(canRotate(mundus, "4"))

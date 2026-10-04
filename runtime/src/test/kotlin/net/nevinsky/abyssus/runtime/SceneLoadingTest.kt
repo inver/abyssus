@@ -96,6 +96,16 @@ class SceneLoadingTest {
         assertEquals(TypeComponent.Type.LIGHT_SPOT, spot.getComponent(TypeComponent::class.java).type)
     }
 
+    @Test fun customProjectLoadsWithoutItsGame() {
+        val messages = mutableListOf<String>()
+        val loaded = requireNotNull(loading(messages).load(testProject("Custom").toPath().resolve("scenes/Field.scene")))
+        assertEquals(setOf(0, 1), loaded.engine.ids.ids)
+        val raw = loaded.engine.ids[0]!!.getComponent(net.nevinsky.abyssus.runtime.ecs.component.RawComponentsComponent::class.java)
+        assertEquals("""{"lineLength":22,"kind":"STUNT"}""", raw.components["PlaneComponent"].toString())
+        assertEquals(1, messages.count { "PlaneComponent" in it })
+        assertEquals(1, messages.size)
+    }
+
     @Test fun unsavedTextLoadsWithoutReadingTheFile() {
         val before = Files.readAllBytes(main)
         val text = Files.readString(main).replace("Model 0", "Plane")

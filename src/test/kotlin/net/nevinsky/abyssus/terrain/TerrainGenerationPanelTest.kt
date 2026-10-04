@@ -36,7 +36,8 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         disk = FileUtil.createTempDirectory("abyssus-terrain", null)
         val source = File("src/test/testData/project/Untitled/assets/$terrainName")
         val target = File(disk, "assets/$terrainName").apply { mkdirs() }
-        source.listFiles()!!.forEach { it.copyTo(File(target, it.name)) }
+        // the fixture folder also holds a recipe from a manual check; these tests start from a terrain without one
+        source.listFiles()!!.filter { it.name != TERRAIN_RECIPE_FILE }.forEach { it.copyTo(File(target, it.name)) }
         folder = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(target)!!
         folder.refresh(false, true)
     }

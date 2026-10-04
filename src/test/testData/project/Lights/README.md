@@ -1,8 +1,7 @@
 # Light fixtures
 
-`scenes/Mundus Lights.scene` is a native Abyssus scene (`format: "abyssus"`, `formatVersion: 1`) with one directional
-light (root id `1`) and one spot light (root id `4`). The file name and scene name are kept because tests and specs
-refer to them by path. The scene began as a recorded sample of a third-party editor's output (provenance only: the
+`scenes/Abyssus Lights.scene` is a native Abyssus scene (`format: "abyssus"`, `formatVersion: 1`) with one directional
+light (root id `1`) and one spot light (root id `4`). Its scene name is still `Mundus Lights`. The scene began as a recorded sample of a third-party editor's output (provenance only: the
 editor is not a dependency and its format is not supported); it was converted once to the native format with the
 content kept: entity ids, names, positions, look-at links and archetypes are unchanged. No importer ships.
 

@@ -10,6 +10,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.JBColor
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.panels.VerticalLayout
@@ -17,7 +18,6 @@ import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.ecs.scene.ComponentEditor
 import net.nevinsky.abyssus.ecs.scene.EditResult
 import net.nevinsky.abyssus.ecs.scene.FieldKind
 import net.nevinsky.abyssus.ecs.scene.FieldValue
@@ -91,7 +91,19 @@ internal class EntityDetailsView(private val project: Project, private val state
                 isOpaque = false
             })
         } else {
-            for (field in section.fields) body.add(fieldRow(section, field))
+            var group = ""
+            for (field in section.fields) {
+                if (field.group != group) {
+                    group = field.group
+                    if (group.isNotEmpty()) body.add(JBLabel(group).apply {
+                        name = "group-${section.kind}-$group"
+                        foreground = secondary()
+                        font = JBFont.small().asBold()
+                        border = JBUI.Borders.empty(6, 0, 2, 0)
+                    })
+                }
+                body.add(fieldRow(section, field))
+            }
         }
         return JPanel(VerticalLayout(0)).apply {
             border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0), JBUI.Borders.empty(8, 16))
@@ -110,7 +122,8 @@ internal class EntityDetailsView(private val project: Project, private val state
             "edgeSoftness" -> "lightEdgeSoftnessLabel"
             else -> null
         } else null
-        val label = JBLabel(labelKey?.let { AbyssusBundle.message(it) } ?: field.field).apply {
+        val label = JBLabel(labelKey?.let { AbyssusBundle.message(it) } ?: field.label).apply {
+            name = "label-${section.kind}-${field.field}"
             preferredSize = Dimension(JBUI.scale(LABEL_WIDTH), preferredSize.height)
         }
         if (section.kind == "LightComponent" && field.field == "range") editor.toolTipText = AbyssusBundle.message("lightRangeTooltip")
@@ -139,6 +152,11 @@ internal class EntityDetailsView(private val project: Project, private val state
     }
 
     private fun editorFor(section: ComponentSection, field: FieldValue, error: JBLabel): JComponent {
+        if (field.kind == FieldKind.BOOLEAN) {
+            val box = JBCheckBox("", field.value == "true")
+            box.addActionListener { commit(section, field, box.isSelected.toString(), error) { box.isSelected = field.value == "true" } }
+            return box
+        }
         val useChoices = field.kind == FieldKind.CHOICE || (field.kind == FieldKind.ASSET_NAME && field.choices.size > 1)
         if (useChoices) {
             val choices = (if (field.optional) listOf("") else emptyList()) + field.choices

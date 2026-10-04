@@ -26,6 +26,7 @@ import net.nevinsky.abyssus.runtime.ecs.render.RenderableObjectDelegate
 import com.fasterxml.jackson.databind.node.DecimalNode
 import java.math.BigDecimal
 import net.nevinsky.abyssus.runtime.scene.ColorDto
+import net.nevinsky.abyssus.runtime.schema.GameComponents
 import kotlin.math.abs
 
 /** Reads and writes one kind of component as the native scene format holds it, under its short [name]. */
@@ -35,10 +36,19 @@ interface ComponentCodec<C : Component> {
 
     fun read(node: JsonNode): C
 
+    /** Reads [node], telling [problems] about values it could not use; only game components report any. */
+    fun read(node: JsonNode, problems: (String) -> Unit): C = read(node)
+
     fun write(component: C): JsonNode
 }
 
 private val nodes = JsonNodeFactory.instance
+
+/** The short names of the components the runtime models itself; a game component cannot take one. */
+val BUILT_IN_COMPONENTS: Set<String> = linkedSetOf(
+    "NameComponent", "TypeComponent", "ParentComponent", "PositionComponent", "CameraComponent", "LightComponent",
+    "Point2PointPositionComponent", "RenderComponent",
+)
 
 /** A float as the scene file writes it: whole numbers without a fraction, others with the shortest float text. */
 fun number(value: Float): JsonNode {
@@ -272,15 +282,19 @@ class RenderCodec(private val resolver: AssetResolver, private val warnings: Sce
     }
 }
 
-/** The components of a scene file the plugin models, by the short name the file uses. */
+/**
+ * The components of a scene file the runtime reads, by the short name the file uses: the built-in ones, then the
+ * [game] components a program registers. Built-in codecs keep their names; a game cannot take one.
+ */
 class ComponentCodecs(
     resolver: AssetResolver = AssetResolver { _, _ -> null },
-    warnings: SceneEcsWarnings = SceneEcsWarnings(net.nevinsky.abyssus.assets.AssetLog { _, _ -> })
+    warnings: SceneEcsWarnings = SceneEcsWarnings(net.nevinsky.abyssus.assets.AssetLog { _, _ -> }),
+    game: GameComponents = GameComponents(),
 ) {
     val all: List<ComponentCodec<*>> = listOf(
         NameCodec(), TypeCodec(), ParentCodec(), PositionCodec(), CameraCodec(), LightCodec(), Point2PointCodec(),
         RenderCodec(resolver, warnings),
-    )
+    ) + game.codecs
 
     private val byName = all.associateBy { it.name }
 

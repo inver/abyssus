@@ -132,6 +132,39 @@ Unknown components and native renderable kinds remain raw and round-trip unchang
 a `class` string inside a custom component or a marker's nested payload does not activate class loading or cause
 format rejection. Adding or editing a component never creates a Java-class identifier table.
 
+### Game components
+
+A game's own components (declared with `@SceneComponent` in its code) are native extension data keyed by their short
+name, next to the built-in ones: `ecs.entities.<id>.components.<ShortName>`. They are written without a class name
+and without an identifier table; a scene that holds `ecs.componentIdentifiers` is rejected before any component is
+read. The document validator does not look inside them. A program that has not registered a game component keeps it
+raw and writes it back unchanged.
+
+A field equal to its declared default is left out, so a plane at its defaults is `"PlaneComponent": {}`. Values are
+stored as JSON numbers (a whole decimal as `25`), booleans, strings (text, a choice's name, an asset folder name), an
+entity id (`-1` for none), or whole `{x, y, z}` / `{r, g, b, a}` objects. An unusable value loads as the default
+with one warning naming entity, component and field.
+
+### The component schema (`abyssus/components.schema.json`)
+
+The game exports what it registers (`SchemaExportMain`, see `runtime/README.md`) so Abyssus can edit those
+components without loading game classes. It is not a native document (no `format` marker); `version` must be `1`.
+
+```json
+{ "version": 1,
+  "components": [ { "name": "PlaneComponent", "class": "net.example.PlaneComponent", "label": "Plane",
+      "fields": [ { "name": "lineLength", "label": "Line length", "type": "decimal", "default": 18,
+                    "group": "Lines", "min": 5, "max": 30 },
+                  { "name": "kind", "label": "Kind", "type": "choice", "choices": ["TRAINER", "STUNT"], "default": "TRAINER" },
+                  { "name": "model", "label": "Model", "type": "asset", "assetType": "MODEL", "default": "" } ] } ] }
+```
+
+Field `type`: `decimal`, `whole`, `boolean`, `text`, `choice` (with `choices`), `vector`, `color`, `entity`, `asset`
+(with `assetType`). `group`, `min`, `max` and `minExclusive: true` are optional; infinite limits are not written.
+The export is stable (registration then declaration order, two-space indent, LF), so the same game gives the same
+bytes. An unknown `version` rejects the file; an unknown field type rejects only that component. Other plugins can
+contribute files in the same format (`docs/ai/architecture.md`, Extension points); the project's file wins per name.
+
 ## Asset `meta.json`
 
 ```json

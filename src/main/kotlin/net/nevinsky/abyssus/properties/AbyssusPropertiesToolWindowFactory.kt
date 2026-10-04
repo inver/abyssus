@@ -20,6 +20,7 @@ class AbyssusPropertiesToolWindowFactory : ToolWindowFactory, DumbAware {
         val services = PanelServices(
             core.metaFiles, core.hdrPreviews, core.json, core.assetFields, core.assetEditor,
             core.terrainGenerator, core.heightEncoder, core.terrainRecipes, project.service<SceneRayControls>(),
+            net.nevinsky.abyssus.schema.ComponentSchemas.of(project),
         )
         val panel = AssetPropertiesPanel(project, toolWindow.disposable, services)
         toolWindow.contentManager.addContent(ContentFactory.getInstance().createContent(panel, "", false))

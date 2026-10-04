@@ -15,11 +15,24 @@ import net.nevinsky.abyssus.runtime.project.ProjectFolder
 import net.nevinsky.abyssus.runtime.project.ProjectInfo
 import net.nevinsky.abyssus.runtime.scene.SceneDto
 import net.nevinsky.abyssus.runtime.scene.SceneParser
+import net.nevinsky.abyssus.runtime.schema.ComponentRegistrationException
+import net.nevinsky.abyssus.runtime.schema.ComponentRegistry
+import net.nevinsky.abyssus.runtime.schema.GameComponents
 import java.nio.file.Files
 import java.nio.file.Path
 
-/** Reads projects and creates independent scene engines without editor or GL services. */
-class SceneLoading(private val json: JsonProcessor, private val log: AssetLog, private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()) {
+/**
+ * Reads projects and creates independent scene engines without editor or GL services. The game components of
+ * [registry] are checked here, so a registration that fails (see [ComponentRegistrationException]) loads no scene.
+ */
+class SceneLoading(
+    private val json: JsonProcessor,
+    private val log: AssetLog,
+    private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat(),
+    registry: ComponentRegistry = ComponentRegistry { emptyList() },
+) {
+    /** The registered game components: their schemas and codecs. */
+    val game = GameComponents(registry)
     private val parser = SceneParser(json, format)
 
     /** A missing project has no result; an unreadable project also reports its cause. */
@@ -64,7 +77,7 @@ class SceneLoading(private val json: JsonProcessor, private val log: AssetLog, p
         val names = if (Files.isDirectory(assets)) Files.list(assets).use { paths ->
             paths.filter { Files.isDirectory(it) }.map { it.fileName.toString() }.toList()
         } else emptyList()
-        val loaded = EcsConfigurator(FolderAssetResolver(names), sceneLog).load(scene.ecs ?: json.readObject("{}"))
+        val loaded = EcsConfigurator(FolderAssetResolver(names), sceneLog, game).load(scene.ecs ?: json.readObject("{}"))
         return LoadedScene(loaded.engine, loaded.document, scene)
     }
 

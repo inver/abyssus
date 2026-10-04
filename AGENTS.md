@@ -34,6 +34,8 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
     itself is in `core`.
   - `ecs/scene/`: `ComponentEditor` edits components in scene JSON; `LightEntities` creates light entities.
     Ashley components, codecs, systems and scene loading live in `runtime`.
+  - `schema/`: component schemas for game components: the `componentSchemas` extension point and the
+    `ComponentSchemas` project service that builds each scene's `ComponentEditor`.
   - `filetype/`, `language/`: file types, icons, scene JSON, the GLTF PSI.
 - `gdx-model/`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import), with inherited sources documented in `docs/third-party/gdx-model-origin.md`.
   See `gdx-model/README.md`.
@@ -42,7 +44,7 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).
   `AssetLoading` wires it; the plugin builds one in `AbyssusCore`. See `core/README.md`.
 - `runtime/`: plain JVM scene parsing, project layout over `Path`, and Ashley components, codecs, systems, loader
-  and writer. `SceneLoading` wires it by constructors; the plugin builds one in `AbyssusCore`. See `runtime/README.md`.
+  and writer. Game components (`@SceneComponent`, `ComponentRegistry`) and their schema export live in its `schema` package. `SceneLoading` wires it by constructors; the plugin builds one in `AbyssusCore`. See `runtime/README.md`.
 - `src/main/java/`: only the grammar sources `Gltf.bnf` / `Gltf.flex`; `src/main/gen` is generated from them.
 - `src/test/kotlin/`, `gdx-model/src/test/kotlin/`, `core/src/test/kotlin/`, `runtime/src/test/kotlin/`: tests. Fixtures in `src/test/testData/project/`
   (shared with `core`'s tests). Test helpers shared across modules live in `testFixtures` source sets

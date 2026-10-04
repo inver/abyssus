@@ -4,6 +4,15 @@ The plugin keeps scene-editing adapters here. `scene/ComponentEditor.kt` adds, u
 components in JSON using runtime codecs and defaults, with reference checks. `scene/LightEntities.kt` creates lights.
 Callers write through `SceneComponentEdits` and `editSceneJson`, preserving formatting and Undo.
 
+`ComponentEditor` is an instance built from component schemas: callers take it from
+`ComponentSchemas.of(project).editorFor(sceneFile)` (`src/main/kotlin/net/nevinsky/abyssus/schema/`). Each schema
+component becomes a kind whose codec is `SchemaCodec` over `SchemaValues` (a map of values), read and written through
+runtime's `SchemaJson`. Vectors and colors are dotted decimal fields (`leadout.x`, `paint.r`); whole numbers and
+booleans use `FieldKind.INT` / `BOOLEAN`. Updates check declared limits and choices, entity references use the same
+reference check as built-in ones, and an asset reference must name a folder of the declared asset type (or be empty).
+Adding one writes only `"<ShortName>": {}` (defaults omitted), never a class name or identifier table. A component
+with no known schema stays read-only JSON.
+
 Ashley components, systems, loader, writer and codecs live in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/`.
 See `runtime/README.md`. The scene view decodes JSON through the codecs; it does not run the Ashley engine.
 

@@ -47,6 +47,10 @@ Two kinds of tests:
   terrain, `skybox_default`, `skybox_physical` (a procedural sky) and `skybox_hdr` (a 64 x 32 Radiance sky that the
   test helper `HdrFixtures` wrote; tests build other HDR skies with it in temp folders).
 - **`Animated/`:** `scenes/Main.scene` with two entities sharing one animated model (`assets/model_anim`). It has no `.abss`.
+- **`Custom/`:** game components. `scenes/Field.scene` has entity `0` (a plane, `"PlaneComponent": {"lineLength": 22,
+  "kind": "STUNT"}`) and entity `1` (a pilot, no plane); `assets/tree` is copied from `Untitled`;
+  `abyssus/components.schema.json` is the export of the test-only `PlaneComponent` in `runtime`'s tests (one field of
+  each type), checked byte for byte by `SchemaFileTest`. Change the class and the file together.
 
 **Size limit:** the binary assets exceed the test VFS size limit, so platform tests copy only what they need (the
 `.abss`, a scene, one `meta.json`). See the `fixture()` helper in `AbyssusViewTest`.

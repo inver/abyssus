@@ -31,7 +31,7 @@ class SceneContentTest {
         )
         assertEquals(listOf("0", "2", "6"), c.models.map { it.entityId })
         assertEquals(listOf("terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), c.terrains.map { it.assetName })
-        assertTrue(c.lights.isEmpty())
+        assertEquals(listOf("7", "8"), c.lights.map { it.entityId })
         assertEquals("skybox_physical", c.skybox)
     }
 
@@ -163,13 +163,13 @@ class SceneContentTest {
         assertEquals(100f, cam.far, 0f)
         assertEquals(67f, cam.fieldOfView, 0f)
         assertEquals(Vec3(0f, 0f, 0f), c.entityPositions["3"])
-        assertTrue(c.lights.isEmpty())
+        assertEquals(listOf("7", "8"), c.lights.map { it.entityId })
         assertEquals(3, c.models.size)
     }
 
     @Test
     fun handleLightsFaceTheirHandles() {
-        val c = content(File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText())
+        val c = content(File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText())
         assertEquals(setOf("0", "3"), c.handleIds)
         val byId = c.lights.associateBy { it.entityId }
         val directional = byId["1"]!!

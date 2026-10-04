@@ -69,7 +69,7 @@ Move mode. A directional or spot light that looks at a direction handle SHALL sh
 
 #### Scenario: Light aimed at its handle in Rotate mode
 
-- **WHEN** directional light `1` of `Lights/scenes/Mundus Lights.scene` (look-at handle `0`) is selected in Rotate mode
+- **WHEN** directional light `1` of `Lights/scenes/Abyssus Lights.scene` (look-at handle `0`) is selected in Rotate mode
 - **THEN** the X, Y and Z rings are shown
 
 ### Requirement: Dragging a move arrow
@@ -131,7 +131,7 @@ undoable edit, and leave the light's own `localRotation` unchanged.
 
 #### Scenario: Turning a light aimed at its handle moves the handle
 
-- **WHEN** in `Lights/scenes/Mundus Lights.scene` the user turns directional light `1` (at (0, 10, 0), facing down at
+- **WHEN** in `Lights/scenes/Abyssus Lights.scene` the user turns directional light `1` (at (0, 10, 0), facing down at
   handle `0` at (0, 0, 0)) about X until it faces along -Z, and releases
 - **THEN** handle `0`'s `PositionComponent` gets a `localPosition` of about (0, 10, -10), light `1`'s
   `PositionComponent` is unchanged, and every other entity is unchanged
@@ -342,12 +342,12 @@ release, the light SHALL keep facing the turned direction, both in the scene vie
 
 #### Scenario: The turn is shown while dragging
 
-- **WHEN** the user drags the X ring of spot light `4` in `Lights/scenes/Mundus Lights.scene`
+- **WHEN** the user drags the X ring of spot light `4` in `Lights/scenes/Abyssus Lights.scene`
 - **THEN** its cone and direction line turn with the cursor during the drag
 
 #### Scenario: The turn stays after release
 
-- **WHEN** the user turns directional light `1` in `Lights/scenes/Mundus Lights.scene` and releases
+- **WHEN** the user turns directional light `1` in `Lights/scenes/Abyssus Lights.scene` and releases
 - **THEN** the light keeps facing the turned direction and doesn't jump back to its old one
 
 #### Scenario: Esc puts the handle back

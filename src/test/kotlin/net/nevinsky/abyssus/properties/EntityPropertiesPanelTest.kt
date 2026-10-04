@@ -13,6 +13,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import net.nevinsky.abyssus.filetype.SceneJson
@@ -55,6 +56,13 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
             d.listFiles { f -> f.isFile }!!.filter { it.extension == "json" }.forEach {
                 myFixture.copyFileToProject("$dir/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
             }
+        }
+    }
+
+    /** The `Custom` project: a scene with a plane, the `tree` model and the exported component schema. */
+    private fun copyCustom() {
+        for (path in listOf("Custom.abss", "scenes/Field.scene", "assets/tree/meta.json", "abyssus/components.schema.json")) {
+            myFixture.copyFileToProject("Custom/$path", "Custom/$path")
         }
     }
 
@@ -178,6 +186,42 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         assertTrue(after.sections.any { it.kind == "LightComponent" })
         assertNotNull(named(p, "field-LightComponent-intensity"))
         assertFalse("LightComponent" in after.addable)
+    }
+
+    fun testSchemaComponentShowsGroupedLabelledFields() {
+        copyCustom()
+        val p = panel()
+        p.show(component("0", "PlaneComponent"))
+        val section = (p.state as PanelState.EntityDetails).sections.single()
+        assertNull(section.raw)
+        assertEquals("Plane", section.label)
+        assertEquals("Line length", (named(p, "label-PlaneComponent-lineLength") as JBLabel).text)
+        assertEquals("22", (named(p, "field-PlaneComponent-lineLength") as JBTextField).text)
+        assertEquals("Lines", (named(p, "group-PlaneComponent-Lines") as JBLabel).text)
+        assertEquals(listOf("lineLength", "leadout.x", "leadout.y", "leadout.z"), section.fields.filter { it.group == "Lines" }.map { it.field })
+        assertEquals("STUNT", (named(p, "field-PlaneComponent-kind") as JComboBox<*>).selectedItem)
+        for (axis in listOf("x", "y", "z")) assertNotNull(named(p, "field-PlaneComponent-leadout.$axis"))
+        val tip = named(p, "field-PlaneComponent-hasTipWeight") as JBCheckBox
+        assertTrue(tip.isSelected)
+        tip.doClick()
+        assertEquals(false, components(sceneFile(), "0")["PlaneComponent"]["hasTipWeight"].booleanValue())
+        assertNotNull(named(p, "remove-PlaneComponent"))
+    }
+
+    fun testAddPlaneFromThePanel() {
+        copyCustom()
+        val p = panel()
+        p.show(entity("1"))
+        val state = p.state as PanelState.EntityDetails
+        assertTrue(state.addable.toString(), "PlaneComponent" in state.addable)
+        val group = addComponentGroup(project, sceneFile(), "1", state.addable, testMetaFiles())
+        val plane: AnAction = group.getChildren(null).first { it.templatePresentation.text == "Plane" }
+        plane.actionPerformed(TestActionEvent.createTestEvent(plane))
+        assertEquals("{}", components(sceneFile(), "1")["PlaneComponent"].toString())
+        val after = p.state as PanelState.EntityDetails
+        assertTrue(after.sections.any { it.kind == "PlaneComponent" && it.raw == null })
+        assertEquals("18", (named(p, "field-PlaneComponent-lineLength") as JBTextField).text)
+        assertFalse("PlaneComponent" in after.addable)
     }
 
     fun testLightRangeEditorWritesThirty() {

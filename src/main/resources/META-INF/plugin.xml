@@ -9,6 +9,13 @@
 
     <resource-bundle>messages.AbyssusBundle</resource-bundle>
 
+    <extensionPoints>
+        <!-- A component schema (format of abyssus/components.schema.json) in the contributing plugin's jar. -->
+        <extensionPoint name="componentSchemas"
+                        beanClass="net.nevinsky.abyssus.schema.ComponentSchemaBean"
+                        dynamic="true"/>
+    </extensionPoints>
+
     <extensions defaultExtensionNs="com.intellij">
         <fileType
                 name="Gltf File"
@@ -35,6 +42,7 @@
                     anchor="right"
                     canCloseContents="false"
                     factoryClass="net.nevinsky.abyssus.properties.AbyssusPropertiesToolWindowFactory"/>
+        <notificationGroup id="Abyssus Component Schemas" displayType="BALLOON" key="schemaNotificationGroup"/>
         <lang.parserDefinition
                 language="GLTF"
                 implementationClass="net.nevinsky.abyssus.language.GltfParserDefinition"/>

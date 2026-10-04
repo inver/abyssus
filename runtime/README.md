@@ -29,3 +29,48 @@ is independent. `core` owns `AbyssusDocumentFormat`, shared with the editor. Enc
 headers; raw ECS helpers validate only reserved payload paths. `componentIdentifiers` and renderable `class` fields
 are rejected. Short component names are stable identifiers, and asset renderables use `kind: "asset"`. Unknown native
 kinds keep their raw payload and do not render. No importer or Java-class aliases are provided.
+
+## Game components
+
+A game declares its own components as annotated Ashley components (package `schema/`). The class needs a no-argument
+constructor; each `@Field`'s value in a new instance is its default, and only fields that differ from it are written.
+
+```kotlin
+@SceneComponent("PlaneComponent", label = "Plane")
+class PlaneComponent : Component {
+    @Field(label = "Line length", group = "Lines", min = 5.0, max = 30.0) var lineLength = 18f
+    @Field var kind = Kind.TRAINER                       // an enum is a choice
+    @Field var leadout = Vector3(0f, 0f, -0.3f)          // Vector3 and Color are written whole
+    @Field @EntityRef var pilot = -1                     // another entity of the scene
+    @Field @AssetRef("MODEL") var model = ""             // an asset folder of that type
+}
+```
+
+Field types: `Float`, `Int`, `Boolean`, `String`, an enum, libGDX `Vector3` and `Color`; `@EntityRef` on an `Int`,
+`@AssetRef(type)` on a `String`. Anything else fails registration.
+
+**Registering is explicit.** Implement `ComponentRegistry` and pass it to the loader:
+`SceneLoading(json, log, registry = MyComponents())`. Construction fails with `ComponentRegistrationException` (naming
+the component and the reason) for a built-in or repeated short name, an unsupported field type or a missing
+no-argument constructor. Built-in codecs keep their names. A component is stored under its short name only
+(`ecs.entities.<id>.components.PlaneComponent`); no class name or identifier table is written. A value of the wrong
+type, not among the choices or outside the limits loads as the default, with one warning naming entity, component
+and field. A program that does not register a component keeps it raw and writes it back unchanged.
+
+`SchemaJson` is the one encoding of these values: `ReflectiveCodec` (the game, with classes) and the editor (without)
+both go through it, and `SchemaJsonRoundTripTest` holds them to the same text.
+
+**Exporting the schema** lets Abyssus edit the components without loading game classes. `SchemaExportMain` writes
+`<project>/abyssus/components.schema.json` (`SchemaFile`: stable bytes, version 1). Arguments: the
+`ComponentRegistry` implementation's class name (it needs a no-argument constructor) and the project folder. A game
+wires it as a Gradle task:
+
+```kotlin
+tasks.register<JavaExec>("exportComponentSchema") {
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.runtime.schema.SchemaExportMain")
+    args("com.example.game.MyComponents", rootProject.file("assets-project").absolutePath)
+}
+```
+
+Required behavior: `openspec/specs/custom-scene-components` and `openspec/specs/component-schemas`.

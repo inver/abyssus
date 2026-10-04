@@ -33,12 +33,13 @@ class LoadedScene(
 open class EcsConfigurator(
     private val resolver: AssetResolver = AssetResolver { _, _ -> null },
     private val log: net.nevinsky.abyssus.assets.AssetLog = net.nevinsky.abyssus.assets.AssetLog { _, _ -> },
+    private val game: net.nevinsky.abyssus.runtime.schema.GameComponents = net.nevinsky.abyssus.runtime.schema.GameComponents(),
 ) {
     fun createEngine(): SceneEngine = SceneEngine().also(::configure)
 
     fun load(ecs: JsonNode): LoadedScene {
         val engine = createEngine()
-        return LoadedScene(engine, SceneEcsLoader(resolver, log).load(ecs, engine))
+        return LoadedScene(engine, SceneEcsLoader(resolver, log, game = game).load(ecs, engine))
     }
 
     protected open fun configure(engine: SceneEngine) {

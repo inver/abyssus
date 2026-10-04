@@ -14,7 +14,7 @@ import org.junit.Test
 import java.io.File
 
 class ScenePreviewTest {
-    private val mundus = SceneContent.of(parseScene(File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()))
+    private val mundus = SceneContent.of(parseScene(File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()))
 
     @Test
     fun turningAHandleAimedLightMovesItsHandle() {

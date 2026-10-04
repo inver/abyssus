@@ -16,6 +16,7 @@ import net.nevinsky.abyssus.runtime.ecs.component.Point2PointPositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.RawComponentsComponent
 import net.nevinsky.abyssus.runtime.ecs.render.AssetResolver
+import net.nevinsky.abyssus.runtime.schema.GameComponents
 
 /**
  * Loads the `ecs` block of a scene file into a [SceneEngine]. Components the plugin models are read by their
@@ -26,11 +27,12 @@ class SceneEcsLoader(
     private val resolver: AssetResolver = AssetResolver { _, _ -> null },
     private val log: net.nevinsky.abyssus.assets.AssetLog = net.nevinsky.abyssus.assets.AssetLog { _, _ -> },
     private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat(),
+    private val game: GameComponents = GameComponents(),
 ) {
     fun load(ecs: JsonNode, engine: SceneEngine): SceneEcsDocument {
         format.requireEcs(ecs)
         val warnings = SceneEcsWarnings(log)
-        val codecs = ComponentCodecs(resolver, warnings)
+        val codecs = ComponentCodecs(resolver, warnings, game)
 
         ecs.obj("entities")?.fields()?.forEach { (key, node) ->
             val id = key.toIntOrNull()
@@ -60,7 +62,7 @@ class SceneEcsLoader(
                 raw.components[name] = component
                 warnings.warn("component $name is not modeled and is kept unchanged")
             } else {
-                entity.add(codec.read(component) as Component)
+                entity.add(codec.read(component) { warnings.warn("entity $id: $name $it") } as Component)
             }
         }
         entity.add(raw)

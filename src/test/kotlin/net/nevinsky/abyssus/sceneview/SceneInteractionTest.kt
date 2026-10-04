@@ -343,7 +343,7 @@ class SceneInteractionTest {
     @Test
     fun rotatingAHandleAimedLightEmitsAHandleMove() {
         val params = SceneRenderParams.from(
-            parseScene(File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()),
+            parseScene(File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()),
             CameraParams.DEFAULT,
         )
         val lightPos = params.content.lights.first { it.entityId == "1" }.position
