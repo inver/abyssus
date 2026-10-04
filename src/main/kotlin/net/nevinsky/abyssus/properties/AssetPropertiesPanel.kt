@@ -108,6 +108,9 @@ class AssetPropertiesPanel(
     private var terrainFolder: VirtualFile? = null
     private var rendering = false
 
+    /** The property whose edit was rejected as stale: its next row says so, because the refresh rebuilds the row. */
+    private var conflictKey: String? = null
+
     /** What the panel currently shows. */
     internal var state: PanelState = emptyState(null)
         private set
@@ -348,6 +351,10 @@ class AssetPropertiesPanel(
     /** The editor of one supported property; a refused value goes back to what the file holds, with the reason beside it. */
     private fun fieldRow(d: PanelState.Details, state: AssetFieldState): JComponent {
         val error = JBLabel("").apply { foreground = JBColor.RED; name = "asset-error-${state.key}" }
+        if (conflictKey == state.key) {
+            conflictKey = null
+            error.text = AbyssusBundle.message("assetFieldConflict")
+        }
         val editor = fieldEditor(d, state, error)
         editor.name = "asset-field-${state.key}"
         val editorAndError = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
@@ -409,6 +416,7 @@ class AssetPropertiesPanel(
             is AssetEditResult.Conflict -> {
                 error.text = AbyssusBundle.message("assetFieldConflict")
                 revert()
+                conflictKey = state.key
                 refresh()
             }
             AssetEditResult.Unreadable -> {

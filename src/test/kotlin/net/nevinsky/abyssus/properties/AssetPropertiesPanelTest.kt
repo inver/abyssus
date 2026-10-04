@@ -367,6 +367,23 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         assertEquals(before, metaText(path))
     }
 
+    fun testACommitBasedOnASupersededValueIsRejectedExplainedAndRefreshed() {
+        copyProject()
+        val path = "Untitled/assets/$terrain/meta.json"
+        val p = panel()
+        p.show(asset(terrain))
+        val stale = field(p, "size") as JBTextField
+        val document = FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!
+        com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) {
+            document.setText(document.text.replace("\"size\":1600", "\"size\":1000"))
+        }
+        val changed = metaText(path)
+        type(stale, "800")
+        assertEquals(changed, metaText(path))
+        assertEquals("1000", (field(p, "size") as JBTextField).text)
+        assertEquals("This value changed elsewhere; the current value is shown.", errorOf(p, "size"))
+    }
+
     fun testAtmosphereRadiiAreValidatedTogether() {
         copyProject()
         val path = "Untitled/assets/skybox_physical/meta.json"

@@ -27,6 +27,15 @@ class ScenePickerTest {
                          world: Matrix4 = Matrix4()) = OrientedBox(
         BoundingBox(Vector3(x - half, bottom, z - half), Vector3(x + half, bottom + 2f, z + half)), world)
 
+    @Test fun aRegeneratedTerrainIsPickedAtItsNewHeightsAndNotTheOldOnes() {
+        val down = ray(Vector3(50f, 20f, 50f), Vector3(50f, 12f, 50f))
+        val old = TerrainTarget("t", flat, Matrix4())
+        val regenerated = TerrainTarget("t", TerrainData(3, FloatArray(9) { 10f }, 100, 1f), Matrix4())
+        assertEquals(20f, ScenePicker.terrainDistance(down, old, 30f)!!, 1e-3f)
+        assertEquals(10f, ScenePicker.terrainDistance(down, regenerated, 30f)!!, 1e-3f)
+        assertEquals("t", ScenePicker.pick(down, emptyList(), listOf(regenerated), 30f))
+    }
+
     @Test fun anIdentityMatrixLeavesTheCornersUnmoved() {
         val b = oriented()
         assertEquals(8, b.corners.size)
