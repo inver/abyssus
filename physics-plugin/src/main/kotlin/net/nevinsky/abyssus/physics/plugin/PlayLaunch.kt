@@ -20,7 +20,22 @@ sealed interface PlayLaunch {
     /** `java [jvmArgs] -cp <classpath> PlayHostMain --port <p> --token <t> <module>`. */
     data class Plan(val classpath: List<String>, val module: String, val jvmArgs: List<String>) : PlayLaunch {
         fun command(java: String, port: Int, token: String): List<String> =
-            listOf(java) + jvmArgs + listOf("-cp", classpath.joinToString(File.pathSeparator), PLAY_HOST_MAIN, "--port", port.toString(), "--token", token, module)
+            buildList {
+                addAll(listOf(java))
+                addAll(this@Plan.jvmArgs)
+                addAll(
+                    listOf(
+                        "-cp",
+                        this@Plan.classpath.joinToString(File.pathSeparator),
+                        PLAY_HOST_MAIN,
+                        "--port",
+                        port.toString(),
+                        "--token",
+                        token,
+                        this@Plan.module
+                    )
+                )
+            }
     }
 
     data class Refused(val message: String) : PlayLaunch
@@ -38,8 +53,15 @@ sealed interface PlayLaunch {
                 } catch (e: Exception) {
                     return Refused(AbyssusPhysicsBundle.message("playBadFile", e.message.orEmpty()))
                 }
-                if (config.protocol != PLAY_PROTOCOL) return Refused(AbyssusPhysicsBundle.message("playStaleProtocol", config.protocol, PLAY_PROTOCOL))
-                config.classpath.firstOrNull { !File(it).exists() }?.let { return Refused(AbyssusPhysicsBundle.message("playStaleJar", it)) }
+                if (config.protocol != PLAY_PROTOCOL) return Refused(
+                    AbyssusPhysicsBundle.message(
+                        "playStaleProtocol",
+                        config.protocol,
+                        PLAY_PROTOCOL
+                    )
+                )
+                config.classpath.firstOrNull { !File(it).exists() }
+                    ?.let { return Refused(AbyssusPhysicsBundle.message("playStaleJar", it)) }
                 return Plan(config.classpath, config.module, config.jvmArgs)
             }
             val jars = playHost?.listFiles { f -> f.isFile && f.name.endsWith(".jar") }?.sortedBy { it.name }.orEmpty()
