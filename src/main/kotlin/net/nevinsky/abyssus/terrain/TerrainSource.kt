@@ -21,6 +21,7 @@ import net.nevinsky.abyssus.assets.terrain.generation.TERRAIN_RECIPE_FILE
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainRecipeCodec
 import net.nevinsky.abyssus.assets.terrain.generation.sha256Hex
 import net.nevinsky.abyssus.properties.AssetReferenceChoices
+import net.nevinsky.abyssus.filetype.documentDisplayMessage
 import java.io.File
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -56,6 +57,9 @@ sealed interface TerrainSource {
  * parsed as [meta]: size, the height file and the recipe beside it. Reads files, so off the EDT.
  */
 fun readTerrainSource(folder: File, metaText: String, meta: JsonNode, choices: AssetReferenceChoices, recipes: TerrainRecipeCodec): TerrainSource {
+    net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().validate(meta, net.nevinsky.abyssus.assets.format.DocumentKind.ASSET)?.let {
+        return TerrainSource.Unusable(net.nevinsky.abyssus.assets.format.UnsupportedDocumentFormat(net.nevinsky.abyssus.assets.format.DocumentKind.ASSET, it).documentDisplayMessage())
+    }
     val additional = meta.obj("additional") ?: return unusable("terrainNoAdditional")
     val size = additional.get("size")?.takeIf { it.isIntegralNumber && it.canConvertToInt() }?.intValue()?.takeIf { it > 0 }
         ?: additional.get("size")?.takeIf { it.isNumber && it.doubleValue() == it.intValue().toDouble() && it.intValue() > 0 }?.intValue()

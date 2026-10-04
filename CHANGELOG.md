@@ -3,6 +3,12 @@
 # abyssus Changelog
 
 ## [Unreleased]
+
+### Changed
+- Abyssus is now an independent libGDX scene editor using native format version 1. Projects, scenes and asset metadata
+  require `format: "abyssus"` and integral `formatVersion: 1`; renderables use stable native kinds and components use short names.
+- Older unmarked files and files from other editors are unsupported. Plugin loading, editing and automatic formatting refuse them without
+  rewriting them. No importer or automatic migration is included. External model, image, terrain binary and recipe encodings remain unchanged.
 ### Added
 - Logging in every module through SLF4J, bound to the IDE logger: `gdx-model`, `core` and `raytracing` now write progress, backend probe results, the chosen GPU, session limits, fallbacks and failures to `idea.log` under `Abyssus.assets`, `Abyssus.model` and `Abyssus.ray` (debug lines follow Debug Log Settings).
 - **Ray Tracing** switch in Abyssus Properties for a selected scene (the Scene View itself has no ray tracing button): it flips the open Scene View, opening it when needed, and shows the status, the reason it is unavailable or failed, and Retry

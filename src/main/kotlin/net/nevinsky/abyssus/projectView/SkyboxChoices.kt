@@ -20,7 +20,8 @@ import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.text
 import net.nevinsky.abyssus.assets.json.text
 import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.dto.SceneEntry
 import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.assets.sky.hdr.HdrSkyFiles
@@ -90,7 +91,7 @@ class SkyboxChoice(
  */
 @JvmOverloads
 fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>, hdr: Map<String, HdrSkyInfo> = emptyMap()): List<SkyboxChoice> {
-    val references = project.scenes.filterIsInstance<SceneDto>().map(::sceneReferences)
+    val references = project.scenes.filterIsInstance<SceneEntry>().map { sceneReferences(it.scene) }
     return project.assets.filter { it.meta.type in SKY_TYPES }.sortedBy { it.name }.map { asset ->
         val additional = metas[asset.name]?.obj("additional")
         val files = SKYBOX_FACES.mapNotNull { key -> additional?.text(key)?.takeIf { it.isNotBlank() } }

@@ -7,3 +7,9 @@ rootProject.name = "abyssus"
 include(":gdx-model")
 include(":core")
 include(":raytracing")
+
+include(":runtime")
+include(":physics")
+include(":physics-plugin")
+
+include(":games:control-line")

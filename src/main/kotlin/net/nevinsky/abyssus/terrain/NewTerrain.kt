@@ -81,7 +81,7 @@ fun GeometryError.message(): String = AbyssusBundle.message("newTerrainGeometryE
 class NewTerrain(val name: String, val uuid: String, val transaction: AssetTransaction)
 
 /**
- * Stages the files of a new terrain asset from a finished [TerrainPreview]: `meta.json` in Mundus's layout with a fresh
+ * Stages the files of a new terrain asset from a finished [TerrainPreview]: `meta.json` in native layout with a fresh
  * `uuid`, the big-endian heights, and the Abyssus recipe. Nothing is written here; no scene or project file is touched.
  */
 class NewTerrainFactory(
@@ -117,7 +117,7 @@ class NewTerrainFactory(
     /** A random `uuid` no asset folder of the project already uses. */
     private fun uniqueUuid(assetsDir: File): String {
         val used = assetsDir.listFiles { f -> f.isDirectory }.orEmpty().mapNotNull { dir ->
-            runCatchingKeepingCancellation { File(dir, META_FILE).takeIf { it.isFile }?.let { json.readObject(it.readText()).text("uuid") } }.getOrNull()
+            runCatchingKeepingCancellation { File(dir, META_FILE).takeIf { it.isFile }?.let { net.nevinsky.abyssus.assets.files.AssetMetaReader(json).read(it.readText()).json.text("uuid") } }.getOrNull()
         }.toSet()
         var uuid = randomUuid()
         while (uuid in used) uuid = randomUuid()

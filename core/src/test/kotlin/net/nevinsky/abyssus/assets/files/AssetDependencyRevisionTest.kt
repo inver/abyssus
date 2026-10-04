@@ -26,12 +26,12 @@ class AssetDependencyRevisionTest {
     private fun terrain(name: String, vararg splat: Pair<String, String>, size: Int = 100) {
         val refs = splat.joinToString("") { ",\"${it.first}\":\"${it.second}\"" }
         write("$name/terrain.data", "xxxx", 1000)
-        write("$name/meta.json", """{"uuid":"t-$name","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$size,"uv":1.0$refs}}""")
+        write("$name/meta.json", """{"format":"abyssus","formatVersion":1,"uuid":"t-$name","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$size,"uv":1.0$refs}}""")
     }
 
     private fun texture(name: String, uuid: String, image: String = "a.png", bytes: String = "png", modified: Long = 1000) {
         write("$name/$image", bytes, modified)
-        write("$name/meta.json", """{"uuid":"$uuid","type":"TEXTURE","additional":{"file":"$image"}}""")
+        write("$name/meta.json", """{"format":"abyssus","formatVersion":1,"uuid":"$uuid","type":"TEXTURE","additional":{"file":"$image"}}""")
     }
 
     private fun snap() = tracker.snapshot(assets)
@@ -151,7 +151,7 @@ class AssetDependencyRevisionTest {
         terrain("hills", "splatBase" to "u-grass")
         texture("grass", "u-grass")
         val before = snap()
-        val edited = """{"uuid":"u-grass","type":"TEXTURE","additional":{"file":"a.png"},"x":1}"""
+        val edited = """{"format":"abyssus","formatVersion":1,"uuid":"u-grass","type":"TEXTURE","additional":{"file":"a.png"},"x":1}"""
         val after = tracker.snapshot(assets) { f -> if (f.parentFile.name == "grass") edited else f.readText() }
         assertEquals(setOf("grass", "hills"), diff(before, after))
     }
@@ -163,7 +163,7 @@ class AssetDependencyRevisionTest {
             terrain("hills", "splatBase" to "u-grass")
             texture("grass", "u-grass")
             File(other.root, "assets/grass").mkdirs()
-            File(other.root, "assets/grass/meta.json").writeText("""{"uuid":"u-grass","type":"TEXTURE","additional":{"file":"a.png"}}""")
+            File(other.root, "assets/grass/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"u-grass","type":"TEXTURE","additional":{"file":"a.png"}}""")
             val mine = snap()
             val theirs = tracker.snapshot(File(other.root, "assets"))
             texture("grass", "u-grass", bytes = "changed again", modified = 7000)

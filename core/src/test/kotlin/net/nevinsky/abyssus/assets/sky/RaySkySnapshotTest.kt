@@ -47,7 +47,7 @@ class RaySkySnapshotTest {
 
     @Test fun largeHdrImagesAreDownsampledForTheRayTexture() = withProject { dir ->
         val folder = File(dir, "assets/big"); folder.mkdirs()
-        File(folder, "meta.json").writeText("""{"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+        File(folder, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
         HdrFixtures.write(File(folder, "sky.hdr"), 2048, 1024, pixel = HdrFixtures.uniform(2f))
         val sky = reader.read(loading.files(dir), "big")!!
         assertEquals(RAY_SKY_MAX_WIDTH, sky.width); assertEquals(RAY_SKY_MAX_WIDTH / 2, sky.height)
@@ -57,12 +57,12 @@ class RaySkySnapshotTest {
 
     @Test fun cubeFacesLandWhereTheRasterCubeLookupPutsThem() = withProject { dir ->
         val folder = File(dir, "assets/cube"); folder.mkdirs()
-        // Mundus order: back, front, left, right, bottom, top are +X, -X, +Y, -Y, +Z, -Z
+        // face order: back, front, left, right, bottom, top are +X, -X, +Y, -Y, +Z, -Z
         val faces = mapOf("back" to Color.RED, "front" to Color.GREEN, "left" to Color.BLUE, "right" to Color.YELLOW, "bottom" to Color.CYAN, "top" to Color.MAGENTA)
         faces.forEach { (name, color) ->
             Pixmap(8, 8, Pixmap.Format.RGBA8888).also { it.setColor(color); it.fill(); PixmapIO.writePNG(FileHandle(File(folder, "$name.png")), it); it.dispose() }
         }
-        File(folder, "meta.json").writeText("""{"version":1,"lastModified":0,"type":"SKYBOX","additional":{${faces.keys.joinToString(",") { "\"$it\":\"$it.png\"" }}}}""")
+        File(folder, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX","additional":{${faces.keys.joinToString(",") { "\"$it\":\"$it.png\"" }}}}""")
         val sky = reader.read(loading.files(dir), "cube")!!
         assertFalse(sky.hdr)
         assertEquals(RAY_SKY_MAX_WIDTH, sky.width)

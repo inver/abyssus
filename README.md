@@ -2,12 +2,16 @@
 
 ![Build](https://github.com/inver/abyssus/workflows/Build/badge.svg)
 
-An IntelliJ Platform plugin for working on [Mundus](https://github.com/mbrlabs/Mundus) game projects from the IDE:
+An independent libGDX scene editor in the IntelliJ Platform:
 browse a project's scenes and assets, inspect asset metadata, and view and lay out a scene in a 3D view.
 Contributors and coding agents: start at [AGENTS.md](AGENTS.md).
 
 <!-- Plugin description -->
-Work on [Mundus](https://github.com/mbrlabs/Mundus) game projects in the IDE.
+Edit native Abyssus projects and libGDX scenes in the IDE.
+
+Abyssus format version 1 requires `"format":"abyssus"` and `"formatVersion":1` in every `.abss`, `.scene` and
+asset `meta.json`. This breaks compatibility with earlier unmarked files and projects from other editors. Unsupported files
+remain readable in the text editor; plugin editing and loading are refused. No importer or automatic migration is included.
 
 - **Abyssus view**: a project tree of `.abss` projects, their scenes, entities and assets, with unused assets marked.
   Toggle scene options, rename scenes and choose a scene's skybox from the tree.
@@ -56,7 +60,7 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
 ## Abyssus Properties panel
 
 The **Abyssus Properties** tool window (right side) shows the Meta of the asset selected in the Abyssus view: a header
-with the asset's type icon, name and `<type> asset`, then a Name / Value table of its `meta.json` (`version`,
+with the asset's type icon, name and `<type> asset`, then a Name / Value table of its `meta.json` (`format`, `formatVersion`, `version`,
 `lastModified` as a date-time, `uuid`, `type`, then the fields of `additional` under an `additional` heading). Every
 field in the file is listed, whatever the asset type; a list shows its item count. A skybox also shows its six faces
 under **Face previews**. Selecting anything that is neither an asset, an entity nor a component (a scene, the project
@@ -74,7 +78,7 @@ Some properties are editable, and the header then says that an edit changes ever
   change it. The atmosphere radius must exceed the planet radius, `mieG` lies between -1 and 1.
 
 Type a value and press Enter (or leave the field), or pick from the list. A value that does not fit goes back to the old
-value with the reason beside the field, and the file is not touched. Identity fields (`uuid`, `type`, `version`,
+value with the reason beside the field, and the file is not touched. Identity fields (`format`, `formatVersion`, `uuid`, `type`, `version`,
 `lastModified`), file names and every other asset type (models, HDR skies, and so on) stay read only. Each change is one
 undoable edit of that asset's `meta.json` that keeps its formatting and every other value; the **Undo** and **Redo**
 buttons in the header (or Ctrl+Z / Ctrl+Shift+Z with the panel focused) apply it.
@@ -93,7 +97,7 @@ height may need Drop. **Cancel**, selecting something else or closing the panel 
 The preview refuses to be applied if the terrain's files or unsaved metadata changed meanwhile: generate a new one.
 
 The same seed and settings always give the same heights, at any resolution. The settings are saved as a recipe,
-`abyssus-terrain.recipe.json`, in the terrain's folder: only Abyssus reads it, Mundus ignores it, and a terrain loads
+`abyssus-terrain.recipe.json`, in the terrain's folder: a terrain loads
 without it. The panel restores the settings from a recipe that still matches the heights, and shows why when it does not
 (missing, malformed, an unknown version, or heights, size or resolution that changed) and offers the defaults instead.
 Heights that are not a square grid of 2 to 255 per side cannot be regenerated.
@@ -102,7 +106,7 @@ Heights that are not a square grid of 2 to 255 per side cannot be regenerated.
 
 Right-click an **Assets** node and choose **New Terrain...**: pick a folder name (it must be new and stay inside
 `assets`), the world size, a resolution from 2 to 255 and the noise settings, generate a preview and **Create**. The
-terrain is written as a Mundus terrain asset (`meta.json` with a fresh `uuid`, `terrain.data`, and the recipe), the view
+terrain is written as a native Abyssus terrain asset (`meta.json` with a fresh `uuid`, `terrain.data`, and the recipe), the view
 refreshes and the new asset is selected. Nothing is placed in a scene and no scene or project file is changed, so the asset
 is marked unused until you add it to a scene. Undo removes the asset again, and Redo brings back the same files and
 `uuid`; Undo refuses while a scene or another asset uses it, or something was added to its folder.
@@ -156,15 +160,35 @@ Each creation is one undoable scene edit. These new light entities use the plugi
 
 For a spotlight, Properties also offers **Cone angle (degrees)** for its full beam width and **Edge softness (%)**
 for the inward edge fade. Defaults are 45 degrees and 20 percent. Each accepted edit is saved in the scene and can
-be undone; resetting a default omits its saved field. These beam fields are Abyssus extensions. Mundus support and
-preservation are unverified, so saving the scene in another editor may lose them.
+be undone; resetting a default omits its saved field. These beam fields are part of the native scene contract.
 
 The toolbar's camera selector (**Free camera** and the scene's cameras by name) renders the view through a camera
 entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
+### Physics (Abyssus Physics plugin)
+
+**Abyssus Physics** is a separate plugin, built from `physics-plugin/`, that depends on Abyssus. With it installed:
+
+- **Add Component** offers **Rigid body**, **Collider** and **Constraint**. They are edited like other components,
+  and sizes and masses must be greater than 0. Without the plugin, these components show as read-only JSON and are
+  kept unchanged.
+- **Show Physics** in the Scene View toolbar (off when the view opens) draws each collider as a wireframe: green for
+  dynamic, blue for kinematic, grey for static. A height field is drawn as its terrain's outline. Each constraint is a
+  line between its anchors; a rope that is longer than its maximum is drawn dashed. The selected entity's physics is
+  brighter and drawn through its model.
+- **Play**, **Pause**, **Step** and **Stop** run the scene's physics in a separate process. Play uses the scene as
+  the editor holds it, unsaved text included. Simulated poses are shown but never written: Stop, Esc, editing the
+  scene or closing the tab returns the view to the scene as the document holds it. While playing, gizmos are off,
+  and keys and mouse buttons go to the game. If the process dies, one notification shows its last output and the IDE
+  keeps running.
+- A game makes Play run its own code by exporting `abyssus/play.json` (see `physics/README.md`). Without that file,
+  Play runs physics alone.
+
+Jolt, the physics engine, is loaded only by the play process, never by the IDE.
+
 The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `gdx-model` module, a
-trimmed fork of Mundus' `lib-core` and `lib-assets` with no IntelliJ dependency, reusable in other libGDX projects;
-see `gdx-model/README.md` for its origin and license. The plugin does not depend on Mundus at build or run time. The GL
+plain JVM library reusable in other libGDX projects; see [source provenance](docs/third-party/gdx-model-origin.md)
+for its origin and license. The GL
 render tests are opt-in: `./gradlew test -Dabyssus.glTests=true` (opens a window).
 
 To support another format, implement `net.nevinsky.abyssus.dto.AssetReader` and return it from

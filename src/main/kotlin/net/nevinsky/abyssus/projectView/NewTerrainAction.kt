@@ -28,7 +28,7 @@ import net.nevinsky.abyssus.terrain.NewTerrainForm
 import net.nevinsky.abyssus.terrain.NewTerrainRequest
 import java.io.File
 import javax.swing.JComponent
-import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
 
 /**
  * Right-click New Terrain on the Assets node of a recognized project: a dialog for the folder name, world size,
@@ -90,6 +90,10 @@ private fun createInteractively(project: Project, abss: VirtualFile) {
 /** Writes the terrain of [request] under [abss]'s project as one undoable command, then selects it in the view. */
 fun createTerrain(project: Project, abss: VirtualFile, request: NewTerrainRequest, report: (String) -> Unit = { Messages.showErrorDialog(project, it, AbyssusBundle.message("newTerrainTitle")) }): AssetCommandResult? {
     val core = service<AbyssusCore>()
+    val accepted = net.nevinsky.abyssus.assets.runCatchingKeepingCancellation {
+        core.format.requireSupported(core.json.readObject(net.nevinsky.abyssus.dto.textOf(abss)), net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT)
+    }
+    accepted.exceptionOrNull()?.let { report(it.displayMessage()); return null }
     val projectDir = File(abss.parent.path)
     val staged = core.newTerrains.stage(projectDir, request.name, request.preview)
     if (staged == null) {

@@ -9,7 +9,7 @@ import net.nevinsky.abyssus.filetype.SceneJson
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.assets.json.float
 import net.nevinsky.abyssus.assets.json.obj
-import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.runtime.scene.SceneDto
 import java.io.File
 import kotlin.math.exp
 import kotlin.math.pow
@@ -34,7 +34,7 @@ data class CameraParams(
 }
 
 /**
- * Mundus fog: the fog share at distance `d` is `1 - exp(-(d * density)^gradient)`.
+ * Native fog: the fog share at distance `d` is `1 - exp(-(d * density)^gradient)`.
  * g3d's default shader fogs with a fixed quadratic ramp, so only [density] can be matched, at its characteristic
  * distance `1 / density`; [gradient] shapes [amount] but not the on-screen curve.
  */
@@ -54,6 +54,8 @@ data class SceneRenderParams(
     val camera: CameraParams,
     val content: SceneContent = SceneContent.EMPTY,
     val projectDir: File? = null,
+    /** The scene's `ecs` block as read, for scene overlays that draw components the view does not model. */
+    val ecs: JsonNode? = null,
 ) {
     companion object {
         val DEFAULT_CLEAR = Rgba(0.1f, 0.1f, 0.15f, 1f)
@@ -61,7 +63,7 @@ data class SceneRenderParams(
 
         fun from(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
             val fog = fogOf(scene)
-            return SceneRenderParams(fog?.color ?: DEFAULT_CLEAR, ambientOf(scene), fog, camera, SceneContent.of(scene), projectDir)
+            return SceneRenderParams(fog?.color ?: DEFAULT_CLEAR, ambientOf(scene), fog, camera, SceneContent.of(scene), projectDir, scene.ecs)
         }
 
         private fun ambientOf(scene: SceneDto): Rgba? {
@@ -92,6 +94,7 @@ internal fun normalized(v: Vec3): Vec3? {
 object MainCamera {
     fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
         val root = SceneJson.parse(abssText).takeIf { it.isObject } ?: return null
+        if (net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().validate(root, net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT) != null) return null
         val cam = root.obj("mainCamera") ?: return null
         val position = cam.vec("position") ?: return null
         val direction = normalized(cam.vec("viewPointPosition") ?: return null) ?: return null

@@ -6,11 +6,11 @@ Users need a quick way to see scene viewport performance while editing. An optio
 
 ## What Changes
 
-- Selecting a Mundus `.abss` project row in the Abyssus view shows project view settings in Abyssus Properties, including a `Show FPS` checkbox.
+- Selecting a native `.abss` project row in the Abyssus view shows project view settings in Abyssus Properties, including a `Show FPS` checkbox.
 - Default the checkbox to off and remember it per IntelliJ project across IDE sessions; it applies to all scene views in that IDE project, including views opened later.
 - When enabled, show a small FPS overlay in the upper-right corner of each scene viewport. Each view measures its own completed viewport frames over approximately one second, including time spent rendering and presenting.
 - Apply enable/disable immediately without reopening views; reset measurement after a hidden view resumes or the counter is enabled.
-- Read no additional Mundus fields and write none: `.abss`, `.scene` and `meta.json` remain unchanged. The Mundus file format does not change.
+- Read no additional document fields and write none: `.abss`, `.scene` and `meta.json` remain unchanged. The Abyssus format does not change.
 - Out of scope: GPU timing, ray-backend throughput, frame-time graphs, profiling, FPS limits, benchmark logging, scene-specific toggles, and a new toolbar toggle.
 
 ## Capabilities

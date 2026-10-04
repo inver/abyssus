@@ -38,16 +38,16 @@ import java.nio.file.Files
 class NewTerrainActionTest : BasePlatformTestCase() {
     private lateinit var projectDir: File
     private lateinit var abss: VirtualFile
-    private val sceneText = """{"name":"Main","ecs":{"entities":{}}}"""
+    private val sceneText = """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{}}}"""
 
     override fun setUp() {
         super.setUp()
         projectDir = FileUtil.createTempDirectory("abyssus-newterrain", null)
-        File(projectDir, "P.abss").writeText("""{"name":"P"}""")
+        File(projectDir, "P.abss").writeText("""{"format":"abyssus","formatVersion":1,"name":"P"}""")
         File(projectDir, "scenes").mkdirs()
         File(projectDir, "scenes/Main.scene").writeText(sceneText)
         File(projectDir, "assets/existing").mkdirs()
-        File(projectDir, "assets/existing/meta.json").writeText("""{"uuid":"fixed-uuid","type":"MODEL","additional":{}}""")
+        File(projectDir, "assets/existing/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"fixed-uuid","type":"MODEL","additional":{}}""")
         abss = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(projectDir, "P.abss"))!!
         abss.parent.refresh(false, true)
     }
@@ -71,9 +71,9 @@ class NewTerrainActionTest : BasePlatformTestCase() {
 
     private fun projectNode(): AbstractTreeNode<*> {
         // the project tree reads through the VFS, so the project must be one the fixture sees: an in-memory copy
-        myFixture.addFileToProject("p/P.abss", """{"name":"P"}""")
+        myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
         myFixture.addFileToProject("p/scenes/Main.scene", sceneText)
-        myFixture.addFileToProject("p/assets/tree/meta.json", """{"version":1,"uuid":"u","type":"MODEL","additional":{}}""")
+        myFixture.addFileToProject("p/assets/tree/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"u","type":"MODEL","additional":{}}""")
         return children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
     }
 
@@ -87,6 +87,22 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         assertNull("the project node", assetsNodeProjectFile(abssNode))
         assertNull(assetsNodeProjectFile(null))
         assertNull(assetsNodeProjectFile("not a node"))
+    }
+
+
+    fun testUnsupportedUnsavedProjectCannotOwnOrCreateTerrain() {
+        val node = projectNode()
+        val assets = children(node).single { label(it) == "assets" }
+        val file = assetsNodeProjectFile(assets)!!
+        val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!
+        com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) {
+            document.setText("""{"format":"abyssus","formatVersion":2}""")
+        }
+        assertNull(assetsNodeProjectFile(assets))
+        val errors = mutableListOf<String>()
+        assertNull(createTerrain(project, file, net.nevinsky.abyssus.terrain.NewTerrainRequest("refused", preview()), errors::add))
+        assertEquals(1, errors.size)
+        assertNull(file.parent.findChild("assets")!!.findChild("refused"))
     }
 
     fun testAStandaloneSceneSelectionHasNoAssetsOwner() {
@@ -175,7 +191,7 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         assertEquals(abssBefore, bytes("P.abss").toList())
         assertEquals(sceneBefore, bytes("scenes/Main.scene").toList())
         val meta = File(projectDir, "assets/hills/meta.json").readText()
-        assertTrue(meta, meta.startsWith("""{"version":1,"lastModified":"""))
+        assertTrue(meta, meta.startsWith("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":"""))
         assertTrue(meta.contains(""""type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":400,"uv":1.0,"splatMap":null"""))
         assertEquals(17 * 17 * 4, bytes("assets/hills/terrain.data").size)
         assertTrue(File(projectDir, "assets/hills/abyssus-terrain.recipe.json").isFile)

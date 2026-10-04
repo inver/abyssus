@@ -5,6 +5,7 @@
 | What | Command |
 |---|---|
 | All plugin and `gdx-model` tests (what CI runs, plus plugin verification) | `./gradlew check` |
+| Runtime tests | `./gradlew :runtime:test` |
 | Plugin tests | `./gradlew :test` |
 | `gdx-model` tests | `./gradlew :gdx-model:test` |
 | One class | `./gradlew :test --tests 'net.nevinsky.abyssus.projectView.SkyboxPickerModelTest'` |
@@ -23,6 +24,15 @@ Results are in `build/test-results/test/*.xml`, and a later run overwrites them.
 - `core/src/test/kotlin/`: asset reading and loading tests, plain JUnit with no IntelliJ classes. They read the shared
   fixtures through `testProject(name)` (Gradle passes the folder as `abyssus.testData`) and build the loading graph
   with `testLoading(log, executor)`. `AssetLoadingGlTest` covers the `asset-loading` spec on real GL.
+- `runtime/src/test/kotlin/`: project layout, scene parsing and loading, ECS codecs, components, loader, writer and
+  systems. Plain JUnit, no IntelliJ or GL; `testProject(name)` uses the same `abyssus.testData` fixture root.
+- `physics/src/test/kotlin/`: physics components, `PhysicsWorld`, rope tension and the Jolt natives. Plain JUnit, no
+  IntelliJ or GL. They load the build machine's `DebugSp` Jolt natives, and use `testProject(name)` and
+  `loadPhysicsScene()`.
+- `games/control-line/src/test/kotlin/`: the Control Line game's flight, track, scoring, screen flow and Play module,
+  headless (Jolt's `ReleaseSp` natives for the build machine, no window). They read the bundled project
+  `games/control-line/project/ControlLine` through `bundledProject()` / `loadField()`, and fly it with `FieldFlight`;
+  `ControlLinePlayTest` runs `PlayHostMain` in a child process.
 - Shared test helpers live in `testFixtures` source sets: `gdx-model`'s `TestGl` (a GL 3.2 core context for one
   block) and `core`'s `HdrFixtures` (Radiance files from a pixel function). Plugin GL tests build their renderer with
   `testRenderer()` (`sceneview/TestRendering.kt`), wired the way `AbyssusCore` wires it in the IDE.
@@ -39,14 +49,27 @@ Two kinds of tests:
 ## Fixtures
 
 `src/test/testData/project/`:
-- **`Untitled/`:** a Mundus project with `Untitled.abss` and `scenes/Main Scene.scene`. The scene has models,
-  terrain, a skybox, `Camera 4` looking at entity 3, and a parented entity. `assets/` holds 4 models, `tree`, a
+- **`Untitled/`:** a native Abyssus project with `Untitled.abss` and `scenes/Main Scene.scene`. The scene has models,
+  terrain, a skybox, directional lights and `Spot Light 8`, `Camera 4` looking at entity 3, and a parented entity. `assets/` holds 4 models, `tree`, a
   terrain, `skybox_default`, `skybox_physical` (a procedural sky) and `skybox_hdr` (a 64 x 32 Radiance sky that the
   test helper `HdrFixtures` wrote; tests build other HDR skies with it in temp folders).
-- **`Animated/`:** `scenes/Main.scene` with one animated model (`assets/model_anim`). It has no `.abss`.
+- **`Animated/`:** `scenes/Main.scene` with two entities sharing one animated model (`assets/model_anim`). It has no `.abss`.
+- **`Custom/`:** game components. `scenes/Field.scene` has entity `0` (a plane, `"PlaneComponent": {"lineLength": 22,
+  "kind": "STUNT"}`) and entity `1` (a pilot, no plane); `assets/tree` is copied from `Untitled`;
+  `abyssus/components.schema.json` is the export of the test-only `PlaneComponent` in `runtime`'s tests (one field of
+  each type), checked byte for byte by `SchemaFileTest`. Change the class and the file together.
+- **`Physics/`:** a copy of `Untitled` whose `Main Scene` gives `Model 0` (at Y `3.086434`) a dynamic box, `Terrain`
+  a height field (all heights `0`) and `Model 2` a static sphere and a 3 m rope to `Model 0`. See its `README.md`.
 
 **Size limit:** the binary assets exceed the test VFS size limit, so platform tests copy only what they need (the
 `.abss`, a scene, one `meta.json`). See the `fixture()` helper in `AbyssusViewTest`.
+
+**Native fixtures and rejection inputs.** Every fixture project, scene and `meta.json` carries
+`"format":"abyssus","formatVersion":1`, has no `componentIdentifiers`, and uses `kind: "asset"` renderables plus inert
+editor-marker kinds (`camera-marker`, `direction-handle-marker`, `direction-line-marker`, `light-marker`). Legacy,
+unmarked and future-version documents are written inline in `AbyssusDocumentFormatTest`, `NativeDocumentReadTest`,
+`NativeDocumentWriteGuardTest` and the runtime loader tests, so they never sit beside the native fixtures. Tests that
+assert a rejection also assert the document text and disk bytes are unchanged.
 
 **Don't edit fixtures through the IDE.** Opening `src/test/testData/project/Untitled` as the `runIde` project and
 using the eye, Rename Scene, the skybox chooser or gizmo drags changes the files the tests assert on.

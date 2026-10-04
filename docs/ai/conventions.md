@@ -20,18 +20,21 @@
 
 ## Logging
 
-- **SLF4J is the one logging interface.** `gdx-model`, `core` and `raytracing` (plain JVM) log through `org.slf4j.Logger`
-  and never import `com.intellij.*`. `core` and `raytracing` take a `Logger` through constructors (`AssetLoading`,
+- **SLF4J is the one logging interface.** `gdx-model`, `core`, `raytracing`, `runtime` and `physics` (plain JVM) log through
+  `org.slf4j.Logger` and never import `com.intellij.*`. `core`, `raytracing`, `runtime` and `physics` take a `Logger` through
+  constructors (`SceneLoading`, `PhysicsWorld`, `PlayHost`, `AssetLoading`,
   `MetalRayBackendFactory`, `VulkanRayBackendFactory`, `RayRenderScheduler`); `gdx-model`'s static loaders read
   `ModelLogging.logger`. Debug messages are lazy: `log.atDebug().log { "..." }`.
 - **The binding to the IDE logger is `IntellijLogger`** (`src/main/kotlin/net/nevinsky/abyssus/log/IntellijLogger.kt`), an
   SLF4J `Logger` over `com.intellij.openapi.diagnostic.Logger`, created by `IntellijLoggerFactory` and held by
-  `AbyssusCore.loggers`. The composition root passes `getLogger("assets")`, `("ray")` and `("model")` (the last installed
+  `AbyssusCore.loggers`. The composition root passes `getLogger("assets")`, `("scenes")`, `("ray")` and `("model")` (the last installed
   into `ModelLogging`), so everything lands in `idea.log` under `Abyssus.<category>` and obeys Debug Log Settings. It is
   passed explicitly because the platform already binds SLF4J to `java.util.logging` for the whole IDE (the IDE's `util-8` library),
   which cannot be changed from a plugin; the plugin zip excludes `org.slf4j` and uses the platform's API classes.
   SLF4J `error` is logged as an IDE *warn*, because `Logger.error` raises the IDE-error dialog.
-- **Tests** use `RecordingLogger` (`core` test fixtures) or `NOPLogger.NOP_LOGGER`; `raytracing` has its own small recorder.
+- **Outside the IDE** (the play host, the Control Line game) `physics`'s runtime dependency `slf4j-simple` binds SLF4J to
+  stderr; Abyssus Physics bundles `physics` without its dependencies, so it never reaches the IDE.
+- **Tests** use `RecordingLogger`, `warningsTo(list)` or `failOnWarnings()` (`core` test fixtures) or `NOPLogger.NOP_LOGGER`; `raytracing` has its own small recorder.
 
 ## JSON
 
@@ -40,7 +43,7 @@
   writing a file therefore never changes numbers you didn't touch.
 - **Binding:** bind files to DTOs with `SceneJson.bind` / `SceneReader.parse`. Unknown fields are ignored, and
   property declaration order is the order the tree shows.
-- **Non-row fields:** mark them `@get:JsonIgnore` (for example `SceneDto.file`, `AssetInfo.unused`) so the tree
+- **Non-row fields:** mark them `@get:JsonIgnore` (for example `SceneEntry.file`, `AssetInfo.unused`) so the tree
   doesn't list them.
 - **Optional values:** read them from a `JsonNode` with the helpers in `core/src/main/kotlin/net/nevinsky/abyssus/assets/json/JsonNodes.kt`
   (`opt`, `text`, `float`, `obj`), which treat absent and JSON `null` alike.

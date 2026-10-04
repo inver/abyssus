@@ -67,6 +67,16 @@ object ScenePreview {
     fun apply(content: SceneContent, preview: Map<String, DragResult>): SceneContent =
         preview.entries.fold(content) { c, (id, result) -> apply(c, id, result) }
 
+    /**
+     * [content] with each entity of [poses] placed at its pose instead of its authored placement, keeping its authored
+     * scale; a light faces along its posed rotation unless it looks at a target. Entities the scene lacks are ignored.
+     */
+    fun withPoses(content: SceneContent, poses: Map<String, Pose>): SceneContent = poses.entries.fold(content) { c, (id, pose) ->
+        val scale = c.models.firstOrNull { it.entityId == id }?.transform?.scale
+            ?: c.terrains.firstOrNull { it.entityId == id }?.transform?.scale ?: Vec3(1f, 1f, 1f)
+        apply(c, id, DragResult(PlacementTransform(pose.position, pose.rotation, scale), null))
+    }
+
     /** The transform of the model, terrain, camera or light [entityId], or null when the scene has no such entity. */
     fun selected(content: SceneContent, entityId: String): Selected? {
         content.models.firstOrNull { it.entityId == entityId }?.let { return Selected(it.transform, null) }

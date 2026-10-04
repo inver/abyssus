@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "components": [
+    {
+      "name": "MarkerComponent",
+      "class": "net.example.MarkerComponent",
+      "label": "Marker",
+      "fields": [
+        {
+          "name": "size",
+          "label": "Size",
+          "type": "decimal",
+          "default": 1,
+          "min": 0,
+          "minExclusive": true
+        }
+      ]
+    }
+  ]
+}

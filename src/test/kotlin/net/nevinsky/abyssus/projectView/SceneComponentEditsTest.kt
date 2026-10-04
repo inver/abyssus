@@ -44,7 +44,7 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
     }
 
     fun testSpotlightBeamEditsEachUndoAndPreserveUnrelatedText() {
-        val text = """{"ecs":{"entities":{"0":{"components":{"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":{"light":{"intensity":1.000,"unknown":2.3400}}}}}}}"""
+        val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":{"light":{"intensity":1.000,"unknown":2.3400}}}}}}}"""
         val (f, editor) = open("c/Beam.scene", text)
         val before = textOf(f)
         assertEquals(EditResult.Unchanged, SceneComponentEdits.update(project, f, "0", "LightComponent", "coneAngle", "45", testMetaFiles()))
@@ -62,7 +62,7 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
     }
 
     fun testMalformedSceneFieldsRejectLightWithoutWrite() {
-        val text = """{"name":[],"ecs":{"entities":{}}}"""
+        val text = """{"format":"abyssus","formatVersion":1,"name":[],"ecs":{"entities":{}}}"""
         val f = myFixture.addFileToProject("c/bad-name.scene", text).virtualFile
         val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.ecs.scene.LightPreset.SUN, net.nevinsky.abyssus.sceneview.Vec3(0f, 0f, 0f), reader)
         assertTrue(result.result is EditResult.Rejected)

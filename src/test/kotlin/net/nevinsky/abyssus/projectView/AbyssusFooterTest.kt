@@ -23,13 +23,13 @@ class AbyssusFooterTest : BasePlatformTestCase() {
     }
 
     private fun projectWith(root: String, scenes: Int, assets: Map<String, Boolean>) {
-        myFixture.addFileToProject("$root/P.abss", """{"name":"P"}""")
+        myFixture.addFileToProject("$root/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
         val used = assets.filterValues { !it }.keys.joinToString(",") { """{"asset":{"assetName":"$it"}}""" }
         for (i in 1..scenes) {
-            val ecs = if (i == 1 && used.isNotEmpty()) """{"ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":[$used]}}}}}}""" else "{}"
+            val ecs = if (i == 1 && used.isNotEmpty()) """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":[$used]}}}}}}""" else """{"format":"abyssus","formatVersion":1}"""
             myFixture.addFileToProject("$root/scenes/S$i.scene", ecs)
         }
-        for (name in assets.keys) myFixture.addFileToProject("$root/assets/$name/meta.json", """{"version":1,"lastModified":1,"uuid":"${java.util.UUID.nameUUIDFromBytes(name.toByteArray())}","type":"MODEL","additional":{}}""")
+        for (name in assets.keys) myFixture.addFileToProject("$root/assets/$name/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"${java.util.UUID.nameUUIDFromBytes(name.toByteArray())}","type":"MODEL","additional":{}}""")
     }
 
     fun testCountsOneProject() {
@@ -40,7 +40,7 @@ class AbyssusFooterTest : BasePlatformTestCase() {
     fun testCountsSumProjectsAndCountAStandaloneSceneAsOne() {
         projectWith("p", 2, mapOf("a" to true))
         projectWith("q", 1, mapOf("x" to true, "y" to true))
-        myFixture.addFileToProject("loose.scene", "{}")
+        myFixture.addFileToProject("loose.scene", """{"format":"abyssus","formatVersion":1}""")
         assertEquals(FooterCounts(scenes = 4, assets = 3, unused = 3), footerCounts(project))
     }
 

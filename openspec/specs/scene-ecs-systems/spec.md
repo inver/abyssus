@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Keeps entity state consistent when a scene engine is advanced, matching how Mundus derives
+Keeps entity state consistent when a scene engine is advanced, deriving
 rotations, camera orientation and render placement from components.
 
 ## Requirements

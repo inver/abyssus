@@ -10,7 +10,7 @@ The properties panel's PanelState distinguishes assets and ECS targets. Water re
 
 **Goals:** deterministic above-water composition; independent surfaces; all edits and projection/hit math testable headlessly; GPU resources owned by a view/context; bounded extra passes; reusable plain JVM water code.
 
-**Non-Goals:** a general render graph framework, new ECS archetypes, generic entity creation, asset duplication, or a promise of Mundus persistence. Water is a rendering surface, not physics ground. See proposal for visual exclusions.
+**Non-Goals:** a general render graph framework, new ECS archetypes, generic entity creation, asset duplication, or support for other editors' persistence. Water is a rendering surface, not physics ground. See proposal for visual exclusions.
 
 ## Decisions
 
@@ -31,7 +31,7 @@ Proposed defaults (implementation choices, not claims of user-selected values):
 
 Write explicit preset values on creation so future default tuning does not change saved appearance. Missing individual fields use the recorded preset's defaults without writes. Reject unknown preset, malformed containers or non-finite values; positive extent, clarity, wavelength and foam width; amplitude/speed non-negative; foam amount in [0,1]. Malformed saved surfaces remain visible as invalid rows for removal but do not render. Never replace an incompatible `abyssus` container when adding; report rejection. Keep an empty waterSurfaces object after deleting its final member to avoid altering unrelated namespace contents.
 
-Alternative: WaterComponent in ECS would require foreign class/archetype bookkeeping and risk existing codecs treating it as a Mundus entity. Alternative: sidecar avoids scene extensions but needs file association, extra watchers and multi-document undo. The explicitly authorized Abyssus-only extension is simpler; document that another editor may remove it.
+Alternative: WaterComponent in ECS would add a new component codec and archetype bookkeeping for data that is only a scene-level rendering surface. Alternative: sidecar avoids scene extensions but needs file association, extra watchers and multi-document undo. The explicitly authorized Abyssus-only extension is simpler; document it as native extension data that the loader preserves.
 
 ### 2. Editing, identity and selection
 
@@ -94,7 +94,7 @@ Reflection failure falls back to sky/tint. Color/depth failure uses a simple ani
 - Planar reflection ignores wave geometry and transparent models -> distort reflected image with wave normals and document bounded visual scope.
 - Shared renderer edits overlap add-scene-shadows -> inspect its current implementation at apply time and integrate into its snapshot/pass entry points; avoid independent frame-update pipelines.
 - Existing tree spec says only three actions write files; show-project-assets is still open -> water delta removes that stale exclusivity, and implementation must reconcile any conflicting open delta without deleting its asset behavior.
-- Another editor may discard `abyssus` data -> explicitly document Abyssus-only persistence and make no Mundus compatibility claim.
+- A tool that does not know the extension may discard it -> document it as native extension data preserved by Abyssus and make no compatibility claim for other tools.
 
 ## Migration Plan
 

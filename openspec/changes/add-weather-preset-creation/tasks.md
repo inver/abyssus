@@ -20,7 +20,7 @@ of `Untitled` (never the fixture itself).
   `./gradlew :test --tests 'net.nevinsky.abyssus.projectView.NewWeatherPresetActionTest'`:
   - shown only for procedural skies with `clouds`;
   - name, path, `:` and collision rejections;
-  - the created `meta.json` content;
+  - the created `meta.json` content, including the native `format` / `formatVersion` markers;
   - selection after creation;
   - the sky, the `.scene` and the `.abss` unchanged byte for byte;
   - Undo removes the unchanged folder;

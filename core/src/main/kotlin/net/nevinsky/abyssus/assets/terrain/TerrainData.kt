@@ -18,7 +18,7 @@ const val MAX_TERRAIN_RESOLUTION = 255
 
 /**
  * A terrain's height field: [resolution] x [resolution] heights, stretched over [size] x [size] world units, with
- * textures repeating [uv] times. The file is Mundus' `terrain.data`: big-endian floats, row after row (z-major).
+ * textures repeating [uv] times. The file is native `terrain.data`: big-endian floats, row after row (z-major).
  */
 class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, val uv: Float) {
     init {
@@ -27,7 +27,7 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
         require(resolution <= MAX_TERRAIN_RESOLUTION) { "terrain resolution $resolution is above the supported $MAX_TERRAIN_RESOLUTION" }
     }
 
-    /** Interleaved position (3), normal (3), texture coordinate (2) per vertex, as Mundus builds the terrain mesh. */
+    /** Interleaved position (3), normal (3), texture coordinate (2) per vertex, in the terrain mesh. */
     fun vertices(): FloatArray {
         val out = FloatArray(resolution * resolution * TERRAIN_FLOATS_PER_VERTEX)
         for (z in 0 until resolution) for (x in 0 until resolution) {
@@ -44,7 +44,7 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
         return out
     }
 
-    /** Central differences, clamped at the edges (Mundus `getNormalAt`). */
+    /** Central differences, clamped at the edges. */
     private fun normalAt(x: Int, z: Int, out: FloatArray, at: Int) {
         val xp = minOf(x + 1, resolution - 1)
         val zp = minOf(z + 1, resolution - 1)
@@ -93,7 +93,7 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
     }
 }
 
-/** Reads Mundus `.terra` height data: big-endian floats, a square grid of heights. */
+/** Reads native `terrain.data` height data: big-endian floats, a square grid of heights. */
 class TerrainDataReader {
     fun read(file: File, size: Int, uv: Float): TerrainData {
         val heights = DataInputStream(file.inputStream().buffered()).use { input ->

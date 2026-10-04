@@ -16,14 +16,14 @@ folder creation and folder-name validation).
 - **What the dialog asks.** A folder name for the preset. It suggests `weather_<sky>` and applies the same name rules
   as New terrain.
 - **What creation does:**
-  - It writes a new `assets/<name>/meta.json` with `"type": "WEATHER_PRESET"`, a fresh `uuid`, `version` 1, the
+  - It writes a new `assets/<name>/meta.json` with the native markers `"format": "abyssus"` and `"formatVersion": 1`, `"type": "WEATHER_PRESET"`, a fresh `uuid`, `version` 1, the
     creation time as `lastModified`, and the sky's **resolved** bands: its preset's bands with the sky's own bands
     applied, built-ins included.
   - It is one undoable command. The new preset is selected in the tree and the Properties panel.
 - **What it leaves alone.** Creation doesn't change the sky, any scene or the `.abss`. The new preset shows as unused
   until a sky names it.
 
-**Mundus fields:**
+**Fields read/written:**
 - **Read:** the sky's `additional.clouds` and the preset it names.
 - **Written:** only the new preset folder's `meta.json`.
 

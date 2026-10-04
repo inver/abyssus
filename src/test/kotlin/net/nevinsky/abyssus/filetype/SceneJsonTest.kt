@@ -12,7 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SceneJsonTest {
-    private val minified = """{"id":0,"name":"Main <Scene> & 'co'","fog":{"density":0.001,"gradient":1.5,"color":{"r":1.0,"a":1.0}},"list":[1,2.50,{"x":-0.0}],"empty":{},"none":[]}"""
+    private val minified = """{"format":"abyssus","formatVersion":1,"id":0,"name":"Main <Scene> & 'co'","fog":{"density":0.001,"gradient":1.5,"color":{"r":1.0,"a":1.0}},"list":[1,2.50,{"x":-0.0}],"empty":{},"none":[]}"""
 
     @Test
     fun breaksMinifiedJsonIntoIndentedLines() {
@@ -55,7 +55,7 @@ class SceneJsonTest {
 
     @Test
     fun keepsNullMembersAtEveryLevel() {
-        val withNulls = """{"skyboxName":null,"fog":{"gradient":null,"color":{"r":1}},"list":[null,{"a":null}]}"""
+        val withNulls = """{"format":"abyssus","formatVersion":1,"skyboxName":null,"fog":{"gradient":null,"color":{"r":1}},"list":[null,{"a":null}]}"""
         val pretty = SceneJson.pretty(withNulls)!!
         assertTrue(pretty, pretty.contains("\"skyboxName\": null"))
         assertEquals(SceneJson.parse(withNulls), SceneJson.parse(pretty))

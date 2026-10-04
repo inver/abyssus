@@ -5,11 +5,12 @@
 package net.nevinsky.abyssus.ecs
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.ecs.component.LightComponent
-import net.nevinsky.abyssus.ecs.component.NameComponent
-import net.nevinsky.abyssus.ecs.component.PositionComponent
-import net.nevinsky.abyssus.ecs.component.TypeComponent
+import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
+import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
+import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
 import net.nevinsky.abyssus.ecs.scene.*
+import net.nevinsky.abyssus.runtime.ecs.scene.*
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.sceneview.LightKind
@@ -21,7 +22,7 @@ import java.io.File
 
 class LightEntitiesTest {
     private fun fixture() = SceneJson.parse(File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
-    private fun empty() = SceneJson.parse("""{"ecs":{"entities":{}}}""")
+    private fun empty() = SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""")
 
     @Test fun createsNextEntityAndPreservesExistingData() {
         val root = fixture()
@@ -30,11 +31,11 @@ class LightEntitiesTest {
         assertEquals(EditResult.Changed, added.result)
         assertEquals("7", added.entityId)
         val ecs = root["ecs"]
+        assertFalse(ecs.has("componentIdentifiers"))
         val entity = ecs["entities"]["7"]
         assertEquals("Directional Light 7", entity["components"]["NameComponent"]["name"].asText())
         for ((id, old) in before["ecs"]["entities"].properties()) assertEquals(old.toString(), ecs["entities"][id].toString())
         for ((id, old) in before["ecs"]["archetypes"].properties()) assertEquals(old, ecs["archetypes"][id])
-        for ((key, old) in before["ecs"]["componentIdentifiers"].properties()) assertEquals(old, ecs["componentIdentifiers"][key])
         assertEquals(before["ecs"]["metadata"], ecs["metadata"])
         val components = entity["components"].fieldNames().asSequence().toSet()
         assertEquals(setOf("NameComponent", "TypeComponent", "PositionComponent", "LightComponent"), components)
@@ -73,7 +74,7 @@ class LightEntitiesTest {
     }
 
     @Test fun missingEcsOrEntitiesIsAnEmptyScene() {
-        for (text in listOf("{}", """{"name":"Empty","ecs":{}}""")) {
+        for (text in listOf("""{"format":"abyssus","formatVersion":1}""", """{"format":"abyssus","formatVersion":1,"name":"Empty","ecs":{}}""")) {
             val root = SceneJson.parse(text)
             val added = LightEntities.add(root, LightPreset.SUN, Vec3(0f, 0f, 0f))
             assertEquals(EditResult.Changed, added.result)
@@ -83,7 +84,7 @@ class LightEntitiesTest {
     }
 
     @Test fun noncanonicalArchetypeKeysDoNotBecomeBrokenReferences() {
-        val root = SceneJson.parse("""{"ecs":{"entities":{},"archetypes":{"01":["NameComponent","TypeComponent","PositionComponent","LightComponent"]}}}""")
+        val root = SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{},"archetypes":{"01":["NameComponent","TypeComponent","PositionComponent","LightComponent"]}}}""")
         LightEntities.add(root, LightPreset.SUN, Vec3(0f, 0f, 0f))
         val ecs = root["ecs"]
         val archetype = ecs["entities"]["0"]["archetype"].asText()
@@ -92,7 +93,7 @@ class LightEntitiesTest {
     }
 
     @Test fun malformedBookkeepingIsRejectedWithoutMutation() {
-        for (text in listOf("""{"ecs":[]}""", "[]", """{"ecs":{"entities":[],"archetypes":{}}}""", """{"ecs":{"entities":{},"archetypes":[]}}""")) {
+        for (text in listOf("""{"format":"abyssus","formatVersion":1,"ecs":[]}""", "[]", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":[],"archetypes":{}}}""", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{},"archetypes":[]}}""")) {
             val root = SceneJson.parse(text)
             val before = root.toString()
             assertTrue(LightEntities.add(root, LightPreset.SUN, Vec3(0f, 0f, 0f)).result is EditResult.Rejected)

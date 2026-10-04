@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import net.nevinsky.abyssus.AbyssusCore
@@ -21,6 +22,7 @@ import org.lwjgl.opengl.awt.GLData
 import com.intellij.openapi.ui.ComboBox
 import java.awt.BorderLayout
 import java.awt.FlowLayout
+import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -28,13 +30,14 @@ import java.awt.event.MouseWheelEvent
 import javax.swing.JButton
 import javax.swing.ButtonGroup
 import javax.swing.JComponent
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JToggleButton
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import javax.swing.Timer
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
 
 /** An entry of the camera selector: [id] is the camera entity to look through, null for the free orbit view. */
 data class CameraChoice(val id: String?, val label: String) {
@@ -55,6 +58,12 @@ class SceneViewPanel internal constructor(
     private val lightActions: ((() -> Vec3) -> DefaultActionGroup)? = null,
     private val canAddLight: () -> Boolean = { lightActions != null },
     ray: RayIntegration? = null,
+    /** Play in this view; without a simulation provider there are no play controls. */
+    private val play: PlayState = PlayState(null),
+    /** What Play starts from; read when Play is pressed. */
+    private val simulationRequest: ((selection: String?) -> SimulationRequest)? = null,
+    /** Other plugins' overlays for this view. */
+    private val overlays: SceneOverlayHost? = null,
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     private val frame = GdxFrame()
@@ -72,6 +81,11 @@ class SceneViewPanel internal constructor(
     private val dropButton = JButton(AbyssusBundle.message("sceneViewDrop"))
     private val addLightButton = JButton(AbyssusBundle.message("addLightTitle")).apply { name = "add-light" }
     private val cameraCombo = ComboBox<CameraChoice>()
+    private val playButton = JButton(AbyssusBundle.message("sceneViewPlay")).apply { name = "play" }
+    private val pauseButton = JButton(AbyssusBundle.message("sceneViewPause")).apply { name = "pause" }
+    private val stepButton = JButton(AbyssusBundle.message("sceneViewStep")).apply { name = "step" }
+    private val stopButton = JButton(AbyssusBundle.message("sceneViewStop")).apply { name = "stop" }
+    private val playStatus = JLabel()
     private var choices: List<CameraChoice> = emptyList()
     private var updatingControls = false
     private var rayFeed: RayViewFeed? = null
@@ -102,6 +116,7 @@ class SceneViewPanel internal constructor(
 
     init {
         renderer.params = initial
+        renderer.overlays = overlays
         // Ray tracing is optional: without an integration the view stays raster only.
         ray?.let(::installRay)
     }
@@ -170,6 +185,8 @@ class SceneViewPanel internal constructor(
             val ctx = gdx ?: return
             capabilities?.let { GL.setCapabilities(it) }
             frame.tick(framebufferWidth, framebufferHeight)
+            renderer.state.poses = play.poses() ?: emptyMap()
+            renderer.state.gizmosEnabled = !play.active
             GdxRuntime.withContext(ctx) {
                 if (experimenting) experiment?.draw(frame.width, frame.height)
                 else renderer.render(frame.width, frame.height, orbit, frame.deltaSeconds)
@@ -203,7 +220,9 @@ class SceneViewPanel internal constructor(
         add(canvas, BorderLayout.CENTER)
         attachInput(canvas)
         bindKeys()
+        forwardKeys()
         interaction.onStateChanged = ::syncControls
+        play.onChanged = ::syncControls
         syncControls()
         refreshCameraChoices(initial)
     }
@@ -243,6 +262,8 @@ class SceneViewPanel internal constructor(
             add(dropButton)
             add(addLightButton)
             add(cameraCombo)
+            if (play.available) addPlayControls(this)
+            overlayToolbar()?.let { add(it) }
             experimentButton?.let { button ->
                 button.isFocusable = false
                 button.addActionListener {
@@ -252,6 +273,35 @@ class SceneViewPanel internal constructor(
                 add(button)
             }
         }
+    }
+
+    private fun addPlayControls(toolbar: JPanel) {
+        playButton.toolTipText = AbyssusBundle.message("sceneViewPlayTooltip")
+        pauseButton.toolTipText = AbyssusBundle.message("sceneViewPauseTooltip")
+        stepButton.toolTipText = AbyssusBundle.message("sceneViewStepTooltip")
+        stopButton.toolTipText = AbyssusBundle.message("sceneViewStopTooltip")
+        for (button in listOf(playButton, pauseButton, stepButton, stopButton)) {
+            button.isFocusable = false
+            toolbar.add(button)
+        }
+        toolbar.add(playStatus)
+        playButton.addActionListener {
+            val request = simulationRequest ?: return@addActionListener
+            play.play { request(renderer.state.selectedId) }
+            requestFocusInWindow()
+        }
+        pauseButton.addActionListener { play.pause() }
+        stepButton.addActionListener { play.step() }
+        stopButton.addActionListener { play.stop() }
+    }
+
+    /** Each overlay's actions (such as Show Physics), in one small action toolbar; null when there are none. */
+    private fun overlayToolbar(): JComponent? {
+        val actions = overlays?.overlays?.flatMap { it.overlay.actions() }.orEmpty()
+        if (actions.isEmpty()) return null
+        val toolbar = ActionManager.getInstance().createActionToolbar("AbyssusSceneOverlays", DefaultActionGroup(actions), true)
+        toolbar.targetComponent = this
+        return toolbar.component
     }
 
     /** Choices retain a supplier so placement follows the current orbit target at the moment of creation. */
@@ -264,10 +314,25 @@ class SceneViewPanel internal constructor(
             registerKeyboardAction({ if (!experimenting) action() }, stroke, WHEN_FOCUSED)
             registerKeyboardAction({ if (!experimenting) action() }, stroke, WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
         }
-        bind(KeyEvent.VK_W) { interaction.mode = GizmoMode.MOVE }
-        bind(KeyEvent.VK_E) { interaction.mode = GizmoMode.ROTATE }
-        bind(KeyEvent.VK_D) { interaction.drop() }
-        bind(KeyEvent.VK_ESCAPE) { interaction.escape() }
+        // while playing these keys go to the simulation instead (forwardKeys), and Escape stops it
+        bind(KeyEvent.VK_W) { if (!play.active) interaction.mode = GizmoMode.MOVE }
+        bind(KeyEvent.VK_E) { if (!play.active) interaction.mode = GizmoMode.ROTATE }
+        bind(KeyEvent.VK_D) { if (!play.active) interaction.drop() }
+        bind(KeyEvent.VK_ESCAPE) { if (!play.escape()) interaction.escape() }
+    }
+
+    /** While playing, every key but Escape goes to the simulation and is consumed, so no editor shortcut fires. */
+    private fun forwardKeys() {
+        addKeyListener(object : KeyAdapter() {
+            override fun keyPressed(e: KeyEvent) = forward(e, SimulationInput.Kind.KEY_DOWN)
+            override fun keyReleased(e: KeyEvent) = forward(e, SimulationInput.Kind.KEY_UP)
+
+            private fun forward(e: KeyEvent, kind: SimulationInput.Kind) {
+                if (!play.active || e.keyCode == KeyEvent.VK_ESCAPE) return
+                play.input(SimulationInput(kind, key = keyName(e.keyCode)))
+                e.consume()
+            }
+        })
     }
 
     /** Brings the toolbar's buttons and selector in line with the interaction state. */
@@ -276,14 +341,35 @@ class SceneViewPanel internal constructor(
         try {
             moveButton.isSelected = interaction.mode == GizmoMode.MOVE
             rotateButton.isSelected = interaction.mode == GizmoMode.ROTATE
-            moveButton.isEnabled = !experimenting
-            rotateButton.isEnabled = !experimenting
+            val editing = !experimenting && !play.active
+            moveButton.isEnabled = editing
+            rotateButton.isEnabled = editing
             cameraCombo.isEnabled = !experimenting
-            dropButton.isEnabled = !experimenting && interaction.canDrop
-            addLightButton.isEnabled = !experimenting && lightActions != null && canAddLight()
+            dropButton.isEnabled = editing && interaction.canDrop
+            addLightButton.isEnabled = editing && lightActions != null && canAddLight()
+            syncPlayControls()
             cameraCombo.selectedItem = choices.firstOrNull { it.id == interaction.viewCamera } ?: choices.firstOrNull()
         } finally {
             updatingControls = false
+        }
+    }
+
+    private fun syncPlayControls() {
+        if (!play.available) {
+            for (c in listOf(playButton, pauseButton, stepButton, stopButton, playStatus)) c.isVisible = false
+            return
+        }
+        val phase = play.phase
+        playButton.isEnabled = phase == PlayState.Phase.IDLE || phase == PlayState.Phase.FAILED || phase == PlayState.Phase.PAUSED
+        pauseButton.isEnabled = phase == PlayState.Phase.PLAYING
+        stepButton.isEnabled = phase == PlayState.Phase.PAUSED
+        stopButton.isEnabled = play.active
+        playStatus.text = when (phase) {
+            PlayState.Phase.IDLE -> ""
+            PlayState.Phase.STARTING -> AbyssusBundle.message("sceneViewPlayStarting")
+            PlayState.Phase.PLAYING -> AbyssusBundle.message("sceneViewPlaying")
+            PlayState.Phase.PAUSED -> AbyssusBundle.message("sceneViewPaused")
+            PlayState.Phase.FAILED -> AbyssusBundle.message("sceneViewPlayFailed")
         }
     }
 
@@ -316,12 +402,14 @@ class SceneViewPanel internal constructor(
             override fun mousePressed(e: MouseEvent) {
                 requestFocusInWindow()
                 if (experimenting) { experimentX = e.x; experimentY = e.y; return }
+                forwardMouse(SimulationInput.Kind.BUTTON_DOWN, e)
                 sync()
                 interaction.pressed(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
             }
 
             override fun mouseReleased(e: MouseEvent) {
                 if (experimenting) return
+                forwardMouse(SimulationInput.Kind.BUTTON_UP, e)
                 sync()
                 interaction.released(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
             }
@@ -341,6 +429,7 @@ class SceneViewPanel internal constructor(
 
             override fun mouseMoved(e: MouseEvent) {
                 if (experimenting) return
+                forwardMouse(SimulationInput.Kind.MOUSE_MOVE, e)
                 sync()
                 interaction.moved(e.x, e.y)
             }
@@ -353,6 +442,11 @@ class SceneViewPanel internal constructor(
         target.addMouseListener(input)
         target.addMouseMotionListener(input)
         target.addMouseWheelListener(input)
+    }
+
+    /** While playing, mouse buttons and moves also go to the simulation; the camera still orbits, pans and zooms. */
+    private fun forwardMouse(kind: SimulationInput.Kind, e: MouseEvent) {
+        if (play.active) play.input(SimulationInput(kind, button = e.button, x = e.x, y = e.y))
     }
 
     /**
@@ -397,6 +491,11 @@ class SceneViewPanel internal constructor(
 
     override fun refreshAssets(revision: AssetRevisionBatch) = renderer.queueAssetRevision(revision)
 
+    override fun stopPlay() = play.documentChanging()
+
+    /** This view's play state; for tests. */
+    internal val playState: PlayState get() = play
+
     override fun addNotify() {
         replaceAbandonedCanvas()
         super.addNotify()
@@ -413,6 +512,8 @@ class SceneViewPanel internal constructor(
 
     override fun dispose() {
         stopLoop()
+        play.stop()
+        overlays?.dispose()
         experiment?.stop()
         rayFeed?.close()
         rayFeed = null
@@ -434,3 +535,11 @@ class SceneViewPanel internal constructor(
         }
     }
 }
+
+/** A stable name for an AWT key code, as the `VK_` constant without its prefix (`W`, `SPACE`, `LEFT`). */
+private val KEY_NAMES: Map<Int, String> by lazy {
+    KeyEvent::class.java.fields.filter { it.name.startsWith("VK_") && it.type == Int::class.javaPrimitiveType }
+        .associate { it.getInt(null) to it.name.removePrefix("VK_") }
+}
+
+internal fun keyName(code: Int): String = KEY_NAMES[code] ?: "KEY_$code"

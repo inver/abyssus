@@ -16,7 +16,8 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.filetype.editSceneJson
-import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.dto.SceneEntry
 
 private fun JsonNode.child(key: String): JsonNode? = when (this) {
     is ObjectNode -> get(key)
@@ -44,9 +45,9 @@ fun toggleEnabled(project: Project, entry: DtoEntry): Boolean {
 
 /** The `.scene` file behind a scene entry listed under a project, or null for any other entry. */
 fun sceneFileOf(entry: DtoEntry): VirtualFile? =
-    (entry.value as? SceneDto)?.file?.takeIf { it.extension == ProjectLayout.SCENE_EXTENSION }
+    (entry.value as? SceneEntry)?.file?.takeIf { it.extension == ProjectLayout.SCENE_EXTENSION }
 
-fun sceneName(entry: DtoEntry): String? = (entry.value as? SceneDto)?.name
+fun sceneName(entry: DtoEntry): String? = (entry.value as? SceneEntry)?.scene?.name
 
 /** Sets the scene's `skyboxName` to [name] (an asset folder, or null for none); false, writing nothing, when it already is. */
 fun setSkybox(project: Project, file: VirtualFile, name: String?): Boolean =

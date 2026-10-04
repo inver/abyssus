@@ -3,15 +3,16 @@
 ## Purpose
 
 Lets users add, change and remove the components of a scene entity from the plugin, so scene content can
-be edited without writing Mundus' component JSON by hand and without disturbing anything else in the file.
+be edited without writing component JSON by hand and without disturbing anything else in the file.
 
 ## Requirements
 
 ### Requirement: Add a component to an entity
 
 The plugin SHALL add a component of any modeled kind (Name, Type, Parent, Position, Camera, Light,
-Point2Point, Render) to an entity of a scene file, initialized with the defaults a scene load gives
-that kind. An entity SHALL NOT receive a second component of a kind it already has.
+Point2Point, Render), or of any kind a known component schema declares, to an entity of a scene file, initialized
+with the defaults a scene load gives that kind. An entity SHALL NOT receive a second component of a kind it already
+has.
 
 #### Scenario: Add a light
 
@@ -31,12 +32,19 @@ that kind. An entity SHALL NOT receive a second component of a kind it already h
 #### Scenario: Unmodeled kind is not offered
 
 - **WHEN** the user opens the list of components that can be added
-- **THEN** it holds only modeled kinds the entity lacks, and never `PickableComponent` or `DependenciesComponent`
+- **THEN** it holds only modeled and schema-declared kinds the entity lacks, and never `PickableComponent` or
+  `DependenciesComponent`
+
+#### Scenario: Add a schema-declared component
+
+- **WHEN** a `PlaneComponent`, declared by the `Custom` project's schema, is added to entity `1` of its scene
+- **THEN** entity `1` gains `"PlaneComponent": {}` and nothing else in the file changes
 
 ### Requirement: Update a component field
 
-The plugin SHALL change one field of a modeled component of an entity and write only that change into the
-file. A value that does not fit the field SHALL be rejected with a message and leave the file unchanged.
+The plugin SHALL change one field of a modeled or schema-declared component of an entity and write only that change
+into the file. A value that does not fit the field, including one outside a schema field's declared limits or not
+among its choices, SHALL be rejected with a message and leave the file unchanged.
 
 #### Scenario: Change a camera field
 
@@ -51,17 +59,28 @@ file. A value that does not fit the field SHALL be rejected with a message and l
 #### Scenario: Value equals the default
 
 - **WHEN** a position's `localScale.y` is set back to `1`
-- **THEN** the file is written the way Mundus writes defaults, leaving no field that only repeats a default
+- **THEN** the file follows the Abyssus version 1 default omission rules, leaving no field that only repeats a default
 
 #### Scenario: No change
 
 - **WHEN** a field is set to the value it already has
 - **THEN** the file is not modified
 
+#### Scenario: Change a schema-declared field
+
+- **WHEN** entity `0`'s `PlaneComponent` `lineLength` in the `Custom` scene is set to `25`
+- **THEN** the file holds `25` for it and the plane's other fields are unchanged
+
+#### Scenario: Outside a declared limit
+
+- **WHEN** `lineLength`, declared with a minimum of `5`, is set to `2`
+- **THEN** the file is unchanged and a message names the field and its minimum
+
 ### Requirement: References between entities stay valid
 
-An update that sets a look-at, parent or point-to-point entity SHALL accept only the id of an entity of the
-scene or `-1` (none), and SHALL reject an entity as its own parent and any parent chain that would loop.
+An update that sets a look-at, parent or point-to-point entity, or an entity-reference field of a schema-declared
+component, SHALL accept only the id of an entity of the scene or `-1` (none), and SHALL reject an entity as its own
+parent and any parent chain that would loop.
 
 #### Scenario: Unknown target
 
@@ -78,9 +97,14 @@ scene or `-1` (none), and SHALL reject an entity as its own parent and any paren
 - **WHEN** a look-at target is set to `-1`
 - **THEN** the file no longer holds a `lookAtId` for that entity
 
+#### Scenario: Schema entity reference
+
+- **WHEN** the `pilot` field of entity `0`'s `PlaneComponent` is set to `99` and the scene has no entity `99`
+- **THEN** the value is rejected and the file is unchanged
+
 ### Requirement: Remove a component
 
-The plugin SHALL remove a modeled component from an entity. Removing the `PositionComponent` of an entity
+The plugin SHALL remove a modeled or schema-declared component from an entity. Removing the `PositionComponent` of an entity
 that another entity looks at, has as parent or uses as a point-to-point endpoint SHALL be refused while
 anything refers to it.
 
@@ -99,16 +123,21 @@ anything refers to it.
 - **WHEN** the user selects a `PickableComponent`
 - **THEN** no remove action is offered for it
 
+#### Scenario: Remove a schema-declared component
+
+- **WHEN** entity `0`'s `PlaneComponent` is removed
+- **THEN** the entity no longer has it, keeps its other components in their order, and nothing else in the file changes
+
 ### Requirement: Edits preserve the rest of the scene file
 
 Every create, update and remove SHALL leave everything it does not target as it was: other entities,
-unmodeled components, `archetype` ids, the `ecs` block's `archetypes`, `componentIdentifiers` and `metadata`,
+unmodeled components, `archetype` ids, the `ecs` block's `archetypes`, `metadata` and the native document markers,
 the order of entities and components, and the formatting style of the file.
 
 #### Scenario: Unmodeled data survives
 
 - **WHEN** a component is changed in `Main Scene`
-- **THEN** reloading the file shows the same `PickableComponent`, `DependenciesComponent`, editor-only renderables, `archetypes`, `componentIdentifiers` and `metadata` as before
+- **THEN** reloading the file shows the same `PickableComponent`, `DependenciesComponent`, unknown native renderable kinds, `archetypes`, `metadata` and the native document markers as before
 
 #### Scenario: Written file loads
 
@@ -184,14 +213,14 @@ Cone angle edits SHALL accept only finite numbers greater than 0 and less than 1
 - **WHEN** edge softness is set below 0, above 100, to a nonfinite value or to nonnumeric text
 - **THEN** the edit is rejected and the scene remains unchanged
 
-### Requirement: Spotlight extension compatibility
+### Requirement: Native spotlight storage
 
-When verified Mundus equivalents are unavailable, the scene SHALL store coneAngle in full degrees and edgeSoftness as a fraction from 0 to 1 in the light's existing nested or flat representation. The documented defaults SHALL be 45 degrees and 0.2 softness, omitted when reset. Documentation SHALL identify these as Abyssus extensions with unverified Mundus support.
+A native spotlight SHALL store `coneAngle` as full degrees and `edgeSoftness` as a fraction from 0 to 1 in its existing nested or flat light representation. Defaults SHALL be 45 degrees and 0.2 softness, omitted when reset. Documentation SHALL describe these as native Abyssus fields.
 
-#### Scenario: Save fallback fields
-- **WHEN** a nested spotlight is saved with a 60-degree cone and 25-percent softness using the extension format
-- **THEN** its light object holds coneAngle 60 and edgeSoftness 0.25, with unrelated content preserved
+#### Scenario: Save native beam fields
+- **WHEN** a nested spotlight is saved with a 60-degree cone and 25-percent softness
+- **THEN** its light object holds `coneAngle: 60` and `edgeSoftness: 0.25`, with unrelated content preserved
 
-#### Scenario: Reset extension defaults
-- **WHEN** extension settings are reset to 45 degrees and 20-percent softness
-- **THEN** their keys are omitted and the effective values remain those defaults
+#### Scenario: Reset native defaults
+- **WHEN** beam settings are reset to 45 degrees and 20-percent softness
+- **THEN** those keys are omitted and the effective values remain the defaults

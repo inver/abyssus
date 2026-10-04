@@ -53,3 +53,10 @@ class RecordingLogger(
 
 /** A logger that appends every warning (and error) message to [list], for tests that only care about problems. */
 fun warningsTo(list: MutableList<String>): org.slf4j.Logger = RecordingLogger(warningsInto = list)
+
+/** A logger that fails the test with the message of the first warning (or error) logged. */
+fun failOnWarnings(): org.slf4j.Logger = RecordingLogger(warningsInto = object : java.util.AbstractList<String>() {
+    override val size get() = 0
+    override fun get(index: Int): String = throw IndexOutOfBoundsException()
+    override fun add(element: String): Boolean = throw AssertionError(element)
+})

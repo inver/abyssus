@@ -9,6 +9,21 @@
 
     <resource-bundle>messages.AbyssusBundle</resource-bundle>
 
+    <extensionPoints>
+        <!-- A component schema (format of abyssus/components.schema.json) in the contributing plugin's jar. -->
+        <extensionPoint name="componentSchemas"
+                        beanClass="net.nevinsky.abyssus.schema.ComponentSchemaBean"
+                        dynamic="true"/>
+        <!-- Lines a plugin draws in every Scene view (net.nevinsky.abyssus.sceneview.SceneOverlayProvider). -->
+        <extensionPoint name="sceneOverlay"
+                        interface="net.nevinsky.abyssus.sceneview.SceneOverlayProvider"
+                        dynamic="true"/>
+        <!-- Play in the Scene view (net.nevinsky.abyssus.sceneview.SceneSimulationProvider); the first one is used. -->
+        <extensionPoint name="sceneSimulation"
+                        interface="net.nevinsky.abyssus.sceneview.SceneSimulationProvider"
+                        dynamic="true"/>
+    </extensionPoints>
+
     <extensions defaultExtensionNs="com.intellij">
         <fileType
                 name="Gltf File"
@@ -35,6 +50,7 @@
                     anchor="right"
                     canCloseContents="false"
                     factoryClass="net.nevinsky.abyssus.properties.AbyssusPropertiesToolWindowFactory"/>
+        <notificationGroup id="Abyssus Component Schemas" displayType="BALLOON" key="schemaNotificationGroup"/>
         <lang.parserDefinition
                 language="GLTF"
                 implementationClass="net.nevinsky.abyssus.language.GltfParserDefinition"/>

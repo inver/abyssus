@@ -1,0 +1,23 @@
+<idea-plugin>
+    <id>net.nevinsky.abyssus.physics</id>
+    <name>Abyssus Physics</name>
+    <vendor>inver</vendor>
+    <description>Physics for Abyssus scenes: collider and constraint overlays and Play in the Scene view.</description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>net.nevinsky.abyssus</depends>
+
+    <resource-bundle>messages.AbyssusPhysicsBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="net.nevinsky.abyssus">
+        <!-- generated at build time from net.nevinsky.abyssus.physics.PhysicsComponents -->
+        <componentSchemas resource="/schemas/physics.schema.json"/>
+        <sceneOverlay implementation="net.nevinsky.abyssus.physics.plugin.PhysicsOverlayProvider"/>
+        <sceneSimulation implementation="net.nevinsky.abyssus.physics.plugin.PhysicsSimulationProvider"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="Abyssus Physics" displayType="BALLOON" key="notificationGroup"/>
+    </extensions>
+
+</idea-plugin>

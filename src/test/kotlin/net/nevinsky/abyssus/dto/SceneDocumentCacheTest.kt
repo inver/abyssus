@@ -19,7 +19,7 @@ class SceneDocumentCacheTest : BasePlatformTestCase() {
     private fun cache() = SceneDocumentCache(project) { text -> parses++; SceneDocumentCache.parsedScene(reader, text) }
         .also { Disposer.register(testRootDisposable, it) }
 
-    private fun scene(text: String = """{"name":"a","ecs":{"entities":{}}}""") =
+    private fun scene(text: String = """{"format":"abyssus","formatVersion":1,"name":"a","ecs":{"entities":{}}}""") =
         myFixture.addFileToProject("c/Main.scene", text).virtualFile
 
     private fun setText(f: com.intellij.openapi.vfs.VirtualFile, text: String) {
@@ -40,7 +40,7 @@ class SceneDocumentCacheTest : BasePlatformTestCase() {
         val cache = cache()
         val f = scene()
         assertEquals("a", cache.read(f)!!.scene.name)
-        setText(f, """{"name":"b"}""")
+        setText(f, """{"format":"abyssus","formatVersion":1,"name":"b"}""")
         assertEquals("b", cache.read(f)!!.scene.name)
         assertEquals(2, parses)
         cache.read(f)
@@ -54,7 +54,7 @@ class SceneDocumentCacheTest : BasePlatformTestCase() {
         assertEquals(setOf(f), cache.cachedFiles())
         runWriteAction { f.delete(this) }
         assertEquals(emptySet<com.intellij.openapi.vfs.VirtualFile>(), cache.cachedFiles())
-        val g = myFixture.addFileToProject("c/Other.scene", "{}").virtualFile
+        val g = myFixture.addFileToProject("c/Other.scene", """{"format":"abyssus","formatVersion":1}""").virtualFile
         assertNotNull(cache.read(g))
         val dir = myFixture.tempDirFixture.findOrCreateDir("c/moved")
         runWriteAction { g.move(this, dir) }
@@ -66,7 +66,7 @@ class SceneDocumentCacheTest : BasePlatformTestCase() {
         val f = scene("{oops")
         repeat(5) { assertNull(cache.read(f)) }
         assertEquals(1, parses)
-        setText(f, """{"name":"fixed"}""")
+        setText(f, """{"format":"abyssus","formatVersion":1,"name":"fixed"}""")
         assertEquals("fixed", cache.read(f)!!.scene.name)
         assertEquals(2, parses)
     }

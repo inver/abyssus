@@ -30,8 +30,11 @@ class SceneFormatListener : FileEditorManagerListener {
 
     private fun format(project: Project, file: VirtualFile) {
         val document = FileDocumentManager.getInstance().getDocument(file)?.takeIf { it.isWritable } ?: return
-        val pretty = SceneJson.pretty(document.text) ?: return
+        val kind = documentKind(file) ?: return
+        val root = net.nevinsky.abyssus.assets.runCatchingKeepingCancellation { SceneJson.parse(document.text) }.getOrNull() ?: return
+        if (net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().validate(root, kind) != null) return
+        val pretty = SceneJson.pretty(root)
         if (pretty == document.text) return
-        WriteCommandAction.runWriteCommandAction(project, "Format Scene JSON", null, { document.setText(pretty) })
+        WriteCommandAction.runWriteCommandAction(project, net.nevinsky.abyssus.AbyssusBundle.message("commandFormatSceneJson"), null, { document.setText(pretty) })
     }
 }

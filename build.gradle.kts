@@ -74,7 +74,10 @@ dependencies {
     runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop")
 
     // Entity-component engine behind the scene model (net.nevinsky.abyssus.ecs)
-    implementation("com.badlogicgames.ashley:ashley:1.7.4")
+    implementation(project(":runtime")) {
+        exclude(group = "org.jetbrains.kotlin")
+        exclude(group = "org.slf4j")
+    }
 
     // Model runtime + Assimp importer (brings lwjgl-assimp and its natives); the IDE provides Kotlin and the SLF4J API
     implementation(project(":gdx-model")) {

@@ -70,11 +70,11 @@ class DesignLookTest : BasePlatformTestCase() {
     // face thumbnails
 
     fun testChooserRowsGetFaceThumbnailsFromTheAssetFolder() {
-        myFixture.addFileToProject("p/P.abss", "{}")
+        myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
         myFixture.copyFileToProject("Untitled/assets/skybox_default/skybox_default.png", "p/assets/sky/skybox_default.png")
-        myFixture.addFileToProject("p/assets/sky/meta.json", """{"type":"SKYBOX","additional":{"top":"skybox_default.png","bottom":"skybox_default.png","left":"skybox_default.png","right":"skybox_default.png","front":"skybox_default.png","back":"missing.png"}}""")
+        myFixture.addFileToProject("p/assets/sky/meta.json", """{"format":"abyssus","formatVersion":1,"type":"SKYBOX","additional":{"top":"skybox_default.png","bottom":"skybox_default.png","left":"skybox_default.png","right":"skybox_default.png","front":"skybox_default.png","back":"missing.png"}}""")
         val abss = myFixture.findFileInTempDir("p/P.abss")
-        myFixture.addFileToProject("p/scenes/S.scene", "{}")
+        myFixture.addFileToProject("p/scenes/S.scene", """{"format":"abyssus","formatVersion":1}""")
         val loaded = loadSkyboxChoices(project, abss, testMetaFiles(), testCore.hdrPreviews)!!
         val sky = loaded.single()
         assertEquals(listOf("skybox_default.png", "skybox_default.png", "skybox_default.png", "skybox_default.png", "skybox_default.png", "missing.png"), sky.faceFiles)

@@ -28,7 +28,7 @@ class AssetReferenceChoicesTest {
         val dir = File(tmp.root, "assets/$name").apply { mkdirs() }
         val id = uuid?.let { """"uuid":"$it",""" } ?: ""
         val f = file?.let { """"file":"$it"""" } ?: """"x":1"""
-        File(dir, "meta.json").writeText("""{"version":1,$id"type":"$type","additional":{$f}}""")
+        File(dir, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,$id"type":"$type","additional":{$f}}""")
         if (write && file != null) File(dir, file).apply { parentFile.mkdirs() }.writeBytes(byteArrayOf(1, 2, 3))
         return dir
     }

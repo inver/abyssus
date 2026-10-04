@@ -14,7 +14,7 @@ import com.intellij.openapi.command.undo.UnexpectedUndoException
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
 
 /**
  * Applies an [AssetTransaction] to a [AssetFileStore], forward or in reverse, as far as the files allow: every

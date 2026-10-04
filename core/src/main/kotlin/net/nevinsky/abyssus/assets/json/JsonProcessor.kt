@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 
 /**
- * Binds Mundus JSON (`.abss`, `.scene`, asset `meta.json`) to Kotlin classes: unknown properties are skipped, unknown
+ * Binds native JSON (`.abss`, `.scene`, asset `meta.json`) to Kotlin classes: unknown properties are skipped, unknown
  * enum values take their default, and properties keep declaration order. Create one and pass it to what needs it.
  */
 class JsonProcessor {

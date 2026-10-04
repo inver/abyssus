@@ -11,15 +11,15 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import net.nevinsky.abyssus.ecs.component.LIGHT_RANGE
-import net.nevinsky.abyssus.ecs.component.CAMERA_NEAR
-import net.nevinsky.abyssus.ecs.component.CAMERA_FAR
-import net.nevinsky.abyssus.ecs.component.CAMERA_FOV
+import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_RANGE
+import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_NEAR
+import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FAR
+import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FOV
 
 class SceneContentTest {
     private fun content(json: String) = SceneContent.of(parseScene(json))
 
-    private fun entity(components: String) = """{"ecs":{"entities":{"7":{"archetype":1,"components":$components}}}}"""
+    private fun entity(components: String) = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"7":{"archetype":1,"components":$components}}}}"""
 
     @Test
     fun mainSceneHasThreeModelsAndOneTerrain() {
@@ -31,7 +31,7 @@ class SceneContentTest {
         )
         assertEquals(listOf("0", "2", "6"), c.models.map { it.entityId })
         assertEquals(listOf("terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), c.terrains.map { it.assetName })
-        assertTrue(c.lights.isEmpty())
+        assertEquals(listOf("7", "8"), c.lights.map { it.entityId })
         assertEquals("skybox_physical", c.skybox)
     }
 
@@ -53,7 +53,7 @@ class SceneContentTest {
 
     @Test
     fun unknownAndMalformedEntitiesAreIgnored() {
-        val json = """{"ecs":{"entities":{
+        val json = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "1":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"SPRITE","assetName":"s"}}}}},
             "2":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL"}}}}},
             "3":{"components":{"RenderComponent":"nope"}},
@@ -66,10 +66,10 @@ class SceneContentTest {
 
     @Test
     fun skyboxNeedsEnabledAndName() {
-        assertEquals("sky", content("""{"skyboxEnabled":true,"skyboxName":"sky"}""").skybox)
-        assertNull(content("""{"skyboxEnabled":false,"skyboxName":"sky"}""").skybox)
-        assertNull(content("""{"skyboxEnabled":true,"skyboxName":null}""").skybox)
-        assertNull(content("""{"skyboxName":"sky"}""").skybox)
+        assertEquals("sky", content("""{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"sky"}""").skybox)
+        assertNull(content("""{"format":"abyssus","formatVersion":1,"skyboxEnabled":false,"skyboxName":"sky"}""").skybox)
+        assertNull(content("""{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":null}""").skybox)
+        assertNull(content("""{"format":"abyssus","formatVersion":1,"skyboxName":"sky"}""").skybox)
     }
 
     @Test
@@ -116,7 +116,7 @@ class SceneContentTest {
 
     @Test
     fun aTextualLookAtTargetIsKept() {
-        val c = content("""{"ecs":{"entities":{
+        val c = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "h":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}},
             "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
                 "PositionComponent":{"lookAtId":"h","localPosition":{"y":5}}}}}}}""")
@@ -163,13 +163,13 @@ class SceneContentTest {
         assertEquals(100f, cam.far, 0f)
         assertEquals(67f, cam.fieldOfView, 0f)
         assertEquals(Vec3(0f, 0f, 0f), c.entityPositions["3"])
-        assertTrue(c.lights.isEmpty())
+        assertEquals(listOf("7", "8"), c.lights.map { it.entityId })
         assertEquals(3, c.models.size)
     }
 
     @Test
-    fun mundusLightsFaceTheirHandles() {
-        val c = content(File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText())
+    fun handleLightsFaceTheirHandles() {
+        val c = content(File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText())
         assertEquals(setOf("0", "3"), c.handleIds)
         val byId = c.lights.associateBy { it.entityId }
         val directional = byId["1"]!!
@@ -198,7 +198,7 @@ class SceneContentTest {
 
     @Test
     fun aLightAtItsTargetFacesAlongItsRotation() {
-        val c = content("""{"ecs":{"entities":{
+        val c = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
                 "PositionComponent":{"localPosition":{"x":3}}}},
             "2":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
@@ -208,7 +208,7 @@ class SceneContentTest {
 
     @Test
     fun aPointLightIgnoresItsLookAtTarget() {
-        val c = content("""{"ecs":{"entities":{
+        val c = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "0":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{}}},
             "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{},
                 "PositionComponent":{"lookAtId":0,"localPosition":{"y":10}}}}}}}""")
@@ -244,7 +244,7 @@ class SceneContentTest {
     @Test
     fun camerasAreNeitherLightsNorModels() {
         val c = content(entity("""{"TypeComponent":{"type":"CAMERA"},"CameraComponent":{"camera":{}},
-            "RenderComponent":{"renderable":{"class":"x"}}}"""))
+            "RenderComponent":{"renderable":{"kind":"debug-marker"}}}"""))
         assertEquals(1, c.cameras.size)
         assertTrue(c.lights.isEmpty())
         assertTrue(c.models.isEmpty())

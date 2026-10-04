@@ -21,7 +21,8 @@ import net.nevinsky.abyssus.projectView.childrenOf
 import net.nevinsky.abyssus.projectView.elementLabel
 import net.nevinsky.abyssus.dto.ProjectReader
 import net.nevinsky.abyssus.dto.SceneReader
-import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.dto.SceneEntry
 import net.nevinsky.abyssus.projectView.foldToggles
 import net.nevinsky.abyssus.filetype.AbyssusProjectFileType
 import net.nevinsky.abyssus.filetype.AbyssusProjectIcons
@@ -110,19 +111,19 @@ class AbyssusViewTest : BasePlatformTestCase() {
     }
 
     fun testMistypedFieldFailsOnlyThatScene() {
-        add("m/a.abss", """{"name":"m"}""")
-        add("m/scenes/good.scene", """{"name":"Good"}""")
-        add("m/scenes/bad.scene", """{"name":"Bad","fogEnabled":"nope"}""")
+        add("m/a.abss", """{"format":"abyssus","formatVersion":1,"name":"m"}""")
+        add("m/scenes/good.scene", """{"format":"abyssus","formatVersion":1,"name":"Good"}""")
+        add("m/scenes/bad.scene", """{"format":"abyssus","formatVersion":1,"name":"Bad","fogEnabled":"nope"}""")
         val dto = project.service<ProjectReader>().read(myFixture.findFileInTempDir("m/a.abss")).obj!!
         assertEquals(2, dto.scenes.size)
-        assertEquals("Good", (dto.scenes.single { it is SceneDto } as SceneDto).name)
+        assertEquals("Good", (dto.scenes.single { it is SceneEntry } as SceneEntry).scene.name)
         assertNotNull((dto.scenes.single { it is SceneError } as SceneError).error)
     }
 
     fun testEmptyScene() {
         assertTrue(!service<SceneReader>().read(add("empty.scene", "")).success)
         assertTrue(!service<SceneReader>().read(add("bad.scene", "{oops")).success)
-        val scene = parseScene("{}")
+        val scene = parseScene("""{"format":"abyssus","formatVersion":1}""")
         assertEquals(SceneDto(), scene)
         assertEquals(9, childrenOf(scene).size)
         assertTrue(childrenOf(scene).all { it.value == null })
@@ -137,14 +138,14 @@ class AbyssusViewTest : BasePlatformTestCase() {
     }
 
     fun testProjectOrderAndMissingFolder() {
-        add("p/a.abss", """{"name":"p"}""")
-        add("p/scenes/b.scene", """{"name":"B"}""")
-        add("p/scenes/a.scene", """{"name":"A"}""")
-        add("p/scenes/c.scene", """{}""")
+        add("p/a.abss", """{"format":"abyssus","formatVersion":1,"name":"p"}""")
+        add("p/scenes/b.scene", """{"format":"abyssus","formatVersion":1,"name":"B"}""")
+        add("p/scenes/a.scene", """{"format":"abyssus","formatVersion":1,"name":"A"}""")
+        add("p/scenes/c.scene", """{"format":"abyssus","formatVersion":1}""")
         add("p/scenes/d.scene", "broken")
         val items = (project.service<ProjectReader>().read(myFixture.findFileInTempDir("p/a.abss")).obj!!).scenes.mapIndexed { i, it -> elementLabel("scenes", it, i) }
         assertEquals(listOf("A", "B", "scenes[2]", "d.scene"), items)
-        add("q/a.abss", """{"name":"q"}""")
+        add("q/a.abss", """{"format":"abyssus","formatVersion":1,"name":"q"}""")
         val none = project.service<ProjectReader>().read(myFixture.findFileInTempDir("q/a.abss")).obj!!
         assertTrue((none as ProjectDto).scenes.isEmpty())
         assertTrue(!project.service<ProjectReader>().read(add("bad.abss", "")).success)
@@ -153,9 +154,9 @@ class AbyssusViewTest : BasePlatformTestCase() {
     // 3. discovery
 
     fun testDiscoveryIsExactSuffixCaseSensitive() {
-        for (n in listOf("a.scene", "Forest.SCENE", "forest.scene.bak", "a.abss", "A.ABSS", "a.abss.bak", "scenes/s.scene", "x.txt")) add(n, "{}")
+        for (n in listOf("a.scene", "Forest.SCENE", "forest.scene.bak", "a.abss", "A.ABSS", "a.abss.bak", "scenes/s.scene", "x.txt")) add(n, """{"format":"abyssus","formatVersion":1}""")
         val dir = myFixture.findFileInTempDir("")
-        runWriteAction { dir.createChildDirectory(this, "excl").createChildData(this, "e.scene").setBinaryContent("{}".toByteArray()) }
+        runWriteAction { dir.createChildDirectory(this, "excl").createChildData(this, "e.scene").setBinaryContent("""{"format":"abyssus","formatVersion":1}""".toByteArray()) }
         PsiTestUtil.addExcludedRoot(module, myFixture.findFileInTempDir("excl"))
         val names = allAssets().map { text(it) }
         // projects first, then standalone scenes; "scenes/s.scene" belongs to the sibling a.abss
@@ -169,7 +170,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         fixture()
         val scene = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()
         val top = children(scene).map { text(it) }
-        assertEquals(listOf("ambientLight", "fog", "skybox: skybox_physical", "ecs  7 entities"), top)
+        assertEquals(listOf("ambientLight", "fog", "skybox: skybox_physical", "ecs  9 entities"), top)
         assertTrue(top.none { it.startsWith("id") || it.startsWith("name") })
         assertTrue("skybox: skybox_physical" in top)
         assertTrue(top.none { it.endsWith("Enabled: true") || it.endsWith("Enabled: false") })
@@ -218,7 +219,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
     }
 
     fun testFoldToggles() {
-        val props = childrenOf(parseScene("""{"fogEnabled":false,"fog":{},"skyboxEnabled":true,"skyboxName":"s","lonelyEnabled":true}"""))
+        val props = childrenOf(parseScene("""{"format":"abyssus","formatVersion":1,"fogEnabled":false,"fog":{},"skyboxEnabled":true,"skyboxName":"s","lonelyEnabled":true}"""))
         val folded = props.foldToggles()
         assertEquals(false, folded.first { it.name == "fog" }.enabled)
         assertEquals(true, folded.first { it.name == "skyboxName" }.enabled)

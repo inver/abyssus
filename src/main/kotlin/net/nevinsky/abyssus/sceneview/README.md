@@ -23,7 +23,9 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 | `SceneMarkers`, `CameraFrustum` | Camera body and frustum, light markers, and their pick bounds |
 | `ScenePicker` | Ray from a pixel, nearest hit over boxes and terrain heights (used by `SnapshotSceneQueries`) |
 | Drop: `OrientedBox`, `TerrainRestHeight`, `ScenePicker.restHeight` | Highest surface under a rotated box footprint; CPU-only bilinear terrain-cell maxima |
-| `ScenePreview` | Applies a drag or drop preview over the placements |
+| `ScenePreview` | Applies a drag or drop preview over the placements, and simulated poses (`withPoses`) while playing |
+| `SceneExtensions.kt`, `SceneOverlayHost` | The `sceneOverlay` and `sceneSimulation` extension points and the per-view overlay list that switches off a failing overlay |
+| `PlayState` | Play in one view without Swing or GL: `IDLE -> STARTING -> PLAYING <-> PAUSED -> IDLE`, plus `FAILED` |
 | `gizmo/` | Handle geometry (`GizmoHandles`), hit tests (`GizmoHit`), drag math (`GizmoDrag`), drawing (`GizmoDraw`) |
 | `SceneTransformWriter` | A finished transform → `PositionComponent` (and camera) fields in the scene JSON |
 | `GdxRuntime`, `GuardedGLCanvas` | The `Gdx.*` shim, and the canvas that refuses unsafe GL |
@@ -62,6 +64,23 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 - **Drags preview, then write once.** During a drag `ScenePreview` overrides the dragged entity's placement. On release
   one `editSceneJson` command ("Move Entity" / "Rotate Entity") writes it. The document change re-reads params, and
   the override stays until they arrive so the object doesn't jump back.
+- **Play shows poses, never writes them.** With a `sceneSimulation` provider installed (Abyssus Physics), the toolbar
+  has Play, Pause, Step and Stop. `PlayState` starts the provider's simulation from the scene's document text, the
+  project folder and the selection. Each frame the panel copies the simulation's latest poses into
+  `SceneViewState.poses`. The renderer's `posedContent` applies them over the authored placements, keeping each
+  placement's scale, so drawing, picking, markers and overlays all see them. A drag preview applies on top. While a
+  simulation is active, gizmos are off (`SceneViewState.gizmosEnabled`), Move/Rotate/Drop are disabled, and every key
+  but Escape goes to the simulation and is consumed. Mouse buttons and moves go to it too, and the camera still
+  orbits. Escape stops. `SceneFileEditor` stops play in `beforeDocumentChange` of the scene or its project file, so
+  any edit (text, panel, tree) applies to the authored scene. Closing the tab stops it too. A simulation that ends on
+  its own (`FAILED`) returns the view to the authored poses; its provider shows the notification. A provider that
+  throws is switched off for the view with one logged error.
+- **Overlays draw twice a frame.** Each `sceneOverlay` provider gets one `SceneOverlay` per view. `drawOverlays` calls
+  them inside `GdxRuntime.withContext`, after the markers with depth testing (`OverlayView.onTop` false), and again
+  after the selection and gizmo without it. They see the content as drawn (poses and previews applied) and the
+  scene's raw `ecs` (`SceneRenderParams.ecs`). They draw only through `LineSink` and own no GL. An overlay that throws
+  is disposed and switched off for that view with one error naming its plugin. Its `actions()` (such as Show Physics)
+  join the toolbar.
 - **Objects without rotation.** A camera whose `lookAtId` resolves, a point light, and a light aimed at anything
   other than a direction handle get Move handles only. A directional or spot light aimed at a `HANDLE` entity keeps
   its rings, but a rotate drag on it turns the direction and moves the handle (`ScenePreview.aimedTarget`), writing
@@ -182,3 +201,8 @@ same status, reason and Retry. It reaches the live view through `SceneRayControl
 Scene View open, switching it on opens one (`openSceneView`) and applies the request when that view registers. The
 switch follows the view's `RayModeState`, so it never disagrees with it, and nothing is persisted: the mode ends with the view and the
 scene file is never written.
+
+Native scene input uses `format: "abyssus"` and integral `formatVersion: 1`. Asset renderables dispatch on `kind: "asset"`
+and their folder reference, without class loading. Unknown native kinds draw nothing and remain raw; light and camera
+look-at resolution still uses the preserved entity ids and transforms. Unsupported enclosing documents are rejected
+before view construction, and unsupported asset metadata never reaches GPU build.

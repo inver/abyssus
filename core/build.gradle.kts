@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Asset reading and loading for Mundus projects: asset folders and meta.json, the prepare/upload/build pipeline, and
+// Asset reading and loading for native projects: asset folders and meta.json, the prepare/upload/build pipeline, and
 // the models, terrains and skies it builds. A plain JVM library (no IntelliJ imports) wired by constructors.
 plugins {
     `java-library`
@@ -49,7 +49,7 @@ kotlin {
 tasks.test {
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
-    // the Mundus fixture projects are shared with the plugin's tests
+    // the native fixture projects are shared with the plugin's tests
     systemProperty("abyssus.testData", rootProject.file("src/test/testData").absolutePath)
 }
 

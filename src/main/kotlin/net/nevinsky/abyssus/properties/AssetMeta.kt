@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.META_FILE
-import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
 import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.assets.files.MetaType

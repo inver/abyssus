@@ -15,23 +15,23 @@ class SceneParamsSourceTest : BasePlatformTestCase() {
     private fun cameraOf(scene: com.intellij.openapi.vfs.VirtualFile) = editorText.read(scene).camera
 
     private fun abss(x: Int) =
-        """{"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":$x,"y":2,"z":3}},"name":"P"}"""
+        """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":$x,"y":2,"z":3}},"name":"P"}"""
 
     fun testSceneInScenesFolderUsesProjectCamera() {
         myFixture.addFileToProject("P/P.abss", abss(7))
-        val scene = myFixture.addFileToProject("P/scenes/a.scene", "{}").virtualFile
+        val scene = myFixture.addFileToProject("P/scenes/a.scene", """{"format":"abyssus","formatVersion":1}""").virtualFile
         assertEquals(7f, cameraOf(scene).position.x, 0f)
     }
 
     fun testSceneOutsideScenesFolderIgnoresNeighbouringAbss() {
         myFixture.addFileToProject("foo/Game.abss", abss(7))
-        val scene = myFixture.addFileToProject("foo/bar/x.scene", "{}").virtualFile
+        val scene = myFixture.addFileToProject("foo/bar/x.scene", """{"format":"abyssus","formatVersion":1}""").virtualFile
         assertEquals(CameraParams.DEFAULT, cameraOf(scene))
     }
 
     fun testUnsavedAbssEditIsUsed() {
         val abss = myFixture.addFileToProject("P/P.abss", abss(7)).virtualFile
-        val scene = myFixture.addFileToProject("P/scenes/a.scene", "{}").virtualFile
+        val scene = myFixture.addFileToProject("P/scenes/a.scene", """{"format":"abyssus","formatVersion":1}""").virtualFile
         val doc = FileDocumentManager.getInstance().getDocument(abss)!!
         WriteCommandAction.runWriteCommandAction(project) { doc.setText(abss(9)) }
         assertEquals(9f, cameraOf(scene).position.x, 0f)
@@ -39,7 +39,7 @@ class SceneParamsSourceTest : BasePlatformTestCase() {
 
     fun testProjectDirAndSourcesFollowTheLayout() {
         val abss = myFixture.addFileToProject("P/P.abss", abss(7)).virtualFile
-        val scene = myFixture.addFileToProject("P/scenes/a.scene", "{}").virtualFile
+        val scene = myFixture.addFileToProject("P/scenes/a.scene", """{"format":"abyssus","formatVersion":1}""").virtualFile
         assertEquals(abss.parent.path, editorText.read(scene).projectDir!!.path)
         assertEquals(setOf(scene, abss), editorText.sources(scene))
     }

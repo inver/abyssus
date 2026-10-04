@@ -36,13 +36,13 @@ class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         root = FileUtil.createTempDirectory("abyssus-refresh", null)
-        File(root, "Refresh.abss").writeText("{}")
+        File(root, "Refresh.abss").writeText("""{"format":"abyssus","formatVersion":1}""")
         File(root, "scenes").mkdirs()
-        File(root, "scenes/Main.scene").writeText("""{"id":0,"name":"Main","ecs":{"entities":{}}}""")
+        File(root, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"id":0,"name":"Main","ecs":{"entities":{}}}""")
         File(root, "assets/hills").mkdirs()
         File(root, "assets/hills/terrain.data").writeBytes(ByteArray(16))
         File(root, "assets/hills/meta.json").writeText(
-            """{"uuid":"t","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":100,"uv":1.0}}""",
+            """{"format":"abyssus","formatVersion":1,"uuid":"t","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":100,"uv":1.0}}""",
         )
         val lfs = LocalFileSystem.getInstance()
         scene = lfs.refreshAndFindFileByIoFile(File(root, "scenes/Main.scene"))!!

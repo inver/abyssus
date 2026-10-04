@@ -2,14 +2,13 @@
 
 | Term | Meaning |
 |---|---|
-| **Mundus** | The open-source libGDX 3D game editor whose project files the plugin reads and writes. `gdx-model` is a trimmed fork of its `lib-core` / `lib-assets`. |
-| **Project** | A Mundus project: an `.abss` file with `scenes/` and `assets/` beside it. Shown as a top-level node of the Abyssus view. |
+| **Project** | A native Abyssus project: an `.abss` file with `scenes/` and `assets/` beside it. Shown as a top-level node of the Abyssus view. |
 | **Scene** | A `.scene` file: environment settings (ambient light, fog, skybox) plus an `ecs` block of entities. |
 | **Asset** | A folder under `assets/` described by its `meta.json` (`type`, `uuid`, `additional`). Scenes name assets by folder; assets name each other by `uuid`. |
 | **Unused asset** | An asset no scene of its project reaches (see `docs/ai/file-formats.md`). Grayed and tagged `unused` in the tree. |
 | **ECS** | Entity-component-system. In a scene file, `ecs.entities.<id>.components.<Name>Component`. In code, the Ashley-based `ecs` package (tests only so far). |
 | **Entity id** | The key under `ecs.entities`. Picking, tree selection and transform writes all use it. |
-| **Component codec** | A `ComponentCodec`: reads one Mundus component into an Ashley component and writes it back. Components without a codec are carried raw. |
+| **Component codec** | A `ComponentCodec`: reads one native component into an Ashley component and writes it back. Components without a codec are carried raw. |
 | **Placement** | What the scene view draws for an entity (`AssetPlacement`, `LightPlacement`, `CameraPlacement` in `SceneContent`), taken directly from the `ecs` JSON. |
 | **Abyssus view** | The Abyssus pane of the Project tool window: the project / scene / asset tree. |
 | **Abyssus Properties** | The tool window showing the selected asset's `meta.json` (read only), or the components of the selected entity, whose fields are editable. |

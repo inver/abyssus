@@ -11,28 +11,28 @@ import net.nevinsky.abyssus.assets.json.obj
 import net.nevinsky.abyssus.assets.json.opt
 import net.nevinsky.abyssus.assets.json.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.scene.SceneDto
-import net.nevinsky.abyssus.ecs.component.LIGHT_RANGE
-import net.nevinsky.abyssus.ecs.component.CAMERA_NEAR
-import net.nevinsky.abyssus.ecs.component.CAMERA_FAR
-import net.nevinsky.abyssus.ecs.component.CAMERA_FOV
-import net.nevinsky.abyssus.ecs.component.LIGHT_CONE_ANGLE
-import net.nevinsky.abyssus.ecs.component.LIGHT_EDGE_SOFTNESS
-import net.nevinsky.abyssus.ecs.scene.SceneEcsPaths
-import net.nevinsky.abyssus.ecs.scene.ComponentCodecs
-import net.nevinsky.abyssus.ecs.component.PositionComponent
-import net.nevinsky.abyssus.ecs.component.TypeComponent
-import net.nevinsky.abyssus.ecs.component.CameraComponent
-import net.nevinsky.abyssus.ecs.component.LightComponent
+import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_RANGE
+import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_NEAR
+import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FAR
+import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FOV
+import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_CONE_ANGLE
+import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_EDGE_SOFTNESS
+import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
+import net.nevinsky.abyssus.runtime.ecs.scene.ComponentCodecs
+import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
+import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
+import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
 
-/** [w] is 1 for the identity rotation, which Mundus leaves out of the file together with the other default fields. */
+/** [w] is 1 for the identity rotation, which native scenes leave out of the file together with the other default fields. */
 data class Quat(val x: Float, val y: Float, val z: Float, val w: Float) {
     companion object {
         val IDENTITY = Quat(0f, 0f, 0f, 1f)
     }
 }
 
-/** Mundus `PositionComponent`: position 0, identity rotation and unit scale unless the file says otherwise. */
+/** Native `PositionComponent`: position 0, identity rotation and unit scale unless the file says otherwise. */
 data class PlacementTransform(val position: Vec3, val rotation: Quat, val scale: Vec3) {
     companion object {
         val IDENTITY = PlacementTransform(Vec3(0f, 0f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f))
@@ -98,8 +98,8 @@ data class SceneContent(
 
         fun of(scene: SceneDto): SceneContent {
             val codecs = ComponentCodecs()
-            val entities = SceneEcsPaths.entitiesIn(scene.ecs)?.properties().orEmpty().mapNotNull { (id, entity) ->
-                val components = SceneEcsPaths.componentsOf(entity) ?: return@mapNotNull null
+            val entities = SceneEcsPaths().entitiesIn(scene.ecs)?.properties().orEmpty().mapNotNull { (id, entity) ->
+                val components = SceneEcsPaths().componentsOf(entity) ?: return@mapNotNull null
                 runCatchingKeepingCancellation { decode(codecs, id, components) }.getOrNull()
             }
             val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled == true && it.isNotBlank() }
@@ -117,7 +117,7 @@ data class SceneContent(
             val assetName = asset?.text("assetName")
             return DecodedEntity(
                 id,
-                SceneEcsPaths.entityName(components, id),
+                SceneEcsPaths().entityName(components, id),
                 position?.let { codecs.read<PositionComponent>("PositionComponent", it) },
                 position?.opt("localPosition") != null,
                 components.opt("TypeComponent")?.let { codecs.read<TypeComponent>("TypeComponent", it).type },

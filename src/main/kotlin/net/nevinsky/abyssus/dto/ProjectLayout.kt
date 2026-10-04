@@ -10,13 +10,13 @@ import net.nevinsky.abyssus.assets.ASSETS_DIR
 import java.io.File
 
 /**
- * Where a Mundus project keeps its files: `<name>.abss` beside a `scenes` folder of `.scene` files and an `assets`
+ * Where a native Abyssus project keeps its files: `<name>.abss` beside a `scenes` folder of `.scene` files and an `assets`
  * folder with one folder per asset, each described by its `meta.json`.
  */
 object ProjectLayout {
-    const val PROJECT_EXTENSION = "abss"
-    const val SCENE_EXTENSION = "scene"
-    const val SCENES_DIR = "scenes"
+    const val PROJECT_EXTENSION = net.nevinsky.abyssus.runtime.project.PROJECT_EXTENSION
+    const val SCENE_EXTENSION = net.nevinsky.abyssus.runtime.project.SCENE_EXTENSION
+    const val SCENES_DIR = net.nevinsky.abyssus.runtime.project.SCENES_DIR
 
     /** Exact, case-sensitive, suffix-based match: `.SCENE` and `.scene.bak` are not asset files. */
     val ASSET_EXTENSIONS = setOf(SCENE_EXTENSION, PROJECT_EXTENSION)

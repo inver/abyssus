@@ -47,7 +47,7 @@ class AssetRevisionTracker(private val json: JsonProcessor) {
         val folders = assetsDir.listFiles { f -> f.isDirectory }?.sortedBy { it.name }.orEmpty()
         val parsed = folders.map { dir ->
             val text = runCatchingKeepingCancellation { metaText.read(File(dir, META_FILE)) }.getOrNull()
-            val tree = text?.let { runCatchingKeepingCancellation { json.readObject(it) }.getOrNull() }
+            val tree = text?.let { runCatchingKeepingCancellation { AssetMetaReader(json).read(it).json }.getOrNull() }
             Triple(dir, text, tree)
         }
         val byUuid = buildMap { for ((dir, _, tree) in parsed) tree?.text("uuid")?.let { putIfAbsent(it, dir.name) } }

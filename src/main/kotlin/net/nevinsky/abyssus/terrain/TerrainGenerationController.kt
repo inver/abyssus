@@ -26,7 +26,7 @@ import net.nevinsky.abyssus.assets.terrain.generation.TerrainRecipeCodec
 import net.nevinsky.abyssus.assets.terrain.generation.sha256Hex
 import java.io.File
 import kotlin.random.Random
-import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
 
 /**
  * The logic behind the terrain regeneration controls for one existing terrain: the draft (settings, latest request,
@@ -95,6 +95,15 @@ class TerrainGenerationController(
     /** Starts a background preview of the current settings; nothing is written. */
     fun preview() {
         if (!canPreview) return
+        val fresh = readCurrent()
+        if (fresh is TerrainSource.Unusable) {
+            runner.invalidate()
+            draft.sourceChanged()
+            message = fresh.reason
+            onChange()
+            return
+        }
+        if (fresh is TerrainSource.Ready) sourceRead(fresh)
         // said before the start: an executor that runs the work at once reports its outcome from inside start()
         message = AbyssusBundle.message("terrainGenerating")
         val started = runner.start(draft) { outcome ->

@@ -25,9 +25,9 @@ Design is included because preferences, properties selection, editor binding and
 
 Introduce a small project service, `SceneViewSettings`, backed by project-scoped `PropertiesComponent` with a namespaced `showFps` key and default `false`, following the storage precedent in `UnusedFilter`. Expose the value, a setter and disposable listeners. Read/write and notify on the EDT. Save before notification and avoid notifications when the value is unchanged.
 
-Assumption: "for project" means the IntelliJ project's view preference. When one IDE project contains several `.abss` files, each project row exposes the same checkbox and all scene views share it, including standalone scenes. Separate IDE projects have separate storage. This keeps the preference local to the user's IDE and avoids introducing a field Mundus does not write. A per-`.abss` map adds unnecessary scope; per-view transient state would lose the user's project preference.
+Assumption: "for project" means the IntelliJ project's view preference. When one IDE project contains several `.abss` files, each project row exposes the same checkbox and all scene views share it, including standalone scenes. Separate IDE projects have separate storage. This keeps the preference local to the user's IDE and avoids introducing a new document field. A per-`.abss` map adds unnecessary scope; per-view transient state would lose the user's project preference.
 
-This is an IDE settings write, not a Mundus scene/project file edit, so `editSceneJson` is not involved. No `.abss`, `.scene` or asset fields are newly read or written.
+This is an IDE settings write, not a scene/project file edit, so `editSceneJson` is not involved. No `.abss`, `.scene` or asset fields are newly read or written.
 
 ### 2. Add a project details state and view
 
@@ -65,4 +65,4 @@ All creation, drawing and safe disposal occur only inside `GdxRuntime.withContex
 
 ## Migration Plan
 
-No Mundus data migration is needed. Existing IDE projects start with the counter off. Removing the feature leaves only an unused namespaced IDE preference; reverting does not require touching game files. Implementation updates the user-facing README/Unreleased notes and scene-view package notes, preserving README plugin-description markers.
+No document migration is needed. Existing IDE projects start with the counter off. Removing the feature leaves only an unused namespaced IDE preference; reverting does not require touching game files. Implementation updates the user-facing README/Unreleased notes and scene-view package notes, preserving README plugin-description markers.

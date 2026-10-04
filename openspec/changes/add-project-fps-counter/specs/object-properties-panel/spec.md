@@ -38,7 +38,7 @@ The project properties view SHALL show the selected project's name and a `Show F
 
 #### Scenario: Toggle before opening a scene
 - **WHEN** the user checks `Show FPS` with no scene view open and then opens `Main Scene`
-- **THEN** the scene view shows the FPS overlay and Mundus files are unchanged
+- **THEN** the scene view shows the FPS overlay and the project, scene and asset files are unchanged
 
 #### Scenario: Reselect the project
 - **WHEN** the user checks `Show FPS`, selects an asset and then reselects `Untitled.abss`

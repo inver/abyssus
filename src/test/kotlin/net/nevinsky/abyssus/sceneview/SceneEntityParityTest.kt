@@ -38,7 +38,7 @@ class SceneEntityParityTest {
     }
 
     private fun value(root: JsonNode, id: String, kind: String, field: String): Float =
-        ComponentEditor.read(root, id, kind)!!.single { it.field == field }.value.toFloat()
+        ComponentEditor().read(root, id, kind)!!.single { it.field == field }.value.toFloat()
 
     @Test
     fun lightPlacementsEqualThePanelValues() {

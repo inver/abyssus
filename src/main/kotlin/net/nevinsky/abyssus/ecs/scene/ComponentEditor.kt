@@ -5,23 +5,30 @@
 
 package net.nevinsky.abyssus.ecs.scene
 
+import net.nevinsky.abyssus.runtime.ecs.scene.*
 import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.ecs.NO_ENTITY
-import net.nevinsky.abyssus.ecs.component.CameraComponent
-import net.nevinsky.abyssus.ecs.component.LightComponent
-import net.nevinsky.abyssus.ecs.component.NameComponent
-import net.nevinsky.abyssus.ecs.component.ParentComponent
-import net.nevinsky.abyssus.ecs.component.Point2PointPositionComponent
-import net.nevinsky.abyssus.ecs.component.PositionComponent
-import net.nevinsky.abyssus.ecs.component.TypeComponent
-import net.nevinsky.abyssus.ecs.render.AssetReference
-import net.nevinsky.abyssus.ecs.render.AssetResolver
-import net.nevinsky.abyssus.ecs.render.AssetType
-import net.nevinsky.abyssus.ecs.render.RenderComponent
-import net.nevinsky.abyssus.ecs.render.RenderableObjectDelegate
+import net.nevinsky.abyssus.runtime.ecs.NO_ENTITY
+import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
+import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
+import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
+import net.nevinsky.abyssus.runtime.ecs.component.ParentComponent
+import net.nevinsky.abyssus.runtime.ecs.component.Point2PointPositionComponent
+import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
+import net.nevinsky.abyssus.runtime.ecs.render.AssetReference
+import net.nevinsky.abyssus.runtime.ecs.render.AssetResolver
+import net.nevinsky.abyssus.runtime.ecs.render.AssetType
+import net.nevinsky.abyssus.runtime.ecs.render.RenderComponent
+import net.nevinsky.abyssus.runtime.ecs.render.RenderableObjectDelegate
+import net.nevinsky.abyssus.runtime.schema.ComponentSchema
+import net.nevinsky.abyssus.runtime.schema.FieldType
+import net.nevinsky.abyssus.runtime.schema.SchemaColor
+import net.nevinsky.abyssus.runtime.schema.SchemaField
+import net.nevinsky.abyssus.runtime.schema.SchemaJson
+import net.nevinsky.abyssus.runtime.schema.SchemaVector
 
 /** What an edit of a scene's JSON tree did. The tree is only touched for [Changed]. */
 sealed interface EditResult {
@@ -32,7 +39,7 @@ sealed interface EditResult {
     data class Rejected(val reason: String) : EditResult
 }
 
-enum class FieldKind { FLOAT, TEXT, CHOICE, ENTITY_REF, ASSET_NAME }
+enum class FieldKind { FLOAT, INT, BOOLEAN, TEXT, CHOICE, ENTITY_REF, ASSET_NAME }
 
 /** One editable value of a component, read and written as text. */
 class ComponentField<C : Component>(
@@ -43,6 +50,15 @@ class ComponentField<C : Component>(
     /** The values a [FieldKind.CHOICE] takes; an optional field also accepts the empty text. */
     val choices: List<String> = emptyList(),
     val optional: Boolean = false,
+    /** What the panel shows for the field, and the group it is listed under (none when empty). */
+    val label: String = name,
+    val group: String = "",
+    /** Limits of a number; [minExclusive] makes [min] itself refused. */
+    val min: Double? = null,
+    val max: Double? = null,
+    val minExclusive: Boolean = false,
+    /** For a schema's asset reference: the meta type the asset folder must have. */
+    val assetType: String? = null,
 )
 
 /** A modeled kind of component: its file name, how to read and write it, how a new one starts and what it holds. */
@@ -51,13 +67,26 @@ class ComponentKind<C : Component>(
     internal val codec: ComponentCodec<C>,
     val fields: List<ComponentField<C>>,
     internal val create: () -> C,
-) {
-    /** The name the view shows: the file name without the `Component` suffix. */
-    val label: String get() = name.removeSuffix("Component").ifEmpty { name }
-}
+    /** The name the view shows: by default the file name without the `Component` suffix. */
+    val label: String = name.removeSuffix("Component").ifEmpty { name },
+)
 
 /** A field of an entity's component as the panel shows it. */
-data class FieldValue(val field: String, val kind: FieldKind, val value: String, val choices: List<String>, val optional: Boolean)
+data class FieldValue(
+    val field: String, val kind: FieldKind, val value: String, val choices: List<String>, val optional: Boolean,
+    val label: String = field, val group: String = "", val assetType: String? = null,
+)
+
+/** A schema-declared component as the editor holds it: its values by field name (see [SchemaField.default]). */
+class SchemaValues(val values: MutableMap<String, Any>) : Component
+
+/** Reads and writes a schema-declared component through [SchemaJson], with no game class. */
+class SchemaCodec(val schema: ComponentSchema, private val json: SchemaJson) : ComponentCodec<SchemaValues> {
+    override val name get() = schema.name
+    override val type = SchemaValues::class.java
+    override fun read(node: JsonNode) = SchemaValues(json.decode(schema, node))
+    override fun write(component: SchemaValues): JsonNode = json.encode(schema, component.values)
+}
 
 private fun f(v: Float) = number(v).asText()
 
@@ -72,11 +101,43 @@ private val MODEL_ASSETS = AssetResolver { type, name -> AssetReference(name, ty
 private fun delegateOf(c: RenderComponent) = c.renderable as? RenderableObjectDelegate
 
 /**
- * Creates, updates and removes the modeled components of an entity in a scene's JSON tree (`ecs.entities.<id>`).
- * Values go through the component [codecs], so defaults and number text match what a scene load and write do, and an
- * update applies only the keys that really differ onto the file's own component object.
+ * The editor fields of a schema [field]: one per value, a vector or color as dotted decimals (`leadout.x`). A vector's
+ * limits hold for each axis.
  */
-object ComponentEditor {
+private fun schemaFields(field: SchemaField): List<ComponentField<SchemaValues>> {
+    fun <T : Any> one(kind: FieldKind, show: (T) -> String, parse: (String) -> Any, choices: List<String> = emptyList(), optional: Boolean = false) =
+        ComponentField<SchemaValues>(
+            field.name, kind, { @Suppress("UNCHECKED_CAST") show(it.values[field.name] as T) }, { c, t -> c.values[field.name] = parse(t) },
+            choices, optional, field.label, field.group, field.min, field.max, field.minExclusive, field.assetType,
+        )
+    fun parts(keys: List<String>, read: (Any) -> List<Float>, limited: Boolean, make: (List<Float>) -> Any) = keys.mapIndexed { i, key ->
+        ComponentField<SchemaValues>(
+            "${field.name}.$key", FieldKind.FLOAT, { f(read(it.values.getValue(field.name))[i]) },
+            { c, t -> c.values[field.name] = make(read(c.values.getValue(field.name)).toMutableList().also { p -> p[i] = t.trim().toFloat() }) },
+            label = "${field.label} $key", group = field.group,
+            min = field.min.takeIf { limited }, max = field.max.takeIf { limited }, minExclusive = limited && field.minExclusive,
+        )
+    }
+    return when (field.type) {
+        FieldType.DECIMAL -> listOf(one<Float>(FieldKind.FLOAT, ::f, { it.trim().toFloat() }))
+        FieldType.WHOLE -> listOf(one<Int>(FieldKind.INT, Int::toString, { it.trim().toInt() }))
+        FieldType.BOOLEAN -> listOf(one<Boolean>(FieldKind.BOOLEAN, Boolean::toString, { it.trim().toBooleanStrict() }))
+        FieldType.TEXT -> listOf(one<String>(FieldKind.TEXT, { it }, { it }, optional = true))
+        FieldType.CHOICE -> listOf(one<String>(FieldKind.CHOICE, { it }, { it.trim() }, field.choices))
+        FieldType.ENTITY -> listOf(one<Int>(FieldKind.ENTITY_REF, Int::toString, { it.trim().toInt() }))
+        FieldType.ASSET -> listOf(one<String>(FieldKind.ASSET_NAME, { it }, { it.trim() }, optional = true))
+        FieldType.VECTOR -> parts(listOf("x", "y", "z"), { (it as SchemaVector).let { v -> listOf(v.x, v.y, v.z) } }, limited = true) { SchemaVector(it[0], it[1], it[2]) }
+        FieldType.COLOR -> parts(listOf("r", "g", "b", "a"), { (it as SchemaColor).let { c -> listOf(c.r, c.g, c.b, c.a) } }, limited = false) { SchemaColor(it[0], it[1], it[2], it[3]) }
+    }
+}
+
+/**
+ * Creates, updates and removes the modeled components of an entity in a scene's JSON tree (`ecs.entities.<id>`): the
+ * built-in kinds and one kind per component of [schemas] (whose built-in names are ignored). Values go through the
+ * component codecs, so defaults and number text match what a scene load and write do, and an update applies only the
+ * keys that really differ onto the file's own component object.
+ */
+class ComponentEditor(schemas: List<ComponentSchema> = emptyList(), private val json: SchemaJson = SchemaJson()) {
     private val codecs = ComponentCodecs(MODEL_ASSETS)
 
     private fun <C : Component> kind(
@@ -172,15 +233,19 @@ object ComponentEditor {
                 ),
             ),
         ) { RenderComponent(RenderableObjectDelegate(AssetReference("", AssetType.MODEL), null)) },
-    )
+    ) + schemas.filter { it.name !in BUILT_IN_COMPONENTS }.map { schema ->
+        ComponentKind(schema.name, SchemaCodec(schema, json), schema.fields.flatMap(::schemaFields), {
+            SchemaValues(schema.fields.associateTo(LinkedHashMap()) { it.name to it.default })
+        }, schema.label)
+    }
 
     private val byName = kinds.associateBy { it.name }
 
     fun kindOf(name: String): ComponentKind<*>? = byName[name]
 
-    private fun entities(root: JsonNode): JsonNode? = SceneEcsPaths.entities(root)
+    private fun entities(root: JsonNode): JsonNode? = SceneEcsPaths().entities(root)
 
-    private fun componentsOf(root: JsonNode, entityId: String): ObjectNode? = SceneEcsPaths.components(root, entityId)
+    private fun componentsOf(root: JsonNode, entityId: String): ObjectNode? = SceneEcsPaths().components(root, entityId)
 
     /** The modeled kinds [entityId] lacks, in the order the view lists them; empty when the entity is missing. */
     fun missingKinds(root: JsonNode, entityId: String): List<ComponentKind<*>> {
@@ -199,7 +264,7 @@ object ComponentEditor {
 
     private fun <C : Component> readFields(kind: ComponentKind<C>, node: JsonNode): List<FieldValue> {
         val component = kind.codec.read(node)
-        return kind.fields.map { FieldValue(it.name, it.kind, it.get(component), it.choices, it.optional) }
+        return kind.fields.map { FieldValue(it.name, it.kind, it.get(component), it.choices, it.optional, it.label, it.group, it.assetType) }
     }
 
     /**
@@ -212,16 +277,20 @@ object ComponentEditor {
         kindName: String,
         initial: Map<String, String> = emptyMap(),
         assets: Set<String>? = null,
+        assetsByType: Map<String, Set<String>>? = null,
     ): EditResult {
         val components = componentsOf(root, entityId) ?: return rejected("componentEntityMissing", entityId)
         val kind = byName[kindName] ?: return rejected("componentKindUnknown", kindName)
         if (components.has(kindName)) return rejected("componentAlreadyPresent", entityId, kind.label)
-        return addTo(root, components, entityId, kind, initial, assets)
+        return addTo(root, components, entityId, kind, initial, Assets(assets, assetsByType))
     }
+
+    /** The asset folders a value may name: [render] for a render component, [byType] for a schema's typed reference. */
+    private class Assets(val render: Set<String>?, val byType: Map<String, Set<String>>?)
 
     private fun <C : Component> addTo(
         root: JsonNode, components: ObjectNode, entityId: String, kind: ComponentKind<C>,
-        initial: Map<String, String>, assets: Set<String>?,
+        initial: Map<String, String>, assets: Assets,
     ): EditResult {
         val component = kind.create()
         for ((name, text) in initial) {
@@ -244,16 +313,17 @@ object ComponentEditor {
         field: String,
         text: String,
         assets: Set<String>? = null,
+        assetsByType: Map<String, Set<String>>? = null,
     ): EditResult {
         val components = componentsOf(root, entityId) ?: return rejected("componentEntityMissing", entityId)
         val kind = byName[kindName] ?: return rejected("componentKindUnknown", kindName)
         val node = components.get(kindName) ?: return rejected("componentMissing", entityId, kind.label)
-        return updateIn(root, components, node, entityId, kind, field, text, assets)
+        return updateIn(root, components, node, entityId, kind, field, text, Assets(assets, assetsByType))
     }
 
     private fun <C : Component> updateIn(
         root: JsonNode, components: ObjectNode, node: JsonNode, entityId: String, kind: ComponentKind<C>,
-        fieldName: String, text: String, assets: Set<String>?,
+        fieldName: String, text: String, assets: Assets,
     ): EditResult {
         val field = kind.fields.firstOrNull { it.name == fieldName } ?: return rejected("componentFieldUnknown", kind.label, fieldName)
         val component = kind.codec.read(node)
@@ -302,7 +372,7 @@ object ComponentEditor {
         val wanted = entityId.toIntOrNull() ?: return null
         for ((id, entity) in entities(root)?.properties().orEmpty()) {
             if (id == entityId) continue
-            val c = SceneEcsPaths.componentsOf(entity) ?: continue
+            val c = SceneEcsPaths().componentsOf(entity) ?: continue
             val refs = listOf(
                 c.get("PositionComponent")?.get("lookAtId"), c.get("ParentComponent")?.get("parentEntityId"),
                 c.get("Point2PointPositionComponent")?.get("entity1Id"), c.get("Point2PointPositionComponent")?.get("entity2Id"),
@@ -313,7 +383,7 @@ object ComponentEditor {
     }
 
     private fun checkValue(
-        root: JsonNode, entityId: String, kind: ComponentKind<*>, field: ComponentField<*>, text: String, assets: Set<String>?,
+        root: JsonNode, entityId: String, kind: ComponentKind<*>, field: ComponentField<*>, text: String, assets: Assets,
     ): EditResult.Rejected? {
         val label = "${kind.label} ${field.name}"
         val value = text.trim()
@@ -326,20 +396,45 @@ object ComponentEditor {
                     reject("componentConeAngleInvalid", label, text)
                 kind.name == "LightComponent" && field.name == "edgeSoftness" && value.toFloat() !in 0f..100f ->
                     reject("componentSoftnessInvalid", label, text)
-                else -> null
+                else -> checkLimits(field, label, value.toFloat().toDouble(), value)
             }
+            FieldKind.INT -> {
+                val number = value.toIntOrNull()
+                if (number == null) reject("componentNotAnInteger", label, text) else checkLimits(field, label, number.toDouble(), value)
+            }
+            FieldKind.BOOLEAN -> if (value == "true" || value == "false") null else reject("componentNotABoolean", label, text)
             FieldKind.TEXT -> null
             FieldKind.CHOICE ->
                 if (value in field.choices || (field.optional && value.isEmpty())) null
                 else reject("componentNotAChoice", label, text, field.choices.joinToString(", "))
-            FieldKind.ASSET_NAME -> when {
-                value.isEmpty() -> reject("componentAssetRequired")
-                assets != null && value !in assets -> reject("componentAssetUnknown", label, text)
-                else -> null
+            FieldKind.ASSET_NAME -> {
+                val type = field.assetType
+                // a schema's asset reference may be cleared, and names a folder of its declared type
+                val known = if (type != null) assets.byType?.get(type).orEmpty() else assets.render
+                val checked = if (type != null) assets.byType != null else assets.render != null
+                when {
+                    value.isEmpty() -> if (type != null) null else reject("componentAssetRequired")
+                    checked && value !in known.orEmpty() -> reject("componentAssetUnknown", label, text)
+                    else -> null
+                }
             }
             FieldKind.ENTITY_REF -> checkReference(root, entityId, kind, field, label, value)
         }
     }
+
+    /** Refuses a number outside the [field]'s declared limits, naming the limit. */
+    private fun checkLimits(field: ComponentField<*>, label: String, number: Double, text: String): EditResult.Rejected? {
+        val min = field.min
+        val max = field.max
+        return when {
+            min != null && field.minExclusive && number <= min -> reject("componentNotAboveMinimum", label, text, limitText(min))
+            min != null && number < min -> reject("componentBelowMinimum", label, text, limitText(min))
+            max != null && number > max -> reject("componentAboveMaximum", label, text, limitText(max))
+            else -> null
+        }
+    }
+
+    private fun limitText(limit: Double) = java.math.BigDecimal(limit.toString()).stripTrailingZeros().toPlainString()
 
     private fun checkReference(
         root: JsonNode, entityId: String, kind: ComponentKind<*>, field: ComponentField<*>, label: String, value: String,
@@ -353,7 +448,7 @@ object ComponentEditor {
             var current: Int = target
             val seen = HashSet<Int>()
             while (current != NO_ENTITY && seen.add(current)) {
-                val next = SceneEcsPaths.componentsOf(entities.get(current.toString()))?.get("ParentComponent")?.get("parentEntityId")?.asInt(NO_ENTITY) ?: NO_ENTITY
+                val next = SceneEcsPaths().componentsOf(entities.get(current.toString()))?.get("ParentComponent")?.get("parentEntityId")?.asInt(NO_ENTITY) ?: NO_ENTITY
                 if (next.toString() == entityId) return reject("componentParentCycle", label, target, entityId)
                 current = next
             }

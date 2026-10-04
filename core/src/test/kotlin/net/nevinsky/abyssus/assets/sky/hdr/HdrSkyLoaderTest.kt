@@ -43,7 +43,7 @@ class HdrSkyLoaderTest {
     fun aFileNamedUnderAnyKeyIsUsed() = withCopy { dir ->
         val folder = File(dir, "assets/skybox_hdr")
         HdrFixtures.write(File(folder, "other.hdr"), 16, 8, pixel = HdrFixtures.uniform(1f))
-        File(folder, "meta.json").writeText("""{"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{"panorama":"other.hdr"}}""")
+        File(folder, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{"panorama":"other.hdr"}}""")
         assertEquals("other.hdr", loader.prepare(loading.files(dir), "skybox_hdr")!!.file.name)
     }
 

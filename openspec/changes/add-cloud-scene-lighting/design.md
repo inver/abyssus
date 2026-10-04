@@ -74,7 +74,7 @@ Until the first build completes, the scene stays lit by its ambient color (spec:
 ### 3. The cloud shadow map
 `CloudShadowMap` (plugin, `sceneview/shadows/`, GL thread) renders a 512² `R16F` texture each frame. It is an
 orthographic projection along the sun direction, centered on the orbit target, covering a 4 km square in world units
-(the scene's units are taken as metres, as Mundus does).
+(the scene's units are taken as metres).
 
 Each texel holds the clouds' transmittance along the sun ray through every band. It is evaluated with
 `clouds_common.glsl` at band mid-altitudes, the same low-frequency coverage that `SunOcclusion` uses, so the map and

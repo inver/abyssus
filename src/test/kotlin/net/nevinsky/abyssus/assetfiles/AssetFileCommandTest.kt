@@ -24,7 +24,7 @@ class AssetFileCommandTest : BasePlatformTestCase() {
 
     private val oldHeights = byteArrayOf(1, 2, 3, 4)
     private val newHeights = byteArrayOf(9, 8, 7, 6)
-    private val metaText = """{"type":"TERRAIN","uuid":"t","additional":{"terrainFile":"terrain.data","size":100}}"""
+    private val metaText = """{"format":"abyssus","formatVersion":1,"type":"TERRAIN","uuid":"t","additional":{"terrainFile":"terrain.data","size":100}}"""
 
     override fun setUp() {
         super.setUp()
@@ -169,7 +169,7 @@ class AssetFileCommandTest : BasePlatformTestCase() {
 
     // creation (5.2): a new asset, undone and redone, and what blocks its undo
 
-    private val hillsMeta = """{"version":1,"lastModified":1,"uuid":"hills-uuid","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":100}}"""
+    private val hillsMeta = """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"hills-uuid","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":100}}"""
     private val hillsHeights = byteArrayOf(0, 0, 0, 0)
 
     private fun creation(guard: () -> String? = AssetReferenceGuard(disk).let { g -> { g.blocker("hills", "hills-uuid") } }) = AssetTransaction(
@@ -241,7 +241,7 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         val txn = creation()
         create(txn)
         File(disk, "scenes").mkdirs()
-        File(disk, "scenes/Main.scene").writeText("""{"name":"Main","ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"assetName":"hills","type":"TERRAIN"}}}}}}}}""")
+        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"assetName":"hills","type":"TERRAIN"}}}}}}}}""")
         assertUndoRefused(txn, "Main.scene uses hills")
     }
 
@@ -249,11 +249,11 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         val txn = creation()
         create(txn)
         File(disk, "scenes").mkdirs()
-        File(disk, "scenes/Main.scene").writeText("""{"name":"Main","ecs":{"entities":{}}}""")
+        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{}}}""")
         root.refresh(false, true)
         val document = FileDocumentManager.getInstance().getDocument(root.findFileByRelativePath("scenes/Main.scene")!!)!!
         WriteCommandAction.runWriteCommandAction(project) {
-            document.setText("""{"name":"Main","ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"assetName":"hills"}}}}}}}}""")
+            document.setText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"assetName":"hills"}}}}}}}}""")
         }
         assertTrue(FileDocumentManager.getInstance().isDocumentUnsaved(document))
         assertUndoRefused(txn, "Main.scene uses hills")
@@ -263,11 +263,11 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         val txn = creation()
         create(txn)
         File(disk, "scenes").mkdirs()
-        File(disk, "scenes/Main.scene").writeText("""{"name":"Main","skyboxName":"hills","ecs":{"entities":{}}}""")
+        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","skyboxName":"hills","ecs":{"entities":{}}}""")
         assertUndoRefused(txn, "Main.scene")
         File(disk, "scenes/Main.scene").delete()
         File(disk, "assets/other").mkdirs()
-        File(disk, "assets/other/meta.json").writeText("""{"type":"MODEL","additional":{"materials":["hills-uuid"]}}""")
+        File(disk, "assets/other/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{"materials":["hills-uuid"]}}""")
         assertUndoRefused(txn, "other uses hills")
     }
 
@@ -275,7 +275,7 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         val txn = creation()
         create(txn)
         File(disk, "scenes").mkdirs()
-        File(disk, "scenes/Main.scene").writeText("""{"name":"Main","ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"assetName":"t"}}}}}}}}""")
+        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"assetName":"t"}}}}}}}}""")
         WriteCommandAction.runWriteCommandAction(project) { undoOf(txn).undo() }
         assertFalse(File(disk, "assets/hills").exists())
     }

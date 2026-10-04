@@ -1,6 +1,6 @@
 # core
 
-Asset reading and loading for Mundus projects, as a plain JVM library: the Abyssus plugin uses it, and so can any
+Asset reading and loading for native Abyssus projects, as a plain JVM library: the Abyssus plugin uses it, and so can any
 libGDX tool or test that has a project folder and a GL context. Root package `net.nevinsky.abyssus.assets`.
 
 ## Rules
@@ -20,7 +20,7 @@ libGDX tool or test that has a project folder and a GL context. Root package `ne
 |---|---|
 | `assets` | `AssetLoading` (the composition root), an SLF4J `Logger` (where progress and problems go), `ShaderSource` (GLSL from a resource folder), `AssetLayout` constants, `runCatchingKeepingCancellation` |
 | `assets.files` | `AssetFiles` (an asset folder's files and `meta.json`), `MetaBase`, `MetaType`, `Asset`, `TerrainFiles` |
-| `assets.json` | `JsonProcessor` (binds Mundus JSON) and `JsonNode` helpers |
+| `assets.json` | `JsonProcessor` (binds native JSON) and `JsonNode` helpers |
 | `assets.loading` | `AssetLoader` (prepare / upload / build / discard), `AssetCache` (load once, fail once, slice GPU work per frame), `SceneAssets` (a cache per project folder) |
 | `assets.model` | `ModelLoader` (glTF and other formats through `gdx-model`'s Assimp loader), optional immutable ray model snapshots and their leases |
 | `assets.terrain` | `TerrainLoader`, `TerrainDataReader`, `TerrainData`, `TerrainMesh`, optional immutable ray terrain snapshots and their leases |
@@ -114,11 +114,7 @@ plugin's tests; the GL context is `gdx-model`'s `TestGl` test fixture.
 
 `assets.terrain.generation` makes heights from `TerrainGenerationSettings` (`TerrainGenerator`), writes them
 (`TerrainHeightEncoder`: big-endian floats, z-major, no header) and builds the files of a new terrain asset
-(`TerrainAssetWriter`). The output was checked against the Mundus writer at commit
-`128175e064a915e043f024a565f935d4c6883292` (the commit `gdx-model` was forked from):
-`projects/app-editor/src/main/com/mbrlabs/mundus/editor/core/assets/EditorTerrainService.java` (`createAndSaveAsset`:
-`terrain.data` written with `DataOutputStream.writeFloat`, `meta.json` fields `terrainFile`, `size`, `uv`),
-`projects/lib-commons/.../assets/meta/Meta.java` (`version` 1, `lastModified`, `uuid`, `type`, `additional`, in that
-order), `.../assets/terrain/TerrainMeta.java` (`terrainFile`, `size`, `uv`, `splatMap`, `splatBase`, `splatR`, `splatG`,
-`splatB`, `splatA`) and `.../assets/meta/MetaService.java` (`save`: compact JSON, nulls kept). The one deliberate
-difference is the starting `uv`: Mundus writes `60`, Abyssus writes `1.0` (a value, not a convention).
+(`TerrainAssetWriter`). Metadata starts with `format: "abyssus"` and `formatVersion: 1`, then the existing
+metadata fields. The initial `uv` is `1.0`. The binary heights and recipe have their own unchanged encodings.
+The retained height encoding was originally compared against the upstream implementation; see
+[model source provenance](../docs/third-party/gdx-model-origin.md). This is historical evidence, not a compatibility guarantee.

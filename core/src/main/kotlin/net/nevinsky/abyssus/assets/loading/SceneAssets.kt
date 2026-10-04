@@ -56,7 +56,11 @@ class SceneAssets<P : Any, T : Disposable>(
     private fun newCache(source: FilesRef) = AssetCache<P, T>(
         executor,
         // the snapshot current when the pool thread starts the load, and always of this cache's own project
-        prepare = { name -> loader.prepare(source.files, name) },
+        prepare = { name ->
+            val files = source.files
+            files.metadataFailure(name)?.let { throw it }
+            loader.prepare(files, name)
+        },
         loader = loader,
         log = log,
     )

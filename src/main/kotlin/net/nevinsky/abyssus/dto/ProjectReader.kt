@@ -6,7 +6,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.runtime.scene.SceneDto
 import net.nevinsky.abyssus.assets.files.Asset
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.META_FILE
@@ -16,25 +16,26 @@ class ProjectReader(
     val project: Project,
     private val json: JsonProcessor,
     private val scenes: SceneReader,
+    private val loading: net.nevinsky.abyssus.runtime.SceneLoading,
 ) : ConfigFileReader<ProjectDto> {
     private val assetListing = ProjectAssetListing(json)
 
     /** What the platform creates: the one place this service looks up what it needs. */
-    constructor(project: Project) : this(project, service<AbyssusCore>().json, service<SceneReader>())
+    constructor(project: Project) : this(project, service<AbyssusCore>().json, service<SceneReader>(), service<AbyssusCore>().scenes)
 
     override fun stamp(file: VirtualFile): Long {
         return (ProjectLayout.sceneFiles(file)
-            .fold(file.modificationStamp) { acc, f -> acc * 31 + f.modificationStamp }
+            .fold(documentStamp(file)) { acc, f -> acc * 31 + documentStamp(f) }
                 * 31
                 + ProjectLayout.assetFolders(file)
             .fold(0L) { acc, dir ->
-                (acc * 31 + dir.name.hashCode()) * 31 + (dir.findChild(META_FILE)?.modificationStamp
+                (acc * 31 + dir.name.hashCode()) * 31 + (dir.findChild(META_FILE)?.let(::documentStamp)
                     ?: 0L)
             })
     }
 
     override fun read(file: VirtualFile): AssetReadResult<ProjectDto> = runCatchingKeepingCancellation {
-        val name = json.parse(file.text(), ProjectDto::class.java).name
+        val name = loading.projectName(file.path) { textOf(file) }
         val sceneResults = ProjectLayout.sceneFiles(file).map { it to scenes.read(it) }
         val roots = sceneResults.flatMap { (_, result) -> result.obj?.let(::sceneReferences) ?: emptySet() }
             .toSet()
@@ -42,7 +43,7 @@ class ProjectReader(
         val used = usedAssets(assets, roots)
         ProjectDto(
             name ?: file.nameWithoutExtension,
-            sceneResults.map { (f, result) -> result.obj ?: SceneError(f, result.message) },
+            sceneResults.map { (f, result) -> result.obj?.let { SceneEntry(f, it) } ?: SceneError(f, result.message) },
             assets.map { it.copy(unused = it.name !in used) },
         )
     }.let { AssetReadResult.of(it) }

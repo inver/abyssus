@@ -1,4 +1,6 @@
 {
+  "format": "abyssus",
+  "formatVersion": 1,
  "id": 0,
  "name": "Animated",
  "ecs": {
@@ -15,6 +17,7 @@
      },
      "RenderComponent": {
       "renderable": {
+       "kind": "asset",
        "asset": {
         "type": "MODEL",
         "assetName": "model_anim"
@@ -35,6 +38,7 @@
      },
      "RenderComponent": {
       "renderable": {
+       "kind": "asset",
        "asset": {
         "type": "MODEL",
         "assetName": "model_anim"

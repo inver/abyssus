@@ -89,7 +89,7 @@ target SHALL face along its rotation.
 
 #### Scenario: A Mundus directional light faces its handle
 
-- **WHEN** `Lights/scenes/Mundus Lights.scene` is shown, where directional light `1` at (0, 10, 0) has `lookAtId` 0
+- **WHEN** `Lights/scenes/Abyssus Lights.scene` is shown, where directional light `1` at (0, 10, 0) has `lookAtId` 0
   and handle `0` is at (0, 0, 0)
 - **THEN** the light shines straight down, along (0, -1, 0), and its direction line points down
 

@@ -34,8 +34,24 @@ import java.util.concurrent.Executors
  */
 @Service(Service.Level.APP)
 class AbyssusCore : Disposable {
+    /**
+     * The one logging interface of every module is SLF4J: this factory hands `gdx-model`, `core` and `raytracing` loggers
+     * over the IDE logger (`Abyssus.assets`, `Abyssus.model`, `Abyssus.ray`, `Abyssus.scenes` in `idea.log`).
+     */
+    val loggers: ILoggerFactory = IntellijLoggerFactory("Abyssus")
+
+    init {
+        ModelLogging.logger = loggers.getLogger("model")
+    }
+
     val json = JsonProcessor()
-    val metaFiles = net.nevinsky.abyssus.dto.MetaFiles(net.nevinsky.abyssus.assets.files.AssetMetaReader(json))
+    val format = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()
+    val scenes = net.nevinsky.abyssus.runtime.SceneLoading(
+        json,
+        loggers.getLogger("scenes"),
+        format,
+    )
+    val metaFiles = net.nevinsky.abyssus.dto.MetaFiles(net.nevinsky.abyssus.assets.files.AssetMetaReader(json, format))
 
     /** The editable `meta.json` fields of each asset type and the editor that changes them one at a time. */
     val assetFields = AssetFieldDescriptions()
@@ -48,15 +64,6 @@ class AbyssusCore : Disposable {
     val terrainRecipes = TerrainRecipeCodec(json)
     val newTerrains = net.nevinsky.abyssus.terrain.NewTerrainFactory(json, terrainWriter, heightEncoder, terrainRecipes)
 
-    /**
-     * The one logging interface of every module is SLF4J: this factory hands `gdx-model`, `core` and `raytracing` loggers
-     * over the IDE logger (`Abyssus.assets`, `Abyssus.model`, `Abyssus.ray` in `idea.log`).
-     */
-    val loggers: ILoggerFactory = IntellijLoggerFactory("Abyssus")
-
-    init {
-        ModelLogging.logger = loggers.getLogger("model")
-    }
 
     /** The scene view's own GLSL (grid lines, overlay, terrain), from the plugin's resources. */
     val sceneShaders = ShaderSource("/shader/scene", AbyssusCore::class.java)

@@ -5,11 +5,11 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.ecs.component.CameraComponent
-import net.nevinsky.abyssus.ecs.component.LightComponent
-import net.nevinsky.abyssus.ecs.component.LightData
-import net.nevinsky.abyssus.ecs.component.PositionComponent
-import net.nevinsky.abyssus.ecs.component.TypeComponent
+import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
+import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
+import net.nevinsky.abyssus.runtime.ecs.component.LightData
+import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
 
 /** The asset a `RenderComponent` shows: `renderable.asset.type` and `assetName`. */
 class DecodedAsset(val type: String, val name: String)

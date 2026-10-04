@@ -39,7 +39,7 @@ class DiskMetaText : MetaTextSource {
  * been added, removed or renamed, make a new instance ([refreshed]). Metadata is read through [metaText], so a caller
  * can substitute text that is not on disk yet (unsaved editor content) with an immutable snapshot.
  */
-class AssetFiles(projectDir: File, private val json: JsonProcessor, private val metaText: MetaTextSource = DiskMetaText()) {
+class AssetFiles(projectDir: File, private val json: JsonProcessor, private val metaText: MetaTextSource = DiskMetaText(), private val log: org.slf4j.Logger = org.slf4j.helpers.NOPLogger.NOP_LOGGER) {
     val projectDir: File = projectDir.absoluteFile
 
     private val assetsDir = File(this.projectDir, ASSETS_DIR)
@@ -58,10 +58,10 @@ class AssetFiles(projectDir: File, private val json: JsonProcessor, private val 
     private val metaReader = AssetMetaReader(json)
 
     /** A new snapshot of the same project, reading the assets again (a changed `uuid` index, added or removed folders). */
-    fun refreshed(metaText: MetaTextSource = this.metaText): AssetFiles = AssetFiles(projectDir, json, metaText)
+    fun refreshed(metaText: MetaTextSource = this.metaText): AssetFiles = AssetFiles(projectDir, json, metaText, log)
 
     /** A folder's `meta.json` as last read: the file stamp (disk source) and the text it was parsed from. */
-    private class CachedMeta(val stamp: Pair<Long, Long>?, val text: String, val document: MetaDocument?)
+    private class CachedMeta(val stamp: Pair<Long, Long>?, val text: String, val document: MetaDocument?, val error: Throwable?)
 
     private val metas = ConcurrentHashMap<File, CachedMeta>()
 
@@ -69,6 +69,7 @@ class AssetFiles(projectDir: File, private val json: JsonProcessor, private val 
      * The parsed `meta.json` of [folder], or null when it is missing or unreadable. One read serves every lookup: from
      * disk it is read again when the file changes, from another source when the text differs.
      */
+    @Synchronized
     private fun metaDocument(folder: File): MetaDocument? {
         val file = File(folder, META_FILE)
         val stamp = if (metaText is DiskMetaText && file.isFile) file.lastModified() to file.length() else null
@@ -76,8 +77,11 @@ class AssetFiles(projectDir: File, private val json: JsonProcessor, private val 
         if (stamp != null && cached?.stamp == stamp) return cached.document
         val text = runCatchingKeepingCancellation { metaText.read(file) }.getOrNull() ?: return null
         if (cached != null && cached.text == text) return cached.document
-        val document = runCatchingKeepingCancellation { metaReader.read(text) }.getOrNull()
-        metas[folder] = CachedMeta(stamp, text, document)
+        val result = runCatchingKeepingCancellation { metaReader.read(text) }
+        val document = result.getOrNull()
+        val error = result.exceptionOrNull()
+        metas[folder] = CachedMeta(stamp, text, document, error)
+        if (error != null) log.warn("$file: ${error.message}", error)
         return document
     }
 
@@ -119,7 +123,15 @@ class AssetFiles(projectDir: File, private val json: JsonProcessor, private val 
     fun loadFile(assetName: String, fileName: String?): File? {
         if (fileName.isNullOrBlank()) return null
         val dir = folder(assetName) ?: return null
+        if (metaDocument(dir) == null) return null
         return file(dir, fileName)
+    }
+
+    /** Retains the refusal reason for a loader's existing once-per-revision failure presentation. */
+    fun metadataFailure(assetName: String): Throwable? {
+        val dir = folder(assetName) ?: return null
+        metaDocument(dir)
+        return metas[dir]?.error
     }
 
     fun <T, M : MetaBase<T>> loadAsset(clazz: Class<M>, name: String): Asset<T>? {

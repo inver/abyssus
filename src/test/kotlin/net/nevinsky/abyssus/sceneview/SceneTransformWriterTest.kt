@@ -21,7 +21,7 @@ class SceneTransformWriterTest {
 
     @Test
     fun droppingAModelChangesOnlyYAndPreservesNumberText() {
-        val text = """{"ecs":{"entities":{"0":{"components":{"PositionComponent":{"localPosition":{"x":1.230000,"y":5.000,"z":-2.34000}}}}}}}"""
+        val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"PositionComponent":{"localPosition":{"x":1.230000,"y":5.000,"z":-2.34000}}}}}}}"""
         val root = SceneJson.parse(text)
         assertTrue(SceneTransformWriter.apply(root, "0", TransformEdit(position = Vec3(1.23f, 1f, -2.34f))))
         assertEquals(text.replace("5.000", "1.0"), SceneJson.compact(root))
@@ -96,7 +96,7 @@ class SceneTransformWriterTest {
 
     @Test
     fun anEntityWithoutAPositionComponentGetsOne() {
-        val root = SceneJson.parse("""{"ecs":{"entities":{"1":{"components":{"NameComponent":{"name":"a"}}}}}}""")
+        val root = SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"1":{"components":{"NameComponent":{"name":"a"}}}}}}""")
         assertTrue(SceneTransformWriter.apply(root, "1", TransformEdit(position = Vec3(1f, 0f, 0f))))
         assertEquals(1f, components(root, "1").get("PositionComponent").get("localPosition").get("x").floatValue(), 0f)
     }
@@ -120,7 +120,7 @@ class SceneTransformWriterTest {
 
     @Test
     fun aHandleMoveWritesTheHandlePosition() {
-        val mundus = File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()
+        val mundus = File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()
         val root = SceneJson.parse(mundus)
         val handle = components(root, "0").get("PositionComponent")
         // The fixture's handle has an empty PositionComponent and no localPosition.
@@ -148,7 +148,7 @@ class SceneTransformWriterTest {
 
     @Test
     fun aHandleMoveToTheSamePlaceChangesNothing() {
-        val mundus = File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()
+        val mundus = File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()
         val root = SceneJson.parse(mundus)
         val same = Vec3(0f, 10f, -10f)
         assertTrue(SceneTransformWriter.apply(root, "1", TransformEdit(target = TargetMove("0", same))))
@@ -163,7 +163,7 @@ class SceneTransformWriterTest {
 
     @Test
     fun aHandleMoveToAMissingEntityLeavesTheTreeAsItWas() {
-        val mundus = File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText()
+        val mundus = File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()
         val root = SceneJson.parse(mundus)
         val edit = TransformEdit(rotation = Quat(0f, 1f, 0f, 0f), target = TargetMove("99", Vec3(0f, 10f, -10f)))
         assertFalse(SceneTransformWriter.apply(root, "1", edit))
@@ -172,7 +172,7 @@ class SceneTransformWriterTest {
 
     @Test
     fun aHandleMoveToAnEntityWithABadPositionComponentLeavesTheTreeAsItWas() {
-        val text = """{"ecs":{"entities":{
+        val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "h":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":5}},
             "l":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"PositionComponent":{"lookAtId":"h"}}}}}}"""
         val root = SceneJson.parse(text)

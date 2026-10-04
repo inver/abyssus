@@ -9,7 +9,6 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.ecs.scene.ComponentEditor
 import net.nevinsky.abyssus.ecs.scene.FieldKind
 import net.nevinsky.abyssus.ecs.scene.FieldValue
 import net.nevinsky.abyssus.filetype.SceneJson
@@ -26,8 +25,8 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
 import net.nevinsky.abyssus.assets.META_FILE
-import net.nevinsky.abyssus.assets.displayMessage
-import net.nevinsky.abyssus.ecs.scene.SceneEcsPaths
+import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
 import net.nevinsky.abyssus.assets.files.MetaType
 import net.nevinsky.abyssus.assets.sky.cube.SKYBOX_FACES
 import net.nevinsky.abyssus.projectView.HdrPreviewSource
@@ -114,25 +113,31 @@ private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreview
  * `Empty` with a message when the scene cannot be read or the entity or component is gone.
  */
 fun readEntityState(target: ComponentTarget, services: PanelServices): PanelState {
-    val root = runCatchingKeepingCancellation { SceneJson.parse(runReadAction { textOf(target.file) }) }
+    val root = runCatchingKeepingCancellation { SceneJson.parse(runReadAction { textOf(target.file) }).also { net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().requireSupported(it, net.nevinsky.abyssus.assets.format.DocumentKind.SCENE) } }
         .getOrElse { return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.displayMessage()), null) }
-    val entity = SceneEcsPaths.entities(root)?.get(target.entityId)?.takeIf { it.isObject }
+    val entity = SceneEcsPaths().entities(root)?.get(target.entityId)?.takeIf { it.isObject }
         ?: return PanelState.Empty(AbyssusBundle.message("propertiesEntityGone", target.entityId), null)
     val components = entity.get("components")?.takeIf { it.isObject }
     val kinds = target.kind?.let { listOf(it) } ?: components?.fieldNames()?.asSequence()?.toList().orEmpty()
     val assets = SceneComponentEdits.renderAssets(target.file, services.metaFiles).map { it.name }
+    val byType = SceneComponentEdits.assetsByType(target.file, services.metaFiles).orEmpty()
+    val editor = services.schemas.editorFor(target.file)
     val sections = kinds.map { kind ->
-        val modeled = ComponentEditor.kindOf(kind)
-        val fields = ComponentEditor.read(root, target.entityId, kind)
+        val modeled = editor.kindOf(kind)
+        val fields = editor.read(root, target.entityId, kind)
         when {
             components?.has(kind) != true ->
                 return PanelState.Empty(AbyssusBundle.message("propertiesComponentGone", target.entityId, kind.removeSuffix("Component")), null)
             modeled == null || fields == null -> ComponentSection(kind, kind.removeSuffix("Component").ifEmpty { kind }, emptyList(), SceneJson.pretty(components!![kind]))
-            else -> ComponentSection(kind, modeled.label, fields.map { if (it.kind == FieldKind.ASSET_NAME) it.copy(choices = (assets + it.value).filter(String::isNotEmpty).distinct()) else it }, null)
+            else -> ComponentSection(kind, modeled.label, fields.map { field -> when {
+                field.kind != FieldKind.ASSET_NAME -> field
+                field.assetType != null -> field.copy(choices = (listOf("") + byType[field.assetType].orEmpty() + field.value).distinct())
+                else -> field.copy(choices = (assets + field.value).filter(String::isNotEmpty).distinct())
+            } }, null)
         }
     }
-    val name = SceneEcsPaths.entityName(components, target.entityId)
-    val addable = if (target.kind == null) ComponentEditor.missingKinds(root, target.entityId).map { it.name } else emptyList()
+    val name = SceneEcsPaths().entityName(components, target.entityId)
+    val addable = if (target.kind == null) editor.missingKinds(root, target.entityId).map { it.name } else emptyList()
     return PanelState.EntityDetails(target, name, sections, addable)
 }
 

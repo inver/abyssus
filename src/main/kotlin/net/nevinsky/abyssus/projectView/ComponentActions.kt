@@ -17,7 +17,8 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.ecs.scene.ComponentEditor
+import com.intellij.openapi.project.ProjectLocator
+import net.nevinsky.abyssus.schema.ComponentSchemas
 import net.nevinsky.abyssus.ecs.scene.EditResult
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.dto.textOf
@@ -40,8 +41,9 @@ internal fun reportRejection(project: Project, result: EditResult) {
  */
 fun addComponentGroup(project: Project, file: VirtualFile, entityId: String, kinds: List<String>, metaFiles: MetaFiles): DefaultActionGroup {
     val group = DefaultActionGroup()
+    val editor = ComponentSchemas.of(project).editorFor(file)
     for (name in kinds) {
-        val label = ComponentEditor.kindOf(name)?.label ?: continue
+        val label = editor.kindOf(name)?.label ?: continue
         if (name == "RenderComponent") {
             val sub = DefaultActionGroup(label, true)
             val assets = SceneComponentEdits.renderAssets(file, metaFiles)
@@ -96,7 +98,7 @@ open class AddComponentAction : AbyssusTreeAction<ComponentTarget>() {
     /** What can be added to the entity [target] stands for: the modeled kinds it lacks in the scene's current text. */
     internal fun choices(project: Project, target: ComponentTarget): DefaultActionGroup {
         val root = SceneDocumentCache.of(project).read(target.file)?.root ?: return DefaultActionGroup()
-        val kinds = ComponentEditor.missingKinds(root, target.entityId).map { it.name }
+        val kinds = ComponentSchemas.of(project).editorFor(target.file).missingKinds(root, target.entityId).map { it.name }
         return addComponentGroup(project, target.file, target.entityId, kinds, service<AbyssusCore>().metaFiles)
     }
 
@@ -117,7 +119,10 @@ open class AddComponentAction : AbyssusTreeAction<ComponentTarget>() {
 /** Right-click "Remove Component" on a component row the plugin models. */
 open class RemoveComponentAction : AbyssusTreeAction<ComponentTarget>() {
     override fun targetOf(node: Any?) =
-        componentTargetOf(node)?.takeIf { it.kind != null && ComponentEditor.kindOf(it.kind) != null }
+        componentTargetOf(node)?.takeIf { target ->
+            val project = ProjectLocator.getInstance().guessProjectForFile(target.file) ?: return@takeIf false
+            target.kind != null && ComponentSchemas.of(project).editorFor(target.file).kindOf(target.kind) != null
+        }
 
     override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) {
         reportRejection(project, SceneComponentEdits.remove(project, target.file, target.entityId, target.kind!!))
