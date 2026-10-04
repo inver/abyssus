@@ -1,5 +1,7 @@
 package net.nevinsky.abyssus.assets
 
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
 import java.io.File
 
 /** A fixture project under the repository's `src/test/testData/project` (shared with the plugin's tests). */
@@ -11,6 +13,6 @@ fun skyShaders(): ShaderSource = ShaderSource("/shader/sky", AssetLoading::class
 
 /** A loading graph with no IDE: [log] receives problems, `prepare` runs on [executor] (the calling thread by default). */
 fun testLoading(
-    log: AssetLog = AssetLog { _, _ -> },
+    log: Logger = NOPLogger.NOP_LOGGER,
     executor: java.util.concurrent.Executor = java.util.concurrent.Executor(Runnable::run),
 ): AssetLoading = AssetLoading(net.nevinsky.abyssus.assets.json.JsonProcessor(), log, executor, skyShaders())

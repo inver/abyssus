@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.raytracing
 
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
 import java.util.concurrent.atomic.AtomicReference
 
 /** Output framebuffer size and active camera identity, independent of adaptive internal dimensions. */
@@ -47,6 +49,7 @@ class RayRenderScheduler(
     private val policy: RayQualityPolicy,
     private val clock: () -> Long,
     private val maxMotionAgeNanos: Long = 100_000_000,
+    private val log: Logger = NOPLogger.NOP_LOGGER,
 ) {
     private data class History(val key: RayFrameKey, val display: RayDisplayKey, val content: Long, val raysPerSample: Int)
     private data class Offered(val input: RayRenderInput, val nanos: Long)
@@ -126,6 +129,7 @@ class RayRenderScheduler(
             pending = null
             val quality = policy.choose(offered.input.display.width, offered.input.display.height, stableFrames, offered.input.raysPerSample)
             val size = quality.width to quality.height
+            if (dimensions != size) log.atDebug().log { "Ray frame ${offered.input.display.width}x${offered.input.display.height} renders at ${size.first}x${size.second}, ${quality.samples} samples per batch, ${offered.input.raysPerSample} rays per sample" }
             if (dimensions != null && dimensions != size) {
                 epoch++
                 samples = 0

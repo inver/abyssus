@@ -212,6 +212,59 @@ CI: `build.yml` and `release.yml` install `glslang-tools` and pass `-Pabyssus.re
 workflow does not; without a compiler the shader task warns and the Vulkan backend reports itself unavailable.
 Not exercised on GitHub runners.
 
+## Vulkan scene path and Linux hardware run (tasks 1.3, 1.4, 1.7 and the Vulkan clauses of 2.4-4.6), 2026-10-04
+
+The user asked for the Vulkan implementation of every task, so the earlier "Vulkan skipped" notes no longer apply.
+
+Host: Linux x86_64, NVIDIA GeForce RTX 3070 Ti (proprietary driver 610.57.04, Vulkan 1.4.341) plus Mesa llvmpipe. The
+backend selects the discrete device; `VulkanRayBackendTest` prints the device it ran on ("Vulkan device: NVIDIA GeForce
+RTX 3070 Ti" in the report). Shaders were built with the NDK's `glslc` (`-Pabyssus.glslc=... -Pabyssus.requireShaders=true`)
+because the host has no `glslangValidator` on PATH. The Khronos validation layer 1.3.275 came from the Ubuntu
+`vulkan-validationlayers` package, extracted outside the system and loaded with `VK_LAYER_PATH` and `LD_LIBRARY_PATH`.
+
+Implemented:
+- `src/main/glsl/scene.comp`: a port of Metal's `rayScene` kernel (default/PBR/terrain shading, per-light visibility rays
+  with alpha-test holes, one GGX reflection bounce, sky and HDR tone mapping, fog, front-to-back blended layers).
+- `VulkanRaySession.submit(RaySceneRequest)`: static geometry reuse, in-place refit of only the changed meshes, payload
+  upload only when shading data changed, instance masks (bit 2 only for blended surfaces), and a 1024-instance capacity
+  like Metal. The payload encoder was renamed `RaySceneEncoding` because both backends read it.
+
+Defects found only by running on hardware or with the real scene, all fixed:
+- Device-extension enumeration allocated on the 64 KB LWJGL `MemoryStack`; the NVIDIA driver overflows it
+  (`OutOfMemoryError: Out of stack space`). Driver-sized lists now use the heap.
+- SPIR-V of the scene shader exceeds the stack too, and the per-mesh loops accumulated stack across 237 mesh parts. The
+  module is copied through the heap and each loop iteration pushes its own stack frame.
+- `glslc -O` inlined the shading code into a 572 KB module (57 KB without); the task no longer passes `-O`.
+
+Results with `-Dabyssus.vulkanTests=true -Dabyssus.raytracing.validation=true`:
+- `VulkanRayBackendTest`: all 44 kit cases pass (11 slice cases and the 32 scene cases, plus the no-device probe), on the
+  RTX 3070 Ti with the validation layer active and no validation messages, repeated twice. All 44 also pass on llvmpipe.
+  One cold llvmpipe run exceeded the kit's 5 s wait on its first scene frame (shader compilation on the CPU); it passed on
+  both reruns.
+- The kit needed one explicit allowance: Vulkan stores color as `R16G16B16A16_SFLOAT` (design decision 8), whose spacing is
+  2^-10 of the value, so absolute tolerances of 0.0003 to 0.001 cannot hold at or above 0.5. `colorStorageError` is a kit
+  hook (0 for the fake and Metal) that adds 2^-10 of the expected value to the color tolerance of the two reference
+  comparisons; depth stays exact. The 32-bit color alternative was not taken because it doubles readback bytes.
+- `RayRealSceneTest.theFixtureSceneRendersThroughTheRealVulkanBackend`: the fixture's Main Scene (hundreds of model parts,
+  blended panes, 2048x2048 textures) renders through the real Vulkan backend.
+- `VulkanNativePackagingTest` 4/4 (both SPIR-V files valid, no shaderc, natives for every target, MoltenVK for macOS only);
+  `verifyNativePackaging` passes; the `buildPlugin` zip's `raytracing.jar` holds `native/vulkan/slice.spv` and `scene.spv`,
+  and the zip holds the `lwjgl-vma` natives for every target and `lwjgl-vulkan` natives for macOS only.
+- Native-only timing (`VulkanRayBackendTimingTest`, 30 s, 1280x720, a moving instance and camera, readback included):
+  slice 106 fps with p95 11.0 ms; scene shader on a small PBR/diffuse scene 105 fps with p95 11.4 ms. This is not the
+  runIde gate: it excludes GL upload, EDT time and presentation latency.
+- `./gradlew check`: 915 tests, 10 failures, none in `raytracing`, `core` or `gdx-model`. The same 10 fail on a clean
+  worktree of HEAD (`SceneContentTest`, `SceneMarkersTest`, `SceneEcsLoaderTest`, `SceneTransformWriterTest`,
+  `SceneTransformEditTest`, `SceneRendererCameraTest`, `AbyssusViewTest`), all from assertions on the `Untitled` fixture that
+  was edited. A stale incremental build also made `SunDirectionTest` fail with a `NoSuchMethodError`; it passes after a clean
+  compile.
+
+Still open, so these tasks stay unchecked:
+- 1.4: Windows, macOS arm64 and macOS x86_64 packaging runs (Linux and the plugin zip contents are done).
+- 1.7: a Windows device. MoltenVK ray-query support on macOS is unverified.
+- 1.8 and 5.1-5.3: the manual runIde checks, and 5.4's IDE load of the zip, which need an interactive IDE session on each OS.
+  This session has no way to drive the IDE window, so none were performed.
+
 ## Preview shadow diagnosis and CPU model companions (2026-10-04)
 
 The user reported a visible reflection but no shadow in the sandbox preview. A

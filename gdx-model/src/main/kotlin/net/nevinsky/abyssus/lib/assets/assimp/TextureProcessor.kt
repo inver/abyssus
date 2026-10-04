@@ -5,7 +5,8 @@
 
 package net.nevinsky.abyssus.lib.assets.assimp
 
-import org.slf4j.LoggerFactory
+import org.slf4j.Logger
+import net.nevinsky.abyssus.core.ModelLogging
 
 import com.badlogic.gdx.files.FileHandle
 import org.lwjgl.assimp.AIScene
@@ -15,7 +16,7 @@ import java.io.IOException
 import java.io.UncheckedIOException
 import javax.imageio.ImageIO
 
-private val log = LoggerFactory.getLogger(TextureProcessor::class.java)
+private val log: Logger get() = ModelLogging.logger
 
 /**
  * Resolves texture paths reported by Assimp to files. File textures keep their relative sub folders; embedded
@@ -41,7 +42,7 @@ internal class TextureProcessor(
             return extract(embedded)
         }
         if (relative.startsWith("*")) {
-            log.warn("Embedded texture {} not found in scene", assimpPath)
+            log.warn("Embedded texture $assimpPath not found in scene")
             return null
         }
         return if (modelDir.isEmpty()) relative else modelDir + "/" + relative

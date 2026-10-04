@@ -5,7 +5,8 @@
 
 package net.nevinsky.abyssus.core.shader
 
-import org.slf4j.LoggerFactory
+import org.slf4j.Logger
+import net.nevinsky.abyssus.core.ModelLogging
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
@@ -28,7 +29,7 @@ import net.nevinsky.abyssus.core.Renderable
 import java.util.function.Function
 import java.util.function.Supplier
 
-private val log = LoggerFactory.getLogger(DefaultShader::class.java)
+private val log: Logger get() = ModelLogging.logger
 open class DefaultShader(requestedConfig: ShaderConfig, renderable: Renderable) : BaseShader() {
     protected var vertexShader: String
     protected var fragmentShader: String
@@ -712,7 +713,7 @@ open class DefaultShader(requestedConfig: ShaderConfig, renderable: Renderable) 
             sb.append("#define numBones ").append(config.numBones).append("\n")
         }
 
-        log.debug("Shader prefix: \n{}", sb)
+        log.atDebug().log { "Shader prefix: \n$sb" }
 
         vertexShader = sb.toString() + vertexShader
         fragmentShader = sb.toString() + fragmentShader

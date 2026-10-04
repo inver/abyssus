@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.assets.AssetLog
+import org.slf4j.Logger
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import java.io.File
 import java.util.concurrent.Executor
@@ -19,7 +19,7 @@ class SceneAssets<P : Any, T : Disposable>(
     private val executor: Executor,
     private val loader: AssetLoader<P, T>,
     private val filesOf: (File) -> AssetFiles,
-    private val log: AssetLog,
+    private val log: Logger,
 ) : Disposable {
     private var files: AssetFiles? = null
     private var cache: AssetCache<P, T>? = null
@@ -30,6 +30,7 @@ class SceneAssets<P : Any, T : Disposable>(
     fun update(projectDir: File?, names: Set<String>) {
         if (projectDir?.absoluteFile != files?.projectDir) {
             cache?.dispose()
+            log.info("Loading assets of ${projectDir?.absolutePath ?: "no project"}")
             files = projectDir?.let(filesOf)
             cache = files?.let(::newCache)
         }

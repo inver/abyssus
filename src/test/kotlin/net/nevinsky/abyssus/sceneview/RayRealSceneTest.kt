@@ -45,14 +45,23 @@ class RayRealSceneTest {
         assertNull("the whole-view fallback must not trigger for the fixture scene", scene.unsupportedReason())
         assertTrue("the scene is bigger than the old 128-instance cap", scene.instances.size > 128)
         assertTrue("its textures stay as bytes", scene.textures.isNotEmpty() && scene.textures.all { it.isBytes })
-        assertTrue(scene.instances.size <= METAL_INSTANCE_CAPACITY)
+        assertTrue(scene.instances.size <= RAY_INSTANCE_CAPACITY)
     }
 
     @Test fun theFixtureSceneRendersThroughTheRealMetalBackend() {
         assumeTrue(System.getProperty("abyssus.metalTests") == "true" && System.getProperty("os.name").startsWith("Mac"))
+        renderThrough(MetalRayBackendFactory())
+    }
+
+    @Test fun theFixtureSceneRendersThroughTheRealVulkanBackend() {
+        assumeTrue(System.getProperty("abyssus.vulkanTests") == "true")
+        renderThrough(VulkanRayBackendFactory())
+    }
+
+    private fun renderThrough(provider: RayBackendProvider) {
         val frame = snapshot()
-        val result = MetalRayBackendFactory().probe()
-        assumeTrue("Metal ray tracing is not available here: $result", result is RayCapability.Available)
+        val result = provider.probe()
+        assumeTrue("Ray tracing is not available here: $result", result is RayCapability.Available)
         (result as RayCapability.Available).backend.use { backend ->
             backend.openSession("real-scene", RayLimits(maxInstances = backend.capabilities.maxInstances)).use { session ->
                 session.submit(RaySceneRequest(RayFrameKey(1, 1, 1, 1), 160, 90, frame.camera.rayCamera(), frame.scene))
@@ -67,5 +76,6 @@ class RayRealSceneTest {
         }
     }
 
-    private companion object { const val METAL_INSTANCE_CAPACITY = 1024 }
+    /** Metal and Vulkan both hold this many instances per session. */
+    private companion object { const val RAY_INSTANCE_CAPACITY = 1024 }
 }

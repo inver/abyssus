@@ -4,7 +4,9 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import org.slf4j.Logger
 import net.nevinsky.abyssus.raytracing.*
+import net.nevinsky.abyssus.testing.RecordingLogger
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.concurrent.CancellationException
@@ -24,6 +26,20 @@ class RayBackendSelectorTest {
         val selection = selector.select() as RayBackendSelection.Selected
         assertSame(backend, selection.backend)
         assertEquals(RayBackendInfo("Vulkan", "Test GPU"), selection.backend.info)
+    }
+
+    @Test fun probeOutcomesGoToTheLog() {
+        val recorder = RecordingLogger()
+        val log: Logger = recorder
+        fun lines() = recorder.entries.map { "${it.level.name.lowercase()} ${it.message}" }
+        RayBackendSelector("vulkan", "Linux", mapOf("vulkan" to { provider(RayCapability.Available(backend("Vulkan", "Test GPU"))) }), log).select()
+        assertTrue(lines().toString(), lines().any { it.startsWith("info Probing the 'vulkan'") })
+        assertTrue(lines().toString(), lines().any { it.startsWith("info Ray tracing backend 'vulkan' is available") && "Test GPU" in it })
+        recorder.entries.clear()
+        RayBackendSelector("vulkan", "Linux", mapOf("vulkan" to {
+            provider(RayCapability.Unavailable(RayUnavailableReason.INITIALIZATION_FAILED, "Packaged Vulkan shader slice is missing"))
+        }), log).select()
+        assertTrue(lines().toString(), lines().any { it.startsWith("warn") && "INITIALIZATION_FAILED" in it && "shader slice is missing" in it })
     }
 
     @Test fun unavailableForcedBackendReportsItsReasonWithoutFallback() {

@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.raytracing
 
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
@@ -42,6 +44,7 @@ internal const val METAL_MAX_INSTANCES = 1024
 class MetalRayBackendFactory(
     private val deviceAvailable: () -> Boolean = { true },
     private val health: RayDeviceHealth = RayDeviceHealth(),
+    private val log: Logger = NOPLogger.NOP_LOGGER,
 ) : RayBackendProvider {
     private val bridge = MetalBridge()
     private val library = MetalLibrary({ resource("libabyssus_ray.dylib") }, { System.load(it) })
@@ -64,22 +67,26 @@ class MetalRayBackendFactory(
     override fun probe(): RayCapability {
         if (!deviceAvailable()) return RayCapability.Unavailable(RayUnavailableReason.ACCELERATION_STRUCTURES)
         backend?.takeUnless { it.disposed }?.let { return RayCapability.Available(it) }
+        log.info("Probing Metal")
         return RayBackendProbe({
             val values = bridge.probe(prepare())
             check(values.size == 5) { "Invalid Metal probe response" }
-            RayCapabilities(values[0] != 0L,values[1] != 0L,values[2] != 0L,values[3].toInt(),values[4],METAL_MAX_INSTANCES)
+            RayCapabilities(values[0] != 0L,values[1] != 0L,values[2] != 0L,values[3].toInt(),values[4],METAL_MAX_INSTANCES).also { log.info("Metal probe: $it") }
         }, { caps ->
             val handle = bridge.create(prepare())
             check(handle != 0L) { "Metal backend initialization failed" }
-            MetalRayBackend(bridge,handle,caps,bridge.deviceName(handle),health).also { backend = it }
-        }).probe()
+            MetalRayBackend(bridge,handle,caps,bridge.deviceName(handle),health,log).also {
+                backend = it
+                log.info("Metal backend ready on '${it.info.gpu}'")
+            }
+        }).probe().also { if (it is RayCapability.Unavailable) log.warn("Metal is unavailable: ${it.reason}${it.detail?.let { d -> " ($d)" } ?: ""}") }
     }
 }
 
 /** All sessions share this device/queue; each keeps independent scene and readback resources. */
 class MetalRayBackend internal constructor(
     private val bridge: MetalBridge, private var handle: Long,
-    override val capabilities: RayCapabilities, gpu: String, private val health: RayDeviceHealth,
+    override val capabilities: RayCapabilities, gpu: String, private val health: RayDeviceHealth, private val log: Logger = NOPLogger.NOP_LOGGER,
 ) : RayBackend {
     override val info = RayBackendInfo("Metal",gpu)
     private val worker = Thread.currentThread()
@@ -90,12 +97,14 @@ class MetalRayBackend internal constructor(
         require(viewId.isNotEmpty() && viewId !in sessions) { "View already owns a Metal session" }
         require(limits.maxDimension <= capabilities.maxFrameDimension && limits.maxPixels <= 4_194_304 && limits.maxInstances <= capabilities.maxInstances)
         health.checkUsable()
+        log.atDebug().log { "Metal session '$viewId' opened, $limits" }
         val driver = MetalRaySession(bridge,bridge.openSession(handle),limits) { sessions.remove(viewId) }
         return RayQueuedSession(driver,health).also { sessions[viewId] = it }
     }
     override fun dispose() {
         check(Thread.currentThread() === worker) { "Metal backend must stay on its owner worker" }
         if (disposed) return
+        log.info("Disposing the Metal backend (${sessions.size} open sessions)")
         sessions.values.toList().forEach { it.dispose() }
         val owned = handle
         handle = 0L
@@ -204,7 +213,7 @@ class MetalRaySession internal constructor(
         }
         sceneGeometryKey = scene.meshes
         if(geometryChanged || !shadingUnchanged(lastScene,scene)) {
-            MetalSceneEncoding(scene).encode().let { bridge.setSceneData(handle,it.floats,it.bytes) }
+            RaySceneEncoding(scene).encode().let { bridge.setSceneData(handle,it.floats,it.bytes) }
             lastScene=scene
         }
         submit(request.key,request.width,request.height,request.camera,scene.instances.map {

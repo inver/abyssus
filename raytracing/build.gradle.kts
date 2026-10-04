@@ -14,6 +14,7 @@ val lwjglVersion = providers.gradleProperty("lwjglVersion").get()
 
 dependencies {
     implementation(kotlin("stdlib"))
+    api("org.slf4j:slf4j-api:2.0.6")
     // Vulkan bindings load nothing until a probe runs. lwjgl-vulkan publishes natives only for macOS (MoltenVK);
     // Windows and Linux use the system loader. lwjgl-vma has natives for every target.
     implementation("org.lwjgl:lwjgl:$lwjglVersion")
@@ -100,32 +101,43 @@ abstract class CompileSpirv : DefaultTask() {
         val tool = compiler.get().takeIf { it.isNotEmpty() }
         if (tool == null) {
             check(!required.get()) { "glslangValidator (or glslc) is required to build the Vulkan shaders" }
-            logger.warn("No glslangValidator/glslc on PATH: Vulkan SPIR-V shaders are not built")
+            logger.warn("No glslangValidator/glslc found (PATH, VULKAN_SDK, Android NDK shader-tools): Vulkan SPIR-V shaders are not built and Vulkan ray tracing will be unavailable. Install one or pass -Pabyssus.glslc=/path/to/tool")
             return
         }
         out.mkdirs()
         sources.get().asFile.listFiles { f -> f.extension == "comp" }!!.sorted().forEach { shader ->
             val target = out.resolve(shader.nameWithoutExtension + ".spv")
             val command = if (tool.endsWith("glslc") || tool.endsWith("glslc.exe"))
-                listOf(tool, "--target-env=vulkan1.2", "-O", shader.absolutePath, "-o", target.absolutePath)
+                listOf(tool, "--target-env=vulkan1.2", shader.absolutePath, "-o", target.absolutePath) // no -O: it inlines the shading code tenfold and drivers optimize SPIR-V anyway
             else listOf(tool, "--target-env", "vulkan1.2", "-V", shader.absolutePath, "-o", target.absolutePath)
             execOperations.exec { commandLine(command) }.assertNormalExitValue()
         }
     }
 }
 
-fun findOnPath(vararg names: String): String? {
+/**
+ * The compiler to use: `PATH` first, then the places SDKs put one (`VULKAN_SDK`, and the Android NDK's `shader-tools`
+ * under `ANDROID_HOME`, `ANDROID_SDK_ROOT` or the default `~/Android/Sdk`, `~/Library/Android/sdk`).
+ */
+fun findShaderCompiler(): String? {
     val extensions = if (System.getProperty("os.name").startsWith("Windows")) listOf(".exe", ".bat", "") else listOf("")
-    val dirs = (System.getenv("PATH") ?: "").split(File.pathSeparator).filter { it.isNotEmpty() }
-    return names.firstNotNullOfOrNull { name ->
+    val names = listOf("glslangValidator", "glslc")
+    fun inDirs(dirs: List<File>) = names.firstNotNullOfOrNull { name ->
         dirs.firstNotNullOfOrNull { dir -> extensions.map { File(dir, name + it) }.firstOrNull { it.isFile } }
     }?.absolutePath
+    inDirs((System.getenv("PATH") ?: "").split(File.pathSeparator).filter { it.isNotEmpty() }.map(::File))?.let { return it }
+    val home = System.getProperty("user.home")
+    val sdkDirs = listOfNotNull(System.getenv("ANDROID_HOME"), System.getenv("ANDROID_SDK_ROOT"), "$home/Android/Sdk", "$home/Library/Android/sdk").map(::File)
+    val ndkTools = sdkDirs.flatMap { sdk -> File(sdk, "ndk").listFiles { f -> f.isDirectory }.orEmpty().sortedDescending() }
+        .flatMap { ndk -> File(ndk, "shader-tools").listFiles { f -> f.isDirectory }.orEmpty().toList() }
+    val vulkanSdk = System.getenv("VULKAN_SDK")?.let { listOf(File(it, "bin"), File(it, "Bin")) }.orEmpty()
+    return inDirs(vulkanSdk + ndkTools)
 }
 
 val spirvResources = layout.buildDirectory.dir("generated/spirv-resources")
 val compileSpirv = tasks.register<CompileSpirv>("compileSpirv") {
     sources.set(layout.projectDirectory.dir("src/main/glsl"))
-    compiler.set(providers.gradleProperty("abyssus.glslc").orElse(provider { findOnPath("glslangValidator", "glslc") ?: "" }))
+    compiler.set(providers.gradleProperty("abyssus.glslc").orElse(provider { findShaderCompiler() ?: "" }))
     required.set(providers.gradleProperty("abyssus.requireShaders").map { it.toBoolean() }.orElse(false))
     destination.set(spirvResources)
 }
@@ -137,6 +149,7 @@ tasks.test {
     System.getProperty("abyssus.raytracing.validation")?.let { systemProperty("abyssus.raytracing.validation", it) }
     System.getProperty("abyssus.metalTests")?.let { systemProperty("abyssus.metalTests", it) }
     System.getProperty("abyssus.metalTimingTests")?.let { systemProperty("abyssus.metalTimingTests", it) }
+    System.getProperty("abyssus.vulkanTimingTests")?.let { systemProperty("abyssus.vulkanTimingTests", it) }
 }
 
 // Use the built jar rather than loose main resources: proves resource packaging, native loading and device behavior.

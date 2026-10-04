@@ -4,16 +4,16 @@
  */
 package net.nevinsky.abyssus.raytracing
 
-/** The shading payload: scalar floats, then raw RGBA8 texels in the same native buffer (the header's slot 29 is where they start). */
-internal class MetalSceneData(val floats:FloatArray,val bytes:ByteArray)
+/** The backend-neutral shading payload (Metal and Vulkan read the same layout): scalar floats, then raw RGBA8 texels in the same native buffer (the header's slot 29 is where they start). */
+internal class RaySceneData(val floats:FloatArray,val bytes:ByteArray)
 
 /**
  * Version 2 ABI: offsets in the float section count floats, never bytes; texture table entries are
  * (offset, width, height, wrapU, wrapV, filter, isBytes), where a byte texture's offset counts RGBA8 texels from the start of
  * the byte section. All payloads are bounded before JNI.
  */
-internal class MetalSceneEncoding(private val scene:RaySceneSnapshot) {
-    fun encode():MetalSceneData {
+internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
+    fun encode():RaySceneData {
         require(scene.materials.size<=128 && scene.textures.size<=128 && scene.lights.size<=12) { "Scene shading resource limit exceeded" }
         val attributes=scene.meshes.sumOf { it.vertexCount.toLong()*12 }
         val cubeFloats=if(scene.environment.ambientCube!=null) 18L else 0L
@@ -83,7 +83,7 @@ internal class MetalSceneEncoding(private val scene:RaySceneSnapshot) {
             cube.forEachIndexed { i,c -> out[at+i*3]=c.r;out[at+i*3+1]=c.g;out[at+i*3+2]=c.b }
             at+=18
         }
-        return MetalSceneData(out,bytes)
+        return RaySceneData(out,bytes)
     }
 }
 

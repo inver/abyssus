@@ -5,6 +5,8 @@
 package net.nevinsky.abyssus.sceneview
 
 import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -25,6 +27,7 @@ internal class RayBackendService(
     private val publish: (() -> Unit) -> Unit = { SwingUtilities.invokeLater(it) },
     private val clock: () -> Long = System::nanoTime,
     private val reportFailure: (Throwable) -> Unit = {},
+    private val log: Logger = NOPLogger.NOP_LOGGER,
 ) : AutoCloseable {
     private class Binding(
         val revision: Long, val backend: RayBackend, val session: RaySession, val scheduler: RayRenderScheduler,
@@ -57,9 +60,13 @@ internal class RayBackendService(
                 RayBackendSelection.Off -> publish {
                     view.mode.unavailable(revision, RayBackendSelection.Unavailable(listOf(RayBackendAttempt("off", RayUnavailableReason.DISABLED))))
                 }
-                is RayBackendSelection.Unavailable -> publish { view.mode.unavailable(revision, selected) }
+                is RayBackendSelection.Unavailable -> {
+                    log.warn("Ray tracing is unavailable for view ${view.viewId}: ${selected.attempts.ifEmpty { listOf(selected.invalidPreference ?: "no backend for this OS") }}")
+                    publish { view.mode.unavailable(revision, selected) }
+                }
                 is RayBackendSelection.Selected -> {
                     val backend = selected.backend
+                    log.info("Ray tracing view ${view.viewId} uses ${backend.info.name} on ${backend.info.gpu}")
                     preparingBackend = backend
                     backends += backend
                     if (!view.wanted(revision) || closed.get()) return@runCatchingKeepingCancellation
@@ -74,13 +81,14 @@ internal class RayBackendService(
                         maxPixels = minOf(view.qualityLimits.maxPixels, limits.maxPixels.toLong()),
                         frameMemoryBytes = minOf(view.qualityLimits.frameMemoryBytes, backend.capabilities.memoryBudgetBytes),
                     )
+                    log.atDebug().log { "Ray tracing session for view ${view.viewId}: $limits, quality $quality" }
                     val scheduler = RayRenderScheduler({ batch ->
                         when (val request = batch.request) {
                             is RayRequest -> session.submit(request)
                             is RaySceneRequest -> session.submit(request)
                             else -> error("Unsupported ray request type")
                         }
-                    }, session::poll, RayQualityPolicy(quality), clock)
+                    }, session::poll, RayQualityPolicy(quality), clock, log = log)
                     if (!view.install(scheduler, revision)) {
                         session.dispose()
                         return@runCatchingKeepingCancellation
@@ -137,7 +145,7 @@ internal class RayBackendService(
             view.clearPublication()
             publish { view.mode.failed(revision, failure.message ?: failure.javaClass.simpleName) }
         }
-        reportFailure(failure)
+        report("Ray tracing stopped for view ${view.viewId}: ${failure.message ?: failure.javaClass.simpleName}", failure)
         disposeBinding(view)
     }
 
@@ -149,16 +157,24 @@ internal class RayBackendService(
             view.clearPublication()
             publish { view.mode.failed(binding.revision, failure.message ?: failure.javaClass.simpleName) }
         }
-        reportFailure(failure)
+        report("Ray tracing device lost (${backend.info.name} on ${backend.info.gpu}): ${failure.message}", failure)
         affected.forEach { (view, _) -> disposeBinding(view) }
         backends.remove(backend)
-        runCatchingKeepingCancellation { backend.dispose() }.onFailure(reportFailure)
+        runCatchingKeepingCancellation { backend.dispose() }.onFailure { report("Disposing the lost ${backend.info.name} backend failed", it) }
     }
+
+    private fun report(message: String, failure: Throwable) {
+        log.warn(message, failure)
+        reportFailure(failure)
+    }
+
+    /** A view gave up before reaching the backend (scene conversion fell back, an asset failed). */
+    internal fun noteFallback(view: RayViewRuntime<*>, detail: String?) = log.warn("Ray tracing fell back to raster for view ${view.viewId}: ${detail ?: "no detail"}")
 
     private fun disposeBinding(view: RayViewRuntime<*>) {
         val binding = bindings.remove(view) ?: return
         binding.scheduler.cancel()
-        runCatchingKeepingCancellation { binding.session.dispose() }.onFailure(reportFailure)
+        runCatchingKeepingCancellation { binding.session.dispose() }.onFailure { report("Disposing a ray tracing session failed", it) }
     }
 
     override fun close() {
@@ -167,7 +183,7 @@ internal class RayBackendService(
         views.clear()
         worker.execute {
             bindings.keys.toList().forEach(::disposeBinding)
-            backends.toList().forEach { backend -> runCatchingKeepingCancellation { backend.dispose() }.onFailure(reportFailure) }
+            backends.toList().forEach { backend -> runCatchingKeepingCancellation { backend.dispose() }.onFailure { report("Disposing the ${backend.info.name} backend failed", it) } }
             backends.clear()
             worker.shutdown()
         }

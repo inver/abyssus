@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.assets
 
+import net.nevinsky.abyssus.testing.warningsTo
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.assets.loading.SceneAssets
@@ -47,7 +48,7 @@ class AssetLoadingGlTest {
     fun mainScenesContentLoadsOutsideTheIde() {
         val logged = mutableListOf<String>()
         TestGl.run {
-            val loading = testLoading(log = { message, _ -> logged += message })
+            val loading = testLoading(log = warningsTo(logged))
             val models = loading.assets(loading.models)
             val terrains = loading.assets(loading.terrains)
             try {
@@ -86,7 +87,7 @@ class AssetLoadingGlTest {
     fun aMissingFolderIsLoggedOnceToTheCallersLog() {
         val logged = mutableListOf<String>()
         TestGl.run {
-            val loading = testLoading(log = { message, _ -> logged += message })
+            val loading = testLoading(log = warningsTo(logged))
             val models = loading.assets(loading.models)
             try {
                 loadAll(models, untitled, setOf("model_missing", mainSceneModels[0]))
@@ -110,7 +111,7 @@ class AssetLoadingGlTest {
             File(untitled, "assets/$model").copyRecursively(File(dir, "assets/$model"))
             File(dir, "assets/$model/model.gltf").writeText("{ this is not glTF")
             TestGl.run {
-                val loading = testLoading(log = { message, _ -> logged += message })
+                val loading = testLoading(log = warningsTo(logged))
                 val models = loading.assets(loading.models)
                 try {
                     loadAll(models, dir, setOf(model))
@@ -131,8 +132,8 @@ class AssetLoadingGlTest {
         val loggedA = mutableListOf<String>()
         val loggedB = mutableListOf<String>()
         TestGl.run {
-            val a = testLoading(log = { message, _ -> loggedA += message })
-            val b = testLoading(log = { message, _ -> loggedB += message })
+            val a = testLoading(log = warningsTo(loggedA))
+            val b = testLoading(log = warningsTo(loggedB))
             val modelsA = a.assets(a.models)
             val modelsB = b.assets(b.models)
             try {

@@ -76,7 +76,7 @@ dependencies {
     // Entity-component engine behind the scene model (net.nevinsky.abyssus.ecs)
     implementation("com.badlogicgames.ashley:ashley:1.7.4")
 
-    // Model runtime + Assimp importer (brings lwjgl-assimp and its natives); the IDE provides Kotlin and SLF4J
+    // Model runtime + Assimp importer (brings lwjgl-assimp and its natives); the IDE provides Kotlin and the SLF4J API
     implementation(project(":gdx-model")) {
         exclude(group = "org.jetbrains.kotlin")
         exclude(group = "org.slf4j")
@@ -88,6 +88,7 @@ dependencies {
     }
     implementation(project(":raytracing")) {
         exclude(group = "org.jetbrains.kotlin")
+        exclude(group = "org.slf4j")
     }
 }
 
@@ -148,6 +149,9 @@ tasks {
         System.getProperty("abyssus.rayTimingTests")?.let { systemProperty("abyssus.rayTimingTests", it) }
         // device tests that render through the real Metal backend: opt in with -Dabyssus.metalTests=true
         System.getProperty("abyssus.metalTests")?.let { systemProperty("abyssus.metalTests", it) }
+        // and through the real Vulkan backend: -Dabyssus.vulkanTests=true (add -Dabyssus.raytracing.validation=true for the validation layer)
+        System.getProperty("abyssus.vulkanTests")?.let { systemProperty("abyssus.vulkanTests", it) }
+        System.getProperty("abyssus.raytracing.validation")?.let { systemProperty("abyssus.raytracing.validation", it) }
     }
     runIde {
         // Open a project on startup: -PideProject=/path/to/project

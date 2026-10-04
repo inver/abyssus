@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.assets.sky.hdr
 
 import net.nevinsky.abyssus.assets.loading.AssetLoader
 import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.AssetLog
+import org.slf4j.Logger
 import net.nevinsky.abyssus.assets.files.MetaBase
 import net.nevinsky.abyssus.assets.files.MetaType
 import net.nevinsky.abyssus.assets.files.AssetFiles
@@ -37,7 +37,7 @@ class HdrSkyLoader(
     private val hdrFiles: HdrSkyFiles,
     private val shaders: ShaderSource,
     private val curve: ToneCurve,
-    private val log: AssetLog,
+    private val log: Logger,
 ) : AssetLoader<PreparedHdrSky, HdrSky> {
     /**
      * Null for a missing folder or a folder that is not an `SKYBOX_HDR`; throws, with the reason, for a folder without
@@ -50,7 +50,8 @@ class HdrSkyLoader(
         val named = asset.meta.additional.orEmpty().values.filterIsInstance<String>()
         val choice = hdrFiles.choose(dir.list()?.toList().orEmpty(), named)
             ?: throw IllegalStateException("HDR sky '$name' has no .hdr file")
-        choice.warning?.let { log.warn("HDR sky '$name': $it", null) }
+        choice.warning?.let { log.warn("HDR sky '$name': $it") }
+        log.atDebug().log { "HDR sky '$name' uses '${choice.file}'" }
         val file = files.file(dir, choice.file) ?: throw IllegalStateException("HDR sky '$name': cannot read '${choice.file}'")
         val image = try {
             decoder.read(file)

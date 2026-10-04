@@ -6,7 +6,8 @@
 package net.nevinsky.abyssus.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.assets.AssetLog
+import net.nevinsky.abyssus.testing.RecordingLogger
+import org.slf4j.Logger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -25,8 +26,9 @@ class AssetCacheTest {
 
     private val queue = ArrayDeque<Runnable>()
     private val executor = Executor { queue += it }
-    private val logged = mutableListOf<String>()
-    private val log = AssetLog { message, _ -> logged += message }
+    private val recorder = RecordingLogger()
+    private val log: Logger = recorder
+    private val logged: List<String> get() = recorder.warnings
     private val prepares = mutableListOf<String>()
     private val builds = mutableListOf<String>()
 
@@ -35,6 +37,17 @@ class AssetCacheTest {
 
     private fun runBackground() {
         while (queue.isNotEmpty()) queue.removeFirst().run()
+    }
+
+    @Test
+    fun progressIsLoggedAtDebugLevelAndNeverAsAWarning() {
+        val c = cache()
+        c.request("a")
+        runBackground()
+        c.pump()
+        assertEquals(emptyList<String>(), logged)
+        val debug = recorder.messages(org.slf4j.event.Level.DEBUG)
+        assertTrue(debug.toString(), "Loading asset 'a'" in debug && "Asset 'a' is ready" in debug)
     }
 
     @Test

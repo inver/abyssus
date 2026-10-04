@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.assets
 
+import org.slf4j.Logger
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.json.JsonProcessor
@@ -38,7 +39,7 @@ import java.util.concurrent.Executor
  */
 class AssetLoading(
     val json: JsonProcessor,
-    val log: AssetLog,
+    val log: Logger,
     private val executor: Executor,
     skyShaders: ShaderSource,
 ) {

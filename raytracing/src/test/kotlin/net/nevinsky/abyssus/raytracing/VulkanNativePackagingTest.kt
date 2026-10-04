@@ -14,9 +14,11 @@ class VulkanNativePackagingTest {
     private val classpath = System.getProperty("java.class.path").split(File.pathSeparator).map { File(it).name }
 
     @Test fun jarHoldsValidSpirvAndNoShaderCompiler() {
-        val spirv = VulkanNativePackagingTest::class.java.getResourceAsStream("/native/vulkan/slice.spv")?.use { it.readBytes() }
-        assertNotNull("SPIR-V must be built into the module resources (install glslangValidator or glslc)", spirv)
-        assertEquals("SPIR-V magic number", 0x07230203, java.nio.ByteBuffer.wrap(spirv!!).order(java.nio.ByteOrder.LITTLE_ENDIAN).int)
+        for (name in listOf("slice", "scene")) {
+            val spirv = VulkanNativePackagingTest::class.java.getResourceAsStream("/native/vulkan/$name.spv")?.use { it.readBytes() }
+            assertNotNull("$name SPIR-V must be built into the module resources (install glslangValidator or glslc)", spirv)
+            assertEquals("$name SPIR-V magic number", 0x07230203, java.nio.ByteBuffer.wrap(spirv!!).order(java.nio.ByteOrder.LITTLE_ENDIAN).int)
+        }
         assertTrue("No shaderc may be packaged", classpath.none { it.contains("shaderc", ignoreCase = true) })
     }
 

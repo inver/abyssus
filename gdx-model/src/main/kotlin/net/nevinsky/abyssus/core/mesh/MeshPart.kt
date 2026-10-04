@@ -4,13 +4,14 @@
  */
 package net.nevinsky.abyssus.core.mesh
 
-import org.slf4j.LoggerFactory
+import org.slf4j.Logger
+import net.nevinsky.abyssus.core.ModelLogging
 
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 
-private val log = LoggerFactory.getLogger(MeshPart::class.java)
+private val log: Logger get() = ModelLogging.logger
 
 /**
  * A MeshPart is composed of a subset of vertices of a [Mesh], along with the primitive type. The vertices subset

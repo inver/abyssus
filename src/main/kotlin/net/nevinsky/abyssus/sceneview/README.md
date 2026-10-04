@@ -39,7 +39,7 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 - **Asset loading lives in `core`** (`core/README.md`). `AssetCache.prepare` runs on a pool thread (IO and decoding,
   no GL). `build`, and `advance` for big textures, run on the render thread one slice per frame, inside this package's
   `GdxRuntime.withContext`. A new project gets a new cache, so a pool thread never prepares from a stale project. A
-  failed asset is remembered and logged once, through the `AssetLog` `AbyssusCore` gives `AssetLoading`.
+  failed asset is remembered and logged once, through the SLF4J `Logger` `AbyssusCore` gives `AssetLoading` (`Abyssus.assets`).
 - **The view reads JSON, not the ECS engine.** Placements come straight from the `ecs` JSON. `ParentComponent` is
   ignored, and `local*` values are drawn as world values; drags write them the same way.
 - **Drags preview, then write once.** During a drag `ScenePreview` overrides the dragged entity's placement. On release
@@ -138,6 +138,9 @@ rejects late results after off, retry, hide or close. It holds no camera, select
 cannot change them. The Properties switch shows the phase, an unusable GPU's reasons (`RayModeText`) and Retry after a
 failure, and the tooltip of an active view names the backend and GPU. `RayBackendSelector` chooses a backend once per IDE
 session (`-Dabyssus.raytracing.backend=auto|metal|vulkan|off`); nothing native loads until ray tracing is switched on.
+Probe results, the chosen backend and GPU, session limits, scene fallbacks and every failure go to `idea.log` through an SLF4J
+`Logger` (category `Abyssus.ray`; add `#Abyssus.ray` in Help | Diagnostic Tools | Debug Log Settings for the debug lines).
+See Logging in `docs/ai/conventions.md`.
 
 Each frame `SceneRenderer` calls its `rayFrameProvider` (the panel's `RayViewFeed`) with a `RayFrameContext`: the
 preview-applied content, camera, lights, animated models and the built HDR sky's ambient colours. The feed copies that

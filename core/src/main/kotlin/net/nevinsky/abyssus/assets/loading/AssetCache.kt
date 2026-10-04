@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.assets.AssetLog
+import org.slf4j.Logger
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executor
@@ -26,7 +26,7 @@ class AssetCache<D : Any, T : Disposable>(
     private val build: (String, D) -> T?,
     private val advance: (D) -> Boolean = { true },
     private val discard: (D) -> Unit = {},
-    private val log: AssetLog,
+    private val log: Logger,
 ) : Disposable {
     private sealed interface State {
         /** One per request: a result is only taken while its request is still the current state of its name. */
@@ -55,13 +55,16 @@ class AssetCache<D : Any, T : Disposable>(
         val request = State.Loading()
         states[name] = request
         live += request
+        log.atDebug().log { "Loading asset '$name'" }
         executor.execute {
             if (request !in live) return@execute
+            val started = System.nanoTime()
             val result: Prepared<D> = try {
                 Prepared(name, request, prepare(name), null)
             } catch (e: Throwable) {
                 Prepared(name, request, null, e)
             }
+            log.atDebug().log { "Prepared asset '$name' in ${(System.nanoTime() - started) / 1_000_000} ms${if (result.data == null) " (nothing to build)" else ""}" }
             prepared.add(result)
             // dropped meanwhile: nothing on the GL thread may ever see it again, so release it here
             if (request !in live && prepared.remove(result)) result.data?.let(discard)
@@ -98,7 +101,10 @@ class AssetCache<D : Any, T : Disposable>(
                 changed = true
                 live -= p.request
                 val value = build(p.name, data)
-                if (value == null) fail(p.name, null) else states[p.name] = State.Ready(value)
+                if (value == null) fail(p.name, null) else {
+                    states[p.name] = State.Ready(value)
+                    log.atDebug().log { "Asset '${p.name}' is ready" }
+                }
             } catch (e: Throwable) {
                 changed = true
                 live -= p.request
@@ -111,7 +117,7 @@ class AssetCache<D : Any, T : Disposable>(
 
     private fun fail(name: String, error: Throwable?) {
         states[name] = State.Failed
-        if (error != null) log.warn("Failed to load asset '$name'", error) else log.warn("Asset '$name' is missing or unreadable", null)
+        if (error != null) log.warn("Failed to load asset '$name'", error) else log.warn("Asset '$name' is missing or unreadable")
     }
 
     @Suppress("UNCHECKED_CAST")

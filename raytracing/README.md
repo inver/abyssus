@@ -73,9 +73,11 @@ the mandatory runIde gate.
 ## Scene shading (one bounce)
 
 `RaySceneRequest` carries an immutable `RaySceneSnapshot`: meshes, instances, materials, textures, lights, environment
-and fog. The Metal backend renders it with the `rayScene` kernel; the fake backend renders the same semantics on the
-CPU (`RaySceneReferenceRenderer`, test-only). Vulkan has no scene path yet. Each documented rule below is pinned by a
-case in `RayBackendConformanceKit` (run by `FakeRayBackendTest` and opt-in `MetalRayBackendTest`) or `RayMaterialTest`.
+and fog. The Metal backend renders it with the `rayScene` kernel and the Vulkan backend with the equivalent compute
+shader `src/main/glsl/scene.comp`; both read the same payload (`RaySceneEncoding`). The fake backend renders the same
+semantics on the CPU (`RaySceneReferenceRenderer`, test-only). Each documented rule below is pinned by a case in
+`RayBackendConformanceKit` (run by `FakeRayBackendTest` and the opt-in `MetalRayBackendTest` and `VulkanRayBackendTest`)
+or `RayMaterialTest`.
 
 - **Materials and lights.** Default, PBR and terrain-splat materials use the raster shaders' linear conventions, and
   point/spot lights keep their range and cone attenuation (`defaultSceneMaterialMatchesRasterReference`,
@@ -139,7 +141,7 @@ re-encoded only when it, or the geometry, changed (`shadingUnchanged`). The plug
 Bounds, all explicit fallbacks through `RaySceneSnapshot.unsupportedReason()` rather than silent omission:
 32 MiB of triangle input per session (`RAY_MAX_GEOMETRY_BYTES`, positions plus 32-bit indices;
 `geometryOverTheMemoryBudgetIsRejectedAndTheSessionStaysUsable`), 128 materials, 128 textures, 12 lights and 32 blended
-instances, and the backend's own instance and mesh capacity (`RayCapabilities.maxInstances`: 1024 on Metal, 128 on
+instances, and the backend's own instance and mesh capacity (`RayCapabilities.maxInstances`: 1024 on Metal and on
 Vulkan; `scenesPastTheOldInstanceCapRenderWithTheBackendsOwnCapacity`, `manyDistinctMeshesPastTheOldCapAreBuiltAndHit`). Native builds are also bounded by the smaller of 512 MiB and a quarter of the Metal device's recommended
 working set. A scene's shading payload is up to 16M floats (64 MiB: materials, normals, UVs, float textures such as an HDR
 sky) followed by up to 16M RGBA8 texels (64 MiB). Ordinary image textures are `RayTexture`s built from bytes and stay
@@ -170,9 +172,11 @@ Defaults cap dimensions at 4096, pixels at 4,194,304, retained frame/presentatio
 payload at 128 MiB (80 bytes/pixel), samples at 8 per batch and 256 per accumulation
 epoch, and worst-case ray count at 2,097,152 per batch. The adapter supplies primary,
 visibility and reflection ray cost per sample; scene/native allocations are budgeted
-separately. If even the half-resolution floor exceeds a hard limit, the policy throws
-`RayQualityLimitException` for explicit view fallback. It never silently lowers that
-floor. Scene/camera/pose/content changes or internal resolution changes start a new
+separately. The ray count is a soft budget: when a view costs more rays per pixel than it
+allows (a window with a dozen lights), the frame stays at the half-resolution floor with
+one sample rather than refusing the view. If even that floor exceeds a hard limit
+(dimension, pixel or memory), the policy throws `RayQualityLimitException` for explicit
+view fallback. It never silently lowers that floor. Scene/camera/pose/content changes or internal resolution changes start a new
 accumulation epoch. At its sample cap, unchanged work stops until quality or inputs
 change.
 
@@ -230,16 +234,25 @@ A device qualifies from measured features, never from its name: Vulkan 1.2, `buf
 `VK_KHR_ray_query`, a compute queue, and storage-image support for `R16G16B16A16_SFLOAT` (color) and
 `R32_SFLOAT` (depth). The per-device reason is in the `Unavailable.detail` text.
 
-Memory comes from VMA. Bottom-level structures are built once per mesh and survive transform-only
+Memory comes from VMA. A scene frame uploads the payload only when materials, lights, environment, fog, mesh
+attributes or textures changed, and rebuilds only the structures of meshes whose vertices changed (a re-skinned model keeps
+its other structures); transform-only frames rewrite the top-level instances alone. Instance masks keep alpha-blended
+surfaces out of shadow and reflection rays. Color is written as `R16G16B16A16_SFLOAT`, so the conformance kit allows
+`VulkanRayBackendTest.colorStorageError` (2^-10 of the value) on top of its absolute color tolerances; depth stays 32-bit. Bottom-level structures are built once per mesh and survive transform-only
 submissions; the top-level structure is rebuilt in each frame's command buffer. Frames are split into
 dispatches of at most 2^19 rays, each in its own command buffer, so no single submission approaches a
 driver timeout. Completion is polled with a fence from the owner worker; `submit` and `poll` never wait.
 Geometry upload and session disposal do wait on the owner worker. After `VK_ERROR_DEVICE_LOST` teardown skips
 every wait. A loss injected through `RayDeviceHealth` leaves the device healthy, so teardown still waits.
 
-The shader is `src/main/glsl/slice.comp`, compiled to SPIR-V at build time by the `compileSpirv` task
-into `native/vulkan/slice.spv`. No `lwjgl-shaderc` is packaged. The task uses `glslangValidator` or `glslc`
-from `PATH` (or `-Pabyssus.glslc=/path/to/tool`). Without either it warns and ships no SPIR-V, and the backend
+There are two shaders. `src/main/glsl/slice.comp` is the feasibility slice (primary visibility, one directional shadow ray,
+one mirror bounce); `src/main/glsl/scene.comp` is the full scene renderer of `RaySceneRequest`, a line-for-line port of the
+Metal `rayScene` kernel. The `compileSpirv` task builds them into `native/vulkan/slice.spv` and `native/vulkan/scene.spv`,
+unoptimized (`-O` inlines the shading code tenfold and drivers optimize SPIR-V themselves). Both pipelines share one
+descriptor layout: the acceleration structure, instance, vertex and index buffers, the two output images, the camera
+uniform and, for the scene shader, the scene payload bound twice (bindings 7 and 8: the floats, and the RGBA8 texels that
+follow them in the same buffer). The slice shader ignores bindings 7 and 8. No `lwjgl-shaderc` is packaged. The task uses `glslangValidator` or `glslc` from `PATH`, then from `VULKAN_SDK/bin`, then from the Android NDK's
+`shader-tools` (under `ANDROID_HOME`, `ANDROID_SDK_ROOT` or `~/Android/Sdk`), or `-Pabyssus.glslc=/path/to/tool`. Without either it warns and ships no SPIR-V, and the backend
 then reports `INITIALIZATION_FAILED`; `-Pabyssus.requireShaders=true` (used by the release and CI builds) turns
 that into a build error.
 
@@ -249,14 +262,19 @@ that into a build error.
 ./gradlew :raytracing:test -Dabyssus.vulkanTests=true -Dabyssus.raytracing.validation=true
 ./gradlew :raytracing:verifyVulkanPackaging                   # jar-based; add -Dabyssus.vulkanTests=true to render
 ./gradlew :raytracing:verifyNativePackaging                   # Vulkan, plus Metal on a Mac
+./gradlew :raytracing:test --tests '*VulkanRayBackendTimingTest' -Dabyssus.vulkanTests=true -Dabyssus.vulkanTimingTests=true
+./gradlew :test --tests '*RayRealSceneTest' -Dabyssus.vulkanTests=true   # the fixture's Main Scene through the real backend
 ```
 
 `-Dabyssus.raytracing.validation=true` enables the Khronos validation layer (and `VK_EXT_debug_utils`) and
-makes `VulkanRayBackendTest` fail on any validation error. It is a developer flag and is never on by default.
+makes `VulkanRayBackendTest` fail on any validation error. It is a developer flag and is never on by default. It needs
+the `VK_LAYER_KHRONOS_validation` layer (Ubuntu: `vulkan-validationlayers`); a layer unpacked outside the system paths is
+found with `VK_LAYER_PATH` plus `LD_LIBRARY_PATH` pointing at its directory.
 `verifyVulkanPackaging` checks the SPIR-V in the jar, that no shaderc is on the runtime classpath, the
 `lwjgl-vma` natives for every target, MoltenVK for macOS only, and that a probe without a loader returns
 `RUNTIME_NOT_FOUND` (one JVM per test class, because LWJGL's library choice is process-global). Metal
 packaging moved to `verifyMetalPackaging`; `verifyNativePackaging` runs both where they apply.
 
 On a machine without a GPU, Mesa's software driver (lavapipe, `mesa-vulkan-drivers`) exposes ray queries and
-runs the whole suite: `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json`.
+runs the whole suite: `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json`. The first scene frame on a cold lavapipe
+compiles the shader on the CPU and can exceed the kit's 5 second wait once; rerun it.
