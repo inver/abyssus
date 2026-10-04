@@ -15,7 +15,7 @@ target, without failing.
 
 #### Scenario: Unreadable light
 
-- **WHEN** a light entity's component data cannot be read at all
+- **WHEN** a light entity's `LightComponent`, or its nested `light`, is present but is not a JSON object
 - **THEN** that light is skipped and the others still apply
 
 #### Scenario: Missing or malformed light values
@@ -31,7 +31,8 @@ target, without failing.
 The view SHALL light the scene with the same color, intensity, range, cone angle and edge softness that the Abyssus
 Properties panel shows for each light, including values the file omits. Omitted values SHALL be: intensity 1, color
 white when the `color` object is missing, 0 for a channel missing inside a present `color` object, range 100, cone angle
-45 and edge softness 0.2. Values nested under `light` and flat in the component SHALL be read alike.
+45 and edge softness 0.2. Values nested under `light` and flat in the component SHALL be read alike. The color's
+alpha channel SHALL NOT affect lighting, so a color that omits `a` lights the scene like one with `a` 1.
 
 #### Scenario: Stated values agree
 

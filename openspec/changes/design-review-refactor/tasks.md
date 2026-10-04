@@ -1,7 +1,7 @@
 # Tasks
 
 Phases 1, 3, 4, 5 and 7 change no behavior: the existing tests must pass unchanged, apart from moves and renames named
-in a task. Single plugin tests: `./gradlew :test --tests '<class>'`. Single `core` tests:
+in a task. Phase 8 changes no behavior either, but ports `SceneInteractionTest` to a fake `SceneQueries` (task 8.3). Single plugin tests: `./gradlew :test --tests '<class>'`. Single `core` tests:
 `./gradlew :core:test --tests '<class>'`.
 
 ## 1. Rule compliance and trivial duplicates (H2, D1, D3, D9, D11, D14, L2, L5, L6)
@@ -26,9 +26,12 @@ in a task. Single plugin tests: `./gradlew :test --tests '<class>'`. Single `cor
 - [ ] 1.5 Make `AssetReadResult` sealed (`Ok` / `Failed`) with `AssetReadResult.of(Result)`, and use it in
   `SceneReader` and `ProjectReader`. Update the callers in `AbyssusNodes` and `AssetReadCache`. Verify with
   `ProjectAssetsTest` and `RowTextTest`.
-- [ ] 1.6 Add `Throwable.displayMessage()` and use it in the 8 `message ?: javaClass.simpleName` sites. Remove
-  `WorldUtils` and keep the `Engine.getFromWorld` extension. Move `textOf` to `dto/` (L5). Make `SkyboxChoice` a plain
-  class (L2). Verify with `SkyboxChoicesTest`, `SkyboxChooserDialogTest`, `SystemsTest` and `./gradlew :test`.
+- [ ] 1.6 Add `Throwable.displayMessage()` and use it in every `message ?: javaClass.simpleName` site (18 in 13
+  files, including the terrain, ray and asset-file code; refresh the inventory with
+  `rg -n 'message \?: .*javaClass\.simpleName' src/main/kotlin core/src/main/kotlin`). Remove `WorldUtils` and keep
+  the `Engine.getFromWorld` extension; move `SceneEcsLoaderTest`'s `WorldUtils.getFromWorld` call onto the extension.
+  Move `textOf` to `dto/` (L5). Make `SkyboxChoice` a plain class (L2). Verify with `SkyboxChoicesTest`,
+  `SkyboxChooserDialogTest`, `SystemsTest`, `SceneEcsLoaderTest` and `./gradlew :test`.
 
 ## 2. One interpretation of component values (H1; spec `scene-entity-lights`)
 
@@ -105,6 +108,7 @@ in a task. Single plugin tests: `./gradlew :test --tests '<class>'`. Single `cor
   `SkyboxCube`, `ProceduralSky`, `HdrSky`, `HdrEnvironmentBuild` and `LoadingOverlay`. Reformat the `SkyboxCube`
   vertex array and make `CAMERA_HEIGHT` a file-level const. Verify with a `SkyGeometryTest` for the matrix (no GL),
   plus `./gradlew :test -Dabyssus.glTests=true --tests 'net.nevinsky.abyssus.sceneview.SceneRenderGlTest'`.
+  The code and `SkyGeometryTest` landed in f42624c; only the GL run remains before this box is ticked.
 - [ ] 4.5 Add `JsonFormat` in `core` and use it from `JsonProcessor` and `SceneJson`. Verify with `JsonProcessorTest`,
   `SceneJsonTest` and `SceneEditFormattingTest` (pretty output unchanged).
 
@@ -194,7 +198,9 @@ in a task. Single plugin tests: `./gradlew :test --tests '<class>'`. Single `cor
 - [ ] 9.2 Verify that `./gradlew check` passes (tests, `checkNoSingletons`, `checkNoRunCatching`, plugin verification),
   and that the GL tests pass with `-Dabyssus.glTests=true` on a machine with a display.
 - [ ] 9.3 Verify that `openspec validate design-review-refactor --strict` passes and that `docs/reviews/design-review-2026-10.md`
-  lists which findings this change closed (all but L1, L8 and the deferred number-text question).
+  lists which findings this change closed: all but L1 (Ashley code, a non-goal), L8 (`DtoEntry.equals`, which needs
+  its own tree-refresh decision) and the deferred number-text question. L9 (`scripts/check-docs.sh` failing) was
+  already fixed before this change; record it as closed elsewhere.
 - [ ] 9.4 Finish by running `./gradlew check` and `scripts/check-docs.sh` after all preceding edits and verification;
   report unrelated failures without silently fixing them. Confirm the runtime extraction change still follows this
   change, or update affected paths/test commands before applying if the order has changed.
