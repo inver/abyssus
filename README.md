@@ -12,7 +12,7 @@ Work on [Mundus](https://github.com/mbrlabs/Mundus) game projects in the IDE.
 - **Abyssus view**: a project tree of `.abss` projects, their scenes, entities and assets, with unused assets marked.
   Toggle scene options, rename scenes and choose a scene's skybox from the tree.
 - **Abyssus Properties**: the `meta.json` of the selected asset, with skybox face previews.
-- **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras. Select
+- **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
 <!-- Plugin description end -->
 
@@ -92,6 +92,16 @@ view's toolbar. Dragging a handle moves or rotates the object along that world a
 `PositionComponent` `localPosition` / `localRotation` (and a camera's `position` / `viewPointPosition`) to the scene
 file as one undoable edit, keeping the file's formatting. Esc cancels a drag. A camera aimed at a `lookAtId` entity
 and a point light have no rotate rings. Dragging anywhere else orbits or pans as usual.
+
+**Ray Tracing** (experimental, off by default) renders the scene on the GPU with ray traced shadows from every
+shadow-casting light, reflections on PBR materials (including geometry outside the picture), the scene's sky, fog and
+alpha-tested leaves and blended surfaces. It has no button in the Scene View: select a scene in the Abyssus view and tick
+**Ray Tracing** under *Rendering* in **Abyssus Properties**. That flips the open Scene View (opening it first if needed) and
+shows the status, the reason it is unavailable or failed, and **Retry**. It needs a GPU with hardware ray tracing: Apple
+silicon with Metal on macOS, or a Vulkan 1.2 device with ray queries on Windows and Linux. Where it is unavailable the switch
+is disabled and says why; if it fails, the view returns to the normal renderer. Selecting, moving and rotating objects, the
+camera and the gizmos work as usual, and the scene file is never written by switching it on or off.
+`-Dabyssus.raytracing.backend=off` disables it for the IDE session.
 
 **Add Light** in the toolbar creates a Directional light, Sun or Spot at the current orbit target and selects it.
 The same menu on a scene row places it at the origin; Spot sits 5 units above that point. A Sun starts warm and

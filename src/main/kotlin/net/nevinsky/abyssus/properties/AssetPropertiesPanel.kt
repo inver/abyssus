@@ -32,6 +32,9 @@ import net.nevinsky.abyssus.projectView.AbyssusSelectionListener
 import net.nevinsky.abyssus.projectView.DtoEntryNode
 import net.nevinsky.abyssus.projectView.assetFolderOf
 import net.nevinsky.abyssus.projectView.componentTargetOf
+import net.nevinsky.abyssus.projectView.viewableSceneFile
+import net.nevinsky.abyssus.projectView.describeNonAsset
+import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.assets.files.Asset
 import java.awt.BorderLayout
 import java.awt.CardLayout
@@ -55,7 +58,7 @@ import javax.swing.SwingConstants
  */
 class AssetPropertiesPanel(
     private val project: Project,
-    parent: Disposable,
+    private val parentDisposable: Disposable,
     private val background: (Runnable) -> Unit = { AppExecutorUtil.getAppExecutorService().execute(it) },
     private val ui: (Runnable) -> Unit = { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
 ) : JPanel(CardLayout()) {
@@ -67,6 +70,7 @@ class AssetPropertiesPanel(
     private var folder: VirtualFile? = null
     private var scene: VirtualFile? = null
     private var generation = 0
+    private var viewDisposable: Disposable? = null
     private var disposed = false
 
     /** What the panel currently shows. */
@@ -76,8 +80,8 @@ class AssetPropertiesPanel(
     init {
         add(content, DETAILS)
         add(empty, EMPTY)
-        project.messageBus.connect(parent).subscribe(AbyssusSelectionListener.TOPIC, AbyssusSelectionListener { show(it) })
-        project.messageBus.connect(parent).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
+        project.messageBus.connect(parentDisposable).subscribe(AbyssusSelectionListener.TOPIC, AbyssusSelectionListener { show(it) })
+        project.messageBus.connect(parentDisposable).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 if (events.any { touches(it.file) }) ui { if (!disposed) refresh() }
             }
@@ -86,8 +90,8 @@ class AssetPropertiesPanel(
             override fun documentChanged(event: DocumentEvent) {
                 if (touches(FileDocumentManager.getInstance().getFile(event.document))) refresh()
             }
-        }, parent)
-        Disposable { disposed = true }.also { com.intellij.openapi.util.Disposer.register(parent, it) }
+        }, parentDisposable)
+        Disposable { disposed = true }.also { com.intellij.openapi.util.Disposer.register(parentDisposable, it) }
         show(AbyssusSelection.of(project).current)
     }
 
@@ -117,7 +121,12 @@ class AssetPropertiesPanel(
             return
         }
         if (assetFolder == null) {
-            apply(if (node.isAssetRow()) emptyState(null) else emptyState(node))
+            val sceneFile = viewableSceneFile(node)?.takeIf { it.isValid && ProjectLayout.isScene(it) }
+            apply(when {
+                sceneFile != null -> PanelState.SceneDetails(sceneFile, describeNonAsset(node)?.first ?: sceneFile.name)
+                node.isAssetRow() -> emptyState(null)
+                else -> emptyState(node)
+            })
             return
         }
         background {
@@ -130,7 +139,16 @@ class AssetPropertiesPanel(
 
     private fun apply(newState: PanelState) {
         state = newState
+        // a scene's switch listens to the Scene views while it is shown; the listener goes with the view
+        viewDisposable?.let(com.intellij.openapi.util.Disposer::dispose)
+        viewDisposable = null
         when (newState) {
+            is PanelState.SceneDetails -> {
+                val own = com.intellij.openapi.util.Disposer.newDisposable(parentDisposable, "scene-details").also { viewDisposable = it }
+                content.removeAll()
+                content.add(JBScrollPane(SceneDetailsView(project.getService(net.nevinsky.abyssus.sceneview.SceneRayControls::class.java), newState, own)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
+                cards.show(this, DETAILS)
+            }
             is PanelState.Empty -> {
                 fillEmpty(newState)
                 cards.show(this, EMPTY)
