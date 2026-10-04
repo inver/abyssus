@@ -43,7 +43,7 @@
           "PositionComponent": {
             "localPosition": {
               "x": -3.035308,
-              "y": 1.358942,
+              "y": 0.9123962,
               "z": -3.2570944
             }
           },
@@ -121,7 +121,7 @@
             },
             "localPosition": {
               "x": -5.250234,
-              "y": 1.198564,
+              "y": 2.462766,
               "z": 6.35708
             }
           },
@@ -157,19 +157,7 @@
               "r": 3
             }
           },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 0.0,
-              "y": 5.520455,
-              "z": 0.0
-            },
-            "localRotation": {
-              "x": 0.5361572,
-              "y": 0.0,
-              "z": 0.0,
-              "w": -0.8441181
-            }
-          },
+          "PositionComponent": {},
           "RenderComponent": {
             "renderable": {
               "class": "com.mbrlabs.mundus.editor.ui.ecs.handle.DirectionHandleRenderDelegate"
@@ -273,7 +261,7 @@
           "PositionComponent": {
             "localPosition": {
               "x": 9.440927,
-              "y": 5.7798624E-4,
+              "y": 0.0,
               "z": 0.0
             },
             "localRotation": {
@@ -301,62 +289,21 @@
       "7": {
         "archetype": 4,
         "components": {
+          "NameComponent": {
+            "name": "Directional Light 7"
+          },
           "TypeComponent": {
             "type": "LIGHT_DIRECTIONAL"
           },
           "PositionComponent": {
             "localRotation": {
-              "x": 0.25881892,
-              "w": -0.9659259
+              "x": 0.38268328,
+              "w": -0.9238796
             },
             "localPosition": {
               "x": -4.6727066,
-              "y": 27.86097,
-              "z": 3.0736215
-            }
-          },
-          "LightComponent": {
-            "light": {
-              "color": {
-                "r": 1,
-                "g": 0.96,
-                "b": 0.84,
-                "a": 1
-              },
-              "intensity": 1.2
-            }
-          }
-        }
-      },
-      "8": {
-        "archetype": 4,
-        "components": {
-          "NameComponent": {
-            "name": "Spot Light 8"
-          },
-          "TypeComponent": {
-            "type": "LIGHT_SPOT"
-          },
-          "PositionComponent": {
-            "localRotation": {
-              "x": 0.70710677,
-              "w": -0.70710677
-            },
-            "localPosition": {
-              "x": -4.6727066,
-              "y": 15.727754,
-              "z": -2.7157028
-            }
-          },
-          "LightComponent": {
-            "light": {
-              "color": {
-                "r": 1,
-                "g": 1,
-                "b": 1,
-                "a": 1
-              },
-              "intensity": 1
+              "y": 6.4600496,
+              "z": 16.883846
             }
           }
         }

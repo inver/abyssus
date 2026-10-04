@@ -23,6 +23,72 @@ probed when ray tracing is switched on, once per IDE session, and `-Dabyssus.ray
 on the next explicit Retry. The backend owns one device and queue, and each view gets its own session (scene structures,
 command pools, output images) that is disposed on the owner worker.
 
+### A scene file to the scene view
+
+1. `SceneFileEditor` reads the scene and its project's `mainCamera` through `SceneParamsSource.EDITOR_TEXT`. It uses
+   the unsaved editor text when there is any. It re-reads on every document or VFS change of those files.
+2. `SceneRenderParams.from` → `SceneContent.of` turns the `ecs` JSON into placements: `models`, `terrains`,
+   `lights`, `cameras`, plus the skybox name. The view reads the JSON directly; it does not use the `ecs` package.
+   A light's or camera's direction resolves its `PositionComponent.lookAtId` to an entity's `localPosition` when that
+   target exists and is not at the entity itself; otherwise it uses the entity's `localRotation`. `handleIds` records
+   the `HANDLE` entities that a light may be aimed at.
+3. `SceneViewPanel` hosts a `GuardedGLCanvas`. A Swing `Timer` renders frames through
+   `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each holding a
+   `core` `SceneAssets` from `AssetLoading`, backed by an `AssetCache`) and draws markers (`SceneMarkers`) and gizmos
+   (`sceneview/gizmo/`).
+4. An HDR sky also lights the content. `core`'s `HdrSkyLoader` decodes the `.hdr` on the pool thread, then
+   `HdrEnvironmentBuild` builds a specular cube, an irradiance cube and six axis colors on the GPU, one step per
+   frame. Once built, `SceneSkybox.environment` hands them to `SceneRenderer`, which (`SceneAmbient.of`) swaps
+   `ColorAttribute.AmbientLight` for `gdx-model`'s `EnvironmentLightAttribute` after drawing the grid: the PBR shader
+   samples both cubes, the default shader takes the six colors as its ambient cubemap, and `TerrainShader` samples the
+   irradiance cube. Without a built HDR sky the content is lit by the ambient color exactly as before.
+5. `SceneShadows` captures model and terrain renderables after their single animation/transform update, then draws
+   bounded depth tiles before the color passes. Its per-canvas `ShadowResources` restores framebuffer and render
+   state and falls back to direct lighting if allocation or depth rendering fails. Default/PBR models and terrain
+   apply atlas visibility per light; ambient, HDR and emissive terms remain independent. The 4096-square atlas supports sixteen views,
+   shared by one directional, two six-face point and three spot shadows; small sets use larger tiles. Resources use the same
+   safe AWT context lifecycle as assets, including CPU-only abandonment after context loss. See
+   `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for fitting, budgets, sampler units and material limits.
+
+### Clicks, drags and writes
+
+- **Mouse and keys:** `SceneInteraction` handles them. A click picks (`ScenePicker` over model bounds, terrain
+  heights and marker bounds). It selects in the view, and `selectEntityInAbyssusView` selects the entity's row in
+  the tree.
+- **Drags:** a drag on a gizmo handle runs a `GizmoDrag`, and `ScenePreview` shows the result live. Esc cancels.
+  Any other drag orbits or pans `OrbitCamera`.
+- **Drop:** the toolbar button or D calls `SceneInteraction.drop`. `ScenePicker.restHeight` queries the highest
+  surface under the selection's oriented-box footprint, using box tops and transformed bilinear terrain cells.
+  It moves only Y, previews the result, and uses the same `applyTransform` callback and Move Entity command as a
+  move drag. No surface or an already-resting object produces no edit. `drawnVersion` triggers an availability
+  re-check after loading changes, outside the GL context. New scene params also invalidate the next frame's query
+  so changed transforms and Undo update availability even when the drawn entity ids stay the same.
+- **On release:** `SceneFileEditor.applyTransform` calls `editSceneJson` with
+  `SceneTransformWriter.apply`, which writes only the changed `localPosition` / `localRotation`, plus the camera's
+  `position` / `viewPointPosition`. The document change triggers the re-read above.
+- **Undo:** `SceneFileEditor` is a `DocumentReferenceProvider`, so Undo in the scene view tab reaches these edits.
+- **Look-through:** the camera selector in the toolbar renders from a camera entity instead of the orbit camera.
+  Orbit, pan and zoom pause while it is active.
+
+### Every write
+
+The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) all go through `editSceneJson`
+(`projectView/EnabledToggle.kt`):
+
+1. Parse the document with `SceneJson`.
+2. Mutate the tree.
+3. Re-serialize with `SceneJson.inStyleOf`, which keeps indentation, key order and number text.
+4. Replace the text in a `WriteCommandAction` and save.
+5. Refresh the Abyssus pane.
+
+### The `ecs` package
+
+`SceneEcsLoader` reads a scene's `ecs` block into an Ashley `SceneEngine`, through one `ComponentCodec` per modeled
+component. Components it doesn't model are carried raw. `SceneEcsWriter` writes the engine back in Mundus' format.
+Systems are in `ecs/system/Systems.kt`. Only tests use the loader, writer and systems today; `ComponentEditor` is used by
+the plugin: it adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
+checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the properties panel and the tree actions. See
+`src/main/kotlin/net/nevinsky/abyssus/ecs/README.md`.
 Per frame, on the EDT, `RayViewFeed` reads the renderer's current preview-applied content, camera, lights and animation
 poses (`RayModelPoses`), freezes them into a job and offers it to a one-slot mailbox; a converter thread turns the newest
 job into an immutable `RaySceneSnapshot` (`RaySceneSnapshots`, including CPU skin deformation) and offers it to the view's
