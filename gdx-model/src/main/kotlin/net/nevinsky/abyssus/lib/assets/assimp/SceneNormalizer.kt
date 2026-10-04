@@ -5,7 +5,8 @@
 
 package net.nevinsky.abyssus.lib.assets.assimp
 
-import org.slf4j.LoggerFactory
+import org.slf4j.Logger
+import net.nevinsky.abyssus.core.ModelLogging
 
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.math.Matrix4
@@ -17,7 +18,7 @@ import org.lwjgl.assimp.Assimp
 import java.nio.ByteOrder
 import kotlin.math.abs
 
-private val log = LoggerFactory.getLogger(SceneNormalizer::class.java)
+private val log: Logger get() = ModelLogging.logger
 
 /**
  * Brings a scene into the coordinate system of the engine: Y up, X right, Z towards the viewer. Importers like the

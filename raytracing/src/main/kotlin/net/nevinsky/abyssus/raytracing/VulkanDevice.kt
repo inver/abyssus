@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.raytracing
 
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
 import org.lwjgl.PointerBuffer
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
@@ -58,7 +60,7 @@ internal fun loadVulkanLibrary() = synchronized(VulkanInstance::class.java) {
 }
 
 /** Headless instance: no surface or window extensions. Portability enumeration is enabled only when offered (MoltenVK). */
-internal class VulkanInstance(validation: Boolean) : AutoCloseable {
+internal class VulkanInstance(validation: Boolean, private val log: Logger = NOPLogger.NOP_LOGGER) : AutoCloseable {
     val instance: VkInstance
     private val messenger: Long
     private val portability: Boolean
@@ -73,6 +75,7 @@ internal class VulkanInstance(validation: Boolean) : AutoCloseable {
             val layers = instanceLayers(stack)
             portability = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME in extensions
             validationActive = validation && VALIDATION_LAYER in layers && VK_EXT_DEBUG_UTILS_EXTENSION_NAME in extensions
+            if (validation && !validationActive) log.warn("Vulkan validation was requested but the $VALIDATION_LAYER layer or VK_EXT_debug_utils is not available")
             val enabled = mutableListOf<String>()
             if (portability) enabled += VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
             if (validationActive) enabled += VK_EXT_DEBUG_UTILS_EXTENSION_NAME
@@ -85,11 +88,14 @@ internal class VulkanInstance(validation: Boolean) : AutoCloseable {
             val handle = stack.mallocPointer(1)
             vkCheck(vkCreateInstance(create, null, handle), "vkCreateInstance")
             instance = VkInstance(handle[0], create)
+            log.info("Vulkan instance created (validation ${if (validationActive) "on" else "off"}, portability ${if (portability) "on" else "off"})")
             if (validationActive) {
                 callback = VkDebugUtilsMessengerCallbackEXT.create { severity, _, data, _ ->
+                    val text = VkDebugUtilsMessengerCallbackDataEXT.create(data).pMessageString() ?: "validation message"
                     if (severity and VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT != 0) {
-                        validationMessages += VkDebugUtilsMessengerCallbackDataEXT.create(data).pMessageString() ?: "validation error"
-                    }
+                        validationMessages += text
+                        log.warn("Vulkan validation error: $text")
+                    } else log.warn("Vulkan validation warning: $text")
                     VK_FALSE
                 }
                 val info = VkDebugUtilsMessengerCreateInfoEXT.calloc(stack).sType(VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT)
@@ -118,7 +124,13 @@ internal class VulkanInstance(validation: Boolean) : AutoCloseable {
         var reason: String? = null
         for (i in 0 until count[0]) {
             val result = evaluate(stack, VkPhysicalDevice(devices[i], instance))
-            result.first?.let { candidates += it } ?: run { reason = reason ?: result.second }
+            result.first?.let {
+                candidates += it
+                log.info("Vulkan device '${it.name}' qualifies (${if (it.discrete) "discrete" else "integrated or software"}, ${it.capabilities})")
+            } ?: run {
+                reason = reason ?: result.second
+                log.info("Vulkan device rejected: ${result.second}")
+            }
         }
         candidates.sortedByDescending { it.discrete }.firstOrNull() to reason
     }
@@ -159,6 +171,7 @@ internal class VulkanInstance(validation: Boolean) : AutoCloseable {
                 colorDepthReadback = family >= 0 && formats,
                 maxFrameDimension = minOf(limits.maxImageDimension2D(), 4096),
                 memoryBudgetBytes = heap / 2,
+                maxInstances = VULKAN_MAX_INSTANCES,
             )
             val unavailable = capabilities.unavailableReason()
             if (unavailable != null) return null to "$name: ${unavailable.name.lowercase()}"
@@ -201,25 +214,38 @@ internal class VulkanInstance(validation: Boolean) : AutoCloseable {
     private fun deviceExtensions(stack: MemoryStack, physical: VkPhysicalDevice): Set<String> {
         val count = stack.ints(0)
         vkEnumerateDeviceExtensionProperties(physical, null as CharSequence?, count, null)
-        val properties = VkExtensionProperties.calloc(count[0], stack)
-        vkEnumerateDeviceExtensionProperties(physical, null as CharSequence?, count, properties)
-        return (0 until count[0]).map { properties[it].extensionNameString() }.toSet()
+        // Driver-defined count: NVIDIA lists enough extensions to overflow the 64 KB thread stack, so allocate on the heap.
+        val properties = VkExtensionProperties.calloc(count[0])
+        try {
+            vkEnumerateDeviceExtensionProperties(physical, null as CharSequence?, count, properties)
+            return (0 until count[0]).map { properties[it].extensionNameString() }.toSet()
+        } finally {
+            properties.free()
+        }
     }
 
     private fun instanceExtensions(stack: MemoryStack): Set<String> {
         val count = stack.ints(0)
         vkEnumerateInstanceExtensionProperties(null as CharSequence?, count, null)
-        val properties = VkExtensionProperties.calloc(count[0], stack)
-        vkEnumerateInstanceExtensionProperties(null as CharSequence?, count, properties)
-        return (0 until count[0]).map { properties[it].extensionNameString() }.toSet()
+        val properties = VkExtensionProperties.calloc(count[0])
+        try {
+            vkEnumerateInstanceExtensionProperties(null as CharSequence?, count, properties)
+            return (0 until count[0]).map { properties[it].extensionNameString() }.toSet()
+        } finally {
+            properties.free()
+        }
     }
 
     private fun instanceLayers(stack: MemoryStack): Set<String> {
         val count = stack.ints(0)
         vkEnumerateInstanceLayerProperties(count, null)
-        val properties = VkLayerProperties.calloc(count[0], stack)
-        vkEnumerateInstanceLayerProperties(count, properties)
-        return (0 until count[0]).map { properties[it].layerNameString() }.toSet()
+        val properties = VkLayerProperties.calloc(count[0])
+        try {
+            vkEnumerateInstanceLayerProperties(count, properties)
+            return (0 until count[0]).map { properties[it].layerNameString() }.toSet()
+        } finally {
+            properties.free()
+        }
     }
 
     override fun close() {

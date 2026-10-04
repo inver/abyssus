@@ -53,6 +53,7 @@ internal class RayViewRuntime<T> internal constructor(
     /** Scene conversion can request whole-view fallback before any native submission is made. */
     fun fail(detail: String?) {
         if (closed.get() || !mode.requested) return
+        service.noteFallback(this, detail)
         mode.failed(mode.snapshot.revision, detail)
         clearPublication()
         service.deactivate(this)

@@ -18,7 +18,7 @@ libGDX tool or test that has a project folder and a GL context. Root package `ne
 
 | Package | What |
 |---|---|
-| `assets` | `AssetLoading` (the composition root), `AssetLog` (where problems go), `ShaderSource` (GLSL from a resource folder), `AssetLayout` constants, `runCatchingKeepingCancellation` |
+| `assets` | `AssetLoading` (the composition root), an SLF4J `Logger` (where progress and problems go), `ShaderSource` (GLSL from a resource folder), `AssetLayout` constants, `runCatchingKeepingCancellation` |
 | `assets.files` | `AssetFiles` (an asset folder's files and `meta.json`), `MetaBase`, `MetaType`, `Asset`, `TerrainFiles` |
 | `assets.json` | `JsonProcessor` (binds native JSON) and `JsonNode` helpers |
 | `assets.loading` | `AssetLoader` (prepare / upload / build / discard), `AssetCache` (load once, fail once, slice GPU work per frame), `SceneAssets` (a cache per project folder) |
@@ -34,7 +34,7 @@ Sky shaders are in `src/main/resources/shader/sky/`.
 ## Use
 
 ```kotlin
-val loading = AssetLoading(JsonProcessor(), AssetLog { message, error -> println(message) }, executor,
+val loading = AssetLoading(JsonProcessor(), org.slf4j.LoggerFactory.getLogger("assets"), executor,
     ShaderSource("/shader/sky", AssetLoading::class.java))
 val models = loading.assets(loading.models)    // one per scene view: owns its caches
 models.update(projectDir, setOf("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"))  // once per frame, GL current

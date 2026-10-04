@@ -5,7 +5,7 @@
 package net.nevinsky.abyssus.physics.play
 
 import com.badlogic.ashley.core.EntitySystem
-import net.nevinsky.abyssus.assets.AssetLog
+import org.slf4j.Logger
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.physics.PHYSICS_STEP
@@ -45,7 +45,7 @@ class PlayHost(
     private val input: DataInputStream,
     private val output: DataOutputStream,
     private val module: PlayModule,
-    private val log: AssetLog,
+    private val log: Logger,
     private val natives: JoltNatives = JoltNatives(),
     private val protocol: PlayProtocol = PlayProtocol(),
     private val clock: () -> Long = System::nanoTime,
@@ -124,7 +124,7 @@ class PlayHost(
             }
             PlayFrame.Stop -> endSession()
             is PlayFrame.Input -> module.input(command.event)
-            else -> log.warn("Unexpected frame from the IDE: $command", null)
+            else -> log.warn("Unexpected frame from the IDE: $command")
         }
     }
 

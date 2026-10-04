@@ -49,11 +49,25 @@ class RayQualityPolicyTest {
         assertThrows(IllegalArgumentException::class.java) { RayQualityLimits(minimumScale = Double.NaN) }
     }
 
-    @Test fun secondaryVisibilityAndReflectionRayCostAlsoFitsThePerFrameBudget() {
+    @Test fun secondaryVisibilityAndReflectionRayCostFitsThePerFrameBudgetWhenTheFrameCanShrink() {
         val policy = RayQualityPolicy()
         repeat(20) { policy.observe(1_000_000L) }
         val plan = policy.choose(1280, 720, 20, raysPerSample = 8)
         assertTrue(plan.width.toLong() * plan.height * plan.samples * 8 <= 2_097_152)
-        assertThrows(RayQualityLimitException::class.java) { policy.choose(1280, 720, 0, raysPerSample = 16) }
+    }
+
+    @Test fun anOverBudgetRayCostShrinksToTheMinimumFrameInsteadOfRefusingTheView() {
+        // 12 lights plus a primary and a reflection ray is 14 rays per pixel: a 1920x1080 view at the minimum scale needs
+        // 29M rays, far over the 2M budget. The view must still render, at the minimum resolution with one sample.
+        val policy = RayQualityPolicy()
+        for (stable in listOf(0, 20)) {
+            val plan = policy.choose(1920, 1080, stable, raysPerSample = 14)
+            assertEquals(960, plan.width)
+            assertEquals(540, plan.height)
+            assertEquals(1, plan.samples)
+        }
+        // hard bounds still refuse: a frame that cannot be allocated is not a soft limit
+        assertThrows(RayQualityLimitException::class.java) { RayQualityPolicy(RayQualityLimits(maxDimension = 400)).choose(1920, 1080, 0, raysPerSample = 14) }
+        assertThrows(RayQualityLimitException::class.java) { RayQualityPolicy(RayQualityLimits(frameMemoryBytes = 1_000_000)).choose(1920, 1080, 0) }
     }
 }

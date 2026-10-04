@@ -14,7 +14,6 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import net.nevinsky.abyssus.assets.AssetLoading
-import net.nevinsky.abyssus.assets.AssetLog
 import net.nevinsky.abyssus.assets.ShaderSource
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.json.JsonProcessor
@@ -33,6 +32,7 @@ import net.nevinsky.abyssus.games.controlline.screens.GameUi
 import net.nevinsky.abyssus.physics.PhysicsAssets
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
+import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -46,10 +46,8 @@ private val SLACK_LINE = Color(0.5f, 0.5f, 0.5f, 1f)
  * asset preparation runs on [executor]. Scores are kept in [scoresFile].
  */
 class ControlLineGame(private val project: Path, private val scoresFile: Path) : ApplicationAdapter() {
-    private val log = AssetLog { message, error ->
-        System.err.println(message)
-        error?.printStackTrace()
-    }
+    /** Problems go to stderr through `physics`'s slf4j-simple binding. */
+    private val log = LoggerFactory.getLogger("control-line")
     private val executor: ExecutorService = Executors.newFixedThreadPool(2) { r -> Thread(r, "asset-prepare").apply { isDaemon = true } }
     private val natives = JoltNatives()
     private val input = HandleInput()

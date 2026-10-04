@@ -39,7 +39,7 @@ class DiskMetaText : MetaTextSource {
  * been added, removed or renamed, make a new instance ([refreshed]). Metadata is read through [metaText], so a caller
  * can substitute text that is not on disk yet (unsaved editor content) with an immutable snapshot.
  */
-class AssetFiles(projectDir: File, private val json: JsonProcessor, private val metaText: MetaTextSource = DiskMetaText(), private val log: net.nevinsky.abyssus.assets.AssetLog = net.nevinsky.abyssus.assets.AssetLog { _, _ -> }) {
+class AssetFiles(projectDir: File, private val json: JsonProcessor, private val metaText: MetaTextSource = DiskMetaText(), private val log: org.slf4j.Logger = org.slf4j.helpers.NOPLogger.NOP_LOGGER) {
     val projectDir: File = projectDir.absoluteFile
 
     private val assetsDir = File(this.projectDir, ASSETS_DIR)

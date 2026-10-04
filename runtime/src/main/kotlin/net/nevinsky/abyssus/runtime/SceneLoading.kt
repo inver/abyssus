@@ -5,7 +5,6 @@
 package net.nevinsky.abyssus.runtime
 
 import net.nevinsky.abyssus.assets.ASSETS_DIR
-import net.nevinsky.abyssus.assets.AssetLog
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.runtime.ecs.EcsConfigurator
@@ -18,6 +17,11 @@ import net.nevinsky.abyssus.runtime.scene.SceneParser
 import net.nevinsky.abyssus.runtime.schema.ComponentRegistrationException
 import net.nevinsky.abyssus.runtime.schema.ComponentRegistry
 import net.nevinsky.abyssus.runtime.schema.GameComponents
+import org.slf4j.Logger
+import org.slf4j.Marker
+import org.slf4j.event.Level
+import org.slf4j.helpers.LegacyAbstractLogger
+import org.slf4j.helpers.MessageFormatter
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -27,7 +31,7 @@ import java.nio.file.Path
  */
 class SceneLoading(
     private val json: JsonProcessor,
-    private val log: AssetLog,
+    private val log: Logger,
     private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat(),
     registry: ComponentRegistry = ComponentRegistry { emptyList() },
 ) {
@@ -63,7 +67,7 @@ class SceneLoading(
     /** Failures are logged once and returned as null, allowing other scene files to load. */
     fun load(scene: Path): LoadedScene? = reported(scene.toString()) {
         val path = scene.toAbsolutePath()
-        loadParsed(Files.readString(path), path.parent.parent, AssetLog { message, error -> log.warn("$scene: $message", error) })
+        loadParsed(Files.readString(path), path.parent.parent, Prefixed(log, "$scene: "))
     }
 
     /** Uses caller-supplied text, including unsaved edits; never reads or writes a scene file. */
@@ -71,7 +75,7 @@ class SceneLoading(
         loadParsed(text, projectDir)
     }
 
-    private fun loadParsed(text: String, dir: Path, sceneLog: AssetLog = log): LoadedScene {
+    private fun loadParsed(text: String, dir: Path, sceneLog: Logger = log): LoadedScene {
         val scene = parse(text)
         val assets = dir.resolve(ASSETS_DIR)
         val names = if (Files.isDirectory(assets)) Files.list(assets).use { paths ->
@@ -89,3 +93,21 @@ class SceneLoading(
 }
 
 private data class ProjectName(val name: String? = null)
+
+/** [delegate] with [prefix] (the scene's path) before every message. */
+private class Prefixed(private val delegate: Logger, private val prefix: String) : LegacyAbstractLogger() {
+    init {
+        name = delegate.name
+    }
+
+    override fun isTraceEnabled() = delegate.isTraceEnabled
+    override fun isDebugEnabled() = delegate.isDebugEnabled
+    override fun isInfoEnabled() = delegate.isInfoEnabled
+    override fun isWarnEnabled() = delegate.isWarnEnabled
+    override fun isErrorEnabled() = delegate.isErrorEnabled
+    override fun getFullyQualifiedCallerName(): String? = null
+
+    override fun handleNormalizedLoggingCall(level: Level, marker: Marker?, messagePattern: String?, arguments: Array<out Any?>?, throwable: Throwable?) {
+        delegate.atLevel(level).setCause(throwable).log(prefix + MessageFormatter.basicArrayFormat(messagePattern, arguments))
+    }
+}

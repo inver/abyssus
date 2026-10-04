@@ -45,14 +45,23 @@ class RayRealSceneTest {
         assertNull("the whole-view fallback must not trigger for the fixture scene", scene.unsupportedReason())
         assertTrue("the scene is bigger than the old 128-instance cap", scene.instances.size > 128)
         assertTrue("its textures stay as bytes", scene.textures.isNotEmpty() && scene.textures.all { it.isBytes })
-        assertTrue(scene.instances.size <= METAL_INSTANCE_CAPACITY)
+        assertTrue(scene.instances.size <= RAY_INSTANCE_CAPACITY)
     }
 
     @Test fun theFixtureSceneRendersThroughTheRealMetalBackend() {
         assumeTrue(System.getProperty("abyssus.metalTests") == "true" && System.getProperty("os.name").startsWith("Mac"))
+        renderThrough(MetalRayBackendFactory())
+    }
+
+    @Test fun theFixtureSceneRendersThroughTheRealVulkanBackend() {
+        assumeTrue(System.getProperty("abyssus.vulkanTests") == "true")
+        renderThrough(VulkanRayBackendFactory())
+    }
+
+    private fun renderThrough(provider: RayBackendProvider) {
         val frame = snapshot()
-        val result = MetalRayBackendFactory().probe()
-        assumeTrue("Metal ray tracing is not available here: $result", result is RayCapability.Available)
+        val result = provider.probe()
+        assumeTrue("Ray tracing is not available here: $result", result is RayCapability.Available)
         (result as RayCapability.Available).backend.use { backend ->
             backend.openSession("real-scene", RayLimits(maxInstances = backend.capabilities.maxInstances)).use { session ->
                 session.submit(RaySceneRequest(RayFrameKey(1, 1, 1, 1), 160, 90, frame.camera.rayCamera(), frame.scene))
@@ -60,12 +69,20 @@ class RayRealSceneTest {
                 var rendered: RayFrame? = null
                 while (rendered == null && System.nanoTime() < deadline) { rendered = session.poll(); Thread.sleep(2) }
                 val image = checkNotNull(rendered) { "the real scene did not render within 30 seconds" }
-                assertTrue("something of the scene is hit", image.depthValues().any { it < 1f })
-                assertTrue("the frame is not a single colour", image.colorValues().toSet().size > 8)
+                val colors = image.colorValues()
+                val summary = "${colors.toSet().size} distinct values in [${colors.min()}, ${colors.max()}], ${image.depthValues().count { it < 1f }} of ${image.depthValues().size} pixels hit"
+                assertTrue("something of the scene is hit: $summary", image.depthValues().any { it < 1f })
+                // not a fixture-specific colour count: the scene's pixels must differ from the background's, and nothing may be flat zero
+                val depth = image.depthValues()
+                val sceneColor = colors.copyOfRange(4 * depth.indexOfFirst { it < 1f }, 4 * depth.indexOfFirst { it < 1f } + 3)
+                val background = depth.indexOfFirst { it >= 1f }
+                assertTrue("the scene is not drawn in one flat colour: $summary", colors.toSet().size > 1)
+                if (background >= 0) assertFalse("scene and background look the same: $summary", sceneColor.contentEquals(colors.copyOfRange(4 * background, 4 * background + 3)))
                 assertTrue(image.colorValues().all { it.isFinite() })
             }
         }
     }
 
-    private companion object { const val METAL_INSTANCE_CAPACITY = 1024 }
+    /** Metal and Vulkan both hold this many instances per session. */
+    private companion object { const val RAY_INSTANCE_CAPACITY = 1024 }
 }

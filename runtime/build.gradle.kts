@@ -15,6 +15,7 @@ dependencies {
     api(project(":core"))
     api("com.badlogicgames.ashley:ashley:1.7.4")
     testImplementation("junit:junit:4.13.2")
+    testImplementation(testFixtures(project(":core")))
 }
 
 java {

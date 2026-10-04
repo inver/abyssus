@@ -288,7 +288,7 @@ class RenderCodec(private val resolver: AssetResolver, private val warnings: Sce
  */
 class ComponentCodecs(
     resolver: AssetResolver = AssetResolver { _, _ -> null },
-    warnings: SceneEcsWarnings = SceneEcsWarnings(net.nevinsky.abyssus.assets.AssetLog { _, _ -> }),
+    warnings: SceneEcsWarnings = SceneEcsWarnings(org.slf4j.helpers.NOPLogger.NOP_LOGGER),
     game: GameComponents = GameComponents(),
 ) {
     val all: List<ComponentCodec<*>> = listOf(

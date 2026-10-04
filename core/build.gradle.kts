@@ -24,6 +24,7 @@ dependencies {
     // the root sets kotlin.stdlib.default.dependency=false for the IDE plugin; a standalone library needs it
     implementation(kotlin("stdlib"))
     api(project(":gdx-model"))
+    api("org.slf4j:slf4j-api:2.0.6")
     api("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
     api("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
 

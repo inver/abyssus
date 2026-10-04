@@ -5,7 +5,8 @@
 
 package net.nevinsky.abyssus.core.model
 
-import org.slf4j.LoggerFactory
+import org.slf4j.Logger
+import net.nevinsky.abyssus.core.ModelLogging
 
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Texture
@@ -36,7 +37,7 @@ import net.nevinsky.abyssus.core.node.NodePart
 import java.util.function.Consumer
 import kotlin.math.max
 
-private val log = LoggerFactory.getLogger(Model::class.java)
+private val log: Logger get() = ModelLogging.logger
 
 /**
  * A model represents a 3D assets. It stores a hierarchy of nodes. A node has a transform and optionally a graphical
@@ -435,7 +436,7 @@ class Model() : Disposable {
                         )
                     )
 
-                    else -> log.debug("Texture usage {} of material '{}' is not supported", tex.usage, mtl.id)
+                    else -> log.atDebug().log { "Texture usage ${tex.usage} of material '${mtl.id}' is not supported" }
                 }
                 if (mtl is PbrModelMaterial) {
                     // PBR shaders read their own attributes, keep the legacy ones for the non PBR shaders

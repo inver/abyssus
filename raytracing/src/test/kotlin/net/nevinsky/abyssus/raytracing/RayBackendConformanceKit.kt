@@ -11,6 +11,12 @@ import kotlin.math.abs
 /** Feasibility/lifecycle stage. Full shading references are added with tasks 3.1–3.5. */
 abstract class RayBackendConformanceKit {
     protected open val sceneMaterials: Boolean = false
+    /**
+     * Relative error of the backend's color storage format, added to the per-pixel color tolerance of the reference
+     * comparisons. Zero for 32-bit float output; the Vulkan backend stores `R16G16B16A16_SFLOAT` (design decision 8),
+     * whose spacing is 2^-10 of the value, so absolute tolerances alone cannot hold for values at or above one.
+     */
+    protected open val colorStorageError: Float = 0f
     protected abstract fun provider(devicePresent: Boolean, health: RayDeviceHealth): RayBackendProvider
 
     @Test
@@ -561,8 +567,10 @@ abstract class RayBackendConformanceKit {
     /** Compares against the shared reference renderer: a per-pixel tolerance, an allowed outlier share and a mean bound. */
     private fun assertMatchesReference(frame: RayFrame, request: RaySceneRequest, tolerance: Float, outlierFraction: Float = 0f, meanTolerance: Float = tolerance) {
         val expected = RaySceneReferenceRenderer().render(request)
-        for ((actual, reference) in listOf(frame.colorValues() to expected.colorValues(), frame.depthValues() to expected.depthValues())) {
-            val outliers = actual.indices.count { abs(actual[it] - reference[it]) > tolerance }
+        // (actual, reference, relative error of the storage format): only color goes through the half-float target
+        val channels = listOf(Triple(frame.colorValues(), expected.colorValues(), colorStorageError), Triple(frame.depthValues(), expected.depthValues(), 0f))
+        for ((actual, reference, storageError) in channels) {
+            val outliers = actual.indices.count { abs(actual[it] - reference[it]) > tolerance + abs(reference[it]) * storageError }
             assertTrue("$outliers of ${actual.size} values differ from the reference by more than $tolerance", outliers <= actual.size * outlierFraction)
             assertTrue(actual.indices.sumOf { abs(actual[it] - reference[it]).toDouble() } / actual.size <= meanTolerance)
         }
@@ -701,7 +709,7 @@ abstract class RayBackendConformanceKit {
 
     private fun assertReference(frame: RayFrame, color: FloatArray, depth: FloatArray, tolerance: Float) {
         val actual = frame.colorValues()
-        assertArrayEquals(color, actual, tolerance)
+        for (i in color.indices) assertEquals("color value $i", color[i], actual[i], tolerance + abs(color[i]) * colorStorageError)
         assertArrayEquals(depth, frame.depthValues(), tolerance)
         assertTrue(actual.indices.sumOf {
             kotlin.math.abs(actual[it] - color[it]).toDouble()

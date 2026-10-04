@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.runtime
 
-import net.nevinsky.abyssus.assets.AssetLog
+import net.nevinsky.abyssus.testing.warningsTo
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
@@ -19,7 +19,7 @@ import java.util.concurrent.Executors
 class SceneLoadingTest {
     private val json = JsonProcessor()
     private fun loading(messages: MutableList<String> = mutableListOf()) =
-        SceneLoading(json, AssetLog { message, _ -> messages += message })
+        SceneLoading(json, warningsTo(messages))
     private val folder get() = testProject("Untitled").toPath()
     private val main get() = folder.resolve("scenes/Main Scene.scene")
 

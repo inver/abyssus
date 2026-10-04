@@ -6,7 +6,6 @@ package net.nevinsky.abyssus.games.controlline.flight
 
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.assets.AssetLog
 import net.nevinsky.abyssus.games.controlline.flow.FlightReport
 import net.nevinsky.abyssus.games.controlline.flow.HandleInput
 import net.nevinsky.abyssus.physics.MAX_STEPS_PER_ADVANCE
@@ -16,6 +15,7 @@ import net.nevinsky.abyssus.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEngine
+import org.slf4j.Logger
 
 /** A frame never runs more than this much simulation (s), so a stall does not jump the plane. */
 private const val MAX_FRAME = 0.1f
@@ -25,7 +25,7 @@ private const val MAX_FRAME = 0.1f
  * loop. Each step reads the handle from the input, updates the [flight] and steps the world. After the flight ends
  * the world goes on, so a crashed plane comes to rest. Lives on the game's main thread; [close] releases the world.
  */
-class FlightSession(engine: SceneEngine, pilot: Entity, val plane: Entity, assets: PhysicsAssets, log: AssetLog, natives: JoltNatives) : AutoCloseable {
+class FlightSession(engine: SceneEngine, pilot: Entity, val plane: Entity, assets: PhysicsAssets, log: Logger, natives: JoltNatives) : AutoCloseable {
     private val world = PhysicsWorld(engine, assets, log, natives)
     private val ground = groundOf(engine, assets)
     val rig = LineRig(world, pilot, plane, ground)

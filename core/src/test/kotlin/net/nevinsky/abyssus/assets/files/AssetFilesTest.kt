@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.assets.files
 
+import net.nevinsky.abyssus.testing.warningsTo
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.assets.testProject
@@ -25,7 +26,7 @@ class AssetFilesTest {
             File(asset, "model.gltf").writeText("model")
             var text = """{"type":"MODEL","uuid":"u","additional":{"file":"model.gltf"}}"""
             val messages = mutableListOf<String>()
-            val snapshot = AssetFiles(dir, json, MetaTextSource { text }, log = net.nevinsky.abyssus.assets.AssetLog { message, _ -> messages += message })
+            val snapshot = AssetFiles(dir, json, MetaTextSource { text }, log = warningsTo(messages))
             assertNull(snapshot.model("m"))
             assertNull(snapshot.metaType("m"))
             assertNull(snapshot.loadFile("m", "model.gltf"))

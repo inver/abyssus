@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.assets.sky.hdr
 
+import net.nevinsky.abyssus.testing.warningsTo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -14,7 +15,7 @@ import java.nio.file.Files
 class HdrSkyLoaderTest {
     private val fixture = testProject("Untitled")
     private val logged = mutableListOf<String>()
-    private val loading = testLoading(log = { message, _ -> logged += message })
+    private val loading = testLoading(log = warningsTo(logged))
     private val loader = HdrSkyLoader(loading.decoder, loading.hdrFiles, skyShaders(), loading.toneCurve, loading.log)
 
     private fun withCopy(block: (File) -> Unit) {

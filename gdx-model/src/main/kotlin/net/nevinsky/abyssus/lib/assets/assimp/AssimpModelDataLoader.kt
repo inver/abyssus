@@ -5,7 +5,8 @@
 
 package net.nevinsky.abyssus.lib.assets.assimp
 
-import org.slf4j.LoggerFactory
+import org.slf4j.Logger
+import net.nevinsky.abyssus.core.ModelLogging
 
 import com.badlogic.gdx.files.FileHandle
 import net.nevinsky.abyssus.core.model.ModelData
@@ -14,7 +15,7 @@ import org.lwjgl.assimp.AIMaterial
 import org.lwjgl.assimp.AIMesh
 import org.lwjgl.assimp.AIScene
 
-private val log = LoggerFactory.getLogger(AssimpModelDataLoader::class.java)
+private val log: Logger get() = ModelLogging.logger
 
 /**
  * Loads a model file through Assimp into a [ModelData]. No OpenGL context is needed.
@@ -38,7 +39,7 @@ class AssimpModelDataLoader
         val start = System.currentTimeMillis()
         AssimpImporter.importScene(file.path(), flags).use { imported ->
             val data: ModelData = convert(modelId, imported.scene()!!, parentDir(file), embeddedTextureDir, convertUnits)
-            log.debug("Model {} loaded in {} ms", modelId, System.currentTimeMillis() - start)
+            log.atDebug().log { "Model $modelId loaded in ${System.currentTimeMillis() - start} ms" }
             return data
         }
     }
@@ -63,7 +64,7 @@ class AssimpModelDataLoader
                 val aiMesh = AIMesh.create(scene.mMeshes()!!.get(i))
                 val mesh = meshProcessor.process(aiMesh, i)
                 if (mesh == null) {
-                    log.warn("Skip non-triangle mesh {}", i)
+                    log.warn("Skip non-triangle mesh $i of model $modelId")
                     continue
                 }
                 data.addMesh(mesh)

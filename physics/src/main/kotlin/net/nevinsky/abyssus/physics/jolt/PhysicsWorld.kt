@@ -33,7 +33,6 @@ import com.github.stephengold.joltjni.Vec3
 import com.github.stephengold.joltjni.enumerate.EActivation
 import com.github.stephengold.joltjni.enumerate.EMotionType
 import com.github.stephengold.joltjni.enumerate.EOverrideMassProperties
-import net.nevinsky.abyssus.assets.AssetLog
 import net.nevinsky.abyssus.physics.ColliderComponent
 import net.nevinsky.abyssus.physics.ColliderShape
 import net.nevinsky.abyssus.physics.ConstraintComponent
@@ -52,6 +51,7 @@ import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.runtime.ecs.component.ParentComponent
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEngine
+import org.slf4j.Logger
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -74,7 +74,7 @@ private const val LAYER_MOVING = 1
 class PhysicsWorld(
     private val engine: SceneEngine,
     private val assets: PhysicsAssets,
-    private val log: AssetLog,
+    private val log: Logger,
     natives: JoltNatives,
 ) : AutoCloseable {
     private val owned = ArrayList<JoltPhysicsObject>()
@@ -433,7 +433,7 @@ class PhysicsWorld(
         return if (name.isNullOrEmpty()) "entity $id" else "$name (entity $id)"
     }
 
-    private fun warn(entity: Entity, message: String) = log.warn("Physics: ${describe(entity)} $message", null)
+    private fun warn(entity: Entity, message: String) = log.warn("Physics: ${describe(entity)} $message")
 
     private fun <T : JoltPhysicsObject> own(o: T): T = o.also { owned += it }
 

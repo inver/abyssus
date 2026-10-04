@@ -7,7 +7,6 @@ package net.nevinsky.abyssus.games.controlline.render
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.assets.AssetLog
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.games.controlline.components.ControlLineComponents
 import net.nevinsky.abyssus.games.controlline.components.PilotComponent
@@ -22,18 +21,18 @@ import net.nevinsky.abyssus.runtime.ecs.render.AssetType
 import net.nevinsky.abyssus.runtime.ecs.render.RenderComponent
 import net.nevinsky.abyssus.runtime.ecs.render.RenderableObjectDelegate
 import net.nevinsky.abyssus.runtime.scene.ColorDto
+import org.slf4j.Logger
 import java.nio.file.Path
 
 /** The field scene's file in the project. */
 const val FIELD_SCENE = "scenes/Field.scene"
 
-/** Reads the field scene of [project] with the game's components; a scene that cannot be read throws, naming why. */
-class FieldLoader(val project: Path, private val log: AssetLog) {
+/** Reads the field scene of [project] with the game's components; a scene that cannot be read throws (the cause goes to [log]). */
+class FieldLoader(val project: Path, private val log: Logger) {
     fun load(): FieldScene {
-        val messages = ArrayList<String>()
-        val loading = SceneLoading(JsonProcessor(), { message, error -> messages += message; log.warn(message, error) }, registry = ControlLineComponents())
+        val loading = SceneLoading(JsonProcessor(), log, registry = ControlLineComponents())
         val loaded = loading.load(project.resolve(FIELD_SCENE))
-            ?: throw IllegalStateException("The field scene ${project.resolve(FIELD_SCENE)} could not be read: ${messages.joinToString("; ")}")
+            ?: throw IllegalStateException("The field scene ${project.resolve(FIELD_SCENE)} could not be read; see the log")
         return FieldScene(loaded)
     }
 }

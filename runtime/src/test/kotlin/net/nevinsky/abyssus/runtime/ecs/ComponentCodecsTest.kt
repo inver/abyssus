@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.runtime.ecs.scene.LightCodec
 import net.nevinsky.abyssus.runtime.ecs.scene.PositionCodec
 import net.nevinsky.abyssus.runtime.testJson
 import net.nevinsky.abyssus.runtime.testProject
-import net.nevinsky.abyssus.assets.AssetLog
+import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.runtime.scene.ColorDto
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.runtime.SceneLoading
@@ -30,7 +30,7 @@ class ComponentCodecsTest {
     @Test fun nativeAssetKindsResolveAndRoundTripWithoutClassDispatch() {
         val codec = net.nevinsky.abyssus.runtime.ecs.scene.RenderCodec(
             net.nevinsky.abyssus.runtime.ecs.render.AssetResolver { type, name -> net.nevinsky.abyssus.runtime.ecs.render.AssetReference(name, type) },
-            net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsWarnings(AssetLog { _, _ -> }),
+            net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsWarnings(NOPLogger.NOP_LOGGER),
         )
         val source = json("""{"renderable":{"kind":"asset","asset":{"type":"MODEL","assetName":"tree"},"shaderKey":"pbr","extra":7}}""")
         val value = codec.read(source)
@@ -53,7 +53,7 @@ class ComponentCodecsTest {
         val error = assertThrows(ComponentRegistrationException::class.java) { ComponentCodecs(game = GameComponents(registry)) }
         assertTrue(error.message, error.message!!.contains("NameComponent is a built-in component"))
         val loading = assertThrows(ComponentRegistrationException::class.java) {
-            SceneLoading(JsonProcessor(), AssetLog { _, _ -> }, registry = registry)
+            SceneLoading(JsonProcessor(), NOPLogger.NOP_LOGGER, registry = registry)
         }
         assertEquals(error.message, loading.message)
     }

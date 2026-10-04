@@ -14,9 +14,27 @@
 
 ## Module boundary
 
-`gdx-model` depends only on libGDX, LWJGL Assimp and slf4j (`gdx-model/build.gradle.kts`). Nothing in it may import
+`gdx-model` depends only on libGDX, LWJGL Assimp and the slf4j API (`gdx-model/build.gradle.kts`). Nothing in it may import
 `com.intellij.*` or `net.nevinsky.abyssus` plugin packages. The plugin depends on it with
 `implementation(project(":gdx-model"))`.
+
+## Logging
+
+- **SLF4J is the one logging interface.** `gdx-model`, `core`, `raytracing`, `runtime` and `physics` (plain JVM) log through
+  `org.slf4j.Logger` and never import `com.intellij.*`. `core`, `raytracing`, `runtime` and `physics` take a `Logger` through
+  constructors (`SceneLoading`, `PhysicsWorld`, `PlayHost`, `AssetLoading`,
+  `MetalRayBackendFactory`, `VulkanRayBackendFactory`, `RayRenderScheduler`); `gdx-model`'s static loaders read
+  `ModelLogging.logger`. Debug messages are lazy: `log.atDebug().log { "..." }`.
+- **The binding to the IDE logger is `IntellijLogger`** (`src/main/kotlin/net/nevinsky/abyssus/log/IntellijLogger.kt`), an
+  SLF4J `Logger` over `com.intellij.openapi.diagnostic.Logger`, created by `IntellijLoggerFactory` and held by
+  `AbyssusCore.loggers`. The composition root passes `getLogger("assets")`, `("scenes")`, `("ray")` and `("model")` (the last installed
+  into `ModelLogging`), so everything lands in `idea.log` under `Abyssus.<category>` and obeys Debug Log Settings. It is
+  passed explicitly because the platform already binds SLF4J to `java.util.logging` for the whole IDE (the IDE's `util-8` library),
+  which cannot be changed from a plugin; the plugin zip excludes `org.slf4j` and uses the platform's API classes.
+  SLF4J `error` is logged as an IDE *warn*, because `Logger.error` raises the IDE-error dialog.
+- **Outside the IDE** (the play host, the Control Line game) `physics`'s runtime dependency `slf4j-simple` binds SLF4J to
+  stderr; Abyssus Physics bundles `physics` without its dependencies, so it never reaches the IDE.
+- **Tests** use `RecordingLogger`, `warningsTo(list)` or `failOnWarnings()` (`core` test fixtures) or `NOPLogger.NOP_LOGGER`; `raytracing` has its own small recorder.
 
 ## JSON
 

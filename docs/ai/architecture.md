@@ -14,7 +14,7 @@
 | `raytracing/` | Plain JVM ray tracing: backend contracts, immutable scene snapshots and linear host frames, the scheduler and quality policy, and optional native Metal and Vulkan backends | Kotlin stdlib, LWJGL Vulkan and VMA |
 
 `gdx-model`, `core`, `runtime` and `physics` must not import IntelliJ or plugin code (see their READMEs). `core` is wired by constructors:
-its composition root `AssetLoading` takes a `JsonProcessor`, an `AssetLog`, an executor and the sky `ShaderSource`; in
+its composition root `AssetLoading` takes a `JsonProcessor`, an SLF4J `Logger`, an executor and the sky `ShaderSource`; in
 the IDE the light application service `AbyssusCore` builds one (IDE log, IDE pool) and hands it to every scene view.
 `AbyssusCore.scenes` builds `SceneLoading(json, log)` with the IDE's `Abyssus.scenes` logger. `SceneReader`
 delegates parsing to it; `ProjectReader` delegates project-name parsing while retaining its VFS stamps and listings.

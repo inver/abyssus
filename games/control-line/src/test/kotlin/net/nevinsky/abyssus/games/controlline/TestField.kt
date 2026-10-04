@@ -5,7 +5,7 @@
 package net.nevinsky.abyssus.games.controlline
 
 import com.badlogic.ashley.core.Entity
-import net.nevinsky.abyssus.assets.AssetLog
+import net.nevinsky.abyssus.testing.warningsTo
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.games.controlline.components.ControlLineComponents
@@ -23,14 +23,14 @@ fun bundledProject(): Path =
 
 /** The bundled field scene with the game's components; [messages] collects the log. */
 fun loadField(messages: MutableList<String> = mutableListOf()): LoadedScene {
-    val loading = SceneLoading(JsonProcessor(), AssetLog { message, _ -> messages += message }, registry = ControlLineComponents())
+    val loading = SceneLoading(JsonProcessor(), warningsTo(messages), registry = ControlLineComponents())
     return requireNotNull(loading.load(bundledProject().resolve("scenes/Field.scene"))) { messages.joinToString("\n") }
 }
 
 /** A physics world over [scene] of the bundled project. */
 fun fieldWorld(scene: LoadedScene, messages: MutableList<String> = mutableListOf()): PhysicsWorld =
     PhysicsWorld(scene.engine, PhysicsAssets(AssetFiles(bundledProject().toFile(), JsonProcessor())),
-        AssetLog { m, _ -> messages += m }, JoltNatives())
+        warningsTo(messages), JoltNatives())
 
 /** The entity named [name]. */
 fun LoadedScene.named(name: String): Entity =

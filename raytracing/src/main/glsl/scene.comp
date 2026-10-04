@@ -1,0 +1,324 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ * SPDX-License-Identifier: Apache-2.0
+ */
+// Vulkan counterpart of the `rayScene` kernel in native/metal/slice.metal: default/PBR/terrain shading, per-light visibility
+// rays with alpha-test holes, one bounded reflection bounce, sky and fog, and front-to-back blended layers. It reads the
+// scene payload encoded by RaySceneEncoding (binding 7 as floats, binding 8 as the RGBA8 texels that follow them).
+// Pixels are row-major from the bottom-left, as in RayFrame.
+#version 460
+#extension GL_EXT_ray_query : require
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+struct SliceInstance { mat4 transform; vec4 color; uvec4 offsets; };
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT scene;
+layout(set = 0, binding = 1, std430) readonly buffer Instances { SliceInstance instances[]; };
+layout(set = 0, binding = 2, std430) readonly buffer Vertices { float vertices[]; };
+layout(set = 0, binding = 3, std430) readonly buffer Indices { uint indices[]; };
+layout(set = 0, binding = 4, rgba16f) uniform writeonly image2D colorImage;
+layout(set = 0, binding = 5, r32f) uniform writeonly image2D depthImage;
+layout(set = 0, binding = 6, std140) uniform Camera {
+    vec4 originNear; vec4 forwardFar; vec4 rightFov; vec4 upAspect; vec4 light;
+} camera;
+layout(set = 0, binding = 7, std430) readonly buffer SceneData { float d[]; };
+layout(set = 0, binding = 8, std430) readonly buffer SceneTexels { uint texels[]; };
+layout(push_constant) uniform Tile { uvec2 dimensions; uint firstRow; uint rows; } tile;
+
+const float PI = 3.14159265358979;
+// Instance masks: bit 1 = visible to shadow and reflection rays, bit 2 = visible to primary rays (blended surfaces: bit 2 only).
+const uint SECONDARY_MASK = 1u;
+const uint MAX_CUTOUT_LAYERS = 8u;
+const uint MAX_BLEND_LAYERS = 16u;
+
+vec3 s3(uint i) { return vec3(d[i], d[i + 1u], d[i + 2u]); }
+vec4 s4(uint i) { return vec4(d[i], d[i + 1u], d[i + 2u], d[i + 3u]); }
+vec3 vertex(uint i) { uint b = i * 3u; return vec3(vertices[b], vertices[b + 1u], vertices[b + 2u]); }
+
+int texIndex(int x, int size, bool repeat) {
+    if (!repeat) return clamp(x, 0, size - 1);
+    int r = x % size;
+    if (r < 0) r += size;
+    return r;
+}
+vec4 texel(uint t, int x, int y) {
+    int w = int(d[t + 1u]), h = int(d[t + 2u]);
+    x = texIndex(x, w, d[t + 3u] < 0.5);
+    y = texIndex(y, h, d[t + 4u] < 0.5);
+    // RGBA8 texels live after the float section; header slot 29 is where they start
+    if (d[t + 6u] > 0.5) return unpackUnorm4x8(texels[uint(d[29]) + uint(d[t]) + uint(y * w + x)]);
+    return s4(uint(d[t]) + uint(y * w + x) * 4u);
+}
+vec4 sampleTexture(uint index, vec2 uv) {
+    uint t = uint(d[4]) + index * 8u;
+    vec2 size = vec2(d[t + 1u], d[t + 2u]);
+    if (d[t + 5u] > 0.5) { ivec2 p = ivec2(floor(uv * size)); return texel(t, p.x, p.y); }
+    vec2 p = uv * size - 0.5, f = fract(p);
+    ivec2 q = ivec2(floor(p));
+    return mix(mix(texel(t, q.x, q.y), texel(t, q.x + 1, q.y), f.x), mix(texel(t, q.x, q.y + 1), texel(t, q.x + 1, q.y + 1), f.x), f.y);
+}
+vec4 binding(uint m, uint slot, vec2 uv, vec4 fallback) {
+    uint b = m + 32u + slot * 8u;
+    return d[b] < 0.0 ? fallback : sampleTexture(uint(d[b]), uv * vec2(d[b + 3u], d[b + 4u]) + vec2(d[b + 1u], d[b + 2u]));
+}
+
+struct Surface { vec3 position; vec3 normal; vec2 uv; vec2 splat; uint material; };
+
+Surface sceneSurface(uint instanceId, uint primitiveId, vec2 bary, vec3 position, vec3 direction) {
+    SliceInstance instance = instances[instanceId];
+    uint offset = instance.offsets.y + primitiveId * 3u;
+    uint ia = instance.offsets.x + indices[offset], ib = instance.offsets.x + indices[offset + 1u], ic = instance.offsets.x + indices[offset + 2u];
+    uint aa = uint(d[3]) + ia * 12u, ab = uint(d[3]) + ib * 12u, ac = uint(d[3]) + ic * 12u;
+    vec3 weight = vec3(1.0 - bary.x - bary.y, bary.x, bary.y);
+    vec3 local = vertex(ia) * weight.x + vertex(ib) * weight.y + vertex(ic) * weight.z;
+    vec3 a = (instance.transform * vec4(vertex(ia), 1.0)).xyz;
+    vec3 b = (instance.transform * vec4(vertex(ib), 1.0)).xyz;
+    vec3 c = (instance.transform * vec4(vertex(ic), 1.0)).xyz;
+    vec3 n = normalize(cross(b - a, c - a));
+    if (d[aa + 9u] > 0.5) {
+        vec3 localNormal = s3(aa) * weight.x + s3(ab) * weight.y + s3(ac) * weight.z;
+        mat3 matrix = mat3(instance.transform[0].xyz, instance.transform[1].xyz, instance.transform[2].xyz);
+        // Cofactor matrix is inverse-transpose up to determinant; preserve mirrored transforms.
+        float det = dot(matrix[0], cross(matrix[1], matrix[2]));
+        n = normalize((cross(matrix[1], matrix[2]) * localNormal.x + cross(matrix[2], matrix[0]) * localNormal.y
+            + cross(matrix[0], matrix[1]) * localNormal.z) * (det < 0.0 ? -1.0 : 1.0));
+    }
+    vec2 ua = vec2(d[aa + 3u], d[aa + 4u]), ub = vec2(d[ab + 3u], d[ab + 4u]), uc = vec2(d[ac + 3u], d[ac + 4u]);
+    vec2 uv = ua * weight.x + ub * weight.y + uc * weight.z;
+    uint material = uint(d[0]) + uint(d[uint(d[5]) + instanceId]) * 128u;
+    if (d[material + 32u + 3u * 8u] >= 0.0) {
+        vec3 tangent, bitangent;
+        if (d[aa + 10u] > 0.5) {
+            vec4 t = s4(aa + 5u) * weight.x + s4(ab + 5u) * weight.y + s4(ac + 5u) * weight.z;
+            tangent = normalize((instance.transform * vec4(t.xyz, 0.0)).xyz);
+            bitangent = normalize(cross(n, tangent)) * t.w;
+        } else {
+            vec2 du1 = (ub - ua) * vec2(1.0, -1.0), du2 = (uc - ua) * vec2(1.0, -1.0);
+            vec3 dp1 = b - a, dp2 = c - a, dp2perp = cross(dp2, n), dp1perp = cross(n, dp1);
+            tangent = dp2perp * du1.x + dp1perp * du2.x;
+            bitangent = dp2perp * du1.y + dp1perp * du2.y;
+            float scale = inversesqrt(max(max(dot(tangent, tangent), dot(bitangent, bitangent)), 1e-12));
+            tangent *= scale;
+            bitangent *= scale;
+        }
+        vec3 map = binding(material, 3u, uv, vec4(0.5, 0.5, 1.0, 1.0)).xyz * 2.0 - 1.0;
+        n = normalize(tangent * map.x + bitangent * map.y + n * map.z);
+    }
+    if (d[material + 19u] > 0.5 && dot(n, direction) > 0.0) n = -n;
+    return Surface(position, n, uv, local.xz / max(d[material + 20u], 0.0001), material);
+}
+
+vec4 sceneBase(Surface s) {
+    uint m = s.material;
+    if (d[m + 16u] < 1.5) return s4(m) * binding(m, 0u, s.uv, vec4(1.0));
+    vec4 color = binding(m, 7u, s.uv, vec4(0.8, 0.8, 0.8, 1.0));
+    if (d[m + 32u + 6u * 8u] >= 0.0) {
+        vec4 splat = binding(m, 6u, s.splat, vec4(0.0));
+        for (uint i = 0u; i < 4u; i++) if (d[m + 32u + (8u + i) * 8u] >= 0.0) color = mix(color, binding(m, 8u + i, s.uv, vec4(0.0)), splat[i]);
+    }
+    return color;
+}
+
+bool isCutout(Surface s) {
+    uint m = s.material;
+    if (d[m + 17u] < 0.5 || d[m + 17u] > 1.5) return false;
+    return sceneBase(s).w * d[m + 15u] < d[m + 18u];
+}
+
+struct Found { bool valid; float distance; uint instance; uint primitive; vec2 bary; };
+
+// Nearest hit that is not an alpha-test hole. Rays pass through holes (a miss after holes is a miss); more than
+// MAX_CUTOUT_LAYERS holes count as solid.
+Found traceMasked(vec3 origin, vec3 direction, float minimum, float maximum, uint mask) {
+    Found none = Found(false, 0.0, 0u, 0u, vec2(0.0));
+    Found last = none;
+    float start = 0.0;
+    for (uint i = 0u; i < MAX_CUTOUT_LAYERS; i++) {
+        vec3 o = origin + direction * start;
+        float tMin = i == 0u ? minimum : 0.0005;
+        float tMax = maximum - start;
+        if (tMax <= tMin) return none;
+        rayQueryEXT query;
+        rayQueryInitializeEXT(query, scene, gl_RayFlagsOpaqueEXT, mask, o, tMin, direction, tMax);
+        while (rayQueryProceedEXT(query)) {}
+        if (rayQueryGetIntersectionTypeEXT(query, true) == gl_RayQueryCommittedIntersectionNoneEXT) return none;
+        float t = rayQueryGetIntersectionTEXT(query, true);
+        uint instanceId = uint(rayQueryGetIntersectionInstanceCustomIndexEXT(query, true));
+        uint primitiveId = uint(rayQueryGetIntersectionPrimitiveIndexEXT(query, true));
+        vec2 bary = rayQueryGetIntersectionBarycentricsEXT(query, true);
+        Surface s = sceneSurface(instanceId, primitiveId, bary, o + direction * t, direction);
+        last = Found(true, start + t, instanceId, primitiveId, bary);
+        if (!isCutout(s)) return last;
+        start += t;
+    }
+    return last;
+}
+
+// Diffuse ambient: the flat colour, or the sky's six axis colours (+X, -X, +Y, -Y, +Z, -Z) blended by the squared normal
+// exactly as the raster shaders do (a non-negative component takes the odd slot).
+vec3 ambientAt(vec3 normal) {
+    if (d[28] < 0.0) return s3(8u);
+    uint c = uint(d[28]);
+    vec3 sq = normal * normal;
+    return sq.x * s3(c + (normal.x >= 0.0 ? 3u : 0u)) + sq.y * s3(c + 6u + (normal.y >= 0.0 ? 3u : 0u)) + sq.z * s3(c + 12u + (normal.z >= 0.0 ? 3u : 0u));
+}
+vec3 skyColor(vec3 direction) {
+    if (d[24] < 0.0) return s3(12u);
+    float rotation = d[26] * PI / 180.0, c = cos(rotation), s = sin(rotation);
+    vec3 r = normalize(vec3(c * direction.x - s * direction.z, direction.y, s * direction.x + c * direction.z));
+    // Equirectangular, same as the raster sky: centre column faces -Z, top row is +Y.
+    vec2 uv = vec2(0.5 + atan(r.x, -r.z) / (2.0 * PI), acos(clamp(r.y, -1.0, 1.0)) / PI);
+    return sampleTexture(uint(d[24]), uv).xyz * d[25];
+}
+// What a camera ray that misses shows. The raster HDR sky is tone mapped for display (ACES fit, gamma 1/2.2) while
+// reflections of it stay linear radiance, so only primary misses go through this.
+vec3 skyDisplay(vec3 direction) {
+    vec3 c = skyColor(direction);
+    if (d[24] < 0.0 || d[27] < 0.5) return c;
+    vec3 mapped = clamp((c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14), 0.0, 1.0);
+    return pow(mapped, vec3(1.0 / 2.2));
+}
+
+uint pcg(uint v) { uint s = v * 747796405u + 2891336453u; uint w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u; return (w >> 22u) ^ w; }
+vec2 random2(uvec2 p) { uint a = pcg(p.x + pcg(p.y)); uint b = pcg(a + 1u); return vec2(float(a), float(b)) * (1.0 / 4294967296.0); }
+
+// GGX-sampled reflection direction; falls back to the mirror direction when the sample points below the surface.
+vec3 reflectionDirection(vec3 normal, vec3 view, float roughness, uvec2 pixel) {
+    vec3 mirror = reflect(-view, normal);
+    float a = roughness * roughness, a2 = a * a;
+    vec2 xi = random2(pixel);
+    float phi = 2.0 * PI * xi.x, cosT = sqrt((1.0 - xi.y) / (1.0 + (a2 - 1.0) * xi.y)), sinT = sqrt(max(1.0 - cosT * cosT, 0.0));
+    vec3 up = abs(normal.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 t = normalize(cross(up, normal)), b = cross(normal, t);
+    vec3 h = normalize(t * (sinT * cos(phi)) + b * (sinT * sin(phi)) + normal * cosT);
+    vec3 r = reflect(-view, h);
+    return dot(r, normal) > 0.0 ? r : mirror;
+}
+
+// Direct light, ambient and emission. [environment] replaces the ambient colour in the PBR specular term when set.
+vec3 shade(Surface s, vec3 view, bool hasEnvironment, vec3 environment) {
+    uint m = s.material;
+    vec4 base = sceneBase(s);
+    vec3 emission = s3(m + 4u) * binding(m, 1u, s.uv, vec4(1.0)).xyz;
+    vec3 specular = s3(m + 8u) * binding(m, 2u, s.uv, vec4(1.0)).xyz;
+    vec4 mr = binding(m, 4u, s.uv, vec4(1.0));
+    float metallic = clamp(d[m + 13u] * mr.b, 0.0, 1.0), roughness = clamp(d[m + 14u] * mr.g, 0.04, 1.0);
+    float alpha = roughness * roughness, a2 = alpha * alpha;
+    vec3 f0 = mix(vec3(0.04), base.xyz, metallic), diffuse = base.xyz * (1.0 - metallic);
+    float nv = max(dot(s.normal, view), 0.0001);
+    bool pbr = d[m + 16u] > 0.5 && d[m + 16u] < 1.5;
+    vec3 ambientLight = ambientAt(s.normal);
+    vec3 ambient = ambientLight * base.xyz;
+    if (pbr) {
+        vec4 r = roughness * vec4(-1.0, -0.0275, -0.572, 0.022) + vec4(1.0, 0.0425, 1.04, -0.04);
+        float a004 = min(r.x * r.x, exp2(-9.28 * nv)) * r.x + r.y;
+        vec2 brdf = vec2(-1.04, 1.04) * a004 + r.zw;
+        float occlusion = binding(m, 5u, s.uv, vec4(1.0)).r;
+        ambient = (ambientLight * diffuse + (f0 * brdf.x + brdf.y) * (hasEnvironment ? environment : ambientLight)) * occlusion;
+    }
+    vec3 result = ambient + emission;
+    for (uint i = 0u; i < uint(d[2]); i++) {
+        uint l = uint(d[1]) + i * 16u;
+        vec3 L;
+        float distance = 10000.0, attenuation = 1.0;
+        if (d[l + 3u] < 0.5) L = -s3(l + 8u);
+        else {
+            vec3 delta = s3(l + 4u) - s.position;
+            float d2 = dot(delta, delta);
+            distance = sqrt(d2);
+            L = delta * inversesqrt(max(d2, 1e-8));
+            float range = d[l + 7u];
+            if (range <= 0.0) continue;
+            attenuation = (1.0 - smoothstep(0.75 * range, range, distance)) / (1.0 + d2);
+            if (d[l + 3u] > 1.5) {
+                float outer = cos(d[l + 11u] * PI / 180.0), inner = cos(d[l + 11u] * (1.0 - d[l + 12u]) * PI / 180.0), c = dot(s3(l + 8u), -L);
+                attenuation *= inner <= outer ? step(outer, c) : smoothstep(outer, inner, c);
+            }
+        }
+        float nl = clamp(dot(s.normal, L), 0.0, 1.0);
+        if (nl <= 0.0 || attenuation <= 0.0) continue;
+        if (d[l + 13u] > 0.5 && traceMasked(s.position + s.normal * 0.001, L, 0.001, max(distance - 0.002, 0.001), SECONDARY_MASK).valid) continue;
+        vec3 H = normalize(L + view);
+        float nh = clamp(dot(s.normal, H), 0.0, 1.0);
+        vec3 contribution = base.xyz + specular * pow(nh, d[m + 12u]);
+        if (pbr) {
+            float vh = clamp(dot(view, H), 0.0, 1.0);
+            vec3 F = f0 + (1.0 - f0) * pow(1.0 - vh, 5.0);
+            float denominator = nh * nh * (a2 - 1.0) + 1.0, distribution = a2 / (PI * denominator * denominator);
+            float gv = nl * sqrt(nv * nv * (1.0 - a2) + a2), gl = nv * sqrt(nl * nl * (1.0 - a2) + a2);
+            contribution = (1.0 - F) * diffuse + F * (distribution * 0.5 / max(gv + gl, 1e-5) * PI);
+        }
+        result += contribution * s3(l) * (nl * attenuation);
+    }
+    return result;
+}
+
+// PBR surfaces add one bounded reflection bounce; its hit is shaded without further scene reflections.
+vec3 shadeSurface(Surface s, vec3 view, uvec2 pixel) {
+    uint m = s.material;
+    if (!(d[m + 16u] > 0.5 && d[m + 16u] < 1.5)) return shade(s, view, false, vec3(0.0));
+    float roughness = clamp(d[m + 14u] * binding(m, 4u, s.uv, vec4(1.0)).g, 0.04, 1.0);
+    vec3 direction = reflectionDirection(s.normal, view, roughness, pixel);
+    Found found = traceMasked(s.position + s.normal * 0.001, direction, 0.001, 10000.0, SECONDARY_MASK);
+    vec3 radiance = skyColor(direction);
+    if (found.valid) {
+        Surface hit = sceneSurface(found.instance, found.primitive, found.bary, s.position + s.normal * 0.001 + direction * found.distance, direction);
+        radiance = shade(hit, -direction, false, vec3(0.0));
+    }
+    return shade(s, view, true, radiance);
+}
+
+vec3 applyFog(vec3 color, float distance) {
+    if (d[22] < 0.5) return color;
+    float k = (1.0 - exp(-1.0)) * d[20] * d[20];
+    return mix(color, s3(16u), min(distance * distance * k, 1.0));
+}
+
+void main() {
+    uvec2 pixel = uvec2(gl_GlobalInvocationID.x, tile.firstRow + gl_GlobalInvocationID.y);
+    if (gl_GlobalInvocationID.y >= tile.rows || any(greaterThanEqual(pixel, tile.dimensions))) return;
+    vec2 ndc = (vec2(pixel) + 0.5) / vec2(tile.dimensions) * 2.0 - 1.0;
+    vec3 origin = camera.originNear.xyz;
+    vec3 forward = camera.forwardFar.xyz;
+    vec3 direction = normalize(forward + camera.rightFov.xyz * ndc.x * camera.upAspect.w * camera.rightFov.w
+        + camera.upAspect.xyz * ndc.y * camera.rightFov.w);
+    float cosine = dot(direction, forward);
+    float near = camera.originNear.w, far = camera.forwardFar.w;
+    vec3 accumulated = vec3(0.0);
+    float transmittance = 1.0, depth = 1.0, start = 0.0;
+    bool finished = false;
+    // Primary rays composite alpha-blended layers front to back; holes in alpha-tested surfaces are skipped.
+    for (uint layer = 0u; layer < MAX_BLEND_LAYERS + MAX_CUTOUT_LAYERS && !finished; layer++) {
+        vec3 o = origin + direction * start;
+        float tMin = layer == 0u ? near / cosine : 0.0005;
+        float tMax = far / cosine - start;
+        if (tMax <= tMin) break;
+        rayQueryEXT query;
+        rayQueryInitializeEXT(query, scene, gl_RayFlagsOpaqueEXT, 0xFF, o, tMin, direction, tMax);
+        while (rayQueryProceedEXT(query)) {}
+        if (rayQueryGetIntersectionTypeEXT(query, true) == gl_RayQueryCommittedIntersectionNoneEXT) break;
+        float travelled = start + rayQueryGetIntersectionTEXT(query, true);
+        Surface surface = sceneSurface(uint(rayQueryGetIntersectionInstanceCustomIndexEXT(query, true)),
+            uint(rayQueryGetIntersectionPrimitiveIndexEXT(query, true)), rayQueryGetIntersectionBarycentricsEXT(query, true),
+            origin + direction * travelled, direction);
+        if (isCutout(surface)) { start = travelled; continue; }
+        vec3 color = applyFog(shadeSurface(surface, -direction, pixel), travelled);
+        if (d[surface.material + 17u] > 1.5) {
+            float alpha = clamp(sceneBase(surface).w * d[surface.material + 15u], 0.0, 1.0);
+            accumulated += transmittance * alpha * color;
+            transmittance *= 1.0 - alpha;
+            start = travelled;
+            if (transmittance < 0.003) finished = true;
+            continue;
+        }
+        float z = travelled * cosine;
+        depth = clamp(far / (far - near) - far * near / ((far - near) * z), 0.0, 1.0);
+        accumulated += transmittance * color;
+        transmittance = 0.0;
+        finished = true;
+    }
+    if (transmittance > 0.0) accumulated += transmittance * skyDisplay(direction);
+    imageStore(colorImage, ivec2(pixel), vec4(accumulated, 1.0));
+    imageStore(depthImage, ivec2(pixel), vec4(depth, 0.0, 0.0, 0.0));
+}

@@ -6,7 +6,7 @@ package net.nevinsky.abyssus.physics
 
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.assets.AssetLog
+import net.nevinsky.abyssus.testing.warningsTo
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.runtime.SceneLoading
 import org.junit.Assert.assertEquals
@@ -20,7 +20,7 @@ class PhysicsFixtureTest {
         val scene = loadPhysicsScene(messages)
         // the physics components add no warning to those Untitled's own markers and unmodeled components give
         val untitled = mutableListOf<String>()
-        SceneLoading(JsonProcessor(), AssetLog { message, _ -> untitled += message })
+        SceneLoading(JsonProcessor(), warningsTo(untitled))
             .load(testProject("Untitled").toPath().resolve("scenes/Main Scene.scene"))
         assertEquals(untitled.map { it.substringAfter(": ") }, messages.map { it.substringAfter(": ") })
         assertTrue(messages.none { "RigidBody" in it || "Collider" in it || "Constraint" in it })

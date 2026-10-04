@@ -6,7 +6,8 @@ package net.nevinsky.abyssus.physics
 
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.assets.AssetLog
+import net.nevinsky.abyssus.testing.warningsTo
+import net.nevinsky.abyssus.testing.failOnWarnings
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
@@ -30,7 +31,7 @@ class PhysicsWorldTest {
     private val natives = JoltNatives()
 
     private fun world(scene: LoadedScene, messages: MutableList<String>, project: File = testProject("Physics")) =
-        PhysicsWorld(scene.engine, PhysicsAssets(AssetFiles(project, JsonProcessor())), AssetLog { m, _ -> messages += m }, natives)
+        PhysicsWorld(scene.engine, PhysicsAssets(AssetFiles(project, JsonProcessor())), warningsTo(messages), natives)
 
     private fun LoadedScene.position(name: String) = named(name).getComponent(PositionComponent::class.java)
 
@@ -72,7 +73,7 @@ class PhysicsWorldTest {
         try {
             writeFlatModel(File(project, "assets/flat"))
             val messages = mutableListOf<String>()
-            val scene = requireNotNull(SceneLoading(JsonProcessor(), AssetLog { m, _ -> messages += m }, registry = PhysicsComponents()).load(
+            val scene = requireNotNull(SceneLoading(JsonProcessor(), warningsTo(messages), registry = PhysicsComponents()).load(
                 """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
                   "0":{"components":{"NameComponent":{"name":"Flat"},"ColliderComponent":{"shape":"CONVEX_HULL"},
                     "RenderComponent":{"renderable":{"kind":"asset","shaderKey":"defaultShader","asset":{"type":"MODEL","assetName":"flat"}}}}},
@@ -203,7 +204,7 @@ class PhysicsWorldTest {
 
     /** A scene of [entities] (`"<id>": {components}` pairs) in a project with no assets. */
     private fun sceneOf(entities: String): LoadedScene = requireNotNull(
-        SceneLoading(JsonProcessor(), AssetLog { m, _ -> error(m) }, registry = PhysicsComponents())
+        SceneLoading(JsonProcessor(), failOnWarnings(), registry = PhysicsComponents())
             .load("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{$entities}}}""", testProject("Physics").toPath()),
     )
 

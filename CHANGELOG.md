@@ -10,6 +10,7 @@
 - Older unmarked files and files from other editors are unsupported. Plugin loading, editing and automatic formatting refuse them without
   rewriting them. No importer or automatic migration is included. External model, image, terrain binary and recipe encodings remain unchanged.
 ### Added
+- Logging in every module through SLF4J, bound to the IDE logger: `gdx-model`, `core` and `raytracing` now write progress, backend probe results, the chosen GPU, session limits, fallbacks and failures to `idea.log` under `Abyssus.assets`, `Abyssus.model` and `Abyssus.ray` (debug lines follow Debug Log Settings).
 - **Ray Tracing** switch in Abyssus Properties for a selected scene (the Scene View itself has no ray tracing button): it flips the open Scene View, opening it when needed, and shows the status, the reason it is unavailable or failed, and Retry
 - **Ray Tracing** (experimental, off by default): ray traced shadows and reflections, sky, fog and transparency on a Metal (macOS) or Vulkan (Windows, Linux) GPU, with an automatic return to the normal renderer on failure
 - Add Light menus in the Scene view toolbar and on scene rows, with Directional, Sun and Spot presets, selection and single-step Undo; editable positive light range in the properties panel
@@ -28,6 +29,8 @@
 - Template sample tool window, frame listener and project service
 
 ### Fixed
+- Ray Tracing stopped with "Minimum ray frame exceeds dimension, pixel, memory or ray bounds" in ordinary windows: the per-frame ray budget is now soft (the frame stays at half resolution with one sample) and only real allocation limits refuse a view.
+- Ray Tracing reported "Packaged Vulkan shader slice is missing" when the plugin was built without a shader compiler on `PATH`; the build now also finds `glslangValidator`/`glslc` under `VULKAN_SDK` and the Android NDK.
 - Ray Tracing refused real scenes ("RESOURCE_LIMIT: Scene exceeds instance, triangle or byte limits"): scenes can now have up to 1024 model parts on Metal and 32 blended surfaces, image textures stay 8-bit, and a scene that is still too big says exactly which limit it exceeded
 - Bounds and picking of meshes with more than 65,535 vertices
 - Assets prepared after the view was closed or its project changed are released instead of leaking

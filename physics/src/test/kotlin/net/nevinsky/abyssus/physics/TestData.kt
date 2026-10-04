@@ -5,7 +5,7 @@
 package net.nevinsky.abyssus.physics
 
 import com.badlogic.ashley.core.Entity
-import net.nevinsky.abyssus.assets.AssetLog
+import net.nevinsky.abyssus.testing.warningsTo
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.runtime.SceneLoading
 import net.nevinsky.abyssus.runtime.ecs.LoadedScene
@@ -18,7 +18,7 @@ fun testProject(name: String): File =
 
 /** `Main Scene` of the `Physics` fixture with the physics components registered; [messages] collects the log. */
 fun loadPhysicsScene(messages: MutableList<String> = mutableListOf()): LoadedScene {
-    val loading = SceneLoading(JsonProcessor(), AssetLog { message, _ -> messages += message }, registry = PhysicsComponents())
+    val loading = SceneLoading(JsonProcessor(), warningsTo(messages), registry = PhysicsComponents())
     return requireNotNull(loading.load(testProject("Physics").toPath().resolve("scenes/Main Scene.scene"))) { messages.joinToString("\n") }
 }
 

@@ -5,6 +5,8 @@
 package net.nevinsky.abyssus.sceneview
 
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.raytracing.*
 import java.util.Locale
 
@@ -25,6 +27,7 @@ internal class RayBackendSelector(
     requestedBackend: String?,
     private val osName: String,
     providers: Map<String, () -> RayBackendProvider>,
+    private val log: Logger = NOPLogger.NOP_LOGGER,
 ) {
     private val preference = (requestedBackend ?: "auto").trim().lowercase(Locale.ROOT)
     private val factories = providers.mapKeys { it.key.lowercase(Locale.ROOT) }
@@ -67,15 +70,24 @@ internal class RayBackendSelector(
     }
 
     private fun probe(name: String): RayCapability {
-        val factory = factories[name] ?: return RayCapability.Unavailable(RayUnavailableReason.RUNTIME_NOT_FOUND)
-        return runCatchingKeepingCancellation {
+        val factory = factories[name] ?: return RayCapability.Unavailable(RayUnavailableReason.RUNTIME_NOT_FOUND).also {
+            log.warn("Ray tracing backend '$name' is not registered")
+        }
+        log.info("Probing the '$name' ray tracing backend (preference '$preference', os '$osName')")
+        val capability = runCatchingKeepingCancellation {
             initialized.getOrPut(name, factory).probe()
         }.getOrElse { failure ->
+            log.warn("Probing the '$name' ray tracing backend threw", failure)
             RayCapability.Unavailable(
                 if (failure is UnsatisfiedLinkError) RayUnavailableReason.RUNTIME_NOT_FOUND else RayUnavailableReason.INITIALIZATION_FAILED,
                 failure.message,
             )
         }
+        when (capability) {
+            is RayCapability.Available -> log.info("Ray tracing backend '$name' is available: ${capability.backend.info}, ${capability.backend.capabilities}")
+            is RayCapability.Unavailable -> log.warn("Ray tracing backend '$name' is unavailable: ${capability.reason}${capability.detail?.let { " ($it)" } ?: ""}")
+        }
+        return capability
     }
 
     companion object {
@@ -84,6 +96,7 @@ internal class RayBackendSelector(
             property: () -> String? = { System.getProperty("abyssus.raytracing.backend") },
             osName: String = System.getProperty("os.name"),
             providers: Map<String, () -> RayBackendProvider>,
-        ) = RayBackendSelector(property(), osName, providers)
+            log: Logger = NOPLogger.NOP_LOGGER,
+        ) = RayBackendSelector(property(), osName, providers, log)
     }
 }

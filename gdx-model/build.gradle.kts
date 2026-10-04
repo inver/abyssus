@@ -22,9 +22,9 @@ val lwjglNatives = listOf("natives-macos-arm64", "natives-macos", "natives-windo
 dependencies {
     // the root sets kotlin.stdlib.default.dependency=false for the IDE plugin; a standalone library needs it
     implementation(kotlin("stdlib"))
+    api("org.slf4j:slf4j-api:2.0.6")
     api("com.badlogicgames.gdx:gdx:$gdxVersion")
     api("org.lwjgl:lwjgl-assimp:$lwjglVersion")
-    implementation("org.slf4j:slf4j-api:2.0.6")
     lwjglNatives.forEach {
         runtimeOnly("org.lwjgl:lwjgl:$lwjglVersion:$it")
         runtimeOnly("org.lwjgl:lwjgl-assimp:$lwjglVersion:$it")

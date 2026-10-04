@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.assets.AssetLog
+import org.slf4j.Logger
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executor
@@ -29,7 +29,7 @@ class AssetCache<D : Any, T : Disposable>(
     private val executor: Executor,
     private val prepare: (String) -> D?,
     private val loader: AssetLoader<D, T>,
-    private val log: AssetLog,
+    private val log: Logger,
 ) : Disposable {
     private sealed interface State {
         /** One per request: a result is only taken while its request is still the current state of its name. */
@@ -98,13 +98,16 @@ class AssetCache<D : Any, T : Disposable>(
             else -> return
         }
         live += request
+        log.atDebug().log { "Loading asset '$name'" }
         executor.execute {
             if (request !in live) return@execute
+            val started = System.nanoTime()
             val result: Prepared<D> = try {
                 Prepared(name, request, prepare(name), null)
             } catch (e: Throwable) {
                 Prepared(name, request, null, e)
             }
+            log.atDebug().log { "Prepared asset '$name' in ${(System.nanoTime() - started) / 1_000_000} ms${if (result.data == null) " (nothing to build)" else ""}" }
             prepared.add(result)
             // dropped meanwhile: nothing on the GL thread may ever see it again, so release it here
             if (request !in live && prepared.remove(result)) result.data?.let(loader::discard)
@@ -165,13 +168,14 @@ class AssetCache<D : Any, T : Disposable>(
         states[name] = State.Ready(value)
         versions[name] = version(name) + 1
         old?.dispose()
+        log.atDebug().log { "Asset '$name' is ready" }
     }
 
     @Suppress("UNCHECKED_CAST")
     private fun fail(name: String, error: Throwable?) {
         (states[name] as? State.Ready<T>)?.value?.dispose() // a revision that cannot load replaces the old one with nothing
         states[name] = State.Failed
-        if (error != null) log.warn("Failed to load asset '$name'", error) else log.warn("Asset '$name' is missing or unreadable", null)
+        if (error != null) log.warn("Failed to load asset '$name'", error) else log.warn("Asset '$name' is missing or unreadable")
     }
 
     @Suppress("UNCHECKED_CAST")

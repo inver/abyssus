@@ -6,7 +6,7 @@
 
 package net.nevinsky.abyssus.physics.play
 
-import net.nevinsky.abyssus.assets.AssetLog
+import org.slf4j.LoggerFactory
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.DataInputStream
@@ -35,10 +35,8 @@ fun main(args: Array<String>) {
         exitProcess(2)
     }
     val module = Class.forName(rest.single()).getDeclaredConstructor().newInstance() as PlayModule
-    val log = AssetLog { message, error ->
-        System.err.println(message)
-        error?.printStackTrace()
-    }
+    // slf4j-simple (this module's runtime binding) prints to stderr, which Abyssus Physics keeps the end of
+    val log = LoggerFactory.getLogger("play-host")
     val code = Socket(InetAddress.getLoopbackAddress(), port).use { socket ->
         socket.tcpNoDelay = true
         PlayHost(

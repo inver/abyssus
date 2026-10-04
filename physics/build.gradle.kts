@@ -36,11 +36,15 @@ val playHost by configurations.creating {
 dependencies {
     implementation(kotlin("stdlib"))
     api(project(":runtime"))
+    // the play host's and games' SLF4J binding: messages go to stderr. Abyssus Physics bundles physics.jar without its
+    // dependencies, so this never reaches the IDE
+    runtimeOnly("org.slf4j:slf4j-simple:2.0.6")
     // The Java API is the same in every platform's plain jar; natives are classifier jars
     api("com.github.stephengold:jolt-jni-Linux64:$joltVersion")
     testRuntimeOnly("com.github.stephengold:jolt-jni-$buildPlatform:$joltVersion:DebugSp")
     joltPlatforms.forEach { playHost("com.github.stephengold:jolt-jni-$it:$joltVersion:ReleaseSp") }
     testImplementation("junit:junit:4.13.2")
+    testImplementation(testFixtures(project(":core")))
 }
 
 java {

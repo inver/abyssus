@@ -21,7 +21,7 @@ import net.nevinsky.abyssus.runtime.ecs.render.RenderComponent
 import net.nevinsky.abyssus.runtime.ecs.render.RenderableObjectDelegate
 import net.nevinsky.abyssus.runtime.testJson
 import net.nevinsky.abyssus.runtime.testProject
-import net.nevinsky.abyssus.assets.AssetLog
+import net.nevinsky.abyssus.testing.warningsTo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -46,7 +46,7 @@ class SceneEcsLoaderTest {
 
     @Test fun unmodeledComponentsAreLoggedOnceToTheCallersLog() {
         val messages = mutableListOf<String>()
-        val log = AssetLog { message, _ -> messages += message }
+        val log = warningsTo(messages)
         val scene = EcsConfigurator(untitledAssets(), log).load(mainSceneEcs())
         assertEquals(9, scene.engine.entities.size())
         for (name in listOf("PickableComponent", "DependenciesComponent")) {

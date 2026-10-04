@@ -25,7 +25,7 @@ import net.nevinsky.abyssus.runtime.schema.GameComponents
  */
 class SceneEcsLoader(
     private val resolver: AssetResolver = AssetResolver { _, _ -> null },
-    private val log: net.nevinsky.abyssus.assets.AssetLog = net.nevinsky.abyssus.assets.AssetLog { _, _ -> },
+    private val log: org.slf4j.Logger = org.slf4j.helpers.NOPLogger.NOP_LOGGER,
     private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat(),
     private val game: GameComponents = GameComponents(),
 ) {

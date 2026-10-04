@@ -37,6 +37,7 @@ dependencies {
     runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop")
     runtimeOnly("com.github.stephengold:jolt-jni-$buildPlatform:$joltVersion:ReleaseSp")
     testImplementation("junit:junit:4.13.2")
+    testImplementation(testFixtures(project(":core")))
 }
 
 java {

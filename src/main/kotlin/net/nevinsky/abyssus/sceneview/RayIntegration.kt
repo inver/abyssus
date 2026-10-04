@@ -4,7 +4,6 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import com.intellij.openapi.diagnostic.Logger
 import net.nevinsky.abyssus.AbyssusCore
 import java.util.concurrent.Executor
 
@@ -25,7 +24,7 @@ internal class RayIntegration(
     companion object {
         fun of(core: AbyssusCore) = RayIntegration(
             core.rayService, { RaySceneAssets(core.loading) }, core.rayConverter, { core.loading.toneCurve.exposure },
-            { Logger.getInstance("Abyssus.ray").warn("Ray tracing stopped", it) },
+            core.loggers.getLogger("ray").let { log -> { failure: Throwable -> log.warn("Ray tracing stopped: ${failure.message ?: failure.javaClass.simpleName}", failure) } },
         )
     }
 }

@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.runtime.schema
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.assets.AssetLog
+import net.nevinsky.abyssus.testing.warningsTo
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.runtime.SceneLoading
 import net.nevinsky.abyssus.runtime.testJson
@@ -46,7 +46,7 @@ class SchemaJsonRoundTripTest {
 
     @Test fun theCustomSceneLoadsItsPlaneAndReportsUnusableValuesOnce() {
         val messages = mutableListOf<String>()
-        val loading = SceneLoading(JsonProcessor(), AssetLog { m, _ -> messages += m }, registry = PlaneRegistry())
+        val loading = SceneLoading(JsonProcessor(), warningsTo(messages), registry = PlaneRegistry())
         val loaded = requireNotNull(loading.load(testProject("Custom").toPath().resolve("scenes/Field.scene")))
         val plane = loaded.engine.ids[0]!!.getComponent(PlaneComponent::class.java)
         assertEquals(22f, plane.lineLength)

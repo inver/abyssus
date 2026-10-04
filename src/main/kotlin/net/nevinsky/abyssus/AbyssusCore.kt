@@ -7,10 +7,11 @@ package net.nevinsky.abyssus
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.assets.AssetLoading
-import net.nevinsky.abyssus.assets.AssetLog
+import net.nevinsky.abyssus.core.ModelLogging
+import net.nevinsky.abyssus.log.IntellijLoggerFactory
+import org.slf4j.ILoggerFactory
 import net.nevinsky.abyssus.assets.ShaderSource
 import net.nevinsky.abyssus.assets.edit.AssetFieldDescriptions
 import net.nevinsky.abyssus.assets.edit.AssetMetaEditor
@@ -33,11 +34,21 @@ import java.util.concurrent.Executors
  */
 @Service(Service.Level.APP)
 class AbyssusCore : Disposable {
+    /**
+     * The one logging interface of every module is SLF4J: this factory hands `gdx-model`, `core` and `raytracing` loggers
+     * over the IDE logger (`Abyssus.assets`, `Abyssus.model`, `Abyssus.ray`, `Abyssus.scenes` in `idea.log`).
+     */
+    val loggers: ILoggerFactory = IntellijLoggerFactory("Abyssus")
+
+    init {
+        ModelLogging.logger = loggers.getLogger("model")
+    }
+
     val json = JsonProcessor()
     val format = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()
     val scenes = net.nevinsky.abyssus.runtime.SceneLoading(
         json,
-        AssetLog { message, error -> Logger.getInstance("Abyssus.scenes").warn(message, error) },
+        loggers.getLogger("scenes"),
         format,
     )
     val metaFiles = net.nevinsky.abyssus.dto.MetaFiles(net.nevinsky.abyssus.assets.files.AssetMetaReader(json, format))
@@ -53,13 +64,14 @@ class AbyssusCore : Disposable {
     val terrainRecipes = TerrainRecipeCodec(json)
     val newTerrains = net.nevinsky.abyssus.terrain.NewTerrainFactory(json, terrainWriter, heightEncoder, terrainRecipes)
 
+
     /** The scene view's own GLSL (grid lines, overlay, terrain), from the plugin's resources. */
     val sceneShaders = ShaderSource("/shader/scene", AbyssusCore::class.java)
 
     /** Asset loading for every scene view: problems go to the IDE log, `prepare` runs on the IDE's pool. */
     val loading = AssetLoading(
         json,
-        AssetLog { message, error -> Logger.getInstance("Abyssus.assets").warn(message, error) },
+        loggers.getLogger("assets"),
         AppExecutorUtil.getAppExecutorService(),
         ShaderSource("/shader/sky", AssetLoading::class.java),
     )
@@ -72,10 +84,11 @@ class AbyssusCore : Disposable {
     }
 
     private val rayServiceHolder = lazy {
+        val rayLog = loggers.getLogger("ray")
         RayBackendService(RayBackendSelector.fromStartup(providers = mapOf(
-            "metal" to { MetalRayBackendFactory() },
-            "vulkan" to { VulkanRayBackendFactory() },
-        )))
+            "metal" to { MetalRayBackendFactory(log = rayLog) },
+            "vulkan" to { VulkanRayBackendFactory(log = rayLog) },
+        ), log = rayLog), log = rayLog)
     }
 
     /**
