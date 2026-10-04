@@ -64,9 +64,10 @@ its maximum and SHALL NOT push them together. Its tension in newtons SHALL be re
 
 ### Requirement: Games act on the simulation
 
-A game SHALL be able, between steps, to apply forces and torques to a body, move a kinematic body, create and remove
-constraints between bodies, read each body's velocity, and learn which bodies touched during the last step and at what
-relative speed. A body removed from the scene SHALL leave the simulation with its constraints.
+A game SHALL be able, between steps, to apply forces and torques to a body, move a kinematic body, put a dynamic or
+kinematic body at a pose at once and at rest, create and remove constraints between bodies, read each body's velocity,
+and learn which bodies touched during the last step and at what relative speed. A body removed from the scene SHALL
+leave the simulation with its constraints.
 
 #### Scenario: Thrust
 
@@ -77,6 +78,12 @@ relative speed. A body removed from the scene SHALL leave the simulation with it
 
 - **WHEN** `Model 0` of the `Physics` scene first lands on the terrain
 - **THEN** that step reports a contact between `Model 0` and `Terrain` with a relative speed above `0`
+
+#### Scenario: Back at rest
+
+- **WHEN** a game puts a moving dynamic body at a new position and rotation
+- **THEN** its entity's pose is that position and rotation at once, and after the next step the body is still there
+  with no velocity
 
 ### Requirement: Bad input is refused before it reaches the engine
 

@@ -29,6 +29,10 @@ Results are in `build/test-results/test/*.xml`, and a later run overwrites them.
 - `physics/src/test/kotlin/`: physics components, `PhysicsWorld`, rope tension and the Jolt natives. Plain JUnit, no
   IntelliJ or GL. They load the build machine's `DebugSp` Jolt natives, and use `testProject(name)` and
   `loadPhysicsScene()`.
+- `games/control-line/src/test/kotlin/`: the Control Line game's flight, track, scoring, screen flow and Play module,
+  headless (Jolt's `ReleaseSp` natives for the build machine, no window). They read the bundled project
+  `games/control-line/project/ControlLine` through `bundledProject()` / `loadField()`, and fly it with `FieldFlight`;
+  `ControlLinePlayTest` runs `PlayHostMain` in a child process.
 - Shared test helpers live in `testFixtures` source sets: `gdx-model`'s `TestGl` (a GL 3.2 core context for one
   block) and `core`'s `HdrFixtures` (Radiance files from a pixel function). Plugin GL tests build their renderer with
   `testRenderer()` (`sceneview/TestRendering.kt`), wired the way `AbyssusCore` wires it in the IDE.

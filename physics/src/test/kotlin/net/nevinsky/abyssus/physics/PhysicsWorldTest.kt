@@ -237,6 +237,24 @@ class PhysicsWorldTest {
     }
 
     @Test
+    fun aGamePutsABodyBackAtRest() {
+        val scene = sceneOf(""""0":{"components":{"NameComponent":{"name":"Plane"},
+            "RigidBodyComponent":{"gravityFactor":0},"ColliderComponent":{"shape":"SPHERE"}}}""")
+        world(scene, mutableListOf()).use { world ->
+            val plane = world.bodyOf(scene.named("Plane"))!!
+            plane.setVelocity(Vector3(5f, 0f, 0f))
+            run(world, 0.5f)
+            val turned = Quaternion(Vector3.Y, 90f)
+            plane.setPose(Vector3(1f, 2f, 3f), turned)
+            assertEquals(Vector3(1f, 2f, 3f), scene.position("Plane").localPosition)
+            world.advance(1f / 60f)
+            assertEquals(0f, plane.velocity().len(), 1e-4f)
+            assertEquals(1f, scene.position("Plane").localPosition.x, 1e-4f)
+            assertEquals(1f, kotlin.math.abs(turned.dot(scene.position("Plane").localRotation)), 1e-4f)
+        }
+    }
+
+    @Test
     fun aGameAddsAndRemovesARope() {
         val scene = loadPhysicsScene()
         world(scene, mutableListOf()).use { world ->

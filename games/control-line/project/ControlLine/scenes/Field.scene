@@ -1,0 +1,310 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "id": 0,
+  "name": "Field",
+  "ambientLightEnabled": true,
+  "ambientLight": {
+    "color": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "intensity": 0.4
+  },
+  "fogEnabled": true,
+  "fog": {
+    "color": {
+      "r": 0.75,
+      "g": 0.82,
+      "b": 0.9,
+      "a": 1
+    },
+    "density": 0.004,
+    "gradient": 1.5
+  },
+  "skyboxEnabled": true,
+  "skyboxName": "skybox_physical",
+  "ecs": {
+    "entities": {
+      "0": {
+        "components": {
+          "NameComponent": {
+            "name": "Field"
+          },
+          "TypeComponent": {
+            "type": "TERRAIN"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -100,
+              "y": -1,
+              "z": -100
+            }
+          },
+          "RenderComponent": {
+            "renderable": {
+              "kind": "asset",
+              "shaderKey": "terrain",
+              "asset": {
+                "type": "TERRAIN",
+                "assetName": "terrain_field"
+              }
+            }
+          },
+          "ColliderComponent": {
+            "shape": "HEIGHT_FIELD"
+          }
+        }
+      },
+      "1": {
+        "components": {
+          "NameComponent": {
+            "name": "Pilot"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "RenderComponent": {
+            "renderable": {
+              "kind": "asset",
+              "shaderKey": "defaultShader",
+              "asset": {
+                "type": "MODEL",
+                "assetName": "model_pilot"
+              }
+            }
+          },
+          "RigidBodyComponent": {
+            "motionType": "KINEMATIC"
+          },
+          "ColliderComponent": {
+            "shape": "SPHERE",
+            "radius": 0.15,
+            "offset": {
+              "x": 0,
+              "y": 1.5,
+              "z": 0
+            }
+          },
+          "PilotComponent": {}
+        }
+      },
+      "2": {
+        "components": {
+          "NameComponent": {
+            "name": "Sun"
+          },
+          "TypeComponent": {
+            "type": "LIGHT_DIRECTIONAL"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 60,
+              "y": 100,
+              "z": 40
+            },
+            "lookAtId": 1
+          },
+          "LightComponent": {
+            "light": {
+              "color": {
+                "r": 1,
+                "g": 0.96,
+                "b": 0.88,
+                "a": 1
+              },
+              "intensity": 1
+            }
+          }
+        }
+      },
+      "3": {
+        "components": {
+          "NameComponent": {
+            "name": "Racer"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 4.0,
+              "y": 0.1329,
+              "z": -2.5
+            },
+            "localRotation": {
+              "x": -0.0799022,
+              "y": -0.7025779,
+              "z": -0.0799022,
+              "w": 0.7025779
+            }
+          },
+          "RenderComponent": {
+            "renderable": {
+              "kind": "asset",
+              "shaderKey": "defaultShader",
+              "asset": {
+                "type": "MODEL",
+                "assetName": "model_racer"
+              }
+            }
+          },
+          "RigidBodyComponent": {
+            "mass": 0.5,
+            "friction": 0.05,
+            "linearDamping": 0
+          },
+          "ColliderComponent": {
+            "shape": "CONVEX_HULL"
+          },
+          "PlaneComponent": {
+            "planeClass": "SPEED",
+            "lineLength": 21,
+            "leadoutUp": {
+              "x": 0.33,
+              "y": 0,
+              "z": 0.01
+            },
+            "leadoutDown": {
+              "x": 0.33,
+              "y": 0,
+              "z": -0.03
+            },
+            "thrust": 6,
+            "fuelTime": 60,
+            "wingArea": 0.09,
+            "liftSlope": 4.2,
+            "zeroLiftDrag": 0.02,
+            "elevatorEffect": 0.3,
+            "pitchDamping": 10
+          }
+        }
+      },
+      "4": {
+        "components": {
+          "NameComponent": {
+            "name": "Stunter"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 4.0,
+              "y": 0.2202,
+              "z": 0
+            },
+            "localRotation": {
+              "x": -0.0799022,
+              "y": -0.7025779,
+              "z": -0.0799022,
+              "w": 0.7025779
+            }
+          },
+          "RenderComponent": {
+            "renderable": {
+              "kind": "asset",
+              "shaderKey": "defaultShader",
+              "asset": {
+                "type": "MODEL",
+                "assetName": "model_stunter"
+              }
+            }
+          },
+          "RigidBodyComponent": {
+            "mass": 1.1,
+            "friction": 0.05,
+            "linearDamping": 0
+          },
+          "ColliderComponent": {
+            "shape": "CONVEX_HULL"
+          },
+          "PlaneComponent": {
+            "planeClass": "STUNT",
+            "lineLength": 18,
+            "leadoutUp": {
+              "x": 0.63,
+              "y": 0,
+              "z": 0.02
+            },
+            "leadoutDown": {
+              "x": 0.63,
+              "y": 0,
+              "z": -0.04
+            },
+            "thrust": 5,
+            "fuelTime": 180,
+            "wingArea": 0.325,
+            "liftSlope": 4.8,
+            "elevatorEffect": 0.7
+          }
+        }
+      },
+      "5": {
+        "components": {
+          "NameComponent": {
+            "name": "Trainer"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 4.0,
+              "y": 0.1765,
+              "z": 2.5
+            },
+            "localRotation": {
+              "x": -0.0799022,
+              "y": -0.7025779,
+              "z": -0.0799022,
+              "w": 0.7025779
+            }
+          },
+          "RenderComponent": {
+            "renderable": {
+              "kind": "asset",
+              "shaderKey": "defaultShader",
+              "asset": {
+                "type": "MODEL",
+                "assetName": "model_trainer"
+              }
+            }
+          },
+          "RigidBodyComponent": {
+            "mass": 0.8,
+            "friction": 0.05,
+            "linearDamping": 0
+          },
+          "ColliderComponent": {
+            "shape": "CONVEX_HULL"
+          },
+          "PlaneComponent": {
+            "lineLength": 15,
+            "leadoutUp": {
+              "x": 0.48,
+              "y": 0,
+              "z": 0.02
+            },
+            "leadoutDown": {
+              "x": 0.48,
+              "y": 0,
+              "z": -0.04
+            },
+            "thrust": 5.5,
+            "zeroLiftDrag": 0.06
+          }
+        }
+      }
+    }
+  }
+}

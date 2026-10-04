@@ -21,6 +21,8 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | Sandbox IDE | `./gradlew runIde` (open a project with `-PideProject=/path/to/project`) |
 | Sandbox IDE with Abyssus Physics | `./gradlew :physics-plugin:runIde` |
 | Abyssus Physics tests | `./gradlew :physics-plugin:test` |
+| Control Line game: play / tests | `./gradlew :games:control-line:run` / `./gradlew :games:control-line:test` |
+| Control Line component schema and play launch file | `./gradlew :games:control-line:exportAbyssus` |
 | Plugin zip | `./gradlew buildPlugin` (to `build/distributions/`) |
 | Docs path check | `scripts/check-docs.sh` |
 
@@ -54,9 +56,13 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
 - `physics-plugin/`: **Abyssus Physics**, a second IntelliJ plugin that depends on Abyssus
   (`localPlugin(project(":"))`). It holds the physics overlay (`sceneOverlay`), Play through a play process
   (`sceneSimulation`), the physics schema generated at build time, and the bundled `play-host` folder.
+- `games/control-line/`: **Control Line**, a libGDX desktop game (LWJGL3) on `runtime` and `physics` that proves the
+  editor-for-games chain: its native project `games/control-line/project/ControlLine` is authored in Abyssus, its
+  `PlaneComponent` / `PilotComponent` are game components, and its `PlayModule` flies a plane in Play. Open a copy of
+  that project in the IDE, never the committed folder (its tests assert on the scene). See `games/control-line/README.md`.
 - `src/main/java/`: only the grammar sources `Gltf.bnf` / `Gltf.flex`; `src/main/gen` is generated from them.
 - `src/test/kotlin/`, `gdx-model/src/test/kotlin/`, `core/src/test/kotlin/`, `runtime/src/test/kotlin/`,
-  `physics/src/test/kotlin/`: tests. Fixtures in `src/test/testData/project/`
+  `physics/src/test/kotlin/`, `games/control-line/src/test/kotlin/`: tests. Fixtures in `src/test/testData/project/`
   (shared with `core`'s tests). Test helpers shared across modules live in `testFixtures` source sets
   (`gdx-model`: `TestGl`; `core`: `HdrFixtures`).
 - `openspec/`: specs and changes (see Workflow). `docs/superpowers/`: one historic design and plan.

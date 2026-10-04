@@ -70,7 +70,8 @@ tuning a plane is an edit in Abyssus, not a code change.
 
 ### Modified Capabilities
 
-None.
+- `physics-simulation`: a game can put a dynamic or kinematic body at a pose at once and at rest
+  (`PhysicsBody.setPose`), so Play can place the plane at takeoff and restart a flight in the world the play host built.
 
 ## Impact
 

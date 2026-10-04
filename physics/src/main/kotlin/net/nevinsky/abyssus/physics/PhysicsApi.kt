@@ -41,6 +41,12 @@ interface PhysicsBody {
 
     /** For a kinematic body: moves it to [position] / [rotation] over the next [seconds]. */
     fun moveKinematic(position: Vector3, rotation: Quaternion, seconds: Float)
+
+    /**
+     * For a dynamic or kinematic body: puts it at [position] / [rotation] at once, at rest, and writes that pose to
+     * its entity's `PositionComponent` (a game restarting a run).
+     */
+    fun setPose(position: Vector3, rotation: Quaternion)
 }
 
 /** Two bodies that touched during the last `advance`, and the speed they met at (m/s). [first]: a new contact. */

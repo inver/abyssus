@@ -38,7 +38,7 @@ model, and a height field from its terrain's `terrain.data`. Both are read by `P
   `PositionComponent.localPosition` / `localRotation` after each call; scale is never changed. `step()` runs exactly
   one. Single-threaded jobs and a fixed temp allocator make a run deterministic on one machine.
 - **Game access:** `bodyOf(entity)` (`applyForce` / `applyTorque` act on every step of the next `advance`,
-  `velocity`, `setVelocity`, `moveKinematic`), `contacts()` (the pairs that touched during the last `advance`, with
+  `velocity`, `setVelocity`, `moveKinematic`, `setPose`: put a dynamic or kinematic body at a pose at once, at rest), `contacts()` (the pairs that touched during the last `advance`, with
   their relative speed), `addRope`, `addConstraint` and `remove(constraint)`. Removing an entity from the engine, or
   `removeEntity`, removes its body and its constraints.
 - **Close:** `close()` removes every constraint and body and releases every native object the world created, in

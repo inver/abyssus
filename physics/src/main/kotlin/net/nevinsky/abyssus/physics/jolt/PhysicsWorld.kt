@@ -496,6 +496,18 @@ class PhysicsWorld(
             bodies.moveKinematic(id, RVec3(position.x.toDouble(), position.y.toDouble(), position.z.toDouble()), Quat(q.x, q.y, q.z, q.w), seconds)
         }
 
+        override fun setPose(position: Vector3, rotation: Quaternion) = open {
+            check(motionType != MotionType.STATIC) { "${describe(entity)} is static" }
+            val q = Quaternion(rotation).nor()
+            bodies.setPositionAndRotation(id, position.x.toDouble(), position.y.toDouble(), position.z.toDouble(), q.x, q.y, q.z, q.w, EActivation.Activate)
+            bodies.setLinearAndAngularVelocity(id, 0f, 0f, 0f, 0f, 0f, 0f)
+            entity.getComponent(PositionComponent::class.java)?.let {
+                it.localPosition.set(position)
+                it.localRotation.set(q)
+            }
+            Unit
+        }
+
         fun applyPending(bodies: BodyInterface) {
             if (motionType != MotionType.DYNAMIC) return
             if (!force.isZero) bodies.addForce(id, force.x, force.y, force.z)
