@@ -28,6 +28,7 @@ import net.nevinsky.abyssus.terrain.NewTerrainForm
 import net.nevinsky.abyssus.terrain.NewTerrainRequest
 import java.io.File
 import javax.swing.JComponent
+import net.nevinsky.abyssus.assets.displayMessage
 
 /**
  * Right-click New Terrain on the Assets node of a recognized project: a dialog for the folder name, world size,
@@ -105,7 +106,7 @@ fun createTerrain(project: Project, abss: VirtualFile, request: NewTerrainReques
         is AssetCommandResult.Conflict -> result.path
         is AssetCommandResult.Blocked -> result.reason
         AssetCommandResult.Cancelled -> AbyssusBundle.message("terrainApplyCancelled")
-        is AssetCommandResult.Failed -> result.cause.message ?: result.cause.javaClass.simpleName
+        is AssetCommandResult.Failed -> result.cause.displayMessage()
     }
     if (problem != null) report(AbyssusBundle.message("newTerrainFailed", problem))
     return result

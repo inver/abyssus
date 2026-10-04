@@ -7,19 +7,21 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 
 | Class | Role |
 |---|---|
-| `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params on document/VFS changes; writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo |
+| `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo. The provider is where the tab's collaborators are looked up and passed in |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
-| `SceneContent` | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
+| `SceneContent`, `PlacementMapper` | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. The components are decoded by the same codecs the Properties panel uses (`DecodedEntity`), so both show the same values and defaults; `PlacementMapper` (pure) maps them. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
 | `LightSet`, `SpotCone` | Deterministic light selection and CPU cone/range attenuation math |
 | `shadows/` | Per-context atlas, stable tile allocation, fitted light cameras and shared model/terrain depth pass |
 | `SceneView` | Interface of the view, so tests can pass a fake (`viewFactory`) |
 | `SceneViewPanel` | Swing panel: GL canvas, Swing `Timer` frame loop, toolbar, keys (W / E / D / Esc) |
-| `SceneInteraction` | Mouse and key logic without Swing or GL: click → pick/select, drag → gizmo or orbit/pan, Drop → a Y-only move |
-| `SceneRenderer` | One frame: environment, skybox, grid, terrains, models, markers, highlight, gizmo; `pick` |
-| `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (a `core` `SceneAssets` each, from `AssetLoading`) and per-entity instances (`PlacedEntities`) |
+| `SceneViewState` | What the user chose: selection, gizmo mode and hovered handle, the camera looked through, the drag/drop preview. The panel changes it; the renderer and the queries read it |
+| `SceneInteraction` | Mouse and key logic without Swing or GL, over a `SceneViewState` and `SceneQueries`: click → pick/select, drag → gizmo or orbit/pan (one `Gesture`: Idle, Dragging or Cancelled), Drop → a Y-only move |
+| `FrameSnapshot`, `SceneQueries`, `SnapshotSceneQueries` | What the last frame drew (camera copy, model boxes, terrain targets, `drawnVersion`), and the CPU-only questions asked of it: pick, ray, ground below, lowest point, gizmo handles and hits, drag start. Tested with hand-built snapshots |
+| `SceneRenderer` | One frame: environment, skybox, grid, terrains, models, markers, highlight, gizmo. GL only: it publishes a `FrameSnapshot` after each frame and exposes `queries`. `GridModel` and `SelectionBox` build the grid and the highlight |
+| `PlacedAssets`, `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (a `core` `SceneAssets` each, from `AssetLoading`) and per-entity instances (`PlacedEntities`); `SceneModels` and `SceneTerrains` extend `PlacedAssets` and `SceneSkybox` has the same `abandon` |
 | `skybox/` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights. The sky loaders, the HDR environment and the sky shaders are in `core` (`net.nevinsky.abyssus.assets.sky`) |
 | `SceneMarkers`, `CameraFrustum` | Camera body and frustum, light markers, and their pick bounds |
-| `ScenePicker` | Ray from a pixel, nearest hit over boxes and terrain heights |
+| `ScenePicker` | Ray from a pixel, nearest hit over boxes and terrain heights (used by `SnapshotSceneQueries`) |
 | Drop: `OrientedBox`, `TerrainRestHeight`, `ScenePicker.restHeight` | Highest surface under a rotated box footprint; CPU-only bilinear terrain-cell maxima |
 | `ScenePreview` | Applies a drag or drop preview over the placements |
 | `gizmo/` | Handle geometry (`GizmoHandles`), hit tests (`GizmoHit`), drag math (`GizmoDrag`), drawing (`GizmoDraw`) |
@@ -54,6 +56,9 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
   replacement (`drawnVersion` changes when an asset is replaced so Drop re-measures). Nothing moves entities.
 - **The view reads JSON, not the ECS engine.** Placements come straight from the `ecs` JSON. `ParentComponent` is
   ignored, and `local*` values are drawn as world values; drags write them the same way.
+- **Picking needs no renderer.** `SceneRenderer.publishSnapshot` copies the camera, the drawn boxes and terrain targets after each
+  frame; `SnapshotSceneQueries` answers from that copy, the `SceneViewState` and the scene content, and puts the drawn
+  boxes together once per snapshot and preview. Marker boxes (cameras, lights) come from the content at question time.
 - **Drags preview, then write once.** During a drag `ScenePreview` overrides the dragged entity's placement. On release
   one `editSceneJson` command ("Move Entity" / "Rotate Entity") writes it. The document change re-reads params, and
   the override stays until they arrive so the object doesn't jump back.

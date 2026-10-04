@@ -194,6 +194,8 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
   test in the plugin because it imports IntelliJ; ordinary failure and cancellation cases can also test the helper
   in `core`. Replace all direct `runCatching` calls in the checked roots, currently eleven, including the newer
   asset-editing, terrain and ray integration sites.
+  The one exception in behavior is `TerrainPreviewRunner`: its own "superseded" `CancellationException` must be captured
+  as the run's outcome, so it uses an explicit `try`/`catch` there instead of either helper.
 - **Build check:** a `checkNoRunCatching` Gradle task (a regex over `src/main` and `core/src/main`, as
   `checkNoSingletons` does) wired into `check`.
 - **JSON setup:** a `JsonFormat` in `core` (a class, no object) builds the shared `JsonMapper.Builder` settings and the

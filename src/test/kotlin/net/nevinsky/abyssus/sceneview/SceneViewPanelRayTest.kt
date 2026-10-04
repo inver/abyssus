@@ -51,7 +51,7 @@ class SceneViewPanelRayTest : BasePlatformTestCase() {
 
     private fun context(renderer: SceneRenderer): RayFrameContext {
         val camera = PerspectiveCamera(60f, 8f, 8f).apply { position.set(0f, 0f, 5f); lookAt(0f, 0f, 0f); update() }
-        return RayFrameContext(renderer.params, SceneContent.EMPTY, camera, LightSet.NONE, emptyList(), 8, 8, renderer.viewCamera)
+        return RayFrameContext(renderer.params, SceneContent.EMPTY, camera, LightSet.NONE, emptyList(), 8, 8, renderer.state.viewCamera)
     }
 
     fun testTheSceneViewToolbarHasNoRayTracingControl() {
@@ -81,11 +81,11 @@ class SceneViewPanelRayTest : BasePlatformTestCase() {
 
     fun testCameraSelectionAndDragStateSurviveEveryTransition() {
         val renderer = testRenderer()
-        renderer.selectedId = "selected-entity"
-        renderer.viewCamera = "camera-1"
-        renderer.preview = mapOf("selected-entity" to net.nevinsky.abyssus.sceneview.gizmo.DragResult(
+        renderer.state.selectedId = "selected-entity"
+        renderer.state.viewCamera = "camera-1"
+        renderer.state.preview = mapOf("selected-entity" to net.nevinsky.abyssus.sceneview.gizmo.DragResult(
             PlacementTransform(Vec3(1f, 2f, 3f), Quat.IDENTITY, Vec3(1f, 1f, 1f)), null))
-        val preview = renderer.preview
+        val preview = renderer.state.preview
         val device = RayFakeDevice()
         val panel = panel(renderer, service("metal" to device))
         panel.rayControl!!.setRequested(true)
@@ -94,9 +94,9 @@ class SceneViewPanelRayTest : BasePlatformTestCase() {
         val feedFrame = renderer.rayFrameProvider!!
         waitFor("device loss to fail the mode") { feedFrame(context(renderer)); panel.rayMode!!.phase == RayModePhase.Failed }
         panel.rayControl!!.setRequested(false)
-        assertEquals("selected-entity", renderer.selectedId)
-        assertEquals("camera-1", renderer.viewCamera)
-        assertSame("a drag in progress keeps its preview", preview, renderer.preview)
+        assertEquals("selected-entity", renderer.state.selectedId)
+        assertEquals("camera-1", renderer.state.viewCamera)
+        assertSame("a drag in progress keeps its preview", preview, renderer.state.preview)
     }
 
     fun testTwoViewsHaveIndependentModes() {

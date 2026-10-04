@@ -33,6 +33,8 @@ import javax.swing.JToggleButton
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import javax.swing.Timer
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.displayMessage
 
 /** An entry of the camera selector: [id] is the camera entity to look through, null for the free orbit view. */
 data class CameraChoice(val id: String?, val label: String) {
@@ -47,16 +49,17 @@ fun cameraChoices(content: SceneContent, freeLabel: String): List<CameraChoice> 
  * Swing panel hosting a core-profile GL canvas that renders a scene with libGDX. Orbit/pan/zoom with the mouse; click
  * selects an object, whose gizmo (Move: W, Rotate: E) can be dragged; a selector looks through a camera entity.
  */
-class SceneViewPanel(
+class SceneViewPanel internal constructor(
     initial: SceneRenderParams,
-    private val renderer: SceneRenderer = service<AbyssusCore>().let { SceneRenderer(it.loading, it.sceneShaders) },
+    private val renderer: SceneRenderer,
     private val lightActions: ((() -> Vec3) -> DefaultActionGroup)? = null,
     private val canAddLight: () -> Boolean = { lightActions != null },
+    ray: RayIntegration? = null,
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     private val frame = GdxFrame()
     private val orbit = OrbitCamera.from(initial.camera)
-    private val interaction = SceneInteraction(renderer, orbit)
+    private val interaction = SceneInteraction(renderer.state, renderer.queries, orbit)
     private var gdx: GdxContext? = null
 
     private var lastCamera = initial.camera
@@ -99,8 +102,8 @@ class SceneViewPanel(
 
     init {
         renderer.params = initial
-        // Ray tracing is optional: a missing service (e.g. a test without the application services) leaves raster only.
-        runCatching { RayIntegration.of(service<AbyssusCore>()) }.getOrNull()?.let(::installRay)
+        // Ray tracing is optional: without an integration the view stays raster only.
+        ray?.let(::installRay)
     }
 
     /**
@@ -174,7 +177,7 @@ class SceneViewPanel(
             if (!experimenting) interaction.frameRendered()
             refreshRay()
             experimentButton?.toolTipText = experiment?.failure?.let {
-                AbyssusBundle.message("sceneViewRayExperimentFailure", it.message ?: it.javaClass.simpleName)
+                AbyssusBundle.message("sceneViewRayExperimentFailure", it.displayMessage())
             } ?: AbyssusBundle.message("sceneViewRayExperimentTooltip")
             swapBuffers()
         }
@@ -378,7 +381,7 @@ class SceneViewPanel(
         }
 
     override fun selectEntity(entityId: String) {
-        renderer.selectedId = entityId
+        renderer.state.selectedId = entityId
         syncControls()
     }
 

@@ -11,6 +11,7 @@ import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.terrain.noise.FAST_NOISE_LITE_REVISION
 import net.nevinsky.abyssus.assets.terrain.noise.OPENSIMPLEX2_FBM_V1
+import net.nevinsky.abyssus.assets.displayMessage
 
 /** The Abyssus-only file beside `terrain.data` that keeps how the applied heights were made. Mundus never reads it. */
 const val TERRAIN_RECIPE_FILE = "abyssus-terrain.recipe.json"
@@ -84,7 +85,7 @@ class TerrainRecipeCodec(private val json: JsonProcessor) {
 
     /** The recipe in [text], or why it is not usable ([RecipeStatus.Malformed] or [RecipeStatus.Unsupported]). */
     fun decode(text: String): Decoded = runCatchingKeepingCancellation { read(json.readObject(text)) }
-        .getOrElse { Decoded.Failed(RecipeStatus.Malformed(it.message ?: it.javaClass.simpleName)) }
+        .getOrElse { Decoded.Failed(RecipeStatus.Malformed(it.displayMessage())) }
 
     sealed interface Decoded {
         data class Recipe(val recipe: TerrainRecipe) : Decoded

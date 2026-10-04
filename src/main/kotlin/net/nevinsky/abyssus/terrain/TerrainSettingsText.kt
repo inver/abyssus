@@ -9,6 +9,7 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assets.terrain.generation.SettingsError
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationSettings
 import java.math.BigDecimal
+import net.nevinsky.abyssus.dto.textOf
 
 /** The seven generation settings an editor shows, by the key a test or editor name uses. */
 enum class TerrainSettingField(val key: String, val labelKey: String, val integer: Boolean) {

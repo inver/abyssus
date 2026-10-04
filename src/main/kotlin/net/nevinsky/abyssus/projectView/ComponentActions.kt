@@ -20,7 +20,12 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.ecs.scene.ComponentEditor
 import net.nevinsky.abyssus.ecs.scene.EditResult
 import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.sceneview.textOf
+import net.nevinsky.abyssus.dto.textOf
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.dto.MetaFiles
+import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.AbyssusCore
+import net.nevinsky.abyssus.dto.SceneDocumentCache
 
 /** Tells the user why an edit was refused; anything else needs no word. */
 internal fun reportRejection(project: Project, result: EditResult) {
@@ -33,13 +38,13 @@ internal fun reportRejection(project: Project, result: EditResult) {
  * The choices for adding a component to [entityId] of [file]: one action per modeled kind the entity lacks, a Render
  * component being offered once per model or terrain of the project. Empty when the entity has everything.
  */
-fun addComponentGroup(project: Project, file: VirtualFile, entityId: String, kinds: List<String>): DefaultActionGroup {
+fun addComponentGroup(project: Project, file: VirtualFile, entityId: String, kinds: List<String>, metaFiles: MetaFiles): DefaultActionGroup {
     val group = DefaultActionGroup()
     for (name in kinds) {
         val label = ComponentEditor.kindOf(name)?.label ?: continue
         if (name == "RenderComponent") {
             val sub = DefaultActionGroup(label, true)
-            val assets = SceneComponentEdits.renderAssets(file)
+            val assets = SceneComponentEdits.renderAssets(file, metaFiles)
             if (assets.isEmpty()) sub.add(object : AnAction(AbyssusBundle.message("addComponentNoAssets")) {
                 override fun actionPerformed(e: AnActionEvent) = Unit
                 override fun update(e: AnActionEvent) {
@@ -60,7 +65,8 @@ fun addComponentGroup(project: Project, file: VirtualFile, entityId: String, kin
                             file,
                             entityId,
                             name,
-                            mapOf("assetType" to asset.type, "assetName" to asset.name)
+                            metaFiles,
+                            mapOf("assetType" to asset.type, "assetName" to asset.name),
                         ),
                     )
                 })
@@ -69,7 +75,7 @@ fun addComponentGroup(project: Project, file: VirtualFile, entityId: String, kin
         } else {
             group.add(object : AnAction(label) {
                 override fun actionPerformed(e: AnActionEvent) =
-                    reportRejection(project, SceneComponentEdits.add(project, file, entityId, name))
+                    reportRejection(project, SceneComponentEdits.add(project, file, entityId, name, metaFiles))
             })
         }
     }
@@ -84,28 +90,17 @@ internal fun selectedNode(e: AnActionEvent): Any? {
 }
 
 /** Right-click "Add Component..." on an entity row: lists the modeled components it lacks. */
-open class AddComponentAction : AnAction(), DumbAware {
-    /** The node the action applies to; the selected row of the Abyssus view. */
-    internal open fun selected(e: AnActionEvent): Any? = selectedNode(e)
-
-    override fun getActionUpdateThread() = ActionUpdateThread.EDT
-
-    private fun target(e: AnActionEvent) = componentTargetOf(selected(e))?.takeIf { it.kind == null }
-
-    override fun update(e: AnActionEvent) {
-        e.presentation.isEnabledAndVisible = target(e) != null
-    }
+open class AddComponentAction : AbyssusTreeAction<ComponentTarget>() {
+    override fun targetOf(node: Any?) = componentTargetOf(node)?.takeIf { it.kind == null }
 
     /** What can be added to the entity [target] stands for: the modeled kinds it lacks in the scene's current text. */
     internal fun choices(project: Project, target: ComponentTarget): DefaultActionGroup {
-        val root = runCatching { SceneJson.parse(textOf(target.file)) }.getOrNull() ?: return DefaultActionGroup()
+        val root = SceneDocumentCache.of(project).read(target.file)?.root ?: return DefaultActionGroup()
         val kinds = ComponentEditor.missingKinds(root, target.entityId).map { it.name }
-        return addComponentGroup(project, target.file, target.entityId, kinds)
+        return addComponentGroup(project, target.file, target.entityId, kinds, service<AbyssusCore>().metaFiles)
     }
 
-    override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
-        val target = target(e) ?: return
+    override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) {
         val group = choices(project, target)
         JBPopupFactory.getInstance()
             .createActionGroupPopup(
@@ -120,22 +115,11 @@ open class AddComponentAction : AnAction(), DumbAware {
 }
 
 /** Right-click "Remove Component" on a component row the plugin models. */
-open class RemoveComponentAction : AnAction(), DumbAware {
-    /** The node the action applies to; the selected row of the Abyssus view. */
-    internal open fun selected(e: AnActionEvent): Any? = selectedNode(e)
+open class RemoveComponentAction : AbyssusTreeAction<ComponentTarget>() {
+    override fun targetOf(node: Any?) =
+        componentTargetOf(node)?.takeIf { it.kind != null && ComponentEditor.kindOf(it.kind) != null }
 
-    override fun getActionUpdateThread() = ActionUpdateThread.EDT
-
-    private fun target(e: AnActionEvent) =
-        componentTargetOf(selected(e))?.takeIf { it.kind != null && ComponentEditor.kindOf(it.kind) != null }
-
-    override fun update(e: AnActionEvent) {
-        e.presentation.isEnabledAndVisible = target(e) != null
-    }
-
-    override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
-        val target = target(e) ?: return
+    override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) {
         reportRejection(project, SceneComponentEdits.remove(project, target.file, target.entityId, target.kind!!))
     }
 }

@@ -14,6 +14,7 @@ import java.io.File
 import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.sqrt
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 
 data class Vec3(val x: Float, val y: Float, val z: Float)
 
@@ -89,7 +90,7 @@ internal fun normalized(v: Vec3): Vec3? {
 
 /** The `mainCamera` of the `.abss` project a scene belongs to. */
 object MainCamera {
-    fun parse(abssText: String): CameraParams? = runCatching {
+    fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
         val root = SceneJson.parse(abssText).takeIf { it.isObject } ?: return null
         val cam = root.obj("mainCamera") ?: return null
         val position = cam.vec("position") ?: return null

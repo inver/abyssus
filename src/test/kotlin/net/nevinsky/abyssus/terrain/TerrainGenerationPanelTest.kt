@@ -21,6 +21,7 @@ import java.awt.Component
 import java.awt.Container
 import java.io.File
 import javax.swing.JButton
+import net.nevinsky.abyssus.testPanelServices
 
 class TerrainGenerationPanelTest : BasePlatformTestCase() {
     private val terrainName = "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
@@ -41,7 +42,7 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
     }
 
     private fun panel(): AssetPropertiesPanel = AssetPropertiesPanel(
-        project, testRootDisposable,
+        project, testRootDisposable, testPanelServices(project),
         background = { if (deferred) queue += it else it.run() },
         ui = { it.run() },
     )

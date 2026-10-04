@@ -5,12 +5,11 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.dto.ProjectLayout
-import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.dto.SceneReader
-import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.dto.textOf
 
 /** Reads what the scene view shows for a `.scene` file; throws when the scene cannot be read. */
 fun interface SceneParamsSource {
@@ -24,15 +23,11 @@ fun interface SceneParamsSource {
          * The scene and its project's main camera as the editors show them (unsaved text included); the default camera
          * when the scene has no project or its camera is unreadable.
          */
-        val EDITOR_TEXT = SceneParamsSource { file ->
+        fun editorText(reader: SceneReader) = SceneParamsSource { file ->
             val camera = ProjectLayout.abssFor(file)?.let { abss ->
                 runCatchingKeepingCancellation { MainCamera.parse(textOf(abss)) }.getOrNull()
             } ?: CameraParams.DEFAULT
-            SceneRenderParams.from(service<SceneReader>().parse(textOf(file)), camera, ProjectLayout.projectDirFor(file))
+            SceneRenderParams.from(reader.parse(textOf(file)), camera, ProjectLayout.projectDirFor(file))
         }
     }
 }
-
-/** The editor's unsaved text when the file has an open document, else the file's content. */
-fun textOf(file: VirtualFile): String =
-    FileDocumentManager.getInstance().getCachedDocument(file)?.text ?: String(file.contentsToByteArray(), file.charset)

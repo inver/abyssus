@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -12,6 +12,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.SwingUtilities
+import net.nevinsky.abyssus.assets.displayMessage
 
 /**
  * Application owner of providers, devices and one serial native worker. Each view gets an independent session and
@@ -135,7 +136,7 @@ internal class RayBackendService(
         }
         if (view.wanted(revision)) {
             view.clearPublication()
-            publish { view.mode.failed(revision, failure.message ?: failure.javaClass.simpleName) }
+            publish { view.mode.failed(revision, failure.displayMessage()) }
         }
         reportFailure(failure)
         disposeBinding(view)
@@ -147,7 +148,7 @@ internal class RayBackendService(
         // Invalidate every publication before starting cleanup, which may need to drain already submitted work.
         for ((view, binding) in affected) {
             view.clearPublication()
-            publish { view.mode.failed(binding.revision, failure.message ?: failure.javaClass.simpleName) }
+            publish { view.mode.failed(binding.revision, failure.displayMessage()) }
         }
         reportFailure(failure)
         affected.forEach { (view, _) -> disposeBinding(view) }

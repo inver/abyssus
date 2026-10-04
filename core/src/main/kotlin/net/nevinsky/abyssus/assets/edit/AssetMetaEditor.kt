@@ -18,6 +18,7 @@ import net.nevinsky.abyssus.assets.files.MetaType
 import net.nevinsky.abyssus.assets.sky.procedural.AtmosphereParams
 import java.math.BigDecimal
 import java.util.UUID
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 
 /** How an editable `additional` field is shown and checked. */
 enum class FieldKind {
@@ -224,7 +225,7 @@ class AssetMetaEditor(private val descriptions: AssetFieldDescriptions) {
 
         FieldKind.ASSET_REFERENCE -> when (value) {
             FieldValue.None -> null
-            is FieldValue.Text -> if (runCatching { UUID.fromString(value.value) }.isSuccess) null else EditError.NOT_A_UUID
+            is FieldValue.Text -> if (runCatchingKeepingCancellation { UUID.fromString(value.value) }.isSuccess) null else EditError.NOT_A_UUID
             else -> EditError.NOT_A_UUID
         }
 

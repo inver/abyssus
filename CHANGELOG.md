@@ -15,6 +15,7 @@
 - Initial scaffold created from [IntelliJ Platform Plugin Template](https://github.com/JetBrains/intellij-platform-plugin-template)
 
 ### Changed
+- Scene view lights that leave out `intensity` are drawn at intensity 1 (they were drawn at 0.3, while the Properties panel always showed 1), and a color channel missing from a present `color` object counts as 0 in both; the scene files are not touched
 - The model runtime and Assimp importer live in their own `gdx-model` library module (no IntelliJ or gdx-gltf dependency)
 
 ### Removed

@@ -8,6 +8,7 @@ package net.nevinsky.abyssus.terrain
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationDraft
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerator
 import kotlin.coroutines.cancellation.CancellationException
+import net.nevinsky.abyssus.assets.displayMessage
 
 /** How a started preview ended; a superseded or cancelled one reports nothing at all. */
 sealed interface PreviewOutcome {
@@ -40,10 +41,14 @@ class TerrainPreviewRunner(
         val request = draft.begin() ?: return false
         active = request.token
         background {
-            val result = runCatching {
-                generator.generate(request.resolution, request.size, request.settings) {
+            // not runCatchingKeepingCancellation: the "superseded" cancellation thrown below ends this run and is the
+            // outcome handled in `ui` (it is ours, not the platform's), so it must be captured too
+            val result = try {
+                Result.success(generator.generate(request.resolution, request.size, request.settings) {
                     if (disposed || active != request.token) throw CancellationException("superseded")
-                }
+                })
+            } catch (e: Throwable) {
+                Result.failure(e)
             }
             ui {
                 if (disposed) return@ui
@@ -52,7 +57,7 @@ class TerrainPreviewRunner(
                     onFailure = { e ->
                         if (e is CancellationException) return@ui
                         draft.fail(request)
-                        if (active == request.token) onOutcome(PreviewOutcome.Failed(e.message ?: e.javaClass.simpleName))
+                        if (active == request.token) onOutcome(PreviewOutcome.Failed(e.displayMessage()))
                     },
                 )
             }

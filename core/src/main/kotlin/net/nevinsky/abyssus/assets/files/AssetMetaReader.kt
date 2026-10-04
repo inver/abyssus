@@ -26,10 +26,10 @@ class AssetMetaReader(private val json: JsonProcessor) {
      * [text] as a document; throws when it is not a JSON object. A missing or unknown `type` reads as
      * [MetaType.UNKNOWN].
      */
-    fun read(text: String): MetaDocument {
-        val tree = json.readObject(text)
-        return MetaDocument(typeOf(tree), tree, json)
-    }
+    fun read(text: String): MetaDocument = read(json.readObject(text))
+
+    /** An already parsed [tree] (a caller that needs its own number text, say) as a document. */
+    fun read(tree: JsonNode): MetaDocument = MetaDocument(typeOf(tree), tree, json)
 
     private fun typeOf(tree: JsonNode): MetaType =
         tree.text("type")?.let { name -> MetaType.entries.firstOrNull { it.name == name } } ?: MetaType.UNKNOWN

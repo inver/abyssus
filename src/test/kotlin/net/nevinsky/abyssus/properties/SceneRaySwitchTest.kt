@@ -23,6 +23,7 @@ import java.awt.Component
 import java.awt.Container
 import java.util.concurrent.TimeUnit
 import javax.swing.JButton
+import net.nevinsky.abyssus.testPanelServices
 
 class SceneRaySwitchTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
@@ -214,10 +215,10 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         panel.installRay(integration)
         // the editor registers its view's switch with the project service, as it does for every Scene View
         val real = project.getService(SceneRayControls::class.java)
-        val editor = SceneFileEditor(project, sceneFile, viewFactory = { panel })
+        val editor = net.nevinsky.abyssus.sceneview.newSceneEditor(project, sceneFile, viewFactory = { panel })
         Disposer.register(testRootDisposable, editor)
         Disposer.register(testRootDisposable) { service.close() }
-        val properties = AssetPropertiesPanel(project, testRootDisposable, { it.run() }, { it.run() })
+        val properties = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
         val scene = children(children(abss()).single { label(it) == "scenes" }).single()
         properties.show(scene)
         assertTrue(properties.state is PanelState.SceneDetails)

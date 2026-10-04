@@ -11,6 +11,7 @@ import net.nevinsky.abyssus.sceneview.SceneTransformWriter
 import net.nevinsky.abyssus.sceneview.TransformEdit
 import net.nevinsky.abyssus.sceneview.Vec3
 import java.io.File
+import net.nevinsky.abyssus.filetype.editSceneJson
 
 class SceneTransformEditTest : BasePlatformTestCase() {
     private val original = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
@@ -37,5 +38,30 @@ class SceneTransformEditTest : BasePlatformTestCase() {
             SceneTransformWriter.apply(root, "0", TransformEdit(position = Vec3(-3.035308f, 0.9123962f, -3.2570944f)))
         })
         assertEquals(original, String(file.contentsToByteArray()))
+    }
+
+    private fun eventsDuring(action: () -> Unit): List<com.intellij.openapi.vfs.VirtualFile> {
+        val events = mutableListOf<com.intellij.openapi.vfs.VirtualFile>()
+        val connection = project.messageBus.connect(testRootDisposable)
+        connection.subscribe(net.nevinsky.abyssus.filetype.AbyssusSceneEdited.TOPIC, net.nevinsky.abyssus.filetype.AbyssusSceneEdited { events += it })
+        action()
+        connection.disconnect()
+        return events
+    }
+
+    fun testAWritePublishesExactlyOneEventForTheFile() {
+        val file = myFixture.addFileToProject("p/Event.scene", original).virtualFile
+        val events = eventsDuring {
+            assertTrue(editSceneJson(project, file, "Move Entity") { root ->
+                SceneTransformWriter.apply(root, "0", TransformEdit(position = Vec3(1f, 0.9123962f, -3.2570944f)))
+            })
+        }
+        assertEquals(listOf(file), events)
+    }
+
+    fun testNoEventWhenNothingIsWritten() {
+        val file = myFixture.addFileToProject("p/NoEvent.scene", original).virtualFile
+        val events = eventsDuring { assertFalse(editSceneJson(project, file, "Nothing") { false }) }
+        assertTrue(events.isEmpty())
     }
 }

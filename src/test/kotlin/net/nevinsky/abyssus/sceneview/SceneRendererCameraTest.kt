@@ -38,7 +38,7 @@ class SceneRendererCameraTest {
     @Test
     fun lookingThroughACameraUsesItsPositionDirectionAndLens() {
         val r = renderer()
-        r.viewCamera = "4"
+        r.state.viewCamera = "4"
         r.updateCamera(width, height, OrbitCamera.from(CameraParams.DEFAULT))
         val cam = r.frameCamera
         assertEquals(-23.56657f, cam.position.x, 1e-4f)
@@ -60,9 +60,9 @@ class SceneRendererCameraTest {
         val orbit = OrbitCamera.from(CameraParams.DEFAULT)
         r.updateCamera(width, height, orbit)
         val before = Vector3(r.frameCamera.position)
-        r.viewCamera = "4"
+        r.state.viewCamera = "4"
         r.updateCamera(width, height, orbit)
-        r.viewCamera = null
+        r.state.viewCamera = null
         r.updateCamera(width, height, orbit)
         assertEquals(before, r.frameCamera.position)
         val eye = orbit.position()
@@ -75,7 +75,7 @@ class SceneRendererCameraTest {
     fun aMissingViewCameraFallsBackToTheOrbit() {
         val r = renderer()
         val orbit = OrbitCamera.from(CameraParams.DEFAULT)
-        r.viewCamera = "99"
+        r.state.viewCamera = "99"
         r.updateCamera(width, height, orbit)
         assertEquals(orbit.position().x, r.frameCamera.position.x, 0f)
     }
@@ -85,8 +85,8 @@ class SceneRendererCameraTest {
         val r = renderer()
         val p = r.params.content.cameras.single().position
         r.updateCamera(width, height, orbitAt(p))
-        assertEquals("4", r.pick(width / 2, height / 2, width, height))
-        assertNull(r.pick(5, 5, width, height))
+        assertEquals("4", r.queries.pick(width / 2, height / 2, width, height))
+        assertNull(r.queries.pick(5, 5, width, height))
     }
 
     private fun screenOf(r: SceneRenderer, p: Vec3): Pair<Int, Int> {
@@ -99,35 +99,35 @@ class SceneRendererCameraTest {
     fun theMoveGizmoOfTheSelectionIsHitAtItsArrowTips() {
         val r = renderer()
         val model = r.params.content.models.first { it.entityId == "0" }
-        r.selectedId = "0"
-        r.gizmoMode = GizmoMode.MOVE
+        r.state.selectedId = "0"
+        r.state.gizmoMode = GizmoMode.MOVE
         r.updateCamera(width, height, orbitAt(model.transform.position))
-        val handles = r.gizmoHandles(height)!!
+        val handles = r.queries.gizmoHandles(height)!!
         for (axis in GizmoAxis.entries) {
             val (x, y) = screenOf(r, handles.tip(axis))
-            assertEquals(axis, r.gizmoHit(x, y, width, height))
+            assertEquals(axis, r.queries.gizmoHit(x, y, width, height))
         }
-        assertNull(r.gizmoHit(2, 2, width, height))
+        assertNull(r.queries.gizmoHit(2, 2, width, height))
     }
 
     @Test
     fun noSelectionMeansNoGizmo() {
         val r = renderer()
         r.updateCamera(width, height, orbitAt(Vec3(0f, 0f, 0f)))
-        assertNull(r.gizmoHandles(height))
-        assertNull(r.gizmoHit(width / 2, height / 2, width, height))
+        assertNull(r.queries.gizmoHandles(height))
+        assertNull(r.queries.gizmoHit(width / 2, height / 2, width, height))
     }
 
     @Test
     fun aLookAtCameraHasNoRotateHandlesButMoves() {
         val r = renderer()
         val p = r.params.content.cameras.single().position
-        r.selectedId = "4"
+        r.state.selectedId = "4"
         r.updateCamera(width, height, orbitAt(p))
-        r.gizmoMode = GizmoMode.ROTATE
-        assertNull(r.gizmoHandles(height))
-        r.gizmoMode = GizmoMode.MOVE
-        assertTrue(r.gizmoHandles(height) != null)
+        r.state.gizmoMode = GizmoMode.ROTATE
+        assertNull(r.queries.gizmoHandles(height))
+        r.state.gizmoMode = GizmoMode.MOVE
+        assertTrue(r.queries.gizmoHandles(height) != null)
     }
 
     @Test
@@ -135,10 +135,10 @@ class SceneRendererCameraTest {
         val r = renderer()
         val original = r.params.content.models.first { it.entityId == "0" }
         val moved = original.transform.copy(position = Vec3(1f, 2f, 3f))
-        r.preview = mapOf("0" to DragResult(moved, null))
+        r.state.preview = mapOf("0" to DragResult(moved, null))
         assertEquals(Vec3(1f, 2f, 3f), r.content.models.first { it.entityId == "0" }.transform.position)
         assertEquals(original.transform.position, r.params.content.models.first { it.entityId == "0" }.transform.position)
-        r.preview = emptyMap()
+        r.state.preview = emptyMap()
         assertEquals(original, r.content.models.first { it.entityId == "0" })
     }
 
@@ -149,7 +149,7 @@ class SceneRendererCameraTest {
         val before = CameraFrustum.directionOf(camera, r.params.content.entityPositions)
         val target = r.params.content.entityPositions.getValue("3")
         val moved = PlacementTransform(Vec3(target.x, target.y + 20f, target.z), Quat.IDENTITY, Vec3(1f, 1f, 1f))
-        r.preview = mapOf("3" to DragResult(moved, null))
+        r.state.preview = mapOf("3" to DragResult(moved, null))
         val c = r.content
         val after = CameraFrustum.directionOf(c.cameras.single(), c.entityPositions)
         assertTrue(after.y > before.y + 0.5f)

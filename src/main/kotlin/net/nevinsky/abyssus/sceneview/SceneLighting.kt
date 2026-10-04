@@ -15,12 +15,13 @@ import com.badlogic.gdx.graphics.g3d.environment.PointLight
 import com.badlogic.gdx.graphics.g3d.environment.SpotLight
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.sqrt
+import net.nevinsky.abyssus.ecs.component.LIGHT_RANGE
 
 /** A directional light: [color] already multiplied by the light's intensity. */
 data class DirectionalSource(val direction: Vec3, val color: Rgba, val entityId: String = "", val position: Vec3 = Vec3(0f, 0f, 0f))
 
 /** A point light: [color] already multiplied by the light's intensity. */
-data class PointSource(val position: Vec3, val color: Rgba, val range: Float = DEFAULT_LIGHT_RANGE, val entityId: String = "")
+data class PointSource(val position: Vec3, val color: Rgba, val range: Float = LIGHT_RANGE, val entityId: String = "")
 
 data class SpotSource(val entityId: String, val position: Vec3, val direction: Vec3, val color: Rgba, val range: Float, val cone: SpotCone)
 

@@ -1,0 +1,312 @@
+openapi: 3.0.3
+info:
+  title: Abyssus Public Asset Library API
+  version: 1.0.0
+  description: |
+    Draft contract for a new public read-only service. No credentials required.
+    Version identities and package bytes are immutable. Packages include the root
+    asset and its full dependency closure; no client-side format conversion.
+    The server URL below is illustrative, not a deployed service.
+servers:
+  - url: https://asset-library.example.invalid
+    description: Placeholder; clients must configure a real API base URL.
+security: []
+tags:
+  - name: Assets
+paths:
+  /v1/assets:
+    get:
+      operationId: listAssets
+      tags: [Assets]
+      summary: Search the public catalog
+      description: |
+        Trim q and search name, description and tags case-insensitively.
+        Sort by name ascending, then assetId. A cursor pins a catalog snapshot
+        and normalized q, type and limit. Keep these parameters unchanged when
+        requesting the next page. Invalid, expired or mismatched cursors return
+        400 INVALID_CURSOR; restart from the first page. No credentials needed.
+      parameters:
+        - name: q
+          in: query
+          schema: {type: string, maxLength: 200, default: ''}
+        - name: type
+          in: query
+          schema: {$ref: '#/components/schemas/AssetType'}
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 40}
+        - name: cursor
+          in: query
+          schema: {type: string, minLength: 1, maxLength: 2048}
+      responses:
+        '200':
+          description: Catalog page; nextCursor null marks the end.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AssetPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /v1/assets/{assetId}:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+    get:
+      operationId: getAsset
+      tags: [Assets]
+      summary: Get public asset details and available versions
+      description: Versions are ordered by publishedAt descending then version ascending.
+      responses:
+        '200':
+          description: Asset details. latestVersion names an entry in versions.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AssetDetail'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /v1/assets/{assetId}/versions/{version}:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+      - $ref: '#/components/parameters/Version'
+    get:
+      operationId: getAssetVersion
+      tags: [Assets]
+      summary: Get an immutable package descriptor
+      description: |
+        Download the ZIP from downloadUrl without authentication. It may use
+        public object storage. URLs may change, but identity, checksum, sizes and
+        includedAssets must not change for an existing assetId/version pair.
+        Download responses use application/zip; non-success responses are errors,
+        never ZIP content. Downloads and previews use HTTPS, except exact loopback
+        HTTP for development. Redirect destinations must satisfy the same rule.
+      responses:
+        '200':
+          description: Immutable version metadata and public package location.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AssetVersion'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+components:
+  parameters:
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      schema: {$ref: '#/components/schemas/Identifier'}
+    Version:
+      name: version
+      in: path
+      required: true
+      description: Opaque immutable version identifier; no latest alias or version ranges.
+      schema: {$ref: '#/components/schemas/Identifier'}
+  responses:
+    BadRequest:
+      description: Invalid parameters or cursor (INVALID_REQUEST or INVALID_CURSOR).
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    NotFound:
+      description: Asset or version does not exist (NOT_FOUND).
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    RateLimited:
+      description: Rate limit exceeded (RATE_LIMITED).
+      headers:
+        Retry-After:
+          description: Required nonnegative integer seconds until retry is allowed.
+          schema: {type: integer, minimum: 0}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Unavailable:
+      description: Temporary service failure (SERVICE_UNAVAILABLE).
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+  schemas:
+    Identifier:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+    Sha256:
+      type: string
+      pattern: '^[a-f0-9]{64}$'
+    PublicUrl:
+      type: string
+      format: uri
+      description: HTTPS URL, or exact loopback HTTP for local development; no embedded credentials.
+    AssetType:
+      type: string
+      enum: [MODEL, TERRAIN, TEXTURE, PIXMAP_TEXTURE, MATERIAL, SHADER, SKYBOX, SKYBOX_PROCEDURAL, SKYBOX_HDR]
+    License:
+      type: object
+      required: [id, name, text]
+      properties:
+        id:
+          type: string
+          description: SPDX identifier when applicable, otherwise a stable custom identifier.
+          minLength: 1
+        name: {type: string, minLength: 1}
+        text:
+          type: string
+          minLength: 1
+          description: Complete applicable license and attribution text, also retained in LICENSE.txt.
+        url: {$ref: '#/components/schemas/PublicUrl'}
+    AssetSummary:
+      type: object
+      required: [assetId, name, type, author, license, latestVersion]
+      properties:
+        assetId: {$ref: '#/components/schemas/Identifier'}
+        name: {type: string, minLength: 1, maxLength: 200}
+        type: {$ref: '#/components/schemas/AssetType'}
+        author: {type: string, minLength: 1, maxLength: 200}
+        license: {$ref: '#/components/schemas/License'}
+        latestVersion: {$ref: '#/components/schemas/Identifier'}
+        thumbnailUrl: {$ref: '#/components/schemas/PublicUrl'}
+    AssetPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/AssetSummary'}
+        nextCursor: {type: string, nullable: true, minLength: 1, maxLength: 2048}
+      example: {items: [], nextCursor: null}
+    AssetDetail:
+      allOf:
+        - $ref: '#/components/schemas/AssetSummary'
+        - type: object
+          required: [description, tags, previewUrls, versions]
+          properties:
+            description: {type: string}
+            tags:
+              type: array
+              uniqueItems: true
+              items: {type: string, minLength: 1}
+            previewUrls:
+              type: array
+              items: {$ref: '#/components/schemas/PublicUrl'}
+            versions:
+              type: array
+              minItems: 1
+              items: {$ref: '#/components/schemas/VersionSummary'}
+    VersionSummary:
+      type: object
+      required: [version, publishedAt]
+      properties:
+        version: {$ref: '#/components/schemas/Identifier'}
+        publishedAt: {type: string, format: date-time}
+    IncludedAsset:
+      type: object
+      required: [assetId, version, folder, uuid, type, license, dependencyUuids]
+      properties:
+        assetId: {$ref: '#/components/schemas/Identifier'}
+        version: {$ref: '#/components/schemas/Identifier'}
+        folder:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9_-]*$'
+          description: Single directory name beneath assets; unique ignoring case in a package.
+        uuid: {type: string, format: uuid}
+        type: {$ref: '#/components/schemas/AssetType'}
+        license: {$ref: '#/components/schemas/License'}
+        dependencyUuids:
+          type: array
+          uniqueItems: true
+          description: Direct dependency UUIDs; every one resolves inside this package.
+          items: {type: string, format: uuid}
+    AssetVersion:
+      type: object
+      required: [assetId, version, publishedAt, packageSchemaVersion, format, formatVersion, mediaType, downloadUrl, sizeBytes, uncompressedSizeBytes, sha256, includedAssets]
+      properties:
+        assetId: {$ref: '#/components/schemas/Identifier'}
+        version: {$ref: '#/components/schemas/Identifier'}
+        publishedAt: {type: string, format: date-time}
+        packageSchemaVersion: {type: integer, enum: [1]}
+        format: {type: string, enum: [abyssus]}
+        formatVersion: {type: integer, enum: [1]}
+        mediaType: {type: string, enum: [application/zip]}
+        downloadUrl: {$ref: '#/components/schemas/PublicUrl'}
+        sizeBytes: {type: integer, format: int64, minimum: 1}
+        uncompressedSizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Sum of all regular ZIP entry bytes, including manifest.json.
+        sha256: {$ref: '#/components/schemas/Sha256'}
+        includedAssets:
+          type: array
+          minItems: 1
+          description: Full closure; exactly one entry matches root assetId/version. All entries reachable from root.
+          items: {$ref: '#/components/schemas/IncludedAsset'}
+    PackageManifest:
+      type: object
+      additionalProperties: false
+      description: |
+        JSON document at ZIP root manifest.json, not a separate HTTP response.
+        Asset entries match descriptor includedAssets exactly. Root matches the
+        requested assetId/version. All assets have supported native meta.json
+        and LICENSE.txt. Files enumerate every regular entry except manifest.json.
+        Only manifest.json and assets/<folder>/ contents are allowed; no symlinks,
+        escaping paths, duplicate paths or case-colliding paths. Manifest and file
+        checksums are validated before any project writes. Files are copied byte
+        for byte without scene/project edits or UUID rewriting.
+      required: [schemaVersion, assetId, version, format, formatVersion, assets, files]
+      properties:
+        schemaVersion: {type: integer, enum: [1]}
+        assetId: {$ref: '#/components/schemas/Identifier'}
+        version: {$ref: '#/components/schemas/Identifier'}
+        format: {type: string, enum: [abyssus]}
+        formatVersion: {type: integer, enum: [1]}
+        assets:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/IncludedAsset'}
+        files:
+          type: array
+          minItems: 2
+          items: {$ref: '#/components/schemas/PackageFile'}
+    PackageFile:
+      type: object
+      additionalProperties: false
+      required: [path, sizeBytes, sha256]
+      properties:
+        path:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          pattern: '^assets/[A-Za-z0-9][A-Za-z0-9_-]*/.+$'
+          description: Relative ZIP regular-file path using forward slashes; no dot segments, backslashes or NUL.
+        sizeBytes: {type: integer, format: int64, minimum: 0}
+        sha256: {$ref: '#/components/schemas/Sha256'}
+    Error:
+      type: object
+      required: [code, message, requestId]
+      properties:
+        code:
+          type: string
+          enum: [INVALID_REQUEST, INVALID_CURSOR, NOT_FOUND, RATE_LIMITED, SERVICE_UNAVAILABLE]
+        message: {type: string, minLength: 1}
+        requestId: {type: string, minLength: 1}
+      example:
+        code: INVALID_CURSOR
+        message: Cursor expired. Restart from the first page.
+        requestId: example-request-1
+x-abyssus-client-limits:
+  description: Proposed v1 client limits; enforce actual streamed bytes, not just advertised sizes.
+  compressedBytes: 134217728
+  extractedBytes: 268435456
+  singleFileBytes: 67108864
+  fileCount: 10000
+  manifestBytes: 1048576
+  jsonResponseBytes: 2097152
+  previewBytes: 8388608
+  previewMaxDimension: 4096

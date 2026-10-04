@@ -128,7 +128,7 @@ class SceneEcsLoaderTest {
         assertEquals("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", delegate.asset.assetName)
         assertEquals(
             listOf(0, 1, 2, 3, 4, 5, 6),
-            WorldUtils.getFromWorld(scene.engine, IdComponent::class.java) { id, _ -> id }.sorted(),
+            scene.engine.getFromWorld(IdComponent::class.java) { id, _ -> id }.sorted(),
         )
         assertEquals(listOf("Model 0", "Terrain", "Model 2", "'Direction' handle", "Camera 4", "Model 6"),
             scene.engine.getFromWorld(NameComponent::class.java) { _, n -> n.name })

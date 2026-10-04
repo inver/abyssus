@@ -20,7 +20,7 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import net.nevinsky.abyssus.dto.ProjectLayout
-import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import java.awt.FlowLayout
 import javax.swing.JButton
 import com.intellij.openapi.project.Project
@@ -73,6 +73,7 @@ import javax.swing.BorderFactory
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
+import net.nevinsky.abyssus.assets.META_FILE
 
 /**
  * The Abyssus Properties panel: the Meta of the asset selected in the Abyssus view (read only), or the components of the
@@ -82,6 +83,7 @@ import javax.swing.SwingConstants
 class AssetPropertiesPanel(
     private val project: Project,
     private val parentDisposable: Disposable,
+    private val services: PanelServices,
     private val background: (Runnable) -> Unit = { AppExecutorUtil.getAppExecutorService().execute(it) },
     private val ui: (Runnable) -> Unit = { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
 ) : JPanel(CardLayout()), UiDataProvider {
@@ -170,7 +172,7 @@ class AssetPropertiesPanel(
         scene = entity?.file
         if (entity != null) {
             background {
-                val result = readEntityState(entity)
+                val result = readEntityState(entity, services)
                 ui { if (token == generation && !disposed) apply(result) }
             }
             return
@@ -185,7 +187,7 @@ class AssetPropertiesPanel(
             return
         }
         background {
-            val result = readAssetState(assetFolder)
+            val result = readAssetState(assetFolder, services)
             ui { if (token == generation && !disposed) apply(result) }
         }
     }
@@ -208,11 +210,10 @@ class AssetPropertiesPanel(
             return
         }
         existing?.dispose()
-        val core = service<AbyssusCore>()
         terrainFolder = folder
         terrainController = TerrainGenerationController(
-            project, folder, ready, core.terrainGenerator, core.heightEncoder, core.terrainRecipes, background, ui,
-            readCurrent = { readTerrainSourceNow(folder) },
+            project, folder, ready, services.terrainGenerator, services.heightEncoder, services.terrainRecipes, background, ui,
+            readCurrent = { readTerrainSourceNow(folder, services) },
         ).also { controller -> controller.onChange = { if (!rendering && !disposed) apply(state) } }
     }
 
@@ -234,7 +235,7 @@ class AssetPropertiesPanel(
             is PanelState.SceneDetails -> {
                 val own = com.intellij.openapi.util.Disposer.newDisposable(parentDisposable, "scene-details").also { viewDisposable = it }
                 content.removeAll()
-                content.add(JBScrollPane(SceneDetailsView(project.getService(net.nevinsky.abyssus.sceneview.SceneRayControls::class.java), newState, own)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
+                content.add(JBScrollPane(SceneDetailsView(services.rayControls, newState, own)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)
             }
             is PanelState.Empty -> {
@@ -247,12 +248,12 @@ class AssetPropertiesPanel(
                 useTerrain(null)
                 useUndoEditor(null)
                 content.removeAll()
-                content.add(JBScrollPane(EntityDetailsView(project, newState)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
+                content.add(JBScrollPane(EntityDetailsView(project, newState, services.metaFiles)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)
             }
             is PanelState.Details -> {
                 useTerrain(newState)
-                useUndoEditor(if (newState.fields.isEmpty()) null else newState.meta.folder.findChild(ProjectLayout.META_FILE))
+                useUndoEditor(if (newState.fields.isEmpty()) null else newState.meta.folder.findChild(META_FILE))
                 content.removeAll()
                 content.add(JBScrollPane(details(newState)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)
@@ -300,7 +301,7 @@ class AssetPropertiesPanel(
     private fun header(d: PanelState.Details): JComponent {
         val text = JPanel(VerticalLayout(JBUI.scale(2))).apply {
             add(JBLabel(d.name).apply { font = JBFont.label().asBold().biggerOn(1f) })
-            val type = (d.meta.type ?: AbyssusBundle.message("propertiesUnknownType")).lowercase()
+            val type = (d.meta.json.get("type")?.takeIf { it.isTextual }?.asText() ?: AbyssusBundle.message("propertiesUnknownType")).lowercase() // as the file spells it
             if (d.fields.isEmpty()) {
                 add(JBLabel(AbyssusBundle.message("propertiesSubtitle", type)).apply { foreground = secondary() })
             } else {
@@ -383,7 +384,7 @@ class AssetPropertiesPanel(
         field.font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size)
         val save = save@{
             if (field.text == state.text) return@save
-            when (val parsed = service<AbyssusCore>().assetEditor.parse(state.field, field.text)) {
+            when (val parsed = services.assetEditor.parse(state.field, field.text)) {
                 is ParseOutcome.Failed -> {
                     error.text = editErrorMessage(parsed.error)
                     field.text = state.text
@@ -400,7 +401,7 @@ class AssetPropertiesPanel(
 
     private fun commitField(d: PanelState.Details, state: AssetFieldState, value: FieldValue, error: JBLabel, revert: () -> Unit) {
         val folder = this.folder ?: return
-        when (val result = AssetMetaEdits.update(project, folder, state.key, state.value, value)) {
+        when (val result = AssetMetaEdits.update(project, folder, state.key, state.value, value, services.assetEditor)) {
             AssetEditResult.Changed -> {
                 error.text = ""
                 refresh() // the document listener ran inside the command, before Undo became available

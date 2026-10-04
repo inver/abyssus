@@ -30,6 +30,7 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 import kotlin.random.Random
+import net.nevinsky.abyssus.dto.textOf
 
 /** What the New terrain form hands over: a valid folder [name] and the finished [preview] of exactly the chosen inputs. */
 class NewTerrainRequest(val name: String, val preview: TerrainPreview)

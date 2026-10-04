@@ -28,7 +28,7 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
 - `src/main/kotlin/net/nevinsky/abyssus/`: the plugin (Kotlin), registered in `src/main/resources/META-INF/plugin.xml`.
   - `dto/`: reads `.abss` / `.scene` files and asset folders (`ProjectLayout`, `AssetReader`, `ProjectAssets`).
   - `scene/`: the scene DTOs (`SceneDto`, fog, lights).
-  - `projectView/`: the Abyssus tree, eye toggles, Rename Scene, skybox chooser, and `editSceneJson`.
+  - `projectView/`: the Abyssus tree, eye toggles, Rename Scene and the skybox chooser. `filetype/` holds `editSceneJson`.
   - `properties/`: the Abyssus Properties tool window.
   - `sceneview/`: the scene view: GL canvas, renderer, picking, cameras, gizmos, transform write-back. Asset loading
     itself is in `core`.
@@ -54,7 +54,7 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
 - **`core` stays a plain JVM library wired by constructors**: no IntelliJ or plugin imports, and no `object` or
   `companion object` in `core/src/main` (a `data object` case of a sealed type is fine). Pass collaborators in;
   `./gradlew :core:checkNoSingletons` (part of `check`) fails otherwise.
-- **Write scene files only through `editSceneJson`** (`src/main/kotlin/net/nevinsky/abyssus/projectView/EnabledToggle.kt`).
+- **Write scene files only through `editSceneJson`** (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneDocumentWriter.kt`).
   It edits the document as one undoable command and keeps the file's formatting and number text. The only other
   writer is `SceneFormatListener`, which pretty-prints a `.scene` / `.abss` opened in the text editor.
 - **Never change numbers or key order you didn't mean to change.** Parse with `SceneJson`, which keeps both.
@@ -63,7 +63,8 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   thread, and it must not touch GL. Picking and gizmo hit tests use CPU data and need no context.
 - **Use GL only while the canvas is safely on screen** (`GuardedGLCanvas.glSafe`). On macOS a zero-sized surface
   aborts the JVM.
-- **Catch with `runCatchingKeepingCancellation`**, not `runCatching`, around anything that may be cancelled.
+- **Catch with `runCatchingKeepingCancellation`**, not `runCatching`, around anything that may be cancelled
+  (`./gradlew checkNoRunCatching`, part of `check`, fails otherwise).
 - **User-facing text goes in `src/main/resources/messages/AbyssusBundle.properties`** via `AbyssusBundle.message`.
 - **Keep the `<!-- Plugin description -->` markers in `README.md`.** `patchPluginXml` copies that block into the
   plugin and fails without them.

@@ -231,3 +231,24 @@ val generateGltfLexer by tasks.registering(org.jetbrains.grammarkit.tasks.Genera
 
 tasks.named("compileKotlin") { dependsOn(generateGltfParser, generateGltfLexer) }
 tasks.named("compileJava") { dependsOn(generateGltfParser, generateGltfLexer) }
+
+// `runCatching` also catches cancellation, which must reach the IDE; use `runCatchingKeepingCancellation` instead
+// (see `core`'s Cancellation.kt). Covers the plugin and `core`, like `:core:checkNoSingletons` covers `core`.
+val checkNoRunCatching by tasks.registering {
+    val sources = files(fileTree("src/main/kotlin") { include("**/*.kt") }, fileTree("core/src/main/kotlin") { include("**/*.kt") })
+    val root = layout.projectDirectory.asFile
+    inputs.files(sources)
+    doLast {
+        val call = Regex("""\brunCatching\s*\{""")
+        val found = sources.files.sorted().flatMap { file ->
+            file.readLines().mapIndexedNotNull { i, line ->
+                if (call.containsMatchIn(line)) "${file.relativeTo(root)}:${i + 1}: ${line.trim()}" else null
+            }
+        }
+        if (found.isNotEmpty()) {
+            throw GradleException("Use runCatchingKeepingCancellation instead of runCatching:\n" + found.joinToString("\n"))
+        }
+    }
+}
+
+tasks.named("check") { dependsOn(checkNoRunCatching) }

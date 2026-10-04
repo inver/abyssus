@@ -282,4 +282,14 @@ class ComponentEditorTest {
         assertEquals(before.document.warnings, after.document.warnings)
         assertEquals(before.engine.entities.size(), after.engine.entities.size())
     }
+
+    @Test
+    fun anUnrelatedPositionEditKeepsTheOriginalLookAtNode() {
+        for (node in listOf("3", "\"3\"", "\"-1\"", "\"h\"")) {
+            val root = scene(entity(0, """"PositionComponent":{"lookAtId":$node,"localPosition":{"x":1}}"""))
+            assertEquals(EditResult.Changed, ComponentEditor.update(root, "0", "PositionComponent", "localPosition.x", "5"))
+            assertEquals(node, SceneJson.parse(node), components(root, 0)["PositionComponent"]["lookAtId"])
+            assertEquals(5, components(root, 0)["PositionComponent"]["localPosition"]["x"].asInt())
+        }
+    }
 }

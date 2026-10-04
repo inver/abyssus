@@ -12,7 +12,7 @@ import com.badlogic.gdx.math.Matrix4
 import net.nevinsky.abyssus.assets.SPLAT_LAYERS
 import net.nevinsky.abyssus.assets.model.*
 import net.nevinsky.abyssus.assets.terrain.RayTerrainSnapshot
-import net.nevinsky.abyssus.dto.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.raytracing.*
 import net.nevinsky.abyssus.sceneview.gizmo.DragResult
 

@@ -26,6 +26,7 @@ import net.nevinsky.abyssus.assets.terrain.generation.TerrainRecipeCodec
 import net.nevinsky.abyssus.assets.terrain.generation.sha256Hex
 import java.io.File
 import kotlin.random.Random
+import net.nevinsky.abyssus.assets.displayMessage
 
 /**
  * The logic behind the terrain regeneration controls for one existing terrain: the draft (settings, latest request,
@@ -184,7 +185,7 @@ class TerrainGenerationController(
             is AssetCommandResult.Collision -> AbyssusBundle.message("terrainApplyConflict", result.path.substringAfterLast('/'))
             is AssetCommandResult.Blocked -> result.reason
             AssetCommandResult.Cancelled -> AbyssusBundle.message("terrainApplyCancelled")
-            is AssetCommandResult.Failed -> AbyssusBundle.message("terrainApplyFailed", result.cause.message ?: result.cause.javaClass.simpleName) +
+            is AssetCommandResult.Failed -> AbyssusBundle.message("terrainApplyFailed", result.cause.displayMessage()) +
                 if (result.leftover.isEmpty()) "" else " " + AbyssusBundle.message("terrainApplyLeftover", result.leftover.joinToString())
         }
         if (result != AssetCommandResult.Done) {

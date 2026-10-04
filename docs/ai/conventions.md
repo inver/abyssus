@@ -29,7 +29,9 @@
   doesn't list them.
 - **Optional values:** read them from a `JsonNode` with the helpers in `core/src/main/kotlin/net/nevinsky/abyssus/assets/json/JsonNodes.kt`
   (`opt`, `text`, `float`, `obj`), which treat absent and JSON `null` alike.
-- **Writing a file:** use `editSceneJson`, re-serialized with `SceneJson.inStyleOf`, so a pretty file stays pretty
+- **Wiring:** pass collaborators in through constructors. A `service<...>()` lookup belongs only in an action, a
+  provider, a tool window factory, the Abyssus pane or a `@Service` constructor.
+- **Writing a file:** use `editSceneJson` (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneDocumentWriter.kt`), re-serialized with `SceneJson.inStyleOf`, so a pretty file stays pretty
   and a compact one stays compact.
 
 ## Writing files
@@ -58,13 +60,16 @@ or another asset uses the new asset (`AssetReferenceGuard`), and removes a folde
 written. Cancellation is honoured only before the first write.
 
 `SceneFormatListener` is the one other writer: it pretty-prints a `.scene` / `.abss` document when it opens in the
-text editor. A new writer goes through `editSceneJson` and gets a command name in the message bundle.
+text editor. A new writer goes through `editSceneJson` (it publishes `AbyssusSceneEdited.TOPIC` when done) and gets a
+command name in the message bundle.
 
 ## Errors and cancellation
 
 - **Catching:** use `runCatchingKeepingCancellation`
-  (`src/main/kotlin/net/nevinsky/abyssus/dto/Cancellation.kt`), not `runCatching`. It rethrows
-  `ProcessCanceledException`, which the platform requires.
+  (`core/src/main/kotlin/net/nevinsky/abyssus/assets/Cancellation.kt`), not `runCatching`. It rethrows
+  `CancellationException`, which includes `ProcessCanceledException`, which the platform requires.
+  `./gradlew checkNoRunCatching` (part of `check`) fails on a `runCatching {` in the plugin or `core`.
+- **Failure text:** show `Throwable.displayMessage()` (the message, or the class name when it has none).
 - **Unreadable files:** an unreadable file or asset becomes a visible failure (an error row, a status message, a
   skipped asset logged once), never an exception out of a reader, renderer or tree node.
 
