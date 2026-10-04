@@ -46,7 +46,8 @@ object ScenePreview {
             lights = content.lights.map {
                 if (it.entityId != entityId) it
                 else {
-                    val target = it.lookAtId?.let(content.entityPositions::get)
+                    // A point light has no direction, so it never re-aims.
+                    val target = it.lookAtId?.takeIf { _ -> it.kind != LightKind.POINT }?.let(content.entityPositions::get)
                     val direction = when {
                         // A move re-aims a look-at light at its unmoved target; a rotate uses the turned direction.
                         target != null && t.position != it.position -> SceneContent.aim(t.position, target) ?: SceneContent.forward(t.rotation)

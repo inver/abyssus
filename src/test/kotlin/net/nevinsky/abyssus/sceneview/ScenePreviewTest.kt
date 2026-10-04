@@ -100,4 +100,15 @@ class ScenePreviewTest {
         assertNotNull(target)
         assertEquals(Vec3(5f, 0f, -1f), target!!)
     }
+
+    @Test
+    fun movingAPointLightDoesNotReAimIt() {
+        val point = SceneContent.of(parseScene("""{"ecs":{"entities":{
+            "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{},
+                "PositionComponent":{"lookAtId":2,"localPosition":{"y":10}}}},
+            "2":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{}}}}}}"""))
+        val moved = DragResult(PlacementTransform(Vec3(5f, 10f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f)), null)
+        val before = point.lights.single().direction
+        assertEquals(before, ScenePreview.apply(point, "1", moved).lights.single().direction)
+    }
 }

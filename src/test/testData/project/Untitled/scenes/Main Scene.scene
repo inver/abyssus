@@ -285,6 +285,28 @@
             "type": "OBJECT"
           }
         }
+      },
+      "7": {
+        "archetype": 4,
+        "components": {
+          "NameComponent": {
+            "name": "Directional Light 7"
+          },
+          "TypeComponent": {
+            "type": "LIGHT_DIRECTIONAL"
+          },
+          "PositionComponent": {
+            "localRotation": {
+              "x": 0.38268328,
+              "w": -0.9238796
+            },
+            "localPosition": {
+              "x": -4.6727066,
+              "y": 6.4600496,
+              "z": 16.883846
+            }
+          }
+        }
       }
     },
     "archetypes": {
@@ -309,6 +331,12 @@
       "3": [
         "RenderComponent",
         "Point2PointPositionComponent"
+      ],
+      "4": [
+        "NameComponent",
+        "TypeComponent",
+        "PositionComponent",
+        "LightComponent"
       ]
     },
     "componentIdentifiers": {
@@ -320,7 +348,8 @@
       "com.mbrlabs.mundus.commons.core.ecs.component.CameraComponent": "CameraComponent",
       "com.mbrlabs.mundus.commons.core.ecs.component.ParentComponent": "ParentComponent",
       "com.mbrlabs.mundus.commons.core.ecs.component.Point2PointPositionComponent": "Point2PointPositionComponent",
-      "com.mbrlabs.mundus.commons.core.ecs.component.NameComponent": "NameComponent"
+      "com.mbrlabs.mundus.commons.core.ecs.component.NameComponent": "NameComponent",
+      "com.mbrlabs.mundus.commons.core.ecs.component.LightComponent": "LightComponent"
     },
     "metadata": {
       "version": 1
