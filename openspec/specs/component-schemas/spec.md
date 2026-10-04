@@ -11,8 +11,8 @@ them without running the game's code.
 
 A game SHALL be able to export the components it registers to `<project>/abyssus/components.schema.json`. The file
 SHALL list each component's short name, class name and display label, and each field's name, label, type, default,
-group, limits (for numbers), choices (for a choice) and asset type (for an asset reference). The `abyssus` folder SHALL
-be created when missing.
+group, limits (for numbers and 3D vectors), choices (for a choice) and asset type (for an asset reference). The
+`abyssus` folder SHALL be created when missing.
 
 #### Scenario: Plane schema
 

@@ -6,11 +6,13 @@
 |---|---|---|
 | root (`src/`) | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.10) | `:runtime`, `:core`, `:gdx-model`, `:raytracing`, Jackson, libGDX, LWJGL3-AWT |
 | `runtime/` | Plain JVM project and scene parsing, Ashley components, codecs, systems and scene loading | `:core`, Ashley |
+| `physics-plugin/` | **Abyssus Physics**, an IntelliJ plugin depending on Abyssus: physics overlay, Play through a separate play process, generated physics schema, bundled `play-host` folder | root plugin (`localPlugin`), `:physics` (without its dependencies), `:runtime` compile-only |
+| `physics/` | Plain JVM physics: the physics components and `PhysicsWorld` (Jolt through jolt-jni), run in a game or the play host, never in the IDE | `:runtime`, jolt-jni |
 | `core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline, and the models, terrains and skies it builds | `:gdx-model`, Jackson, libGDX |
 | `gdx-model/` | Plain JVM library: libGDX model runtime with 32-bit mesh indices and an Assimp importer | libGDX, LWJGL Assimp |
 | `raytracing/` | Plain JVM ray tracing: backend contracts, immutable scene snapshots and linear host frames, the scheduler and quality policy, and optional native Metal and Vulkan backends | Kotlin stdlib, LWJGL Vulkan and VMA |
 
-`gdx-model`, `core` and `runtime` must not import IntelliJ or plugin code (see their READMEs). `core` is wired by constructors:
+`gdx-model`, `core`, `runtime` and `physics` must not import IntelliJ or plugin code (see their READMEs). `core` is wired by constructors:
 its composition root `AssetLoading` takes a `JsonProcessor`, an `AssetLog`, an executor and the sky `ShaderSource`; in
 the IDE the light application service `AbyssusCore` builds one (IDE log, IDE pool) and hands it to every scene view.
 `AbyssusCore.scenes` builds `SceneLoading(json, log)` with the IDE's `Abyssus.scenes` logger. `SceneReader`
@@ -18,6 +20,14 @@ delegates parsing to it; `ProjectReader` delegates project-name parsing while re
 `SceneEntry(file, scene)` keeps editor sources out of the runtime DTO. Filesystem callers use `ProjectFolder` and
 `SceneLoading.project` and `SceneLoading.load` with `Path`; every load gets its own engine, resolver and warnings. Parsing and loading
 run on the caller's thread without GL.
+
+**Abyssus Physics** (`physics-plugin/`) runs Play outside the IDE. On Play, `PhysicsSimulationProvider` picks what
+to launch (`PlayLaunch`): the game's `<project>/abyssus/play.json` classpath and module, or the bundled `play-host` jars with
+`PhysicsOnlyPlayModule`. `PlayProcessLauncher` starts `<java.home>/bin/java ... PlayHostMain --port --token` on a
+loopback port, waits 20 s for the hello, and keeps the last 200 output lines. `PlayClient` sends `load` (the editor's
+scene text), then `play`. A reader thread publishes the latest poses, which the Scene view shows through the
+`sceneSimulation` extension point. The process exits on `bye` or when the socket closes. The protocol is in
+`physics/src/main/kotlin/net/nevinsky/abyssus/physics/play/PlayProtocol.kt`.
 
 `raytracing` is an optional GPU ray tracing renderer, off by default per view (switched from the **Ray Tracing**
 switch in Abyssus Properties; the Scene View has no button for it). It owns nothing global: the plugin's `AbyssusCore` lazily builds one `RayBackendService` (a
@@ -148,6 +158,8 @@ an asset. A rejected file is never imported, formatted or edited; supported sibl
 
 ## Threading
 
+- **Play:** `PlayState` and the play toolbar run on the EDT. A provider's callbacks are brought there with `invokeLater`.
+  The panel reads `SceneSimulation.poses()` on the render thread each frame.
 - **The EDT:** all tree, properties and editor UI. The scene view's frames also run on the EDT, the AWT thread,
   through a Swing `Timer`.
 - **`Gdx.*`:** these statics are process-global. `GdxRuntime.withContext` installs a per-canvas shim
@@ -186,5 +198,15 @@ an asset. A rejected file is never imported, formatted or edited; supported sibl
   `<extensions defaultExtensionNs="net.nevinsky.abyssus">` (bean `ComponentSchemaBean`). Its components are edited in
   every project like the project's own; a project schema that declares the same name wins, with one notification.
   Unloading the plugin turns its components into read-only JSON; no scene file changes.
+- **`net.nevinsky.abyssus.sceneOverlay` (IDE extension point, interface `SceneOverlayProvider`):** another plugin
+  draws lines and markers in every Scene view. `create(project, file)` makes one `SceneOverlay` per view, disposed
+  with it. `draw(view, lines)` runs on the render thread inside `GdxRuntime.withContext`, twice a frame (depth-tested,
+  then on top), and sees the shown poses and the scene's `ecs`. An overlay that throws is switched off for that view
+  with one logged error.
+- **`net.nevinsky.abyssus.sceneSimulation` (IDE extension point, interface `SceneSimulationProvider`):** Play in the
+  Scene view. With one installed, the toolbar shows Play, Pause, Step and Stop. `start(request, listener)` gets the
+  scene text, project folder and selection, and returns a `SceneSimulation`. Its `poses()` replace the authored
+  placements as transient overrides (`ScenePreview.withPoses`); nothing is written. Any edit of the scene stops play
+  first. See `PlayState` and `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md`.
 - **A new asset kind drawn in the scene view:** an `AssetLoader` in `core` (built in `AssetLoading`), and a placement in
   `SceneContent`.

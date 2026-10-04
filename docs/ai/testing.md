@@ -26,6 +26,9 @@ Results are in `build/test-results/test/*.xml`, and a later run overwrites them.
   with `testLoading(log, executor)`. `AssetLoadingGlTest` covers the `asset-loading` spec on real GL.
 - `runtime/src/test/kotlin/`: project layout, scene parsing and loading, ECS codecs, components, loader, writer and
   systems. Plain JUnit, no IntelliJ or GL; `testProject(name)` uses the same `abyssus.testData` fixture root.
+- `physics/src/test/kotlin/`: physics components, `PhysicsWorld`, rope tension and the Jolt natives. Plain JUnit, no
+  IntelliJ or GL. They load the build machine's `DebugSp` Jolt natives, and use `testProject(name)` and
+  `loadPhysicsScene()`.
 - Shared test helpers live in `testFixtures` source sets: `gdx-model`'s `TestGl` (a GL 3.2 core context for one
   block) and `core`'s `HdrFixtures` (Radiance files from a pixel function). Plugin GL tests build their renderer with
   `testRenderer()` (`sceneview/TestRendering.kt`), wired the way `AbyssusCore` wires it in the IDE.
@@ -51,6 +54,8 @@ Two kinds of tests:
   "kind": "STUNT"}`) and entity `1` (a pilot, no plane); `assets/tree` is copied from `Untitled`;
   `abyssus/components.schema.json` is the export of the test-only `PlaneComponent` in `runtime`'s tests (one field of
   each type), checked byte for byte by `SchemaFileTest`. Change the class and the file together.
+- **`Physics/`:** a copy of `Untitled` whose `Main Scene` gives `Model 0` (at Y `3.086434`) a dynamic box, `Terrain`
+  a height field (all heights `0`) and `Model 2` a static sphere and a 3 m rope to `Model 0`. See its `README.md`.
 
 **Size limit:** the binary assets exceed the test VFS size limit, so platform tests copy only what they need (the
 `.abss`, a scene, one `meta.json`). See the `fixture()` helper in `AbyssusViewTest`.

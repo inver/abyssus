@@ -77,4 +77,21 @@ class SchemaJsonTest {
         assertEquals(SchemaVector(0f, 0f, -0.3f), values["leadout"])
         assertEquals(5, problems.size)
     }
+
+    @Test fun aVectorAxisOutsideItsLimitFallsBackNamingTheAxis() {
+        val box = ComponentSchemaReader().read(BoxComponent::class.java)
+        assertEquals(0.0, box.fields.single().min)
+        val problems = mutableListOf<String>()
+        val values = json.decode(box, testJson("""{"halfExtents": {"x": 1, "y": 0, "z": 1}}""")) { problems += it }
+        assertEquals(SchemaVector(0.5f, 0.5f, 0.5f), values["halfExtents"])
+        assertEquals(listOf("field halfExtents: y: 0 is not greater than the minimum 0; the default {\"x\":0.5,\"y\":0.5,\"z\":0.5} is used"), problems)
+        assertEquals(SchemaVector(1f, 0.5f, 0.5f), json.decode(box, testJson("""{"halfExtents": {"x": 1}}"""))["halfExtents"])
+    }
+}
+
+/** A vector field whose every axis must be greater than `0`. */
+@SceneComponent("BoxComponent")
+class BoxComponent : com.badlogic.ashley.core.Component {
+    @Field(min = 0.0, minExclusive = true)
+    var halfExtents = com.badlogic.gdx.math.Vector3(0.5f, 0.5f, 0.5f)
 }

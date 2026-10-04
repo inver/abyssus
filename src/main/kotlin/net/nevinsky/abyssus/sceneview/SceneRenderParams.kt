@@ -54,6 +54,8 @@ data class SceneRenderParams(
     val camera: CameraParams,
     val content: SceneContent = SceneContent.EMPTY,
     val projectDir: File? = null,
+    /** The scene's `ecs` block as read, for scene overlays that draw components the view does not model. */
+    val ecs: JsonNode? = null,
 ) {
     companion object {
         val DEFAULT_CLEAR = Rgba(0.1f, 0.1f, 0.15f, 1f)
@@ -61,7 +63,7 @@ data class SceneRenderParams(
 
         fun from(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
             val fog = fogOf(scene)
-            return SceneRenderParams(fog?.color ?: DEFAULT_CLEAR, ambientOf(scene), fog, camera, SceneContent.of(scene), projectDir)
+            return SceneRenderParams(fog?.color ?: DEFAULT_CLEAR, ambientOf(scene), fog, camera, SceneContent.of(scene), projectDir, scene.ecs)
         }
 
         private fun ambientOf(scene: SceneDto): Rgba? {

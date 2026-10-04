@@ -31,4 +31,7 @@ interface SceneView : Disposable {
 
     /** Loads the assets of [revision] again once the view can safely draw; a hidden view keeps it until it is shown. */
     fun refreshAssets(revision: AssetRevisionBatch) {}
+
+    /** The scene's document is about to change: a running simulation stops first. */
+    fun stopPlay() {}
 }

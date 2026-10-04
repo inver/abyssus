@@ -58,6 +58,8 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.util.Alarm
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
+import com.intellij.openapi.vfs.VfsUtilCore
+import com.intellij.ide.plugins.PluginManager
 import net.nevinsky.abyssus.filetype.AbyssusSceneEdited
 
 class SceneFileEditorProvider : FileEditorProvider, DumbAware {
@@ -77,8 +79,41 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
                 lightActions = { position -> AddLightGroup(project, file, position) },
                 canAddLight = { canAddLight(file, documents) },
                 ray = ray,
+                play = playState(),
+                simulationRequest = { selection -> simulationRequest(project, file, selection) },
+                overlays = overlays(project, file),
             )
         }
+    }
+
+    /** Play for one view, from the first installed simulation provider (none: no play controls). */
+    private fun playState(): PlayState {
+        val provider = SceneSimulationProvider.EP_NAME.extensionList.firstOrNull()
+        return PlayState(
+            provider, provider?.let(::pluginName).orEmpty(),
+            ui = { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
+            logError = { message, error -> thisLogger().error(message, error) },
+        )
+    }
+
+    /** One overlay per installed provider; a provider that throws while creating it is left out with one error. */
+    private fun overlays(project: Project, file: VirtualFile): SceneOverlayHost {
+        val created = SceneOverlayProvider.EP_NAME.extensionList.mapNotNull { provider ->
+            runCatchingKeepingCancellation { NamedOverlay(pluginName(provider), provider.create(project, file)) }
+                .onFailure { thisLogger().error("Scene overlay of ${pluginName(provider)} could not be created", it) }
+                .getOrNull()
+        }
+        return SceneOverlayHost(created) { message, error -> thisLogger().error(message, error) }
+    }
+
+    private fun pluginName(extension: Any): String =
+        PluginManager.getPluginByClass(extension.javaClass)?.name ?: extension.javaClass.name
+
+    /** The scene as the editor holds it, unsaved text included. */
+    private fun simulationRequest(project: Project, file: VirtualFile, selection: String?): SimulationRequest {
+        val text = FileDocumentManager.getInstance().getDocument(file)?.text ?: VfsUtilCore.loadText(file)
+        val projectDir = ProjectLayout.projectDirFor(file) ?: File(file.parent.parent.path)
+        return SimulationRequest(project, file, text, projectDir, selection)
     }
 
     override fun getEditorTypeId() = EDITOR_TYPE_ID
@@ -162,6 +197,12 @@ class SceneFileEditor(
         })
         // unsaved edits in the text tabs of the scene or of its project file: typing waits for a pause, Undo and Redo do not
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
+            // any edit, from a text tab, the panel, the tree or a gizmo, stops play before it applies
+            override fun beforeDocumentChange(event: DocumentEvent) {
+                val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
+                if (isSource(changed)) view?.stopPlay()
+            }
+
             override fun documentChanged(event: DocumentEvent) {
                 val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
                 if (!isSource(changed)) return

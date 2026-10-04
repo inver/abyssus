@@ -100,18 +100,22 @@ private val MODEL_ASSETS = AssetResolver { type, name -> AssetReference(name, ty
 
 private fun delegateOf(c: RenderComponent) = c.renderable as? RenderableObjectDelegate
 
-/** The editor fields of a schema [field]: one per value, a vector or color as dotted decimals (`leadout.x`). */
+/**
+ * The editor fields of a schema [field]: one per value, a vector or color as dotted decimals (`leadout.x`). A vector's
+ * limits hold for each axis.
+ */
 private fun schemaFields(field: SchemaField): List<ComponentField<SchemaValues>> {
     fun <T : Any> one(kind: FieldKind, show: (T) -> String, parse: (String) -> Any, choices: List<String> = emptyList(), optional: Boolean = false) =
         ComponentField<SchemaValues>(
             field.name, kind, { @Suppress("UNCHECKED_CAST") show(it.values[field.name] as T) }, { c, t -> c.values[field.name] = parse(t) },
             choices, optional, field.label, field.group, field.min, field.max, field.minExclusive, field.assetType,
         )
-    fun parts(keys: List<String>, read: (Any) -> List<Float>, make: (List<Float>) -> Any) = keys.mapIndexed { i, key ->
+    fun parts(keys: List<String>, read: (Any) -> List<Float>, limited: Boolean, make: (List<Float>) -> Any) = keys.mapIndexed { i, key ->
         ComponentField<SchemaValues>(
             "${field.name}.$key", FieldKind.FLOAT, { f(read(it.values.getValue(field.name))[i]) },
             { c, t -> c.values[field.name] = make(read(c.values.getValue(field.name)).toMutableList().also { p -> p[i] = t.trim().toFloat() }) },
             label = "${field.label} $key", group = field.group,
+            min = field.min.takeIf { limited }, max = field.max.takeIf { limited }, minExclusive = limited && field.minExclusive,
         )
     }
     return when (field.type) {
@@ -122,8 +126,8 @@ private fun schemaFields(field: SchemaField): List<ComponentField<SchemaValues>>
         FieldType.CHOICE -> listOf(one<String>(FieldKind.CHOICE, { it }, { it.trim() }, field.choices))
         FieldType.ENTITY -> listOf(one<Int>(FieldKind.ENTITY_REF, Int::toString, { it.trim().toInt() }))
         FieldType.ASSET -> listOf(one<String>(FieldKind.ASSET_NAME, { it }, { it.trim() }, optional = true))
-        FieldType.VECTOR -> parts(listOf("x", "y", "z"), { (it as SchemaVector).let { v -> listOf(v.x, v.y, v.z) } }) { SchemaVector(it[0], it[1], it[2]) }
-        FieldType.COLOR -> parts(listOf("r", "g", "b", "a"), { (it as SchemaColor).let { c -> listOf(c.r, c.g, c.b, c.a) } }) { SchemaColor(it[0], it[1], it[2], it[3]) }
+        FieldType.VECTOR -> parts(listOf("x", "y", "z"), { (it as SchemaVector).let { v -> listOf(v.x, v.y, v.z) } }, limited = true) { SchemaVector(it[0], it[1], it[2]) }
+        FieldType.COLOR -> parts(listOf("r", "g", "b", "a"), { (it as SchemaColor).let { c -> listOf(c.r, c.g, c.b, c.a) } }, limited = false) { SchemaColor(it[0], it[1], it[2], it[3]) }
     }
 }
 

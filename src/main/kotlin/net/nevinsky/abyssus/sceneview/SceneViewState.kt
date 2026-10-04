@@ -28,4 +28,10 @@ class SceneViewState {
 
     /** Transforms shown over the scene's own while a gizmo drag or completed drop is previewed (entity id to where it is now). */
     var preview: Map<String, DragResult> = emptyMap()
+
+    /** Simulated poses shown instead of the authored placements while playing (entity id to pose); empty otherwise. */
+    var poses: Map<String, Pose> = emptyMap()
+
+    /** Whether gizmos are offered: off while a simulation plays. */
+    var gizmosEnabled: Boolean = true
 }

@@ -78,7 +78,8 @@ class SchemaJson {
             else -> Decoded.Value(node.textValue())
         }
         FieldType.VECTOR -> parts(node, listOf("x", "y", "z"), (field.default as SchemaVector).let { listOf(it.x, it.y, it.z) })
-            ?.let { Decoded.Value(SchemaVector(it[0], it[1], it[2])) } ?: Decoded.Unusable("$node is not an {x, y, z} vector")
+            ?.let { axes -> limitedAxes(field, listOf("x", "y", "z"), axes) ?: Decoded.Value(SchemaVector(axes[0], axes[1], axes[2])) }
+            ?: Decoded.Unusable("$node is not an {x, y, z} vector")
         FieldType.COLOR -> parts(node, listOf("r", "g", "b", "a"), (field.default as SchemaColor).let { listOf(it.r, it.g, it.b, it.a) })
             ?.let { Decoded.Value(SchemaColor(it[0], it[1], it[2], it[3])) } ?: Decoded.Unusable("$node is not an {r, g, b, a} color")
     }
@@ -105,6 +106,12 @@ class SchemaJson {
             else -> Decoded.Value(value)
         }
     }
+
+    /** The first axis of a vector outside [field]'s limits, as `x: <why>`; null when every axis is within them. */
+    private fun limitedAxes(field: SchemaField, keys: List<String>, axes: List<Float>): Decoded.Unusable? =
+        axes.indices.firstNotNullOfOrNull { i ->
+            (limited(field, axes[i].toDouble(), axes[i]) as? Decoded.Unusable)?.let { Decoded.Unusable("${keys[i]}: ${it.reason}") }
+        }
 
     /** The numbers [keys] of [node], each missing one taken from [defaults]; null when [node] is not such an object. */
     private fun parts(node: JsonNode, keys: List<String>, defaults: List<Float>): List<Float>? {

@@ -14,10 +14,13 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | Plugin tests only | `./gradlew :test` |
 | `gdx-model` tests only | `./gradlew :gdx-model:test` |
 | `runtime` tests only | `./gradlew :runtime:test` |
+| `physics` tests only | `./gradlew :physics:test` |
 | `core` tests only | `./gradlew :core:test` (one class: `./gradlew :core:test --tests 'net.nevinsky.abyssus.assets.files.AssetFilesTest'`) |
 | One test class | `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.OrbitCameraTest'` |
 | Also run GL tests (open a window) | add `-Dabyssus.glTests=true` |
 | Sandbox IDE | `./gradlew runIde` (open a project with `-PideProject=/path/to/project`) |
+| Sandbox IDE with Abyssus Physics | `./gradlew :physics-plugin:runIde` |
+| Abyssus Physics tests | `./gradlew :physics-plugin:test` |
 | Plugin zip | `./gradlew buildPlugin` (to `build/distributions/`) |
 | Docs path check | `scripts/check-docs.sh` |
 
@@ -45,8 +48,15 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   `AssetLoading` wires it; the plugin builds one in `AbyssusCore`. See `core/README.md`.
 - `runtime/`: plain JVM scene parsing, project layout over `Path`, and Ashley components, codecs, systems, loader
   and writer. Game components (`@SceneComponent`, `ComponentRegistry`) and their schema export live in its `schema` package. `SceneLoading` wires it by constructors; the plugin builds one in `AbyssusCore`. See `runtime/README.md`.
+- `physics/`: a plain JVM library on `runtime`, root package `net.nevinsky.abyssus.physics`: the physics components
+  (`PhysicsComponents`) and `PhysicsWorld`, which runs Jolt through jolt-jni (only its `jolt` package imports Jolt). See
+  `physics/README.md`.
+- `physics-plugin/`: **Abyssus Physics**, a second IntelliJ plugin that depends on Abyssus
+  (`localPlugin(project(":"))`). It holds the physics overlay (`sceneOverlay`), Play through a play process
+  (`sceneSimulation`), the physics schema generated at build time, and the bundled `play-host` folder.
 - `src/main/java/`: only the grammar sources `Gltf.bnf` / `Gltf.flex`; `src/main/gen` is generated from them.
-- `src/test/kotlin/`, `gdx-model/src/test/kotlin/`, `core/src/test/kotlin/`, `runtime/src/test/kotlin/`: tests. Fixtures in `src/test/testData/project/`
+- `src/test/kotlin/`, `gdx-model/src/test/kotlin/`, `core/src/test/kotlin/`, `runtime/src/test/kotlin/`,
+  `physics/src/test/kotlin/`: tests. Fixtures in `src/test/testData/project/`
   (shared with `core`'s tests). Test helpers shared across modules live in `testFixtures` source sets
   (`gdx-model`: `TestGl`; `core`: `HdrFixtures`).
 - `openspec/`: specs and changes (see Workflow). `docs/superpowers/`: one historic design and plan.
@@ -58,6 +68,12 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   Reject legacy `ecs.componentIdentifiers` and renderable `class`; components use short names, assets use `kind: "asset"`.
   Keep unknown native extension data, unrelated numbers/key order and default omission. No importer or implicit migration.
 
+- **`physics` stays a plain JVM library wired by constructors**, like `runtime` (`./gradlew :physics:checkNoSingletons`
+  is part of `check`). **Jolt never loads in the IDE process:** only a game or the play host calls `JoltNatives`.
+- **Extension plugins bundle only their own code.** `physics-plugin` ships its jar and `physics.jar`; libGDX,
+  `runtime`, `core` and `gdx-model` come from Abyssus's classloader (`Gdx.*` is process-global). Its main sources may
+  not name `com.github.stephengold` or `net.nevinsky.abyssus.physics.jolt` (`./gradlew :physics-plugin:checkNoJolt`,
+  part of `check`).
 - **Don't edit `src/main/gen`.** It is git-ignored and regenerated from `Gltf.bnf` / `Gltf.flex`.
 - **`gdx-model` stays a plain JVM library**: no IntelliJ or plugin imports, so other libGDX projects can use it.
 - **`core` stays a plain JVM library wired by constructors**: no IntelliJ or plugin imports, and no `object` or

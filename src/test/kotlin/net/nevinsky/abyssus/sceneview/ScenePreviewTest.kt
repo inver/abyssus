@@ -111,4 +111,32 @@ class ScenePreviewTest {
         val before = point.lights.single().direction
         assertEquals(before, ScenePreview.apply(point, "1", moved).lights.single().direction)
     }
+
+    // ---- pose overrides (Play) ----
+
+    private val untitled = SceneContent.of(parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()))
+
+    @Test
+    fun aPoseOverrideReplacesAPlacementAndKeepsItsScale() {
+        val authored = untitled.models.single { it.entityId == "0" }
+        val pose = Pose(Vec3(1f, 0.5f, 2f), Quat(0f, 0.70710677f, 0f, 0.70710677f))
+        val posed = ScenePreview.withPoses(untitled, mapOf("0" to pose))
+        val model = posed.models.single { it.entityId == "0" }
+        assertEquals(PlacementTransform(pose.position, pose.rotation, authored.transform.scale), model.transform)
+        assertEquals(pose.position, posed.entityPositions["0"])
+        // the other entities keep their authored placements
+        assertEquals(untitled.models.filter { it.entityId != "0" }, posed.models.filter { it.entityId != "0" })
+        assertEquals(untitled.terrains, posed.terrains)
+        // an entity the scene lacks is ignored
+        assertEquals(untitled, ScenePreview.withPoses(untitled, mapOf("99" to pose)))
+    }
+
+    @Test
+    fun aDragPreviewStillWorksOverPoses() {
+        val posed = ScenePreview.withPoses(untitled, mapOf("0" to Pose(Vec3(1f, 0.5f, 2f), Quat.IDENTITY)))
+        val dragged = DragResult(PlacementTransform(Vec3(5f, 5f, 5f), Quat.IDENTITY, Vec3(1f, 1f, 1f)), null)
+        val previewed = ScenePreview.apply(posed, mapOf("2" to dragged))
+        assertEquals(Vec3(5f, 5f, 5f), previewed.models.single { it.entityId == "2" }.transform.position)
+        assertEquals(Vec3(1f, 0.5f, 2f), previewed.models.single { it.entityId == "0" }.transform.position)
+    }
 }

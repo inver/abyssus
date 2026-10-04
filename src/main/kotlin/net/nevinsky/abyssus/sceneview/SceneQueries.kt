@@ -152,6 +152,7 @@ class SnapshotSceneQueries(
     companion object {
         /** The gizmo of the selected entity of [c], seen by [eyeCamera] in a view [height] pixels tall; shared with the renderer's drawing. */
         fun gizmoHandles(c: SceneContent, eyeCamera: PerspectiveCamera, state: SceneViewState, height: Int): GizmoHandles? {
+            if (!state.gizmosEnabled) return null
             val id = state.selectedId ?: return null
             if (state.gizmoMode == GizmoMode.ROTATE && !canRotate(c, id)) return null
             val selected = ScenePreview.selected(c, id) ?: return null

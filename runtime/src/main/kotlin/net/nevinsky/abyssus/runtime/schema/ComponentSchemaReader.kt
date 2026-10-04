@@ -41,7 +41,8 @@ class ComponentSchemaReader {
         val declared = field.getAnnotation(Field::class.java)
         val type = fieldType(component, field)
         val choices = if (type == FieldType.CHOICE) field.type.enumConstants.map { (it as Enum<*>).name } else emptyList()
-        val numeric = type == FieldType.DECIMAL || type == FieldType.WHOLE
+        // a vector's limits hold for each of its axes
+        val numeric = type == FieldType.DECIMAL || type == FieldType.WHOLE || type == FieldType.VECTOR
         return SchemaField(
             name = field.name,
             label = declared.label.ifEmpty { field.name },

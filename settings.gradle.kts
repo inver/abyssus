@@ -9,3 +9,5 @@ include(":core")
 include(":raytracing")
 
 include(":runtime")
+include(":physics")
+include(":physics-plugin")

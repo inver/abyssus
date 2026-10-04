@@ -62,13 +62,34 @@ class SceneRenderer(
     @Volatile
     var params: SceneRenderParams = SceneRenderParams.DEFAULT
 
-    /** The scene's content with the previewed transforms applied. */
-    internal val content: SceneContent
+    private var posedBase: SceneContent? = null
+    private var posedPoses: Map<String, Pose>? = null
+    private var posed: SceneContent? = null
+
+    /** The scene's content with the simulated poses applied: the authored content while nothing plays. */
+    internal val posedContent: SceneContent
         get() {
             val c = params.content
+            val poses = state.poses
+            if (poses.isEmpty()) return c
+            posed?.takeIf { c === posedBase && poses === posedPoses }?.let { return it }
+            return ScenePreview.withPoses(c, poses).also {
+                posed = it
+                posedBase = c
+                posedPoses = poses
+            }
+        }
+
+    /** The scene's content with simulated poses and then the previewed transforms applied. */
+    internal val content: SceneContent
+        get() {
+            val c = posedContent
             val p = state.preview
             return if (p.isEmpty()) c else ScenePreview.apply(c, p)
         }
+
+    /** Other plugins' overlays for this view; drawn after the markers, then again over everything. */
+    internal var overlays: SceneOverlayHost? = null
 
     private var batch: ModelBatch? = null
     private var contentBatch: ContentBatch? = null
@@ -131,7 +152,7 @@ class SceneRenderer(
     private var snapshot: FrameSnapshot? = null
 
     /** CPU-only questions about the scene as the last frame drew it: picking, ground below, gizmo handles. */
-    val queries: SceneQueries = SnapshotSceneQueries({ snapshot }, state) { params.content }
+    val queries: SceneQueries = SnapshotSceneQueries({ snapshot }, state) { posedContent }
 
     /** Copies what was drawn so the queries need neither this renderer nor GL. */
     internal fun publishSnapshot() {
@@ -300,23 +321,34 @@ class SceneRenderer(
         camera.update()
     }
 
-    /** Camera markers and light markers in the scene, then the selection's highlight and gizmo on top of everything. */
+    /**
+     * Camera markers, light markers and the overlays' depth-tested pass in the scene, then the selection's highlight,
+     * its gizmo and the overlays' second pass on top of everything.
+     */
     private fun drawOverlays(width: Int, height: Int, c: SceneContent = content, displayCamera: PerspectiveCamera = camera) {
         val lines = lineBatch ?: return
         drewGizmo = false
         drawnCameraMarkers = c.cameras.count { it.entityId != state.viewCamera }
+        val aspect = aspectOf(width, height) ?: return
         lines.begin(displayCamera, depthTest = true)
-        SceneMarkers.draw(lines, c, aspectOf(width, height) ?: return, state.viewCamera)
+        SceneMarkers.draw(lines, c, aspect, state.viewCamera)
+        overlays?.draw(overlayView(c, displayCamera, height, onTop = false), lines)
         lines.end()
-        val id = state.selectedId ?: return
         lines.begin(displayCamera, depthTest = false)
-        boundsOf(c, id)?.let { SelectionBox.draw(lines, it) }
-        SnapshotSceneQueries.gizmoHandles(c, displayCamera, state, height)?.let {
-            GizmoDraw.draw(lines, it, state.hoveredAxis)
-            drewGizmo = true
+        state.selectedId?.let { id ->
+            boundsOf(c, id)?.let { SelectionBox.draw(lines, it) }
+            SnapshotSceneQueries.gizmoHandles(c, displayCamera, state, height)?.let {
+                GizmoDraw.draw(lines, it, state.hoveredAxis)
+                drewGizmo = true
+            }
         }
+        overlays?.draw(overlayView(c, displayCamera, height, onTop = true), lines)
         lines.end()
     }
+
+    internal fun overlayView(c: SceneContent, displayCamera: PerspectiveCamera, height: Int, onTop: Boolean) = OverlayView(
+        c, params.ecs, params.projectDir, state.selectedId, displayCamera, height, state.poses.isNotEmpty() || !state.gizmosEnabled, onTop,
+    )
 
     /** The world bounds of the entity [id] as the last frame drew it. */
     internal fun boundsOf(c: SceneContent, id: String): BoundingBox? {
@@ -389,6 +421,7 @@ class SceneRenderer(
 
     override fun dispose() {
         snapshot = null
+        posed = null
         rayPresenter?.dispose()
         rayPresenter = null
         bakedSky = null

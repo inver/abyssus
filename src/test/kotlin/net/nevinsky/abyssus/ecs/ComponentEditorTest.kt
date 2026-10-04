@@ -337,6 +337,25 @@ class ComponentEditorTest {
     }
 
     @Test
+    fun aVectorAxisBelowAnExclusiveMinimumIsRefused() {
+        val box = net.nevinsky.abyssus.runtime.schema.ComponentSchema(
+            "BoxComponent", "", "Box",
+            listOf(net.nevinsky.abyssus.runtime.schema.SchemaField(
+                "halfExtents", "Half extents", net.nevinsky.abyssus.runtime.schema.FieldType.VECTOR,
+                net.nevinsky.abyssus.runtime.schema.SchemaVector(0.5f, 0.5f, 0.5f), min = 0.0, minExclusive = true,
+            )),
+        )
+        val boxEditor = ComponentEditor(listOf(box))
+        val root = scene(entity(0, """"BoxComponent":{}"""))
+        val result = boxEditor.update(root, "0", "BoxComponent", "halfExtents.y", "0")
+        assertRejected(result)
+        assertTrue((result as EditResult.Rejected).reason, result.reason.contains("halfExtents.y") && result.reason.contains("greater than 0"))
+        assertEquals("{}", components(root, 0)["BoxComponent"].toString())
+        assertEquals(EditResult.Changed, boxEditor.update(root, "0", "BoxComponent", "halfExtents.x", "1"))
+        assertEquals("""{"halfExtents":{"x":1,"y":0.5,"z":0.5}}""", components(root, 0)["BoxComponent"].toString())
+    }
+
+    @Test
     fun aPlaneEntityReferenceMustNameAnEntityOfTheScene() {
         val root = customScene()
         val before = root.toString()

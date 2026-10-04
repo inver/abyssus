@@ -165,6 +165,27 @@ be undone; resetting a default omits its saved field. These beam fields are part
 The toolbar's camera selector (**Free camera** and the scene's cameras by name) renders the view through a camera
 entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
+### Physics (Abyssus Physics plugin)
+
+**Abyssus Physics** is a separate plugin, built from `physics-plugin/`, that depends on Abyssus. With it installed:
+
+- **Add Component** offers **Rigid body**, **Collider** and **Constraint**. They are edited like other components,
+  and sizes and masses must be greater than 0. Without the plugin, these components show as read-only JSON and are
+  kept unchanged.
+- **Show Physics** in the Scene View toolbar (off when the view opens) draws each collider as a wireframe: green for
+  dynamic, blue for kinematic, grey for static. A height field is drawn as its terrain's outline. Each constraint is a
+  line between its anchors; a rope that is longer than its maximum is drawn dashed. The selected entity's physics is
+  brighter and drawn through its model.
+- **Play**, **Pause**, **Step** and **Stop** run the scene's physics in a separate process. Play uses the scene as
+  the editor holds it, unsaved text included. Simulated poses are shown but never written: Stop, Esc, editing the
+  scene or closing the tab returns the view to the scene as the document holds it. While playing, gizmos are off,
+  and keys and mouse buttons go to the game. If the process dies, one notification shows its last output and the IDE
+  keeps running.
+- A game makes Play run its own code by exporting `abyssus/play.json` (see `physics/README.md`). Without that file,
+  Play runs physics alone.
+
+Jolt, the physics engine, is loaded only by the play process, never by the IDE.
+
 The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `gdx-model` module, a
 plain JVM library reusable in other libGDX projects; see [source provenance](docs/third-party/gdx-model-origin.md)
 for its origin and license. The GL

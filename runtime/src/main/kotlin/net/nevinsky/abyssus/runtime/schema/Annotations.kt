@@ -16,7 +16,7 @@ annotation class SceneComponent(val name: String, val label: String = "")
 
 /**
  * An editable field of a [SceneComponent]: shown under [label] (the field name when empty) in [group]. [min] and
- * [max] bound a number; with [minExclusive] the value must be greater than [min].
+ * [max] bound a number, or each axis of a `Vector3`; with [minExclusive] the value must be greater than [min].
  */
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
