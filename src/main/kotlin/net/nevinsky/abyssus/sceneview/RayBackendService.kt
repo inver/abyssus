@@ -86,7 +86,11 @@ internal class RayBackendService(
                     val scheduler = RayRenderScheduler({ batch ->
                         when (val request = batch.request) {
                             is RayRequest -> session.submit(request)
-                            is RaySceneRequest -> session.submit(request)
+                            is RaySceneRequest -> {
+                                // A backend without the optics payload must not silently drop saved depths or glass.
+                                request.requireOptics(backend.capabilities)
+                                session.submit(request)
+                            }
                             else -> error("Unsupported ray request type")
                         }
                     }, session::poll, RayQualityPolicy(quality), clock, log = log)

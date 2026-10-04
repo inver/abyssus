@@ -18,7 +18,7 @@ import com.intellij.openapi.vfs.VirtualFile
  */
 @Service(Service.Level.PROJECT)
 class SceneRayControls @JvmOverloads constructor(
-    private val project: Project,
+    internal val project: Project,
     private val open: (Project, VirtualFile) -> Unit = { p, f -> openSceneView(p, f) },
 ) {
     private val controls = LinkedHashMap<VirtualFile, MutableList<RayControl>>()

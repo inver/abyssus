@@ -182,11 +182,13 @@ class AssetPropertiesPanel(
         }
         if (assetFolder == null) {
             val sceneFile = viewableSceneFile(node)?.takeIf { it.isValid && ProjectLayout.isScene(it) }
-            apply(when {
-                sceneFile != null -> PanelState.SceneDetails(sceneFile, describeNonAsset(node)?.first ?: sceneFile.name)
-                node.isAssetRow() -> emptyState(null)
-                else -> emptyState(node)
-            })
+            if(sceneFile!=null) {
+                scene=sceneFile
+                background {
+                    val result=readSceneState(sceneFile,describeNonAsset(node)?.first ?: sceneFile.name)
+                    ui { if(token==generation && !disposed) apply(result) }
+                }
+            } else apply(if(node.isAssetRow()) emptyState(null) else emptyState(node))
             return
         }
         background {
@@ -236,9 +238,13 @@ class AssetPropertiesPanel(
     private fun render(newState: PanelState) {
         when (newState) {
             is PanelState.SceneDetails -> {
+                useTerrain(null)
+                useUndoEditor(newState.file)
                 val own = com.intellij.openapi.util.Disposer.newDisposable(parentDisposable, "scene-details").also { viewDisposable = it }
                 content.removeAll()
-                content.add(JBScrollPane(SceneDetailsView(services.rayControls, newState, own)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
+                val conflict = conflictKey.also { conflictKey = null }
+                val view = SceneDetailsView(services.rayControls, newState, own, conflict) { conflictKey = it }
+                content.add(JBScrollPane(view).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)
             }
             is PanelState.Empty -> {
@@ -249,7 +255,7 @@ class AssetPropertiesPanel(
             }
             is PanelState.EntityDetails -> {
                 useTerrain(null)
-                useUndoEditor(null)
+                useUndoEditor(newState.target.file)
                 content.removeAll()
                 content.add(JBScrollPane(EntityDetailsView(project, newState, services.metaFiles)).apply { border = BorderFactory.createEmptyBorder() }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)

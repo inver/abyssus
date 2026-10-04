@@ -33,7 +33,7 @@ internal class RayViewFeed(
     private val reportFailure: (Throwable) -> Unit = {},
 ) : AutoCloseable {
     private class Job(
-        val epoch: Long, val params: SceneRenderParams, val camera: PerspectiveCamera, val lights: LightSet,
+        val epoch: Long, val settingsRevision: Long, val params: SceneRenderParams, val camera: PerspectiveCamera, val lights: LightSet,
         val state: RaySceneAssetState.Ready, val poses: Map<String, RayModelPose>, val activeCamera: String?,
         val width: Int, val height: Int, val metadata: RayDisplayMetadata, val hdrAmbient: FloatArray?,
         val sky: RaySkySnapshot?,
@@ -43,6 +43,8 @@ internal class RayViewFeed(
     private val running = AtomicBoolean()
     private val closed = AtomicBoolean()
     @Volatile private var epoch = 0L
+    private var settingsRevision = 0L
+    private var settingsSignature: Pair<SceneRaySettingsState, Map<String, com.fasterxml.jackson.databind.JsonNode>>? = null
 
     // Owned by the converter thread (the one worker that runs [drain]).
     private var lastFrame: RaySceneFrame? = null
@@ -57,6 +59,17 @@ internal class RayViewFeed(
     /** Render thread. The ray frame to present for [context], or null while raster should be shown. */
     fun frame(context: RayFrameContext): RaySceneDisplay? {
         if (closed.get()) return null
+        val overrides=context.params.ecs?.path("entities")?.properties()?.mapNotNull { (id,entity) ->
+            entity.path("components").path("RenderComponent").get("rayTracingMaterials")?.let { id to it }
+        }?.toMap().orEmpty()
+        val signature=context.params.raySettings to overrides
+        if(settingsSignature!=signature) {
+            settingsSignature=signature
+            settingsRevision++
+            epoch++
+            pendingJob.set(null)
+            runtime.invalidateSettingsWork()
+        }
         if (!runtime.mode.requested) {
             releaseWhenOff()
             return null
@@ -95,7 +108,7 @@ internal class RayViewFeed(
 
     private fun post(context: RayFrameContext, state: RaySceneAssetState.Ready) {
         lastFrameWasLive = true
-        val job = Job(epoch, context.params.copy(content = context.content), copy(context.camera), context.lights, state,
+        val job = Job(epoch, settingsRevision, context.params.copy(content = context.content), copy(context.camera), context.lights, state,
             poses.capture(context.models), context.viewCamera, context.width, context.height,
             RayDisplayMetadata.capture(context), context.hdrAmbient?.copyOf(),
             state.sky ?: context.bakedSky?.invoke())
@@ -109,8 +122,7 @@ internal class RayViewFeed(
                 val job = pendingJob.getAndSet(null) ?: break
                 if (job.epoch != epoch) continue
                 runCatchingKeepingCancellation { convert(job) }.onFailure { failure ->
-                    reportFailure(failure)
-                    runtime.fail(failure.displayMessage())
+                    if(job.epoch==epoch) { reportFailure(failure); runtime.fail(failure.displayMessage()) }
                 }
             }
         } finally {
@@ -156,11 +168,13 @@ internal class RayViewFeed(
         if (diff.changes.any { it != RaySceneChange.CAMERA && it != RaySceneChange.POSE }) contentRevision++
         if (job.epoch != epoch) return
         val key = RayFrameKey(sceneGeneration, contextGeneration, cameraRevision, poseRevision)
-        val request = RaySceneRequest(key, job.width, job.height, frame.camera.rayCamera(), scene)
-        // one primary ray, one shadow ray per light, and one reflection ray when any material is PBR
-        val reflective = scene.materials.any { it.kind == RayMaterialKind.PBR }
-        val rays = 1 + scene.lights.size + if (reflective) 1 else 0
-        val input = RayRenderInput(request, RayDisplayKey(job.width, job.height, job.activeCamera ?: "free"), contentRevision, rays, job.metadata)
+        val settings=frame.settings
+        val request=RaySceneRequest(key,job.width,job.height,frame.camera.rayCamera(),scene,
+            maxReflectionBounces=settings.maxReflectionBounces,maxRefractionBounces=settings.maxRefractionBounces,
+            maxRaysPerFrame=settings.maxRaysPerFrame.toLong(),settingsRevision=job.settingsRevision)
+        val rays=RayWorkBudget().perCameraSample(scene,settings.maxReflectionBounces,settings.maxRefractionBounces).toInt()
+        val input=RayRenderInput(request,RayDisplayKey(job.width,job.height,job.activeCamera ?: "free"),contentRevision,rays,job.metadata,
+            RayRenderSettings(settings.targetSamplesPerPixel,settings.maxRaysPerFrame.toLong()),job.settingsRevision)
         runtime.offer(input, job.metadata)
     }
 

@@ -24,6 +24,12 @@ class RayModelSnapshotReader(private val assimp: AssimpModelLoader, private val 
         return try { capture(data, images) } finally { images.values.forEach(Pixmap::dispose) }
     }
 
+    /** Only the material table, in model order: identifiers and whether each is PBR. Decodes no images, for editors. */
+    fun materials(files: AssetFiles, name: String): List<RayModelMaterialInfo>? {
+        val file = FileHandle(files.model(name) ?: return null)
+        return assimp.loadData(file).materials.map { RayModelMaterialInfo(it.id, it is PbrModelMaterial) }
+    }
+
     /** Does not dispose or mutate the caller's parsed model or Pixmaps. */
     fun capture(data: ModelData, images: Map<String, Pixmap>): RayModelSnapshot {
         val bytes = data.meshes.sumOf { mesh ->

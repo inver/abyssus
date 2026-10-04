@@ -211,3 +211,26 @@ an asset. A rejected file is never imported, formatted or edited; supported sibl
   first. See `PlayState` and `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md`.
 - **A new asset kind drawn in the scene view:** an `AssetLoader` in `core` (built in `AssetLoading`), and a placement in
   `SceneContent`.
+
+### Saved ray settings revisions
+
+Scene DTO parsing remains in `runtime.scene.SceneParser`; it carries the optional raw `rayTracing` node without
+repairing it. Plugin `SceneRenderParams` decodes the four preferences with the pure `SceneRaySettingsCodec`.
+`RayMaterialOverrides` reads pure JSON from each Render component, and `RaySceneSnapshots` resolves unique PBR
+material IDs on the converter thread. Per-instance copied materials retain shared meshes and textures.
+Malformed settings or unresolved optical overrides cause explicit ray conversion fallback.
+
+The render-thread `RayViewFeed` detects changed settings/optical data before posting a frozen conversion job and
+invalidates the existing scheduler's CPU publication immediately. Jobs carry the settings revision, so a delayed
+converter cannot republish earlier settings. `RayRenderInput` freezes the target and query budget; only the serial
+native worker chooses resolution and sample count. No preference edit requires a device probe, view opening or
+session reconstruction. `RayWorkBudget` includes intersection retries and secondary direct-shadow work, and the
+quality policy falls back when the saved budget cannot fit a sample at its minimum resolution.
+
+`RayBackendService` rejects a scene request that uses non-default depths or transmission on a backend whose
+`RayCapabilities.sceneOptics` is false, so saved settings are never silently ignored. Native kernels evaluate each batch's
+samples independently, and each session's `RayFrameAccumulator` merges batches of the same key, epoch, revision and limits.
+A frame that fails its per-path query bound or meets an unsupported dielectric medium is rejected whole at poll;
+`RayQueuedSession` then accepts new work at once. In Properties, `SceneDetailsView` edits the four settings and
+`EntityDetailsView` the per-material optics through `SceneRayEdits` (one `editSceneJson` command each); see the
+scene view README.

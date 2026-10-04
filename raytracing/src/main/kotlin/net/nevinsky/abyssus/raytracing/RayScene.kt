@@ -77,8 +77,9 @@ data class RayMaterial(
     val specularTexture: RayTextureBinding?=null, val normalTexture: RayTextureBinding?=null,
     val metallicRoughnessTexture: RayTextureBinding?=null, val occlusionTexture: RayTextureBinding?=null,
     val terrain: RayTerrainMaterial?=null,
+    val transmission: Float=0f, val ior: Float=1.5f,
 ) {
-    init { require(listOf(shininess,metallic,roughness,opacity,alphaCutoff).all { it.isFinite() }); require(shininess>=0 && opacity in 0f..1f && alphaCutoff in 0f..1f) }
+    init { require(transmission.isFinite() && transmission in 0f..1f && ior.isFinite() && ior in 1f..3f); require(listOf(shininess,metallic,roughness,opacity,alphaCutoff).all { it.isFinite() }); require(shininess>=0 && opacity in 0f..1f && alphaCutoff in 0f..1f) }
     internal fun bindings()=listOf(baseTexture,emissiveTexture,specularTexture,normalTexture,metallicRoughnessTexture,occlusionTexture)+listOf(terrain?.splat)+(terrain?.layers ?: List(5){null})
 }
 /** One triangle part. Local positions/normals/UV and optional tangent xyzw, preserving 32-bit indices. */
@@ -146,7 +147,7 @@ class RaySceneSnapshot(meshes: List<RayMesh>, instances: List<RayInstance>, mate
         lights.size>RAY_MAX_LIGHTS -> "Scene has more than $RAY_MAX_LIGHTS lights"
         geometryBytes>RAY_MAX_GEOMETRY_BYTES -> "Scene geometry exceeds the $RAY_MAX_GEOMETRY_BYTES byte budget"
         blendedInstances>RAY_MAX_BLENDED_INSTANCES -> "Ray transparency exceeds the supported layer limit"
-        else -> null
+        else -> RayOpticalEligibility().unsupportedReason(this)
     }
     val geometryBytes get()=this.meshes.sumOf { (it.vertexCount*3L+it.indexCount)*4L }
     val blendedInstances get()=this.instances.count { this.materials[it.material].alphaMode==RayAlphaMode.BLEND }
@@ -171,8 +172,28 @@ fun dirtyMeshes(previous:List<RayMesh>?,next:List<RayMesh>):List<Int>? {
 fun sameGeometry(previous:List<RayMesh>?,next:List<RayMesh>)=previous!=null && previous.size==next.size && previous.indices.all { previous[it].sameGeometryAs(next[it]) }
 
 class RaySceneRequest(override val key: RayFrameKey, override val width: Int, override val height: Int, override val camera: RaySliceCamera, val scene: RaySceneSnapshot,
-    val samples: Int=1, val sampleOffset: Int=0, val accumulationEpoch: Long=0) : RayRenderRequest {
-    init { require(width>0 && height>0 && samples in 1..8 && sampleOffset>=0) }
-    override fun withRenderPlan(width: Int, height: Int, samples: Int, sampleOffset: Int, accumulationEpoch: Long) =
-        RaySceneRequest(key, width, height, camera, scene, samples, sampleOffset, accumulationEpoch)
+    val samples: Int=1, val sampleOffset: Int=0, val accumulationEpoch: Long=0,
+    val maxReflectionBounces: Int=1, val maxRefractionBounces: Int=0, val maxRaysPerFrame: Long=2097152,
+    val settingsRevision: Long=0) : RayRenderRequest {
+    init {
+        require(width>0 && height>0 && samples in 1..8 && sampleOffset>=0)
+        require(maxReflectionBounces in 0..16 && maxRefractionBounces in 0..16 && maxRaysPerFrame in 1..67108864)
+    }
+    override fun withRenderPlan(width: Int,height: Int,samples: Int,sampleOffset: Int,accumulationEpoch: Long) =
+        RaySceneRequest(key,width,height,camera,scene,samples,sampleOffset,accumulationEpoch,maxReflectionBounces,maxRefractionBounces,maxRaysPerFrame,settingsRevision)
+    fun requireWithinBudget() {
+        val cost=RayWorkBudget().perCameraSample(scene,maxReflectionBounces,maxRefractionBounces)
+        val work=RayWorkBudget().frameQueries(width,height,samples,cost)
+        if(work>maxRaysPerFrame) throw RayQualityLimitException("Submitted frame exceeds the saved ray budget")
+    }
+    fun requireOptics(capabilities: RayCapabilities) {
+        if(!capabilities.sceneOptics && (maxReflectionBounces!=1 || maxRefractionBounces!=0 || scene.materials.any { it.transmission>0f }))
+            throw UnsupportedOperationException("Backend does not support scene optics")
+    }
+    /** 28 float camera ABI: lens/light, transport (R,T,samples,offset), per-sample and per-frame query budgets. */
+    internal fun nativeCamera(): FloatArray = camera.uniforms(width,height).copyOf(28).also {
+        it[20]=maxReflectionBounces.toFloat();it[21]=maxRefractionBounces.toFloat();it[22]=samples.toFloat();it[23]=sampleOffset.toFloat()
+        it[24]=RayWorkBudget().perCameraSample(scene,maxReflectionBounces,maxRefractionBounces).toFloat()
+        it[25]=maxRaysPerFrame.toFloat()
+    }
 }

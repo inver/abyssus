@@ -74,7 +74,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         assertEquals("", status(v))
         assertFalse(retry(v).isVisible)
         assertEquals("Ray scene", (named(v, "scene-name") as JBLabel).text)
-        assertTrue((named(v, "ray-tracing-hint") as JBLabel).text.contains("Nothing is saved to the scene"))
+        assertTrue((named(v, "ray-tracing-hint") as JBLabel).text.contains("The switch is not saved to the scene"))
     }
 
     fun testSwitchingOnWithoutAViewOpensTheSceneViewAndAppliesTheRequestWhenItAppears() {
@@ -140,6 +140,12 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         assertTrue(detail(v).isVisible)
         assertTrue(detail(v).text, detail(v).text.contains("no hardware ray tracing"))
         assertTrue(switch(v).toolTipText.contains("Metal"))
+        // the saved limits stay editable and still save while the hardware cannot ray trace
+        val samples = named(v, "ray-setting-targetSamplesPerPixel") as com.intellij.ui.components.JBTextField
+        assertTrue(samples.isEnabled)
+        samples.text = "64"; samples.postActionEvent()
+        val saved = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!.text
+        assertEquals(64, net.nevinsky.abyssus.filetype.SceneJson.parse(saved)["rayTracing"]["targetSamplesPerPixel"].intValue())
     }
 
     fun testFailureShowsItsReasonAndARetryThatReachesTheView() {

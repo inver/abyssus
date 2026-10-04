@@ -16,6 +16,7 @@ data class RayCapabilities(
     val memoryBudgetBytes: Long,
     /** The most instances (and meshes) one session of this backend can hold; scenes with more fall back to raster. */
     val maxInstances: Int = 128,
+    val sceneOptics: Boolean = false,
 ) {
     fun unavailableReason(): RayUnavailableReason? = when {
         !accelerationStructures -> RayUnavailableReason.ACCELERATION_STRUCTURES

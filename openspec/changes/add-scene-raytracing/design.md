@@ -1,5 +1,7 @@
 # Design
 
+The fixed single-reflection depth and explicit dielectric-refraction exclusion below describe the original baseline. They are superseded by `add-scene-raytracing-settings`, which adds saved transport limits and per-instance transmission/IOR on both Metal and Vulkan. Alpha-blended reflection exclusions and unrelated platform, lifecycle and transparency requirements remain in force. Existing task completion evidence is unchanged.
+
 ## Context
 
 See proposal.md for motivation and the delta specs for the behavior contract. SceneViewPanel owns an OpenGL 3.2 core AWT canvas driven by a Swing timer. SceneRenderer renders sky, grid, terrain, models and overlays. ScenePreview supplies in-progress transforms; SceneModels advances each entity's animation. Picking and gizmo calculations already use CPU data independently of rendering.

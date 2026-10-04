@@ -94,6 +94,12 @@ internal class RayViewRuntime<T> internal constructor(
         true
     }
 
+    /** Reject previous settings immediately while preserving the installed native session/scheduler. */
+    internal fun invalidateSettingsWork() = synchronized(lock) {
+        scheduler?.cancel()
+        preparingInput = null
+    }
+
     internal fun clearPublication() = synchronized(lock) {
         scheduler?.cancel()
         scheduler = null

@@ -172,6 +172,7 @@ internal class VulkanInstance(validation: Boolean, private val log: Logger = NOP
                 maxFrameDimension = minOf(limits.maxImageDimension2D(), 4096),
                 memoryBudgetBytes = heap / 2,
                 maxInstances = VULKAN_MAX_INSTANCES,
+                sceneOptics = true,
             )
             val unavailable = capabilities.unavailableReason()
             if (unavailable != null) return null to "$name: ${unavailable.name.lowercase()}"

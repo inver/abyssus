@@ -51,6 +51,10 @@ instances/views share the same immutable snapshot; the last close removes the ca
 bytes. A closed lease holds no snapshot, and results arriving after release are dropped.
 Different project folders have independent entries.
 
+`AssetLoading.rayModelMaterials(files, assetName)` reads only a model's material table (`RayModelMaterialInfo`: the
+loader's material identifier and whether it is PBR) on the caller's thread, without decoding images or touching GL. The
+plugin's Properties panel uses it for optical override editors; the identifiers equal those of the full snapshot.
+
 Ordinary raster preparation retains nothing when no lease requests the model. When
 requested, `ModelLoader` offers CPU data before texture upload disposes its Pixmaps.
 Enabling ray mode after raster assets are already cached prepares a CPU-only companion

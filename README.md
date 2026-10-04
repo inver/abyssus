@@ -20,6 +20,10 @@ remain readable in the text editor; plugin editing and loading are refused. No i
   from seeded noise, and **New Terrain** on the Assets node creates a terrain asset.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
+- **Ray Tracing settings**: a selected scene's Properties switch turns Ray Tracing on for its open views (not saved), and
+  its target samples, ray budget and reflection and refraction depths are saved in the scene and undoable. A model
+  entity's PBR materials can be given Transmission and IOR to render as glass; these overrides apply to that entity only.
+  Glass must be a closed solid, and anything Ray Tracing cannot draw falls back to the normal renderer with the reason.
 <!-- Plugin description end -->
 
 ## Abyssus view

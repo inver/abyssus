@@ -257,6 +257,8 @@ internal class VulkanRaySession(
     private var sceneBuffer: VulkanBuffer
     private var frame: FrameResources? = null
     private var pending: Pending? = null
+    private val accumulator=RayFrameAccumulator()
+    private var opticalRequest:RaySceneRequest?=null
     private var inFlightCommands: PointerBufferHolder? = null
 
     override val geometryBuilds: Long get() = builds
@@ -290,7 +292,7 @@ internal class VulkanRaySession(
             vkCheck(vkCreateFence(device, fenceInfo, null, out), "vkCreateFence")
             fence = out[0]
         }
-        cameraBuffer = context.createBuffer(80, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, Access.HOST_WRITE)
+        cameraBuffer = context.createBuffer(112, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, Access.HOST_WRITE)
         sceneBuffer = context.createBuffer(256, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Access.HOST_WRITE)
         instanceBuffer = context.createBuffer(limits.maxInstances.toLong() * INSTANCE_BYTES, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Access.HOST_WRITE)
         tlasInstances = context.createBuffer(limits.maxInstances.toLong() * TLAS_INSTANCE_BYTES,
@@ -552,14 +554,15 @@ internal class VulkanRaySession(
     }
 
     /** Writes the TLAS instances, records the build, bounded dispatches and readback copies, and submits without waiting. */
-    private fun enqueue(key: RayFrameKey, width: Int, height: Int, cameraSpec: RaySliceCamera, instances: List<RaySliceInstance>, scene: Boolean) {
+    private fun enqueue(key: RayFrameKey, width: Int, height: Int, cameraSpec: RaySliceCamera, instances: List<RaySliceInstance>, scene: Boolean, nativeCamera: FloatArray = cameraSpec.uniforms(width,height)) {
         require(width in 1..limits.maxDimension && height in 1..limits.maxDimension && width.toLong() * height <= limits.maxPixels)
         require(instances.isNotEmpty() && instances.size <= limits.maxInstances && instances.all { it.mesh < blas.size })
         val target = ensureFrame(width, height)
         writeInstances(instances)
-        val camera = cameraSpec.uniforms(width, height)
+        val camera = nativeCamera
         val cameraView = cameraBuffer.mapped!!.asFloatBuffer()
-        cameraView.put(camera.copyOf(20))
+        cameraView.clear()
+        cameraView.put(camera.copyOf(28))
         context.flush(cameraBuffer)
 
         MemoryStack.stackPush().use { stack ->
@@ -698,6 +701,7 @@ internal class VulkanRaySession(
 
     override fun submit(request: RayRequest) {
         checkOwner()
+        opticalRequest=null;accumulator.clear()
         check(pending == null) { "A Vulkan frame is already in flight" }
         sceneGeometryKey = null
         lastScene = null
@@ -711,6 +715,8 @@ internal class VulkanRaySession(
     override fun submit(request: RaySceneRequest) {
         checkOwner()
         check(pending == null) { "A Vulkan frame is already in flight" }
+        request.requireWithinBudget()
+        opticalRequest=request
         val scene = request.scene
         require(scene.instances.isNotEmpty()) { "Empty ray scenes are not supported yet" }
         scene.unsupportedReason()?.let {
@@ -732,7 +738,7 @@ internal class VulkanRaySession(
             }
             enqueue(request.key, request.width, request.height, request.camera, scene.instances.map {
                 RaySliceInstance(it.mesh, it.transform().toList(), listOf(1f, 1f, 1f), primaryOnly = scene.materials[it.material].alphaMode == RayAlphaMode.BLEND)
-            }, scene = true)
+            }, scene = true, nativeCamera = request.nativeCamera())
         }
     }
 
@@ -753,7 +759,9 @@ internal class VulkanRaySession(
             target.depthReadback.mapped!!.asFloatBuffer().get(depth)
             releaseCommands()
             pending = null
-            RayFrame(request.key, request.width, request.height, color, depth)
+            requireNativeOpticalFrame(color)
+            val frame=RayFrame(request.key, request.width, request.height, color, depth)
+            opticalRequest?.let { accumulator.add(it,frame) } ?: frame
         }
     }
 

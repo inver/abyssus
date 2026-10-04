@@ -128,6 +128,22 @@ class RayModelSnapshotTest {
         lease.close()
     }
 
+    @Test fun theMaterialTableListsIdsInModelOrderWithoutImages() {
+        val source = File(System.getProperty("abyssus.testData"), "project/Untitled/assets/model_fc33e1f1-015b-4524-9b10-aa417acd273c")
+        val root = java.nio.file.Files.createTempDirectory("ray-model-materials").toFile()
+        try {
+            // the model's large TGA texture is left behind: the table must not need it
+            File(root, "assets/model").mkdirs()
+            source.listFiles { f -> f.extension != "tga" }!!.forEach { it.copyTo(File(root, "assets/model/${it.name}")) }
+            val reader = RayModelSnapshotReader(AssimpModelLoader())
+            val materials = reader.materials(AssetFiles(root, JsonProcessor()), "model")!!
+            // the loader's identifiers, which scene optical overrides are keyed by, not the glTF names
+            assertEquals(listOf("mat00", "mat01", "glass", "material_3"), materials.map { it.id })
+            assertTrue(materials.all { it.pbr })
+            assertNull(reader.materials(AssetFiles(root, JsonProcessor()), "missing"))
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun theRealModelLoaderOffersPreparedDataAndLateAcquisitionUsesTheSameCpuReader() {
         GdxNativesLoader.load()
         val source = File(System.getProperty("abyssus.testData"), "project/Untitled/assets/model_29e9be61-6594-4f82-a6cf-44ccf09f71fb")

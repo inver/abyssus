@@ -43,6 +43,7 @@ class RaySceneFrame internal constructor(
     internal val assets: Map<String, Any>, internal val topology: List<String>,
     internal val transforms: Map<String, List<Float>>, internal val poses: Map<String, Long>,
     internal val environmentRevision: Long,
+    val settings: SceneRaySettings = SceneRaySettings(),
 )
 
 sealed interface RaySceneConversion {
@@ -62,7 +63,7 @@ data class RaySceneDiff(val changes: Set<RaySceneChange>) {
             val changes = mutableSetOf<RaySceneChange>()
             if (previous.projectId != next.projectId || previous.assets != next.assets || previous.topology != next.topology)
                 changes += RaySceneChange.STRUCTURE
-            if (previous.assets != next.assets) changes += RaySceneChange.MATERIAL
+            if (previous.assets != next.assets || previous.scene.materials != next.scene.materials || previous.settings != next.settings) changes += RaySceneChange.MATERIAL
             if (previous.transforms != next.transforms) changes += RaySceneChange.TRANSFORM
             if (previous.poses != next.poses) changes += RaySceneChange.POSE
             if (previous.camera != next.camera) changes += RaySceneChange.CAMERA
@@ -87,6 +88,8 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         deform: ((RayModelMesh, List<FloatArray>) -> FloatArray)? = null,
         environmentRevision: Long = 0,
     ): RaySceneConversion {
+        if (params.raySettings.settings == null) return RaySceneConversion.Fallback(RaySceneFallback.UNSUPPORTED_GEOMETRY,
+            "Malformed rayTracing settings: ${params.raySettings.errors.keys.joinToString()}")
         if (assets is RaySceneAssetState.Preparing) return RaySceneConversion.Preparing(assets.assets)
         if (assets is RaySceneAssetState.Failed) return RaySceneConversion.Fallback(RaySceneFallback.ASSET_FAILURE, assets.failures.keys.joinToString())
         assets as RaySceneAssetState.Ready
@@ -96,7 +99,10 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         if (missing.isNotEmpty()) return RaySceneConversion.Preparing(missing.distinct())
         val result = runCatchingKeepingCancellation {
             val builder = Builder(limits, environmentTextures, deform) { shared.getOrPut(it) { HashMap() } }
-            for (placement in content.models) builder.model(placement, assets.models.getValue(placement.assetName), poses[placement.entityId])
+            for (placement in content.models) {
+                val render=params.ecs?.path("entities")?.path(placement.entityId)?.path("components")?.get("RenderComponent")
+                builder.model(placement, assets.models.getValue(placement.assetName), poses[placement.entityId],render)
+            }
             for (placement in content.terrains) builder.terrain(placement, assets.terrains.getValue(placement.assetName))
             builder.checkBounds()
             val scene = RaySceneSnapshot(builder.meshes, builder.instances, builder.materials, builder.textures,
@@ -106,7 +112,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 camera.fieldOfView, camera.near, camera.far, camera.projection.`val`.toList(), camera.view.`val`.toList(), activeCameraId)
             RaySceneFrame(scene, cameraSnapshot, params.projectDir?.absoluteFile?.toPath()?.normalize()?.toString(),
                 assets.models.mapKeys { "model:${it.key}" } + assets.terrains.mapKeys { "terrain:${it.key}" }, builder.topology.toList(),
-                builder.transforms.toMap(), poses.mapValues { it.value.revision }, environmentRevision)
+                builder.transforms.toMap(), poses.mapValues { it.value.revision }, environmentRevision, params.raySettings.settings)
         }
         return result.fold({ RaySceneConversion.Ready(it) }, {
             RaySceneConversion.Fallback(if (it is RaySceneLimitException) RaySceneFallback.RESOURCE_LIMIT else RaySceneFallback.UNSUPPORTED_GEOMETRY, it.message)
@@ -125,14 +131,23 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         private val geometry = mutableMapOf<String, Int>(); private val materialIds = mutableMapOf<String, Int>()
         private var bytes = initialTextures.sumOf { it.width.toLong() * it.height * 16 }; private var triangles = 0L
 
-        fun model(placement: AssetPlacement, asset: RayModelSnapshot, pose: RayModelPose?) {
+        fun model(placement: AssetPlacement, asset: RayModelSnapshot, pose: RayModelPose?,render: com.fasterxml.jackson.databind.JsonNode?) {
+            val codec=RayMaterialOverrides()
+            val identities=asset.materials.map { RayMaterialIdentity(it.id,it.pbr) }
+            val optics=render?.let(codec::read)
+            require(optics?.errors.isNullOrEmpty()) { "Malformed optical overrides: ${optics?.errors?.keys?.joinToString()}" }
+            val unresolved=render?.let { codec.unresolved(it,identities) }.orEmpty()
+            require(unresolved.isEmpty()) { "Unresolved or ineligible optical material IDs: ${unresolved.joinToString()}" }
             val firstInstance = instances.size
             cache = cacheFor(asset)
             val prefix = "model:${placement.assetName}"
             val textureIds = asset.images.mapValues { (name, image) -> texture("$prefix:$name", image, RayTextureSampler()) }
-            fun material(id: String?): Int = materialIds.getOrPut("$prefix:$id") {
+            fun material(id: String?): Int = materialIds.getOrPut("$prefix:$id" + if(optics?.values?.containsKey(id)==true) ":${placement.entityId}" else "") {
                 val source = requireNotNull(asset.materials.firstOrNull { it.id == id }) { "Missing material $id" }
-                materials.add(convertMaterial(source, textureIds)); materials.lastIndex
+                val material=convertMaterial(source,textureIds)
+                val override=optics?.values?.get(id)
+                materials.add(if(override==null) material else material.copy(transmission=override.transmission.toFloat(),ior=override.ior.toFloat()))
+                materials.lastIndex
             }
             fun visit(node: RayModelNode, parent: Matrix4, path: String) {
                 val local = PlacementTransform(Vec3(node.translation.x, node.translation.y, node.translation.z),

@@ -70,6 +70,9 @@ class RayModelMaterial internal constructor(
     val textures: List<RayModelTexture> = immutableModelList(textures)
 }
 
+/** One entry of a model's material table, without its colours or textures (see [RayModelSnapshotReader.materials]). */
+data class RayModelMaterialInfo(val id: String?, val pbr: Boolean)
+
 class RayModelMatrix internal constructor(matrix: FloatArray) {
     private val values = matrix.copyOf()
     fun values(): FloatArray = values.copyOf()

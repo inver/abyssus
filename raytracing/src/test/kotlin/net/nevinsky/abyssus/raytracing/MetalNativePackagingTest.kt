@@ -35,6 +35,7 @@ class MetalNativePackagingTest {
             assertNotNull("Packaged shader must render a frame",frame)
             assertTrue(frame!!.depthValues()[0] < 1f)
             second.dispose()
+            backend.openSession("optics",RayLimits()).use(::assertPackagedSceneOptics)
         }
     }
 }

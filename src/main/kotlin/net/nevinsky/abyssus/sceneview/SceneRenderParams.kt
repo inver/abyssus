@@ -56,6 +56,7 @@ data class SceneRenderParams(
     val projectDir: File? = null,
     /** The scene's `ecs` block as read, for scene overlays that draw components the view does not model. */
     val ecs: JsonNode? = null,
+    val raySettings: SceneRaySettingsState = SceneRaySettingsCodec().read(SceneJson.mapper.createObjectNode()),
 ) {
     companion object {
         val DEFAULT_CLEAR = Rgba(0.1f, 0.1f, 0.15f, 1f)
@@ -63,7 +64,8 @@ data class SceneRenderParams(
 
         fun from(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
             val fog = fogOf(scene)
-            return SceneRenderParams(fog?.color ?: DEFAULT_CLEAR, ambientOf(scene), fog, camera, SceneContent.of(scene), projectDir, scene.ecs)
+            return SceneRenderParams(fog?.color ?: DEFAULT_CLEAR, ambientOf(scene), fog, camera, SceneContent.of(scene), projectDir, scene.ecs,
+                SceneRaySettingsCodec().read(SceneJson.mapper.createObjectNode().also { root -> scene.rayTracing?.let { root.set<JsonNode>("rayTracing",it) } }))
         }
 
         private fun ambientOf(scene: SceneDto): Rgba? {

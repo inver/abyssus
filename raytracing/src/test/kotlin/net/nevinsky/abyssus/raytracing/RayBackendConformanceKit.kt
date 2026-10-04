@@ -19,6 +19,198 @@ abstract class RayBackendConformanceKit {
     protected open val colorStorageError: Float = 0f
     protected abstract fun provider(devicePresent: Boolean, health: RayDeviceHealth): RayBackendProvider
 
+    @Test fun configurableReflectionZeroAndOnePreserveBoundedEnvironmentAndSceneHits() = withBackend { backend, _ ->
+        backend.openSession("reflection-limits", RayLimits()).use { session ->
+            val scene=opticsFixture(false)
+            val camera=RaySliceCamera(listOf(0f,0f,3f),listOf(0f,0f,-1f),listOf(0f,1f,0f),60f,.1f,100f)
+            val zero=RaySceneRequest(RayFrameKey(1,1,1,1),1,1,camera,scene,maxReflectionBounces=0)
+            val one=RaySceneRequest(RayFrameKey(1,1,2,1),1,1,camera,scene,maxReflectionBounces=1)
+            val a=renderScene(session,zero);val b=renderScene(session,one)
+            assertTrue("Reflection depth zero must differ from a scene hit",abs(a.colorValues()[1]-b.colorValues()[1])>.01f)
+            assertReference(a,RaySceneReferenceRenderer().render(zero).colorValues(),a.depthValues(),.002f)
+            assertReference(b,RaySceneReferenceRenderer().render(one).colorValues(),b.depthValues(),.002f)
+        }
+    }
+
+    @Test fun closedGlassUsesTwoCrossingsAndIndependentSampleOffsets() = withBackend { backend, _ ->
+        backend.openSession("glass",RayLimits()).use { session ->
+            val scene=opticsFixture(true)
+            val camera=RaySliceCamera(listOf(.4f,0f,3f),listOf(-.1f,0f,-1f),listOf(0f,1f,0f),60f,.1f,100f)
+            val request=RaySceneRequest(RayFrameKey(1,1,1,1),1,1,camera,scene,samples=8,maxReflectionBounces=2,maxRefractionBounces=2)
+            val actual=renderScene(session,request)
+            val expected=RaySceneReferenceRenderer().render(request)
+            assertReference(actual,expected.colorValues(),expected.depthValues(),.005f)
+            assertTrue("glass transmits the red background",actual.colorValues()[0]>actual.colorValues()[1]+.2f)
+            val off=RaySceneRequest(RayFrameKey(1,1,2,1),1,1,camera,scene,maxReflectionBounces=0,maxRefractionBounces=0)
+            assertTrue(renderScene(session,off).colorValues()[1]>actual.colorValues()[1]+.2f)
+        }
+    }
+
+    @Test fun secondMirrorRevealsTheHiddenObjectOnlyFromReflectionDepthTwo() = sceneCase("two-mirrors") { session ->
+        fun limit(depth: Int) = renderScene(session, twoMirrors(depth)).also {
+            assertReference(it, RaySceneReferenceRenderer().render(twoMirrors(depth)).colorValues(), it.depthValues(), .005f)
+        }.colorValues()
+        val zero = limit(0); val one = limit(1); val two = limit(2); val sixteen = limit(16)
+        assertTrue("depth 1 stops at the second mirror", one[1] < .1f)
+        assertTrue("depth 2 reaches the green panel", two[1] > one[1] + .3f)
+        assertEquals("the panel is not a mirror, so deeper limits add nothing", two[1], sixteen[1], .005f)
+        assertTrue("depth 0 uses the environment approximation", abs(zero[2] - one[2]) > .01f)
+    }
+
+    @Test fun closedSlabRefractionAtLimitsZeroOneAndTwo() = sceneCase("slab-limits") { session ->
+        val camera = RaySliceCamera(listOf(.4f, 0f, 3f), listOf(-.1f, 0f, -1f), listOf(0f, 1f, 0f), 60f, .1f, 100f)
+        fun limit(depth: Int): FloatArray {
+            val request = RaySceneRequest(RayFrameKey(1, 1, depth + 1L, 1), 1, 1, camera, opticsFixture(true), samples = 8,
+                maxReflectionBounces = 0, maxRefractionBounces = depth)
+            val frame = renderScene(session, request)
+            assertReference(frame, RaySceneReferenceRenderer().render(request).colorValues(), frame.depthValues(), .005f)
+            assertTrue(frame.colorValues().all { it.isFinite() })
+            return frame.colorValues()
+        }
+        val zero = limit(0); val one = limit(1); val two = limit(2)
+        assertTrue("limit 1 enters but ends on the environment inside the slab", one[0] < .2f)
+        assertTrue("limit 2 leaves the slab and reaches the red background", two[0] > one[0] + .3f)
+        assertTrue("limit 0 keeps ordinary opaque shading", abs(zero[1] - one[1]) > .01f || abs(zero[2] - one[2]) > .01f)
+    }
+
+    @Test fun fresnelSplitConservesEnergyInAUniformEnvironment() = sceneCase("fresnel-energy") { session ->
+        val sky = RayColor(.3f, .5f, .7f)
+        val scene = RaySceneSnapshot(listOf(box("glass", -1f, 1f, -1f, 1f, -.2f, .2f)), listOf(instance(0, 0)), listOf(glass()),
+            emptyList(), emptyList(), RayEnvironment(ambient = RayColor(0f, 0f, 0f), background = sky))
+        for ((index, direction) in listOf(listOf(0f, 0f, -1f), listOf(-.5f, 0f, -1f), listOf(-.2f, .3f, -1f)).withIndex()) {
+            val request = RaySceneRequest(RayFrameKey(1, 1, index + 1L, 1), 1, 1,
+                RaySliceCamera(listOf(.3f, 0f, 2f), direction, listOf(0f, 1f, 0f), 60f, .1f, 100f), scene, samples = 8,
+                maxReflectionBounces = 4, maxRefractionBounces = 4)
+            val frame = renderScene(session, request)
+            assertReference(frame, RaySceneReferenceRenderer().render(request).colorValues(), frame.depthValues(), .005f)
+            val color = frame.colorValues()
+            assertEquals("reflected plus transmitted energy keeps the sky ($direction)", sky.r, color[0], .01f)
+            assertEquals(sky.g, color[1], .01f); assertEquals(sky.b, color[2], .01f)
+        }
+    }
+
+    @Test fun totalInternalReflectionReflectsInsteadOfTransmitting() = sceneCase("internal-reflection") { session ->
+        // The camera starts inside a wide slab; under it lies an emissive red floor outside the glass.
+        val red = RayMaterial(baseColor = RayColor(0f, 0f, 0f), emissive = RayColor(1f, 0f, 0f))
+        val scene = RaySceneSnapshot(listOf(box("slab", -6f, 6f, -6f, 6f, -.5f, .5f), quadXY(-40f, 40f, -40f, 40f, -3f)),
+            listOf(instance(0, 0), instance(1, 1)), listOf(glass(), red), emptyList(), emptyList(),
+            RayEnvironment(ambient = RayColor(0f, 0f, 0f), background = RayColor(0f, .2f, .4f)))
+        fun look(direction: List<Float>, reflections: Int): FloatArray {
+            val request = RaySceneRequest(RayFrameKey(1, 1, reflections + 10L * direction.hashCode(), 1), 1, 1,
+                RaySliceCamera(listOf(0f, 0f, 0f), direction, listOf(0f, 1f, 0f), 30f, .01f, 100f), scene, samples = 8,
+                maxReflectionBounces = reflections, maxRefractionBounces = 2)
+            val frame = renderScene(session, request)
+            assertReference(frame, RaySceneReferenceRenderer().render(request).colorValues(), frame.depthValues(), .005f)
+            assertTrue(frame.colorValues().all { it.isFinite() })
+            return frame.colorValues()
+        }
+        // 53 degrees from the normal is past the 41.8 degree critical angle of IOR 1.5; 17 degrees is not.
+        val steep = look(listOf(.3f, 0f, -.954f), 0)
+        assertTrue("a steep exit transmits to the red floor", steep[0] > .5f)
+        for (reflections in listOf(0, 1, 2, 16)) {
+            val grazing = look(listOf(.8f, 0f, -.6f), reflections)
+            assertTrue("a grazing exit never transmits (reflection limit $reflections)", grazing[0] < .01f)
+        }
+    }
+
+    @Test fun mixedReflectionAndTransmissionPathsMatchTheReferenceAtEveryLimitPair() = sceneCase("mixed-paths") { session ->
+        val camera = RaySliceCamera(listOf(.6f, .2f, 3f), listOf(-.2f, -.05f, -1f), listOf(0f, 1f, 0f), 60f, .1f, 100f)
+        for ((index, limits) in listOf(0 to 1, 1 to 1, 1 to 2, 2 to 1, 3 to 4, 16 to 16).withIndex()) {
+            val request = RaySceneRequest(RayFrameKey(1, 1, index + 1L, 1), 1, 1, camera, opticsFixture(true), samples = 8,
+                maxReflectionBounces = limits.first, maxRefractionBounces = limits.second)
+            val frame = renderScene(session, request)
+            assertReference(frame, RaySceneReferenceRenderer().render(request).colorValues(), frame.depthValues(), .005f)
+            assertTrue("$limits", frame.colorValues().all { it.isFinite() })
+        }
+    }
+
+    @Test fun framesOverTheSavedRayBudgetAreRejectedAndTheSessionStaysUsable() = sceneCase("query-budget") { session ->
+        val camera = RaySliceCamera(listOf(.4f, 0f, 3f), listOf(-.1f, 0f, -1f), listOf(0f, 1f, 0f), 60f, .1f, 100f)
+        val scene = opticsFixture(true)
+        val cost = RayWorkBudget().perCameraSample(scene, 16, 16)
+        val over = RaySceneRequest(RayFrameKey(1, 1, 1, 1), 4, 4, camera, scene, samples = 8,
+            maxReflectionBounces = 16, maxRefractionBounces = 16, maxRaysPerFrame = cost * 4 * 4 * 8 - 1)
+        assertThrows(RayQualityLimitException::class.java) { session.submit(over) }
+        val fits = RaySceneRequest(RayFrameKey(1, 1, 2, 1), 4, 4, camera, scene, samples = 8,
+            maxReflectionBounces = 16, maxRefractionBounces = 16, maxRaysPerFrame = cost * 4 * 4 * 8)
+        assertTrue(renderScene(session, fits).colorValues().all { it.isFinite() })
+    }
+
+    @Test fun unsupportedTransmissionIsAnExplicitFailure() = sceneCase("unsupported-optics") { session ->
+        val camera = RaySliceCamera(listOf(0f, 0f, 3f), listOf(0f, 0f, -1f), listOf(0f, 1f, 0f), 60f, .1f, 100f)
+        fun request(meshes: List<RayMesh>, instances: List<RayInstance>, material: RayMaterial) = RaySceneRequest(RayFrameKey(1, 1, 1, 1), 1, 1,
+            camera, RaySceneSnapshot(meshes, instances, listOf(material), emptyList(), emptyList()), samples = 8,
+            maxReflectionBounces = 1, maxRefractionBounces = 4)
+        val slab = box("slab", -1f, 1f, -1f, 1f, -.2f, .2f)
+        val open = RayMesh("open", slab.positions(), slab.indices().copyOf(30))
+        val failures = listOf(
+            request(listOf(open), listOf(instance(0, 0)), glass()),
+            request(listOf(slab), listOf(instance(0, 0)), glass().copy(alphaMode = RayAlphaMode.MASK)),
+            request(listOf(slab), listOf(instance(0, 0)), glass().copy(alphaMode = RayAlphaMode.BLEND, opacity = .5f)),
+            // a second solid entered from inside the first
+            request(listOf(slab, box("inner", -.5f, .5f, -.5f, .5f, -.5f, .1f)), listOf(instance(0, 0), instance(1, 0)), glass()),
+        )
+        for (failing in failures) {
+            val failure = runCatching { renderScene(session, failing) }.exceptionOrNull()
+            assertNotNull("transmission must not be approximated silently", failure)
+            assertTrue(failure!!.message.orEmpty(), failure.message.orEmpty().contains("closed") || failure.message.orEmpty().contains("opaque PBR") ||
+                failure.message.orEmpty().contains("dielectric"))
+        }
+        val valid = request(listOf(slab), listOf(instance(0, 0)), glass())
+        assertTrue("the session stays usable after an optical failure", renderScene(session, valid).colorValues().all { it.isFinite() })
+    }
+
+    @Test fun transmissiveSolidsCastStraightOpaqueShadows() = sceneCase("glass-shadow") { session ->
+        fun floor(occluder: RayMaterial): RaySceneRequest {
+            val base = shadowScene(occluder = null)
+            val scene = base.scene
+            return RaySceneRequest(base.key, base.width, base.height, base.camera,
+                RaySceneSnapshot(scene.meshes + box("block", -3f, 3f, 1f, 1.4f, -2f, 2f), scene.instances + instance(1, 1),
+                    scene.materials + occluder, scene.textures, scene.lights, scene.environment), maxRefractionBounces = 2)
+        }
+        val glassShadow = renderScene(session, floor(glass()))
+        val opaqueShadow = renderScene(session, floor(RayMaterial()))
+        assertMatchesReference(glassShadow, floor(glass()), .002f)
+        // Columns 2..5 lie under the block; glass occludes direct light exactly like an opaque solid.
+        for (column in 2..5) for (channel in 0..2)
+            assertEquals(opaqueShadow.colorValues()[column * 4 + channel], glassShadow.colorValues()[column * 4 + channel], .002f)
+    }
+
+    private fun glass() = RayMaterial(kind = RayMaterialKind.PBR, metallic = 0f, roughness = .04f, transmission = 1f)
+
+    /** A closed axis-aligned box with outward winding (the eligibility check requires it). */
+    private fun box(id: String, x0: Float, x1: Float, y0: Float, y1: Float, z0: Float, z1: Float) = RayMesh(id,
+        floatArrayOf(x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1),
+        intArrayOf(0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 3, 7, 6, 3, 6, 2, 0, 4, 7, 0, 7, 3, 1, 2, 6, 1, 6, 5))
+
+    /**
+     * The camera looks down -z at mirror A, which turns the ray to +x onto mirror B, which turns it to +z onto an
+     * emissive green panel behind the camera. Only a second scene reflection can show the panel.
+     */
+    private fun twoMirrors(depth: Int): RaySceneRequest {
+        val a = RayMesh("mirror-a", floatArrayOf(-1f, -1f, -1f, 1f, -1f, -3f, 1f, 1f, -3f, -1f, 1f, -1f), intArrayOf(0, 1, 2, 0, 2, 3))
+        val b = RayMesh("mirror-b", floatArrayOf(2f, -1f, -3f, 4f, -1f, -1f, 4f, 1f, -1f, 2f, 1f, -3f), intArrayOf(0, 1, 2, 0, 2, 3))
+        val panel = RayMesh("panel", floatArrayOf(2f, -1f, 5f, 4f, -1f, 5f, 4f, 1f, 5f, 2f, 1f, 5f), intArrayOf(0, 2, 1, 0, 3, 2))
+        val mirror = RayMaterial(kind = RayMaterialKind.PBR, baseColor = RayColor(1f, 1f, 1f), metallic = 1f, roughness = .04f)
+        val green = RayMaterial(baseColor = RayColor(0f, 0f, 0f), emissive = RayColor(0f, 1f, 0f))
+        return RaySceneRequest(RayFrameKey(1, 1, depth + 1L, 1), 1, 1,
+            RaySliceCamera(listOf(0f, 0f, 0f), listOf(0f, 0f, -1f), listOf(0f, 1f, 0f), 20f, .1f, 100f),
+            RaySceneSnapshot(listOf(a, b, panel), listOf(instance(0, 0), instance(1, 0), instance(2, 1)), listOf(mirror, green),
+                emptyList(), emptyList(), RayEnvironment(ambient = RayColor(.3f, 0f, .6f), background = RayColor(0f, 0f, .3f))),
+            maxReflectionBounces = depth)
+    }
+
+    private fun opticsFixture(glass:Boolean): RaySceneSnapshot {
+        val box=RayMesh("box",floatArrayOf(-1f,-1f,-.2f,1f,-1f,-.2f,1f,1f,-.2f,-1f,1f,-.2f,-1f,-1f,.2f,1f,-1f,.2f,1f,1f,.2f,-1f,1f,.2f),
+            intArrayOf(0,2,1,0,3,2,4,5,6,4,6,7,0,1,5,0,5,4,3,7,6,3,6,2,0,4,7,0,7,3,1,2,6,1,6,5))
+        val red=RayMesh("red",floatArrayOf(-10f,-10f,-2f,10f,-10f,-2f,0f,10f,-2f),intArrayOf(0,1,2))
+        val reflected=RayMesh("reflected",floatArrayOf(-10f,-10f,5f,0f,10f,5f,10f,-10f,5f),intArrayOf(0,1,2))
+        val identity=floatArrayOf(1f,0f,0f,0f,0f,1f,0f,0f,0f,0f,1f,0f,0f,0f,0f,1f)
+        return RaySceneSnapshot(listOf(box,red,reflected),listOf(RayInstance("glass",0,0,identity),RayInstance("red",1,1,identity),RayInstance("reflected",2,1,identity)),
+            listOf(RayMaterial(kind=RayMaterialKind.PBR,metallic=if(glass)0f else 1f,roughness=.04f,transmission=if(glass)1f else 0f),RayMaterial(baseColor=RayColor(1f,0f,0f))),
+            emptyList(),emptyList(),RayEnvironment(ambient=RayColor(1f,1f,1f),background=RayColor(.05f,.1f,.2f)))
+    }
+
     @Test
     fun probeWithoutDeviceIsUnavailable() {
         assertTrue(provider(false, RayDeviceHealth()).probe() is RayCapability.Unavailable)

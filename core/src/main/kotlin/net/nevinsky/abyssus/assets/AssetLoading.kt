@@ -51,6 +51,8 @@ class AssetLoading(
     private val modelReader = AssimpModelLoader()
     private val rayModelReader = RayModelSnapshotReader(modelReader)
     val rayModels = RayModelSnapshots(executor, rayModelReader::read, rayModelReader::capture)
+    /** A model's material identifiers and PBR flags, read on the caller's thread without images or GL. */
+    fun rayModelMaterials(files: AssetFiles, name: String) = rayModelReader.materials(files, name)
     val models = ModelLoader(modelReader, rayModels)
     private val terrainReader = TerrainDataReader()
     private val rayTerrainReader = RayTerrainSnapshotReader(terrainReader)

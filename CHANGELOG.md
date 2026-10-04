@@ -11,6 +11,8 @@
   rewriting them. No importer or automatic migration is included. External model, image, terrain binary and recipe encodings remain unchanged.
 ### Added
 - Logging in every module through SLF4J, bound to the IDE logger: `gdx-model`, `core` and `raytracing` now write progress, backend probe results, the chosen GPU, session limits, fallbacks and failures to `idea.log` under `Abyssus.assets`, `Abyssus.model` and `Abyssus.ray` (debug lines follow Debug Log Settings).
+- Saved **Ray Tracing** settings for a selected scene in Abyssus Properties: target samples per pixel, maximum rays per frame, and maximum reflection and refraction bounces, stored in the scene's `rayTracing` block (defaults omitted) with Undo/Redo; the switch itself is still not saved
+- Ray traced glass: **Transmission** and **IOR** for a model entity's PBR materials, saved as that entity's `RenderComponent.rayTracingMaterials` overrides, with Snell refraction, Fresnel and total internal reflection through closed solids; unsupported glass (open meshes, overlapping solids, masked or blended materials) falls back to raster with the reason
 - **Ray Tracing** switch in Abyssus Properties for a selected scene (the Scene View itself has no ray tracing button): it flips the open Scene View, opening it when needed, and shows the status, the reason it is unavailable or failed, and Retry
 - **Ray Tracing** (experimental, off by default): ray traced shadows and reflections, sky, fog and transparency on a Metal (macOS) or Vulkan (Windows, Linux) GPU, with an automatic return to the normal renderer on failure
 - Add Light menus in the Scene view toolbar and on scene rows, with Directional, Sun and Spot presets, selection and single-step Undo; editable positive light range in the properties panel

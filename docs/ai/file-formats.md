@@ -251,3 +251,25 @@ Spotlight beam settings are native Abyssus fields: `coneAngle` is the full cone 
 `LightComponent.light` for nested components, or directly in an existing flat LightComponent. Missing fields use the
 defaults without writing the scene; resetting a default removes its key. Unknown fields and unrelated number text
 are preserved. The native format makes no promise of support in another editor and provides no legacy importer.
+
+## Saved ray tracing preferences and instance optics
+
+Native version 1 scenes may contain a root `rayTracing` object. Omitted fields use these defaults:
+
+| Field | Default | Accepted integers |
+|---|---:|---:|
+| `targetSamplesPerPixel` | 256 | 1–4096 |
+| `maxRaysPerFrame` | 2097152 | 1–67108864 |
+| `maxReflectionBounces` | 1 | 0–16 |
+| `maxRefractionBounces` | 0 | 0–16 |
+
+A present null, fraction, string or out-of-range value is malformed. Ordinary scene editing remains available;
+ray conversion reports the error. Reading never repairs it or inserts defaults. Runtime Ray Tracing enable state
+is separate and is not saved. Resetting one preference removes only that field, then an empty known container.
+Unknown members and unrelated number text remain intact.
+
+Each model entity's `RenderComponent.rayTracingMaterials` is an optional map keyed by unique nonempty model material
+IDs. A PBR material entry accepts finite `transmission` from 0 through 1 (default 0) and `ior` from 1 through 3
+(default 1.5). Default fields are omitted on reset. These overrides belong to the scene instance and never change
+model sources or asset metadata. Unresolved or ambiguous material IDs are preserved without retargeting; ray
+conversion refuses unsupported overrides. Geometry and textures stay shared while affected materials are copied.

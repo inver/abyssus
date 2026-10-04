@@ -164,10 +164,16 @@ backend cannot represent becomes an explicit `RaySceneConversion.Fallback`. `Ray
 skinned entity's displayed pose on the render thread, after animations advanced, and `RayModelSkinning` (core)
 deforms the shared source mesh per instance on a worker.
 
-What the native renderer then draws, and its bounds, are in `raytracing/README.md` ("Scene shading (one bounce)"):
-per-light shadow rays, cutouts, one reflection bounce for PBR, sky and fog like raster, and front-to-back alpha
-blending that neither casts shadows nor appears in reflections. Whole-view raster fallback applies when the scene
-exceeds those bounds.
+What the native renderer then draws, and its bounds, are in `raytracing/README.md`: per-light shadow rays, cutouts,
+reflections up to the scene's saved depth, glass refraction for materials given a transmission override, sky and fog like
+raster, and front-to-back alpha blending that neither casts shadows nor appears in reflections. Whole-view raster
+fallback applies when the scene exceeds those bounds, when its saved `rayTracing` settings or optical overrides are
+malformed or name materials the model lacks, when glass is not a closed opaque-PBR solid, and when the backend lacks
+`sceneOptics` (`RayBackendService` checks each request).
+
+Each frame's conversion also carries the scene's saved settings (`SceneRaySettings`, from `SceneRenderParams`) and
+the entity's optical overrides (`RayMaterialOverrides`). An override copies only that entity's material, with
+transmission and IOR, into its own material index; meshes and textures stay shared with other instances.
 
 ## Ray Tracing mode
 
@@ -199,8 +205,25 @@ same status, reason and Retry. It reaches the live view through `SceneRayControl
 `SceneFileEditor` registers its view's `RayControl` (implemented by `SceneViewPanel`, which flips the same
 `RayViewRuntime`) by scene file, and `request` applies a change to every open view of that scene. With no
 Scene View open, switching it on opens one (`openSceneView`) and applies the request when that view registers. The
-switch follows the view's `RayModeState`, so it never disagrees with it, and nothing is persisted: the mode ends with the view and the
-scene file is never written.
+switch follows the view's `RayModeState`, so it never disagrees with it, and the switch persists nothing: the mode ends with
+the view and turning it on or off never writes the scene file.
+
+### Saved settings and glass in Abyssus Properties
+
+Below the switch, the same Rendering section edits the scene's saved `rayTracing` limits: **Target samples per pixel**
+(accumulated while the view is still), **Maximum rays per frame** (all queries of one submitted frame), and maximum
+reflection and refraction bounces. They are scene data, unlike the switch: each accepted edit is one `editSceneJson`
+command through `SceneRayEdits`, checked against the value the panel was built from (a newer value wins and the field
+says so), and Undo/Redo work from the panel through its hidden text editor on the scene. They stay editable with no view
+open or no ray tracing hardware, selecting a scene writes nothing, and a malformed saved value is shown beside its
+field, never rewritten. Every open view of the scene reads the new values on its next frame and discards older results.
+
+A selected model entity (or its Render component) lists its model's materials under **Ray Tracing materials** with
+**Transmission (%)** and **IOR** for each uniquely named PBR material, stored as overrides of that entity only
+(`RenderComponent.rayTracingMaterials`). Repeated or missing material identifiers and non-PBR materials get an
+explanation instead of editors; stored overrides for materials the model no longer has are listed, kept and never
+retargeted. The material table comes from `AssetLoading.rayModelMaterials` (no images decoded), cached per model file
+by the tool window. Raster rendering ignores both values.
 
 Native scene input uses `format: "abyssus"` and integral `formatVersion: 1`. Asset renderables dispatch on `kind: "asset"`
 and their folder reference, without class loading. Unknown native kinds draw nothing and remain raw; light and camera

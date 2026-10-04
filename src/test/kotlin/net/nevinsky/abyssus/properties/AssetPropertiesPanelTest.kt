@@ -463,6 +463,38 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         return found as? com.intellij.openapi.fileEditor.FileEditor
     }
 
+    fun testSceneRaySettingsUndoAndRedoFromThePanelFollowTheSavedScene() {
+        copyProject()
+        val path = "Untitled/scenes/Main Scene.scene"
+        val original = metaText(path)
+        val p = panel()
+        p.show(children(children(abss()).single { label(it) == "scenes" }).single())
+        assertEquals("selecting the scene writes nothing", original, metaText(path))
+        assertEquals("256", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
+        val editor = providedEditor(p) as com.intellij.openapi.fileEditor.TextEditor
+        assertEquals("Main Scene.scene", editor.file.name)
+        type(find(p, "ray-setting-targetSamplesPerPixel") as JBTextField, "512")
+        val edited = metaText(path)
+        assertEquals(512, net.nevinsky.abyssus.filetype.SceneJson.parse(edited)["rayTracing"]["targetSamplesPerPixel"].intValue())
+        assertEquals("the panel refreshes from the document", "512", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
+        val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
+        undo.undo(editor)
+        assertEquals(original, metaText(path))
+        assertEquals("256", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
+        undo.redo(editor)
+        assertEquals(edited, metaText(path))
+        assertEquals("512", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
+        // an external text edit, valid or not, is read back without a selection change
+        val document = FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!
+        WriteCommandAction.runWriteCommandAction(project) { document.setText(edited.replace("512", "1024")) }
+        assertEquals("1024", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
+        WriteCommandAction.runWriteCommandAction(project) { document.setText(edited.replace("512", "-1")) }
+        assertTrue(errorText(p, "ray-setting-targetSamplesPerPixel-error").isNotBlank())
+        assertEquals("the invalid file is not rewritten", edited.replace("512", "-1"), document.text)
+    }
+
+    private fun errorText(p: Component, name: String) = (find(p, name) as JBLabel).text
+
     fun testThePanelProvidesAnEditorForThePlatformUndo() {
         copyProject()
         val p = panel()

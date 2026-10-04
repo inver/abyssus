@@ -19,7 +19,7 @@ import net.nevinsky.abyssus.core.model.ModelMesh
 import net.nevinsky.abyssus.core.model.ModelMeshPart
 
 /** One node with two mesh parts (red, green) over a shared mesh, read the way the scene view reads models. */
-internal fun rayTestModel(count: Int = 3): RayModelSnapshot {
+internal fun rayTestModel(count: Int = 3, pbr: Boolean = false): RayModelSnapshot {
         val data = ModelData()
         data.meshes.add(ModelMesh().apply {
             id = "mesh"; attributes = arrayOf(VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0))
@@ -31,7 +31,7 @@ internal fun rayTestModel(count: Int = 3): RayModelSnapshot {
             } }.toTypedArray()
         })
         listOf("red" to Color.RED, "green" to Color.GREEN).forEach { (name, color) ->
-            data.materials.add(ModelMaterial().apply { id = name; diffuse = Color(color) })
+            data.materials.add(if (pbr) net.nevinsky.abyssus.core.model.PbrModelMaterial().apply { id = name; diffuse = Color(color); baseColor = Color(color); metallic = 0f; roughness = 0.2f } else ModelMaterial().apply { id = name; diffuse = Color(color) })
         }
         data.nodes.add(ModelNode().apply {
             id = "node"; translation = Vector3(0f, 1f, 0f)

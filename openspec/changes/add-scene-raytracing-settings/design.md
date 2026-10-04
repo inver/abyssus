@@ -6,13 +6,13 @@ See proposal.md for motivation and the delta specs for the behavior contract. `S
 
 `RayQualityLimits` defaults to eight samples per submission and 256 accumulated samples. `RaySceneRequest` accepts only 1..8 samples per submission. `RayViewRuntime` receives immutable limits when constructed; `RayBackendService` constructs the scheduler/policy when activating it. `RayViewFeed` currently estimates ray cost as one primary, one shadow per light and one reflection for any PBR material. That estimate omits secondary lighting and cutout/blend retries and cannot enforce the new budget contract without replacement.
 
-`RayModelSnapshotReader` retains material IDs, and `RaySceneSnapshots` converts CPU model data to the scene ray material representation. Materials currently have alpha mode and opacity but no transmission/IOR. The Metal shader has a fixed single-bounce scene path; Vulkan remains a feasibility slice with no complete scene renderer. Native and fake conformance tests pin the current single-bounce and blended-surface rules.
+`RayModelSnapshotReader` retains material IDs, and `RaySceneSnapshots` converts CPU model data to the scene ray material representation. Materials currently have alpha mode and opacity but no transmission/IOR. The Metal shader has a fixed single-bounce scene path; Vulkan now has the matching complete scene renderer. Native and fake conformance tests pin the current single-bounce and blended-surface rules.
 
 ## Goals / Non-Goals
 
 **Goals:** Make persisted document state authoritative; keep panel commits independent of GPU availability; bound transport without recursive branch explosion; maintain responsiveness through revisioned immutable requests.
 
-**Non-Goals:** No shared material mutation or general material-authoring pipeline. No recursive GPU call stack, new native window, new dependencies, or implied Vulkan scene parity. Optical overrides are deliberately scene-instance data until a separate material-authoring capability exists.
+**Non-Goals:** No shared material mutation or general material-authoring pipeline. No recursive GPU call stack, new native window or new dependencies. Both existing Metal and Vulkan scene paths receive the same settings and optics contract. Optical overrides are deliberately scene-instance data until a separate material-authoring capability exists.
 
 ## Decisions
 
@@ -64,7 +64,7 @@ Alternative: alpha blending has no refracted direction; a single fixed air-to-gl
 
 Panel actions, document commands and listener publication run on the EDT. Settings/override codecs, budget math and optical math have no Swing, GL or IntelliJ dependency and are headless-testable. Document reads follow existing background-read patterns. Conversion, material resolution and skin deformation run on the converter thread using frozen jobs. Policy replacement, native preparation/submission/polling/disposal run on the service's serial worker. Only safe presentation/GL upload uses `GdxRuntime.withContext` on the rendering AWT thread with `GuardedGLCanvas.glSafe`.
 
-Add a scene-optics capability check rather than assume every backend understands the extended payload. Implement and verify fake/reference and Metal; Vulkan's missing scene path remains explicit unavailability/fallback. Shader/native layout changes ship together and packaging tests load the compiled library. No GUI action awaits conversion or a device fence.
+Add a scene-optics capability check rather than assume every backend understands the extended payload. Implement and verify fake/reference, Metal and Vulkan; Extend the existing Vulkan scene path with the same transport and payload contract; device checks remain explicit and separate from headless verification. Shader/native layout changes ship together and packaging tests load the compiled library. No GUI action awaits conversion or a device fence.
 
 ## Risks / Trade-offs
 
@@ -77,7 +77,7 @@ Add a scene-optics capability check rather than assume every backend understands
 
 ## Migration Plan
 
-1. Land the native document contract from `decouple-from-mundus` and use the existing complete Metal scene path. Reconcile the base raytracing delta's recursion/refraction exclusions as explicit historical baseline, superseded by these optical requirements.
+1. Land the native document contract from `decouple-from-mundus` and use the existing complete Metal and Vulkan scene paths. Reconcile the base raytracing delta's recursion/refraction exclusions as explicit historical baseline, superseded by these optical requirements.
 2. Add optional codecs and tests; native scenes lacking fields keep defaults and are not rewritten on load. Extend scheduler/material/request layouts and package matching Metal shaders.
 3. Add Properties editors and verification on temporary native project copies. Record manual and device results separately; skipped device tests do not count as support verification.
 4. To roll back the feature, turn runtime Ray Tracing off. Older native readers must preserve unknown optional fields; there is no automatic file conversion or deletion of saved settings.

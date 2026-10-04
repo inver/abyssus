@@ -71,7 +71,7 @@ class MetalRayBackendFactory(
         return RayBackendProbe({
             val values = bridge.probe(prepare())
             check(values.size == 5) { "Invalid Metal probe response" }
-            RayCapabilities(values[0] != 0L,values[1] != 0L,values[2] != 0L,values[3].toInt(),values[4],METAL_MAX_INSTANCES).also { log.info("Metal probe: $it") }
+            RayCapabilities(values[0] != 0L,values[1] != 0L,values[2] != 0L,values[3].toInt(),values[4],METAL_MAX_INSTANCES,sceneOptics=true).also { log.info("Metal probe: $it") }
         }, { caps ->
             val handle = bridge.create(prepare())
             check(handle != 0L) { "Metal backend initialization failed" }
@@ -137,6 +137,8 @@ class MetalRaySession internal constructor(
     private var builds = 0L
     override val geometryBuilds: Long get() = builds
     private var pending: Pending? = null
+    private val accumulator=RayFrameAccumulator()
+    private var opticalRequest:RaySceneRequest?=null
     private class Pending(val key: RayFrameKey, val width: Int, val height: Int) {
         val color = FloatArray(width * height * 4)
         val depth = FloatArray(width * height)
@@ -163,13 +165,13 @@ class MetalRaySession internal constructor(
     }
 
     /** Enqueues GPU work without waiting for a fence. One submitted request per session. */
-    fun submit(key: RayFrameKey, width: Int, height: Int, camera: RaySliceCamera, instances: List<RaySliceInstance>) {
+    fun submit(key: RayFrameKey, width: Int, height: Int, camera: RaySliceCamera, instances: List<RaySliceInstance>, nativeCamera: FloatArray = camera.uniforms(width,height)) {
         checkOwner()
         check(pending == null) { "A Metal frame is already in flight" }
         require(width in 1..limits.maxDimension && height in 1..limits.maxDimension && width.toLong() * height <= limits.maxPixels)
         require(instances.isNotEmpty() && instances.size <= limits.maxInstances && instances.all { it.mesh < meshCount })
         val request = Pending(key, width, height)
-        bridge.submit(handle, width, height, camera.uniforms(width, height),
+        bridge.submit(handle, width, height, nativeCamera,
             instances.flatMap { it.metalUniforms().asIterable() }.toFloatArray(), instances.map { it.mesh }.toIntArray())
         pending = request
     }
@@ -180,11 +182,14 @@ class MetalRaySession internal constructor(
         val request = pending ?: return null
         if (!bridge.poll(handle, request.color, request.depth)) return null
         pending = null
-        return RayFrame(request.key, request.width, request.height, request.color, request.depth)
+        requireNativeOpticalFrame(request.color)
+        val frame=RayFrame(request.key, request.width, request.height, request.color, request.depth)
+        return opticalRequest?.let { accumulator.add(it,frame) } ?: frame
     }
 
     override fun submit(request: RayRequest) {
         checkOwner()
+        opticalRequest=null;accumulator.clear()
         check(pending == null) { "A Metal frame is already in flight" }
         sceneGeometryKey = null
         lastScene = null
@@ -197,6 +202,8 @@ class MetalRaySession internal constructor(
     override fun submit(request: RaySceneRequest) {
         checkOwner()
         check(pending == null) { "A Metal frame is already in flight" }
+        request.requireWithinBudget()
+        opticalRequest=request
         val scene=request.scene
         require(scene.instances.isNotEmpty()) { "Empty ray scenes are not supported yet" }
         scene.unsupportedReason()?.let { throw IllegalArgumentException(it) }
@@ -218,7 +225,7 @@ class MetalRaySession internal constructor(
         }
         submit(request.key,request.width,request.height,request.camera,scene.instances.map {
             RaySliceInstance(it.mesh,it.transform().toList(),listOf(1f,1f,1f),primaryOnly=scene.materials[it.material].alphaMode==RayAlphaMode.BLEND)
-        })
+        }, request.nativeCamera())
     }
 
     override fun dispose() {

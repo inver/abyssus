@@ -8,12 +8,12 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 private const val MAX_CUTOUT_LAYERS = 8
-private const val MAX_BLEND_LAYERS = 8
+private const val MAX_BLEND_LAYERS = RAY_PRIMARY_BLEND_LAYERS
 
 /** Test-only triangle traversal with the same semantics as the native kernels. */
-internal class RaySceneReferenceRenderer {
+internal class RaySceneReferenceRenderer(private val onIntersection: () -> Unit = {}) {
     private val reference=RayMaterialReference()
-    private class Triangle(val a:RayVec3,val b:RayVec3,val c:RayVec3,val normals:List<RayVec3>?,val uv:FloatArray,val local:List<RayVec3>,val material:Int) {
+    private class Triangle(val a:RayVec3,val b:RayVec3,val c:RayVec3,val normals:List<RayVec3>?,val uv:FloatArray,val local:List<RayVec3>,val material:Int,val solid:Int) {
         fun hit(origin:RayVec3,direction:RayVec3,min:Float,max:Float):Hit? {
             val e1=b-a;val e2=c-a;val p=direction.cross(e2);val determinant=e1.dot(p)
             if(abs(determinant)<1e-8f) return null
@@ -24,10 +24,16 @@ internal class RaySceneReferenceRenderer {
     }
     private class Hit(val triangle:Triangle,val distance:Float,val u:Float,val v:Float)
     private class Surface(val position:RayVec3,val normal:RayVec3,val material:RayMaterial,val evaluated:RayMaterial,val base:RayColor,
-        val emissive:RayColor,val occlusion:Float)
+        val emissive:RayColor,val occlusion:Float,val geometric:RayVec3,val solid:Int)
 
     fun render(request:RaySceneRequest):RayFrame {
+        request.scene.unsupportedReason()?.let { throw IllegalArgumentException(it) }
+        request.requireWithinBudget()
         val scene=request.scene
+        val solids=scene.instances.map { it.id.substringBefore('/') }.distinct()
+        val optics=RayOptics()
+        var queries=0L
+        val queryLimit=RayWorkBudget().perCameraSample(scene,request.maxReflectionBounces,request.maxRefractionBounces)
         val triangles=scene.instances.flatMap { instance ->
             val mesh=scene.meshes[instance.mesh];val p=mesh.positions();val indices=mesh.indices();val normals=mesh.normals();val uv=mesh.uvs();val matrix=instance.transform()
             fun local(i:Int)=RayVec3(p[i*3],p[i*3+1],p[i*3+2])
@@ -37,12 +43,12 @@ internal class RaySceneReferenceRenderer {
             (indices.indices step 3).map { j ->
                 val ids=listOf(indices[j],indices[j+1],indices[j+2]);val points=ids.map(::local)
                 Triangle(world(points[0]),world(points[1]),world(points[2]),normals?.let { ids.map(::normal) },
-                    ids.flatMap { i -> listOf(uv?.get(i*2) ?: 0f,uv?.get(i*2+1) ?: 0f) }.toFloatArray(),points,instance.material)
+                    ids.flatMap { i -> listOf(uv?.get(i*2) ?: 0f,uv?.get(i*2+1) ?: 0f) }.toFloatArray(),points,instance.material,solids.indexOf(instance.id.substringBefore('/')))
             }
         }
         // Blended triangles are visible to primary rays only; shadow and reflection rays never see them.
         val secondary=triangles.filter { scene.materials[it.material].alphaMode!=RayAlphaMode.BLEND }
-        fun nearest(candidates:List<Triangle>,origin:RayVec3,direction:RayVec3,min:Float,max:Float)=candidates.mapNotNull { it.hit(origin,direction,min,max) }.minByOrNull { it.distance }
+        fun nearest(candidates:List<Triangle>,origin:RayVec3,direction:RayVec3,min:Float,max:Float): Hit? { onIntersection(); queries++;check(queries<=queryLimit) { "Ray query budget exceeded" }; return candidates.mapNotNull { it.hit(origin,direction,min,max) }.minByOrNull { it.distance } }
         fun surfaceOf(hit:Hit,position:RayVec3,direction:RayVec3):Surface {
             val triangle=hit.triangle;val weights=floatArrayOf(1-hit.u-hit.v,hit.u,hit.v)
             var normal=triangle.normals?.let { (it[0]*weights[0]+it[1]*weights[1]+it[2]*weights[2]).unit() } ?: (triangle.b-triangle.a).cross(triangle.c-triangle.a).unit()
@@ -55,7 +61,7 @@ internal class RaySceneReferenceRenderer {
             fun texture(b:RayTextureBinding?)=b?.let { reference.sample(it,scene.textures,u,v) } ?: RayColor(1f,1f,1f)
             val mr=texture(material.metallicRoughnessTexture)
             val evaluated=material.copy(specular=material.specular*texture(material.specularTexture),metallic=material.metallic*mr.b,roughness=material.roughness*mr.g)
-            return Surface(position,normal,material,evaluated,base,material.emissive*texture(material.emissiveTexture),texture(material.occlusionTexture).r)
+            return Surface(position,normal,material,evaluated,base,material.emissive*texture(material.emissiveTexture),texture(material.occlusionTexture).r,(triangle.b-triangle.a).cross(triangle.c-triangle.a).unit(),triangle.solid)
         }
         fun isCutout(s:Surface)=s.material.alphaMode==RayAlphaMode.MASK && s.base.a*s.material.opacity<s.material.alphaCutoff
         /** Nearest hit that is not an alpha-test hole; more than [MAX_CUTOUT_LAYERS] holes count as solid. */
@@ -86,14 +92,52 @@ internal class RaySceneReferenceRenderer {
             }
             return value
         }
-        fun shadeSurface(s:Surface,view:RayVec3,x:Int,y:Int):RayColor {
-            if(s.material.kind!=RayMaterialKind.PBR) return shade(s,view,null)
-            val direction=reference.reflectionDirection(s.normal,view,s.evaluated.roughness.coerceIn(.04f,1f),x,y)
-            val origin=s.position+s.normal*.001f
-            var radiance=reference.skyColor(scene.environment,scene.textures,direction)
-            // The reflected hit is shaded directly, without a further scene bounce.
-            traceMasked(origin,direction,.001f,10000f)?.let { (_,surface) -> radiance=shade(surface,direction*-1f,null) }
-            return shade(s,view,radiance)
+        fun shadeSurface(initial:Surface,initialView:RayVec3,x:Int,y:Int,sample:Int):RayColor {
+            var s=initial;var view=initialView
+            var result=RayColor(0f,0f,0f);var throughput=RayColor(1f,1f,1f)
+            val path=RayOpticalPath(request.maxReflectionBounces,request.maxRefractionBounces)
+            val medium=RayOpticalMedium()
+            for(event in 0..request.maxReflectionBounces+request.maxRefractionBounces) {
+                if(s.material.kind!=RayMaterialKind.PBR) return result+throughput*shade(s,view,null)
+                val transmission=if(request.maxRefractionBounces>0) s.material.transmission else 0f
+                if(transmission==0f && path.reflections==request.maxReflectionBounces) return result+throughput*shade(s,view,null)
+                val roughness=s.evaluated.roughness.coerceIn(.04f,1f)
+                var direction=reference.reflectionDirection(s.normal,view,roughness,x+sample*1973+event*31847,y)
+                val ambient=reference.ambientAt(scene.environment,s.normal)
+                val zero=reference.ambient(s.evaluated,s.base,ambient,RayColor(0f,0f,0f),s.normal.dot(view))*s.occlusion
+                val unit=reference.ambient(s.evaluated,s.base,ambient,RayColor(1f,1f,1f),s.normal.dot(view))*s.occlusion
+                var weight=RayColor((unit.r-zero.r).coerceAtLeast(0f),(unit.g-zero.g).coerceAtLeast(0f),(unit.b-zero.b).coerceAtLeast(0f))
+                var selected=RayOpticalEvent.REFLECTION
+                var entering=false
+                if(transmission>0f) {
+                    entering=view.dot(s.geometric)>0f
+                    val opposing=if(entering) s.geometric else s.geometric*-1f
+                    val from=medium.incidentIor(s.solid,s.material.ior,entering)
+                    val to=if(entering) s.material.ior else 1f
+                    val refracted=optics.refract(view*-1f,opposing,from,to)
+                    val F=optics.fresnel(view.dot(opposing),from,to)
+                    val reflection=weight*(1-transmission)+RayColor(1f,1f,1f)*(transmission*F)
+                    val transmitted=transmission*(1-F)
+                    val maximum=maxOf(reflection.r,reflection.g,reflection.b)
+                    val probability=if(maximum+transmitted>0f) maximum/(maximum+transmitted) else 1f
+                    if(refracted!=null && optics.sample(x,y,sample,event)>=probability) {
+                        selected=RayOpticalEvent.TRANSMISSION;direction=refracted
+                        weight=RayColor(1f,1f,1f)*(transmitted/(1-probability))
+                    } else weight=reflection*(1/probability.coerceAtLeast(1e-6f))
+                }
+                result+=throughput*shade(s,view,RayColor(0f,0f,0f))*(1-transmission)
+                throughput=throughput*weight
+                if(!path.consume(selected)) return result+throughput*reference.skyColor(scene.environment,scene.textures,direction)
+                if(selected==RayOpticalEvent.TRANSMISSION) medium.cross(s.solid,s.material.ior,entering)
+                val origin=optics.offset(s.position,s.geometric,direction)
+                val next=traceMasked(origin,direction,.001f,10000f)
+                if(next==null) {
+                    require(!medium.inside) { "Unmatched dielectric boundary" }
+                    return result+throughput*reference.skyColor(scene.environment,scene.textures,direction)
+                }
+                s=next.second;view=direction*-1f
+            }
+            error("Optical event bound exceeded")
         }
         val camera=request.camera.uniforms(request.width,request.height)
         fun vector(i:Int)=RayVec3(camera[i],camera[i+1],camera[i+2])
@@ -101,6 +145,9 @@ internal class RaySceneReferenceRenderer {
         val near=camera[3];val far=camera[7]
         val colors=FloatArray(request.width*request.height*4);val depths=FloatArray(request.width*request.height){1f}
         for(y in 0 until request.height) for(x in 0 until request.width) {
+            var total=RayColor(0f,0f,0f)
+            for(batchSample in 0 until request.samples) {
+            queries=0L
             val direction=(forward+right*(((x+.5f)/request.width*2-1)*camera[15]*camera[11])+up*(((y+.5f)/request.height*2-1)*camera[11])).unit()
             val cosine=direction.dot(forward);val pixel=y*request.width+x
             var accumulated=RayColor(0f,0f,0f);var transmittance=1f;var start=0f;var finished=false
@@ -112,7 +159,7 @@ internal class RaySceneReferenceRenderer {
                 val travelled=start+hit.distance
                 val surface=surfaceOf(hit,origin+direction*travelled,direction)
                 if(isCutout(surface)) { start=travelled;continue }
-                var color=shadeSurface(surface,direction*-1f,x,y)
+                var color=shadeSurface(surface,direction*-1f,x,y,request.sampleOffset+batchSample)
                 scene.fog?.let { fog -> color=mix(color,fog.color,reference.fogAmount(fog.density,travelled)) }
                 if(surface.material.alphaMode==RayAlphaMode.BLEND) {
                     val alpha=(surface.base.a*surface.material.opacity).coerceIn(0f,1f)
@@ -124,7 +171,10 @@ internal class RaySceneReferenceRenderer {
                 accumulated+=color*transmittance;transmittance=0f;finished=true
             }
             if(transmittance>0f) accumulated+=reference.skyDisplayColor(scene.environment,scene.textures,direction)*transmittance
-            colors[pixel*4]=accumulated.r;colors[pixel*4+1]=accumulated.g;colors[pixel*4+2]=accumulated.b;colors[pixel*4+3]=1f
+            total+=accumulated
+            }
+            val pixel=y*request.width+x
+            colors[pixel*4]=total.r/request.samples;colors[pixel*4+1]=total.g/request.samples;colors[pixel*4+2]=total.b/request.samples;colors[pixel*4+3]=1f
         }
         return RayFrame(request.key,request.width,request.height,colors,depths)
     }

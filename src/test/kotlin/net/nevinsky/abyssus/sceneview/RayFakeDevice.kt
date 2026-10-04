@@ -26,6 +26,7 @@ internal class RayFakeDevice(private val name: String = "Metal", private val gpu
     @Volatile var failOpen = false
     @Volatile var failRender = false
     @Volatile var completionGate: CountDownLatch? = null
+    @Volatile var sceneOptics = false
 
     private fun owner() { threads += Thread.currentThread().name }
 
@@ -35,7 +36,7 @@ internal class RayFakeDevice(private val name: String = "Metal", private val gpu
         val health = RayDeviceHealth()
         return RayCapability.Available(object : RayBackend {
             override val info = RayBackendInfo(name, gpu)
-            override val capabilities = RayCapabilities(true, true, true, 4096, 128L * 1024 * 1024)
+            override val capabilities = RayCapabilities(true, true, true, 4096, 128L * 1024 * 1024, sceneOptics = sceneOptics)
             override fun openSession(viewId: String, limits: RayLimits): RaySession {
                 owner(); opened.incrementAndGet()
                 check(!failOpen) { "Preparation failed" }

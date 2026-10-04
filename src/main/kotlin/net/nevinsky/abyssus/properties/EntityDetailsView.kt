@@ -26,6 +26,10 @@ import net.nevinsky.abyssus.filetype.PropertyIcons
 import net.nevinsky.abyssus.projectView.SceneComponentEdits
 import net.nevinsky.abyssus.projectView.addComponentGroup
 import net.nevinsky.abyssus.projectView.reportRejection
+import net.nevinsky.abyssus.sceneview.RayDataEdit
+import net.nevinsky.abyssus.sceneview.RayDataError
+import net.nevinsky.abyssus.sceneview.RayOpticalField
+import net.nevinsky.abyssus.sceneview.SceneRayEdits
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Font
@@ -43,7 +47,9 @@ import net.nevinsky.abyssus.dto.MetaFiles
 /**
  * An entity (or one component) of a scene with an editor for every field of the components the plugin models. Editors
  * are named `field-<Kind>-<field>` (their message `error-<Kind>-<field>`), a section's Remove button `remove-<Kind>` and
- * the Add button `add-component`, which is how tests reach them.
+ * the Add button `add-component`, which is how tests reach them. A model's Render section also lists its materials'
+ * Ray Tracing overrides: `optics-<field>-<material>` (message `optics-error-<material>`), `optics-unresolved-<material>`
+ * and `optics-problem`.
  */
 internal class EntityDetailsView(private val project: Project, private val state: PanelState.EntityDetails, private val metaFiles: MetaFiles) : JPanel(BorderLayout()) {
     private val target = state.target
@@ -105,12 +111,80 @@ internal class EntityDetailsView(private val project: Project, private val state
                 body.add(fieldRow(section, field))
             }
         }
+        if (section.kind == "RenderComponent") state.optics?.let { body.add(opticsView(it)) }
         return JPanel(VerticalLayout(0)).apply {
             border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0), JBUI.Borders.empty(8, 16))
             add(title)
             add(body)
         }
     }
+
+    /** Transmission (in percent) and IOR per PBR material of the model, as overrides of this entity only. */
+    private fun opticsView(optics: RenderOptics): JComponent = JPanel(VerticalLayout(JBUI.scale(2))).apply {
+        add(JBLabel(AbyssusBundle.message("propertiesOptics")).apply { foreground = secondary(); font = JBFont.small().asBold(); border = JBUI.Borders.empty(8, 0, 2, 0) })
+        add(JBLabel("<html>${AbyssusBundle.message("propertiesOpticsNote")} ${AbyssusBundle.message("propertiesOpticsRange")}</html>").apply {
+            foreground = secondary(); font = JBFont.small(); name = "optics-note"
+        })
+        optics.problem?.let { add(JBLabel("<html>$it</html>").apply { foreground = JBColor.RED; name = "optics-problem" }) }
+        for (row in optics.materials) add(opticsRow(optics, row))
+        for (id in optics.unresolved) add(JBLabel("<html>${AbyssusBundle.message("propertiesOpticsUnresolved", id)}</html>").apply {
+            foreground = JBColor.RED; name = "optics-unresolved-$id"
+        })
+    }
+
+    private fun opticsRow(optics: RenderOptics, row: OpticalMaterialRow): JComponent {
+        val box = JPanel(VerticalLayout(JBUI.scale(2))).apply { border = JBUI.Borders.emptyTop(4) }
+        box.add(JBLabel(row.id ?: AbyssusBundle.message("propertiesOpticsUnnamed")).apply { font = JBFont.label().asBold() })
+        val id = row.id
+        if (id == null || row.error != null) {
+            box.add(JBLabel("<html>${AbyssusBundle.message("propertiesRayError${(row.error ?: RayDataError.MATERIAL_ID).name}")}</html>").apply {
+                foreground = secondary(); name = "optics-error-${id ?: ""}"
+            })
+            return box
+        }
+        val error = JBLabel(row.errors.values.firstOrNull()?.let { AbyssusBundle.message("propertiesRayError${it.name}") } ?: "").apply {
+            foreground = JBColor.RED; name = "optics-error-$id"
+        }
+        for (field in RayOpticalField.entries) {
+            val stored = row.stored[field]
+            val shown = stored?.takeIf { it.isNumber }?.doubleValue() ?: field.default
+            val text = if (field == RayOpticalField.TRANSMISSION) percent(shown) else stored?.takeIf { it.isNumber }?.asText() ?: number(shown)
+            val editor = JBTextField(text).apply { name = "optics-${field.key}-$id"; columns = 6 }
+            val save = {
+                if (editor.text.trim() != text) {
+                    // Transmission is typed in percent; the scene stores the 0..1 fraction
+                    val value = if (field == RayOpticalField.TRANSMISSION) editor.text.trim().toDoubleOrNull()?.takeIf { it.isFinite() }?.let { number(it / 100) } else editor.text
+                    val result = if (value == null) RayDataEdit.Rejected(RayDataError.NUMBER)
+                        else SceneRayEdits.material(project, target.file, target.entityId, id, field, stored, value, optics.identities)
+                    when (result) {
+                        RayDataEdit.Changed -> error.text = ""
+                        RayDataEdit.Unchanged -> { error.text = ""; editor.text = text }
+                        RayDataEdit.Conflict -> { error.text = AbyssusBundle.message("propertiesRayConflict"); editor.text = text }
+                        is RayDataEdit.Rejected -> { error.text = AbyssusBundle.message("propertiesRayError${result.error.name}"); editor.text = text }
+                    }
+                }
+            }
+            editor.addActionListener { save() }
+            editor.addFocusListener(object : FocusAdapter() {
+                override fun focusLost(e: FocusEvent) = save()
+            })
+            val label = JBLabel(AbyssusBundle.message(if (field == RayOpticalField.TRANSMISSION) "propertiesOpticsTransmission" else "propertiesOpticsIor")).apply {
+                preferredSize = Dimension(JBUI.scale(LABEL_WIDTH), preferredSize.height)
+            }
+            box.add(JPanel(GridBagLayout()).apply {
+                add(label, GridBagConstraints().apply { gridx = 0; anchor = GridBagConstraints.WEST })
+                add(editor, GridBagConstraints().apply { gridx = 1; weightx = 1.0; fill = GridBagConstraints.HORIZONTAL })
+            })
+        }
+        box.add(error)
+        return box
+    }
+
+    /** [fraction] as a percentage without float noise (0.07 shows as 7, not 7.000000000000001). */
+    private fun percent(fraction: Double) = number(fraction * 100)
+
+    private fun number(value: Double): String =
+        java.math.BigDecimal(value).round(java.math.MathContext(10)).stripTrailingZeros().toPlainString()
 
     private fun fieldRow(section: ComponentSection, field: FieldValue): JComponent {
         val error = JBLabel("").apply { foreground = JBColor.RED; name = "error-${section.kind}-${field.field}" }

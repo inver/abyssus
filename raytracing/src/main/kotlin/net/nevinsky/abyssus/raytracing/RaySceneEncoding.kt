@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.raytracing
 internal class RaySceneData(val floats:FloatArray,val bytes:ByteArray)
 
 /**
- * Version 2 ABI: offsets in the float section count floats, never bytes; texture table entries are
+ * Version 3 ABI: offsets in the float section count floats, never bytes; texture table entries are
  * (offset, width, height, wrapU, wrapV, filter, isBytes), where a byte texture's offset counts RGBA8 texels from the start of
  * the byte section. All payloads are bounded before JNI.
  */
@@ -17,7 +17,7 @@ internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
         require(scene.materials.size<=128 && scene.textures.size<=128 && scene.lights.size<=12) { "Scene shading resource limit exceeded" }
         val attributes=scene.meshes.sumOf { it.vertexCount.toLong()*12 }
         val cubeFloats=if(scene.environment.ambientCube!=null) 18L else 0L
-        val total=cubeFloats+32L+scene.materials.size*128L+scene.lights.size*16L+attributes+scene.textures.size*8L+scene.instances.size+
+        val total=cubeFloats+32L+scene.materials.size*128L+scene.lights.size*16L+attributes+scene.textures.size*8L+scene.instances.size*2L+
             scene.textures.filter { !it.isBytes }.sumOf { it.width.toLong()*it.height*4 }
         val byteTexels=scene.textures.filter { it.isBytes }.sumOf { it.width.toLong()*it.height }
         // offsets are stored as floats, which are exact only up to 2^24
@@ -36,6 +36,7 @@ internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
             out[start+12]=m.shininess;out[start+13]=m.metallic;out[start+14]=m.roughness;out[start+15]=m.opacity
             out[start+16]=m.kind.ordinal.toFloat();out[start+17]=m.alphaMode.ordinal.toFloat();out[start+18]=m.alphaCutoff;out[start+19]=if(m.doubleSided)1f else 0f
             out[start+20]=m.terrain?.size ?: 1f
+            out[start+21]=m.transmission;out[start+22]=m.ior
             m.bindings().forEachIndexed { index,b ->
                 val offset=start+32+index*8
                 out[offset]=b?.texture?.toFloat() ?: -1f
@@ -62,6 +63,9 @@ internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
         out[4]=at.toFloat();val textureTable=at;at+=scene.textures.size*8
         out[5]=at.toFloat()
         scene.instances.forEach { out[at++]=it.material.toFloat() }
+        out[6]=at.toFloat()
+        val solids=scene.instances.map { it.id.substringBefore('/') }.distinct().withIndex().associate { it.value to it.index }
+        scene.instances.forEach { out[at++]=solids.getValue(it.id.substringBefore('/')).toFloat() }
         scene.textures.forEachIndexed { i,t ->
             val p=textureTable+i*8;out[p+1]=t.width.toFloat();out[p+2]=t.height.toFloat();out[p+3]=t.wrapU.ordinal.toFloat();out[p+4]=t.wrapV.ordinal.toFloat();out[p+5]=t.filter.ordinal.toFloat()
             val packed=t.rgba8()

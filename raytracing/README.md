@@ -90,14 +90,31 @@ or `RayMaterialTest`.
 - **Cutouts.** An alpha-test hole (`alpha * opacity` below the cutoff) is invisible to shadow, reflection and primary
   rays (`cutoutHolesStayOpenInShadows`). Rays pass through `RAY_CUTOUT_HOLE_DEPTH` (8) holes in a row; the next one
   counts as solid (`cutoutHolesAreSkippedUpToAFixedDepthAndThenCountAsSolid`).
-- **Reflections.** A PBR surface traces one GGX-sampled reflection ray (roughness floor 0.04, a per-pixel hash, the
-  mirror direction when the sample points below the surface). The ray sees opaque and alpha-tested models and terrain,
-  including geometry outside the camera image (`smoothReflectionsIncludeOffscreenModelsAndSkyMisses`,
-  `reflectionsIncludeOffscreenTerrainAndRoughnessChangesTheResult`). A reflected hit gets direct light, emission and
-  ambient, with the ambient colour as its terminal specular, and spawns no further scene bounce
-  (`reflectedPbrSurfacesAreShadedWithoutAFurtherBounce`). A miss shows the sky. The traced radiance replaces the
-  ambient colour in the primary PBR specular term only; diffuse ambient is unchanged. Default and terrain materials
+- **Reflections.** A PBR surface traces GGX-sampled reflection rays (roughness floor 0.04, a per-pixel/sample/event
+  hash, the mirror direction when the sample points below the surface) up to the request's `maxReflectionBounces`
+  (0–16, default 1). The rays see opaque and alpha-tested models and terrain, including geometry outside the camera
+  image (`smoothReflectionsIncludeOffscreenModelsAndSkyMisses`, `reflectionsIncludeOffscreenTerrainAndRoughnessChangesTheResult`).
+  When the limit is reached, the last hit gets direct light, emission and ambient, with the ambient colour as its
+  terminal specular, and traces nothing further (`reflectedPbrSurfacesAreShadedWithoutAFurtherBounce`,
+  `secondMirrorRevealsTheHiddenObjectOnlyFromReflectionDepthTwo`); limit 0 uses that approximation on the primary hit
+  (`configurableReflectionZeroAndOnePreserveBoundedEnvironmentAndSceneHits`). A miss shows the sky. The traced radiance
+  replaces the ambient colour in the PBR specular term only; diffuse ambient is unchanged. Default and terrain materials
   gain no reflections.
+- **Glass.** A PBR material with `transmission` above 0 (from a scene-instance override, never inferred from alpha) is a
+  dielectric with `ior` (1–3, default 1.5) against air. Each event picks one continuation, reflected or refracted (Snell),
+  by Fresnel weight with probability-compensated throughput, so a uniform environment keeps its energy
+  (`fresnelSplitConservesEnergyInAUniformEnvironment`). Every surface crossing spends one of `maxRefractionBounces`
+  (0–16, default 0) and every reflection, including total internal reflection, one of `maxReflectionBounces`
+  (`closedSlabRefractionAtLimitsZeroOneAndTwo`, `totalInternalReflectionReflectsInsteadOfTransmitting`,
+  `mixedReflectionAndTransmissionPathsMatchTheReferenceAtEveryLimitPair`). An exhausted continuation shows the sky in its
+  direction. Refraction limit 0 shades the material as ordinary opaque PBR. Supported geometry: per entity, one
+  connected, closed, consistently outward-wound manifold whose parts all carry the same transmission material on opaque
+  PBR (`RayOpticalEligibility`, checked on the CPU before upload). The kernels track air or one solid: a camera inside
+  glass is inferred from the first backface; entering a second solid, or leaving into nothing while inside, fails the
+  whole frame (alpha -2), as does a path that would exceed its query bound (alpha -1); `requireNativeOpticalFrame`
+  turns both into exceptions at poll (`unsupportedTransmissionIsAnExplicitFailure`). Glass casts straight opaque shadows:
+  no coloured transmission shadows or caustics (`transmissiveSolidsCastStraightOpaqueShadows`). A backend whose
+  `RayCapabilities.sceneOptics` is false rejects requests with non-default depths or transmission (`requireOptics`).
 - **Sky.** A miss, primary or reflected, shows the equirectangular environment texture times its intensity (linear
   HDR values above 1 survive), oriented like the raster sky: the centre column faces -Z, the top row is +Y, and
   `rotation` turns it about +Y in degrees. With no texture, a miss shows the background colour
@@ -114,7 +131,8 @@ or `RayMaterialTest`.
 - **Transparency.** Alpha-blended surfaces are composited front to back over the opaque surface behind them, are
   shadowed like any receiver, and are invisible to shadow and reflection rays (`blendedSurfacesReceiveButDoNotCastShadows`,
   `overlappingBlendedLayersCompositeFrontToBackOverTheOpaqueSurface`, `blendedGeometryIsNotReflected`). They do not
-  write depth: the frame's depth is that of the first opaque surface, or 1. No refraction.
+  write depth: the frame's depth is that of the first opaque surface, or 1. They never refract; masked or blended
+  materials with transmission are rejected.
 - **Explicit fallback.** `RaySceneSnapshot.unsupportedReason()` reports a scene the backends reject, and `submit`
   throws `IllegalArgumentException` for it, so the view falls back to raster: more than `RAY_MAX_BLENDED_INSTANCES` (32)
   blended instances, more than 128 materials or textures, or more than 12 lights (`tooManyBlendedLayersAreAnExplicitFallback`,
@@ -123,8 +141,9 @@ or `RayMaterialTest`.
   pins twelve stacked panes, the count of the fixture Main Scene.)
 
 Instances carry a ray visibility mask (`RaySliceInstance.primaryOnly`): bit 1 for shadow/reflection rays, bit 2 for
-primary rays; blended instances use only bit 2. Metal accepts the 21-float instance record this needs. Accumulation
-across samples is not implemented: the kernel ignores `samples`, so roughness noise is static per pixel.
+primary rays; blended instances use only bit 2. Metal accepts the 21-float instance record this needs. A scene request
+evaluates `samples` (1–8) independent camera samples starting at `sampleOffset` and returns their mean; the session's
+`RayFrameAccumulator` weights consecutive batches of the same key, epoch, revision and limits by sample count.
 
 ## Geometry reuse and resource bounds
 
@@ -273,8 +292,32 @@ found with `VK_LAYER_PATH` plus `LD_LIBRARY_PATH` pointing at its directory.
 `verifyVulkanPackaging` checks the SPIR-V in the jar, that no shaderc is on the runtime classpath, the
 `lwjgl-vma` natives for every target, MoltenVK for macOS only, and that a probe without a loader returns
 `RUNTIME_NOT_FOUND` (one JVM per test class, because LWJGL's library choice is process-global). Metal
-packaging moved to `verifyMetalPackaging`; `verifyNativePackaging` runs both where they apply.
+packaging moved to `verifyMetalPackaging`; `verifyNativePackaging` runs both where they apply. When they render, both
+packaging tests also draw a glass slab through the packaged scene shader (`assertPackagedSceneOptics`), so a jar whose
+shader predates the version 3 scene payload or the 28-float camera fails there. Metal and Vulkan both report
+`sceneOptics`; the Metal kernel and `scene.comp` change together with `RaySceneEncoding` and `RaySceneRequest.nativeCamera`.
 
 On a machine without a GPU, Mesa's software driver (lavapipe, `mesa-vulkan-drivers`) exposes ray queries and
 runs the whole suite: `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json`. The first scene frame on a cold lavapipe
 compiles the shader on the CPU and can exceed the kit's 5 second wait once; rerun it.
+
+## Saved quality limits and query accounting
+
+`RayRenderInput` can carry a frozen `RayRenderSettings` target (1–4096 camera samples per pixel) and frame budget
+(1–67108864 intersection queries). Scheduler inputs without saved settings retain their constructor limits.
+Submissions contain at most eight samples; the last batch is clamped to the remaining target. A different internal
+resolution begins a new accumulation epoch. Backends evaluate each batch's samples independently and accumulate them
+in the session (`RayFrameAccumulator`).
+
+`RayWorkBudget` replaces the former primary + lights + one reflection estimate. Both current native primary loops
+allow 16 blended layers plus 8 cutout queries; secondary and shadow traversal allow 8 cutout retries. With opaque
+materials only, traversal needs one query per segment. For each potentially shaded primary layer, the conservative
+bound includes every allowed reflection/refraction event and each shadow-casting light at each shaded vertex,
+including the terminal surface. Reflection and refraction share one sampled continuation, never a binary tree.
+Frame multiplication uses checked Long arithmetic. The policy intersects this query budget with device dimensions,
+pixel and memory bounds. When one sample at half resolution does not fit, it reports `RayQualityLimitException`;
+it no longer exceeds the ray budget to preserve a large preview. Saved preferences are not rewritten by fallback.
+
+Changed settings carry an explicit input revision. They clear pending/completed publication and history while the
+same native session drains its in-flight work. The scheduler rejects older revisions even within its ordinary
+motion grace interval; stable unchanged content stops submitting at the target.
