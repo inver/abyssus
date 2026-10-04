@@ -19,7 +19,8 @@ class RaySliceMesh(vertices: FloatArray, indices: IntArray) {
     internal fun indices() = triangles.copyOf()
 }
 
-class RaySliceInstance(val mesh: Int, transform: List<Float>, color: List<Float>, val reflective: Boolean = false) {
+/** [primaryOnly] hides the instance from shadow and reflection rays (alpha-blended surfaces). */
+class RaySliceInstance(val mesh: Int, transform: List<Float>, color: List<Float>, val reflective: Boolean = false, val primaryOnly: Boolean = false) {
     private val matrix = transform.toFloatArray()
     private val tint = color.toFloatArray()
     init {
@@ -28,6 +29,8 @@ class RaySliceInstance(val mesh: Int, transform: List<Float>, color: List<Float>
         require(tint.size == 3 && tint.all { it.isFinite() && it in 0f..1f })
     }
     internal fun uniforms() = matrix + tint + floatArrayOf(if (reflective) 1f else 0f)
+    /** Metal's 21-float instance record: [uniforms] plus the ray visibility mask. */
+    internal fun metalUniforms() = uniforms() + floatArrayOf(if (primaryOnly) 2f else 3f)
 }
 
 class RaySliceCamera(

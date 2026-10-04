@@ -8,8 +8,9 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 class FakeRayBackendTest : RayBackendConformanceKit() {
+    override val sceneMaterials = true
     override fun provider(devicePresent: Boolean, health: RayDeviceHealth): RayBackendProvider = RayBackendProbe({
-        RayCapabilities(devicePresent,devicePresent,devicePresent,4096,512L*1024*1024)
+        RayCapabilities(devicePresent,devicePresent,devicePresent,4096,512L*1024*1024,maxInstances=1024)
     }, { FakeRayBackend(it,health) })
 }
 
@@ -34,9 +35,19 @@ private class FakeRayBackend(override val capabilities: RayCapabilities, private
 private class FakeRaySession(private val onDisposed: () -> Unit) : RaySession {
     private var closed = false
     private var completed: RayFrame? = null
+    private var meshes: List<RayMesh>? = null
+    private var builds = 0L
+    override val geometryBuilds: Long get() = builds
     override fun submit(request: RayRequest) {
         check(!closed && completed == null)
         completed = renderReferenceGeometry(request)
+    }
+    override fun submit(request: RaySceneRequest) {
+        check(!closed && completed == null)
+        request.scene.unsupportedReason()?.let { throw IllegalArgumentException(it) }
+        builds += (dirtyMeshes(meshes, request.scene.meshes)?.size ?: request.scene.meshes.size).toLong()
+        meshes = request.scene.meshes
+        completed = RaySceneReferenceRenderer().render(request)
     }
     override fun poll(): RayFrame? {
         check(!closed)

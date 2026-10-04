@@ -52,7 +52,7 @@ class SceneViewPanel(
     private val renderer: SceneRenderer = service<AbyssusCore>().let { SceneRenderer(it.loading, it.sceneShaders) },
     private val lightActions: ((() -> Vec3) -> DefaultActionGroup)? = null,
     private val canAddLight: () -> Boolean = { lightActions != null },
-) : JPanel(BorderLayout()), SceneView {
+) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     private val frame = GdxFrame()
     private val orbit = OrbitCamera.from(initial.camera)
@@ -71,6 +71,27 @@ class SceneViewPanel(
     private val cameraCombo = ComboBox<CameraChoice>()
     private var choices: List<CameraChoice> = emptyList()
     private var updatingControls = false
+    private var rayFeed: RayViewFeed? = null
+    private var shownRay: RayModeSnapshot? = null
+    private val rayListeners = mutableListOf<() -> Unit>()
+
+    /** The only switch for Ray Tracing: the Abyssus Properties panel flips it. The Scene View toolbar has no ray control. */
+    override val rayControl: RayControl? get() = if (rayFeed == null) null else panelRayControl
+    private val panelRayControl = object : RayControl {
+        override val mode: RayModeSnapshot? get() = rayMode
+        override fun setRequested(enabled: Boolean) {
+            rayFeed?.runtime?.setRequested(enabled)
+            refreshRay()
+        }
+        override fun retry() {
+            rayFeed?.runtime?.retry()
+            refreshRay()
+        }
+        override fun addListener(parent: com.intellij.openapi.Disposable, listener: () -> Unit) {
+            rayListeners += listener
+            com.intellij.openapi.util.Disposer.register(parent) { rayListeners -= listener }
+        }
+    }
     private val experimentButton = if (java.lang.Boolean.getBoolean("abyssus.raytracing.experiment"))
         JToggleButton(AbyssusBundle.message("sceneViewRayExperiment")) else null
     private val experiment = experimentButton?.let { RayFeasibilityPreview { message -> thisLogger().info(message) } }
@@ -78,6 +99,33 @@ class SceneViewPanel(
 
     init {
         renderer.params = initial
+        // Ray tracing is optional: a missing service (e.g. a test without the application services) leaves raster only.
+        runCatching { RayIntegration.of(service<AbyssusCore>()) }.getOrNull()?.let(::installRay)
+    }
+
+    /**
+     * Binds this view's Ray Tracing mode to [integration], replacing any earlier binding. Nothing native is created
+     * until ray tracing is switched on from Abyssus Properties.
+     */
+    internal fun installRay(integration: RayIntegration) {
+        rayFeed?.close()
+        val feed = integration.newFeed("scene-view-${NEXT_VIEW.incrementAndGet()}")
+        feed.runtime.mode.addListener { SwingUtilities.invokeLater { if (rayFeed === feed) refreshRay() } }
+        rayFeed = feed
+        renderer.rayFrameProvider = { context -> feed.frame(context) }
+        shownRay = null
+        refreshRay()
+    }
+
+    /** The current Ray Tracing mode of this view (Off until it is switched on from Abyssus Properties). */
+    internal val rayMode: RayModeSnapshot? get() = rayFeed?.runtime?.mode?.snapshot
+
+    /** Tells listeners (the Properties panel's switch) when the mode changed. Cheap when nothing did. */
+    private fun refreshRay() {
+        val snapshot = rayFeed?.runtime?.mode?.snapshot
+        if (snapshot == shownRay) return
+        shownRay = snapshot
+        rayListeners.toList().forEach { it() }
     }
 
     /** Called (on the AWT thread) when rendering fails, e.g. when no GL 3.2 core context can be created. */
@@ -100,6 +148,7 @@ class SceneViewPanel(
             gdx = null
             capabilities?.let { GL.setCapabilities(it) }
             try {
+                rayFeed?.reset()
                 GdxRuntime.withContext(ctx) { experiment?.dispose(); renderer.dispose() }
             } catch (e: Throwable) {
                 thisLogger().warn("Failed to release scene view GL resources", e)
@@ -107,6 +156,7 @@ class SceneViewPanel(
         }
 
         override fun onContextAbandoned() {
+            rayFeed?.reset()
             experiment?.abandon()
             renderer.abandonShadows()
             gdx = null
@@ -122,6 +172,7 @@ class SceneViewPanel(
                 else renderer.render(frame.width, frame.height, orbit, frame.deltaSeconds)
             }
             if (!experimenting) interaction.frameRendered()
+            refreshRay()
             experimentButton?.toolTipText = experiment?.failure?.let {
                 AbyssusBundle.message("sceneViewRayExperimentFailure", it.message ?: it.javaClass.simpleName)
             } ?: AbyssusBundle.message("sceneViewRayExperimentTooltip")
@@ -344,23 +395,29 @@ class SceneViewPanel(
     override fun addNotify() {
         replaceAbandonedCanvas()
         super.addNotify()
+        rayFeed?.runtime?.setVisible(true)
         timer.start()
     }
 
     override fun removeNotify() {
         stopLoop()
         experiment?.stop()
+        rayFeed?.runtime?.setVisible(false)
         super.removeNotify()
     }
 
     override fun dispose() {
         stopLoop()
         experiment?.stop()
+        rayFeed?.close()
+        rayFeed = null
+        renderer.rayFrameProvider = null
         canvas.disposeCanvas() // releases GL resources through disposeGL while the context is still current
     }
 
     private companion object {
         const val FRAME_MILLIS = 16
+        val NEXT_VIEW = java.util.concurrent.atomic.AtomicLong()
 
         fun glData() = GLData().apply {
             majorVersion = 3

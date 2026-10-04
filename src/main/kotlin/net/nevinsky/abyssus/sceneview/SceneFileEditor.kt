@@ -124,6 +124,7 @@ class SceneFileEditor(
         created.onFailure = { e -> ApplicationManager.getApplication().invokeLater { showGlFailure(e) } }
         created.onPick = { entityId -> selectEntityInAbyssusView(project, file, entityId) }
         created.onTransform = ::applyTransform
+        (created as? RayControlProvider)?.rayControl?.let { project.getService(SceneRayControls::class.java).register(file, it, created) }
         view = created
         statusText = null
         setContent(created.view)

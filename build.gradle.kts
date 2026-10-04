@@ -146,6 +146,8 @@ tasks {
         // GL render tests open a real window: opt in with -Dabyssus.glTests=true
         System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
         System.getProperty("abyssus.rayTimingTests")?.let { systemProperty("abyssus.rayTimingTests", it) }
+        // device tests that render through the real Metal backend: opt in with -Dabyssus.metalTests=true
+        System.getProperty("abyssus.metalTests")?.let { systemProperty("abyssus.metalTests", it) }
     }
     runIde {
         // Open a project on startup: -PideProject=/path/to/project

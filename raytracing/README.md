@@ -41,8 +41,8 @@ are packaged under `native/macos-<architecture>/` as `libabyssus_ray.dylib` and
 one content-addressed path per JVM/classloader; session/device state is constructor-owned.
 The JNI bridge has no registered Objective-C classes or process-global device state.
 
-`verifyNativePackaging` currently verifies the Metal jar, not the final plugin zip or
-Vulkan dependencies. It loads the actual library/shader from the jar, probes the GPU,
+`verifyMetalPackaging` verifies the Metal jar, not the final plugin zip. It loads
+the actual library/shader from the jar, probes the GPU,
 creates two sessions and renders from the second after disposing the first. It requires
 a compatible Mac. Ordinary tests skip GPU cases unless `abyssus.metalTests=true`.
 
@@ -65,13 +65,125 @@ Initial caps: 128 meshes/instances, 32 MiB of input geometry, 4096 per dimension
 512 MiB and one quarter of the device's recommended working set. These are slice
 bounds; complete per-view/application budgets remain part of the asset/resource work.
 
-Full materials/textures, terrain splats, roughness, cutouts/blending, sky/fog, animation,
-Vulkan and complete editor integration are not implemented. The staged conformance
-kit runs 11 feasibility/lifecycle cases on the fake and opt-in Metal backends;
-full shading references remain tasks 3.1–3.5. The optional
+The staged conformance kit runs the feasibility/lifecycle cases on the fake and opt-in Metal backends. The optional
 30-second timing test reports native submission/readback throughput; it does not
 measure GL presentation, EDT upload cost or input-to-present latency and cannot pass
 the mandatory runIde gate.
+
+## Scene shading (one bounce)
+
+`RaySceneRequest` carries an immutable `RaySceneSnapshot`: meshes, instances, materials, textures, lights, environment
+and fog. The Metal backend renders it with the `rayScene` kernel; the fake backend renders the same semantics on the
+CPU (`RaySceneReferenceRenderer`, test-only). Vulkan has no scene path yet. Each documented rule below is pinned by a
+case in `RayBackendConformanceKit` (run by `FakeRayBackendTest` and opt-in `MetalRayBackendTest`) or `RayMaterialTest`.
+
+- **Materials and lights.** Default, PBR and terrain-splat materials use the raster shaders' linear conventions, and
+  point/spot lights keep their range and cone attenuation (`defaultSceneMaterialMatchesRasterReference`,
+  `pbrSceneMaterialMatchesRasterReference`, `terrainSplatSceneMatchesOrderedRasterMixes`,
+  `pointAndSpotSceneLightsKeepRangeAndConeAttenuation`, `RayMaterialTest`, `RayLightTest`).
+- **Shadows.** Every light that casts shadows traces its own visibility ray, so one blocked light never removes
+  ambient, emission or another light (`oneShadowKeepsAmbientEmissionAndTheOtherLight`). Models and terrain cast onto
+  each other (`terrainReceivesModelShadowsAndRidgesShadowTerrain`); point and spot lights are covered by
+  `pointLightShadowCoversOnlyTheOccludedFloor` and `spotConeLimitsLightAndShadowToItsCone`.
+- **Cutouts.** An alpha-test hole (`alpha * opacity` below the cutoff) is invisible to shadow, reflection and primary
+  rays (`cutoutHolesStayOpenInShadows`). Rays pass through `RAY_CUTOUT_HOLE_DEPTH` (8) holes in a row; the next one
+  counts as solid (`cutoutHolesAreSkippedUpToAFixedDepthAndThenCountAsSolid`).
+- **Reflections.** A PBR surface traces one GGX-sampled reflection ray (roughness floor 0.04, a per-pixel hash, the
+  mirror direction when the sample points below the surface). The ray sees opaque and alpha-tested models and terrain,
+  including geometry outside the camera image (`smoothReflectionsIncludeOffscreenModelsAndSkyMisses`,
+  `reflectionsIncludeOffscreenTerrainAndRoughnessChangesTheResult`). A reflected hit gets direct light, emission and
+  ambient, with the ambient colour as its terminal specular, and spawns no further scene bounce
+  (`reflectedPbrSurfacesAreShadedWithoutAFurtherBounce`). A miss shows the sky. The traced radiance replaces the
+  ambient colour in the primary PBR specular term only; diffuse ambient is unchanged. Default and terrain materials
+  gain no reflections.
+- **Sky.** A miss, primary or reflected, shows the equirectangular environment texture times its intensity (linear
+  HDR values above 1 survive), oriented like the raster sky: the centre column faces -Z, the top row is +Y, and
+  `rotation` turns it about +Y in degrees. With no texture, a miss shows the background colour
+  (`skyMissesShowTheEnvironmentWithExposureAndOrientation`, `disabledOrMissingSkyShowsTheBackground`,
+  `RayMaterialTest`). An HDR sky (`RayEnvironment.hdr`) is tone mapped (ACES fit, gamma 1/2.2) when a camera ray sees it,
+  like the raster sky, while reflections of it stay linear radiance (`hdrSkyIsToneMappedWhenSeenDirectlyAndLinearWhenReflected`).
+  The plugin produces the texture: `core`'s `RaySkySnapshot` for HDR and cube skies, and a GL bake of a procedural sky.
+  HDR diffuse lighting arrives as `RayEnvironment.ambientCube` (the sky's six axis colours, blended by the squared normal
+  exactly like the raster model shaders, `hdrAmbientCubeLightsSurfacesByNormalLikeTheRasterModelShader`); without it the
+  flat `ambient` colour applies.
+- **Fog.** Primary hits use the raster quadratic ramp `min(d^2 * (1 - 1/e) * density^2, 1)` on the world-space hit
+  distance; the sky is not fogged, and reflected hits are not fogged (`fogFollowsHitDistanceAndLeavesTheSkyUnfogged`).
+  Fog `gradient` shapes nothing, as in raster.
+- **Transparency.** Alpha-blended surfaces are composited front to back over the opaque surface behind them, are
+  shadowed like any receiver, and are invisible to shadow and reflection rays (`blendedSurfacesReceiveButDoNotCastShadows`,
+  `overlappingBlendedLayersCompositeFrontToBackOverTheOpaqueSurface`, `blendedGeometryIsNotReflected`). They do not
+  write depth: the frame's depth is that of the first opaque surface, or 1. No refraction.
+- **Explicit fallback.** `RaySceneSnapshot.unsupportedReason()` reports a scene the backends reject, and `submit`
+  throws `IllegalArgumentException` for it, so the view falls back to raster: more than `RAY_MAX_BLENDED_INSTANCES` (32)
+  blended instances, more than 128 materials or textures, or more than 12 lights (`tooManyBlendedLayersAreAnExplicitFallback`,
+  `tooManyLightsMaterialsOrTexturesAreAnExplicitFallback`). A primary ray composites at most 16 blended layers and
+  8 holes in a row; anything deeper is dropped and the remainder shows the sky. (`aDozenBlendedLayersCompositeWithinTheLimit`
+  pins twelve stacked panes, the count of the fixture Main Scene.)
+
+Instances carry a ray visibility mask (`RaySliceInstance.primaryOnly`): bit 1 for shadow/reflection rays, bit 2 for
+primary rays; blended instances use only bit 2. Metal accepts the 21-float instance record this needs. Accumulation
+across samples is not implemented: the kernel ignores `samples`, so roughness noise is static per pixel.
+
+## Geometry reuse and resource bounds
+
+A session keeps one bottom-level structure per `RayMesh`; every instance of a mesh shares it, and a transform-only
+update only rebuilds the top-level structure (`staticGeometryIsReusedWhileOnlyTransformsChange`,
+`repeatedInstancesShareOneMeshAndRemovedInstancesDisappear`). `dirtyMeshes` compares consecutive scenes: a mesh whose
+positions changed but whose vertex count and indices did not (a re-skinned model) is refit alone, overwriting its
+vertex range and rebuilding only its structure (`aReSkinnedMeshRefitsOnlyItsOwnStructureAndMovesTheHit`). Any other
+change (a different mesh count, vertex count or indices) rebuilds every structure. `RaySession.geometryBuilds` counts
+structures built, so tests and diagnostics can see reuse. Shading data (materials, textures, lights, normals, UVs) is
+re-encoded only when it, or the geometry, changed (`shadingUnchanged`). The plugin's `RaySceneSnapshots` keeps the same
+`RayMesh`/`RayTexture` objects for an unchanged asset, which makes these comparisons identity checks.
+
+Bounds, all explicit fallbacks through `RaySceneSnapshot.unsupportedReason()` rather than silent omission:
+32 MiB of triangle input per session (`RAY_MAX_GEOMETRY_BYTES`, positions plus 32-bit indices;
+`geometryOverTheMemoryBudgetIsRejectedAndTheSessionStaysUsable`), 128 materials, 128 textures, 12 lights and 32 blended
+instances, and the backend's own instance and mesh capacity (`RayCapabilities.maxInstances`: 1024 on Metal, 128 on
+Vulkan; `scenesPastTheOldInstanceCapRenderWithTheBackendsOwnCapacity`, `manyDistinctMeshesPastTheOldCapAreBuiltAndHit`). Native builds are also bounded by the smaller of 512 MiB and a quarter of the Metal device's recommended
+working set. A scene's shading payload is up to 16M floats (64 MiB: materials, normals, UVs, float textures such as an HDR
+sky) followed by up to 16M RGBA8 texels (64 MiB). Ordinary image textures are `RayTexture`s built from bytes and stay
+8-bit from the plugin to the shader, a quarter of the size of float texels (`byteTexturesRenderLikeTheSameFloatTextures`,
+`aLargeByteTextureIsAcceptedWithoutExpandingToFloats`). The plugin additionally bounds instances (1024), triangles (2M)
+and bytes (512 MB) in `RaySnapshotLimits`, and its fallback message says which bound a scene exceeded and by how much. Removed instances simply disappear from the next top-level structure. These bounds
+are per session, so one view's scene never consumes another view's budget.
+
+## Scheduler and quality policy
+
+`RayRenderScheduler` is a constructor-wired mailbox and serial-worker pump.
+`offer`, `latest` and `cancel` invoke no native callbacks. `pump` calls the supplied
+submit/poll adapter on one owner worker, with one batch in flight and one replaceable
+pending input. Cancellation clears queued/display state immediately; the owner still
+drains already selected work and performs eventual backend/session disposal.
+
+Inputs carry structural scene/context generations, output framebuffer size, active
+camera identity, camera/pose revisions and a content revision for transforms, lights,
+materials, environment and geometry. Structural changes invalidate completed frames
+immediately. Modestly older motion frames may display for at most 100 ms from offer,
+using their own batch camera/geometry metadata; unchanged still frames do not expire.
+The caller must advance revisions whenever those inputs change. There is no GL/Swing
+or project file access in this scheduler.
+
+`RayQualityPolicy` starts interaction at half output dimensions with one sample.
+Stable rendering raises resolution from recent worker timing and increases samples.
+Defaults cap dimensions at 4096, pixels at 4,194,304, retained frame/presentation
+payload at 128 MiB (80 bytes/pixel), samples at 8 per batch and 256 per accumulation
+epoch, and worst-case ray count at 2,097,152 per batch. The adapter supplies primary,
+visibility and reflection ray cost per sample; scene/native allocations are budgeted
+separately. If even the half-resolution floor exceeds a hard limit, the policy throws
+`RayQualityLimitException` for explicit view fallback. It never silently lowers that
+floor. Scene/camera/pose/content changes or internal resolution changes start a new
+accumulation epoch. At its sample cap, unchanged work stops until quality or inputs
+change.
+
+The immutable `RayRenderBatch` carries internal dimensions, samples, accumulation
+epoch/offset and matching display input to the worker adapter. Wiring that adapter
+to complete scene shading and the Scene view remains later integration work; the
+existing native feasibility shader is unchanged.
+
+```sh
+./gradlew :raytracing:test --tests '*RayRenderSchedulerTest' --tests '*RayQualityPolicyTest'
+```
 
 ## Experimental GL presentation
 

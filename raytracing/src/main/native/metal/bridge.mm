@@ -14,11 +14,13 @@
 struct AbyssusMetalSession {
     id<MTLDevice> device;
     id<MTLCommandQueue> queue;
-    id<MTLComputePipelineState> pipeline;
+    id<MTLComputePipelineState> pipeline, scenePipeline;
     NSArray<id<MTLAccelerationStructure>> *geometry;
     NSArray<NSNumber *> *vertexOffsets;
     NSArray<NSNumber *> *indexOffsets;
-    id<MTLBuffer> vertices, indices, color, depth;
+    NSArray<NSNumber *> *vertexCounts;
+    NSArray<NSNumber *> *indexCounts;
+    id<MTLBuffer> vertices, indices, color, depth, sceneData;
     id<MTLCommandBuffer> inFlight;
 };
 
@@ -51,6 +53,9 @@ static std::unique_ptr<AbyssusMetalSession> makeSession(JNIEnv *env, jbyteArray 
     session->device = device;
     session->queue = queue;
     session->pipeline = pipeline;
+    id<MTLFunction> sceneFunction = [library newFunctionWithName:@"rayScene"];
+    session->scenePipeline = sceneFunction ? [device newComputePipelineStateWithFunction:sceneFunction error:&error] : nil;
+    if (!session->scenePipeline) { fail(env,error.localizedDescription ?: @"Missing Metal rayScene kernel"); return nullptr; }
     return session;
 }
 
@@ -102,6 +107,7 @@ Java_net_nevinsky_abyssus_raytracing_MetalBridge_openSession(JNIEnv *env, jobjec
         session->device = backend->device;
         session->queue = backend->queue;
         session->pipeline = backend->pipeline;
+        session->scenePipeline = backend->scenePipeline;
         return reinterpret_cast<jlong>(session.release());
     }
 }
@@ -122,6 +128,23 @@ static std::vector<jint> integers(JNIEnv *env, jintArray array) {
     return values;
 }
 
+static MTLPrimitiveAccelerationStructureDescriptor *triangleDescriptor(id<MTLBuffer> vertexBuffer, NSUInteger vertexOffset,
+    id<MTLBuffer> indexBuffer, NSUInteger indexOffset, NSUInteger indexCount) {
+    MTLAccelerationStructureTriangleGeometryDescriptor *triangles = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
+    triangles.vertexBuffer = vertexBuffer;
+    triangles.vertexBufferOffset = vertexOffset*3*sizeof(float);
+    triangles.vertexStride = 3*sizeof(float);
+    triangles.vertexFormat = MTLAttributeFormatFloat3;
+    triangles.indexBuffer = indexBuffer;
+    triangles.indexBufferOffset = indexOffset*sizeof(jint);
+    triangles.indexType = MTLIndexTypeUInt32;
+    triangles.triangleCount = indexCount/3;
+    triangles.opaque = YES;
+    MTLPrimitiveAccelerationStructureDescriptor *descriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
+    descriptor.geometryDescriptors = @[triangles];
+    return descriptor;
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_net_nevinsky_abyssus_raytracing_MetalBridge_setGeometry(JNIEnv *env, jobject, jlong handle,
     jfloatArray vertexArray, jintArray indexArray, jintArray vertexCountArray, jintArray indexCountArray) {
@@ -132,7 +155,7 @@ Java_net_nevinsky_abyssus_raytracing_MetalBridge_setGeometry(JNIEnv *env, jobjec
         auto vertexCounts = integers(env,vertexCountArray);
         auto indexCounts = integers(env,indexCountArray);
         if (env->ExceptionCheck()) return;
-        if (session->inFlight || vertexCounts.empty() || vertexCounts.size() != indexCounts.size() || vertexCounts.size() > 128) {
+        if (session->inFlight || vertexCounts.empty() || vertexCounts.size() != indexCounts.size() || vertexCounts.size() > 1024) {
             fail(env,@"Invalid Metal geometry update"); return;
         }
         id<MTLDevice> device = session->device;
@@ -142,6 +165,8 @@ Java_net_nevinsky_abyssus_raytracing_MetalBridge_setGeometry(JNIEnv *env, jobjec
         NSMutableArray *built = [NSMutableArray array];
         NSMutableArray *vertexOffsets = [NSMutableArray array];
         NSMutableArray *indexOffsets = [NSMutableArray array];
+        NSMutableArray *vertexCountValues = [NSMutableArray array];
+        NSMutableArray *indexCountValues = [NSMutableArray array];
         id<MTLCommandBuffer> command = [session->queue commandBuffer];
         id<MTLAccelerationStructureCommandEncoder> encoder = [command accelerationStructureCommandEncoder];
         NSUInteger vertexOffset = 0, indexOffset = 0;
@@ -151,18 +176,7 @@ Java_net_nevinsky_abyssus_raytracing_MetalBridge_setGeometry(JNIEnv *env, jobjec
                 (vertexOffset+vertexCounts[i])*3 > vertices.size() || indexOffset+indexCounts[i] > indices.size()) {
                 [encoder endEncoding]; fail(env,@"Invalid Metal mesh range"); return;
             }
-            MTLAccelerationStructureTriangleGeometryDescriptor *triangles = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
-            triangles.vertexBuffer = vertexBuffer;
-            triangles.vertexBufferOffset = vertexOffset*3*sizeof(float);
-            triangles.vertexStride = 3*sizeof(float);
-            triangles.vertexFormat = MTLAttributeFormatFloat3;
-            triangles.indexBuffer = indexBuffer;
-            triangles.indexBufferOffset = indexOffset*sizeof(jint);
-            triangles.indexType = MTLIndexTypeUInt32;
-            triangles.triangleCount = indexCounts[i]/3;
-            triangles.opaque = YES;
-            MTLPrimitiveAccelerationStructureDescriptor *descriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
-            descriptor.geometryDescriptors = @[triangles];
+            MTLPrimitiveAccelerationStructureDescriptor *descriptor = triangleDescriptor(vertexBuffer, vertexOffset, indexBuffer, indexOffset, indexCounts[i]);
             MTLAccelerationStructureSizes sizes = [device accelerationStructureSizesWithDescriptor:descriptor];
             budget += sizes.accelerationStructureSize + sizes.buildScratchBufferSize;
             if (budget > MIN(device.recommendedMaxWorkingSetSize/4,512ULL*1024*1024)) {
@@ -175,6 +189,8 @@ Java_net_nevinsky_abyssus_raytracing_MetalBridge_setGeometry(JNIEnv *env, jobjec
             [built addObject:geometry];
             [vertexOffsets addObject:@(vertexOffset)];
             [indexOffsets addObject:@(indexOffset)];
+            [vertexCountValues addObject:@(vertexCounts[i])];
+            [indexCountValues addObject:@(indexCounts[i])];
             vertexOffset += vertexCounts[i];
             indexOffset += indexCounts[i];
         }
@@ -185,13 +201,77 @@ Java_net_nevinsky_abyssus_raytracing_MetalBridge_setGeometry(JNIEnv *env, jobjec
         session->geometry = built;
         session->vertexOffsets = vertexOffsets;
         session->indexOffsets = indexOffsets;
+        session->vertexCounts = vertexCountValues;
+        session->indexCounts = indexCountValues;
         session->vertices = vertexBuffer;
         session->indices = indexBuffer;
     }
 }
 
+// Rewrites the positions of existing meshes (same vertex and index counts, e.g. a re-skinned model) and rebuilds only
+// their bottom-level structures; every other mesh keeps its structure. Runs on the owner worker between frames.
+extern "C" JNIEXPORT void JNICALL
+Java_net_nevinsky_abyssus_raytracing_MetalBridge_updateGeometry(JNIEnv *env, jobject, jlong handle, jintArray meshArray, jfloatArray vertexArray) {
+    @autoreleasepool {
+        AbyssusMetalSession *session = sessionAt(handle);
+        auto meshes = integers(env,meshArray);
+        auto vertices = floats(env,vertexArray);
+        if (env->ExceptionCheck()) return;
+        if (session->inFlight || !session->geometry || !session->vertices || meshes.empty()) { fail(env,@"Invalid Metal geometry refit"); return; }
+        id<MTLDevice> device = session->device;
+        NSMutableArray *built = [session->geometry mutableCopy];
+        id<MTLCommandBuffer> command = [session->queue commandBuffer];
+        id<MTLAccelerationStructureCommandEncoder> encoder = [command accelerationStructureCommandEncoder];
+        NSMutableArray<id<MTLBuffer>> *scratchBuffers = [NSMutableArray array];
+        size_t cursor = 0;
+        for (jint mesh : meshes) {
+            if (mesh < 0 || static_cast<NSUInteger>(mesh) >= built.count) { [encoder endEncoding]; fail(env,@"Invalid Metal mesh id"); return; }
+            NSUInteger count = session->vertexCounts[mesh].unsignedIntegerValue;
+            if (cursor + count*3 > vertices.size()) { [encoder endEncoding]; fail(env,@"Invalid Metal geometry refit range"); return; }
+            NSUInteger vertexOffset = session->vertexOffsets[mesh].unsignedIntegerValue;
+            std::memcpy(static_cast<float *>(session->vertices.contents) + vertexOffset*3, vertices.data()+cursor, count*3*sizeof(float));
+            cursor += count*3;
+            MTLPrimitiveAccelerationStructureDescriptor *descriptor = triangleDescriptor(session->vertices, vertexOffset, session->indices,
+                session->indexOffsets[mesh].unsignedIntegerValue, session->indexCounts[mesh].unsignedIntegerValue);
+            MTLAccelerationStructureSizes sizes = [device accelerationStructureSizesWithDescriptor:descriptor];
+            id<MTLAccelerationStructure> geometry = [device newAccelerationStructureWithSize:sizes.accelerationStructureSize];
+            id<MTLBuffer> scratch = [device newBufferWithLength:sizes.buildScratchBufferSize options:MTLResourceStorageModePrivate];
+            if (!geometry || !scratch) { [encoder endEncoding]; fail(env,@"Metal acceleration structure allocation failed"); return; }
+            [encoder buildAccelerationStructure:geometry descriptor:descriptor scratchBuffer:scratch scratchBufferOffset:0];
+            [scratchBuffers addObject:scratch];
+            built[mesh] = geometry;
+        }
+        [encoder endEncoding];
+        [command commit];
+        [command waitUntilCompleted]; // Preparation on the worker only; submit/poll never wait.
+        if (command.status == MTLCommandBufferStatusError) { fail(env,command.error.localizedDescription); return; }
+        session->geometry = built;
+    }
+}
+
 struct SliceInstance { simd_float4x4 transform; simd_float4 color; simd_uint4 offsets; };
 static_assert(sizeof(SliceInstance) == 96,"Metal instance layout must agree with shader");
+
+// The scene payload: floats followed by raw RGBA8 texels in one buffer; the shader finds the texels from a header slot.
+extern "C" JNIEXPORT void JNICALL
+Java_net_nevinsky_abyssus_raytracing_MetalBridge_setSceneData(JNIEnv *env, jobject, jlong handle, jfloatArray values, jbyteArray bytes) {
+    @autoreleasepool {
+        auto session = sessionAt(handle);
+        if (session->inFlight) { fail(env,@"Cannot update shading while a frame is in flight"); return; }
+        if (!values) { session->sceneData = nil; return; }
+        const jsize floatCount = env->GetArrayLength(values);
+        const jsize byteCount = bytes ? env->GetArrayLength(bytes) : 0;
+        if (floatCount < 32 || floatCount > 16*1024*1024 || byteCount < 0 || byteCount > 64*1024*1024) { fail(env,@"Invalid scene shading payload"); return; }
+        const NSUInteger length = static_cast<NSUInteger>(floatCount)*sizeof(float) + static_cast<NSUInteger>(byteCount);
+        id<MTLBuffer> buffer = [session->device newBufferWithLength:length options:MTLResourceStorageModeShared];
+        if (!buffer) { fail(env,@"Metal shading allocation failed"); return; }
+        // copied straight into the buffer: no intermediate host copy of a payload that can hold large textures
+        env->GetFloatArrayRegion(values,0,floatCount,static_cast<jfloat *>(buffer.contents));
+        if (byteCount > 0) env->GetByteArrayRegion(bytes,0,byteCount,reinterpret_cast<jbyte *>(static_cast<char *>(buffer.contents) + static_cast<NSUInteger>(floatCount)*sizeof(float)));
+        if (env->ExceptionCheck()) return;
+        session->sceneData = buffer;
+    }
+}
 
 extern "C" JNIEXPORT void JNICALL
 Java_net_nevinsky_abyssus_raytracing_MetalBridge_submit(JNIEnv *env, jobject, jlong handle, jint width, jint height,
@@ -202,8 +282,8 @@ Java_net_nevinsky_abyssus_raytracing_MetalBridge_submit(JNIEnv *env, jobject, jl
         auto values = floats(env,instanceArray);
         auto meshes = integers(env,meshArray);
         if (env->ExceptionCheck()) return;
-        if (session->inFlight || !session->geometry || camera.size() != 20 || meshes.empty() || meshes.size() > 128 ||
-            values.size() != meshes.size()*20 || width <= 0 || height <= 0 || width > 4096 || height > 4096 ||
+        if (session->inFlight || !session->geometry || camera.size() != 20 || meshes.empty() || meshes.size() > 1024 ||
+            values.size() != meshes.size()*21 || width <= 0 || height <= 0 || width > 4096 || height > 4096 ||
             static_cast<uint64_t>(width)*height > 4194304) {
             fail(env,@"Invalid Metal render request"); return;
         }
@@ -211,11 +291,14 @@ Java_net_nevinsky_abyssus_raytracing_MetalBridge_submit(JNIEnv *env, jobject, jl
         std::vector<SliceInstance> uniforms(meshes.size());
         for (size_t i = 0; i < meshes.size(); i++) {
             if (meshes[i] < 0 || static_cast<NSUInteger>(meshes[i]) >= session->geometry.count) { fail(env,@"Invalid Metal mesh id"); return; }
-            const float *matrix = values.data()+i*20;
+            const float *matrix = values.data()+i*21;
             for (int col = 0; col < 4; col++)
                 std::memcpy(reinterpret_cast<float *>(&descriptors[i].transformationMatrix)+col*3,matrix+col*4,3*sizeof(float));
             descriptors[i].options = MTLAccelerationStructureInstanceOptionOpaque;
-            descriptors[i].mask = 0xff;
+            // matrix[20]: bit 1 = shadow/reflection rays, bit 2 = primary rays.
+            uint32_t mask = static_cast<uint32_t>(matrix[20]);
+            if (mask == 0 || mask > 3) { fail(env,@"Invalid Metal instance mask"); return; }
+            descriptors[i].mask = mask;
             descriptors[i].accelerationStructureIndex = meshes[i];
             std::memcpy(&uniforms[i].transform,matrix,16*sizeof(float));
             std::memcpy(&uniforms[i].color,matrix+16,4*sizeof(float));
@@ -240,7 +323,9 @@ Java_net_nevinsky_abyssus_raytracing_MetalBridge_submit(JNIEnv *env, jobject, jl
         [build buildAccelerationStructure:top descriptor:descriptor scratchBuffer:scratch scratchBufferOffset:0];
         [build endEncoding];
         id<MTLComputeCommandEncoder> compute = [command computeCommandEncoder];
-        [compute setComputePipelineState:session->pipeline];
+        id<MTLComputePipelineState> pipeline = session->sceneData ? session->scenePipeline : session->pipeline;
+        [compute setComputePipelineState:pipeline];
+        if (session->sceneData) [compute setBuffer:session->sceneData offset:0 atIndex:8];
         [compute setAccelerationStructure:top atBufferIndex:0];
         for (id<MTLAccelerationStructure> geometry in session->geometry) [compute useResource:geometry usage:MTLResourceUsageRead];
         [compute setBuffer:shading offset:0 atIndex:1];
@@ -251,7 +336,7 @@ Java_net_nevinsky_abyssus_raytracing_MetalBridge_submit(JNIEnv *env, jobject, jl
         [compute setBytes:camera.data() length:camera.size()*sizeof(float) atIndex:6];
         simd_uint2 dimensions = simd_make_uint2(width,height);
         [compute setBytes:&dimensions length:sizeof(dimensions) atIndex:7];
-        NSUInteger groupWidth = session->pipeline.threadExecutionWidth;
+        NSUInteger groupWidth = pipeline.threadExecutionWidth;
         [compute dispatchThreads:MTLSizeMake(width,height,1) threadsPerThreadgroup:MTLSizeMake(groupWidth,1,1)];
         [compute endEncoding];
         session->color = color;

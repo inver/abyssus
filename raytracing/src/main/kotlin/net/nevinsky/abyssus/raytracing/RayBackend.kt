@@ -14,6 +14,8 @@ data class RayCapabilities(
     val colorDepthReadback: Boolean,
     val maxFrameDimension: Int,
     val memoryBudgetBytes: Long,
+    /** The most instances (and meshes) one session of this backend can hold; scenes with more fall back to raster. */
+    val maxInstances: Int = 128,
 ) {
     fun unavailableReason(): RayUnavailableReason? = when {
         !accelerationStructures -> RayUnavailableReason.ACCELERATION_STRUCTURES
@@ -27,6 +29,8 @@ data class RayCapabilities(
 enum class RayUnavailableReason {
     ACCELERATION_STRUCTURES, RAY_QUERIES, COLOR_DEPTH_READBACK, RESOURCE_LIMITS,
     RUNTIME_NOT_FOUND, INITIALIZATION_FAILED,
+    /** The `abyssus.raytracing.backend=off` property: ray tracing is switched off for this IDE session. */
+    DISABLED,
 }
 
 data class RayBackendInfo(val name: String, val gpu: String)
@@ -52,7 +56,10 @@ interface RayBackend : AutoCloseable {
 
 interface RaySession : AutoCloseable {
     fun submit(request: RayRequest)
+    fun submit(request: RaySceneRequest) { throw UnsupportedOperationException("Backend does not support scene materials") }
     fun poll(): RayFrame?
+    /** How many times this session built acceleration structures; transform-only updates must not increase it. */
+    val geometryBuilds: Long get() = 0
     fun dispose()
     override fun close() = dispose()
 }
@@ -64,9 +71,9 @@ data class RayLimits(val maxDimension: Int = 4096, val maxPixels: Int = 4_194_30
 
 /** Feasibility request. Complete scene material/texture snapshots are added by the asset tasks. */
 class RayRequest(
-    val key: RayFrameKey, val width: Int, val height: Int,
-    val camera: RaySliceCamera, meshes: List<RaySliceMesh>, instances: List<RaySliceInstance>,
-) {
+    override val key: RayFrameKey, override val width: Int, override val height: Int,
+    override val camera: RaySliceCamera, meshes: List<RaySliceMesh>, instances: List<RaySliceInstance>,
+) : RayRenderRequest {
     private val geometry = meshes.toList()
     private val placements = instances.toList()
     init {
@@ -75,6 +82,8 @@ class RayRequest(
     }
     fun meshes(): List<RaySliceMesh> = geometry.toList()
     fun instances(): List<RaySliceInstance> = placements.toList()
+    override fun withRenderPlan(width: Int, height: Int, samples: Int, sampleOffset: Int, accumulationEpoch: Long) =
+        RayRequest(key, width, height, camera, geometry, placements)
 }
 
 /** Converts expected native initialization failures to availability, without swallowing cancellation. */

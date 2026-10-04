@@ -18,22 +18,27 @@ class RayQueuedSession(private val driver: RaySession, private val health: RayDe
     private val worker = Thread.currentThread()
     private var closed = false
     private var inFlight = false
-    private var pending: RayRequest? = null
-    private var latest: RayRequest? = null
+    private var pending: Submission? = null
+    private var latest: Submission? = null
+    private class Submission(val key: RayFrameKey,val width:Int,val height:Int,val submit:()->Unit)
 
     private fun checkOwner() {
         check(Thread.currentThread() === worker && !closed) { "Ray session is closed or used from another worker" }
         health.checkUsable()
     }
 
-    override fun submit(request: RayRequest) {
+    override fun submit(request: RayRequest) = offer(Submission(request.key,request.width,request.height) { driver.submit(request) })
+    override fun submit(request: RaySceneRequest) = offer(Submission(request.key,request.width,request.height) { driver.submit(request) })
+    private fun offer(request: Submission) {
         checkOwner()
         if (inFlight) pending = request else {
-            driver.submit(request)
+            request.submit()
             inFlight = true
         }
         latest = request
     }
+
+    override val geometryBuilds: Long get() = driver.geometryBuilds
 
     override fun poll(): RayFrame? {
         checkOwner()
@@ -52,7 +57,7 @@ class RayQueuedSession(private val driver: RaySession, private val health: RayDe
         val next = pending
         pending = null
         if (next != null) {
-            driver.submit(next)
+            next.submit()
             inFlight = true
         }
         return frame.takeIf { compatible }
