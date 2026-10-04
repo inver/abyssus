@@ -4,15 +4,20 @@
 
 | Module | What | Depends on |
 |---|---|---|
-| root (`src/`) | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.10) | `:core`, `:gdx-model`, Jackson, libGDX, LWJGL3-AWT |
+| root (`src/`) | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.10) | `:runtime`, `:core`, `:gdx-model`, `:raytracing`, Jackson, libGDX, LWJGL3-AWT |
+| `runtime/` | Plain JVM project and scene parsing, Ashley components, codecs, systems and scene loading | `:core`, Ashley |
 | `core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline, and the models, terrains and skies it builds | `:gdx-model`, Jackson, libGDX |
 | `gdx-model/` | Plain JVM library: libGDX model runtime with 32-bit mesh indices and an Assimp importer | libGDX, LWJGL Assimp |
 | `raytracing/` | Plain JVM ray tracing: backend contracts, immutable scene snapshots and linear host frames, the scheduler and quality policy, and optional native Metal and Vulkan backends | Kotlin stdlib, LWJGL Vulkan and VMA |
 
-`gdx-model` and `core` must not import IntelliJ or plugin code (see their READMEs). `core` is wired by constructors:
+`gdx-model`, `core` and `runtime` must not import IntelliJ or plugin code (see their READMEs). `core` is wired by constructors:
 its composition root `AssetLoading` takes a `JsonProcessor`, an `AssetLog`, an executor and the sky `ShaderSource`; in
 the IDE the light application service `AbyssusCore` builds one (IDE log, IDE pool) and hands it to every scene view.
-The plugin does not depend on Mundus.
+`AbyssusCore.scenes` builds `SceneLoading(json, log)` with the IDE's `Abyssus.scenes` logger. `SceneReader`
+delegates parsing to it; `ProjectReader` delegates project-name parsing while retaining its VFS stamps and listings.
+`SceneEntry(file, scene)` keeps editor sources out of the runtime DTO. Filesystem callers use `ProjectFolder` and
+`SceneLoading.project` and `SceneLoading.load` with `Path`; every load gets its own engine, resolver and warnings. Parsing and loading
+run on the caller's thread without GL. The plugin does not depend on Mundus.
 
 `raytracing` is an optional GPU ray tracing renderer, off by default per view (switched from the **Ray Tracing**
 switch in Abyssus Properties; the Scene View has no button for it). It owns nothing global: the plugin's `AbyssusCore` lazily builds one `RayBackendService` (a
@@ -36,7 +41,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 1. `SceneFileEditor` reads the scene and its project's `mainCamera` through `SceneParamsSource.EDITOR_TEXT`. It uses
    the unsaved editor text when there is any. It re-reads on every document or VFS change of those files.
 2. `SceneRenderParams.from` → `SceneContent.of` turns the `ecs` JSON into placements: `models`, `terrains`,
-   `lights`, `cameras`, plus the skybox name. The view reads the JSON directly; it does not use the `ecs` package.
+   `lights`, `cameras`, plus the skybox name. The view reads the JSON through runtime component codecs; it does not run the Ashley engine.
    A light's or camera's direction resolves its `PositionComponent.lookAtId` to an entity's `localPosition` when that
    target exists and is not at the entity itself; otherwise it uses the entity's `localRotation`. `handleIds` records
    the `HANDLE` entities that a light may be aimed at.
@@ -101,7 +106,7 @@ fail it between any two writes. No scene or project file is written that way.
 
 `SceneEcsLoader` reads a scene's `ecs` block into an Ashley `SceneEngine`, through one `ComponentCodec` per modeled
 component. Components it doesn't model are carried raw. `SceneEcsWriter` writes the engine back in Mundus' format.
-Systems are in `ecs/system/Systems.kt`. Only tests use the loader, writer and systems today; `ComponentEditor` is used by
+Systems are in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/system/Systems.kt`. Only tests use the loader, writer and systems today; `ComponentEditor` is used by
 the plugin: it adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
 checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the properties panel and the tree actions. See
 `src/main/kotlin/net/nevinsky/abyssus/ecs/README.md`.
@@ -147,6 +152,6 @@ and bounds, and `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for t
 - **A new asset file format:** implement `ConfigFileReader` and return it from `AssetReadCache.readerFor`
   (`src/main/kotlin/net/nevinsky/abyssus/dto/ConfigFileReader.kt`). Add the extension to `ProjectLayout.ASSET_EXTENSIONS`.
 - **A new ECS component:** write a `ComponentCodec` and add it to `ComponentCodecs`
-  (`src/main/kotlin/net/nevinsky/abyssus/ecs/scene/ComponentCodecs.kt`).
+  (`runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/scene/ComponentCodecs.kt`).
 - **A new asset kind drawn in the scene view:** an `AssetLoader` in `core` (built in `AssetLoading`), and a placement in
   `SceneContent`.

@@ -5,23 +5,24 @@
 
 package net.nevinsky.abyssus.ecs.scene
 
+import net.nevinsky.abyssus.runtime.ecs.scene.*
 import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.ecs.NO_ENTITY
-import net.nevinsky.abyssus.ecs.component.CameraComponent
-import net.nevinsky.abyssus.ecs.component.LightComponent
-import net.nevinsky.abyssus.ecs.component.NameComponent
-import net.nevinsky.abyssus.ecs.component.ParentComponent
-import net.nevinsky.abyssus.ecs.component.Point2PointPositionComponent
-import net.nevinsky.abyssus.ecs.component.PositionComponent
-import net.nevinsky.abyssus.ecs.component.TypeComponent
-import net.nevinsky.abyssus.ecs.render.AssetReference
-import net.nevinsky.abyssus.ecs.render.AssetResolver
-import net.nevinsky.abyssus.ecs.render.AssetType
-import net.nevinsky.abyssus.ecs.render.RenderComponent
-import net.nevinsky.abyssus.ecs.render.RenderableObjectDelegate
+import net.nevinsky.abyssus.runtime.ecs.NO_ENTITY
+import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
+import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
+import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
+import net.nevinsky.abyssus.runtime.ecs.component.ParentComponent
+import net.nevinsky.abyssus.runtime.ecs.component.Point2PointPositionComponent
+import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
+import net.nevinsky.abyssus.runtime.ecs.render.AssetReference
+import net.nevinsky.abyssus.runtime.ecs.render.AssetResolver
+import net.nevinsky.abyssus.runtime.ecs.render.AssetType
+import net.nevinsky.abyssus.runtime.ecs.render.RenderComponent
+import net.nevinsky.abyssus.runtime.ecs.render.RenderableObjectDelegate
 
 /** What an edit of a scene's JSON tree did. The tree is only touched for [Changed]. */
 sealed interface EditResult {
@@ -178,9 +179,9 @@ object ComponentEditor {
 
     fun kindOf(name: String): ComponentKind<*>? = byName[name]
 
-    private fun entities(root: JsonNode): JsonNode? = SceneEcsPaths.entities(root)
+    private fun entities(root: JsonNode): JsonNode? = SceneEcsPaths().entities(root)
 
-    private fun componentsOf(root: JsonNode, entityId: String): ObjectNode? = SceneEcsPaths.components(root, entityId)
+    private fun componentsOf(root: JsonNode, entityId: String): ObjectNode? = SceneEcsPaths().components(root, entityId)
 
     /** The modeled kinds [entityId] lacks, in the order the view lists them; empty when the entity is missing. */
     fun missingKinds(root: JsonNode, entityId: String): List<ComponentKind<*>> {
@@ -302,7 +303,7 @@ object ComponentEditor {
         val wanted = entityId.toIntOrNull() ?: return null
         for ((id, entity) in entities(root)?.properties().orEmpty()) {
             if (id == entityId) continue
-            val c = SceneEcsPaths.componentsOf(entity) ?: continue
+            val c = SceneEcsPaths().componentsOf(entity) ?: continue
             val refs = listOf(
                 c.get("PositionComponent")?.get("lookAtId"), c.get("ParentComponent")?.get("parentEntityId"),
                 c.get("Point2PointPositionComponent")?.get("entity1Id"), c.get("Point2PointPositionComponent")?.get("entity2Id"),
@@ -353,7 +354,7 @@ object ComponentEditor {
             var current: Int = target
             val seen = HashSet<Int>()
             while (current != NO_ENTITY && seen.add(current)) {
-                val next = SceneEcsPaths.componentsOf(entities.get(current.toString()))?.get("ParentComponent")?.get("parentEntityId")?.asInt(NO_ENTITY) ?: NO_ENTITY
+                val next = SceneEcsPaths().componentsOf(entities.get(current.toString()))?.get("ParentComponent")?.get("parentEntityId")?.asInt(NO_ENTITY) ?: NO_ENTITY
                 if (next.toString() == entityId) return reject("componentParentCycle", label, target, entityId)
                 current = next
             }

@@ -5,6 +5,7 @@
 | What | Command |
 |---|---|
 | All plugin and `gdx-model` tests (what CI runs, plus plugin verification) | `./gradlew check` |
+| Runtime tests | `./gradlew :runtime:test` |
 | Plugin tests | `./gradlew :test` |
 | `gdx-model` tests | `./gradlew :gdx-model:test` |
 | One class | `./gradlew :test --tests 'net.nevinsky.abyssus.projectView.SkyboxPickerModelTest'` |
@@ -23,6 +24,8 @@ Results are in `build/test-results/test/*.xml`, and a later run overwrites them.
 - `core/src/test/kotlin/`: asset reading and loading tests, plain JUnit with no IntelliJ classes. They read the shared
   fixtures through `testProject(name)` (Gradle passes the folder as `abyssus.testData`) and build the loading graph
   with `testLoading(log, executor)`. `AssetLoadingGlTest` covers the `asset-loading` spec on real GL.
+- `runtime/src/test/kotlin/`: project layout, scene parsing and loading, ECS codecs, components, loader, writer and
+  systems. Plain JUnit, no IntelliJ or GL; `testProject(name)` uses the same `abyssus.testData` fixture root.
 - Shared test helpers live in `testFixtures` source sets: `gdx-model`'s `TestGl` (a GL 3.2 core context for one
   block) and `core`'s `HdrFixtures` (Radiance files from a pixel function). Plugin GL tests build their renderer with
   `testRenderer()` (`sceneview/TestRendering.kt`), wired the way `AbyssusCore` wires it in the IDE.
@@ -40,10 +43,10 @@ Two kinds of tests:
 
 `src/test/testData/project/`:
 - **`Untitled/`:** a Mundus project with `Untitled.abss` and `scenes/Main Scene.scene`. The scene has models,
-  terrain, a skybox, `Camera 4` looking at entity 3, and a parented entity. `assets/` holds 4 models, `tree`, a
+  terrain, a skybox, directional lights and `Spot Light 8`, `Camera 4` looking at entity 3, and a parented entity. `assets/` holds 4 models, `tree`, a
   terrain, `skybox_default`, `skybox_physical` (a procedural sky) and `skybox_hdr` (a 64 x 32 Radiance sky that the
   test helper `HdrFixtures` wrote; tests build other HDR skies with it in temp folders).
-- **`Animated/`:** `scenes/Main.scene` with one animated model (`assets/model_anim`). It has no `.abss`.
+- **`Animated/`:** `scenes/Main.scene` with two entities sharing one animated model (`assets/model_anim`). It has no `.abss`.
 
 **Size limit:** the binary assets exceed the test VFS size limit, so platform tests copy only what they need (the
 `.abss`, a scene, one `meta.json`). See the `fixture()` helper in `AbyssusViewTest`.

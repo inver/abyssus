@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus
 
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.runtime.scene.SceneDto
 import net.nevinsky.abyssus.assets.files.Asset
 import net.nevinsky.abyssus.assets.files.MetaBase
 import net.nevinsky.abyssus.assets.files.MetaType

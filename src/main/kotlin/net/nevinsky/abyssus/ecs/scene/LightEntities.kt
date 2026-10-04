@@ -4,17 +4,18 @@
  */
 package net.nevinsky.abyssus.ecs.scene
 
+import net.nevinsky.abyssus.runtime.ecs.scene.*
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.ecs.component.LightComponent
-import net.nevinsky.abyssus.ecs.component.LightData
-import net.nevinsky.abyssus.ecs.component.NameComponent
-import net.nevinsky.abyssus.ecs.component.PositionComponent
-import net.nevinsky.abyssus.ecs.component.TypeComponent
-import net.nevinsky.abyssus.scene.ColorDto
+import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
+import net.nevinsky.abyssus.runtime.ecs.component.LightData
+import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
+import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
+import net.nevinsky.abyssus.runtime.scene.ColorDto
 import net.nevinsky.abyssus.sceneview.Vec3
 
 /** Sun is a directional light with different initial values, never a separate file type. */

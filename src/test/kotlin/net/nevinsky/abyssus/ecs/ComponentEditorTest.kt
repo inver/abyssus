@@ -6,6 +6,9 @@
 package net.nevinsky.abyssus.ecs
 
 import com.fasterxml.jackson.databind.JsonNode
+import java.io.File
+import net.nevinsky.abyssus.runtime.ecs.EcsConfigurator
+import net.nevinsky.abyssus.runtime.ecs.render.FolderAssetResolver
 import net.nevinsky.abyssus.ecs.scene.ComponentEditor
 import net.nevinsky.abyssus.ecs.scene.EditResult
 import net.nevinsky.abyssus.filetype.SceneJson
@@ -257,7 +260,7 @@ class ComponentEditorTest {
 
     @Test
     fun mainSceneEditsKeepEverythingElse() {
-        val file = java.io.File(UNTITLED, "scenes/Main Scene.scene")
+        val file = File("src/test/testData/project/Untitled/scenes/Main Scene.scene")
         val original = SceneJson.parse(file.readText())
         val root = original.deepCopy<JsonNode>()
         assertEquals(EditResult.Changed, ComponentEditor.add(root, "0", "LightComponent"))
@@ -271,12 +274,12 @@ class ComponentEditorTest {
 
     @Test
     fun editedMainSceneLoadsWithoutNewWarnings() {
-        val original = SceneJson.parse(java.io.File(UNTITLED, "scenes/Main Scene.scene").readText())
+        val original = SceneJson.parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
         val root = original.deepCopy<JsonNode>()
         ComponentEditor.add(root, "0", "LightComponent")
         ComponentEditor.update(root, "4", "CameraComponent", "camera.near", "0.25")
         ComponentEditor.update(root, "0", "PositionComponent", "localPosition.y", "2.5")
-        val configurator = EcsConfigurator(untitledAssets())
+        val configurator = EcsConfigurator(FolderAssetResolver(File("src/test/testData/project/Untitled/assets").list().orEmpty().toList()))
         val before = configurator.load(original["ecs"])
         val after = configurator.load(root["ecs"])
         assertEquals(before.document.warnings, after.document.warnings)

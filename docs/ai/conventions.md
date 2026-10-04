@@ -25,7 +25,7 @@
   writing a file therefore never changes numbers you didn't touch.
 - **Binding:** bind files to DTOs with `SceneJson.bind` / `SceneReader.parse`. Unknown fields are ignored, and
   property declaration order is the order the tree shows.
-- **Non-row fields:** mark them `@get:JsonIgnore` (for example `SceneDto.file`, `AssetInfo.unused`) so the tree
+- **Non-row fields:** mark them `@get:JsonIgnore` (for example `SceneEntry.file`, `AssetInfo.unused`) so the tree
   doesn't list them.
 - **Optional values:** read them from a `JsonNode` with the helpers in `core/src/main/kotlin/net/nevinsky/abyssus/assets/json/JsonNodes.kt`
   (`opt`, `text`, `float`, `obj`), which treat absent and JSON `null` alike.

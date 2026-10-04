@@ -46,7 +46,7 @@ import net.nevinsky.abyssus.sceneview.terrain.TerrainShader
 import net.nevinsky.abyssus.sceneview.shadows.SceneShadows
 import net.nevinsky.abyssus.core.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.core.ModelBatch as ContentBatch
-import net.nevinsky.abyssus.ecs.component.CAMERA_FOV
+import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FOV
 
 /**
  * Draws a scene's environment, a ground grid and the content the scene places (skybox, terrains, models), and picks

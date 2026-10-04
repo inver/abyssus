@@ -34,6 +34,10 @@ import java.util.concurrent.Executors
 @Service(Service.Level.APP)
 class AbyssusCore : Disposable {
     val json = JsonProcessor()
+    val scenes = net.nevinsky.abyssus.runtime.SceneLoading(
+        json,
+        AssetLog { message, error -> Logger.getInstance("Abyssus.scenes").warn(message, error) },
+    )
     val metaFiles = net.nevinsky.abyssus.dto.MetaFiles(net.nevinsky.abyssus.assets.files.AssetMetaReader(json))
 
     /** The editable `meta.json` fields of each asset type and the editor that changes them one at a time. */

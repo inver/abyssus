@@ -9,10 +9,10 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.runtime.scene.SceneDto
 import net.nevinsky.abyssus.assets.files.Asset
 
-/** A `.abss` project as the view shows it. [scenes] holds [SceneDto]s, and a [SceneError] for each that failed to read. */
+/** A `.abss` project as the view shows it. [scenes] holds [SceneEntry]s, and a [SceneError] for each that failed to read. */
 data class ProjectDto(
     val name: String?,
     val scenes: List<Any>,
@@ -24,3 +24,6 @@ data class ProjectDto(
 
 /** A scene file that could not be read; shown as an `error` row under the scene's file name. */
 data class SceneError(@get:JsonIgnore val file: VirtualFile, val error: String?)
+
+/** Editor source paired with a platform-independent scene. */
+data class SceneEntry(@get:JsonIgnore val file: VirtualFile, val scene: SceneDto)

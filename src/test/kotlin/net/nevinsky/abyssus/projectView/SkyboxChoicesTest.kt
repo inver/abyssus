@@ -8,6 +8,7 @@ package net.nevinsky.abyssus.projectView
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.testAsset
 import net.nevinsky.abyssus.dto.ProjectDto
+import net.nevinsky.abyssus.dto.SceneEntry
 import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.testMetaFiles
@@ -113,7 +114,9 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
     fun testSceneCountAndUnusedFlag() {
         val dto = ProjectDto(
             "P",
-            listOf(scene("nebula"), scene("nebula"), scene(null)),
+            listOf(scene("nebula"), scene("nebula"), scene(null)).mapIndexed { i, scene ->
+                SceneEntry(myFixture.addFileToProject("scenes/$i.scene", "{}").virtualFile, scene)
+            },
             listOf(testAsset("nebula", "1", "SKYBOX"), testAsset("dusk", "2", "SKYBOX", unused = true)),
         )
         val byName = skyboxChoices(dto, emptyMap()).associateBy { it.name }

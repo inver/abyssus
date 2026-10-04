@@ -20,7 +20,7 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.AssetReadResult
 import net.nevinsky.abyssus.dto.ProjectDto
 import net.nevinsky.abyssus.dto.ProjectLayout
-import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.runtime.scene.SceneDto
 import java.awt.Color
 import java.awt.FlowLayout
 import javax.swing.BorderFactory

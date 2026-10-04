@@ -10,8 +10,9 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assets.files.Asset
 import net.nevinsky.abyssus.dto.SceneError
 import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.scene.SceneDto
-import net.nevinsky.abyssus.ecs.scene.SceneEcsPaths
+import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.dto.SceneEntry
+import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
 
 /**
  * A named, ordered child of a DTO as shown by the Abyssus view. [enabled] is set when the row is gated by an
@@ -56,6 +57,7 @@ fun scalarOf(value: Any?): Any? = when {
  * `@JsonIgnore`d metadata), a list its indexes and a JSON node its fields or elements. A scalar has none.
  */
 fun childrenOf(value: Any?): List<DtoRow> = when {
+    value is SceneEntry -> childrenOf(value.scene)
     isScalar(value) -> emptyList()
     value is JsonNode ->
         if (value.isObject) value.properties().map { (k, v) -> DtoRow(k, v) } else value.mapIndexed { i, v -> DtoRow("$i", v) }
@@ -96,6 +98,7 @@ fun sceneLabel(scene: SceneDto, index: Int): String {
 
 /** What a list element is called in the tree: a scene's label, an asset's folder, a failed scene's file, else `parent[i]`. */
 fun elementLabel(parentName: String, element: Any?, index: Int): String = when (element) {
+    is SceneEntry -> sceneLabel(element.scene, index)
     is SceneDto -> sceneLabel(element, index)
     is Asset<*> -> element.name
     is SceneError -> element.file.name
@@ -120,7 +123,7 @@ fun isEntityEntry(entry: DtoEntry) = entry.parentKeys == listOf(ECS, ENTITIES) &
 fun isComponentEntry(entry: DtoEntry) = entry.parentKeys.size == 4 && entry.parentKeys[0] == ECS && entry.parentKeys[1] == ENTITIES && entry.parentKeys[3] == COMPONENTS
 
 private fun entityName(entry: DtoEntry): String =
-    SceneEcsPaths.entityName((entry.value as JsonNode).get(COMPONENTS), entry.name)
+    SceneEcsPaths().entityName((entry.value as JsonNode).get(COMPONENTS), entry.name)
 
 /** The label and secondary text of [entry]; [label] is what its parent already named it (a list element). */
 fun rowText(entry: DtoEntry, label: String? = null): RowText {

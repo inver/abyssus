@@ -15,7 +15,7 @@ import com.badlogic.gdx.graphics.g3d.environment.PointLight
 import com.badlogic.gdx.graphics.g3d.environment.SpotLight
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.sqrt
-import net.nevinsky.abyssus.ecs.component.LIGHT_RANGE
+import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_RANGE
 
 /** A directional light: [color] already multiplied by the light's intensity. */
 data class DirectionalSource(val direction: Vec3, val color: Rgba, val entityId: String = "", val position: Vec3 = Vec3(0f, 0f, 0f))

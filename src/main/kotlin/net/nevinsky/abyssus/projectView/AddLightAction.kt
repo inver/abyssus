@@ -22,7 +22,7 @@ import net.nevinsky.abyssus.ecs.scene.LightPreset
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.sceneview.Vec3
 import net.nevinsky.abyssus.dto.textOf
-import net.nevinsky.abyssus.ecs.scene.SceneEcsPaths
+import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
 import net.nevinsky.abyssus.dto.SceneDocumentCache
 
 /** The same three choices in the tree and toolbar; placement is read when a choice is made. */
@@ -50,7 +50,7 @@ class AddLightGroup(
 /** Publish immediately, then select the corresponding row when the asynchronous tree refresh reaches it. */
 private fun selectCreatedLight(project: Project, file: VirtualFile, entityId: String) {
     val entity = runCatchingKeepingCancellation {
-        SceneEcsPaths.entities(SceneJson.parse(textOf(file)))?.get(entityId)
+        SceneEcsPaths().entities(SceneJson.parse(textOf(file)))?.get(entityId)
     }.getOrNull()
     if (entity?.isObject == true) {
         val node = DtoEntryNode(project, file.path, DtoRow(entityId, entity), file, listOf("ecs", "entities"))

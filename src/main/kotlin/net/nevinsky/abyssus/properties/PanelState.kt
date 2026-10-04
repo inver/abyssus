@@ -27,7 +27,7 @@ import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
 import net.nevinsky.abyssus.assets.META_FILE
 import net.nevinsky.abyssus.assets.displayMessage
-import net.nevinsky.abyssus.ecs.scene.SceneEcsPaths
+import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
 import net.nevinsky.abyssus.assets.files.MetaType
 import net.nevinsky.abyssus.assets.sky.cube.SKYBOX_FACES
 import net.nevinsky.abyssus.projectView.HdrPreviewSource
@@ -116,7 +116,7 @@ private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreview
 fun readEntityState(target: ComponentTarget, services: PanelServices): PanelState {
     val root = runCatchingKeepingCancellation { SceneJson.parse(runReadAction { textOf(target.file) }) }
         .getOrElse { return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.displayMessage()), null) }
-    val entity = SceneEcsPaths.entities(root)?.get(target.entityId)?.takeIf { it.isObject }
+    val entity = SceneEcsPaths().entities(root)?.get(target.entityId)?.takeIf { it.isObject }
         ?: return PanelState.Empty(AbyssusBundle.message("propertiesEntityGone", target.entityId), null)
     val components = entity.get("components")?.takeIf { it.isObject }
     val kinds = target.kind?.let { listOf(it) } ?: components?.fieldNames()?.asSequence()?.toList().orEmpty()
@@ -131,7 +131,7 @@ fun readEntityState(target: ComponentTarget, services: PanelServices): PanelStat
             else -> ComponentSection(kind, modeled.label, fields.map { if (it.kind == FieldKind.ASSET_NAME) it.copy(choices = (assets + it.value).filter(String::isNotEmpty).distinct()) else it }, null)
         }
     }
-    val name = SceneEcsPaths.entityName(components, target.entityId)
+    val name = SceneEcsPaths().entityName(components, target.entityId)
     val addable = if (target.kind == null) ComponentEditor.missingKinds(root, target.entityId).map { it.name } else emptyList()
     return PanelState.EntityDetails(target, name, sections, addable)
 }

@@ -21,7 +21,8 @@ import net.nevinsky.abyssus.projectView.childrenOf
 import net.nevinsky.abyssus.projectView.elementLabel
 import net.nevinsky.abyssus.dto.ProjectReader
 import net.nevinsky.abyssus.dto.SceneReader
-import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.dto.SceneEntry
 import net.nevinsky.abyssus.projectView.foldToggles
 import net.nevinsky.abyssus.filetype.AbyssusProjectFileType
 import net.nevinsky.abyssus.filetype.AbyssusProjectIcons
@@ -115,7 +116,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         add("m/scenes/bad.scene", """{"name":"Bad","fogEnabled":"nope"}""")
         val dto = project.service<ProjectReader>().read(myFixture.findFileInTempDir("m/a.abss")).obj!!
         assertEquals(2, dto.scenes.size)
-        assertEquals("Good", (dto.scenes.single { it is SceneDto } as SceneDto).name)
+        assertEquals("Good", (dto.scenes.single { it is SceneEntry } as SceneEntry).scene.name)
         assertNotNull((dto.scenes.single { it is SceneError } as SceneError).error)
     }
 

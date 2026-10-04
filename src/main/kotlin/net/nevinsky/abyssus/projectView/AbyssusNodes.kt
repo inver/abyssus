@@ -27,7 +27,8 @@ import net.nevinsky.abyssus.filetype.ComponentIcons
 import net.nevinsky.abyssus.filetype.PropertyIcons
 import net.nevinsky.abyssus.filetype.SceneIcons
 import net.nevinsky.abyssus.filetype.ScenesIcons
-import net.nevinsky.abyssus.scene.SceneDto
+import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.dto.SceneEntry
 import javax.swing.Icon
 
 /** Shown in a scene entry's label (`name (id)`) and edited via Rename, so not repeated as rows. */
@@ -81,7 +82,7 @@ class AbyssusAssetNode(project: Project, file: VirtualFile, settings: ViewSettin
             null -> emptyList()
             else -> result.obj?.let { root ->
                 UnusedFilter.apply(project!!, childrenOf(root)).foldToggles().map {
-                    DtoEntryNode(project!!, value.path, it, (root as? SceneDto)?.file ?: value, emptyList())
+                    DtoEntryNode(project!!, value.path, it, value, emptyList())
                 }
             } ?: emptyList()
         }
@@ -126,7 +127,7 @@ private fun entryIcon(entry: DtoEntry): Icon {
         dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
         isEntityEntry(entry) -> PropertyIcons.ECS
         isComponentEntry(entry) -> ComponentIcons.forComponent(entry.name)
-        dto is SceneDto && dto.file?.extension == ProjectLayout.SCENE_EXTENSION -> SceneIcons.FILE
+        dto is SceneEntry && dto.file.extension == ProjectLayout.SCENE_EXTENSION -> SceneIcons.FILE
         PropertyIcons.forProperty(entry.name) != null -> PropertyIcons.forProperty(entry.name)!!
         isScalar(dto) -> AllIcons.Nodes.Property
         else -> AllIcons.Nodes.Class
@@ -148,7 +149,7 @@ class DtoEntryNode(
 ) {
     private fun child(row: DtoRow, label: String? = null): DtoEntryNode {
         val v = value
-        val ownSource = (v.value as? SceneDto)?.file
+        val ownSource = (v.value as? SceneEntry)?.file
         // an object read from its own file restarts the key path; otherwise it extends this entry's
         val (src, baseKeys) = if (ownSource != null) ownSource to emptyList() else v.source to (v.parentKeys + v.name)
         // keys the view skips (`entities`, `components`) stay in the path and the key path, so they still name the real location

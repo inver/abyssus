@@ -5,11 +5,12 @@
 package net.nevinsky.abyssus.ecs
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.ecs.component.LightComponent
-import net.nevinsky.abyssus.ecs.component.NameComponent
-import net.nevinsky.abyssus.ecs.component.PositionComponent
-import net.nevinsky.abyssus.ecs.component.TypeComponent
+import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
+import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
+import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
 import net.nevinsky.abyssus.ecs.scene.*
+import net.nevinsky.abyssus.runtime.ecs.scene.*
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.sceneview.LightKind
