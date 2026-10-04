@@ -19,6 +19,9 @@ class TextureUploadQueue(
 ) {
     private val pixmaps = LinkedHashMap(pixmaps)
 
+    /** The images not yet uploaded, by name. */
+    val pending: Map<String, Pixmap> get() = pixmaps
+
     /** The textures uploaded so far, by name. */
     val textures = HashMap<String, Texture>()
 

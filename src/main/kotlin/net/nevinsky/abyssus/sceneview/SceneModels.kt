@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.loading.SceneAssets
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.utils.Disposable
@@ -54,6 +55,12 @@ class SceneModels(private val assets: SceneAssets<PreparedModel, Model>) : Dispo
     /** The first animation loops for as long as the entity is shown. */
     private fun firstAnimationOf(instance: ModelInstance): AnimationController? =
         instance.animations.firstOrNull()?.let { first -> AnimationController(instance).also { it.setAnimation(first.id, -1) } }
+
+    /** Loads [names] again from [files], the project's refreshed snapshot; the old assets stay drawn until each replacement is built. */
+    fun revise(files: AssetFiles, names: Set<String>) {
+        assets.replaceFiles(files)
+        assets.invalidate(names)
+    }
 
     /** Forgets everything without GL calls; see [AssetCache.abandon]. */
     fun abandon() {

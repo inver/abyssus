@@ -11,12 +11,15 @@ Constraints that shape the approach:
 - **Threading:** libGDX runs only inside `GdxRuntime.withContext` on the AWT thread that renders the canvas.
   Picking, the Drop query and gizmo hit tests are CPU-only and run on the EDT.
 - **`core`:** no `object` / `companion object`, and no IntelliJ imports. Collaborators are passed through constructors.
-- **Open change `show-project-assets`:** `ProjectAssetListing` must keep listing an unreadable or unknown `meta.json` as
+- **Main capability `abyssus-project-assets`:** `ProjectAssetListing` must keep listing an unreadable or unknown `meta.json` as
   `MetaType.UNKNOWN` with no references, and must keep the unused rule.
 - **Other open changes:** `add-realistic-water`, `add-scene-raytracing` and `add-asset-editing-and-terrain-generation`
   plan code in `SceneRenderer`, `SceneContent`, `SceneFileEditor`, `editSceneJson`, `AssetCache` and `AssetFiles`. None
   of their delta specs touch the capabilities this change modifies, but their code will conflict with phases 5–8.
-  Whichever change lands second rebases onto the new structure.
+  Whichever change lands second rebases onto the new structure. `extract-scene-runtime` explicitly follows this
+  change; its later move changes the defaults/codecs' package and test module. `add-project-fps-counter` also touches
+  editor/view binding: preserve its project preference delivery and completed-frame measurement boundary if it lands
+  first. This change does not add the counter.
 - **Existing tests** pin today's behavior: `SceneContentTest`, `ComponentCodecsTest`, `SceneFileEditorTest`,
   `SceneComponentEditsTest`, `SceneInteraction*` tests and `core` tests. They are the safety net for the refactors.
 
@@ -62,8 +65,15 @@ Light kind detection (`TypeComponent` `LIGHT_*`, or a lone `LightComponent` → 
 (`camera.position` when the entity has no `PositionComponent`; `lookAtId` accepting text and integer ids) stay in
 `PlacementMapper`, so `SceneContentTest` keeps passing.
 
-- **`lookAtId`:** `PositionCodec` currently reads only integers. It gains the same text/integer reading, so the panel
-  and the view agree. It writes back the form the file used, so the file format does not change.
+- **`lookAtId`:** the component currently stores an `Int`, which cannot represent an arbitrary textual entity id
+  such as `"h"`. Preserve a decoded reference plus its original JSON representation in the shared decoder, keeping
+  the numeric accessor for existing Ashley callers. Placements consume the decoded reference; an unrelated position
+  edit retains the original text or integer node, including `"3"` and `"-1"`. An explicit reference edit uses the
+  existing editor's output rules. No conversion of unrelated reference values is allowed.
+- **Light aiming and handles:** retain the positions of all positioned entities and the `HANDLE` id set, then
+  resolve directional/spot light targets after placements are built. Missing or coincident targets fall back to
+  rotation; point lights keep their existing behavior. Camera target resolution and handle-based light rotation
+  writes remain unchanged. The `Lights` fixture and current look-at/target-drag tests are regression coverage.
 - **Entity names:** `entityName(components, id)` in `SceneEcsPaths` replaces the three copies of the name lookup.
 
 *Alternative:* keep the ad-hoc reader and only share the defaults. Rejected because the two readers would drift apart
@@ -94,6 +104,8 @@ New pieces, all on the EDT/AWT thread:
 
 `SceneMarkers` still supplies the marker boxes for the snapshot, and the test hooks (`drawnModels`, `drewGizmo`, …)
 stay `internal` on the renderer.
+Snapshots copy mutable camera, matrix and bounds data rather than retaining objects changed on later frames.
+Keep the existing ray presentation/pose capture order and any FPS presentation hook intact during the split.
 *Alternative:* only extract `SceneViewState`. Rejected: picking would still need a live renderer, which is the main
 obstacle to testing.
 
@@ -130,21 +142,27 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
 - `SceneReader(json: JsonProcessor)` and `ProjectReader(project, json, sceneReader)`. The `@Service` constructors look
   up `AbyssusCore` once.
 - `PanelState` functions take an `HdrPreviewSource` (L7), a small interface over `AssetLoading`'s HDR pieces.
+  Its newer asset-field and terrain-source readers also receive the editing, metadata and terrain collaborators
+  they use; an HDR-only parameter is no longer sufficient to remove the service lookups.
 - `SceneViewPanel` takes `SceneRenderer` from its caller (`SceneFileEditor`'s view factory, which runs in the editor
   provider), with no default `service<>()` call.
+  Inject optional `RayIntegration` there too instead of its current service lookup in panel initialization.
 - `SkyboxChoices` and `SceneComponentEdits` take what they need as parameters.
 - Services stay as lookups only in `AnAction`s, providers, tool window factories and `@Service` constructors.
 
 ### D-9. One `meta.json` reading (M4, D6, D7, D10)
 - **`core`:** `AssetMetaReader(json)` parses once to `MetaDocument(type: MetaType, json: JsonNode)`, with
   `typed(clazz)` for `MetaBase<T>`. `AssetFiles` uses it, and caches per folder within one `AssetFiles` instance.
+  Keep `MetaTextSource` injection and `refreshed` snapshots: cached metadata belongs only to that snapshot, and a new
+  snapshot observes changed disk or unsaved text, changed UUIDs and added/removed folders. Preserve failure fallback
+  and prevent duplicate concurrent preparation from corrupting the cache. Do not add a process-wide metadata cache.
   `SKYBOX_FACES` moves to `core`, next to `SkyboxAdditional`.
 - **Plugin:** `ProjectAssetListing`, `AssetMeta` and the skybox chooser read through a VFS adapter (`text` from
   `textOf`) into the same reader.
   - `AssetMeta.Loaded.type` becomes `MetaType`. Rows still come from the raw JSON, so the panel's table is unchanged.
   - `SKYBOX_TYPE` / `PROCEDURAL_SKY_TYPE` / `HDR_SKY_TYPE` and the `"MODEL"` / `"TERRAIN"` strings are replaced by
     `MetaType`.
-- The `show-project-assets` scenarios (unknown/unreadable meta, references, unused rule) are kept, checked by
+- The main `abyssus-project-assets` scenarios (unknown/unreadable meta, references, unused rule) are kept, checked by
   `ProjectAssetsTest`.
 
 ### D-10. `core` loading simplifications (M6, M7, M8)
@@ -156,7 +174,7 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
 - **`TextureUploadQueue`:** `TextureUploadQueue(pixmaps, makeTexture: (String, Pixmap) -> Texture)` is shared by
   `PreparedModel` and `PreparedTerrain`. The terrain passes its splat/layer filter choice as `makeTexture`. The upload
   still runs on the GL thread inside `pump`, and the release still runs on any thread that `discard` already uses.
-- **Sky drawing:** `FullscreenTriangle.create()` and `rotationOnlyViewProj(camera, out)` are top-level functions in
+- **Sky drawing:** `createFullscreenTriangle()` and `rotationOnlyViewProj(camera, out)` are top-level functions in
   `core/.../sky/SkyGeometry.kt`, used by `SkyboxCube`, `ProceduralSky`, `HdrSky`, `HdrEnvironmentBuild` and the
   plugin's `LoadingOverlay`.
   - No `FullscreenSky` base class: the two skies set very different uniforms, so a base class would save little.
@@ -164,8 +182,10 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
 
 ### D-11. Small shared helpers (H2, D1–D3, D9, D11, D14, L2, L5, L6)
 - **Cancellation:** delete `dto/Cancellation.kt`. The plugin imports `net.nevinsky.abyssus.assets.runCatchingKeepingCancellation`
-  (verified in task 1.1 that `ProcessCanceledException` is a `CancellationException` on 252). Replace the four
-  `runCatching` uses.
+  (verified in task 1.1 that `ProcessCanceledException` is a `CancellationException` on 252). Keep that compatibility
+  test in the plugin because it imports IntelliJ; ordinary failure and cancellation cases can also test the helper
+  in `core`. Replace all direct `runCatching` calls in the checked roots, currently eleven, including the newer
+  asset-editing, terrain and ray integration sites.
 - **Build check:** a `checkNoRunCatching` Gradle task (a regex over `src/main` and `core/src/main`, as
   `checkNoSingletons` does) wired into `check`.
 - **JSON setup:** a `JsonFormat` in `core` (a class, no object) builds the shared `JsonMapper.Builder` settings and the
@@ -198,13 +218,14 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
 - **A `SceneDocumentCache` copy could be mutated by mistake.** → Read callers get the cached node read-only by
   convention, and `editSceneJson` always parses fresh from the document text (it does not use the cache), so the write
   path cannot be affected.
-- **Merging the `meta.json` readers could change the `show-project-assets` behavior.** → Its tests run unchanged; the
+- **Merging the `meta.json` readers could change the `abyssus-project-assets` behavior.** → Its tests run unchanged; the
   type fallback stays `UNKNOWN`.
 - **Other open changes edit the same classes.** → Phases 1–4 are small and mechanical, so land them first. Agree on a
   merge order with the owners of `add-realistic-water`, `add-scene-raytracing` and
   `add-asset-editing-and-terrain-generation` before phases 5–8.
-- **The change is large.** → Phases 1–5 have no behavior change and can each be merged separately. Phases 6–8 depend
-  on 1–2.
+- **The change is large.** → Phases 1, 3, 4, 5 and 7 preserve behavior; phase 2 changes light defaults and phase 6
+  changes typing reload timing. Land in task order, keeping each phase verified. Coordinate phases 5–8 with the
+  overlapping changes; runtime extraction follows this change.
 
 ## Migration Plan
 

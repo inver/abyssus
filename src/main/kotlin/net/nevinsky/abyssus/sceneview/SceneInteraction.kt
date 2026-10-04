@@ -182,9 +182,15 @@ class SceneInteraction(
         if (left && wasClick) pickAt(x, y)
     }
 
-    private fun editOf(id: String, result: DragResult): TransformEdit =
-        if (renderer.gizmoMode == GizmoMode.MOVE) TransformEdit(position = result.transform.position)
-        else TransformEdit(rotation = result.transform.rotation, direction = result.direction.takeIf { ScenePreview.isCamera(renderer.params.content, id) })
+    private fun editOf(id: String, result: DragResult): TransformEdit {
+        if (renderer.gizmoMode == GizmoMode.MOVE) return TransformEdit(position = result.transform.position)
+        val content = renderer.params.content
+        val handleId = content.lights.firstOrNull { it.entityId == id }?.let(content::aimHandleOf)
+        // A rotate drag on a light aimed at a direction handle moves the handle instead of the light's own rotation.
+        val handleAt = handleId?.let { ScenePreview.aimedTarget(content, id, result) }
+        if (handleId != null && handleAt != null) return TransformEdit(target = TargetMove(handleId, handleAt))
+        return TransformEdit(rotation = result.transform.rotation, direction = result.direction.takeIf { ScenePreview.isCamera(content, id) })
+    }
 
     /** The cursor moved without a button: brightens the handle under it. */
     fun moved(x: Int, y: Int) {

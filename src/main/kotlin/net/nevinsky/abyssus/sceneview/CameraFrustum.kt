@@ -27,10 +27,7 @@ class CameraFrustum(val direction: Vec3, val corners: List<Vec3>) {
          */
         fun directionOf(placement: CameraPlacement, positions: Map<String, Vec3>): Vec3 {
             val target = placement.lookAtId?.let(positions::get)
-            if (target != null) {
-                val toTarget = target.toVector3().sub(placement.position.toVector3())
-                if (toTarget.len2() > 1e-12f) return toTarget.nor().toVec3()
-            }
+            if (target != null) SceneContent.aim(placement.position, target)?.let { return it }
             return normalized(placement.direction) ?: FORWARD
         }
 

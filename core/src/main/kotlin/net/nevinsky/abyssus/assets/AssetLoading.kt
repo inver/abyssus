@@ -11,6 +11,10 @@ import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.loading.AssetLoader
 import net.nevinsky.abyssus.assets.loading.SceneAssets
 import net.nevinsky.abyssus.assets.model.ModelLoader
+import net.nevinsky.abyssus.assets.model.RayModelSnapshotReader
+import net.nevinsky.abyssus.assets.model.RayModelSnapshots
+import net.nevinsky.abyssus.assets.sky.RaySkySnapshotReader
+import net.nevinsky.abyssus.assets.sky.RaySkySnapshots
 import net.nevinsky.abyssus.assets.sky.SkyLoader
 import net.nevinsky.abyssus.assets.sky.cube.SkyboxLoader
 import net.nevinsky.abyssus.assets.sky.hdr.HdrPreview
@@ -21,6 +25,8 @@ import net.nevinsky.abyssus.assets.sky.hdr.ToneCurve
 import net.nevinsky.abyssus.assets.sky.procedural.ProceduralSkyLoader
 import net.nevinsky.abyssus.assets.terrain.TerrainDataReader
 import net.nevinsky.abyssus.assets.terrain.TerrainLoader
+import net.nevinsky.abyssus.assets.terrain.RayTerrainSnapshotReader
+import net.nevinsky.abyssus.assets.terrain.RayTerrainSnapshots
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader
 import java.io.File
 import java.util.concurrent.Executor
@@ -28,7 +34,7 @@ import java.util.concurrent.Executor
 /**
  * Builds the asset loading graph from what the caller provides: [json] for `meta.json`, [log] for problems, [executor]
  * for the off-GL-thread `prepare` step and [skyShaders] for the sky programs (`/shader/sky` in this module). Holds no
- * state of its own: every [assets] it hands out owns its caches, so two scene views or two tests never share one.
+ * shared optional CPU model/terrain companions; every [assets] it hands out owns its GPU caches.
  */
 class AssetLoading(
     val json: JsonProcessor,
@@ -41,8 +47,16 @@ class AssetLoading(
     val toneCurve = ToneCurve()
     val hdrPreview = HdrPreview(decoder, toneCurve)
 
-    val models = ModelLoader(AssimpModelLoader())
-    val terrains = TerrainLoader(TerrainDataReader())
+    private val modelReader = AssimpModelLoader()
+    private val rayModelReader = RayModelSnapshotReader(modelReader)
+    val rayModels = RayModelSnapshots(executor, rayModelReader::read, rayModelReader::capture)
+    val models = ModelLoader(modelReader, rayModels)
+    private val terrainReader = TerrainDataReader()
+    private val rayTerrainReader = RayTerrainSnapshotReader(terrainReader)
+    val rayTerrains = RayTerrainSnapshots(executor, rayTerrainReader::read, rayTerrainReader::capture)
+    val terrains = TerrainLoader(terrainReader, rayTerrains)
+    private val raySkyReader = RaySkySnapshotReader(decoder, hdrFiles)
+    val raySkies = RaySkySnapshots(executor, raySkyReader::read)
     val skies = SkyLoader(
         SkyboxLoader(skyShaders),
         ProceduralSkyLoader(),
@@ -53,5 +67,12 @@ class AssetLoading(
     fun files(projectDir: File): AssetFiles = AssetFiles(projectDir, json)
 
     /** A new per-project cache over [loader]: prepares on the executor, builds on the GL thread, logs to [log]. */
-    fun <P : Any, T : Disposable> assets(loader: AssetLoader<P, T>): SceneAssets<P, T> = SceneAssets(executor, loader, ::files, log)
+    fun <P : Any, T : Disposable> assets(loader: AssetLoader<P, T>): SceneAssets<P, T> = assets(loader, ::files)
+
+    /**
+     * Like [assets], with [filesOf] making the [AssetFiles] snapshot of a project when its cache is (re)created: a caller
+     * that has refreshed snapshots (reading unsaved metadata) passes them on, so a rebuilt cache does not fall back to disk.
+     */
+    fun <P : Any, T : Disposable> assets(loader: AssetLoader<P, T>, filesOf: (File) -> AssetFiles): SceneAssets<P, T> =
+        SceneAssets(executor, loader, filesOf, log)
 }

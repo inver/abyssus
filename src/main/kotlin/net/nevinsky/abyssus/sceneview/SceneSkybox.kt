@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
+import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.loading.SceneAssets
 import net.nevinsky.abyssus.assets.sky.PreparedSky
 import net.nevinsky.abyssus.assets.sky.Sky
@@ -43,6 +44,18 @@ class SceneSkybox(private val assets: SceneAssets<PreparedSky, Sky>) : Disposabl
         Gdx.gl.glDepthMask(true)
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
     }
+
+    /** Loads [names] again from [files], the project's refreshed snapshot; the old sky stays drawn until its replacement is built. */
+    fun revise(files: AssetFiles, names: Set<String>) {
+        assets.replaceFiles(files)
+        assets.invalidate(names)
+    }
+
+    /** The built sky named [name], or null while it loads or when it failed. */
+    fun sky(name: String?): Sky? = name?.let(assets::get)
+
+    /** Keeps the sky named [name] loading (and a replaced one released) without drawing it, e.g. while a ray frame is shown. */
+    fun update(name: String?, projectDir: File?) = assets.update(projectDir, setOfNotNull(name))
 
     /** The lighting environment of the HDR sky [name] once it is built; null for any other sky or while it builds. */
     fun environment(name: String?): HdrEnvironment? = (name?.let(assets::get) as? HdrSky)?.environment

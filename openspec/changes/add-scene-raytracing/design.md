@@ -94,7 +94,16 @@ Selection is a pure, headless-tested `RayBackendSelector`:
 - dispose with work in flight, and with several sessions sharing one device;
 - device-loss injection, through a test hook that makes the next poll report a lost device.
 
-A fake in-memory backend passes the kit headlessly. The real backends run it as opt-in device tests.
+The kit is staged to preserve the feasibility gate's ordering. Task 1.3 establishes the common
+feasibility/lifecycle suite: primary visibility, one directional visibility ray, mirror hit/miss,
+depth, instance motion, request replacement/stale rejection, independent sessions, disposal and
+injected loss. The fake passes that suite headlessly; the native slices extend and pass it on
+their devices before the gate. Tasks 3.1–3.5 add their full material/light/terrain/environment/
+transparency reference cases to the same conformance framework as those features are implemented.
+The complete conformance suite remains mandatory on both native backends before completion;
+the early slice tests do not count as full shading parity.
+
+A fake in-memory backend passes the applicable kit cases headlessly. The real backends run them as opt-in device tests.
 *Alternative:* a public IntelliJ extension point. Rejected for now because of the API surface and compatibility cost.
 
 ### 8. Vulkan through LWJGL

@@ -279,4 +279,264 @@ class AssetCacheTest {
         assertFalse(c.isLoading())
         assertNull(c.get("x"))
     }
+
+    // --- revisions: invalidate, replace, retry ---
+
+    /** A cache whose prepared data carries a revision number, so a test can tell which revision became the asset. */
+    private fun revisions(discarded: MutableList<String>, fail: Set<Int> = emptySet(), slices: Int = 1): Triple<AssetCache<String, Res>, () -> Unit, MutableMap<String, Int>> {
+        var revision = 0
+        val current = mutableMapOf<String, Int>()
+        val progress = mutableMapOf<String, Int>()
+        val c = AssetCache<String, Res>(
+            executor,
+            prepare = { n -> val r = ++revision; current[n] = r; if (r in fail) null else "$n#$r" },
+            loader = FakeLoader(
+                upload = { d -> val k = (progress[d] ?: 0) + 1; progress[d] = k; k >= slices },
+                discarded = discarded,
+            ),
+            log = log,
+        )
+        return Triple(c, { runBackground() }, progress)
+    }
+
+    @Test
+    fun aChangedAssetStaysInUseUntilItsReplacementIsBuilt() {
+        val discarded = mutableListOf<String>()
+        val (c, run) = revisions(discarded)
+        c.request("a")
+        run()
+        c.pump()
+        val first = c.get("a")!!
+        assertEquals("a#1", first.name)
+        assertEquals(1, c.version("a"))
+
+        c.invalidate(setOf("a"))
+        assertSame("the old asset keeps rendering while the new one loads", first, c.get("a"))
+        assertTrue(c.isLoading())
+        c.request("a")
+        run()
+        assertSame(first, c.get("a"))
+        assertFalse(first.disposed)
+        c.pump()
+        val second = c.get("a")!!
+        assertEquals("a#2", second.name)
+        assertEquals(2, c.version("a"))
+        assertTrue(first.disposed)
+        assertFalse(second.disposed)
+        assertFalse(c.isLoading())
+        c.request("a")
+        run()
+        assertEquals("nothing reloads once current", 2, builds.size)
+    }
+
+    @Test
+    fun invalidatingOneNameLeavesTheOthersAlone() {
+        val c = cache()
+        c.request("a")
+        c.request("b")
+        runBackground()
+        c.pump(2)
+        val a = c.get("a")!!
+        val b = c.get("b")!!
+        c.invalidate(setOf("a", "unknown"))
+        c.request("a")
+        c.request("b")
+        runBackground()
+        c.pump(2)
+        assertTrue(a.disposed)
+        assertSame(b, c.get("b"))
+        assertFalse(b.disposed)
+        assertEquals(1, c.version("b"))
+        assertEquals(0, c.version("unknown"))
+    }
+
+    @Test
+    fun anInvalidatedLoadingRequestIsDroppedAndNeverBuilt() {
+        val discarded = mutableListOf<String>()
+        val (c, run) = revisions(discarded)
+        c.request("a")
+        run() // revision 1 prepared, waiting for the GL thread
+        c.invalidate(setOf("a"))
+        c.request("a")
+        run()
+        c.pump(2)
+        assertEquals(listOf("a#1"), discarded)
+        assertEquals(listOf("a#2"), builds)
+        assertEquals("a#2", c.get("a")!!.name)
+    }
+
+    @Test
+    fun anInvalidatedRequestThatHasNotStartedIsNeverPrepared() {
+        val c = cache()
+        c.request("a")
+        c.invalidate(setOf("a"))
+        runBackground()
+        assertTrue("only the dropped request ran", prepares.isEmpty())
+        c.request("a")
+        runBackground()
+        c.pump()
+        assertEquals(listOf("a"), prepares)
+        assertEquals("a", c.get("a")!!.name)
+    }
+
+    @Test
+    fun aReplacementPreparedWhileInvalidatedAgainIsDiscardedOnce() {
+        val discarded = mutableListOf<String>()
+        val (c, run) = revisions(discarded)
+        c.request("a")
+        run()
+        c.pump()
+        val first = c.get("a")!!
+        repeat(3) {
+            c.invalidate(setOf("a"))
+            c.request("a")
+            run()
+        }
+        c.pump(10)
+        assertEquals("only the latest revision is built", listOf("a#1", "a#4"), builds)
+        assertEquals(listOf("a#2", "a#3"), discarded)
+        assertTrue(first.disposed)
+        assertEquals("a#4", c.get("a")!!.name)
+        assertFalse(c.get("a")!!.disposed)
+        assertEquals(2, c.version("a"))
+    }
+
+    @Test
+    fun anUploadInProgressForASupersededRevisionIsDiscardedOnceAndNeverBuilt() {
+        val discarded = mutableListOf<String>()
+        val (c, run, progress) = revisions(discarded, slices = 3)
+        c.request("a")
+        run()
+        c.pump(1) // slice 1 of a#1
+        assertEquals(mapOf("a#1" to 1), progress)
+        c.invalidate(setOf("a"))
+        c.request("a")
+        run()
+        c.pump(1) // a#1 is superseded: discarded without another slice; a#2 gets this step's slice
+        assertEquals(listOf("a#1"), discarded)
+        assertEquals(mapOf("a#1" to 1, "a#2" to 1), progress)
+        assertTrue(builds.isEmpty())
+        c.pump(1)
+        c.pump(1)
+        assertEquals(listOf("a#2"), builds)
+        assertEquals(listOf("a#1"), discarded)
+        assertEquals("a#2", c.get("a")!!.name)
+    }
+
+    @Test
+    fun aFailedAssetIsRetriedAfterItChanges() {
+        val discarded = mutableListOf<String>()
+        val (c, run) = revisions(discarded, fail = setOf(1))
+        c.request("a")
+        run()
+        c.pump()
+        assertNull(c.get("a"))
+        assertEquals(1, logged.size)
+        c.request("a")
+        run()
+        assertEquals("not retried without a change", 1, logged.size)
+        assertTrue(builds.isEmpty())
+
+        c.invalidate(setOf("a"))
+        c.request("a")
+        run()
+        c.pump()
+        assertEquals("a#2", c.get("a")!!.name)
+        assertEquals(1, logged.size)
+    }
+
+    @Test
+    fun aBrokenRevisionRemovesTheOldAssetAndIsReportedOnce() {
+        val discarded = mutableListOf<String>()
+        val (c, run) = revisions(discarded, fail = setOf(2, 3))
+        c.request("a")
+        run()
+        c.pump()
+        val first = c.get("a")!!
+        c.invalidate(setOf("a"))
+        c.request("a")
+        run()
+        c.pump()
+        assertNull(c.get("a"))
+        assertTrue(first.disposed)
+        assertEquals(1, logged.size)
+        c.request("a")
+        run()
+        c.pump()
+        assertEquals("one report per revision", 1, logged.size)
+        c.invalidate(setOf("a"))
+        c.request("a")
+        run()
+        c.pump()
+        assertEquals(2, logged.size)
+        assertNull(c.get("a"))
+    }
+
+    @Test
+    fun retainingWithoutAReplacementPendingDisposesTheOldAndTheReplacementIsDropped() {
+        val discarded = mutableListOf<String>()
+        val (c, run) = revisions(discarded)
+        c.request("a")
+        run()
+        c.pump()
+        val first = c.get("a")!!
+        c.invalidate(setOf("a"))
+        c.request("a")
+        run()
+        c.retain(emptySet())
+        assertTrue(first.disposed)
+        c.pump()
+        assertEquals(listOf("a#2"), discarded)
+        assertEquals(listOf("a#1"), builds)
+        assertNull(c.get("a"))
+    }
+
+    @Test
+    fun disposeReleasesAPendingReplacementToo() {
+        val discarded = mutableListOf<String>()
+        val (c, run) = revisions(discarded)
+        c.request("a")
+        run()
+        c.pump()
+        val first = c.get("a")!!
+        c.invalidate(setOf("a"))
+        c.request("a")
+        run()
+        c.dispose()
+        assertTrue(first.disposed)
+        assertEquals(listOf("a#2"), discarded)
+    }
+
+    @Test
+    fun cachesOfDifferentProjectsAreIsolated() {
+        val loader = object : AssetLoader<String, Res> {
+            override fun prepare(files: net.nevinsky.abyssus.assets.files.AssetFiles, name: String) = "${files.projectDir.name}/$name"
+            override fun build(prepared: String) = Res(prepared)
+            override fun discard(prepared: String) {}
+        }
+        val json = net.nevinsky.abyssus.assets.json.JsonProcessor()
+        val one = java.nio.file.Files.createTempDirectory("one").toFile()
+        val two = java.nio.file.Files.createTempDirectory("two").toFile()
+        val a = SceneAssets(executor, loader, { net.nevinsky.abyssus.assets.files.AssetFiles(it, json) }, log)
+        val b = SceneAssets(executor, loader, { net.nevinsky.abyssus.assets.files.AssetFiles(it, json) }, log)
+        a.update(one, setOf("x"))
+        b.update(two, setOf("x"))
+        runBackground()
+        a.update(one, setOf("x"))
+        b.update(two, setOf("x"))
+        val ax = a.get("x")!!
+        val bx = b.get("x")!!
+        assertEquals(one.name + "/x", ax.name)
+        assertEquals(two.name + "/x", bx.name)
+
+        a.invalidate(setOf("x"))
+        a.update(one, setOf("x"))
+        runBackground()
+        a.update(one, setOf("x"))
+        assertTrue(ax.disposed)
+        assertFalse(bx.disposed)
+        assertSame(bx, b.get("x"))
+        assertEquals(2, a.version("x"))
+        assertEquals(1, b.version("x"))
+    }
 }

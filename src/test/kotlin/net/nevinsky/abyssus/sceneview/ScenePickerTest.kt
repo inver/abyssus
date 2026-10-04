@@ -27,6 +27,15 @@ class ScenePickerTest {
                          world: Matrix4 = Matrix4()) = OrientedBox(
         BoundingBox(Vector3(x - half, bottom, z - half), Vector3(x + half, bottom + 2f, z + half)), world)
 
+    @Test fun aRegeneratedTerrainIsPickedAtItsNewHeightsAndNotTheOldOnes() {
+        val down = ray(Vector3(50f, 20f, 50f), Vector3(50f, 12f, 50f))
+        val old = TerrainTarget("t", flat, Matrix4())
+        val regenerated = TerrainTarget("t", TerrainData(3, FloatArray(9) { 10f }, 100, 1f), Matrix4())
+        assertEquals(20f, ScenePicker.terrainDistance(down, old, 30f)!!, 1e-3f)
+        assertEquals(10f, ScenePicker.terrainDistance(down, regenerated, 30f)!!, 1e-3f)
+        assertEquals("t", ScenePicker.pick(down, emptyList(), listOf(regenerated), 30f))
+    }
+
     @Test fun anIdentityMatrixLeavesTheCornersUnmoved() {
         val b = oriented()
         assertEquals(8, b.corners.size)
@@ -227,5 +236,31 @@ class PickRayTest {
         val ray = ScenePicker.pickRay(camera(), 0, 0, 800, 600)
         org.junit.Assert.assertTrue(ray.direction.x < 0f)
         org.junit.Assert.assertTrue(ray.direction.y > 0f)
+    }
+
+    // a regenerated terrain: the same entity with new heights is what picking and resting use
+
+    @Test fun pickingUsesTheNewHeightsOfAReplacedTerrain() {
+        val low = TerrainData(3, FloatArray(9) { 1f }, 100, 1f)
+        val high = TerrainData(3, FloatArray(9) { 40f }, 100, 1f)
+        // a ray from above at (50, 50) towards (50, 20, 50): it passes the low surface (y 1) but is blocked by the high one (y 40)
+        val ray = Ray(Vector3(50f, 100f, 50f), Vector3(0f, -1f, 0f))
+        val beforeHit = ScenePicker.terrainDistance(ray, TerrainTarget("t", low, Matrix4()), 1000f)!!
+        val afterHit = ScenePicker.terrainDistance(ray, TerrainTarget("t", high, Matrix4()), 1000f)!!
+        assertEquals(99f, beforeHit, 0.05f)
+        assertEquals(60f, afterHit, 0.05f)
+        assertEquals("t", ScenePicker.pick(ray, emptyList(), listOf(TerrainTarget("t", high, Matrix4())), 1000f))
+        // a ray that only reaches y 20 hits the new surface and missed the old one
+        val short = Ray(Vector3(50f, 60f, 50f), Vector3(0f, -1f, 0f))
+        assertEquals("t", ScenePicker.pick(short, emptyList(), listOf(TerrainTarget("t", high, Matrix4())), 30f))
+        assertNull(ScenePicker.pick(short, emptyList(), listOf(TerrainTarget("t", low, Matrix4())), 30f))
+    }
+
+    @Test fun restingFollowsTheNewHeightsOfAReplacedTerrain() {
+        val footprint = OrientedBox(BoundingBox(Vector3(1f, 5f, 1f), Vector3(3f, 7f, 3f)), Matrix4())
+        val before = ScenePicker.restHeight(footprint, emptyList(), listOf(TerrainTarget("t", TerrainData(3, FloatArray(9) { 3f }, 4, 1f), Matrix4())))!!
+        val after = ScenePicker.restHeight(footprint, emptyList(), listOf(TerrainTarget("t", TerrainData(3, FloatArray(9) { 8f }, 4, 1f), Matrix4())))!!
+        assertEquals(3f, before, 1e-5f)
+        assertEquals(8f, after, 1e-5f)
     }
 }

@@ -61,8 +61,8 @@ The components the plugin reads:
 | Component | Used for |
 |---|---|
 | `NameComponent.name` | Entity label (the id when missing) |
-| `TypeComponent.type` | `CAMERA`, `LIGHT_*` (kind of light), ... |
-| `PositionComponent` | `localPosition`, `localRotation` (quaternion `x y z w`) and `localScale`; plus `lookAtId` for cameras |
+| `TypeComponent.type` | `CAMERA`, `LIGHT_*` (kind of light), `HANDLE` (a light's direction handle) |
+| `PositionComponent` | `localPosition`, `localRotation` (quaternion `x y z w`) and `localScale`; plus `lookAtId` for cameras and lights |
 | `RenderComponent.renderable` | `asset.assetName` + `asset.type` (`MODEL` / `TERRAIN`) and `shaderKey`. Editor-only renderables have a `class` but no `asset` |
 | `CameraComponent.camera` | `position`, `viewPointPosition` (the view direction), `near`, `far`, `fieldOfView` |
 | `LightComponent` | `color`, `intensity`, `range` (positive reach, default 100 omitted), either directly or under `light` |
@@ -75,6 +75,16 @@ empty `PositionComponent: {}` is valid. Writers add fields when they change them
 
 **Cameras have two positions:** a camera's position is stored both in `PositionComponent.localPosition` and in
 `CameraComponent.camera.position`. Gizmo moves write both.
+
+**A light that looks at an entity takes its direction from it.** A `LIGHT_DIRECTIONAL` or `LIGHT_SPOT` light with a
+`PositionComponent.lookAtId` pointing at an existing entity faces it: the view direction is the unit vector from the
+light to that entity's `localPosition`. The light's own `localRotation` is still read and used when the target is
+missing or at the light itself. A light whose target is a `HANDLE` entity (an entity whose `TypeComponent.type` is
+`HANDLE`, the direction handle of a Mundus light) is a **handle-aimed light**: a rotate gizmo drag on it turns the
+direction and moves the handle, and the handle's `localPosition` is written instead of the light's rotation. A light
+aimed at anything else (a model, a camera, a terrain) only moves; turning it would mean moving an unrelated object.
+A point light has no direction and never gets a ring. The scene view's own light direction is the same resolved
+direction (`SceneContent`).
 
 ## Asset `meta.json`
 
@@ -92,6 +102,34 @@ empty `PositionComponent: {}` is valid. Writers add fields when they change them
 | `TEXTURE`, `PIXMAP_TEXTURE`, `MATERIAL`, `SHADER` | Recognized for icons; not drawn by the scene view |
 
 `uuid` can be missing (the fixture's `skybox_default` and `tree` have none).
+
+### Terrain data and the generation recipe
+
+A terrain folder holds `meta.json` and the height file named by `additional.terrainFile` (`terrain.data`): no header,
+each height a big-endian 32-bit float, a square grid row after row (z-major), so the resolution is the square root of
+the float count (the fixture's is 180). Generating a terrain changes none of this: it writes the same two files.
+
+New terrain metadata is one compact line in Mundus's order (`version` 1, `lastModified`, `uuid`, `type` `TERRAIN`,
+`additional` with `terrainFile`, `size`, `uv` 1.0 and the six splat fields null); see `TerrainAssetWriter` in
+`core/src/main/kotlin/net/nevinsky/abyssus/assets/terrain/generation/TerrainAssetEncoding.kt`.
+
+How generated heights were made is kept apart from Mundus's files, in a recipe file beside the
+heights (`TERRAIN_RECIPE_FILE`; Mundus never reads it, and a terrain loads without it):
+
+```json
+// abyssus-terrain.recipe.json
+{ "schemaVersion": 1,
+  "generator": { "id": "opensimplex2-fbm-v1", "sourceRevision": "<FastNoiseLite commit>" },
+  "settings": { "seed": 12345, "featureSize": 200.0, "minHeight": 0.0, "maxHeight": 120.0, "octaves": 5, "persistence": 0.5, "lacunarity": 2.0 },
+  "size": 1600, "resolution": 180, "heightsSha256": "<SHA-256 of terrain.data>" }
+```
+
+The recipe is a fingerprint, not a source of truth: if the size, the resolution or the height bytes no longer match,
+or the schema or generator identifier is unknown, or the file is malformed, the terrain stays usable, the panel shows
+why, and a draft starts from the defaults above. An identifier is never reinterpreted: new noise gets a new
+identifier. Heights come from world-local OpenSimplex2 fractal noise (`x / (resolution - 1) * size`), mapped onto
+`minHeight..maxHeight`, so a height means the same at any resolution.
+
 
 **`SKYBOX_PROCEDURAL` is a plugin-only type.** Mundus does not define it and will not load such an asset. The scene view
 draws it as a fullscreen triangle with the folder's own shaders (single-scattering Rayleigh + Mie, ray-marched per

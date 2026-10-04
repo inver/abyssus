@@ -16,18 +16,27 @@ import net.nevinsky.abyssus.assets.SPLAT_MAP
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import java.io.File
+import java.util.concurrent.CancellationException
 
 /** Terrain assets: height data and splat images read off the GL thread, images uploaded one per frame. */
-class TerrainLoader(private val reader: TerrainDataReader) : AssetLoader<PreparedTerrain, TerrainMesh> {
+class TerrainLoader(private val reader: TerrainDataReader, private val raySnapshots: RayTerrainSnapshots? = null) : AssetLoader<PreparedTerrain, TerrainMesh> {
     /** A splat texture that cannot be read is left out; the terrain is drawn without it. */
     override fun prepare(files: AssetFiles, name: String): PreparedTerrain? {
+        val capture = raySnapshots?.preparation(files, name)
         val terrain = files.terrain(name) ?: return null
         val data = reader.read(terrain.data, terrain.size, terrain.uv)
         val splat = terrain.splat[SPLAT_MAP]?.let(::pixmapOrNull)
         val layers =
             SPLAT_LAYERS.mapNotNull { f -> terrain.splat[f]?.let(::pixmapOrNull)?.let { f to it } }
                 .toMap()
-        return PreparedTerrain(data, splat, layers)
+        val prepared = PreparedTerrain(data, splat, layers)
+        try {
+            capture?.offer(data, prepared.pixmaps)
+            return prepared
+        } catch (cancelled: CancellationException) {
+            prepared.dispose()
+            throw cancelled
+        }
     }
 
     override fun upload(prepared: PreparedTerrain) = prepared.uploadNext()
@@ -57,6 +66,7 @@ class PreparedTerrain(val data: TerrainData, splatMap: Pixmap?, layers: Map<Stri
         },
         ::makeTexture,
     )
+    internal val pixmaps: Map<String, Pixmap> get() = uploads.pending
     val textures: MutableMap<String, Texture> get() = uploads.textures
 
     /** Uploads one more image; true when every image is on the GPU. */

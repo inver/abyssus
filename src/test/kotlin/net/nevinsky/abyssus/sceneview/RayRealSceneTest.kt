@@ -1,0 +1,71 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package net.nevinsky.abyssus.sceneview
+
+import com.badlogic.gdx.graphics.PerspectiveCamera
+import net.nevinsky.abyssus.assets.AssetLoading
+import net.nevinsky.abyssus.assets.ShaderSource
+import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.parseScene
+import net.nevinsky.abyssus.raytracing.*
+import org.junit.Assert.*
+import org.junit.Assume.assumeTrue
+import org.junit.Test
+import java.io.File
+import java.util.concurrent.Executor
+
+/**
+ * The fixture project's Main Scene is a real scene: a few hundred model parts, a dozen blended panes and several
+ * 2048x2048 textures. It once failed ray tracing with "RESOURCE_LIMIT: Scene exceeds instance, triangle or byte limits"
+ * because the caps were sized for toy scenes. These tests keep it working. They assert nothing about the fixture's exact
+ * contents (it is edited in the IDE), only that a real scene stays inside the bounds and renders.
+ */
+class RayRealSceneTest {
+    private val project = File("src/test/testData/project/Untitled").absoluteFile
+
+    private fun snapshot(): RaySceneFrame {
+        com.badlogic.gdx.utils.GdxNativesLoader.load()
+        val loading = AssetLoading(JsonProcessor(), printingLog, Executor(Runnable::run), ShaderSource("/shader/sky", AssetLoading::class.java))
+        val content = SceneContent.of(parseScene(project.resolve("scenes/Main Scene.scene").readText()))
+        val assets = RaySceneAssets(loading)
+        assets.update(project, content)
+        val state = assets.poll()
+        assertTrue("the scene's assets must load: $state", state is RaySceneAssetState.Ready)
+        val camera = PerspectiveCamera(60f, 160f, 90f).apply { position.set(0f, 60f, 140f); lookAt(0f, 0f, 0f); near = .5f; far = 3000f; update() }
+        val params = SceneRenderParams.DEFAULT.copy(content = content, projectDir = project)
+        val conversion = RaySceneSnapshots().capture(params, camera, LightSet.NONE, state, activeCameraId = null)
+        assertTrue("a real scene must convert with the default limits: $conversion", conversion is RaySceneConversion.Ready)
+        return (conversion as RaySceneConversion.Ready).frame
+    }
+
+    @Test fun theFixtureSceneIsInsideEveryRayTracingBound() {
+        val scene = snapshot().scene
+        assertNull("the whole-view fallback must not trigger for the fixture scene", scene.unsupportedReason())
+        assertTrue("the scene is bigger than the old 128-instance cap", scene.instances.size > 128)
+        assertTrue("its textures stay as bytes", scene.textures.isNotEmpty() && scene.textures.all { it.isBytes })
+        assertTrue(scene.instances.size <= METAL_INSTANCE_CAPACITY)
+    }
+
+    @Test fun theFixtureSceneRendersThroughTheRealMetalBackend() {
+        assumeTrue(System.getProperty("abyssus.metalTests") == "true" && System.getProperty("os.name").startsWith("Mac"))
+        val frame = snapshot()
+        val result = MetalRayBackendFactory().probe()
+        assumeTrue("Metal ray tracing is not available here: $result", result is RayCapability.Available)
+        (result as RayCapability.Available).backend.use { backend ->
+            backend.openSession("real-scene", RayLimits(maxInstances = backend.capabilities.maxInstances)).use { session ->
+                session.submit(RaySceneRequest(RayFrameKey(1, 1, 1, 1), 160, 90, frame.camera.rayCamera(), frame.scene))
+                val deadline = System.nanoTime() + 30_000_000_000L
+                var rendered: RayFrame? = null
+                while (rendered == null && System.nanoTime() < deadline) { rendered = session.poll(); Thread.sleep(2) }
+                val image = checkNotNull(rendered) { "the real scene did not render within 30 seconds" }
+                assertTrue("something of the scene is hit", image.depthValues().any { it < 1f })
+                assertTrue("the frame is not a single colour", image.colorValues().toSet().size > 8)
+                assertTrue(image.colorValues().all { it.isFinite() })
+            }
+        }
+    }
+
+    private companion object { const val METAL_INSTANCE_CAPACITY = 1024 }
+}

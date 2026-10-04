@@ -38,6 +38,8 @@ Fixing these now, before more scene-editing features land, keeps each later chan
   - Move `editSceneJson` out of `EnabledToggle.kt` and stop it from refreshing the pane directly.
   - Pass collaborators through constructors instead of looking up services inside classes.
   - Replace `runCatching` with `runCatchingKeepingCancellation`, plus a build check that keeps it out.
+    The current plugin/core tree contains eleven direct calls, including newer terrain, asset-editing and ray
+    integration code; replace every call in the check's scope rather than only the original four review sites.
   - One `meta.json` reader, using `MetaType` instead of type strings.
   - Shared helpers for duplicated code:
     - texture upload queue, fullscreen triangle and sky matrix (in `core`)
@@ -86,8 +88,9 @@ None.
   current text without re-reading an unchanged scene.
 
 Unchanged and used as regression checks: `scene-object-transform` (transform writes), `scene-component-editing`,
-`object-properties-panel`, `asset-loading` and `abyssus-project-view`, and the open change `show-project-assets`
-(`abyssus-project-assets`), which must keep its behavior when the `meta.json` readers are merged.
+`object-properties-panel`, `asset-loading`, `abyssus-project-view` and the main `abyssus-project-assets` capability
+(the former `show-project-assets` change is archived). Asset listing and unused detection must keep their behavior
+when the `meta.json` readers are merged. Preserve the now-specified look-at light aiming and handle transforms.
 
 ## Impact
 
@@ -102,7 +105,8 @@ Unchanged and used as regression checks: `scene-object-transform` (transform wri
 - **Plugin, other packages:**
   - `dto/`: `ProjectReader`, `SceneReader`, `ConfigFileReader`, `ProjectAssetListing`, `ProjectLayout` and
     `Cancellation.kt` (removed)
-  - `properties/`: `PanelState` and `AssetMeta`
+  - `properties/`: `PanelState`, `AssetMeta` and `AssetReferenceChoices`
+  - `terrain/`: `NewTerrain` and `TerrainPreviewRunner` (cancellation and constructor wiring)
   - `ecs/`: `ComponentCodecs`, `LightComponent`, `ComponentEditor` and `EcsConfigurator`
   - `filetype/SceneJson.kt`
 - **`core`:**
@@ -110,9 +114,15 @@ Unchanged and used as regression checks: `scene-object-transform` (transform wri
   - `ModelLoader` and `TerrainLoader`
   - `SkyboxCube`, `ProceduralSky`, `HdrSky` and `HdrEnvironmentBuild`
   - `AssetFiles` and `JsonProcessor`
+  - `AssetMetaEditor` (cancellation helper)
   - new shared helpers
 - **Build:** a `checkNoRunCatching` task wired into `check`, like `checkNoSingletons`.
 - **Tests:**
   - Existing tests keep passing, except for any that assert the old light defaults on the view side.
   - New tests: view/panel parity on the Untitled fixture, the edit-cache behavior and the debounce.
 - **No new dependencies.**
+- **Integration order:** `extract-scene-runtime` follows this change and moves the shared ECS defaults/codecs to
+  `runtime`; if it lands first, adapt the affected paths and verification commands before applying this plan.
+  Coordinate scene-view wiring with `add-scene-raytracing`, asset snapshot refresh with
+  `add-asset-editing-and-terrain-generation`, and view replacement/lifecycle with `add-project-fps-counter`.
+  This refactor preserves their behavior and does not implement the FPS feature.

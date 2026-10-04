@@ -15,14 +15,27 @@ import net.nevinsky.abyssus.core.loader.PreloadedTextureProvider
 import net.nevinsky.abyssus.core.model.Model
 import net.nevinsky.abyssus.core.model.ModelData
 import net.nevinsky.abyssus.assets.files.AssetFiles
+import kotlin.coroutines.cancellation.CancellationException
 
 
 /** Model assets through Assimp: parsed and their images decoded off the GL thread, textures uploaded one per frame. */
-class ModelLoader(private val assimp: AssimpModelLoader) : AssetLoader<PreparedModel, Model> {
+class ModelLoader(
+    private val assimp: AssimpModelLoader,
+    private val raySnapshots: RayModelSnapshots? = null,
+) : AssetLoader<PreparedModel, Model> {
     override fun prepare(files: AssetFiles, name: String): PreparedModel? {
+        val capture = raySnapshots?.preparation(files, name)
         val handle = FileHandle(files.model(name) ?: return null)
         val data = assimp.loadData(handle)
-        return PreparedModel(data, handle, assimp.decodeTextures(data, handle))
+        val images = assimp.decodeTextures(data, handle)
+        val prepared = PreparedModel(data, handle, images)
+        try {
+            capture?.offer(data, images)
+            return prepared
+        } catch (cancelled: CancellationException) {
+            prepared.dispose()
+            throw cancelled
+        }
     }
 
     override fun upload(prepared: PreparedModel) = prepared.uploadNext()

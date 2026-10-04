@@ -39,7 +39,23 @@ Readers never write (`ConfigFileReader` implementations never write and never th
 - the eye toggle,
 - Rename Scene,
 - the skybox chooser,
-- scene view gizmo drags and Drop (the same Move Entity command).
+- scene view gizmo drags and Drop (the same Move Entity command),
+- asset property edits in the properties panel (`AssetMetaEdits` in `properties/AssetMetaEdits.kt`): one `additional` key
+  of an asset's `meta.json` per command, named Edit Asset Property. The rules (which keys, validation, defaults, stale
+  values) are `AssetMetaEditor`'s in `core`, which works on any JSON tree and never touches `version`, `uuid`, `type`,
+  `lastModified` or unknown keys.
+
+**The one other write path: terrain files.** A scene or project file edit never takes it. Regenerating a terrain
+replaces a binary height file and an Abyssus recipe, and creating one makes a folder with new files; none of that is a
+JSON document edit, so `AssetFileCommand` (`assetfiles/AssetFileCommand.kt`) runs it as one named write command over
+immutable `FileSnapshot`s staged beforehand. It checks the starting state inside the command (a changed file is a
+conflict, an existing folder a collision, and nothing is written), writes with `java.io` and refreshes the VFS after the
+command (a VFS write inside a command would also be recorded by the platform's own file undo, which would fight ours),
+puts back what it wrote when a write fails (application-level rollback only: a process that dies mid-write can leave
+files behind), and registers one `UndoableAction` only after success. Undo and Redo check the files again and refuse,
+with the reason, rather than overwrite a later change; Undo of a creation also refuses while a scene (saved or unsaved)
+or another asset uses the new asset (`AssetReferenceGuard`), and removes a folder only when it holds exactly what was
+written. Cancellation is honoured only before the first write.
 
 `SceneFormatListener` is the one other writer: it pretty-prints a `.scene` / `.abss` document when it opens in the
 text editor. A new writer goes through `editSceneJson` and gets a command name in the message bundle.

@@ -11,28 +11,37 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 
 /**
  * What a drag changes about an entity: any of its [position], its [rotation] and, for a camera, its view [direction].
- * A null part is left as it is.
+ * A null part is left as it is. [target] moves another entity (a light's direction handle) instead of the light itself.
  */
-data class TransformEdit(val position: Vec3? = null, val rotation: Quat? = null, val direction: Vec3? = null)
+data class TransformEdit(
+    val position: Vec3? = null,
+    val rotation: Quat? = null,
+    val direction: Vec3? = null,
+    val target: TargetMove? = null,
+)
+
+/** A move of another entity's `PositionComponent.localPosition`: [entityId] is the target, [position] is its new position. */
+data class TargetMove(val entityId: String, val position: Vec3)
 
 /** Writes a [TransformEdit] into a scene's JSON tree, touching only the values that change. */
 object SceneTransformWriter {
     /**
      * Sets `PositionComponent.localPosition` / `localRotation` of the entity [entityId] under `ecs.entities`, adding
      * missing objects and fields. For an entity with a `CameraComponent.camera` object it also sets that object's
-     * `position` and `viewPointPosition`. Returns false, leaving [root] as it was, when the entity is missing or no
-     * value differs.
+     * `position` and `viewPointPosition`. [target] is written as the target entity's `PositionComponent.localPosition`.
+     * Returns false, leaving [root] as it was, when the entity or the target is missing, either has a
+     * `PositionComponent` that is not an object, or no value differs.
      */
     fun apply(root: JsonNode, entityId: String, edit: TransformEdit): Boolean {
-        val components = root.get("ecs")?.get("entities")?.get(entityId)?.get("components") as? ObjectNode ?: return false
+        val entities = root.get("ecs")?.get("entities") ?: return false
+        val components = entities.get(entityId)?.get("components") as? ObjectNode ?: return false
+        // Check every entity the edit touches before writing anything, so a rejected edit leaves [root] as it was.
+        if ((edit.position != null || edit.rotation != null) && !holdsPlacement(components)) return false
+        val targetComponents = edit.target?.let { entities.get(it.entityId)?.get("components") as? ObjectNode ?: return false }
+        if (targetComponents != null && !holdsPlacement(targetComponents)) return false
         var changed = false
         if (edit.position != null || edit.rotation != null) {
-            val existing = components.get("PositionComponent")
-            val placement = when {
-                existing == null || existing.isNull -> components.putObject("PositionComponent")
-                existing is ObjectNode -> existing
-                else -> return false
-            }
+            val placement = placementOf(components)
             edit.position?.let { changed = setVec(placement, "localPosition", it) or changed }
             edit.rotation?.let { changed = setQuat(placement, "localRotation", it) or changed }
         }
@@ -41,8 +50,19 @@ object SceneTransformWriter {
             edit.position?.let { changed = setVec(camera, "position", it) or changed }
             edit.direction?.let { changed = setVec(camera, "viewPointPosition", it) or changed }
         }
+        if (edit.target != null && targetComponents != null) {
+            changed = setVec(placementOf(targetComponents), "localPosition", edit.target.position) or changed
+        }
         return changed
     }
+
+    /** Whether [components] has a `PositionComponent` object, or none yet (a missing or null one is added on write). */
+    private fun holdsPlacement(components: ObjectNode): Boolean =
+        components.get("PositionComponent").let { it == null || it.isNull || it is ObjectNode }
+
+    /** The `PositionComponent` object of [components], added when missing; call only after [holdsPlacement]. */
+    private fun placementOf(components: ObjectNode): ObjectNode =
+        components.get("PositionComponent") as? ObjectNode ?: components.putObject("PositionComponent")
 
     private fun setVec(parent: ObjectNode, name: String, v: Vec3) =
         setFields(parent, name, listOf(Field("x", v.x, 0f), Field("y", v.y, 0f), Field("z", v.z, 0f)))
