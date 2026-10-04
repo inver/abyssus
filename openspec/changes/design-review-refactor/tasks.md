@@ -98,12 +98,14 @@ in a task. Phase 8 changes no behavior either, but ports `SceneInteractionTest` 
 
 - [x] 4.1 Make `AssetCache` take an `AssetLoader`, and simplify `SceneAssets`. Verify with
   `./gradlew :core:test --tests 'net.nevinsky.abyssus.assets.loading.AssetCacheTest'`, with the test's fake lambdas
-  turned into a fake loader.
+  turned into a fake loader. The test keeps the revision cases from `add-asset-editing-and-terrain-generation`
+  (`invalidate`, `version`, superseded loads), also through the fake loader.
 - [x] 4.2 Rework `SkyLoader` / `PreparedSky` so each prepared sky carries its loader, and choose the kind through
   `AssetMetaReader`. Verify with the `core` sky tests (`./gradlew :core:test`).
 - [x] 4.3 Add `TextureUploadQueue` and use it in `PreparedModel` and `PreparedTerrain`. Add a `TextureUploadQueueTest`
   with a fake texture factory: it uploads one image per call, `dispose` releases both the remaining pixmaps and the
-  uploaded textures, and it is safe to call twice.
+  uploaded textures, and it is safe to call twice. `PreparedTerrain` reads the not-yet-uploaded images through the
+  queue's `pending` view for the ray terrain capture.
 - [ ] 4.4 Add top-level `createFullscreenTriangle()` / `rotationOnlyViewProj` (`core/.../sky/SkyGeometry.kt`) and use them in
   `SkyboxCube`, `ProceduralSky`, `HdrSky`, `HdrEnvironmentBuild` and `LoadingOverlay`. Reformat the `SkyboxCube`
   vertex array and make `CAMERA_HEIGHT` a file-level const. Verify with a `SkyGeometryTest` for the matrix (no GL),

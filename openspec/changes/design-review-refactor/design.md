@@ -159,6 +159,8 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
   Keep `MetaTextSource` injection and `refreshed` snapshots: cached metadata belongs only to that snapshot, and a new
   snapshot observes changed disk or unsaved text, changed UUIDs and added/removed folders. Preserve failure fallback
   and prevent duplicate concurrent preparation from corrupting the cache. Do not add a process-wide metadata cache.
+  Within a snapshot, a disk `meta.json` is re-read when its stamp (modified time and size) changes; text from another
+  `MetaTextSource` is re-parsed only when it differs. The `uuid` index stays a snapshot until `refreshed`.
   `SKYBOX_FACES` moves to `core`, next to `SkyboxAdditional`.
 - **Plugin:** `ProjectAssetListing`, `AssetMeta` and the skybox chooser read through a VFS adapter (`text` from
   `textOf`) into the same reader.
@@ -170,13 +172,16 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
 
 ### D-10. `core` loading simplifications (M6, M7, M8)
 - **`AssetCache`:** takes `(executor, prepare: (String) -> P?, loader: AssetLoader<P, T>, log)`. The `build` name
-  argument goes, and `SceneAssets` passes its loader straight through.
+  argument goes, and `SceneAssets` passes its loader straight through. `AssetCache` keeps the revision behavior from
+  `add-asset-editing-and-terrain-generation` (`invalidate`, `version`; a load that finishes for a superseded request is
+  discarded), and `SceneAssets` keeps `replaceFiles`.
 - **`SkyLoader`:** `PreparedSky` becomes `class PreparedSky<P>(val loader: AssetLoader<P, out Sky>, val prepared: P)`
   behind a star-projected helper, so `upload` / `build` / `discard` delegate in one line. Only `prepare` chooses by
   `MetaType`, using `AssetMetaReader` instead of binding `ProceduralSkyMeta` to read the type.
 - **`TextureUploadQueue`:** `TextureUploadQueue(pixmaps, makeTexture: (String, Pixmap) -> Texture)` is shared by
   `PreparedModel` and `PreparedTerrain`. The terrain passes its splat/layer filter choice as `makeTexture`. The upload
   still runs on the GL thread inside `pump`, and the release still runs on any thread that `discard` already uses.
+  It exposes a read-only `pending` view of the images not yet uploaded, which the ray terrain snapshot reads.
 - **Sky drawing:** `createFullscreenTriangle()` and `rotationOnlyViewProj(camera, out)` are top-level functions in
   `core/.../sky/SkyGeometry.kt`, used by `SkyboxCube`, `ProceduralSky`, `HdrSky`, `HdrEnvironmentBuild` and the
   plugin's `LoadingOverlay`.
