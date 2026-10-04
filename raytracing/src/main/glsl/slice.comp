@@ -1,0 +1,104 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ * SPDX-License-Identifier: Apache-2.0
+ */
+// Vulkan counterpart of native/metal/slice.metal: primary visibility, one directional shadow ray and one mirror bounce
+// using ray queries in a compute shader. Pixels are row-major from the bottom-left, as in RayFrame.
+#version 460
+#extension GL_EXT_ray_query : require
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+struct SliceInstance { mat4 transform; vec4 color; uvec4 offsets; };
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT scene;
+layout(set = 0, binding = 1, std430) readonly buffer Instances { SliceInstance instances[]; };
+layout(set = 0, binding = 2, std430) readonly buffer Vertices { float vertices[]; };
+layout(set = 0, binding = 3, std430) readonly buffer Indices { uint indices[]; };
+layout(set = 0, binding = 4, rgba16f) uniform writeonly image2D colorImage;
+layout(set = 0, binding = 5, r32f) uniform writeonly image2D depthImage;
+layout(set = 0, binding = 6, std140) uniform Camera {
+    vec4 originNear; vec4 forwardFar; vec4 rightFov; vec4 upAspect; vec4 light;
+} camera;
+layout(push_constant) uniform Tile { uvec2 dimensions; uint firstRow; uint rows; } tile;
+
+const vec3 BACKGROUND = vec3(0.05, 0.1, 0.2);
+
+vec3 vertexAt(SliceInstance instance, uint index) {
+    uint base = (instance.offsets.x + index) * 3u;
+    return (instance.transform * vec4(vertices[base], vertices[base + 1u], vertices[base + 2u], 1.0)).xyz;
+}
+
+vec3 surfaceNormal(uint instanceId, uint primitiveId, vec3 direction) {
+    SliceInstance instance = instances[instanceId];
+    uint offset = instance.offsets.y + primitiveId * 3u;
+    vec3 a = vertexAt(instance, indices[offset]);
+    vec3 b = vertexAt(instance, indices[offset + 1u]);
+    vec3 c = vertexAt(instance, indices[offset + 2u]);
+    vec3 normal = normalize(cross(b - a, c - a));
+    return dot(normal, direction) > 0.0 ? -normal : normal;
+}
+
+bool closestHit(vec3 origin, vec3 direction, float tMin, float tMax, out float distance, out uint instanceId, out uint primitiveId) {
+    rayQueryEXT query;
+    rayQueryInitializeEXT(query, scene, gl_RayFlagsOpaqueEXT, 0xFF, origin, tMin, direction, tMax);
+    while (rayQueryProceedEXT(query)) {}
+    if (rayQueryGetIntersectionTypeEXT(query, true) == gl_RayQueryCommittedIntersectionNoneEXT) return false;
+    distance = rayQueryGetIntersectionTEXT(query, true);
+    instanceId = uint(rayQueryGetIntersectionInstanceCustomIndexEXT(query, true));
+    primitiveId = uint(rayQueryGetIntersectionPrimitiveIndexEXT(query, true));
+    return true;
+}
+
+bool blocked(vec3 origin, vec3 direction) {
+    rayQueryEXT query;
+    rayQueryInitializeEXT(query, scene, gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, origin, 0.001, direction, 10000.0);
+    while (rayQueryProceedEXT(query)) {}
+    return rayQueryGetIntersectionTypeEXT(query, true) != gl_RayQueryCommittedIntersectionNoneEXT;
+}
+
+vec3 directColor(uint instanceId, vec3 position, vec3 normal, vec3 light) {
+    float diffuse = blocked(position + normal * 0.001, light) ? 0.0 : max(dot(normal, light), 0.0);
+    return instances[instanceId].color.xyz * (0.1 + 0.9 * diffuse);
+}
+
+void main() {
+    uvec2 pixel = uvec2(gl_GlobalInvocationID.x, tile.firstRow + gl_GlobalInvocationID.y);
+    if (gl_GlobalInvocationID.y >= tile.rows || any(greaterThanEqual(pixel, tile.dimensions))) return;
+    vec2 ndc = (vec2(pixel) + 0.5) / vec2(tile.dimensions) * 2.0 - 1.0;
+    vec3 origin = camera.originNear.xyz;
+    vec3 forward = camera.forwardFar.xyz;
+    vec3 direction = normalize(forward + camera.rightFov.xyz * ndc.x * camera.upAspect.w * camera.rightFov.w
+        + camera.upAspect.xyz * ndc.y * camera.rightFov.w);
+    float cosine = dot(direction, forward);
+    float near = camera.originNear.w;
+    float far = camera.forwardFar.w;
+
+    vec3 color = BACKGROUND;
+    float depth = 1.0;
+    float distance;
+    uint instanceId;
+    uint primitiveId;
+    if (closestHit(origin, direction, near / cosine, far / cosine, distance, instanceId, primitiveId)) {
+        vec3 position = origin + direction * distance;
+        vec3 normal = surfaceNormal(instanceId, primitiveId, direction);
+        float z = distance * cosine;
+        depth = clamp(far / (far - near) - far * near / ((far - near) * z), 0.0, 1.0);
+        color = directColor(instanceId, position, normal, camera.light.xyz);
+        if (instances[instanceId].color.w > 0.5) {
+            vec3 reflectionOrigin = position + normal * 0.001;
+            vec3 reflected = reflect(direction, normal);
+            color = BACKGROUND;
+            float secondaryDistance;
+            uint secondaryInstance;
+            uint secondaryPrimitive;
+            if (closestHit(reflectionOrigin, reflected, 0.001, 10000.0, secondaryDistance, secondaryInstance, secondaryPrimitive)) {
+                vec3 point = reflectionOrigin + reflected * secondaryDistance;
+                vec3 n = surfaceNormal(secondaryInstance, secondaryPrimitive, reflected);
+                color = directColor(secondaryInstance, point, n, camera.light.xyz);
+            }
+        }
+    }
+    imageStore(colorImage, ivec2(pixel), vec4(color, 1.0));
+    imageStore(depthImage, ivec2(pixel), vec4(depth, 0.0, 0.0, 0.0));
+}

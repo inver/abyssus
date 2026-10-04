@@ -32,6 +32,9 @@ sealed interface PanelState {
     /** No asset to describe: [message], and under it [hint] when there is one. */
     data class Empty(val message: String, val hint: String?) : PanelState
 
+    /** A scene row: the scene's runtime view settings, currently its Ray Tracing switch. Reads no file. */
+    data class SceneDetails(val file: VirtualFile, val name: String) : PanelState
+
     data class Details(val name: String, val meta: AssetMeta.Loaded, val faces: List<FaceCell>?, val hdr: HdrCell? = null) : PanelState
 
     /**
