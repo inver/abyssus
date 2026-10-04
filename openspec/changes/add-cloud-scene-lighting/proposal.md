@@ -32,7 +32,7 @@ Depends on `add-sky-clouds`.
   - ray-traced reflection misses (`add-scene-raytracing`).
   Tasks amend those changes' deltas if they are still open.
 
-**Mundus fields:**
+**Fields read/written:**
 - **Read:** `additional.lightsScene` and `additional.clouds` of `SKYBOX_PROCEDURAL` assets; the atmosphere
   parameters; the scene's `skyboxName`, `skyboxEnabled`, ambient light and light entities.
 - **Written:** nothing.

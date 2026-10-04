@@ -2,7 +2,7 @@
 
 ## 1. Prerequisites and contract reconciliation
 
-- [ ] 1.1 Confirm `decouple-from-mundus` has established the native scene contract and compatibility rules, and resolve scene-parameter ownership against `extract-scene-runtime` before implementation. Record exact prerequisite status and owner paths in this change's verification.md; if native writes remain prohibited, stop implementation of persistence rather than introducing a different storage path. Verify with `openspec status --change decouple-from-mundus --json`, its native-format tests and inspection of the active configuration.
+- [ ] 1.1 Confirm `decouple-from-mundus` has established the native scene contract (document markers, short identifiers, rejection of unsupported files), and resolve scene-parameter ownership against `extract-scene-runtime` before implementation. Record exact prerequisite status and owner paths in this change's verification.md; if the native contract is not in place, stop implementation of persistence rather than introducing a different storage path. Verify with `openspec status --change decouple-from-mundus --json`, its native-format tests and inspection of the active configuration.
 - [ ] 1.2 Amend `add-scene-raytracing` proposal/design/tasks and `specs/scene-raytracing/spec.md` to identify the old fixed-depth/refraction exclusions as superseded by this change, preserving unrelated platform and transparency requirements. Verify both changes with `openspec validate <change-name> --strict` and record the reconciliation. Do not mark the unimplemented Vulkan scene path complete.
 
 ## 2. Scene settings and optical data

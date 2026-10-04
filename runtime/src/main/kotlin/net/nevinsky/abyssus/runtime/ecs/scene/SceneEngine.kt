@@ -31,10 +31,9 @@ class SceneEngine : Engine() {
 
 /**
  * What the loader keeps of the `ecs` block besides the entities: every other top-level member (`archetypes`,
- * `componentIdentifiers`, `metadata`, in file order) as raw JSON, and the problems met while loading.
+ * `metadata`, in file order) as raw JSON, and the problems met while loading.
  */
 class SceneEcsDocument(val extras: Map<String, JsonNode>, val warnings: List<String>) {
     val archetypes: JsonNode? get() = extras["archetypes"]
-    val componentIdentifiers: JsonNode? get() = extras["componentIdentifiers"]
     val metadata: JsonNode? get() = extras["metadata"]
 }

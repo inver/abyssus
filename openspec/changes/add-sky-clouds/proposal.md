@@ -40,7 +40,7 @@ lighting follow in `add-cloud-scene-lighting`.
   - A preset named by a used sky counts as used for the unused mark.
 - **Skybox chooser.** A procedural sky with clouds enabled reads `procedural sky · clouds` in the chooser.
 
-**Mundus fields:**
+**Fields read/written:**
 - **Read:** the `type` of every asset `meta.json`; for a `SKYBOX_PROCEDURAL`, `additional.clouds` and the existing
   atmosphere fields; for a `WEATHER_PRESET`, `additional.low`, `mid` and `high`; the scene's `skyboxName`,
   `skyboxEnabled` and light entities (for the sun).
@@ -49,8 +49,8 @@ lighting follow in `add-cloud-scene-lighting`.
 **File format.**
 - No `.scene` or `.abss` change.
 - `additional.clouds` lives only in the plugin's own `SKYBOX_PROCEDURAL` type.
-- `WEATHER_PRESET` is a new Abyssus-only type. The Mundus editor does not know it, as it already does not know
-  `SKYBOX_PROCEDURAL` and `SKYBOX_HDR`.
+- `WEATHER_PRESET` is a native Abyssus asset type, like `SKYBOX_PROCEDURAL` and `SKYBOX_HDR`. Its `meta.json`
+  carries the native `format` / `formatVersion` markers.
 
 ### Out of scope
 
@@ -63,7 +63,7 @@ lighting follow in `add-cloud-scene-lighting`.
   `add-scene-raytracing` draw or sample the sky without clouds until `add-cloud-scene-lighting` supplies a cloudy-sky
   cube.
 - Writing a technique choice back to `meta.json` from the toolbar.
-- Making the Mundus editor read clouds or presets.
+- Supporting other editors reading clouds or presets.
 
 ## Capabilities
 

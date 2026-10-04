@@ -30,6 +30,14 @@ class AssetMetaEditorTest {
 
     private fun rejected(outcome: EditOutcome): EditError = (outcome as EditOutcome.Rejected).error
 
+    @Test fun legacyMetadataIsRefusedWithoutMutation() {
+        val root = net.nevinsky.abyssus.assets.json.JsonProcessor().readObject("""{"type":"TERRAIN","additional":{"size":100}}""")
+        val before = root.toString()
+        val outcome = AssetMetaEditor(AssetFieldDescriptions()).edit(root, "size", FieldValue.Int(100), FieldValue.Int(200))
+        org.junit.Assert.assertTrue(outcome is EditOutcome.Rejected)
+        org.junit.Assert.assertEquals(before, root.toString())
+    }
+
     @Test
     fun `terrain size and uv are read as the file holds them`() {
         val root = terrain()
@@ -79,7 +87,7 @@ class AssetMetaEditorTest {
 
     @Test
     fun `an omitted atmosphere field shows its default and an edit adds only that key`() {
-        val root = json.readObject("""{"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f","planetRadius":6360000.0}}""")
+        val root = json.readObject("""{"format":"abyssus","formatVersion":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f","planetRadius":6360000.0}}""")
         assertEquals(FieldValue.Real(20f), cur(root, MetaType.SKYBOX_PROCEDURAL, "sunIntensity"))
         assertEquals(EditOutcome.NoChange, edit(root, MetaType.SKYBOX_PROCEDURAL, "sunIntensity", FieldValue.Real(20f)))
         assertEquals(listOf("vertex", "fragment", "planetRadius"), root.get("additional").fieldNames().asSequence().toList())
@@ -164,7 +172,7 @@ class AssetMetaEditorTest {
 
     @Test
     fun `an omitted radius is checked against the default of the other`() {
-        val root = json.readObject("""{"type":"SKYBOX_PROCEDURAL","additional":{}}""")
+        val root = json.readObject("""{"format":"abyssus","formatVersion":1,"type":"SKYBOX_PROCEDURAL","additional":{}}""")
         assertEquals(
             EditError.ATMOSPHERE_ORDER,
             rejected(edit(root, MetaType.SKYBOX_PROCEDURAL, "planetRadius", FieldValue.Real(6500000f))),
@@ -173,7 +181,7 @@ class AssetMetaEditorTest {
 
     @Test
     fun `a stored value of the wrong shape is shown and can be replaced`() {
-        val root = json.readObject("""{"type":"TERRAIN","uuid":"u","additional":{"size":"big","uv":1.0,"splatMap":5}}""")
+        val root = json.readObject("""{"format":"abyssus","formatVersion":1,"type":"TERRAIN","uuid":"u","additional":{"size":"big","uv":1.0,"splatMap":5}}""")
         val size = cur(root, MetaType.TERRAIN, "size")
         assertEquals(FieldValue.Invalid("\"big\""), size)
         assertEquals(FieldValue.Invalid("5"), cur(root, MetaType.TERRAIN, "splatMap"))

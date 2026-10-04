@@ -23,6 +23,17 @@ class SceneLoadingTest {
     private val folder get() = testProject("Untitled").toPath()
     private val main get() = folder.resolve("scenes/Main Scene.scene")
 
+    @Test fun nativeLoadingRejectsLegacyAndFutureDocumentsWithoutBlockingSiblings() {
+        val messages = mutableListOf<String>()
+        val service = loading(messages)
+        for (text in listOf("{}", """{"format":"abyssus","formatVersion":2}""", """{"format":"abyssus","formatVersion":1,"ecs":{"componentIdentifiers":{}}}""")) {
+            assertNull(service.load(text, folder))
+            if (!text.contains("componentIdentifiers")) assertThrows(net.nevinsky.abyssus.assets.format.UnsupportedDocumentFormat::class.java) { service.projectName(text) }
+        }
+        assertEquals(3, messages.size)
+        assertNotNull(service.load(main))
+    }
+
     @Test fun untitledProjectReadsOutsideTheIde() {
         val project = requireNotNull(loading().project(folder))
         assertEquals("Untitled", project.name)
@@ -41,8 +52,8 @@ class SceneLoadingTest {
     }
 
     @Test fun projectNameKeepsTheExistingDtoBinding() {
-        assertEquals("123", loading().projectName("""{"name":123}"""))
-        assertNull(loading().projectName("{}"))
+        assertEquals("123", loading().projectName("""{"format":"abyssus","formatVersion":1,"name":123}"""))
+        assertNull(loading().projectName("""{"format":"abyssus","formatVersion":1}"""))
     }
 
     @Test fun anEditorParseFailureIsLoggedAndRethrown() {

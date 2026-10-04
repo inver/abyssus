@@ -13,7 +13,7 @@ sky, any scene or the project file.
 
 - **WHEN** a copy of `Untitled`'s `skybox_physical` has `"clouds": {"enabled": true, "preset": "builtin:storm",
   "high": {"type": "cirrus"}}` and the user creates `weather_mystorm` from it
-- **THEN** `assets/weather_mystorm/meta.json` has `"type": "WEATHER_PRESET"`, a new `uuid`, the storm preset's low and
+- **THEN** `assets/weather_mystorm/meta.json` has `"format": "abyssus"`, `"formatVersion": 1`, `"type": "WEATHER_PRESET"`, a new `uuid`, the storm preset's low and
   mid bands and the sky's cirrus high band, and it is selected in the tree and the Properties panel
 
 #### Scenario: New preset starts unused

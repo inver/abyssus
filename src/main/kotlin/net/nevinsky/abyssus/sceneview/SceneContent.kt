@@ -25,14 +25,14 @@ import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
 import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
 import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
 
-/** [w] is 1 for the identity rotation, which Mundus leaves out of the file together with the other default fields. */
+/** [w] is 1 for the identity rotation, which native scenes leave out of the file together with the other default fields. */
 data class Quat(val x: Float, val y: Float, val z: Float, val w: Float) {
     companion object {
         val IDENTITY = Quat(0f, 0f, 0f, 1f)
     }
 }
 
-/** Mundus `PositionComponent`: position 0, identity rotation and unit scale unless the file says otherwise. */
+/** Native `PositionComponent`: position 0, identity rotation and unit scale unless the file says otherwise. */
 data class PlacementTransform(val position: Vec3, val rotation: Quat, val scale: Vec3) {
     companion object {
         val IDENTITY = PlacementTransform(Vec3(0f, 0f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f))

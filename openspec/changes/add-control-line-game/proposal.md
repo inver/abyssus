@@ -11,13 +11,13 @@ tuning a plane is an edit in Abyssus, not a code change.
 ## What Changes
 
 - **A game module `games/control-line`** (`:games:control-line`): a libGDX desktop application (LWJGL3 backend) on
-  `runtime` and `physics`, with its own bundled Mundus project (a flying field with terrain, a sky, the pilot circle
+  `runtime` and `physics`, with its own bundled native Abyssus project (a flying field with terrain, a sky, the pilot circle
   and the planes parked beside it).
 - **Game components,** declared with `@SceneComponent` / `@Field` and editable in Abyssus:
   - `PilotComponent`: handle height and line spacing at the handle.
   - `PlaneComponent`: class, line length and diameter, leadout anchors, engine thrust and fuel time, aerodynamic
     coefficients (wing area, lift slope, zero-lift drag, elevator effect, pitch damping), rudder and engine offset.
-  - A plane's display name is its Mundus `NameComponent`, and its mass and collider are the physics components from
+  - A plane's display name is its `NameComponent`, and its mass and collider are the physics components from
     `add-jolt-physics`.
 - **Flight.** The plane is a dynamic Jolt body. At takeoff, game code creates two lines from the pilot's handle (a
   kinematic body) to the plane's leadouts as distance constraints of 0 to L, so they pull when taut and go slack.
@@ -43,11 +43,11 @@ tuning a plane is an edit in Abyssus, not a code change.
   `play.json` into the bundled project, so pressing Play in Abyssus flies the plane selected in the tree (or the first
   parked plane) with the same input.
 
-**Mundus files.**
+**Fields read/written.**
 - **Read:** the bundled project's `.abss` and field `.scene`: `NameComponent`, `TypeComponent`, `PositionComponent`,
   `RenderComponent` (plane models and the field terrain), the terrain's `.terra` data, sky assets, and the custom
   `PilotComponent`, `PlaneComponent` and physics components.
-- **Written:** the game itself writes no Mundus file, only its score file. Its scene data is authored in Abyssus under
+- **Written:** the game itself writes no project, scene or asset file, only its score file. Its scene data is authored in Abyssus under
   the `add-custom-components` rules. No further format change.
 
 **Out of scope.**
@@ -78,7 +78,7 @@ None.
   the libGDX LWJGL3 backend with desktop natives, and gets a `run` task and the schema / play export task.
   `./gradlew check` runs its headless tests (flight, scoring, maneuver detection, screen flow logic). Anything that
   opens a window stays behind `-Dabyssus.glTests=true`.
-- **Assets:** a small bundled Mundus project under the module with plane models, a field terrain and a sky. Asset
+- **Assets:** a small bundled native Abyssus project under the module (`format: "abyssus"`, `formatVersion: 1`) with plane models, a field terrain and a sky. Asset
   licensing must be recorded.
 - **Docs:** `AGENTS.md` (layout and commands), `docs/ai/architecture.md`, a `games/control-line/README.md` with how to
   open the bundled project in Abyssus (as a copy, like the `runIde` fixture rule) and how to play.

@@ -18,6 +18,29 @@ class AssetFilesTest {
     private val json = JsonProcessor()
     private val files = AssetFiles(testProject("Untitled"), json)
 
+    @Test fun rejectedSnapshotsHaveNoFilesOrUuidsAndReportOncePerRevision() {
+        val dir = Files.createTempDirectory("native-snapshots").toFile()
+        try {
+            val asset = File(dir, "assets/m").apply { mkdirs() }
+            File(asset, "model.gltf").writeText("model")
+            var text = """{"type":"MODEL","uuid":"u","additional":{"file":"model.gltf"}}"""
+            val messages = mutableListOf<String>()
+            val snapshot = AssetFiles(dir, json, MetaTextSource { text }, log = net.nevinsky.abyssus.assets.AssetLog { message, _ -> messages += message })
+            assertNull(snapshot.model("m"))
+            assertNull(snapshot.metaType("m"))
+            assertNull(snapshot.loadFile("m", "model.gltf"))
+            assertEquals(1, messages.size)
+            org.junit.Assert.assertTrue(messages.single().contains("meta.json"))
+            org.junit.Assert.assertTrue(messages.single().contains("format"))
+            text = """{"format":"abyssus","formatVersion":2,"type":"MODEL","additional":{"file":"model.gltf"}}"""
+            assertNull(snapshot.model("m"))
+            assertEquals(2, messages.size)
+            text = """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{"file":"model.gltf"}}"""
+            assertEquals("model.gltf", snapshot.model("m")?.name)
+            assertEquals(2, messages.size)
+        } finally { dir.deleteRecursively() }
+    }
+
     @Test
     fun resolvesModelFileFromMeta() {
         val f = files.model("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb")
@@ -46,7 +69,7 @@ class AssetFilesTest {
         File(dir, "assets/m").mkdirs()
         File(dir, "assets/m/meta.json").writeText("{ not json")
         assertNull(AssetFiles(dir, json).model("m"))
-        File(dir, "assets/m/meta.json").writeText("""{"additional":{"file":"missing.gltf"}}""")
+        File(dir, "assets/m/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"additional":{"file":"missing.gltf"}}""")
         assertNull(AssetFiles(dir, json).model("m"))
     }
 
@@ -56,11 +79,11 @@ class AssetFilesTest {
         File(dir, "assets/terr").mkdirs()
         File(dir, "assets/terr/terrain.data").writeBytes(ByteArray(16))
         File(dir, "assets/terr/meta.json").writeText(
-            """{"additional":{"terrainFile":"terrain.data","size":10,"uv":2.0,"splatBase":"u-1","splatR":"u-missing"}}"""
+            """{"format":"abyssus","formatVersion":1,"additional":{"terrainFile":"terrain.data","size":10,"uv":2.0,"splatBase":"u-1","splatR":"u-missing"}}"""
         )
         File(dir, "assets/tex").mkdirs()
         File(dir, "assets/tex/a.png").writeText("x")
-        File(dir, "assets/tex/meta.json").writeText("""{"uuid":"u-1","type":"TEXTURE","additional":{"file":"a.png"}}""")
+        File(dir, "assets/tex/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"u-1","type":"TEXTURE","additional":{"file":"a.png"}}""")
         val t = AssetFiles(dir, json).terrain("terr")!!
         assertEquals(setOf("splatBase"), t.splat.keys)
         assertEquals("a.png", t.splat["splatBase"]!!.name)
@@ -71,7 +94,7 @@ class AssetFilesTest {
         val dir = Files.createTempDirectory("proj").toFile()
         File(dir, "assets/sky").mkdirs()
         val meta = File(dir, "assets/sky/meta.json")
-        meta.writeText("""{"version":1,"lastModified":1,"type":"SKYBOX","additional":{"top":"t.png"}}""")
+        meta.writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX","additional":{"top":"t.png"}}""")
         val files = AssetFiles(dir, json)
         assertEquals(MetaType.SKYBOX, files.metaType("sky"))
         assertEquals("t.png", files.loadAsset(SkyboxMeta::class.java, "sky")?.meta?.additional?.top)
@@ -90,7 +113,7 @@ class AssetFilesTest {
     fun metaTypeOfAnUnknownOrBrokenMetaIsUnknownOrNull() {
         val dir = Files.createTempDirectory("proj").toFile()
         File(dir, "assets/odd").mkdirs()
-        File(dir, "assets/odd/meta.json").writeText("""{"type":"SOMETHING_NEW"}""")
+        File(dir, "assets/odd/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"type":"SOMETHING_NEW"}""")
         File(dir, "assets/bad").mkdirs()
         File(dir, "assets/bad/meta.json").writeText("{ not json")
         val files = AssetFiles(dir, json)
@@ -104,7 +127,7 @@ class AssetFilesTest {
         File(dir, "assets/terr").mkdirs()
         File(dir, "assets/terr/terrain.data").writeBytes(ByteArray(16))
         File(dir, "assets/terr/meta.json").writeText(
-            """{"additional":{"terrainFile":"terrain.data","size":10,"uv":2.0,"splatBase":"u-1"}}"""
+            """{"format":"abyssus","formatVersion":1,"additional":{"terrainFile":"terrain.data","size":10,"uv":2.0,"splatBase":"u-1"}}"""
         )
         return dir
     }
@@ -112,7 +135,7 @@ class AssetFilesTest {
     private fun addTexture(dir: File, folder: String, uuid: String, image: String) {
         File(dir, "assets/$folder").mkdirs()
         File(dir, "assets/$folder/$image").writeText("x")
-        File(dir, "assets/$folder/meta.json").writeText("""{"uuid":"$uuid","type":"TEXTURE","additional":{"file":"$image"}}""")
+        File(dir, "assets/$folder/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"$uuid","type":"TEXTURE","additional":{"file":"$image"}}""")
     }
 
     @Test
@@ -133,7 +156,7 @@ class AssetFilesTest {
         addTexture(dir, "tex", "u-1", "a.png")
         val first = AssetFiles(dir, json)
         assertEquals("a.png", first.terrain("terr")!!.splat["splatBase"]!!.name)
-        File(dir, "assets/tex/meta.json").writeText("""{"uuid":"u-1","type":"TEXTURE","additional":{"file":"b.png"}}""")
+        File(dir, "assets/tex/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"u-1","type":"TEXTURE","additional":{"file":"b.png"}}""")
         File(dir, "assets/tex/b.png").writeText("y")
         assertEquals("b.png", first.refreshed().terrain("terr")!!.splat["splatBase"]!!.name)
     }
@@ -142,7 +165,7 @@ class AssetFilesTest {
     fun aChangedTextureUuidUnresolvesTheReference() {
         val dir = project()
         addTexture(dir, "tex", "u-1", "a.png")
-        File(dir, "assets/tex/meta.json").writeText("""{"uuid":"u-2","type":"TEXTURE","additional":{"file":"a.png"}}""")
+        File(dir, "assets/tex/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"u-2","type":"TEXTURE","additional":{"file":"a.png"}}""")
         assertEquals(emptyMap<String, File>(), AssetFiles(dir, json).terrain("terr")!!.splat)
     }
 
@@ -158,7 +181,7 @@ class AssetFilesTest {
     fun metadataIsReadThroughTheSuppliedSource() {
         val dir = project()
         val edited = MetaTextSource { f ->
-            if (f.parentFile.name == "terr") """{"additional":{"terrainFile":"terrain.data","size":77,"uv":3.0}}""" else f.readText()
+            if (f.parentFile.name == "terr") """{"format":"abyssus","formatVersion":1,"additional":{"terrainFile":"terrain.data","size":77,"uv":3.0}}""" else f.readText()
         }
         val t = AssetFiles(dir, json, edited).terrain("terr")!!
         assertEquals(77, t.size)

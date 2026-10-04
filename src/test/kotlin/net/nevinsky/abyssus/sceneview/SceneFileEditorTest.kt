@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.testMetaFiles
 class SceneFileEditorTest : BasePlatformTestCase() {
     private val provider = SceneFileEditorProvider()
 
-    private fun file(path: String, text: String = "{}") = myFixture.addFileToProject(path, text).virtualFile
+    private fun file(path: String, text: String = """{"format":"abyssus","formatVersion":1}""") = myFixture.addFileToProject(path, text).virtualFile
 
     fun testAcceptsOnlyExactSceneExtension() {
         assertTrue(provider.accept(project, file("a/Main.scene")))
@@ -44,13 +44,13 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testValidSceneEditorCreatesAndDisposesWithoutThrowing() {
         // In a headless/GL-less environment the tab shows the glUnavailable message; either way no exception.
-        val editor = provider.createEditor(project, file("ok/Main.scene", """{"name":"x"}""")) as SceneFileEditor
+        val editor = provider.createEditor(project, file("ok/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"x"}""")) as SceneFileEditor
         assertNotNull(editor.component)
         editor.dispose()
     }
 
     fun testLateGlFailureReplacesTabWithGlUnavailableMessage() {
-        val editor = provider.createEditor(project, file("late/Main.scene", """{"name":"x"}""")) as SceneFileEditor
+        val editor = provider.createEditor(project, file("late/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"x"}""")) as SceneFileEditor
         try {
             editor.showGlFailure(RuntimeException("no GL 3.2"))
             val status = editor.statusText
@@ -95,14 +95,14 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testSceneContentFollowsEdits() {
         val views = mutableListOf<FakeView>()
-        val entity = """{"ecs":{"entities":{"1":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"m"}}}}}}}}"""
-        val (editor, f) = fakeEditor("content/a.scene", "{}", views)
+        val entity = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"1":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"m"}}}}}}}}"""
+        val (editor, f) = fakeEditor("content/a.scene", """{"format":"abyssus","formatVersion":1}""", views)
         try {
             assertTrue(views[0].current.content.models.isEmpty())
             setText(f, entity)
             editor.afterThePause()
             assertEquals(listOf("m"), views[0].current.content.models.map { it.assetName })
-            setText(f, "{}")
+            setText(f, """{"format":"abyssus","formatVersion":1}""")
             editor.afterThePause()
             assertTrue(views[0].current.content.models.isEmpty())
         } finally {
@@ -112,7 +112,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testAddedLightSelectsInViewEvenWithoutATreeRow() {
         val views = mutableListOf<FakeView>()
-        val (editor, file) = fakeEditor("selection/new-light.scene", """{"ecs":{"entities":{}}}""", views)
+        val (editor, file) = fakeEditor("selection/new-light.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""", views)
         try {
             val actions = net.nevinsky.abyssus.projectView.AddLightGroup(project, file, { Vec3(0f, 0f, 0f) }).getChildren(null)
             actions[0].actionPerformed(com.intellij.testFramework.TestActionEvent.createTestEvent(actions[0]))
@@ -123,7 +123,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testTreeSelectionReachesSceneView() {
         val views = mutableListOf<FakeView>()
-        val text = """{"ecs":{"entities":{"7":{"components":{"PositionComponent":{}}}}}}"""
+        val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"7":{"components":{"PositionComponent":{}}}}}}"""
         val (editor, file) = fakeEditor("selection/a.scene", text, views)
         try {
             val entry = net.nevinsky.abyssus.projectView.DtoRow("7", net.nevinsky.abyssus.filetype.SceneJson.parse(text)["ecs"]["entities"]["7"])
@@ -135,11 +135,11 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testRendersAndUpdatesInPlaceOnUnsavedEdits() {
         val views = mutableListOf<FakeView>()
-        val (editor, f) = fakeEditor("live/a.scene", """{"name":"a"}""", views)
+        val (editor, f) = fakeEditor("live/a.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""", views)
         try {
             assertEquals(1, views.size)
             assertNull(editor.statusText)
-            setText(f, """{"name":"a","fogEnabled":true,"fog":{"color":{"r":1,"g":0,"b":0,"a":1},"density":0.5}}""")
+            setText(f, """{"format":"abyssus","formatVersion":1,"name":"a","fogEnabled":true,"fog":{"color":{"r":1,"g":0,"b":0,"a":1},"density":0.5}}""")
             editor.afterThePause()
             assertEquals(1, views.size)
             assertEquals(1, views[0].updates)
@@ -151,13 +151,13 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testBadEditDisposesViewThenFixRecreatesIt() {
         val views = mutableListOf<FakeView>()
-        val (editor, f) = fakeEditor("live/b.scene", """{"name":"b"}""", views)
+        val (editor, f) = fakeEditor("live/b.scene", """{"format":"abyssus","formatVersion":1,"name":"b"}""", views)
         try {
             setText(f, "{ nope")
             editor.afterThePause()
             assertTrue(views[0].disposed)
             assertTrue(editor.statusText!!.startsWith("Cannot read scene"))
-            setText(f, """{"name":"b"}""")
+            setText(f, """{"format":"abyssus","formatVersion":1,"name":"b"}""")
             editor.afterThePause()
             assertEquals(2, views.size)
             assertFalse(views[1].disposed)
@@ -169,14 +169,14 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testDisposingEditorDisposesView() {
         val views = mutableListOf<FakeView>()
-        val (editor, _) = fakeEditor("live/c.scene", """{"name":"c"}""", views)
+        val (editor, _) = fakeEditor("live/c.scene", """{"format":"abyssus","formatVersion":1,"name":"c"}""", views)
         com.intellij.openapi.util.Disposer.dispose(editor)
         assertTrue(views.single().disposed)
     }
 
     fun testViewFailureShowsGlUnavailableAndDisposesView() {
         val views = mutableListOf<FakeView>()
-        val (editor, _) = fakeEditor("live/d.scene", """{"name":"d"}""", views)
+        val (editor, _) = fakeEditor("live/d.scene", """{"format":"abyssus","formatVersion":1,"name":"d"}""", views)
         try {
             views[0].onFailure!!.invoke(RuntimeException("no GL"))
             com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
@@ -189,12 +189,12 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testAbssEditRefreshesCamera() {
         val views = mutableListOf<FakeView>()
-        val abss = myFixture.addFileToProject("Q/Q.abss", """{"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3}}}""").virtualFile
-        val scene = file("Q/scenes/a.scene", """{"name":"a"}""")
+        val abss = myFixture.addFileToProject("Q/Q.abss", """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3}}}""").virtualFile
+        val scene = file("Q/scenes/a.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""")
         val editor = newSceneEditor(project, scene) { p -> FakeView(p).also { views += it } }
         try {
             assertEquals(1f, views[0].current.camera.position.x, 0f)
-            setText(abss, """{"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":5,"y":2,"z":3}}}""")
+            setText(abss, """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":5,"y":2,"z":3}}}""")
             editor.afterThePause()
             assertEquals(5f, views[0].current.camera.position.x, 0f)
         } finally {
@@ -350,10 +350,10 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testTypingBurstReloadsOnce() {
         val views = mutableListOf<FakeView>()
-        val (editor, f) = fakeEditor("burst/a.scene", """{"name":"a"}""", views)
+        val (editor, f) = fakeEditor("burst/a.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""", views)
         try {
             val before = views[0].updates
-            for (i in 1..10) setText(f, """{"skyboxEnabled":true,"skyboxName":"s$i"}""")
+            for (i in 1..10) setText(f, """{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"s$i"}""")
             assertEquals("nothing is re-read while typing", before, views[0].updates)
             editor.afterThePause()
             assertEquals(before + 1, views[0].updates)
@@ -367,11 +367,11 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testInvalidIntermediateTextNeverShowsError() {
         val views = mutableListOf<FakeView>()
-        val (editor, f) = fakeEditor("burst/b.scene", """{"name":"a"}""", views)
+        val (editor, f) = fakeEditor("burst/b.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""", views)
         try {
             setText(f, """{"name":""")
             assertNull("the half-typed text is not read", editor.statusText)
-            setText(f, """{"skyboxEnabled":true,"skyboxName":"fixed"}""")
+            setText(f, """{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"fixed"}""")
             editor.afterThePause()
             assertNull(editor.statusText)
             assertFalse(views[0].disposed)
@@ -383,9 +383,9 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testDisposingWithAPendingReloadDeliversNothing() {
         val views = mutableListOf<FakeView>()
-        val (editor, f) = fakeEditor("burst/c.scene", """{"name":"a"}""", views)
+        val (editor, f) = fakeEditor("burst/c.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""", views)
         val updates = views[0].updates
-        setText(f, """{"name":"late"}""")
+        setText(f, """{"format":"abyssus","formatVersion":1,"name":"late"}""")
         com.intellij.openapi.util.Disposer.dispose(editor)
         editor.afterThePause()
         assertEquals(updates, views[0].updates)

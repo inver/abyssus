@@ -3,6 +3,12 @@
 # abyssus Changelog
 
 ## [Unreleased]
+
+### Changed
+- Abyssus is now an independent libGDX scene editor using native format version 1. Projects, scenes and asset metadata
+  require `format: "abyssus"` and integral `formatVersion: 1`; renderables use stable native kinds and components use short names.
+- Older unmarked files and files from other editors are unsupported. Plugin loading, editing and automatic formatting refuse them without
+  rewriting them. No importer or automatic migration is included. External model, image, terrain binary and recipe encodings remain unchanged.
 ### Added
 - **Ray Tracing** switch in Abyssus Properties for a selected scene (the Scene View itself has no ray tracing button): it flips the open Scene View, opening it when needed, and shows the status, the reason it is unavailable or failed, and Retry
 - **Ray Tracing** (experimental, off by default): ray traced shadows and reflections, sky, fog and transparency on a Metal (macOS) or Vulkan (Windows, Linux) GPU, with an automatic return to the normal renderer on failure

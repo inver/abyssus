@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.terrain
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationDraft
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerator
 import kotlin.coroutines.cancellation.CancellationException
-import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
 
 /** How a started preview ended; a superseded or cancelled one reports nothing at all. */
 sealed interface PreviewOutcome {

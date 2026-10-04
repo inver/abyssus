@@ -3,7 +3,7 @@
 ## Purpose
 
 Lets users add a directional light, a sun or a spot light to a scene from the plugin, so a scene can be lit without
-opening Mundus and without writing entity JSON by hand.
+writing entity JSON by hand.
 
 ## Requirements
 
@@ -41,14 +41,14 @@ SHALL NOT re-read it.
 
 ### Requirement: Adding a light creates a new entity
 
-Choosing a kind SHALL add one new entity to the scene file holding a name, a type of `LIGHT_DIRECTIONAL` (Directional and
+Choosing a kind in a native scene SHALL add one new entity to the scene file holding a name, a type of `LIGHT_DIRECTIONAL` (Directional and
 Sun) or `LIGHT_SPOT` (Spot), a position and a light component. Its id SHALL be one more than the highest numeric entity id
 of the scene, and its name the kind's label and that id. Everything else in the file SHALL stay as it was.
 
 #### Scenario: Add a directional light to the fixture scene
 
-- **WHEN** Directional is chosen in `Main Scene`, whose highest entity id is `6`
-- **THEN** the file gains entity `7` named `Directional Light 7` with type `LIGHT_DIRECTIONAL` and a light of color `1,1,1,1` and intensity `1`, and entities `0` to `6` are unchanged
+- **WHEN** Directional is chosen in `Main Scene`, whose highest entity id is `8`
+- **THEN** the file gains entity `9` named `Directional Light 9` with type `LIGHT_DIRECTIONAL` and a light of color `1,1,1,1` and intensity `1`, and entities `0` to `8` are unchanged
 
 #### Scenario: Add a sun
 
@@ -113,7 +113,7 @@ file text from before it.
 ### Requirement: The written scene stays loadable
 
 An added light SHALL use the plugin-defined Name, Type, Position and Light component structure, keeping the scene's own key order, number text and
-formatting, and leaving its `ecs` bookkeeping valid, so the scene loads again in the plugin without new warnings.
+formatting, and leaving its native `ecs` data valid without creating `componentIdentifiers` or Java class names, so the scene loads again in the plugin without new warnings.
 
 #### Scenario: Reload
 
@@ -123,4 +123,4 @@ formatting, and leaving its `ecs` bookkeeping valid, so the scene loads again in
 #### Scenario: Unrelated data survives
 
 - **WHEN** a light is added to `Main Scene`
-- **THEN** the `PickableComponent`, `DependenciesComponent`, editor-only renderables, `archetypes`, `componentIdentifiers` and `metadata` of the other entities are as before
+- **THEN** the `PickableComponent`, `DependenciesComponent`, unknown native renderable kinds, `archetypes`, native markers and `metadata` of the other entities are as before

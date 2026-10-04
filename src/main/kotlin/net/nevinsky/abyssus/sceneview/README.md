@@ -179,3 +179,8 @@ same status, reason and Retry. It reaches the live view through `SceneRayControl
 Scene View open, switching it on opens one (`openSceneView`) and applies the request when that view registers. The
 switch follows the view's `RayModeState`, so it never disagrees with it, and nothing is persisted: the mode ends with the view and the
 scene file is never written.
+
+Native scene input uses `format: "abyssus"` and integral `formatVersion: 1`. Asset renderables dispatch on `kind: "asset"`
+and their folder reference, without class loading. Unknown native kinds draw nothing and remain raw; light and camera
+look-at resolution still uses the preserved entity ids and transforms. Unsupported enclosing documents are rejected
+before view construction, and unsupported asset metadata never reaches GPU build.

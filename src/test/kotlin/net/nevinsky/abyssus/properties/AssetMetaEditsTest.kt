@@ -71,7 +71,7 @@ class AssetMetaEditsTest : BasePlatformTestCase() {
     }
 
     fun testAnOmittedDefaultIsNotMaterializedByAnEqualEdit() {
-        val text = """{"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f"}}"""
+        val text = """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f"}}"""
         val (dir, meta, _) = open("sky2", text)
         assertEquals(AssetEditResult.Unchanged, update(project, dir, "sunIntensity", FieldValue.Real(20f), FieldValue.Real(20f)))
         assertEquals(text, textOf(meta))

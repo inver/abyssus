@@ -116,7 +116,7 @@ class RaySceneSnapshotTest {
         assertEquals(RaySceneFallback.ASSET_FAILURE, (failed as RaySceneConversion.Fallback).reason)
     }
 
-    @Test fun `environment and fog preserve linear ambient and Mundus density gradient`() {
+    @Test fun `environment and fog preserve linear ambient and the density gradient`() {
         val p = params().copy(ambient = Rgba(.2f, .3f, .4f, 1f), fog = FogParams(Rgba(.1f, .2f, .3f, 1f), .02f, 1.7f))
         val frame = ready(p)
         assertEquals(RayColor(.2f, .3f, .4f), frame.scene.environment.ambient)

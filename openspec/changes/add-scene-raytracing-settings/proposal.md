@@ -15,7 +15,7 @@ Scene ray tracing exposes only an on/off switch: users cannot choose an image-qu
 
 **Fields read/written:** add root `rayTracing.targetSamplesPerPixel`, `rayTracing.maxRaysPerFrame`, `rayTracing.maxReflectionBounces`, and `rayTracing.maxRefractionBounces`; add `ecs.entities.<id>.components.RenderComponent.rayTracingMaterials.<material-id>.transmission` and `.ior`. Continue reading existing renderable asset references, transforms, model material identifiers, lighting, sky and fog fields. No `.abss`, model source or asset `meta.json` writes are introduced.
 
-**Format impact:** these are additive Abyssus scene fields, with defaults omitted. They are not established Mundus fields. Implementation depends on `decouple-from-mundus` establishing the native document contract and updating compatibility constraints; this planning change does not modify workflow configuration or convert legacy files.
+**Format impact:** these are additive Abyssus scene fields, with defaults omitted. They are native Abyssus scene fields inside the version 1 contract. Implementation depends on `decouple-from-mundus` establishing the native document contract; this planning change does not modify workflow configuration or convert legacy files.
 
 **Out of scope:** persisting the enable switch, a general material editor, imported transmission extensions/textures, raster refraction, water, caustics, diffuse global illumination, dispersion, absorbing volumes, overlapping/nested refractive solids, and completing the currently unimplemented Vulkan scene renderer.
 

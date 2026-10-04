@@ -50,7 +50,7 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
 import net.nevinsky.abyssus.assets.META_FILE
-import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.dto.SceneReader
 import net.nevinsky.abyssus.dto.SceneDocumentCache

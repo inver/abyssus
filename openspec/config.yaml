@@ -3,17 +3,19 @@ schema: spec-driven
 # Constraints an agent cannot infer from the code. Facts about the code itself live in AGENTS.md and docs/ai/;
 # read those for commands, layout and conventions.
 context: |
-  Abyssus is an IntelliJ Platform plugin (IC 2025.2.4+) for Mundus game projects. Start from AGENTS.md; the docs index
+  Abyssus is an IntelliJ Platform plugin (IC 2025.2.4+) for native Abyssus game projects. Start from AGENTS.md; the docs index
   is docs/README.md.
 
-  File-format compatibility:
-  - .scene, .abss and asset meta.json files are Mundus's format, read and written by the Mundus editor too.
-  - Never rename, drop or reorder their keys. Never write values Mundus does not write.
-  - Keep defaults omitted as Mundus does. Change only the values an edit is about.
+  Native file-format contract:
+  - .scene, .abss and asset meta.json require format: "abyssus" and integral formatVersion: 1.
+  - Validate before reading, enumerating, editing, generating previews or formatting. Unsupported files stay unchanged.
+  - Component identifiers are short names; asset renderables use kind: "asset". Refuse reserved class/identifier-table fields.
+  - Preserve unknown native extension payloads, unrelated key order, number text and omitted defaults.
+  - No external-editor compatibility, importer or automatic migration is promised.
   - A display-only rename in the UI (as skyboxName is shown as "skybox") must leave the file key alone.
 
   Writes and module boundary:
-  - Every write to a scene or project file goes through editSceneJson: one undoable command that keeps the file's
+  - Every document edit to a scene, project or asset metadata file goes through editSceneJson: one undoable command that keeps the file's
     formatting and number text.
   - A plan that needs another write path must say why.
   - gdx-model stays a plain JVM library with no IntelliJ or plugin imports; it is meant to be reusable in other libGDX
@@ -36,7 +38,7 @@ context: |
 
 rules:
   proposal:
-    - "Name the Mundus file fields the change reads or writes, and say whether the file format changes (it should not)."
+    - "Name the native file fields the change reads or writes, its document validation and any deliberate versioned format changes."
     - "State what is out of scope, especially features a design board or reference shows that this change does not build."
   specs:
     - "Use the Untitled fixture (src/test/testData/project/Untitled) in scenarios where it fits, with its real entity ids, names and values."

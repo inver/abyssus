@@ -26,7 +26,7 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
 import net.nevinsky.abyssus.assets.META_FILE
-import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
 import net.nevinsky.abyssus.assets.files.MetaType
 import net.nevinsky.abyssus.assets.sky.cube.SKYBOX_FACES
@@ -114,7 +114,7 @@ private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreview
  * `Empty` with a message when the scene cannot be read or the entity or component is gone.
  */
 fun readEntityState(target: ComponentTarget, services: PanelServices): PanelState {
-    val root = runCatchingKeepingCancellation { SceneJson.parse(runReadAction { textOf(target.file) }) }
+    val root = runCatchingKeepingCancellation { SceneJson.parse(runReadAction { textOf(target.file) }).also { net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().requireSupported(it, net.nevinsky.abyssus.assets.format.DocumentKind.SCENE) } }
         .getOrElse { return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.displayMessage()), null) }
     val entity = SceneEcsPaths().entities(root)?.get(target.entityId)?.takeIf { it.isObject }
         ?: return PanelState.Empty(AbyssusBundle.message("propertiesEntityGone", target.entityId), null)

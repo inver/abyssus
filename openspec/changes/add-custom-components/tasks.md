@@ -2,16 +2,16 @@
 
 ## 1. Spike and rule
 
-- [ ] 1.1 Spike: in the Mundus editor, open a copy of `Untitled` whose `Main Scene` entity `0` has an added
-      `"PlaneComponent": {"lineLength": 22}` with a `componentIdentifiers` entry `"net.example.PlaneComponent":
-      "PlaneComponent"`, and an `abyssus/` folder holding a file. Record: does the scene open, is the entity kept, and
-      what does saving from Mundus do to the component, the identifier and the folder. Verify: the findings are written
-      in `docs/ai/file-formats.md` under "Game components"; if Mundus fails to open the scene, stop and raise it with
-      the user before 1.2
-- [ ] 1.2 Propose the new wording of the Mundus compatibility rule in `openspec/config.yaml` (Mundus's own keys keep
-      every rule; game-declared components may be added as `custom-scene-components` defines) and the matching hard
-      rule in `AGENTS.md`. Apply both only after the user confirms the wording. Verify: the confirmation is recorded
-      here and `openspec validate add-custom-components --strict` still passes
+- [ ] 1.1 Confirm the native contract from `decouple-from-mundus` is in place: short component names are the stable
+      identifiers, `AbyssusDocumentFormat` treats an unregistered or custom component payload as opaque, and the loader
+      and writer keep an unknown component raw. No spike against another editor is needed. Verify:
+      `./gradlew :core:test --tests 'net.nevinsky.abyssus.assets.format.AbyssusDocumentFormatTest'` (opaque custom
+      payload case) and `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.runtime.ecs.SceneEcsLoaderTest' --tests
+      'net.nevinsky.abyssus.runtime.ecs.SceneEcsWriterTest'` (unknown component kept) pass
+- [ ] 1.2 Record the rule for game components in `docs/ai/file-formats.md` under "Game components": they are native
+      extension data keyed by short name, written without class names or identifier tables, and a scene that holds
+      `ecs.componentIdentifiers` is rejected. Verify: `scripts/check-docs.sh` passes and `openspec validate
+      add-custom-components --strict` still passes
 
 ## 2. Fixture
 
@@ -32,10 +32,10 @@
       `custom-scene-components` (`lineLength` `"long"` and `2` fall back to `18` with one message each naming entity,
       component and field; `25.0` writes `25`; all-default writes `{}`) and passes with the same command as 3.1
 - [ ] 3.3 Add `ReflectiveCodec` and the registry in `ComponentCodecs` with `ComponentRegistry` passed through
-      `SceneLoading` (design decision 3); `SceneEcsWriter` appends missing `componentIdentifiers` entries. Verify:
+      `SceneLoading` (design decision 3); `SceneEcsWriter` writes the short name only. Verify:
       `SchemaJsonRoundTripTest` (every field type gives identical text through `ReflectiveCodec` and `SchemaJson`),
-      `ComponentCodecsTest.aGameCannotTakeAMundusName`, and `SceneEcsWriterTest.firstPlaneAddsOneIdentifierAtTheEnd` /
-      `existingIdentifierIsKept` pass with `./gradlew :runtime:test`
+      `ComponentCodecsTest.aGameCannotTakeABuiltInName`, and `SceneEcsWriterTest.declaredComponentWritesNoIdentifierTable`
+      pass with `./gradlew :runtime:test`
 
 ## 4. Runtime: schema file
 
@@ -56,11 +56,9 @@
       plugin; a broken file gives one message naming `components.schema.json`; a removed contribution drops its
       components) passes with `./gradlew :test --tests 'net.nevinsky.abyssus.schema.ComponentSchemasTest'`
 - [ ] 5.2 Make `ComponentEditor` an instance built from the schemas, with `SchemaCodec` / `SchemaValues`, the new
-      `INT` and `BOOLEAN` field kinds, limit and choice checks, typed asset references, and the `componentIdentifiers`
-      entry on add; update its callers. Verify: `ComponentEditorTest` gains the scenarios of the
-      `scene-component-editing` delta that use `Custom` (add to entity `1` writes `{}` and one identifier;
-      `lineLength` `25` written, `2` rejected naming the minimum; `pilot` `99` rejected; remove keeps
-      `componentIdentifiers`; the add list offers `PlaneComponent` but never `PickableComponent`) and passes, with all
+      `INT` and `BOOLEAN` field kinds, limit and choice checks and typed asset references; update its callers. Verify: `ComponentEditorTest` gains the scenarios of the
+      `scene-component-editing` delta that use `Custom` (add to entity `1` writes `{}` and no identifier table;
+      `lineLength` `25` written, `2` rejected naming the minimum; `pilot` `99` rejected; the add list offers `PlaneComponent` but never `PickableComponent`) and passes, with all
       its existing cases, using `./gradlew :test --tests 'net.nevinsky.abyssus.ecs.ComponentEditorTest'`
 
 ## 6. Plugin: panel
@@ -69,7 +67,7 @@
       checkbox for `BOOLEAN`, and Add component / Remove for schema kinds. Verify: `EntityPropertiesPanelTest` gains
       `schemaComponentShowsGroupedLabelledFields` and `addPlaneFromThePanel` (entity `1` of `Custom`) and passes with
       `./gradlew :test --tests 'net.nevinsky.abyssus.properties.EntityPropertiesPanelTest'`
-- [ ] 6.2 Update `docs/ai/file-formats.md` (game components, `componentIdentifiers`, the schema file),
+- [ ] 6.2 Update `docs/ai/file-formats.md` (game components, the schema file),
       `docs/ai/architecture.md` (extension points, the schema flow), `src/main/kotlin/net/nevinsky/abyssus/ecs/README.md`
       and `docs/ai/testing.md` (the `Custom` fixture). Verify: `scripts/check-docs.sh` passes
 

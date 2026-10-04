@@ -156,12 +156,12 @@ class RayTerrainSnapshotTest {
         val root = Files.createTempDirectory("ray-terrain").toFile()
         val folder = File(root, "assets/terrain").apply { mkdirs() }
         DataOutputStream(File(folder, "terrain.data").outputStream()).use { out -> repeat(4) { out.writeFloat(it.toFloat()) } }
-        File(folder, "meta.json").writeText("""{"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":10,"uv":4,"splatMap":"missing","splatBase":"00000000-0000-0000-0000-000000000002","splatR":"00000000-0000-0000-0000-000000000001","splatG":"missing"}}""")
+        File(folder, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":10,"uv":4,"splatMap":"missing","splatBase":"00000000-0000-0000-0000-000000000002","splatR":"00000000-0000-0000-0000-000000000001","splatG":"missing"}}""")
         val broken = File(root, "assets/broken").apply { mkdirs() }
-        File(broken, "meta.json").writeText("""{"uuid":"00000000-0000-0000-0000-000000000001","type":"TEXTURE","additional":{"file":"broken.png"}}""")
+        File(broken, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"00000000-0000-0000-0000-000000000001","type":"TEXTURE","additional":{"file":"broken.png"}}""")
         File(broken, "broken.png").writeText("not an image")
         val valid = File(root, "assets/valid").apply { mkdirs() }
-        File(valid, "meta.json").writeText("""{"uuid":"00000000-0000-0000-0000-000000000002","type":"TEXTURE","additional":{"file":"valid.png"}}""")
+        File(valid, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"00000000-0000-0000-0000-000000000002","type":"TEXTURE","additional":{"file":"valid.png"}}""")
         val image = pixel(0x204080ff)
         try { PixmapIO.writePNG(FileHandle(File(valid, "valid.png")), image) } finally { image.dispose() }
         return root

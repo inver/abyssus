@@ -21,7 +21,7 @@ class MetaDocument internal constructor(val type: MetaType, val json: JsonNode, 
  * Parses `meta.json` text once into a [MetaDocument]. Every reader of asset metadata (the loaders, the project
  * listing, the properties panel) goes through it, so they agree on the type and read the text once.
  */
-class AssetMetaReader(private val json: JsonProcessor) {
+class AssetMetaReader(private val json: JsonProcessor, private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()) {
     /**
      * [text] as a document; throws when it is not a JSON object. A missing or unknown `type` reads as
      * [MetaType.UNKNOWN].
@@ -29,7 +29,10 @@ class AssetMetaReader(private val json: JsonProcessor) {
     fun read(text: String): MetaDocument = read(json.readObject(text))
 
     /** An already parsed [tree] (a caller that needs its own number text, say) as a document. */
-    fun read(tree: JsonNode): MetaDocument = MetaDocument(typeOf(tree), tree, json)
+    fun read(tree: JsonNode): MetaDocument {
+        format.requireSupported(tree, net.nevinsky.abyssus.assets.format.DocumentKind.ASSET)
+        return MetaDocument(typeOf(tree), tree, json)
+    }
 
     private fun typeOf(tree: JsonNode): MetaType =
         tree.text("type")?.let { name -> MetaType.entries.firstOrNull { it.name == name } } ?: MetaType.UNKNOWN

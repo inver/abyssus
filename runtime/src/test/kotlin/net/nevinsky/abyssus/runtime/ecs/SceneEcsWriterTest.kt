@@ -12,11 +12,18 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class SceneEcsWriterTest {
+    @Test fun rawLegacyExtrasAreRefusedByWriter() {
+        val document = net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsDocument(linkedMapOf("componentIdentifiers" to net.nevinsky.abyssus.runtime.testJson("{}")), emptyList())
+        org.junit.Assert.assertThrows(net.nevinsky.abyssus.assets.format.UnsupportedDocumentFormat::class.java) {
+            SceneEcsWriter().write(net.nevinsky.abyssus.runtime.ecs.scene.SceneEngine(), document)
+        }
+    }
+
     /** Numbers by value, objects by key regardless of order, so `100` and `100.0` or key order do not matter. */
     private fun assertSameJson(path: String, expected: JsonNode, actual: JsonNode) {
         when {
             expected.isObject -> {
-                // the writer leaves out a zero number (a default), which Mundus may have written out explicitly
+                // the writer leaves out a zero number (a default), which a document may spell out explicitly
                 val kept = expected.fieldNames().asSequence().filter { k -> actual.has(k) || !(expected[k].isNumber && expected[k].doubleValue() == 0.0) }.toSet()
                 assertEquals("keys at $path", kept, actual.fieldNames().asSequence().toSet())
                 kept.forEach { k -> assertSameJson("$path/$k", expected[k], actual[k]) }
@@ -36,7 +43,7 @@ class SceneEcsWriterTest {
         val scene = EcsConfigurator(untitledAssets()).load(original)
         val written = SceneEcsWriter().write(scene.engine, scene.document)
         assertSameJson("ecs", original, written)
-        assertEquals(listOf("entities", "archetypes", "componentIdentifiers", "metadata"), written.fieldNames().asSequence().toList())
+        assertEquals(listOf("entities", "archetypes", "metadata"), written.fieldNames().asSequence().toList())
     }
 
     @Test

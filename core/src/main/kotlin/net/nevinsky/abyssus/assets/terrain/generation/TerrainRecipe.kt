@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.assets.terrain.noise.FAST_NOISE_LITE_REVISION
 import net.nevinsky.abyssus.assets.terrain.noise.OPENSIMPLEX2_FBM_V1
 import net.nevinsky.abyssus.assets.displayMessage
 
-/** The Abyssus-only file beside `terrain.data` that keeps how the applied heights were made. Mundus never reads it. */
+/** The Abyssus-only file beside `terrain.data` that keeps how the applied heights were made. */
 const val TERRAIN_RECIPE_FILE = "abyssus-terrain.recipe.json"
 
 private const val SHA_HEX_LENGTH = 64

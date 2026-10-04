@@ -19,10 +19,10 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
 
     private fun faces(vararg files: String): String {
         val keys = listOf("top", "bottom", "left", "right", "front", "back")
-        return """{"type":"SKYBOX","additional":{${files.mapIndexed { i, f -> "\"${keys[i]}\":\"$f\"" }.joinToString(",")}}}"""
+        return """{"format":"abyssus","formatVersion":1,"type":"SKYBOX","additional":{${files.mapIndexed { i, f -> "\"${keys[i]}\":\"$f\"" }.joinToString(",")}}}"""
     }
 
-    private fun scene(sky: String?) = parseScene("""{"skyboxName":${sky?.let { "\"$it\"" } ?: "null"}}""")
+    private fun scene(sky: String?) = parseScene("""{"format":"abyssus","formatVersion":1,"skyboxName":${sky?.let { "\"$it\"" } ?: "null"}}""")
 
     fun testOnlySkyboxAssetsInNameOrder() {
         val dto = ProjectDto("P", emptyList(), listOf(
@@ -81,8 +81,8 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
     }
 
     fun testUnreadableHdrDetailIsHdr() {
-        val abss = myFixture.addFileToProject("p/P.abss", """{"name":"P"}""").virtualFile
-        myFixture.addFileToProject("p/assets/broken/meta.json", """{"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+        val abss = myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""").virtualFile
+        myFixture.addFileToProject("p/assets/broken/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
         myFixture.addFileToProject("p/assets/broken/sky.hdr", "this is not an image")
         val choice = loadSkyboxChoices(project, abss, testMetaFiles(), testCore.hdrPreviews)!!.single()
         assertEquals(HdrSkyInfo("sky.hdr", 0, 0), choice.hdr)
@@ -115,7 +115,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
         val dto = ProjectDto(
             "P",
             listOf(scene("nebula"), scene("nebula"), scene(null)).mapIndexed { i, scene ->
-                SceneEntry(myFixture.addFileToProject("scenes/$i.scene", "{}").virtualFile, scene)
+                SceneEntry(myFixture.addFileToProject("scenes/$i.scene", """{"format":"abyssus","formatVersion":1}""").virtualFile, scene)
             },
             listOf(testAsset("nebula", "1", "SKYBOX"), testAsset("dusk", "2", "SKYBOX", unused = true)),
         )
@@ -127,9 +127,9 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
     }
 
     fun testChooserOnlyOnAProjectScenesOwnSkyboxRow() {
-        val abss = myFixture.addFileToProject("p/P.abss", """{"name":"P"}""").virtualFile
-        val inProject = myFixture.addFileToProject("p/scenes/A.scene", "{}").virtualFile
-        val standalone = myFixture.addFileToProject("loose/B.scene", "{}").virtualFile
+        val abss = myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""").virtualFile
+        val inProject = myFixture.addFileToProject("p/scenes/A.scene", """{"format":"abyssus","formatVersion":1}""").virtualFile
+        val standalone = myFixture.addFileToProject("loose/B.scene", """{"format":"abyssus","formatVersion":1}""").virtualFile
         fun entry(name: String, source: com.intellij.openapi.vfs.VirtualFile, keys: List<String> = emptyList()) =
             DtoEntry("x/$name", name, null, true, "skyboxEnabled", source, keys)
         assertEquals(abss, skyboxProjectOf(entry("skyboxName", inProject)))

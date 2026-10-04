@@ -25,7 +25,9 @@ fun interface SceneParamsSource {
          */
         fun editorText(reader: SceneReader) = SceneParamsSource { file ->
             val camera = ProjectLayout.abssFor(file)?.let { abss ->
-                runCatchingKeepingCancellation { MainCamera.parse(textOf(abss)) }.getOrNull()
+                val text = textOf(abss)
+                net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().requireSupported(net.nevinsky.abyssus.filetype.SceneJson.parse(text), net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT)
+                MainCamera.parse(text)
             } ?: CameraParams.DEFAULT
             SceneRenderParams.from(reader.parse(textOf(file)), camera, ProjectLayout.projectDirFor(file))
         }

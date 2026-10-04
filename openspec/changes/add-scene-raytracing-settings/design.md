@@ -22,7 +22,7 @@ Add an immutable `SceneRaySettings` value and pure codec/editor in the scene par
 
 Store four fields under root `rayTracing`; remove default-valued edited fields and prune only empty known containers. Preserve unknown members. Opening the panel never inserts defaults. Use `SceneJson` and `editSceneJson` for both settings and optical overrides. Check the populated field's expected value against the current document before applying an edit; equal-value edits do nothing. Document commands and document references support Undo/Redo from Properties. Subscribe to the existing scene edit topic and document/VFS refresh to update controls while preserving focus where possible.
 
-Alternative: IDE workspace persistence would survive reopening locally but would not travel with scene files. A sidecar would add lifecycle and rename concerns. The selected `.scene` storage satisfies the requested scene ownership. It requires the native document change first: do not introduce these fields while the project's active compatibility rule still prohibits non-Mundus values. No workflow configuration is edited by this change's proposal.
+Alternative: IDE workspace persistence would survive reopening locally but would not travel with scene files. A sidecar would add lifecycle and rename concerns. The selected `.scene` storage satisfies the requested scene ownership. It requires the native document change first: the fields are native extension data under the version 1 contract, written only to supported native scenes. No workflow configuration is edited by this change's proposal.
 
 ### 2. Scene-owned per-instance optical overrides
 

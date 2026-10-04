@@ -22,7 +22,13 @@ private val LOG = Logger.getInstance("net.nevinsky.abyssus.projectView.AssetSele
 fun assetsNodeProjectFile(node: Any?): VirtualFile? {
     val entry = (node as? DtoEntryNode)?.value ?: return null
     if (entry.name != "assets" || entry.value !is List<*>) return null
-    return entry.source?.takeIf { it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION }
+    return entry.source?.takeIf { it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
+        net.nevinsky.abyssus.assets.runCatchingKeepingCancellation {
+            net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().validate(
+                net.nevinsky.abyssus.filetype.SceneJson.parse(net.nevinsky.abyssus.dto.textOf(it)),
+                net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT,
+            ) == null
+        }.getOrDefault(false) }
 }
 
 /**

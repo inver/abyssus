@@ -25,17 +25,17 @@ class ProjectReader(
 
     override fun stamp(file: VirtualFile): Long {
         return (ProjectLayout.sceneFiles(file)
-            .fold(file.modificationStamp) { acc, f -> acc * 31 + f.modificationStamp }
+            .fold(documentStamp(file)) { acc, f -> acc * 31 + documentStamp(f) }
                 * 31
                 + ProjectLayout.assetFolders(file)
             .fold(0L) { acc, dir ->
-                (acc * 31 + dir.name.hashCode()) * 31 + (dir.findChild(META_FILE)?.modificationStamp
+                (acc * 31 + dir.name.hashCode()) * 31 + (dir.findChild(META_FILE)?.let(::documentStamp)
                     ?: 0L)
             })
     }
 
     override fun read(file: VirtualFile): AssetReadResult<ProjectDto> = runCatchingKeepingCancellation {
-        val name = loading.projectName(file.path) { file.text() }
+        val name = loading.projectName(file.path) { textOf(file) }
         val sceneResults = ProjectLayout.sceneFiles(file).map { it to scenes.read(it) }
         val roots = sceneResults.flatMap { (_, result) -> result.obj?.let(::sceneReferences) ?: emptySet() }
             .toSet()

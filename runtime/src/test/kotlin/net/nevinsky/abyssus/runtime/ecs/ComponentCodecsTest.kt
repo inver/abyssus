@@ -19,6 +19,22 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ComponentCodecsTest {
+    @Test fun nativeAssetKindsResolveAndRoundTripWithoutClassDispatch() {
+        val codec = net.nevinsky.abyssus.runtime.ecs.scene.RenderCodec(
+            net.nevinsky.abyssus.runtime.ecs.render.AssetResolver { type, name -> net.nevinsky.abyssus.runtime.ecs.render.AssetReference(name, type) },
+            net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsWarnings(AssetLog { _, _ -> }),
+        )
+        val source = json("""{"renderable":{"kind":"asset","asset":{"type":"MODEL","assetName":"tree"},"shaderKey":"pbr","extra":7}}""")
+        val value = codec.read(source)
+        assertTrue(value.renderable is net.nevinsky.abyssus.runtime.ecs.render.RenderableObjectDelegate)
+        assertEquals(source, codec.write(value))
+        val unknown = json("""{"renderable":{"kind":"debug-marker","payload":{"class":"opaque"}}}""")
+        assertEquals(unknown, codec.write(codec.read(unknown)))
+        org.junit.Assert.assertThrows(net.nevinsky.abyssus.assets.format.UnsupportedDocumentFormat::class.java) {
+            codec.read(json("""{"renderable":{"class":"legacy","kind":"asset"}}"""))
+        }
+    }
+
     private fun json(text: String) = testJson(text)
 
     @Test

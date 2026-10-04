@@ -27,7 +27,7 @@ data class SpotSource(val entityId: String, val position: Vec3, val direction: V
 
 /**
  * The light entities of a scene as the renderers use them, limited to what the shaders support
- * ([MAX_DIRECTIONAL] / [MAX_POINT], Mundus' shader defaults).
+ * ([MAX_DIRECTIONAL] / [MAX_POINT], configured shader limits).
  *
  * Point and spot lights share the local-light ceiling.
  */

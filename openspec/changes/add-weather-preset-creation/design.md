@@ -27,7 +27,7 @@ validation.
 `add-sky-clouds` uses for drawing. It also reports when a named preset couldn't be read (the dialog notice).
 
 `toMetaJson(uuid, lastModified)` writes, in this key order:
-`version: 1`, `lastModified`, `type: "WEATHER_PRESET"`, `uuid`, `additional: { low, mid, high }`.
+`format: "abyssus"`, `formatVersion: 1`, `version: 1`, `lastModified`, `type: "WEATHER_PRESET"`, `uuid`, `additional: { low, mid, high }`. The source sky's metadata must itself be a supported native document, or creation is refused.
 - Only present bands are written.
 - Each band is written with every field resolved (type defaults filled in), so a preset is self-describing and
   doesn't depend on future default changes.

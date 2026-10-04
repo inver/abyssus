@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Abyssus is an IntelliJ Platform plugin for [Mundus](https://github.com/mbrlabs/Mundus) game projects. It shows a
+Abyssus is an independent libGDX scene editor implemented as an IntelliJ Platform plugin. It shows a
 project's `.abss` / `.scene` / asset files as a tree, the selected asset's `meta.json` in a properties panel, and a
 scene in a libGDX-rendered view where objects can be selected, moved and rotated.
 
@@ -35,7 +35,7 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   - `ecs/scene/`: `ComponentEditor` edits components in scene JSON; `LightEntities` creates light entities.
     Ashley components, codecs, systems and scene loading live in `runtime`.
   - `filetype/`, `language/`: file types, icons, scene JSON, the GLTF PSI.
-- `gdx-model/`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import), forked from Mundus.
+- `gdx-model/`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import), with inherited sources documented in `docs/third-party/gdx-model-origin.md`.
   See `gdx-model/README.md`.
 - `core/`: a plain JVM library, root package `net.nevinsky.abyssus.assets`: asset folders and `meta.json`
   (`AssetFiles`, `JsonProcessor`), the loading pipeline (`AssetLoader`, `AssetCache`, `SceneAssets`), and the loaders
@@ -50,6 +50,11 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
 - `openspec/`: specs and changes (see Workflow). `docs/superpowers/`: one historic design and plan.
 
 ## Hard rules
+
+- **Native documents only:** `.abss`, `.scene` and asset `meta.json` require `format: "abyssus"` and integral
+  `formatVersion: 1`. Validate with `AbyssusDocumentFormat` before binding, enumerating, editing or formatting.
+  Reject legacy `ecs.componentIdentifiers` and renderable `class`; components use short names, assets use `kind: "asset"`.
+  Keep unknown native extension data, unrelated numbers/key order and default omission. No importer or implicit migration.
 
 - **Don't edit `src/main/gen`.** It is git-ignored and regenerated from `Gltf.bnf` / `Gltf.flex`.
 - **`gdx-model` stays a plain JVM library**: no IntelliJ or plugin imports, so other libGDX projects can use it.
@@ -88,7 +93,7 @@ When a change makes a doc wrong, update the doc in the same change and run `scri
 
 - `docs/ai/architecture.md`: modules, data flow, threading, extension points.
 - `docs/ai/file-formats.md`: `.scene`, `.abss`, asset `meta.json`.
-- `docs/ai/glossary.md`: Mundus and Abyssus terms.
+- `docs/ai/glossary.md`: Native Abyssus terms.
 - `docs/ai/conventions.md`: code conventions.
 - `docs/ai/testing.md`: test layout, fixtures, GL tests.
 - Package notes: `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md`,

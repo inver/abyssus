@@ -17,13 +17,13 @@ import net.nevinsky.abyssus.assets.json.JsonProcessor
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 
-/** The height data file of a terrain asset, as Mundus names it. */
+/** The height data file of a terrain asset, in the native layout. */
 const val TERRAIN_DATA_FILE = "terrain.data"
 
 /** The texture repetition a new terrain starts with. */
 const val NEW_TERRAIN_UV = 1f
 
-/** The `version` Mundus writes in every `meta.json`. */
+/** The metadata `version`, distinct from document `formatVersion`. */
 private const val META_VERSION = 1
 
 /** [bytes] as lowercase hexadecimal SHA-256, the fingerprint recipes keep of applied heights. */
@@ -31,7 +31,7 @@ fun sha256Hex(bytes: ByteArray): String =
     MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
 /**
- * Writes terrain heights as Mundus does: no header, each height a big-endian 32-bit float, row after row (z-major), as
+ * Writes terrain heights: no header, each height a big-endian 32-bit float, row after row (z-major), as
  * `java.io.DataOutputStream.writeFloat` produces (the editor's `EditorTerrainService.createAndSaveAsset`).
  */
 class TerrainHeightEncoder {
@@ -46,7 +46,7 @@ class TerrainHeightEncoder {
 class NewTerrainFiles(val metaText: String, val heightBytes: ByteArray)
 
 /**
- * Builds the files of a new terrain asset the way Mundus writes them: one compact line of `version`, `lastModified`,
+ * Builds native terrain asset files: one compact line of `format`, `formatVersion`, `version`, `lastModified`,
  * `uuid`, `type` and `additional` (`terrainFile`, `size`, `uv`, then the six splat references, null while unset), with
  * no trailing newline.
  */
@@ -64,6 +64,8 @@ class TerrainAssetWriter(private val json: JsonProcessor, private val encoder: T
             SPLAT_FIELDS.forEach { set<NullNode>(it, NullNode.instance) }
         }
         val root = nodes.objectNode().apply {
+            put("format", "abyssus")
+            put("formatVersion", 1)
             set<IntNode>("version", IntNode.valueOf(META_VERSION))
             set<LongNode>("lastModified", LongNode.valueOf(lastModified))
             set<TextNode>("uuid", TextNode.valueOf(uuid))

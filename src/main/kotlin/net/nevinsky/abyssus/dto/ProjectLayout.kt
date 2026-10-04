@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.assets.ASSETS_DIR
 import java.io.File
 
 /**
- * Where a Mundus project keeps its files: `<name>.abss` beside a `scenes` folder of `.scene` files and an `assets`
+ * Where a native Abyssus project keeps its files: `<name>.abss` beside a `scenes` folder of `.scene` files and an `assets`
  * folder with one folder per asset, each described by its `meta.json`.
  */
 object ProjectLayout {

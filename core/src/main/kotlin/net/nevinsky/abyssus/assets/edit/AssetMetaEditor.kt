@@ -62,6 +62,7 @@ class AssetField(val key: String, val kind: FieldKind, val default: FieldValue? 
 
 /** Why an edit was refused; the plugin shows a localized message for each. */
 enum class EditError {
+    UNSUPPORTED_FORMAT,
     UNSUPPORTED_FIELD,
     NOT_AN_OBJECT,
     NOT_A_NUMBER,
@@ -133,9 +134,9 @@ class AssetFieldDescriptions {
  * caller picks a parser that keeps number text and key order; an edit changes exactly one key and nothing else, and
  * never touches `version`, `uuid`, `type`, `lastModified` or unknown keys.
  */
-class AssetMetaEditor(private val descriptions: AssetFieldDescriptions) {
+class AssetMetaEditor(private val descriptions: AssetFieldDescriptions, private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()) {
     fun typeOf(root: JsonNode): MetaType =
-        root.get("type")?.takeIf { it.isTextual }?.asText()?.let { name -> MetaType.entries.firstOrNull { it.name == name } }
+        root.takeIf { format.validate(it, net.nevinsky.abyssus.assets.format.DocumentKind.ASSET) == null }?.get("type")?.takeIf { it.isTextual }?.asText()?.let { name -> MetaType.entries.firstOrNull { it.name == name } }
             ?: MetaType.UNKNOWN
 
     /** The effective value of [field] in [root]: the stored value, the default of an omitted key, or none. */
@@ -252,6 +253,7 @@ class AssetMetaEditor(private val descriptions: AssetFieldDescriptions) {
      * effect.
      */
     fun edit(root: JsonNode, key: String, expected: FieldValue, value: FieldValue): EditOutcome {
+        if (format.validate(root, net.nevinsky.abyssus.assets.format.DocumentKind.ASSET) != null) return EditOutcome.Rejected(EditError.UNSUPPORTED_FORMAT)
         val field = descriptions.field(typeOf(root), key) ?: return EditOutcome.Rejected(EditError.UNSUPPORTED_FIELD)
         val additional = root.get("additional") as? ObjectNode ?: return EditOutcome.Rejected(EditError.NOT_AN_OBJECT)
         val actual = current(root, field)

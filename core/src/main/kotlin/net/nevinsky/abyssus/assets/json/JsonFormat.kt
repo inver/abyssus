@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 
 /**
- * How Mundus JSON is read and written, in one place: unknown properties are skipped, properties keep declaration
+ * How native JSON is read and written, in one place: unknown properties are skipped, properties keep declaration
  * order, and the pretty printer indents by two spaces with `"key": value` and empty containers closed on the same line.
  * [JsonProcessor] and the plugin's `SceneJson` both build on it, so the two cannot drift apart.
  */

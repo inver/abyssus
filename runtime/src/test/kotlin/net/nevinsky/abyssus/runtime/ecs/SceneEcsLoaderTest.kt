@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.runtime.ecs
 
 import net.nevinsky.abyssus.runtime.ecs.render.FolderAssetResolver
-import net.nevinsky.abyssus.runtime.ecs.render.MUNDUS_RENDERABLE_OBJECT_CLASS
+import net.nevinsky.abyssus.runtime.ecs.render.ASSET_RENDERABLE_KIND
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.runtime.ecs.component.IdComponent
 import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
@@ -36,6 +36,14 @@ internal fun untitledAssets() = FolderAssetResolver(File(UNTITLED, "assets").lis
 internal fun mainSceneEcs() = testJson(File(UNTITLED, "scenes/Main Scene.scene").readText())["ecs"]
 
 class SceneEcsLoaderTest {
+    @Test fun rawLegacyPayloadIsRejectedBeforeEntitiesAreAdded() {
+        val engine = net.nevinsky.abyssus.runtime.ecs.scene.SceneEngine()
+        org.junit.Assert.assertThrows(net.nevinsky.abyssus.assets.format.UnsupportedDocumentFormat::class.java) {
+            net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsLoader().load(testJson("""{"entities":{"0":{"components":{"NameComponent":{"name":"A"}}}},"componentIdentifiers":{}}"""), engine)
+        }
+        assertEquals(0, engine.entities.size())
+    }
+
     @Test fun unmodeledComponentsAreLoggedOnceToTheCallersLog() {
         val messages = mutableListOf<String>()
         val log = AssetLog { message, _ -> messages += message }
@@ -57,7 +65,7 @@ class SceneEcsLoaderTest {
         val scene = load(
             """{"entities":{
                 "0":{"archetype":1,"components":{"NameComponent":{"name":"A"},"PickableComponent":{"pickerIdAttribute":{"r":1}},
-                    "RenderComponent":{"renderable":{"class":"com.mbrlabs.mundus.editor.Foo"}}}},
+                    "RenderComponent":{"renderable":{"kind":"debug-marker"}}}},
                 "1":{"components":{"PickableComponent":{}}}},
               "metadata":{"version":1}}""",
         )
@@ -97,7 +105,7 @@ class SceneEcsLoaderTest {
     fun modelAssetWithoutFolderLoadsWithoutRenderable() {
         val scene = load(
             """{"entities":{
-              "0":{"components":{"RenderComponent":{"renderable":{"class":"${MUNDUS_RENDERABLE_OBJECT_CLASS}",
+              "0":{"components":{"RenderComponent":{"renderable":{"kind":"${ASSET_RENDERABLE_KIND}",
                   "shaderKey":"s","asset":{"type":"MODEL","assetName":"missing"}}}}},
               "1":{"components":{"NameComponent":{"name":"B"}}}}}""",
             resolver = FolderAssetResolver(emptyList()),
@@ -110,7 +118,7 @@ class SceneEcsLoaderTest {
     @Test
     fun modelAssetReference() {
         val scene = load(
-            """{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"class":"${MUNDUS_RENDERABLE_OBJECT_CLASS}",
+            """{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"kind":"${ASSET_RENDERABLE_KIND}",
                   "shaderKey":"pbr","asset":{"type":"MODEL","assetName":"m1"}}}}}}}""",
         )
         val delegate = scene.get(0, RenderComponent::class.java)!!.renderable as RenderableObjectDelegate

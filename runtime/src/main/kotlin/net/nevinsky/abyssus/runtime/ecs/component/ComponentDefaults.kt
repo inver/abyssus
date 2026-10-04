@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.runtime.ecs.component
 
 /*
- * The value a scene file means when it omits a field, as Mundus reads it. The scene view, the Properties panel and the
+ * The value a scene file means when it omits a field. The scene view, the Properties panel and the
  * component codecs all take them from here, so they cannot disagree.
  */
 

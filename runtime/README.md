@@ -23,3 +23,9 @@ Only the render system needs a current GL context. Parsing, loading, other syste
 Tests use plain JUnit and `testProject(name)` with Gradle's shared `abyssus.testData` property. Required behavior is in
 `openspec/specs/scene-ecs-components` and `openspec/specs/scene-ecs-systems`; scene loading is specified in
 `openspec/specs/scene-loading`.
+
+Native version 1 documents have root `format: "abyssus"` and integral `formatVersion: 1`; asset metadata's `version`
+is independent. `core` owns `AbyssusDocumentFormat`, shared with the editor. Enclosing project/scene parsing validates
+headers; raw ECS helpers validate only reserved payload paths. `componentIdentifiers` and renderable `class` fields
+are rejected. Short component names are stable identifiers, and asset renderables use `kind: "asset"`. Unknown native
+kinds keep their raw payload and do not render. No importer or Java-class aliases are provided.

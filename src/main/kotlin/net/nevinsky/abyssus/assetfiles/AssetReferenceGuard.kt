@@ -29,13 +29,13 @@ class AssetReferenceGuard(private val projectDir: File) {
         val sceneFiles = (scenes.map { it.absoluteFile } + unsaved.keys.filter { it.extension == ProjectLayout.SCENE_EXTENSION && it.parentFile?.name == ProjectLayout.SCENES_DIR })
             .distinct().sortedBy { it.name }
         for (scene in sceneFiles) {
-            val root = text(scene)?.let { runCatchingKeepingCancellation { SceneJson.parse(it) }.getOrNull() } ?: continue
+            val root = text(scene)?.let { runCatchingKeepingCancellation { SceneJson.parse(it).also { root -> net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().requireSupported(root, net.nevinsky.abyssus.assets.format.DocumentKind.SCENE) } }.getOrNull() } ?: continue
             if (names(root).contains(name)) return "${scene.name} uses $name"
         }
         val assets = File(projectDir, ASSETS_DIR)
         val metas = assets.listFiles { f -> f.isDirectory && f.name != name }.orEmpty().map { File(it, META_FILE).absoluteFile }
         for (meta in (metas + unsaved.keys.filter { it.name == META_FILE && it.parentFile?.parentFile?.absoluteFile == assets.absoluteFile && it.parentFile.name != name }).distinct().sortedBy { it.path }) {
-            val root = text(meta)?.let { runCatchingKeepingCancellation { SceneJson.parse(it) }.getOrNull() } ?: continue
+            val root = text(meta)?.let { runCatchingKeepingCancellation { SceneJson.parse(it).also { root -> net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().requireSupported(root, net.nevinsky.abyssus.assets.format.DocumentKind.ASSET) } }.getOrNull() } ?: continue
             if (holds(root.get("additional"), uuid)) return "${meta.parentFile.name} uses $name"
         }
         return null

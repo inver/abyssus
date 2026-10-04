@@ -235,7 +235,7 @@ class SceneRenderGlTest {
         try {
             val sky = File(dir, "assets/sky")
             net.nevinsky.abyssus.assets.sky.hdr.HdrFixtures.write(File(sky, "sky.hdr"), 64, 32, pixel = net.nevinsky.abyssus.assets.sky.hdr.HdrFixtures.uniform(radiance))
-            File(sky, "meta.json").writeText("""{"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+            File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
             val text = edit(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()) { root ->
                 noFog(root); root.put("skyboxEnabled", true); root.put("skyboxName", "sky")
             }
@@ -308,7 +308,7 @@ class SceneRenderGlTest {
             File(source, "assets").copyRecursively(File(dir, "assets"))
             val sky = File(dir, "assets/sky")
             net.nevinsky.abyssus.assets.sky.hdr.HdrFixtures.write(File(sky, "sky.hdr"), 64, 32, pixel = pixel)
-            File(sky, "meta.json").writeText("""{"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+            File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
             val text = File(source, "scenes/Main Scene.scene").readText()
             return variants.map { variant ->
                 val patched = edit(text) { root ->

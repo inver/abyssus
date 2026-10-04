@@ -20,7 +20,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
 
     fun testToolbarPlacesLightAtOrbitTargetAndDisablesForUnreadableScene() {
-        val file = myFixture.addFileToProject("Lights.scene", """{"ecs":{"entities":{}}}""").virtualFile
+        val file = myFixture.addFileToProject("Lights.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""").virtualFile
         val params = SceneRenderParams.DEFAULT.copy(camera = CameraParams.DEFAULT.copy(position = Vec3(10f, 0f, 6f), direction = Vec3(0f, 0f, -1f)))
         var selected: String? = null
         val panel = SceneViewPanel(params, testRenderer(),

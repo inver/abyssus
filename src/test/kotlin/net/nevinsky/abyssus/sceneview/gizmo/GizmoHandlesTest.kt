@@ -38,7 +38,7 @@ class GizmoHandlesTest {
         val main = content(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
         assertFalse(canRotate(main, "4"))
         assertTrue(canRotate(main, "0"))
-        val lights = content("""{"ecs":{"entities":{
+        val lights = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{}}}},
             "2":{"components":{"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":{"light":{}}}},
             "3":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{"light":{}}}},
@@ -53,28 +53,28 @@ class GizmoHandlesTest {
 
     @Test
     fun cameraWhoseTargetIsMissingCanRotate() {
-        val c = content("""{"ecs":{"entities":{"4":{"components":{"CameraComponent":{"camera":{}},"PositionComponent":{"lookAtId":99}}}}}}""")
+        val c = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"4":{"components":{"CameraComponent":{"camera":{}},"PositionComponent":{"lookAtId":99}}}}}}""")
         assertTrue(canRotate(c, "4"))
     }
 
     @Test
-    fun mundusLightsCanRotateAndALightAimedAtAModelCannot() {
+    fun handleLightsCanRotateAndALightAimedAtAModelCannot() {
         val mundus = content(File("src/test/testData/project/Lights/scenes/Mundus Lights.scene").readText())
         // A directional or spot light that looks at a direction handle keeps its rings.
         assertTrue(canRotate(mundus, "1"))
         assertTrue(canRotate(mundus, "4"))
         // A light aimed at something other than a handle (a model) only moves.
-        val aimedAtModel = content("""{"ecs":{"entities":{
+        val aimedAtModel = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "m":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"a"}}},
                 "PositionComponent":{"localPosition":{"x":1}}}},
             "l":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
                 "PositionComponent":{"lookAtId":"m","localPosition":{"x":5}}}}}}}""")
         assertFalse(canRotate(aimedAtModel, "l"))
         // A light without a look-at target keeps its rings; a point light never has any.
-        val noTarget = content("""{"ecs":{"entities":{
+        val noTarget = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "d":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{}}}}}}""")
         assertTrue(canRotate(noTarget, "d"))
-        val point = content("""{"ecs":{"entities":{
+        val point = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "p":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{}}}}}}""")
         assertFalse(canRotate(point, "p"))
     }

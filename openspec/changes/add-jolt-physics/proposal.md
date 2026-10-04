@@ -37,12 +37,12 @@ and users who never need it never load native physics code into their IDE. The c
   events to it. The protocol is versioned at a handshake. A crash in the child stops the simulation and shows a
   notification; the IDE keeps running.
 - **Games ship their own host.** A game's export task (the one that writes `components.schema.json`) also writes
-  `<mundus project>/abyssus/play.json`: the game's `PlayModule` class (components to register, systems to add, input
+  `<project>/abyssus/play.json`: the game's `PlayModule` class (components to register, systems to add, input
   mapping), the resolved classpath and the protocol version. Abyssus Physics launches that classpath, so Play runs the
   game's own code. Without `play.json` it uses its built-in classpath and runs physics only. `PlayModule` is a small
   API in `physics`.
 
-**Mundus files.**
+**Fields read/written.**
 - **Read:** the scene's `ecs` block, `RenderComponent` asset references (for hulls and height fields), terrain
   `.terra` data, and the new `abyssus/play.json`.
 - **Written:** the physics components through the `add-custom-components` rules, when a user adds or edits them in

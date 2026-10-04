@@ -1,4 +1,6 @@
 {
+  "format": "abyssus",
+  "formatVersion": 1,
   "id": 0,
   "name": "Ololo",
   "ambientLightEnabled": true,
@@ -49,7 +51,7 @@
           },
           "RenderComponent": {
             "renderable": {
-              "class": "com.mbrlabs.mundus.commons.core.ecs.delegate.RenderableObjectDelegate",
+              "kind": "asset",
               "shaderKey": "defaultShader",
               "asset": {
                 "type": "MODEL",
@@ -85,7 +87,7 @@
           },
           "RenderComponent": {
             "renderable": {
-              "class": "com.mbrlabs.mundus.commons.core.ecs.delegate.RenderableObjectDelegate",
+              "kind": "asset",
               "shaderKey": "terrain",
               "asset": {
                 "type": "TERRAIN",
@@ -127,7 +129,7 @@
           },
           "RenderComponent": {
             "renderable": {
-              "class": "com.mbrlabs.mundus.commons.core.ecs.delegate.RenderableObjectDelegate",
+              "kind": "asset",
               "shaderKey": "defaultShader",
               "asset": {
                 "type": "MODEL",
@@ -160,7 +162,7 @@
           "PositionComponent": {},
           "RenderComponent": {
             "renderable": {
-              "class": "com.mbrlabs.mundus.editor.ui.ecs.handle.DirectionHandleRenderDelegate"
+              "kind": "direction-handle-marker"
             }
           },
           "TypeComponent": {
@@ -221,7 +223,7 @@
           },
           "RenderComponent": {
             "renderable": {
-              "class": "com.mbrlabs.mundus.editor.ui.ecs.camera.CameraBodyRenderDelegate",
+              "kind": "camera-marker",
               "shaderKey": "defaultShader"
             }
           },
@@ -239,7 +241,7 @@
           },
           "RenderComponent": {
             "renderable": {
-              "class": "com.mbrlabs.mundus.editor.ui.ecs.handle.DirectionLineRenderDelegate"
+              "kind": "direction-line-marker"
             }
           }
         }
@@ -273,7 +275,7 @@
           },
           "RenderComponent": {
             "renderable": {
-              "class": "com.mbrlabs.mundus.commons.core.ecs.delegate.RenderableObjectDelegate",
+              "kind": "asset",
               "shaderKey": "pbr",
               "asset": {
                 "type": "MODEL",
@@ -367,18 +369,6 @@
         "PositionComponent",
         "LightComponent"
       ]
-    },
-    "componentIdentifiers": {
-      "com.mbrlabs.mundus.commons.core.ecs.component.TypeComponent": "TypeComponent",
-      "com.mbrlabs.mundus.commons.core.ecs.component.PositionComponent": "PositionComponent",
-      "com.mbrlabs.mundus.commons.core.ecs.base.RenderComponent": "RenderComponent",
-      "com.mbrlabs.mundus.editor.core.ecs.PickableComponent": "PickableComponent",
-      "com.mbrlabs.mundus.editor.core.ecs.DependenciesComponent": "DependenciesComponent",
-      "com.mbrlabs.mundus.commons.core.ecs.component.CameraComponent": "CameraComponent",
-      "com.mbrlabs.mundus.commons.core.ecs.component.ParentComponent": "ParentComponent",
-      "com.mbrlabs.mundus.commons.core.ecs.component.Point2PointPositionComponent": "Point2PointPositionComponent",
-      "com.mbrlabs.mundus.commons.core.ecs.component.NameComponent": "NameComponent",
-      "com.mbrlabs.mundus.commons.core.ecs.component.LightComponent": "LightComponent"
     },
     "metadata": {
       "version": 1

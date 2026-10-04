@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Describes a game's components as data, in a schema file inside the Mundus project, so the editor can show and edit
+Describes a game's components as data, in a schema file inside the project, so the editor can show and edit
 them without running the game's code.
 
 ## ADDED Requirements

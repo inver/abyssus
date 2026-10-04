@@ -24,7 +24,7 @@ class MetaRowsTest : BasePlatformTestCase() {
 
     fun testSkyboxListsTopLevelFieldsThenAdditionalFacesInFileOrder() {
         val rows = metaRowsOf(sample("skybox_default"), ZoneOffset.UTC)
-        assertEquals(listOf("version", "lastModified", "type", "additional", "top", "bottom", "left", "right", "front", "back"), rows.map { it.name })
+        assertEquals(listOf("format", "formatVersion", "version", "lastModified", "type", "additional", "top", "bottom", "left", "right", "front", "back"), rows.map { it.name })
         assertEquals("SKYBOX", rows.single { it.name == "type" }.value)
         assertEquals(RowKind.HEADING, rows.single { it.name == "additional" }.kind)
         val faces = rows.dropWhile { it.kind != RowKind.HEADING }.drop(1)
@@ -48,27 +48,27 @@ class MetaRowsTest : BasePlatformTestCase() {
     }
 
     fun testSingularListAndObjectSummaries() {
-        val rows = rows("""{"additional":{"a":[1],"b":{"x":1,"y":2},"c":{"x":1}}}""").associateBy { it.name }
+        val rows = rows("""{"format":"abyssus","formatVersion":1,"additional":{"a":[1],"b":{"x":1,"y":2},"c":{"x":1}}}""").associateBy { it.name }
         assertEquals("1 item", rows.getValue("a").value)
         assertEquals("2 properties", rows.getValue("b").value)
         assertEquals("1 property", rows.getValue("c").value)
     }
 
     fun testMissingUuidAndMissingAdditionalAreNotListed() {
-        val rows = rows("""{"version":1,"type":"MODEL"}""")
-        assertEquals(listOf("version", "type"), rows.map { it.name })
+        val rows = rows("""{"format":"abyssus","formatVersion":1,"version":1,"type":"MODEL"}""")
+        assertEquals(listOf("format", "formatVersion", "version", "type"), rows.map { it.name })
         assertTrue(rows.none { it.kind != RowKind.FIELD })
     }
 
     fun testLastModifiedIsADateTimeAndOtherNumbersAreUntouched() {
-        val rows = rows("""{"lastModified":1663444124794,"version":1}""").associateBy { it.name }
+        val rows = rows("""{"format":"abyssus","formatVersion":1,"lastModified":1663444124794,"version":1}""").associateBy { it.name }
         assertEquals("2022-09-17 19:48:44", rows.getValue("lastModified").value)
         assertEquals("1", rows.getValue("version").value)
     }
 
     fun testUnknownTypeAndFieldsAreStillListed() {
-        val rows = rows("""{"type":"WIDGET","additional":{"shiny":true}}""")
-        assertEquals(listOf("type", "additional", "shiny"), rows.map { it.name })
+        val rows = rows("""{"format":"abyssus","formatVersion":1,"type":"WIDGET","additional":{"shiny":true}}""")
+        assertEquals(listOf("format", "formatVersion", "type", "additional", "shiny"), rows.map { it.name })
     }
 
     // 1.2 loading
@@ -80,9 +80,9 @@ class MetaRowsTest : BasePlatformTestCase() {
     }
 
     fun testLoadsAValidMeta() {
-        val loaded = load(asset("""{"type":"SKYBOX","additional":{"top":"t.png"}}""")) as AssetMeta.Loaded
+        val loaded = load(asset("""{"format":"abyssus","formatVersion":1,"type":"SKYBOX","additional":{"top":"t.png"}}""")) as AssetMeta.Loaded
         assertEquals(net.nevinsky.abyssus.assets.files.MetaType.SKYBOX, loaded.type)
-        assertEquals(listOf("type", "additional", "top"), loaded.rows.map { it.name })
+        assertEquals(listOf("format", "formatVersion", "type", "additional", "top"), loaded.rows.map { it.name })
     }
 
     fun testMissingMetaFailsWithTheFolderName() {
@@ -101,10 +101,10 @@ class MetaRowsTest : BasePlatformTestCase() {
     }
 
     fun testUnsavedEditorTextWinsOverTheFile() {
-        val folder = asset("""{"type":"MODEL"}""")
+        val folder = asset("""{"format":"abyssus","formatVersion":1,"type":"MODEL"}""")
         val file = folder.findChild("meta.json")!!
         val doc = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!
-        com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) { doc.setText("""{"type":"TERRAIN"}""") }
+        com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) { doc.setText("""{"format":"abyssus","formatVersion":1,"type":"TERRAIN"}""") }
         assertEquals(net.nevinsky.abyssus.assets.files.MetaType.TERRAIN, (load(folder) as AssetMeta.Loaded).type)
     }
 }

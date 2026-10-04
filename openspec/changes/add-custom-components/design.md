@@ -6,8 +6,7 @@ See proposal.md - Why. After `extract-scene-runtime`:
 
 - `runtime` holds the Ashley components, `ComponentCodec<C>` (`name`, `type`, `read(JsonNode)`, `write(C)`), the
   fixed `ComponentCodecs` list, `SceneEcsLoader` (an unknown name is kept in `RawComponentsComponent` with a warning),
-  `SceneEcsWriter` (writes components in the file's order; `extras` such as `componentIdentifiers` are written back
-  unchanged), the `number(Float)` helper for whole-number text, and `SceneLoading(json, log)`.
+  `SceneEcsWriter` (writes components in the file's order; unknown block `extras` are written back unchanged), the `number(Float)` helper for whole-number text, and `SceneLoading(json, log)`.
 - The plugin's `ComponentEditor` is an `object` with a fixed `kinds` list. Each `ComponentKind<C>` has a codec, a
   list of `ComponentField<C>` read and written as text, and `create()`. `FieldKind` is `FLOAT, TEXT, CHOICE,
   ENTITY_REF, ASSET_NAME`. Vectors and colors are edited as dotted float fields (`localPosition.x`, `color.r`).
@@ -29,7 +28,7 @@ See proposal.md - Why. After `extract-scene-runtime`:
 **Non-Goals:**
 
 - Nested objects or lists as field types; per-component custom editor UI.
-- Maintaining `archetypes` / entity `archetype` ids (proposal: the spike decides a follow-up).
+- Maintaining `archetypes` / entity `archetype` ids (left as they are, as for built-in components).
 
 ## Decisions
 
@@ -70,8 +69,8 @@ directly. A shared round-trip test (decision 7) holds both to the same text.
 `ComponentCodecs` becomes a registry built from the built-in codecs plus `ComponentRegistry`, a list of game component
 classes the caller passes to `SceneLoading`. Registration builds each class's schema and `ReflectiveCodec` and fails
 with one message (spec: "Registration is checked") on a taken short name, an unsupported field type or a missing
-no-argument constructor. `SceneEcsWriter` adds a `componentIdentifiers` entry, appended after the existing ones, for
-each declared component class that has none.
+no-argument constructor. The short name is the stable identifier, so
+`SceneEcsWriter` writes no identifier table and no class name; `decouple-from-mundus` rejects both.
 
 ### 4. Schema file and export (runtime)
 
@@ -104,8 +103,7 @@ task runs. Infinite limits are not written.
   `SchemaValues` is a map-backed component). Vectors and colors become dotted decimal fields (`leadout.x`,
   `paint.r`) as `Position` and `Light` already do. `FieldKind` gains `INT` and `BOOLEAN`; `checkValue` gains whole
   numbers, booleans and the schema's limits; entity references reuse `checkReference`; asset references reuse the
-  asset-name check filtered by the declared asset type. `add` also appends the `componentIdentifiers` entry when
-  missing.
+  asset-name check filtered by the declared asset type. `add` writes only the short-name component.
 - **Panel:** `EntityDetailsView` adds a checkbox editor for `BOOLEAN` and group sub-headings; labels come from the
   schema.
 
@@ -136,8 +134,8 @@ test checks that exporting it reproduces the fixture's schema file byte for byte
 
 ## Risks / Trade-offs
 
-- **Mundus may reject unknown classes.** The proposal's spike runs first (task 1.1). If Mundus fails to open such a
-  scene, stop and bring the finding to the user before the rule change: the whole approach depends on it.
+- **A game name could shadow a built-in or collide with another game component.** → Registration fails with a
+  message naming the component (spec: "Registration is checked"); built-in codecs keep precedence.
 - **Two codecs drifting apart.** → Decision 2 makes the reflective codec a thin layer over `SchemaJson`, and the
   round-trip test fails on any difference.
 - **Stale schema vs scene.** A field removed from the game stays in old scene files. → It is kept untouched, like an

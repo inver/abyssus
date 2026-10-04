@@ -21,7 +21,7 @@ import net.nevinsky.abyssus.runtime.ecs.scene.SceneEntityIds
 private fun positionOf(ids: SceneEntityIds, id: Int): PositionComponent? =
     ids[id]?.getComponent(PositionComponent::class.java)
 
-/** Turns an entity to face its look-at target; the angles are Mundus' (yaw from x/z, pitch from y). */
+/** Turns an entity to face its look-at target; the angles use (yaw from x/z, pitch from y). */
 class LookAtSystem(private val ids: SceneEntityIds, priority: Int = 0) :
     IteratingSystem(Family.all(PositionComponent::class.java).get(), priority) {
     private val mapper = ComponentMapper.getFor(PositionComponent::class.java)

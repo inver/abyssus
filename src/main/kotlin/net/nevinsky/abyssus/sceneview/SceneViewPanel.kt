@@ -34,7 +34,7 @@ import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import javax.swing.Timer
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
 
 /** An entry of the camera selector: [id] is the camera entity to look through, null for the free orbit view. */
 data class CameraChoice(val id: String?, val label: String) {

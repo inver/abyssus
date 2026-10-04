@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lets the editor, a game, its tests and any other libGDX program read a Mundus project's scenes into entities the same
+Lets the editor, a game, its tests and any other libGDX program read a native Abyssus project's scenes into entities the same
 way, from a project folder, without needing a running IDE.
 
 ## Requirements

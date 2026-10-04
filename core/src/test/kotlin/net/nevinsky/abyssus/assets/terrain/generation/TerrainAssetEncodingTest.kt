@@ -44,10 +44,10 @@ class TerrainAssetEncodingTest {
     }
 
     @Test
-    fun `new terrain meta follows the Mundus writer`() {
+    fun `new terrain meta follows the native writer`() {
         val text = writer.meta("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b", 1699293063182L, 1600)
         assertEquals(
-            """{"version":1,"lastModified":1699293063182,"uuid":"2cf70bf7-f7ee-4c41-934c-e40df1d35c8b","type":"TERRAIN",""" +
+            """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1699293063182,"uuid":"2cf70bf7-f7ee-4c41-934c-e40df1d35c8b","type":"TERRAIN",""" +
                 """"additional":{"terrainFile":"terrain.data","size":1600,"uv":1.0,"splatMap":null,"splatBase":null,""" +
                 """"splatR":null,"splatG":null,"splatB":null,"splatA":null}}""",
             text,

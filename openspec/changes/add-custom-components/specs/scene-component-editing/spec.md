@@ -7,7 +7,7 @@
 The plugin SHALL add a component of any modeled kind (Name, Type, Parent, Position, Camera, Light,
 Point2Point, Render), or of any kind a known component schema declares, to an entity of a scene file, initialized
 with the defaults a scene load gives that kind. An entity SHALL NOT receive a second component of a kind it already
-has. Adding a schema-declared kind SHALL also record its class in `componentIdentifiers` when no entry names it.
+has.
 
 #### Scenario: Add a light
 
@@ -33,8 +33,7 @@ has. Adding a schema-declared kind SHALL also record its class in `componentIden
 #### Scenario: Add a schema-declared component
 
 - **WHEN** a `PlaneComponent`, declared by the `Custom` project's schema, is added to entity `1` of its scene
-- **THEN** entity `1` gains `"PlaneComponent": {}`, `componentIdentifiers` gains an entry for the plane's class if it
-  had none, and nothing else in the file changes
+- **THEN** entity `1` gains `"PlaneComponent": {}` and nothing else in the file changes
 
 ### Requirement: Update a component field
 
@@ -55,7 +54,7 @@ among its choices, SHALL be rejected with a message and leave the file unchanged
 #### Scenario: Value equals the default
 
 - **WHEN** a position's `localScale.y` is set back to `1`
-- **THEN** the file is written the way Mundus writes defaults, leaving no field that only repeats a default
+- **THEN** the file follows the Abyssus version 1 default omission rules, leaving no field that only repeats a default
 
 #### Scenario: No change
 
@@ -122,20 +121,18 @@ anything refers to it.
 #### Scenario: Remove a schema-declared component
 
 - **WHEN** entity `0`'s `PlaneComponent` is removed
-- **THEN** the entity no longer has it, keeps its other components in their order, and `componentIdentifiers` is
-  unchanged
+- **THEN** the entity no longer has it, keeps its other components in their order, and nothing else in the file changes
 
 ### Requirement: Edits preserve the rest of the scene file
 
 Every create, update and remove SHALL leave everything it does not target as it was: other entities,
-unmodeled components, `archetype` ids, the `ecs` block's `archetypes`, `componentIdentifiers` and `metadata`,
-the order of entities and components, and the formatting style of the file. The only exception is the
-`componentIdentifiers` entry that adding a schema-declared component records.
+unmodeled components, `archetype` ids, the `ecs` block's `archetypes`, `metadata` and the native document markers,
+the order of entities and components, and the formatting style of the file.
 
 #### Scenario: Unmodeled data survives
 
 - **WHEN** a component is changed in `Main Scene`
-- **THEN** reloading the file shows the same `PickableComponent`, `DependenciesComponent`, editor-only renderables, `archetypes`, `componentIdentifiers` and `metadata` as before
+- **THEN** reloading the file shows the same `PickableComponent`, `DependenciesComponent`, unknown native renderable kinds, `archetypes`, `metadata` and the native document markers as before
 
 #### Scenario: Written file loads
 

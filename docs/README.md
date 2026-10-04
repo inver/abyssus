@@ -10,7 +10,7 @@ needs them.
 | `AGENTS.md` | Commands, layout map, hard rules, workflow | How to build, test and run; what not to touch |
 | `docs/ai/architecture.md` | Modules, registrations, data flow, threading, extension points | How the parts fit together |
 | `docs/ai/file-formats.md` | `.abss`, `.scene`, `meta.json`, asset reachability | What the files contain and how the plugin reads them |
-| `docs/ai/glossary.md` | Mundus and Abyssus terms | What a word means here |
+| `docs/ai/glossary.md` | Native Abyssus terms | What a word means here |
 | `docs/ai/conventions.md` | JSON, writing files, errors, UI text, code style | How code is written |
 | `docs/ai/testing.md` | Test layout, fixtures, GL tests, seams | How to test |
 | Package `README.md`s (`sceneview`, `projectView`, `ecs`, `gdx-model`, `core`) | The non-obvious parts of one package | That package's internals |

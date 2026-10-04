@@ -3,7 +3,7 @@
 ## Purpose
 
 Lets a game keep data of its own on scene entities, such as a plane's line length, as components declared in its code
-and stored in the scene file next to Mundus's components.
+and stored in the scene file next to the built-in components.
 
 ## ADDED Requirements
 
@@ -39,12 +39,11 @@ name, an `{x, y, z}` object, an `{r, g, b, a}` object, an entity id (`-1` for no
 #### Scenario: Whole decimal numbers
 
 - **WHEN** a decimal field holds `25.0`
-- **THEN** the file holds `25`, the way the scene file writes Mundus's own whole numbers
+- **THEN** the file holds `25`, the way the scene file writes whole numbers
 
 ### Requirement: Defaults are not written
 
-Writing a declared component SHALL leave out every field whose value equals its declared default, as Mundus does for
-its own components. A component whose every field is at its default SHALL be written as an empty object.
+Writing a declared component SHALL leave out every field whose value equals its declared default, as built-in components do. A component whose every field is at its default SHALL be written as an empty object.
 
 #### Scenario: Default line length
 
@@ -81,22 +80,21 @@ for any component the runtime does not model.
 ### Requirement: Registration is checked
 
 Registering a component SHALL fail, naming the component and the reason, when its short name is already taken by a
-Mundus component or another registered component, when a declared field has an unsupported type, or when the
+built-in component or another registered component, when a declared field has an unsupported type, or when the
 component cannot be created with all its fields at their defaults. A failed registration SHALL load no scene.
 
 #### Scenario: Taken name
 
 - **WHEN** a game registers a component under the short name `NameComponent`
-- **THEN** registration fails with a message saying `NameComponent` is a Mundus component
+- **THEN** registration fails with a message saying `NameComponent` is a built-in component
 
-### Requirement: Written components are identified
+### Requirement: Written components use their short name only
 
-When a scene is written with a declared component on any entity, `ecs.componentIdentifiers` SHALL map the
-component's class name to its short name. An existing entry SHALL be kept as it is, and no other entry SHALL change.
+A declared component SHALL be written under its short name and SHALL NOT cause a class name, `ecs.componentIdentifiers`
+or other Java-class bookkeeping to be written. A scene that already holds `ecs.componentIdentifiers` is refused by the
+native document format before it reaches the writer.
 
 #### Scenario: First plane in a scene
 
-- **WHEN** a plane is added to entity `0` of a scene whose `componentIdentifiers` has no entry for it, and the scene is
-  written
-- **THEN** `componentIdentifiers` gains one entry from the plane's class name to `PlaneComponent`, after the entries it
-  already had
+- **WHEN** a plane is added to entity `0` and the scene is written
+- **THEN** entity `0` holds `"PlaneComponent": {}` and the `ecs` block gains no `componentIdentifiers` and no class name

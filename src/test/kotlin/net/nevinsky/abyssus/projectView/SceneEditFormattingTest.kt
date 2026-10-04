@@ -10,7 +10,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.filetype.SceneJson
 
 class SceneEditFormattingTest : BasePlatformTestCase() {
-    private val compact = """{"id":0,"name":"Main","skyboxName":null,"fogEnabled":true,"fog":{"density":0.001}}"""
+    private val compact = """{"format":"abyssus","formatVersion":1,"id":0,"name":"Main","skyboxName":null,"fogEnabled":true,"fog":{"density":0.001}}"""
 
     private fun toggleFog(file: VirtualFile): Boolean {
         val entry = DtoEntry(
@@ -48,7 +48,7 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
     }
 
     fun testTogglingTwiceRestoresTheOriginalBytes() {
-        val original = """{"id":0,"name":"Ololo","fogEnabled":true,"fog":{"density":0.001,"gradient":1.5},"skyboxName":null,"ecs":{"entities":{"0":{"x":-3.035308,"far":100,"fieldOfView":67}},"metadata":{"version":1}}}"""
+        val original = """{"format":"abyssus","formatVersion":1,"id":0,"name":"Ololo","fogEnabled":true,"fog":{"density":0.001,"gradient":1.5},"skyboxName":null,"ecs":{"entities":{"0":{"x":-3.035308,"far":100,"fieldOfView":67}},"metadata":{"version":1}}}"""
         val file = myFixture.addFileToProject("p/Main Scene.scene", original).virtualFile
         val toggle = { enabled: Boolean ->
             toggleEnabled(
@@ -63,16 +63,16 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
     }
 
     fun testSkyboxEyeKeepsTheSkyboxNameKey() {
-        val source = """{"skyboxEnabled":true,"skyboxName":"sky"}"""
+        val source = """{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"sky"}"""
         val file = myFixture.addFileToProject("p/Sky.scene", source).virtualFile
         val entry = DtoEntry("x/skyboxName", "skyboxName", "sky", true, "skyboxEnabled", file, emptyList())
         assertTrue(toggleEnabled(project, entry))
-        assertEquals("""{"skyboxEnabled":false,"skyboxName":"sky"}""", text(file))
+        assertEquals("""{"format":"abyssus","formatVersion":1,"skyboxEnabled":false,"skyboxName":"sky"}""", text(file))
         assertNull(SceneJson.parse(text(file)).get("skybox"))
     }
 
     fun testSettingASkyboxKeepsFormattingAndTheEnabledFlag() {
-        val source = """{"id":0,"name":"Main","skyboxEnabled":false,"skyboxName":null,"fogEnabled":true,"fog":{"density":0.001}}"""
+        val source = """{"format":"abyssus","formatVersion":1,"id":0,"name":"Main","skyboxEnabled":false,"skyboxName":null,"fogEnabled":true,"fog":{"density":0.001}}"""
         val file = myFixture.addFileToProject("p/SetSky.scene", SceneJson.pretty(source)!!).virtualFile
         assertTrue(setSkybox(project, file, "skybox_default"))
         val after = text(file)
@@ -82,24 +82,24 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
     }
 
     fun testClearingTheSkyboxWritesNull() {
-        val file = myFixture.addFileToProject("p/Clear.scene", """{"skyboxEnabled":true,"skyboxName":"skybox_default"}""").virtualFile
+        val file = myFixture.addFileToProject("p/Clear.scene", """{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"skybox_default"}""").virtualFile
         assertTrue(setSkybox(project, file, null))
-        assertEquals("""{"skyboxEnabled":true,"skyboxName":null}""", text(file))
+        assertEquals("""{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":null}""", text(file))
     }
 
     fun testSettingTheSameSkyboxWritesNothing() {
-        val source = """{"skyboxName":"sky"}"""
+        val source = """{"format":"abyssus","formatVersion":1,"skyboxName":"sky"}"""
         val file = myFixture.addFileToProject("p/Same.scene", source).virtualFile
         val stamp = file.modificationStamp
         assertFalse(setSkybox(project, file, "sky"))
         assertEquals(stamp, file.modificationStamp)
-        val noKey = myFixture.addFileToProject("p/NoKey.scene", "{}").virtualFile
+        val noKey = myFixture.addFileToProject("p/NoKey.scene", """{"format":"abyssus","formatVersion":1}""").virtualFile
         assertFalse("a missing key already means no skybox", setSkybox(project, noKey, null))
         assertEquals(source, text(file))
     }
 
     fun testNumberTextSurvivesAnEdit() {
-        val source = """{"fogEnabled":true,"fog":{"density":1.0E-4,"gradient":2.50,"offset":-0.0,"big":12345678901234567890}}"""
+        val source = """{"format":"abyssus","formatVersion":1,"fogEnabled":true,"fog":{"density":1.0E-4,"gradient":2.50,"offset":-0.0,"big":12345678901234567890}}"""
         val file = myFixture.addFileToProject("p/Numbers.scene", source).virtualFile
         assertTrue(toggleFog(file))
         assertEquals(source.replace("\"fogEnabled\":true", "\"fogEnabled\":false"), text(file))

@@ -30,9 +30,13 @@ fun interface AbyssusSceneEdited {
  */
 fun editSceneJson(project: Project, file: VirtualFile, commandName: String, mutate: (JsonNode) -> Boolean): Boolean {
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
-    val root = runCatchingKeepingCancellation { SceneJson.parse(document.text) }.getOrNull() ?: return false
-    if (!mutate(root)) return false
-    val text = SceneJson.inStyleOf(document.text, root)
+    val kind = documentKind(file) ?: return false
+    val format = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()
+    val original = document.text
+    val root = runCatchingKeepingCancellation { SceneJson.parse(original).also { format.requireSupported(it, kind) } }.getOrNull() ?: return false
+    if (!mutate(root) || format.validate(root, kind) != null || document.text != original) return false
+    val text = SceneJson.inStyleOf(original, root)
+    if (text == original) return false
     WriteCommandAction.runWriteCommandAction(project, commandName, null, {
         document.setText(text)
         FileDocumentManager.getInstance().saveDocument(document)

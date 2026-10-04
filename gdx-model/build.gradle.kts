@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// libGDX 3D model runtime with 32-bit indices and an Assimp importer (trimmed Mundus fork, see README.md).
+// libGDX 3D model runtime with 32-bit indices and an Assimp importer (an inherited fork; see README.md and docs/third-party/gdx-model-origin.md).
 // Plain JVM library: no IntelliJ dependency, so other libGDX projects can use it.
 plugins {
     `java-library`

@@ -25,8 +25,10 @@ import net.nevinsky.abyssus.runtime.ecs.render.AssetResolver
 class SceneEcsLoader(
     private val resolver: AssetResolver = AssetResolver { _, _ -> null },
     private val log: net.nevinsky.abyssus.assets.AssetLog = net.nevinsky.abyssus.assets.AssetLog { _, _ -> },
+    private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat(),
 ) {
     fun load(ecs: JsonNode, engine: SceneEngine): SceneEcsDocument {
+        format.requireEcs(ecs)
         val warnings = SceneEcsWarnings(log)
         val codecs = ComponentCodecs(resolver, warnings)
 

@@ -59,8 +59,8 @@ class SystemsTest {
     private fun position(e: Entity) = e.getComponent(PositionComponent::class.java)
 
     @Test
-    fun lookAtMatchesMundusAngles() {
-        // Mundus: dir (0,0,-1): yaw = atan(-0/-1) = 0 (z<0, no +180), pitch = 90 - acos(0) = 0 -> identity
+    fun lookAtYawAndPitchFollowTheDirection() {
+        // dir (0,0,-1): yaw = atan(-0/-1) = 0 (z<0, no +180), pitch = 90 - acos(0) = 0 -> identity
         val a = entity(0, PositionComponent(0f, 0f, 0f).also { it.lookAtId = 1 })
         entity(1, PositionComponent(0f, 0f, -10f))
         engine.update(0f)

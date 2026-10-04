@@ -6,7 +6,7 @@ package net.nevinsky.abyssus.runtime
 
 import java.io.File
 
-/** Shared Mundus fixtures, supplied by Gradle so tests do not depend on their working directory. */
+/** Shared native test fixtures, supplied by Gradle so tests do not depend on their working directory. */
 fun testProject(name: String): File =
     File(checkNotNull(System.getProperty("abyssus.testData")) { "run through Gradle: abyssus.testData is not set" }, "project/$name")
 

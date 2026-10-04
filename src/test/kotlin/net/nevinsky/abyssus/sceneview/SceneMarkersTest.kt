@@ -25,7 +25,7 @@ class SceneMarkersTest {
 
     private fun main() = SceneContent.of(parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()))
 
-    private fun content(entities: String) = SceneContent.of(parseScene("""{"ecs":{"entities":{$entities}}}"""))
+    private fun content(entities: String) = SceneContent.of(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{$entities}}}"""))
 
     private fun light(id: String, type: String, x: Float = 0f) =
         """"$id":{"components":{"TypeComponent":{"type":"$type"},"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":$x}}}}"""

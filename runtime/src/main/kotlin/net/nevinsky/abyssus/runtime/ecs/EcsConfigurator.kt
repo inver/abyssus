@@ -28,7 +28,7 @@ class LoadedScene(
 
 /**
  * Creates the scene [Engine]: look-at, render placement, camera sync, point-to-point placement, then the render pass
- * (system priorities, as Mundus registers them), and loads a scene's `ecs` block into it.
+ * (system priorities, in evaluation order), and loads a scene's `ecs` block into it.
  */
 open class EcsConfigurator(
     private val resolver: AssetResolver = AssetResolver { _, _ -> null },

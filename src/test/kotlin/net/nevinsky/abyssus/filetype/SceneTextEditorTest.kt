@@ -12,7 +12,7 @@ import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class SceneTextEditorTest : BasePlatformTestCase() {
-    private val minified = """{"id":0,"name":"Main","fog":{"density":0.001}}"""
+    private val minified = """{"format":"abyssus","formatVersion":1,"id":0,"name":"Main","fog":{"density":0.001}}"""
 
     fun testSceneFilesAreJson() {
         assertEquals(JsonLanguage.INSTANCE, SceneFileType.INSTANCE.language)

@@ -89,5 +89,5 @@ class RenderableObjectDelegate(var asset: RenderableSceneObject, var shaderKey: 
     }
 }
 
-/** The delegate name carried by Mundus files, written back unchanged. */
-const val MUNDUS_RENDERABLE_OBJECT_CLASS = "com.mbrlabs.mundus.commons.core.ecs.delegate.RenderableObjectDelegate"
+/** The stable native kind for an asset renderable. */
+const val ASSET_RENDERABLE_KIND = "asset"

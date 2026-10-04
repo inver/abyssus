@@ -124,8 +124,8 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     }
 
     fun testUnknownTypeUsesTheGenericIconAndTypeText() {
-        myFixture.addFileToProject("p/P.abss", "{}")
-        myFixture.addFileToProject("p/assets/w/meta.json", """{"type":"WIDGET","additional":{"a":1}}""")
+        myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
+        myFixture.addFileToProject("p/assets/w/meta.json", """{"format":"abyssus","formatVersion":1,"type":"WIDGET","additional":{"a":1}}""")
         val node = children(children(abss()).single { label(it) == "assets" }).single()
         val p = panel()
         p.show(node)
@@ -154,8 +154,8 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     }
 
     fun testBrokenMetaShowsACannotReadMessage() {
-        myFixture.addFileToProject("p/P.abss", "{}")
-        myFixture.addFileToProject("p/assets/w/meta.json", """{"type":"MODEL"}""")
+        myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
+        myFixture.addFileToProject("p/assets/w/meta.json", """{"format":"abyssus","formatVersion":1,"type":"MODEL"}""")
         val node = children(children(abss()).single { label(it) == "assets" }).single()
         val p = panel()
         p.show(node)
@@ -226,8 +226,8 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     }
 
     fun testUnreadableHdrShowsAPlaceholderAndRows() {
-        myFixture.addFileToProject("p/P.abss", "{}")
-        myFixture.addFileToProject("p/assets/broken/meta.json", """{"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+        myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
+        myFixture.addFileToProject("p/assets/broken/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
         val bytes = File("$testDataPath/Untitled/assets/skybox_hdr/sky.hdr").readBytes()
         val vf = myFixture.addFileToProject("p/assets/broken/sky.hdr", "").virtualFile
         WriteCommandAction.runWriteCommandAction(project) { vf.setBinaryContent(bytes.copyOf(bytes.size / 2)) }
@@ -307,15 +307,15 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     }
 
     fun testProceduralSkyShowsEffectiveDefaultsForOmittedFields() {
-        myFixture.addFileToProject("p/P.abss", "{}")
-        myFixture.addFileToProject("p/assets/sky/meta.json", """{"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f"}}""")
+        myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
+        myFixture.addFileToProject("p/assets/sky/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f"}}""")
         val p = panel()
         p.show(children(children(abss()).single { label(it) == "assets" }).single())
         assertEquals("20.0", (field(p, "sunIntensity") as JBTextField).text)
         assertEquals("0.76", (field(p, "mieG") as JBTextField).text)
         assertEquals("6360000.0", (field(p, "planetRadius") as JBTextField).text)
         assertEquals("5.8E-6, 1.35E-5, 3.31E-5", (field(p, "betaRayleigh") as JBTextField).text)
-        assertEquals("the file still omits them", """{"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f"}}""", metaText("p/assets/sky/meta.json"))
+        assertEquals("the file still omits them", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f"}}""", metaText("p/assets/sky/meta.json"))
     }
 
     fun testUnsupportedAssetsStayReadOnly() {

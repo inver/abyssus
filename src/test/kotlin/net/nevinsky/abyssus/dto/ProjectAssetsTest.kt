@@ -31,7 +31,7 @@ class ProjectAssetsTest : BasePlatformTestCase() {
     private fun add(path: String, text: String): VirtualFile = myFixture.addFileToProject(path, text).virtualFile
 
     private fun project(scenes: Map<String, String>, assets: Map<String, String>, root: String = "p"): VirtualFile {
-        val abss = add("$root/P.abss", """{"name":"P"}""")
+        val abss = add("$root/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
         scenes.forEach { (name, text) -> add("$root/scenes/$name.scene", text) }
         assets.forEach { (folder, meta) -> add("$root/assets/$folder/meta.json", meta) }
         return abss
@@ -41,13 +41,13 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         project.service<ProjectReader>().read(abss).obj!!.assets
 
     private fun ecs(vararg refs: String) =
-        """{"ecs":{"entities":{${refs.mapIndexed { i, r -> "\"$i\":{\"components\":{\"RenderComponent\":{\"renderable\":$r}}}" }.joinToString(",")}}}}"""
+        """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{${refs.mapIndexed { i, r -> "\"$i\":{\"components\":{\"RenderComponent\":{\"renderable\":$r}}}" }.joinToString(",")}}}}"""
 
     private fun modelRef(name: String, shader: String = "defaultShader") =
         """{"shaderKey":"$shader","asset":{"type":"MODEL","assetName":"$name"}}"""
 
     private fun meta(type: String, label: String, additional: String = "{}") =
-        """{"version":1,"lastModified":1,"uuid":"${u(label)}","type":"$type","additional":$additional}"""
+        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"${u(label)}","type":"$type","additional":$additional}"""
 
     // 2.1 listing
 
@@ -72,7 +72,7 @@ class ProjectAssetsTest : BasePlatformTestCase() {
     }
 
     fun testProjectWithoutAssetsFolderHasEmptyList() {
-        val abss = add("none/P.abss", """{"name":"P"}""")
+        val abss = add("none/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
         assertEquals(emptyList<Asset<Any>>(), readAssets(abss))
     }
 
@@ -94,7 +94,7 @@ class ProjectAssetsTest : BasePlatformTestCase() {
 
     fun testSceneNamesAssetsSkyboxesAndShadersDirectly() {
         val abss = project(
-            mapOf("S" to """{"skyboxName":"sky","ecs":{"x":{"asset":{"assetName":"m1"},"shaderKey":"myShader"}}}"""),
+            mapOf("S" to """{"format":"abyssus","formatVersion":1,"skyboxName":"sky","ecs":{"x":{"asset":{"assetName":"m1"},"shaderKey":"myShader"}}}"""),
             mapOf(
                 "m1" to meta("MODEL", "u1"), "m2" to meta("MODEL", "u2"), "sky" to meta("SKYBOX", "u3"),
                 "myShader" to meta("SHADER", "u4"), "otherShader" to meta("SHADER", "u5"),
@@ -134,7 +134,7 @@ class ProjectAssetsTest : BasePlatformTestCase() {
 
     fun testSplatTextureIsUsedThroughItsTerrain() {
         val abss = project(
-            mapOf("S" to """{"ecs":{"e":{"asset":{"assetName":"terr"}}}}"""),
+            mapOf("S" to """{"format":"abyssus","formatVersion":1,"ecs":{"e":{"asset":{"assetName":"terr"}}}}"""),
             mapOf(
                 "terr" to meta("TERRAIN", "ut", """{"splatMap":"${u("us1")}","splatR":"${u("us2")}","splatG":null}"""),
                 "splat1" to meta("TEXTURE", "us1"), "splat2" to meta("TEXTURE", "us2"), "lonely" to meta("TEXTURE", "ul"),
@@ -218,7 +218,7 @@ class ProjectAssetsTest : BasePlatformTestCase() {
 
     fun testAssetRowsUseTheirTypeIcon() {
         project(
-            mapOf("S" to "{}"),
+            mapOf("S" to """{"format":"abyssus","formatVersion":1}"""),
             mapOf("m" to meta("MODEL", "u1"), "t" to meta("TERRAIN", "u2"), "x" to "{ nope"),
             "icons",
         )

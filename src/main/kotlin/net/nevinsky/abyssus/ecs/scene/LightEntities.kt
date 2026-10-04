@@ -41,10 +41,10 @@ object LightEntities {
     private val componentNames = listOf("NameComponent", "TypeComponent", "PositionComponent", "LightComponent")
 
     fun canAdd(root: JsonNode): Boolean {
-        if (root !is ObjectNode) return false
+        if (root !is ObjectNode || net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().validate(root, net.nevinsky.abyssus.assets.format.DocumentKind.SCENE) != null) return false
         val ecs = root.get("ecs") ?: return true
         if (ecs !is ObjectNode) return false
-        return listOf("entities", "archetypes", "componentIdentifiers").all { !ecs.has(it) || ecs.get(it) is ObjectNode }
+        return listOf("entities", "archetypes").all { !ecs.has(it) || ecs.get(it) is ObjectNode }
     }
 
     fun add(root: JsonNode, preset: LightPreset, position: Vec3): AddedLight {
@@ -59,7 +59,6 @@ object LightEntities {
                 value.all { it.isTextual } && value.map { it.asText() }.toSet() == componentNames.toSet()
         }?.key
         val archetype = matching ?: nextId(archetypes) ?: return rejected()
-        val identifiers = ecs.get("componentIdentifiers") as? ObjectNode ?: nodes.objectNode()
         val components = nodes.objectNode()
         components.set<JsonNode>("NameComponent", NameCodec().write(NameComponent(AbyssusBundle.message(preset.nameKey, id))))
         components.set<JsonNode>("TypeComponent", TypeCodec().write(TypeComponent(preset.type)))
@@ -68,12 +67,7 @@ object LightEntities {
         components.set<JsonNode>("PositionComponent", PositionCodec().write(transform))
         components.set<JsonNode>("LightComponent", LightCodec().write(LightComponent(LightData(preset.color, preset.intensity))))
         if (matching == null) archetypes.set<JsonNode>(archetype, nodes.arrayNode().also { a -> componentNames.forEach(a::add) })
-        for (name in componentNames) {
-            val clazz = "com.mbrlabs.mundus.commons.core.ecs.component.$name"
-            if (!identifiers.has(clazz)) identifiers.put(clazz, name)
-        }
         if (!ecs.has("archetypes")) ecs.set<JsonNode>("archetypes", archetypes)
-        if (!ecs.has("componentIdentifiers")) ecs.set<JsonNode>("componentIdentifiers", identifiers)
         if (!ecs.has("entities")) ecs.set<JsonNode>("entities", entities)
         if (!root.has("ecs")) (root as ObjectNode).set<JsonNode>("ecs", ecs)
         entities.set<JsonNode>(id, nodes.objectNode().put("archetype", archetype.toInt()).set<JsonNode>("components", components))

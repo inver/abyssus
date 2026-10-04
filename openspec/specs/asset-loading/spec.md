@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lets the scene view, its tests and any other libGDX tool turn a Mundus project's asset folders into drawable models,
+Lets the scene view, its tests and any other libGDX tool turn a native Abyssus project's asset folders into drawable models,
 terrains and skies the same way, without needing a running IDE.
 
 ## Requirements

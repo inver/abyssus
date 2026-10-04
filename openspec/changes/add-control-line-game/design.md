@@ -57,7 +57,7 @@ each with `PlaneComponent`, a dynamic `RigidBodyComponent` and a `CONVEX_HULL` c
   (`games/control-line/tools/PlaneModels.kt`, run by a `generatePlaneModels` task); the generated files are
   committed, so no art licence question arises.
 - **Terrain:** a gently rolling 200 m field with a flat 50 m circle, generated once with `core`'s terrain generator
-  and committed as an ordinary Mundus terrain asset.
+  and committed as an ordinary native terrain asset (`format: "abyssus"`, `formatVersion: 1`).
 - **Sky:** a copy of `Untitled`'s procedural `skybox_physical`.
 - **`abyssus/components.schema.json`** is committed (stable output); **`abyssus/play.json`** holds absolute paths, so
   it is git-ignored and written by `./gradlew :games:control-line:exportAbyssus`.

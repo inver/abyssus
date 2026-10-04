@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
 
 /**
  * Connects one scene view's renderer to its [RayViewRuntime]. [frame] runs on the render thread once per frame: it

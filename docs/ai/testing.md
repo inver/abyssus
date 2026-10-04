@@ -42,7 +42,7 @@ Two kinds of tests:
 ## Fixtures
 
 `src/test/testData/project/`:
-- **`Untitled/`:** a Mundus project with `Untitled.abss` and `scenes/Main Scene.scene`. The scene has models,
+- **`Untitled/`:** a native Abyssus project with `Untitled.abss` and `scenes/Main Scene.scene`. The scene has models,
   terrain, a skybox, directional lights and `Spot Light 8`, `Camera 4` looking at entity 3, and a parented entity. `assets/` holds 4 models, `tree`, a
   terrain, `skybox_default`, `skybox_physical` (a procedural sky) and `skybox_hdr` (a 64 x 32 Radiance sky that the
   test helper `HdrFixtures` wrote; tests build other HDR skies with it in temp folders).
@@ -50,6 +50,13 @@ Two kinds of tests:
 
 **Size limit:** the binary assets exceed the test VFS size limit, so platform tests copy only what they need (the
 `.abss`, a scene, one `meta.json`). See the `fixture()` helper in `AbyssusViewTest`.
+
+**Native fixtures and rejection inputs.** Every fixture project, scene and `meta.json` carries
+`"format":"abyssus","formatVersion":1`, has no `componentIdentifiers`, and uses `kind: "asset"` renderables plus inert
+editor-marker kinds (`camera-marker`, `direction-handle-marker`, `direction-line-marker`, `light-marker`). Legacy,
+unmarked and future-version documents are written inline in `AbyssusDocumentFormatTest`, `NativeDocumentReadTest`,
+`NativeDocumentWriteGuardTest` and the runtime loader tests, so they never sit beside the native fixtures. Tests that
+assert a rejection also assert the document text and disk bytes are unchanged.
 
 **Don't edit fixtures through the IDE.** Opening `src/test/testData/project/Untitled` as the `runIde` project and
 using the eye, Rename Scene, the skybox chooser or gizmo drags changes the files the tests assert on.

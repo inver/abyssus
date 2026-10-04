@@ -24,15 +24,15 @@ Users SHALL be able to add a Lake or Sea from the Scene view toolbar or a scene'
 
 ### Requirement: Water persistence and compatibility
 
-Water SHALL be saved only under `abyssus.waterSurfaces.<id>` in the scene file, with `name`, `preset`, `position`, `width`, `length`, `tint`, `clarity`, `waveAmplitude`, `waveLength`, `waveSpeed`, `foamAmount`, `foamWidth` and `enabled`. It SHALL be identified as Abyssus-only. Opening a scene SHALL write nothing; a scene without the extension SHALL have no water.
+Water SHALL be saved only under `abyssus.waterSurfaces.<id>` in the scene file, with `name`, `preset`, `position`, `width`, `length`, `tint`, `clarity`, `waveAmplitude`, `waveLength`, `waveSpeed`, `foamAmount`, `foamWidth` and `enabled`. It SHALL be native Abyssus extension data inside a version 1 document. Opening a scene SHALL write nothing; a scene without the extension SHALL have no water.
 
 #### Scenario: Reopen water
 - **WHEN** a saved scene with water is reopened in Abyssus
 - **THEN** the same surfaces, ids and settings appear without a file rewrite
 
-#### Scenario: Existing Mundus data survives
+#### Scenario: Existing native data survives
 - **WHEN** water is added to the Untitled Main Scene
-- **THEN** its existing keys, numbers, formatting, ECS archetypes and component identifiers remain unchanged, and neither the .abss nor asset meta.json files are modified
+- **THEN** its existing keys, numbers, formatting, ECS archetypes, components and native document markers remain unchanged, and neither the .abss nor asset meta.json files are modified
 
 ### Requirement: Water edits are undoable and isolated
 

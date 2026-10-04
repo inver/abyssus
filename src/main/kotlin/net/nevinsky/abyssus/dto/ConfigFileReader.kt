@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.dto
 
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
 
 /** What reading a config file gave: the parsed [obj], or the [message] of why it could not be read. */
 sealed interface AssetReadResult<out T> {
@@ -39,7 +39,7 @@ interface ConfigFileReader<T> {
     fun read(file: VirtualFile): AssetReadResult<T>
 
     /** Part of the cache key: changes whenever anything this reader depends on changes. */
-    fun stamp(file: VirtualFile): Long = file.modificationStamp
+    fun stamp(file: VirtualFile): Long = documentStamp(file)
 }
 
 fun VirtualFile.text() = String(contentsToByteArray(), charset)
@@ -47,3 +47,7 @@ fun VirtualFile.text() = String(contentsToByteArray(), charset)
 /** The editor's unsaved text when the file has an open document, else the file's content. */
 fun textOf(file: VirtualFile): String =
     FileDocumentManager.getInstance().getCachedDocument(file)?.text ?: String(file.contentsToByteArray(), file.charset)
+
+/** Cache keys include unsaved edits as well as disk changes. */
+fun documentStamp(file: VirtualFile): Long =
+    file.modificationStamp * 31 + (FileDocumentManager.getInstance().getCachedDocument(file)?.modificationStamp ?: 0L)

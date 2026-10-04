@@ -49,7 +49,7 @@ class ScenePreviewTest {
 
     @Test
     fun aLightWithoutTargetUsesTheDraggedDirection() {
-        val noTarget = SceneContent.of(parseScene("""{"ecs":{"entities":{
+        val noTarget = SceneContent.of(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
                 "PositionComponent":{"localPosition":{"y":10}}}}}}}"""))
         val turned = DragResult(
@@ -74,7 +74,7 @@ class ScenePreviewTest {
 
     @Test
     fun aimedTargetIsANullWhenTheLightLooksAtANonHandle() {
-        val aimedAtModel = SceneContent.of(parseScene("""{"ecs":{"entities":{
+        val aimedAtModel = SceneContent.of(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "m":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"a"}}},
                 "PositionComponent":{"localPosition":{"x":1}}}},
             "l":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
@@ -88,7 +88,7 @@ class ScenePreviewTest {
 
     @Test
     fun aimedTargetUsesADistanceOfOneWhenTheHandleIsAtTheLight() {
-        val atLight = SceneContent.of(parseScene("""{"ecs":{"entities":{
+        val atLight = SceneContent.of(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "h":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"x":5}}}},
             "l":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
                 "PositionComponent":{"lookAtId":"h","localPosition":{"x":5}}}}}}}"""))
@@ -103,7 +103,7 @@ class ScenePreviewTest {
 
     @Test
     fun movingAPointLightDoesNotReAimIt() {
-        val point = SceneContent.of(parseScene("""{"ecs":{"entities":{
+        val point = SceneContent.of(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{},
                 "PositionComponent":{"lookAtId":2,"localPosition":{"y":10}}}},
             "2":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{}}}}}}"""))

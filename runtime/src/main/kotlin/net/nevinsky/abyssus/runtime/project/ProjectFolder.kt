@@ -13,7 +13,7 @@ const val SCENES_DIR = "scenes"
 
 data class ProjectInfo(val name: String, val scenes: List<Path>)
 
-/** Mundus project layout, independent of the editor's virtual filesystem. */
+/** Native project layout, independent of the editor's virtual filesystem. */
 class ProjectFolder(private val dir: Path) {
     fun abss(): Path? = files(dir, PROJECT_EXTENSION).firstOrNull()
     fun sceneFiles(): List<Path> = files(dir.resolve(SCENES_DIR), SCENE_EXTENSION)

@@ -16,6 +16,6 @@ class SceneReader(private val loading: SceneLoading) : ConfigFileReader<SceneDto
     fun parse(text: String): SceneDto = loading.parse(text)
 
     override fun read(file: VirtualFile): AssetReadResult<SceneDto> = runCatchingKeepingCancellation {
-        loading.parse(file.path) { file.text() }
+        loading.parse(file.path) { textOf(file) }
     }.let { AssetReadResult.of(it) }
 }

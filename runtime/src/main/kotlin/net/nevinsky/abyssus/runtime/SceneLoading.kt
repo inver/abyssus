@@ -19,8 +19,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /** Reads projects and creates independent scene engines without editor or GL services. */
-class SceneLoading(private val json: JsonProcessor, private val log: AssetLog) {
-    private val parser = SceneParser(json)
+class SceneLoading(private val json: JsonProcessor, private val log: AssetLog, private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()) {
+    private val parser = SceneParser(json, format)
 
     /** A missing project has no result; an unreadable project also reports its cause. */
     fun project(dir: Path): ProjectInfo? {
@@ -31,7 +31,11 @@ class SceneLoading(private val json: JsonProcessor, private val log: AssetLog) {
         }
     }
 
-    fun projectName(text: String): String? = json.parse(text, ProjectName::class.java).name
+    fun projectName(text: String): String? {
+        val root = json.readObject(text)
+        format.requireSupported(root, net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT)
+        return json.bind(root, ProjectName::class.java).name
+    }
     fun projectName(source: String, readText: () -> String): String? =
         reportedOrThrow("project $source") { projectName(readText()) }
     fun parse(text: String): SceneDto = parser.parse(text)

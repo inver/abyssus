@@ -34,7 +34,7 @@ data class CameraParams(
 }
 
 /**
- * Mundus fog: the fog share at distance `d` is `1 - exp(-(d * density)^gradient)`.
+ * Native fog: the fog share at distance `d` is `1 - exp(-(d * density)^gradient)`.
  * g3d's default shader fogs with a fixed quadratic ramp, so only [density] can be matched, at its characteristic
  * distance `1 / density`; [gradient] shapes [amount] but not the on-screen curve.
  */
@@ -92,6 +92,7 @@ internal fun normalized(v: Vec3): Vec3? {
 object MainCamera {
     fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
         val root = SceneJson.parse(abssText).takeIf { it.isObject } ?: return null
+        if (net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().validate(root, net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT) != null) return null
         val cam = root.obj("mainCamera") ?: return null
         val position = cam.vec("position") ?: return null
         val direction = normalized(cam.vec("viewPointPosition") ?: return null) ?: return null

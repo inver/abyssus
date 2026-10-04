@@ -14,11 +14,11 @@ import net.nevinsky.abyssus.runtime.ecs.component.IdComponent
 import net.nevinsky.abyssus.runtime.ecs.component.RawComponentsComponent
 
 /**
- * Writes a [SceneEngine] as an `ecs` block in the format Mundus reads. Modeled components are written by their
+ * Writes a [SceneEngine] as an `ecs` block in the native format. Modeled components are written by their
  * [ComponentCodec], carried ones unchanged, in the order of the file they came from; the [SceneEcsDocument]'s extra
  * members follow the entities. Derived state (combined transform, light instance) is not written.
  */
-class SceneEcsWriter(private val codecs: ComponentCodecs = ComponentCodecs()) {
+class SceneEcsWriter(private val codecs: ComponentCodecs = ComponentCodecs(), private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()) {
     private val nodes = JsonNodeFactory.instance
 
     fun write(engine: SceneEngine, document: SceneEcsDocument): ObjectNode {
@@ -31,6 +31,7 @@ class SceneEcsWriter(private val codecs: ComponentCodecs = ComponentCodecs()) {
         val out = nodes.objectNode()
         out.set<JsonNode>("entities", entities)
         document.extras.forEach { (key, node) -> out.set<JsonNode>(key, node) }
+        format.requireEcs(out)
         return out
     }
 

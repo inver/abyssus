@@ -45,14 +45,14 @@ class AssetRefreshTest {
         File(assets, path).apply { parentFile.mkdirs(); writeText(text); modified?.let { setLastModified(it) } }
 
     private fun terrainMeta(size: Int) =
-        """{"uuid":"t","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$size,"uv":1.0,"splatBase":"u-grass"}}"""
+        """{"format":"abyssus","formatVersion":1,"uuid":"t","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$size,"uv":1.0,"splatBase":"u-grass"}}"""
 
     private fun project() {
         write("hills/terrain.data", "1234", 1000)
         write("hills/meta.json", terrainMeta(100))
         write("grass/a.png", "png", 1000)
-        write("grass/meta.json", """{"uuid":"u-grass","type":"TEXTURE","additional":{"file":"a.png"}}""")
-        write("tree/meta.json", """{"uuid":"m","type":"MODEL","additional":{"file":"tree.gltf"}}""")
+        write("grass/meta.json", """{"format":"abyssus","formatVersion":1,"uuid":"u-grass","type":"TEXTURE","additional":{"file":"a.png"}}""")
+        write("tree/meta.json", """{"format":"abyssus","formatVersion":1,"uuid":"m","type":"MODEL","additional":{"file":"tree.gltf"}}""")
         write("tree/tree.gltf", "gltf", 1000)
     }
 
@@ -183,7 +183,7 @@ class AssetRefreshTest {
     @Test
     fun `a project without assets has nothing to deliver`() {
         val r = refresh().also { it.start(); settle() }
-        write("late/meta.json", """{"type":"MODEL","additional":{}}""")
+        write("late/meta.json", """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{}}""")
         r.changed(); settle()
         assertEquals(setOf("late"), delivered.single().names)
     }

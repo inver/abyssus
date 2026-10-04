@@ -34,11 +34,13 @@ import java.util.concurrent.Executors
 @Service(Service.Level.APP)
 class AbyssusCore : Disposable {
     val json = JsonProcessor()
+    val format = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()
     val scenes = net.nevinsky.abyssus.runtime.SceneLoading(
         json,
         AssetLog { message, error -> Logger.getInstance("Abyssus.scenes").warn(message, error) },
+        format,
     )
-    val metaFiles = net.nevinsky.abyssus.dto.MetaFiles(net.nevinsky.abyssus.assets.files.AssetMetaReader(json))
+    val metaFiles = net.nevinsky.abyssus.dto.MetaFiles(net.nevinsky.abyssus.assets.files.AssetMetaReader(json, format))
 
     /** The editable `meta.json` fields of each asset type and the editor that changes them one at a time. */
     val assetFields = AssetFieldDescriptions()

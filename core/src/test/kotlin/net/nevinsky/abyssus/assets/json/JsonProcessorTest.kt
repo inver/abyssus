@@ -15,12 +15,12 @@ class JsonProcessorTest {
 
     @Test
     fun skipsUnknownProperties() {
-        assertEquals(Meta(1, Kind.MODEL), json.parse("""{"version":1,"type":"MODEL","extra":{"a":[1,2]}}""", Meta::class.java))
+        assertEquals(Meta(1, Kind.MODEL), json.parse("""{"format":"abyssus","formatVersion":1,"version":1,"type":"MODEL","extra":{"a":[1,2]}}""", Meta::class.java))
     }
 
     @Test
     fun anUnknownEnumValueTakesTheDefault() {
-        assertEquals(Kind.UNKNOWN, json.parse("""{"version":1,"type":"WIDGET"}""", Meta::class.java).type)
+        assertEquals(Kind.UNKNOWN, json.parse("""{"format":"abyssus","formatVersion":1,"version":1,"type":"WIDGET"}""", Meta::class.java).type)
     }
 
     @Test
@@ -31,16 +31,16 @@ class JsonProcessorTest {
     @Test
     fun parsesAMetaOfEveryTypeAndAnUnknownOne() {
         for (type in MetaType.entries) {
-            val meta = json.parse("""{"version":1,"lastModified":5,"type":"$type","additional":{}}""", MetaBase::class.java)
+            val meta = json.parse("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":5,"type":"$type","additional":{}}""", MetaBase::class.java)
             assertEquals(type, meta.type)
         }
-        val unknown = json.parse("""{"version":1,"lastModified":5,"type":"WIDGET","additional":{}}""", MetaBase::class.java)
+        val unknown = json.parse("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":5,"type":"WIDGET","additional":{}}""", MetaBase::class.java)
         assertEquals(MetaType.UNKNOWN, unknown.type)
     }
 
     @Test
     fun instancesShareNothing() {
         // two processors are independent objects; nothing is looked up globally
-        assertEquals(json.parse("""{"version":3,"type":"MODEL"}""", Meta::class.java), JsonProcessor().parse("""{"version":3,"type":"MODEL"}""", Meta::class.java))
+        assertEquals(json.parse("""{"format":"abyssus","formatVersion":1,"version":3,"type":"MODEL"}""", Meta::class.java), JsonProcessor().parse("""{"format":"abyssus","formatVersion":1,"version":3,"type":"MODEL"}""", Meta::class.java))
     }
 }

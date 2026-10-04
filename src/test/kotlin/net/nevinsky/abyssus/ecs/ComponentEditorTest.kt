@@ -19,7 +19,7 @@ import org.junit.Test
 
 class ComponentEditorTest {
     private fun scene(vararg entities: String) =
-        SceneJson.parse("""{"ecs":{"entities":{${entities.joinToString(",")}},"archetypes":{"1":{"a":1}},"metadata":{"m":2}}}""")
+        SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{${entities.joinToString(",")}},"archetypes":{"1":{"a":1}},"metadata":{"m":2}}}""")
 
     private fun entity(id: Int, components: String) = """"$id":{"archetype":1,"components":{$components}}"""
 

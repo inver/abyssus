@@ -17,7 +17,7 @@ class AtmosphereParamsTest {
 
     @Test
     fun omittedParametersTakeEarthDefaults() {
-        val meta = parse("""{"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"a.vert","fragment":"a.frag"}}""")
+        val meta = parse("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"a.vert","fragment":"a.frag"}}""")
         assertEquals(MetaType.SKYBOX_PROCEDURAL, meta.type)
         assertEquals(AtmosphereParams(), meta.additional.params)
     }
@@ -33,7 +33,7 @@ class AtmosphereParamsTest {
 
     @Test
     fun overridesApplyAndTheRestStaysDefault() {
-        val a = parse("""{"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f","mieG":0.5,"betaRayleigh":[1e-6,2e-6,3e-6]}}""").additional
+        val a = parse("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f","mieG":0.5,"betaRayleigh":[1e-6,2e-6,3e-6]}}""").additional
         assertEquals(0.5f, a.params.mieG, 0f)
         assertEquals(listOf(1e-6f, 2e-6f, 3e-6f), a.params.betaRayleigh)
         assertEquals(AtmosphereParams().betaMie, a.params.betaMie, 0f)
@@ -41,7 +41,7 @@ class AtmosphereParamsTest {
 
     @Test
     fun rejectsAMetaWithoutShaderNames() {
-        val a = parse("""{"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{}}""").additional
+        val a = parse("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{}}""").additional
         assertNull(a.vertex)
         assertNull(a.fragment)
         assertNotNull(a.params)

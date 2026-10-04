@@ -176,7 +176,7 @@ launch selection from `play.json`. The toolbar, focus and key forwarding, and re
 
 `src/test/testData/project/Physics`: a copy of `Untitled` whose `Main Scene` gives `Model 0` a dynamic rigid body and
 a box collider (half extents `0.5`), `Terrain` a `HEIGHT_FIELD` collider, and `Model 2` a rope to `Model 0`
-(maximum `3`), with the physics `componentIdentifiers` entries.
+(maximum `3`), under their short names in a native scene.
 
 ## Risks / Trade-offs
 

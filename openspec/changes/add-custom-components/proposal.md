@@ -5,8 +5,8 @@
 A game needs data of its own in its scenes, such as a plane's mass and line length or where the pilot stands. A
 designer should set that data in Abyssus, not in code. Today the scene runtime knows a fixed list of component kinds
 (`ComponentCodecs`), and any other component is carried through a round trip as raw JSON that nobody can edit. The
-scene format already has the slot: `ecs.componentIdentifiers` maps a component class to the short name its entities
-use. This change lets a game declare its own components in code, read and write them in scenes, and edit them in
+native scene format already keys components by stable short names, so a game's own components can sit beside the
+built-in ones. This change lets a game declare its own components in code, read and write them in scenes, and edit them in
 Abyssus as if they were built in.
 
 ## What Changes
@@ -17,15 +17,14 @@ Abyssus as if they were built in.
   `runtime` reads and writes every declared component. A field's default is its value in a freshly constructed
   instance, and fields equal to their default are omitted on write, as the built-in codecs do.
 - **Registration is explicit.** The game passes its component classes to the scene loader. There is no classpath
-  scanning. Built-in codecs keep precedence for Mundus's own component names.
-- **In the scene file.** A declared component is stored under `ecs.entities.<id>.components.<ShortName>`. Adding one
-  to an entity also adds its class to `componentIdentifiers` when it is not there yet. `archetypes` and the entity's
-  `archetype` id are left as they are, as adding a built-in component already does; the spike below decides whether a
-  follow-up must maintain them.
+  scanning. Built-in codecs keep precedence for the built-in component names.
+- **In the scene file.** A declared component is stored under `ecs.entities.<id>.components.<ShortName>`. The short
+  name is its stable identifier: no Java class name and no identifier table are written. `archetypes` and the entity's
+  `archetype` id are left as they are, as adding a built-in component already does.
 - **One encoding.** How each field type looks in JSON is defined once, by the schema, in `runtime`. The game's
   reflective codec and the plugin's editor (which never loads game classes) both read and write through it.
 - **Schema export.** `runtime` provides an entry point that writes the registered components' schema (names, fields,
-  types, defaults, limits, groups) to `<mundus project>/abyssus/components.schema.json`. A game wires it as a Gradle
+  types, defaults, limits, groups) to `<project>/abyssus/components.schema.json`. A game wires it as a Gradle
   task. The plugin never loads game classes.
 - **Editor extension point.** Abyssus gets its first extension point, `componentSchemas`. Another plugin can
   contribute a bundled schema through it, for example the physics components in `add-jolt-physics`. Abyssus also
@@ -33,18 +32,14 @@ Abyssus as if they were built in.
 - **Editing in Abyssus.** The properties panel shows schema-declared components with editors per field type, offers
   them in "Add component", and changes them through `ComponentEditor` and `editSceneJson`: one undoable command per
   edit, same rules as built-in kinds. A component whose schema is unknown stays raw and read-only, as today.
-- **Mundus compatibility rule.** `openspec/config.yaml`'s rule "Never write values Mundus does not write" is amended:
-  Mundus's own keys keep every rule, and game-declared components may be added as described here. The new wording is
-  written in a task and confirmed by the project owner before any code lands.
-- **Spike first.** Check what the Mundus editor does when it opens a scene with a component class it cannot load and a
-  project with an `abyssus/` folder. The finding is recorded in `docs/ai/file-formats.md`.
+- **Native extension data.** Game-declared components are opaque, native extension payloads inside the Abyssus
+  version 1 contract from `decouple-from-mundus`; the document validator does not inspect them. No compatibility with
+  another editor is promised and no separate spike or rule change is needed.
 
-**Mundus files.**
-- **Read:** `ecs.entities.<id>.components` and `ecs.componentIdentifiers`, plus the new
-  `abyssus/components.schema.json`.
-- **Written:** declared components under `components.<ShortName>` and new entries in `componentIdentifiers`.
-  **The file format changes on purpose:** scenes can hold component classes Mundus does not have. Mundus's own keys,
-  their order and their defaults are unchanged.
+**Fields read/written.**
+- **Read:** `ecs.entities.<id>.components`, plus the new `abyssus/components.schema.json`.
+- **Written:** declared components under `components.<ShortName>`. Built-in keys, their order and their defaults are
+  unchanged, and no `ecs.componentIdentifiers` is read or written (the native format rejects it).
 
 **Out of scope.**
 
@@ -59,15 +54,14 @@ Abyssus as if they were built in.
 ### New Capabilities
 
 - `custom-scene-components`: declaring game components in code and reading and writing them in a scene's `ecs`
-  block, including the `componentIdentifiers` entry and the default-omission rule.
+  block under their short names and the default-omission rule.
 - `component-schemas`: the schema file: what it declares, how a game exports it, and how Abyssus reads it.
 - `abyssus-extension-points`: the extension points Abyssus offers other plugins, starting with `componentSchemas`.
 
 ### Modified Capabilities
 
 - `scene-component-editing`: add, update and remove extend from the modeled kinds to schema-declared components,
-  with the same validation, undo and "leave everything else as it was" rules. Adding one also records its class in
-  `componentIdentifiers`.
+  with the same validation, undo and "leave everything else as it was" rules.
 - `object-properties-panel`: schema-declared components are shown with editors per field type and grouped by
   `@Field` group, and "Add component" lists them.
 
@@ -75,10 +69,7 @@ Abyssus as if they were built in.
 
 - **Code:** `runtime` (annotations, reflective codec, codec registry, schema model and exporter); the plugin's
   `ComponentEditor`, properties panel, schema loading and `plugin.xml` (the new extension point).
-- **Process:** the `openspec/config.yaml` rule change described above, made in a task after the owner confirms the
-  wording.
-- **Tests:** codec round trips for every field type, default omission, the `componentIdentifiers` entry, schema
+- **Tests:** codec round trips for every field type, default omission, short-name-only writing, schema
   export, and panel editing of a schema component against a fixture project that holds an exported schema.
-- **Docs:** `AGENTS.md` (the compatibility rule), `docs/ai/file-formats.md` (custom components, the schema file and
-  the spike's finding), `docs/ai/architecture.md` (extension points), `runtime/README.md`, `ecs/README.md`.
-- **Depends on:** `extract-scene-runtime`.
+- **Docs:** `docs/ai/file-formats.md` (custom components and the schema file), `docs/ai/architecture.md` (extension points), `runtime/README.md`, `ecs/README.md`.
+- **Depends on:** `extract-scene-runtime` and the native contract from `decouple-from-mundus`.

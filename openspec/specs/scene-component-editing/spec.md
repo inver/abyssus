@@ -3,7 +3,7 @@
 ## Purpose
 
 Lets users add, change and remove the components of a scene entity from the plugin, so scene content can
-be edited without writing Mundus' component JSON by hand and without disturbing anything else in the file.
+be edited without writing component JSON by hand and without disturbing anything else in the file.
 
 ## Requirements
 
@@ -51,7 +51,7 @@ file. A value that does not fit the field SHALL be rejected with a message and l
 #### Scenario: Value equals the default
 
 - **WHEN** a position's `localScale.y` is set back to `1`
-- **THEN** the file is written the way Mundus writes defaults, leaving no field that only repeats a default
+- **THEN** the file follows the Abyssus version 1 default omission rules, leaving no field that only repeats a default
 
 #### Scenario: No change
 
@@ -102,13 +102,13 @@ anything refers to it.
 ### Requirement: Edits preserve the rest of the scene file
 
 Every create, update and remove SHALL leave everything it does not target as it was: other entities,
-unmodeled components, `archetype` ids, the `ecs` block's `archetypes`, `componentIdentifiers` and `metadata`,
+unmodeled components, `archetype` ids, the `ecs` block's `archetypes`, `metadata` and the native document markers,
 the order of entities and components, and the formatting style of the file.
 
 #### Scenario: Unmodeled data survives
 
 - **WHEN** a component is changed in `Main Scene`
-- **THEN** reloading the file shows the same `PickableComponent`, `DependenciesComponent`, editor-only renderables, `archetypes`, `componentIdentifiers` and `metadata` as before
+- **THEN** reloading the file shows the same `PickableComponent`, `DependenciesComponent`, unknown native renderable kinds, `archetypes`, `metadata` and the native document markers as before
 
 #### Scenario: Written file loads
 
@@ -184,14 +184,14 @@ Cone angle edits SHALL accept only finite numbers greater than 0 and less than 1
 - **WHEN** edge softness is set below 0, above 100, to a nonfinite value or to nonnumeric text
 - **THEN** the edit is rejected and the scene remains unchanged
 
-### Requirement: Spotlight extension compatibility
+### Requirement: Native spotlight storage
 
-When verified Mundus equivalents are unavailable, the scene SHALL store coneAngle in full degrees and edgeSoftness as a fraction from 0 to 1 in the light's existing nested or flat representation. The documented defaults SHALL be 45 degrees and 0.2 softness, omitted when reset. Documentation SHALL identify these as Abyssus extensions with unverified Mundus support.
+A native spotlight SHALL store `coneAngle` as full degrees and `edgeSoftness` as a fraction from 0 to 1 in its existing nested or flat light representation. Defaults SHALL be 45 degrees and 0.2 softness, omitted when reset. Documentation SHALL describe these as native Abyssus fields.
 
-#### Scenario: Save fallback fields
-- **WHEN** a nested spotlight is saved with a 60-degree cone and 25-percent softness using the extension format
-- **THEN** its light object holds coneAngle 60 and edgeSoftness 0.25, with unrelated content preserved
+#### Scenario: Save native beam fields
+- **WHEN** a nested spotlight is saved with a 60-degree cone and 25-percent softness
+- **THEN** its light object holds `coneAngle: 60` and `edgeSoftness: 0.25`, with unrelated content preserved
 
-#### Scenario: Reset extension defaults
-- **WHEN** extension settings are reset to 45 degrees and 20-percent softness
-- **THEN** their keys are omitted and the effective values remain those defaults
+#### Scenario: Reset native defaults
+- **WHEN** beam settings are reset to 45 degrees and 20-percent softness
+- **THEN** those keys are omitted and the effective values remain the defaults

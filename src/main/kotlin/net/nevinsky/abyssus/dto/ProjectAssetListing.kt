@@ -29,7 +29,7 @@ class ProjectAssetListing(json: JsonProcessor) {
      */
     fun list(abss: VirtualFile): List<Asset<Any>> = ProjectLayout.assetFolders(abss).map { dir ->
         runCatchingKeepingCancellation {
-            val document = metaFiles.saved(dir) ?: return@runCatchingKeepingCancellation null
+            val document = metaFiles.inEditor(dir) ?: return@runCatchingKeepingCancellation null
 
             @Suppress("UNCHECKED_CAST")
             val parsedMeta = document.typed(MetaBase::class.java as Class<MetaBase<Any>>) ?: return@runCatchingKeepingCancellation null
@@ -39,7 +39,7 @@ class ProjectAssetListing(json: JsonProcessor) {
     }
 
     /**
-     * The `uuid`s a `meta.json` holds in the fields Mundus resolves to other assets: the splat textures and the
+     * The `uuid`s a `meta.json` holds in the fields Abyssus resolves to other assets: the splat textures and the
      * `materials` list. Files named in `meta.json` live in the asset's own folder and are not references.
      */
     private fun references(meta: JsonNode): List<String> {

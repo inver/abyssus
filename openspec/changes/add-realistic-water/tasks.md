@@ -6,7 +6,7 @@ Tests named below are proposed new classes unless already present. Plugin single
 
 - [ ] 1.1 Add constructor-wired core WaterSettings, preset defaults and WaterValidation; verify WaterSettingsTest covers Lake/Sea differences, finite/range checks, missing defaults and invalid presets with `./gradlew :core:test`.
 - [ ] 1.2 Add a scene extension codec and SceneDto/SceneContent reading that retains unknown data without rewrites; verify WaterCodecTest and SceneContentTest cover absent/empty/malformed extensions, invalid surfaces, independent ids/levels and unchanged original Untitled text with `./gradlew :test`.
-- [ ] 1.3 Implement pure WaterEdits add/update/rename/toggle/remove and id allocation; verify WaterEditsTest covers incompatible containers, collisions, no-op/rejection, preservation of unknown members/key order/number text, last removal and unchanged ECS bookkeeping.
+- [ ] 1.3 Implement pure WaterEdits add/update/rename/toggle/remove and id allocation; verify WaterEditsTest covers incompatible containers, collisions, no-op/rejection, preservation of unknown members/key order/number text, last removal and unchanged ECS data and native document markers.
 - [ ] 1.4 Wire water edits through editSceneJson with bundle commands; verify WaterSceneEditsTest covers each edit's exact-text undo/redo and unchanged .abss/meta.json, and that a rejected edit creates no undo step.
 - [ ] 1.5 Document the schema, defaults, Abyssus-only limitation and no-migration behavior in docs/ai/file-formats.md; verify documented field names against WaterCodecTest and run `scripts/check-docs.sh`.
 

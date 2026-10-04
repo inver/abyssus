@@ -15,7 +15,7 @@ import net.nevinsky.abyssus.assets.files.AssetFiles
 /** Skybox assets: the six face images decoded off the GL thread, then uploaded as one cube map. */
 class SkyboxLoader(private val shaders: ShaderSource) : AssetLoader<PreparedSkybox, SkyboxCube> {
     /**
-     * Mundus builds the cube map from (back, front, left, right, bottom, top) as (+X, -X, +Y, -Y, +Z, -Z); the same
+     * The native cube map maps from (back, front, left, right, bottom, top) as (+X, -X, +Y, -Y, +Z, -Z); the same
      * order is kept so a skybox looks here as it does in the editor.
      */
     override fun prepare(files: AssetFiles, name: String): PreparedSkybox? {

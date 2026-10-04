@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.runtime.ecs.scene
 
-import net.nevinsky.abyssus.runtime.ecs.render.MUNDUS_RENDERABLE_OBJECT_CLASS
+import net.nevinsky.abyssus.runtime.ecs.render.ASSET_RENDERABLE_KIND
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
@@ -28,7 +28,7 @@ import java.math.BigDecimal
 import net.nevinsky.abyssus.runtime.scene.ColorDto
 import kotlin.math.abs
 
-/** Reads and writes one kind of component as the Mundus scene format holds it, under its short [name]. */
+/** Reads and writes one kind of component as the native scene format holds it, under its short [name]. */
 interface ComponentCodec<C : Component> {
     val name: String
     val type: Class<C>
@@ -108,7 +108,7 @@ class ParentCodec : ComponentCodec<ParentComponent> {
         nodes.objectNode().putId("parentEntityId", component.parentEntityId)
 }
 
-/** Position, rotation and scale: only the values that differ from the defaults are written, as Mundus does. */
+/** Position, rotation and scale: only the values that differ from the defaults are written. */
 class PositionCodec : ComponentCodec<PositionComponent> {
     override val name = "PositionComponent"
     override val type = PositionComponent::class.java
@@ -224,20 +224,21 @@ class Point2PointCodec : ComponentCodec<Point2PointPositionComponent> {
 }
 
 /**
- * The render component: a Mundus `RenderableObjectDelegate` resolves its asset through [resolver]; any other
+ * The render component: a native `asset` kind resolves its asset through [resolver]; any other
  * renderable (editor-only delegates) or an asset the project lacks loads without a renderable and keeps the file's
  * `renderable` object, which is written back.
  */
-class RenderCodec(private val resolver: AssetResolver, private val warnings: SceneEcsWarnings) :
+class RenderCodec(private val resolver: AssetResolver, private val warnings: SceneEcsWarnings, private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()) :
     ComponentCodec<RenderComponent> {
     override val name = "RenderComponent"
     override val type = RenderComponent::class.java
 
     override fun read(node: JsonNode): RenderComponent {
         val raw = node.obj("renderable") ?: return RenderComponent()
-        val clazz = raw.text("class")
-        if (clazz != MUNDUS_RENDERABLE_OBJECT_CLASS) {
-            warnings.warn("renderable class $clazz is not supported and is kept unchanged")
+        format.requireRenderable(raw)
+        val kind = raw.text("kind")
+        if (kind != ASSET_RENDERABLE_KIND) {
+            warnings.warn("renderable kind $kind is not supported and is kept unchanged")
             return RenderComponent(null, raw)
         }
         val asset = raw.obj("asset")
@@ -258,9 +259,10 @@ class RenderCodec(private val resolver: AssetResolver, private val warnings: Sce
     override fun write(component: RenderComponent): JsonNode {
         val renderable = component.renderable
         val raw = component.raw
+        raw?.let(format::requireRenderable)
         if (renderable !is RenderableObjectDelegate) return nodes.objectNode().putIf("renderable", raw)
         val out = (raw as? ObjectNode)?.deepCopy() ?: nodes.objectNode()
-        out.put("class", MUNDUS_RENDERABLE_OBJECT_CLASS)
+        out.put("kind", ASSET_RENDERABLE_KIND)
         renderable.shaderKey?.let { out.put("shaderKey", it) }
         out.set<JsonNode>(
             "asset",

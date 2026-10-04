@@ -17,7 +17,7 @@ the IDE the light application service `AbyssusCore` builds one (IDE log, IDE poo
 delegates parsing to it; `ProjectReader` delegates project-name parsing while retaining its VFS stamps and listings.
 `SceneEntry(file, scene)` keeps editor sources out of the runtime DTO. Filesystem callers use `ProjectFolder` and
 `SceneLoading.project` and `SceneLoading.load` with `Path`; every load gets its own engine, resolver and warnings. Parsing and loading
-run on the caller's thread without GL. The plugin does not depend on Mundus.
+run on the caller's thread without GL.
 
 `raytracing` is an optional GPU ray tracing renderer, off by default per view (switched from the **Ray Tracing**
 switch in Abyssus Properties; the Scene View has no button for it). It owns nothing global: the plugin's `AbyssusCore` lazily builds one `RayBackendService` (a
@@ -105,7 +105,7 @@ fail it between any two writes. No scene or project file is written that way.
 ### The `ecs` package
 
 `SceneEcsLoader` reads a scene's `ecs` block into an Ashley `SceneEngine`, through one `ComponentCodec` per modeled
-component. Components it doesn't model are carried raw. `SceneEcsWriter` writes the engine back in Mundus' format.
+component. Components it doesn't model are carried raw. `SceneEcsWriter` writes the engine back in native format.
 Systems are in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/system/Systems.kt`. Only tests use the loader, writer and systems today; `ComponentEditor` is used by
 the plugin: it adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
 checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the properties panel and the tree actions. See
@@ -120,6 +120,22 @@ against its depth. Scenes the backend cannot represent, a failed asset, or a dev
 once and surface a reason with a Retry button; no scene file is written by any of this. See `raytracing/README.md` for
 toolchains, the opt-in device test commands (`-Dabyssus.metalTests=true`, `-Dabyssus.vulkanTests=true`), shading rules
 and bounds, and `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for the view's states.
+
+## Native document validation
+
+`core`'s `AbyssusDocumentFormat` is a stateless, constructor-built validator over parsed `JsonNode`s with no Swing,
+IntelliJ or GL. `validate(document, kind)` checks the enclosing `.abss` / `.scene` / `meta.json` header
+(`format: "abyssus"`, integral `formatVersion: 1`) and, for scenes, the reserved legacy fields
+(`ecs.componentIdentifiers`, renderable `class`); it returns a `FormatRejection` or `null`. `validateEcs` and
+`requireRenderable` check only a raw `ecs` block or renderable, so `SceneEcsLoader`, `SceneEcsWriter` and `RenderCodec`
+refuse legacy payloads even when handed no enclosing document. Extension payloads are opaque.
+
+It runs on whatever thread the caller is already on: the pool thread in `AssetFiles` / `AssetMetaReader` and
+`SceneLoading`, a read action in the DTO readers and `SceneRenderParams`, and the EDT in `editSceneJson` (before the
+mutation and again on the candidate text) and `SceneFormatListener`, always against the current document text rather
+than an accepted snapshot. Rejections surface through `documentDisplayMessage` with the localized
+`unsupportedFormat.*` messages: the existing tree/status text for projects and scenes, the unavailable presentation for
+an asset. A rejected file is never imported, formatted or edited; supported siblings keep working.
 
 ## Threading
 

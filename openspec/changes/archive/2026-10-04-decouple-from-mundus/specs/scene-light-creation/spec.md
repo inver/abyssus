@@ -10,8 +10,8 @@ of the scene, and its name the kind's label and that id. Everything else in the 
 
 #### Scenario: Add a directional light to the fixture scene
 
-- **WHEN** Directional is chosen in `Main Scene`, whose highest entity id is `7`
-- **THEN** the file gains entity `8` named `Directional Light 8` with type `LIGHT_DIRECTIONAL` and a light of color `1,1,1,1` and intensity `1`, and entities `0` to `7` are unchanged
+- **WHEN** Directional is chosen in `Main Scene`, whose highest entity id is `8`
+- **THEN** the file gains entity `9` named `Directional Light 9` with type `LIGHT_DIRECTIONAL` and a light of color `1,1,1,1` and intensity `1`, and entities `0` to `8` are unchanged
 
 #### Scenario: Add a sun
 
