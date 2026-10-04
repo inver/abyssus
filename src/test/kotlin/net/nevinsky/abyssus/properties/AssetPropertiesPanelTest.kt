@@ -98,8 +98,10 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         p.show(abss())
         assertEquals("Nothing to show: Untitled.abss is the project file.", (p.state as PanelState.Empty).message)
         val scene = children(children(abss()).single { label(it) == "scenes" }).single()
+        // a scene row shows the scene's view settings (its Ray Tracing switch) instead of an empty state
         p.show(scene)
-        assertTrue((p.state as PanelState.Empty).message.endsWith("is a scene."))
+        val details = p.state as PanelState.SceneDetails
+        assertEquals("Main Scene.scene", details.file.name)
     }
 
     // 3.1a header

@@ -156,6 +156,7 @@ class SceneFileEditor(
         created.onFailure = { e -> ApplicationManager.getApplication().invokeLater { showGlFailure(e) } }
         created.onPick = { entityId -> selectEntityInAbyssusView(project, file, entityId) }
         created.onTransform = ::applyTransform
+        (created as? RayControlProvider)?.rayControl?.let { project.getService(SceneRayControls::class.java).register(file, it, created) }
         view = created
         statusText = null
         setContent(created.view)
@@ -163,7 +164,8 @@ class SceneFileEditor(
 
     /** Writes [edit] to the entity [entityId] of the scene as one undoable command; false when nothing changed. */
     internal fun applyTransform(entityId: String, edit: TransformEdit): Boolean {
-        val command = AbyssusBundle.message(if (edit.rotation != null) "commandRotateEntity" else "commandMoveEntity")
+        val isRotate = edit.rotation != null || edit.target != null
+        val command = AbyssusBundle.message(if (isRotate) "commandRotateEntity" else "commandMoveEntity")
         return editSceneJson(project, file, command) { root -> SceneTransformWriter.apply(root, entityId, edit) }
     }
 

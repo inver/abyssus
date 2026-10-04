@@ -61,8 +61,8 @@ The components the plugin reads:
 | Component | Used for |
 |---|---|
 | `NameComponent.name` | Entity label (the id when missing) |
-| `TypeComponent.type` | `CAMERA`, `LIGHT_*` (kind of light), ... |
-| `PositionComponent` | `localPosition`, `localRotation` (quaternion `x y z w`) and `localScale`; plus `lookAtId` for cameras |
+| `TypeComponent.type` | `CAMERA`, `LIGHT_*` (kind of light), `HANDLE` (a light's direction handle) |
+| `PositionComponent` | `localPosition`, `localRotation` (quaternion `x y z w`) and `localScale`; plus `lookAtId` for cameras and lights |
 | `RenderComponent.renderable` | `asset.assetName` + `asset.type` (`MODEL` / `TERRAIN`) and `shaderKey`. Editor-only renderables have a `class` but no `asset` |
 | `CameraComponent.camera` | `position`, `viewPointPosition` (the view direction), `near`, `far`, `fieldOfView` |
 | `LightComponent` | `color`, `intensity`, `range` (positive reach, default 100 omitted), either directly or under `light` |
@@ -75,6 +75,16 @@ empty `PositionComponent: {}` is valid. Writers add fields when they change them
 
 **Cameras have two positions:** a camera's position is stored both in `PositionComponent.localPosition` and in
 `CameraComponent.camera.position`. Gizmo moves write both.
+
+**A light that looks at an entity takes its direction from it.** A `LIGHT_DIRECTIONAL` or `LIGHT_SPOT` light with a
+`PositionComponent.lookAtId` pointing at an existing entity faces it: the view direction is the unit vector from the
+light to that entity's `localPosition`. The light's own `localRotation` is still read and used when the target is
+missing or at the light itself. A light whose target is a `HANDLE` entity (an entity whose `TypeComponent.type` is
+`HANDLE`, the direction handle of a Mundus light) is a **handle-aimed light**: a rotate gizmo drag on it turns the
+direction and moves the handle, and the handle's `localPosition` is written instead of the light's rotation. A light
+aimed at anything else (a model, a camera, a terrain) only moves; turning it would mean moving an unrelated object.
+A point light has no direction and never gets a ring. The scene view's own light direction is the same resolved
+direction (`SceneContent`).
 
 ## Asset `meta.json`
 

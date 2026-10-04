@@ -9,7 +9,7 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 |---|---|
 | `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params on document/VFS changes; writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
-| `SceneContent` | `ecs` JSON → placements: models, terrains, lights, cameras, skybox |
+| `SceneContent` | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
 | `LightSet`, `SpotCone` | Deterministic light selection and CPU cone/range attenuation math |
 | `shadows/` | Per-context atlas, stable tile allocation, fitted light cameras and shared model/terrain depth pass |
 | `SceneView` | Interface of the view, so tests can pass a fake (`viewFactory`) |
@@ -57,7 +57,10 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 - **Drags preview, then write once.** During a drag `ScenePreview` overrides the dragged entity's placement. On release
   one `editSceneJson` command ("Move Entity" / "Rotate Entity") writes it. The document change re-reads params, and
   the override stays until they arrive so the object doesn't jump back.
-- **Objects without rotation.** A camera whose `lookAtId` resolves, and a point light, get Move handles only.
+- **Objects without rotation.** A camera whose `lookAtId` resolves, a point light, and a light aimed at anything
+  other than a direction handle get Move handles only. A directional or spot light aimed at a `HANDLE` entity keeps
+  its rings, but a rotate drag on it turns the direction and moves the handle (`ScenePreview.aimedTarget`), writing
+  the handle's `PositionComponent`; a move drag re-aims the light at its unmoved handle.
 - **HiDPI:** mouse positions are Swing pixels; the framebuffer can be larger. `ViewSize` converts between them for
   picking and gizmo hits.
 
@@ -127,3 +130,47 @@ and depth shaders. Missing framebuffer support, insufficient texture size or few
 units disables shadows while keeping lighting. A failed depth pass disables shadows until recreation. Terrain
 reserves unit 6 for the atlas, between its six layer textures and irradiance on unit 7; model shaders use their
 texture binder. Atlas allocation and tile passes restore GL state even on failure.
+
+## Ray tracing scene conversion
+
+`RaySceneSnapshots` converts the same preview-applied `SceneContent`, `LightSet`, camera and environment that raster
+draws into an immutable `RaySceneSnapshot`, from CPU asset companions only (never GL handles). `RaySceneDiff` classifies
+what changed between frames (structure, transform, pose, camera, light, material, environment), and anything the
+backend cannot represent becomes an explicit `RaySceneConversion.Fallback`. `RayModelPoses` copies each animated or
+skinned entity's displayed pose on the render thread, after animations advanced, and `RayModelSkinning` (core)
+deforms the shared source mesh per instance on a worker.
+
+What the native renderer then draws, and its bounds, are in `raytracing/README.md` ("Scene shading (one bounce)"):
+per-light shadow rays, cutouts, one reflection bounce for PBR, sky and fog like raster, and front-to-back alpha
+blending that neither casts shadows nor appears in reflections. Whole-view raster fallback applies when the scene
+exceeds those bounds.
+
+## Ray Tracing mode
+
+Ray Tracing is per view and off by default, and the Scene View's toolbar has no control for it: the switch lives in Abyssus
+Properties (below). `RayModeState` holds the phase (Off, Checking, Preparing, Active, Unavailable, Failed) and a revision that
+rejects late results after off, retry, hide or close. It holds no camera, selection or drag state, so switching renderers
+cannot change them. The Properties switch shows the phase, an unusable GPU's reasons (`RayModeText`) and Retry after a
+failure, and the tooltip of an active view names the backend and GPU. `RayBackendSelector` chooses a backend once per IDE
+session (`-Dabyssus.raytracing.backend=auto|metal|vulkan|off`); nothing native loads until ray tracing is switched on.
+
+Each frame `SceneRenderer` calls its `rayFrameProvider` (the panel's `RayViewFeed`) with a `RayFrameContext`: the
+preview-applied content, camera, lights, animated models and the built HDR sky's ambient colours. The feed copies that
+state on the EDT, converts it off the EDT, and returns the newest completed frame that still matches the view's size,
+camera, project and drawn entities; otherwise the renderer draws raster as usual. A presented ray frame goes through
+`RayFramePresenter`, then the grid and overlays are drawn with the frame's own camera against its depth. Hiding the view
+stops submissions and releases the session; showing it resumes without stale images. The scene's sky is transferred as a
+CPU `RaySkySnapshot` (HDR and cube skies) or, for a procedural sky (arbitrary asset GLSL), rendered once per sky and sun
+direction by `RaySkyBaker` into six faces on the render thread and resampled. A sky that is still loading or cannot be
+transferred shows the background colour; it never fails the view. The mode reads renderer state
+and never writes a scene file, so every edit, move, rotate, drop and undo reaches it through the view's existing state.
+
+### Switching it from Abyssus Properties
+
+A selected scene row in the Abyssus Properties panel (`properties/SceneDetailsView`) has a **Ray Tracing** switch with the
+same status, reason and Retry. It reaches the live view through `SceneRayControls`, a project service: each
+`SceneFileEditor` registers its view's `RayControl` (implemented by `SceneViewPanel`, which flips the same
+`RayViewRuntime`) by scene file, and `request` applies a change to every open view of that scene. With no
+Scene View open, switching it on opens one (`openSceneView`) and applies the request when that view registers. The
+switch follows the view's `RayModeState`, so it never disagrees with it, and nothing is persisted: the mode ends with the view and the
+scene file is never written.

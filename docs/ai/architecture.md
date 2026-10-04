@@ -7,43 +7,21 @@
 | root (`src/`) | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.10) | `:core`, `:gdx-model`, Jackson, libGDX, LWJGL3-AWT |
 | `core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline, and the models, terrains and skies it builds | `:gdx-model`, Jackson, libGDX |
 | `gdx-model/` | Plain JVM library: libGDX model runtime with 32-bit mesh indices and an Assimp importer | libGDX, LWJGL Assimp |
+| `raytracing/` | Plain JVM ray tracing: backend contracts, immutable scene snapshots and linear host frames, the scheduler and quality policy, and optional native Metal and Vulkan backends | Kotlin stdlib, LWJGL Vulkan and VMA |
 
 `gdx-model` and `core` must not import IntelliJ or plugin code (see their READMEs). `core` is wired by constructors:
 its composition root `AssetLoading` takes a `JsonProcessor`, an `AssetLog`, an executor and the sky `ShaderSource`; in
 the IDE the light application service `AbyssusCore` builds one (IDE log, IDE pool) and hands it to every scene view.
 The plugin does not depend on Mundus.
 
-## What the plugin registers
-
-All in `src/main/resources/META-INF/plugin.xml`:
-
-- **File types:** `.scene` (`SceneFileType`) and `.abss` (`AbyssusProjectFileType`), both JSON; `.gltf` with its
-  own PSI (`src/main/kotlin/net/nevinsky/abyssus/language/`).
-- **Abyssus view:** a pane of the Project tool window (`AbyssusProjectViewPane`), opened on startup by
-  `OpenAbyssusViewActivity`.
-- **Scene view:** a second editor tab for `.scene` files (`SceneFileEditorProvider`).
-- **Abyssus Properties:** a tool window (`AbyssusPropertiesToolWindowFactory`).
-- **Rename Scene...:** a tree popup action (`RenameSceneAction`).
-- **`SceneFormatListener`:** pretty-prints `.scene` / `.abss` text when opened in the text editor.
-
-## Data flow
-
-### Files to the tree
-
-1. `findTopLevelAssets` (`projectView/AbyssusNodes.kt`) lists every `.abss`, and every `.scene` outside a project,
-   under the content roots.
-2. `AssetReadCache` reads each through a `ConfigFileReader` chosen by extension (`SceneReader`, `ProjectReader` in
-   `dto/`). It re-reads when the reader's `stamp` changes. A project's stamp folds in its scene files
-   and asset folders.
-3. `ProjectReader` builds a `ProjectDto`: the scenes from the `scenes` folder, and the assets from the `assets`
-   folder with their `unused` flag (`ProjectReader.usedAssets`, see `docs/ai/file-formats.md`).
-4. `childrenOf` / `foldToggles` (`projectView/DtoTree.kt`) turn DTOs into rows. `DtoEntryNode` renders them, and
-   `RowActions.kt` paints the eye, the scene "View" icon and the skybox "Choose" button.
-
-### Tree selection to the properties panel
-
-`AbyssusSelection` publishes the selected node on `AbyssusSelectionListener.TOPIC`. `AssetPropertiesPanel` reads
-the selected asset folder's `meta.json` off the EDT (`readAssetState`) and shows it. It never writes.
+`raytracing` is an optional GPU ray tracing renderer, off by default per view (switched from the **Ray Tracing**
+switch in Abyssus Properties; the Scene View has no button for it). It owns nothing global: the plugin's `AbyssusCore` lazily builds one `RayBackendService` (a
+`RayBackendSelector` over the Metal and Vulkan providers, and one serial native worker) and one converter thread, and
+each Scene view registers a `RayViewRuntime` with it. Nothing native loads at startup: providers are only constructed and
+probed when ray tracing is switched on, once per IDE session, and `-Dabyssus.raytracing.backend=off` never loads any.
+`auto` tries Metal then Vulkan on macOS and Vulkan on Windows and Linux; a device loss marks the backend for a re-probe
+on the next explicit Retry. The backend owns one device and queue, and each view gets its own session (scene structures,
+command pools, output images) that is disposed on the owner worker.
 
 ### Changed assets to the scene view
 
@@ -59,6 +37,9 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    the unsaved editor text when there is any. It re-reads on every document or VFS change of those files.
 2. `SceneRenderParams.from` → `SceneContent.of` turns the `ecs` JSON into placements: `models`, `terrains`,
    `lights`, `cameras`, plus the skybox name. The view reads the JSON directly; it does not use the `ecs` package.
+   A light's or camera's direction resolves its `PositionComponent.lookAtId` to an entity's `localPosition` when that
+   target exists and is not at the entity itself; otherwise it uses the entity's `localRotation`. `handleIds` records
+   the `HANDLE` entities that a light may be aimed at.
 3. `SceneViewPanel` hosts a `GuardedGLCanvas`. A Swing `Timer` renders frames through
    `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each holding a
    `core` `SceneAssets` from `AssetLoading`, backed by an `AssetCache`) and draws markers (`SceneMarkers`) and gizmos
@@ -122,6 +103,16 @@ Systems are in `ecs/system/Systems.kt`. Only tests use the loader, writer and sy
 the plugin: it adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
 checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the properties panel and the tree actions. See
 `src/main/kotlin/net/nevinsky/abyssus/ecs/README.md`.
+Per frame, on the EDT, `RayViewFeed` reads the renderer's current preview-applied content, camera, lights and animation
+poses (`RayModelPoses`), freezes them into a job and offers it to a one-slot mailbox; a converter thread turns the newest
+job into an immutable `RaySceneSnapshot` (`RaySceneSnapshots`, including CPU skin deformation) and offers it to the view's
+`RayRenderScheduler`. The native worker keeps one frame in flight and one replaceable pending request per view and polls
+completion, so the EDT never waits on a fence or a conversion. A completed linear RGBA/depth frame returns to the EDT,
+where `RayFramePresenter` uploads it inside the safe canvas context and `SceneRenderer` composes the grid and overlays
+against its depth. Scenes the backend cannot represent, a failed asset, or a device loss restore raster rendering at
+once and surface a reason with a Retry button; no scene file is written by any of this. See `raytracing/README.md` for
+toolchains, the opt-in device test commands (`-Dabyssus.metalTests=true`, `-Dabyssus.vulkanTests=true`), shading rules
+and bounds, and `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for the view's states.
 
 ## Threading
 
@@ -138,6 +129,10 @@ checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the proper
 - **GL safety:** `GuardedGLCanvas` refuses GL until the canvas has been on screen with a non-zero size for 250 ms.
   When disposed while hidden, it drops the context without making it current, because on macOS that would abort the
   JVM.
+- **Ray tracing:** the EDT only copies state, offers requests and uploads completed frames (inside the safe canvas
+  context). Scene conversion and skin deformation run on one converter thread fed by a latest-wins mailbox; native
+  preparation, submission, completion polling and disposal run on the ray service's serial worker. Mode transitions
+  publish to the EDT; a late result after hide, close, retry or a replaced context is discarded by its revision.
 - **Off the EDT:** properties panel reads (`readAssetState`), `AssetReadCache` reads in the background tree builder,
   and asset `prepare`.
 

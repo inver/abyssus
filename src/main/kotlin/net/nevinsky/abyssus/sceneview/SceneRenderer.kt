@@ -111,6 +111,12 @@ class SceneRenderer(
     private var gridModel: Model? = null
     private var grid: ModelInstance? = null
     private val camera = PerspectiveCamera()
+    private val rayCamera = PerspectiveCamera()
+    private var rayPresenter: RayFramePresenter? = null
+    /** Invoked after current preview/camera/animation updates, in the safe canvas context. */
+    internal var rayFrameProvider: ((RayFrameContext) -> RaySceneDisplay?)? = null
+    internal var presentedRayFrame = false
+        private set
     private val environment = Environment()
 
     @Volatile
@@ -192,12 +198,15 @@ class SceneRenderer(
 
     /** The gizmo of the selected entity for a view [height] pixels tall, or null when nothing is selected or it has no handles. */
     internal fun gizmoHandles(height: Int): GizmoHandles? {
+        return gizmoHandles(content, camera, height)
+    }
+
+    private fun gizmoHandles(c: SceneContent, eyeCamera: PerspectiveCamera, height: Int): GizmoHandles? {
         val id = selectedId ?: return null
-        val c = content
         if (gizmoMode == GizmoMode.ROTATE && !canRotate(c, id)) return null
         val selected = ScenePreview.selected(c, id) ?: return null
-        val eye = Vec3(camera.position.x, camera.position.y, camera.position.z)
-        return GizmoHandles.of(selected.transform.position, gizmoMode, eye, camera.fieldOfView, height)
+        val eye = Vec3(eyeCamera.position.x, eyeCamera.position.y, eyeCamera.position.z)
+        return GizmoHandles.of(selected.transform.position, gizmoMode, eye, eyeCamera.fieldOfView, height)
     }
 
     /** The handle of the selected entity's gizmo under the pixel, or null. Uses CPU-side data only. */
@@ -223,6 +232,8 @@ class SceneRenderer(
      * the models and terrains cached from it are invalid in the new context and must be loaded again.
      */
     fun create() {
+        // An abandoned context owns the previous handles; never delete those through a new context.
+        rayPresenter = null
         abandonShadows()
         shadows = SceneShadows()
         models.abandon()
@@ -273,21 +284,39 @@ class SceneRenderer(
         models.update(c.models, p.projectDir, deltaSeconds)
         terrains.update(c.terrains, p.projectDir)
         updateDrawnVersion()
-        val atlas = shadows?.render(camera, lights, environment, models.drawn, terrains.drawn)
+        skybox?.update(c.skybox, p.projectDir)
+        val hdrAmbient = (SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) } as? SceneAmbient.Sky)?.environment?.ambient
+        val rayDisplay = rayFrameProvider?.invoke(RayFrameContext(p, c, camera, lights, models.drawn, width, height, viewCamera, hdrAmbient) { bakedProceduralSky(c, p) })
+            ?.takeIf { compatibleRayDisplay(it, c, width, height) }
+        presentedRayFrame = rayDisplay != null
+        val atlas = if (rayDisplay == null) shadows?.render(camera, lights, environment, models.drawn, terrains.drawn) else null
         shadowedLightIds = atlas?.records?.mapTo(HashSet()) { it.lightId } ?: emptySet()
         Gdx.gl.glViewport(0, 0, width, height)
         Gdx.gl.glClearColor(p.clear.r, p.clear.g, p.clear.b, p.clear.a)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
 
-        skybox?.draw(camera, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights))
-
-        batch.begin(camera)
-        batch.render(grid, environment)
-        batch.end()
-
-        renderContent(p, c, atlas)
-        drawOverlays(width, height)
+        if (rayDisplay == null) {
+            skybox?.draw(camera, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights))
+            batch.begin(camera)
+            batch.render(grid, environment)
+            batch.end()
+            renderContent(p, c, atlas)
+            drawOverlays(width, height)
+        } else {
+            val matched = rayDisplay.metadata
+            matched.camera.applyTo(rayCamera, width, height)
+            val presenter = rayPresenter ?: RayFramePresenter().also { rayPresenter = it }
+            presenter.draw(rayDisplay.frame)
+            applyEnvironment(p.copy(ambient = matched.ambient, fog = matched.fog))
+            Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
+            Gdx.gl.glDepthFunc(GL20.GL_LEQUAL)
+            batch.begin(rayCamera)
+            batch.render(grid, environment)
+            batch.end()
+            drawOverlays(width, height, matched.content, rayCamera)
+            applyEnvironment(p)
+        }
 
         // grayed out with a spinner for as long as the scene's assets are on their way
         loading = (skybox?.isLoading ?: false) || models.isLoading || terrains.isLoading
@@ -326,18 +355,17 @@ class SceneRenderer(
     }
 
     /** Camera markers and light markers in the scene, then the selection's highlight and gizmo on top of everything. */
-    private fun drawOverlays(width: Int, height: Int) {
+    private fun drawOverlays(width: Int, height: Int, c: SceneContent = content, displayCamera: PerspectiveCamera = camera) {
         val lines = lineBatch ?: return
-        val c = content
         drewGizmo = false
         drawnCameraMarkers = c.cameras.count { it.entityId != viewCamera }
-        lines.begin(camera, depthTest = true)
+        lines.begin(displayCamera, depthTest = true)
         SceneMarkers.draw(lines, c, aspectOf(width, height) ?: return, viewCamera)
         lines.end()
         val id = selectedId ?: return
-        lines.begin(camera, depthTest = false)
+        lines.begin(displayCamera, depthTest = false)
         boundsOf(c, id)?.let { drawBox(lines, it) }
-        gizmoHandles(height)?.let {
+        gizmoHandles(c, displayCamera, height)?.let {
             GizmoDraw.draw(lines, it, hoveredAxis)
             drewGizmo = true
         }
@@ -346,14 +374,17 @@ class SceneRenderer(
 
     /** The world bounds of the entity [id] as the last frame drew it. */
     internal fun boundsOf(c: SceneContent, id: String): BoundingBox? {
-        models.drawn.firstOrNull { it.placement.entityId == id }?.let { return BoundingBox(it.localBounds).mul(it.instance.transform) }
+        models.drawn.firstOrNull { it.placement.entityId == id }?.let {
+            val transform = c.models.firstOrNull { model -> model.entityId == id }?.transform?.toMatrix() ?: it.instance.transform
+            return BoundingBox(it.localBounds).mul(transform)
+        }
         terrains.drawn.firstOrNull { it.placement.entityId == id }?.let {
             val data = it.terrain.data
             val local = BoundingBox(
                 Vector3(0f, data.heights.min(), 0f),
                 Vector3(data.size.toFloat(), data.heights.max(), data.size.toFloat()),
             )
-            return local.mul(it.world)
+            return local.mul(c.terrains.firstOrNull { terrain -> terrain.entityId == id }?.transform?.toMatrix() ?: it.world)
         }
         return SceneMarkers.boundsOf(c, id)
     }
@@ -438,6 +469,9 @@ class SceneRenderer(
 
     /** No GL calls: used immediately when a hidden canvas loses its context, including final editor disposal. */
     internal fun abandonShadows() {
+        rayPresenter = null
+        bakedSky = null
+        presentedRayFrame = false
         shadows?.abandon()
         shadows = null
         shadowedLightIds = emptySet()
@@ -445,6 +479,10 @@ class SceneRenderer(
     }
 
     override fun dispose() {
+        rayPresenter?.dispose()
+        rayPresenter = null
+        bakedSky = null
+        presentedRayFrame = false
         shadows?.dispose()
         shadows = null
         shadowedLightIds = emptySet()
@@ -474,5 +512,29 @@ class SceneRenderer(
         const val GRID_HALF_EXTENT = 50
         const val MIN_NEAR = 0.01f
         val HIGHLIGHT = Rgba(1f, 0.72f, 0.15f, 1f)
+    }
+
+    private class BakedSky(val key: Triple<String, java.io.File?, Vec3>, val snapshot: net.nevinsky.abyssus.assets.sky.RaySkySnapshot?)
+    private var bakedSky: BakedSky? = null
+    private val skyBaker = RaySkyBaker()
+
+    /** The procedural sky rendered into a ray texture once per sky and sun direction; null while it loads or fails to bake. */
+    private fun bakedProceduralSky(c: SceneContent, p: SceneRenderParams): net.nevinsky.abyssus.assets.sky.RaySkySnapshot? {
+        val name = c.skybox ?: return null
+        val sky = skybox?.sky(name) as? net.nevinsky.abyssus.assets.sky.procedural.ProceduralSky ?: return null
+        val sun = SunDirection.of(c.lights)
+        val key = Triple(name, p.projectDir, sun)
+        bakedSky?.takeIf { it.key == key }?.let { return it.snapshot }
+        val snapshot = try { skyBaker.bake(sky, sun) } catch (failure: Exception) { null }
+        bakedSky = BakedSky(key, snapshot)
+        return snapshot
+    }
+
+    private fun compatibleRayDisplay(display: RaySceneDisplay, current: SceneContent, width: Int, height: Int): Boolean {
+        val metadata = display.metadata
+        fun keys(placements: List<AssetPlacement>) = placements.map { it.entityId to it.assetName }.toSet()
+        return metadata.width == width && metadata.height == height && metadata.viewCamera == viewCamera &&
+            metadata.projectDir == params.projectDir && keys(metadata.content.models) == keys(current.models) &&
+            keys(metadata.content.terrains) == keys(current.terrains)
     }
 }
