@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.projectView
 
-import net.nevinsky.abyssus.assets.files.Asset
+import net.nevinsky.abyssus.assets.Asset
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI

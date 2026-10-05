@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.assets.edit
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.testProject
 import org.junit.Assert.assertEquals

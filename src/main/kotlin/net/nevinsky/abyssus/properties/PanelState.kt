@@ -10,7 +10,7 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assets.META_FILE
-import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.sky.cube.SKYBOX_FACES
 import net.nevinsky.abyssus.assets.sky.hdr.HdrPreview

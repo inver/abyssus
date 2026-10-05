@@ -13,7 +13,7 @@ import com.intellij.openapi.wm.ToolWindowId
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
-import net.nevinsky.abyssus.assets.files.Asset
+import net.nevinsky.abyssus.assets.Asset
 import net.nevinsky.abyssus.dto.ProjectLayout
 
 private val LOG = Logger.getInstance("net.nevinsky.abyssus.projectView.AssetSelection")

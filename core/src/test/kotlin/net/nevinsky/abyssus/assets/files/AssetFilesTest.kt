@@ -9,6 +9,7 @@ import net.nevinsky.abyssus.testing.warningsTo
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.assets.testProject
+import net.nevinsky.abyssus.assets.MetaType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

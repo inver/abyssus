@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.projectView
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.testAsset
 import net.nevinsky.abyssus.dto.ProjectDto
 import net.nevinsky.abyssus.dto.SceneEntry
@@ -66,7 +67,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
         myFixture.copyFileToProject("Untitled/assets/skybox_hdr/meta.json", "Untitled/assets/skybox_hdr/meta.json")
         myFixture.copyFileToProject("Untitled/assets/skybox_hdr/sky.hdr", "Untitled/assets/skybox_hdr/sky.hdr")
         val choice = loadSkyboxChoices(project, abss, testMetaFiles(), testCore.hdrPreviews)!!.single { it.name == "skybox_hdr" }
-        assertEquals(net.nevinsky.abyssus.assets.files.MetaType.SKYBOX_HDR, choice.type)
+        assertEquals(MetaType.SKYBOX_HDR, choice.type)
         assertEquals(HdrSkyInfo("sky.hdr", 64, 32), choice.hdr)
         assertEquals(listOf("sky.hdr"), choice.faceFiles)
         assertTrue(choice.unused)

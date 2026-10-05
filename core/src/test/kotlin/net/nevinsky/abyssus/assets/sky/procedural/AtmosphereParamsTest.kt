@@ -1,9 +1,7 @@
 package net.nevinsky.abyssus.assets.sky.procedural
 
 import net.nevinsky.abyssus.assets.testProject
-import net.nevinsky.abyssus.assets.files.MetaType
-import net.nevinsky.abyssus.assets.sky.procedural.AtmosphereParams
-import net.nevinsky.abyssus.assets.sky.procedural.ProceduralSkyMeta
+import net.nevinsky.abyssus.assets.MetaType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

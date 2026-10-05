@@ -12,8 +12,6 @@ import net.nevinsky.abyssus.core.ModelLogging
 import net.nevinsky.abyssus.log.IntellijLoggerFactory
 import org.slf4j.ILoggerFactory
 import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.edit.AssetFieldDescriptions
-import net.nevinsky.abyssus.assets.edit.AssetMetaEditor
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainAssetWriter
 import net.nevinsky.abyssus.terrain.generation.TerrainGenerator

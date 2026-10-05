@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.properties
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.filetype.SceneJson
 import java.io.File
 import java.time.ZoneOffset
@@ -81,7 +82,7 @@ class MetaRowsTest : BasePlatformTestCase() {
 
     fun testLoadsAValidMeta() {
         val loaded = load(asset("""{"format":"abyssus","formatVersion":1,"type":"SKYBOX","additional":{"top":"t.png"}}""")) as AssetMeta.Loaded
-        assertEquals(net.nevinsky.abyssus.assets.files.MetaType.SKYBOX, loaded.type)
+        assertEquals(MetaType.SKYBOX, loaded.type)
         assertEquals(listOf("format", "formatVersion", "type", "additional", "top"), loaded.rows.map { it.name })
     }
 
@@ -105,6 +106,6 @@ class MetaRowsTest : BasePlatformTestCase() {
         val file = folder.findChild("meta.json")!!
         val doc = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!
         com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) { doc.setText("""{"format":"abyssus","formatVersion":1,"type":"TERRAIN"}""") }
-        assertEquals(net.nevinsky.abyssus.assets.files.MetaType.TERRAIN, (load(folder) as AssetMeta.Loaded).type)
+        assertEquals(MetaType.TERRAIN, (load(folder) as AssetMeta.Loaded).type)
     }
 }

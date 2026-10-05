@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.projectView
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.assets.files.Asset
+import net.nevinsky.abyssus.assets.Asset
 import net.nevinsky.abyssus.dto.SceneError
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.runtime.scene.SceneDto

@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.dto
 
-import net.nevinsky.abyssus.filetype.SceneJson
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.vfs.VirtualFile
@@ -15,7 +14,7 @@ import net.nevinsky.abyssus.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.projectView.AbyssusRootNode
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.assets.files.Asset
+import net.nevinsky.abyssus.assets.Asset
 import net.nevinsky.abyssus.testAsset
 import java.util.UUID
 

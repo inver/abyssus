@@ -8,9 +8,9 @@ package net.nevinsky.abyssus.dto
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.assets.SPLAT_FIELDS
-import net.nevinsky.abyssus.assets.files.Asset
-import net.nevinsky.abyssus.assets.files.AssetMeta
-import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.assets.Asset
+import net.nevinsky.abyssus.assets.AssetMeta
+import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.sceneview.obj
 import net.nevinsky.abyssus.sceneview.opt

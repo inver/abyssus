@@ -1,8 +1,8 @@
 package net.nevinsky.abyssus.terrain
 
-import net.nevinsky.abyssus.assets.files.AssetMeta
-import net.nevinsky.abyssus.assets.files.META_VERSION_DEFAULT
-import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.assets.AssetMeta
+import net.nevinsky.abyssus.assets.META_VERSION_DEFAULT
+import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.terrain.NEW_TERRAIN_UV_DEFAULT
 import net.nevinsky.abyssus.assets.terrain.TERRAIN_META_FILE_NAME_DEFAULT

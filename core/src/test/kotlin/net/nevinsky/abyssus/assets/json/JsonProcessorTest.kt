@@ -1,8 +1,8 @@
 package net.nevinsky.abyssus.assets.json
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
-import net.nevinsky.abyssus.assets.files.AssetMeta
-import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.assets.AssetMeta
+import net.nevinsky.abyssus.assets.MetaType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

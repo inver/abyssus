@@ -20,7 +20,7 @@ import net.nevinsky.abyssus.sceneview.text
 import net.nevinsky.abyssus.dto.SceneEntry
 import net.nevinsky.abyssus.assets.sky.hdr.HdrSkyFiles
 import net.nevinsky.abyssus.assets.sky.hdr.RadianceDecoder
-import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.assets.sky.cube.SKYBOX_FACES
 import net.nevinsky.abyssus.dto.MetaFiles
 import net.nevinsky.abyssus.assets.sky.hdr.HdrPreview

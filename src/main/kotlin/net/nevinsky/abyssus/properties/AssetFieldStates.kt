@@ -6,15 +6,13 @@
 package net.nevinsky.abyssus.properties
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.assets.edit.AssetField
-import net.nevinsky.abyssus.assets.edit.EditError
-import net.nevinsky.abyssus.assets.edit.FieldKind
-import net.nevinsky.abyssus.assets.edit.FieldValue
-import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.AssetField
+import net.nevinsky.abyssus.EditError
+import net.nevinsky.abyssus.FieldKind
+import net.nevinsky.abyssus.FieldValue
+import net.nevinsky.abyssus.assets.MetaType
 import java.io.File
 
 /**

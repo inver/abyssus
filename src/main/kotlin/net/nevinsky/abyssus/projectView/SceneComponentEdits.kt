@@ -10,9 +10,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.dto.SceneReader
-import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.ecs.scene.ComponentEditor
 import net.nevinsky.abyssus.schema.ComponentSchemas
 import net.nevinsky.abyssus.ecs.scene.EditResult
@@ -22,7 +19,7 @@ import net.nevinsky.abyssus.ecs.scene.LightPreset
 import net.nevinsky.abyssus.sceneview.Vec3
 import net.nevinsky.abyssus.properties.AssetMeta
 import net.nevinsky.abyssus.properties.loadAssetMeta
-import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.filetype.editSceneJson
 import net.nevinsky.abyssus.dto.MetaFiles
 import net.nevinsky.abyssus.dto.SceneDocumentCache

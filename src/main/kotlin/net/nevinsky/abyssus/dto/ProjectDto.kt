@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.runtime.scene.SceneDto
-import net.nevinsky.abyssus.assets.files.Asset
+import net.nevinsky.abyssus.assets.Asset
 
 /** A `.abss` project as the view shows it. [scenes] holds [SceneEntry]s, and a [SceneError] for each that failed to read. */
 data class ProjectDto(

@@ -5,6 +5,7 @@
 package net.nevinsky.abyssus.assets.files
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.format.UnsupportedDocumentFormat
+import net.nevinsky.abyssus.assets.MetaType
 import org.junit.Assert.*
 import org.junit.Test
 

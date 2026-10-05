@@ -5,10 +5,8 @@ import org.junit.Assert.assertNotNull
 import org.junit.Test
 import net.nevinsky.abyssus.assets.testProject
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.sky.procedural.ProceduralSkyMeta
-import java.io.File
 
 class ProceduralSkyFixtureTest {
     @Test

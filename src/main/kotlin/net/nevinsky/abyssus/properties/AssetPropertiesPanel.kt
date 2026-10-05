@@ -39,10 +39,10 @@ import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.assets.META_FILE
-import net.nevinsky.abyssus.assets.edit.FieldKind
-import net.nevinsky.abyssus.assets.edit.FieldValue
-import net.nevinsky.abyssus.assets.edit.ParseOutcome
-import net.nevinsky.abyssus.assets.files.Asset
+import net.nevinsky.abyssus.FieldKind
+import net.nevinsky.abyssus.FieldValue
+import net.nevinsky.abyssus.ParseOutcome
+import net.nevinsky.abyssus.assets.Asset
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.text

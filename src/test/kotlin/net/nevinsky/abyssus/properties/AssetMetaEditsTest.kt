@@ -11,13 +11,12 @@ import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.assets.edit.EditError
-import net.nevinsky.abyssus.assets.edit.FieldValue
+import net.nevinsky.abyssus.EditError
+import net.nevinsky.abyssus.FieldValue
 import java.io.File
-import net.nevinsky.abyssus.dto.textOf
 import net.nevinsky.abyssus.testCore
 
-private fun update(project: com.intellij.openapi.project.Project, dir: com.intellij.openapi.vfs.VirtualFile, key: String, expected: net.nevinsky.abyssus.assets.edit.FieldValue, value: net.nevinsky.abyssus.assets.edit.FieldValue) =
+private fun update(project: com.intellij.openapi.project.Project, dir: com.intellij.openapi.vfs.VirtualFile, key: String, expected: FieldValue, value: FieldValue) =
     AssetMetaEdits.update(project, dir, key, expected, value, testCore.assetEditor)
 
 class AssetMetaEditsTest : BasePlatformTestCase() {

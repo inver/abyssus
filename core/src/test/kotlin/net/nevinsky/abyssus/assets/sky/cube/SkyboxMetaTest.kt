@@ -12,10 +12,7 @@ import net.nevinsky.abyssus.assets.skyShaders
 import net.nevinsky.abyssus.assets.testProject
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.files.MetaType
-import net.nevinsky.abyssus.assets.sky.cube.SkyboxMeta
-import net.nevinsky.abyssus.assets.sky.cube.SkyboxLoader
-import java.io.File
+import net.nevinsky.abyssus.assets.MetaType
 
 class SkyboxMetaTest {
     private val projectDir = testProject("Untitled")

@@ -6,8 +6,8 @@
 package net.nevinsky.abyssus.dto
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.assets.files.AssetMeta
-import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.assets.AssetMeta
+import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.assets.format.DocumentKind
 import net.nevinsky.abyssus.assets.json.JsonProcessor
