@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "dev-pattern-compliance-audit",
+  "owner": "inver",
+  "repo": "ai-skills",
+  "path": "skills/dev-pattern-compliance-audit",
+  "branch": "main",
+  "sha": "49eb88bc5f3f75f719e3dba58b4a84e5eb2391fb",
+  "source": "manual"
+}

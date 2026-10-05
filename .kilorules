@@ -1,0 +1,28 @@
+# ==============================================================================
+# [UNIVERSAL TERMINAL EXECUTION & ANTI-HANG GUIDELINES]
+# ==============================================================================
+
+## 1. PowerShell Environment Constraints
+- You are running in a Windows PowerShell environment within Kilo Code.
+- **CRITICAL**: NEVER append OS-level filters like `| Select-String`, `| Select-Object`, or `| Out-String` directly to long-running or streaming commands, as this blocks the standard output buffer and causes Kilo Code to freeze.
+
+## 2. Universal Anti-Hang Strategy (Asynchronous Execution)
+- **DETECTOR FOR HANGS**: Any command that takes longer than 3 seconds, requires compilation, starts a server, or spawns interactive processes **MUST** be launched as an ASYNCHRONOUS background task.
+- **NEVER** run heavy or unpredictable commands directly in the foreground.
+- **ALWAYS** use `Start-Process` to launch tasks completely detached.
+- **CRITICAL**: Never use the `-Wait` flag. Removing `-Wait` guarantees the terminal tool returns control to Kilo Code within 1 second.
+- **LOG REDIRECTION**: Always redirect both Standard Output and Standard Error to a temporary log file so execution can be monitored.
+
+### Universal Async Template:
+Start-Process cmd.exe -ArgumentList "/c <YOUR_COMMAND_HERE> > D:\TMP\kilo\async_run.log 2>&1"
+
+## 3. Autonomous Log Monitoring Loop
+- Since the process runs in the background, you must not assume it finished.
+- Implement a separate autonomous loop in subsequent turns to periodically check the status of the log file:
+  Get-Content "D:\TMP\kilo\async_run.log" -Tail 20
+- Check the log and process status periodically (simulated via step-by-step turns) until you detect termination signals (e.g., "SUCCESS", "FAILED", "EXIT", or when the process disappears from `Get-Process`).
+
+## 4. Error Diagnostics & Auto-Recovery
+- If the monitored log file or exit codes indicate a failure, do not stall or wait for user intervention.
+- Autonomously read the generated error logs/reports, locate the root cause, modify the codebase/configuration, and immediately fire the next asynchronous job.
+# ==============================================================================
