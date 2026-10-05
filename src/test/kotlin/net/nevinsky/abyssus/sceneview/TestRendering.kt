@@ -1,6 +1,6 @@
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.assets.AssetLoading
+import net.nevinsky.abyssus.AssetLoading
 import net.nevinsky.abyssus.testing.RecordingLogger
 import org.slf4j.Logger
 import net.nevinsky.abyssus.assets.ShaderSource

@@ -15,9 +15,9 @@ class AbyssusDocumentFormatTest {
     @Test fun nativeHeadersSupportEachDocumentKindWithoutChangingThePayload() {
         for (kind in DocumentKind.entries) {
             val node = json.readObject("""{"format":"abyssus","formatVersion":1,"version":7,"extra":{"class":"custom"}}""")
-            val before = json.compact(node)
+            val before = json.toString(node)
             assertNull(format.validate(node, kind))
-            assertEquals(before, json.compact(node))
+            assertEquals(before, json.toString(node))
         }
     }
 

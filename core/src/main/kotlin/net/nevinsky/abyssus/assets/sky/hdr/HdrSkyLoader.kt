@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.assets.sky.hdr
 
 import net.nevinsky.abyssus.assets.ShaderSource
+import net.nevinsky.abyssus.assets.files.AssetMeta
 import net.nevinsky.abyssus.assets.loading.AssetLoader
 import net.nevinsky.abyssus.core.AssetMetaLoader
 
@@ -20,11 +21,15 @@ class HdrSkyLoader(
     private val curve: ToneCurve,
 ) : AssetLoader<PreparedHdrSky, HdrSky> {
 
+    override fun loadPrepared(meta: AssetMeta<Any>): PreparedHdrSky {
+        val additional = meta.typedAdditional<HdrSkyMeta>()
+        val image = exrLoader.loadExr(meta.name, additional.file)
+        return PreparedHdrSky(meta.name, additional.file!!, image)
+    }
+
     override fun prepare(name: String): PreparedHdrSky? {
         val meta = metaLoader.loadBaseMeta(name) ?: return null
-        val additional = meta.typedAdditional<HdrSkyMeta>()
-        val image = exrLoader.loadExr(name, additional.file)
-        return PreparedHdrSky(name, additional.file!!, image)
+        return loadPrepared(meta)
     }
 
     override fun upload(prepared: PreparedHdrSky): Boolean =

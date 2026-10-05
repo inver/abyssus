@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.assets
 
+import net.nevinsky.abyssus.assets.json.JsonProcessor
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import java.io.File
@@ -15,4 +16,4 @@ fun skyShaders(): ShaderSource = ShaderSource("/shader/sky", AssetLoading::class
 fun testLoading(
     log: Logger = NOPLogger.NOP_LOGGER,
     executor: java.util.concurrent.Executor = java.util.concurrent.Executor(Runnable::run),
-): AssetLoading = AssetLoading(net.nevinsky.abyssus.assets.json.JsonProcessor(), log, executor, skyShaders())
+): AssetLoading = AssetLoading(JsonProcessor(), log, executor, skyShaders())

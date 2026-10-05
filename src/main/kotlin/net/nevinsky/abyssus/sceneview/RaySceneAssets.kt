@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.assets.AssetLoading
+import net.nevinsky.abyssus.AssetLoading
 import net.nevinsky.abyssus.assets.model.RayModelSnapshot
 import net.nevinsky.abyssus.assets.sky.RaySkySnapshot
 import net.nevinsky.abyssus.assets.terrain.RayTerrainSnapshot

@@ -32,7 +32,7 @@ class LineSegment(val from: Vector3, val to: Vector3, val color: Color)
 /**
  * Draws a [FieldScene] (design decision 8): the sky, the terrain with the game's own shader, the models with the
  * default shader lit by the scene's sun and ambient light, and the control lines. Assets load through `core`'s
- * [AssetLoading] from [projectDir]: prepared off the GL thread, built here. GL thread only.
+ * [net.nevinsky.abyssus.AssetLoading] from [projectDir]: prepared off the GL thread, built here. GL thread only.
  */
 class FieldRenderer(loading: AssetLoading, private val projectDir: File, shaders: ShaderSource) : Disposable {
     private val models = loading.assets(loading.models)

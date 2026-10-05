@@ -5,15 +5,14 @@
 
 package net.nevinsky.abyssus.lib.assets.assimp
 
-import org.slf4j.Logger
-import net.nevinsky.abyssus.core.ModelLogging
-
 import com.badlogic.gdx.files.FileHandle
+import net.nevinsky.abyssus.core.ModelLogging
 import net.nevinsky.abyssus.core.model.ModelData
 import net.nevinsky.abyssus.core.model.ModelMesh
 import org.lwjgl.assimp.AIMaterial
 import org.lwjgl.assimp.AIMesh
 import org.lwjgl.assimp.AIScene
+import org.slf4j.Logger
 
 private val log: Logger get() = ModelLogging.logger
 
@@ -38,7 +37,8 @@ class AssimpModelDataLoader
     ): ModelData {
         val start = System.currentTimeMillis()
         AssimpImporter.importScene(file.path(), flags).use { imported ->
-            val data: ModelData = convert(modelId, imported.scene()!!, parentDir(file), embeddedTextureDir, convertUnits)
+            val data: ModelData =
+                convert(modelId, imported.scene()!!, parentDir(file), embeddedTextureDir, convertUnits)
             log.atDebug().log { "Model $modelId loaded in ${System.currentTimeMillis() - start} ms" }
             return data
         }

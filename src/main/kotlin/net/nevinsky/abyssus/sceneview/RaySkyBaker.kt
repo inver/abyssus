@@ -76,7 +76,9 @@ internal class RaySkyBaker(private val faceSize: Int = 256) {
             val phi = (y + .5f) / height * PI.toFloat()
             for (x in 0 until width) {
                 val theta = ((x + .5f) / width - .5f) * 2f * PI.toFloat()
-                val dx = sin(phi) * sin(theta); val dy = cos(phi); val dz = -sin(phi) * cos(theta)
+                val dx = sin(phi) * sin(theta);
+                val dy = cos(phi);
+                val dz = -sin(phi) * cos(theta)
                 val index = when {
                     abs(dx) >= abs(dy) && abs(dx) >= abs(dz) -> if (dx > 0) 0 else 1
                     abs(dy) >= abs(dz) -> if (dy > 0) 2 else 3
@@ -87,7 +89,8 @@ internal class RaySkyBaker(private val faceSize: Int = 256) {
                 val u = (dx * face.right.x + dy * face.right.y + dz * face.right.z) / forward
                 val v = (dx * face.vertical.x + dy * face.vertical.y + dz * face.vertical.z) / forward
                 val px = ((u + 1f) / 2f * faceSize).toInt().coerceIn(0, faceSize - 1)
-                val py = ((v + 1f) / 2f * faceSize).toInt().coerceIn(0, faceSize - 1) // row 0 is the bottom, as glReadPixels returns
+                val py = ((v + 1f) / 2f * faceSize).toInt()
+                    .coerceIn(0, faceSize - 1) // row 0 is the bottom, as glReadPixels returns
                 val source = (py * faceSize + px) * 4
                 val i = (y * width + x) * 4
                 out[i] = (images[index][source].toInt() and 255) / 255f

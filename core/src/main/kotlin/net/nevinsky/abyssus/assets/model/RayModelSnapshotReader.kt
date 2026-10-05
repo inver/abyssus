@@ -14,14 +14,15 @@ import net.nevinsky.abyssus.core.model.ModelData
 import net.nevinsky.abyssus.core.model.PbrModelMaterial
 
 /** CPU-only copy before images are uploaded/disposed, or a fresh preparation when ray mode starts later. */
-class RayModelSnapshotReader(private val assimp: AssimpModelLoader, private val maxBytes: Long = 128L * 1024 * 1024) {
-    init { require(maxBytes > 0) }
+class RayModelSnapshotReader(private val assimp: AssimpModelLoader,
+                             private val maxBytes: Long = 128L * 1024 * 1024) {
+    init {
+        require(maxBytes > 0)
+    }
 
     fun read(files: AssetFiles, name: String): RayModelSnapshot? {
         val file = FileHandle(files.model(name) ?: return null)
-        val data = assimp.loadData(file)
-        val images = assimp.decodeTextures(data, file)
-        return try { capture(data, images) } finally { images.values.forEach(Pixmap::dispose) }
+
     }
 
     /** Only the material table, in model order: identifiers and whether each is PBR. Decodes no images, for editors. */
@@ -39,8 +40,10 @@ class RayModelSnapshotReader(private val assimp: AssimpModelLoader, private val 
         val meshes = data.meshes.map { mesh ->
             var offset = 0
             val attributes = mesh.attributes.map { attribute ->
-                RayModelVertexAttribute(attribute.usage, attribute.numComponents, attribute.type, attribute.normalized,
-                    attribute.unit, attribute.alias, offset).also { offset += attribute.sizeInBytes }
+                RayModelVertexAttribute(
+                    attribute.usage, attribute.numComponents, attribute.type, attribute.normalized,
+                    attribute.unit, attribute.alias, offset
+                ).also { offset += attribute.sizeInBytes }
             }
             require(offset > 0 && offset % 4 == 0 && mesh.vertices.size % (offset / 4) == 0) { "Invalid model vertex layout" }
             val vertices = mesh.vertices.size / (offset / 4)
@@ -51,7 +54,8 @@ class RayModelSnapshotReader(private val assimp: AssimpModelLoader, private val 
         }
         val materials = data.materials.map { material ->
             val pbr = material as? PbrModelMaterial
-            RayModelMaterial(material.id, pbr != null,
+            RayModelMaterial(
+                material.id, pbr != null,
                 color(material.ambient), color(material.diffuse), color(material.specular),
                 color(material.emissive), color(material.reflection), material.shininess, material.opacity,
                 color(pbr?.baseColor), pbr?.metallic, pbr?.roughness, pbr?.doubleSided ?: false,
@@ -63,8 +67,10 @@ class RayModelSnapshotReader(private val assimp: AssimpModelLoader, private val 
                 material.textures?.map { texture ->
                     val name = requireNotNull(texture.fileName) { "Model texture has no file name" }
                     require(name in images) { "CPU model image '$name' is missing or unreadable" }
-                    RayModelTexture(name, texture.usage, texture.uvTranslation?.x ?: 0f, texture.uvTranslation?.y ?: 0f,
-                        texture.uvScaling?.x ?: 1f, texture.uvScaling?.y ?: 1f)
+                    RayModelTexture(
+                        name, texture.usage, texture.uvTranslation?.x ?: 0f, texture.uvTranslation?.y ?: 0f,
+                        texture.uvScaling?.x ?: 1f, texture.uvScaling?.y ?: 1f
+                    )
                 } ?: emptyList())
         }
         val copiedImages = images.mapValues { (_, image) -> copyRayImage(image) }

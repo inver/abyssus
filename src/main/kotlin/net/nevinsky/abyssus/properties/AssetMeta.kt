@@ -10,6 +10,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assets.files.MetaType
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.core.AbyssusProjectLayout.META_FILE
 import net.nevinsky.abyssus.dto.MetaFiles
 import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage

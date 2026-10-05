@@ -1,3 +1,8 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package net.nevinsky.abyssus.assets.terrain
 
 import com.badlogic.gdx.Gdx
@@ -5,17 +10,18 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
-import com.badlogic.gdx.utils.Disposable
-import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.graphics.g3d.Material
+import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.core.Renderable
 import net.nevinsky.abyssus.core.mesh.Mesh
-import net.nevinsky.abyssus.assets.SPLAT_LAYERS
-import net.nevinsky.abyssus.assets.SPLAT_MAP
 
 
 /** The texture unit of the splat map; the layers take the units before it. */
 const val SPLAT_UNIT = 5
+
+private val HAS_UNIFORMS = SPLAT_LAYERS.map { "u_has_$it" }
+private val LAYER_UNIFORMS = SPLAT_LAYERS.map { "u_$it" }
 
 /** One terrain asset on the GPU. */
 class TerrainMesh(prepared: PreparedTerrain) : Disposable {
@@ -45,12 +51,11 @@ class TerrainMesh(prepared: PreparedTerrain) : Disposable {
     fun draw(shader: ShaderProgram, blank: Texture) {
         shader.setUniformf("u_terrainSize", data.size.toFloat())
         // base layer first, then the channels, blended by the splat map (neutral gray without any texture)
-        val hasSplat = splat != null
-        shader.setUniformi("u_hasSplat", if (hasSplat) 1 else 0)
-        for ((unit, field) in SPLAT_LAYERS.withIndex()) {
-            val texture = layers[field]
-            shader.setUniformi("u_has_$field", if (texture != null) 1 else 0)
-            shader.setUniformi("u_$field", unit)
+        shader.setUniformi("u_hasSplat", if (splat != null) 1 else 0)
+        for (unit in SPLAT_LAYERS.indices) {
+            val texture = layers[SPLAT_LAYERS[unit]]
+            shader.setUniformi(HAS_UNIFORMS[unit], if (texture != null) 1 else 0)
+            shader.setUniformi(LAYER_UNIFORMS[unit], unit)
             (texture ?: blank).bind(unit)
         }
         shader.setUniformi("u_splat", SPLAT_UNIT)
@@ -72,5 +77,4 @@ class TerrainMesh(prepared: PreparedTerrain) : Disposable {
         splat?.dispose()
         layers.values.forEach(Texture::dispose)
     }
-
 }

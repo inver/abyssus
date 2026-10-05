@@ -5,22 +5,25 @@
 
 package net.nevinsky.abyssus.assets.sky.procedural
 
-import net.nevinsky.abyssus.assets.files.AssetFiles
+import net.nevinsky.abyssus.assets.files.AssetMeta
 import net.nevinsky.abyssus.assets.loading.AssetLoader
 import net.nevinsky.abyssus.core.AssetMetaLoader
 import net.nevinsky.abyssus.core.FileLoader
 
 class ProceduralSkyLoader(private val fileLoader: FileLoader, private val metaLoader: AssetMetaLoader) :
     AssetLoader<PreparedProceduralSky, ProceduralSky> {
-
-    override fun prepare(name: String): PreparedProceduralSky? {
-        val meta = metaLoader.loadBaseMeta(name) ?: return null
+    override fun loadPrepared(meta: AssetMeta<Any>): PreparedProceduralSky? {
         val additional = meta.typedAdditional<ProceduralSkyMeta>()
         return PreparedProceduralSky(
             additional.params,
-            fileLoader.loadFileContent(name, additional.shaderVert),
-            fileLoader.loadFileContent(name, additional.shaderFrag)
+            fileLoader.loadFileContent(meta.name, additional.shaderVert),
+            fileLoader.loadFileContent(meta.name, additional.shaderFrag)
         )
+    }
+
+    override fun prepare(name: String): PreparedProceduralSky? {
+        val meta = metaLoader.loadBaseMeta(name) ?: return null
+        return loadPrepared(meta)
     }
 
     override fun build(prepared: PreparedProceduralSky) = ProceduralSky(prepared)

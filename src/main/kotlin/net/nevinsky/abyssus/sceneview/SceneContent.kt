@@ -6,10 +6,6 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.assets.json.float
-import net.nevinsky.abyssus.assets.json.obj
-import net.nevinsky.abyssus.assets.json.opt
-import net.nevinsky.abyssus.assets.json.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.runtime.scene.SceneDto
 import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_RANGE

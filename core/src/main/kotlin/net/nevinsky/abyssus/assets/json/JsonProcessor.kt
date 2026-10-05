@@ -5,8 +5,12 @@
 
 package net.nevinsky.abyssus.assets.json
 
+import com.fasterxml.jackson.core.util.DefaultIndenter
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
+import com.fasterxml.jackson.core.util.Separators
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 
@@ -15,14 +19,23 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
  * enum values take their default, and properties keep declaration order. Create one and pass it to what needs it.
  */
 class JsonProcessor {
-    private val format = JsonFormat()
+    private val prettyPrinter: DefaultPrettyPrinter = DefaultPrettyPrinter(
+        Separators.createDefaultInstance()
+            .withObjectFieldValueSpacing(Separators.Spacing.AFTER)
+            .withObjectEmptySeparator("")
+            .withArrayEmptySeparator(""),
+    ).also {
+        val indenter = DefaultIndenter("  ", "\n")
+        it.indentObjectsWith(indenter)
+        it.indentArraysWith(indenter)
+    }
 
-    private val mapper: JsonMapper = format.mapperBuilder()
+    private val mapper: JsonMapper = JsonMapper.builder()
+        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        .disable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
         .addModule(KotlinModule.Builder().build())
         .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
         .build()
-
-    private val prettyPrinter = format.prettyPrinter
 
     /** [text] as a JSON tree; throws when it is not a JSON object. */
     fun readObject(text: String): JsonNode =
@@ -37,7 +50,7 @@ class JsonProcessor {
     fun <T> bind(node: JsonNode, clazz: Class<T>): T = mapper.treeToValue(node, clazz)
 
     /** [obj] as one line of JSON, with no trailing newline. */
-    fun compact(obj: Any): String = mapper.writeValueAsString(obj)
+    fun toString(obj: Any): String = mapper.writeValueAsString(obj)
 
     fun pretty(obj: Any): String = mapper.writer(prettyPrinter).writeValueAsString(obj) + "\n"
 }

@@ -8,7 +8,6 @@ package net.nevinsky.abyssus
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.util.concurrency.AppExecutorUtil
-import net.nevinsky.abyssus.assets.AssetLoading
 import net.nevinsky.abyssus.core.ModelLogging
 import net.nevinsky.abyssus.log.IntellijLoggerFactory
 import org.slf4j.ILoggerFactory
@@ -17,11 +16,11 @@ import net.nevinsky.abyssus.assets.edit.AssetFieldDescriptions
 import net.nevinsky.abyssus.assets.edit.AssetMetaEditor
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainAssetWriter
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerator
+import net.nevinsky.abyssus.terrain.generation.TerrainGenerator
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainHeightEncoder
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainRecipeCodec
-import net.nevinsky.abyssus.assets.terrain.noise.FastNoiseSamplerFactory
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.dto.AssetMetaReader
+import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
+import net.nevinsky.abyssus.terrain.noise.FastNoiseSamplerFactory
 import net.nevinsky.abyssus.raytracing.MetalRayBackendFactory
 import net.nevinsky.abyssus.raytracing.VulkanRayBackendFactory
 import net.nevinsky.abyssus.sceneview.RayBackendSelector
@@ -53,7 +52,7 @@ class AbyssusCore : Disposable {
         format,
     )
 
-    val metaFiles = net.nevinsky.abyssus.dto.MetaFiles(net.nevinsky.abyssus.assets.files.AssetMetaReader(json, format))
+    val metaFiles = net.nevinsky.abyssus.dto.MetaFiles(AssetMetaReader(json, format))
 
     /** The editable `meta.json` fields of each asset type and the editor that changes them one at a time. */
     val assetFields = AssetFieldDescriptions()

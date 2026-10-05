@@ -12,12 +12,11 @@ import net.nevinsky.abyssus.assets.files.Asset
 import net.nevinsky.abyssus.assets.files.AssetMeta
 import net.nevinsky.abyssus.assets.files.MetaType
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.assets.json.obj
-import net.nevinsky.abyssus.assets.json.opt
-import net.nevinsky.abyssus.assets.json.text
+import net.nevinsky.abyssus.sceneview.obj
+import net.nevinsky.abyssus.sceneview.opt
+import net.nevinsky.abyssus.sceneview.text
 import java.io.File
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.files.AssetMetaReader
 
 /** Lists a project's asset folders through the VFS, as the Abyssus tree shows them, parsing `meta.json` with [json]. */
 class ProjectAssetListing(json: JsonProcessor) {

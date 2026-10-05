@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.assets.terrain.noise
+package net.nevinsky.abyssus.terrain.noise
 
 import net.nevinsky.abyssus.assets.terrain.noise.fastnoise.FastNoiseLite
 

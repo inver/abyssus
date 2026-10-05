@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.assets.model
 
+import net.nevinsky.abyssus.assets.loading.RaySnapshot
 import java.util.*
 
 internal fun <T> immutableModelList(values: Collection<T>): List<T> = Collections.unmodifiableList(values.toList())
@@ -99,7 +100,7 @@ class RayModelSnapshot internal constructor(
     materials: List<RayModelMaterial>,
     nodes: List<RayModelNode>,
     images: Map<String, RayModelImage>,
-) {
+) : RaySnapshot {
     val meshes: List<RayModelMesh> = immutableModelList(meshes)
     val materials: List<RayModelMaterial> = immutableModelList(materials)
     val nodes: List<RayModelNode> = immutableModelList(nodes)

@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.assets.terrain.generation
+package net.nevinsky.abyssus.terrain.generation
 
 import net.nevinsky.abyssus.assets.terrain.MAX_TERRAIN_RESOLUTION
-import net.nevinsky.abyssus.assets.terrain.noise.NoiseSamplerFactory
+import net.nevinsky.abyssus.terrain.noise.NoiseSamplerFactory
 
 /** The smallest terrain resolution: two heights per side. */
 const val MIN_TERRAIN_RESOLUTION = 2

@@ -8,9 +8,10 @@ package net.nevinsky.abyssus.properties
 import net.nevinsky.abyssus.assets.META_FILE
 import net.nevinsky.abyssus.assets.files.MetaType
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.assets.json.obj
-import net.nevinsky.abyssus.assets.json.text
+import net.nevinsky.abyssus.sceneview.obj
+import net.nevinsky.abyssus.sceneview.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.dto.AssetMetaReader
 import java.io.File
 
 /**
@@ -40,7 +41,7 @@ class AssetReferenceChoices(private val json: JsonProcessor) {
     /** The `uuid` of the texture asset in [folder], or null when it is not a texture, has no `uuid` or no readable image. */
     private fun textureUuid(folder: File): String? {
         val meta = runCatchingKeepingCancellation {
-            File(folder, META_FILE).takeIf { it.isFile }?.let { net.nevinsky.abyssus.assets.files.AssetMetaReader(json).read(it.readText()).json }
+            File(folder, META_FILE).takeIf { it.isFile }?.let { AssetMetaReader(json).read(it.readText()).json }
         }.getOrNull() ?: return null
         val type = meta.text("type")
         if (type != MetaType.TEXTURE.name && type != MetaType.PIXMAP_TEXTURE.name) return null
@@ -53,7 +54,9 @@ class AssetReferenceChoices(private val json: JsonProcessor) {
      * separators. The stored [current] name is kept as an unresolved entry when it is not among them.
      */
     fun faces(folder: File, current: String?): List<AssetChoice> {
-        val meta = runCatchingKeepingCancellation { File(folder, META_FILE).takeIf { it.isFile }?.let { net.nevinsky.abyssus.assets.files.AssetMetaReader(json).read(it.readText()) } }.getOrNull()
+        val meta = runCatchingKeepingCancellation { File(folder, META_FILE).takeIf { it.isFile }?.let { AssetMetaReader(
+            json
+        ).read(it.readText()) } }.getOrNull()
         if (meta == null) return listOfNotNull(AssetChoice(null, ""), current?.let { AssetChoice(it, it, resolved = false) })
         val found = folder.walkTopDown().maxDepth(MAX_FACE_DEPTH).filter { it.isFile }
             .map { it.relativeTo(folder).invariantSeparatorsPath }

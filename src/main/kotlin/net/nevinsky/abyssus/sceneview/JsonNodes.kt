@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.assets.json
+package net.nevinsky.abyssus.sceneview
 
 import com.fasterxml.jackson.databind.JsonNode
 

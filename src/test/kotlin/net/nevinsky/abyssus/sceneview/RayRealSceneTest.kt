@@ -5,7 +5,7 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import net.nevinsky.abyssus.assets.AssetLoading
+import net.nevinsky.abyssus.AssetLoading
 import net.nevinsky.abyssus.assets.ShaderSource
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.parseScene

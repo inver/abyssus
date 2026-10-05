@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.assets.sky
 
+import net.nevinsky.abyssus.assets.loading.RaySnapshot
+
 /** The widest equirectangular sky handed to a ray backend; the height is half of it. */
 const val RAY_SKY_MAX_WIDTH = 1024
 
@@ -12,7 +14,7 @@ const val RAY_SKY_MAX_WIDTH = 1024
  * +Y, rows from the top), for ray tracing. [hdr] skies hold linear radiance, possibly far above 1; the others hold the
  * display values their images store. Downsampled to at most [RAY_SKY_MAX_WIDTH] wide.
  */
-class RaySkySnapshot(val width: Int, val height: Int, rgba: FloatArray, val hdr: Boolean) {
+class RaySkySnapshot(val width: Int, val height: Int, rgba: FloatArray, val hdr: Boolean) : RaySnapshot {
     private val pixels = rgba.copyOf()
 
     init {

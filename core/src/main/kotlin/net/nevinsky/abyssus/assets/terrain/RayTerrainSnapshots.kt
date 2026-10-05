@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.assets.terrain
 import com.badlogic.gdx.graphics.Pixmap
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import java.io.File
 import java.util.concurrent.Executor
 
 /** Shared optional CPU companions, keyed by project and asset. No GPU cache invalidation or GL readback. */
@@ -81,11 +82,12 @@ class RayTerrainSnapshots(
         entry.failure = IllegalStateException("CPU terrain '$name' was invalidated")
     }
 
-    /** Capture request identity before IO so an old raster preparation cannot fill a replacement lease. */
-    fun preparation(files: AssetFiles, name: String): RayTerrainSnapshotCapture? {
-        val key = key(files, name)
+    fun preparation(projectDir: File, name: String): RayTerrainSnapshotCapture? {
+        val key = key(projectDir, name)
         val entry = synchronized(lock) { entries[key] } ?: return null
-        if (!wanted(key, entry)) return null
+        if (!wanted(key, entry)) {
+            return null
+        }
         return RayTerrainSnapshotCapture { data, images ->
             if (wanted(key, entry)) {
                 publish(key, entry, runCatchingKeepingCancellation { capture(data, images) })
@@ -108,7 +110,7 @@ class RayTerrainSnapshots(
         }
     }
 
-    private fun key(files: AssetFiles, name: String) = Key(files.projectDir.toPath().normalize().toString(), name)
+    private fun key(projectDir: File, name: String) = Key(projectDir.toPath().normalize().toString(), name)
 }
 
 /** One preparation's optional CPU interest; offering after cancellation/reacquisition is a no-op. */

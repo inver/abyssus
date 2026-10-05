@@ -8,9 +8,10 @@ package net.nevinsky.abyssus.assets.model
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
-import net.nevinsky.abyssus.assets.files.AssetFiles
+import net.nevinsky.abyssus.assets.files.AssetMeta
 import net.nevinsky.abyssus.assets.loading.AssetLoader
 import net.nevinsky.abyssus.assets.loading.TextureUploadQueue
+import net.nevinsky.abyssus.core.AssetMetaLoader
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader
 import net.nevinsky.abyssus.core.loader.PreloadedTextureProvider
 import net.nevinsky.abyssus.core.model.Model
@@ -20,10 +21,26 @@ import kotlin.coroutines.cancellation.CancellationException
 
 /** Model assets through Assimp: parsed and their images decoded off the GL thread, textures uploaded one per frame. */
 class ModelLoader(
+    private val metaLoader: AssetMetaLoader,
     private val assimp: AssimpModelLoader,
     private val raySnapshots: RayModelSnapshots? = null,
 ) : AssetLoader<PreparedModel, Model> {
-    override fun prepare(files: AssetFiles, name: String): PreparedModel? {
+    override fun loadPrepared(meta: AssetMeta<Any>): PreparedModel? {
+        val capture = raySnapshots?.preparation(files, name)
+        val handle = FileHandle(files.model(name) ?: return null)
+        val data = assimp.loadData(handle)
+        val images = assimp.decodeTextures(data, handle)
+        val prepared = PreparedModel(data, handle, images)
+        try {
+            capture?.offer(data, images)
+            return prepared
+        } catch (cancelled: CancellationException) {
+            prepared.dispose()
+            throw cancelled
+        }
+    }
+
+    override fun prepare(name: String): PreparedModel? {
         val capture = raySnapshots?.preparation(files, name)
         val handle = FileHandle(files.model(name) ?: return null)
         val data = assimp.loadData(handle)

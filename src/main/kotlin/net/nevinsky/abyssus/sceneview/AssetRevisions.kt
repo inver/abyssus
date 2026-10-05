@@ -3,17 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.assets.files
+package net.nevinsky.abyssus.sceneview
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.assets.SPLAT_FIELDS
+import net.nevinsky.abyssus.dto.AssetMetaReader
+import net.nevinsky.abyssus.assets.files.MetaType
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.assets.json.obj
-import net.nevinsky.abyssus.assets.json.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.terrain.generation.sha256Hex
 import net.nevinsky.abyssus.core.AbyssusProjectLayout.META_FILE
 import java.io.File
+import kotlin.collections.iterator
 
 /** The revisions of every asset folder of a project at one moment, by folder name. */
 data class ProjectRevisions(val assets: Map<String, AssetRevision>)

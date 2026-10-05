@@ -21,10 +21,10 @@ import net.nevinsky.abyssus.assetfiles.AssetFileStore
 import net.nevinsky.abyssus.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.terrain.TerrainDataReader
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationDraft
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationSettings
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainPreview
-import net.nevinsky.abyssus.assets.terrain.generation.SourceSnapshot
+import net.nevinsky.abyssus.terrain.generation.TerrainGenerationDraft
+import net.nevinsky.abyssus.terrain.generation.TerrainGenerationSettings
+import net.nevinsky.abyssus.terrain.generation.TerrainPreview
+import net.nevinsky.abyssus.terrain.generation.SourceSnapshot
 import net.nevinsky.abyssus.dto.ProjectReader
 import net.nevinsky.abyssus.terrain.FolderNameError
 import net.nevinsky.abyssus.terrain.GeometryError

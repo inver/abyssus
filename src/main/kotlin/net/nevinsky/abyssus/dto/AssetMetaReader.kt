@@ -3,11 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.assets.files
+package net.nevinsky.abyssus.dto
 
 import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.assets.files.AssetMeta
+import net.nevinsky.abyssus.assets.files.MetaType
+import net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.assets.format.DocumentKind
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.assets.json.text
+import net.nevinsky.abyssus.sceneview.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 
 /** One parsed `meta.json`: its [type], its raw [json] tree, and the typed binding on request. */
@@ -21,7 +25,7 @@ class MetaDocument internal constructor(val type: MetaType, val json: JsonNode, 
  * Parses `meta.json` text once into a [MetaDocument]. Every reader of asset metadata (the loaders, the project
  * listing, the properties panel) goes through it, so they agree on the type and read the text once.
  */
-class AssetMetaReader(private val json: JsonProcessor, private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()) {
+class AssetMetaReader(private val json: JsonProcessor, private val format: AbyssusDocumentFormat = AbyssusDocumentFormat()) {
     /**
      * [text] as a document; throws when it is not a JSON object. A missing or unknown `type` reads as
      * [MetaType.UNKNOWN].
@@ -30,7 +34,7 @@ class AssetMetaReader(private val json: JsonProcessor, private val format: net.n
 
     /** An already parsed [tree] (a caller that needs its own number text, say) as a document. */
     fun read(tree: JsonNode): MetaDocument {
-        format.requireSupported(tree, net.nevinsky.abyssus.assets.format.DocumentKind.ASSET)
+        format.requireSupported(tree, DocumentKind.ASSET)
         return MetaDocument(typeOf(tree), tree, json)
     }
 

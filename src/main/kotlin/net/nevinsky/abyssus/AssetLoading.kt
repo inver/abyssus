@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.assets
+package net.nevinsky.abyssus
 
-import org.slf4j.Logger
 import com.badlogic.gdx.utils.Disposable
+import net.nevinsky.abyssus.assets.ShaderSource
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.loading.AssetLoader
@@ -23,11 +23,12 @@ import net.nevinsky.abyssus.assets.sky.hdr.HdrSkyLoader
 import net.nevinsky.abyssus.assets.sky.hdr.RadianceDecoder
 import net.nevinsky.abyssus.assets.sky.hdr.ToneCurve
 import net.nevinsky.abyssus.assets.sky.procedural.ProceduralSkyLoader
-import net.nevinsky.abyssus.assets.terrain.TerrainDataReader
-import net.nevinsky.abyssus.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.assets.terrain.RayTerrainSnapshotReader
 import net.nevinsky.abyssus.assets.terrain.RayTerrainSnapshots
+import net.nevinsky.abyssus.assets.terrain.TerrainDataReader
+import net.nevinsky.abyssus.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader
+import org.slf4j.Logger
 import java.io.File
 import java.util.concurrent.Executor
 
@@ -50,6 +51,7 @@ class AssetLoading(
     private val modelReader = AssimpModelLoader()
     private val rayModelReader = RayModelSnapshotReader(modelReader)
     val rayModels = RayModelSnapshots(executor, rayModelReader::read, rayModelReader::capture)
+
     /** A model's material identifiers and PBR flags, read on the caller's thread without images or GL. */
     fun rayModelMaterials(files: AssetFiles, name: String) = rayModelReader.materials(files, name)
     val models = ModelLoader(modelReader, rayModels)

@@ -190,7 +190,7 @@ the float count (the fixture's is 180). Generating a terrain changes none of thi
 
 New terrain metadata is one compact line with native markers first (`format`, `formatVersion`), then `version` 1, `lastModified`, `uuid`, `type` `TERRAIN`,
 `additional` with `terrainFile`, `size`, `uv` 1.0 and the six splat fields null; see `TerrainAssetWriter` in
-`core/src/main/kotlin/net/nevinsky/abyssus/assets/terrain/generation/TerrainAssetEncoding.kt`.
+`../../src/main/kotlin/net/nevinsky/abyssus/terrain/generation`.
 
 How generated heights were made is kept in a recipe file beside the
 heights (`TERRAIN_RECIPE_FILE`; a terrain loads without it):

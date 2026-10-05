@@ -3,21 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.assets.terrain.generation
+package net.nevinsky.abyssus.terrain.generation
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.terrain.noise.FAST_NOISE_LITE_REVISION
-import net.nevinsky.abyssus.assets.terrain.noise.OPENSIMPLEX2_FBM_V1
+import net.nevinsky.abyssus.terrain.noise.FAST_NOISE_LITE_REVISION
+import net.nevinsky.abyssus.terrain.noise.OPENSIMPLEX2_FBM_V1
 import net.nevinsky.abyssus.assets.displayMessage
+import net.nevinsky.abyssus.assets.terrain.MAX_TERRAIN_RESOLUTION
 
 /** The Abyssus-only file beside `terrain.data` that keeps how the applied heights were made. */
 const val TERRAIN_RECIPE_FILE = "abyssus-terrain.recipe.json"
 
 private const val SHA_HEX_LENGTH = 64
-private const val MAX_RESOLUTION = net.nevinsky.abyssus.assets.terrain.MAX_TERRAIN_RESOLUTION
+private const val MAX_RESOLUTION = MAX_TERRAIN_RESOLUTION
 
 /** The recipe layout this code reads and writes. */
 const val RECIPE_SCHEMA_VERSION = 1

@@ -5,43 +5,27 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.assets.AssetLoading
+import net.nevinsky.abyssus.AssetLoading
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import java.io.File
 import net.nevinsky.abyssus.assets.ShaderSource
 import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.graphics.g3d.Environment
-import com.badlogic.gdx.graphics.g3d.Material
 import com.badlogic.gdx.graphics.g3d.Model
 import com.badlogic.gdx.graphics.g3d.ModelBatch
 import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
-import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder.VertexInfo
-import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder
-import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
-import com.badlogic.gdx.math.collision.Ray
 import com.intellij.openapi.Disposable
-import net.nevinsky.abyssus.core.model.Model as ContentModel
 import net.nevinsky.abyssus.core.shader.DefaultShaderProvider
 import net.nevinsky.abyssus.core.shader.EnvironmentLightAttribute
 import net.nevinsky.abyssus.core.shader.ShaderProvider
 import net.nevinsky.abyssus.sceneview.fog.FogShaderProvider
-import net.nevinsky.abyssus.sceneview.gizmo.DragResult
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoAxis
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoDrag
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoDraw
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoHandles
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoHit
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
-import net.nevinsky.abyssus.sceneview.gizmo.canRotate
 import net.nevinsky.abyssus.sceneview.skybox.SunDirection
-import net.nevinsky.abyssus.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.sceneview.terrain.TerrainShader
 import net.nevinsky.abyssus.sceneview.shadows.SceneShadows
 import net.nevinsky.abyssus.core.shader.ShadowAtlasAttribute

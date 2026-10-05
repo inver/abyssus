@@ -14,7 +14,7 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.sky.createFullscreenTriangle
+import net.nevinsky.abyssus.core.GeometryUtils.Companion.createFullscreenTriangle
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 

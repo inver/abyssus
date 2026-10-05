@@ -10,23 +10,22 @@ import net.nevinsky.abyssus.assetfiles.AssetReferenceGuard
 import net.nevinsky.abyssus.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.assetfiles.FileChange
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
-import net.nevinsky.abyssus.assets.ASSETS_DIR
-import net.nevinsky.abyssus.assets.META_FILE
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.assets.json.text
+import net.nevinsky.abyssus.sceneview.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.terrain.generation.MIN_TERRAIN_RESOLUTION
+import net.nevinsky.abyssus.assets.terrain.generation.*
 import net.nevinsky.abyssus.assets.terrain.generation.TERRAIN_DATA_FILE
-import net.nevinsky.abyssus.assets.terrain.generation.TERRAIN_RECIPE_FILE
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainAssetWriter
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainPreview
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainRecipe
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainRecipeCodec
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainHeightEncoder
-import net.nevinsky.abyssus.assets.terrain.generation.sha256Hex
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.dto.AssetMetaReader
+import net.nevinsky.abyssus.terrain.generation.MIN_TERRAIN_RESOLUTION
+import net.nevinsky.abyssus.terrain.generation.TERRAIN_RECIPE_FILE
+import net.nevinsky.abyssus.terrain.generation.TerrainPreview
+import net.nevinsky.abyssus.terrain.generation.TerrainRecipe
+import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
 import java.io.File
 import java.nio.file.Files
-import java.util.UUID
+import java.util.*
 
 /** Why a folder name for a new terrain is refused; the dialog shows a localized reason for each. */
 enum class FolderNameError { BLANK, DOT, SEPARATOR, INVALID_CHARACTER, TRAILING, RESERVED, OUTSIDE, EXISTS }
@@ -56,7 +55,8 @@ fun checkFolderName(assetsDir: File, name: String): FolderNameError? {
 private fun escapes(assetsDir: File, name: String): Boolean {
     if (!assetsDir.exists()) return false
     val root = runCatchingKeepingCancellation { assetsDir.canonicalFile }.getOrNull() ?: return true
-    val parent = runCatchingKeepingCancellation { File(assetsDir, name).canonicalFile.parentFile }.getOrNull() ?: return true
+    val parent =
+        runCatchingKeepingCancellation { File(assetsDir, name).canonicalFile.parentFile }.getOrNull() ?: return true
     return parent != root
 }
 
@@ -81,7 +81,7 @@ fun GeometryError.message(): String = AbyssusBundle.message("newTerrainGeometryE
 class NewTerrain(val name: String, val uuid: String, val transaction: AssetTransaction)
 
 /**
- * Stages the files of a new terrain asset from a finished [TerrainPreview]: `meta.json` in native layout with a fresh
+ * Stages the files of a new terrain asset from a finished [net.nevinsky.abyssus.terrain.generation.TerrainPreview]: `meta.json` in native layout with a fresh
  * `uuid`, the big-endian heights, and the Abyssus recipe. Nothing is written here; no scene or project file is touched.
  */
 class NewTerrainFactory(
@@ -90,7 +90,7 @@ class NewTerrainFactory(
     private val encoder: TerrainHeightEncoder,
     private val recipes: TerrainRecipeCodec,
     private val clock: () -> Long = System::currentTimeMillis,
-    private val randomUuid: () -> String = { UUID.randomUUID().toString() },
+    private val randomUuid: () -> UUID = { UUID.randomUUID() },
 ) {
     /** The staged terrain, or null when the folder name is refused (re-checked here: the folder may have appeared since). */
     fun stage(projectDir: File, rawName: String, preview: TerrainPreview): NewTerrain? {
@@ -106,7 +106,11 @@ class NewTerrainFactory(
             changes = listOf(
                 FileChange("$base/$META_FILE", FileSnapshot.Absent, FileSnapshot.Bytes(files.metaText.toByteArray())),
                 FileChange("$base/$TERRAIN_DATA_FILE", FileSnapshot.Absent, FileSnapshot.Bytes(files.heightBytes)),
-                FileChange("$base/$TERRAIN_RECIPE_FILE", FileSnapshot.Absent, FileSnapshot.Bytes(recipes.encode(recipe).toByteArray())),
+                FileChange(
+                    "$base/${TERRAIN_RECIPE_FILE}",
+                    FileSnapshot.Absent,
+                    FileSnapshot.Bytes(recipes.encode(recipe).toByteArray())
+                ),
             ),
             createdDirs = (if (assetsDir.isDirectory) emptyList() else listOf(ASSETS_DIR)) + base,
             guard = AssetReferenceGuard(projectDir).let { guard -> { guard.blocker(name, uuid) } },
@@ -115,9 +119,13 @@ class NewTerrainFactory(
     }
 
     /** A random `uuid` no asset folder of the project already uses. */
-    private fun uniqueUuid(assetsDir: File): String {
+    private fun uniqueUuid(assetsDir: File): UUID {
         val used = assetsDir.listFiles { f -> f.isDirectory }.orEmpty().mapNotNull { dir ->
-            runCatchingKeepingCancellation { File(dir, META_FILE).takeIf { it.isFile }?.let { net.nevinsky.abyssus.assets.files.AssetMetaReader(json).read(it.readText()).json.text("uuid") } }.getOrNull()
+            runCatchingKeepingCancellation {
+                File(dir, META_FILE).takeIf { it.isFile }?.let {
+                    AssetMetaReader(json).read(it.readText()).json.text("uuid")
+                }
+            }.getOrNull()
         }.toSet()
         var uuid = randomUuid()
         while (uuid in used) uuid = randomUuid()

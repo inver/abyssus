@@ -6,9 +6,7 @@
 package net.nevinsky.abyssus.sceneview
 
 import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.files.AssetRevisionTracker
 import net.nevinsky.abyssus.assets.files.MetaTextSource
-import net.nevinsky.abyssus.assets.files.ProjectRevisions
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import java.io.File

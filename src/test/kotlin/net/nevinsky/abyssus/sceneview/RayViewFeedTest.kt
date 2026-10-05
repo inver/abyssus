@@ -5,6 +5,9 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
+import net.nevinsky.abyssus.AssetLoading
+import net.nevinsky.abyssus.assets.ShaderSource
+import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.raytracing.RayUnavailableReason
 import org.junit.After
 import org.junit.Assert.*
@@ -126,8 +129,10 @@ class RayViewFeedTest {
     }
 
     @Test fun theScenesHdrSkyAndItsAmbientColoursReachTheRenderer() {
-        val loading = net.nevinsky.abyssus.assets.AssetLoading(net.nevinsky.abyssus.assets.json.JsonProcessor(), printingLog, Executor(Runnable::run),
-            net.nevinsky.abyssus.assets.ShaderSource("/shader/sky", net.nevinsky.abyssus.assets.AssetLoading::class.java))
+        val loading = AssetLoading(
+            JsonProcessor(), printingLog, Executor(Runnable::run),
+            ShaderSource("/shader/sky", AssetLoading::class.java)
+        )
         val project = File("src/test/testData/project/Untitled").absoluteFile
         val assets = RaySceneAssets(
             { _, _ -> RayAssetLease({ model }, { null }, {}) }, { _, _ -> error("none") },
@@ -154,8 +159,10 @@ class RayViewFeedTest {
 
     @Test fun aSkyThatCannotBeTransferredShowsTheBackgroundInsteadOfFailingTheView() {
         val project = File("src/test/testData/project/Untitled").absoluteFile
-        val loading = net.nevinsky.abyssus.assets.AssetLoading(net.nevinsky.abyssus.assets.json.JsonProcessor(), printingLog, Executor(Runnable::run),
-            net.nevinsky.abyssus.assets.ShaderSource("/shader/sky", net.nevinsky.abyssus.assets.AssetLoading::class.java))
+        val loading = AssetLoading(
+            JsonProcessor(), printingLog, Executor(Runnable::run),
+            ShaderSource("/shader/sky", AssetLoading::class.java)
+        )
         val assets = RaySceneAssets({ _, _ -> RayAssetLease({ model }, { null }, {}) }, { _, _ -> error("none") },
             acquireSky = { dir, name -> loading.raySkies.acquire(loading.files(dir), name).let { lease -> RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close) } })
         val feed = feed(assets = assets)
