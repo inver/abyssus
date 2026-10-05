@@ -5,21 +5,22 @@
 
 package net.nevinsky.abyssus.assets.terrain
 
-import net.nevinsky.abyssus.assets.loading.AssetLoader
-import net.nevinsky.abyssus.assets.loading.TextureUploadQueue
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
-import net.nevinsky.abyssus.core.loader.Pixmaps
 import net.nevinsky.abyssus.assets.SPLAT_LAYERS
 import net.nevinsky.abyssus.assets.SPLAT_MAP
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.files.AssetFiles
+import net.nevinsky.abyssus.assets.loading.AssetLoader
+import net.nevinsky.abyssus.assets.loading.TextureUploadQueue
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.loader.Pixmaps
 import java.io.File
 import java.util.concurrent.CancellationException
 
 /** Terrain assets: height data and splat images read off the GL thread, images uploaded one per frame. */
-class TerrainLoader(private val reader: TerrainDataReader, private val raySnapshots: RayTerrainSnapshots? = null) : AssetLoader<PreparedTerrain, TerrainMesh> {
+class TerrainLoader(private val reader: TerrainDataReader, private val raySnapshots: RayTerrainSnapshots? = null) :
+    AssetLoader<PreparedTerrain, TerrainMesh> {
     /** A splat texture that cannot be read is left out; the terrain is drawn without it. */
     override fun prepare(files: AssetFiles, name: String): PreparedTerrain? {
         val capture = raySnapshots?.preparation(files, name)

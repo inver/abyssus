@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
  * GLSL programs from the resource folder [root] (for example `/shader/sky`), read through [resources]' class loader.
  * Reading is plain IO; [program] compiles and needs a current GL context.
  */
+//todo replace to ShaderLoader with loading default shaders if specified doesnt found
 class ShaderSource(private val root: String, private val resources: Class<*> = ShaderSource::class.java) {
     /** The text of [file] under [root]; throws, naming the path, when it is missing. */
     fun read(file: String): String =

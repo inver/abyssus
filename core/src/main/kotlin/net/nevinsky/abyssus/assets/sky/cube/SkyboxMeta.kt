@@ -7,6 +7,5 @@ class SkyboxMeta(
     val right: String?,
     val front: String?,
     val back: String?,
-    val shaderFrag: String?,
-    val shaderVert: String?
+    val shader: String?
 )

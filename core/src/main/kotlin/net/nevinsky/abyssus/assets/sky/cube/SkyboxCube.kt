@@ -1,15 +1,10 @@
 package net.nevinsky.abyssus.assets.sky.cube
 
-import com.badlogic.gdx.graphics.Camera
-import com.badlogic.gdx.graphics.Cubemap
-import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.Mesh
-import com.badlogic.gdx.graphics.VertexAttribute
+import com.badlogic.gdx.graphics.*
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.assets.sky.Sky
-import net.nevinsky.abyssus.assets.sky.rotationOnlyViewProj
 
 /** A six-face skybox on a cube mesh, drawn with [program] (`skybox.vert` / `skybox.frag`), which it owns. */
 class SkyboxCube(prepared: PreparedSkybox, private val program: ShaderProgram) : Sky {

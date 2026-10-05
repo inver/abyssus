@@ -18,12 +18,8 @@ class SkyboxLoader(
     private val fileLoader: FileLoader,
     private val metaLoader: AssetMetaLoader,
     private val shaders: ShaderSource
-) :
-    AssetLoader<PreparedSkybox, SkyboxCube> {
-    /**
-     * The native cube map maps from (back, front, left, right, bottom, top) as (+X, -X, +Y, -Y, +Z, -Z); the same
-     * order is kept so a skybox looks here as it does in the editor.
-     */
+) : AssetLoader<PreparedSkybox, SkyboxCube> {
+
     override fun prepare(files: AssetFiles, name: String): PreparedSkybox? {
         val meta = metaLoader.loadBaseMeta(name) ?: return null
         val additional = meta.typedAdditional<SkyboxMeta>()
@@ -39,15 +35,15 @@ class SkyboxLoader(
             faces.forEach(Pixmap::dispose)
             throw e
         }
-        return PreparedSkybox(faces)
+        return PreparedSkybox(faces, additional.shader ?: "skybox")
     }
 
-    override fun build(prepared: PreparedSkybox) = SkyboxCube(prepared, shaders.program("skybox"))
+    override fun build(prepared: PreparedSkybox) = SkyboxCube(prepared, shaders.program(prepared.shaderName))
 
     override fun discard(prepared: PreparedSkybox) = prepared.dispose()
 }
 
 /** The six decoded faces of a skybox asset, in libGDX cube map order. Released when built or discarded. */
-class PreparedSkybox(val faces: List<Pixmap>) {
+class PreparedSkybox(val faces: List<Pixmap>, val shaderName: String) {
     fun dispose() = faces.forEach(Pixmap::dispose)
 }
