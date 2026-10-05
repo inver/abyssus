@@ -15,7 +15,7 @@ class FileLoaderTest {
     fun resolvesAnAssetFolderAndItsFile() {
         val folder = untitled.folder("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb")!!
         assertEquals("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", folder.name)
-        assertEquals("model.gltf", untitled.loadFile("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "model.gltf").name)
+        assertEquals("model.gltf", untitled.loadAssetFile("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "model.gltf").name)
     }
 
     @Test
@@ -26,20 +26,20 @@ class FileLoaderTest {
     @Test
     fun aMissingAssetOrFileIsReportedWithItsName() {
         val asset = "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"
-        assertThrows(IllegalStateException::class.java) { untitled.loadFile("model_nope", "model.gltf") }.also {
+        assertThrows(IllegalStateException::class.java) { untitled.loadAssetFile("model_nope", "model.gltf") }.also {
             assertEquals(true, it.message!!.contains("model_nope"))
         }
-        assertThrows(IllegalStateException::class.java) { untitled.loadFile(asset, "nope.gltf") }.also {
+        assertThrows(IllegalStateException::class.java) { untitled.loadAssetFile(asset, "nope.gltf") }.also {
             assertEquals(true, it.message!!.contains("nope.gltf"))
         }
-        assertThrows(IllegalArgumentException::class.java) { untitled.loadFile(asset, null) }
-        assertThrows(IllegalArgumentException::class.java) { untitled.loadFile(asset, " ") }
+        assertThrows(IllegalArgumentException::class.java) { untitled.loadAssetFile(asset, null) }
+        assertThrows(IllegalArgumentException::class.java) { untitled.loadAssetFile(asset, " ") }
     }
 
     @Test
     fun aFileMustBeInsideItsAssetFolder() {
         assertThrows(IllegalStateException::class.java) {
-            untitled.loadFile("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "..")
+            untitled.loadAssetFile("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "..")
         }
     }
 
@@ -51,8 +51,8 @@ class FileLoaderTest {
             File(dir, "assets/a/blank.glsl").writeText("  \n")
             File(dir, "assets/a/code.glsl").writeText("void main() {}")
             val loader = FileLoader(dir)
-            assertEquals("void main() {}", loader.loadFileContent("a", "code.glsl"))
-            assertThrows(IllegalStateException::class.java) { loader.loadFileContent("a", "blank.glsl") }
+            assertEquals("void main() {}", loader.loadAssetFileContent("a", "code.glsl"))
+            assertThrows(IllegalStateException::class.java) { loader.loadAssetFileContent("a", "blank.glsl") }
         } finally {
             dir.deleteRecursively()
         }

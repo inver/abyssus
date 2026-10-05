@@ -25,7 +25,7 @@ class TextureLoader(
         if (meta.type != MetaType.TEXTURE && meta.type != MetaType.PIXMAP_TEXTURE) {
             return null
         }
-        val file = fileLoader.loadFile(meta.name, meta.typedAdditional<TextureMeta>().file)
+        val file = fileLoader.loadAssetFile(meta.name, meta.typedAdditional<TextureMeta>().file)
         return PreparedTexture(Pixmaps.load(FileHandle(file)))
     }
 

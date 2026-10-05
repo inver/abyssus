@@ -1,7 +1,6 @@
-package net.nevinsky.abyssus.runtime.scene
+package net.nevinsky.abyssus.core.scene
 
-data class RayTracingDto(
-    var enabled: Boolean = false,
+data class RayTracing(
     var targetSamplesPerPixel: Int = 256,
     var maxRaysPerFrame: Int = 2097152,
     var maxReflectionBounces: Int = 1,

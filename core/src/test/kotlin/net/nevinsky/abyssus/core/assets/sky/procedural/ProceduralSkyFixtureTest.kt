@@ -22,7 +22,7 @@ class ProceduralSkyFixtureTest {
         assertEquals(MetaType.SKYBOX_PROCEDURAL, meta!!.type)
         val additional = meta.typedAdditional<ProceduralSkyMeta>()
         val files = FileLoader(projectDir)
-        assertNotNull(files.loadFile("skybox_physical", additional.vertex))
-        assertNotNull(files.loadFile("skybox_physical", additional.fragment))
+        assertNotNull(files.loadAssetFile("skybox_physical", additional.vertex))
+        assertNotNull(files.loadAssetFile("skybox_physical", additional.fragment))
     }
 }

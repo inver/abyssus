@@ -17,8 +17,8 @@ class ProceduralSkyLoader(private val fileLoader: FileLoader, private val metaLo
         val additional = meta.typedAdditional<ProceduralSkyMeta>()
         return PreparedProceduralSky(
             additional.params,
-            fileLoader.loadFileContent(meta.name, additional.vertex),
-            fileLoader.loadFileContent(meta.name, additional.fragment)
+            fileLoader.loadAssetFileContent(meta.name, additional.vertex),
+            fileLoader.loadAssetFileContent(meta.name, additional.fragment)
         )
     }
 

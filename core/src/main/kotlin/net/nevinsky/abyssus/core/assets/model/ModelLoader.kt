@@ -31,7 +31,7 @@ class ModelLoader(
 ) : AssetLoader<PreparedModel, Model> {
     override fun loadPrepared(meta: AssetMeta<Any>): PreparedModel? {
         val capture = raySnapshots?.preparation(meta.name)
-        val handle = FileHandle(fileLoader.loadFile(meta.name, meta.typedAdditional<ModelMeta>().file))
+        val handle = FileHandle(fileLoader.loadAssetFile(meta.name, meta.typedAdditional<ModelMeta>().file))
         val data = assimp.loadData(handle)
         val images = assimp.decodeTextures(data, handle)
         val prepared = PreparedModel(data, handle, images)

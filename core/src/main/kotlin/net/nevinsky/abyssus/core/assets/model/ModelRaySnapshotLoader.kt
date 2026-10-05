@@ -21,7 +21,7 @@ class ModelRaySnapshotLoader(
     private val maxBytes: Long = 128L * 1024 * 1024
 ) : RaySnapshotLoader<RayModelSnapshot, RayModelSource> {
     override fun load(meta: AssetMeta<Any>): RayModelSnapshot {
-        val file = FileHandle(fileLoader.loadFile(meta.name, meta.typedAdditional<ModelMeta>().file))
+        val file = FileHandle(fileLoader.loadAssetFile(meta.name, meta.typedAdditional<ModelMeta>().file))
         val data = assimp.loadData(file)
         val images = assimp.decodeTextures(data, file)
         return try {

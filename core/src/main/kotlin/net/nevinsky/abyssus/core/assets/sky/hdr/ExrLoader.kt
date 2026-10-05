@@ -27,7 +27,7 @@ class ExrLoader(private val fileLoader: FileLoader) {
 
     /** The `.exr` [fileName] of asset [assetName], decoded at no more than [maxWidth] wide. */
     fun loadExr(assetName: String, fileName: String?, maxWidth: Int = MAX_HDR_WIDTH): HdrImage =
-        decode(fileLoader.loadFile(assetName, fileName), maxWidth)
+        decode(fileLoader.loadAssetFile(assetName, fileName), maxWidth)
 
     /**
      * Decodes [file], halving it until it is at most [maxWidth] wide. Scanline and tiled (one level or mipmapped)

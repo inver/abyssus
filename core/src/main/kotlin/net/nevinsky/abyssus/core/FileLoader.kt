@@ -1,13 +1,15 @@
 package net.nevinsky.abyssus.core
 
 import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.SCENES_DIR
 import java.io.File
 
 class FileLoader(val projectDir: File) {
 
     private val assetsDir = File(projectDir, ASSETS_DIR)
+    private val scenesDir = File(projectDir, SCENES_DIR)
 
-    fun loadFile(assetName: String, fileName: String?): File {
+    fun loadAssetFile(assetName: String, fileName: String?): File {
         if (fileName.isNullOrBlank()) {
             throw IllegalArgumentException("Empty file name")
         }
@@ -16,8 +18,8 @@ class FileLoader(val projectDir: File) {
             ?: throw IllegalStateException("Failed to load file '$fileName' in asset '$assetName'")
     }
 
-    fun loadFileContent(assetName: String, fileName: String?): String {
-        val content = loadFile(assetName, fileName).readText()
+    fun loadAssetFileContent(assetName: String, fileName: String?): String {
+        val content = loadAssetFile(assetName, fileName).readText()
         if (content.isBlank()) {
             throw IllegalStateException("Asset '$assetName' has no file '$fileName'")
         }
@@ -34,6 +36,16 @@ class FileLoader(val projectDir: File) {
             return null
         }
         return File(assetsDir, assetName).takeIf { it.isDirectory }
+    }
+
+    fun loadProjectFile(projectName: String): File {
+        return file(projectDir, projectName)
+            ?: throw IllegalStateException("Failed to load scene '$projectName'")
+    }
+
+    fun loadSceneFile(sceneName: String): File {
+        return file(scenesDir, sceneName)
+            ?: throw IllegalStateException("Failed to load scene '$sceneName'")
     }
 
     /** The file [name] inside [folder], or null when it is blank, missing or outside the folder. */

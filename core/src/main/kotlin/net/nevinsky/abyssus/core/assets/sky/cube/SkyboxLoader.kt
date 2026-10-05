@@ -24,12 +24,12 @@ class SkyboxLoader(
         val additional = meta.typedAdditional<SkyboxMeta>()
         val faces = ArrayList<Pixmap>(6)
         try {
-            faces += Pixmaps.load(fileLoader.loadFile(meta.name, additional.back))
-            faces += Pixmaps.load(fileLoader.loadFile(meta.name, additional.front))
-            faces += Pixmaps.load(fileLoader.loadFile(meta.name, additional.left))
-            faces += Pixmaps.load(fileLoader.loadFile(meta.name, additional.right))
-            faces += Pixmaps.load(fileLoader.loadFile(meta.name, additional.bottom))
-            faces += Pixmaps.load(fileLoader.loadFile(meta.name, additional.top))
+            faces += Pixmaps.load(fileLoader.loadAssetFile(meta.name, additional.back))
+            faces += Pixmaps.load(fileLoader.loadAssetFile(meta.name, additional.front))
+            faces += Pixmaps.load(fileLoader.loadAssetFile(meta.name, additional.left))
+            faces += Pixmaps.load(fileLoader.loadAssetFile(meta.name, additional.right))
+            faces += Pixmaps.load(fileLoader.loadAssetFile(meta.name, additional.bottom))
+            faces += Pixmaps.load(fileLoader.loadAssetFile(meta.name, additional.top))
         } catch (e: Throwable) {
             faces.forEach(Pixmap::dispose)
             throw e

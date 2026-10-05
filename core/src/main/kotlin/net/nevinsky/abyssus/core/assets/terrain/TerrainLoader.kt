@@ -49,7 +49,7 @@ class TerrainLoader(
     }
 
     private fun read(assetName: String, meta: TerrainMeta): TerrainData {
-        val bytes = fileLoader.loadFile(assetName, meta.terrainFile).readBytes()
+        val bytes = fileLoader.loadAssetFile(assetName, meta.terrainFile).readBytes()
         val heights = FloatArray(bytes.size / Float.SIZE_BYTES)
         ByteBuffer.wrap(bytes).asFloatBuffer().get(heights) // big-endian, as written by the editor
         val resolution = sqrt(heights.size.toFloat()).roundToInt()
