@@ -59,7 +59,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
     private fun named(c: Component, name: String): Component? =
         if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
 
-    private fun view(): SceneDetailsView = SceneDetailsView(controls, PanelState.SceneDetails(file, "Ray scene"), testRootDisposable)
+    private fun view(): SceneDetailsView = SceneDetailsView(controls, PanelState.UISceneState(file, "Ray scene"), testRootDisposable)
     private fun switch(v: Component) = named(v, "ray-tracing-switch") as JBCheckBox
     private fun status(v: Component) = (named(v, "ray-tracing-status") as JBLabel).text
     private fun detail(v: Component) = named(v, "ray-tracing-detail") as JBLabel
@@ -186,7 +186,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         val control = FakeControl()
         register(control)
         val parent = Disposer.newDisposable(testRootDisposable)
-        val v = SceneDetailsView(controls, PanelState.SceneDetails(file, "Ray scene"), parent)
+        val v = SceneDetailsView(controls, PanelState.UISceneState(file, "Ray scene"), parent)
         Disposer.dispose(parent)
         control.change(RayModeSnapshot(RayModePhase.Active, 1, info))
         assertFalse("a view the panel dropped is no longer updated", switch(v).isSelected)
@@ -227,7 +227,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         val properties = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
         val scene = children(children(abss()).single { label(it) == "scenes" }).single()
         properties.show(scene)
-        assertTrue(properties.state is PanelState.SceneDetails)
+        assertTrue(properties.state is PanelState.UISceneState)
         assertNotNull("the open Scene View registered its switch", real.mode(sceneFile))
         assertNull("the Scene View has no ray tracing button of its own", named(panel, "ray-tracing"))
         val propertySwitch = named(properties, "ray-tracing-switch") as JBCheckBox

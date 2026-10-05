@@ -20,7 +20,7 @@ class PreloadedTextureProvider(
 ) : TextureProvider {
     override fun load(fileName: String?): Texture? {
         val texture = textures.remove(fileName)
-        return if (texture != null) texture else fallback.load(fileName)
+        return texture ?: fallback.load(fileName)
     }
 
     companion object {

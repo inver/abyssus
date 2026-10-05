@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 /** One parsed `meta.json`: its [type], its raw [json] tree, and the typed binding on request. */
 class MetaDocument internal constructor(val type: MetaType, val json: JsonNode, private val processor: JsonProcessor) {
     /** Binds the document to [clazz], or null when it does not fit (a missing required field, say). */
-    fun <T, M : MetaBase<T>> typed(clazz: Class<M>): M? =
+    fun <T, M : AssetMeta<T>> typed(clazz: Class<M>): M? =
         runCatchingKeepingCancellation { processor.bind(json, clazz) }.getOrNull()
 }
 

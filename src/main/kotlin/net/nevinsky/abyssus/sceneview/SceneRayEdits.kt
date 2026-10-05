@@ -13,22 +13,38 @@ import net.nevinsky.abyssus.filetype.editSceneJson
 
 /** Platform adapter: every accepted edit is one native document command. */
 object SceneRayEdits {
-    fun setting(project: Project,file: VirtualFile,field: SceneRayField,expected: JsonNode?,text: String): RayDataEdit =
-        edit(project,file) { SceneRaySettingsCodec().edit(it,field,expected,text) }
+    fun setting(
+        project: Project,
+        file: VirtualFile,
+        field: SceneRayField,
+        expected: JsonNode?,
+        text: String
+    ): RayDataEdit = edit(project, file) { SceneRaySettingsCodec().edit(it, field, expected, text) }
 
-    fun material(project: Project,file: VirtualFile,entity: String,id: String,field: RayOpticalField,expected: JsonNode?,text: String,
-        identities: List<RayMaterialIdentity>): RayDataEdit = edit(project,file) { root ->
-        val render=root.path("ecs").path("entities").path(entity).path("components").get("RenderComponent") as? ObjectNode
-            ?: return@edit RayDataEdit.Conflict
-        RayMaterialOverrides().edit(render,id,field,expected,text,identities)
+    fun material(
+        project: Project,
+        file: VirtualFile,
+        entity: String,
+        id: String,
+        field: RayOpticalField,
+        expected: JsonNode?,
+        text: String,
+        identities: List<RayMaterialIdentity>
+    ): RayDataEdit = edit(project, file) { root ->
+        val render =
+            root.path("ecs").path("entities").path(entity).path("components").get("RenderComponent") as? ObjectNode
+                ?: return@edit RayDataEdit.Conflict
+        RayMaterialOverrides().edit(render, id, field, expected, text, identities)
     }
 
-    private fun edit(project: Project,file: VirtualFile,mutate: (ObjectNode)->RayDataEdit): RayDataEdit {
-        if(file.extension!="scene") return RayDataEdit.Rejected(RayDataError.OBJECT)
-        var result: RayDataEdit=RayDataEdit.Rejected(RayDataError.OBJECT)
-        editSceneJson(project,file,AbyssusBundle.message("commandEditSceneRaySettings")) { root ->
-            result=mutate(root as ObjectNode)
-            result==RayDataEdit.Changed
+    private fun edit(project: Project, file: VirtualFile, mutate: (ObjectNode) -> RayDataEdit): RayDataEdit {
+        var result = RayDataEdit.Rejected(RayDataError.OBJECT)
+        if (file.extension != "scene") {
+            return result
+        }
+        editSceneJson(project, file, AbyssusBundle.message("commandEditSceneRaySettings")) { root ->
+//            result = mutate(root as ObjectNode)
+            result == RayDataEdit.Changed
         }
         return result
     }

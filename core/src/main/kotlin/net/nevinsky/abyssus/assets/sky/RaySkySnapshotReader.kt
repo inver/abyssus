@@ -43,8 +43,10 @@ class RaySkySnapshotReader(private val decoder: RadianceDecoder, private val hdr
         val asset = files.loadAsset(HdrSkyMeta::class.java, name) ?: return null
         val dir = asset.baseDir
         val named = asset.meta.additional.orEmpty().values.filterIsInstance<String>()
-        val choice: HdrChoice = hdrFiles.choose(dir.list()?.toList().orEmpty(), named) ?: throw IllegalStateException("HDR sky '$name' has no .hdr file")
-        val file = files.file(dir, choice.file) ?: throw IllegalStateException("HDR sky '$name': cannot read '${choice.file}'")
+        val choice: HdrChoice = hdrFiles.choose(dir.list()?.toList().orEmpty(), named)
+            ?: throw IllegalStateException("HDR sky '$name' has no .hdr file")
+        val file =
+            files.file(dir, choice.file) ?: throw IllegalStateException("HDR sky '$name': cannot read '${choice.file}'")
         return downsample(decoder.read(file))
     }
 
@@ -56,7 +58,9 @@ class RaySkySnapshotReader(private val decoder: RadianceDecoder, private val hdr
         val out = FloatArray(width * height * 4)
         val area = (factor * factor).toFloat()
         for (y in 0 until height) for (x in 0 until width) {
-            var r = 0f; var g = 0f; var b = 0f
+            var r = 0f;
+            var g = 0f;
+            var b = 0f
             for (dy in 0 until factor) for (dx in 0 until factor) {
                 val p = image.pixel(minOf(x * factor + dx, image.width - 1), minOf(y * factor + dy, image.height - 1))
                 r += p[0]; g += p[1]; b += p[2]
@@ -72,8 +76,16 @@ class RaySkySnapshotReader(private val decoder: RadianceDecoder, private val hdr
         val additional = files.loadAsset(SkyboxMeta::class.java, name)?.meta?.additional ?: return null
         val faces = ArrayList<Pixmap>(6)
         try {
-            for (face in listOf(additional.back, additional.front, additional.left, additional.right, additional.bottom, additional.top)) {
-                val file = files.loadFile(name, face) ?: throw IllegalStateException("Skybox '$name': cannot read face '$face'")
+            for (face in listOf(
+                additional.back,
+                additional.front,
+                additional.left,
+                additional.right,
+                additional.bottom,
+                additional.top
+            )) {
+                val file = files.loadFile(name, face)
+                    ?: throw IllegalStateException("Skybox '$name': cannot read face '$face'")
                 faces += Pixmaps.load(FileHandle(file))
             }
             return resample(faces)
@@ -90,13 +102,36 @@ class RaySkySnapshotReader(private val decoder: RadianceDecoder, private val hdr
             val phi = (y + .5f) / height * PI.toFloat()
             for (x in 0 until width) {
                 val theta = ((x + .5f) / width - .5f) * 2f * PI.toFloat()
-                val dx = sin(phi) * sin(theta); val dy = cos(phi); val dz = -sin(phi) * cos(theta)
-                val ax = abs(dx); val ay = abs(dy); val az = abs(dz)
+                val dx = sin(phi) * sin(theta);
+                val dy = cos(phi);
+                val dz = -sin(phi) * cos(theta)
+                val ax = abs(dx);
+                val ay = abs(dy);
+                val az = abs(dz)
                 // the GL cube map face selection: major axis, then the in-face coordinates (sc, tc) over |ma|
-                val face: Int; val sc: Float; val tc: Float; val ma: Float
-                if (ax >= ay && ax >= az) { ma = ax; if (dx > 0) { face = 0; sc = -dz; tc = -dy } else { face = 1; sc = dz; tc = -dy } }
-                else if (ay >= az) { ma = ay; if (dy > 0) { face = 2; sc = dx; tc = dz } else { face = 3; sc = dx; tc = -dz } }
-                else { ma = az; if (dz > 0) { face = 4; sc = dx; tc = -dy } else { face = 5; sc = -dx; tc = -dy } }
+                val face: Int;
+                val sc: Float;
+                val tc: Float;
+                val ma: Float
+                if (ax >= ay && ax >= az) {
+                    ma = ax; if (dx > 0) {
+                        face = 0; sc = -dz; tc = -dy
+                    } else {
+                        face = 1; sc = dz; tc = -dy
+                    }
+                } else if (ay >= az) {
+                    ma = ay; if (dy > 0) {
+                        face = 2; sc = dx; tc = dz
+                    } else {
+                        face = 3; sc = dx; tc = -dz
+                    }
+                } else {
+                    ma = az; if (dz > 0) {
+                        face = 4; sc = dx; tc = -dy
+                    } else {
+                        face = 5; sc = -dx; tc = -dy
+                    }
+                }
                 val pixmap = faces[face]
                 val px = ((sc / ma + 1f) / 2f * pixmap.width).toInt().coerceIn(0, pixmap.width - 1)
                 val py = ((tc / ma + 1f) / 2f * pixmap.height).toInt().coerceIn(0, pixmap.height - 1)

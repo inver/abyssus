@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.assets.SPLAT_FIELDS
 import net.nevinsky.abyssus.assets.files.Asset
-import net.nevinsky.abyssus.assets.files.MetaBase
+import net.nevinsky.abyssus.assets.files.AssetMeta
 import net.nevinsky.abyssus.assets.files.MetaType
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.json.obj
@@ -32,10 +32,10 @@ class ProjectAssetListing(json: JsonProcessor) {
             val document = metaFiles.inEditor(dir) ?: return@runCatchingKeepingCancellation null
 
             @Suppress("UNCHECKED_CAST")
-            val parsedMeta = document.typed(MetaBase::class.java as Class<MetaBase<Any>>) ?: return@runCatchingKeepingCancellation null
+            val parsedMeta = document.typed(AssetMeta::class.java as Class<AssetMeta<Any>>) ?: return@runCatchingKeepingCancellation null
             val references = runCatchingKeepingCancellation { references(document.json) }.getOrDefault(emptyList())
             Asset(dir.name, parsedMeta, File(dir.path), references)
-        }.getOrNull() ?: Asset(dir.name, MetaBase(0, 0L, MetaType.UNKNOWN, Any()), File(dir.path))
+        }.getOrNull() ?: Asset(dir.name, AssetMeta(0, 0L, MetaType.UNKNOWN, Any()), File(dir.path))
     }
 
     /**

@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.assets.sky.hdr
 
-import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.sky.createFullscreenTriangle
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GL30
@@ -15,6 +13,9 @@ import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
+import net.nevinsky.abyssus.assets.ShaderSource
+import net.nevinsky.abyssus.assets.sky.createFullscreenTriangle
+import org.lwjgl.util.tinyexr.EXRImage
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -37,7 +38,8 @@ private const val GL_TEXTURE_CUBE_MAP_SEAMLESS = 0x884F
 private const val GL_FRAMEBUFFER_BINDING = 0x8CA6
 
 /** A texture made with raw GL calls, so libGDX's texture binder can bind it like any other. */
-class GpuTexture(target: Int, private val width: Int, private val height: Int) : GLTexture(target, Gdx.gl.glGenTexture()) {
+class GpuTexture(target: Int, private val width: Int, private val height: Int) :
+    GLTexture(target, Gdx.gl.glGenTexture()) {
     override fun getWidth() = width
     override fun getHeight() = height
     override fun getDepth() = 0
@@ -69,7 +71,7 @@ class HdrEnvironment(
  * `GdxRuntime.withContext`. Each step renders into its own framebuffer and restores the framebuffer, viewport and
  * state it found. Throws when the GPU lacks OpenGL 3 or a renderable 16-bit float framebuffer.
  */
-class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: ShaderSource) : Disposable {
+class HdrEnvironmentBuild(private val image: EXRImage, private val shaders: ShaderSource) : Disposable {
 
     private var done = 0
     private var equirect: GpuTexture? = null
@@ -116,7 +118,17 @@ class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: Shad
         data.asShortBuffer().put(image.rgb)
         texture.bind()
         gl.glPixelStorei(GL20.GL_UNPACK_ALIGNMENT, 1)
-        gl.glTexImage2D(GL20.GL_TEXTURE_2D, 0, GL_RGB16F, image.width, image.height, 0, GL20.GL_RGB, GL_HALF_FLOAT, data)
+        gl.glTexImage2D(
+            GL20.GL_TEXTURE_2D,
+            0,
+            GL_RGB16F,
+            image.width,
+            image.height,
+            0,
+            GL20.GL_RGB,
+            GL_HALF_FLOAT,
+            data
+        )
         gl.glPixelStorei(GL20.GL_UNPACK_ALIGNMENT, 4)
         // no mipmaps: atan2 jumps at the image's left and right edge, and mip selection there would draw a seam
         parameters(GL20.GL_TEXTURE_2D, GL20.GL_LINEAR, GL20.GL_LINEAR, GL20.GL_REPEAT, GL20.GL_CLAMP_TO_EDGE)
@@ -183,7 +195,17 @@ class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: Shad
         texture.bind()
         for (level in 0 until levels) for (face in 0 until 6) {
             val s = maxOf(size shr level, 1)
-            gl.glTexImage2D(GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level, GL_RGB16F, s, s, 0, GL20.GL_RGB, GL_HALF_FLOAT, null)
+            gl.glTexImage2D(
+                GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+                level,
+                GL_RGB16F,
+                s,
+                s,
+                0,
+                GL20.GL_RGB,
+                GL_HALF_FLOAT,
+                null
+            )
         }
         gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL30.GL_TEXTURE_MAX_LEVEL, levels - 1)
         val min = if (levels > 1) GL20.GL_LINEAR_MIPMAP_LINEAR else GL20.GL_LINEAR
@@ -219,9 +241,21 @@ class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: Shad
 
     private fun attach(target: GpuTexture, face: Int, level: Int) {
         val gl = Gdx.gl
-        gl.glFramebufferTexture2D(GL20.GL_FRAMEBUFFER, GL20.GL_COLOR_ATTACHMENT0, GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, target.textureObjectHandle, level)
+        gl.glFramebufferTexture2D(
+            GL20.GL_FRAMEBUFFER,
+            GL20.GL_COLOR_ATTACHMENT0,
+            GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+            target.textureObjectHandle,
+            level
+        )
         val status = gl.glCheckFramebufferStatus(GL20.GL_FRAMEBUFFER)
-        check(status == GL20.GL_FRAMEBUFFER_COMPLETE) { "16-bit float framebuffer is incomplete (status 0x${status.toString(16)})" }
+        check(status == GL20.GL_FRAMEBUFFER_COMPLETE) {
+            "16-bit float framebuffer is incomplete (status 0x${
+                status.toString(
+                    16
+                )
+            })"
+        }
     }
 
     /** Runs [block] with [fbo] bound and blending, depth, culling and scissor off; restores what it found. */
@@ -250,7 +284,16 @@ class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: Shad
     }
 
     override fun dispose() {
-        listOfNotNull(equirect, source, specular, irradiance, project, prefilter, convolve, mesh).forEach(Disposable::dispose)
+        listOfNotNull(
+            equirect,
+            source,
+            specular,
+            irradiance,
+            project,
+            prefilter,
+            convolve,
+            mesh
+        ).forEach(Disposable::dispose)
         equirect = null
         source = null
         specular = null

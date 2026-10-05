@@ -34,7 +34,10 @@ class AbyssusDocumentFormat {
         for ((id, entity) in entities.properties()) {
             val renderable = entity.get("components")?.get("RenderComponent")?.get("renderable")
             if (renderable?.has("class") == true)
-                return FormatRejection(FormatProblem.LEGACY_FIELD, "ecs.entities.$id.components.RenderComponent.renderable.class")
+                return FormatRejection(
+                    FormatProblem.LEGACY_FIELD,
+                    "ecs.entities.$id.components.RenderComponent.renderable.class"
+                )
         }
         return null
     }

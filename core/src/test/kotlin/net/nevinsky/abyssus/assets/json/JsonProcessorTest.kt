@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.assets.json
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
-import net.nevinsky.abyssus.assets.files.MetaBase
+import net.nevinsky.abyssus.assets.files.AssetMeta
 import net.nevinsky.abyssus.assets.files.MetaType
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -31,10 +31,10 @@ class JsonProcessorTest {
     @Test
     fun parsesAMetaOfEveryTypeAndAnUnknownOne() {
         for (type in MetaType.entries) {
-            val meta = json.parse("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":5,"type":"$type","additional":{}}""", MetaBase::class.java)
+            val meta = json.parse("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":5,"type":"$type","additional":{}}""", AssetMeta::class.java)
             assertEquals(type, meta.type)
         }
-        val unknown = json.parse("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":5,"type":"WIDGET","additional":{}}""", MetaBase::class.java)
+        val unknown = json.parse("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":5,"type":"WIDGET","additional":{}}""", AssetMeta::class.java)
         assertEquals(MetaType.UNKNOWN, unknown.type)
     }
 

@@ -28,6 +28,7 @@ class JsonProcessor {
     fun readObject(text: String): JsonNode =
         mapper.readTree(text)?.takeIf { it.isObject } ?: throw IllegalArgumentException("expected a JSON object")
 
+    //todo add validation on parsing for formats
     fun <T> parse(text: String, clazz: Class<T>): T {
         return mapper.readValue(text, clazz)
     }

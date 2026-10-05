@@ -9,11 +9,14 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assets.displayMessage
 import net.nevinsky.abyssus.assets.format.DocumentKind
 import net.nevinsky.abyssus.assets.format.UnsupportedDocumentFormat
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.META_FILE
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.PROJECT_EXTENSION
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.SCENE_EXTENSION
 
 internal fun documentKind(file: VirtualFile): DocumentKind? = when {
-    file.extension == "scene" -> DocumentKind.SCENE
-    file.extension == "abss" -> DocumentKind.PROJECT
-    file.name == "meta.json" -> DocumentKind.ASSET
+    file.extension == SCENE_EXTENSION -> DocumentKind.SCENE
+    file.extension == PROJECT_EXTENSION -> DocumentKind.PROJECT
+    file.name == META_FILE -> DocumentKind.ASSET
     else -> null
 }
 

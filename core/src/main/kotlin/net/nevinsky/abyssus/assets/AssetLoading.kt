@@ -19,7 +19,6 @@ import net.nevinsky.abyssus.assets.sky.RaySkySnapshots
 import net.nevinsky.abyssus.assets.sky.SkyLoader
 import net.nevinsky.abyssus.assets.sky.cube.SkyboxLoader
 import net.nevinsky.abyssus.assets.sky.hdr.HdrPreview
-import net.nevinsky.abyssus.assets.sky.hdr.HdrSkyFiles
 import net.nevinsky.abyssus.assets.sky.hdr.HdrSkyLoader
 import net.nevinsky.abyssus.assets.sky.hdr.RadianceDecoder
 import net.nevinsky.abyssus.assets.sky.hdr.ToneCurve

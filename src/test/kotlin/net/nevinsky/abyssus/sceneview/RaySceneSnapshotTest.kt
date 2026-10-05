@@ -4,20 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import com.badlogic.gdx.graphics.VertexAttribute
-import com.badlogic.gdx.graphics.g3d.model.data.ModelMaterial
-import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
-import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
-import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.assets.model.RayModelSnapshotReader
-import net.nevinsky.abyssus.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.core.model.ModelData
-import net.nevinsky.abyssus.core.model.ModelMesh
-import net.nevinsky.abyssus.core.model.ModelMeshPart
 import net.nevinsky.abyssus.raytracing.RayColor
 import net.nevinsky.abyssus.raytracing.RayEnvironment
 import net.nevinsky.abyssus.sceneview.gizmo.DragResult
@@ -151,7 +139,7 @@ class RaySceneSnapshotTest {
         val sources = RaySceneAssetState.Ready(mapOf("model" to asset), emptyMap())
         val p = params(SceneContent(models = listOf(placement, placement.copy(entityId = "second")))).copy(
             ecs = net.nevinsky.abyssus.filetype.SceneJson.parse("""{"entities":{"entity":{"components":{"RenderComponent":{"rayTracingMaterials":{"red":{"transmission":1,"ior":1.4}}}}}}}"""),
-            raySettings = SceneRaySettingsCodec().read(net.nevinsky.abyssus.filetype.SceneJson.parse("""{"rayTracing":{"maxReflectionBounces":2}}""")))
+            rayTracing = SceneRaySettingsCodec().read(net.nevinsky.abyssus.filetype.SceneJson.parse("""{"rayTracing":{"maxReflectionBounces":2}}""")))
         val converter = RaySceneSnapshots()
         val before = (converter.capture(p.copy(ecs = null), camera, LightSet.NONE, sources) as RaySceneConversion.Ready).frame
         val after = (converter.capture(p, camera, LightSet.NONE, sources) as RaySceneConversion.Ready).frame
@@ -169,7 +157,7 @@ class RaySceneSnapshotTest {
     @Test fun malformedSettingsPreventRayConversionButKeepOrdinarySceneParsing() {
         val scene = net.nevinsky.abyssus.parseScene("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxRefractionBounces":null}}""")
         val p = SceneRenderParams.from(scene, CameraParams.DEFAULT)
-        assertNull(p.raySettings.settings)
+        assertNull(p.rayTracing.settings)
         assertTrue(RaySceneSnapshots().capture(p,camera,LightSet.NONE,assets) is RaySceneConversion.Fallback)
     }
 

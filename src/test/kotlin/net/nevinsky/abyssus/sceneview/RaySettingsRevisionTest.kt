@@ -18,7 +18,7 @@ class RaySettingsRevisionTest {
     private val content=SceneContent(models=listOf(AssetPlacement("entity","model",PlacementTransform.IDENTITY)))
     private val camera=PerspectiveCamera(60f,8f,8f).apply { position.set(0f,0f,2f);direction.set(0f,0f,-1f);update() }
     private fun context(target:Int)=RayFrameContext(SceneRenderParams.DEFAULT.copy(content=content,projectDir=File("project"),
-        raySettings=SceneRaySettingsCodec().read(SceneJson.parse("""{"rayTracing":{"targetSamplesPerPixel":$target}}"""))),content,camera,LightSet.NONE,emptyList(),8,8,null)
+        rayTracing=SceneRaySettingsCodec().read(SceneJson.parse("""{"rayTracing":{"targetSamplesPerPixel":$target}}"""))),content,camera,LightSet.NONE,emptyList(),8,8,null)
     private fun feed(service:RayBackendService,id:String,executor:Executor=Executor(Runnable::run))=RayViewFeed(service.newView(id),
         RaySceneAssets({_,_->RayAssetLease({model},{null},{})},{_,_->error("terrain")}),executor)
 

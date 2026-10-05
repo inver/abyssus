@@ -19,11 +19,15 @@ class RayModelSnapshots(
 ) {
     private data class Key(val project: String, val name: String)
     private class Entry(var references: Int = 0, var snapshot: RayModelSnapshot? = null, var failure: Throwable? = null)
+
     private val lock = Any()
     private val entries = HashMap<Key, Entry>()
     private var bytes = 0L
     val retainedBytes: Long get() = synchronized(lock) { bytes }
-    init { require(maxBytes > 0) }
+
+    init {
+        require(maxBytes > 0)
+    }
 
     /** A lease is closed on disable/deletion/project replacement; native workers receive only its immutable snapshot. */
     fun acquire(files: AssetFiles, name: String): RayModelSnapshotLease {
@@ -35,19 +39,28 @@ class RayModelSnapshots(
         val lease = RayModelSnapshotLease(
             { synchronized(lock) { entry.snapshot } },
             { synchronized(lock) { entry.failure } },
-            { synchronized(lock) {
-                if (--entry.references == 0) {
-                    if (entries[key] === entry) entries.remove(key)
-                    bytes -= entry.snapshot?.byteSize ?: 0
-                    entry.snapshot = null
-                    entry.failure = null
+            {
+                synchronized(lock) {
+                    if (--entry.references == 0) {
+                        if (entries[key] === entry) entries.remove(key)
+                        bytes -= entry.snapshot?.byteSize ?: 0
+                        entry.snapshot = null
+                        entry.failure = null
+                    }
                 }
-            } }
+            }
         )
         if (fresh) try {
             executor.execute {
                 if (!wanted(key, entry)) return@execute
-                val result = runCatchingKeepingCancellation { checkNotNull(read(files, name)) { "CPU model '$name' is unreadable" } }
+                val result = runCatchingKeepingCancellation {
+                    checkNotNull(
+                        read(
+                            files,
+                            name
+                        )
+                    ) { "CPU model '$name' is unreadable" }
+                }
                 publish(key, entry, result)
             }
         } catch (failure: Throwable) {
@@ -78,13 +91,18 @@ class RayModelSnapshots(
     private fun wanted(key: Key, entry: Entry) = synchronized(lock) {
         entries[key] === entry && entry.references > 0 && entry.snapshot == null && entry.failure == null
     }
+
     private fun publish(key: Key, entry: Entry, result: Result<RayModelSnapshot>) = synchronized(lock) {
         if (!wanted(key, entry)) return@synchronized
         val snapshot = result.getOrNull()
         if (snapshot == null) entry.failure = result.exceptionOrNull()
-        else if (snapshot.byteSize > maxBytes - bytes) entry.failure = IllegalStateException("Shared CPU model snapshots exceed $maxBytes bytes")
-        else { entry.snapshot = snapshot; bytes += snapshot.byteSize }
+        else if (snapshot.byteSize > maxBytes - bytes) entry.failure =
+            IllegalStateException("Shared CPU model snapshots exceed $maxBytes bytes")
+        else {
+            entry.snapshot = snapshot; bytes += snapshot.byteSize
+        }
     }
+
     private fun key(files: AssetFiles, name: String) = Key(files.projectDir.toPath().normalize().toString(), name)
 }
 

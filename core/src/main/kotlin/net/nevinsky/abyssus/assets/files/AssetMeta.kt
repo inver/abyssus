@@ -3,16 +3,20 @@ package net.nevinsky.abyssus.assets.files
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import java.util.*
 
-open class MetaBase<T>(
+open class AssetMeta<T>(
     val version: Int,
     val lastModified: Long,
     val type: MetaType,
     val additional: T,
     val uuid: UUID? = null
-)
+) {
+    @Suppress("UNCHECKED_CAST")
+    fun <T> typedAdditional(): T {
+        return additional as T
+    }
+}
 
 enum class MetaType {
-    /** A type this plugin does not know, or a `meta.json` that could not be bound. */
     @JsonEnumDefaultValue
     UNKNOWN,
     SKYBOX,

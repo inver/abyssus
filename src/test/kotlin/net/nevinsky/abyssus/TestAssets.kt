@@ -3,7 +3,7 @@ package net.nevinsky.abyssus
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.runtime.scene.SceneDto
 import net.nevinsky.abyssus.assets.files.Asset
-import net.nevinsky.abyssus.assets.files.MetaBase
+import net.nevinsky.abyssus.assets.files.AssetMeta
 import net.nevinsky.abyssus.assets.files.MetaType
 import java.io.File
 import java.util.UUID
@@ -20,7 +20,7 @@ fun testAsset(
     unused: Boolean = false,
 ): Asset<Any> = Asset(
     name,
-    MetaBase(1, 0L, MetaType.valueOf(type), Any(), uuid?.let { UUID.nameUUIDFromBytes(it.toByteArray()) }),
+    AssetMeta(1, 0L, MetaType.valueOf(type), Any(), uuid?.let { UUID.nameUUIDFromBytes(it.toByteArray()) }),
     File(name),
     references,
     unused,

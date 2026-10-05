@@ -23,10 +23,13 @@ class RayModelSkinning {
         val stride = mesh.vertexSizeBytes / 4
         val source = mesh.vertices()
         require(stride > 0 && source.size % stride == 0) { "Vertex data does not match its stride" }
-        val weights = mesh.attributes.filter { it.usage == Usage.BoneWeight }.map { requireFloatChannel(it, 2); it.offsetBytes / 4 }
-        val position = mesh.attributes.firstOrNull { it.usage == Usage.Position && it.unit == 0 }?.also { requireFloatChannel(it, 3) }
-        val directions = mesh.attributes.filter { it.unit == 0 && (it.usage == Usage.Normal || it.usage == Usage.Tangent || it.usage == Usage.BiNormal) }
-            .onEach { requireFloatChannel(it, 3) }
+        val weights = mesh.attributes.filter { it.usage == Usage.BoneWeight }
+            .map { requireFloatChannel(it, 2); it.offsetBytes / 4 }
+        val position = mesh.attributes.firstOrNull { it.usage == Usage.Position && it.unit == 0 }
+            ?.also { requireFloatChannel(it, 3) }
+        val directions =
+            mesh.attributes.filter { it.unit == 0 && (it.usage == Usage.Normal || it.usage == Usage.Tangent || it.usage == Usage.BiNormal) }
+                .onEach { requireFloatChannel(it, 3) }
         val result = source.copyOf()
         val skin = FloatArray(16)
         for (vertex in 0 until source.size / stride) {
@@ -55,14 +58,18 @@ class RayModelSkinning {
         require(attribute.type == GL20.GL_FLOAT && attribute.components >= components && attribute.offsetBytes % 4 == 0) { "Unsupported skinned vertex channel" }
 
     private fun transformPoint(m: FloatArray, from: FloatArray, to: FloatArray, at: Int) {
-        val x = from[at]; val y = from[at + 1]; val z = from[at + 2]
+        val x = from[at];
+        val y = from[at + 1];
+        val z = from[at + 2]
         to[at] = m[0] * x + m[4] * y + m[8] * z + m[12]
         to[at + 1] = m[1] * x + m[5] * y + m[9] * z + m[13]
         to[at + 2] = m[2] * x + m[6] * y + m[10] * z + m[14]
     }
 
     private fun transformDirection(m: FloatArray, from: FloatArray, to: FloatArray, at: Int) {
-        val x = from[at]; val y = from[at + 1]; val z = from[at + 2]
+        val x = from[at];
+        val y = from[at + 1];
+        val z = from[at + 2]
         val dx = m[0] * x + m[4] * y + m[8] * z
         val dy = m[1] * x + m[5] * y + m[9] * z
         val dz = m[2] * x + m[6] * y + m[10] * z

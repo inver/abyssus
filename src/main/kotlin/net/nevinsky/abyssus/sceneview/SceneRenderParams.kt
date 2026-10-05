@@ -5,16 +5,17 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.filetype.SceneJson
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.assets.json.float
 import net.nevinsky.abyssus.assets.json.obj
+import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.runtime.scene.RayTracingDto
 import net.nevinsky.abyssus.runtime.scene.SceneDto
 import java.io.File
 import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.sqrt
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 
 data class Vec3(val x: Float, val y: Float, val z: Float)
 
@@ -40,7 +41,8 @@ data class CameraParams(
  */
 data class FogParams(val color: Rgba, val density: Float, val gradient: Float) {
     fun amount(distance: Float): Float =
-        (1.0 - exp(-(distance.coerceAtLeast(0f) * density).toDouble().pow(gradient.toDouble()))).toFloat().coerceIn(0f, 1f)
+        (1.0 - exp(-(distance.coerceAtLeast(0f) * density).toDouble().pow(gradient.toDouble()))).toFloat()
+            .coerceIn(0f, 1f)
 
     /** Multiplier for g3d's `dot(d, d) * k` fog term that reaches [amount] at `1 / density` for any gradient. */
     val shaderCoefficient: Float get() = ((1.0 - exp(-1.0)) * density.toDouble() * density).toFloat()
@@ -56,7 +58,7 @@ data class SceneRenderParams(
     val projectDir: File? = null,
     /** The scene's `ecs` block as read, for scene overlays that draw components the view does not model. */
     val ecs: JsonNode? = null,
-    val raySettings: SceneRaySettingsState = SceneRaySettingsCodec().read(SceneJson.mapper.createObjectNode()),
+    val rayTracing: RayTracingDto? = null,
 ) {
     companion object {
         val DEFAULT_CLEAR = Rgba(0.1f, 0.1f, 0.15f, 1f)
@@ -64,8 +66,16 @@ data class SceneRenderParams(
 
         fun from(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
             val fog = fogOf(scene)
-            return SceneRenderParams(fog?.color ?: DEFAULT_CLEAR, ambientOf(scene), fog, camera, SceneContent.of(scene), projectDir, scene.ecs,
-                SceneRaySettingsCodec().read(SceneJson.mapper.createObjectNode().also { root -> scene.rayTracing?.let { root.set<JsonNode>("rayTracing",it) } }))
+            return SceneRenderParams(
+                fog?.color ?: DEFAULT_CLEAR,
+                ambientOf(scene),
+                fog,
+                camera,
+                SceneContent.of(scene),
+                projectDir,
+                scene.ecs,
+                scene.rayTracing
+            )
         }
 
         private fun ambientOf(scene: SceneDto): Rgba? {
@@ -96,7 +106,9 @@ internal fun normalized(v: Vec3): Vec3? {
 object MainCamera {
     fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
         val root = SceneJson.parse(abssText).takeIf { it.isObject } ?: return null
-        if (net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().validate(root, net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT) != null) return null
+        if (net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()
+                .validate(root, net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT) != null
+        ) return null
         val cam = root.obj("mainCamera") ?: return null
         val position = cam.vec("position") ?: return null
         val direction = normalized(cam.vec("viewPointPosition") ?: return null) ?: return null

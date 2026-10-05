@@ -5,25 +5,9 @@
 
 package net.nevinsky.abyssus.assets.sky.procedural
 
-import net.nevinsky.abyssus.assets.files.MetaBase
-import net.nevinsky.abyssus.assets.files.MetaType
-import java.util.*
-
 class ProceduralSkyMeta(
-    version: Int,
-    lastModified: Long,
-    type: MetaType,
-    additional: ProceduralSkyAdditional,
-    uuid: UUID? = null
-) : MetaBase<ProceduralSkyAdditional>(version, lastModified, type, additional, uuid)
-
-/**
- * The `additional` block of a `SKYBOX_PROCEDURAL` asset: the two GLSL files in the asset folder and the atmosphere
- * parameters. Every parameter is optional; [params] fills the gaps with the defaults of [AtmosphereParams].
- */
-class ProceduralSkyAdditional(
-    val vertex: String? = null,
-    val fragment: String? = null,
+    val shaderVert: String? = null,
+    val shaderFrag: String? = null,
     val planetRadius: Float? = null,
     val atmosphereRadius: Float? = null,
     val betaRayleigh: List<Float>? = null,
@@ -49,7 +33,6 @@ class ProceduralSkyAdditional(
         }
 }
 
-/** The atmosphere of a procedural sky; the defaults are Earth's (the Nishita / Scratchapixel values). */
 data class AtmosphereParams(
     val planetRadius: Float = 6360e3f,
     val atmosphereRadius: Float = 6420e3f,

@@ -5,12 +5,7 @@
 
 package net.nevinsky.abyssus.assets.sky.hdr
 
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import java.io.BufferedInputStream
-import java.io.EOFException
-import java.io.File
-import java.io.IOException
-import java.io.InputStream
+import java.io.*
 
 /** A Radiance file this view does not read, or a broken one; the message says which header line or why. */
 class RadianceFormatException(message: String) : IOException(message)
@@ -20,7 +15,11 @@ class HdrImage(val width: Int, val height: Int, val rgb: ShortArray) {
     /** The radiance of pixel ([x], [y]) as floats. */
     fun pixel(x: Int, y: Int): FloatArray {
         val i = (y * width + x) * 3
-        return floatArrayOf(java.lang.Float.float16ToFloat(rgb[i]), java.lang.Float.float16ToFloat(rgb[i + 1]), java.lang.Float.float16ToFloat(rgb[i + 2]))
+        return floatArrayOf(
+            java.lang.Float.float16ToFloat(rgb[i]),
+            java.lang.Float.float16ToFloat(rgb[i + 1]),
+            java.lang.Float.float16ToFloat(rgb[i + 2])
+        )
     }
 }
 
@@ -40,10 +39,6 @@ data class RadianceHeader(val width: Int, val height: Int)
  */
 class RadianceDecoder {
     private val resolution = Regex("""-Y (\d+) \+X (\d+)""")
-
-    /** The header of [file], or null when it is missing or not a supported Radiance image. */
-    fun headerOf(file: File): RadianceHeader? =
-        runCatchingKeepingCancellation { BufferedInputStream(file.inputStream()).use(::header) }.getOrNull()
 
     /**
      * Reads the header lines of [input], leaving it at the first scanline. Throws [RadianceFormatException] for a
@@ -81,7 +76,8 @@ class RadianceDecoder {
         }
     }
 
-    fun read(file: File, maxWidth: Int = MAX_HDR_WIDTH): HdrImage = BufferedInputStream(file.inputStream(), 1 shl 16).use { read(it, maxWidth) }
+    fun read(file: File, maxWidth: Int = MAX_HDR_WIDTH): HdrImage =
+        BufferedInputStream(file.inputStream(), 1 shl 16).use { read(it, maxWidth) }
 
     /** Reads a whole image from [input], halving it until it is at most [maxWidth] wide. */
     fun read(input: InputStream, maxWidth: Int = MAX_HDR_WIDTH): HdrImage {

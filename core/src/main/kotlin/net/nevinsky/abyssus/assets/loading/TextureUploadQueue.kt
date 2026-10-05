@@ -17,24 +17,23 @@ class TextureUploadQueue(
     pixmaps: Map<String, Pixmap>,
     private val makeTexture: (String, Pixmap) -> Texture,
 ) {
-    private val pixmaps = LinkedHashMap(pixmaps)
-
     /** The images not yet uploaded, by name. */
-    val pending: Map<String, Pixmap> get() = pixmaps
+    val pending: Map<String, Pixmap>
+        field = LinkedHashMap(pixmaps)
 
     /** The textures uploaded so far, by name. */
     val textures = HashMap<String, Texture>()
 
     /** Uploads one more image; true when every image is on the GPU. */
     fun uploadNext(): Boolean {
-        val name = pixmaps.keys.firstOrNull() ?: return true
-        textures[name] = makeTexture(name, pixmaps.remove(name)!!)
-        return pixmaps.isEmpty()
+        val name = pending.keys.firstOrNull() ?: return true
+        textures[name] = makeTexture(name, pending.remove(name)!!)
+        return pending.isEmpty()
     }
 
     fun dispose() {
-        pixmaps.values.forEach(Pixmap::dispose)
-        pixmaps.clear()
+        pending.values.forEach(Pixmap::dispose)
+        pending.clear()
         textures.values.forEach(Texture::dispose)
         textures.clear()
     }

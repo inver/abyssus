@@ -102,7 +102,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val scene = children(children(abss()).single { label(it) == "scenes" }).single()
         // a scene row shows the scene's view settings (its Ray Tracing switch) instead of an empty state
         p.show(scene)
-        val details = p.state as PanelState.SceneDetails
+        val details = p.state as PanelState.UISceneState
         assertEquals("Main Scene.scene", details.file.name)
     }
 

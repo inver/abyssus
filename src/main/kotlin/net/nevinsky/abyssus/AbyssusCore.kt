@@ -21,6 +21,7 @@ import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerator
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainHeightEncoder
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainRecipeCodec
 import net.nevinsky.abyssus.assets.terrain.noise.FastNoiseSamplerFactory
+import net.nevinsky.abyssus.core.FileLoader
 import net.nevinsky.abyssus.raytracing.MetalRayBackendFactory
 import net.nevinsky.abyssus.raytracing.VulkanRayBackendFactory
 import net.nevinsky.abyssus.sceneview.RayBackendSelector
@@ -51,6 +52,7 @@ class AbyssusCore : Disposable {
         loggers.getLogger("scenes"),
         format,
     )
+
     val metaFiles = net.nevinsky.abyssus.dto.MetaFiles(net.nevinsky.abyssus.assets.files.AssetMetaReader(json, format))
 
     /** The editable `meta.json` fields of each asset type and the editor that changes them one at a time. */

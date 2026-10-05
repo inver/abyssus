@@ -20,7 +20,7 @@ class SceneRaySettingsPanelTest:BasePlatformTestCase() {
         if(c is Container) c.components.forEach { addAll(texts(it)) }
     }
     private fun file(text:String="""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""")=myFixture.addFileToProject("settings.scene",text).virtualFile
-    private fun view(file:com.intellij.openapi.vfs.VirtualFile)=SceneDetailsView(SceneRayControls(project) { _,_->error("Settings must not open a view") },readSceneState(file,"Settings") as PanelState.SceneDetails,testRootDisposable)
+    private fun view(file:com.intellij.openapi.vfs.VirtualFile)=SceneDetailsView(SceneRayControls(project) { _,_->error("Settings must not open a view") },readSceneState(file,"Settings") as PanelState.UISceneState,testRootDisposable)
     fun testDefaultsAndValidEditsWorkWithoutAViewAndSelectionDoesNotWrite() {
         val file=file();val document=FileDocumentManager.getInstance().getDocument(file)!!;val original=document.text
         val view=view(file)
@@ -42,7 +42,7 @@ class SceneRaySettingsPanelTest:BasePlatformTestCase() {
         assertEquals(4,SceneJson.parse(document.text)["rayTracing"]["targetSamplesPerPixel"].intValue())
         assertTrue((named(view,"ray-setting-targetSamplesPerPixel-error") as JLabel).text.contains("changed"))
         assertTrue("a rebuilt view keeps the explanation",(named(SceneDetailsView(SceneRayControls(project) { _,_->error("no view") },
-            readSceneState(file,"Settings") as PanelState.SceneDetails,testRootDisposable,conflict="targetSamplesPerPixel"),
+            readSceneState(file,"Settings") as PanelState.UISceneState,testRootDisposable,conflict="targetSamplesPerPixel"),
             "ray-setting-targetSamplesPerPixel-error") as JLabel).text.contains("changed"))
     }
     fun testLabelsHelpAndRangesSeparateQualityFromWork() {

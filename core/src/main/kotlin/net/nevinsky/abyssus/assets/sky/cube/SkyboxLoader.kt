@@ -5,34 +5,36 @@
 
 package net.nevinsky.abyssus.assets.sky.cube
 
-import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.loading.AssetLoader
-import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
-import net.nevinsky.abyssus.core.loader.Pixmaps
+import net.nevinsky.abyssus.assets.ShaderSource
 import net.nevinsky.abyssus.assets.files.AssetFiles
+import net.nevinsky.abyssus.assets.loading.AssetLoader
+import net.nevinsky.abyssus.core.AssetMetaLoader
+import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.loader.Pixmaps
 
 /** Skybox assets: the six face images decoded off the GL thread, then uploaded as one cube map. */
-class SkyboxLoader(private val shaders: ShaderSource) : AssetLoader<PreparedSkybox, SkyboxCube> {
+class SkyboxLoader(
+    private val fileLoader: FileLoader,
+    private val metaLoader: AssetMetaLoader,
+    private val shaders: ShaderSource
+) :
+    AssetLoader<PreparedSkybox, SkyboxCube> {
     /**
      * The native cube map maps from (back, front, left, right, bottom, top) as (+X, -X, +Y, -Y, +Z, -Z); the same
      * order is kept so a skybox looks here as it does in the editor.
      */
     override fun prepare(files: AssetFiles, name: String): PreparedSkybox? {
-        val assetData = files.loadAsset(SkyboxMeta::class.java, name) ?: return null
-        val additional = assetData.meta.additional
+        val meta = metaLoader.loadBaseMeta(name) ?: return null
+        val additional = meta.typedAdditional<SkyboxMeta>()
         val faces = ArrayList<Pixmap>(6)
         try {
-            for (f in listOf(
-                files.loadFile(name, additional.back),
-                files.loadFile(name, additional.front),
-                files.loadFile(name, additional.left),
-                files.loadFile(name, additional.right),
-                files.loadFile(name, additional.bottom),
-                files.loadFile(name, additional.top),
-            )) {
-                faces += Pixmaps.load(FileHandle(f))
-            }
+            faces += Pixmaps.load(fileLoader.loadFile(name, additional.back))
+            faces += Pixmaps.load(fileLoader.loadFile(name, additional.front))
+            faces += Pixmaps.load(fileLoader.loadFile(name, additional.left))
+            faces += Pixmaps.load(fileLoader.loadFile(name, additional.right))
+            faces += Pixmaps.load(fileLoader.loadFile(name, additional.bottom))
+            faces += Pixmaps.load(fileLoader.loadFile(name, additional.top))
         } catch (e: Throwable) {
             faces.forEach(Pixmap::dispose)
             throw e

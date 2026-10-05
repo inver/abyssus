@@ -5,20 +5,22 @@
 
 package net.nevinsky.abyssus.assets.sky.procedural
 
-import net.nevinsky.abyssus.assets.loading.AssetLoader
-import net.nevinsky.abyssus.assets.files.MetaType
 import net.nevinsky.abyssus.assets.files.AssetFiles
+import net.nevinsky.abyssus.assets.loading.AssetLoader
+import net.nevinsky.abyssus.core.AssetMetaLoader
+import net.nevinsky.abyssus.core.FileLoader
 
-/** Procedural sky assets: the metadata and both GLSL files read off the GL thread, compiled when built. */
-class ProceduralSkyLoader : AssetLoader<PreparedProceduralSky, ProceduralSky> {
-    /** Null for a folder that is not a `SKYBOX_PROCEDURAL`; throws when a shader file it names is missing. */
+class ProceduralSkyLoader(private val fileLoader: FileLoader, private val metaLoader: AssetMetaLoader) :
+    AssetLoader<PreparedProceduralSky, ProceduralSky> {
+
     override fun prepare(files: AssetFiles, name: String): PreparedProceduralSky? {
-        val asset = files.loadAsset(ProceduralSkyMeta::class.java, name) ?: return null
-        if (asset.meta.type != MetaType.SKYBOX_PROCEDURAL) return null
-        val additional = asset.meta.additional
-        fun source(field: String, file: String?) =
-            files.loadFile(name, file)?.readText() ?: throw IllegalStateException("Sky '$name' has no $field shader file '$file'")
-        return PreparedProceduralSky(additional.params, source("vertex", additional.vertex), source("fragment", additional.fragment))
+        val meta = metaLoader.loadBaseMeta(name) ?: return null
+        val additional = meta.typedAdditional<ProceduralSkyMeta>()
+        return PreparedProceduralSky(
+            additional.params,
+            fileLoader.loadFileContent(name, additional.shaderVert),
+            fileLoader.loadFileContent(name, additional.shaderFrag)
+        )
     }
 
     override fun build(prepared: PreparedProceduralSky) = ProceduralSky(prepared)

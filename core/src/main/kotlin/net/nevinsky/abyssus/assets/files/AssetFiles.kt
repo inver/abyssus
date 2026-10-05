@@ -6,14 +6,14 @@
 package net.nevinsky.abyssus.assets.files
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.assets.META_FILE
-import net.nevinsky.abyssus.assets.SPLAT_FIELDS
-import net.nevinsky.abyssus.assets.ASSETS_DIR
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.json.float
 import net.nevinsky.abyssus.assets.json.obj
 import net.nevinsky.abyssus.assets.json.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.ASSETS_DIR
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.META_FILE
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.SPLAT_FIELDS
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -39,7 +39,12 @@ class DiskMetaText : MetaTextSource {
  * been added, removed or renamed, make a new instance ([refreshed]). Metadata is read through [metaText], so a caller
  * can substitute text that is not on disk yet (unsaved editor content) with an immutable snapshot.
  */
-class AssetFiles(projectDir: File, private val json: JsonProcessor, private val metaText: MetaTextSource = DiskMetaText(), private val log: org.slf4j.Logger = org.slf4j.helpers.NOPLogger.NOP_LOGGER) {
+class AssetFiles(
+    projectDir: File,
+    private val json: JsonProcessor,
+    private val metaText: MetaTextSource = DiskMetaText(),
+    private val log: org.slf4j.Logger = org.slf4j.helpers.NOPLogger.NOP_LOGGER
+) {
     val projectDir: File = projectDir.absoluteFile
 
     private val assetsDir = File(this.projectDir, ASSETS_DIR)
@@ -61,7 +66,12 @@ class AssetFiles(projectDir: File, private val json: JsonProcessor, private val 
     fun refreshed(metaText: MetaTextSource = this.metaText): AssetFiles = AssetFiles(projectDir, json, metaText, log)
 
     /** A folder's `meta.json` as last read: the file stamp (disk source) and the text it was parsed from. */
-    private class CachedMeta(val stamp: Pair<Long, Long>?, val text: String, val document: MetaDocument?, val error: Throwable?)
+    private class CachedMeta(
+        val stamp: Pair<Long, Long>?,
+        val text: String,
+        val document: MetaDocument?,
+        val error: Throwable?
+    )
 
     private val metas = ConcurrentHashMap<File, CachedMeta>()
 
@@ -115,7 +125,7 @@ class AssetFiles(projectDir: File, private val json: JsonProcessor, private val 
             file(dir, additional(dir)?.text("file"))?.let { field to it }
         }.toMap()
 
-    private fun <T, M : MetaBase<T>> loadMeta(clazz: Class<M>, folder: File): M? = metaDocument(folder)?.typed(clazz)
+    private fun <T, M : AssetMeta<T>> loadMeta(clazz: Class<M>, folder: File): M? = metaDocument(folder)?.typed(clazz)
 
     /** The `type` of [name]'s `meta.json`; null when there is no readable one. */
     fun metaType(name: String): MetaType? = folder(name)?.let(::metaDocument)?.type
@@ -134,7 +144,7 @@ class AssetFiles(projectDir: File, private val json: JsonProcessor, private val 
         return metas[dir]?.error
     }
 
-    fun <T, M : MetaBase<T>> loadAsset(clazz: Class<M>, name: String): Asset<T>? {
+    fun <T, M : AssetMeta<T>> loadAsset(clazz: Class<M>, name: String): Asset<T>? {
         val dir = folder(name) ?: return null
         val meta = loadMeta(clazz, dir) ?: return null
         return Asset(name, meta, dir)

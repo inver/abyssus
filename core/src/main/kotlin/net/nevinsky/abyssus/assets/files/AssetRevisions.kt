@@ -6,17 +6,17 @@
 package net.nevinsky.abyssus.assets.files
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.assets.META_FILE
 import net.nevinsky.abyssus.assets.SPLAT_FIELDS
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.json.obj
 import net.nevinsky.abyssus.assets.json.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.terrain.generation.sha256Hex
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.META_FILE
 import java.io.File
 
-/** What a file looked like when a snapshot was taken; a replaced file changes at least one of them. */
-data class FileStamp(val length: Long, val lastModified: Long)
+/** The revisions of every asset folder of a project at one moment, by folder name. */
+data class ProjectRevisions(val assets: Map<String, AssetRevision>)
 
 /**
  * Everything about one asset folder that can change what it draws: the hash of its `meta.json` text, the stamps of the
@@ -32,8 +32,8 @@ data class AssetRevision(
     val references: Map<String, String?>,
 )
 
-/** The revisions of every asset folder of a project at one moment, by folder name. */
-class ProjectRevisions(val assets: Map<String, AssetRevision>)
+/** What a file looked like when a snapshot was taken; a replaced file changes at least one of them. */
+data class FileStamp(val length: Long, val lastModified: Long)
 
 /**
  * Takes [ProjectRevisions] snapshots and says which assets differ between two of them. A terrain also differs when a
@@ -71,7 +71,9 @@ class AssetRevisionTracker(private val json: JsonProcessor) {
             .filter { (key, value) -> value.isTextual && key !in SPLAT_FIELDS && value.asText().isNotBlank() }
             .map { (_, value) -> value.asText() }
             .distinct().sorted()
-            .associateWith { name -> File(dir, name).takeIf { it.isFile }?.let { FileStamp(it.length(), it.lastModified()) } }
+            .associateWith { name ->
+                File(dir, name).takeIf { it.isFile }?.let { FileStamp(it.length(), it.lastModified()) }
+            }
     }
 
     private fun references(tree: JsonNode, byUuid: Map<String, String>): Map<String, String?> {

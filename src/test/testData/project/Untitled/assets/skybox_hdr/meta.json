@@ -4,5 +4,7 @@
   "version": 1,
   "lastModified": 1663444124794,
   "type": "SKYBOX_HDR",
-  "additional": {}
+  "additional": {
+    "file": "sky.exr"
+  }
 }

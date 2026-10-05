@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
-import net.nevinsky.abyssus.assets.SPLAT_FIELDS
 import net.nevinsky.abyssus.assets.files.MetaType
 import net.nevinsky.abyssus.assets.sky.procedural.AtmosphereParams
 import java.math.BigDecimal

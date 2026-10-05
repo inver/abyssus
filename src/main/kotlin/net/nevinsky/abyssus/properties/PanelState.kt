@@ -11,8 +11,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assets.META_FILE
 import net.nevinsky.abyssus.assets.files.MetaType
-import net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.assets.format.DocumentKind
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.sky.cube.SKYBOX_FACES
 import net.nevinsky.abyssus.assets.sky.hdr.HdrPreview
@@ -23,7 +21,11 @@ import net.nevinsky.abyssus.ecs.scene.FieldValue
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.projectView.*
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
-import net.nevinsky.abyssus.sceneview.*
+import net.nevinsky.abyssus.runtime.scene.RayTracingDto
+import net.nevinsky.abyssus.sceneview.RayDataError
+import net.nevinsky.abyssus.sceneview.RayMaterialIdentity
+import net.nevinsky.abyssus.sceneview.RayMaterialOverrides
+import net.nevinsky.abyssus.sceneview.RayOpticalField
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
@@ -35,16 +37,16 @@ sealed interface PanelState {
     /** No asset to describe: [message], and under it [hint] when there is one. */
     data class Empty(val message: String, val hint: String?) : PanelState
 
-    /**
-     * A scene row: its Rendering settings. [rayRoot] is the scene document as read (see [readSceneState]); the runtime Ray
-     * Tracing switch is not part of it.
-     */
-    data class SceneDetails(
+    data class UISceneState(
         val file: VirtualFile,
         val name: String,
-        val rayRoot: JsonNode = SceneJson.parse("{}"),
-        val raySettings: SceneRaySettingsState = SceneRaySettingsCodec().read(rayRoot),
+        val raySettings: UIRayTracingState,
     ) : PanelState
+
+    data class UIRayTracingState(
+        val dto: RayTracingDto?,
+        val errors: Map<String, RayDataError> = emptyMap()
+    )
 
     /** An asset's Meta; [fields] are its editable properties (empty for a type without editors, which stays read only). */
     data class Details(
@@ -318,8 +320,8 @@ fun readTerrainSourceNow(folder: VirtualFile, services: PanelServices): net.nevi
 }
 
 /** Current native scene preferences, read off the EDT independently of renderer availability. */
-fun readSceneState(file: VirtualFile, name: String): PanelState = runCatchingKeepingCancellation {
-    val root = SceneJson.parse(runReadAction { textOf(file) })
-    AbyssusDocumentFormat().requireSupported(root, DocumentKind.SCENE)
-    PanelState.SceneDetails(file, name, root)
-}.getOrElse { PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.displayMessage()), null) }
+//fun readSceneState(file: VirtualFile, name: String): PanelState = runCatchingKeepingCancellation {
+//    val root = SceneJson.parse(runReadAction { textOf(file) })
+////    AbyssusDocumentFormat().requireSupported(root, DocumentKind.SCENE)
+//    PanelState.SceneDetails(file, name, root)
+//}.getOrElse { PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.displayMessage()), null) }
