@@ -8,8 +8,10 @@ package net.nevinsky.abyssus.sceneview
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.runtime.scene.RayTracingDto
-import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.core.scene.RayTracing
+import net.nevinsky.abyssus.core.scene.Scene
+import net.nevinsky.abyssus.runtime.float
+import net.nevinsky.abyssus.runtime.obj
 import java.io.File
 import kotlin.math.exp
 import kotlin.math.pow
@@ -56,13 +58,13 @@ data class SceneRenderParams(
     val projectDir: File? = null,
     /** The scene's `ecs` block as read, for scene overlays that draw components the view does not model. */
     val ecs: JsonNode? = null,
-    val rayTracing: RayTracingDto? = null,
+    val rayTracing: RayTracing? = null,
 ) {
     companion object {
         val DEFAULT_CLEAR = Rgba(0.1f, 0.1f, 0.15f, 1f)
         val DEFAULT = SceneRenderParams(DEFAULT_CLEAR, null, null, CameraParams.DEFAULT)
 
-        fun from(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
+        fun from(scene: Scene, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
             val fog = fogOf(scene)
             return SceneRenderParams(
                 fog?.color ?: DEFAULT_CLEAR,
@@ -76,7 +78,7 @@ data class SceneRenderParams(
             )
         }
 
-        private fun ambientOf(scene: SceneDto): Rgba? {
+        private fun ambientOf(scene: Scene): Rgba? {
             if (scene.ambientLightEnabled != true) return null
             val light = scene.ambientLight ?: return null
             val c = light.color ?: return null
@@ -84,7 +86,7 @@ data class SceneRenderParams(
             return Rgba(c.r * k, c.g * k, c.b * k, 1f)
         }
 
-        private fun fogOf(scene: SceneDto): FogParams? {
+        private fun fogOf(scene: Scene): FogParams? {
             if (scene.fogEnabled != true) return null
             val fog = scene.fog ?: return null
             val c = fog.color ?: return null

@@ -20,8 +20,8 @@ import net.nevinsky.abyssus.ecs.scene.FieldKind
 import net.nevinsky.abyssus.ecs.scene.FieldValue
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.projectView.*
-import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
-import net.nevinsky.abyssus.runtime.scene.RayTracingDto
+import net.nevinsky.abyssus.SceneEcsPaths
+import net.nevinsky.abyssus.core.scene.RayTracing
 import net.nevinsky.abyssus.sceneview.RayDataError
 import net.nevinsky.abyssus.sceneview.RayMaterialIdentity
 import net.nevinsky.abyssus.sceneview.RayMaterialOverrides
@@ -44,7 +44,7 @@ sealed interface PanelState {
     ) : PanelState
 
     data class UIRayTracingState(
-        val dto: RayTracingDto?,
+        val dto: RayTracing?,
         val errors: Map<String, RayDataError> = emptyMap()
     )
 

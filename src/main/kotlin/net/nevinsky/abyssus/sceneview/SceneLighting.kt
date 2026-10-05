@@ -44,7 +44,8 @@ class LightSet(val directional: List<DirectionalSource>, val point: List<PointSo
             environment.add(PointLight().set(Color(p.color.r, p.color.g, p.color.b, 1f), p.position.x, p.position.y, p.position.z, p.range))
         }
         for (s in spot) {
-            environment.add(SpotLight().set(Color(s.color.r, s.color.g, s.color.b, 1f),
+            environment.add(SpotLight().set(
+                Color(s.color.r, s.color.g, s.color.b, 1f),
                 Vector3(s.position.x, s.position.y, s.position.z), Vector3(s.direction.x, s.direction.y, s.direction.z),
                 s.range, s.cone.angle / 2f, s.cone.softness))
         }

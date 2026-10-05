@@ -26,7 +26,7 @@ import net.nevinsky.abyssus.filetype.ComponentIcons
 import net.nevinsky.abyssus.filetype.PropertyIcons
 import net.nevinsky.abyssus.filetype.SceneIcons
 import net.nevinsky.abyssus.filetype.ScenesIcons
-import net.nevinsky.abyssus.dto.SceneEntry
+import net.nevinsky.abyssus.core.project.SceneEntry
 import javax.swing.Icon
 
 /** Shown in a scene entry's label (`name (id)`) and edited via Rename, so not repeated as rows. */

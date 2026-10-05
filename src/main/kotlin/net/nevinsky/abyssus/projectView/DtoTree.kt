@@ -8,11 +8,11 @@ package net.nevinsky.abyssus.projectView
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assets.Asset
-import net.nevinsky.abyssus.dto.SceneError
+import net.nevinsky.abyssus.core.project.SceneError
 import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.runtime.scene.SceneDto
-import net.nevinsky.abyssus.dto.SceneEntry
-import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
+import net.nevinsky.abyssus.core.scene.Scene
+import net.nevinsky.abyssus.core.project.SceneEntry
+import net.nevinsky.abyssus.SceneEcsPaths
 
 /**
  * A named, ordered child of a DTO as shown by the Abyssus view. [enabled] is set when the row is gated by an
@@ -91,7 +91,7 @@ fun List<DtoRow>.foldToggles(): List<DtoRow> {
 }
 
 /** `Main Scene (6275127)`: the scene name followed by its id; the index stands in for a missing name. */
-fun sceneLabel(scene: SceneDto, index: Int): String {
+fun sceneLabel(scene: Scene, index: Int): String {
     val name = scene.name?.takeIf { it.isNotBlank() } ?: AbyssusBundle.message("dtoListElementLabel", "scenes", index)
     return scene.id?.let { "$name ($it)" } ?: name
 }
@@ -99,7 +99,7 @@ fun sceneLabel(scene: SceneDto, index: Int): String {
 /** What a list element is called in the tree: a scene's label, an asset's folder, a failed scene's file, else `parent[i]`. */
 fun elementLabel(parentName: String, element: Any?, index: Int): String = when (element) {
     is SceneEntry -> sceneLabel(element.scene, index)
-    is SceneDto -> sceneLabel(element, index)
+    is Scene -> sceneLabel(element, index)
     is Asset<*> -> element.name
     is SceneError -> element.file.name
     else -> AbyssusBundle.message("dtoListElementLabel", parentName, index)

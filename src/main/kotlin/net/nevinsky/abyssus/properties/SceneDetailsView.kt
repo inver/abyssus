@@ -16,8 +16,8 @@ import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.filetype.SceneIcons
 import net.nevinsky.abyssus.filetype.editSceneValue
-import net.nevinsky.abyssus.runtime.scene.RayTracingDto
-import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.core.scene.RayTracing
+import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.sceneview.RayModePhase
 import net.nevinsky.abyssus.sceneview.RayModeText
 import net.nevinsky.abyssus.sceneview.SceneRayControls
@@ -147,8 +147,8 @@ internal class SceneDetailsView(
 
     private fun intRow(
         key: String,
-        valueGetter: (RayTracingDto?) -> Int,
-        valueSetter: (SceneDto, Int) -> Unit,
+        valueGetter: (RayTracing?) -> Int,
+        valueSetter: (Scene, Int) -> Unit,
         default: Int?,
         minimum: Int,
         maximum: Int

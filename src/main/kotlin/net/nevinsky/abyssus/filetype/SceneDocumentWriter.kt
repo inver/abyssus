@@ -14,7 +14,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.Topic
 import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.core.scene.Scene
 
 /** Told after a plugin edit wrote [file] (a scene or project file), so views of it can refresh. */
 fun interface AbyssusSceneEdited {
@@ -56,10 +56,10 @@ fun editSceneJson(project: Project, file: VirtualFile, commandName: String, muta
     return true
 }
 
-fun editSceneValue(project: Project, file: VirtualFile, commandName: String, setter: ((SceneDto) -> Unit)?): Boolean {
+fun editSceneValue(project: Project, file: VirtualFile, commandName: String, setter: ((Scene) -> Unit)?): Boolean {
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
     val dto = runCatchingKeepingCancellation {
-        service<AbyssusCore>().json.parse(document.text, SceneDto::class.java)
+        service<AbyssusCore>().json.parse(document.text, Scene::class.java)
     }.getOrNull() ?: return false
     runCatchingKeepingCancellation {
         if (setter != null) setter(dto)

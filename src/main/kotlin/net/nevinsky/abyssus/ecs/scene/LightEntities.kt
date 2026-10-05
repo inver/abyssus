@@ -15,7 +15,7 @@ import net.nevinsky.abyssus.runtime.ecs.component.LightData
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
-import net.nevinsky.abyssus.runtime.scene.ColorDto
+import net.nevinsky.abyssus.core.scene.Color
 import net.nevinsky.abyssus.sceneview.Vec3
 
 /** Sun is a directional light with different initial values, never a separate file type. */
@@ -23,14 +23,14 @@ enum class LightPreset(
     val labelKey: String,
     val nameKey: String,
     val type: TypeComponent.Type,
-    val color: ColorDto,
+    val color: Color,
     val intensity: Float,
     val rotationDegrees: Float,
     val height: Float,
 ) {
-    DIRECTIONAL("lightDirectional", "lightDirectionalName", TypeComponent.Type.LIGHT_DIRECTIONAL, ColorDto(1f, 1f, 1f, 1f), 1f, -45f, 0f),
-    SUN("lightSun", "lightSunName", TypeComponent.Type.LIGHT_DIRECTIONAL, ColorDto(1f, 0.96f, 0.84f, 1f), 1.2f, -30f, 0f),
-    SPOT("lightSpot", "lightSpotName", TypeComponent.Type.LIGHT_SPOT, ColorDto(1f, 1f, 1f, 1f), 1f, -90f, 5f),
+    DIRECTIONAL("lightDirectional", "lightDirectionalName", TypeComponent.Type.LIGHT_DIRECTIONAL, Color(1f, 1f, 1f, 1f), 1f, -45f, 0f),
+    SUN("lightSun", "lightSunName", TypeComponent.Type.LIGHT_DIRECTIONAL, Color(1f, 0.96f, 0.84f, 1f), 1.2f, -30f, 0f),
+    SPOT("lightSpot", "lightSpotName", TypeComponent.Type.LIGHT_SPOT, Color(1f, 1f, 1f, 1f), 1f, -90f, 5f),
 }
 
 data class AddedLight(val result: EditResult, val entityId: String? = null)

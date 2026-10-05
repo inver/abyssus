@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.assets.model.*
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.terrain.RayTerrainSnapshot
 import net.nevinsky.abyssus.raytracing.*
-import net.nevinsky.abyssus.runtime.scene.RayTracingDto
+import net.nevinsky.abyssus.core.scene.RayTracing
 import net.nevinsky.abyssus.sceneview.gizmo.DragResult
 
 /** Immutable render-thread camera capture. The actual camera preserves orbit and look-through lens/up conventions. */
@@ -55,7 +55,7 @@ class RaySceneFrame internal constructor(
     internal val assets: Map<String, Any>, internal val topology: List<String>,
     internal val transforms: Map<String, List<Float>>, internal val poses: Map<String, Long>,
     internal val environmentRevision: Long,
-    val settings: RayTracingDto = RayTracingDto(),
+    val settings: RayTracing = RayTracing(),
 )
 
 sealed interface RaySceneConversion {

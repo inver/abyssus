@@ -7,19 +7,21 @@ package net.nevinsky.abyssus.sceneview
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_RANGE
 import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_NEAR
 import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FAR
 import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_CONE_ANGLE
 import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_EDGE_SOFTNESS
-import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
+import net.nevinsky.abyssus.SceneEcsPaths
 import net.nevinsky.abyssus.runtime.ecs.scene.ComponentCodecs
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
 import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
 import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
+import net.nevinsky.abyssus.runtime.opt
+import net.nevinsky.abyssus.runtime.text
 
 /** [w] is 1 for the identity rotation, which native scenes leave out of the file together with the other default fields. */
 data class Quat(val x: Float, val y: Float, val z: Float, val w: Float) {
@@ -92,7 +94,7 @@ data class SceneContent(
     companion object {
         val EMPTY = SceneContent()
 
-        fun of(scene: SceneDto): SceneContent {
+        fun of(scene: Scene): SceneContent {
             val codecs = ComponentCodecs()
             val entities = SceneEcsPaths().entitiesIn(scene.ecs)?.properties().orEmpty().mapNotNull { (id, entity) ->
                 val components = SceneEcsPaths().componentsOf(entity) ?: return@mapNotNull null

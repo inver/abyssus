@@ -11,13 +11,13 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.dto.ProjectDto
+import net.nevinsky.abyssus.core.project.Project
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.sceneReferences
-import net.nevinsky.abyssus.sceneview.obj
+import net.nevinsky.abyssus.runtime.obj
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.sceneview.text
-import net.nevinsky.abyssus.dto.SceneEntry
+import net.nevinsky.abyssus.runtime.text
+import net.nevinsky.abyssus.core.project.SceneEntry
 import net.nevinsky.abyssus.assets.sky.hdr.HdrSkyFiles
 import net.nevinsky.abyssus.assets.sky.hdr.RadianceDecoder
 import net.nevinsky.abyssus.assets.MetaType
@@ -84,7 +84,7 @@ class SkyboxChoice(
  * `meta.json` (absent or null when unreadable) and [hdr] what was read of each HDR sky's image (absent: nothing).
  */
 @JvmOverloads
-fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>, hdr: Map<String, HdrSkyInfo> = emptyMap()): List<SkyboxChoice> {
+fun skyboxChoices(project: net.nevinsky.abyssus.core.project.Project, metas: Map<String, JsonNode?>, hdr: Map<String, HdrSkyInfo> = emptyMap()): List<SkyboxChoice> {
     val references = project.scenes.filterIsInstance<SceneEntry>().map { sceneReferences(it.scene) }
     return project.assets.filter { it.meta.type in SKY_TYPES }.sortedBy { it.name }.map { asset ->
         val additional = metas[asset.name]?.obj("additional")
@@ -101,7 +101,7 @@ fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>, hdr: Map<S
 
 /** The skybox choices of the `.abss` project [abss], read as the Abyssus view reads it; null when the project cannot be read. */
 fun loadSkyboxChoices(project: Project, abss: VirtualFile, metaFiles: MetaFiles, hdrSource: HdrPreviewSource): List<SkyboxChoice>? {
-    val dto = AssetReadCache.of(project).read(abss)?.obj as? ProjectDto ?: return null
+    val dto = AssetReadCache.of(project).read(abss)?.obj as? net.nevinsky.abyssus.core.project.Project ?: return null
     val skyboxes = dto.assets.filter { it.meta.type in SKY_TYPES }.map { it.name }.toSet()
     val metas = ProjectLayout.assetFolders(abss).filter { it.name in skyboxes }.associate { dir ->
         dir.name to runCatchingKeepingCancellation {

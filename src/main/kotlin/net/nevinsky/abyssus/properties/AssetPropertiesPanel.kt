@@ -48,7 +48,7 @@ import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.text
 import net.nevinsky.abyssus.filetype.AssetIcons
 import net.nevinsky.abyssus.projectView.*
-import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.terrain.TerrainGenerationController
 import net.nevinsky.abyssus.terrain.TerrainGenerationSection
 import net.nevinsky.abyssus.terrain.TerrainSource
@@ -177,7 +177,7 @@ class AssetPropertiesPanel(
                 scene = sceneFile
                 background {
                     val result = runCatchingKeepingCancellation {
-                        val sceneDto = service<AbyssusCore>().json.parse(sceneFile.text(), SceneDto::class.java)
+                        val sceneDto = service<AbyssusCore>().json.parse(sceneFile.text(), Scene::class.java)
                         PanelState.UISceneState(
                             sceneFile,
                             describeNonAsset(node)?.first ?: sceneFile.name,

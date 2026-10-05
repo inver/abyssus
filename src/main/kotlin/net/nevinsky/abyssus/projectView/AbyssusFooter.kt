@@ -17,10 +17,9 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.dto.AssetReadResult
-import net.nevinsky.abyssus.dto.ProjectDto
+import net.nevinsky.abyssus.core.project.Project
 import net.nevinsky.abyssus.dto.ProjectLayout
-import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.core.scene.Scene
 import java.awt.Color
 import java.awt.FlowLayout
 import javax.swing.BorderFactory
@@ -40,12 +39,12 @@ fun footerCounts(project: Project): FooterCounts {
     var unused = 0
     for (file in findTopLevelAssets(project)) {
         when (val root = AssetReadCache.of(project).read(file)?.takeIf { it.success }?.obj) {
-            is ProjectDto -> {
+            is net.nevinsky.abyssus.core.project.Project -> {
                 scenes += root.scenes.size
                 assets += root.assets.size
                 unused += root.assets.count { it.unused }
             }
-            is SceneDto -> scenes++
+            is Scene -> scenes++
             else -> if (file.extension == ProjectLayout.SCENE_EXTENSION) scenes++
         }
     }

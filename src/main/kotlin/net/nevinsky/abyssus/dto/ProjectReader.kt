@@ -6,10 +6,13 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.assets.Asset
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.META_FILE
+import net.nevinsky.abyssus.core.project.Project
+import net.nevinsky.abyssus.core.project.SceneEntry
+import net.nevinsky.abyssus.core.project.SceneError
 
 @Service(Service.Level.PROJECT)
 class ProjectReader(
@@ -17,7 +20,7 @@ class ProjectReader(
     private val json: JsonProcessor,
     private val scenes: SceneReader,
     private val loading: net.nevinsky.abyssus.runtime.SceneLoading,
-) : ConfigFileReader<ProjectDto> {
+) : ConfigFileReader<net.nevinsky.abyssus.core.project.Project> {
     private val assetListing = ProjectAssetListing(json)
 
     /** What the platform creates: the one place this service looks up what it needs. */
@@ -34,14 +37,14 @@ class ProjectReader(
             })
     }
 
-    override fun read(file: VirtualFile): AssetReadResult<ProjectDto> = runCatchingKeepingCancellation {
+    override fun read(file: VirtualFile): AssetReadResult<net.nevinsky.abyssus.core.project.Project> = runCatchingKeepingCancellation {
         val name = loading.projectName(file.path) { textOf(file) }
         val sceneResults = ProjectLayout.sceneFiles(file).map { it to scenes.read(it) }
         val roots = sceneResults.flatMap { (_, result) -> result.obj?.let(::sceneReferences) ?: emptySet() }
             .toSet()
         val assets = readAssets(file)
         val used = usedAssets(assets, roots)
-        ProjectDto(
+        Project(
             name ?: file.nameWithoutExtension,
             sceneResults.map { (f, result) -> result.obj?.let { SceneEntry(f, it) } ?: SceneError(f, result.message) },
             assets.map { it.copy(unused = it.name !in used) },
@@ -72,7 +75,7 @@ class ProjectReader(
 }
 
 /** What a scene names directly: `assetName` and `shaderKey` values in its ECS data, and `skyboxName`. */
-fun sceneReferences(scene: SceneDto): Set<String> {
+fun sceneReferences(scene: Scene): Set<String> {
     val names = mutableSetOf<String>()
     scene.ecs?.let { ecs ->
         for (field in listOf("assetName", "shaderKey")) ecs.findValues(field)

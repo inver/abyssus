@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.physics.plugin
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.sceneview.SceneContent
 import net.nevinsky.abyssus.sceneview.Vec3
 import org.junit.Assert.assertEquals
@@ -18,7 +18,7 @@ import java.io.File
 class PhysicsOverlayGeometryTest {
     private val project = File(checkNotNull(System.getProperty("abyssus.testData")), "project/Physics")
     private val json = JsonProcessor()
-    private val scene = json.parse(File(project, "scenes/Main Scene.scene").readText(), SceneDto::class.java)
+    private val scene = json.parse(File(project, "scenes/Main Scene.scene").readText(), Scene::class.java)
     private val content = SceneContent.of(scene)
     private val files = AssetFiles(project, json)
     private val geometry = PhysicsOverlayGeometry { name -> files.terrain(name)?.size?.toFloat() }

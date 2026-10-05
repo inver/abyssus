@@ -8,8 +8,8 @@ package net.nevinsky.abyssus.projectView
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.testAsset
-import net.nevinsky.abyssus.dto.ProjectDto
-import net.nevinsky.abyssus.dto.SceneEntry
+import net.nevinsky.abyssus.core.project.Project
+import net.nevinsky.abyssus.core.project.SceneEntry
 import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.testMetaFiles
@@ -26,7 +26,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
     private fun scene(sky: String?) = parseScene("""{"format":"abyssus","formatVersion":1,"skyboxName":${sky?.let { "\"$it\"" } ?: "null"}}""")
 
     fun testOnlySkyboxAssetsInNameOrder() {
-        val dto = ProjectDto("P", emptyList(), listOf(
+        val dto = Project("P", emptyList(), listOf(
             testAsset("nebula", "1", "SKYBOX"),
             testAsset("hdr", "2", "SKYBOX_HDR"),
             testAsset("reef", "3", "MODEL"),
@@ -37,7 +37,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
     }
 
     fun testListsAllThreeSkyboxKinds() {
-        val dto = ProjectDto("P", emptyList(), listOf(
+        val dto = Project("P", emptyList(), listOf(
             testAsset("skybox_physical", "1", "SKYBOX_PROCEDURAL"),
             testAsset("skybox_default", "2", "SKYBOX"),
             testAsset("hdr", "3", "SKYBOX_HDR"),
@@ -46,7 +46,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
     }
 
     fun testProceduralDetailLine() {
-        val dto = ProjectDto("P", emptyList(), listOf(testAsset("skybox_physical", "1", "SKYBOX_PROCEDURAL")))
+        val dto = Project("P", emptyList(), listOf(testAsset("skybox_physical", "1", "SKYBOX_PROCEDURAL")))
         val choice = skyboxChoices(dto, emptyMap()).single()
         assertTrue(choice.procedural)
         assertEquals("procedural sky", choice.detail)
@@ -74,7 +74,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
     }
 
     fun testHdrDetailLine() {
-        val dto = ProjectDto("P", emptyList(), listOf(testAsset("sky", "1", "SKYBOX_HDR")))
+        val dto = Project("P", emptyList(), listOf(testAsset("sky", "1", "SKYBOX_HDR")))
         val choice = skyboxChoices(dto, emptyMap(), mapOf("sky" to HdrSkyInfo("sky.hdr", 4096, 2048))).single()
         // sizes are not grouped ("4,096") whatever the locale
         assertEquals("HDR · 4096 × 2048", choice.detail)
@@ -89,11 +89,11 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
         assertEquals(HdrSkyInfo("sky.hdr", 0, 0), choice.hdr)
         assertEquals("HDR", choice.detail)
         // an HDR sky with no image at all is still listed, with no thumbnail cell to fill
-        assertEquals("HDR", skyboxChoices(ProjectDto("P", emptyList(), listOf(testAsset("bare", "1", "SKYBOX_HDR"))), emptyMap()).single().detail)
+        assertEquals("HDR", skyboxChoices(Project("P", emptyList(), listOf(testAsset("bare", "1", "SKYBOX_HDR"))), emptyMap()).single().detail)
     }
 
     fun testDetailLineCountsFacesAndSortsFormats() {
-        val dto = ProjectDto("P", emptyList(), listOf(testAsset("sky", "1", "SKYBOX")))
+        val dto = Project("P", emptyList(), listOf(testAsset("sky", "1", "SKYBOX")))
         val meta = SceneJson.parse(faces("a.png", "b.PNG", "c.jpg", "d.png", "e.jpg", "f.png"))
         val choice = skyboxChoices(dto, mapOf("sky" to meta)).single()
         assertEquals(6, choice.faces)
@@ -102,7 +102,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
     }
 
     fun testMissingFacesAndMetaDoNotFail() {
-        val dto = ProjectDto("P", emptyList(), listOf(testAsset("partial", "1", "SKYBOX"), testAsset("bare", "2", "SKYBOX")))
+        val dto = Project("P", emptyList(), listOf(testAsset("partial", "1", "SKYBOX"), testAsset("bare", "2", "SKYBOX")))
         val choices = skyboxChoices(dto, mapOf("partial" to SceneJson.parse(faces("a.png", "", "c.png")), "bare" to null))
         val partial = choices.first { it.name == "partial" }
         assertEquals(2, partial.faces)
@@ -113,7 +113,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
     }
 
     fun testSceneCountAndUnusedFlag() {
-        val dto = ProjectDto(
+        val dto = Project(
             "P",
             listOf(scene("nebula"), scene("nebula"), scene(null)).mapIndexed { i, scene ->
                 SceneEntry(myFixture.addFileToProject("scenes/$i.scene", """{"format":"abyssus","formatVersion":1}""").virtualFile, scene)

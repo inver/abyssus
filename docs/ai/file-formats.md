@@ -55,7 +55,7 @@ Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored
 
 ## `.scene`
 
-Top level, bound to `SceneDto` (`runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/scene/SceneDto.kt`):
+Top level, bound to `SceneDto` (`../../core/src/main/kotlin/net/nevinsky/abyssus/core/scene/Scene.kt`):
 
 | Key | Meaning |
 |---|---|
@@ -71,9 +71,9 @@ tree shows `skyboxName` as `skybox`, but the key in the file stays `skyboxName`.
 ### `ecs`
 
 ```
-ecs:
-  entities: { "<id>": { archetype, components: { "<Name>Component": {...}, ... } } }
-  archetypes, metadata    (optional native data, carried unchanged)
+ecs: { "<id>": { components: { "<Name>Component": {...}, ... } }, ... }
+  (older scenes wrap this map in an `entities` member beside optional `metadata`, which the runtime keeps and writes
+  back; they also have an `archetype` per entity and an `archetypes` table, which it neither reads nor carries)
 ```
 
 The components the plugin reads:

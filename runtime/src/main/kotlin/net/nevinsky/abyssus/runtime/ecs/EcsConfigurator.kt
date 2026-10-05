@@ -8,22 +8,21 @@ package net.nevinsky.abyssus.runtime.ecs
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Engine
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.runtime.ecs.component.IdComponent
 import net.nevinsky.abyssus.runtime.ecs.render.AssetResolver
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsDocument
-import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsLoader
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEngine
-import net.nevinsky.abyssus.runtime.ecs.system.LookAtSystem
-import net.nevinsky.abyssus.runtime.ecs.system.RenderComponentSystem
-import net.nevinsky.abyssus.runtime.ecs.system.SynchronizeCameraComponentSystem
-import net.nevinsky.abyssus.runtime.ecs.system.SynchronizeRenderComponentSystem
-import net.nevinsky.abyssus.runtime.ecs.system.SynchronizeRenderPoint2PointSystem
+import net.nevinsky.abyssus.runtime.ecs.system.*
+import net.nevinsky.abyssus.runtime.schema.GameComponents
+import org.slf4j.Logger
 
 /** A scene's [engine] with its [document] (what the loader kept besides the entities). */
 class LoadedScene(
     val engine: SceneEngine,
     val document: SceneEcsDocument,
-    val scene: net.nevinsky.abyssus.runtime.scene.SceneDto = net.nevinsky.abyssus.runtime.scene.SceneDto(),
+    val scene: Scene = Scene(),
 )
 
 /**
@@ -31,15 +30,16 @@ class LoadedScene(
  * (system priorities, in evaluation order), and loads a scene's `ecs` block into it.
  */
 open class EcsConfigurator(
+    private val mapper: ObjectMapper,
     private val resolver: AssetResolver = AssetResolver { _, _ -> null },
-    private val log: org.slf4j.Logger = org.slf4j.helpers.NOPLogger.NOP_LOGGER,
-    private val game: net.nevinsky.abyssus.runtime.schema.GameComponents = net.nevinsky.abyssus.runtime.schema.GameComponents(),
+    private val log: Logger,
+    private val game: GameComponents,
 ) {
     fun createEngine(): SceneEngine = SceneEngine().also(::configure)
 
     fun load(ecs: JsonNode): LoadedScene {
         val engine = createEngine()
-        return LoadedScene(engine, SceneEcsLoader(resolver, log, game = game).load(ecs, engine))
+        return LoadedScene(engine, EcsLoader(mapper, resolver, log, game).load(ecs, engine))
     }
 
     protected open fun configure(engine: SceneEngine) {
@@ -52,7 +52,7 @@ open class EcsConfigurator(
 }
 
 /** Converts every entity with a [clazz] component, given its file id and the component. */
-fun <R, C : Component> Engine.getFromWorld(clazz: Class<C>, converter: (Int, C) -> R): List<R> =
+fun <R, C : Component> Engine.getFromWorld(clazz: Class<C>, converter: (Long, C) -> R): List<R> =
     entities.mapNotNull { entity ->
         val component = entity.getComponent(clazz) ?: return@mapNotNull null
         val id = entity.getComponent(IdComponent::class.java)?.id ?: return@mapNotNull null
