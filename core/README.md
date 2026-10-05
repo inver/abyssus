@@ -21,10 +21,11 @@ code is in `net.nevinsky.abyssus.core.assets`.
 | Package | What |
 |---|---|
 | `core` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `GeometryUtils` |
-| `core.assets` | `AssetMeta` and `MetaType` (the `meta.json` model), `AssetMetaLoader` (reads a `meta.json`, cached by timestamp and size), `Asset`, `runCatchingKeepingCancellation`, `Throwables` |
-| `core.assets.loading` | `AssetLoader` (prepare / upload / build / discard), `AssetStorage` (load once, fail once, slice GPU work per frame), `RaySnapshotStore` with `RaySnapshotLoader`, `RaySnapshot` and the leases (see below), `TextureUploadQueue`, `ShaderSource` (GLSL from a resource folder) |
+| `core.assets` | `AssetMeta` and `MetaType` (the `meta.json` model; `uuid` is null when a meta declares none), `AssetMetaLoader` (reads a `meta.json` into an `AssetMeta` named after its folder, with `additional` bound to the class of its `type`; cached by timestamp and size), `AssetIndex` (the asset folder of a `uuid`), `Asset`, `runCatchingKeepingCancellation`, `Throwables` |
+| `core.assets.loading` | `AssetLoader` (prepare / dependencies / upload / build / discard), `CompositeAssetLoader` (one loader for every asset kind, by `MetaType`), `AssetStorage` (the cache and owner of built assets: load once, fail once, slice GPU work per frame, load dependencies first) with `BuiltAssets`, `RaySnapshotStore` with `RaySnapshotLoader`, `RaySnapshot` and the leases (see below), `TextureUploadQueue`, `ShaderSource` (GLSL from a resource folder) |
 | `core.assets.model` | `ModelLoader` (glTF and other formats through `gdx-model`'s Assimp loader), `ModelMeta`, the ray model snapshot types and `ModelRaySnapshotLoader` |
 | `core.assets.terrain` | `TerrainLoader`, `TerrainData`, `TerrainMesh`, `TerrainMeta`, `RayTerrainSnapshot` and `TerrainRaySnapshotLoader` |
+| `core.assets.texture` | `TextureLoader` (`TEXTURE` and `PIXMAP_TEXTURE` assets: image decoded off the GL thread, uploaded as a mipmapped repeating texture), `PreparedTexture` (the decoded image; `release()` hands the `Pixmap` to a caller that uploads it itself) and `TextureMeta` |
 | `core.assets.sky` | `Sky` (a drawable background) and `RaySkySnapshot`; `cube/` six-face skyboxes, `procedural/` skies drawn by the asset's own GLSL, `hdr/` Radiance and EXR skies and their lighting environment. Each has a `*Loader` and a `*RaySnapshotLoader` |
 
 Sky shaders are in `src/main/resources/shader/sky/`.
@@ -32,28 +33,59 @@ Sky shaders are in `src/main/resources/shader/sky/`.
 Terrain generation, noise, the `meta.json` field editor and the composition root (`AssetLoading`) are not here: they
 live in the plugin (`src/main/kotlin/net/nevinsky/abyssus/terrain/`, `AssetMetaEditor.kt`, `AssetLoading.kt`).
 
+## References between assets
+
+An asset's `meta.json` names another asset by its `uuid`: a terrain's `splatMap`, `splatBase`, `splatR`, `splatG`,
+`splatB` and `splatA` are texture assets. `AssetIndex(fileLoader, metaLoader).folder(uuid)` finds the folder that
+declares a `uuid`. It keeps no state: each call lists the asset folders and reads their metas through `AssetMetaLoader`
+(cached per file), so an added, replaced or deleted texture is seen on the next call with nothing to refresh. The first
+folder by name wins a `uuid` two folders share.
+
+An asset loader never calls another asset loader. What an asset needs from another asset it names in
+`AssetLoader.dependencies`, and `AssetStorage` loads those first; the loader reads the built result from the
+`BuiltAssets` it is handed. `TerrainLoader` resolves each splat field to a texture folder in `prepare` (an unknown `uuid`
+leaves the layer out), names the folders as its dependencies, and its `TerrainMesh` reads the textures from the storage
+on every draw: a replaced texture is picked up without rebuilding the terrain, and the mesh never owns or disposes one.
+The splat map is set to linear filtering and clamped edges the first time a texture is drawn as one.
+
 ## Loading and caching
 
 An `AssetLoader<P, T>` turns one asset into a GPU object in steps: `prepare(name)` (or `loadPrepared(meta)`) reads and
-decodes with no GL, `upload` does one slice of GPU work, `build` creates the object, `discard` releases a prepared value
-that was never built. `AssetStorage<P, T>(executor, loader, log)` runs them:
+decodes with no GL, `dependencies(prepared)` names the other assets it needs, `upload` does one slice of GPU work,
+`build(prepared, assets)` creates the object, and `discard` releases a prepared value that was never built.
+
+`CompositeAssetLoader(metaLoader, loaders)` is the loader of a whole project: it reads an asset's `meta.json` and hands
+the asset to the loader registered for its `MetaType`. One `AssetStorage<PreparedAsset, Disposable>(executor, composite,
+log)` over it owns the built assets of every kind, keyed by asset folder name, which is what lets assets depend on each
+other. `AssetStorage` itself works over any single `AssetLoader`.
 
 - `request(name)` starts a load on the executor; every name loads once and is shared, and a failure is logged once and
   remembered, so it is not retried every frame.
 - `pump(maxSteps)` (GL thread) advances `upload` and `build`, one asset at a time, and returns true when something
-  changed. `get(name)` is null until the asset is built.
+  changed. `get(name)` / `getAs<T>(name)` is null until the asset is built.
+- Once an asset is prepared, the storage requests its `dependencies` and holds its upload and build until each is built
+  or has failed (a failed dependency is simply absent from `BuiltAssets`). Assets that depend on each other in a cycle
+  (including an asset that needs itself) cannot be built before one another, so every member fails with a
+  `dependency cycle: a -> b -> a` error as soon as the last of them is prepared; whatever merely needs a member is
+  not part of the cycle and carries on without it.
+- `isLoading()` / `isLoading(name)` say whether anything, or one asset, is still loading.
 - `invalidate(names)` marks names as changed on disk: a loaded asset stays in use until its replacement is built, then
   the two swap in one step; a superseded load is discarded. `version(name)` changes when `get` returns another asset.
-- `retain(names)` disposes everything else, `abandon()` forgets assets without disposing them (the GL context is gone),
-  `dispose()` releases everything.
+- `retain(names)` disposes everything neither named nor needed by a named asset, `abandon()` forgets assets without
+  disposing them (the GL context is gone), `dispose()` releases everything.
 
-One `AssetStorage` serves one asset kind of one project; the plugin owns one per scene view.
+`AssetIndex` stays a pure lookup (asset folder of a `uuid`); the storage, not the index, owns the built assets.
 
 ```kotlin
-val storage = AssetStorage(executor, ModelLoader(metaLoader, assimp, fileLoader), log)
-storage.request("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb")
-storage.pump()                                          // once per frame, GL current
-val model = storage.get("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb")   // null until built
+val composite = CompositeAssetLoader(metaLoader, mapOf(
+    MetaType.MODEL to ModelLoader(metaLoader, assimp, fileLoader),
+    MetaType.TERRAIN to TerrainLoader(fileLoader, metaLoader),
+    MetaType.TEXTURE to TextureLoader(fileLoader, metaLoader),
+))
+val assets = AssetStorage(executor, composite, log)
+assets.request("terrain_x")                     // its splat textures load first
+assets.pump()                                   // once per frame, GL current
+val terrain = assets.getAs<TerrainMesh>("terrain_x")   // null until built
 ```
 
 ## Optional CPU companions (ray snapshots)
@@ -71,12 +103,12 @@ already holds, and `label` ("model", "terrain", "sky") names the kind in failure
 - `RaySnapshotLoader<S, D>` builds the snapshot: `load(meta)` reads the asset afresh (the fallback when ray mode starts
   after the raster asset is cached), and `capture(source)` copies a `D` that raster preparation offers. Kinds with no
   raster capture (skies) leave `capture` at its default and use `D = Nothing`.
-- Ordinary raster preparation retains nothing when no lease requests the asset. When one does, `ModelLoader` and
-  `TerrainLoader` call `store.preparation(name)?.offer(source)` (`RayModelSource`, `RayTerrainSource`) before upload
-  disposes the Pixmaps; an offer after cancellation or reacquisition is a no-op. The fallback `load` disposes its own
+- Ordinary raster preparation retains nothing when no lease requests the asset. When one does, `ModelLoader` calls
+  `store.preparation(name)?.offer(source)` (`RayModelSource`) before upload disposes the Pixmaps; an offer after cancellation or reacquisition is a no-op. The fallback `load` disposes its own
   decoded images after copying, including failures. It never reads back, reloads or disposes a GPU resource.
-- A `TerrainRaySnapshotLoader` wraps a plain `TerrainLoader` built without a store (it must not publish snapshots
-  itself), so the store-aware `TerrainLoader` is built after the store and the snapshot loader.
+- The terrain store has no raster capture (`D = Nothing`): the raster terrain keeps no pixels once its textures are
+  on the GPU, so `TerrainRaySnapshotLoader` reads heights (through a `TerrainLoader`) and splat images (through a
+  `TextureLoader`) afresh. It is a CPU companion read, not an asset load, so it uses both loaders directly.
 
 ## Optional CPU model companions
 
@@ -128,8 +160,9 @@ and never touch the GPU caches or GL.
 ## Tests
 
 `./gradlew :core:test`; GL tests opt in with `-Dabyssus.glTests=true`. Tests read the repository's
-`src/test/testData/project` fixtures. `HdrFixtures` (in `src/testFixtures`) is shared with the plugin's tests; the GL
-context is `gdx-model`'s `TestGl` test fixture. `AssetStorageTest` covers the loading pipeline with a fake loader and a
+`src/test/testData/project` fixtures through `testProject(name)`; `testFileLoader` and `testMetaLoader` build a project's
+loaders, and `exrFixture()` gives the bundled EXR sky as a file (`TestData.kt`). The GL context is `gdx-model`'s `TestGl`
+test fixture. `HdrFixtures` and `RecordingLogger` are in `src/testFixtures`, shared with the plugin's tests. `AssetStorageTest` covers the loading pipeline with a fake loader and a
 queued executor.
 
 ## Terrain format

@@ -5,60 +5,51 @@
 
 package net.nevinsky.abyssus.core.assets.terrain
 
-import com.badlogic.gdx.files.FileHandle
-import com.badlogic.gdx.graphics.Pixmap
-import com.badlogic.gdx.graphics.Texture
 import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.assets.AssetIndex
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.loading.AssetLoader
-import net.nevinsky.abyssus.core.assets.loading.RaySnapshotStore
-import net.nevinsky.abyssus.core.assets.loading.TextureUploadQueue
-import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.core.loader.Pixmaps
+import net.nevinsky.abyssus.core.assets.loading.BuiltAssets
 import java.nio.ByteBuffer
+import java.util.*
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-/** Terrain assets: height data and splat images read off the GL thread, images uploaded one per frame. */
+/**
+ * Terrain assets: the height data is read off the GL thread. The splat textures are other assets, named in the meta by
+ * `uuid` and resolved to asset folders through [index]; the terrain names them in [dependencies], so the storage loads
+ * them first, and the [TerrainMesh] reads them from the storage when it draws, so a replaced texture is picked up
+ * without rebuilding the terrain.
+ */
 class TerrainLoader(
     private val fileLoader: FileLoader,
     private val metaLoader: AssetMetaLoader,
-    private val raySnapshots: RaySnapshotStore<RayTerrainSnapshot, RayTerrainSource>? = null,
+    private val index: AssetIndex = AssetIndex(fileLoader, metaLoader),
 ) : AssetLoader<PreparedTerrain, TerrainMesh> {
 
-    override fun loadPrepared(meta: AssetMeta<Any>): PreparedTerrain? {
-        val capture = raySnapshots?.preparation(meta.name)
+    override fun loadPrepared(meta: AssetMeta<Any>): PreparedTerrain {
         val additional = meta.typedAdditional<TerrainMeta>()
-
         val data = read(meta.name, additional)
-        val images = LinkedHashMap<String, Pixmap>()
+        val folders =
+            SPLAT_FIELDS.mapNotNull { additional.splat(it) }.takeIf { it.isNotEmpty() }?.let { index.folders() }
+        val splats = LinkedHashMap<String, String>()
         for (field in SPLAT_FIELDS) {
-            additional.splat(field)?.let { loadPixmap(meta.name, it) }?.let { images[field] = it }
+            val reference = additional.splat(field) ?: continue
+            val folder =
+                runCatching { folders?.get(UUID.fromString(reference)) }.getOrNull() ?: continue // unknown: left out
+            splats[field] = folder
         }
-
-        val prepared = PreparedTerrain(data, images)
-        try {
-            capture?.offer(RayTerrainSource(data, prepared.pixmaps))
-        } catch (failure: Throwable) {
-            prepared.dispose()
-            throw failure
-        }
-        return prepared
+        return PreparedTerrain(data, splats)
     }
 
-    /** A splat texture that cannot be read is left out; the terrain is drawn without it. */
     override fun prepare(name: String): PreparedTerrain? {
         val meta = metaLoader.loadBaseMeta(name) ?: return null
         return loadPrepared(meta)
     }
 
-    private fun loadPixmap(assetName: String, fileName: String): Pixmap? = runCatchingKeepingCancellation {
-        Pixmaps.load(FileHandle(fileLoader.loadFile(assetName, fileName)))
-    }.getOrNull()
-
     private fun read(assetName: String, meta: TerrainMeta): TerrainData {
-        val bytes = fileLoader.loadFile(assetName, meta.file).readBytes()
+        val bytes = fileLoader.loadFile(assetName, meta.terrainFile).readBytes()
         val heights = FloatArray(bytes.size / Float.SIZE_BYTES)
         ByteBuffer.wrap(bytes).asFloatBuffer().get(heights) // big-endian, as written by the editor
         val resolution = sqrt(heights.size.toFloat()).roundToInt()
@@ -66,40 +57,16 @@ class TerrainLoader(
         return TerrainData(resolution, heights, meta.size, meta.uv)
     }
 
-    override fun upload(prepared: PreparedTerrain) = prepared.uploadNext()
+    override fun dependencies(prepared: PreparedTerrain): Set<String> = prepared.splats.values.toSet()
 
-    override fun build(prepared: PreparedTerrain) = TerrainMesh(prepared)
+    override fun build(prepared: PreparedTerrain, assets: BuiltAssets) = TerrainMesh(prepared, assets)
 
-    override fun discard(prepared: PreparedTerrain) = prepared.dispose()
+    override fun discard(prepared: PreparedTerrain) = Unit
 }
 
-/**
- * A parsed terrain waiting for its GL resources. Its images are uploaded one per frame ([uploadNext], the slow part),
- * then [TerrainMesh] takes the textures. [dispose] releases whatever was not taken and may be called more than once.
- */
-class PreparedTerrain(val data: TerrainData, pixmaps: Map<String, Pixmap>) {
+/** A parsed terrain waiting for its GL resources: [splats] maps each splat field to its texture asset's folder. */
+class PreparedTerrain(val data: TerrainData, val splats: Map<String, String>) {
     // computed with the rest of the preparation, off the GL thread: the mesh is then just an upload
     val vertices = data.vertices()
     val indices = data.indices()
-
-    private val uploads = TextureUploadQueue(pixmaps, ::makeTexture)
-    internal val pixmaps: Map<String, Pixmap> get() = uploads.pending
-    val textures: MutableMap<String, Texture> get() = uploads.textures
-
-    /** Uploads one more image; true when every image is on the GPU. */
-    fun uploadNext(): Boolean = uploads.uploadNext()
-
-    fun dispose() = uploads.dispose()
-
-    private fun makeTexture(name: String, pixmap: Pixmap): Texture = try {
-        if (name == SPLAT_MAP) Texture(pixmap).also {
-            it.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
-        }
-        else Texture(pixmap, true).also {
-            it.setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear)
-            it.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat)
-        }
-    } finally {
-        pixmap.dispose()
-    }
 }

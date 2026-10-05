@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.core.assets.terrain
 
+import com.fasterxml.jackson.annotation.JsonAlias
+
 /** The splat map: per-pixel weights of the four channel layers. */
 const val SPLAT_MAP = "splatMap"
 
@@ -14,13 +16,9 @@ val SPLAT_LAYERS = listOf("splatBase", "splatR", "splatG", "splatB", "splatA")
 /** Every `meta.json` splat field, in file order. */
 val SPLAT_FIELDS = listOf(SPLAT_MAP) + SPLAT_LAYERS
 
-val TERRAIN_META_FILE_NAME_DEFAULT = "terrain.data"
-
-const val NEW_TERRAIN_UV_DEFAULT = 1f
-
 /** The `additional` block of a terrain `meta.json`. */
 data class TerrainMeta(
-    val file: String? = null,
+    val terrainFile: String? = null,
     val size: Int = 0,
     val uv: Float = 0f,
     val splatMap: String? = null,

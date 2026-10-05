@@ -15,7 +15,7 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | `gdx-model` tests only | `./gradlew :gdx-model:test` |
 | `runtime` tests only | `./gradlew :runtime:test` |
 | `physics` tests only | `./gradlew :physics:test` |
-| `core` tests only | `./gradlew :core:test` (one class: `./gradlew :core:test --tests 'net.nevinsky.abyssus.assets.files.AssetFilesTest'`) |
+| `core` tests only | `./gradlew :core:test` (one class: `./gradlew :core:test --tests 'net.nevinsky.abyssus.core.assets.loading.AssetStorageTest'`) |
 | One test class | `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.OrbitCameraTest'` |
 | Also run GL tests (open a window) | add `-Dabyssus.glTests=true` |
 | Sandbox IDE | `./gradlew runIde` (open a project with `-PideProject=/path/to/project`) |
@@ -46,7 +46,7 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   See `gdx-model/README.md`.
 - `core/`: a plain JVM library, root package `net.nevinsky.abyssus.core`: project layout and file access
   (`AbyssusProjectLayout`, `FileLoader`, `JsonProcessor`), asset metas (`AssetMeta`, `AssetMetaLoader`), the loading
-  pipeline (`AssetLoader`, `AssetStorage`), the optional CPU snapshots for ray tracing (`RaySnapshotStore`), and the
+  pipeline (`AssetLoader`, `CompositeAssetLoader`, `AssetStorage`), the optional CPU snapshots for ray tracing (`RaySnapshotStore`), and the
   loaders with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).
   The plugin wires it in `AssetLoading` (root package). See `core/README.md`.
 - `runtime/`: plain JVM scene parsing, project layout over `Path`, and Ashley components, codecs, systems, loader

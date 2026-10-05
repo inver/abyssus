@@ -10,11 +10,11 @@ import java.util.*
  */
 data class Asset<T>(
     val baseDir: File,
-    val meta: net.nevinsky.abyssus.core.assets.AssetMeta<T>,
+    val meta: AssetMeta<T>,
     val references: List<String> = emptyList(),
     val unused: Boolean = false
 ) {
     val name: String get() = meta.name
-    val type: net.nevinsky.abyssus.core.assets.MetaType get() = meta.type
-    val uuid: UUID get() = meta.uuid
+    val type: MetaType get() = meta.type
+    val uuid: UUID? get() = meta.uuid
 }

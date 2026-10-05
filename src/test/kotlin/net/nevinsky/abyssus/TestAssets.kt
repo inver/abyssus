@@ -25,3 +25,7 @@ fun testAsset(
     references,
     unused,
 )
+
+/** A fixture project under the repository's `src/test/testData/project`, shared with `core`'s tests. */
+fun testProject(name: String): File =
+    File(System.getProperty("abyssus.testData") ?: "src/test/testData", "project/$name")

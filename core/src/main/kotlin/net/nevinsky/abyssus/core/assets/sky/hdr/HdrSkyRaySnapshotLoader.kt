@@ -14,7 +14,7 @@ class HdrSkyRaySnapshotLoader(
     }
 
     /** A box filter over whole source pixels, so a 4096 image does not alias into the ray texture. */
-    private fun downsample(image: HdrImage): RaySkySnapshot {
+    internal fun downsample(image: HdrImage): RaySkySnapshot {
         val factor = (image.width + RAY_SKY_MAX_WIDTH - 1) / RAY_SKY_MAX_WIDTH
         val width = image.width / factor
         val height = maxOf(image.height / factor, 1)

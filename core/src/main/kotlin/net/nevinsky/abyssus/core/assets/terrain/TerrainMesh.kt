@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.g3d.Material
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.core.Renderable
+import net.nevinsky.abyssus.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.core.mesh.Mesh
 
 
@@ -23,13 +24,18 @@ const val SPLAT_UNIT = 5
 private val HAS_UNIFORMS = SPLAT_LAYERS.map { "u_has_$it" }
 private val LAYER_UNIFORMS = SPLAT_LAYERS.map { "u_$it" }
 
-/** One terrain asset on the GPU. */
-class TerrainMesh(prepared: PreparedTerrain) : Disposable {
+/**
+ * One terrain asset on the GPU. Its splat textures belong to the storage: the mesh holds only their asset folders
+ * ([PreparedTerrain.splats]) and reads the built textures from [assets] on every draw, so it never owns or disposes one
+ * and always draws the current revision. The splat map is set to linear filtering and clamped edges the first time a
+ * given texture is drawn as one, which a layer texture shared with it would also get.
+ */
+class TerrainMesh(prepared: PreparedTerrain, private val assets: BuiltAssets) : Disposable {
     val data = prepared.data
     private val indexCount: Int
     private val mesh: Mesh
-    private val splat: Texture?
-    private val layers: Map<String, Texture>
+    private val splats = prepared.splats
+    private var configuredSplat: Texture? = null
     private val depthMaterial = Material()
 
     init {
@@ -42,18 +48,23 @@ class TerrainMesh(prepared: PreparedTerrain) : Disposable {
         )
         mesh.setVertices(vertices)
         mesh.setIndices(indices)
-        // the mesh now owns the textures; the prepared terrain must not release them
-        splat = prepared.textures.remove(SPLAT_MAP)
-        layers = HashMap(prepared.textures)
-        prepared.textures.clear()
     }
 
+    private fun texture(field: String): Texture? = splats[field]?.let { assets.get(it) as? Texture }
+
     fun draw(shader: ShaderProgram, blank: Texture) {
+        val splat = texture(SPLAT_MAP)?.also {
+            if (it !== configuredSplat) {
+                it.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
+                it.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge)
+                configuredSplat = it
+            }
+        }
         shader.setUniformf("u_terrainSize", data.size.toFloat())
         // base layer first, then the channels, blended by the splat map (neutral gray without any texture)
         shader.setUniformi("u_hasSplat", if (splat != null) 1 else 0)
         for (unit in SPLAT_LAYERS.indices) {
-            val texture = layers[SPLAT_LAYERS[unit]]
+            val texture = texture(SPLAT_LAYERS[unit])
             shader.setUniformi(HAS_UNIFORMS[unit], if (texture != null) 1 else 0)
             shader.setUniformi(LAYER_UNIFORMS[unit], unit)
             (texture ?: blank).bind(unit)
@@ -74,7 +85,5 @@ class TerrainMesh(prepared: PreparedTerrain) : Disposable {
 
     override fun dispose() {
         mesh.dispose()
-        splat?.dispose()
-        layers.values.forEach(Texture::dispose)
     }
 }

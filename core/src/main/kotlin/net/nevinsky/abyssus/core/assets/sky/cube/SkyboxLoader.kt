@@ -11,6 +11,7 @@ import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.core.loader.Pixmaps
 
 /** Skybox assets: the six face images decoded off the GL thread, then uploaded as one cube map. */
@@ -41,7 +42,7 @@ class SkyboxLoader(
         return loadPrepared(meta)
     }
 
-    override fun build(prepared: PreparedSkybox) = SkyboxCube(prepared, shaders.program(prepared.shaderName))
+    override fun build(prepared: PreparedSkybox, assets: BuiltAssets) = SkyboxCube(prepared, shaders.program(prepared.shaderName))
 
     override fun discard(prepared: PreparedSkybox) = prepared.dispose()
 }

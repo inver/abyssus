@@ -24,6 +24,10 @@ class FileLoader(val projectDir: File) {
         return content
     }
 
+    /** The names of every asset folder of the project, sorted. */
+    fun assetNames(): List<String> =
+        assetsDir.listFiles { file -> file.isDirectory }?.map { it.name }?.sorted() ?: emptyList()
+
     fun folder(assetName: String): File? {
         // an asset name is a folder name: refuse anything that could leave the assets folder
         if (assetName.isEmpty() || assetName.contains('/') || assetName.contains('\\') || assetName == ".." || assetName == ".") {

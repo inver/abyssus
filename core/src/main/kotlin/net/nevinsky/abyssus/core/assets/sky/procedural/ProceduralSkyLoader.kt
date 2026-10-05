@@ -9,6 +9,7 @@ import net.nevinsky.abyssus.core.FileLoader
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.core.assets.loading.BuiltAssets
 
 class ProceduralSkyLoader(private val fileLoader: FileLoader, private val metaLoader: AssetMetaLoader) :
     AssetLoader<PreparedProceduralSky, ProceduralSky> {
@@ -16,8 +17,8 @@ class ProceduralSkyLoader(private val fileLoader: FileLoader, private val metaLo
         val additional = meta.typedAdditional<ProceduralSkyMeta>()
         return PreparedProceduralSky(
             additional.params,
-            fileLoader.loadFileContent(meta.name, additional.shaderVert),
-            fileLoader.loadFileContent(meta.name, additional.shaderFrag)
+            fileLoader.loadFileContent(meta.name, additional.vertex),
+            fileLoader.loadFileContent(meta.name, additional.fragment)
         )
     }
 
@@ -26,7 +27,7 @@ class ProceduralSkyLoader(private val fileLoader: FileLoader, private val metaLo
         return loadPrepared(meta)
     }
 
-    override fun build(prepared: PreparedProceduralSky) = ProceduralSky(prepared)
+    override fun build(prepared: PreparedProceduralSky, assets: BuiltAssets) = ProceduralSky(prepared)
 
     override fun discard(prepared: PreparedProceduralSky) = Unit
 }

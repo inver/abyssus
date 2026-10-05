@@ -11,6 +11,7 @@ import net.nevinsky.abyssus.testing.RecordingLogger
 import org.slf4j.Logger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -39,6 +40,8 @@ class AssetStorageTest {
         val build: (String) -> Res = { Res(it) },
         val upload: (String) -> Boolean = { true },
         val discarded: MutableList<String> = mutableListOf(),
+        val needs: (String) -> Set<String> = { emptySet() },
+        val onBuild: (String, BuiltAssets) -> Unit = { _, _ -> },
     ) : AssetLoader<String, Res> {
         override fun loadPrepared(meta: AssetMeta<Any>): String? = error("the storage prepares by name")
         override fun prepare(name: String): String? {
@@ -46,8 +49,11 @@ class AssetStorageTest {
             return prepare.invoke(name)
         }
         override fun upload(prepared: String): Boolean = upload.invoke(prepared)
-        override fun build(prepared: String): Res {
+        override fun dependencies(prepared: String): Set<String> = needs.invoke(prepared)
+
+        override fun build(prepared: String, assets: BuiltAssets): Res {
             builds += prepared
+            onBuild(prepared, assets)
             return build.invoke(prepared)
         }
 
@@ -381,6 +387,158 @@ class AssetStorageTest {
         assertEquals(listOf("a#1"), discarded)
         assertEquals(listOf("a#2"), builds)
         assertEquals("a#2", c.get("a")!!.name)
+    }
+
+    @Test
+    fun isLoadingByNameFollowsOneAssetFromRequestToBuiltAndToFailed() {
+        val c = cache(prepare = { if (it == "bad") null else it })
+        assertFalse("never requested", c.isLoading("a"))
+        c.request("a"); c.request("bad")
+        assertTrue(c.isLoading("a")); assertTrue(c.isLoading("bad"))
+        runBackground()
+        assertTrue("prepared, not yet built", c.isLoading("a"))
+        c.pump(2)
+        assertFalse(c.isLoading("a")); assertFalse("failed is settled", c.isLoading("bad"))
+        c.invalidate(setOf("a"))
+        assertTrue("a loaded asset marked changed is being replaced", c.isLoading("a"))
+    }
+
+    // --- dependencies: an asset that needs others ---
+
+    private fun withDependencies(
+        needs: Map<String, Set<String>>,
+        prepare: (String) -> String? = { it },
+        onBuild: (String, BuiltAssets) -> Unit = { _, _ -> },
+    ) = AssetStorage(executor, FakeLoader(prepare = prepare, needs = { needs[it].orEmpty() }, onBuild = onBuild), log)
+
+    @Test
+    fun anAssetRequestsItsDependenciesAndWaitsUntilTheyAreBuilt() {
+        var seen: Res? = null
+        val c = withDependencies(mapOf("terr" to setOf("tex"))) { name, assets -> if (name == "terr") seen = assets.get("tex") as Res }
+        c.request("terr")
+        runBackground()
+        c.pump()
+        assertTrue("terr is prepared, not built", builds.isEmpty())
+        assertTrue(c.isLoading("terr"))
+        assertTrue("its dependency was requested", c.isLoading("tex"))
+        runBackground()
+        c.pump(1) // terr is blocked and waits; tex gets the step
+        assertEquals(listOf("tex"), builds)
+        c.pump(1)
+        assertEquals(listOf("tex", "terr"), builds)
+        assertSame("the build reads the built dependency", c.get("tex"), seen)
+        assertFalse(c.isLoading())
+    }
+
+    @Test
+    fun aDependencyThatFailsDoesNotBlockTheAssetThatNeedsIt() {
+        var seen: Any? = "unset"
+        val c = withDependencies(mapOf("terr" to setOf("tex")), prepare = { if (it == "tex") null else it }) { name, assets ->
+            if (name == "terr") seen = assets.get("tex")
+        }
+        c.request("terr")
+        runBackground(); c.pump()
+        runBackground(); c.pump(3)
+        assertEquals(listOf("terr"), builds)
+        assertNull(seen)
+        assertNull(c.get("tex"))
+        assertFalse(c.isLoading())
+    }
+
+    @Test
+    fun anAssetWhoseDependencyNeverProgressesDoesNotSpinThePump() {
+        val c = withDependencies(mapOf("terr" to setOf("tex")))
+        c.request("terr")
+        runBackground() // terr is prepared; tex is requested but its preparation never runs
+        assertFalse(c.pump(5))
+        assertFalse(c.pump(5))
+        assertTrue(builds.isEmpty())
+        assertTrue(c.isLoading("terr"))
+    }
+
+    /** Pumps until nothing is loading: enough rounds for every request, preparation and build to happen. */
+    private fun settle(c: AssetStorage<String, Res>) {
+        repeat(10) { runBackground(); c.pump(3) }
+    }
+
+    @Test
+    fun assetsThatDependOnEachOtherFailInsteadOfWaitingForever() {
+        val c = withDependencies(mapOf("a" to setOf("b"), "b" to setOf("a")))
+        c.request("a")
+        settle(c)
+        assertNull(c.get("a")); assertNull(c.get("b"))
+        assertFalse("nothing is left loading", c.isLoading())
+        assertTrue(builds.isEmpty())
+        assertEquals(2, logged.size)
+        assertTrue(logged.toString(), logged.all { it.startsWith("Failed to load asset") })
+        val reasons = recorder.throwables.map { it.message }
+        assertTrue(reasons.toString(), reasons.all { it == "dependency cycle: b -> a -> b" || it == "dependency cycle: a -> b -> a" })
+    }
+
+    @Test
+    fun anAssetThatNeedsItselfFails() {
+        val c = withDependencies(mapOf("a" to setOf("a")))
+        c.request("a")
+        settle(c)
+        assertNull(c.get("a"))
+        assertFalse(c.isLoading())
+        assertEquals(listOf("dependency cycle: a -> a"), recorder.throwables.map { it.message })
+    }
+
+    @Test
+    fun aLongerCycleFailsEveryMemberAndFreesWhatWaitedOnIt() {
+        // a -> b -> c -> a is a cycle; d needs a and e needs d, and neither is part of it
+        val c = withDependencies(mapOf("a" to setOf("b"), "b" to setOf("c"), "c" to setOf("a"), "d" to setOf("a"), "e" to setOf("d")))
+        c.request("e"); c.request("a")
+        settle(c)
+        for (name in listOf("a", "b", "c")) assertNull(name, c.get(name))
+        assertNotNull("d is built without the failed a", c.get("d"))
+        assertNotNull("e is built after d", c.get("e"))
+        assertFalse(c.isLoading())
+        assertEquals(setOf("d", "e"), builds.toSet())
+    }
+
+    @Test
+    fun aDiamondOfDependenciesIsNotACycle() {
+        val c = withDependencies(mapOf("a" to setOf("b", "c"), "b" to setOf("d"), "c" to setOf("d")))
+        c.request("a")
+        settle(c)
+        assertEquals(setOf("a", "b", "c", "d"), builds.toSet())
+        assertEquals("d is built once, before the others", "d", builds.first())
+        assertEquals(emptyList<String>(), logged)
+    }
+
+    @Test
+    fun aCycleIsFoundWhenItsLastMemberIsPreparedEvenIfTheOthersAreAlreadyBlocked() {
+        val c = withDependencies(mapOf("a" to setOf("b"), "b" to setOf("a")))
+        c.request("a")
+        runBackground(); c.pump(2) // a is prepared and blocked on b, which is requested but not prepared yet
+        assertTrue(c.isLoading("a")); assertEquals(emptyList<String>(), logged)
+        runBackground(); c.pump(2) // b is prepared: it closes the cycle
+        assertFalse(c.isLoading("a")); assertFalse(c.isLoading("b"))
+        assertEquals(2, logged.size)
+    }
+
+    @Test
+    fun retainKeepsWhatARetainedAssetNeeds() {
+        val c = withDependencies(mapOf("terr" to setOf("tex")))
+        c.request("terr"); runBackground(); c.pump(); runBackground(); c.pump(3)
+        val tex = c.get("tex")!!
+        c.retain(setOf("terr"))
+        assertFalse("needed by a retained asset", tex.disposed)
+        assertSame(tex, c.get("tex"))
+        c.retain(emptySet())
+        assertTrue(tex.disposed)
+        assertNull(c.get("terr"))
+    }
+
+    @Test
+    fun getAsReadsABuiltAssetAsItsKind() {
+        val c = cache()
+        c.request("a"); runBackground(); c.pump()
+        assertEquals("a", c.getAs<Res>("a")!!.name)
+        assertNull(c.getAs<String>("a"))
+        assertNull(c.getAs<Res>("missing"))
     }
 
     @Test

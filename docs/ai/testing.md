@@ -22,8 +22,10 @@ Results are in `build/test-results/test/*.xml`, and a later run overwrites them.
   `ecs/`, `properties/`, `dto/`, `filetype/`).
 - `gdx-model/src/test/kotlin/`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`).
 - `core/src/test/kotlin/`: asset reading and loading tests, plain JUnit with no IntelliJ classes. They read the shared
-  fixtures through `testProject(name)` (Gradle passes the folder as `abyssus.testData`) and build the loading graph
-  with `testLoading(log, executor)`. `AssetLoadingGlTest` covers the `asset-loading` spec on real GL.
+  fixtures through `testProject(name)` (Gradle passes the folder as `abyssus.testData`) and get a project's
+  `FileLoader` and `AssetMetaLoader` from `testFileLoader(dir)` / `testMetaLoader(dir)` (`TestData.kt`); loaders and
+  stores are wired by hand in each test. `exrFixture()` extracts the bundled EXR sky to a real file. `AssetStorageTest`
+  covers the loading pipeline with a fake loader; `AssetLoadingGlTest` covers the `asset-loading` spec on real GL.
 - `runtime/src/test/kotlin/`: project layout, scene parsing and loading, ECS codecs, components, loader, writer and
   systems. Plain JUnit, no IntelliJ or GL; `testProject(name)` uses the same `abyssus.testData` fixture root.
 - `physics/src/test/kotlin/`: physics components, `PhysicsWorld`, rope tension and the Jolt natives. Plain JUnit, no

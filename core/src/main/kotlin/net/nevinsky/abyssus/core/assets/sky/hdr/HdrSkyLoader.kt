@@ -9,6 +9,7 @@ import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.core.assets.loading.BuiltAssets
 
 /**
  * `SKYBOX_HDR` assets: the `.exr` is decoded off the GL thread, then the environment is built on the GPU
@@ -35,7 +36,7 @@ class HdrSkyLoader(
     override fun upload(prepared: PreparedHdrSky): Boolean =
         (prepared.build ?: HdrEnvironmentBuild(prepared.image, shaders).also { prepared.build = it }).step()
 
-    override fun build(prepared: PreparedHdrSky): HdrSky {
+    override fun build(prepared: PreparedHdrSky, assets: BuiltAssets): HdrSky {
         val environment = checkNotNull(prepared.build) { "HDR sky '${prepared.name}' was never uploaded" }.finish()
         prepared.build = null
         return HdrSky(environment, shaders, curve)

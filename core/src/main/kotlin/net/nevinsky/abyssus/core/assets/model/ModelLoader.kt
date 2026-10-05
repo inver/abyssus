@@ -12,6 +12,7 @@ import net.nevinsky.abyssus.core.FileLoader
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.core.assets.loading.RaySnapshotStore
 import net.nevinsky.abyssus.core.assets.loading.TextureUploadQueue
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader
@@ -50,7 +51,7 @@ class ModelLoader(
 
     override fun upload(prepared: PreparedModel) = prepared.uploadNext()
 
-    override fun build(prepared: PreparedModel): Model =
+    override fun build(prepared: PreparedModel, assets: BuiltAssets): Model =
         assimp.build(prepared.data, prepared.file, prepared.textures).also { prepared.dispose() }
 
     override fun discard(prepared: PreparedModel) = prepared.dispose()

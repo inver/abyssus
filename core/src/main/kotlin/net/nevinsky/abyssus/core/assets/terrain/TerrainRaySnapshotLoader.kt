@@ -7,30 +7,36 @@ import net.nevinsky.abyssus.core.assets.model.RayTextureFilter
 import net.nevinsky.abyssus.core.assets.model.RayTextureSampler
 import net.nevinsky.abyssus.core.assets.model.RayTextureWrap
 import net.nevinsky.abyssus.core.assets.model.copyRayImage
-
-/** Parsed terrain data and its decoded images, borrowed from a raster preparation; the snapshot copies them. */
-data class RayTerrainSource(val data: TerrainData, val images: Map<String, Pixmap>)
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.texture.TextureLoader
 
 /**
- * Reuses raster preparation's height/image reader without uploading or invalidating any GPU asset. [terrainLoader]
- * must not publish snapshots itself (built without a `RaySnapshotStore`).
+ * The CPU-only companion of a terrain: its heights and splat images are read afresh (no GL, nothing uploaded, no GPU
+ * asset touched), because the raster side keeps no pixels once its splat textures are on the GPU. This is a
+ * companion read, not an asset load, so it takes [terrainLoader] (for the parsed terrain) and [textureLoader] (for the
+ * decoded images) directly, without the caching [net.nevinsky.abyssus.core.assets.loading.AssetStorage] gives GPU assets.
  */
 class TerrainRaySnapshotLoader(
     private val terrainLoader: TerrainLoader,
+    private val textureLoader: TextureLoader,
     private val maxBytes: Long = 128L * 1024 * 1024,
-) : RaySnapshotLoader<RayTerrainSnapshot, RayTerrainSource> {
-    override fun load(meta: AssetMeta<Any>): RayTerrainSnapshot? {
-        val prepared = terrainLoader.loadPrepared(meta) ?: return null
-        return try {
-            capture(RayTerrainSource(prepared.data, prepared.pixmaps))
+) : RaySnapshotLoader<RayTerrainSnapshot, Nothing> {
+    override fun load(meta: AssetMeta<Any>): RayTerrainSnapshot {
+        val prepared = terrainLoader.loadPrepared(meta)
+        val images = LinkedHashMap<String, Pixmap>()
+        try {
+            for ((field, folder) in prepared.splats) {
+                // an unreadable texture is left out, as the raster terrain leaves its layer out
+                runCatchingKeepingCancellation { textureLoader.prepare(folder)?.release() }.getOrNull()?.let { images[field] = it }
+            }
+            return snapshot(prepared.data, images)
         } finally {
-            prepared.dispose()
+            images.values.forEach(Pixmap::dispose)
         }
     }
 
-    /** Copies borrowed data/images before disposal; no libGDX mutable values or GL handles escape. */
-    override fun capture(source: RayTerrainSource): RayTerrainSnapshot {
-        val (data, images) = source
+    /** Copies the data and images before they are disposed; no libGDX mutable values or GL handles escape. */
+    internal fun snapshot(data: TerrainData, images: Map<String, Pixmap>): RayTerrainSnapshot {
         val cells = data.resolution.toLong() - 1
         val bytes = data.heights.size.toLong() * (1 + TERRAIN_FLOATS_PER_VERTEX) * 4 + cells * cells * 6 * 4 +
                 SPLAT_FIELDS.sumOf { field -> images[field]?.let { it.width.toLong() * it.height * 4 } ?: 0L }

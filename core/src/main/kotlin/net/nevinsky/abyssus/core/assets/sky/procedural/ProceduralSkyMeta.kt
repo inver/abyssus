@@ -6,8 +6,8 @@
 package net.nevinsky.abyssus.core.assets.sky.procedural
 
 class ProceduralSkyMeta(
-    val shaderVert: String? = null,
-    val shaderFrag: String? = null,
+    val vertex: String? = null,
+    val fragment: String? = null,
     val planetRadius: Float? = null,
     val atmosphereRadius: Float? = null,
     val betaRayleigh: List<Float>? = null,
