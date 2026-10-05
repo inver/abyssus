@@ -32,8 +32,7 @@ class AssetCache<D : Any, T : Disposable>(
     private val log: Logger,
 ) : Disposable {
     private sealed interface State {
-        /** One per request: a result is only taken while its request is still the current state of its name. */
-        class Loading : State
+        data object Loading : State
         data object Failed : State
 
         /** A built asset; [pending] is the request that will replace it, [stale] that one must be started. */
@@ -55,7 +54,8 @@ class AssetCache<D : Any, T : Disposable>(
     private val waiting = ArrayDeque<Prepared<D>>()
 
     /** True while any requested asset has not finished loading (neither built nor failed). */
-    fun isLoading(): Boolean = states.values.any { it is State.Loading || (it as? State.Ready<*>)?.let { r -> r.pending != null || r.stale } == true }
+    fun isLoading(): Boolean =
+        states.values.any { it is State.Loading || (it as? State.Ready<*>)?.let { r -> r.pending != null || r.stale } == true }
 
     /** The number of assets built under [name] so far: another value means [get] returns a new asset. */
     fun version(name: String): Long = versions[name] ?: 0L
@@ -87,7 +87,7 @@ class AssetCache<D : Any, T : Disposable>(
     /** Starts loading [name] unless it is already loading, loaded and current, or failed. */
     fun request(name: String) {
         val existing = states[name]
-        val request = State.Loading()
+        val request = State.Loading
         when {
             existing == null -> states[name] = request
             existing is State.Ready<*> && existing.stale -> {
@@ -107,7 +107,8 @@ class AssetCache<D : Any, T : Disposable>(
             } catch (e: Throwable) {
                 Prepared(name, request, null, e)
             }
-            log.atDebug().log { "Prepared asset '$name' in ${(System.nanoTime() - started) / 1_000_000} ms${if (result.data == null) " (nothing to build)" else ""}" }
+            log.atDebug()
+                .log { "Prepared asset '$name' in ${(System.nanoTime() - started) / 1_000_000} ms${if (result.data == null) " (nothing to build)" else ""}" }
             prepared.add(result)
             // dropped meanwhile: nothing on the GL thread may ever see it again, so release it here
             if (request !in live && prepared.remove(result)) result.data?.let(loader::discard)
@@ -175,7 +176,10 @@ class AssetCache<D : Any, T : Disposable>(
     private fun fail(name: String, error: Throwable?) {
         (states[name] as? State.Ready<T>)?.value?.dispose() // a revision that cannot load replaces the old one with nothing
         states[name] = State.Failed
-        if (error != null) log.warn("Failed to load asset '$name'", error) else log.warn("Asset '$name' is missing or unreadable")
+        if (error != null) log.warn(
+            "Failed to load asset '$name'",
+            error
+        ) else log.warn("Asset '$name' is missing or unreadable")
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -209,8 +213,12 @@ class AssetCache<D : Any, T : Disposable>(
     }
 
     private fun discardPending() {
-        while (true) prepared.poll()?.data?.let(loader::discard) ?: break
-        while (waiting.isNotEmpty()) waiting.removeFirst().data?.let(loader::discard)
+        while (true) {
+            prepared.poll()?.data?.let(loader::discard) ?: break
+        }
+        while (waiting.isNotEmpty()) {
+            waiting.removeFirst().data?.let(loader::discard)
+        }
     }
 
     override fun dispose() {

@@ -5,6 +5,7 @@
 package net.nevinsky.abyssus.core.assets.model
 
 import net.nevinsky.abyssus.assets.loading.RaySnapshot
+import net.nevinsky.abyssus.core.assets.loading.RaySnapshot
 import java.util.*
 
 internal fun <T> immutableModelList(values: Collection<T>): List<T> = Collections.unmodifiableList(values.toList())

@@ -5,10 +5,10 @@
 
 package net.nevinsky.abyssus.core.assets.sky.procedural
 
-import net.nevinsky.abyssus.assets.AssetMeta
-import net.nevinsky.abyssus.assets.loading.AssetLoader
-import net.nevinsky.abyssus.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.assets.AssetMeta
+import net.nevinsky.abyssus.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.core.assets.loading.AssetLoader
 
 class ProceduralSkyLoader(private val fileLoader: FileLoader, private val metaLoader: AssetMetaLoader) :
     AssetLoader<PreparedProceduralSky, ProceduralSky> {

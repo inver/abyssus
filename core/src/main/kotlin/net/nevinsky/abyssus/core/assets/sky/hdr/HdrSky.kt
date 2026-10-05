@@ -9,9 +9,9 @@ import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.sky.Sky
 import net.nevinsky.abyssus.core.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.core.assets.ShaderSource
+import net.nevinsky.abyssus.core.assets.sky.Sky
 
 /**
  * A built HDR sky: draws its equirectangular image as the background, tone mapped by [curve], and holds

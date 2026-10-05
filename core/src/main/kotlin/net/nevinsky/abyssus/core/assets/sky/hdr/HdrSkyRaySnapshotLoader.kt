@@ -1,14 +1,14 @@
 package net.nevinsky.abyssus.core.assets.sky.hdr
 
-import net.nevinsky.abyssus.assets.AssetMeta
-import net.nevinsky.abyssus.assets.loading.RaySnapshotLoader
-import net.nevinsky.abyssus.assets.sky.RAY_SKY_MAX_WIDTH
-import net.nevinsky.abyssus.assets.sky.RaySkySnapshot
+import net.nevinsky.abyssus.core.assets.AssetMeta
+import net.nevinsky.abyssus.core.assets.loading.RaySnapshotLoader
+import net.nevinsky.abyssus.core.assets.sky.RAY_SKY_MAX_WIDTH
+import net.nevinsky.abyssus.core.assets.sky.RaySkySnapshot
 
 class HdrSkyRaySnapshotLoader(
     private val hdrSkyLoader: HdrSkyLoader
 ) : RaySnapshotLoader {
-    override fun load(meta: AssetMeta<Any>): RaySkySnapshot? {
+    override fun load(meta: AssetMeta<Any>): RaySkySnapshot {
         val prepared = hdrSkyLoader.loadPrepared(meta)
         return downsample(prepared.image)
     }

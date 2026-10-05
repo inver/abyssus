@@ -5,10 +5,10 @@
 
 package net.nevinsky.abyssus.core.assets.sky.hdr
 
-import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.AssetMeta
-import net.nevinsky.abyssus.assets.loading.AssetLoader
-import net.nevinsky.abyssus.assets.AssetMetaLoader
+import net.nevinsky.abyssus.core.assets.AssetMeta
+import net.nevinsky.abyssus.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.core.assets.ShaderSource
+import net.nevinsky.abyssus.core.assets.loading.AssetLoader
 
 /**
  * `SKYBOX_HDR` assets: the `.exr` is decoded off the GL thread, then the environment is built on the GPU

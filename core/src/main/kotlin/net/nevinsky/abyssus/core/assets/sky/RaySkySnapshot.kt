@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.core.assets.sky
 
-import net.nevinsky.abyssus.assets.loading.RaySnapshot
+import net.nevinsky.abyssus.core.assets.loading.RaySnapshot
 
 /** The widest equirectangular sky handed to a ray backend; the height is half of it. */
 const val RAY_SKY_MAX_WIDTH = 1024

@@ -13,10 +13,7 @@ import com.badlogic.gdx.graphics.Texture
  * [makeTexture] turns one pixmap into a texture and takes over the pixmap: it must dispose it. [dispose] releases the
  * pixmaps not yet uploaded and the textures uploaded so far, and may be called more than once.
  */
-class TextureUploadQueue(
-    pixmaps: Map<String, Pixmap>,
-    private val makeTexture: (String, Pixmap) -> Texture,
-) {
+class TextureUploadQueue(pixmaps: Map<String, Pixmap>, private val makeTexture: (String, Pixmap) -> Texture) {
     /** The images not yet uploaded, by name. */
     val pending: Map<String, Pixmap>
         field = LinkedHashMap(pixmaps)

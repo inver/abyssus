@@ -12,6 +12,9 @@ import net.nevinsky.abyssus.assets.AssetMeta
 import net.nevinsky.abyssus.assets.loading.AssetLoader
 import net.nevinsky.abyssus.assets.loading.TextureUploadQueue
 import net.nevinsky.abyssus.assets.AssetMetaLoader
+import net.nevinsky.abyssus.core.assets.AssetMeta
+import net.nevinsky.abyssus.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.core.assets.loading.AssetLoader
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader
 import net.nevinsky.abyssus.core.loader.PreloadedTextureProvider
 import net.nevinsky.abyssus.core.model.Model

@@ -4,7 +4,7 @@ import com.badlogic.gdx.graphics.*
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.assets.sky.Sky
+import net.nevinsky.abyssus.core.assets.sky.Sky
 
 /** A six-face skybox on a cube mesh, drawn with [program] (`skybox.vert` / `skybox.frag`), which it owns. */
 class SkyboxCube(prepared: PreparedSkybox, private val program: ShaderProgram) : Sky {

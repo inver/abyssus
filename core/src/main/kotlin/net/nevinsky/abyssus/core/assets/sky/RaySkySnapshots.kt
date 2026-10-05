@@ -6,6 +6,7 @@ package net.nevinsky.abyssus.core.assets.sky
 
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import java.util.concurrent.Executor
 
 /** Shared optional CPU sky companions, keyed by project and asset; no GL readback and no GPU cache invalidation. */

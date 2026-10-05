@@ -6,10 +6,11 @@
 package net.nevinsky.abyssus.core.assets.sky.cube
 
 import com.badlogic.gdx.graphics.Pixmap
-import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.loading.AssetLoader
-import net.nevinsky.abyssus.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.assets.AssetMeta
+import net.nevinsky.abyssus.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.core.assets.ShaderSource
+import net.nevinsky.abyssus.core.assets.loading.AssetLoader
 import net.nevinsky.abyssus.core.loader.Pixmaps
 
 /** Skybox assets: the six face images decoded off the GL thread, then uploaded as one cube map. */
@@ -18,23 +19,26 @@ class SkyboxLoader(
     private val metaLoader: AssetMetaLoader,
     private val shaders: ShaderSource
 ) : AssetLoader<PreparedSkybox, SkyboxCube> {
-
-    override fun prepare(name: String): PreparedSkybox? {
-        val meta = metaLoader.loadBaseMeta(name) ?: return null
+    override fun loadPrepared(meta: AssetMeta<Any>): PreparedSkybox {
         val additional = meta.typedAdditional<SkyboxMeta>()
         val faces = ArrayList<Pixmap>(6)
         try {
-            faces += Pixmaps.load(fileLoader.loadFile(name, additional.back))
-            faces += Pixmaps.load(fileLoader.loadFile(name, additional.front))
-            faces += Pixmaps.load(fileLoader.loadFile(name, additional.left))
-            faces += Pixmaps.load(fileLoader.loadFile(name, additional.right))
-            faces += Pixmaps.load(fileLoader.loadFile(name, additional.bottom))
-            faces += Pixmaps.load(fileLoader.loadFile(name, additional.top))
+            faces += Pixmaps.load(fileLoader.loadFile(meta.name, additional.back))
+            faces += Pixmaps.load(fileLoader.loadFile(meta.name, additional.front))
+            faces += Pixmaps.load(fileLoader.loadFile(meta.name, additional.left))
+            faces += Pixmaps.load(fileLoader.loadFile(meta.name, additional.right))
+            faces += Pixmaps.load(fileLoader.loadFile(meta.name, additional.bottom))
+            faces += Pixmaps.load(fileLoader.loadFile(meta.name, additional.top))
         } catch (e: Throwable) {
             faces.forEach(Pixmap::dispose)
             throw e
         }
         return PreparedSkybox(faces, additional.shader ?: "skybox")
+    }
+
+    override fun prepare(name: String): PreparedSkybox? {
+        val meta = metaLoader.loadBaseMeta(name) ?: return null
+
     }
 
     override fun build(prepared: PreparedSkybox) = SkyboxCube(prepared, shaders.program(prepared.shaderName))
