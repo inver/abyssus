@@ -12,7 +12,7 @@ import kotlin.math.sin
 
 class SkyboxRaySnapshotLoader(
     private val skyboxLoader: SkyboxLoader
-) : RaySnapshotLoader {
+) : RaySnapshotLoader<RaySkySnapshot, Nothing> {
     override fun load(meta: AssetMeta<Any>): RaySkySnapshot {
         val skybox = skyboxLoader.loadPrepared(meta) ?: throw IllegalStateException("Skybox is null!")
         return resample(skybox.faces)

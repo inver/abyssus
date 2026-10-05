@@ -7,7 +7,7 @@ import net.nevinsky.abyssus.core.assets.sky.RaySkySnapshot
 
 class HdrSkyRaySnapshotLoader(
     private val hdrSkyLoader: HdrSkyLoader
-) : RaySnapshotLoader {
+) : RaySnapshotLoader<RaySkySnapshot, Nothing> {
     override fun load(meta: AssetMeta<Any>): RaySkySnapshot {
         val prepared = hdrSkyLoader.loadPrepared(meta)
         return downsample(prepared.image)

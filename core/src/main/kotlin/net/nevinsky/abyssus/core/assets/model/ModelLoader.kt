@@ -8,13 +8,12 @@ package net.nevinsky.abyssus.core.assets.model
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
-import net.nevinsky.abyssus.assets.AssetMeta
-import net.nevinsky.abyssus.assets.loading.AssetLoader
-import net.nevinsky.abyssus.assets.loading.TextureUploadQueue
-import net.nevinsky.abyssus.assets.AssetMetaLoader
+import net.nevinsky.abyssus.core.FileLoader
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.core.assets.loading.RaySnapshotStore
+import net.nevinsky.abyssus.core.assets.loading.TextureUploadQueue
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader
 import net.nevinsky.abyssus.core.loader.PreloadedTextureProvider
 import net.nevinsky.abyssus.core.model.Model
@@ -26,16 +25,17 @@ import kotlin.coroutines.cancellation.CancellationException
 class ModelLoader(
     private val metaLoader: AssetMetaLoader,
     private val assimp: AssimpModelLoader,
-    private val raySnapshots: RayModelSnapshots? = null,
+    private val fileLoader: FileLoader,
+    private val raySnapshots: RaySnapshotStore<RayModelSnapshot, RayModelSource>? = null,
 ) : AssetLoader<PreparedModel, Model> {
     override fun loadPrepared(meta: AssetMeta<Any>): PreparedModel? {
-        val capture = raySnapshots?.preparation(files, name)
-        val handle = FileHandle(files.model(name) ?: return null)
+        val capture = raySnapshots?.preparation(meta.name)
+        val handle = FileHandle(fileLoader.loadFile(meta.name, meta.typedAdditional<ModelMeta>().file))
         val data = assimp.loadData(handle)
         val images = assimp.decodeTextures(data, handle)
         val prepared = PreparedModel(data, handle, images)
         try {
-            capture?.offer(data, images)
+            capture?.offer(RayModelSource(data, images))
             return prepared
         } catch (cancelled: CancellationException) {
             prepared.dispose()
@@ -44,18 +44,8 @@ class ModelLoader(
     }
 
     override fun prepare(name: String): PreparedModel? {
-        val capture = raySnapshots?.preparation(files, name)
-        val handle = FileHandle(files.model(name) ?: return null)
-        val data = assimp.loadData(handle)
-        val images = assimp.decodeTextures(data, handle)
-        val prepared = PreparedModel(data, handle, images)
-        try {
-            capture?.offer(data, images)
-            return prepared
-        } catch (cancelled: CancellationException) {
-            prepared.dispose()
-            throw cancelled
-        }
+        val meta = metaLoader.loadBaseMeta(name) ?: return null
+        return loadPrepared(meta)
     }
 
     override fun upload(prepared: PreparedModel) = prepared.uploadNext()

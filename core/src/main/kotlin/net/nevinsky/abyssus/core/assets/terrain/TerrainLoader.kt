@@ -8,12 +8,13 @@ package net.nevinsky.abyssus.core.assets.terrain
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
-import net.nevinsky.abyssus.assets.AssetMeta
-import net.nevinsky.abyssus.assets.loading.AssetLoader
-import net.nevinsky.abyssus.assets.loading.TextureUploadQueue
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.assets.AssetMeta
+import net.nevinsky.abyssus.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.core.assets.loading.RaySnapshotStore
+import net.nevinsky.abyssus.core.assets.loading.TextureUploadQueue
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.core.loader.Pixmaps
 import java.nio.ByteBuffer
 import kotlin.math.roundToInt
@@ -23,22 +24,22 @@ import kotlin.math.sqrt
 class TerrainLoader(
     private val fileLoader: FileLoader,
     private val metaLoader: AssetMetaLoader,
-    private val raySnapshots: RayTerrainSnapshots? = null
+    private val raySnapshots: RaySnapshotStore<RayTerrainSnapshot, RayTerrainSource>? = null,
 ) : AssetLoader<PreparedTerrain, TerrainMesh> {
+
     override fun loadPrepared(meta: AssetMeta<Any>): PreparedTerrain? {
-        val capture = raySnapshots?.preparation(fileLoader.projectDir, name)
-        val meta = metaLoader.loadBaseMeta(name) ?: return null
+        val capture = raySnapshots?.preparation(meta.name)
         val additional = meta.typedAdditional<TerrainMeta>()
 
-        val data = read(name, additional)
+        val data = read(meta.name, additional)
         val images = LinkedHashMap<String, Pixmap>()
         for (field in SPLAT_FIELDS) {
-            additional.splat(field)?.let { loadPixmap(name, it) }?.let { images[field] = it }
+            additional.splat(field)?.let { loadPixmap(meta.name, it) }?.let { images[field] = it }
         }
 
         val prepared = PreparedTerrain(data, images)
         try {
-            capture?.offer(data, prepared.pixmaps)
+            capture?.offer(RayTerrainSource(data, prepared.pixmaps))
         } catch (failure: Throwable) {
             prepared.dispose()
             throw failure
@@ -48,8 +49,8 @@ class TerrainLoader(
 
     /** A splat texture that cannot be read is left out; the terrain is drawn without it. */
     override fun prepare(name: String): PreparedTerrain? {
-
-
+        val meta = metaLoader.loadBaseMeta(name) ?: return null
+        return loadPrepared(meta)
     }
 
     private fun loadPixmap(assetName: String, fileName: String): Pixmap? = runCatchingKeepingCancellation {

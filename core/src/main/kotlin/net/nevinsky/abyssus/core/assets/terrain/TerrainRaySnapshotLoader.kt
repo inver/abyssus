@@ -1,40 +1,36 @@
-/*
- * Copyright 2023-2026 Alexey Nevinsky
- * SPDX-License-Identifier: Apache-2.0
- */
 package net.nevinsky.abyssus.core.assets.terrain
 
 import com.badlogic.gdx.graphics.Pixmap
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.model.RayTextureFilter
-import net.nevinsky.abyssus.assets.model.RayTextureSampler
-import net.nevinsky.abyssus.assets.model.RayTextureWrap
-import net.nevinsky.abyssus.assets.model.copyRayImage
-import java.io.File
+import net.nevinsky.abyssus.core.assets.AssetMeta
+import net.nevinsky.abyssus.core.assets.loading.RaySnapshotLoader
+import net.nevinsky.abyssus.core.assets.model.RayTextureFilter
+import net.nevinsky.abyssus.core.assets.model.RayTextureSampler
+import net.nevinsky.abyssus.core.assets.model.RayTextureWrap
+import net.nevinsky.abyssus.core.assets.model.copyRayImage
+
+/** Parsed terrain data and its decoded images, borrowed from a raster preparation; the snapshot copies them. */
+data class RayTerrainSource(val data: TerrainData, val images: Map<String, Pixmap>)
 
 /**
- * Reuses raster preparation's height/image reader without uploading or invalidating any GPU asset. [loaders] makes the
- * [TerrainLoader] of a project folder; it must not publish snapshots itself (no [RayTerrainSnapshots] inside).
+ * Reuses raster preparation's height/image reader without uploading or invalidating any GPU asset. [terrainLoader]
+ * must not publish snapshots itself (built without a `RaySnapshotStore`).
  */
-class RayTerrainSnapshotReader(
-    private val loaders: (File) -> TerrainLoader,
+class TerrainRaySnapshotLoader(
+    private val terrainLoader: TerrainLoader,
     private val maxBytes: Long = 128L * 1024 * 1024,
-) {
-    init {
-        require(maxBytes > 0)
-    }
-
-    fun read(files: AssetFiles, name: String): RayTerrainSnapshot? {
-        val prepared = loaders(files.projectDir).prepare(name) ?: return null
+) : RaySnapshotLoader<RayTerrainSnapshot, RayTerrainSource> {
+    override fun load(meta: AssetMeta<Any>): RayTerrainSnapshot? {
+        val prepared = terrainLoader.loadPrepared(meta) ?: return null
         return try {
-            capture(prepared.data, prepared.pixmaps)
+            capture(RayTerrainSource(prepared.data, prepared.pixmaps))
         } finally {
             prepared.dispose()
         }
     }
 
     /** Copies borrowed data/images before disposal; no libGDX mutable values or GL handles escape. */
-    fun capture(data: TerrainData, images: Map<String, Pixmap>): RayTerrainSnapshot {
+    override fun capture(source: RayTerrainSource): RayTerrainSnapshot {
+        val (data, images) = source
         val cells = data.resolution.toLong() - 1
         val bytes = data.heights.size.toLong() * (1 + TERRAIN_FLOATS_PER_VERTEX) * 4 + cells * cells * 6 * 4 +
                 SPLAT_FIELDS.sumOf { field -> images[field]?.let { it.width.toLong() * it.height * 4 } ?: 0L }

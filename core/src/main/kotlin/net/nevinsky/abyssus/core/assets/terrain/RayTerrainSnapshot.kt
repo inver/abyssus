@@ -4,14 +4,15 @@
  */
 package net.nevinsky.abyssus.core.assets.terrain
 
-import net.nevinsky.abyssus.assets.loading.RaySnapshot
-import net.nevinsky.abyssus.assets.model.RayModelImage
-import net.nevinsky.abyssus.assets.model.RayTextureColorSpace
-import net.nevinsky.abyssus.assets.model.RayTextureSampler
+import net.nevinsky.abyssus.core.assets.loading.RaySnapshot
+import net.nevinsky.abyssus.core.assets.model.RayModelImage
+import net.nevinsky.abyssus.core.assets.model.RayTextureColorSpace
+import net.nevinsky.abyssus.core.assets.model.RayTextureSampler
 import java.util.*
 
 data class RayTerrainTexture(
-    val image: RayModelImage, val sampler: RayTextureSampler,
+    val image: RayModelImage,
+    val sampler: RayTextureSampler,
     val colorSpace: RayTextureColorSpace = RayTextureColorSpace.LINEAR,
 )
 
@@ -27,7 +28,7 @@ class RayTerrainSnapshot internal constructor(
 
     /** Base then R/G/B/A: sequential shader mixes, with absent layers skipped and absent base neutral gray. */
     val layers: Map<String, RayTerrainTexture> = Collections.unmodifiableMap(LinkedHashMap(layers))
-    val byteSize: Long = (heightValues.size.toLong() + vertexValues.size + indexValues.size) * 4 +
+    override val byteSize: Long = (heightValues.size.toLong() + vertexValues.size + indexValues.size) * 4 +
             (splatMap?.image?.byteSize ?: 0) + layers.values.sumOf { it.image.byteSize }
 
     fun heights(): FloatArray = heightValues.copyOf()

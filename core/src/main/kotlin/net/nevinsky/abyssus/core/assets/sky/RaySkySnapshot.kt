@@ -21,6 +21,6 @@ class RaySkySnapshot(val width: Int, val height: Int, rgba: FloatArray, val hdr:
         require(width > 0 && height > 0 && pixels.size.toLong() == width.toLong() * height * 4)
     }
 
-    val byteSize: Long get() = pixels.size.toLong() * 4
+    override val byteSize: Long get() = pixels.size.toLong() * 4
     fun rgba(): FloatArray = pixels.copyOf()
 }

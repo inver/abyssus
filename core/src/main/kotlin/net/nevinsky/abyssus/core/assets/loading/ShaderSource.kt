@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.core.assets
+package net.nevinsky.abyssus.core.assets.loading
 
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 

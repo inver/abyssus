@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.core.assets.model
 
-import net.nevinsky.abyssus.assets.loading.RaySnapshot
+import com.badlogic.gdx.graphics.Pixmap
 import net.nevinsky.abyssus.core.assets.loading.RaySnapshot
 import java.util.*
 
@@ -108,5 +108,18 @@ class RayModelSnapshot internal constructor(
     val images: Map<String, RayModelImage> = Collections.unmodifiableMap(images.toMap())
 
     /** Retained geometry/image payload; backend resource bounds are accounted separately. */
-    val byteSize: Long = meshes.sumOf { it.byteSize } + images.values.sumOf { it.byteSize }
+    override val byteSize: Long = meshes.sumOf { it.byteSize } + images.values.sumOf { it.byteSize }
+}
+
+/** Shares the raster upload's row order and converts arbitrary Pixmap formats to immutable RGBA8888. */
+internal fun copyRayImage(image: Pixmap): RayModelImage {
+    val pixels = image.width.toLong() * image.height
+    require(pixels <= Int.MAX_VALUE / 4) { "CPU image dimensions exceed array limits" }
+    val rgba = ByteArray(pixels.toInt() * 4)
+    for (y in 0 until image.height) for (x in 0 until image.width) {
+        val pixel = image.getPixel(x, y)
+        val start = (y * image.width + x) * 4
+        for (channel in 0..3) rgba[start + channel] = (pixel ushr (24 - channel * 8)).toByte()
+    }
+    return RayModelImage(image.width, image.height, rgba)
 }

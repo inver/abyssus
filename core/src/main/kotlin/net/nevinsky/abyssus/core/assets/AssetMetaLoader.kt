@@ -1,6 +1,6 @@
 package net.nevinsky.abyssus.core.assets
 
-import net.nevinsky.abyssus.core.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.core.FileLoader
 import org.slf4j.Logger
@@ -9,13 +9,13 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 class AssetMetaLoader(
-    private val json: net.nevinsky.abyssus.core.assets.json.JsonProcessor,
+    private val json: JsonProcessor,
     private val fileLoader: FileLoader,
     private val log: Logger = NOPLogger.NOP_LOGGER
 ) {
     private val metasCache = ConcurrentHashMap<File, CachedMeta>()
 
-    fun loadBaseMeta(assetName: String?): net.nevinsky.abyssus.core.assets.AssetMeta<Any>? {
+    fun loadBaseMeta(assetName: String?): AssetMeta<Any>? {
         if (assetName.isNullOrBlank()) return null
         val dir = fileLoader.folder(assetName) ?: return null
 

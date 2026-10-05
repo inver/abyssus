@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.core.assets.sky.hdr
 
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.core.assets.ShaderSource
+import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.core.assets.loading.AssetLoader
 
 /**
