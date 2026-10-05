@@ -6,17 +6,18 @@
 package net.nevinsky.abyssus.assets.sky.hdr
 
 import java.awt.image.BufferedImage
-import java.io.InputStream
+import java.io.File
 import kotlin.math.roundToInt
 
 /** Small tone-mapped pictures of HDR skies for the chooser and the properties panel. No GL; call off the EDT. */
-class HdrPreview(private val decoder: RadianceDecoder, private val curve: ToneCurve) {
+class HdrPreview(private val loader: ExrLoader, private val curve: ToneCurve) {
     /**
-     * [input] decoded at no more than about twice [maxWidth] (halved while reading), tone mapped as the scene view
-     * draws it, and scaled to at most [maxWidth] wide. Throws [RadianceFormatException] for an unreadable image.
+     * The `.exr` [file] decoded at no more than about twice [maxWidth] (halved while reading), tone mapped as the scene
+     * view draws it, and scaled to at most [maxWidth] wide. Throws [ExrFormatException] for an unreadable image.
      */
-    fun image(input: InputStream, maxWidth: Int): BufferedImage {
-        val hdr = decoder.read(input, maxOf(maxWidth * 2, 2))
+    fun image(file: File, maxWidth: Int): BufferedImage = image(loader.decode(file, maxOf(maxWidth * 2, 2)), maxWidth)
+
+    fun image(hdr: HdrImage, maxWidth: Int): BufferedImage {
         val w = minOf(maxWidth, hdr.width).coerceAtLeast(1)
         val h = (w / 2).coerceAtLeast(1)
         val out = BufferedImage(w, h, BufferedImage.TYPE_INT_RGB)

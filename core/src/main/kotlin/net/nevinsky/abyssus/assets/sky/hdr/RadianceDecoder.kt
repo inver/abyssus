@@ -10,25 +10,6 @@ import java.io.*
 /** A Radiance file this view does not read, or a broken one; the message says which header line or why. */
 class RadianceFormatException(message: String) : IOException(message)
 
-/** An equirectangular image as RGB half floats, row by row from the top, the layout an `RGB16F` texture takes. */
-class HdrImage(val width: Int, val height: Int, val rgb: ShortArray) {
-    /** The radiance of pixel ([x], [y]) as floats. */
-    fun pixel(x: Int, y: Int): FloatArray {
-        val i = (y * width + x) * 3
-        return floatArrayOf(
-            java.lang.Float.float16ToFloat(rgb[i]),
-            java.lang.Float.float16ToFloat(rgb[i + 1]),
-            java.lang.Float.float16ToFloat(rgb[i + 2])
-        )
-    }
-}
-
-/** The tallest equirectangular image the view takes; the widest is twice that. */
-const val MAX_HDR_HEIGHT = 4096
-
-/** The widest image handed to the GPU. */
-const val MAX_HDR_WIDTH = 4096
-
 /** The size a Radiance header declares, checked against what the view supports before any pixel is read. */
 data class RadianceHeader(val width: Int, val height: Int)
 
