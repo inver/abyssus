@@ -1,4 +1,4 @@
-# Ray tracing foundation and Metal/Vulkan feasibility slices
+# Ray tracing
 
 Plain JVM module without IntelliJ, Swing or libGDX dependencies. Its internal backend
 protocol has no extension point or binary compatibility promise. A provider probes
@@ -6,12 +6,15 @@ on the backend's serial worker and returns a backend or an unavailable reason co
 (the plugin localizes it). Construction loads no native libraries. Expected native
 load/init errors become unavailability; cancellation still propagates.
 
-The application composition root will inject one provider/backend. The Metal backend
+The plugin's application service lazily selects and injects one backend through `RayBackendService`. The Metal backend
 owns one device, queue and pipeline; each view owns an independent session containing
 its geometry, instance structures and readback buffers. All backend/session methods
 run on the same owner worker. Closing a view does not dispose another view's session.
-The module is a plugin dependency. The developer-only feasibility preview is wired
-into the Scene view; project asset/material rendering remains unimplemented.
+The module is a plugin dependency. The Scene view renders project models, terrain, materials, lights, sky and fog
+through immutable CPU snapshots. Ray Tracing is enabled from scene Properties, per view and off by default.
+See [scene view integration](../src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md) for conversion, lifecycle,
+GL presentation, saved settings and raster fallback. A separate synthetic feasibility preview remains available
+under the developer experiment flag.
 
 `RayFrame` copies linear RGBA floats and depth on input and output. HDR values above
 1 survive; exposure/tone/sRGB conversion belongs to presentation. Buffers are row-major
@@ -46,7 +49,7 @@ the actual library/shader from the jar, probes the GPU,
 creates two sessions and renders from the second after disposing the first. It requires
 a compatible Mac. Ordinary tests skip GPU cases unless `abyssus.metalTests=true`.
 
-## Slice scope and bounds
+## Synthetic feasibility slice
 
 The feasibility representation accepts triangle meshes with 32-bit indices, affine
 instance transforms, flat colors, one directional light and perfect mirrors. Static
@@ -55,22 +58,21 @@ top-level structure. Camera rays produce projected depth; visibility rays shadow
 only direct light; a reflection hit receives direct shading and misses use the fixed
 slice background. Only one native frame may be submitted per session. `submit` and
 `poll` never wait for the GPU; geometry preparation and disposal currently wait on
-the owner worker. Queued request replacement, stale-frame rejection and bounded
-failure/disposal for the complete editor remain pending the scheduler/lifecycle tasks.
-The common `RayQueuedSession` already bounds pending requests, rejects incompatible
+the owner worker. The complete scene renderer uses the scheduler and quality policy documented below.
+The common `RayQueuedSession` bounds pending requests, rejects incompatible
 structural/resize results and propagates injected device loss to every owned session.
 
 Initial caps: 128 meshes/instances, 32 MiB of input geometry, 4096 per dimension,
 4,194,304 pixels per frame, and native geometry builds bounded by the smaller of
-512 MiB and one quarter of the device's recommended working set. These are slice
-bounds; complete per-view/application budgets remain part of the asset/resource work.
+512 MiB and one quarter of the device's recommended working set. These are synthetic slice
+bounds; project scene capacities and snapshot budgets are documented below and in `core/README.md`.
 
 The staged conformance kit runs the feasibility/lifecycle cases on the fake and opt-in Metal backends. The optional
 30-second timing test reports native submission/readback throughput; it does not
 measure GL presentation, EDT upload cost or input-to-present latency and cannot pass
 the mandatory runIde gate.
 
-## Scene shading (one bounce)
+## Scene shading and optical paths
 
 `RaySceneRequest` carries an immutable `RaySceneSnapshot`: meshes, instances, materials, textures, lights, environment
 and fog. The Metal backend renders it with the `rayScene` kernel and the Vulkan backend with the equivalent compute
@@ -191,24 +193,23 @@ Defaults cap dimensions at 4096, pixels at 4,194,304, retained frame/presentatio
 payload at 128 MiB (80 bytes/pixel), samples at 8 per batch and 256 per accumulation
 epoch, and worst-case ray count at 2,097,152 per batch. The adapter supplies primary,
 visibility and reflection ray cost per sample; scene/native allocations are budgeted
-separately. The ray count is a soft budget: when a view costs more rays per pixel than it
-allows (a window with a dozen lights), the frame stays at the half-resolution floor with
-one sample rather than refusing the view. If even that floor exceeds a hard limit
-(dimension, pixel or memory), the policy throws `RayQualityLimitException` for explicit
-view fallback. It never silently lowers that floor. Scene/camera/pose/content changes or internal resolution changes start a new
+separately. All limits, including the intersection-query budget, are hard. If one sample at the half-resolution
+floor exceeds the query, dimension, pixel or memory bounds, the policy throws `RayQualityLimitException` for explicit
+view fallback. `RayWorkBudget` accounts for traversal retries and allowed secondary/shadow work (see below).
+It never silently lowers that floor. Scene/camera/pose/content changes or internal resolution changes start a new
 accumulation epoch. At its sample cap, unchanged work stops until quality or inputs
 change.
 
 The immutable `RayRenderBatch` carries internal dimensions, samples, accumulation
-epoch/offset and matching display input to the worker adapter. Wiring that adapter
-to complete scene shading and the Scene view remains later integration work; the
-existing native feasibility shader is unchanged.
+epoch/offset and matching display input to the worker adapter. The plugin's `RayViewRuntime` / `RayViewFeed`
+and `RayBackendService` connect it to full scene shading and safe GL presentation. The separate synthetic
+feasibility shader remains available for its dedicated tests.
 
 ```sh
 ./gradlew :raytracing:test --tests '*RayRenderSchedulerTest' --tests '*RayQualityPolicyTest'
 ```
 
-## Experimental GL presentation
+## Developer feasibility preview
 
 Use a copy of the fixture project, and run:
 
@@ -266,12 +267,12 @@ every wait. A loss injected through `RayDeviceHealth` leaves the device healthy,
 
 There are two shaders. `src/main/glsl/slice.comp` is the feasibility slice (primary visibility, one directional shadow ray,
 one mirror bounce); `src/main/glsl/scene.comp` is the full scene renderer of `RaySceneRequest`, a line-for-line port of the
-Metal `rayScene` kernel. The `compileSpirv` task builds them into `native/vulkan/slice.spv` and `native/vulkan/scene.spv`,
+Metal `rayScene` kernel. The `compileSpirv` task builds them into jar resources *native/vulkan/slice.spv* and *native/vulkan/scene.spv*,
 unoptimized (`-O` inlines the shading code tenfold and drivers optimize SPIR-V themselves). Both pipelines share one
 descriptor layout: the acceleration structure, instance, vertex and index buffers, the two output images, the camera
 uniform and, for the scene shader, the scene payload bound twice (bindings 7 and 8: the floats, and the RGBA8 texels that
-follow them in the same buffer). The slice shader ignores bindings 7 and 8. No `lwjgl-shaderc` is packaged. The task uses `glslangValidator` or `glslc` from `PATH`, then from `VULKAN_SDK/bin`, then from the Android NDK's
-`shader-tools` (under `ANDROID_HOME`, `ANDROID_SDK_ROOT` or `~/Android/Sdk`), or `-Pabyssus.glslc=/path/to/tool`. Without either it warns and ships no SPIR-V, and the backend
+follow them in the same buffer). The slice shader ignores bindings 7 and 8. No `lwjgl-shaderc` is packaged. The task uses `glslangValidator` or `glslc` from `PATH`, then from the `VULKAN_SDK` environment variable's `bin` directory, then from the Android NDK's
+`shader-tools` (under `ANDROID_HOME`, `ANDROID_SDK_ROOT` or the default Android SDK directory in the user's home), or `-Pabyssus.glslc=/path/to/tool`. Without either it warns and ships no SPIR-V, and the backend
 then reports `INITIALIZATION_FAILED`; `-Pabyssus.requireShaders=true` (used by the release and CI builds) turns
 that into a build error.
 

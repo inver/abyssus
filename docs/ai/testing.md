@@ -4,7 +4,11 @@
 
 | What | Command |
 |---|---|
-| All plugin and `gdx-model` tests (what CI runs, plus plugin verification) | `./gradlew check` |
+| All module tests and verification tasks | `./gradlew check` (CI requires compiled shaders; see `AGENTS.md`) |
+| Core tests | `./gradlew :core:test` |
+| Physics library / plugin tests | `./gradlew :physics:test` / `./gradlew :physics-plugin:test` |
+| Ray tracing contracts / jar packaging | `./gradlew :raytracing:test` / `./gradlew :raytracing:verifyNativePackaging` |
+| Control Line tests | `./gradlew :games:control-line:test` |
 | Runtime tests | `./gradlew :runtime:test` |
 | Plugin tests | `./gradlew :test` |
 | `gdx-model` tests | `./gradlew :gdx-model:test` |
@@ -14,7 +18,8 @@
 
 **Use `:test` with `--tests`.** Plain `test --tests X` also runs `:gdx-model:test` and `:core:test`, which fail with
 "No tests found". For `core`, use `./gradlew :core:test --tests '<class>'`.
-Results are in `build/test-results/test/*.xml`, and a later run overwrites them.
+Results are in each module's `build/test-results/test/*.xml` and `build/reports/tests/test/`; a later run overwrites them.
+CI also runs Plugin Verifier and Qodana separately from `check`.
 
 ## Layout
 
@@ -26,7 +31,7 @@ Results are in `build/test-results/test/*.xml`, and a later run overwrites them.
   `FileLoader` and `AssetMetaLoader` from `testFileLoader(dir)` / `testMetaLoader(dir)` (`TestData.kt`); loaders and
   stores are wired by hand in each test. `exrFixture()` extracts the bundled EXR sky to a real file. `AssetStorageTest`
   covers the loading pipeline with a fake loader; `AssetLoadingGlTest` covers the `asset-loading` spec on real GL.
-- `runtime/src/test/kotlin/`: project layout, scene parsing and loading, ECS codecs, components, loader, writer and
+- `runtime/src/test/kotlin/`: scene loading, schemas, ECS codecs, components, loader, writer and
   systems. Plain JUnit, no IntelliJ or GL; `testProject(name)` uses the same `abyssus.testData` fixture root.
 - `physics/src/test/kotlin/`: physics components, `PhysicsWorld`, rope tension and the Jolt natives. Plain JUnit, no
   IntelliJ or GL. They load the build machine's `DebugSp` Jolt natives, and use `testProject(name)` and
@@ -35,6 +40,11 @@ Results are in `build/test-results/test/*.xml`, and a later run overwrites them.
   headless (Jolt's `ReleaseSp` natives for the build machine, no window). They read the bundled project
   `games/control-line/project/ControlLine` through `bundledProject()` / `loadField()`, and fly it with `FieldFlight`;
   `ControlLinePlayTest` runs `PlayHostMain` in a child process.
+- `physics-plugin/src/test/kotlin/`: overlay geometry, game/fallback launch selection and bundled play-host packaging.
+- `raytracing/src/test/kotlin/`: backend contracts, fake backend, snapshots, scheduling, budgets, optics, accumulation
+  and native packaging. Metal and Vulkan device tests opt in separately with `-Dabyssus.metalTests=true` and
+  `-Dabyssus.vulkanTests=true`; these are not enabled by `abyssus.glTests`. See `raytracing/README.md` for toolchains
+  and dedicated timing gates. Plugin ray integration tests live under `src/test/kotlin/`.
 - Shared test helpers live in `testFixtures` source sets: `gdx-model`'s `TestGl` (a GL 3.2 core context for one
   block) and `core`'s `HdrFixtures` (Radiance files from a pixel function). Plugin GL tests build their renderer with
   `testRenderer()` (`sceneview/TestRendering.kt`), wired the way `AbyssusCore` wires it in the IDE.
@@ -52,9 +62,9 @@ Two kinds of tests:
 
 `src/test/testData/project/`:
 - **`Untitled/`:** a native Abyssus project with `Untitled.abss` and `scenes/Main Scene.scene`. The scene has models,
-  terrain, a skybox, directional lights and `Spot Light 8`, `Camera 4` looking at entity 3, and a parented entity. `assets/` holds 4 models, `tree`, a
-  terrain, `skybox_default`, `skybox_physical` (a procedural sky) and `skybox_hdr` (a 64 x 32 Radiance sky that the
-  test helper `HdrFixtures` wrote; tests build other HDR skies with it in temp folders).
+  terrain, a skybox, directional lights and `Spot Light 8`, `Camera 4` looking at entity 3, and a parented entity. `assets/` holds 4 models, `tree`,
+  a terrain, `skybox_default`, `skybox_physical` (a procedural sky) and `skybox_hdr` (an OpenEXR sky named by its
+  metadata). `HdrFixtures` remains a helper for writing Radiance bytes; it does not describe the current EXR loader.
 - **`Animated/`:** `scenes/Main.scene` with two entities sharing one animated model (`assets/model_anim`). It has no `.abss`.
 - **`Custom/`:** game components. `scenes/Field.scene` has entity `0` (a plane, `"PlaneComponent": {"lineLength": 22,
   "kind": "STUNT"}`) and entity `1` (a pilot, no plane); `assets/tree` is copied from `Untitled`;
@@ -70,7 +80,7 @@ Two kinds of tests:
 `"format":"abyssus","formatVersion":1`, has no `componentIdentifiers`, and uses `kind: "asset"` renderables plus inert
 editor-marker kinds (`camera-marker`, `direction-handle-marker`, `direction-line-marker`, `light-marker`). Legacy,
 unmarked and future-version documents are written inline in `AbyssusDocumentFormatTest`, `NativeDocumentReadTest`,
-`NativeDocumentWriteGuardTest` and the runtime loader tests, so they never sit beside the native fixtures. Tests that
+`NativeDocumentWriteGuardTest`, so rejection cases need not sit beside native fixtures. Editor tests that
 assert a rejection also assert the document text and disk bytes are unchanged.
 
 **Don't edit fixtures through the IDE.** Opening `src/test/testData/project/Untitled` as the `runIde` project and

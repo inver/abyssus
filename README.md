@@ -38,8 +38,8 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   to it, listed by file name and expandable inline (display only, no navigation).
 - A property gated by an `xxxEnabled` option (e.g. `fog`, `skybox`) shows an eye at the right of
   its row; click it to flip the option in the file (undoable). The scene's `skyboxName` is shown as `skybox`.
-- A project scene's `skybox` row has a **Choose** button. It opens **Choose a skybox**: the project's `SKYBOX` assets
-  with their face count and format, how many scenes use each (or `unused`), a name filter and a **None** entry.
+- A project scene's `skybox` row has a **Choose** button. It opens **Choose a skybox**: the project's cube, procedural and HDR sky assets
+  with their format and preview information, how many scenes use each (or `unused`), a name filter and a **None** entry.
   **Assign** writes the chosen folder name to the scene's `skyboxName` (undoable); **Cancel** writes nothing.
 - A scene under a project is labelled `Name (id)`; right-click it and choose **Rename Scene...** to change its name.
 - A project also lists its `assets`: one entry per sub-folder of the `assets` folder next to the `.abss`
@@ -67,8 +67,9 @@ The **Abyssus Properties** tool window (right side) shows the Meta of the asset 
 with the asset's type icon, name and `<type> asset`, then a Name / Value table of its `meta.json` (`format`, `formatVersion`, `version`,
 `lastModified` as a date-time, `uuid`, `type`, then the fields of `additional` under an `additional` heading). Every
 field in the file is listed, whatever the asset type; a list shows its item count. A skybox also shows its six faces
-under **Face previews**. Selecting anything that is neither an asset, an entity nor a component (a scene, the project
-file) shows a "Nothing to show" message. The panel refreshes when the asset's `meta.json` or a face image changes, and
+under **Face previews**; an HDR sky shows a tone-mapped OpenEXR preview and image information. Selecting a scene
+shows its Rendering section with the Ray Tracing switch and saved quality settings. Selecting a project or an
+unhandled property shows a "Nothing to show" message. The panel refreshes when the asset's `meta.json` or a face image changes, and
 selecting an asset never writes a file.
 
 Some properties are editable, and the header then says that an edit changes every instance that uses the asset:
@@ -132,7 +133,7 @@ project's `assets` folder beside the `.abss`:
   rotation and scale; a model that has animations plays its first one on a loop;
 - the scene's **terrain** (height data and splat textures of a `TERRAIN` asset);
 - the **skybox** named by `skyboxName` when `skyboxEnabled`;
-- the **light entities** (directional and point; a spot light is drawn as a point light) on top of the scene's
+- the **light entities** (directional, point and spot, with cone and edge softness) on top of the scene's
   ambient light and fog, each with a small marker (and a direction line for directional and spot lights);
 - the **camera entities**, each as a small body with its view frustum (near, far, field of view), pointing at its
   `lookAtId` entity when it has one.
@@ -155,7 +156,8 @@ shows the status, the reason it is unavailable or failed, and **Retry**. It need
 silicon with Metal on macOS, or a Vulkan 1.2 device with ray queries on Windows and Linux. Where it is unavailable the switch
 is disabled and says why; if it fails, the view returns to the normal renderer. Selecting, moving and rotating objects, the
 camera and the gizmos work as usual, and the scene file is never written by switching it on or off.
-`-Dabyssus.raytracing.backend=off` disables it for the IDE session.
+`-Dabyssus.raytracing.backend=off` disables it for the IDE session. See [ray tracing](raytracing/README.md) for
+backend requirements, rendering limits and native toolchains.
 
 **Add Light** in the toolbar creates a Directional light, Sun or Spot at the current orbit target and selects it.
 The same menu on a scene row places it at the origin; Spot sits 5 units above that point. A Sun starts warm and
@@ -185,7 +187,7 @@ entity; orbit, pan and zoom pause until **Free camera** is chosen again.
   scene or closing the tab returns the view to the scene as the document holds it. While playing, gizmos are off,
   and keys and mouse buttons go to the game. If the process dies, one notification shows its last output and the IDE
   keeps running.
-- A game makes Play run its own code by exporting `abyssus/play.json` (see `physics/README.md`). Without that file,
+- A game makes Play run its own code by exporting `<project>/abyssus/play.json` (see `physics/README.md`). Without that file,
   Play runs physics alone.
 
 Jolt, the physics engine, is loaded only by the play process, never by the IDE.
@@ -195,8 +197,15 @@ plain JVM library reusable in other libGDX projects; see [source provenance](doc
 for its origin and license. The GL
 render tests are opt-in: `./gradlew test -Dabyssus.glTests=true` (opens a window).
 
-To support another format, implement `net.nevinsky.abyssus.dto.AssetReader` and return it from
-`AssetReader.forExtension`.
+To add a project or scene file format, implement `ConfigFileReader` and wire it into `AssetReadCache` and
+`ProjectLayout.ASSET_EXTENSIONS`. Asset loading uses `core`'s `AssetLoader` implementations; see
+[architecture and extension points](docs/ai/architecture.md).
+
+## Development
+
+See [AGENTS.md](AGENTS.md) for build, test and sandbox commands, and [the documentation map](docs/README.md)
+for architecture, native formats and module guides. The [Control Line game](games/control-line/README.md) demonstrates
+custom components, schema export and Play through the separate physics host. Use a copy of its native project in the IDE.
 
 ## Installation
 

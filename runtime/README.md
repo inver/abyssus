@@ -4,19 +4,21 @@ Plain JVM scene runtime with no IntelliJ or plugin dependencies. Constructor-wir
 `companion object`; `checkNoSingletons` runs as part of `check`. Depends on `core` and Ashley 1.7.4.
 
 `RuntimeSceneLoader(json, fileLoader, log, registry)` is the composition root for one project folder. `load(sceneName)`
-reads a scene file of the project's `scenes` folder (by its name, extension included) and `loadText(text)` a scene from
+reads a scene file of the project's `scenes` folder (by its name, extension included) and `loadFromText(text)` a scene from
 text, including unsaved edits; neither reads or writes anything else. Both return a `SceneContext` (the new Ashley engine,
 the scene settings and the ECS document), or null: a scene that cannot be read is logged once with its cause, and a
 caller can carry on with the others. Each load logs under the scene's name. The game components of `registry` are
 checked when the loader is built, so a registration that fails (`ComponentRegistrationException`) loads no scene.
 Reading a project's name, its project file or its scene list is `core`'s (`ProjectLoader`, `Project`).
 
-`scene/` holds platform-free DTOs. `ecs/` holds components, systems, codecs, loader and writer. The plugin pairs scenes with
+The `core` scene package holds the platform-free scene DTOs and `SceneLoader`. `ecs/` holds components, systems, codecs, loader and writer. The plugin pairs scenes with
 `VirtualFile` in its own `SceneEntry`; `AbyssusCore` supplies the IDE log to this module.
 
 Each load owns its engine, entities, resolver and warning collection. Unknown components are logged once per load
 and carried unchanged; missing references become `NO_ENTITY`. Render references resolve folder names without GL.
-The writer preserves unknown JSON and component order, omits default transform fields, and never writes derived state.
+The writer preserves carried unknown component JSON, orders entities by numeric id and known components by registration,
+omits default transform fields, and never writes derived state. It does not preserve arbitrary input key order like the
+editor's document writer.
 Codecs retain unchanged source fields; callers requiring exact number text supply number-preserving JSON nodes.
 Only the render system needs a current GL context. Parsing, loading, other systems and tests need no GL.
 
@@ -25,9 +27,11 @@ Tests use plain JUnit and `testProject(name)` with Gradle's shared `abyssus.test
 `openspec/specs/scene-loading`.
 
 Native version 1 documents have root `format: "abyssus"` and integral `formatVersion: 1`; asset metadata's `version`
-is independent. `core` owns `AbyssusDocumentFormat`, shared with the editor. Enclosing project/scene parsing validates
-headers; raw ECS helpers validate only reserved payload paths. `componentIdentifiers` and renderable `class` fields
-are rejected. Asset renderables use `kind: "asset"`. Unknown native kinds keep their raw payload and do not render.
+is independent. The editor owns `AbyssusDocumentFormat` in its `format` package and guards its document readers and edits.
+The plain JVM `SceneLoader`, `ProjectLoader`, `AssetMetaLoader` and raw ECS helpers currently do not share that
+validator; callers must not assume they enforce native admission. This is a gap against the native document spec
+(see `docs/reviews/documentation-audit-2026-10-06.md`). `componentIdentifiers` and renderable `class` fields
+are forbidden by that contract. Asset renderables use `kind: "asset"`. Unknown native kinds keep their raw payload and do not render.
 No importer is provided.
 
 ## Loading components: `EcsLoader`
@@ -84,7 +88,8 @@ There are no component codecs: `EcsWriter` writes what `EcsLoader` reads.
   `archetype` of an entity and the `archetypes` table are not read or carried: Ashley has no archetypes, so a scene
   written back no longer has them.
 - Derived state (combined transform, light instance, point-to-point positions) is never written.
-- A game component (`@SceneComponent`) writes and binds only its `@Field`s, by field name.
+- A game component binds and writes Jackson-visible properties by name. `@Field` controls the exported editor schema;
+  it does not restrict runtime Jackson binding to those fields.
 
 ## Game components
 

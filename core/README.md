@@ -6,7 +6,7 @@ code is in `net.nevinsky.abyssus.core.assets`.
 
 ## Rules
 
-- **No IntelliJ or plugin imports.** Depends on `:gdx-model`, libGDX, SLF4J and Jackson only.
+- **No IntelliJ or plugin imports.** Depends on `:gdx-model`, libGDX, SLF4J, Jackson and LWJGL TinyEXR for OpenEXR decoding.
 - **Wired by constructors.** No `object` or `companion object` in `src/main` (a `data object` case of a sealed type is a
   value and is fine); pure constants are top-level `const val`. `./gradlew :core:checkNoSingletons`, part of `check`,
   enforces it; `AbyssusProjectLayout` and `GeometryUtils` are its only exceptions. Collaborators are passed in; nothing
@@ -26,7 +26,12 @@ code is in `net.nevinsky.abyssus.core.assets`.
 | `core.assets.model` | `ModelLoader` (glTF and other formats through `gdx-model`'s Assimp loader), `ModelMeta`, the ray model snapshot types and `ModelRaySnapshotLoader` |
 | `core.assets.terrain` | `TerrainLoader`, `TerrainData`, `TerrainMesh`, `TerrainMeta`, `RayTerrainSnapshot` and `TerrainRaySnapshotLoader` |
 | `core.assets.texture` | `TextureLoader` (`TEXTURE` and `PIXMAP_TEXTURE` assets: image decoded off the GL thread, uploaded as a mipmapped repeating texture), `PreparedTexture` (the decoded image; `release()` hands the `Pixmap` to a caller that uploads it itself) and `TextureMeta` |
-| `core.assets.sky` | `Sky` (a drawable background) and `RaySkySnapshot`; `cube/` six-face skyboxes, `procedural/` skies drawn by the asset's own GLSL, `hdr/` Radiance and EXR skies and their lighting environment. Each has a `*Loader` and a `*RaySnapshotLoader` |
+| `core.assets.sky` | `Sky` (a drawable background) and `RaySkySnapshot`; `cube/` six-face skyboxes, `procedural/` skies drawn by the asset's own GLSL, `hdr/` OpenEXR skies and their lighting environment. Each has a `*Loader` and a `*RaySnapshotLoader` |
+
+`core.project` holds filesystem `Project` / `ProjectLoader`; the `core` scene package holds scene DTOs and `SceneLoader`.
+These and `AssetMetaLoader` currently bind JSON without enforcing the editor's native document validator; see
+`docs/reviews/documentation-audit-2026-10-06.md` for the gap against the required format contract.
+The vendored Java noise implementation is under `src/main/java/`; generator and recipe orchestration live in the plugin.
 
 Sky shaders are in `src/main/resources/shader/sky/`.
 

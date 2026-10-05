@@ -13,16 +13,19 @@ needs them.
 | `docs/ai/glossary.md` | Native Abyssus terms | What a word means here |
 | `docs/ai/conventions.md` | JSON, writing files, errors, UI text, code style | How code is written |
 | `docs/ai/testing.md` | Test layout, fixtures, GL tests, seams | How to test |
-| Package `README.md`s (`sceneview`, `projectView`, `ecs`, `gdx-model`, `core`) | The non-obvious parts of one package | That package's internals |
-| `openspec/specs/` | One spec per capability (13 today) | **Required behavior.** Read the capability before changing a feature |
+| Package and module `README.md`s (`sceneview`, `projectView`, `ecs`, `gdx-model`, `core`, `runtime`, `physics`, `raytracing`, `games/control-line`) | The non-obvious parts of one package | That package's internals |
+| `openspec/specs/` | One spec per capability | **Required behavior.** Read the capability before changing a feature |
 | `openspec/changes/` | Changes in progress: proposal, delta specs, design, tasks | What is being changed and why |
 | `openspec/changes/archive/` | Finished changes, dated | Why past decisions were made |
+| `docs/reviews/` | Dated architecture and documentation audits | Findings at the reviewed revision; verify against current code |
 | `docs/superpowers/` | One early design and plan (the scene view shell) | History only; superseded by the specs |
 | `README.md` | User-facing feature description and the marketplace description block | What users see |
 | `CHANGELOG.md` | Release notes (`[Unreleased]` first) | What changed for users |
 
-**One place per fact.** These pages link to code and to each other rather than copying. Build commands are only in
-`AGENTS.md`, file-format details only in `docs/ai/file-formats.md`, and required behavior only in `openspec/specs/`.
+**One place per fact.** These pages link to code and to each other rather than copying. `AGENTS.md` is the command
+index; testing and module pages add focused examples. File-format details live in `docs/ai/file-formats.md`, and
+required behavior lives in `openspec/specs/`. Documentation describes the implementation; a known gap against a
+requirement belongs in a dated review, not an unannounced rewrite of the spec.
 
 ## Keeping docs true
 

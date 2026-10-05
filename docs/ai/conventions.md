@@ -2,8 +2,9 @@
 
 ## Languages and generated code
 
-- **Kotlin everywhere.** The only Java sources are the GLTF grammar inputs in
-  `src/main/java/net/nevinsky/abyssus/language/psi/` (`Gltf.bnf`, `Gltf.flex`).
+- **Kotlin for application code.** GLTF grammar inputs live in
+  `src/main/java/net/nevinsky/abyssus/language/psi/` (`Gltf.bnf`, `Gltf.flex`). The vendored FastNoiseLite implementation
+  is Java in `core/src/main/java/`; Metal/Vulkan native code and shaders live in `raytracing/src/main`.
 - **Generated code:** the lexer and parser are generated into `src/main/gen` by the `generateGltfParser` / `generateGltfLexer` Gradle tasks (run before compiling), and the directory is git-ignored. Never edit it;
   change the grammar instead.
 - **Package-private libGDX code:** `com.badlogic.gdx.backends.lwjgl3.GdxGlBridge` lives in libGDX's package on
@@ -60,9 +61,11 @@ Readers never write (`ConfigFileReader` implementations never write and never th
 - Rename Scene,
 - the skybox chooser,
 - scene view gizmo drags and Drop (the same Move Entity command),
+- component add, edit and remove, and Add Light (`SceneComponentEdits`),
+- saved ray settings and per-instance optical overrides (`SceneRayEdits`),
 - asset property edits in the properties panel (`AssetMetaEdits` in `properties/AssetMetaEdits.kt`): one `additional` key
   of an asset's `meta.json` per command, named Edit Asset Property. The rules (which keys, validation, defaults, stale
-  values) are `AssetMetaEditor`'s in `core`, which works on any JSON tree and never touches `version`, `uuid`, `type`,
+  values) are the plugin's `AssetMetaEditor`'s, which works on any JSON tree and never touches `version`, `uuid`, `type`,
   `lastModified` or unknown keys.
 
 **The one other write path: terrain files.** A scene or project file edit never takes it. Regenerating a terrain

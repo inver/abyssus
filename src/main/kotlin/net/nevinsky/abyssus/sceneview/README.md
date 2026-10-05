@@ -41,7 +41,7 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
   without making it current, so its GL objects can't be released. macOS also stops sizing that canvas's native
   surface with the component, so `SceneViewPanel` replaces such an "abandoned" canvas when the view is shown again.
 - **Asset loading lives in `core`** (`core/README.md`). `AssetStorage.prepare` runs on a pool thread (IO and decoding,
-  no GL). `build`, and `advance` for big textures, run on the render thread one slice per frame, inside this package's
+  no GL). `build`, and `upload` for big textures, run on the render thread one slice per frame, inside this package's
   `GdxRuntime.withContext`. A new project gets a new cache, so a pool thread never prepares from a stale project. A
   failed asset is remembered and logged once, through the SLF4J `Logger` `AbyssusCore` gives `AssetLoading` (`Abyssus.assets`).
 - **Changed assets reload without reopening the view.** `AssetRefresh` (UI thread, reads on the pool) compares
@@ -200,7 +200,7 @@ and never writes a scene file, so every edit, move, rotate, drop and undo reache
 
 ### Switching it from Abyssus Properties
 
-A selected scene row in the Abyssus Properties panel (`properties/SceneDetailsView`) has a **Ray Tracing** switch with the
+A selected scene row in the Abyssus Properties panel (`properties/SceneDetailsView.kt`) has a **Ray Tracing** switch with the
 same status, reason and Retry. It reaches the live view through `SceneRayControls`, a project service: each
 `SceneFileEditor` registers its view's `RayControl` (implemented by `SceneViewPanel`, which flips the same
 `RayViewRuntime`) by scene file, and `request` applies a change to every open view of that scene. With no

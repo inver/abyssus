@@ -5,7 +5,7 @@
 | Module | What | Depends on |
 |---|---|---|
 | root (`src/`) | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.10) | `:runtime`, `:core`, `:gdx-model`, `:raytracing`, Jackson, libGDX, LWJGL3-AWT |
-| `runtime/` | Plain JVM project and scene parsing, Ashley components, codecs, systems and scene loading | `:core`, Ashley |
+| `runtime/` | Plain JVM Ashley components, codecs, systems, schema export and scene loading (DTOs and filesystem parsing in `core`) | `:core`, Ashley |
 | `physics-plugin/` | **Abyssus Physics**, an IntelliJ plugin depending on Abyssus: physics overlay, Play through a separate play process, generated physics schema, bundled `play-host` folder | root plugin (`localPlugin`), `:physics` (without its dependencies), `:runtime` compile-only |
 | `physics/` | Plain JVM physics: the physics components and `PhysicsWorld` (Jolt through jolt-jni), run in a game or the play host, never in the IDE | `:runtime`, jolt-jni |
 | `games/control-line/` | **Control Line**, a libGDX desktop game (LWJGL3): flight on Jolt lines, scoring, screens, its bundled native project and its `PlayModule` for Play in Abyssus | `:physics`, libGDX LWJGL3 backend, jolt-jni natives of the build machine |
@@ -16,10 +16,10 @@
 `gdx-model`, `core`, `runtime` and `physics` must not import IntelliJ or plugin code (see their READMEs). `core` is wired by constructors:
 its composition root `AssetLoading` takes a `JsonProcessor`, an SLF4J `Logger`, an executor and the sky `ShaderSource`; in
 the IDE the light application service `AbyssusCore` builds one (IDE log, IDE pool) and hands it to every scene view.
-The plugin's `SceneReader` and `ProjectReader` parse scene and project text with `core`'s `SceneLoader.parse` and
-`JsonProcessor` while retaining their VFS stamps and listings.
+The plugin's `SceneReader` and `ProjectReader` use `DocumentParsing` and `JsonProcessor` to validate and bind
+scene and project text while retaining their VFS stamps and listings. Filesystem callers use `core`'s `SceneLoader`.
 `SceneEntry(file, scene)` keeps editor sources out of the runtime DTO. Filesystem callers use `core`'s `Project` (`file()`, `sceneFiles()`) and
-`RuntimeSceneLoader.load` / `loadText`; every load gets its own engine, resolver and warnings. Parsing and loading
+`RuntimeSceneLoader.load` / `loadFromText`; every load gets its own engine, resolver and warnings. Parsing and loading
 run on the caller's thread without GL.
 
 **Abyssus Physics** (`physics-plugin/`) runs Play outside the IDE. On Play, `PhysicsSimulationProvider` picks what
@@ -60,7 +60,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each holding a
    `core` `AssetStorage` built by `AssetLoading`) and draws markers (`SceneMarkers`) and gizmos
    (`sceneview/gizmo/`).
-4. An HDR sky also lights the content. `core`'s `HdrSkyLoader` decodes the `.hdr` on the pool thread, then
+4. An HDR sky also lights the content. `core`'s `HdrSkyLoader` decodes the `.exr` through TinyEXR on the pool thread, then
    `HdrEnvironmentBuild` builds a specular cube, an irradiance cube and six axis colors on the GPU, one step per
    frame. Once built, `SceneSkybox.environment` hands them to `SceneRenderer`, which (`SceneAmbient.of`) swaps
    `ColorAttribute.AmbientLight` for `gdx-model`'s `EnvironmentLightAttribute` after drawing the grid: the PBR shader
@@ -98,7 +98,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 
 ### Every write
 
-The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) and asset property edits (`AssetMetaEdits`, over `core`'s
+The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) and asset property edits (`AssetMetaEdits`, over the plugin's
 `AssetMetaEditor`; reference and face choices come from `properties/AssetReferenceChoices.kt`) all go through `editSceneJson`
 (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneDocumentWriter.kt`):
 
@@ -118,8 +118,8 @@ fail it between any two writes. No scene or project file is written that way.
 `EcsLoader` reads a scene's `ecs` block into an Ashley `SceneEngine`: each component entry is keyed by a class name and
 bound into that class with Jackson (`readValue`), with no per-component codec. Components it doesn't model are carried
 raw. `EcsWriter` writes the engine back in native format with Jackson too (`valueToTree`), without defaults.
-Systems are in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/system/`. Only tests use the loader, writer and systems today; `ComponentEditor` is used by
-the plugin: it adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
+Systems are in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/system/`. The Control Line game and the Play host load Ashley engines through `RuntimeSceneLoader`; the editor view
+decodes JSON directly. `ComponentEditor` is used by the plugin: it adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
 checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the properties panel and the tree actions. See
 `src/main/kotlin/net/nevinsky/abyssus/ecs/README.md`.
 
@@ -144,19 +144,18 @@ and bounds, and `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for t
 
 ## Native document validation
 
-`core`'s `AbyssusDocumentFormat` is a stateless, constructor-built validator over parsed `JsonNode`s with no Swing,
-IntelliJ or GL. `validate(document, kind)` checks the enclosing `.abss` / `.scene` / `meta.json` header
-(`format: "abyssus"`, integral `formatVersion: 1`) and, for scenes, the reserved legacy fields
-(`ecs.componentIdentifiers`, renderable `class`); it returns a `FormatRejection` or `null`. `validateEcs` and
-`requireRenderable` check only a raw `ecs` block or renderable, so `EcsLoader` and `EcsWriter`
-refuse legacy payloads even when handed no enclosing document. Extension payloads are opaque.
+The plugin's `AbyssusDocumentFormat` (`src/main/kotlin/net/nevinsky/abyssus/format/AbyssusDocumentFormat.kt`)
+is a constructor-built validator over parsed `JsonNode`s with no Swing, IntelliJ or GL dependencies. It checks the
+`.abss` / `.scene` / `meta.json` header (`format: "abyssus"`, integral `formatVersion: 1`) and reserved scene fields
+(`ecs.componentIdentifiers`, renderable `class`), returning a `FormatRejection` or null. Extension payloads are opaque.
 
-It runs on whatever thread the caller is already on: the pool thread in `AssetMetaLoader` and
-`RuntimeSceneLoader`, a read action in the DTO readers and `SceneRenderParams`, and the EDT in `editSceneJson` (before the
-mutation and again on the candidate text) and `SceneFormatListener`, always against the current document text rather
-than an accepted snapshot. Rejections surface through `documentDisplayMessage` with the localized
-`unsupportedFormat.*` messages: the existing tree/status text for projects and scenes, the unavailable presentation for
-an asset. A rejected file is never imported, formatted or edited; supported siblings keep working.
+`DocumentParsing` guards editor project/scene binding; `AssetMetaReader` guards editor metadata reads.
+`editSceneJson` validates current and candidate document text on the EDT, and `SceneFormatListener` guards formatting.
+Rejections surface through `documentDisplayMessage` and localized `unsupportedFormat.*` messages.
+
+The plain JVM loaders in `core` and raw ECS helpers in `runtime` do not currently invoke this validator. The requirement
+to validate before loading still applies, but is not enforced at all of those boundaries. See
+`docs/reviews/documentation-audit-2026-10-06.md`; do not treat the editor's guard as proof that a direct JVM load is guarded.
 
 ## Threading
 
@@ -192,8 +191,8 @@ an asset. A rejected file is never imported, formatted or edited; supported sibl
   (`src/main/kotlin/net/nevinsky/abyssus/dto/ConfigFileReader.kt`). Add the extension to `ProjectLayout.ASSET_EXTENSIONS`.
 - **A new built-in ECS component:** write the Ashley component with Jackson-friendly properties (a no-argument
   constructor; a `@JsonSerialize` / `@JsonDeserialize` class for a shape that is not plain properties), add it to the
-  built-in list and its name to `BUILT_IN_COMPONENTS` in
-  `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/EcsJson.kt`.
+  registered type list in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/EcsJson.kt` and
+  the editor kind/codec definitions in `src/main/kotlin/net/nevinsky/abyssus/ecs/scene/ComponentEditor.kt`.
 - **A game component:** annotate the class (`@SceneComponent`, `@Field`), register it through a `ComponentRegistry`
   passed to `RuntimeSceneLoader`, and export its schema; no plugin change. See `runtime/README.md`.
 - **`net.nevinsky.abyssus.componentSchemas` (IDE extension point, dynamic):** another plugin contributes a component
@@ -216,8 +215,9 @@ an asset. A rejected file is never imported, formatted or edited; supported sibl
 
 ### Saved ray settings revisions
 
-Scene DTO parsing remains in `runtime.scene.SceneParser`; it carries the optional raw `rayTracing` node without
-repairing it. Plugin `SceneRenderParams` decodes the four preferences with the pure `SceneRaySettingsCodec`.
+Scene DTOs live in the `core` scene package: `Scene.rayTracing` binds to the typed `RayTracing` DTO. Plugin
+`SceneRenderParams` re-serializes it before decoding the four preferences with `SceneRaySettingsCodec`. Properties reads
+the original JSON. These paths do not preserve the same malformed inputs; see the documentation audit for that gap.
 `RayMaterialOverrides` reads pure JSON from each Render component, and `RaySceneSnapshots` resolves unique PBR
 material IDs on the converter thread. Per-instance copied materials retain shared meshes and textures.
 Malformed settings or unresolved optical overrides cause explicit ray conversion fallback.

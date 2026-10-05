@@ -121,7 +121,8 @@ direction (`SceneContent`).
 Component map keys such as `PositionComponent` are stable schema identifiers independent of their implementation
 packages. Optional `archetypes` lists use these short identifiers. `ecs.componentIdentifiers` and
 `RenderComponent.renderable.class` are rejected even when the scene has native markers; they are not aliases.
-Low-level ECS load/write helpers validate these reserved paths without requiring an enclosing document header.
+These reserved paths are checked by the editor validator. The plain JVM ECS helpers currently lack that guard;
+see `docs/reviews/documentation-audit-2026-10-06.md` for the implementation gap.
 
 ```json
 { "renderable": { "kind": "asset", "shaderKey": "pbr",
@@ -142,8 +143,8 @@ raw and writes it back unchanged.
 
 A field equal to its declared default is left out, so a plane at its defaults is `"PlaneComponent": {}`. Values are
 stored as JSON numbers (a whole decimal as `25`), booleans, strings (text, a choice's name, an asset folder name), an
-entity id (`-1` for none), or whole `{x, y, z}` / `{r, g, b, a}` objects. An unusable value loads as the default
-with one warning naming entity, component and field.
+entity id (`-1` for none), or whole `{x, y, z}` / `{r, g, b, a}` objects. If Jackson cannot bind a component (for example, an unknown enum),
+the runtime keeps the whole component raw with a warning. Schema limits are editor validation, not runtime load-time constraints.
 
 ### The component schema (`abyssus/components.schema.json`)
 
@@ -177,7 +178,7 @@ contribute files in the same format (`docs/ai/architecture.md`, Extension points
 | `TERRAIN` | `terrainFile`, `size`, `uv`, `splatMap`, `splatBase`, `splatR`, `splatG`, `splatB`, `splatA` (texture asset `uuid`s) |
 | `SKYBOX` | `top`, `bottom`, `left`, `right`, `front`, `back` (image files in the folder) |
 | `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults) |
-| `SKYBOX_HDR` | Any; a text value naming a `.hdr` file in the folder is used, otherwise the folder's `.hdr` is found by extension |
+| `SKYBOX_HDR` | `file`: the OpenEXR image file inside the asset folder |
 | `TEXTURE`, `PIXMAP_TEXTURE`, `MATERIAL`, `SHADER` | Recognized for icons; not drawn by the scene view |
 
 `uuid` can be missing (the fixture's `skybox_default` and `tree` have none).
@@ -218,13 +219,15 @@ pixel; the fixture is `assets/skybox_physical`). The plugin supplies these unifo
 `u_heightMie`, `u_mieG`, `u_sunIntensity`. The vertex shader takes `attribute vec2 a_position` (the three corners of
 the triangle). A missing file or a compile error skips that sky and logs it.
 
-**`SKYBOX_HDR` is a native asset type.** The folder holds a
-Radiance `.hdr` image: a `.hdr` named by any `additional` text value, else the only `.hdr`, else the first by name
-(logged). Supported: header `#?RADIANCE` or `#?RGBE`, `FORMAT=32-bit_rle_rgbe` or none, resolution line
-`-Y <height> +X <width>` only, flat or new-style run-length scanlines; `EXPOSURE` and other header lines are ignored.
-The image must be equirectangular (width = 2 x height, height at most 4096); one wider than 4096 is halved while
-reading. The horizontal centre faces `-Z`, the top row `+Y`. The fixture is `assets/skybox_hdr` (64 x 32, written by
-the test helper `HdrFixtures`).
+**`SKYBOX_HDR` is a native asset type.** `additional.file` names a single-part OpenEXR image inside the asset
+folder. `ExrLoader` in `core` decodes it through TinyEXR off the GL thread. The image must be equirectangular
+(width = 2 × height, height at most 4096); it is reduced by block averaging to at most 4096 pixels wide for raster
+loading. Scanline and tiled files, including the base level of mipmapped files, are supported; multipart,
+ripmapped and subsampled color channels are rejected. RGB channels are found by name (including layer prefixes);
+Y or a lone channel can provide grayscale. Alpha is not used. Pixels are kept as RGB half floats: negative/NaN
+radiance becomes zero and positive values saturate at 65504. The horizontal centre faces `-Z`, the top row `+Y`.
+The fixture is `src/test/testData/project/Untitled/assets/skybox_hdr/`, whose metadata names `sky.exr`.
+Radiance `.hdr` decoding and extension-based file discovery are not implemented by the current loader.
 
 ### Reachability ("unused")
 
@@ -264,7 +267,9 @@ Native version 1 scenes may contain a root `rayTracing` object. Omitted fields u
 | `maxRefractionBounces` | 0 | 0–16 |
 
 A present null, fraction, string or out-of-range value is malformed. Ordinary scene editing remains available;
-ray conversion reports the error. Reading never repairs it or inserts defaults. Runtime Ray Tracing enable state
+the raw Properties reader reports the error. This is the required contract; the render path currently binds
+through a typed DTO first and may coerce malformed values or reject the whole scene. See the documentation audit.
+Editor writes never repair unrelated fields or insert their defaults. Runtime Ray Tracing enable state
 is separate and is not saved. Resetting one preference removes only that field, then an empty known container.
 Unknown members and unrelated number text remain intact.
 
