@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.assets.files.AssetFiles
 
 /**
  * Turns one asset folder into a GPU object, in the steps [AssetCache] runs: [prepare] off the GL thread (file IO,
@@ -14,7 +13,7 @@ import net.nevinsky.abyssus.assets.files.AssetFiles
  */
 interface AssetLoader<P : Any, T : Disposable> {
     /** Reads and decodes the asset [name]; null when it has no usable files. No GL; runs on a pool thread. */
-    fun prepare(files: AssetFiles, name: String): P?
+    fun prepare(name: String): P?
 
     /** Does one slice of the GPU upload; true when nothing is left. */
     fun upload(prepared: P): Boolean = true

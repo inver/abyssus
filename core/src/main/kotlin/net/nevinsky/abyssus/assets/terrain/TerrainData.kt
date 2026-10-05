@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.assets.terrain
 
-import java.io.DataInputStream
-import java.io.File
 import kotlin.math.sqrt
 
 
@@ -90,18 +88,5 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
         val h01 = heights[(gz + 1) * resolution + gx]
         val h11 = heights[(gz + 1) * resolution + gx + 1]
         return (h00 * (1 - fx) + h10 * fx) * (1 - fz) + (h01 * (1 - fx) + h11 * fx) * fz
-    }
-}
-
-/** Reads native `terrain.data` height data: big-endian floats, a square grid of heights. */
-class TerrainDataReader {
-    fun read(file: File, size: Int, uv: Float): TerrainData {
-        val heights = DataInputStream(file.inputStream().buffered()).use { input ->
-            val count = (file.length() / 4).toInt()
-            FloatArray(count) { input.readFloat() }
-        }
-        val resolution = Math.round(sqrt(heights.size.toFloat()))
-        require(resolution * resolution == heights.size) { "terrain data has ${heights.size} heights, not a square" }
-        return TerrainData(resolution, heights, size, uv)
     }
 }

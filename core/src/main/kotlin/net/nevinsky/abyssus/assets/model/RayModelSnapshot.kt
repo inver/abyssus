@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.assets.model
 
-import java.util.Collections
+import java.util.*
 
 internal fun <T> immutableModelList(values: Collection<T>): List<T> = Collections.unmodifiableList(values.toList())
 
@@ -28,6 +28,7 @@ data class RayTextureSampler(
     val wrapV: RayTextureWrap = RayTextureWrap.REPEAT,
     val mipmaps: Boolean = false,
 )
+
 data class RayModelTexture(
     val fileName: String, val usage: Int,
     val offsetU: Float, val offsetV: Float, val scaleU: Float, val scaleV: Float,
@@ -77,11 +78,13 @@ class RayModelMatrix internal constructor(matrix: FloatArray) {
     private val values = matrix.copyOf()
     fun values(): FloatArray = values.copyOf()
 }
+
 class RayModelNodePart internal constructor(
     val meshPartId: String?, val materialId: String?, boneBindTransforms: Map<String, RayModelMatrix>,
 ) {
     val boneBindTransforms: Map<String, RayModelMatrix> = Collections.unmodifiableMap(boneBindTransforms.toMap())
 }
+
 class RayModelNode internal constructor(
     val id: String?, val translation: RayModelVector, val rotation: RayModelRotation, val scale: RayModelVector,
     parts: List<RayModelNodePart>, children: List<RayModelNode>,
@@ -92,12 +95,16 @@ class RayModelNode internal constructor(
 
 /** No mutable libGDX objects or GL handles escape asset preparation. Repeated instances share these bytes. */
 class RayModelSnapshot internal constructor(
-    meshes: List<RayModelMesh>, materials: List<RayModelMaterial>, nodes: List<RayModelNode>, images: Map<String, RayModelImage>,
+    meshes: List<RayModelMesh>,
+    materials: List<RayModelMaterial>,
+    nodes: List<RayModelNode>,
+    images: Map<String, RayModelImage>,
 ) {
     val meshes: List<RayModelMesh> = immutableModelList(meshes)
     val materials: List<RayModelMaterial> = immutableModelList(materials)
     val nodes: List<RayModelNode> = immutableModelList(nodes)
     val images: Map<String, RayModelImage> = Collections.unmodifiableMap(images.toMap())
+
     /** Retained geometry/image payload; backend resource bounds are accounted separately. */
     val byteSize: Long = meshes.sumOf { it.byteSize } + images.values.sumOf { it.byteSize }
 }

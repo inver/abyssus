@@ -7,7 +7,6 @@ package net.nevinsky.abyssus.assets.sky.cube
 
 import com.badlogic.gdx.graphics.Pixmap
 import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.loading.AssetLoader
 import net.nevinsky.abyssus.core.AssetMetaLoader
 import net.nevinsky.abyssus.core.FileLoader
@@ -20,7 +19,7 @@ class SkyboxLoader(
     private val shaders: ShaderSource
 ) : AssetLoader<PreparedSkybox, SkyboxCube> {
 
-    override fun prepare(files: AssetFiles, name: String): PreparedSkybox? {
+    override fun prepare(name: String): PreparedSkybox? {
         val meta = metaLoader.loadBaseMeta(name) ?: return null
         val additional = meta.typedAdditional<SkyboxMeta>()
         val faces = ArrayList<Pixmap>(6)

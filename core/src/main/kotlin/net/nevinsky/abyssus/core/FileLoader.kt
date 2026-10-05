@@ -33,7 +33,7 @@ class FileLoader(val projectDir: File) {
     }
 
     /** The file [name] inside [folder], or null when it is blank, missing or outside the folder. */
-    fun file(folder: File, name: String?): File? {
+    private fun file(folder: File, name: String?): File? {
         if (name.isNullOrBlank()) {
             return null
         }

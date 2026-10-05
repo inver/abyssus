@@ -12,7 +12,6 @@ class AssetMetaLoader(
     private val fileLoader: FileLoader,
     private val log: org.slf4j.Logger = org.slf4j.helpers.NOPLogger.NOP_LOGGER
 ) {
-
     private val metasCache = ConcurrentHashMap<File, CachedMeta>()
 
     fun loadBaseMeta(assetName: String?): AssetMeta<Any>? {
