@@ -30,7 +30,8 @@ class JsonProcessor {
         it.indentArraysWith(indenter)
     }
 
-    private val mapper: JsonMapper = JsonMapper.builder()
+    /** The configured mapper, for code that binds JSON itself (`readValue`, readers with injected values). */
+    val mapper: JsonMapper = JsonMapper.builder()
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
         .disable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
         .addModule(KotlinModule.Builder().build())

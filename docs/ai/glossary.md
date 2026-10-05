@@ -8,7 +8,7 @@
 | **Unused asset** | An asset no scene of its project reaches (see `docs/ai/file-formats.md`). Grayed and tagged `unused` in the tree. |
 | **ECS** | Entity-component-system. In a scene file, `ecs.entities.<id>.components.<Name>Component`. In code, the Ashley-based `ecs` package (tests only so far). |
 | **Entity id** | The key under `ecs.entities`. Picking, tree selection and transform writes all use it. |
-| **Component codec** | A `ComponentCodec`: reads one native component into an Ashley component and writes it back. Components without a codec are carried raw. |
+| **Component class name** | The key of a component in a scene's `components`: the fully qualified class name or the short name of a built-in or registered component class. `EcsLoader` binds the value into that class with Jackson, `EcsWriter` writes it back. Any other key is carried raw. |
 | **Placement** | What the scene view draws for an entity (`AssetPlacement`, `LightPlacement`, `CameraPlacement` in `SceneContent`), taken directly from the `ecs` JSON. |
 | **Abyssus view** | The Abyssus pane of the Project tool window: the project / scene / asset tree. |
 | **Abyssus Properties** | The tool window showing the selected asset's `meta.json` (read only), or the components of the selected entity, whose fields are editable. |

@@ -13,6 +13,8 @@ import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.terrain.generation.sha256Hex
 import net.nevinsky.abyssus.core.AbyssusProjectLayout.META_FILE
+import net.nevinsky.abyssus.runtime.obj
+import net.nevinsky.abyssus.runtime.text
 import java.io.File
 import kotlin.collections.iterator
 

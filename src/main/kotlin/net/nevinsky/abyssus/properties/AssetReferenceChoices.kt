@@ -8,8 +8,8 @@ package net.nevinsky.abyssus.properties
 import net.nevinsky.abyssus.assets.META_FILE
 import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.sceneview.obj
-import net.nevinsky.abyssus.sceneview.text
+import net.nevinsky.abyssus.runtime.obj
+import net.nevinsky.abyssus.runtime.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.AssetMetaReader
 import java.io.File

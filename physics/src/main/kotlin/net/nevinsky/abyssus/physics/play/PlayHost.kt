@@ -5,19 +5,20 @@
 package net.nevinsky.abyssus.physics.play
 
 import com.badlogic.ashley.core.EntitySystem
-import org.slf4j.Logger
 import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.physics.PHYSICS_STEP
 import net.nevinsky.abyssus.physics.PhysicsAssets
 import net.nevinsky.abyssus.physics.PhysicsComponents
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.runtime.SceneLoading
-import net.nevinsky.abyssus.runtime.ecs.NO_ENTITY
+import net.nevinsky.abyssus.runtime.RuntimeSceneLoader
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEngine
 import net.nevinsky.abyssus.runtime.schema.ComponentRegistry
+import org.slf4j.Logger
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
@@ -78,7 +79,8 @@ class PlayHost(
         }, "play-host-reader").apply { isDaemon = true; start() }
         try {
             while (true) {
-                val next = if (playing) queue.poll(maxOf(0L, last + TICK - clock()), TimeUnit.NANOSECONDS) else queue.take()
+                val next =
+                    if (playing) queue.poll(maxOf(0L, last + TICK - clock()), TimeUnit.NANOSECONDS) else queue.take()
                 when (next) {
                     null -> Unit
                     closed, PlayFrame.Bye -> return 0
@@ -109,10 +111,12 @@ class PlayHost(
                     sendPoses()
                 }
             }
+
             PlayFrame.Play -> if (session != null && !playing) {
                 playing = true
                 last = clock()
             }
+
             PlayFrame.Pause -> playing = false
             PlayFrame.Step -> session?.let {
                 if (!playing) {
@@ -122,6 +126,7 @@ class PlayHost(
                     sendPoses()
                 }
             }
+
             PlayFrame.Stop -> endSession()
             is PlayFrame.Input -> module.input(command.event)
             else -> log.warn("Unexpected frame from the IDE: $command")
@@ -144,9 +149,19 @@ class PlayHost(
     private fun load(command: PlayFrame.Load): Session {
         val registry = ComponentRegistry { PhysicsComponents().components() + module.components().components() }
         val projectDir = Path.of(command.projectDir)
-        val loaded = SceneLoading(JsonProcessor(), log, registry = registry).load(command.sceneText, projectDir)
+        val loaded = RuntimeSceneLoader(
+            JsonProcessor(),
+            FileLoader(projectDir.toFile()),
+            log,
+            registry
+        ).loadFromText(command.sceneText)
             ?: throw IllegalArgumentException("the scene text is not a supported Abyssus scene")
-        val world = PhysicsWorld(loaded.engine, PhysicsAssets(AssetFiles(projectDir.toFile(), JsonProcessor(), log = log)), log, natives)
+        val world = PhysicsWorld(
+            loaded.engine,
+            PhysicsAssets(AssetFiles(projectDir.toFile(), JsonProcessor(), log = log)),
+            log,
+            natives
+        )
         return try {
             val selection = if (command.selection == NO_ENTITY) null else loaded.engine.ids[command.selection]
             val systems = module.systems(world, loaded.engine, selection)
@@ -174,7 +189,16 @@ class PlayHost(
         lastSent = clock()
         val poses = s.engine.ids.ids.sorted().mapNotNull { id ->
             val p = s.engine.ids[id]?.getComponent(PositionComponent::class.java) ?: return@mapNotNull null
-            EntityPose(id, p.localPosition.x, p.localPosition.y, p.localPosition.z, p.localRotation.x, p.localRotation.y, p.localRotation.z, p.localRotation.w)
+            EntityPose(
+                id,
+                p.localPosition.x,
+                p.localPosition.y,
+                p.localPosition.z,
+                p.localRotation.x,
+                p.localRotation.y,
+                p.localRotation.z,
+                p.localRotation.w
+            )
         }
         send(PlayFrame.Poses(frame, simTime, poses))
         module.lines(s.world).takeIf { it.isNotEmpty() }?.let { send(PlayFrame.Lines(it)) }

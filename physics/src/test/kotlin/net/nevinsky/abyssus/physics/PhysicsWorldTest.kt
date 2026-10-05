@@ -4,16 +4,17 @@
  */
 package net.nevinsky.abyssus.physics
 
+import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.runtime.SceneContext
+import net.nevinsky.abyssus.runtime.RuntimeSceneLoader
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.testing.warningsTo
 import net.nevinsky.abyssus.testing.failOnWarnings
 import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.runtime.SceneLoading
-import net.nevinsky.abyssus.runtime.ecs.LoadedScene
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -30,10 +31,10 @@ import java.util.Base64
 class PhysicsWorldTest {
     private val natives = JoltNatives()
 
-    private fun world(scene: LoadedScene, messages: MutableList<String>, project: File = testProject("Physics")) =
+    private fun world(scene: SceneContext, messages: MutableList<String>, project: File = testProject("Physics")) =
         PhysicsWorld(scene.engine, PhysicsAssets(AssetFiles(project, JsonProcessor())), warningsTo(messages), natives)
 
-    private fun LoadedScene.position(name: String) = named(name).getComponent(PositionComponent::class.java)
+    private fun SceneContext.position(name: String) = named(name).getComponent(PositionComponent::class.java)
 
     /** Advances [world] by [seconds] in calls of 1/60 s. */
     private fun run(world: PhysicsWorld, seconds: Float) = repeat(Math.round(seconds * 60)) { world.advance(1f / 60f) }
@@ -73,13 +74,12 @@ class PhysicsWorldTest {
         try {
             writeFlatModel(File(project, "assets/flat"))
             val messages = mutableListOf<String>()
-            val scene = requireNotNull(SceneLoading(JsonProcessor(), warningsTo(messages), registry = PhysicsComponents()).load(
+            val scene = requireNotNull(RuntimeSceneLoader(JsonProcessor(), FileLoader(project), warningsTo(messages), PhysicsComponents()).loadFromText(
                 """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
                   "0":{"components":{"NameComponent":{"name":"Flat"},"ColliderComponent":{"shape":"CONVEX_HULL"},
                     "RenderComponent":{"renderable":{"kind":"asset","shaderKey":"defaultShader","asset":{"type":"MODEL","assetName":"flat"}}}}},
                   "1":{"components":{"NameComponent":{"name":"Ball"},"PositionComponent":{"localPosition":{"y":5}},
                     "RigidBodyComponent":{},"ColliderComponent":{"shape":"SPHERE"}}}}}}""",
-                project.toPath(),
             ))
             assertEquals(emptyList<String>(), messages)
             world(scene, messages, project).use { world ->
@@ -203,9 +203,9 @@ class PhysicsWorldTest {
     // ---- the game facade ----
 
     /** A scene of [entities] (`"<id>": {components}` pairs) in a project with no assets. */
-    private fun sceneOf(entities: String): LoadedScene = requireNotNull(
-        SceneLoading(JsonProcessor(), failOnWarnings(), registry = PhysicsComponents())
-            .load("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{$entities}}}""", testProject("Physics").toPath()),
+    private fun sceneOf(entities: String): SceneContext = requireNotNull(
+        RuntimeSceneLoader(JsonProcessor(), FileLoader(testProject("Physics")), failOnWarnings(), PhysicsComponents())
+            .loadFromText("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{$entities}}}"""),
     )
 
     @Test

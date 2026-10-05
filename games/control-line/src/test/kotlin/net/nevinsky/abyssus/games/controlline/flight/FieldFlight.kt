@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.games.controlline.flight
 
+import net.nevinsky.abyssus.runtime.SceneContext
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
@@ -19,7 +20,6 @@ import net.nevinsky.abyssus.physics.PHYSICS_STEP
 import net.nevinsky.abyssus.physics.PhysicsAssets
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.runtime.ecs.LoadedScene
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 
 /**
@@ -27,7 +27,7 @@ import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
  * [change] edits the plane's component before the world is built.
  */
 class FieldFlight(planeName: String, change: PlaneComponent.() -> Unit = {}) : AutoCloseable {
-    val scene: LoadedScene = loadField()
+    val scene: SceneContext = loadField()
     val plane: Entity = scene.named(planeName)
     val settings: PlaneComponent = plane.getComponent(PlaneComponent::class.java).apply(change)
     private val assets = PhysicsAssets(AssetFiles(bundledProject().toFile(), JsonProcessor()))

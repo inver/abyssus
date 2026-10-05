@@ -10,8 +10,8 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.assets.ASSETS_DIR
 import net.nevinsky.abyssus.assets.META_FILE
-import net.nevinsky.abyssus.sceneview.obj
-import net.nevinsky.abyssus.sceneview.text
+import net.nevinsky.abyssus.runtime.obj
+import net.nevinsky.abyssus.runtime.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.terrain.MAX_TERRAIN_RESOLUTION
 import net.nevinsky.abyssus.terrain.generation.MIN_TERRAIN_RESOLUTION

@@ -9,7 +9,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import java.util.*
 
 data class Scene(
-    val id: UUID = UUID.randomUUID(),
+    /** The scene's id as the file holds it: a UUID for a scene made now, a number in older files. */
+    val id: String = UUID.randomUUID().toString(),
     val name: String? = null,
     val ambientLightEnabled: Boolean = false,
     val ambientLight: BaseLight? = null,

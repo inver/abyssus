@@ -10,6 +10,7 @@ import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.AbyssusBundle
+import net.nevinsky.abyssus.SceneEcsPaths
 import net.nevinsky.abyssus.runtime.ecs.NO_ENTITY
 import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
 import net.nevinsky.abyssus.runtime.ecs.component.LightComponent

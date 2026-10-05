@@ -14,7 +14,7 @@ class SkyboxRaySnapshotLoader(
     private val skyboxLoader: SkyboxLoader
 ) : RaySnapshotLoader<RaySkySnapshot, Nothing> {
     override fun load(meta: AssetMeta<Any>): RaySkySnapshot {
-        val skybox = skyboxLoader.loadPrepared(meta) ?: throw IllegalStateException("Skybox is null!")
+        val skybox = skyboxLoader.loadPrepared(meta)
         return resample(skybox.faces)
     }
 

@@ -8,18 +8,15 @@ package net.nevinsky.abyssus.runtime.ecs
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.core.ModelInstance
+import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.core.model.Model
 import net.nevinsky.abyssus.runtime.ecs.component.ParentComponent
 import net.nevinsky.abyssus.runtime.ecs.component.Point2PointPositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.render.AssetReference
-import net.nevinsky.abyssus.runtime.ecs.render.AssetType
 import net.nevinsky.abyssus.runtime.ecs.render.RenderableObjectDelegate
 import net.nevinsky.abyssus.runtime.ecs.render.RenderableSceneObject
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
+import org.junit.Assert.*
 import org.junit.Test
 
 class ComponentsTest {
@@ -48,7 +45,7 @@ class ComponentsTest {
     @Test
     fun delegateSetsTransformAndWrapsAsComponent() {
         val instance = ModelInstance(Model())
-        val asset = object : RenderableSceneObject by AssetReference("m", AssetType.MODEL) {
+        val asset = object : RenderableSceneObject by AssetReference("m", MetaType.MODEL) {
             override val modelInstance = instance
         }
         val delegate = RenderableObjectDelegate(asset, "defaultShader")
@@ -60,6 +57,6 @@ class ComponentsTest {
 
     @Test
     fun referenceHasNoGeometry() {
-        assertNull(AssetReference("m", AssetType.TERRAIN).modelInstance)
+        assertNull(AssetReference("m", MetaType.TERRAIN).modelInstance)
     }
 }

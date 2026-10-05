@@ -4,11 +4,7 @@
  */
 package net.nevinsky.abyssus.games.controlline
 
-import com.badlogic.gdx.ApplicationAdapter
-import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.Input
-import com.badlogic.gdx.InputAdapter
-import com.badlogic.gdx.InputMultiplexer
+import com.badlogic.gdx.*
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
@@ -16,17 +12,13 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import net.nevinsky.abyssus.assets.AssetLoading
 import net.nevinsky.abyssus.assets.ShaderSource
 import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.games.controlline.flight.CONTROL_TENSION
 import net.nevinsky.abyssus.games.controlline.flight.FlightSession
 import net.nevinsky.abyssus.games.controlline.flow.GameFlow
 import net.nevinsky.abyssus.games.controlline.flow.HandleInput
 import net.nevinsky.abyssus.games.controlline.flow.Screen
-import net.nevinsky.abyssus.games.controlline.render.Cameras
-import net.nevinsky.abyssus.games.controlline.render.FieldLoader
-import net.nevinsky.abyssus.games.controlline.render.FieldRenderer
-import net.nevinsky.abyssus.games.controlline.render.FieldScene
-import net.nevinsky.abyssus.games.controlline.render.LineSegment
+import net.nevinsky.abyssus.games.controlline.render.*
 import net.nevinsky.abyssus.games.controlline.score.ScoreTable
 import net.nevinsky.abyssus.games.controlline.screens.GameUi
 import net.nevinsky.abyssus.physics.PhysicsAssets
@@ -48,7 +40,8 @@ private val SLACK_LINE = Color(0.5f, 0.5f, 0.5f, 1f)
 class ControlLineGame(private val project: Path, private val scoresFile: Path) : ApplicationAdapter() {
     /** Problems go to stderr through `physics`'s slf4j-simple binding. */
     private val log = LoggerFactory.getLogger("control-line")
-    private val executor: ExecutorService = Executors.newFixedThreadPool(2) { r -> Thread(r, "asset-prepare").apply { isDaemon = true } }
+    private val executor: ExecutorService =
+        Executors.newFixedThreadPool(2) { r -> Thread(r, "asset-prepare").apply { isDaemon = true } }
     private val natives = JoltNatives()
     private val input = HandleInput()
     private val loader = FieldLoader(project, log)
@@ -102,18 +95,31 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
         when (screen) {
             is Screen.PlaneSelect -> parked.entity(flow.planes[screen.index].entityId)?.let { plane ->
                 val p = parked.position(plane)
-                cameras.planeSelect(p.localPosition, p.localRotation.transform(Vector3(0f, 0f, 1f)).also { it.y = 0f }.nor(), seconds)
+                cameras.planeSelect(
+                    p.localPosition,
+                    p.localRotation.transform(Vector3(0f, 0f, 1f)).also { it.y = 0f }.nor(),
+                    seconds
+                )
             }
+
             else -> if (s != null) {
                 val pilot = scene.position(s.rig.pilot).localPosition
                 cameras.flying(pilot, scene.position(s.plane).localPosition)
                 val color = if (s.flight.tension >= CONTROL_TENSION) TAUT_LINE else SLACK_LINE
                 lines = s.lines().map { (a, b) -> LineSegment(a, b, color) }
             } else {
-                cameras.menu(scene.pilot?.getComponent(PositionComponent::class.java)?.localPosition ?: Vector3(), seconds)
+                cameras.menu(
+                    scene.pilot?.getComponent(PositionComponent::class.java)?.localPosition ?: Vector3(),
+                    seconds
+                )
             }
         }
-        renderer.draw(scene, cameras.camera, lines, hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null)
+        renderer.draw(
+            scene,
+            cameras.camera,
+            lines,
+            hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null
+        )
         ui.update(s, seconds)
         ui.draw()
     }

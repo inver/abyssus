@@ -30,10 +30,17 @@ class SceneEngine : Engine() {
 }
 
 /**
- * What the loader keeps of the `ecs` block besides the entities: every other top-level member (`archetypes`,
- * `metadata`, in file order) as raw JSON, and the problems met while loading.
+ * What the loader keeps of the `ecs` block besides the entities: every other top-level member (`metadata`, in file
+ * order) as raw JSON, the components it could not bind (by entity id, then the key the file gave them, in file order),
+ * and the problems met while loading. [carried] is what lets a scene be written back without losing a component this
+ * program does not model; the writer adds it to the entity of the same id.
  */
-class SceneEcsDocument(val extras: Map<String, JsonNode>, val warnings: List<String>) {
-    val archetypes: JsonNode? get() = extras["archetypes"]
+class SceneEcsDocument(
+    val extras: Map<String, JsonNode>,
+    val warnings: List<String>,
+    val carried: Map<Long, Map<String, JsonNode>> = emptyMap(),
+    /** True when the block held its entities in an `entities` member (an older scene); the writer keeps that shape. */
+    val wrapped: Boolean = false,
+) {
     val metadata: JsonNode? get() = extras["metadata"]
 }

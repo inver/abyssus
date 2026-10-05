@@ -4,11 +4,12 @@
  */
 package net.nevinsky.abyssus.physics
 
+import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.runtime.SceneContext
+import net.nevinsky.abyssus.runtime.RuntimeSceneLoader
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.testing.warningsTo
-import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.runtime.SceneLoading
-import net.nevinsky.abyssus.runtime.ecs.LoadedScene
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import java.io.File
 
@@ -17,11 +18,11 @@ fun testProject(name: String): File =
     File(checkNotNull(System.getProperty("abyssus.testData")) { "run through Gradle: abyssus.testData is not set" }, "project/$name")
 
 /** `Main Scene` of the `Physics` fixture with the physics components registered; [messages] collects the log. */
-fun loadPhysicsScene(messages: MutableList<String> = mutableListOf()): LoadedScene {
-    val loading = SceneLoading(JsonProcessor(), warningsTo(messages), registry = PhysicsComponents())
-    return requireNotNull(loading.load(testProject("Physics").toPath().resolve("scenes/Main Scene.scene"))) { messages.joinToString("\n") }
+fun loadPhysicsScene(messages: MutableList<String> = mutableListOf()): SceneContext {
+    val loader = RuntimeSceneLoader(JsonProcessor(), FileLoader(testProject("Physics")), warningsTo(messages), PhysicsComponents())
+    return requireNotNull(loader.load("Main Scene.scene")) { messages.joinToString("\n") }
 }
 
 /** The entity named [name]. */
-fun LoadedScene.named(name: String): Entity =
+fun SceneContext.named(name: String): Entity =
     engine.entities.single { it.getComponent(NameComponent::class.java)?.name == name }

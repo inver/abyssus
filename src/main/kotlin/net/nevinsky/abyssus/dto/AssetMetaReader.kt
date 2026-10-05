@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.assets.format.DocumentKind
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.sceneview.text
+import net.nevinsky.abyssus.runtime.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 
 /** One parsed `meta.json`: its [type], its raw [json] tree, and the typed binding on request. */

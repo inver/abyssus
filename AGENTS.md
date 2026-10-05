@@ -49,8 +49,8 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   pipeline (`AssetLoader`, `CompositeAssetLoader`, `AssetStorage`), the optional CPU snapshots for ray tracing (`RaySnapshotStore`), and the
   loaders with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).
   The plugin wires it in `AssetLoading` (root package). See `core/README.md`.
-- `runtime/`: plain JVM scene parsing, project layout over `Path`, and Ashley components, codecs, systems, loader
-  and writer. Game components (`@SceneComponent`, `ComponentRegistry`) and their schema export live in its `schema` package. `SceneLoading` wires it by constructors; the plugin builds one in `AbyssusCore`. See `runtime/README.md`.
+- `runtime/`: plain JVM scene loading and Ashley components, codecs, systems, loader
+  and writer. Game components (`@SceneComponent`, `ComponentRegistry`) and their schema export live in its `schema` package. `RuntimeSceneLoader` wires it by constructors. See `runtime/README.md`.
 - `physics/`: a plain JVM library on `runtime`, root package `net.nevinsky.abyssus.physics`: the physics components
   (`PhysicsComponents`) and `PhysicsWorld`, which runs Jolt through jolt-jni (only its `jolt` package imports Jolt). See
   `physics/README.md`.
@@ -72,7 +72,7 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
 
 - **Native documents only:** `.abss`, `.scene` and asset `meta.json` require `format: "abyssus"` and integral
   `formatVersion: 1`. Validate with `AbyssusDocumentFormat` before binding, enumerating, editing or formatting.
-  Reject legacy `ecs.componentIdentifiers` and renderable `class`; components use short names, assets use `kind: "asset"`.
+  Reject legacy `ecs.componentIdentifiers` and renderable `class`; a component entry is keyed by the class name of a built-in or registered component (fully qualified, or its short name), assets use `kind: "asset"`.
   Keep unknown native extension data, unrelated numbers/key order and default omission. No importer or implicit migration.
 
 - **`physics` stays a plain JVM library wired by constructors**, like `runtime` (`./gradlew :physics:checkNoSingletons`

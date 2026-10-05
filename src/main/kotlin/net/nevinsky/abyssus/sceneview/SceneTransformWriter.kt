@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.sceneview
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.FloatNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
+import net.nevinsky.abyssus.SceneEcsPaths
 
 /**
  * What a drag changes about an entity: any of its [position], its [rotation] and, for a camera, its view [direction].

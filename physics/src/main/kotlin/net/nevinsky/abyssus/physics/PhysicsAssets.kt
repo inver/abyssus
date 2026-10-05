@@ -13,6 +13,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.assets.terrain.TerrainData
 import net.nevinsky.abyssus.assets.terrain.TerrainDataReader
+import net.nevinsky.abyssus.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader
 import net.nevinsky.abyssus.core.model.ModelData
 import net.nevinsky.abyssus.runtime.ecs.render.AssetType

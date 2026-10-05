@@ -27,7 +27,6 @@
   "skyboxEnabled": true,
   "skyboxName": "skybox_physical",
   "ecs": {
-    "entities": {
       "0": {
         "archetype": 1,
         "components": {
@@ -339,39 +338,5 @@
           }
         }
       }
-    },
-    "archetypes": {
-      "1": [
-        "PositionComponent",
-        "RenderComponent",
-        "NameComponent",
-        "TypeComponent",
-        "ParentComponent",
-        "PickableComponent"
-      ],
-      "2": [
-        "PositionComponent",
-        "RenderComponent",
-        "CameraComponent",
-        "NameComponent",
-        "TypeComponent",
-        "ParentComponent",
-        "PickableComponent",
-        "DependenciesComponent"
-      ],
-      "3": [
-        "RenderComponent",
-        "Point2PointPositionComponent"
-      ],
-      "4": [
-        "NameComponent",
-        "TypeComponent",
-        "PositionComponent",
-        "LightComponent"
-      ]
-    },
-    "metadata": {
-      "version": 1
-    }
   }
 }

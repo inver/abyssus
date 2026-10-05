@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.assetfiles.FileChange
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.sceneview.text
+import net.nevinsky.abyssus.runtime.text
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.assets.terrain.generation.*
 import net.nevinsky.abyssus.assets.terrain.generation.TERRAIN_DATA_FILE

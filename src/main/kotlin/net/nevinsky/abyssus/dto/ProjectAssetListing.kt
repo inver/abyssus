@@ -12,9 +12,9 @@ import net.nevinsky.abyssus.assets.Asset
 import net.nevinsky.abyssus.assets.AssetMeta
 import net.nevinsky.abyssus.assets.MetaType
 import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.sceneview.obj
-import net.nevinsky.abyssus.sceneview.opt
-import net.nevinsky.abyssus.sceneview.text
+import net.nevinsky.abyssus.runtime.obj
+import net.nevinsky.abyssus.runtime.opt
+import net.nevinsky.abyssus.runtime.text
 import java.io.File
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
 

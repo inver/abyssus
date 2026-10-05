@@ -10,6 +10,6 @@ class ProjectLoader(
 
     fun load(projectName: String): Project {
         val str = fileLoader.loadProjectFile(projectName).readText()
-        return jsonProcessor.parse(str, Project::class.java)
+        return jsonProcessor.parse(str, Project::class.java).copy(dir = fileLoader.projectDir.toPath())
     }
 }

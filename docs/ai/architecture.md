@@ -16,10 +16,10 @@
 `gdx-model`, `core`, `runtime` and `physics` must not import IntelliJ or plugin code (see their READMEs). `core` is wired by constructors:
 its composition root `AssetLoading` takes a `JsonProcessor`, an SLF4J `Logger`, an executor and the sky `ShaderSource`; in
 the IDE the light application service `AbyssusCore` builds one (IDE log, IDE pool) and hands it to every scene view.
-`AbyssusCore.scenes` builds `SceneLoading(json, log)` with the IDE's `Abyssus.scenes` logger. `SceneReader`
-delegates parsing to it; `ProjectReader` delegates project-name parsing while retaining its VFS stamps and listings.
-`SceneEntry(file, scene)` keeps editor sources out of the runtime DTO. Filesystem callers use `ProjectFolder` and
-`SceneLoading.project` and `SceneLoading.load` with `Path`; every load gets its own engine, resolver and warnings. Parsing and loading
+The plugin's `SceneReader` and `ProjectReader` parse scene and project text with `core`'s `SceneLoader.parse` and
+`JsonProcessor` while retaining their VFS stamps and listings.
+`SceneEntry(file, scene)` keeps editor sources out of the runtime DTO. Filesystem callers use `core`'s `Project` (`file()`, `sceneFiles()`) and
+`RuntimeSceneLoader.load` / `loadText`; every load gets its own engine, resolver and warnings. Parsing and loading
 run on the caller's thread without GL.
 
 **Abyssus Physics** (`physics-plugin/`) runs Play outside the IDE. On Play, `PhysicsSimulationProvider` picks what
@@ -115,8 +115,9 @@ fail it between any two writes. No scene or project file is written that way.
 
 ### The `ecs` package
 
-`SceneEcsLoader` reads a scene's `ecs` block into an Ashley `SceneEngine`, through one `ComponentCodec` per modeled
-component. Components it doesn't model are carried raw. `SceneEcsWriter` writes the engine back in native format.
+`EcsLoader` reads a scene's `ecs` block into an Ashley `SceneEngine`: each component entry is keyed by a class name and
+bound into that class with Jackson (`readValue`), with no per-component codec. Components it doesn't model are carried
+raw. `EcsWriter` writes the engine back in native format with Jackson too (`valueToTree`), without defaults.
 Systems are in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/system/Systems.kt`. Only tests use the loader, writer and systems today; `ComponentEditor` is used by
 the plugin: it adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
 checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the properties panel and the tree actions. See
@@ -126,7 +127,7 @@ checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the proper
 (`src/main/kotlin/net/nevinsky/abyssus/schema/ComponentSchemas.kt`): the built-in kinds plus one kind per component of
 the merged schemas, the scene project's `abyssus/components.schema.json` winning per name over the `componentSchemas`
 contributions (`SchemaMerge`, a pure function). Values of those components go through `runtime`'s `SchemaJson`, the
-same encoding the game's `ReflectiveCodec` uses. Snapshots are cached per project folder; a VFS event on a schema file
+same text the game's components are written as by `EcsWriter`. Snapshots are cached per project folder; a VFS event on a schema file
 or a plugin load/unload drops them and publishes `ComponentSchemasListener.TOPIC`, which makes the Properties panel
 re-read (in the background, where the parsing then happens). Problems are reported once each as a notification.
 
@@ -147,11 +148,11 @@ and bounds, and `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for t
 IntelliJ or GL. `validate(document, kind)` checks the enclosing `.abss` / `.scene` / `meta.json` header
 (`format: "abyssus"`, integral `formatVersion: 1`) and, for scenes, the reserved legacy fields
 (`ecs.componentIdentifiers`, renderable `class`); it returns a `FormatRejection` or `null`. `validateEcs` and
-`requireRenderable` check only a raw `ecs` block or renderable, so `SceneEcsLoader`, `SceneEcsWriter` and `RenderCodec`
+`requireRenderable` check only a raw `ecs` block or renderable, so `EcsLoader` and `EcsWriter`
 refuse legacy payloads even when handed no enclosing document. Extension payloads are opaque.
 
 It runs on whatever thread the caller is already on: the pool thread in `AssetFiles` / `AssetMetaReader` and
-`SceneLoading`, a read action in the DTO readers and `SceneRenderParams`, and the EDT in `editSceneJson` (before the
+`RuntimeSceneLoader`, a read action in the DTO readers and `SceneRenderParams`, and the EDT in `editSceneJson` (before the
 mutation and again on the candidate text) and `SceneFormatListener`, always against the current document text rather
 than an accepted snapshot. Rejections surface through `documentDisplayMessage` with the localized
 `unsupportedFormat.*` messages: the existing tree/status text for projects and scenes, the unavailable presentation for
@@ -189,11 +190,12 @@ an asset. A rejected file is never imported, formatted or edited; supported sibl
 
 - **A new asset file format:** implement `ConfigFileReader` and return it from `AssetReadCache.readerFor`
   (`src/main/kotlin/net/nevinsky/abyssus/dto/ConfigFileReader.kt`). Add the extension to `ProjectLayout.ASSET_EXTENSIONS`.
-- **A new built-in ECS component:** write a `ComponentCodec` and add it to `ComponentCodecs`
-  (`runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/scene/ComponentCodecs.kt`) and its name to
-  `BUILT_IN_COMPONENTS`.
+- **A new built-in ECS component:** write the Ashley component with Jackson-friendly properties (a no-argument
+  constructor; a `@JsonSerialize` / `@JsonDeserialize` class for a shape that is not plain properties), add it to the
+  built-in list and its name to `BUILT_IN_COMPONENTS` in
+  `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/EcsJson.kt`.
 - **A game component:** annotate the class (`@SceneComponent`, `@Field`), register it through a `ComponentRegistry`
-  passed to `SceneLoading`, and export its schema; no plugin change. See `runtime/README.md`.
+  passed to `RuntimeSceneLoader`, and export its schema; no plugin change. See `runtime/README.md`.
 - **`net.nevinsky.abyssus.componentSchemas` (IDE extension point, dynamic):** another plugin contributes a component
   schema file from its jar: `<componentSchemas resource="/schemas/markers.json"/>` in
   `<extensions defaultExtensionNs="net.nevinsky.abyssus">` (bean `ComponentSchemaBean`). Its components are edited in
