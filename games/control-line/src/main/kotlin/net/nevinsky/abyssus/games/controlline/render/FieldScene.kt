@@ -11,7 +11,6 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.core.JsonProcessor
-import net.nevinsky.abyssus.core.scene.Color
 import net.nevinsky.abyssus.games.controlline.components.ControlLineComponents
 import net.nevinsky.abyssus.games.controlline.components.PilotComponent
 import net.nevinsky.abyssus.games.controlline.flow.PlaneChoice

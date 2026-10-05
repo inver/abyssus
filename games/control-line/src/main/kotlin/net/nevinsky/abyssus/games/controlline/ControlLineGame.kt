@@ -9,9 +9,8 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
-import net.nevinsky.abyssus.assets.AssetLoading
-import net.nevinsky.abyssus.assets.ShaderSource
 import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.games.controlline.flight.CONTROL_TENSION
 import net.nevinsky.abyssus.games.controlline.flight.FlightSession
 import net.nevinsky.abyssus.games.controlline.flow.GameFlow
@@ -61,9 +60,8 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
         ShaderProgram.pedantic = false
         parked = loader.load()
         flow = GameFlow(parked.planes, ScoreTable(scoresFile))
-        val json = JsonProcessor()
-        val loading = AssetLoading(json, log, executor, ShaderSource("/shader/sky", AssetLoading::class.java))
-        renderer = FieldRenderer(loading, project.toFile(), ShaderSource("/shader", ControlLineGame::class.java))
+        val assets = fieldAssets(project.toFile(), JsonProcessor(), log, executor)
+        renderer = FieldRenderer(assets, ShaderSource("/shader", ControlLineGame::class.java))
         skin = Skin(Gdx.files.classpath("uiskin/uiskin.json"))
         ui = GameUi(flow, skin) { Gdx.app.exit() }
         cameras = Cameras(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat())
