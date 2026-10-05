@@ -111,7 +111,7 @@ inside the method that needs it. This merges with D6: each group of `AbyssusCore
   field is written from two threads.
 - Actions whose `update()` reads only data (no Swing component) switch to `ActionUpdateThread.BGT`; the scene text read
   stays behind the cached parse, with a read action where PSI or documents are touched. Actions that read the tree
-  selection component stay on EDT. Each action is classified in task 11.5.
+  selection component stay on EDT. Each action is classified in task 10.5.
 - New async work uses a coroutine scope injected into a service. No existing callback code is rewritten.
 
 ### D12. Localized action text and dynamic reload (P6, P8)
@@ -129,7 +129,7 @@ category (static caches, a leaked disposable, the native libraries).
   prototype in task 3.1 is not smaller than what it replaces, stop and keep the switches.
 - **Hidden behavior in copies.** The two `parse` copies could differ in subtle ways (the unsaved one drops errors
   silently). Task 1.1 writes a test first that pins both behaviors on the Untitled fixture and on a malformed meta.
-- **The verifier may report a lot at first.** Task 11.1 only records the baseline; fixes are limited to what P2 names.
+- **The verifier may report a lot at first.** Task 10.1 only records the baseline; fixes are limited to what P2 names.
 - **BGT `update()` can expose a hidden Swing access** and throw in a slow-operation assertion. Each switch is tested and
   the list of switched actions is explicit.
 - **Docs and the OpenSpec specs** must change in the same change that makes them wrong; each phase's last task does so.

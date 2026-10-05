@@ -3,7 +3,7 @@
 Every phase changes no behavior: existing tests pass unchanged apart from moves and renames named in a task. Each
 phase ends green on `./gradlew check` before the next starts. Single plugin tests:
 `./gradlew :test --tests '<class>'`; module tests: `./gradlew :core:test`, `:runtime:test`, `:physics:test`.
-Only task 11.9 needs `runIde`; tasks marked (GL) run only with `-Dabyssus.glTests=true` on a machine with a display.
+Only task 10.9 needs `runIde`; tasks marked (GL) run only with `-Dabyssus.glTests=true` on a machine with a display.
 
 ## 1. One meta.json binding (F1; spec `asset-loading`)
 
@@ -93,35 +93,35 @@ Only task 11.9 needs `runIde`; tasks marked (GL) run only with `-Dabyssus.glTest
 - [ ] 9.3 List the seams in `PhysicsWorld` (bodies, shapes, stepping, queries) against `PhysicsWorldTest`; split only
   where a seam already has its own tests. Verify with `./gradlew :physics:test` and `:physics:checkNoSingletons`.
 
-## 11. Platform best practices (P1–P9)
+## 10. Platform best practices (P1–P9)
 
-- [ ] 11.1 Baseline: add `pluginVerification { ides { recommended() } }` and run `./gradlew verifyPlugin` on a machine
+- [ ] 10.1 Baseline: add `pluginVerification { ides { recommended() } }` and run `./gradlew verifyPlugin` on a machine
   with network access to the IDE downloads; save the report summary in this design (D9). Verify that the task runs
   and lists the internal-API usages from P2.
-- [ ] 11.2 Fix CI: call `verifyPlugin` instead of `runPluginVerifier` in `.github/workflows/build.yml`, and update the
+- [ ] 10.2 Fix CI: call `verifyPlugin` instead of `runPluginVerifier` in `.github/workflows/build.yml`, and update the
   workflow actions to supported versions. Verify by running the workflow on the branch (a green run uploads the
   verifier report).
-- [ ] 11.3 Isolate the internal API in `AbyssusProjectViewPane.kt` with a comment per use and an allowlist for known
+- [ ] 10.3 Isolate the internal API in `AbyssusProjectViewPane.kt` with a comment per use and an allowlist for known
   hits; replace any use that has a public equivalent. Verify with `verifyPlugin` (no new hits) and `AbyssusViewTest`.
-- [ ] 11.4 Move action, tool window and notification text into `AbyssusBundle.properties` and
+- [ ] 10.4 Move action, tool window and notification text into `AbyssusBundle.properties` and
   `AbyssusPhysicsBundle.properties` (`action.<id>.text`, `toolwindow.stripe.<id>`, `notification.group.<id>`); remove
   the `text=` attributes. Verify with a test that loads `plugin.xml` and checks each action has a bundle key, and with
-  `scripts/check-docs.sh`. Runtime titles in runIde: step 11.9.
-- [ ] 11.5 Classify every `getActionUpdateThread()` (list in design D11); switch the data-only ones to BGT. Verify with
+  `scripts/check-docs.sh`. Runtime titles in runIde: step 10.9.
+- [ ] 10.5 Classify every `getActionUpdateThread()` (list in design D11); switch the data-only ones to BGT. Verify with
   `ComponentActionsTest`, `AddLightActionTest`, `NewTerrainActionTest` plus a test that `update()` of each switched
   action runs off the EDT without error.
-- [ ] 11.6 Remove service lookups from constructors of `SceneReader`, `SceneDocumentCache`, `ProjectReader` and
+- [ ] 10.6 Remove service lookups from constructors of `SceneReader`, `SceneDocumentCache`, `ProjectReader` and
   `AssetReadCache`; build `AbyssusCore` groups lazily (with task 6.2). Verify with
   `rg -n 'service<' src/main/kotlin` showing only entry points and `AbyssusViewTest`.
-- [ ] 11.7 Make the skybox thumbnail load publish one immutable result to the EDT. Verify with `SkyboxChooserDialogTest`.
-- [ ] 11.8 Add to `docs/ai/conventions.md`: service scopes for new coroutines, `update()` thread rule, no service lookup
+- [ ] 10.7 Make the skybox thumbnail load publish one immutable result to the EDT. Verify with `SkyboxChooserDialogTest`.
+- [ ] 10.8 Add to `docs/ai/conventions.md`: service scopes for new coroutines, `update()` thread rule, no service lookup
   in constructors, internal-API policy. Verify with `scripts/check-docs.sh`.
-- [ ] 11.9 Manual (runIde, cannot be done headless): (a) action and tool window titles unchanged; (b) install,
+- [ ] 10.9 Manual (runIde, cannot be done headless): (a) action and tool window titles unchanged; (b) install,
   update and uninstall the built plugin zip, and `Abyssus Physics`, without restart; (c) open a scene, close the
   project, and check `idea.log` for disposer or leaked-thread messages. List exact steps for the user if not run.
 
-## 12. Finish
+## 11. Finish
 
-- [ ] 12.1 Run `./gradlew check` and `scripts/check-docs.sh`; fix only what this change caused and report anything
+- [ ] 11.1 Run `./gradlew check` and `scripts/check-docs.sh`; fix only what this change caused and report anything
   failing for other reasons with its cause.
-- [ ] 12.2 Archive the change, which merges the two spec deltas into `openspec/specs/`.
+- [ ] 11.2 Archive the change, which merges the two spec deltas into `openspec/specs/`.
