@@ -86,6 +86,41 @@ Task 9.1 diffs `MetalRayBackend` and `VulkanRayBackend` session code and records
 shared base or helper only for blocks that are identical in behavior; otherwise leave them and say so. Same for
 `PhysicsWorld`: split only along seams covered by separate tests (`PhysicsWorldTest`).
 
+### D9. Verifier first (P1, P2)
+
+Configure `intellijPlatform { pluginVerification { ides { recommended() } } }` and run `verifyPlugin` once before any
+other platform work, so the baseline is known. For each internal-API hit in the project view pane, either replace it
+with a public API or keep it in one file (`AbyssusProjectViewPane.kt`), comment why, and list it in an allowlist of
+known problems in the verifier configuration so new hits fail CI. No replacement is forced when the public API cannot
+build the same tree.
+
+### D10. Constructors do not look up services (P3)
+
+Entry points (actions, factories, providers, the pane) read services and pass them in. Secondary constructors that call
+`service<...>()` are removed from `SceneReader`, `SceneDocumentCache`, `ProjectReader` and `AssetReadCache`; their
+dependencies come from `@Service` constructors that take only `Project` (allowed) and read the shared holder lazily
+inside the method that needs it. This merges with D6: each group of `AbyssusCore` is created on first access
+(`lazy`), so the first call to one group does not build the others.
+
+### D11. Threads and `update()` (P4, P5)
+
+- The single-thread ray worker and the ray convert thread stay plugin-owned: they own native resources and need thread
+  affinity, which a platform pool does not give. Both are closed in `AbyssusCore.dispose`.
+- `executeOnPooledThread` in `SkyboxChooserDialog` becomes a `SwingWorker`-free pattern: build the thumbnail list off
+  the EDT into an immutable result, then hand it to the EDT in one `invokeLater` that stores and repaints. No mutable
+  field is written from two threads.
+- Actions whose `update()` reads only data (no Swing component) switch to `ActionUpdateThread.BGT`; the scene text read
+  stays behind the cached parse, with a read action where PSI or documents are touched. Actions that read the tree
+  selection component stay on EDT. Each action is classified in task 11.5.
+- New async work uses a coroutine scope injected into a service. No existing callback code is rewritten.
+
+### D12. Localized action text and dynamic reload (P6, P8)
+
+Action, tool window and notification names move to bundle keys (`action.Abyssus.RenameScene.text` and so on) while the
+English text stays identical. Dynamic reload is checked by hand: install the built zip into a running sandbox IDE,
+update it, and uninstall it without restart; if unloading fails, fix what the log names under the `DynamicPlugins`
+category (static caches, a leaked disposable, the native libraries).
+
 ## Risks / Trade-offs
 
 - **Churn conflicts** with open changes touching `AssetLoading`, `SceneViewPanel` and ray files. Mitigation: phases are
@@ -94,6 +129,9 @@ shared base or helper only for blocks that are identical in behavior; otherwise 
   prototype in task 3.1 is not smaller than what it replaces, stop and keep the switches.
 - **Hidden behavior in copies.** The two `parse` copies could differ in subtle ways (the unsaved one drops errors
   silently). Task 1.1 writes a test first that pins both behaviors on the Untitled fixture and on a malformed meta.
+- **The verifier may report a lot at first.** Task 11.1 only records the baseline; fixes are limited to what P2 names.
+- **BGT `update()` can expose a hidden Swing access** and throw in a slow-operation assertion. Each switch is tested and
+  the list of switched actions is explicit.
 - **Docs and the OpenSpec specs** must change in the same change that makes them wrong; each phase's last task does so.
 
 ## Open Questions
