@@ -5,8 +5,9 @@
 package net.nevinsky.abyssus.physics.plugin
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.sceneview.SceneContent
 import net.nevinsky.abyssus.sceneview.Vec3
@@ -20,8 +21,8 @@ class PhysicsOverlayGeometryTest {
     private val json = JsonProcessor()
     private val scene = json.parse(File(project, "scenes/Main Scene.scene").readText(), Scene::class.java)
     private val content = SceneContent.of(scene)
-    private val files = AssetFiles(project, json)
-    private val geometry = PhysicsOverlayGeometry { name -> files.terrain(name)?.size?.toFloat() }
+    private val metas = AssetMetaLoader(json, FileLoader(project))
+    private val geometry = PhysicsOverlayGeometry { name -> metas.terrainSize(name) }
 
     private fun extent(segments: List<OverlaySegment>, axis: (Vec3) -> Float): Float {
         val values = segments.flatMap { listOf(axis(it.from), axis(it.to)) }
@@ -86,7 +87,7 @@ class PhysicsOverlayGeometryTest {
         val outline = geometry.segments(content, scene.ecs, null).filter { it.color == PhysicsColors.STATIC && it.from.y == 0f && it.to.y == 0f }
         assertEquals(4, outline.size)
         val terrain = content.terrains.single()
-        val size = files.terrain(terrain.assetName)!!.size.toFloat()
+        val size = metas.terrainSize(terrain.assetName)!!
         assertEquals(size, extent(outline) { it.x }, 1e-2f)
         assertEquals(terrain.transform.position.x, outline.minOf { minOf(it.from.x, it.to.x) }, 1e-3f)
     }

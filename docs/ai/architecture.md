@@ -151,7 +151,7 @@ IntelliJ or GL. `validate(document, kind)` checks the enclosing `.abss` / `.scen
 `requireRenderable` check only a raw `ecs` block or renderable, so `EcsLoader` and `EcsWriter`
 refuse legacy payloads even when handed no enclosing document. Extension payloads are opaque.
 
-It runs on whatever thread the caller is already on: the pool thread in `AssetFiles` / `AssetMetaReader` and
+It runs on whatever thread the caller is already on: the pool thread in `AssetMetaLoader` and
 `RuntimeSceneLoader`, a read action in the DTO readers and `SceneRenderParams`, and the EDT in `editSceneJson` (before the
 mutation and again on the candidate text) and `SceneFormatListener`, always against the current document text rather
 than an accepted snapshot. Rejections surface through `documentDisplayMessage` with the localized

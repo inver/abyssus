@@ -12,8 +12,10 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.sceneview.LineSink
 import net.nevinsky.abyssus.sceneview.OverlayView
 import net.nevinsky.abyssus.sceneview.SceneContent
@@ -35,8 +37,9 @@ class PhysicsOverlay : SceneOverlay {
     @Volatile
     var shown = false
 
-    private var files: AssetFiles? = null
-    private val geometry = PhysicsOverlayGeometry { name -> files?.terrain(name)?.size?.toFloat() }
+    private var projectDir: File? = null
+    private var metas: AssetMetaLoader? = null
+    private val geometry = PhysicsOverlayGeometry { name -> metas?.terrainSize(name) }
 
     private var lastContent: SceneContent? = null
     private var lastEcs: JsonNode? = null
@@ -46,7 +49,7 @@ class PhysicsOverlay : SceneOverlay {
     override fun draw(view: OverlayView, lines: LineSink) {
         if (!shown) return
         val dir = view.projectDir
-        if (dir != null && files?.projectDir != dir.absoluteFile) files = AssetFiles(dir, JsonProcessor())
+        if (dir != null && projectDir != dir.absoluteFile) useProject(dir)
         if (view.content !== lastContent || view.ecs !== lastEcs || view.selectedId != lastSelection) {
             segments = geometry.segments(view.content, view.ecs, view.selectedId)
             lastContent = view.content
@@ -68,6 +71,11 @@ class PhysicsOverlay : SceneOverlay {
 
     /** For tests: the project folder terrain sizes are read from. */
     internal fun useProject(dir: File) {
-        files = AssetFiles(dir, JsonProcessor())
+        projectDir = dir.absoluteFile
+        metas = AssetMetaLoader(JsonProcessor(), FileLoader(dir.absoluteFile))
     }
 }
+
+/** The edge length of the terrain asset [name] from its meta; null without a terrain meta. */
+internal fun AssetMetaLoader.terrainSize(name: String): Float? =
+    loadBaseMeta(name)?.additional.let { it as? TerrainMeta }?.size?.toFloat()

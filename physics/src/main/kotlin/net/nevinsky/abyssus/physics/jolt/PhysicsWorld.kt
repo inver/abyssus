@@ -46,7 +46,7 @@ import net.nevinsky.abyssus.physics.PhysicsAssets
 import net.nevinsky.abyssus.physics.PhysicsBody
 import net.nevinsky.abyssus.physics.PhysicsConstraint
 import net.nevinsky.abyssus.physics.RigidBodyComponent
-import net.nevinsky.abyssus.runtime.ecs.NO_ENTITY
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.runtime.ecs.component.ParentComponent
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent

@@ -1,27 +1,24 @@
 package net.nevinsky.abyssus.runtime.ecs.component
 
-import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_NEAR
-import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FAR
-import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
-import net.nevinsky.abyssus.runtime.ecs.vectorDiff
-import net.nevinsky.abyssus.runtime.ecs.putIf
-import net.nevinsky.abyssus.runtime.ecs.number
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.core.JsonGenerator
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Vector3
+import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FAR
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_NEAR
+import net.nevinsky.abyssus.runtime.ecs.number
+import net.nevinsky.abyssus.runtime.ecs.putIf
+import net.nevinsky.abyssus.runtime.ecs.vectorDiff
 
 /** [camera]'s `direction` is the file's `viewPointPosition`. Bound by [CameraComponentDeserializer]. */
 @JsonDeserialize(using = CameraComponentDeserializer::class)

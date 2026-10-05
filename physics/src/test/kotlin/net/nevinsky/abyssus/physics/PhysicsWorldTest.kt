@@ -12,7 +12,6 @@ import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.testing.warningsTo
 import net.nevinsky.abyssus.testing.failOnWarnings
-import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
@@ -32,7 +31,7 @@ class PhysicsWorldTest {
     private val natives = JoltNatives()
 
     private fun world(scene: SceneContext, messages: MutableList<String>, project: File = testProject("Physics")) =
-        PhysicsWorld(scene.engine, PhysicsAssets(AssetFiles(project, JsonProcessor())), warningsTo(messages), natives)
+        PhysicsWorld(scene.engine, PhysicsAssets(project), warningsTo(messages), natives)
 
     private fun SceneContext.position(name: String) = named(name).getComponent(PositionComponent::class.java)
 

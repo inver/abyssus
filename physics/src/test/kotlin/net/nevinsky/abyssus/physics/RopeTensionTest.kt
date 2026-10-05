@@ -10,7 +10,6 @@ import net.nevinsky.abyssus.runtime.SceneContext
 import net.nevinsky.abyssus.runtime.RuntimeSceneLoader
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.testing.failOnWarnings
-import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
 import org.junit.Assert.assertEquals
@@ -28,7 +27,7 @@ class RopeTensionTest {
     )
 
     private fun world(scene: SceneContext) =
-        PhysicsWorld(scene.engine, PhysicsAssets(AssetFiles(testProject("Physics"), JsonProcessor())), failOnWarnings(), JoltNatives())
+        PhysicsWorld(scene.engine, PhysicsAssets(testProject("Physics")), failOnWarnings(), JoltNatives())
 
     private fun distance(rope: PhysicsConstraint): Float {
         val a = Vector3()

@@ -40,8 +40,12 @@ class CompositeAssetLoader(
     }
 }
 
-/** An asset prepared by one of a [CompositeAssetLoader]'s loaders, with the loader that finishes it. */
-class PreparedAsset internal constructor(private val loader: AssetLoader<Any, Disposable>, private val value: Any) {
+/**
+ * An asset prepared by one of a [CompositeAssetLoader]'s loaders, with the loader that finishes it. [value] is what that
+ * loader prepared (a `PreparedModel`, a `PreparedTerrain`), for a reader that needs the CPU data and no GL; release it
+ * with [CompositeAssetLoader.discard] when it is not built.
+ */
+class PreparedAsset internal constructor(private val loader: AssetLoader<Any, Disposable>, val value: Any) {
     internal fun upload() = loader.upload(value)
     internal fun dependencies() = loader.dependencies(value)
     internal fun build(assets: BuiltAssets) = loader.build(value, assets)

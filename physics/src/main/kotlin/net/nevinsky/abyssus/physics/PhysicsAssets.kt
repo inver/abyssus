@@ -5,47 +5,82 @@
 package net.nevinsky.abyssus.physics
 
 import com.badlogic.ashley.core.Entity
-import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.terrain.TerrainData
-import net.nevinsky.abyssus.assets.terrain.TerrainDataReader
+import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.core.assets.MetaType
+import net.nevinsky.abyssus.core.assets.loading.CompositeAssetLoader
+import net.nevinsky.abyssus.core.assets.model.ModelLoader
+import net.nevinsky.abyssus.core.assets.model.PreparedModel
 import net.nevinsky.abyssus.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.core.assets.terrain.PreparedTerrain
+import net.nevinsky.abyssus.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader
 import net.nevinsky.abyssus.core.model.ModelData
-import net.nevinsky.abyssus.runtime.ecs.render.AssetType
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.runtime.ecs.render.RenderComponent
 import net.nevinsky.abyssus.runtime.ecs.render.RenderableObjectDelegate
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
+import java.io.File
 
 /**
  * Reads what colliders need from a project's asset folders, with no GL: the vertex positions of a model, for a convex
  * hull, and the heights of a terrain, for a height field. Each asset is read once per instance.
  */
-class PhysicsAssets(
-    private val files: AssetFiles,
-    private val models: AssimpModelLoader = AssimpModelLoader(),
-    private val terrains: TerrainDataReader = TerrainDataReader(),
-) {
+class PhysicsAssets(private val loader: CompositeAssetLoader) {
+    /** Assets of the project in [projectDir], with its own file access and meta reading. */
+    constructor(projectDir: File, json: JsonProcessor = JsonProcessor(), log: Logger = NOPLogger.NOP_LOGGER) :
+        this(FileLoader(projectDir), json, log)
+
+    private constructor(fileLoader: FileLoader, json: JsonProcessor, log: Logger) :
+        this(AssetMetaLoader(json, fileLoader, log), fileLoader)
+
+    private constructor(metaLoader: AssetMetaLoader, fileLoader: FileLoader) : this(
+        CompositeAssetLoader(
+            metaLoader,
+            mapOf(
+                MetaType.MODEL to ModelLoader(metaLoader, AssimpModelLoader(), fileLoader, decodeTextures = false),
+                MetaType.TERRAIN to TerrainLoader(fileLoader, metaLoader),
+            ),
+        ),
+    )
+
     private val points = HashMap<String, List<Vector3>?>()
     private val heights = HashMap<String, TerrainData?>()
 
     /** The asset folder [entity]'s render component names when it is of [type]; null otherwise. */
-    fun assetName(entity: Entity, type: AssetType): String? {
+    fun assetName(entity: Entity, type: MetaType): String? {
         val asset = (entity.getComponent(RenderComponent::class.java)?.renderable as? RenderableObjectDelegate)?.asset ?: return null
         return asset.assetName.takeIf { asset.type == type }
     }
 
     /** Every vertex position of the model in [assetName], in model space (node transforms applied); null without one. */
     fun modelPoints(assetName: String): List<Vector3>? = points.getOrPut(assetName) {
-        files.model(assetName)?.let { file -> positions(models.loadData(FileHandle(file))) }
+        runCatchingKeepingCancellation {
+            val prepared = loader.prepare(assetName) ?: return@runCatchingKeepingCancellation null
+            try {
+                (prepared.value as? PreparedModel)?.let { positions(it.data) }
+            } finally {
+                loader.discard(prepared)
+            }
+        }.getOrNull()
     }
 
     /** The heights of the terrain in [assetName]; null without terrain data. */
     fun terrain(assetName: String): TerrainData? = heights.getOrPut(assetName) {
-        files.terrain(assetName)?.takeIf { it.data.isFile }?.let { terrains.read(it.data, it.size, it.uv) }
+        runCatchingKeepingCancellation {
+            val prepared = loader.prepare(assetName) ?: return@runCatchingKeepingCancellation null
+            try {
+                (prepared.value as? PreparedTerrain)?.data
+            } finally {
+                loader.discard(prepared)
+            }
+        }.getOrNull()
     }
 
     private fun positions(data: ModelData): List<Vector3> {

@@ -5,7 +5,6 @@
 package net.nevinsky.abyssus.physics.play
 
 import com.badlogic.ashley.core.EntitySystem
-import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.core.FileLoader
 import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.physics.PHYSICS_STEP
@@ -158,7 +157,7 @@ class PlayHost(
             ?: throw IllegalArgumentException("the scene text is not a supported Abyssus scene")
         val world = PhysicsWorld(
             loaded.engine,
-            PhysicsAssets(AssetFiles(projectDir.toFile(), JsonProcessor(), log = log)),
+            PhysicsAssets(projectDir.toFile(), log = log),
             log,
             natives
         )

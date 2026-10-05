@@ -10,7 +10,6 @@ import net.nevinsky.abyssus.runtime.SceneContext
 import net.nevinsky.abyssus.runtime.RuntimeSceneLoader
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.testing.warningsTo
-import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.games.controlline.components.ControlLineComponents
 import net.nevinsky.abyssus.physics.PhysicsAssets
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
@@ -30,7 +29,7 @@ fun loadField(messages: MutableList<String> = mutableListOf()): SceneContext {
 
 /** A physics world over [scene] of the bundled project. */
 fun fieldWorld(scene: SceneContext, messages: MutableList<String> = mutableListOf()): PhysicsWorld =
-    PhysicsWorld(scene.engine, PhysicsAssets(AssetFiles(bundledProject().toFile(), JsonProcessor())),
+    PhysicsWorld(scene.engine, PhysicsAssets(bundledProject().toFile()),
         warningsTo(messages), JoltNatives())
 
 /** The entity named [name]. */

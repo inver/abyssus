@@ -22,18 +22,23 @@ import net.nevinsky.abyssus.core.model.ModelData
 import kotlin.coroutines.cancellation.CancellationException
 
 
-/** Model assets through Assimp: parsed and their images decoded off the GL thread, textures uploaded one per frame. */
+/**
+ * Model assets through Assimp: parsed and their images decoded off the GL thread, textures uploaded one per frame. With
+ * [decodeTextures] false only the geometry is read (no image is decoded, so no libGDX natives are needed): for a reader
+ * of the prepared model's data, never for building one.
+ */
 class ModelLoader(
     private val metaLoader: AssetMetaLoader,
     private val assimp: AssimpModelLoader,
     private val fileLoader: FileLoader,
     private val raySnapshots: RaySnapshotStore<RayModelSnapshot, RayModelSource>? = null,
+    private val decodeTextures: Boolean = true,
 ) : AssetLoader<PreparedModel, Model> {
     override fun loadPrepared(meta: AssetMeta<Any>): PreparedModel? {
         val capture = raySnapshots?.preparation(meta.name)
         val handle = FileHandle(fileLoader.loadAssetFile(meta.name, meta.typedAdditional<ModelMeta>().file))
         val data = assimp.loadData(handle)
-        val images = assimp.decodeTextures(data, handle)
+        val images = if (decodeTextures) assimp.decodeTextures(data, handle) else mutableMapOf()
         val prepared = PreparedModel(data, handle, images)
         try {
             capture?.offer(RayModelSource(data, images))

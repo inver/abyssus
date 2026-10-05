@@ -11,7 +11,6 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import net.nevinsky.abyssus.assets.AssetLoading
 import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.files.AssetFiles
 import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.games.controlline.flight.CONTROL_TENSION
 import net.nevinsky.abyssus.games.controlline.flight.FlightSession
@@ -139,7 +138,7 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
         val scene = loader.load()
         val plane = scene.entity(screen.plane.entityId) ?: return
         val pilot = scene.pilot ?: return
-        val assets = PhysicsAssets(AssetFiles(project.toFile(), JsonProcessor()))
+        val assets = PhysicsAssets(project.toFile())
         session = FlightSession(scene.engine, pilot, plane, assets, log, natives)
         sessionScene = scene
         flying = screen

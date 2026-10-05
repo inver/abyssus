@@ -9,8 +9,6 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.testing.failOnWarnings
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.games.controlline.bundledProject
 import net.nevinsky.abyssus.games.controlline.components.PilotComponent
 import net.nevinsky.abyssus.games.controlline.components.PlaneComponent
@@ -30,7 +28,7 @@ class FieldFlight(planeName: String, change: PlaneComponent.() -> Unit = {}) : A
     val scene: SceneContext = loadField()
     val plane: Entity = scene.named(planeName)
     val settings: PlaneComponent = plane.getComponent(PlaneComponent::class.java).apply(change)
-    private val assets = PhysicsAssets(AssetFiles(bundledProject().toFile(), JsonProcessor()))
+    private val assets = PhysicsAssets(bundledProject().toFile())
     val world = PhysicsWorld(scene.engine, assets, failOnWarnings(), JoltNatives())
     val ground = groundOf(scene.engine, assets)
     val pilot: Entity = scene.engine.entities.single { it.getComponent(PilotComponent::class.java) != null }

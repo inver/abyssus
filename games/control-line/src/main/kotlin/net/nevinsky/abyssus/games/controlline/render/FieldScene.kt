@@ -19,7 +19,7 @@ import net.nevinsky.abyssus.games.controlline.flow.planeChoices
 import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
-import net.nevinsky.abyssus.runtime.ecs.render.AssetType
+import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.runtime.ecs.render.RenderComponent
 import net.nevinsky.abyssus.runtime.ecs.render.RenderableObjectDelegate
 import org.slf4j.Logger
@@ -53,11 +53,11 @@ class FieldScene(val loaded: SceneContext) {
 
     /** Entities drawn with a model: (entity, model asset folder). */
     val models: List<Pair<Entity, String>> =
-        entities.values.mapNotNull { e -> asset(e, AssetType.MODEL)?.let { e to it } }
+        entities.values.mapNotNull { e -> asset(e, MetaType.MODEL)?.let { e to it } }
 
     /** Entities drawn as terrain: (entity, terrain asset folder). */
     val terrains: List<Pair<Entity, String>> =
-        entities.values.mapNotNull { e -> asset(e, AssetType.TERRAIN)?.let { e to it } }
+        entities.values.mapNotNull { e -> asset(e, MetaType.TERRAIN)?.let { e to it } }
 
     val skyName: String? = loaded.scene.skyboxName.takeIf { loaded.scene.skyboxEnabled != false }
 
@@ -95,7 +95,7 @@ class FieldScene(val loaded: SceneContext) {
         return (toward ?: p.localRotation.transform(Vector3(0f, 0f, -1f))).nor()
     }
 
-    private fun asset(e: Entity, type: AssetType): String? {
+    private fun asset(e: Entity, type: MetaType): String? {
         val asset =
             (e.getComponent(RenderComponent::class.java)?.renderable as? RenderableObjectDelegate)?.asset ?: return null
         return asset.assetName.takeIf { asset.type == type }

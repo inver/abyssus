@@ -77,7 +77,7 @@ class PlayHostMainTest {
 
     @Test
     fun aSceneThatCannotLoadIsReported() = playing { process, _, input, output ->
-        protocol.write(output, PlayFrame.Load("{}", testProject("Physics").path, -1))
+        protocol.write(output, PlayFrame.Load("not a scene", testProject("Physics").path, -1))
         val error = protocol.read(input) as PlayFrame.Error
         assertTrue(error.message, error.message.contains("could not be loaded"))
         protocol.write(output, PlayFrame.Bye)
