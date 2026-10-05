@@ -5,16 +5,16 @@
 
 package net.nevinsky.abyssus.assets.model
 
-import net.nevinsky.abyssus.assets.loading.AssetLoader
-import net.nevinsky.abyssus.assets.loading.TextureUploadQueue
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import net.nevinsky.abyssus.assets.files.AssetFiles
+import net.nevinsky.abyssus.assets.loading.AssetLoader
+import net.nevinsky.abyssus.assets.loading.TextureUploadQueue
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader
 import net.nevinsky.abyssus.core.loader.PreloadedTextureProvider
 import net.nevinsky.abyssus.core.model.Model
 import net.nevinsky.abyssus.core.model.ModelData
-import net.nevinsky.abyssus.assets.files.AssetFiles
 import kotlin.coroutines.cancellation.CancellationException
 
 

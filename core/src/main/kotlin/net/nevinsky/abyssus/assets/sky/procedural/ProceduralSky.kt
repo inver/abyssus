@@ -11,8 +11,8 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.assets.sky.Sky
-import net.nevinsky.abyssus.assets.sky.createFullscreenTriangle
 import net.nevinsky.abyssus.assets.sky.rotationOnlyViewProj
+import net.nevinsky.abyssus.core.GeometryUtils.Companion.createFullscreenTriangle
 
 private const val CAMERA_HEIGHT = 100.0
 

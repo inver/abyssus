@@ -3,7 +3,7 @@ package net.nevinsky.abyssus.core
 import net.nevinsky.abyssus.assets.files.AssetMeta
 import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.META_FILE
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -14,7 +14,6 @@ class AssetMetaLoader(
 ) {
 
     private val metasCache = ConcurrentHashMap<File, CachedMeta>()
-
 
     fun loadBaseMeta(assetName: String?): AssetMeta<Any>? {
         if (assetName.isNullOrBlank()) return null

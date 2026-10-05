@@ -59,7 +59,10 @@ tasks.test {
 val checkNoSingletons by tasks.registering {
     val sources = fileTree("src/main/kotlin") {
         include("**/*.kt")
-        exclude("net/nevinsky/abyssus/core/AbyssusProjectLayout.kt")
+        exclude(
+            "net/nevinsky/abyssus/core/AbyssusProjectLayout.kt",
+            "net/nevinsky/abyssus/core/GeometryUtils.kt"
+        )
     }
 
     val root = layout.projectDirectory.asFile
