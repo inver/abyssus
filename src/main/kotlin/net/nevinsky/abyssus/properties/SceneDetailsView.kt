@@ -8,20 +8,21 @@ import com.intellij.openapi.Disposable
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.fields.IntegerField
+import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.panels.VerticalLayout
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
+import net.nevinsky.abyssus.dto.textOf
 import net.nevinsky.abyssus.filetype.SceneIcons
-import net.nevinsky.abyssus.filetype.editSceneValue
-import net.nevinsky.abyssus.core.scene.RayTracing
-import net.nevinsky.abyssus.core.scene.Scene
+import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.sceneview.RayDataEdit
 import net.nevinsky.abyssus.sceneview.RayModePhase
 import net.nevinsky.abyssus.sceneview.RayModeText
 import net.nevinsky.abyssus.sceneview.SceneRayControls
 import net.nevinsky.abyssus.sceneview.SceneRayEdits
+import net.nevinsky.abyssus.sceneview.SceneRayField
 import java.awt.BorderLayout
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
@@ -39,21 +40,16 @@ import javax.swing.JPanel
  * `ray-tracing-retry`, `ray-settings-error` and `ray-setting-<key>` (with `-error`), which is how tests reach them.
  */
 internal class SceneDetailsView(
-    private val controls: SceneRayControls,
-    private val state: PanelState.UISceneState,
-    parent: Disposable,
+    private val controls: SceneRayControls, private val state: PanelState.UISceneState, parent: Disposable,
     /** The saved field whose last edit lost to a newer value; the panel rebuilds this view on that change, so it carries it over. */
     private val conflict: String? = null,
     private val onConflict: (String) -> Unit = {},
 ) : JPanel(BorderLayout()) {
     private val file = state.file
-    private val switch =
-        JBCheckBox(AbyssusBundle.message("propertiesSceneRayTracing")).apply { name = "ray-tracing-switch" }
+    private val switch = JBCheckBox(AbyssusBundle.message("propertiesSceneRayTracing")).apply { name = "ray-tracing-switch" }
     private val status = JBLabel().apply { name = "ray-tracing-status"; foreground = secondary() }
     private val detail = JBLabel().apply { name = "ray-tracing-detail"; foreground = secondary(); isVisible = false }
-    private val retry = JButton(AbyssusBundle.message("sceneViewRayRetry")).apply {
-        name = "ray-tracing-retry"; isVisible = false; isFocusable = false
-    }
+    private val retry = JButton(AbyssusBundle.message("sceneViewRayRetry")).apply { name = "ray-tracing-retry"; isVisible = false; isFocusable = false }
     private var updating = false
 
     init {
@@ -75,192 +71,72 @@ internal class SceneDetailsView(
             add(JBLabel(AbyssusBundle.message("propertiesSceneSubtitle")).apply { foreground = secondary() })
         }
         return JPanel(BorderLayout(JBUI.scale(10), 0)).apply {
-            border = BorderFactory.createCompoundBorder(
-                JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0),
-                JBUI.Borders.empty(12, 16)
-            )
+            border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0), JBUI.Borders.empty(12, 16))
             add(JBLabel(SceneIcons.FILE), BorderLayout.WEST)
             add(text, BorderLayout.CENTER)
         }
     }
 
     private fun section(): JComponent {
-        val row = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
-            isOpaque = false; add(switch, BorderLayout.WEST); add(
-            retry,
-            BorderLayout.EAST
-        )
-        }
+        val row = JPanel(BorderLayout(JBUI.scale(8), 0)).apply { isOpaque = false; add(switch, BorderLayout.WEST); add(retry, BorderLayout.EAST) }
         return JPanel(VerticalLayout(JBUI.scale(6))).apply {
             border = JBUI.Borders.empty(12, 16, 16, 16)
-            add(JBLabel(AbyssusBundle.message("propertiesSceneRendering").uppercase()).apply {
-                foreground = secondary(); font = JBFont.small()
-            })
+            add(JBLabel(AbyssusBundle.message("propertiesSceneRendering").uppercase()).apply { foreground = secondary(); font = JBFont.small() })
             add(row)
             add(status)
             add(detail)
             add(JBLabel("<html>${AbyssusBundle.message("propertiesSceneRayHint")} ${AbyssusBundle.message("propertiesSceneRayNote")}</html>").apply {
                 foreground = secondary(); font = JBFont.small(); name = "ray-tracing-hint"
             })
-            add(JBLabel(AbyssusBundle.message("propertiesRaySaved")).apply {
-                font = JBFont.label().asBold(); border = JBUI.Borders.emptyTop(6)
-            })
+            add(JBLabel(AbyssusBundle.message("propertiesRaySaved")).apply { font = JBFont.label().asBold(); border = JBUI.Borders.emptyTop(6) })
             state.raySettings.errors["rayTracing"]?.let { error ->
-                add(JBLabel(AbyssusBundle.message("propertiesRayError${error.name}")).apply {
-                    name = "ray-settings-error"; foreground = JBColor.RED
-                })
+                add(JBLabel(AbyssusBundle.message("propertiesRayError${error.name}")).apply { name = "ray-settings-error"; foreground = JBColor.RED })
             }
-            add(
-                intRow(
-                    "targetSamplesPerPixel",
-                    { dto -> dto?.targetSamplesPerPixel ?: 0 },
-                    { scene, value -> scene.rayTracing?.targetSamplesPerPixel = value },
-                    256, 1, 4096
-                )
-            )
-            add(
-                intRow(
-                    "maxRaysPerFrame",
-                    { dto -> dto?.maxRaysPerFrame ?: 0 },
-                    { scene, value -> scene.rayTracing?.maxRaysPerFrame = value },
-                    2097152, 1, 67108864
-                )
-            )
-            add(
-                intRow(
-                    "maxReflectionBounces",
-                    { dto -> dto?.maxReflectionBounces ?: 0 },
-                    { scene, value -> scene.rayTracing?.maxReflectionBounces = value },
-                    1, 0, 16
-                )
-            )
-            add(
-                intRow(
-                    "maxRefractionBounces",
-                    { dto -> dto?.maxRefractionBounces ?: 0 },
-                    { scene, value -> scene.rayTracing?.maxRefractionBounces = value },
-                    0, 0, 16
-                )
-            )
+            for (field in SceneRayField.entries) add(settingRow(field))
         }
     }
 
-    private fun intRow(
-        key: String,
-        valueGetter: (RayTracing?) -> Int,
-        valueSetter: (Scene, Int) -> Unit,
-        default: Int?,
-        minimum: Int,
-        maximum: Int
-    ): JComponent {
-        val editor = IntegerField("ray-setting-${key}", minimum, maximum).apply {
-            isEnabled = state.raySettings.dto?.enabled ?: false
+    /** One saved limit: label, editor, the reason of a rejected edit or malformed saved value, and its help and range. */
+    private fun settingRow(field: SceneRayField): JComponent {
+        var expected = state.rayRoot.get("rayTracing")?.get(field.key)
+        val editor = JBTextField(expected?.toString() ?: field.default.toString()).apply {
+            name = "ray-setting-${field.key}"; columns = 10
+            // a non-object block cannot take a targeted edit; the scene JSON must be corrected first
+            isEnabled = "rayTracing" !in state.raySettings.errors
         }
-        editor.value = valueGetter(state.raySettings.dto)
-        val initial = state.raySettings.errors[key]?.let { AbyssusBundle.message("propertiesRayError${it.name}") }
-            ?: AbyssusBundle.message("propertiesRayConflict").takeIf { conflict == key } ?: ""
+        val initial = state.raySettings.errors[field.key]?.let { AbyssusBundle.message("propertiesRayError${it.name}") }
+            ?: AbyssusBundle.message("propertiesRayConflict").takeIf { conflict == field.key } ?: ""
         val error = JBLabel(initial).apply {
-            name = "ray-setting-${key}-error"; foreground = JBColor.RED
+            name = "ray-setting-${field.key}-error"; foreground = JBColor.RED
         }
-
         fun commit() {
-            editSceneValue(
-                controls.project,
-                file,
-                AbyssusBundle.message("commandEditSceneRaySettings"),
-            ) {
-                valueSetter(it, editor.value)
+            when (val result = SceneRayEdits.setting(controls.project, file, field, expected, editor.text)) {
+                RayDataEdit.Changed, RayDataEdit.Unchanged -> {
+                    error.text = ""
+                    expected = SceneJson.parse(textOf(file)).get("rayTracing")?.get(field.key)
+                    editor.text = expected?.toString() ?: field.default.toString()
+                }
+                RayDataEdit.Conflict -> {
+                    error.text = AbyssusBundle.message("propertiesRayConflict")
+                    onConflict(field.key)
+                }
+                is RayDataEdit.Rejected -> error.text = AbyssusBundle.message("propertiesRayError${result.error.name}")
             }
         }
         editor.addActionListener { commit() }
-        editor.addFocusListener(object : FocusAdapter() {
-            override fun focusLost(e: FocusEvent) {
-                if (editor.isEnabled) {
-                    commit()
-                }
-            }
-        })
-        val help = AbyssusBundle.message("propertiesRayHelp_${key}") + " " +
-                AbyssusBundle.message(
-                    "propertiesRayRange",
-                    minimum.toString(),
-                    maximum.toString(),
-                    default.toString()
-                )
+        editor.addFocusListener(object : FocusAdapter() { override fun focusLost(e: FocusEvent) { if (editor.isEnabled) commit() } })
+        val help = AbyssusBundle.message("propertiesRayHelp${field.name}") + " " +
+            AbyssusBundle.message("propertiesRayRange", field.minimum.toString(), field.maximum.toString(), field.default.toString())
         editor.toolTipText = help
         return JPanel(VerticalLayout(JBUI.scale(2))).apply {
             add(JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
-                add(
-                    JBLabel(AbyssusBundle.message("propertiesRay_${key}")).apply { labelFor = editor },
-                    BorderLayout.WEST
-                )
+                add(JBLabel(AbyssusBundle.message("propertiesRay${field.name}")).apply { labelFor = editor }, BorderLayout.WEST)
                 add(editor, BorderLayout.CENTER)
             })
             add(error)
-            add(JBLabel("<html>$help</html>").apply {
-                name = "ray-setting-${key}-help"; foreground = secondary(); font = JBFont.small()
-            })
+            add(JBLabel("<html>$help</html>").apply { name = "ray-setting-${field.key}-help"; foreground = secondary(); font = JBFont.small() })
         }
     }
-
-//    /** One saved limit: label, editor, the reason of a rejected edit or malformed saved value, and its help and range. */
-//    private fun settingRow(field: SceneRayField): JComponent {
-//        var expected = state.raySettings.rayRoot.get("rayTracing")?.get(field.key)
-//        val editor = JBTextField(expected?.toString() ?: field.default.toString()).apply {
-//            name = "ray-setting-${field.key}"; columns = 10
-//            // a non-object block cannot take a targeted edit; the scene JSON must be corrected first
-//            isEnabled = "rayTracing" !in state.raySettings.errors
-//        }
-//        val initial = state.raySettings.errors[field.key]?.let { AbyssusBundle.message("propertiesRayError${it.name}") }
-//            ?: AbyssusBundle.message("propertiesRayConflict").takeIf { conflict == field.key } ?: ""
-//        val error = JBLabel(initial).apply {
-//            name = "ray-setting-${field.key}-error"; foreground = JBColor.RED
-//        }
-//
-//        fun commit() {
-//            when (val result = SceneRayEdits.setting(controls.project, file, field, expected, editor.text)) {
-//                RayDataEdit.Changed, RayDataEdit.Unchanged -> {
-//                    error.text = ""
-//                    expected = SceneJson.parse(textOf(file)).get("rayTracing")?.get(field.key)
-//                    editor.text = expected?.toString() ?: field.default.toString()
-//                }
-//
-//                RayDataEdit.Conflict -> {
-//                    error.text = AbyssusBundle.message("propertiesRayConflict")
-//                    onConflict(field.key)
-//                }
-//
-//                is RayDataEdit.Rejected -> error.text = AbyssusBundle.message("propertiesRayError${result.error.name}")
-//            }
-//        }
-//        editor.addActionListener { commit() }
-//        editor.addFocusListener(object : FocusAdapter() {
-//            override fun focusLost(e: FocusEvent) {
-//                if (editor.isEnabled) commit()
-//            }
-//        })
-//        val help = AbyssusBundle.message("propertiesRayHelp${field.name}") + " " +
-//                AbyssusBundle.message(
-//                    "propertiesRayRange",
-//                    field.minimum.toString(),
-//                    field.maximum.toString(),
-//                    field.default.toString()
-//                )
-//        editor.toolTipText = help
-//        return JPanel(VerticalLayout(JBUI.scale(2))).apply {
-//            add(JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
-//                add(
-//                    JBLabel(AbyssusBundle.message("propertiesRay${field.name}")).apply { labelFor = editor },
-//                    BorderLayout.WEST
-//                )
-//                add(editor, BorderLayout.CENTER)
-//            })
-//            add(error)
-//            add(JBLabel("<html>$help</html>").apply {
-//                name = "ray-setting-${field.key}-help"; foreground = secondary(); font = JBFont.small()
-//            })
-//        }
-//    }
 
     /** Brings the switch, status, reason and Retry in line with the open view's mode (or with a pending request). */
     private fun refresh() {

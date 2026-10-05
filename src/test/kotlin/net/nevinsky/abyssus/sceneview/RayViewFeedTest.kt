@@ -6,8 +6,8 @@ package net.nevinsky.abyssus.sceneview
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.AssetLoading
-import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.raytracing.RayUnavailableReason
 import org.junit.After
 import org.junit.Assert.*
@@ -136,7 +136,7 @@ class RayViewFeedTest {
         val project = File("src/test/testData/project/Untitled").absoluteFile
         val assets = RaySceneAssets(
             { _, _ -> RayAssetLease({ model }, { null }, {}) }, { _, _ -> error("none") },
-            acquireSky = { dir, name -> loading.raySkies.acquire(loading.files(dir), name).let { lease -> RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close) } },
+            acquireSky = { dir, name -> ViewAssets(loading).project(dir).raySkies.acquire(name).let { lease -> RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close) } },
         )
         val feed = feed(assets = assets)
         val content = SceneContent(models = listOf(placement), skybox = "skybox_hdr")
@@ -164,7 +164,7 @@ class RayViewFeedTest {
             ShaderSource("/shader/sky", AssetLoading::class.java)
         )
         val assets = RaySceneAssets({ _, _ -> RayAssetLease({ model }, { null }, {}) }, { _, _ -> error("none") },
-            acquireSky = { dir, name -> loading.raySkies.acquire(loading.files(dir), name).let { lease -> RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close) } })
+            acquireSky = { dir, name -> ViewAssets(loading).project(dir).raySkies.acquire(name).let { lease -> RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close) } })
         val feed = feed(assets = assets)
         val content = SceneContent(models = listOf(placement), skybox = "skybox_physical") // a procedural sky has no CPU form
         SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
@@ -178,7 +178,7 @@ class RayViewFeedTest {
 
     @Test fun aBakedProceduralSkyReachesTheRendererAsADisplayValueTexture() {
         val feed = feed()
-        val baked = net.nevinsky.abyssus.assets.sky.RaySkySnapshot(4, 2, FloatArray(4 * 2 * 4) { .25f }, hdr = false)
+        val baked = net.nevinsky.abyssus.core.assets.sky.RaySkySnapshot(4, 2, FloatArray(4 * 2 * 4) { .25f }, hdr = false)
         val content = SceneContent(models = listOf(placement), skybox = "procedural")
         SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
         RayFakeDevice.await(what = "a scene with the baked sky") {

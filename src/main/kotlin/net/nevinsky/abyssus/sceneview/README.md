@@ -18,8 +18,8 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 | `SceneInteraction` | Mouse and key logic without Swing or GL, over a `SceneViewState` and `SceneQueries`: click → pick/select, drag → gizmo or orbit/pan (one `Gesture`: Idle, Dragging or Cancelled), Drop → a Y-only move |
 | `FrameSnapshot`, `SceneQueries`, `SnapshotSceneQueries` | What the last frame drew (camera copy, model boxes, terrain targets, `drawnVersion`), and the CPU-only questions asked of it: pick, ray, ground below, lowest point, gizmo handles and hits, drag start. Tested with hand-built snapshots |
 | `SceneRenderer` | One frame: environment, skybox, grid, terrains, models, markers, highlight, gizmo. GL only: it publishes a `FrameSnapshot` after each frame and exposes `queries`. `GridModel` and `SelectionBox` build the grid and the highlight |
-| `PlacedAssets`, `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (a `core` `SceneAssets` each, from `AssetLoading`) and per-entity instances (`PlacedEntities`); `SceneModels` and `SceneTerrains` extend `PlacedAssets` and `SceneSkybox` has the same `abandon` |
-| `skybox/` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights. The sky loaders, the HDR environment and the sky shaders are in `core` (`net.nevinsky.abyssus.assets.sky`) |
+| `PlacedAssets`, `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (an `AssetView` each over the view's `ViewAssets`, whose `ProjectAssets` from `AssetLoading` hold the one `core` `AssetStorage`) and per-entity instances (`PlacedEntities`); `SceneModels` and `SceneTerrains` extend `PlacedAssets` and `SceneSkybox` has the same `abandon` |
+| `skybox/` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights. The sky loaders, the HDR environment and the sky shaders are in `core` (`net.nevinsky.abyssus.core.assets.sky`) |
 | `SceneMarkers`, `CameraFrustum` | Camera body and frustum, light markers, and their pick bounds |
 | `ScenePicker` | Ray from a pixel, nearest hit over boxes and terrain heights (used by `SnapshotSceneQueries`) |
 | Drop: `OrientedBox`, `TerrainRestHeight`, `ScenePicker.restHeight` | Highest surface under a rotated box footprint; CPU-only bilinear terrain-cell maxima |
@@ -47,12 +47,12 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 - **Changed assets reload without reopening the view.** `AssetRefresh` (UI thread, reads on the pool) compares
   snapshots of the project's effective asset revisions: each `meta.json` as the editors hold it (unsaved text is captured
   on the UI thread by `unsavedAssetMeta` and handed in as immutable text, so pool threads never touch documents) plus the
-  stamps of the files it names. Only a real difference produces an `AssetRevisionBatch` (names plus a fresh `AssetFiles`
-  snapshot), so saving shown text, or Undo back to loaded text, costs nothing. A texture change also names the terrains
+  stamps of the files it names. Only a real difference produces an `AssetRevisionBatch` (names plus the unsaved
+  `meta.json` text, which `FileLoader` serves to later loads), so saving shown text, or Undo back to loaded text, costs nothing. A texture change also names the terrains
   that use it. `SceneFileEditor` feeds it VFS and document events and passes the batch to `SceneView.refreshAssets`;
   `SceneRenderer.queueAssetRevision` keeps batches (merged, in `PendingAssetRevision`) until `render` takes them, and
   `render` only runs while the canvas is safely on screen, so a hidden view reloads when it is shown. On the render
-  thread the batch gives each `SceneAssets` the new snapshot and invalidates the names (`AssetStorage.invalidate`): the old
+  thread the batch gives `ViewAssets` the unsaved text and invalidates the names (`AssetStorage.invalidate`): the old
   asset keeps drawing until its replacement is built, then is disposed once; a superseded load is discarded. A terrain's
   mesh and CPU height data come from one `TerrainMesh`, so drawing, picking, Drop and shadows all see the same
   replacement (`drawnVersion` changes when an asset is replaced so Drop re-measures). Nothing moves entities.

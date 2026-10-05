@@ -41,6 +41,23 @@ data class SceneRaySettingsState(
 
 /** Pure JSON codec/editor. Callers validate the enclosing native document and provide its expected field snapshot. */
 class SceneRaySettingsCodec {
+    fun read(root: JsonNode): SceneRaySettingsState {
+        val block = root.get("rayTracing")
+        val errors = linkedMapOf<String, RayDataError>()
+        if (block != null && !block.isObject) errors["rayTracing"] = RayDataError.OBJECT
+        val values = SceneRayField.entries.associateWith { field ->
+            val node = block?.get(field.key)
+            val error = validate(node, field)
+            if (error != null) errors[field.key] = error
+            if (node == null || error != null) field.default else node.intValue()
+        }
+        val settings = if (errors.isEmpty()) SceneRaySettings(
+            values.getValue(SceneRayField.SAMPLES), values.getValue(SceneRayField.RAYS),
+            values.getValue(SceneRayField.REFLECTIONS), values.getValue(SceneRayField.REFRACTIONS),
+        ) else null
+        return SceneRaySettingsState(settings, values, errors)
+    }
+
     fun edit(root: ObjectNode, field: SceneRayField, expected: JsonNode?, text: String): RayDataEdit {
         val block = root.get("rayTracing")
         if (block != null && !block.isObject) return RayDataEdit.Rejected(RayDataError.OBJECT)

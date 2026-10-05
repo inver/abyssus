@@ -70,7 +70,8 @@ class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
         WriteCommandAction.runWriteCommandAction(project) { document.setText(document.text.replace("\"size\":100", "\"size\":250")) }
         settle()
         assertEquals(setOf("hills"), view.revisions.single().names)
-        assertEquals(250, view.revisions.single().files.terrain("hills")!!.size)
+        val text = view.revisions.single().unsaved[File(meta.path).absoluteFile]!!
+        assertEquals(250, net.nevinsky.abyssus.core.JsonProcessor().readObject(text).get("additional").get("size").asInt())
         FileDocumentManager.getInstance().saveDocument(document)
         settle()
         assertEquals("saving the shown text is not a new revision", 1, view.revisions.size)

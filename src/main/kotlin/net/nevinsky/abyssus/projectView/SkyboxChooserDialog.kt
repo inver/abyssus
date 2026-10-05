@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.projectView
 
-import net.nevinsky.abyssus.assets.sky.hdr.HdrPreview
+import net.nevinsky.abyssus.core.assets.sky.hdr.HdrPreview
 import net.nevinsky.abyssus.AbyssusCore
 import com.intellij.openapi.components.service
 import com.intellij.icons.AllIcons

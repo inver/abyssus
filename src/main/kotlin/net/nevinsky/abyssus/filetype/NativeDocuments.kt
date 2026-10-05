@@ -6,12 +6,12 @@ package net.nevinsky.abyssus.filetype
 
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.assets.displayMessage
-import net.nevinsky.abyssus.assets.format.DocumentKind
-import net.nevinsky.abyssus.assets.format.UnsupportedDocumentFormat
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.META_FILE
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.PROJECT_EXTENSION
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.SCENE_EXTENSION
+import net.nevinsky.abyssus.core.assets.displayMessage
+import net.nevinsky.abyssus.format.DocumentKind
+import net.nevinsky.abyssus.format.UnsupportedDocumentFormat
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.PROJECT_EXTENSION
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.SCENE_EXTENSION
 
 internal fun documentKind(file: VirtualFile): DocumentKind? = when {
     file.extension == SCENE_EXTENSION -> DocumentKind.SCENE

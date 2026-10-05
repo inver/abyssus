@@ -5,15 +5,20 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.sceneview.SceneRaySettingsState
+import net.nevinsky.abyssus.sceneview.SceneRaySettingsCodec
+import net.nevinsky.abyssus.format.DocumentKind
+import net.nevinsky.abyssus.format.AbyssusDocumentFormat
+import java.io.File
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.assets.META_FILE
-import net.nevinsky.abyssus.assets.MetaType
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.sky.cube.SKYBOX_FACES
-import net.nevinsky.abyssus.assets.sky.hdr.HdrPreview
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.assets.MetaType
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.SKYBOX_FACES
+import net.nevinsky.abyssus.core.assets.sky.hdr.HdrPreview
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.textOf
 import net.nevinsky.abyssus.ecs.scene.FieldKind
@@ -21,7 +26,6 @@ import net.nevinsky.abyssus.ecs.scene.FieldValue
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.projectView.*
 import net.nevinsky.abyssus.SceneEcsPaths
-import net.nevinsky.abyssus.core.scene.RayTracing
 import net.nevinsky.abyssus.sceneview.RayDataError
 import net.nevinsky.abyssus.sceneview.RayMaterialIdentity
 import net.nevinsky.abyssus.sceneview.RayMaterialOverrides
@@ -40,13 +44,9 @@ sealed interface PanelState {
     data class UISceneState(
         val file: VirtualFile,
         val name: String,
-        val raySettings: UIRayTracingState,
+        val rayRoot: JsonNode = SceneJson.parse("{}"),
+        val raySettings: SceneRaySettingsState = SceneRaySettingsCodec().read(rayRoot),
     ) : PanelState
-
-    data class UIRayTracingState(
-        val dto: RayTracing?,
-        val errors: Map<String, RayDataError> = emptyMap()
-    )
 
     /** An asset's Meta; [fields] are its editable properties (empty for a type without editors, which stays read only). */
     data class Details(
@@ -135,8 +135,7 @@ private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreview
     val info = hdrSkyInfo(folder, meta.json, hdr)
     val file = info.file ?: return HdrCell(AbyssusBundle.message("propertiesHdrNoFile"), null)
     val image = runCatchingKeepingCancellation {
-        folder.findChild(file)?.inputStream?.buffered()?.use { hdr.preview.image(it, THUMBNAIL_WIDTH) }
-            ?: error("missing")
+        hdr.preview.image(File(folder.path, file).also { check(it.isFile) { "missing" } }, THUMBNAIL_WIDTH)
     }
     return image.fold(
         {
@@ -156,8 +155,8 @@ private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreview
 fun readEntityState(target: ComponentTarget, services: PanelServices): PanelState {
     val root = runCatchingKeepingCancellation {
         SceneJson.parse(runReadAction { textOf(target.file) }).also {
-            net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()
-                .requireSupported(it, net.nevinsky.abyssus.assets.format.DocumentKind.SCENE)
+            net.nevinsky.abyssus.format.AbyssusDocumentFormat()
+                .requireSupported(it, net.nevinsky.abyssus.format.DocumentKind.SCENE)
         }
     }
         .getOrElse {
@@ -286,11 +285,11 @@ private fun scaled(source: BufferedImage, maxWidth: Int, maxHeight: Int): Buffer
     return out
 }
 
-/** A tone-mapped thumbnail at most [width] wide of the Radiance image [fileName] in [folder], or null when it is absent or unreadable. Off the EDT. */
+/** A tone-mapped thumbnail at most [width] wide of the OpenEXR image [fileName] in [folder], or null when it is absent or unreadable. Off the EDT. */
 fun hdrThumbnail(folder: VirtualFile, fileName: String, width: Int, preview: HdrPreview): BufferedImage? =
     runCatchingKeepingCancellation {
         val file = imageFile(folder, fileName) ?: return@runCatchingKeepingCancellation null
-        file.inputStream.buffered().use { preview.image(it, width) }
+        preview.image(File(file.path), width)
     }.getOrNull()
 
 /** A small square-bounded thumbnail of the image [fileName] in [folder], or null when it is absent or cannot be decoded. Safe off the EDT. */
@@ -320,8 +319,8 @@ fun readTerrainSourceNow(folder: VirtualFile, services: PanelServices): net.nevi
 }
 
 /** Current native scene preferences, read off the EDT independently of renderer availability. */
-//fun readSceneState(file: VirtualFile, name: String): PanelState = runCatchingKeepingCancellation {
-//    val root = SceneJson.parse(runReadAction { textOf(file) })
-////    AbyssusDocumentFormat().requireSupported(root, DocumentKind.SCENE)
-//    PanelState.SceneDetails(file, name, root)
-//}.getOrElse { PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.displayMessage()), null) }
+fun readSceneState(file: VirtualFile, name: String): PanelState = runCatchingKeepingCancellation {
+    val root = SceneJson.parse(runReadAction { textOf(file) })
+    AbyssusDocumentFormat().requireSupported(root, DocumentKind.SCENE)
+    PanelState.UISceneState(file, name, root)
+}.getOrElse { PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.displayMessage()), null) }

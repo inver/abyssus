@@ -36,7 +36,7 @@ import javax.swing.JToggleButton
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import javax.swing.Timer
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
 
 /** An entry of the camera selector: [id] is the camera entity to look through, null for the free orbit view. */
@@ -127,7 +127,7 @@ class SceneViewPanel internal constructor(
      */
     internal fun installRay(integration: RayIntegration) {
         rayFeed?.close()
-        val feed = integration.newFeed("scene-view-${NEXT_VIEW.incrementAndGet()}")
+        val feed = integration.newFeed("scene-view-${NEXT_VIEW.incrementAndGet()}", renderer.assets)
         feed.runtime.mode.addListener { SwingUtilities.invokeLater { if (rayFeed === feed) refreshRay() } }
         rayFeed = feed
         renderer.rayFrameProvider = { context -> feed.frame(context) }

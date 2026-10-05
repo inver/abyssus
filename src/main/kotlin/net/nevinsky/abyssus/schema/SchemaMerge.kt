@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.schema
 
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.ecs.scene.ComponentEditor
 import net.nevinsky.abyssus.filetype.documentDisplayMessage
 import net.nevinsky.abyssus.runtime.ecs.BUILT_IN_COMPONENTS

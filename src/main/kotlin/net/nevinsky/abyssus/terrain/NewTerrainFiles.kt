@@ -1,12 +1,14 @@
 package net.nevinsky.abyssus.terrain
 
-import net.nevinsky.abyssus.assets.AssetMeta
-import net.nevinsky.abyssus.assets.META_VERSION_DEFAULT
-import net.nevinsky.abyssus.assets.MetaType
-import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.assets.terrain.NEW_TERRAIN_UV_DEFAULT
-import net.nevinsky.abyssus.assets.terrain.TERRAIN_META_FILE_NAME_DEFAULT
-import net.nevinsky.abyssus.assets.terrain.TerrainMeta
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.NullNode
+import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.core.assets.META_VERSION_DEFAULT
+import net.nevinsky.abyssus.core.assets.MetaType
+import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.NEW_TERRAIN_UV_DEFAULT
+import net.nevinsky.abyssus.TERRAIN_META_FILE_NAME_DEFAULT
+import net.nevinsky.abyssus.core.assets.terrain.SPLAT_FIELDS
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.util.*
@@ -41,13 +43,22 @@ class TerrainAssetWriter(private val json: JsonProcessor, private val encoder: T
 
     fun meta(uuid: UUID, lastModified: Long, size: Int, uv: Float = NEW_TERRAIN_UV_DEFAULT): String {
         require(size > 0) { "size must be positive" }
-        val terrainMeta = TerrainMeta(
-            TERRAIN_META_FILE_NAME_DEFAULT,
-            size, uv
-        )
-        val resMeta = AssetMeta(
-            1, META_VERSION_DEFAULT, lastModified, MetaType.TERRAIN, terrainMeta, uuid
-        )
-        return json.toString(resMeta)
+        val nodes = JsonNodeFactory.instance
+        val additional = nodes.objectNode().apply {
+            put("terrainFile", TERRAIN_META_FILE_NAME_DEFAULT)
+            put("size", size)
+            put("uv", uv)
+            SPLAT_FIELDS.forEach { set<NullNode>(it, NullNode.instance) }
+        }
+        val root = nodes.objectNode().apply {
+            put("format", "abyssus")
+            put("formatVersion", 1)
+            put("version", META_VERSION_DEFAULT)
+            put("lastModified", lastModified)
+            put("uuid", uuid.toString())
+            put("type", MetaType.TERRAIN.name)
+            set<ObjectNode>("additional", additional)
+        }
+        return json.toString(root)
     }
 }

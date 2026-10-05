@@ -6,9 +6,8 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.core.scene.RayTracing
 import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.runtime.float
 import net.nevinsky.abyssus.runtime.obj
@@ -58,7 +57,7 @@ data class SceneRenderParams(
     val projectDir: File? = null,
     /** The scene's `ecs` block as read, for scene overlays that draw components the view does not model. */
     val ecs: JsonNode? = null,
-    val rayTracing: RayTracing? = null,
+    val rayTracing: SceneRaySettingsState = SceneRaySettingsCodec().read(SceneJson.mapper.createObjectNode()),
 ) {
     companion object {
         val DEFAULT_CLEAR = Rgba(0.1f, 0.1f, 0.15f, 1f)
@@ -74,7 +73,9 @@ data class SceneRenderParams(
                 SceneContent.of(scene),
                 projectDir,
                 scene.ecs,
-                scene.rayTracing
+                SceneRaySettingsCodec().read(SceneJson.mapper.createObjectNode().also { root ->
+                    scene.rayTracing?.let { root.set<JsonNode>("rayTracing", SceneJson.mapper.valueToTree(it)) }
+                }),
             )
         }
 
@@ -106,8 +107,8 @@ internal fun normalized(v: Vec3): Vec3? {
 object MainCamera {
     fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
         val root = SceneJson.parse(abssText).takeIf { it.isObject } ?: return null
-        if (net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()
-                .validate(root, net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT) != null
+        if (net.nevinsky.abyssus.format.AbyssusDocumentFormat()
+                .validate(root, net.nevinsky.abyssus.format.DocumentKind.PROJECT) != null
         ) return null
         val cam = root.obj("mainCamera") ?: return null
         val position = cam.vec("position") ?: return null

@@ -19,7 +19,7 @@ import net.nevinsky.abyssus.ecs.scene.LightPreset
 import net.nevinsky.abyssus.sceneview.Vec3
 import net.nevinsky.abyssus.properties.AssetMeta
 import net.nevinsky.abyssus.properties.loadAssetMeta
-import net.nevinsky.abyssus.assets.MetaType
+import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.filetype.editSceneJson
 import net.nevinsky.abyssus.dto.MetaFiles
 import net.nevinsky.abyssus.dto.SceneDocumentCache

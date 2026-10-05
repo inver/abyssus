@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus
 
+import net.nevinsky.abyssus.core.assets.terrain.SPLAT_FIELDS
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.FloatNode
@@ -13,11 +14,11 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
-import net.nevinsky.abyssus.assets.MetaType
-import net.nevinsky.abyssus.assets.sky.procedural.AtmosphereParams
+import net.nevinsky.abyssus.core.assets.MetaType
+import net.nevinsky.abyssus.core.assets.sky.procedural.AtmosphereParams
 import java.math.BigDecimal
 import java.util.UUID
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 
 /** How an editable `additional` field is shown and checked. */
 enum class FieldKind {
@@ -133,9 +134,9 @@ class AssetFieldDescriptions {
  * caller picks a parser that keeps number text and key order; an edit changes exactly one key and nothing else, and
  * never touches `version`, `uuid`, `type`, `lastModified` or unknown keys.
  */
-class AssetMetaEditor(private val descriptions: AssetFieldDescriptions, private val format: net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()) {
+class AssetMetaEditor(private val descriptions: AssetFieldDescriptions, private val format: net.nevinsky.abyssus.format.AbyssusDocumentFormat = net.nevinsky.abyssus.format.AbyssusDocumentFormat()) {
     fun typeOf(root: JsonNode): MetaType =
-        root.takeIf { format.validate(it, net.nevinsky.abyssus.assets.format.DocumentKind.ASSET) == null }?.get("type")?.takeIf { it.isTextual }?.asText()?.let { name -> MetaType.entries.firstOrNull { it.name == name } }
+        root.takeIf { format.validate(it, net.nevinsky.abyssus.format.DocumentKind.ASSET) == null }?.get("type")?.takeIf { it.isTextual }?.asText()?.let { name -> MetaType.entries.firstOrNull { it.name == name } }
             ?: MetaType.UNKNOWN
 
     /** The effective value of [field] in [root]: the stored value, the default of an omitted key, or none. */
@@ -252,7 +253,7 @@ class AssetMetaEditor(private val descriptions: AssetFieldDescriptions, private 
      * effect.
      */
     fun edit(root: JsonNode, key: String, expected: FieldValue, value: FieldValue): EditOutcome {
-        if (format.validate(root, net.nevinsky.abyssus.assets.format.DocumentKind.ASSET) != null) return EditOutcome.Rejected(EditError.UNSUPPORTED_FORMAT)
+        if (format.validate(root, net.nevinsky.abyssus.format.DocumentKind.ASSET) != null) return EditOutcome.Rejected(EditError.UNSUPPORTED_FORMAT)
         val field = descriptions.field(typeOf(root), key) ?: return EditOutcome.Rejected(EditError.UNSUPPORTED_FIELD)
         val additional = root.get("additional") as? ObjectNode ?: return EditOutcome.Rejected(EditError.NOT_AN_OBJECT)
         val actual = current(root, field)

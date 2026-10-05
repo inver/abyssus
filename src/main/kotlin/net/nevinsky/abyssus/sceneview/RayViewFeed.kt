@@ -5,9 +5,9 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import net.nevinsky.abyssus.assets.model.RayModelSkinning
-import net.nevinsky.abyssus.assets.sky.RaySkySnapshot
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.model.RayModelSkinning
+import net.nevinsky.abyssus.core.assets.sky.RaySkySnapshot
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
@@ -70,7 +70,7 @@ internal class RayViewFeed(
     /** Render thread. The ray frame to present for [context], or null while raster should be shown. */
     fun frame(context: RayFrameContext): RaySceneDisplay? {
         if (closed.get()) return null
-        val overrides = context.params.ecs?.path("entities")?.properties()?.mapNotNull { (id, entity) ->
+        val overrides = net.nevinsky.abyssus.SceneEcsPaths().entitiesIn(context.params.ecs)?.properties()?.mapNotNull { (id, entity) ->
             entity.path("components").path("RenderComponent").get("rayTracingMaterials")?.let { id to it }
         }?.toMap().orEmpty()
         val signature = context.params.rayTracing to overrides

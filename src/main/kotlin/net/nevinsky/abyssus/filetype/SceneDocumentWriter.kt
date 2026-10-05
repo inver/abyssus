@@ -7,14 +7,11 @@ package net.nevinsky.abyssus.filetype
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.Topic
-import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.core.scene.Scene
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 
 /** Told after a plugin edit wrote [file] (a scene or project file), so views of it can refresh. */
 fun interface AbyssusSceneEdited {
@@ -34,7 +31,7 @@ fun interface AbyssusSceneEdited {
 fun editSceneJson(project: Project, file: VirtualFile, commandName: String, mutate: (JsonNode) -> Boolean): Boolean {
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
     val kind = documentKind(file) ?: return false
-    val format = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()
+    val format = net.nevinsky.abyssus.format.AbyssusDocumentFormat()
     val original = document.text
     val root = runCatchingKeepingCancellation {
         SceneJson.parse(original).also { format.requireSupported(it, kind) }
@@ -48,24 +45,6 @@ fun editSceneJson(project: Project, file: VirtualFile, commandName: String, muta
     }
     WriteCommandAction.runWriteCommandAction(project, commandName, null, {
         document.setText(text)
-        FileDocumentManager.getInstance().saveDocument(document)
-    })
-    if (!project.isDisposed) {
-        project.messageBus.syncPublisher(AbyssusSceneEdited.TOPIC).sceneEdited(file)
-    }
-    return true
-}
-
-fun editSceneValue(project: Project, file: VirtualFile, commandName: String, setter: ((Scene) -> Unit)?): Boolean {
-    val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
-    val dto = runCatchingKeepingCancellation {
-        service<AbyssusCore>().json.parse(document.text, Scene::class.java)
-    }.getOrNull() ?: return false
-    runCatchingKeepingCancellation {
-        if (setter != null) setter(dto)
-    }.getOrNull() ?: return false
-    WriteCommandAction.runWriteCommandAction(project, commandName, null, {
-        document.setText(service<AbyssusCore>().json.pretty(dto))
         FileDocumentManager.getInstance().saveDocument(document)
     })
     if (!project.isDisposed) {

@@ -5,12 +5,12 @@
 
 package net.nevinsky.abyssus.properties
 
-import net.nevinsky.abyssus.assets.META_FILE
-import net.nevinsky.abyssus.assets.MetaType
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.assets.MetaType
+import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.runtime.obj
 import net.nevinsky.abyssus.runtime.text
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.AssetMetaReader
 import java.io.File
 

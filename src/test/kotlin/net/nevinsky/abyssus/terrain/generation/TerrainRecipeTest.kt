@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.terrain.generation
 
+import net.nevinsky.abyssus.terrain.sha256Hex
 import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.terrain.noise.FAST_NOISE_LITE_REVISION
 import org.junit.Assert.assertEquals

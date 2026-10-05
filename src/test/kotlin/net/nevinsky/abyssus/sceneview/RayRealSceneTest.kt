@@ -6,8 +6,8 @@ package net.nevinsky.abyssus.sceneview
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.AssetLoading
-import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.raytracing.*
 import org.junit.Assert.*
@@ -29,7 +29,7 @@ class RayRealSceneTest {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
         val loading = AssetLoading(JsonProcessor(), printingLog, Executor(Runnable::run), ShaderSource("/shader/sky", AssetLoading::class.java))
         val content = SceneContent.of(parseScene(project.resolve("scenes/Main Scene.scene").readText()))
-        val assets = RaySceneAssets(loading)
+        val assets = RaySceneAssets(ViewAssets(loading))
         assets.update(project, content)
         val state = assets.poll()
         assertTrue("the scene's assets must load: $state", state is RaySceneAssetState.Ready)

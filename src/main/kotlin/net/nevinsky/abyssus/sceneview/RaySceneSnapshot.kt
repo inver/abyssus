@@ -9,12 +9,11 @@ import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import com.badlogic.gdx.math.Matrix4
-import net.nevinsky.abyssus.assets.SPLAT_LAYERS
-import net.nevinsky.abyssus.assets.model.*
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.terrain.RayTerrainSnapshot
+import net.nevinsky.abyssus.core.assets.terrain.SPLAT_LAYERS
+import net.nevinsky.abyssus.core.assets.model.*
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.terrain.RayTerrainSnapshot
 import net.nevinsky.abyssus.raytracing.*
-import net.nevinsky.abyssus.core.scene.RayTracing
 import net.nevinsky.abyssus.sceneview.gizmo.DragResult
 
 /** Immutable render-thread camera capture. The actual camera preserves orbit and look-through lens/up conventions. */
@@ -55,7 +54,7 @@ class RaySceneFrame internal constructor(
     internal val assets: Map<String, Any>, internal val topology: List<String>,
     internal val transforms: Map<String, List<Float>>, internal val poses: Map<String, Long>,
     internal val environmentRevision: Long,
-    val settings: RayTracing = RayTracing(),
+    val settings: SceneRaySettings = SceneRaySettings(),
 )
 
 sealed interface RaySceneConversion {
@@ -102,12 +101,10 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         deform: ((RayModelMesh, List<FloatArray>) -> FloatArray)? = null,
         environmentRevision: Long = 0,
     ): RaySceneConversion {
-        if (params.rayTracing == null) {
-            return RaySceneConversion.Fallback(
-                RaySceneFallback.UNSUPPORTED_GEOMETRY,
-                "Malformed rayTracing settings: "
-            )
-        }
+        val settings = params.rayTracing.settings ?: return RaySceneConversion.Fallback(
+            RaySceneFallback.UNSUPPORTED_GEOMETRY,
+            "Malformed rayTracing settings: ${params.rayTracing.errors.keys.joinToString()}"
+        )
         if (assets is RaySceneAssetState.Preparing) return RaySceneConversion.Preparing(assets.assets)
         if (assets is RaySceneAssetState.Failed) return RaySceneConversion.Fallback(
             RaySceneFallback.ASSET_FAILURE,
@@ -123,7 +120,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
             val builder = Builder(limits, environmentTextures, deform) { shared.getOrPut(it) { HashMap() } }
             for (placement in content.models) {
                 val render =
-                    params.ecs?.path("entities")?.path(placement.entityId)?.path("components")?.get("RenderComponent")
+                    net.nevinsky.abyssus.SceneEcsPaths().entitiesIn(params.ecs)?.get(placement.entityId)?.get("components")?.get("RenderComponent")
                 builder.model(placement, assets.models.getValue(placement.assetName), poses[placement.entityId], render)
             }
             for (placement in content.terrains) builder.terrain(
@@ -162,7 +159,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 builder.transforms.toMap(),
                 poses.mapValues { it.value.revision },
                 environmentRevision,
-                params.rayTracing
+                settings
             )
         }
         return result.fold({ RaySceneConversion.Ready(it) }, {

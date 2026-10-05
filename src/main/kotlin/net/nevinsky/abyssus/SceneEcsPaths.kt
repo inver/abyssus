@@ -8,13 +8,23 @@ package net.nevinsky.abyssus
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 
-/** Where a scene file keeps its entities: `ecs.entities.<id>.components.<ComponentName>`. */
+/**
+ * Where a scene file keeps its entities: `ecs.<id>.components.<ComponentName>`, or in an older scene
+ * `ecs.entities.<id>.components.<ComponentName>` (an `entities` member that is an object makes the scene "wrapped").
+ */
 class SceneEcsPaths {
-    /** The `ecs.entities` object of the scene [root], or null when it has none. */
-    fun entities(root: JsonNode): JsonNode? = root.get("ecs")?.get("entities")?.takeIf { it.isObject }
+    /** The entity map of the scene [root], or null when it has no `ecs` object. */
+    fun entities(root: JsonNode): JsonNode? = entitiesIn(root.get("ecs"))
 
-    /** The `entities` object of a scene's `ecs` object [ecs] (as `SceneDto.ecs` holds it), or null. */
-    fun entitiesIn(ecs: JsonNode?): JsonNode? = ecs?.get("entities")?.takeIf { it.isObject }
+    /** The entity map of a scene's `ecs` object [ecs]: its `entities` member when that is an object, else [ecs] itself. */
+    fun entitiesIn(ecs: JsonNode?): JsonNode? {
+        if (ecs == null || !ecs.isObject) return null
+        return ecs.get("entities")?.takeIf { it.isObject } ?: ecs
+    }
+
+    /** The JSON keys leading to the entity map of [root]: `ecs`, then `entities` for a wrapped scene. */
+    fun entityKeys(root: JsonNode): List<String> =
+        if (root.get("ecs")?.get("entities")?.isObject == true) listOf("ecs", "entities") else listOf("ecs")
 
     /** The `components` object of entity [entityId], or null when the entity or its components are missing. */
     fun components(root: JsonNode, entityId: String): ObjectNode? =

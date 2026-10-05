@@ -17,14 +17,13 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.core.project.Project
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.core.scene.Scene
 import java.awt.Color
 import java.awt.FlowLayout
 import javax.swing.BorderFactory
 import javax.swing.JPanel
-import net.nevinsky.abyssus.assets.META_FILE
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
 
 /** The numbers under the tree. */
 data class FooterCounts(val scenes: Int, val assets: Int, val unused: Int)
@@ -39,7 +38,7 @@ fun footerCounts(project: Project): FooterCounts {
     var unused = 0
     for (file in findTopLevelAssets(project)) {
         when (val root = AssetReadCache.of(project).read(file)?.takeIf { it.success }?.obj) {
-            is net.nevinsky.abyssus.core.project.Project -> {
+            is net.nevinsky.abyssus.dto.ProjectDto -> {
                 scenes += root.scenes.size
                 assets += root.assets.size
                 unused += root.assets.count { it.unused }

@@ -5,7 +5,10 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.core.assets.terrain.TerrainMeta
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -47,6 +50,13 @@ class AssetRefreshTest {
     private fun terrainMeta(size: Int) =
         """{"format":"abyssus","formatVersion":1,"uuid":"t","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$size,"uv":1.0,"splatBase":"u-grass"}}"""
 
+    /** The size the `hills` terrain meta says as a load after [batch] reads it (its unsaved text over the disk). */
+    private fun terrainSize(batch: AssetRevisionBatch): Int {
+        val meta = File(assets, "hills/meta.json").absoluteFile
+        val text = batch.unsaved[meta] ?: meta.readText()
+        return JsonProcessor().readObject(text).get("additional").get("size").asInt()
+    }
+
     private fun project() {
         write("hills/terrain.data", "1234", 1000)
         write("hills/meta.json", terrainMeta(100))
@@ -76,7 +86,7 @@ class AssetRefreshTest {
         r.changed()
         settle()
         assertEquals(setOf("hills"), delivered.single().names)
-        assertEquals(200, delivered.single().files.terrain("hills")!!.size)
+        assertEquals(200, terrainSize(delivered.single()))
     }
 
     @Test
@@ -87,7 +97,7 @@ class AssetRefreshTest {
         r.changed()
         settle()
         assertEquals(setOf("hills"), delivered.single().names)
-        assertEquals("the snapshot reads the unsaved text", 300, delivered.single().files.terrain("hills")!!.size)
+        assertEquals("the snapshot reads the unsaved text", 300, terrainSize(delivered.single()))
         assertEquals("the disk still holds the old size", 100, JsonProcessor().readObject(meta.readText()).get("additional").get("size").asInt())
 
         // saved: the document is no longer unsaved and the disk holds the same text
@@ -109,7 +119,7 @@ class AssetRefreshTest {
         unsaved = mapOf(meta to terrainMeta(300)) // redo
         r.changed(); settle()
         assertEquals(listOf(setOf("hills"), setOf("hills"), setOf("hills")), delivered.map { it.names })
-        assertEquals(listOf(300, 100, 300), delivered.map { it.files.terrain("hills")!!.size })
+        assertEquals(listOf(300, 100, 300), delivered.map { terrainSize(it) })
     }
 
     @Test
@@ -176,8 +186,8 @@ class AssetRefreshTest {
         write("tree/tree.gltf", "gltf!", 4000); r.changed(); settle()
         val merged = delivered[0] + delivered[1]
         assertEquals(setOf("hills", "tree"), merged.names)
-        assertEquals(150, merged.files.terrain("hills")!!.size)
-        assertTrue(merged.files === delivered[1].files)
+        assertEquals(150, terrainSize(merged))
+        assertEquals(delivered[1].unsaved, merged.unsaved)
     }
 
     @Test
@@ -199,7 +209,7 @@ class AssetRefreshTest {
         pending.queue(delivered[1])
         val taken = pending.take()!!
         assertEquals(setOf("hills", "tree"), taken.names)
-        assertTrue(taken.files === delivered[1].files)
+        assertEquals(delivered[1].unsaved, taken.unsaved)
         assertEquals("taken once", null, pending.take())
     }
 }

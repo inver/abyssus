@@ -38,12 +38,12 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.assets.META_FILE
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.FieldKind
 import net.nevinsky.abyssus.FieldValue
 import net.nevinsky.abyssus.ParseOutcome
-import net.nevinsky.abyssus.assets.Asset
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.Asset
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.text
 import net.nevinsky.abyssus.filetype.AssetIcons
@@ -176,23 +176,7 @@ class AssetPropertiesPanel(
             if (sceneFile != null) {
                 scene = sceneFile
                 background {
-                    val result = runCatchingKeepingCancellation {
-                        val sceneDto = service<AbyssusCore>().json.parse(sceneFile.text(), Scene::class.java)
-                        PanelState.UISceneState(
-                            sceneFile,
-                            describeNonAsset(node)?.first ?: sceneFile.name,
-                            PanelState.UIRayTracingState(sceneDto.rayTracing)
-                        )
-                    }.getOrElse {
-                        thisLogger().error(it)
-                        PanelState.Empty(
-                            AbyssusBundle.message(
-                                "propertiesSceneUnreadable",
-                                //TODO add reason
-                                "REASON HERE"
-                            ), null
-                        )
-                    }
+                    val result = readSceneState(sceneFile, describeNonAsset(node)?.first ?: sceneFile.name)
                     ui { if (token == generation && !disposed) apply(result) }
                 }
             } else {

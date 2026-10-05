@@ -26,11 +26,10 @@ class AbyssusPropertiesToolWindowFactory : ToolWindowFactory, DumbAware {
             net.nevinsky.abyssus.schema.ComponentSchemas.of(project),
         ) { dir, name ->
             // the panel re-reads an entity on every scene edit; parse each model file once per modification
-            val files = core.loading.files(dir)
-            files.model(name)?.let { model ->
+            core.loading.modelFile(dir, name)?.let { model ->
                 val stamp = model.lastModified()
                 tables[model.canonicalFile]?.takeIf { it.first == stamp }?.second
-                    ?: core.loading.rayModelMaterials(files, name)?.map { RayMaterialIdentity(it.id, it.pbr) }
+                    ?: core.loading.rayModelMaterials(dir, name)?.map { RayMaterialIdentity(it.id, it.pbr) }
                         ?.also { tables[model.canonicalFile] = stamp to it }
             }
         }

@@ -9,7 +9,7 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
-import net.nevinsky.abyssus.assets.terrain.TerrainData
+import net.nevinsky.abyssus.core.assets.terrain.TerrainData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -110,9 +110,7 @@ class ScenePickerTest {
         val dir = java.io.File("src/test/testData/project/Untitled")
         val content = SceneContent.of(net.nevinsky.abyssus.parseScene(java.io.File(dir, "scenes/Main Scene.scene").readText()))
         val placement = content.terrains.single()
-        val asset = java.io.File(dir, "assets/" + placement.assetName)
-        val meta = net.nevinsky.abyssus.filetype.SceneJson.parse(java.io.File(asset, "meta.json").readText())["additional"]
-        val data = net.nevinsky.abyssus.assets.terrain.TerrainDataReader().read(java.io.File(asset, meta["terrainFile"].asText()), meta["size"].asInt(), meta["uv"].floatValue())
+        val data = net.nevinsky.abyssus.terrainData(dir, placement.assetName)
         org.junit.Assert.assertTrue(data.heights.all { it == 0f })
         val camera = content.cameras.single()
         val ground = ScenePicker.restHeight(OrientedBox(SceneMarkers.cameraBounds(camera.position), Matrix4()), emptyList(), listOf(TerrainTarget("1", data, placement.transform.toMatrix())))!!

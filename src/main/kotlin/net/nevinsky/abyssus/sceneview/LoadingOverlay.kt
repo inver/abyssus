@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.sky.createFullscreenTriangle
+import net.nevinsky.abyssus.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.core.GeometryUtils.Companion.createFullscreenTriangle
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.utils.Disposable

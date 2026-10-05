@@ -5,7 +5,7 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import net.nevinsky.abyssus.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.core.assets.model.RayModelSnapshot
 import net.nevinsky.abyssus.raytracing.RayColor
 import net.nevinsky.abyssus.raytracing.RayEnvironment
 import net.nevinsky.abyssus.sceneview.gizmo.DragResult

@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.terrain.generation
 
+import net.nevinsky.abyssus.TERRAIN_DATA_FILE
+import net.nevinsky.abyssus.terrain.TerrainAssetWriter
+import net.nevinsky.abyssus.terrain.TerrainHeightEncoder
+import net.nevinsky.abyssus.terrain.sha256Hex
 import net.nevinsky.abyssus.core.FileLoader
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.terrain.TerrainLoader
@@ -47,7 +51,7 @@ class TerrainAssetEncodingTest {
 
     @Test
     fun `new terrain meta follows the native writer`() {
-        val text = writer.meta("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b", 1699293063182L, 1600)
+        val text = writer.meta(java.util.UUID.fromString("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), 1699293063182L, 1600)
         assertEquals(
             """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1699293063182,"uuid":"2cf70bf7-f7ee-4c41-934c-e40df1d35c8b","type":"TERRAIN",""" +
                 """"additional":{"terrainFile":"terrain.data","size":1600,"uv":1.0,"splatMap":null,"splatBase":null,""" +
@@ -59,19 +63,19 @@ class TerrainAssetEncodingTest {
     @Test
     fun `the fixture meta differs only in uv`() {
         val fixtureText = File(fixture, "meta.json").readText()
-        assertEquals(fixtureText.replace("\"uv\":60.0", "\"uv\":1.0"), writer.meta("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b", 1699293063182L, 1600))
+        assertEquals(fixtureText.replace("\"uv\":60.0", "\"uv\":1.0"), writer.meta(java.util.UUID.fromString("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), 1699293063182L, 1600))
     }
 
     @Test
     fun `a new asset loads through the ordinary asset files`() {
         val heights = TerrainGenerator(FastNoiseSamplerFactory()).generate(33, 800, TerrainGenerationSettings())
-        val files = writer.create("11111111-2222-3333-4444-555555555555", 1L, 800, heights)
+        val files = writer.create(java.util.UUID.fromString("11111111-2222-3333-4444-555555555555"), 1L, 800, heights)
         val dir = File(tmp.root, "assets/hills").apply { mkdirs() }
         File(dir, "meta.json").writeText(files.metaText)
         File(dir, TERRAIN_DATA_FILE).writeBytes(files.heightBytes)
 
         val fileLoader = FileLoader(tmp.root)
-        val read = checkNotNull(TerrainLoader(fileLoader, AssetMetaLoader(json, fileLoader)).prepare("hills")).also { it.dispose() }.data
+        val read = checkNotNull(TerrainLoader(fileLoader, AssetMetaLoader(json, fileLoader)).prepare("hills")).data
         assertEquals(800, read.size)
         assertEquals(1f, read.uv)
         assertEquals(33, read.resolution)
@@ -85,6 +89,6 @@ class TerrainAssetEncodingTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun `a non positive size is refused`() {
-        writer.meta("u", 1L, 0)
+        writer.meta(java.util.UUID.randomUUID(), 1L, 0)
     }
 }

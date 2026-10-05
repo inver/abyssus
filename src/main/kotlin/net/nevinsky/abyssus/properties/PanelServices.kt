@@ -7,9 +7,9 @@ package net.nevinsky.abyssus.properties
 
 import net.nevinsky.abyssus.AssetFieldDescriptions
 import net.nevinsky.abyssus.AssetMetaEditor
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.terrain.generation.TerrainGenerator
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainHeightEncoder
+import net.nevinsky.abyssus.terrain.TerrainHeightEncoder
 import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
 import net.nevinsky.abyssus.dto.MetaFiles
 import net.nevinsky.abyssus.projectView.HdrPreviewSource

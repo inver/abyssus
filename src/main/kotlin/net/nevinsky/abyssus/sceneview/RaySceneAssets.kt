@@ -4,10 +4,9 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.AssetLoading
-import net.nevinsky.abyssus.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.assets.sky.RaySkySnapshot
-import net.nevinsky.abyssus.assets.terrain.RayTerrainSnapshot
+import net.nevinsky.abyssus.core.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.core.assets.sky.RaySkySnapshot
+import net.nevinsky.abyssus.core.assets.terrain.RayTerrainSnapshot
 import java.io.File
 
 /** Per-view optional CPU interest. Reconciliation and polling never wait for asset preparation or touch GL. */
@@ -18,22 +17,23 @@ class RaySceneAssets(
     private val acquireSky: (File, String) -> RayAssetLease<RaySkySnapshot>? = { _, _ -> null },
     private val invalidateSky: (File, String) -> Unit = { _, _ -> },
 ) : AutoCloseable {
-    constructor(loading: AssetLoading) : this(
-        { project, name -> loading.rayModels.acquire(loading.files(project), name).let { lease ->
+    constructor(assets: ViewAssets) : this(
+        { project, name -> assets.project(project).rayModels.acquire(name).let { lease ->
             RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close)
         } },
-        { project, name -> loading.rayTerrains.acquire(loading.files(project), name).let { lease ->
+        { project, name -> assets.project(project).rayTerrains.acquire(name).let { lease ->
             RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close)
         } },
         { project, models, terrains ->
-            val files = loading.files(project)
-            models.forEach { loading.rayModels.invalidate(files, it) }
-            terrains.forEach { loading.rayTerrains.invalidate(files, it) }
+            assets.current?.takeIf { it.projectDir == project.absoluteFile }?.let {
+                models.forEach(it.rayModels::invalidate)
+                terrains.forEach(it.rayTerrains::invalidate)
+            }
         },
-        { project, name -> loading.raySkies.acquire(loading.files(project), name).let { lease ->
+        { project, name -> assets.project(project).raySkies.acquire(name).let { lease ->
             RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close)
         } },
-        { project, name -> loading.raySkies.invalidate(loading.files(project), name) },
+        { project, name -> assets.current?.takeIf { it.projectDir == project.absoluteFile }?.raySkies?.invalidate(name) },
     )
 
     private var project: String? = null

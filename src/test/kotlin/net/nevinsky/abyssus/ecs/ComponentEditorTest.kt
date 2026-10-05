@@ -283,7 +283,12 @@ class ComponentEditorTest {
         editor.add(root, "0", "LightComponent")
         editor.update(root, "4", "CameraComponent", "camera.near", "0.25")
         editor.update(root, "0", "PositionComponent", "localPosition.y", "2.5")
-        val configurator = EcsConfigurator(FolderAssetResolver(File("src/test/testData/project/Untitled/assets").list().orEmpty().toList()))
+        val configurator = EcsConfigurator(
+            net.nevinsky.abyssus.core.JsonProcessor().mapper,
+            FolderAssetResolver(File("src/test/testData/project/Untitled/assets").list().orEmpty().toList()),
+            org.slf4j.helpers.NOPLogger.NOP_LOGGER,
+            net.nevinsky.abyssus.runtime.schema.GameComponents(),
+        )
         val before = configurator.load(original["ecs"])
         val after = configurator.load(root["ecs"])
         assertEquals(before.document.warnings, after.document.warnings)

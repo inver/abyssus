@@ -14,16 +14,18 @@ import java.util.concurrent.Executor
  */
 internal class RayIntegration(
     private val service: RayBackendService,
-    private val assets: () -> RaySceneAssets,
+    private val assets: (ViewAssets) -> RaySceneAssets,
     private val executor: Executor,
     private val exposure: () -> Float = { 1f },
     private val reportFailure: (Throwable) -> Unit = {},
 ) {
-    fun newFeed(viewId: String): RayViewFeed = RayViewFeed(service.newView(viewId), assets(), executor, exposure, reportFailure = reportFailure)
+    /** A feed whose CPU asset interest goes through [viewAssets], the assets of the view it is for. */
+    fun newFeed(viewId: String, viewAssets: ViewAssets): RayViewFeed =
+        RayViewFeed(service.newView(viewId), assets(viewAssets), executor, exposure, reportFailure = reportFailure)
 
     companion object {
         fun of(core: AbyssusCore) = RayIntegration(
-            core.rayService, { RaySceneAssets(core.loading) }, core.rayConverter, { core.loading.toneCurve.exposure },
+            core.rayService, { viewAssets -> RaySceneAssets(viewAssets) }, core.rayConverter, { core.loading.toneCurve.exposure },
             core.loggers.getLogger("ray").let { log -> { failure: Throwable -> log.warn("Ray tracing stopped: ${failure.message ?: failure.javaClass.simpleName}", failure) } },
         )
     }

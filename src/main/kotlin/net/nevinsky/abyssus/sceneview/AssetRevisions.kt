@@ -6,17 +6,27 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.assets.SPLAT_FIELDS
+import net.nevinsky.abyssus.core.assets.terrain.SPLAT_FIELDS
 import net.nevinsky.abyssus.dto.AssetMetaReader
-import net.nevinsky.abyssus.assets.MetaType
-import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.terrain.generation.sha256Hex
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.META_FILE
+import net.nevinsky.abyssus.core.assets.MetaType
+import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.terrain.sha256Hex
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.runtime.obj
 import net.nevinsky.abyssus.runtime.text
 import java.io.File
 import kotlin.collections.iterator
+
+/** Reads a `meta.json` file as text; null when there is none. The default reads the file from disk. */
+fun interface MetaTextSource {
+    fun read(metaFile: File): String?
+}
+
+/** The default [MetaTextSource]: the file's content on disk. */
+class DiskMetaText : MetaTextSource {
+    override fun read(metaFile: File): String? = metaFile.takeIf { it.isFile }?.readText()
+}
 
 /** The revisions of every asset folder of a project at one moment, by folder name. */
 data class ProjectRevisions(val assets: Map<String, AssetRevision>)

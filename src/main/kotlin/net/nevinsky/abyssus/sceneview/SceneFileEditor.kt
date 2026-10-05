@@ -10,7 +10,7 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.assets.ASSETS_DIR
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
 import java.io.File
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.command.undo.DocumentReference
@@ -37,7 +37,7 @@ import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.components.JBLabel
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.filetype.editSceneJson
 import net.nevinsky.abyssus.projectView.AddLightGroup
 import net.nevinsky.abyssus.projectView.canAddLight
@@ -49,9 +49,9 @@ import java.beans.PropertyChangeListener
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
-import net.nevinsky.abyssus.assets.META_FILE
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.dto.SceneReader
 import net.nevinsky.abyssus.dto.SceneDocumentCache
 import com.intellij.openapi.command.undo.UndoManager
@@ -75,7 +75,7 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
             project, file, core.json, project.service<SceneRayControls>(), SceneParamsSource.editorText(reader),
         ) { params ->
             SceneViewPanel(
-                params, SceneRenderer(core.loading, core.sceneShaders),
+                params, SceneRenderer(ViewAssets(core.loading), core.sceneShaders),
                 lightActions = { position -> AddLightGroup(project, file, position) },
                 canAddLight = { canAddLight(file, documents) },
                 ray = ray,

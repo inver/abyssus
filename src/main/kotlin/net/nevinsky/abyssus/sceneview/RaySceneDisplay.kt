@@ -17,7 +17,7 @@ internal class RayFrameContext(
     /** The built HDR sky's six axis irradiance colours (+X, -X, +Y, -Y, +Z, -Z), the same ones raster models use as ambient. */
     val hdrAmbient: FloatArray? = null,
     /** Bakes the scene's procedural sky (arbitrary asset GLSL) on the render thread; null for any other sky. Only asked in ray mode. */
-    val bakedSky: (() -> net.nevinsky.abyssus.assets.sky.RaySkySnapshot?)? = null,
+    val bakedSky: (() -> net.nevinsky.abyssus.core.assets.sky.RaySkySnapshot?)? = null,
 )
 
 internal data class RayDisplayCamera(

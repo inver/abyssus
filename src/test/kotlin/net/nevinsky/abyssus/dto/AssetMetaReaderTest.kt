@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.dto
 import net.nevinsky.abyssus.core.JsonProcessor
-import net.nevinsky.abyssus.assets.format.UnsupportedDocumentFormat
+import net.nevinsky.abyssus.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.core.assets.MetaType
 import org.junit.Assert.*
 import org.junit.Test

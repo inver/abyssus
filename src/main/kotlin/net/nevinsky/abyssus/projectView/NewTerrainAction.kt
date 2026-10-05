@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -90,8 +91,8 @@ private fun createInteractively(project: Project, abss: VirtualFile) {
 /** Writes the terrain of [request] under [abss]'s project as one undoable command, then selects it in the view. */
 fun createTerrain(project: Project, abss: VirtualFile, request: NewTerrainRequest, report: (String) -> Unit = { Messages.showErrorDialog(project, it, AbyssusBundle.message("newTerrainTitle")) }): AssetCommandResult? {
     val core = service<AbyssusCore>()
-    val accepted = net.nevinsky.abyssus.assets.runCatchingKeepingCancellation {
-        core.format.requireSupported(core.json.readObject(net.nevinsky.abyssus.dto.textOf(abss)), net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT)
+    val accepted = net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation {
+        core.format.requireSupported(core.json.readObject(net.nevinsky.abyssus.dto.textOf(abss)), net.nevinsky.abyssus.format.DocumentKind.PROJECT)
     }
     accepted.exceptionOrNull()?.let { report(it.displayMessage()); return null }
     val projectDir = File(abss.parent.path)

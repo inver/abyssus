@@ -8,8 +8,8 @@ package net.nevinsky.abyssus.properties
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.assets.MetaType
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.MetaType
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.dto.MetaFiles
 import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage

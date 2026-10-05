@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.terrain.generation
 
-import net.nevinsky.abyssus.assets.terrain.MAX_TERRAIN_RESOLUTION
+import net.nevinsky.abyssus.core.assets.terrain.MAX_TERRAIN_RESOLUTION
 import net.nevinsky.abyssus.terrain.noise.NoiseSamplerFactory
 
 /** The smallest terrain resolution: two heights per side. */
@@ -54,7 +54,7 @@ data class TerrainGenerationSettings(
 /**
  * Makes terrain heights from [TerrainGenerationSettings]: fractal noise sampled at world positions, so the same
  * settings, size and noise generator give the same heights at any resolution, then mapped onto the height range.
- * Heights are laid out row after row (z-major) as [net.nevinsky.abyssus.assets.terrain.TerrainData] expects. Pure
+ * Heights are laid out row after row (z-major) as [net.nevinsky.abyssus.core.assets.terrain.TerrainData] expects. Pure
  * CPU work, safe on any thread.
  */
 class TerrainGenerator(private val noise: NoiseSamplerFactory) {

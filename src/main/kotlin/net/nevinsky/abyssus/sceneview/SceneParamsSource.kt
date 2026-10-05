@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.sceneview
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.SceneReader
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.textOf
 
 /** Reads what the scene view shows for a `.scene` file; throws when the scene cannot be read. */
@@ -26,7 +26,7 @@ fun interface SceneParamsSource {
         fun editorText(reader: SceneReader) = SceneParamsSource { file ->
             val camera = ProjectLayout.abssFor(file)?.let { abss ->
                 val text = textOf(abss)
-                net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().requireSupported(net.nevinsky.abyssus.filetype.SceneJson.parse(text), net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT)
+                net.nevinsky.abyssus.format.AbyssusDocumentFormat().requireSupported(net.nevinsky.abyssus.filetype.SceneJson.parse(text), net.nevinsky.abyssus.format.DocumentKind.PROJECT)
                 MainCamera.parse(text)
             } ?: CameraParams.DEFAULT
             SceneRenderParams.from(reader.parse(textOf(file)), camera, ProjectLayout.projectDirFor(file))

@@ -32,7 +32,7 @@ object SceneRayEdits {
         identities: List<RayMaterialIdentity>
     ): RayDataEdit = edit(project, file) { root ->
         val render =
-            root.path("ecs").path("entities").path(entity).path("components").get("RenderComponent") as? ObjectNode
+            net.nevinsky.abyssus.SceneEcsPaths().components(root, entity)?.get("RenderComponent") as? ObjectNode
                 ?: return@edit RayDataEdit.Conflict
         RayMaterialOverrides().edit(render, id, field, expected, text, identities)
     }

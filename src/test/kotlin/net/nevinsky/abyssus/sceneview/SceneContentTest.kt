@@ -11,10 +11,10 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_RANGE
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_NEAR
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FAR
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FOV
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_RANGE
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_NEAR
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FAR
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
 
 class SceneContentTest {
     private fun content(json: String) = SceneContent.of(parseScene(json))

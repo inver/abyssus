@@ -11,11 +11,11 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.core.ModelLogging
 import net.nevinsky.abyssus.log.IntellijLoggerFactory
 import org.slf4j.ILoggerFactory
-import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainAssetWriter
+import net.nevinsky.abyssus.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.terrain.TerrainAssetWriter
 import net.nevinsky.abyssus.terrain.generation.TerrainGenerator
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainHeightEncoder
+import net.nevinsky.abyssus.terrain.TerrainHeightEncoder
 import net.nevinsky.abyssus.dto.AssetMetaReader
 import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
 import net.nevinsky.abyssus.terrain.noise.FastNoiseSamplerFactory
@@ -43,12 +43,8 @@ class AbyssusCore : Disposable {
     }
 
     val json = JsonProcessor()
-    val format = net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat()
-    val scenes = net.nevinsky.abyssus.runtime.SceneLoading(
-        json,
-        loggers.getLogger("scenes"),
-        format,
-    )
+    val format = net.nevinsky.abyssus.format.AbyssusDocumentFormat()
+    val documents = net.nevinsky.abyssus.dto.DocumentParsing(json, loggers.getLogger("scenes"), format)
 
     val metaFiles = net.nevinsky.abyssus.dto.MetaFiles(AssetMetaReader(json, format))
 
@@ -77,8 +73,6 @@ class AbyssusCore : Disposable {
 
     /** The loading pipeline's Radiance sky pieces, for the chooser and the Properties panel. */
     val hdrPreviews: net.nevinsky.abyssus.projectView.HdrPreviewSource = object : net.nevinsky.abyssus.projectView.HdrPreviewSource {
-        override val files get() = loading.hdrFiles
-        override val decoder get() = loading.decoder
         override val preview get() = loading.hdrPreview
     }
 

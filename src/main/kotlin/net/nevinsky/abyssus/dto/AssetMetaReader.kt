@@ -6,13 +6,13 @@
 package net.nevinsky.abyssus.dto
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.assets.AssetMeta
-import net.nevinsky.abyssus.assets.MetaType
-import net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.assets.format.DocumentKind
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.assets.AssetMeta
+import net.nevinsky.abyssus.core.assets.MetaType
+import net.nevinsky.abyssus.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.format.DocumentKind
+import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.runtime.text
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 
 /** One parsed `meta.json`: its [type], its raw [json] tree, and the typed binding on request. */
 class MetaDocument internal constructor(val type: MetaType, val json: JsonNode, private val processor: JsonProcessor) {

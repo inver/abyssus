@@ -16,7 +16,7 @@ Version 1 requires these root members in each project, scene and asset metadata 
 { "format": "abyssus", "formatVersion": 1 }
 ```
 
-`AbyssusDocumentFormat` (`core/src/main/kotlin/net/nevinsky/abyssus/assets/format/AbyssusDocumentFormat.kt`)
+`AbyssusDocumentFormat` (`src/main/kotlin/net/nevinsky/abyssus/format/AbyssusDocumentFormat.kt`)
 validates document identity and reserved scene fields on the caller's thread, without GL or platform services.
 Only the exact string `abyssus` and integral JSON version `1` are supported. Missing/null/foreign markers, string
 or fractional versions (including `1.0`), negative versions and future versions are unsupported. Asset metadata's
@@ -55,7 +55,7 @@ Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored
 
 ## `.scene`
 
-Top level, bound to `SceneDto` (`../../core/src/main/kotlin/net/nevinsky/abyssus/core/scene/Scene.kt`):
+Top level, bound to `Scene` (`core/src/main/kotlin/net/nevinsky/abyssus/core/scene/Scene.kt`):
 
 | Key | Meaning |
 |---|---|
@@ -93,7 +93,7 @@ The components the plugin reads:
 empty `PositionComponent: {}` is valid. Writers add fields when they change them (`SceneTransformWriter`,
 `PositionCodec`).
 
-**Light defaults** (`runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/component/ComponentDefaults.kt`). A light that leaves a value out has: `intensity` 1; the
+**Light defaults** (`runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/component/LightComponent.kt`). A light that leaves a value out has: `intensity` 1; the
 whole `color` object missing means white, but a channel missing inside a `color` object is 0 (the alpha channel never
 affects lighting); `range` 100; `coneAngle` 45 and `edgeSoftness` 0.2. The scene view, the Properties panel and edits
 all read lights through the same codecs, so they show and use these values alike. The file is never rewritten to state
@@ -190,7 +190,7 @@ the float count (the fixture's is 180). Generating a terrain changes none of thi
 
 New terrain metadata is one compact line with native markers first (`format`, `formatVersion`), then `version` 1, `lastModified`, `uuid`, `type` `TERRAIN`,
 `additional` with `terrainFile`, `size`, `uv` 1.0 and the six splat fields null; see `TerrainAssetWriter` in
-`../../src/main/kotlin/net/nevinsky/abyssus/terrain/generation`.
+`src/main/kotlin/net/nevinsky/abyssus/terrain/generation`.
 
 How generated heights were made is kept in a recipe file beside the
 heights (`TERRAIN_RECIPE_FILE`; a terrain loads without it):

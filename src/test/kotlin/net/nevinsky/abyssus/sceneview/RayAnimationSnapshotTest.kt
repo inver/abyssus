@@ -17,9 +17,10 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.ArrayMap
-import net.nevinsky.abyssus.assets.model.RayModelSkinning
-import net.nevinsky.abyssus.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.assets.model.RayModelSnapshotReader
+import net.nevinsky.abyssus.core.assets.model.RayModelSkinning
+import net.nevinsky.abyssus.core.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.core.assets.model.ModelRaySnapshotLoader
+import net.nevinsky.abyssus.core.assets.model.RayModelSource
 import net.nevinsky.abyssus.core.AnimationController
 import net.nevinsky.abyssus.core.ModelInstance
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader
@@ -154,6 +155,6 @@ class RayAnimationSnapshotTest {
                 bones = ArrayMap<String, Matrix4>().apply { put("joint", Matrix4()) }
             })
         })
-        return RayModelSnapshotReader(AssimpModelLoader()).capture(data, emptyMap())
+        return ModelRaySnapshotLoader(net.nevinsky.abyssus.core.FileLoader(java.io.File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
     }
 }

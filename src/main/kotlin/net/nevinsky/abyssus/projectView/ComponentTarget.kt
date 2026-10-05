@@ -16,7 +16,7 @@ fun componentTargetOf(node: Any?): ComponentTarget? {
     val file = entry.source?.takeIf { it.isValid } ?: return null
     return when {
         isEntityEntry(entry) -> ComponentTarget(file, entry.name, null)
-        isComponentEntry(entry) -> ComponentTarget(file, entry.parentKeys[2], entry.name)
+        isComponentEntry(entry) -> ComponentTarget(file, entry.parentKeys[entry.parentKeys.size - 2], entry.name)
         else -> null
     }
 }

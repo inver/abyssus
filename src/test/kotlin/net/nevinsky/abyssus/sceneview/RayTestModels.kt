@@ -11,8 +11,9 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelMaterial
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.assets.model.RayModelSnapshotReader
+import net.nevinsky.abyssus.core.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.core.assets.model.ModelRaySnapshotLoader
+import net.nevinsky.abyssus.core.assets.model.RayModelSource
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader
 import net.nevinsky.abyssus.core.model.ModelData
 import net.nevinsky.abyssus.core.model.ModelMesh
@@ -37,5 +38,5 @@ internal fun rayTestModel(count: Int = 3, pbr: Boolean = false): RayModelSnapsho
             id = "node"; translation = Vector3(0f, 1f, 0f)
             parts = arrayOf("red", "green").map { name -> ModelNodePart().apply { meshPartId = name; materialId = name } }.toTypedArray()
         })
-        return RayModelSnapshotReader(AssimpModelLoader()).capture(data, emptyMap())
+        return ModelRaySnapshotLoader(net.nevinsky.abyssus.core.FileLoader(java.io.File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
     }

@@ -234,7 +234,7 @@ class SceneRenderGlTest {
         val dir = java.nio.file.Files.createTempDirectory("hdrscene").toFile()
         try {
             val sky = File(dir, "assets/sky")
-            net.nevinsky.abyssus.core.assets.sky.hdr.HdrFixtures.write(File(sky, "sky.hdr"), 64, 32, pixel = net.nevinsky.abyssus.assets.sky.hdr.HdrFixtures.uniform(radiance))
+            net.nevinsky.abyssus.core.assets.sky.hdr.HdrFixtures.write(File(sky, "sky.hdr"), 64, 32, pixel = net.nevinsky.abyssus.core.assets.sky.hdr.HdrFixtures.uniform(radiance))
             File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
             val text = edit(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()) { root ->
                 noFog(root); root.put("skyboxEnabled", true); root.put("skyboxName", "sky")

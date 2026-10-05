@@ -15,14 +15,14 @@ import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.TestDataPath
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.core.project.Project
-import net.nevinsky.abyssus.core.project.SceneError
+import net.nevinsky.abyssus.dto.ProjectDto
+import net.nevinsky.abyssus.dto.SceneError
 import net.nevinsky.abyssus.projectView.childrenOf
 import net.nevinsky.abyssus.projectView.elementLabel
 import net.nevinsky.abyssus.dto.ProjectReader
 import net.nevinsky.abyssus.dto.SceneReader
 import net.nevinsky.abyssus.core.scene.Scene
-import net.nevinsky.abyssus.core.project.SceneEntry
+import net.nevinsky.abyssus.dto.SceneEntry
 import net.nevinsky.abyssus.projectView.foldToggles
 import net.nevinsky.abyssus.filetype.AbyssusProjectFileType
 import net.nevinsky.abyssus.filetype.AbyssusProjectIcons
@@ -102,7 +102,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
     }
 
     fun testRowNamesAndOrderAreStable() {
-        assertEquals(listOf("name", "scenes", "assets"), childrenOf(Project("n", emptyList(), emptyList())).map { it.name })
+        assertEquals(listOf("name", "scenes", "assets"), childrenOf(ProjectDto("n", emptyList(), emptyList())).map { it.name })
         assertEquals(listOf("type", "uuid"), childrenOf(testAsset("a", "u", "MODEL", listOf("r"), true)).map { it.name })
         assertEquals(listOf("error"), childrenOf(SceneError(add("e.scene", "x"), "boom")).map { it.name })
         val fog = parseScene("""{"fog":{"color":{"r":1,"g":2,"b":3,"a":4},"density":0.5}}""").fog!!
@@ -133,7 +133,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val file = fixture().findChild("Untitled.abss")!!
         val root = project.service<ProjectReader>().read(file).obj!!
         assertEquals(listOf("name", "scenes", "assets"), childrenOf(root).map { it.name })
-        val scenes = (root as Project).scenes
+        val scenes = (root as ProjectDto).scenes
         assertEquals(listOf("$fixtureSceneName (0)"), scenes.mapIndexed { i, it -> elementLabel("scenes", it, i) })
     }
 
@@ -147,7 +147,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals(listOf("A", "B", "scenes[2]", "d.scene"), items)
         add("q/a.abss", """{"format":"abyssus","formatVersion":1,"name":"q"}""")
         val none = project.service<ProjectReader>().read(myFixture.findFileInTempDir("q/a.abss")).obj!!
-        assertTrue((none as Project).scenes.isEmpty())
+        assertTrue((none as ProjectDto).scenes.isEmpty())
         assertTrue(!project.service<ProjectReader>().read(add("bad.abss", "")).success)
     }
 

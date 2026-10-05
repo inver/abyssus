@@ -8,12 +8,12 @@ package net.nevinsky.abyssus.terrain
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
-import net.nevinsky.abyssus.assets.ASSETS_DIR
-import net.nevinsky.abyssus.assets.META_FILE
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.runtime.obj
 import net.nevinsky.abyssus.runtime.text
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.terrain.MAX_TERRAIN_RESOLUTION
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.terrain.MAX_TERRAIN_RESOLUTION
 import net.nevinsky.abyssus.terrain.generation.MIN_TERRAIN_RESOLUTION
 import net.nevinsky.abyssus.terrain.generation.RecipeStatus
 import net.nevinsky.abyssus.terrain.generation.SourceSnapshot
@@ -56,8 +56,8 @@ sealed interface TerrainSource {
  * parsed as [meta]: size, the height file and the recipe beside it. Reads files, so off the EDT.
  */
 fun readTerrainSource(folder: File, metaText: String, meta: JsonNode, choices: AssetReferenceChoices, recipes: TerrainRecipeCodec): TerrainSource {
-    net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().validate(meta, net.nevinsky.abyssus.assets.format.DocumentKind.ASSET)?.let {
-        return TerrainSource.Unusable(net.nevinsky.abyssus.assets.format.UnsupportedDocumentFormat(net.nevinsky.abyssus.assets.format.DocumentKind.ASSET, it).documentDisplayMessage())
+    net.nevinsky.abyssus.format.AbyssusDocumentFormat().validate(meta, net.nevinsky.abyssus.format.DocumentKind.ASSET)?.let {
+        return TerrainSource.Unusable(net.nevinsky.abyssus.format.UnsupportedDocumentFormat(net.nevinsky.abyssus.format.DocumentKind.ASSET, it).documentDisplayMessage())
     }
     val additional = meta.obj("additional") ?: return unusable("terrainNoAdditional")
     val size = additional.get("size")?.takeIf { it.isIntegralNumber && it.canConvertToInt() }?.intValue()?.takeIf { it > 0 }

@@ -10,11 +10,10 @@ import net.nevinsky.abyssus.assetfiles.AssetReferenceGuard
 import net.nevinsky.abyssus.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.assetfiles.FileChange
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.runtime.text
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.terrain.generation.*
-import net.nevinsky.abyssus.assets.terrain.generation.TERRAIN_DATA_FILE
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.TERRAIN_DATA_FILE
 import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.dto.AssetMetaReader
@@ -113,9 +112,9 @@ class NewTerrainFactory(
                 ),
             ),
             createdDirs = (if (assetsDir.isDirectory) emptyList() else listOf(ASSETS_DIR)) + base,
-            guard = AssetReferenceGuard(projectDir).let { guard -> { guard.blocker(name, uuid) } },
+            guard = AssetReferenceGuard(projectDir).let { guard -> { guard.blocker(name, uuid.toString()) } },
         )
-        return NewTerrain(name, uuid, transaction)
+        return NewTerrain(name, uuid.toString(), transaction)
     }
 
     /** A random `uuid` no asset folder of the project already uses. */
@@ -128,7 +127,7 @@ class NewTerrainFactory(
             }.getOrNull()
         }.toSet()
         var uuid = randomUuid()
-        while (uuid in used) uuid = randomUuid()
+        while (uuid.toString() in used) uuid = randomUuid()
         return uuid
     }
 }

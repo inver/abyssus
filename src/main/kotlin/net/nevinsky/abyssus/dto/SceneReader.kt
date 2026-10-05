@@ -4,14 +4,13 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.runtime.SceneLoading
 import net.nevinsky.abyssus.core.scene.Scene
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 
 @Service(Service.Level.APP)
-class SceneReader(private val loading: SceneLoading) : ConfigFileReader<Scene> {
+class SceneReader(private val loading: DocumentParsing) : ConfigFileReader<Scene> {
     /** What the platform creates: the one place this service looks up the core. */
-    constructor() : this(service<AbyssusCore>().scenes)
+    constructor() : this(service<AbyssusCore>().documents)
 
     fun parse(text: String): Scene = loading.parse(text)
 

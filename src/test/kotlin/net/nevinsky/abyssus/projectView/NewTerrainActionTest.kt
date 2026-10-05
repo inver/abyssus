@@ -19,8 +19,7 @@ import net.nevinsky.abyssus.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.assetfiles.AssetFileStore
 import net.nevinsky.abyssus.assetfiles.LocalAssetFileStore
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.terrain.TerrainDataReader
+import net.nevinsky.abyssus.terrainData
 import net.nevinsky.abyssus.terrain.generation.TerrainGenerationDraft
 import net.nevinsky.abyssus.terrain.generation.TerrainGenerationSettings
 import net.nevinsky.abyssus.terrain.generation.TerrainPreview
@@ -200,10 +199,9 @@ class NewTerrainActionTest : BasePlatformTestCase() {
     fun testTheNewTerrainLoadsAndWithoutItsRecipeToo() {
         create()
         File(projectDir, "assets/hills/abyssus-terrain.recipe.json").delete()
-        val files = AssetFiles(projectDir, service<AbyssusCore>().json).terrain("hills")!!
-        val data = TerrainDataReader().read(files.data, files.size, files.uv)
+        val data = terrainData(projectDir, "hills")
         assertEquals(17, data.resolution)
-        assertEquals(400, files.size)
+        assertEquals(400, data.size)
     }
 
     fun testTheNewAssetIsListedAsUnusedAndNothingIsPlaced() {
@@ -276,11 +274,13 @@ class NewTerrainActionTest : BasePlatformTestCase() {
 
     fun testFreshUuidsAreUniqueInTheProject() {
         val core = service<AbyssusCore>()
-        val sequence = ArrayDeque(listOf("fixed-uuid", "fixed-uuid", "brand-new"))
+        val fixed = java.util.UUID.nameUUIDFromBytes("fixed-uuid".toByteArray())
+        val brandNew = java.util.UUID.nameUUIDFromBytes("brand-new".toByteArray())
+        val sequence = ArrayDeque(listOf(fixed, fixed, brandNew))
         val factory = NewTerrainFactory(core.json, core.terrainWriter, core.heightEncoder, core.terrainRecipes, randomUuid = { sequence.removeFirst() })
         val staged = factory.stage(projectDir, "hills", preview())!!
-        assertEquals("brand-new", staged.uuid)
-        assertTrue(String(staged.transaction.changes.first { it.path.endsWith("meta.json") }.after.let { (it as net.nevinsky.abyssus.assetfiles.FileSnapshot.Bytes).toByteArray() }).contains("\"uuid\":\"brand-new\""))
+        assertEquals(brandNew.toString(), staged.uuid)
+        assertTrue(String(staged.transaction.changes.first { it.path.endsWith("meta.json") }.after.let { (it as net.nevinsky.abyssus.assetfiles.FileSnapshot.Bytes).toByteArray() }).contains("\"uuid\":\"$brandNew\""))
         // the real generator never repeats within a run
         val real = (1..50).map { core.newTerrains.stage(projectDir, "t$it", preview())!!.uuid }
         assertEquals(50, real.toSet().size)

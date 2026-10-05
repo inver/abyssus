@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.AssetField
 import net.nevinsky.abyssus.EditError
 import net.nevinsky.abyssus.FieldKind
 import net.nevinsky.abyssus.FieldValue
-import net.nevinsky.abyssus.assets.MetaType
+import net.nevinsky.abyssus.core.assets.MetaType
 import java.io.File
 
 /**

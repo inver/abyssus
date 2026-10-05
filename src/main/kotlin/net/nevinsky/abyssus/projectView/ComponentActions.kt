@@ -22,7 +22,7 @@ import net.nevinsky.abyssus.schema.ComponentSchemas
 import net.nevinsky.abyssus.ecs.scene.EditResult
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.dto.textOf
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.MetaFiles
 import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.AbyssusCore

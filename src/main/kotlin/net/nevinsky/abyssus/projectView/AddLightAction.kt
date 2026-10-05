@@ -13,7 +13,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.ecs.scene.LightEntities
 import net.nevinsky.abyssus.ecs.scene.LightPreset
 import net.nevinsky.abyssus.filetype.SceneJson
@@ -50,7 +50,7 @@ private fun selectCreatedLight(project: Project, file: VirtualFile, entityId: St
         SceneEcsPaths().entities(SceneJson.parse(textOf(file)))?.get(entityId)
     }.getOrNull()
     if (entity?.isObject == true) {
-        val node = DtoEntryNode(project, file.path, DtoRow(entityId, entity), file, listOf("ecs", "entities"))
+        val node = DtoEntryNode(project, file.path, DtoRow(entityId, entity), file, SceneEcsPaths().entityKeys(SceneJson.parse(textOf(file))))
         AbyssusSelection.of(project).select(node)
     }
     selectEntityInAbyssusView(project, file, entityId)

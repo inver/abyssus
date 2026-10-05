@@ -6,16 +6,19 @@
 package net.nevinsky.abyssus.sceneview
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.core.scene.Scene
-import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_RANGE
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_NEAR
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FAR
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FOV
-import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_CONE_ANGLE
-import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_EDGE_SOFTNESS
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_RANGE
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_NEAR
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FAR
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_CONE_ANGLE
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_EDGE_SOFTNESS
 import net.nevinsky.abyssus.SceneEcsPaths
-import net.nevinsky.abyssus.runtime.ecs.scene.ComponentCodecs
+import com.badlogic.ashley.core.Component
+import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.ecs.scene.ComponentReader
+import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
 import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
@@ -95,20 +98,19 @@ data class SceneContent(
         val EMPTY = SceneContent()
 
         fun of(scene: Scene): SceneContent {
-            val codecs = ComponentCodecs()
             val entities = SceneEcsPaths().entitiesIn(scene.ecs)?.properties().orEmpty().mapNotNull { (id, entity) ->
                 val components = SceneEcsPaths().componentsOf(entity) ?: return@mapNotNull null
-                runCatchingKeepingCancellation { decode(codecs, id, components) }.getOrNull()
+                runCatchingKeepingCancellation { decode(id, components) }.getOrNull()
             }
             val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled == true && it.isNotBlank() }
             return PlacementMapper().map(entities, skybox)
         }
 
         /**
-         * Reads the entity's components through the same codecs the Properties panel uses, so both show the same values,
+         * Reads the entity's components through the runtime loader the Properties panel uses, so both show the same values,
          * defaults included. The render asset is read as the file names it, whichever delegate class holds it.
          */
-        private fun decode(codecs: ComponentCodecs, id: String, components: JsonNode): DecodedEntity {
+        private fun decode(id: String, components: JsonNode): DecodedEntity {
             val position = components.opt("PositionComponent")
             val asset = components.opt("RenderComponent")?.opt("renderable")?.opt("asset")
             val assetType = asset?.text("type")
@@ -116,14 +118,21 @@ data class SceneContent(
             return DecodedEntity(
                 id,
                 SceneEcsPaths().entityName(components, id),
-                position?.let { codecs.read<PositionComponent>("PositionComponent", it) },
+                position?.let { read<PositionComponent>(it) },
                 position?.opt("localPosition") != null,
-                components.opt("TypeComponent")?.let { codecs.read<TypeComponent>("TypeComponent", it).type },
-                components.opt("CameraComponent")?.let { codecs.read<CameraComponent>("CameraComponent", it) },
-                components.opt("LightComponent")?.let { codecs.read<LightComponent>("LightComponent", it) },
+                components.opt("TypeComponent")?.let { read<TypeComponent>(it)?.type },
+                components.opt("CameraComponent")?.let { read<CameraComponent>(it) },
+                components.opt("LightComponent")?.let { read<LightComponent>(it) },
                 if (assetType != null && assetName != null) DecodedAsset(assetType, assetName) else null,
             )
         }
+
+        /** Binds components the way a scene load does, so the view and the Properties panel show the same values. */
+        private val components = ComponentReader(JsonProcessor().mapper, { _, _ -> null }, NOPLogger.NOP_LOGGER)
+
+        /** A component that cannot be bound is left out, so one bad value does not hide the entity. */
+        private inline fun <reified C : Component> read(node: JsonNode): C? =
+            runCatchingKeepingCancellation { components.read(C::class.java, node) }.getOrNull()
 
         /** The libGDX forward axis (-Z) rotated by [q]. */
         internal fun forward(q: Quat): Vec3 {
