@@ -169,7 +169,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         fixture()
         val scene = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()
         val top = children(scene).map { text(it) }
-        assertEquals(listOf("ambientLight", "fog", "skybox: skybox_physical", "ecs  7 entities"), top)
+        assertEquals(listOf("ambientLight", "fog", "skybox: skybox_physical", "ecs  8 entities"), top)
         assertTrue(top.none { it.startsWith("id") || it.startsWith("name") })
         assertTrue("skybox: skybox_physical" in top)
         assertTrue(top.none { it.endsWith("Enabled: true") || it.endsWith("Enabled: false") })

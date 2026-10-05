@@ -662,3 +662,136 @@ its tooltip and its states); their behaviour is unchanged and is now reached thr
 `SceneViewPanelRayTest` (7) drives the view's `RayControl` directly and has a new case asserting the toolbar holds no ray
 control (nothing named `ray-*`, no "Ray Tracing" text); `SceneRaySwitchTest` (11) asserts the Scene View has no button and that a
 change made through the view's control flips the Properties switch back. Two unused message keys were removed.
+
+## Windows Vulkan device run (tasks 1.3, 1.4, 1.7, 2026-10-05)
+
+Host: Windows 10 10.0 amd64, NVIDIA GeForce RTX 5070 Ti. Vulkan loader 1.4.341; Khronos validation layer 1.4.363 was
+loaded from `D:\TMP\kilo\vulkansdk\Bin` with `VK_LAYER_PATH`, `VK_LAYER_SETTINGS_PATH` and
+`VK_LOADER_LAYERS_DISABLE=~implicit~`. Shaders were built with `glslangValidator`
+(`-Pabyssus.glslc=D:\TMP\kilo\vulkansdk\Bin\glslangValidator.exe -Pabyssus.requireShaders=true`).
+
+Commands (run through `cmd /c` with output redirected to `D:\TMP\kilo\gradle_run.log`):
+
+```bat
+gradlew.bat :raytracing:test -Dabyssus.vulkanTests=true -Dabyssus.raytracing.validation=true -Pabyssus.glslc=D:\TMP\kilo\vulkansdk\Bin\glslangValidator.exe -Pabyssus.requireShaders=true
+gradlew.bat :raytracing:verifyNativePackaging -Pabyssus.glslc=D:\TMP\kilo\vulkansdk\Bin\glslangValidator.exe -Pabyssus.requireShaders=true
+gradlew.bat :raytracing:test --tests *VulkanRayBackendTimingTest -Dabyssus.vulkanTests=true -Dabyssus.vulkanTimingTests=true -Pabyssus.glslc=D:\TMP\kilo\vulkansdk\Bin\glslangValidator.exe -Pabyssus.requireShaders=true
+```
+
+Results:
+- `VulkanRayBackendTest`: 45/45 passed, no skips, no failures or errors. The selected device is `NVIDIA GeForce RTX 5070 Ti`.
+- `VulkanNativePackagingTest`: 4/4 passed. `verifyNativePackaging` passed on Windows.
+- Full `:raytracing:test` with `-Dabyssus.raytracing.validation=true` and the default callback flags disabled: 176 tests,
+  48 skipped (Metal suites, Vulkan timing and the missing-loader packaging case), 0 failures, 0 errors.
+- Native-only timing (`VulkanRayBackendTimingTest`, 30 s, 1280x720, moving instance and camera, readback included):
+  - validation layer active, callback disabled: slice 39.7 fps, p95 32.8 ms; scene 28.6 fps, p95 94.9 ms.
+  - validation layer disabled: slice 69.9 fps, p95 16.4 ms; scene 68.0 fps, p95 16.7 ms.
+  This is not the runIde presentation/EDT/input-latency gate.
+
+Validation callback diagnosis:
+- With `khronos_validation.debug_action = VK_DBG_LAYER_ACTION_CALLBACK`, `vkCreateInstance` succeeds while the Khronos
+  validation layer is active.
+- Creating `VK_EXT_debug_utils` messenger or `VK_EXT_debug_report` callback crashes in `VkLayer_khronos_validation.dll`
+  and then `msvcp140.dll` (`EXCEPTION_ACCESS_VIOLATION`). Crash logs were moved to `D:\TMP\kilo\crash_logs`.
+- Attempts that did not fix it: narrow severity/type, non-null `pUserData`, `VkLayerSettingsCreateInfoEXT` pNext with
+  zero settings, `khronos_validation.report_flags = error`, disabling implicit loader layers, and disabling validation
+  features through the settings file.
+- `khronos_validation.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG` crashes during `vkCreateInstance`, both with stdout
+  and with a file log target.
+
+Consequence: `VulkanInstance` now keeps the validation layer active when requested, but does not install a debug callback
+by default. `-Dabyssus.raytracing.validationMessenger=true` and `-Dabyssus.raytracing.validationReport=true` opt into
+`VK_EXT_debug_utils` or `VK_EXT_debug_report` capture on hosts where callback creation is safe. On this Windows host the
+device suite passes with the validation layer active, but validation messages cannot be captured without crashing the
+validation layer, so task 1.7 remains open until a working callback capture run is available or the requirement is amended.
+
+Task 1.4: Windows `verifyNativePackaging` now passes. macOS arm64 and macOS x86_64 packaging runs remain open.
+`buildPlugin` on Windows failed before compilation because Gradle requested a Java 21 toolchain and only JDK 24 and
+IntelliJ JBR 25 were found; task 5.4 remains open.
+
+## Windows real-scene texture path and packaging follow-up (2026-10-05)
+
+Host: Windows 10 10.0 amd64, NVIDIA GeForce RTX 5070 Ti. Vulkan SDK tools were supplied with
+`-Pabyssus.glslc=D:\TMP\kilo\vulkansdk\Bin\glslangValidator.exe -Pabyssus.requireShaders=true`. Device tests used
+`-Dabyssus.vulkanTests=true`. Validation was not enabled in these runs because the Khronos debug callback crash
+recorded above remains unresolved.
+
+Fixed a Windows-only Assimp texture-path failure found by `RayModelSnapshotTest` and `RayRealSceneTest`: Assimp can
+report texture names as absolute Windows paths such as `C:/...`, but the loaders only treated a leading `/` as
+absolute. `AssimpModelLoader.decodeTextures` and `ParentBasedTextureProvider` now use `File(name).isAbsolute` and pass
+the absolute name to `FileHandle` directly.
+
+Fixed two Windows-sensitive plugin tests:
+- `ShaderSourceTest` now normalizes CRLF to LF before comparing joined shader text.
+- `SceneParamsSourceTest` compares the project directory as a `java.io.File` path, because IntelliJ `VirtualFile.path`
+  uses `/` while `File.path` uses `\` on Windows.
+- `TerrainGenerationPanelTest` deletes the tracked `abyssus-terrain.recipe.json` from its copied temporary terrain
+  folder in `setUp`; the suite expects a terrain with no recipe, while the shared fixture contains one for manual
+  checks.
+
+Commands and results:
+
+```bat
+gradlew.bat :core:test --tests net.nevinsky.abyssus.assets.model.RayModelSnapshotTest --console=plain
+gradlew.bat :test --tests net.nevinsky.abyssus.sceneview.RayRealSceneTest -Dabyssus.vulkanTests=true -Pabyssus.glslc=D:\TMP\kilo\vulkansdk\Bin\glslangValidator.exe -Pabyssus.requireShaders=true --console=plain
+gradlew.bat :raytracing:test -Dabyssus.vulkanTests=true -Pabyssus.glslc=D:\TMP\kilo\vulkansdk\Bin\glslangValidator.exe -Pabyssus.requireShaders=true --console=plain
+gradlew.bat :raytracing:verifyNativePackaging -Pabyssus.glslc=D:\TMP\kilo\vulkansdk\Bin\glslangValidator.exe -Pabyssus.requireShaders=true --console=plain
+gradlew.bat buildPlugin -Pabyssus.glslc=D:\TMP\kilo\vulkansdk\Bin\glslangValidator.exe -Pabyssus.requireShaders=true --console=plain
+```
+
+- `RayModelSnapshotTest`: 10 tests, 0 skipped, 0 failures, 0 errors.
+- `ShaderSourceTest`: 2 tests, 0 skipped, 0 failures, 0 errors.
+- `RayRealSceneTest`: 3 tests, 1 skipped (the Metal case), 0 failures, 0 errors. The Vulkan real-fixture case ran on
+  the RTX 5070 Ti.
+- Full `:raytracing:test` with Vulkan device tests enabled: 176 tests, 48 skipped (Metal suites, Vulkan timing and the
+  missing-loader packaging case), 0 failures, 0 errors. `VulkanRayBackendTest` is 45/45 and `VulkanNativePackagingTest`
+  is 4/4.
+- `:core:test` and `:gdx-model:test` pass.
+- `buildPlugin` now succeeds on Windows after a Java 21 toolchain is available. The produced
+  `build/distributions/abyssus-0.0.1.zip` contains `abyssus/lib/raytracing.jar`, and that jar contains
+  `native/vulkan/scene.spv` and `native/vulkan/slice.spv`. The plugin zip contains `lwjgl-vma` natives for linux,
+  macos, macos-arm64 and windows, `lwjgl-vulkan` natives for macOS only, and does not contain `lwjgl-shaderc`.
+- `gradlew.bat check -Dabyssus.vulkanTests=true -Pabyssus.glslc=D:\TMP\kilo\vulkansdk\Bin\glslangValidator.exe
+  -Pabyssus.requireShaders=true --continue` fails only in `:test`: 775 tests, 6 failed, 41 skipped. The failures are
+  the remaining `Untitled` fixture-drift assertions:
+  `AbyssusViewTest.testNodeTree`, `SceneEcsLoaderTest.mainSceneLoads`,
+  `SceneContentTest.mainSceneHasThreeModelsAndOneTerrain`, `SceneContentTest.mainSceneHasTheFixtureCamera`,
+  `SceneMarkersTest.theViewCameraHasNoMarkerTarget`, and `SceneMarkersTest.aCameraDrawsABodyAndAFrustum`.
+- `git diff --check` passes. `scripts/check-docs.sh` passes: 136 paths OK in 6 files. The OpenSpec CLI was not found
+  on this Windows shell, so `openspec validate add-scene-raytracing --strict` was not re-run in this follow-up.
+
+Task 5.4 remains open for loading the packaged zip in an IDE, the no-Vulkan-loader start-up, the tooltip/device matrix
+and macOS packaging. Tasks 1.8 and 5.1-5.3 remain open because they require interactive manual IDE checks.
+
+## Windows validation callback capture resolved (task 1.7, 2026-10-05)
+
+Host: Windows 10 10.0.19041 amd64, NVIDIA GeForce RTX 5070 Ti. Vulkan loader `C:\Windows\SYSTEM32\vulkan-1.dll`
+1.4.341.0; Khronos validation layer from `D:\TMP\kilo\vulkansdk\Bin` (SDK 1.4.363) with `VK_LAYER_PATH`,
+`VK_LOADER_LAYERS_DISABLE=~implicit~` and a settings file with `khronos_validation.debug_action =
+VK_DBG_LAYER_ACTION_CALLBACK`, `report_flags = error`, `enable_message_limit = false`.
+
+Root cause of the callback-creation crash: the test JVM was `C:\Program Files\Java\jdk-24`, whose `bin` ships
+`msvcp140.dll` 14.36.32532.0. Windows resolves `msvcp140.dll` from the process executable directory first, so the
+1.4.363 validation layer bound to that old C++ runtime instead of the system `C:\Windows\System32\msvcp140.dll`
+14.51.36247.0; the layer's message-formatting path then raised `EXCEPTION_ACCESS_VIOLATION` inside `msvcp140.dll`
+(captured in `D:\TMP\kilo\crash_logs`, problematic frame `msvcp140.dll+0x12f58`, called from
+`VkLayer_khronos_validation.dll`). The crash followed the JVM, not the callback API: both `VK_EXT_debug_utils` and
+`VK_EXT_debug_report` died the same way, and the system loader and layer themselves are fine. Running the same tests
+on a JDK whose `bin` carries the current runtime (`D:\TMP\kilo\jdk24`, `msvcp140.dll` 14.51.36247.0) creates the
+messenger without crashing and captures messages.
+
+Run (Gradle on `JAVA_HOME=D:\TMP\kilo\jdk24`):
+
+```bat
+gradlew.bat :raytracing:test --tests *VulkanRayBackendTest -Dabyssus.vulkanTests=true -Dabyssus.raytracing.validation=true -Dabyssus.raytracing.validationMessenger=true "-Pabyssus.glslc=D:\TMP\kilo\vulkansdk\Bin\glslangValidator.exe" -Pabyssus.requireShaders=true
+gradlew.bat :raytracing:test -Dabyssus.vulkanTests=true -Dabyssus.raytracing.validation=true -Dabyssus.raytracing.validationMessenger=true "-Pabyssus.glslc=D:\TMP\kilo\vulkansdk\Bin\glslangValidator.exe" -Pabyssus.requireShaders=true
+```
+
+- `VulkanRayBackendTest` with `-Dabyssus.raytracing.validationMessenger=true`: 45 tests, 0 skipped, 0 failures,
+  0 errors on the RTX 5070 Ti, validation layer active, debug-utils messenger installed, `validationErrors` empty.
+- Full `:raytracing:test` with validation and callback capture: 176 tests, 48 skipped (Metal suites, Vulkan timing
+  and the missing-loader packaging case), 0 failures, 0 errors.
+
+Task 1.7 is complete: the Windows gate "run with `-Dabyssus.raytracing.validation=true` and no validation errors"
+now passes with working callback capture; the earlier crash was host-local (an outdated JDK-bundled `msvcp140.dll`),
+not a backend or requirement problem. The README documents the pitfall and the opt-in flags.

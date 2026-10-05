@@ -37,6 +37,7 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         val source = File("src/test/testData/project/Untitled/assets/$terrainName")
         val target = File(disk, "assets/$terrainName").apply { mkdirs() }
         source.listFiles()!!.forEach { it.copyTo(File(target, it.name)) }
+        File(target, TERRAIN_RECIPE_FILE).delete()
         folder = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(target)!!
         folder.refresh(false, true)
     }

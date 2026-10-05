@@ -9,12 +9,14 @@ import org.slf4j.helpers.NOPLogger
 import org.lwjgl.PointerBuffer
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
+import org.lwjgl.system.NativeResource
 import org.lwjgl.util.vma.Vma.*
 import org.lwjgl.util.vma.VmaAllocationCreateInfo
 import org.lwjgl.util.vma.VmaAllocationInfo
 import org.lwjgl.util.vma.VmaAllocatorCreateInfo
 import org.lwjgl.util.vma.VmaVulkanFunctions
 import org.lwjgl.vulkan.*
+import org.lwjgl.vulkan.EXTDebugReport.*
 import org.lwjgl.vulkan.EXTDebugUtils.*
 import org.lwjgl.vulkan.KHRAccelerationStructure.VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME
 import org.lwjgl.vulkan.KHRDeferredHostOperations.VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
@@ -62,11 +64,13 @@ internal fun loadVulkanLibrary() = synchronized(VulkanInstance::class.java) {
 /** Headless instance: no surface or window extensions. Portability enumeration is enabled only when offered (MoltenVK). */
 internal class VulkanInstance(validation: Boolean, private val log: Logger = NOPLogger.NOP_LOGGER) : AutoCloseable {
     val instance: VkInstance
-    private val messenger: Long
+    private val debugHandle: Long
+    private val debugCallback: NativeResource?
+    private val debugUserData: ByteBuffer?
+    private val debugIsReport: Boolean
     private val portability: Boolean
     val validationActive: Boolean
     val validationMessages = CopyOnWriteArrayList<String>()
-    private val callback: VkDebugUtilsMessengerCallbackEXT?
 
     init {
         loadVulkanLibrary()
@@ -74,11 +78,22 @@ internal class VulkanInstance(validation: Boolean, private val log: Logger = NOP
             val extensions = instanceExtensions(stack)
             val layers = instanceLayers(stack)
             portability = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME in extensions
-            validationActive = validation && VALIDATION_LAYER in layers && VK_EXT_DEBUG_UTILS_EXTENSION_NAME in extensions
-            if (validation && !validationActive) log.warn("Vulkan validation was requested but the $VALIDATION_LAYER layer or VK_EXT_debug_utils is not available")
+            val debugReport = VK_EXT_DEBUG_REPORT_EXTENSION_NAME in extensions
+            val debugUtils = VK_EXT_DEBUG_UTILS_EXTENSION_NAME in extensions
+            validationActive = validation && VALIDATION_LAYER in layers
+            if (validation && !validationActive) {
+                log.warn("Vulkan validation was requested but the $VALIDATION_LAYER layer is not available")
+            }
+            // Some Windows validation-layer/loader combinations crash while creating either debug callback.
+            // Keep the layer active by default, but require an explicit opt-in for the callback path.
+            val useReport = debugReport && System.getProperty("abyssus.raytracing.validationReport", "false").toBoolean()
+            val useMessenger = !useReport && debugUtils && System.getProperty("abyssus.raytracing.validationMessenger", "false").toBoolean()
             val enabled = mutableListOf<String>()
             if (portability) enabled += VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
-            if (validationActive) enabled += VK_EXT_DEBUG_UTILS_EXTENSION_NAME
+            if (validationActive) {
+                if (useReport) enabled += VK_EXT_DEBUG_REPORT_EXTENSION_NAME
+                else if (useMessenger) enabled += VK_EXT_DEBUG_UTILS_EXTENSION_NAME
+            }
             val app = VkApplicationInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)
                 .pApplicationName(stack.UTF8("Abyssus")).apiVersion(VK_API_VERSION_1_2)
             val create = VkInstanceCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO).pApplicationInfo(app)
@@ -89,8 +104,29 @@ internal class VulkanInstance(validation: Boolean, private val log: Logger = NOP
             vkCheck(vkCreateInstance(create, null, handle), "vkCreateInstance")
             instance = VkInstance(handle[0], create)
             log.info("Vulkan instance created (validation ${if (validationActive) "on" else "off"}, portability ${if (portability) "on" else "off"})")
-            if (validationActive) {
-                callback = VkDebugUtilsMessengerCallbackEXT.create { severity, _, data, _ ->
+            if (useReport) {
+                debugIsReport = true
+                debugCallback = VkDebugReportCallbackEXT.create { flags, _, _, _, _, _, pMessage, _ ->
+                    val text = if (pMessage == MemoryUtil.NULL) "validation message" else MemoryUtil.memUTF8(pMessage)
+                    if (flags and VK_DEBUG_REPORT_ERROR_BIT_EXT != 0) {
+                        validationMessages += text
+                        log.warn("Vulkan validation error: $text")
+                    } else log.warn("Vulkan validation warning: $text")
+                    VK_FALSE
+                }
+                val userData = MemoryUtil.memAlloc(1)
+                debugUserData = userData
+                val info = VkDebugReportCallbackCreateInfoEXT.calloc(stack)
+                    .sType(VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT)
+                    .flags(VK_DEBUG_REPORT_ERROR_BIT_EXT)
+                    .pfnCallback(debugCallback)
+                    .pUserData(MemoryUtil.memAddress(userData))
+                val out = stack.mallocLong(1)
+                vkCheck(vkCreateDebugReportCallbackEXT(instance, info, null, out), "vkCreateDebugReportCallbackEXT")
+                debugHandle = out[0]
+            } else if (useMessenger) {
+                debugIsReport = false
+                debugCallback = VkDebugUtilsMessengerCallbackEXT.create { severity, _, data, _ ->
                     val text = VkDebugUtilsMessengerCallbackDataEXT.create(data).pMessageString() ?: "validation message"
                     if (severity and VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT != 0) {
                         validationMessages += text
@@ -98,17 +134,21 @@ internal class VulkanInstance(validation: Boolean, private val log: Logger = NOP
                     } else log.warn("Vulkan validation warning: $text")
                     VK_FALSE
                 }
+                val userData = MemoryUtil.memAlloc(1)
+                debugUserData = userData
                 val info = VkDebugUtilsMessengerCreateInfoEXT.calloc(stack).sType(VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT)
-                    .messageSeverity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT or VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-                    .messageType(VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT or VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT or
-                        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
-                    .pfnUserCallback(callback)
+                    .messageSeverity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+                    .messageType(VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+                    .pfnUserCallback(debugCallback)
+                    .pUserData(MemoryUtil.memAddress(userData))
                 val out = stack.mallocLong(1)
                 vkCheck(vkCreateDebugUtilsMessengerEXT(instance, info, null, out), "vkCreateDebugUtilsMessengerEXT")
-                messenger = out[0]
+                debugHandle = out[0]
             } else {
-                callback = null
-                messenger = 0L
+                debugIsReport = false
+                debugCallback = null
+                debugUserData = null
+                debugHandle = 0L
             }
         }
     }
@@ -249,9 +289,13 @@ internal class VulkanInstance(validation: Boolean, private val log: Logger = NOP
     }
 
     override fun close() {
-        if (messenger != 0L) vkDestroyDebugUtilsMessengerEXT(instance, messenger, null)
+        if (debugHandle != 0L) {
+            if (debugIsReport) vkDestroyDebugReportCallbackEXT(instance, debugHandle, null)
+            else vkDestroyDebugUtilsMessengerEXT(instance, debugHandle, null)
+        }
         vkDestroyInstance(instance, null)
-        callback?.free()
+        debugCallback?.free()
+        debugUserData?.let { MemoryUtil.memFree(it) }
     }
 }
 

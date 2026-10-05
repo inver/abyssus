@@ -9,7 +9,8 @@ class ShaderSourceTest {
 
     @Test
     fun fragmentsAreJoinedInOrder() {
-        assertEquals("float a() { return 1.0; }\n\nvoid main() { gl_FragColor = vec4(a()); }\n", shaders.fragment("common.glsl", "main.frag"))
+        val joined = shaders.fragment("common.glsl", "main.frag").replace("\r\n", "\n")
+        assertEquals("float a() { return 1.0; }\n\nvoid main() { gl_FragColor = vec4(a()); }\n", joined)
     }
 
     @Test
