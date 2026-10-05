@@ -51,7 +51,9 @@ codec dependencies on the schema model. The registry keeps the enum a pure tag.
 *Risk:* the `when` blocks are exhaustive today, so the compiler catches a missing type; the registry must keep that
 guarantee. Handler registration is checked by a test that every `FieldType.entries` has a handler.
 
-### D4. Split by reason to change (F4, F5)
+### D4. Split by reason to change (F4, F5) — executed in `restructure-editor-modules` stage 3
+
+The split below is the intended result; it is carried out together with the module move so each file is touched once.
 
 - `ComponentEditor.kt` → `ComponentCodec.kt` (contract and `RuntimeCodec`), `BuiltInComponentKinds.kt` (field tables),
   `SchemaCodec.kt`, `ComponentEditor.kt` (create/update/remove). Public names stay; this is file moves plus visibility.

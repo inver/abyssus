@@ -46,6 +46,9 @@ Only task 10.9 needs `runIde`; tasks marked (GL) run only with `-Dabyssus.glTest
 
 ## 4. Split by responsibility: component editor and properties (F4, F5 part)
 
+> Moved to `restructure-editor-modules` stage 3 (tasks 3.1 and 3.4), where the files also change module. Do these tasks
+> here only if that change is not going to be applied. If you do them here, mark the matching tasks there as done.
+
 - [ ] 4.1 Split `ComponentEditor.kt` into the four files from design D4; keep public names and packages. Verify with
   `./gradlew :test --tests 'net.nevinsky.abyssus.ecs.*'` and `./gradlew :test` unchanged.
 - [ ] 4.2 Extract row builders and `Thumbnail` from `AssetPropertiesPanel` into their own files. Verify with
@@ -70,6 +73,9 @@ Only task 10.9 needs `runIde`; tasks marked (GL) run only with `-Dabyssus.glTest
   `./gradlew :test`.
 
 ## 7. Scene view panel (F5)
+
+> Moved to `restructure-editor-modules` task 3.1 for the same reason as phase 4. Keep 7.1 (Swing-free toolbar state with
+> tests) only if it is useful before the module move.
 
 - [ ] 7.1 Move camera choices and button enablement into Swing-free functions with tests. Verify with a new
   `SceneToolbarStateTest`.

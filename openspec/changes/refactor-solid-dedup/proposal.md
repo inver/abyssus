@@ -89,6 +89,14 @@ Refactors only; **no user-visible behavior and no file format change**.
   documented choice that the platform's own logging reaches).
 - Hand-checking performance. No hot path (frame loop, picking) is restructured.
 
+### Relation to `restructure-editor-modules`
+
+A second change, `restructure-editor-modules`, holds the structural work this one cannot do inside one Gradle module:
+package cycles, a single scene-document layer, extracting a plain-JVM `editor-core` module and an optional
+`editor-render`. To avoid doing work twice, **phases 4 and 7 of this change (splitting `ComponentEditor.kt`,
+`AssetPropertiesPanel`, `SceneViewPanel`) move into that change's stage 3.** Phases 1, 2, 3, 5, 6, 8, 9 and 10 stay here
+and run first, because they are small and make the later moves cleaner.
+
 ## Capabilities
 
 ### New Capabilities
