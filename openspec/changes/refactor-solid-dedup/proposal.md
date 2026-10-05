@@ -20,7 +20,7 @@ Concrete findings (each has a task with its own verification):
 | F7 | Three Gradle build files carry near-identical `checkNoSingletons` tasks (`core`, `runtime`, `physics`), plus `checkNoRunCatching` and `checkNoJolt`. | DRY | `*/build.gradle.kts` |
 | F8 | `AbyssusCore` is a flat holder of about 25 collaborators with fully qualified names inline, and callers take the whole holder through `service<AbyssusCore>()` (about 9 sites) to reach one or two members. | ISP, DIP | `AbyssusCore.kt` and its callers |
 | F9 | `PhysicsWorld` (545 lines, 45 functions) and `VulkanRayBackend` (795 lines) are large single classes. Whether the Metal and Vulkan backends repeat session/queue logic is **not yet verified**. | SRP | `physics/jolt/`, `raytracing/` |
-| F10 | Docs drift: `docs/ai/conventions.md` says `AssetMetaEditor` is in `core`; it is in the plugin root package (`core/README.md` already says so). | Docs | `docs/ai/conventions.md` |
+| F10 | Docs drift: `docs/ai/conventions.md` said `AssetMetaEditor` is in `core`; the upstream "Improved docs" commit already fixed that. Re-check the other docs against the new structure after each phase. | Docs | `docs/ai/*.md` |
 
 ### IntelliJ Platform best practices audit
 
@@ -74,7 +74,7 @@ Refactors only; **no user-visible behavior and no file format change**.
   - Add a service-scope coroutine rule to the conventions for new async code (no rewrite of working code).
   - Check dynamic install/unload by hand and fix what it shows.
   - Update workflow actions.
-- **Docs (F10):** fix `conventions.md`, update `architecture.md`, `runtime/README.md`, `core/README.md` and the package READMEs.
+- **Docs (F10):** update `architecture.md`, `runtime/README.md`, `core/README.md` and the package READMEs.
 
 ### Out of scope
 

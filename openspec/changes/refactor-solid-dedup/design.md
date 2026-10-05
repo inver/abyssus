@@ -137,4 +137,4 @@ category (static caches, a leaked disposable, the native libraries).
 ## Open Questions
 
 - Should the extracted `SceneToolbar` live in `sceneview/` or a new `sceneview/toolbar/` package? Default: new package.
-- Is `AssetMetaEditor` meant to move to `core` as `conventions.md` says? Default here: fix the doc, do not move code.
+- (Resolved upstream) `AssetMetaEditor` stays in the plugin; the docs now say so.

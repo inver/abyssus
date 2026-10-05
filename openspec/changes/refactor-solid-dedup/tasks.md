@@ -79,7 +79,7 @@ Only task 10.9 needs `runIde`; tasks marked (GL) run only with `-Dabyssus.glTest
 
 ## 8. Docs
 
-- [ ] 8.1 Fix `docs/ai/conventions.md` (`AssetMetaEditor` is in the plugin, not `core`), then update
+- [ ] 8.1 Update
   `docs/ai/architecture.md`, `core/README.md`, `runtime/README.md`, `AGENTS.md` (if the check commands or layout
   change) and the `sceneview/` README. Verify with `scripts/check-docs.sh`.
 
