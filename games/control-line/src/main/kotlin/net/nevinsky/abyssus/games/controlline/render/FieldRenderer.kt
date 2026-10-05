@@ -71,10 +71,14 @@ fun fieldAssets(projectDir: File, json: JsonProcessor, log: Logger, executor: Ex
 /** A segment to draw: a control line from [from] to [to], in [color]. */
 class LineSegment(val from: Vector3, val to: Vector3, val color: Color)
 
+/** The texture unit of the terrain's shadow map: the splat layers and the splat map take the units before it. */
+private const val SHADOW_UNIT = 6
+
 /**
  * Draws a [FieldScene] (design decision 8): the sky, the terrain with the game's own shader, the models with the
- * default shader lit by the scene's sun and ambient light, and the control lines. Assets load through `core`'s
- * [AssetStorage] ([fieldAssets]): prepared off the GL thread, built here. GL thread only.
+ * default shader lit by the scene's sun and ambient light, and the control lines. The sun casts shadows from models and
+ * terrain onto both ([FieldShadows]), aimed at the pilot. Assets load through `core`'s [AssetStorage] ([fieldAssets]):
+ * prepared off the GL thread, built here. GL thread only.
  */
 class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>, shaders: ShaderSource) : Disposable {
     private val modelShaders = DefaultShaderProvider()
@@ -86,6 +90,7 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
     private var scene: FieldScene? = null
     private val environment = Environment()
     private val sun = DirectionalLight()
+    private val shadows = FieldShadows()
 
     /** Whether the scene's assets are all built. */
     fun loaded(field: FieldScene): Boolean =
@@ -118,6 +123,14 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
             Gdx.gl.glDepthMask(true)
         }
 
+        val drawn = drawnModels(field)
+        val terrains = field.terrains.mapNotNull { (entity, name) ->
+            assets.getAs<TerrainMesh>(name)?.let { it to field.position(entity).getTransform() }
+        }
+        shadows.aim(sun, field.sunDirection, field.pilot?.let { field.position(it).localPosition } ?: Vector3.Zero)
+        shadows.render(drawn.map { it.second }, terrains)
+        shadows.attribute()?.let(environment::set)
+
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
         Gdx.gl.glDepthFunc(GL20.GL_LEQUAL)
         Gdx.gl.glEnable(GL20.GL_CULL_FACE)
@@ -131,19 +144,19 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
         terrainShader.setUniformf("u_lightDirection", field.sunDirection)
         terrainShader.setUniformf("u_lightColor", field.sunColor.r, field.sunColor.g, field.sunColor.b)
         terrainShader.setUniformf("u_ambient", field.ambient.r, field.ambient.g, field.ambient.b)
-        for ((entity, name) in field.terrains) {
-            val mesh = assets.getAs<TerrainMesh>(name) ?: continue
-            terrainShader.setUniformMatrix("u_worldTrans", field.position(entity).getTransform())
+        terrainShader.setUniformMatrix("u_shadowMatrix", shadows.matrix)
+        terrainShader.setUniformf("u_shadowTexel", 1f / SHADOW_MAP_SIZE)
+        terrainShader.setUniformf("u_shadowBias", shadows.bias)
+        terrainShader.setUniformi("u_shadowTexture", SHADOW_UNIT)
+        for ((mesh, world) in terrains) {
+            shadows.texture.bind(SHADOW_UNIT)
+            terrainShader.setUniformMatrix("u_worldTrans", world)
             mesh.draw(terrainShader, blank)
         }
 
         batch.begin(camera)
-        for ((entity, name) in field.models) {
+        for ((entity, instance) in drawn) {
             if (entity === hidden) continue
-            val model = assets.getAs<Model>(name) ?: continue
-            val instance = instances[entity]?.takeIf { it.first === model }?.second
-                ?: ModelInstance(model).also { instances[entity] = model to it }
-            instance.transform!!.set(field.position(entity).getTransform())
             batch.render(instance, environment, ShaderProvider.DEFAULT_SHADER_KEY)
         }
         batch.end()
@@ -162,8 +175,18 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
         Gdx.gl.glDisable(GL20.GL_CULL_FACE)
     }
 
+    /** The scene's models that are built, each with its instance placed at the entity's transform. */
+    private fun drawnModels(field: FieldScene): List<Pair<Entity, ModelInstance>> = field.models.mapNotNull { (entity, name) ->
+        val model = assets.getAs<Model>(name) ?: return@mapNotNull null
+        val instance = instances[entity]?.takeIf { it.first === model }?.second
+            ?: ModelInstance(model).also { instances[entity] = model to it }
+        instance.transform!!.set(field.position(entity).getTransform())
+        entity to instance
+    }
+
     override fun dispose() {
         assets.dispose()
+        shadows.dispose()
         modelShaders.dispose()
         terrainShader.dispose()
         blank.dispose()

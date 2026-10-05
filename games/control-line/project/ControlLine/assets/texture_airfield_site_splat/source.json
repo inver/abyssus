@@ -1,0 +1,13 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "reference": "../pics/img.png and ../pics/about.txt (layout reference only; not traced)",
+  "channels": {
+    "R": "compacted dirt",
+    "G": "asphalt",
+    "B": "railway ballast",
+    "A": "sidewalk concrete"
+  },
+  "texel": "0.146 m",
+  "note": "Painted from the street, track, path and railway lines in site_plan.py with procedural wear."
+}

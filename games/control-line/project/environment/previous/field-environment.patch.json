@@ -1,0 +1,4005 @@
+{
+  "patchVersion": 1,
+  "target": "ControlLine/scenes/Field.scene",
+  "expectedSha256": "7a6895353031879e89c285d195575d7a0c5784f662f03462ef09c92fcc7d374a",
+  "fieldEntity": "0",
+  "fieldAsset": "terrain_airfield_povolzhsky",
+  "fieldPosition": {
+    "x": -100,
+    "y": -1,
+    "z": -85.5
+  },
+  "appendEntities": {
+    "100": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield surroundings"
+        },
+        "TypeComponent": {
+          "type": "TERRAIN"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -300.0,
+            "y": -1.02,
+            "z": -300.0
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.0,
+            "z": 0,
+            "w": 1.0
+          },
+          "localScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "terrain",
+            "asset": {
+              "type": "TERRAIN",
+              "assetName": "terrain_airfield_surroundings"
+            }
+          }
+        }
+      }
+    },
+    "101": {
+      "components": {
+        "NameComponent": {
+          "name": "Field workshop"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 37.007,
+            "y": 0.0,
+            "z": 33.06656
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.052336,
+            "z": 0,
+            "w": 0.9986295
+          },
+          "localScale": {
+            "x": 16.88594,
+            "y": 5.82342,
+            "z": 9.85127
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_shed"
+            }
+          }
+        }
+      }
+    },
+    "102": {
+      "components": {
+        "NameComponent": {
+          "name": "Field garage row"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 53.17357,
+            "y": 0.0,
+            "z": 30.98176
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.052336,
+            "z": 0,
+            "w": 0.9986295
+          },
+          "localScale": {
+            "x": 17.45283,
+            "y": 4.78017,
+            "z": 8.731
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_garages"
+            }
+          }
+        }
+      }
+    },
+    "103": {
+      "components": {
+        "NameComponent": {
+          "name": "East workshop"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 76.01866,
+            "y": 0.0,
+            "z": 12.1775
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.052336,
+            "z": 0,
+            "w": 0.9986295
+          },
+          "localScale": {
+            "x": 9.21051,
+            "y": 5.17638,
+            "z": 26.27005
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_shed"
+            }
+          }
+        }
+      }
+    },
+    "104": {
+      "components": {
+        "NameComponent": {
+          "name": "North east shed"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 47.00777,
+            "y": 0.0,
+            "z": -34.92604
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.052336,
+            "z": 0,
+            "w": 0.9986295
+          },
+          "localScale": {
+            "x": 12.28068,
+            "y": 5.82342,
+            "z": 10.94585
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_shed"
+            }
+          }
+        }
+      }
+    },
+    "105": {
+      "components": {
+        "NameComponent": {
+          "name": "Plamya hall approximation"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 36.9868,
+            "y": 0.0,
+            "z": -105.99861
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.052336,
+            "z": 0,
+            "w": 0.9986295
+          },
+          "localScale": {
+            "x": 18.23777,
+            "y": 8.84354,
+            "z": 33.81642
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_hall"
+            }
+          }
+        }
+      }
+    },
+    "106": {
+      "components": {
+        "NameComponent": {
+          "name": "Hall annex"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 88.98819,
+            "y": 0.0,
+            "z": -90.99876
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.052336,
+            "z": 0,
+            "w": 0.9986295
+          },
+          "localScale": {
+            "x": 16.318,
+            "y": 5.44218,
+            "z": 17.71336
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_hall"
+            }
+          }
+        }
+      }
+    },
+    "107": {
+      "components": {
+        "NameComponent": {
+          "name": "West garage block"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -150.63409,
+            "y": 0.0,
+            "z": -96.03846
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.052336,
+            "z": 0,
+            "w": 0.9986295
+          },
+          "localScale": {
+            "x": 36.79245,
+            "y": 4.78017,
+            "z": 15.27925
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_garages"
+            }
+          }
+        }
+      }
+    },
+    "108": {
+      "components": {
+        "NameComponent": {
+          "name": "West field storage"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -206.98912,
+            "y": 0.0,
+            "z": -22.89646
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.052336,
+            "z": 0,
+            "w": 0.9986295
+          },
+          "localScale": {
+            "x": 43.74993,
+            "y": 6.47047,
+            "z": 15.3242
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_shed"
+            }
+          }
+        }
+      }
+    },
+    "109": {
+      "components": {
+        "NameComponent": {
+          "name": "East apartment block 1"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 196.0,
+            "y": 0.0,
+            "z": -150.0
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.052336,
+            "z": 0,
+            "w": 0.9986295
+          },
+          "localScale": {
+            "x": 27.8366,
+            "y": 9.45068,
+            "z": 9.70149
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_apartments"
+            }
+          }
+        }
+      }
+    },
+    "110": {
+      "components": {
+        "NameComponent": {
+          "name": "East apartment block 2"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 208.0,
+            "y": 0.0,
+            "z": -97.0
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.052336,
+            "z": 0,
+            "w": 0.9986295
+          },
+          "localScale": {
+            "x": 29.75636,
+            "y": 9.45068,
+            "z": 9.70149
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_apartments"
+            }
+          }
+        }
+      }
+    },
+    "111": {
+      "components": {
+        "NameComponent": {
+          "name": "East apartment block 3"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 214.0,
+            "y": 0.0,
+            "z": -60.0
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.052336,
+            "z": 0,
+            "w": 0.9986295
+          },
+          "localScale": {
+            "x": 25.91683,
+            "y": 9.45068,
+            "z": 9.70149
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_apartments"
+            }
+          }
+        }
+      }
+    },
+    "112": {
+      "components": {
+        "NameComponent": {
+          "name": "Northern apartment block"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 50.0,
+            "y": 0.0,
+            "z": -206.0
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.052336,
+            "z": 0,
+            "w": 0.9986295
+          },
+          "localScale": {
+            "x": 29.75636,
+            "y": 9.45068,
+            "z": 9.70149
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_apartments"
+            }
+          }
+        }
+      }
+    },
+    "113": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 01"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -38.7673,
+            "y": 0.0,
+            "z": -32.36755
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9870157,
+            "z": 0,
+            "w": -0.160624
+          },
+          "localScale": {
+            "x": 6.24531,
+            "y": 6.24531,
+            "z": 6.24531
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "114": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 02"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -54.74,
+            "y": 0.0,
+            "z": -36.69
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.6920143,
+            "z": 0,
+            "w": 0.7218838
+          },
+          "localScale": {
+            "x": 4.49163,
+            "y": 4.49163,
+            "z": 4.49163
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "115": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 03"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -60.43,
+            "y": -0.0,
+            "z": -52.98
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.8406569,
+            "z": 0,
+            "w": 0.541568
+          },
+          "localScale": {
+            "x": 8.69549,
+            "y": 8.69549,
+            "z": 8.69549
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "116": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 04"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -58.02912,
+            "y": 0.0,
+            "z": -27.7009
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.7809502,
+            "z": 0,
+            "w": 0.6245933
+          },
+          "localScale": {
+            "x": 6.42639,
+            "y": 6.42639,
+            "z": 6.42639
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "117": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 05"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -60.58,
+            "y": 0.0,
+            "z": -51.65
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.94458,
+            "z": 0,
+            "w": -0.3282814
+          },
+          "localScale": {
+            "x": 6.53218,
+            "y": 6.53218,
+            "z": 6.53218
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "118": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 06"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -49.86,
+            "y": -0.0,
+            "z": -42.26
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9323103,
+            "z": 0,
+            "w": -0.3616595
+          },
+          "localScale": {
+            "x": 7.12467,
+            "y": 7.12467,
+            "z": 7.12467
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "119": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 07"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -47.51429,
+            "y": 0.0,
+            "z": -45.13968
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.7143398,
+            "z": 0,
+            "w": 0.699799
+          },
+          "localScale": {
+            "x": 6.79612,
+            "y": 6.79612,
+            "z": 6.79612
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "120": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 08"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -66.91,
+            "y": 0.0,
+            "z": -35.45
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.2953678,
+            "z": 0,
+            "w": 0.9553836
+          },
+          "localScale": {
+            "x": 4.72654,
+            "y": 4.72654,
+            "z": 4.72654
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "121": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 09"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -65.97,
+            "y": -0.0,
+            "z": -59.13
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.5383664,
+            "z": 0,
+            "w": 0.8427109
+          },
+          "localScale": {
+            "x": 8.03455,
+            "y": 8.03455,
+            "z": 8.03455
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "122": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 10"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -79.72186,
+            "y": 0.0,
+            "z": -57.29852
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.4651115,
+            "z": 0,
+            "w": 0.8852521
+          },
+          "localScale": {
+            "x": 7.27537,
+            "y": 7.27537,
+            "z": 7.27537
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "123": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 11"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -93.4,
+            "y": 0.0,
+            "z": -70.18
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.3797145,
+            "z": 0,
+            "w": -0.9251037
+          },
+          "localScale": {
+            "x": 5.40135,
+            "y": 5.40135,
+            "z": 5.40135
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "124": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 12"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -64.81,
+            "y": -0.0,
+            "z": -66.02
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.673484,
+            "z": 0,
+            "w": -0.7392018
+          },
+          "localScale": {
+            "x": 7.79309,
+            "y": 7.79309,
+            "z": 7.79309
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "125": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 13"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -93.44702,
+            "y": 0.0,
+            "z": -69.21902
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9153327,
+            "z": 0,
+            "w": -0.4026984
+          },
+          "localScale": {
+            "x": 7.90465,
+            "y": 7.90465,
+            "z": 7.90465
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "126": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 14"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -63.04,
+            "y": 0.0,
+            "z": -54.91
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.4521747,
+            "z": 0,
+            "w": 0.8919294
+          },
+          "localScale": {
+            "x": 4.26497,
+            "y": 4.26497,
+            "z": 4.26497
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "127": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 15"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -61.3,
+            "y": -0.0,
+            "z": -55.63
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9932616,
+            "z": 0,
+            "w": -0.1158935
+          },
+          "localScale": {
+            "x": 6.51222,
+            "y": 6.51222,
+            "z": 6.51222
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "128": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 16"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -94.36091,
+            "y": 0.0,
+            "z": -67.57047
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9994417,
+            "z": 0,
+            "w": -0.0334098
+          },
+          "localScale": {
+            "x": 5.66237,
+            "y": 5.66237,
+            "z": 5.66237
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "129": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 17"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 13.12,
+            "y": 0.0,
+            "z": -53.25
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.6344748,
+            "z": 0,
+            "w": 0.7729436
+          },
+          "localScale": {
+            "x": 5.70836,
+            "y": 5.70836,
+            "z": 5.70836
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "130": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 18"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -14.73,
+            "y": -0.0,
+            "z": -48.9
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9809146,
+            "z": 0,
+            "w": -0.194439
+          },
+          "localScale": {
+            "x": 8.44366,
+            "y": 8.44366,
+            "z": 8.44366
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "131": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 19"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 24.32263,
+            "y": 0.0,
+            "z": -49.44811
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.6098807,
+            "z": 0,
+            "w": 0.7924933
+          },
+          "localScale": {
+            "x": 5.22237,
+            "y": 5.22237,
+            "z": 5.22237
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "132": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 20"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 4.28,
+            "y": 0.0,
+            "z": -46.23
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9699772,
+            "z": 0,
+            "w": 0.243196
+          },
+          "localScale": {
+            "x": 7.02436,
+            "y": 7.02436,
+            "z": 7.02436
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "133": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 21"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -9.73,
+            "y": -0.0,
+            "z": -46.0
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.2185237,
+            "z": 0,
+            "w": -0.9758316
+          },
+          "localScale": {
+            "x": 7.79626,
+            "y": 7.79626,
+            "z": 7.79626
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "134": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 22"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 4.09782,
+            "y": 0.0,
+            "z": -46.0677
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.3860149,
+            "z": 0,
+            "w": -0.9224925
+          },
+          "localScale": {
+            "x": 6.35249,
+            "y": 6.35249,
+            "z": 6.35249
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "135": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 23"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 1.16,
+            "y": 0.0,
+            "z": -50.75
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.7791246,
+            "z": 0,
+            "w": 0.6268691
+          },
+          "localScale": {
+            "x": 4.3344,
+            "y": 4.3344,
+            "z": 4.3344
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "136": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 24"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -15.41,
+            "y": -0.0,
+            "z": -47.9
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.2743798,
+            "z": 0,
+            "w": 0.9616214
+          },
+          "localScale": {
+            "x": 5.94183,
+            "y": 5.94183,
+            "z": 5.94183
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "137": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 25"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 7.46833,
+            "y": 0.0,
+            "z": -51.9387
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.6656556,
+            "z": 0,
+            "w": 0.746259
+          },
+          "localScale": {
+            "x": 7.01221,
+            "y": 7.01221,
+            "z": 7.01221
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "138": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 26"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 18.49,
+            "y": 0.0,
+            "z": -73.5
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9185743,
+            "z": 0,
+            "w": -0.3952484
+          },
+          "localScale": {
+            "x": 4.47542,
+            "y": 4.47542,
+            "z": 4.47542
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "139": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 27"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 25.65,
+            "y": -0.0,
+            "z": -79.62
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.1948103,
+            "z": 0,
+            "w": 0.9808409
+          },
+          "localScale": {
+            "x": 6.4287,
+            "y": 6.4287,
+            "z": 6.4287
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "140": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 28"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 41.03408,
+            "y": 0.0,
+            "z": -77.19643
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.647416,
+            "z": 0,
+            "w": -0.7621368
+          },
+          "localScale": {
+            "x": 6.89434,
+            "y": 6.89434,
+            "z": 6.89434
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "141": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 29"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 17.89,
+            "y": 0.0,
+            "z": -68.58
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9989887,
+            "z": 0,
+            "w": 0.044963
+          },
+          "localScale": {
+            "x": 5.54698,
+            "y": 5.54698,
+            "z": 5.54698
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "142": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 30"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 36.78,
+            "y": -0.0,
+            "z": -68.88
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.8896054,
+            "z": 0,
+            "w": -0.45673
+          },
+          "localScale": {
+            "x": 9.6685,
+            "y": 9.6685,
+            "z": 9.6685
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "143": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 31"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 40.61337,
+            "y": 0.0,
+            "z": -67.48282
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.1993376,
+            "z": 0,
+            "w": 0.9799309
+          },
+          "localScale": {
+            "x": 5.65818,
+            "y": 5.65818,
+            "z": 5.65818
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "144": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 32"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 23.23,
+            "y": 0.0,
+            "z": -63.31
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.4953971,
+            "z": 0,
+            "w": -0.8686667
+          },
+          "localScale": {
+            "x": 4.24505,
+            "y": 4.24505,
+            "z": 4.24505
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "145": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 33"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 74.39,
+            "y": -0.0,
+            "z": -51.93
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.1425167,
+            "z": 0,
+            "w": -0.9897924
+          },
+          "localScale": {
+            "x": 9.08437,
+            "y": 9.08437,
+            "z": 9.08437
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "146": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 34"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 69.78889,
+            "y": 0.0,
+            "z": -52.50089
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9783926,
+            "z": 0,
+            "w": 0.2067555
+          },
+          "localScale": {
+            "x": 6.42852,
+            "y": 6.42852,
+            "z": 6.42852
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "147": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 35"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 59.52,
+            "y": 0.0,
+            "z": -39.7
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.1643051,
+            "z": 0,
+            "w": 0.9864096
+          },
+          "localScale": {
+            "x": 4.81,
+            "y": 4.81,
+            "z": 4.81
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "148": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 36"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 84.72,
+            "y": -0.0,
+            "z": -54.32
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.2841587,
+            "z": 0,
+            "w": -0.9587773
+          },
+          "localScale": {
+            "x": 6.32272,
+            "y": 6.32272,
+            "z": 6.32272
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "149": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 37"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 74.17663,
+            "y": 0.0,
+            "z": -56.25014
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.1298626,
+            "z": 0,
+            "w": 0.991532
+          },
+          "localScale": {
+            "x": 7.75219,
+            "y": 7.75219,
+            "z": 7.75219
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "150": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 38"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 89.08,
+            "y": 0.0,
+            "z": -59.44
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9406751,
+            "z": 0,
+            "w": 0.3393086
+          },
+          "localScale": {
+            "x": 4.09978,
+            "y": 4.09978,
+            "z": 4.09978
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "151": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 39"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 78.76,
+            "y": -0.0,
+            "z": -44.14
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.99,
+            "z": 0,
+            "w": 0.1410672
+          },
+          "localScale": {
+            "x": 9.39645,
+            "y": 9.39645,
+            "z": 9.39645
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "152": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 40"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 81.50923,
+            "y": 0.0,
+            "z": -44.02526
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9619187,
+            "z": 0,
+            "w": -0.2733356
+          },
+          "localScale": {
+            "x": 5.17873,
+            "y": 5.17873,
+            "z": 5.17873
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "153": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 41"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 81.35,
+            "y": 0.0,
+            "z": -34.34
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.6633503,
+            "z": 0,
+            "w": 0.748309
+          },
+          "localScale": {
+            "x": 4.27042,
+            "y": 4.27042,
+            "z": 4.27042
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "154": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 42"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 93.58,
+            "y": -0.0,
+            "z": 54.76
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.8973817,
+            "z": 0,
+            "w": 0.4412551
+          },
+          "localScale": {
+            "x": 6.00767,
+            "y": 6.00767,
+            "z": 6.00767
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "155": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 43"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 100.54854,
+            "y": 0.0,
+            "z": 30.21946
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.7265141,
+            "z": 0,
+            "w": 0.6871515
+          },
+          "localScale": {
+            "x": 6.17079,
+            "y": 6.17079,
+            "z": 6.17079
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "156": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 44"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 99.45,
+            "y": 0.0,
+            "z": 55.46
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.1942784,
+            "z": 0,
+            "w": -0.9809464
+          },
+          "localScale": {
+            "x": 5.18602,
+            "y": 5.18602,
+            "z": 5.18602
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "157": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 45"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 80.15,
+            "y": -0.0,
+            "z": 40.01
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9920357,
+            "z": 0,
+            "w": -0.1259572
+          },
+          "localScale": {
+            "x": 6.8257,
+            "y": 6.8257,
+            "z": 6.8257
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "158": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 46"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 89.24202,
+            "y": 0.0,
+            "z": 58.64214
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.0548365,
+            "z": 0,
+            "w": -0.9984953
+          },
+          "localScale": {
+            "x": 7.59986,
+            "y": 7.59986,
+            "z": 7.59986
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "159": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 47"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 96.02,
+            "y": 0.0,
+            "z": 37.86
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.6910152,
+            "z": 0,
+            "w": -0.7228403
+          },
+          "localScale": {
+            "x": 4.59833,
+            "y": 4.59833,
+            "z": 4.59833
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "160": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 48"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 99.46,
+            "y": -0.0,
+            "z": 59.91
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.3152781,
+            "z": 0,
+            "w": 0.9489993
+          },
+          "localScale": {
+            "x": 6.50661,
+            "y": 6.50661,
+            "z": 6.50661
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "161": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 49"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 87.62389,
+            "y": 0.0,
+            "z": 37.30718
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.6053953,
+            "z": 0,
+            "w": 0.7959249
+          },
+          "localScale": {
+            "x": 6.45769,
+            "y": 6.45769,
+            "z": 6.45769
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "162": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 50"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 85.62,
+            "y": 0.0,
+            "z": 43.86
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.4645929,
+            "z": 0,
+            "w": 0.8855244
+          },
+          "localScale": {
+            "x": 5.03475,
+            "y": 5.03475,
+            "z": 5.03475
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "163": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 51"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -29.44,
+            "y": -0.0,
+            "z": 73.89
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.8377978,
+            "z": 0,
+            "w": 0.5459807
+          },
+          "localScale": {
+            "x": 7.07495,
+            "y": 7.07495,
+            "z": 7.07495
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "164": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 52"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -39.23401,
+            "y": 0.0,
+            "z": 69.64948
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9090013,
+            "z": 0,
+            "w": 0.4167933
+          },
+          "localScale": {
+            "x": 6.00836,
+            "y": 6.00836,
+            "z": 6.00836
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "165": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 53"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -20.44,
+            "y": 0.0,
+            "z": 73.04
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.4081252,
+            "z": 0,
+            "w": -0.912926
+          },
+          "localScale": {
+            "x": 4.84117,
+            "y": 4.84117,
+            "z": 4.84117
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "166": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 54"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -46.99,
+            "y": -0.0,
+            "z": 60.18
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.5532961,
+            "z": 0,
+            "w": -0.8329846
+          },
+          "localScale": {
+            "x": 7.97651,
+            "y": 7.97651,
+            "z": 7.97651
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "167": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 55"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -7.39435,
+            "y": 0.0,
+            "z": 61.02324
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.23558,
+            "z": 0,
+            "w": -0.971855
+          },
+          "localScale": {
+            "x": 4.71537,
+            "y": 4.71537,
+            "z": 4.71537
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "168": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 56"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -19.52,
+            "y": 0.0,
+            "z": 73.5
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.8502112,
+            "z": 0,
+            "w": -0.5264418
+          },
+          "localScale": {
+            "x": 6.40171,
+            "y": 6.40171,
+            "z": 6.40171
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "169": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 57"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -58.44,
+            "y": -0.0,
+            "z": 66.09
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9991819,
+            "z": 0,
+            "w": -0.0404405
+          },
+          "localScale": {
+            "x": 9.03865,
+            "y": 9.03865,
+            "z": 9.03865
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "170": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 58"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -53.19773,
+            "y": 0.0,
+            "z": 69.28482
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.2422595,
+            "z": 0,
+            "w": 0.9702115
+          },
+          "localScale": {
+            "x": 7.59639,
+            "y": 7.59639,
+            "z": 7.59639
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "171": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 59"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 112.01,
+            "y": 0.0,
+            "z": -129.82
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.99807,
+            "z": 0,
+            "w": 0.0620992
+          },
+          "localScale": {
+            "x": 4.35567,
+            "y": 4.35567,
+            "z": 4.35567
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "172": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 60"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 125.43,
+            "y": -0.0,
+            "z": -139.0
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.7122053,
+            "z": 0,
+            "w": 0.7019712
+          },
+          "localScale": {
+            "x": 7.69194,
+            "y": 7.69194,
+            "z": 7.69194
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "173": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 61"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 105.27223,
+            "y": 0.0,
+            "z": -113.46836
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.6955769,
+            "z": 0,
+            "w": 0.7184517
+          },
+          "localScale": {
+            "x": 4.84178,
+            "y": 4.84178,
+            "z": 4.84178
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "174": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 62"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 127.17,
+            "y": 0.0,
+            "z": -120.99
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.3632738,
+            "z": 0,
+            "w": -0.9316824
+          },
+          "localScale": {
+            "x": 6.88118,
+            "y": 6.88118,
+            "z": 6.88118
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "175": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 63"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 90.22,
+            "y": -0.0,
+            "z": -113.54
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.2026889,
+            "z": 0,
+            "w": 0.9792432
+          },
+          "localScale": {
+            "x": 9.24949,
+            "y": 9.24949,
+            "z": 9.24949
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "176": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 64"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 101.23235,
+            "y": 0.0,
+            "z": -133.06115
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.5764712,
+            "z": 0,
+            "w": -0.8171175
+          },
+          "localScale": {
+            "x": 4.75313,
+            "y": 4.75313,
+            "z": 4.75313
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "177": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 65"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 102.39,
+            "y": 0.0,
+            "z": -134.27
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9255597,
+            "z": 0,
+            "w": -0.3786018
+          },
+          "localScale": {
+            "x": 4.93584,
+            "y": 4.93584,
+            "z": 4.93584
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "178": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 66"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 112.03,
+            "y": -0.0,
+            "z": -128.85
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.4662956,
+            "z": 0,
+            "w": 0.884629
+          },
+          "localScale": {
+            "x": 5.95324,
+            "y": 5.95324,
+            "z": 5.95324
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "179": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 67"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 112.26377,
+            "y": 0.0,
+            "z": -114.69833
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.5769482,
+            "z": 0,
+            "w": 0.8167807
+          },
+          "localScale": {
+            "x": 6.97436,
+            "y": 6.97436,
+            "z": 6.97436
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "180": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 68"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -11.38,
+            "y": 0.0,
+            "z": -146.13
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.0599215,
+            "z": 0,
+            "w": -0.9982031
+          },
+          "localScale": {
+            "x": 6.22836,
+            "y": 6.22836,
+            "z": 6.22836
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "181": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 69"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -15.67,
+            "y": -0.0,
+            "z": -107.33
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.4524426,
+            "z": 0,
+            "w": 0.8917935
+          },
+          "localScale": {
+            "x": 9.49003,
+            "y": 9.49003,
+            "z": 9.49003
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "182": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 70"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -22.72054,
+            "y": 0.0,
+            "z": -104.78157
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9590261,
+            "z": 0,
+            "w": 0.2833179
+          },
+          "localScale": {
+            "x": 6.45911,
+            "y": 6.45911,
+            "z": 6.45911
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "183": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 71"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -6.42,
+            "y": 0.0,
+            "z": -147.04
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.7904116,
+            "z": 0,
+            "w": 0.6125761
+          },
+          "localScale": {
+            "x": 4.43303,
+            "y": 4.43303,
+            "z": 4.43303
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "184": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 72"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -16.02,
+            "y": -0.0,
+            "z": -145.22
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.6386395,
+            "z": 0,
+            "w": 0.769506
+          },
+          "localScale": {
+            "x": 9.50527,
+            "y": 9.50527,
+            "z": 9.50527
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "185": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 73"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -11.88796,
+            "y": 0.0,
+            "z": -127.76991
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9485212,
+            "z": 0,
+            "w": -0.3167137
+          },
+          "localScale": {
+            "x": 6.90091,
+            "y": 6.90091,
+            "z": 6.90091
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "186": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 74"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -24.21,
+            "y": 0.0,
+            "z": -102.48
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9615626,
+            "z": 0,
+            "w": 0.2745859
+          },
+          "localScale": {
+            "x": 6.33457,
+            "y": 6.33457,
+            "z": 6.33457
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "187": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 75"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -2.59,
+            "y": -0.0,
+            "z": -151.87
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9359036,
+            "z": 0,
+            "w": 0.3522563
+          },
+          "localScale": {
+            "x": 7.20333,
+            "y": 7.20333,
+            "z": 7.20333
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "188": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 76"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -25.43929,
+            "y": 0.0,
+            "z": -98.20762
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.4473981,
+            "z": 0,
+            "w": 0.8943349
+          },
+          "localScale": {
+            "x": 5.35661,
+            "y": 5.35661,
+            "z": 5.35661
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "189": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 77"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 132.86,
+            "y": 0.0,
+            "z": -86.05
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9346003,
+            "z": 0,
+            "w": 0.3556996
+          },
+          "localScale": {
+            "x": 5.76125,
+            "y": 5.76125,
+            "z": 5.76125
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "190": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 78"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 147.53,
+            "y": -0.0,
+            "z": -71.87
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9341833,
+            "z": 0,
+            "w": 0.3567934
+          },
+          "localScale": {
+            "x": 9.39104,
+            "y": 9.39104,
+            "z": 9.39104
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "191": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 79"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 133.42125,
+            "y": 0.0,
+            "z": -40.50043
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9421455,
+            "z": 0,
+            "w": -0.3352042
+          },
+          "localScale": {
+            "x": 6.11029,
+            "y": 6.11029,
+            "z": 6.11029
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "192": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 80"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 153.94,
+            "y": 0.0,
+            "z": -47.81
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.3541115,
+            "z": 0,
+            "w": 0.9352032
+          },
+          "localScale": {
+            "x": 6.67343,
+            "y": 6.67343,
+            "z": 6.67343
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "193": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 81"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 149.43,
+            "y": -0.0,
+            "z": -73.97
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.4928549,
+            "z": 0,
+            "w": 0.8701115
+          },
+          "localScale": {
+            "x": 8.5097,
+            "y": 8.5097,
+            "z": 8.5097
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "194": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 82"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 151.20762,
+            "y": 0.0,
+            "z": -93.3447
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.5489293,
+            "z": 0,
+            "w": 0.8358688
+          },
+          "localScale": {
+            "x": 4.96912,
+            "y": 4.96912,
+            "z": 4.96912
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "195": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 83"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 152.01,
+            "y": 0.0,
+            "z": -70.88
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9138598,
+            "z": 0,
+            "w": -0.40603
+          },
+          "localScale": {
+            "x": 6.15546,
+            "y": 6.15546,
+            "z": 6.15546
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "196": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 84"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 148.2,
+            "y": -0.0,
+            "z": -41.69
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.1399206,
+            "z": 0,
+            "w": 0.9901627
+          },
+          "localScale": {
+            "x": 6.86459,
+            "y": 6.86459,
+            "z": 6.86459
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "197": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 85"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 155.81776,
+            "y": 0.0,
+            "z": -90.63963
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9999703,
+            "z": 0,
+            "w": 0.0077061
+          },
+          "localScale": {
+            "x": 5.3461,
+            "y": 5.3461,
+            "z": 5.3461
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "198": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 86"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 174.36,
+            "y": 0.0,
+            "z": 40.9
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.890801,
+            "z": 0,
+            "w": -0.4543936
+          },
+          "localScale": {
+            "x": 5.20996,
+            "y": 5.20996,
+            "z": 5.20996
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "199": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 87"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 203.93,
+            "y": -0.0,
+            "z": 55.02
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9432951,
+            "z": 0,
+            "w": -0.3319554
+          },
+          "localScale": {
+            "x": 7.33565,
+            "y": 7.33565,
+            "z": 7.33565
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "200": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 88"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 157.61203,
+            "y": 0.0,
+            "z": 39.689
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9751296,
+            "z": 0,
+            "w": -0.2216355
+          },
+          "localScale": {
+            "x": 5.76739,
+            "y": 5.76739,
+            "z": 5.76739
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "201": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 89"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 197.31,
+            "y": 0.0,
+            "z": 56.98
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.8647359,
+            "z": 0,
+            "w": -0.5022269
+          },
+          "localScale": {
+            "x": 6.06094,
+            "y": 6.06094,
+            "z": 6.06094
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    },
+    "202": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 90"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 183.92,
+            "y": -0.0,
+            "z": 47.48
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.6561518,
+            "z": 0,
+            "w": -0.7546289
+          },
+          "localScale": {
+            "x": 9.70084,
+            "y": 9.70084,
+            "z": 9.70084
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_oak"
+            }
+          }
+        }
+      }
+    },
+    "203": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 91"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 171.97464,
+            "y": 0.0,
+            "z": 32.99029
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.9284579,
+            "z": 0,
+            "w": -0.3714376
+          },
+          "localScale": {
+            "x": 4.99146,
+            "y": 4.99146,
+            "z": 4.99146
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_poplar"
+            }
+          }
+        }
+      }
+    },
+    "204": {
+      "components": {
+        "NameComponent": {
+          "name": "Airfield tree 92"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 138.56,
+            "y": 0.0,
+            "z": 40.14
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.7313378,
+            "z": 0,
+            "w": -0.6820155
+          },
+          "localScale": {
+            "x": 6.82895,
+            "y": 6.82895,
+            "z": 6.82895
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_broadleaf"
+            }
+          }
+        }
+      }
+    }
+  },
+  "instructions": "Apply atomically using editSceneJson, checking expectedSha256 first. Retain every unrelated field and number literal. No scenery colliders are added."
+}

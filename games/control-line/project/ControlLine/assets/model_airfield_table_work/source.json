@@ -1,0 +1,25 @@
+{
+  "author": {
+    "Kirill Sannikov": "All"
+  },
+  "license": "CC0-1.0",
+  "sourcePage": "https://polyhaven.com/a/painted_wooden_table",
+  "sourceFile": "painted_wooden_table_1k.gltf",
+  "sha256Source": "7e1ba86ae2c570e3464c42556e4e6cc09186a99127b86eaf54e7dbecb2fbafc3",
+  "use": "worktable",
+  "note": "Textures resized to 1024 px (normal 512 px); ARM map dropped.",
+  "triangles": 600,
+  "bounds": {
+    "min": [
+      -1.2033226490020752,
+      -0.0004928112030029297,
+      -0.5711875557899475
+    ],
+    "max": [
+      1.20228111743927,
+      0.9581443071365356,
+      0.565796434879303
+    ]
+  },
+  "sha256": "249d95b8312926201ae55290ec61b9be22abb344e9fcb17502ad2556d46c01d4"
+}

@@ -1,0 +1,24 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "description": "Long industrial warehouse with a bright blue corrugated metal roof, west-southwest of the field, parallel to the railway.",
+  "materials": {
+    "walls": "https://ambientcg.com/view?id=Concrete034",
+    "roof": "https://ambientcg.com/view?id=CorrugatedSteel007A (tinted blue)",
+    "doors": "https://ambientcg.com/view?id=CorrugatedSteel005"
+  },
+  "triangles": 52,
+  "bounds": {
+    "min": [
+      -30.5,
+      -0.5,
+      -8.5
+    ],
+    "max": [
+      30.5,
+      7.800000190734863,
+      8.5
+    ]
+  },
+  "sha256": "1bd22855c3ad508dd22667d85dbf4ba8d88e3c026d5e02e2755570f84116047c"
+}
