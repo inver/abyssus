@@ -84,7 +84,7 @@ command name in the message bundle.
 ## Errors and cancellation
 
 - **Catching:** use `runCatchingKeepingCancellation`
-  (`core/src/main/kotlin/net/nevinsky/abyssus/assets/Cancellation.kt`), not `runCatching`. It rethrows
+  (`core/src/main/kotlin/net/nevinsky/abyssus/core/assets/Cancellation.kt`), not `runCatching`. It rethrows
   `CancellationException`, which includes `ProcessCanceledException`, which the platform requires.
   `./gradlew checkNoRunCatching` (part of `check`) fails on a `runCatching {` in the plugin or `core`.
 - **Failure text:** show `Throwable.displayMessage()` (the message, or the class name when it has none).

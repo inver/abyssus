@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.assets.loading
+package net.nevinsky.abyssus.core.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.assets.files.AssetFiles
+import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.testing.RecordingLogger
 import org.slf4j.Logger
 import org.junit.Assert.assertEquals
@@ -17,7 +17,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.Executor
 
-class AssetCacheTest {
+class AssetStorageTest {
     private class Res(val name: String) : Disposable {
         var disposed = false
         override fun dispose() {
@@ -35,11 +35,16 @@ class AssetCacheTest {
 
     /** Prepared data is the asset name itself, so `build` / `upload` / `discard` receive the name. */
     private inner class FakeLoader(
+        val prepare: (String) -> String? = { it },
         val build: (String) -> Res = { Res(it) },
         val upload: (String) -> Boolean = { true },
         val discarded: MutableList<String> = mutableListOf(),
     ) : AssetLoader<String, Res> {
-        override fun prepare(files: AssetFiles, name: String): String? = error("the cache prepares through its own lambda")
+        override fun loadPrepared(meta: AssetMeta<Any>): String? = error("the storage prepares by name")
+        override fun prepare(name: String): String? {
+            prepares += name
+            return prepare.invoke(name)
+        }
         override fun upload(prepared: String): Boolean = upload.invoke(prepared)
         override fun build(prepared: String): Res {
             builds += prepared
@@ -53,8 +58,8 @@ class AssetCacheTest {
 
     private fun cache(
         prepare: (String) -> String? = { it },
-        loader: AssetLoader<String, Res> = FakeLoader(),
-    ) = AssetCache(executor, { prepares += it; prepare(it) }, loader, log)
+        loader: AssetLoader<String, Res> = FakeLoader(prepare),
+    ) = AssetStorage(executor, loader, log)
 
     private fun runBackground() {
         while (queue.isNotEmpty()) queue.removeFirst().run()
@@ -172,8 +177,8 @@ class AssetCacheTest {
     fun forgottenWhilePreparingIsDiscardedWithoutReachingTheGlThread() {
         val loader = FakeLoader()
         val discarded = loader.discarded
-        lateinit var c: AssetCache<String, Res>
-        c = AssetCache(executor, { c.retain(emptySet()); it }, loader, log)
+        lateinit var c: AssetStorage<String, Res>
+        c = AssetStorage(executor, FakeLoader(prepare = { c.retain(emptySet()); it }, discarded = discarded), log)
         c.request("a")
         runBackground()
         assertEquals(listOf("a"), discarded)
@@ -185,8 +190,8 @@ class AssetCacheTest {
     fun aResultArrivingAfterDisposeIsReleased() {
         val loader = FakeLoader()
         val discarded = loader.discarded
-        lateinit var c: AssetCache<String, Res>
-        c = AssetCache(executor, { c.dispose(); it }, loader, log)
+        lateinit var c: AssetStorage<String, Res>
+        c = AssetStorage(executor, FakeLoader(prepare = { c.dispose(); it }, discarded = discarded), log)
         c.request("a")
         runBackground()
         assertEquals(listOf("a"), discarded)
@@ -197,12 +202,12 @@ class AssetCacheTest {
         val loader = FakeLoader()
         val discarded = loader.discarded
         var abandonNext = true
-        lateinit var c: AssetCache<String, Res>
-        c = AssetCache(executor, {
+        lateinit var c: AssetStorage<String, Res>
+        c = AssetStorage(executor, FakeLoader(prepare = {
             if (abandonNext) c.abandon()
             abandonNext = false
             it
-        }, loader, log)
+        }, discarded = discarded), log)
         c.request("a")
         runBackground()
         assertEquals(listOf("a"), discarded)
@@ -258,8 +263,8 @@ class AssetCacheTest {
     @Test
     fun slowGpuWorkIsSpreadOverSeveralSteps() {
         val slices = mutableMapOf<String, Int>()
-        val c = AssetCache(
-            executor, { it },
+        val c = AssetStorage(
+            executor,
             FakeLoader(upload = { d -> val n = (slices[d] ?: 0) + 1; slices[d] = n; n >= 3 }), log,
         )
         c.request("big")
@@ -284,7 +289,7 @@ class AssetCacheTest {
     fun anAssetThatFailsInTheMiddleIsDiscardedAndRemembered() {
         val loader = FakeLoader(upload = { error("upload failed") })
         val discarded = loader.discarded
-        val c = AssetCache(executor, { it }, loader, log)
+        val c = AssetStorage(executor, loader, log)
         c.request("x")
         runBackground()
         c.pump()
@@ -296,14 +301,14 @@ class AssetCacheTest {
     // --- revisions: invalidate, replace, retry ---
 
     /** A cache whose prepared data carries a revision number, so a test can tell which revision became the asset. */
-    private fun revisions(discarded: MutableList<String>, fail: Set<Int> = emptySet(), slices: Int = 1): Triple<AssetCache<String, Res>, () -> Unit, MutableMap<String, Int>> {
+    private fun revisions(discarded: MutableList<String>, fail: Set<Int> = emptySet(), slices: Int = 1): Triple<AssetStorage<String, Res>, () -> Unit, MutableMap<String, Int>> {
         var revision = 0
         val current = mutableMapOf<String, Int>()
         val progress = mutableMapOf<String, Int>()
-        val c = AssetCache<String, Res>(
+        val c = AssetStorage<String, Res>(
             executor,
-            prepare = { n -> val r = ++revision; current[n] = r; if (r in fail) null else "$n#$r" },
             loader = FakeLoader(
+                prepare = { n -> val r = ++revision; current[n] = r; if (r in fail) null else "$n#$r" },
                 upload = { d -> val k = (progress[d] ?: 0) + 1; progress[d] = k; k >= slices },
                 discarded = discarded,
             ),
@@ -521,31 +526,24 @@ class AssetCacheTest {
     }
 
     @Test
-    fun cachesOfDifferentProjectsAreIsolated() {
-        val loader = object : AssetLoader<String, Res> {
-            override fun prepare(files: net.nevinsky.abyssus.assets.files.AssetFiles, name: String) = "${files.projectDir.name}/$name"
-            override fun build(prepared: String) = Res(prepared)
-            override fun discard(prepared: String) {}
-        }
-        val json = net.nevinsky.abyssus.assets.json.JsonProcessor()
-        val one = java.nio.file.Files.createTempDirectory("one").toFile()
-        val two = java.nio.file.Files.createTempDirectory("two").toFile()
-        val a = SceneAssets(executor, loader, { net.nevinsky.abyssus.assets.files.AssetFiles(it, json) }, log)
-        val b = SceneAssets(executor, loader, { net.nevinsky.abyssus.assets.files.AssetFiles(it, json) }, log)
-        a.update(one, setOf("x"))
-        b.update(two, setOf("x"))
+    fun storagesOfDifferentProjectsAreIsolated() {
+        fun project(prefix: String) = AssetStorage(executor, FakeLoader(prepare = { "$prefix/$it" }), log)
+        val a = project("one")
+        val b = project("two")
+        a.request("x")
+        b.request("x")
         runBackground()
-        a.update(one, setOf("x"))
-        b.update(two, setOf("x"))
+        a.pump()
+        b.pump()
         val ax = a.get("x")!!
         val bx = b.get("x")!!
-        assertEquals(one.name + "/x", ax.name)
-        assertEquals(two.name + "/x", bx.name)
+        assertEquals("one/x", ax.name)
+        assertEquals("two/x", bx.name)
 
         a.invalidate(setOf("x"))
-        a.update(one, setOf("x"))
+        a.request("x")
         runBackground()
-        a.update(one, setOf("x"))
+        a.pump()
         assertTrue(ax.disposed)
         assertFalse(bx.disposed)
         assertSame(bx, b.get("x"))

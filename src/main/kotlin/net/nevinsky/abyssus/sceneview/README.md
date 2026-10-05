@@ -40,7 +40,7 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
   stable for 250 ms. On macOS a zero-sized surface aborts the JVM. A canvas disposed while hidden drops its context
   without making it current, so its GL objects can't be released. macOS also stops sizing that canvas's native
   surface with the component, so `SceneViewPanel` replaces such an "abandoned" canvas when the view is shown again.
-- **Asset loading lives in `core`** (`core/README.md`). `AssetCache.prepare` runs on a pool thread (IO and decoding,
+- **Asset loading lives in `core`** (`core/README.md`). `AssetStorage.prepare` runs on a pool thread (IO and decoding,
   no GL). `build`, and `advance` for big textures, run on the render thread one slice per frame, inside this package's
   `GdxRuntime.withContext`. A new project gets a new cache, so a pool thread never prepares from a stale project. A
   failed asset is remembered and logged once, through the SLF4J `Logger` `AbyssusCore` gives `AssetLoading` (`Abyssus.assets`).
@@ -52,7 +52,7 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
   that use it. `SceneFileEditor` feeds it VFS and document events and passes the batch to `SceneView.refreshAssets`;
   `SceneRenderer.queueAssetRevision` keeps batches (merged, in `PendingAssetRevision`) until `render` takes them, and
   `render` only runs while the canvas is safely on screen, so a hidden view reloads when it is shown. On the render
-  thread the batch gives each `SceneAssets` the new snapshot and invalidates the names (`AssetCache.invalidate`): the old
+  thread the batch gives each `SceneAssets` the new snapshot and invalidates the names (`AssetStorage.invalidate`): the old
   asset keeps drawing until its replacement is built, then is disposed once; a superseded load is discarded. A terrain's
   mesh and CPU height data come from one `TerrainMesh`, so drawing, picking, Drop and shadows all see the same
   replacement (`drawnVersion` changes when an asset is replaced so Drop re-measures). Nothing moves entities.

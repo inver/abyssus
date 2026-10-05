@@ -38,7 +38,7 @@ open class PlacedAssets<P : Any, A : Disposable, E : PlacedEntity<A>>(
         assets.invalidate(names)
     }
 
-    /** Forgets everything without GL calls; see [net.nevinsky.abyssus.assets.loading.AssetCache.abandon]. */
+    /** Forgets everything without GL calls; see [net.nevinsky.abyssus.assets.loading.AssetStorage.abandon]. */
     fun abandon() {
         entities.clear()
         assets.abandon()

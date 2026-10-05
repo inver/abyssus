@@ -9,7 +9,7 @@
 | `physics-plugin/` | **Abyssus Physics**, an IntelliJ plugin depending on Abyssus: physics overlay, Play through a separate play process, generated physics schema, bundled `play-host` folder | root plugin (`localPlugin`), `:physics` (without its dependencies), `:runtime` compile-only |
 | `physics/` | Plain JVM physics: the physics components and `PhysicsWorld` (Jolt through jolt-jni), run in a game or the play host, never in the IDE | `:runtime`, jolt-jni |
 | `games/control-line/` | **Control Line**, a libGDX desktop game (LWJGL3): flight on Jolt lines, scoring, screens, its bundled native project and its `PlayModule` for Play in Abyssus | `:physics`, libGDX LWJGL3 backend, jolt-jni natives of the build machine |
-| `core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline, and the models, terrains and skies it builds | `:gdx-model`, Jackson, libGDX |
+| `core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline (`AssetStorage`), CPU ray snapshots (`RaySnapshotStore`), and the models, terrains and skies it builds | `:gdx-model`, Jackson, libGDX |
 | `gdx-model/` | Plain JVM library: libGDX model runtime with 32-bit mesh indices and an Assimp importer | libGDX, LWJGL Assimp |
 | `raytracing/` | Plain JVM ray tracing: backend contracts, immutable scene snapshots and linear host frames, the scheduler and quality policy, and optional native Metal and Vulkan backends | Kotlin stdlib, LWJGL Vulkan and VMA |
 
@@ -44,7 +44,7 @@ command pools, output images) that is disposed on the owner worker.
 `SceneFileEditor` watches the project's `assets` (VFS events and `meta.json` documents). `AssetRefresh` diffs snapshots of
 effective asset revisions off the EDT (unsaved metadata text is captured on the EDT first), and a real change reaches
 `SceneRenderer.queueAssetRevision` as an `AssetRevisionBatch`. The next safe frame invalidates the changed names in each
-`AssetCache` and swaps old assets for new ones as they finish building. See
+`AssetStorage` and swaps old assets for new ones as they finish building. See
 `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md`.
 
 ### A scene file to the scene view
@@ -58,7 +58,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    the `HANDLE` entities that a light may be aimed at.
 3. `SceneViewPanel` hosts a `GuardedGLCanvas`. A Swing `Timer` renders frames through
    `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each holding a
-   `core` `SceneAssets` from `AssetLoading`, backed by an `AssetCache`) and draws markers (`SceneMarkers`) and gizmos
+   `core` `AssetStorage` built by `AssetLoading`) and draws markers (`SceneMarkers`) and gizmos
    (`sceneview/gizmo/`).
 4. An HDR sky also lights the content. `core`'s `HdrSkyLoader` decodes the `.hdr` on the pool thread, then
    `HdrEnvironmentBuild` builds a specular cube, an irradiance cube and six axis colors on the GPU, one step per
@@ -166,7 +166,7 @@ an asset. A rejected file is never imported, formatted or edited; supported sibl
 - **`Gdx.*`:** these statics are process-global. `GdxRuntime.withContext` installs a per-canvas shim
   (`Gdx.app`, `Gdx.graphics`, `Gdx.gl*`, `Gdx.files`) under a lock, then restores the previous values. All libGDX
   calls happen inside it.
-- **Asset loading:** `AssetCache.prepare` runs on a pool thread and does file IO and decoding, no GL. Building GPU
+- **Asset loading:** `AssetStorage.prepare` runs on a pool thread and does file IO and decoding, no GL. Building GPU
   objects happens on the render thread in `pump`, sliced per frame for big textures and for an HDR sky's
   environment passes (`HdrEnvironmentBuild`, which restores the framebuffer, viewport and state it changes).
   Reloading a changed asset follows the same split: `AssetRefresh` reads on the pool and delivers on the EDT, and

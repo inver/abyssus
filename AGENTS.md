@@ -44,10 +44,11 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   - `filetype/`, `language/`: file types, icons, scene JSON, the GLTF PSI.
 - `gdx-model/`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import), with inherited sources documented in `docs/third-party/gdx-model-origin.md`.
   See `gdx-model/README.md`.
-- `core/`: a plain JVM library, root package `net.nevinsky.abyssus.assets`: asset folders and `meta.json`
-  (`AssetFiles`, `JsonProcessor`), the loading pipeline (`AssetLoader`, `AssetCache`, `SceneAssets`), and the loaders
-  with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).
-  `AssetLoading` wires it; the plugin builds one in `AbyssusCore`. See `core/README.md`.
+- `core/`: a plain JVM library, root package `net.nevinsky.abyssus.core`: project layout and file access
+  (`AbyssusProjectLayout`, `FileLoader`, `JsonProcessor`), asset metas (`AssetMeta`, `AssetMetaLoader`), the loading
+  pipeline (`AssetLoader`, `AssetStorage`), the optional CPU snapshots for ray tracing (`RaySnapshotStore`), and the
+  loaders with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).
+  The plugin wires it in `AssetLoading` (root package). See `core/README.md`.
 - `runtime/`: plain JVM scene parsing, project layout over `Path`, and Ashley components, codecs, systems, loader
   and writer. Game components (`@SceneComponent`, `ComponentRegistry`) and their schema export live in its `schema` package. `SceneLoading` wires it by constructors; the plugin builds one in `AbyssusCore`. See `runtime/README.md`.
 - `physics/`: a plain JVM library on `runtime`, root package `net.nevinsky.abyssus.physics`: the physics components
@@ -92,7 +93,7 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   writer is `SceneFormatListener`, which pretty-prints a `.scene` / `.abss` opened in the text editor.
 - **Never change numbers or key order you didn't mean to change.** Parse with `SceneJson`, which keeps both.
 - **`Gdx.*` is process-global inside the IDE.** Run libGDX code only inside `GdxRuntime.withContext`, on the AWT
-  thread that renders the canvas (a Swing timer drives frames). Only the `prepare` step of `AssetCache` runs off that
+  thread that renders the canvas (a Swing timer drives frames). Only the `prepare` step of `AssetStorage` runs off that
   thread, and it must not touch GL. Picking and gizmo hit tests use CPU data and need no context.
 - **Use GL only while the canvas is safely on screen** (`GuardedGLCanvas.glSafe`). On macOS a zero-sized surface
   aborts the JVM.
