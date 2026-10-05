@@ -59,7 +59,7 @@ class SceneMarkersTest {
     @Test
     fun theViewCameraHasNoMarkerTarget() {
         val c = main()
-        assertTrue(SceneMarkers.targets(c, skipCamera = "4").isEmpty())
+        assertEquals(listOf("7"), SceneMarkers.targets(c, skipCamera = "4").map { it.entityId })
         assertNull(ScenePicker.pick(ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f)), SceneMarkers.targets(c, "4"), emptyList(), 100f))
     }
 
@@ -67,11 +67,11 @@ class SceneMarkersTest {
     fun aCameraDrawsABodyAndAFrustum() {
         val out = Recorder()
         SceneMarkers.draw(out, main(), 1.5f)
-        // 12 frustum edges, 12 body edges and 4 lens lines
-        assertEquals(28, out.lines.size)
+        // 12 frustum edges, 12 body edges, 4 lens lines and the fixture light's 13 marker lines
+        assertEquals(41, out.lines.size)
         val skipped = Recorder()
         SceneMarkers.draw(skipped, main(), 1.5f, skipCamera = "4")
-        assertTrue(skipped.lines.isEmpty())
+        assertEquals(13, skipped.lines.size)
     }
 
     @Test

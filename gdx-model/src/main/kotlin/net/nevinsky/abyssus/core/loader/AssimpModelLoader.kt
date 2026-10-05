@@ -12,6 +12,7 @@ import net.nevinsky.abyssus.core.model.Model
 import net.nevinsky.abyssus.core.model.ModelData
 import net.nevinsky.abyssus.lib.assets.assimp.AssimpFlags
 import net.nevinsky.abyssus.lib.assets.assimp.AssimpModelDataLoader
+import java.io.File
 
 /**
  * Loads a model file through Assimp. Trimmed copy of Mundus' `AssimpModelLoader` (no exporter, no import preview).
@@ -42,7 +43,7 @@ class AssimpModelLoader {
                 if (name == null || result.containsKey(name)) {
                     continue
                 }
-                val source = if (name.startsWith("/")) FileHandle(name) else file.parent().child(name)
+                val source = if (File(name).isAbsolute) FileHandle(name) else file.parent().child(name)
                 try {
                     result[name] = Pixmaps.load(source)
                 } catch (e: RuntimeException) {

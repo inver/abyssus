@@ -260,16 +260,21 @@ that into a build error.
 ./gradlew :raytracing:test                                    # Vulkan cases skip without a device flag
 ./gradlew :raytracing:test --tests '*VulkanRayBackendTest' -Dabyssus.vulkanTests=true
 ./gradlew :raytracing:test -Dabyssus.vulkanTests=true -Dabyssus.raytracing.validation=true
+./gradlew :raytracing:test -Dabyssus.vulkanTests=true -Dabyssus.raytracing.validation=true -Dabyssus.raytracing.validationMessenger=true
 ./gradlew :raytracing:verifyVulkanPackaging                   # jar-based; add -Dabyssus.vulkanTests=true to render
 ./gradlew :raytracing:verifyNativePackaging                   # Vulkan, plus Metal on a Mac
 ./gradlew :raytracing:test --tests '*VulkanRayBackendTimingTest' -Dabyssus.vulkanTests=true -Dabyssus.vulkanTimingTests=true
 ./gradlew :test --tests '*RayRealSceneTest' -Dabyssus.vulkanTests=true   # the fixture's Main Scene through the real backend
 ```
 
-`-Dabyssus.raytracing.validation=true` enables the Khronos validation layer (and `VK_EXT_debug_utils`) and
-makes `VulkanRayBackendTest` fail on any validation error. It is a developer flag and is never on by default. It needs
-the `VK_LAYER_KHRONOS_validation` layer (Ubuntu: `vulkan-validationlayers`); a layer unpacked outside the system paths is
-found with `VK_LAYER_PATH` plus `LD_LIBRARY_PATH` pointing at its directory.
+`-Dabyssus.raytracing.validation=true` enables the Khronos validation layer and makes `VulkanRayBackendTest` fail on
+validation errors captured by the backend. It is a developer flag and is never on by default. It needs the
+`VK_LAYER_KHRONOS_validation` layer (Ubuntu: `vulkan-validationlayers`; Windows: `VK_LAYER_PATH` pointing at the SDK's
+`Bin` directory). No debug callback is installed unless asked for: add
+`-Dabyssus.raytracing.validationMessenger=true` or `-Dabyssus.raytracing.validationReport=true` to opt into
+`VK_EXT_debug_utils` or `VK_EXT_debug_report` capture. On Windows a callback-creation access violation inside
+`msvcp140.dll` means the test JVM's `bin` ships an older `msvcp140.dll` than the SDK's validation layer expects
+(Windows resolves it from the JVM's directory first); run the tests on a JDK with a current bundled runtime instead.
 `verifyVulkanPackaging` checks the SPIR-V in the jar, that no shaderc is on the runtime classpath, the
 `lwjgl-vma` natives for every target, MoltenVK for macOS only, and that a probe without a loader returns
 `RUNTIME_NOT_FOUND` (one JVM per test class, because LWJGL's library choice is process-global). Metal

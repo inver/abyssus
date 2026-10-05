@@ -113,8 +113,9 @@ completion, so the EDT never waits on a fence or a conversion. A completed linea
 where `RayFramePresenter` uploads it inside the safe canvas context and `SceneRenderer` composes the grid and overlays
 against its depth. Scenes the backend cannot represent, a failed asset, or a device loss restore raster rendering at
 once and surface a reason with a Retry button; no scene file is written by any of this. See `raytracing/README.md` for
-toolchains, the opt-in device test commands (`-Dabyssus.metalTests=true`, `-Dabyssus.vulkanTests=true`), shading rules
-and bounds, and `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for the view's states.
+toolchains, the opt-in device test commands (`-Dabyssus.metalTests=true`, `-Dabyssus.vulkanTests=true`,
+`-Dabyssus.raytracing.validation=true` and the optional `validationMessenger` / `validationReport` capture flags),
+shading rules and bounds, and `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for the view's states.
 
 ## Threading
 

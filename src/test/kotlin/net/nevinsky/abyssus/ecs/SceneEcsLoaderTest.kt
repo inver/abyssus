@@ -120,17 +120,17 @@ class SceneEcsLoaderTest {
         val file = File(UNTITLED, "scenes/Main Scene.scene")
         val before = file.readBytes()
         val scene = EcsConfigurator(untitledAssets()).load(mainSceneEcs())
-        assertEquals(7, scene.engine.entities.size())
+        assertEquals(8, scene.engine.entities.size())
         assertEquals("Model 0", scene.get(0, NameComponent::class.java)!!.name)
         assertEquals(TypeComponent.Type.OBJECT, scene.get(0, TypeComponent::class.java)!!.type)
         val delegate = scene.get(0, RenderComponent::class.java)!!.renderable as RenderableObjectDelegate
         assertEquals(AssetType.MODEL, delegate.asset.type)
         assertEquals("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", delegate.asset.assetName)
         assertEquals(
-            listOf(0, 1, 2, 3, 4, 5, 6),
+            listOf(0, 1, 2, 3, 4, 5, 6, 7),
             scene.engine.getFromWorld(IdComponent::class.java) { id, _ -> id }.sorted(),
         )
-        assertEquals(listOf("Model 0", "Terrain", "Model 2", "'Direction' handle", "Camera 4", "Model 6"),
+        assertEquals(listOf("Model 0", "Terrain", "Model 2", "'Direction' handle", "Camera 4", "Model 6", "Directional Light 7"),
             scene.engine.getFromWorld(NameComponent::class.java) { _, n -> n.name })
         assertTrue(file.readBytes().contentEquals(before))
         assertEquals(3, scene.get(4, PositionComponent::class.java)!!.lookAtId)

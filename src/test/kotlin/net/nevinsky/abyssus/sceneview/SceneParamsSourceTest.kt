@@ -8,6 +8,7 @@ package net.nevinsky.abyssus.sceneview
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.io.File
 
 class SceneParamsSourceTest : BasePlatformTestCase() {
     private val editorText get() = SceneParamsSource.editorText(com.intellij.openapi.components.service<net.nevinsky.abyssus.dto.SceneReader>())
@@ -40,7 +41,7 @@ class SceneParamsSourceTest : BasePlatformTestCase() {
     fun testProjectDirAndSourcesFollowTheLayout() {
         val abss = myFixture.addFileToProject("P/P.abss", abss(7)).virtualFile
         val scene = myFixture.addFileToProject("P/scenes/a.scene", "{}").virtualFile
-        assertEquals(abss.parent.path, editorText.read(scene).projectDir!!.path)
+        assertEquals(File(abss.parent.path).path, editorText.read(scene).projectDir!!.path)
         assertEquals(setOf(scene, abss), editorText.sources(scene))
     }
 }

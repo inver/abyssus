@@ -147,6 +147,8 @@ tasks.processResources { dependsOn(compileSpirv) }
 tasks.test {
     System.getProperty("abyssus.vulkanTests")?.let { systemProperty("abyssus.vulkanTests", it) }
     System.getProperty("abyssus.raytracing.validation")?.let { systemProperty("abyssus.raytracing.validation", it) }
+    System.getProperty("abyssus.raytracing.validationReport")?.let { systemProperty("abyssus.raytracing.validationReport", it) }
+    System.getProperty("abyssus.raytracing.validationMessenger")?.let { systemProperty("abyssus.raytracing.validationMessenger", it) }
     System.getProperty("abyssus.metalTests")?.let { systemProperty("abyssus.metalTests", it) }
     System.getProperty("abyssus.metalTimingTests")?.let { systemProperty("abyssus.metalTimingTests", it) }
     System.getProperty("abyssus.vulkanTimingTests")?.let { systemProperty("abyssus.vulkanTimingTests", it) }
