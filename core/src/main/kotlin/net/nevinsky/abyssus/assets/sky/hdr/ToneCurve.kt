@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.assets.sky.hdr
 
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /**
  * How an HDR sky is shown: radiance times [exposure], the ACES filmic curve fitted by Narkowicz, clamped to 0..1, then
@@ -18,5 +19,5 @@ class ToneCurve(val exposure: Float = 1.0f) {
     fun display(radiance: Float): Float = aces(maxOf(radiance, 0f) * exposure).pow(1f / 2.2f)
 
     /** Display value 0..255 of [radiance], rounded. */
-    fun byte(radiance: Float): Int = Math.round(display(radiance) * 255f)
+    fun byte(radiance: Float): Int = (display(radiance) * 255f).roundToInt()
 }
