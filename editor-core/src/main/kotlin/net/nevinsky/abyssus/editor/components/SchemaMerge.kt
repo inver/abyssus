@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.schema
+package net.nevinsky.abyssus.editor.components
 
 import net.nevinsky.abyssus.editor.EditorMessages
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.ecs.scene.ComponentEditor
 import net.nevinsky.abyssus.editor.document.documentDisplayMessage
 import net.nevinsky.abyssus.runtime.schema.BUILT_IN_COMPONENTS
 import net.nevinsky.abyssus.runtime.schema.ComponentSchema

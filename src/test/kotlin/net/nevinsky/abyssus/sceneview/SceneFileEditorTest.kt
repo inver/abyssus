@@ -254,7 +254,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             val old = views[0].current.content.models.first { it.entityId == "0" }.transform.position
             val result = net.nevinsky.abyssus.projectView.SceneComponentEdits
                 .update(project, f, "0", "PositionComponent", "localPosition.x", (old.x + 3f).toString(), testMetaFiles())
-            assertEquals(net.nevinsky.abyssus.ecs.scene.EditResult.Changed, result)
+            assertEquals(net.nevinsky.abyssus.editor.components.EditResult.Changed, result)
             assertEquals(old.x + 3f, views[0].current.content.models.first { it.entityId == "0" }.transform.position.x, 1e-4f)
         } finally {
             com.intellij.openapi.util.Disposer.dispose(editor)

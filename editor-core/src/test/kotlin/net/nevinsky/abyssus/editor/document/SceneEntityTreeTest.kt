@@ -2,7 +2,7 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.ecs.scene
+package net.nevinsky.abyssus.editor.document
 
 import net.nevinsky.abyssus.editor.document.SceneEntityTree
 import com.fasterxml.jackson.databind.JsonNode
@@ -15,7 +15,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
-class SceneEntitiesTest {
+class SceneEntityTreeTest {
     private val nodes = JsonNodeFactory.instance
 
     private fun components(vararg names: String): ObjectNode =

@@ -198,7 +198,7 @@ The editor retains source aliases in its `format` package. None of these checks 
 - **A new built-in ECS component:** write the Ashley component with Jackson-friendly properties (a no-argument
   constructor; a `@JsonSerialize` / `@JsonDeserialize` class for a shape that is not plain properties), add it to the
   registered type list in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/EcsJson.kt` and
-  the editor kind/codec definitions in `src/main/kotlin/net/nevinsky/abyssus/ecs/scene/ComponentEditor.kt`.
+  the editor kind/codec definitions in `editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/components/BuiltInComponentKinds.kt`.
 - **A game component:** annotate the class (`@SceneComponent`, `@Field`), register it through a `ComponentRegistry`
   passed to `RuntimeSceneLoader`, and export its schema; no plugin change. See `runtime/README.md`.
 - **`net.nevinsky.abyssus.componentSchemas` (IDE extension point, dynamic):** another plugin contributes a component

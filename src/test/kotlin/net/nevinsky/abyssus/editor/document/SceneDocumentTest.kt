@@ -2,7 +2,7 @@ package net.nevinsky.abyssus.editor.document
 
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.format.UnsupportedDocumentFormat
-import net.nevinsky.abyssus.ecs.scene.ComponentReader
+import net.nevinsky.abyssus.editor.components.ComponentReader
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.sceneview.SceneContent
 import net.nevinsky.abyssus.parseScene

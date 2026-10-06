@@ -7,9 +7,9 @@ package net.nevinsky.abyssus.properties
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.ecs.scene.ComponentEditor
-import net.nevinsky.abyssus.ecs.scene.FieldKind
-import net.nevinsky.abyssus.ecs.scene.FieldValue
+import net.nevinsky.abyssus.editor.components.ComponentEditor
+import net.nevinsky.abyssus.editor.components.FieldKind
+import net.nevinsky.abyssus.editor.components.FieldValue
 import net.nevinsky.abyssus.editor.EditorMessages
 import net.nevinsky.abyssus.editor.document.SceneDocument
 import net.nevinsky.abyssus.editor.document.SceneJson

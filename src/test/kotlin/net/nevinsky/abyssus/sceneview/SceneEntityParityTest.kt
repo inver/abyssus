@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.editor.content.LightKind
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.ecs.scene.ComponentEditor
+import net.nevinsky.abyssus.editor.components.ComponentEditor
 import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.parseScene
 import org.junit.Assert.assertEquals

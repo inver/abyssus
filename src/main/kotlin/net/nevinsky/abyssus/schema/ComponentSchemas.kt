@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.schema
 
+import net.nevinsky.abyssus.editor.components.ContributedSchemaText
+import net.nevinsky.abyssus.editor.components.ProjectSchemaText
+import net.nevinsky.abyssus.editor.components.SchemaMerge
+import net.nevinsky.abyssus.editor.components.SchemaSnapshot
 import net.nevinsky.abyssus.EditorBundle
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
@@ -24,7 +28,7 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.textOf
-import net.nevinsky.abyssus.ecs.scene.ComponentEditor
+import net.nevinsky.abyssus.editor.components.ComponentEditor
 import net.nevinsky.abyssus.ui.documentDisplayMessage
 import net.nevinsky.abyssus.runtime.schema.SCHEMA_FILE
 import java.util.concurrent.ConcurrentHashMap

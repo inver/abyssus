@@ -24,7 +24,7 @@ import net.nevinsky.abyssus.editor.document.EntityView
 import net.nevinsky.abyssus.editor.document.sceneDocumentFromEcs
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.core.io.JsonProcessor
-import net.nevinsky.abyssus.ecs.scene.ComponentReader
+import net.nevinsky.abyssus.editor.components.ComponentReader
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent

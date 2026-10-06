@@ -4,6 +4,9 @@
  */
 package net.nevinsky.abyssus.ecs
 
+import net.nevinsky.abyssus.editor.components.EditResult
+import net.nevinsky.abyssus.editor.components.LightEntities
+import net.nevinsky.abyssus.editor.components.LightPreset
 import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.core.io.JsonProcessor
 
@@ -12,7 +15,6 @@ import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
-import net.nevinsky.abyssus.ecs.scene.*
 import net.nevinsky.abyssus.runtime.ecs.scene.*
 import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.parseScene

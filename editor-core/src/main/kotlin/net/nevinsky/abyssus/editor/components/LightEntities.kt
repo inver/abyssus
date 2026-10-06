@@ -2,7 +2,7 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.ecs.scene
+package net.nevinsky.abyssus.editor.components
 
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.runtime.ecs.EcsWriter

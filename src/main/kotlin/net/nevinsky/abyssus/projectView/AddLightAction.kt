@@ -15,8 +15,8 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.ecs.scene.LightEntities
-import net.nevinsky.abyssus.ecs.scene.LightPreset
+import net.nevinsky.abyssus.editor.components.LightEntities
+import net.nevinsky.abyssus.editor.components.LightPreset
 import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.dto.textOf

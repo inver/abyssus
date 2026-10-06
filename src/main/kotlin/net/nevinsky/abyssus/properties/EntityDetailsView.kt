@@ -19,9 +19,9 @@ import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.ecs.scene.EditResult
-import net.nevinsky.abyssus.ecs.scene.FieldKind
-import net.nevinsky.abyssus.ecs.scene.FieldValue
+import net.nevinsky.abyssus.editor.components.EditResult
+import net.nevinsky.abyssus.editor.components.FieldKind
+import net.nevinsky.abyssus.editor.components.FieldValue
 import net.nevinsky.abyssus.filetype.ComponentIcons
 import net.nevinsky.abyssus.filetype.PropertyIcons
 import net.nevinsky.abyssus.projectView.SceneComponentEdits

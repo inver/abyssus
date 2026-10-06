@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.ecs.scene
+package net.nevinsky.abyssus.editor.components
 
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.graphics.Color

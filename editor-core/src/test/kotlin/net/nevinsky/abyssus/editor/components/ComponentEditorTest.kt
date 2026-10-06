@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.ecs
+package net.nevinsky.abyssus.editor.components
 
 import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.core.io.JsonProcessor
@@ -12,9 +12,6 @@ import com.fasterxml.jackson.databind.JsonNode
 import java.io.File
 import net.nevinsky.abyssus.runtime.ecs.EcsConfigurator
 import net.nevinsky.abyssus.runtime.ecs.render.FolderAssetResolver
-import net.nevinsky.abyssus.ecs.scene.ComponentEditor
-import net.nevinsky.abyssus.ecs.scene.EditResult
-import net.nevinsky.abyssus.ecs.scene.FieldKind
 import net.nevinsky.abyssus.runtime.schema.SchemaFile
 import net.nevinsky.abyssus.editor.document.SceneJson
 import org.junit.Assert.assertEquals

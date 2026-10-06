@@ -13,7 +13,7 @@ import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.ecs.scene.EditResult
+import net.nevinsky.abyssus.editor.components.EditResult
 import net.nevinsky.abyssus.editor.document.SceneJson
 import java.io.File
 import net.nevinsky.abyssus.dto.textOf
@@ -37,7 +37,7 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
     fun testAddLightIsOneUndoStep() {
         val (f, editor) = open("c/Lights.scene", File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
         val start = textOf(f)
-        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.ecs.scene.LightPreset.SUN, net.nevinsky.abyssus.editor.content.Vec3(10f, 0f, -4f), reader)
+        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.editor.components.LightPreset.SUN, net.nevinsky.abyssus.editor.content.Vec3(10f, 0f, -4f), reader)
         assertEquals(EditResult.Changed, result.result)
         assertEquals("7", result.entityId)
         assertEquals("Sun 7", components(f, "7")["NameComponent"]["name"].asText())
@@ -66,7 +66,7 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
     fun testMalformedSceneFieldsRejectLightWithoutWrite() {
         val text = """{"format":"abyssus","formatVersion":1,"name":[],"ecs":{"entities":{}}}"""
         val f = myFixture.addFileToProject("c/bad-name.scene", text).virtualFile
-        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.ecs.scene.LightPreset.SUN, net.nevinsky.abyssus.editor.content.Vec3(0f, 0f, 0f), reader)
+        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.editor.components.LightPreset.SUN, net.nevinsky.abyssus.editor.content.Vec3(0f, 0f, 0f), reader)
         assertTrue(result.result is EditResult.Rejected)
         assertFalse(canAddLight(f, reader))
         assertEquals(text, textOf(f))
@@ -74,7 +74,7 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
 
     fun testUnreadableSceneRejectsLightWithoutWrite() {
         val f = myFixture.addFileToProject("c/bad-light.scene", "not json").virtualFile
-        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.ecs.scene.LightPreset.SPOT, net.nevinsky.abyssus.editor.content.Vec3(0f, 0f, 0f), reader)
+        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.editor.components.LightPreset.SPOT, net.nevinsky.abyssus.editor.content.Vec3(0f, 0f, 0f), reader)
         assertTrue(result.result is EditResult.Rejected)
         assertNull(result.entityId)
         assertEquals("not json", textOf(f))

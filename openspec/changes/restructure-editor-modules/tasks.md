@@ -63,7 +63,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
   core validation tests in `core.format`; consumers and aliases use that implementation. Verify with
   `./gradlew :editor-core:test :test :core:test :runtime:test`, unchanged rejection reasons, no duplicate validator
   implementation, and no dependency from `core` or `runtime` to `editor-core`.
-- [ ] 3.4 Slice `components`: the four files of the component editor (with `refactor-solid-dedup` 4.1 done here),
+- [x] 3.4 Slice `components`: the four files of the component editor (with `refactor-solid-dedup` 4.1 done here),
   `ComponentReader`, `LightEntities`, `SchemaMerge`. Verify with `:editor-core:test` and `ComponentActionsTest`.
 - [ ] 3.5 Slice `content` and `pick`: `SceneContent`, `SceneRenderParams`, `PlacementMapper`, `ScenePicker`,
   `SceneQueries`, `TerrainRestHeight`, `OrbitCamera`, gizmo math, `SceneInteraction`, `ScenePreview`,

@@ -32,6 +32,9 @@ kotlin {
     compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21) }
 }
 tasks.test {
+    // fixture paths in the tests are relative to the repository root, as in the plugin's tests
+    workingDir = rootProject.projectDir
+    systemProperty("abyssus.editorCoreSources", file("src/main/kotlin").absolutePath)
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
     // the native fixture projects are shared with the plugin's tests
