@@ -78,7 +78,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
   no VFS), using the shared `core.format` validator and rejection types. Verify with `HeadlessSceneEditingTest`:
   the move, the refusal (including the same rejection reason) and the asset-property scenarios of the
   spec, each compared with the plugin's `editSceneJson` result on the same text.
-- [ ] 3.9 Check the plugin zip and `physics-plugin`: `./gradlew buildPlugin` contains `editor-core` once; `:physics-plugin:test`
+- [x] 3.9 Check the plugin zip and `physics-plugin`: `./gradlew buildPlugin` contains `editor-core` once; `:physics-plugin:test`
   and `:physics-plugin:checkNoJolt` pass; the physics plugin does not bundle it.
 
 ## 4. Stage 4 decision (`editor-render`)
