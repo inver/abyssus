@@ -39,7 +39,7 @@ CI also runs Plugin Verifier and Qodana separately from `check`.
 - `games/control-line/src/test/kotlin/`: the Control Line game's flight, track, scoring, screen flow and Play module,
   headless (Jolt's `ReleaseSp` natives for the build machine, no window). They read the bundled project
   `games/control-line/project/ControlLine` through `bundledProject()` / `loadField()`, and fly it with `FieldFlight`;
-  `ControlLinePlayTest` runs `PlayHostMain` in a child process.
+  `ControlLinePlayTest` runs `PlayHostMain` in a child process. `CrashClipGlTest` is the one GL test there (opt-in).
 - `physics-plugin/src/test/kotlin/`: overlay geometry, game/fallback launch selection and bundled play-host packaging.
 - `raytracing/src/test/kotlin/`: backend contracts, fake backend, snapshots, scheduling, budgets, optics, accumulation
   and native packaging. Metal and Vulkan device tests opt in separately with `-Dabyssus.metalTests=true` and
@@ -90,7 +90,7 @@ an object was dragged.
 
 ## GL tests
 
-- **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `LargeMeshGlTest`, `core`'s `*GlTest`) run only with
+- **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `LargeMeshGlTest`, `core`'s `*GlTest`, Control Line's `CrashClipGlTest`) run only with
   `-Dabyssus.glTests=true` on a machine with a display. Otherwise `GlHarness.enabled` is false and they are skipped
   (counted as skipped, not failed).
 - **Harness:** `GlHarness` (`src/test/kotlin/net/nevinsky/abyssus/sceneview/GlHarness.kt`) renders a few frames on

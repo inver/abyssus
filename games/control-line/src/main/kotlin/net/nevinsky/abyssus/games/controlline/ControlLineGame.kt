@@ -115,7 +115,9 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
             scene,
             cameras.camera,
             lines,
-            hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null
+            hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null,
+            clips = s?.flight?.crash?.let { mapOf(s.plane to it.clip) }.orEmpty(),
+            seconds = seconds,
         )
         ui.update(s, seconds)
         ui.draw()

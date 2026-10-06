@@ -75,4 +75,26 @@ class FlightOutcomeTest {
         assertEquals(FlightEnd.LINES_SLACK, f.flight.result)
         assertEquals("Lines went slack", f.flight.result!!.label)
     }
+
+    @Test
+    fun theImpactSpeedPicksTheCrash() {
+        for ((sinkSpeed, severity) in listOf(4.5f to CrashSeverity.LITTLE, 8f to CrashSeverity.MEDIUM, 14f to CrashSeverity.FULL)) {
+            FieldFlight("Trainer").use { f ->
+                f.touchDown(sinkSpeed)
+                f.fly(0.5f)
+                assertEquals("at $sinkSpeed m/s", FlightEnd.CRASHED, f.flight.result)
+                assertEquals("at $sinkSpeed m/s", sinkSpeed, f.flight.impactSpeed, 0.5f)
+                assertEquals("at $sinkSpeed m/s", severity, f.flight.crash)
+            }
+        }
+    }
+
+    @Test
+    fun aLandingIsNoCrash() = FieldFlight("Trainer") { fuelTime = 0f }.use { f ->
+        f.touchDown(sinkSpeed = 2f)
+        f.fly(0.5f)
+        assertEquals(FlightEnd.LANDED, f.flight.result)
+        assertNull(f.flight.crash)
+        assertEquals(0f, f.flight.impactSpeed, 0f)
+    }
 }
