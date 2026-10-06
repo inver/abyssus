@@ -5,20 +5,22 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.ray.SceneRaySettingsState
+import net.nevinsky.abyssus.editor.ray.SceneRaySettingsCodec
+
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Rgba
+
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.assets.json.float
-import net.nevinsky.abyssus.assets.json.obj
-import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.editor.document.SceneJson
+import net.nevinsky.abyssus.core.scene.Scene
+import net.nevinsky.abyssus.runtime.float
+import net.nevinsky.abyssus.runtime.obj
 import java.io.File
 import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.sqrt
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-
-data class Vec3(val x: Float, val y: Float, val z: Float)
-
-data class Rgba(val r: Float, val g: Float, val b: Float, val a: Float)
 
 /** [direction] is the unit vector the camera looks along. */
 data class CameraParams(
@@ -40,7 +42,8 @@ data class CameraParams(
  */
 data class FogParams(val color: Rgba, val density: Float, val gradient: Float) {
     fun amount(distance: Float): Float =
-        (1.0 - exp(-(distance.coerceAtLeast(0f) * density).toDouble().pow(gradient.toDouble()))).toFloat().coerceIn(0f, 1f)
+        (1.0 - exp(-(distance.coerceAtLeast(0f) * density).toDouble().pow(gradient.toDouble()))).toFloat()
+            .coerceIn(0f, 1f)
 
     /** Multiplier for g3d's `dot(d, d) * k` fog term that reaches [amount] at `1 / density` for any gradient. */
     val shaderCoefficient: Float get() = ((1.0 - exp(-1.0)) * density.toDouble() * density).toFloat()
@@ -56,17 +59,29 @@ data class SceneRenderParams(
     val projectDir: File? = null,
     /** The scene's `ecs` block as read, for scene overlays that draw components the view does not model. */
     val ecs: JsonNode? = null,
+    val rayTracing: SceneRaySettingsState = SceneRaySettingsCodec().read(SceneJson.mapper.createObjectNode()),
 ) {
     companion object {
         val DEFAULT_CLEAR = Rgba(0.1f, 0.1f, 0.15f, 1f)
         val DEFAULT = SceneRenderParams(DEFAULT_CLEAR, null, null, CameraParams.DEFAULT)
 
-        fun from(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
+        fun from(scene: Scene, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
             val fog = fogOf(scene)
-            return SceneRenderParams(fog?.color ?: DEFAULT_CLEAR, ambientOf(scene), fog, camera, SceneContent.of(scene), projectDir, scene.ecs)
+            return SceneRenderParams(
+                fog?.color ?: DEFAULT_CLEAR,
+                ambientOf(scene),
+                fog,
+                camera,
+                SceneContent.of(scene),
+                projectDir,
+                scene.ecs,
+                SceneRaySettingsCodec().read(SceneJson.mapper.createObjectNode().also { root ->
+                    scene.rayTracing?.let { root.set<JsonNode>("rayTracing", SceneJson.mapper.valueToTree(it)) }
+                }),
+            )
         }
 
-        private fun ambientOf(scene: SceneDto): Rgba? {
+        private fun ambientOf(scene: Scene): Rgba? {
             if (scene.ambientLightEnabled != true) return null
             val light = scene.ambientLight ?: return null
             val c = light.color ?: return null
@@ -74,7 +89,7 @@ data class SceneRenderParams(
             return Rgba(c.r * k, c.g * k, c.b * k, 1f)
         }
 
-        private fun fogOf(scene: SceneDto): FogParams? {
+        private fun fogOf(scene: Scene): FogParams? {
             if (scene.fogEnabled != true) return null
             val fog = scene.fog ?: return null
             val c = fog.color ?: return null
@@ -94,7 +109,9 @@ internal fun normalized(v: Vec3): Vec3? {
 object MainCamera {
     fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
         val root = SceneJson.parse(abssText).takeIf { it.isObject } ?: return null
-        if (net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().validate(root, net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT) != null) return null
+        if (net.nevinsky.abyssus.format.AbyssusDocumentFormat()
+                .validate(root, net.nevinsky.abyssus.format.DocumentKind.PROJECT) != null
+        ) return null
         val cam = root.obj("mainCamera") ?: return null
         val position = cam.vec("position") ?: return null
         val direction = normalized(cam.vec("viewPointPosition") ?: return null) ?: return null

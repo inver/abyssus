@@ -14,9 +14,10 @@ the row actions that call `editSceneJson` (`src/main/kotlin/net/nevinsky/abyssus
 | `AssetReadCache` | Parsed files per project, re-read when the reader's `stamp` changes |
 | `RowActions.kt` | What a row paints at its right edge: eye, "View", the `unused` tag, the skybox **Choose** button |
 | `SceneComponentEdits.kt` | Add, update and remove a component as undoable `editSceneJson` commands; also lists a project's model and terrain assets |
-| `ComponentActions.kt`, `ComponentTarget.kt` | The **Add Component...** / **Remove Component** tree actions and the entity or component a row stands for |
+| `ComponentActions.kt`, `ComponentTarget.kt` | The **Add Component...** / **Remove Component** tree actions and the entity or component a row stands for; `AddComponentOnEcsAction` is Add Component... on a scene's `ecs` row, creating a new `Entity <id>` with the chosen component (`SceneComponentEdits.addAsNewEntity`, inserted by `SceneEntities`) |
 | `EnabledToggle.kt` | The writes built on `editSceneJson`: `toggleEnabled`, `renameScene`, `setSkybox` |
 | `RenameSceneAction` | Right-click **Rename Scene...** |
+| `ImportFlightGearAction.kt`, `FlightGearImportSettings.kt` | Right-click **Import FlightGear Aircraft...** on the Assets node: the dialog over a Swing-free settings model, `importFlightGear` (stage off the EDT through `core.flightgear`, then one undoable `AssetFileCommand`) and `importTransaction` |
 | `SkyboxChoices.kt`, `SkyboxPickerModel`, `SkyboxChooserDialog` | The skybox list, its filter and selection logic, and the dialog |
 | `EntitySelection.kt` | Selects an entity's row when the scene view picks it |
 | `AbyssusSelection` | Publishes the selected node on `AbyssusSelectionListener.TOPIC` (the properties panel listens) |
@@ -39,6 +40,8 @@ the row actions that call `editSceneJson` (`src/main/kotlin/net/nevinsky/abyssus
   because toggle folding, icons and write-back match on it.
 - **Painting a selected disabled row:** the platform repaints selected rows in the selection colour.
   `GrayKeepingRenderer` keeps the gray on disabled rows so they still read as disabled while selected.
+- **HDR sizes come from headers.** `hdrSkyInfo` reads the EXR data window off the EDT without decoding pixels.
+  An unreadable header keeps the filename with unknown dimensions; preview failures still show their own reason.
 
 ## Add Light
 
@@ -46,3 +49,12 @@ the row actions that call `editSceneJson` (`src/main/kotlin/net/nevinsky/abyssus
 `AddLightGroup` is shared with the Scene view toolbar. Tree placement is the origin; Spot is 5 units above it.
 `SceneComponentEdits.addLight` writes through `editSceneJson` as one undoable Add Light command, then the action
 selects the new entity through `selectEntityInAbyssusView`. Invalid scene text disables creation.
+
+## Add Asset
+
+`AddAssetAction` (scene rows) and the Scene view toolbar share `AddAssetGroup`: the project's models and terrains
+from `SceneComponentEdits.renderAssets`, under Models / Terrains, labelled with the folder name as it is (no mnemonic).
+`SceneComponentEdits.addAsset` reads a terrain's `additional.size`, and `AssetEntities` (`ecs/scene`) builds the entity
+on the JSON tree. It is written as one undoable Add Asset command and selected with `selectCreatedEntity`, which
+Add Light uses too. Disabled for unreadable scene text, a scene outside a project, or a project without models and
+terrains.

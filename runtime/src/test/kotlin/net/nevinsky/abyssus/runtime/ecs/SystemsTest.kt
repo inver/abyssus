@@ -18,6 +18,7 @@ import net.nevinsky.abyssus.runtime.ecs.render.RenderContext
 import net.nevinsky.abyssus.runtime.ecs.render.RenderableDelegate
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEngine
 import net.nevinsky.abyssus.runtime.ecs.system.RenderComponentSystem
+import net.nevinsky.abyssus.runtime.testConfigurator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -46,11 +47,11 @@ private class Recorder(private val rotationOf: (() -> Float)? = null) :
 }
 
 class SystemsTest {
-    private val engine = EcsConfigurator().createEngine()
+    private val engine = testConfigurator().createEngine()
 
     private fun entity(id: Int, vararg components: com.badlogic.ashley.core.Component): Entity =
         Entity().also { e ->
-            e.add(IdComponent(id))
+            e.add(IdComponent(id.toLong()))
             components.forEach { e.add(it) }
             engine.addEntity(e)
             engine.ids.register(id, e)

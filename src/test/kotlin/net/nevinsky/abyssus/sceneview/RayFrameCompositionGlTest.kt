@@ -4,6 +4,10 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Rgba
+import net.nevinsky.abyssus.editor.content.PlacementTransform
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.utils.BufferUtils

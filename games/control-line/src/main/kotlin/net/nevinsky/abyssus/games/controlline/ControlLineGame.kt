@@ -4,29 +4,19 @@
  */
 package net.nevinsky.abyssus.games.controlline
 
-import com.badlogic.gdx.ApplicationAdapter
-import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.Input
-import com.badlogic.gdx.InputAdapter
-import com.badlogic.gdx.InputMultiplexer
+import com.badlogic.gdx.*
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
-import net.nevinsky.abyssus.assets.AssetLoading
-import net.nevinsky.abyssus.assets.ShaderSource
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.json.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.games.controlline.flight.CONTROL_TENSION
 import net.nevinsky.abyssus.games.controlline.flight.FlightSession
 import net.nevinsky.abyssus.games.controlline.flow.GameFlow
-import net.nevinsky.abyssus.games.controlline.flow.HandleInput
+import net.nevinsky.abyssus.games.controlline.input.HandleInput
 import net.nevinsky.abyssus.games.controlline.flow.Screen
-import net.nevinsky.abyssus.games.controlline.render.Cameras
-import net.nevinsky.abyssus.games.controlline.render.FieldLoader
-import net.nevinsky.abyssus.games.controlline.render.FieldRenderer
-import net.nevinsky.abyssus.games.controlline.render.FieldScene
-import net.nevinsky.abyssus.games.controlline.render.LineSegment
+import net.nevinsky.abyssus.games.controlline.render.*
 import net.nevinsky.abyssus.games.controlline.score.ScoreTable
 import net.nevinsky.abyssus.games.controlline.screens.GameUi
 import net.nevinsky.abyssus.physics.PhysicsAssets
@@ -48,7 +38,8 @@ private val SLACK_LINE = Color(0.5f, 0.5f, 0.5f, 1f)
 class ControlLineGame(private val project: Path, private val scoresFile: Path) : ApplicationAdapter() {
     /** Problems go to stderr through `physics`'s slf4j-simple binding. */
     private val log = LoggerFactory.getLogger("control-line")
-    private val executor: ExecutorService = Executors.newFixedThreadPool(2) { r -> Thread(r, "asset-prepare").apply { isDaemon = true } }
+    private val executor: ExecutorService =
+        Executors.newFixedThreadPool(2) { r -> Thread(r, "asset-prepare").apply { isDaemon = true } }
     private val natives = JoltNatives()
     private val input = HandleInput()
     private val loader = FieldLoader(project, log)
@@ -69,9 +60,8 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
         ShaderProgram.pedantic = false
         parked = loader.load()
         flow = GameFlow(parked.planes, ScoreTable(scoresFile))
-        val json = JsonProcessor()
-        val loading = AssetLoading(json, log, executor, ShaderSource("/shader/sky", AssetLoading::class.java))
-        renderer = FieldRenderer(loading, project.toFile(), ShaderSource("/shader", ControlLineGame::class.java))
+        val assets = fieldAssets(project.toFile(), JsonProcessor(), log, executor)
+        renderer = FieldRenderer(assets, ShaderSource("/shader", ControlLineGame::class.java))
         skin = Skin(Gdx.files.classpath("uiskin/uiskin.json"))
         ui = GameUi(flow, skin) { Gdx.app.exit() }
         cameras = Cameras(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat())
@@ -102,18 +92,33 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
         when (screen) {
             is Screen.PlaneSelect -> parked.entity(flow.planes[screen.index].entityId)?.let { plane ->
                 val p = parked.position(plane)
-                cameras.planeSelect(p.localPosition, p.localRotation.transform(Vector3(0f, 0f, 1f)).also { it.y = 0f }.nor(), seconds)
+                cameras.planeSelect(
+                    p.localPosition,
+                    p.localRotation.transform(Vector3(0f, 0f, 1f)).also { it.y = 0f }.nor(),
+                    seconds
+                )
             }
+
             else -> if (s != null) {
                 val pilot = scene.position(s.rig.pilot).localPosition
                 cameras.flying(pilot, scene.position(s.plane).localPosition)
                 val color = if (s.flight.tension >= CONTROL_TENSION) TAUT_LINE else SLACK_LINE
                 lines = s.lines().map { (a, b) -> LineSegment(a, b, color) }
             } else {
-                cameras.menu(scene.pilot?.getComponent(PositionComponent::class.java)?.localPosition ?: Vector3(), seconds)
+                cameras.menu(
+                    scene.pilot?.getComponent(PositionComponent::class.java)?.localPosition ?: Vector3(),
+                    seconds
+                )
             }
         }
-        renderer.draw(scene, cameras.camera, lines, hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null)
+        renderer.draw(
+            scene,
+            cameras.camera,
+            lines,
+            hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null,
+            clips = s?.flight?.crash?.let { mapOf(s.plane to it.clip) }.orEmpty(),
+            seconds = seconds,
+        )
         ui.update(s, seconds)
         ui.draw()
     }
@@ -133,7 +138,7 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
         val scene = loader.load()
         val plane = scene.entity(screen.plane.entityId) ?: return
         val pilot = scene.pilot ?: return
-        val assets = PhysicsAssets(AssetFiles(project.toFile(), JsonProcessor()))
+        val assets = PhysicsAssets(project.toFile())
         session = FlightSession(scene.engine, pilot, plane, assets, log, natives)
         sessionScene = scene
         flying = screen

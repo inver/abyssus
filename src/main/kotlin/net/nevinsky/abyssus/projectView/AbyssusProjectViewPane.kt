@@ -47,7 +47,10 @@ import net.nevinsky.abyssus.filetype.AbyssusSceneEdited
 import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.AbyssusCore
 
-class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project) {
+// Platform project-view implementation APIs supply its native selection, toolbar and tree lifecycle.
+// Keep that integration here; the public ViewSettings/node contracts do not construct a custom pane.
+class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
+    net.nevinsky.abyssus.sceneview.SceneViewHost by ProjectSceneViewHost(project) {
     init {
         // a plugin edit of a scene or project file changes what the tree shows (names, toggles, counts)
         project.messageBus.connect(this).subscribe(AbyssusSceneEdited.TOPIC, AbyssusSceneEdited { updateFromRoot(true) })
@@ -163,8 +166,8 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
     private fun skyboxAction(entry: DtoEntry): RowAction? {
         val abss = skyboxProjectOf(entry) ?: return null
         return ChooseButton(AbyssusBundle.message("skyboxChooserTooltip")) {
-            val core = service<AbyssusCore>()
-            if (chooseSkybox(project, entry, abss, core.metaFiles, core.hdrPreviews)) reselect(entry.path, false)
+            val assets = service<AbyssusCore>().assets
+            if (chooseSkybox(project, entry, abss, assets.metaFiles, assets.hdrPreviews)) reselect(entry.path, false)
         }
     }
 
@@ -188,6 +191,8 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
 
     init {
         // the design's selection highlight; the platform paints it (rounded in the new UI) with this colour
+        // Internal rendering key: Swing's selection color does not override the platform renderer's row background.
+        // This exact use is the project-tree finding in the recorded verifier baseline (design D9).
         putClientProperty(RenderingUtil.CUSTOM_SELECTION_BACKGROUND, Supplier<Color> { DesignColors.SELECTION })
         ToolTipManager.sharedInstance().registerComponent(this)
         addMouseListener(object : MouseAdapter() {

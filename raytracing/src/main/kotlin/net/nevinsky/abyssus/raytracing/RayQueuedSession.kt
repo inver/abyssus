@@ -48,6 +48,11 @@ class RayQueuedSession(private val driver: RaySession, private val health: RayDe
         } catch (lost: RayDeviceLostException) {
             health.reportLost(lost.message ?: "Ray device lost")
             throw lost
+        } catch (rejected: RuntimeException) {
+            // The driver finished the frame and rejected it (query budget, unsupported medium); later work must not wait on it.
+            inFlight = false
+            pending = null
+            throw rejected
         } ?: return null
         inFlight = false
         val desired = latest!!

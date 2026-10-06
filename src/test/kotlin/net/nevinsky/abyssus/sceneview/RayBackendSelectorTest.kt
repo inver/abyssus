@@ -4,6 +4,9 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayBackendAttempt
+import net.nevinsky.abyssus.editor.ray.RayBackendSelection
+
 import org.slf4j.Logger
 import net.nevinsky.abyssus.raytracing.*
 import net.nevinsky.abyssus.testing.RecordingLogger

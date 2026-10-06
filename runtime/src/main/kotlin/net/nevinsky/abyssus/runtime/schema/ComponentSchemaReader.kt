@@ -106,11 +106,3 @@ internal fun schemaValue(type: FieldType, value: Any?): Any = when (type) {
     FieldType.VECTOR -> (value as? Vector3)?.let { SchemaVector(it.x, it.y, it.z) } ?: SchemaVector(0f, 0f, 0f)
     FieldType.COLOR -> (value as? Color)?.let { SchemaColor(it.r, it.g, it.b, it.a) } ?: SchemaColor(0f, 0f, 0f, 0f)
 }
-
-/** A schema [value] as the Java field [field] takes it. */
-internal fun javaValue(field: JavaField, type: FieldType, value: Any): Any? = when (type) {
-    FieldType.CHOICE -> field.type.enumConstants.firstOrNull { (it as Enum<*>).name == value }
-    FieldType.VECTOR -> (value as SchemaVector).let { Vector3(it.x, it.y, it.z) }
-    FieldType.COLOR -> (value as SchemaColor).let { Color(it.r, it.g, it.b, it.a) }
-    else -> value
-}

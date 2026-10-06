@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.document.SceneJson
+import net.nevinsky.abyssus.editor.meta.AssetChoice
+
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.command.WriteCommandAction
@@ -21,7 +24,7 @@ import net.nevinsky.abyssus.projectView.DtoEntryNode
 import java.awt.Component
 import java.awt.Container
 import java.io.File
-import net.nevinsky.abyssus.assets.sky.cube.SKYBOX_FACES
+import net.nevinsky.abyssus.SKYBOX_FACES
 import net.nevinsky.abyssus.testPanelServices
 
 class AssetPropertiesPanelTest : BasePlatformTestCase() {
@@ -45,8 +48,13 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
         File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
-            d.listFiles { f -> f.isFile }!!.filter { it.extension in setOf("json", "png", "hdr") }.forEach {
-                myFixture.copyFileToProject("$dir/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
+            d.listFiles { f -> f.isFile }!!.filter { it.extension in setOf("json", "png") }.forEach {
+                val path = "$dir/assets/${d.name}/${it.name}"
+                if (it.extension == "json") {
+                    myFixture.addFileToProject(path, it.readText().trimEnd() + "\n")
+                } else {
+                    myFixture.copyFileToProject(path, path)
+                }
             }
         }
     }
@@ -102,7 +110,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val scene = children(children(abss()).single { label(it) == "scenes" }).single()
         // a scene row shows the scene's view settings (its Ray Tracing switch) instead of an empty state
         p.show(scene)
-        val details = p.state as PanelState.SceneDetails
+        val details = p.state as PanelState.UISceneState
         assertEquals("Main Scene.scene", details.file.name)
     }
 
@@ -207,14 +215,13 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     }
 
     fun testHdrShowsOnePreviewLabelledWithSize() {
-        copyProject()
         val p = panel()
-        p.show(asset("skybox_hdr"))
+        p.showFolder(diskHdr())
         val hdr = (p.state as PanelState.Details).hdr!!
-        assertEquals("sky.hdr · 64 × 32", hdr.label)
+        assertEquals("sky.exr · 1024 × 512", hdr.label)
         assertEquals(2 * hdr.image!!.height, hdr.image!!.width)
         val shown = texts(p)
-        assertTrue(shown.toString(), shown.contains("PREVIEW") && shown.contains("sky.hdr · 64 × 32"))
+        assertTrue(shown.toString(), shown.contains("PREVIEW") && shown.contains("sky.exr · 1024 × 512"))
     }
 
     fun testHdrShowsNoFacePreviews() {
@@ -225,18 +232,22 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         assertFalse(texts(p).contains("FACE PREVIEWS"))
     }
 
+    /** Test-owned EXR bytes on disk, where the preview decoder reads them; never modifies shared assets. */
+    private fun diskHdr(truncated: Boolean = false): VirtualFile {
+        val disk = com.intellij.openapi.util.io.FileUtil.createTempDirectory("abyssus-hdr-sky", null)
+        val sky = File(disk, "assets/skybox_hdr").apply { mkdirs() }
+        File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{"file":"sky.exr"}}""")
+        val bytes = File("$testDataPath/Untitled/assets/skybox_hdr/sky.exr").readBytes()
+        File(sky, "sky.exr").writeBytes(if (truncated) bytes.copyOf(bytes.size / 2) else bytes)
+        return com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByIoFile(sky)!!
+    }
+
     fun testUnreadableHdrShowsAPlaceholderAndRows() {
-        myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
-        myFixture.addFileToProject("p/assets/broken/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
-        val bytes = File("$testDataPath/Untitled/assets/skybox_hdr/sky.hdr").readBytes()
-        val vf = myFixture.addFileToProject("p/assets/broken/sky.hdr", "").virtualFile
-        WriteCommandAction.runWriteCommandAction(project) { vf.setBinaryContent(bytes.copyOf(bytes.size / 2)) }
-        val node = children(children(abss()).single { label(it) == "assets" }).single()
         val p = panel()
-        p.show(node)
+        p.showFolder(diskHdr(truncated = true))
         val details = p.state as PanelState.Details
         assertNull(details.hdr!!.image)
-        assertTrue(details.hdr!!.label, details.hdr!!.label.startsWith("Cannot read sky.hdr: ") && details.hdr!!.label.contains("truncated"))
+        assertTrue(details.hdr!!.label, details.hdr!!.label.startsWith("Cannot read sky.exr: ") && details.hdr!!.label.contains("EXR image error"))
         assertTrue("the Meta rows are still shown", texts(p).contains("SKYBOX_HDR"))
     }
 
@@ -262,7 +273,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val meta = myFixture.findFileInTempDir("Untitled/assets/$terrain/meta.json")
         WriteCommandAction.runWriteCommandAction(project) {
             val doc = FileDocumentManager.getInstance().getDocument(meta)!!
-            doc.setText(doc.text.replace("\"size\":1600", "\"size\":2048"))
+            doc.setText(doc.text.replace("\"size\": 1600", "\"size\": 2048"))
         }
         assertEquals("2048", size())
     }
@@ -302,7 +313,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         p.show(asset("skybox_default"))
         for (face in SKYBOX_FACES) {
             val combo = field(p, face) as com.intellij.openapi.ui.ComboBox<*>
-            assertEquals("skybox_default.png", (combo.selectedItem as net.nevinsky.abyssus.properties.AssetChoice).value)
+            assertEquals("skybox_default.png", (combo.selectedItem as net.nevinsky.abyssus.editor.meta.AssetChoice).value)
         }
     }
 
@@ -350,7 +361,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.show(asset(terrain))
         type(field(p, "size") as JBTextField, "800")
-        assertEquals(before.replace("\"size\":1600", "\"size\":800"), metaText(path))
+        assertEquals(before.replace("\"size\": 1600", "\"size\": 800"), metaText(path))
         assertEquals("800", (field(p, "size") as JBTextField).text)
         assertEquals("", errorOf(p, "size"))
     }
@@ -377,7 +388,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val stale = field(p, "size") as JBTextField
         val document = FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!
         com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) {
-            document.setText(document.text.replace("\"size\":1600", "\"size\":1000"))
+            document.setText(document.text.replace("\"size\": 1600", "\"size\": 1000"))
         }
         val changed = metaText(path)
         type(stale, "800")
@@ -415,11 +426,11 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.showFolder(folder)
         @Suppress("UNCHECKED_CAST")
-        val combo = field(p, "left") as com.intellij.openapi.ui.ComboBox<net.nevinsky.abyssus.properties.AssetChoice>
+        val combo = field(p, "left") as com.intellij.openapi.ui.ComboBox<net.nevinsky.abyssus.editor.meta.AssetChoice>
         val other = (0 until combo.itemCount).map { combo.getItemAt(it) }.single { it.value == "other.png" }
         combo.selectedItem = other
         val after = FileDocumentManager.getInstance().getDocument(meta)!!.text
-        assertEquals(before.replaceFirst("\"left\": \"skybox_default.png\"", "\"left\": \"other.png\""), after.trimEnd())
+        assertEquals(before.trimEnd().replaceFirst("\"left\": \"skybox_default.png\"", "\"left\": \"other.png\""), after.trimEnd())
         assertEquals("other.png", (p.state as PanelState.Details).faces!!.single { it.face == "left" }.file)
     }
 
@@ -429,12 +440,15 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         copyProject()
         val path = "Untitled/assets/$terrain/meta.json"
         val original = metaText(path)
+        // Fixture creation has its own commands; this test starts before the first panel edit.
+        (com.intellij.openapi.command.undo.UndoManager.getInstance(project) as com.intellij.openapi.command.impl.UndoManagerImpl)
+            .clearUndoRedoQueueInTests(myFixture.findFileInTempDir(path))
         val p = panel()
         p.show(asset(terrain))
         assertFalse("nothing to undo yet", find(p, "asset-undo")!!.isEnabled)
         type(field(p, "uv") as JBTextField, "30")
         val edited = metaText(path)
-        assertTrue(edited, edited.contains("\"uv\":30.0"))
+        assertTrue(edited, edited.contains("\"uv\": 30.0"))
         assertTrue(find(p, "asset-undo")!!.isEnabled)
         click(p, "asset-undo")
         assertEquals(original, metaText(path))
@@ -462,6 +476,38 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         })
         return found as? com.intellij.openapi.fileEditor.FileEditor
     }
+
+    fun testSceneRaySettingsUndoAndRedoFromThePanelFollowTheSavedScene() {
+        copyProject()
+        val path = "Untitled/scenes/Main Scene.scene"
+        val original = metaText(path)
+        val p = panel()
+        p.show(children(children(abss()).single { label(it) == "scenes" }).single())
+        assertEquals("selecting the scene writes nothing", original, metaText(path))
+        assertEquals("256", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
+        val editor = providedEditor(p) as com.intellij.openapi.fileEditor.TextEditor
+        assertEquals("Main Scene.scene", editor.file.name)
+        type(find(p, "ray-setting-targetSamplesPerPixel") as JBTextField, "512")
+        val edited = metaText(path)
+        assertEquals(512, net.nevinsky.abyssus.editor.document.SceneJson.parse(edited)["rayTracing"]["targetSamplesPerPixel"].intValue())
+        assertEquals("the panel refreshes from the document", "512", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
+        val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
+        undo.undo(editor)
+        assertEquals(original, metaText(path))
+        assertEquals("256", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
+        undo.redo(editor)
+        assertEquals(edited, metaText(path))
+        assertEquals("512", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
+        // an external text edit, valid or not, is read back without a selection change
+        val document = FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!
+        WriteCommandAction.runWriteCommandAction(project) { document.setText(edited.replace("512", "1024")) }
+        assertEquals("1024", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
+        WriteCommandAction.runWriteCommandAction(project) { document.setText(edited.replace("512", "-1")) }
+        assertTrue(errorText(p, "ray-setting-targetSamplesPerPixel-error").isNotBlank())
+        assertEquals("the invalid file is not rewritten", edited.replace("512", "-1"), document.text)
+    }
+
+    private fun errorText(p: Component, name: String) = (find(p, name) as JBLabel).text
 
     fun testThePanelProvidesAnEditorForThePlatformUndo() {
         copyProject()

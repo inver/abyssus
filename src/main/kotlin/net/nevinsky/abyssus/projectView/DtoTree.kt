@@ -7,12 +7,12 @@ package net.nevinsky.abyssus.projectView
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.assets.files.Asset
+import net.nevinsky.abyssus.core.assets.Asset
 import net.nevinsky.abyssus.dto.SceneError
-import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.editor.document.SceneJson
+import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.dto.SceneEntry
-import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
+import net.nevinsky.abyssus.SceneEcsPaths
 
 /**
  * A named, ordered child of a DTO as shown by the Abyssus view. [enabled] is set when the row is gated by an
@@ -91,7 +91,7 @@ fun List<DtoRow>.foldToggles(): List<DtoRow> {
 }
 
 /** `Main Scene (6275127)`: the scene name followed by its id; the index stands in for a missing name. */
-fun sceneLabel(scene: SceneDto, index: Int): String {
+fun sceneLabel(scene: Scene, index: Int): String {
     val name = scene.name?.takeIf { it.isNotBlank() } ?: AbyssusBundle.message("dtoListElementLabel", "scenes", index)
     return scene.id?.let { "$name ($it)" } ?: name
 }
@@ -99,7 +99,7 @@ fun sceneLabel(scene: SceneDto, index: Int): String {
 /** What a list element is called in the tree: a scene's label, an asset's folder, a failed scene's file, else `parent[i]`. */
 fun elementLabel(parentName: String, element: Any?, index: Int): String = when (element) {
     is SceneEntry -> sceneLabel(element.scene, index)
-    is SceneDto -> sceneLabel(element, index)
+    is Scene -> sceneLabel(element, index)
     is Asset<*> -> element.name
     is SceneError -> element.file.name
     else -> AbyssusBundle.message("dtoListElementLabel", parentName, index)
@@ -117,10 +117,13 @@ private const val COMPONENT_SUFFIX = "Component"
 fun isEcsEntry(entry: DtoEntry) = entry.name == ECS && entry.parentKeys.isEmpty() && (entry.value as? JsonNode)?.isObject == true
 
 /** An entity row, listed directly under `ecs`; its JSON key path is `ecs/entities`. */
-fun isEntityEntry(entry: DtoEntry) = entry.parentKeys == listOf(ECS, ENTITIES) && (entry.value as? JsonNode)?.isObject == true
+fun isEntityEntry(entry: DtoEntry) =
+    (entry.parentKeys == listOf(ECS, ENTITIES) || (entry.parentKeys == listOf(ECS) && entry.name.toIntOrNull() != null)) &&
+        (entry.value as? JsonNode)?.isObject == true
 
 /** A component row of an entity: its JSON key path ends in `components`. */
-fun isComponentEntry(entry: DtoEntry) = entry.parentKeys.size == 4 && entry.parentKeys[0] == ECS && entry.parentKeys[1] == ENTITIES && entry.parentKeys[3] == COMPONENTS
+fun isComponentEntry(entry: DtoEntry) = entry.parentKeys.lastOrNull() == COMPONENTS && entry.parentKeys.firstOrNull() == ECS &&
+    (entry.parentKeys.size == 4 && entry.parentKeys[1] == ENTITIES || entry.parentKeys.size == 3)
 
 private fun entityName(entry: DtoEntry): String =
     SceneEcsPaths().entityName((entry.value as JsonNode).get(COMPONENTS), entry.name)
@@ -131,15 +134,16 @@ fun rowText(entry: DtoEntry, label: String? = null): RowText {
     return when {
         v is List<*> && entry.name == "scenes" -> RowText(AbyssusBundle.message("treeScenes"), v.size.toString())
         v is List<*> && entry.name == "assets" -> RowText(AbyssusBundle.message("treeAssets"), v.size.toString())
-        isEcsEntry(entry) -> RowText(ECS, AbyssusBundle.message("treeEntities", (v as JsonNode).get(ENTITIES)?.size() ?: 0))
+        isEcsEntry(entry) -> RowText(ECS, AbyssusBundle.message("treeEntities", SceneEcsPaths().entitiesIn(v as JsonNode)?.size() ?: 0))
         isEntityEntry(entry) -> RowText(entityName(entry), AbyssusBundle.message("treeComponents", (v as JsonNode).get(COMPONENTS)?.size() ?: 0))
         isComponentEntry(entry) -> RowText(entry.name.removeSuffix(COMPONENT_SUFFIX).ifEmpty { entry.name })
         else -> RowText(label ?: displayName(entry.name))
     }
 }
 
-/** The children of an `ecs` object: its entities directly (the `entities` level is skipped), then its other keys. */
+/** The children of an `ecs` object: its entities directly (an older scene's `entities` level is skipped), then its other keys. */
 fun ecsRows(ecs: JsonNode): List<DtoRow> =
+    if (ecs.get(ENTITIES)?.isObject != true) ecs.properties().map { (k, v) -> DtoRow(k, v) } else
     (ecs.get(ENTITIES)?.takeIf { it.isObject }?.properties()?.map { (id, e) -> DtoRow(id, e, via = listOf(ENTITIES)) } ?: emptyList()) +
         ecs.properties().filter { it.key != ENTITIES || !it.value.isObject }.map { (k, v) -> DtoRow(k, v) }
 

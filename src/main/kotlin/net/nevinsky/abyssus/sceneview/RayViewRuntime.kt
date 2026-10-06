@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayModePhase
+
 import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -92,6 +94,12 @@ internal class RayViewRuntime<T> internal constructor(
         preparingInput?.let(value::offer)
         preparingInput = null
         true
+    }
+
+    /** Reject previous settings immediately while preserving the installed native session/scheduler. */
+    internal fun invalidateSettingsWork() = synchronized(lock) {
+        scheduler?.cancel()
+        preparingInput = null
     }
 
     internal fun clearPublication() = synchronized(lock) {

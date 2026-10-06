@@ -8,13 +8,11 @@ package net.nevinsky.abyssus.games.controlline.tools
 
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationSettings
 import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerator
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainHeightEncoder
 import net.nevinsky.abyssus.assets.terrain.noise.FastNoiseSamplerFactory
 import java.awt.image.BufferedImage
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Random
-import java.util.UUID
+import java.util.*
 import javax.imageio.ImageIO
 import kotlin.math.hypot
 import kotlin.math.roundToInt
@@ -62,11 +60,12 @@ fun main(args: Array<String>) {
     }
     val dir = assets.resolve("terrain_field")
     Files.createDirectories(dir)
-    Files.write(dir.resolve("terrain.data"), TerrainHeightEncoder().encode(heights))
-    Files.writeString(dir.resolve("meta.json"),
-        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":$GENERATED_AT,"uuid":"${uuid("terrain_field")}",""" +
-            """"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$FIELD_SIZE,"uv":40.0,"splatMap":"$splat",""" +
-            """"splatBase":"$grass","splatR":"$mown","splatG":null,"splatB":null,"splatA":null}}""")
+    throw IllegalStateException("!!!!!!!!!!!!!!!!!!!!!")
+//    Files.write(dir.resolve("terrain.data"), TerrainHeightEncoder().encode(heights))
+//    Files.writeString(dir.resolve("meta.json"),
+//        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":$GENERATED_AT,"uuid":"${uuid("terrain_field")}",""" +
+//            """"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$FIELD_SIZE,"uv":40.0,"splatMap":"$splat",""" +
+//            """"splatBase":"$grass","splatR":"$mown","splatG":null,"splatB":null,"splatA":null}}""")
 }
 
 private fun uuid(name: String) = UUID.nameUUIDFromBytes("abyssus-control-line/$name".toByteArray()).toString()
@@ -77,9 +76,11 @@ private fun texture(assets: Path, name: String, file: String, image: BufferedIma
     Files.createDirectories(dir)
     ImageIO.write(image, "png", dir.resolve(file).toFile())
     val id = uuid(name)
-    Files.writeString(dir.resolve("meta.json"),
+    Files.writeString(
+        dir.resolve("meta.json"),
         """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":$GENERATED_AT,"uuid":"$id","type":"TEXTURE",""" +
-            """"additional":{"file":"$file"}}""")
+                """"additional":{"file":"$file"}}"""
+    )
     return id
 }
 

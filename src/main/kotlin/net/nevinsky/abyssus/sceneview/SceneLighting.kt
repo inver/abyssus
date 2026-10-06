@@ -5,6 +5,11 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Rgba
+import net.nevinsky.abyssus.editor.content.LightKind
+import net.nevinsky.abyssus.editor.content.LightPlacement
+
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.attributes.DirectionalLightsAttribute
@@ -15,7 +20,7 @@ import com.badlogic.gdx.graphics.g3d.environment.PointLight
 import com.badlogic.gdx.graphics.g3d.environment.SpotLight
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.sqrt
-import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_RANGE
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_RANGE
 
 /** A directional light: [color] already multiplied by the light's intensity. */
 data class DirectionalSource(val direction: Vec3, val color: Rgba, val entityId: String = "", val position: Vec3 = Vec3(0f, 0f, 0f))
@@ -44,7 +49,8 @@ class LightSet(val directional: List<DirectionalSource>, val point: List<PointSo
             environment.add(PointLight().set(Color(p.color.r, p.color.g, p.color.b, 1f), p.position.x, p.position.y, p.position.z, p.range))
         }
         for (s in spot) {
-            environment.add(SpotLight().set(Color(s.color.r, s.color.g, s.color.b, 1f),
+            environment.add(SpotLight().set(
+                Color(s.color.r, s.color.g, s.color.b, 1f),
                 Vector3(s.position.x, s.position.y, s.position.z), Vector3(s.direction.x, s.direction.y, s.direction.z),
                 s.range, s.cone.angle / 2f, s.cone.softness))
         }

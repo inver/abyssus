@@ -1,0 +1,11 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "placement": {
+    "x": -300.0,
+    "y": 0,
+    "z": -300.0
+  },
+  "note": "Flat horizon ground, sunk under the site terrain so it never shows through.",
+  "resolution": 201
+}

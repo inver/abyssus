@@ -5,23 +5,26 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.runtime.scene.SceneDto
-import net.nevinsky.abyssus.assets.files.Asset
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.META_FILE
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.core.scene.Scene
+import net.nevinsky.abyssus.core.assets.Asset
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.dto.ProjectDto
 
 @Service(Service.Level.PROJECT)
 class ProjectReader(
     val project: Project,
-    private val json: JsonProcessor,
-    private val scenes: SceneReader,
-    private val loading: net.nevinsky.abyssus.runtime.SceneLoading,
-) : ConfigFileReader<ProjectDto> {
-    private val assetListing = ProjectAssetListing(json)
+    json: JsonProcessor?,
+    scenes: SceneReader?,
+    loading: DocumentParsing?,
+) : ConfigFileReader<net.nevinsky.abyssus.dto.ProjectDto> {
+    constructor(project: Project) : this(project, null, null, null)
 
-    /** What the platform creates: the one place this service looks up what it needs. */
-    constructor(project: Project) : this(project, service<AbyssusCore>().json, service<SceneReader>(), service<AbyssusCore>().scenes)
+    private val json by lazy { json ?: service<AbyssusCore>().documents.json }
+    private val scenes by lazy { scenes ?: service<SceneReader>() }
+    private val loading by lazy { loading ?: service<AbyssusCore>().documents.parsing }
+    private val assetListing by lazy { ProjectAssetListing(this.json) }
 
     override fun stamp(file: VirtualFile): Long {
         return (ProjectLayout.sceneFiles(file)
@@ -34,7 +37,7 @@ class ProjectReader(
             })
     }
 
-    override fun read(file: VirtualFile): AssetReadResult<ProjectDto> = runCatchingKeepingCancellation {
+    override fun read(file: VirtualFile): AssetReadResult<net.nevinsky.abyssus.dto.ProjectDto> = runCatchingKeepingCancellation {
         val name = loading.projectName(file.path) { textOf(file) }
         val sceneResults = ProjectLayout.sceneFiles(file).map { it to scenes.read(it) }
         val roots = sceneResults.flatMap { (_, result) -> result.obj?.let(::sceneReferences) ?: emptySet() }
@@ -72,7 +75,7 @@ class ProjectReader(
 }
 
 /** What a scene names directly: `assetName` and `shaderKey` values in its ECS data, and `skyboxName`. */
-fun sceneReferences(scene: SceneDto): Set<String> {
+fun sceneReferences(scene: Scene): Set<String> {
     val names = mutableSetOf<String>()
     scene.ecs?.let { ecs ->
         for (field in listOf("assetName", "shaderKey")) ecs.findValues(field)

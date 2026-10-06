@@ -5,15 +5,15 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.assets.files.AssetFiles
+import java.io.File
 
 /**
- * Assets of a project that changed: the [names] of their folders, and [files], a fresh snapshot of the project's asset
- * metadata (unsaved editor text included) that every later load reads from.
+ * Assets of a project that changed: the [names] of their folders, and [unsaved], the `meta.json` text the editors hold
+ * that is not on the disk yet, which every later load reads.
  */
-class AssetRevisionBatch(val names: Set<String>, val files: AssetFiles) {
-    /** This batch followed by [later]: the changed names add up and the newer snapshot wins. */
-    operator fun plus(later: AssetRevisionBatch) = AssetRevisionBatch(names + later.names, later.files)
+class AssetRevisionBatch(val names: Set<String>, val unsaved: Map<File, String> = emptyMap()) {
+    /** This batch followed by [later]: the changed names add up and the newer text wins. */
+    operator fun plus(later: AssetRevisionBatch) = AssetRevisionBatch(names + later.names, later.unsaved)
 }
 
 /**

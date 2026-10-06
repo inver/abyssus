@@ -1,0 +1,24 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "description": "50 m segment of the double-track electrified railway: concrete sleepers, rails 1520 mm gauge, tracks 4.1 m apart, one catenary pole with cantilevers, contact and messenger wires. Origin at sleeper bottom, track along +X.",
+  "materials": {
+    "rails": "https://ambientcg.com/view?id=Metal041B",
+    "sleepers and pole": "https://ambientcg.com/view?id=Concrete036"
+  },
+  "candidates": "The supplied Sketchfab track needs a login; a generated segment is used instead.",
+  "triangles": 2120,
+  "bounds": {
+    "min": [
+      -25.0,
+      -0.30000001192092896,
+      -5.559232234954834
+    ],
+    "max": [
+      25.0,
+      9.600000381469727,
+      3.4000000953674316
+    ]
+  },
+  "sha256": "1fd22006af6f9f2096568e6ce636ca3d50ddf1936d9fa1bf992ed231a6a4f2f0"
+}

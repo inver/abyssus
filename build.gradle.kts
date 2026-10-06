@@ -5,6 +5,7 @@
 
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
+import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 
 fun properties(key: String) = providers.gradleProperty(key)
 fun environment(key: String) = providers.environmentVariable(key)
@@ -65,6 +66,8 @@ dependencies {
     lwjglNatives.forEach {
         runtimeOnly("org.lwjgl:lwjgl:$lwjglVersion:$it")
         runtimeOnly("org.lwjgl:lwjgl-opengl:$lwjglVersion:$it")
+        // HDR preview regressions decode EXR files without altering the plugin's packaged runtime.
+        testRuntimeOnly("org.lwjgl:lwjgl-tinyexr:$lwjglVersion:$it")
     }
 
     // libGDX core (g3d, math) hosted on the AWT GL canvas; only the backend's GL wrapper classes are used
@@ -109,6 +112,12 @@ kotlin {
 
 // Configure IntelliJ Platform Gradle Plugin - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html
 intellijPlatform {
+    pluginVerification {
+        ides { recommended() }
+        // Internal usages are checked against exact descriptions by checkPluginInternalApis below.
+        failureLevel = listOf(VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
+            VerifyPluginTask.FailureLevel.OVERRIDE_ONLY_API_USAGES)
+    }
     pluginConfiguration {
         name = properties("pluginName")
         version = properties("pluginVersion")
@@ -239,23 +248,10 @@ val generateGltfLexer by tasks.registering(org.jetbrains.grammarkit.tasks.Genera
 tasks.named("compileKotlin") { dependsOn(generateGltfParser, generateGltfLexer) }
 tasks.named("compileJava") { dependsOn(generateGltfParser, generateGltfLexer) }
 
-// `runCatching` also catches cancellation, which must reach the IDE; use `runCatchingKeepingCancellation` instead
-// (see `core`'s Cancellation.kt). Covers the plugin and `core`, like `:core:checkNoSingletons` covers `core`.
-val checkNoRunCatching by tasks.registering {
-    val sources = files(fileTree("src/main/kotlin") { include("**/*.kt") }, fileTree("core/src/main/kotlin") { include("**/*.kt") })
-    val root = layout.projectDirectory.asFile
-    inputs.files(sources)
-    doLast {
-        val call = Regex("""\brunCatching\s*\{""")
-        val found = sources.files.sorted().flatMap { file ->
-            file.readLines().mapIndexedNotNull { i, line ->
-                if (call.containsMatchIn(line)) "${file.relativeTo(root)}:${i + 1}: ${line.trim()}" else null
-            }
-        }
-        if (found.isNotEmpty()) {
-            throw GradleException("Use runCatchingKeepingCancellation instead of runCatching:\n" + found.joinToString("\n"))
-        }
-    }
-}
-
-tasks.named("check") { dependsOn(checkNoRunCatching) }
+extra["abyssusRunCatchingRoots"] = listOf(
+    "src/main/kotlin", "core/src/main/kotlin", "runtime/src/main/kotlin", "physics/src/main/kotlin",
+    "raytracing/src/main/kotlin", "physics-plugin/src/main/kotlin", "games/control-line/src/main/kotlin",
+)
+apply(from = "gradle/checks.gradle.kts")
+apply(from = "gradle/package-cycles.gradle.kts")
+apply(from = "gradle/plugin-verification.gradle.kts")

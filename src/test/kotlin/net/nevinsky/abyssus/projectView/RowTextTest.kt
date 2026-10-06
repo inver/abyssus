@@ -6,8 +6,8 @@
 package net.nevinsky.abyssus.projectView
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.assets.files.Asset
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.core.assets.Asset
+import net.nevinsky.abyssus.editor.document.SceneJson
 
 class RowTextTest : BasePlatformTestCase() {
     private fun entry(name: String, value: Any?, vararg keys: String) =

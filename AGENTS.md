@@ -10,12 +10,13 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 
 | What | Command |
 |---|---|
-| Everything CI runs (tests, verification) | `./gradlew check` |
+| All module checks and tests | `./gradlew check` (CI adds `-Pabyssus.requireShaders=true`; verifier and Qodana run separately) |
 | Plugin tests only | `./gradlew :test` |
 | `gdx-model` tests only | `./gradlew :gdx-model:test` |
+| Ray tracing tests / native jar packaging | `./gradlew :raytracing:test` / `./gradlew :raytracing:verifyNativePackaging` |
 | `runtime` tests only | `./gradlew :runtime:test` |
 | `physics` tests only | `./gradlew :physics:test` |
-| `core` tests only | `./gradlew :core:test` (one class: `./gradlew :core:test --tests 'net.nevinsky.abyssus.assets.files.AssetFilesTest'`) |
+| `core` tests only | `./gradlew :core:test` (one class: `./gradlew :core:test --tests 'net.nevinsky.abyssus.core.assets.loading.AssetStorageTest'`) |
 | One test class | `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.OrbitCameraTest'` |
 | Also run GL tests (open a window) | add `-Dabyssus.glTests=true` |
 | Sandbox IDE | `./gradlew runIde` (open a project with `-PideProject=/path/to/project`) |
@@ -32,7 +33,7 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
 ## Layout
 
 - `src/main/kotlin/net/nevinsky/abyssus/`: the plugin (Kotlin), registered in `src/main/resources/META-INF/plugin.xml`.
-  - `dto/`: reads `.abss` / `.scene` files and asset folders (`ProjectLayout`, `AssetReader`, `ProjectAssets`).
+  - `dto/`: reads `.abss` / `.scene` files and asset folders (`ProjectLayout`, `SceneReader`, `ProjectReader`, `ProjectAssetListing`).
   - `projectView/`: the Abyssus tree, eye toggles, Rename Scene and the skybox chooser. `filetype/` holds `editSceneJson`.
   - `properties/`: the Abyssus Properties tool window.
   - `sceneview/`: the scene view: GL canvas, renderer, picking, cameras, gizmos, transform write-back. Asset loading
@@ -44,12 +45,15 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   - `filetype/`, `language/`: file types, icons, scene JSON, the GLTF PSI.
 - `gdx-model/`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import), with inherited sources documented in `docs/third-party/gdx-model-origin.md`.
   See `gdx-model/README.md`.
-- `core/`: a plain JVM library, root package `net.nevinsky.abyssus.assets`: asset folders and `meta.json`
-  (`AssetFiles`, `JsonProcessor`), the loading pipeline (`AssetLoader`, `AssetCache`, `SceneAssets`), and the loaders
-  with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).
-  `AssetLoading` wires it; the plugin builds one in `AbyssusCore`. See `core/README.md`.
-- `runtime/`: plain JVM scene parsing, project layout over `Path`, and Ashley components, codecs, systems, loader
-  and writer. Game components (`@SceneComponent`, `ComponentRegistry`) and their schema export live in its `schema` package. `SceneLoading` wires it by constructors; the plugin builds one in `AbyssusCore`. See `runtime/README.md`.
+- `core/`: a plain JVM library, root package `net.nevinsky.abyssus.core`: project layout and file access
+  (`core.io.AbyssusProjectLayout`, `core.io.FileLoader`, `core.io.JsonProcessor`), asset metas (`AssetMeta`, `AssetMetaLoader`), the loading
+  pipeline (`AssetLoader`, `CompositeAssetLoader`, `AssetStorage`), the optional CPU snapshots for ray tracing (`RaySnapshotStore`), and the
+  loaders with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).
+  The plugin wires it in `AssetLoading` (root package). See `core/README.md`.
+- `raytracing/`: plain JVM GPU ray tracing contracts, snapshots, scheduling, and optional Metal/Vulkan backends.
+  The plugin owns view integration; native probing starts only when enabled. See `raytracing/README.md`.
+- `runtime/`: plain JVM scene loading and Ashley components, codecs, systems, loader
+  and writer. Game components (`@SceneComponent`, `ComponentRegistry`) and their schema export live in its `schema` package. `RuntimeSceneLoader` wires it by constructors. See `runtime/README.md`.
 - `physics/`: a plain JVM library on `runtime`, root package `net.nevinsky.abyssus.physics`: the physics components
   (`PhysicsComponents`) and `PhysicsWorld`, which runs Jolt through jolt-jni (only its `jolt` package imports Jolt). See
   `physics/README.md`.
@@ -62,7 +66,8 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   that project in the IDE, never the committed folder (its tests assert on the scene). See `games/control-line/README.md`.
 - `src/main/java/`: only the grammar sources `Gltf.bnf` / `Gltf.flex`; `src/main/gen` is generated from them.
 - `src/test/kotlin/`, `gdx-model/src/test/kotlin/`, `core/src/test/kotlin/`, `runtime/src/test/kotlin/`,
-  `physics/src/test/kotlin/`, `games/control-line/src/test/kotlin/`: tests. Fixtures in `src/test/testData/project/`
+  `physics/src/test/kotlin/`, `physics-plugin/src/test/kotlin/`, `raytracing/src/test/kotlin/`,
+  `games/control-line/src/test/kotlin/`: tests. Fixtures in `src/test/testData/project/`
   (shared with `core`'s tests). Test helpers shared across modules live in `testFixtures` source sets
   (`gdx-model`: `TestGl`; `core`: `HdrFixtures`).
 - `openspec/`: specs and changes (see Workflow). `docs/superpowers/`: one historic design and plan.
@@ -71,7 +76,7 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
 
 - **Native documents only:** `.abss`, `.scene` and asset `meta.json` require `format: "abyssus"` and integral
   `formatVersion: 1`. Validate with `AbyssusDocumentFormat` before binding, enumerating, editing or formatting.
-  Reject legacy `ecs.componentIdentifiers` and renderable `class`; components use short names, assets use `kind: "asset"`.
+  Reject legacy `ecs.componentIdentifiers` and renderable `class`; a component entry is keyed by the class name of a built-in or registered component (fully qualified, or its short name), assets use `kind: "asset"`.
   Keep unknown native extension data, unrelated numbers/key order and default omission. No importer or implicit migration.
 
 - **`physics` stays a plain JVM library wired by constructors**, like `runtime` (`./gradlew :physics:checkNoSingletons`
@@ -92,7 +97,7 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   writer is `SceneFormatListener`, which pretty-prints a `.scene` / `.abss` opened in the text editor.
 - **Never change numbers or key order you didn't mean to change.** Parse with `SceneJson`, which keeps both.
 - **`Gdx.*` is process-global inside the IDE.** Run libGDX code only inside `GdxRuntime.withContext`, on the AWT
-  thread that renders the canvas (a Swing timer drives frames). Only the `prepare` step of `AssetCache` runs off that
+  thread that renders the canvas (a Swing timer drives frames). Only the `prepare` step of `AssetStorage` runs off that
   thread, and it must not touch GL. Picking and gizmo hit tests use CPU data and need no context.
 - **Use GL only while the canvas is safely on screen** (`GuardedGLCanvas.glSafe`). On macOS a zero-sized surface
   aborts the JVM.

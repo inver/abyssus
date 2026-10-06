@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Quat
+
 import com.badlogic.gdx.graphics.Camera
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.Disposable

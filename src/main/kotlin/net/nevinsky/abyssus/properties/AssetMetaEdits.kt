@@ -5,18 +5,15 @@
 
 package net.nevinsky.abyssus.properties
 
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.assets.edit.EditError
-import net.nevinsky.abyssus.assets.edit.EditOutcome
-import net.nevinsky.abyssus.assets.edit.FieldValue
-import net.nevinsky.abyssus.dto.ProjectLayout
+import net.nevinsky.abyssus.EditError
+import net.nevinsky.abyssus.EditOutcome
+import net.nevinsky.abyssus.FieldValue
 import net.nevinsky.abyssus.filetype.editSceneJson
-import net.nevinsky.abyssus.assets.META_FILE
-import net.nevinsky.abyssus.assets.edit.AssetMetaEditor
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.AssetMetaEditor
 
 /** What came of one asset property edit. Only [Changed] wrote anything. */
 sealed interface AssetEditResult {

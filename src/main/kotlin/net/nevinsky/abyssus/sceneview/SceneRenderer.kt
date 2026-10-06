@@ -5,56 +5,42 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.assets.AssetLoading
-import net.nevinsky.abyssus.assets.files.AssetFiles
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+import net.nevinsky.abyssus.editor.content.LightPlacement
+
 import java.io.File
-import net.nevinsky.abyssus.assets.ShaderSource
+import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.graphics.g3d.Environment
-import com.badlogic.gdx.graphics.g3d.Material
 import com.badlogic.gdx.graphics.g3d.Model
 import com.badlogic.gdx.graphics.g3d.ModelBatch
 import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
-import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder.VertexInfo
-import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder
-import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
-import com.badlogic.gdx.math.collision.Ray
 import com.intellij.openapi.Disposable
-import net.nevinsky.abyssus.core.model.Model as ContentModel
 import net.nevinsky.abyssus.core.shader.DefaultShaderProvider
 import net.nevinsky.abyssus.core.shader.EnvironmentLightAttribute
 import net.nevinsky.abyssus.core.shader.ShaderProvider
 import net.nevinsky.abyssus.sceneview.fog.FogShaderProvider
-import net.nevinsky.abyssus.sceneview.gizmo.DragResult
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoAxis
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoDrag
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoDraw
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoHandles
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoHit
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
-import net.nevinsky.abyssus.sceneview.gizmo.canRotate
 import net.nevinsky.abyssus.sceneview.skybox.SunDirection
-import net.nevinsky.abyssus.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.sceneview.terrain.TerrainShader
 import net.nevinsky.abyssus.sceneview.shadows.SceneShadows
 import net.nevinsky.abyssus.core.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.core.ModelBatch as ContentBatch
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FOV
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
 
 /**
  * Draws a scene's environment, a ground grid and the content the scene places (skybox, terrains, models), and picks
- * entities under the cursor. Assets come from [assetLoading]; the grid, overlay and terrain programs from [shaders]. Call only inside [GdxRuntime.withContext]
+ * entities under the cursor. Assets come from [assets]; the grid, overlay and terrain programs from [shaders]. Call only inside [GdxRuntime.withContext]
  * with the GL context current; picking, ground queries and interaction geometry use CPU data only.
  */
 class SceneRenderer(
-    private val assetLoading: AssetLoading,
+    val assets: ViewAssets,
     private val shaders: ShaderSource,
     /** What the user selected, previews and looks through; the view panel changes it, this draws from it. */
     val state: SceneViewState = SceneViewState(),
@@ -94,16 +80,11 @@ class SceneRenderer(
     private var batch: ModelBatch? = null
     private var contentBatch: ContentBatch? = null
     private var contentShaders: DefaultShaderProvider? = null
-    /** The project's newest asset snapshot (unsaved metadata included); a rebuilt cache starts from it instead of from disk. */
-    private var latestFiles: AssetFiles? = null
-    private fun filesFor(projectDir: File): AssetFiles =
-        latestFiles?.takeIf { it.projectDir == projectDir.absoluteFile } ?: assetLoading.files(projectDir)
-
     /** Asset changes waiting for a frame that can safely replace GL resources; merged until [render] takes them. */
     private val pendingRevision = PendingAssetRevision()
 
-    private val models = SceneModels(assetLoading.assets(assetLoading.models, ::filesFor))
-    private val terrains = SceneTerrains(assetLoading.assets(assetLoading.terrains, ::filesFor))
+    private val models = SceneModels(AssetView(assets, net.nevinsky.abyssus.core.model.Model::class.java))
+    private val terrains = SceneTerrains(AssetView(assets, net.nevinsky.abyssus.core.assets.terrain.TerrainMesh::class.java))
     private var terrainShader: TerrainShader? = null
     private var shadows: SceneShadows? = null
     internal var shadowedLightIds: Set<String> = emptySet()
@@ -205,7 +186,7 @@ class SceneRenderer(
             numSpotLights = LightSet.MAX_POINT
         }).also { contentBatch = ContentBatch(it) }
         terrainShader = TerrainShader(shaders)
-        skybox = SceneSkybox(assetLoading.assets(assetLoading.skies, ::filesFor))
+        skybox = SceneSkybox(AssetView(assets, net.nevinsky.abyssus.core.assets.sky.Sky::class.java))
         overlay = LoadingOverlay(shaders)
         lineBatch = LineBatch(shaders)
         gridModel = GridModel.build().also { grid = ModelInstance(it) }
@@ -220,13 +201,11 @@ class SceneRenderer(
         pendingRevision.queue(revision)
     }
 
-    /** Applies the queued revision on the GL thread: new snapshot for later loads, then the changed names reload. */
+    /** Applies the queued revision on the GL thread: the unsaved text for later loads, then the changed names reload. */
     private fun applyPendingRevision() {
         val revision = pendingRevision.take() ?: return
-        latestFiles = revision.files
-        models.revise(revision.files, revision.names)
-        terrains.revise(revision.files, revision.names)
-        skybox?.revise(revision.files, revision.names)
+        assets.replaceUnsaved(revision.unsaved)
+        assets.invalidate(revision.names)
     }
 
     fun render(width: Int, height: Int, orbit: OrbitCamera, deltaSeconds: Float = 0f) {
@@ -455,14 +434,14 @@ class SceneRenderer(
         const val MIN_NEAR = 0.01f
     }
 
-    private class BakedSky(val key: Triple<String, java.io.File?, Vec3>, val snapshot: net.nevinsky.abyssus.assets.sky.RaySkySnapshot?)
+    private class BakedSky(val key: Triple<String, java.io.File?, Vec3>, val snapshot: net.nevinsky.abyssus.core.assets.sky.RaySkySnapshot?)
     private var bakedSky: BakedSky? = null
     private val skyBaker = RaySkyBaker()
 
     /** The procedural sky rendered into a ray texture once per sky and sun direction; null while it loads or fails to bake. */
-    private fun bakedProceduralSky(c: SceneContent, p: SceneRenderParams): net.nevinsky.abyssus.assets.sky.RaySkySnapshot? {
+    private fun bakedProceduralSky(c: SceneContent, p: SceneRenderParams): net.nevinsky.abyssus.core.assets.sky.RaySkySnapshot? {
         val name = c.skybox ?: return null
-        val sky = skybox?.sky(name) as? net.nevinsky.abyssus.assets.sky.procedural.ProceduralSky ?: return null
+        val sky = skybox?.sky(name) as? net.nevinsky.abyssus.core.assets.sky.procedural.ProceduralSky ?: return null
         val sun = SunDirection.of(c.lights)
         val key = Triple(name, p.projectDir, sun)
         bakedSky?.takeIf { it.key == key }?.let { return it.snapshot }

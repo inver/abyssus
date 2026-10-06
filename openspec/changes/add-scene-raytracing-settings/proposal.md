@@ -17,7 +17,7 @@ Scene ray tracing exposes only an on/off switch: users cannot choose an image-qu
 
 **Format impact:** these are additive Abyssus scene fields, with defaults omitted. They are native Abyssus scene fields inside the version 1 contract. Implementation depends on `decouple-from-mundus` establishing the native document contract; this planning change does not modify workflow configuration or convert legacy files.
 
-**Out of scope:** persisting the enable switch, a general material editor, imported transmission extensions/textures, raster refraction, water, caustics, diffuse global illumination, dispersion, absorbing volumes, overlapping/nested refractive solids, and completing the currently unimplemented Vulkan scene renderer.
+**Out of scope:** persisting the enable switch, a general material editor, imported transmission extensions/textures, raster refraction, water, caustics, diffuse global illumination, dispersion, absorbing volumes, overlapping/nested refractive solids, and completing unverified platform/device integration gates.
 
 ## Capabilities
 
@@ -36,4 +36,4 @@ Scene ray tracing exposes only an on/off switch: users cannot choose an image-qu
 - Scene parameter decoding, `RaySceneSnapshots`, `RayViewFeed`, `RayViewRuntime`, `RayBackendService`, `RayRenderScheduler`, `RayQualityPolicy`, request/material/native payloads and the Metal scene shader; extend the CPU reference renderer and conformance kit.
 - Reuse model snapshot material identifiers without changing shared asset metadata. Keep native/GL work off panel actions and plain JVM boundaries intact. No new dependency is planned.
 - Depends on the implemented scene path in `add-scene-raytracing` and native format from `decouple-from-mundus`. During implementation, amend the former's refraction exclusion and fixed one-bounce planning language; coordinate parameter ownership with `extract-scene-runtime` if its classes have moved. Unsupported backend scene features must produce explicit raster fallback rather than ignored settings.
-- Update file-format, architecture, scene-view and raytracing documentation, user documentation and changelog. Device verification covers the implemented Metal scene path; unsupported Vulkan scene support remains explicitly reported.
+- Update file-format, architecture, scene-view and raytracing documentation, user documentation and changelog. Device verification covers both implemented Metal and Vulkan scene paths; unperformed platform/device checks remain explicitly reported.

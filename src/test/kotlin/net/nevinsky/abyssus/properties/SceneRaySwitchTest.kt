@@ -4,6 +4,14 @@
  */
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.document.SceneJson
+
+import net.nevinsky.abyssus.editor.ray.RayModePhase
+import net.nevinsky.abyssus.editor.ray.RayModeSnapshot
+import net.nevinsky.abyssus.editor.ray.RayBackendAttempt
+import net.nevinsky.abyssus.editor.ray.RayBackendSelection
+import net.nevinsky.abyssus.SceneRayControls
+
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.Disposable
@@ -59,7 +67,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
     private fun named(c: Component, name: String): Component? =
         if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
 
-    private fun view(): SceneDetailsView = SceneDetailsView(controls, PanelState.SceneDetails(file, "Ray scene"), testRootDisposable)
+    private fun view(): SceneDetailsView = SceneDetailsView(controls, PanelState.UISceneState(file, "Ray scene"), testRootDisposable)
     private fun switch(v: Component) = named(v, "ray-tracing-switch") as JBCheckBox
     private fun status(v: Component) = (named(v, "ray-tracing-status") as JBLabel).text
     private fun detail(v: Component) = named(v, "ray-tracing-detail") as JBLabel
@@ -74,7 +82,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         assertEquals("", status(v))
         assertFalse(retry(v).isVisible)
         assertEquals("Ray scene", (named(v, "scene-name") as JBLabel).text)
-        assertTrue((named(v, "ray-tracing-hint") as JBLabel).text.contains("Nothing is saved to the scene"))
+        assertTrue((named(v, "ray-tracing-hint") as JBLabel).text.contains("The switch is not saved to the scene"))
     }
 
     fun testSwitchingOnWithoutAViewOpensTheSceneViewAndAppliesTheRequestWhenItAppears() {
@@ -140,6 +148,12 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         assertTrue(detail(v).isVisible)
         assertTrue(detail(v).text, detail(v).text.contains("no hardware ray tracing"))
         assertTrue(switch(v).toolTipText.contains("Metal"))
+        // the saved limits stay editable and still save while the hardware cannot ray trace
+        val samples = named(v, "ray-setting-targetSamplesPerPixel") as com.intellij.ui.components.JBTextField
+        assertTrue(samples.isEnabled)
+        samples.text = "64"; samples.postActionEvent()
+        val saved = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!.text
+        assertEquals(64, net.nevinsky.abyssus.editor.document.SceneJson.parse(saved)["rayTracing"]["targetSamplesPerPixel"].intValue())
     }
 
     fun testFailureShowsItsReasonAndARetryThatReachesTheView() {
@@ -180,7 +194,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         val control = FakeControl()
         register(control)
         val parent = Disposer.newDisposable(testRootDisposable)
-        val v = SceneDetailsView(controls, PanelState.SceneDetails(file, "Ray scene"), parent)
+        val v = SceneDetailsView(controls, PanelState.UISceneState(file, "Ray scene"), parent)
         Disposer.dispose(parent)
         control.change(RayModeSnapshot(RayModePhase.Active, 1, info))
         assertFalse("a view the panel dropped is no longer updated", switch(v).isSelected)
@@ -221,7 +235,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         val properties = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
         val scene = children(children(abss()).single { label(it) == "scenes" }).single()
         properties.show(scene)
-        assertTrue(properties.state is PanelState.SceneDetails)
+        assertTrue(properties.state is PanelState.UISceneState)
         assertNotNull("the open Scene View registered its switch", real.mode(sceneFile))
         assertNull("the Scene View has no ray tracing button of its own", named(panel, "ray-tracing"))
         val propertySwitch = named(properties, "ray-tracing-switch") as JBCheckBox

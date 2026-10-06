@@ -17,16 +17,16 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.editor.document.SceneJson
+import net.nevinsky.abyssus.core.scene.Scene
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A scene's text read as the plugin needs it: [root] is the JSON tree (with its original number text) and [scene] the
  * bound DTO. Both are shared between callers: read them, never change them (an edit parses the document afresh).
  */
-class ParsedScene(val root: JsonNode, val scene: SceneDto)
+class ParsedScene(val root: JsonNode, val scene: Scene)
 
 /**
  * The parsed text of scene files as the editors show it (unsaved text included), keyed by the document's modification
@@ -34,9 +34,8 @@ class ParsedScene(val root: JsonNode, val scene: SceneDto)
  * An unreadable text is remembered too, so it is not re-read either. Entries go when the file is deleted or moved.
  */
 @Service(Service.Level.PROJECT)
-class SceneDocumentCache(project: Project, private val parse: (String) -> ParsedScene) : Disposable {
-    /** What the platform creates. */
-    constructor(project: Project) : this(project, { text -> parsedScene(service<SceneReader>(), text) })
+class SceneDocumentCache(project: Project, private val parse: ((String) -> ParsedScene)?) : Disposable {
+    constructor(project: Project) : this(project, null)
 
     private class Entry(val stamp: Long, val document: Boolean, val parsed: ParsedScene?)
 
@@ -57,7 +56,7 @@ class SceneDocumentCache(project: Project, private val parse: (String) -> Parsed
         val stamp = document?.modificationStamp ?: file.modificationStamp
         entries[file]?.takeIf { it.stamp == stamp && it.document == (document != null) }?.let { return it.parsed }
         val text = document?.text ?: String(file.contentsToByteArray(), file.charset)
-        val parsed = runCatchingKeepingCancellation { parse(text) }.getOrNull()
+        val parsed = runCatchingKeepingCancellation { parse?.invoke(text) ?: parsedScene(service<SceneReader>(), text) }.getOrNull()
         entries[file] = Entry(stamp, document != null, parsed)
         return parsed
     }

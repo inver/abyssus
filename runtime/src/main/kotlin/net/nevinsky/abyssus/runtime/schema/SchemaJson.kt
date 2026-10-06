@@ -11,12 +11,12 @@ import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
-import net.nevinsky.abyssus.runtime.ecs.scene.number
+import net.nevinsky.abyssus.runtime.json.number
 import java.math.BigDecimal
 
 /**
- * The one encoding of game component values in a scene file, given only the [ComponentSchema]: the game's
- * [ReflectiveCodec] and the editor both read and write through it. Values are as [SchemaField.default] describes.
+ * The one encoding of game component values in a scene file, given only the [ComponentSchema]: the editor
+ * reads and writes through it, and the game's components are held to the same text. Values are as [SchemaField.default] describes.
  */
 class SchemaJson {
     private val nodes = JsonNodeFactory.instance

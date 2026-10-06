@@ -1,0 +1,11 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1791238934100,
+  "uuid": "0e39bd6a-c63e-5a6c-8d17-4cdea041ab0b",
+  "type": "TEXTURE",
+  "additional": {
+    "file": "texture_airfield_ground_dirt.jpg"
+  }
+}

@@ -33,6 +33,9 @@ class RecordingLogger(
 
     val warnings: List<String> get() = messages(Level.WARN)
 
+    /** The exceptions attached to warnings, oldest first. */
+    val throwables: List<Throwable> get() = entries.filter { it.level == Level.WARN }.mapNotNull { it.error }
+
     override fun isTraceEnabled() = debugEnabled
     override fun isDebugEnabled() = debugEnabled
     override fun isInfoEnabled() = true

@@ -5,12 +5,12 @@
 
 package net.nevinsky.abyssus.ecs.scene
 
-import net.nevinsky.abyssus.runtime.ecs.scene.*
 import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.runtime.ecs.NO_ENTITY
+import net.nevinsky.abyssus.SceneEcsPaths
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
 import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
@@ -20,7 +20,12 @@ import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
 import net.nevinsky.abyssus.runtime.ecs.render.AssetReference
 import net.nevinsky.abyssus.runtime.ecs.render.AssetResolver
-import net.nevinsky.abyssus.runtime.ecs.render.AssetType
+import net.nevinsky.abyssus.core.assets.MetaType
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.runtime.schema.BUILT_IN_COMPONENTS
+import net.nevinsky.abyssus.runtime.ecs.EcsWriter
+import net.nevinsky.abyssus.runtime.json.number
+import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.runtime.ecs.render.RenderComponent
 import net.nevinsky.abyssus.runtime.ecs.render.RenderableObjectDelegate
 import net.nevinsky.abyssus.runtime.schema.ComponentSchema
@@ -60,6 +65,28 @@ class ComponentField<C : Component>(
     /** For a schema's asset reference: the meta type the asset folder must have. */
     val assetType: String? = null,
 )
+
+/** Reads and writes one kind of component as the native scene format holds it, under its short [name]. */
+interface ComponentCodec<C : Component> {
+    val name: String
+    val type: Class<C>
+
+    fun read(node: JsonNode): C
+
+    fun write(component: C): JsonNode
+}
+
+/** A built-in component bound by the runtime's own loader and writer, so defaults and number text match a scene load. */
+private class RuntimeCodec<C : Component>(
+    override val name: String,
+    override val type: Class<C>,
+    private val reader: ComponentReader,
+    private val writer: EcsWriter,
+) : ComponentCodec<C> {
+    override fun read(node: JsonNode): C = reader.read(type, node)
+
+    override fun write(component: C): JsonNode = writer.writeComponent(component)
+}
 
 /** A modeled kind of component: its file name, how to read and write it, how a new one starts and what it holds. */
 class ComponentKind<C : Component>(
@@ -138,16 +165,15 @@ private fun schemaFields(field: SchemaField): List<ComponentField<SchemaValues>>
  * keys that really differ onto the file's own component object.
  */
 class ComponentEditor(schemas: List<ComponentSchema> = emptyList(), private val json: SchemaJson = SchemaJson()) {
-    private val codecs = ComponentCodecs(MODEL_ASSETS)
+    private val mapper = JsonProcessor().mapper
+    private val reader = ComponentReader(mapper, MODEL_ASSETS, NOPLogger.NOP_LOGGER)
+    private val writer = EcsWriter(mapper)
 
-    private fun <C : Component> kind(
+    private inline fun <reified C : Component> kind(
         codecName: String,
         fields: List<ComponentField<C>>,
-        create: () -> C,
-    ): ComponentKind<C> {
-        @Suppress("UNCHECKED_CAST")
-        return ComponentKind(codecName, codecs[codecName] as ComponentCodec<C>, fields, create)
-    }
+        noinline create: () -> C,
+    ): ComponentKind<C> = ComponentKind(codecName, RuntimeCodec(codecName, C::class.java, reader, writer), fields, create)
 
     val kinds: List<ComponentKind<*>> = listOf(
         kind<NameComponent>(
@@ -220,8 +246,8 @@ class ComponentEditor(schemas: List<ComponentSchema> = emptyList(), private val 
             listOf(
                 ComponentField(
                     "assetType", FieldKind.CHOICE, { delegateOf(it)?.asset?.type?.name.orEmpty() },
-                    { c, t -> delegateOf(c)?.let { d -> d.asset = AssetReference(d.asset.assetName, AssetType.valueOf(t)) } },
-                    choices = AssetType.entries.map { it.name },
+                    { c, t -> delegateOf(c)?.let { d -> d.asset = AssetReference(d.asset.assetName, MetaType.valueOf(t)) } },
+                    choices = listOf(MetaType.MODEL, MetaType.TERRAIN).map { it.name },
                 ),
                 ComponentField(
                     "assetName", FieldKind.ASSET_NAME, { delegateOf(it)?.asset?.assetName.orEmpty() },
@@ -232,7 +258,7 @@ class ComponentEditor(schemas: List<ComponentSchema> = emptyList(), private val 
                     { c, t -> delegateOf(c)?.shaderKey = t.ifEmpty { null } }, optional = true,
                 ),
             ),
-        ) { RenderComponent(RenderableObjectDelegate(AssetReference("", AssetType.MODEL), null)) },
+        ) { RenderComponent(RenderableObjectDelegate(AssetReference("", MetaType.MODEL), null)) },
     ) + schemas.filter { it.name !in BUILT_IN_COMPONENTS }.map { schema ->
         ComponentKind(schema.name, SchemaCodec(schema, json), schema.fields.flatMap(::schemaFields), {
             SchemaValues(schema.fields.associateTo(LinkedHashMap()) { it.name to it.default })

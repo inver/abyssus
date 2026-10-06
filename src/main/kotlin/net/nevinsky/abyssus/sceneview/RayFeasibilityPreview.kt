@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+
 import net.nevinsky.abyssus.raytracing.*
 import org.lwjgl.opengl.GL32C.*
 import kotlin.math.sin

@@ -4,31 +4,30 @@
  */
 package net.nevinsky.abyssus.physics
 
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.core.io.FileLoader
+import net.nevinsky.abyssus.runtime.SceneContext
+import net.nevinsky.abyssus.runtime.RuntimeSceneLoader
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.testing.failOnWarnings
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.runtime.SceneLoading
-import net.nevinsky.abyssus.runtime.ecs.LoadedScene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RopeTensionTest {
     /** A 1 kg sphere at (0, 8, 0), and [rope] as its constraint (none when empty). */
-    private fun weight(rope: String = ""): LoadedScene = requireNotNull(
-        SceneLoading(JsonProcessor(), failOnWarnings(), registry = PhysicsComponents()).load(
+    private fun weight(rope: String = ""): SceneContext = requireNotNull(
+        RuntimeSceneLoader(JsonProcessor(), FileLoader(testProject("Physics")), failOnWarnings(), PhysicsComponents()).loadFromText(
             """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"NameComponent":{"name":"Weight"},
             "PositionComponent":{"localPosition":{"y":8}},"RigidBodyComponent":{},"ColliderComponent":{"shape":"SPHERE","radius":0.2}
             ${if (rope.isEmpty()) "" else ",\"ConstraintComponent\":$rope"}}}}}}""",
-            testProject("Physics").toPath(),
         ),
     )
 
-    private fun world(scene: LoadedScene) =
-        PhysicsWorld(scene.engine, PhysicsAssets(AssetFiles(testProject("Physics"), JsonProcessor())), failOnWarnings(), JoltNatives())
+    private fun world(scene: SceneContext) =
+        PhysicsWorld(scene.engine, PhysicsAssets(testProject("Physics")), failOnWarnings(), JoltNatives())
 
     private fun distance(rope: PhysicsConstraint): Float {
         val a = Vector3()

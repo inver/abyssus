@@ -6,12 +6,12 @@ package net.nevinsky.abyssus.games.controlline.flight
 
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.assets.terrain.TerrainData
+import net.nevinsky.abyssus.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.physics.ColliderComponent
 import net.nevinsky.abyssus.physics.ColliderShape
 import net.nevinsky.abyssus.physics.PhysicsAssets
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.runtime.ecs.render.AssetType
+import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEngine
 
 /**
@@ -34,6 +34,6 @@ fun groundOf(engine: SceneEngine, assets: PhysicsAssets): Ground {
     val field = engine.ids.ids.sorted().mapNotNull { engine.ids[it] }.firstOrNull {
         it.getComponent(ColliderComponent::class.java)?.shape == ColliderShape.HEIGHT_FIELD
     }
-    val terrain = field?.let { assets.assetName(it, AssetType.TERRAIN) }?.let(assets::terrain)
+    val terrain = field?.let { assets.assetName(it, MetaType.TERRAIN) }?.let(assets::terrain)
     return Ground(field, terrain)
 }

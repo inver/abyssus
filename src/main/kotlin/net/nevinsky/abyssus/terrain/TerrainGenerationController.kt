@@ -15,18 +15,15 @@ import net.nevinsky.abyssus.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.assetfiles.FileChange
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.assetfiles.LocalAssetFileStore
-import net.nevinsky.abyssus.assets.terrain.generation.MismatchReason
-import net.nevinsky.abyssus.assets.terrain.generation.RecipeStatus
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationDraft
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationSettings
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerator
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainHeightEncoder
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainRecipe
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainRecipeCodec
-import net.nevinsky.abyssus.assets.terrain.generation.sha256Hex
+import net.nevinsky.abyssus.terrain.generation.RecipeStatus
+import net.nevinsky.abyssus.terrain.generation.TerrainGenerationDraft
+import net.nevinsky.abyssus.terrain.generation.TerrainGenerationSettings
+import net.nevinsky.abyssus.terrain.generation.TerrainGenerator
+import net.nevinsky.abyssus.terrain.generation.TerrainRecipe
+import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
 import java.io.File
 import kotlin.random.Random
-import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
 
 /**
  * The logic behind the terrain regeneration controls for one existing terrain: the draft (settings, latest request,

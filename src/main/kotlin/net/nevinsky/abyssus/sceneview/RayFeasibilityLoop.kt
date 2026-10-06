@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit

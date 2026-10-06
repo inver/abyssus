@@ -16,5 +16,4 @@ class SceneEcsWarnings(private val log: Logger) {
     fun warn(message: String) {
         if (seen.add(message)) log.warn(message)
     }
-
 }

@@ -5,12 +5,15 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.ui.thumbnail
+
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.testAsset
 import net.nevinsky.abyssus.dto.ProjectDto
 import net.nevinsky.abyssus.dto.SceneEntry
 import net.nevinsky.abyssus.parseScene
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.testMetaFiles
 import net.nevinsky.abyssus.testCore
 
@@ -52,24 +55,39 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
     }
 
     fun testFixtureProjectOffersAllThreeSkies() {
-        val abss = myFixture.copyFileToProject("Untitled/Untitled.abss", "Untitled/Untitled.abss")
-        myFixture.copyFileToProject("Untitled/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
-        java.io.File("$testDataPath/Untitled/assets").listFiles { f -> f.isDirectory }!!.forEach {
-            myFixture.copyFileToProject("Untitled/assets/${it.name}/meta.json", "Untitled/assets/${it.name}/meta.json")
+        val abss = myFixture.copyFileToProject("Tree/Untitled.abss", "Untitled/Untitled.abss")
+        myFixture.copyFileToProject("Tree/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
+        java.io.File("$testDataPath/Tree/assets").listFiles { f -> f.isDirectory }!!.forEach {
+            myFixture.copyFileToProject("Tree/assets/${it.name}/meta.json", "Untitled/assets/${it.name}/meta.json")
         }
         assertEquals(listOf("skybox_default", "skybox_hdr", "skybox_physical"), loadSkyboxChoices(project, abss, testMetaFiles(), testCore.hdrPreviews)!!.map { it.name })
     }
 
     fun testListsTheHdrFixture() {
-        val abss = myFixture.copyFileToProject("Untitled/Untitled.abss", "Untitled/Untitled.abss")
-        myFixture.copyFileToProject("Untitled/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
-        myFixture.copyFileToProject("Untitled/assets/skybox_hdr/meta.json", "Untitled/assets/skybox_hdr/meta.json")
-        myFixture.copyFileToProject("Untitled/assets/skybox_hdr/sky.hdr", "Untitled/assets/skybox_hdr/sky.hdr")
+        val abss = diskHdrFixture()
         val choice = loadSkyboxChoices(project, abss, testMetaFiles(), testCore.hdrPreviews)!!.single { it.name == "skybox_hdr" }
-        assertEquals(net.nevinsky.abyssus.assets.files.MetaType.SKYBOX_HDR, choice.type)
-        assertEquals(HdrSkyInfo("sky.hdr", 64, 32), choice.hdr)
-        assertEquals(listOf("sky.hdr"), choice.faceFiles)
+        assertEquals(MetaType.SKYBOX_HDR, choice.type)
+        assertEquals(HdrSkyInfo("sky.exr", 1024, 512), choice.hdr)
+        assertEquals(listOf("sky.exr"), choice.faceFiles)
         assertTrue(choice.unused)
+    }
+
+    fun testHeaderDimensionsDoNotRequireImagePixels() {
+        val abss = diskHdrFixture(truncated = true)
+        val choice = loadSkyboxChoices(project, abss, testMetaFiles(), testCore.hdrPreviews)!!.single()
+        assertEquals(HdrSkyInfo("sky.exr", 1024, 512), choice.hdr)
+    }
+
+    private fun diskHdrFixture(truncated: Boolean = false): com.intellij.openapi.vfs.VirtualFile {
+        val dir = com.intellij.openapi.util.io.FileUtil.createTempDirectory("abyssus-hdr-choices", null)
+        val sky = java.io.File(dir, "assets/skybox_hdr").apply { mkdirs() }
+        java.io.File(dir, "scenes").mkdirs()
+        java.io.File("$testDataPath/Tree/Untitled.abss").copyTo(java.io.File(dir, "Untitled.abss"))
+        java.io.File("$testDataPath/Tree/scenes/Main Scene.scene").copyTo(java.io.File(dir, "scenes/Main Scene.scene"))
+        java.io.File("$testDataPath/Tree/assets/skybox_hdr/meta.json").copyTo(java.io.File(sky, "meta.json"))
+        val bytes = java.io.File("$testDataPath/Untitled/assets/skybox_hdr/sky.exr").readBytes()
+        java.io.File(sky, "sky.exr").writeBytes(if (truncated) bytes.copyOf(bytes.size / 2) else bytes)
+        return com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByIoFile(java.io.File(dir, "Untitled.abss"))!!
     }
 
     fun testHdrDetailLine() {
@@ -82,7 +100,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
 
     fun testUnreadableHdrDetailIsHdr() {
         val abss = myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""").virtualFile
-        myFixture.addFileToProject("p/assets/broken/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+        myFixture.addFileToProject("p/assets/broken/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{"file":"sky.hdr"}}""")
         myFixture.addFileToProject("p/assets/broken/sky.hdr", "this is not an image")
         val choice = loadSkyboxChoices(project, abss, testMetaFiles(), testCore.hdrPreviews)!!.single()
         assertEquals(HdrSkyInfo("sky.hdr", 0, 0), choice.hdr)

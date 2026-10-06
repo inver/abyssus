@@ -13,16 +13,13 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.dto.ProjectLayout
-import net.nevinsky.abyssus.dto.SceneReader
-import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.ecs.scene.LightEntities
 import net.nevinsky.abyssus.ecs.scene.LightPreset
-import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.document.SceneJson
+import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.dto.textOf
-import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
+import net.nevinsky.abyssus.SceneEcsPaths
 import net.nevinsky.abyssus.dto.SceneDocumentCache
 
 /** The same three choices in the tree and toolbar; placement is read when a choice is made. */
@@ -30,11 +27,11 @@ class AddLightGroup(
     project: Project,
     file: VirtualFile,
     position: () -> Vec3,
-    select: (String) -> Unit = { selectCreatedLight(project, file, it) },
+    select: (String) -> Unit = { selectCreatedEntity(project, file, it) },
 ) : DefaultActionGroup(AbyssusBundle.message("addLightTitle"), true), DumbAware {
     init {
         for (preset in LightPreset.entries) add(object : AnAction(AbyssusBundle.message(preset.labelKey)), DumbAware {
-            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+            override fun getActionUpdateThread() = ActionUpdateThread.BGT
             override fun update(e: AnActionEvent) {
                 e.presentation.isEnabled = canAddLight(file, SceneDocumentCache.of(project))
             }
@@ -47,13 +44,13 @@ class AddLightGroup(
     }
 }
 
-/** Publish immediately, then select the corresponding row when the asynchronous tree refresh reaches it. */
-private fun selectCreatedLight(project: Project, file: VirtualFile, entityId: String) {
+/** Publish a new entity immediately, then select its row when the asynchronous tree refresh reaches it. */
+internal fun selectCreatedEntity(project: Project, file: VirtualFile, entityId: String) {
     val entity = runCatchingKeepingCancellation {
         SceneEcsPaths().entities(SceneJson.parse(textOf(file)))?.get(entityId)
     }.getOrNull()
     if (entity?.isObject == true) {
-        val node = DtoEntryNode(project, file.path, DtoRow(entityId, entity), file, listOf("ecs", "entities"))
+        val node = DtoEntryNode(project, file.path, DtoRow(entityId, entity), file, SceneEcsPaths().entityKeys(SceneJson.parse(textOf(file))))
         AbyssusSelection.of(project).select(node)
     }
     selectEntityInAbyssusView(project, file, entityId)

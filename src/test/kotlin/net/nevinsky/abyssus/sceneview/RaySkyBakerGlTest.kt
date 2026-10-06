@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Mesh
@@ -12,8 +14,8 @@ import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.assets.sky.RAY_SKY_MAX_WIDTH
-import net.nevinsky.abyssus.assets.sky.Sky
+import net.nevinsky.abyssus.core.assets.sky.RAY_SKY_MAX_WIDTH
+import net.nevinsky.abyssus.core.assets.sky.Sky
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test

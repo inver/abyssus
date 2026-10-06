@@ -5,39 +5,31 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.ui.thumbnail
+
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.dto.AssetReadResult
 import net.nevinsky.abyssus.dto.ProjectDto
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.sceneReferences
-import net.nevinsky.abyssus.assets.json.obj
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.dto.text
-import net.nevinsky.abyssus.assets.json.text
-import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.runtime.scene.SceneDto
+import net.nevinsky.abyssus.runtime.obj
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.runtime.text
 import net.nevinsky.abyssus.dto.SceneEntry
-import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.assets.sky.hdr.HdrSkyFiles
-import net.nevinsky.abyssus.assets.sky.hdr.RadianceDecoder
-import net.nevinsky.abyssus.assets.files.MetaType
-import net.nevinsky.abyssus.assets.sky.cube.SKYBOX_FACES
+import net.nevinsky.abyssus.core.assets.MetaType
+import net.nevinsky.abyssus.SKYBOX_FACES
 import net.nevinsky.abyssus.dto.MetaFiles
-import net.nevinsky.abyssus.assets.sky.hdr.HdrPreview
+import net.nevinsky.abyssus.core.assets.sky.hdr.HdrPreview
 
 /** The `meta.json` types of the assets a scene's `skyboxName` can name. */
 private val SKY_TYPES = setOf(MetaType.SKYBOX, MetaType.SKYBOX_PROCEDURAL, MetaType.SKYBOX_HDR)
 
-/** The Radiance sky pieces the chooser and the Properties panel need: choosing a file, reading its header, a thumbnail. */
+/** The OpenEXR sky pieces the chooser and the Properties panel need: header dimensions and a thumbnail. */
 interface HdrPreviewSource {
-    val files: HdrSkyFiles
-    val decoder: RadianceDecoder
     val preview: HdrPreview
 }
 
@@ -90,7 +82,7 @@ class SkyboxChoice(
  * `meta.json` (absent or null when unreadable) and [hdr] what was read of each HDR sky's image (absent: nothing).
  */
 @JvmOverloads
-fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>, hdr: Map<String, HdrSkyInfo> = emptyMap()): List<SkyboxChoice> {
+fun skyboxChoices(project: net.nevinsky.abyssus.dto.ProjectDto, metas: Map<String, JsonNode?>, hdr: Map<String, HdrSkyInfo> = emptyMap()): List<SkyboxChoice> {
     val references = project.scenes.filterIsInstance<SceneEntry>().map { sceneReferences(it.scene) }
     return project.assets.filter { it.meta.type in SKY_TYPES }.sortedBy { it.name }.map { asset ->
         val additional = metas[asset.name]?.obj("additional")
@@ -107,7 +99,7 @@ fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>, hdr: Map<S
 
 /** The skybox choices of the `.abss` project [abss], read as the Abyssus view reads it; null when the project cannot be read. */
 fun loadSkyboxChoices(project: Project, abss: VirtualFile, metaFiles: MetaFiles, hdrSource: HdrPreviewSource): List<SkyboxChoice>? {
-    val dto = AssetReadCache.of(project).read(abss)?.obj as? ProjectDto ?: return null
+    val dto = AssetReadCache.of(project).read(abss)?.obj as? net.nevinsky.abyssus.dto.ProjectDto ?: return null
     val skyboxes = dto.assets.filter { it.meta.type in SKY_TYPES }.map { it.name }.toSet()
     val metas = ProjectLayout.assetFolders(abss).filter { it.name in skyboxes }.associate { dir ->
         dir.name to runCatchingKeepingCancellation {
@@ -121,12 +113,18 @@ fun loadSkyboxChoices(project: Project, abss: VirtualFile, metaFiles: MetaFiles,
     return skyboxChoices(dto, metas, hdr).onEach { it.folder = folders[it.name] }
 }
 
-/** The image an HDR sky folder uses and the size its header declares; size 0 when the header cannot be read. */
+/**
+ * The `.exr` image an HDR sky folder uses: the file its `meta.json` names when the folder has it, else the first `.exr`
+ * by name. Reads only its header for the original size; no image pixels are decoded. Call off the EDT.
+ */
 fun hdrSkyInfo(folder: VirtualFile, meta: JsonNode?, source: HdrPreviewSource): HdrSkyInfo {
-    val named = meta?.obj("additional")?.properties()?.mapNotNull { it.value.takeIf(JsonNode::isTextual)?.asText() }.orEmpty()
-    val file = source.files.choose(folder.children.filter { !it.isDirectory }.map { it.name }, named)?.file ?: return HdrSkyInfo(null)
-    val header = runCatchingKeepingCancellation { folder.findChild(file)?.inputStream?.buffered()?.use(source.decoder::header) }.getOrNull()
-    return HdrSkyInfo(file, header?.width ?: 0, header?.height ?: 0)
+    val files = folder.children.filter { !it.isDirectory }.map { it.name }
+    val named = meta?.obj("additional")?.text("file")?.takeIf { it in files }
+    val file = named ?: files.sorted().firstOrNull { it.endsWith(".exr", ignoreCase = true) } ?: return HdrSkyInfo(null)
+    val dimensions = runCatchingKeepingCancellation {
+        source.preview.dimensions(java.io.File(folder.path, file))
+    }.getOrNull() ?: return HdrSkyInfo(file)
+    return HdrSkyInfo(file, dimensions.first, dimensions.second)
 }
 
 /** The `.abss` project of a scene's own `skyboxName` row, which is what gets the chooser; null for any other row. */

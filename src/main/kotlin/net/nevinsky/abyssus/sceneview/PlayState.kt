@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 
 /**
  * Play in one Scene view, without Swing or GL: `IDLE -> STARTING -> PLAYING <-> PAUSED -> IDLE`, and `FAILED` when the

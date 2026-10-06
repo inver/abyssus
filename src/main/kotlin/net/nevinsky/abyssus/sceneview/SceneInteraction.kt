@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+
 import net.nevinsky.abyssus.sceneview.gizmo.DragResult
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoDrag
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode

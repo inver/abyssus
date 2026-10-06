@@ -5,12 +5,12 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.assets.loading.SceneAssets
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
-import net.nevinsky.abyssus.assets.terrain.PreparedTerrain
-import net.nevinsky.abyssus.assets.terrain.TerrainMesh
+import net.nevinsky.abyssus.core.assets.terrain.TerrainMesh
 
 class TerrainEntity(override val placement: AssetPlacement, val terrain: TerrainMesh, val world: Matrix4) : PlacedEntity<TerrainMesh> {
     override val asset: TerrainMesh get() = terrain
@@ -23,7 +23,7 @@ class TerrainEntity(override val placement: AssetPlacement, val terrain: Terrain
 }
 
 /** The terrain entities of the scene, loaded like [SceneModels]. GL thread only. */
-class SceneTerrains(assets: SceneAssets<PreparedTerrain, TerrainMesh>) : PlacedAssets<PreparedTerrain, TerrainMesh, TerrainEntity>(
+class SceneTerrains(assets: AssetView<TerrainMesh>) : PlacedAssets<TerrainMesh, TerrainEntity>(
     assets,
     { p, terrain, _ -> TerrainEntity(p, terrain, p.transform.toMatrix()) },
 )

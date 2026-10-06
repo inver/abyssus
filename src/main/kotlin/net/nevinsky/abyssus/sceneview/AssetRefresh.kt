@@ -5,12 +5,9 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.files.AssetRevisionTracker
-import net.nevinsky.abyssus.assets.files.MetaTextSource
-import net.nevinsky.abyssus.assets.files.ProjectRevisions
-import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import java.io.File
 
 /**
@@ -32,7 +29,7 @@ class AssetRefresh(
     private val deliver: (AssetRevisionBatch) -> Unit,
 ) {
     private val tracker = AssetRevisionTracker(json)
-    private val assetsDir = File(projectDir.absoluteFile, net.nevinsky.abyssus.assets.ASSETS_DIR)
+    private val assetsDir = File(projectDir.absoluteFile, ASSETS_DIR)
 
     private var baseline: ProjectRevisions? = null
     private var running = false
@@ -62,11 +59,11 @@ class AssetRefresh(
         }
         background {
             val result = runCatchingKeepingCancellation { tracker.snapshot(assetsDir, source) }
-            ui { finished(result.getOrNull(), source) }
+            ui { finished(result.getOrNull(), overrides) }
         }
     }
 
-    private fun finished(snapshot: ProjectRevisions?, source: MetaTextSource) {
+    private fun finished(snapshot: ProjectRevisions?, overrides: Map<File, String>) {
         running = false
         if (disposed) return
         if (snapshot != null) {
@@ -74,7 +71,7 @@ class AssetRefresh(
             baseline = snapshot
             if (before != null) {
                 val names = tracker.changed(before, snapshot)
-                if (names.isNotEmpty()) deliver(AssetRevisionBatch(names, AssetFiles(projectDir, json, source)))
+                if (names.isNotEmpty()) deliver(AssetRevisionBatch(names, overrides))
             }
         }
         if (again) schedule()

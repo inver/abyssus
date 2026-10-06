@@ -4,7 +4,17 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayModePhase
+
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Quat
+import net.nevinsky.abyssus.editor.content.PlacementTransform
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+
 import com.badlogic.gdx.graphics.PerspectiveCamera
+import net.nevinsky.abyssus.AssetLoading
+import net.nevinsky.abyssus.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.raytracing.RayUnavailableReason
 import org.junit.After
 import org.junit.Assert.*
@@ -126,12 +136,14 @@ class RayViewFeedTest {
     }
 
     @Test fun theScenesHdrSkyAndItsAmbientColoursReachTheRenderer() {
-        val loading = net.nevinsky.abyssus.assets.AssetLoading(net.nevinsky.abyssus.assets.json.JsonProcessor(), printingLog, Executor(Runnable::run),
-            net.nevinsky.abyssus.assets.ShaderSource("/shader/sky", net.nevinsky.abyssus.assets.AssetLoading::class.java))
+        val loading = AssetLoading(
+            JsonProcessor(), printingLog, Executor(Runnable::run),
+            ShaderSource("/shader/sky", AssetLoading::class.java)
+        )
         val project = File("src/test/testData/project/Untitled").absoluteFile
         val assets = RaySceneAssets(
             { _, _ -> RayAssetLease({ model }, { null }, {}) }, { _, _ -> error("none") },
-            acquireSky = { dir, name -> loading.raySkies.acquire(loading.files(dir), name).let { lease -> RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close) } },
+            acquireSky = { dir, name -> ViewAssets(loading).project(dir).raySkies.acquire(name).let { lease -> RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close) } },
         )
         val feed = feed(assets = assets)
         val content = SceneContent(models = listOf(placement), skybox = "skybox_hdr")
@@ -145,7 +157,8 @@ class RayViewFeedTest {
         val environment = scene.environment
         assertEquals(0, environment.texture)
         assertTrue("an HDR sky is flagged so primary misses are tone mapped", environment.hdr)
-        assertEquals(64, scene.textures[0].width)
+        assertEquals(1024, scene.textures[0].width)
+        assertEquals(512, scene.textures[0].height)
         assertEquals("sky", scene.textures[0].id)
         assertEquals(6, environment.ambientCube!!.size)
         assertEquals(.1f, environment.ambientCube!![0].r, 1e-6f)
@@ -154,10 +167,12 @@ class RayViewFeedTest {
 
     @Test fun aSkyThatCannotBeTransferredShowsTheBackgroundInsteadOfFailingTheView() {
         val project = File("src/test/testData/project/Untitled").absoluteFile
-        val loading = net.nevinsky.abyssus.assets.AssetLoading(net.nevinsky.abyssus.assets.json.JsonProcessor(), printingLog, Executor(Runnable::run),
-            net.nevinsky.abyssus.assets.ShaderSource("/shader/sky", net.nevinsky.abyssus.assets.AssetLoading::class.java))
+        val loading = AssetLoading(
+            JsonProcessor(), printingLog, Executor(Runnable::run),
+            ShaderSource("/shader/sky", AssetLoading::class.java)
+        )
         val assets = RaySceneAssets({ _, _ -> RayAssetLease({ model }, { null }, {}) }, { _, _ -> error("none") },
-            acquireSky = { dir, name -> loading.raySkies.acquire(loading.files(dir), name).let { lease -> RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close) } })
+            acquireSky = { dir, name -> ViewAssets(loading).project(dir).raySkies.acquire(name).let { lease -> RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close) } })
         val feed = feed(assets = assets)
         val content = SceneContent(models = listOf(placement), skybox = "skybox_physical") // a procedural sky has no CPU form
         SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
@@ -171,7 +186,7 @@ class RayViewFeedTest {
 
     @Test fun aBakedProceduralSkyReachesTheRendererAsADisplayValueTexture() {
         val feed = feed()
-        val baked = net.nevinsky.abyssus.assets.sky.RaySkySnapshot(4, 2, FloatArray(4 * 2 * 4) { .25f }, hdr = false)
+        val baked = net.nevinsky.abyssus.core.assets.sky.RaySkySnapshot(4, 2, FloatArray(4 * 2 * 4) { .25f }, hdr = false)
         val content = SceneContent(models = listOf(placement), skybox = "procedural")
         SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
         RayFakeDevice.await(what = "a scene with the baked sky") {

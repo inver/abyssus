@@ -1,0 +1,23 @@
+{
+ "note": "Apply with ScenePatchApplicationTest (ABYSSUS_SCENE_PATCH) after importTrainer: the trainer's meta names model.glb, and the Cessna parks level on its nose wheel (same heading; its origin, the centre of gravity, is 0.136 m above its wheels).",
+ "documents": [
+  {
+   "target": "../project/ControlLine/assets/model_trainer/meta.json",
+   "expectedSha256": "bf7311d8461778bf17aaa079b239c86a473459b41dbaad9fe56f39b2a9ef49d5",
+   "operations": [
+    {"op": "set", "path": ["additional", "file"], "value": "model.glb"}
+   ]
+  },
+  {
+   "target": "../project/ControlLine/scenes/Field.scene",
+   "expectedSha256": "c6451f654df9b9b3e97605a858825ed8d629656cb15c5ee4a9cc8762d372780b",
+   "operations": [
+    {"op": "set", "path": ["ecs", "entities", "5", "components", "PositionComponent", "localPosition", "y"], "value": 0.136},
+    {"op": "set", "path": ["ecs", "entities", "5", "components", "PositionComponent", "localRotation", "x"], "value": 0},
+    {"op": "set", "path": ["ecs", "entities", "5", "components", "PositionComponent", "localRotation", "y"], "value": -0.7071068},
+    {"op": "set", "path": ["ecs", "entities", "5", "components", "PositionComponent", "localRotation", "z"], "value": 0},
+    {"op": "set", "path": ["ecs", "entities", "5", "components", "PositionComponent", "localRotation", "w"], "value": 0.7071068}
+   ]
+  }
+ ]
+}

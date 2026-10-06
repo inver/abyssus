@@ -7,7 +7,7 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 
 | Class | Role |
 |---|---|
-| `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo. The provider is where the tab's collaborators are looked up and passed in |
+| `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo. The provider in the root package is where the tab's collaborators are looked up and passed in; `SceneViewHost` carries tree selection and Add actions |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
 | `SceneContent`, `PlacementMapper` | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. The components are decoded by the same codecs the Properties panel uses (`DecodedEntity`), so both show the same values and defaults; `PlacementMapper` (pure) maps them. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
 | `LightSet`, `SpotCone` | Deterministic light selection and CPU cone/range attenuation math |
@@ -18,8 +18,8 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 | `SceneInteraction` | Mouse and key logic without Swing or GL, over a `SceneViewState` and `SceneQueries`: click → pick/select, drag → gizmo or orbit/pan (one `Gesture`: Idle, Dragging or Cancelled), Drop → a Y-only move |
 | `FrameSnapshot`, `SceneQueries`, `SnapshotSceneQueries` | What the last frame drew (camera copy, model boxes, terrain targets, `drawnVersion`), and the CPU-only questions asked of it: pick, ray, ground below, lowest point, gizmo handles and hits, drag start. Tested with hand-built snapshots |
 | `SceneRenderer` | One frame: environment, skybox, grid, terrains, models, markers, highlight, gizmo. GL only: it publishes a `FrameSnapshot` after each frame and exposes `queries`. `GridModel` and `SelectionBox` build the grid and the highlight |
-| `PlacedAssets`, `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (a `core` `SceneAssets` each, from `AssetLoading`) and per-entity instances (`PlacedEntities`); `SceneModels` and `SceneTerrains` extend `PlacedAssets` and `SceneSkybox` has the same `abandon` |
-| `skybox/` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights. The sky loaders, the HDR environment and the sky shaders are in `core` (`net.nevinsky.abyssus.assets.sky`) |
+| `PlacedAssets`, `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (an `AssetView` each over the view's `ViewAssets`, whose `ProjectAssets` from `AssetLoading` hold the one `core` `AssetStorage`) and per-entity instances (`PlacedEntities`); `SceneModels` and `SceneTerrains` extend `PlacedAssets` and `SceneSkybox` has the same `abandon` |
+| `skybox/` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights. The sky loaders, the HDR environment and the sky shaders are in `core` (`net.nevinsky.abyssus.core.assets.sky`) |
 | `SceneMarkers`, `CameraFrustum` | Camera body and frustum, light markers, and their pick bounds |
 | `ScenePicker` | Ray from a pixel, nearest hit over boxes and terrain heights (used by `SnapshotSceneQueries`) |
 | Drop: `OrientedBox`, `TerrainRestHeight`, `ScenePicker.restHeight` | Highest surface under a rotated box footprint; CPU-only bilinear terrain-cell maxima |
@@ -40,19 +40,19 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
   stable for 250 ms. On macOS a zero-sized surface aborts the JVM. A canvas disposed while hidden drops its context
   without making it current, so its GL objects can't be released. macOS also stops sizing that canvas's native
   surface with the component, so `SceneViewPanel` replaces such an "abandoned" canvas when the view is shown again.
-- **Asset loading lives in `core`** (`core/README.md`). `AssetCache.prepare` runs on a pool thread (IO and decoding,
-  no GL). `build`, and `advance` for big textures, run on the render thread one slice per frame, inside this package's
+- **Asset loading lives in `core`** (`core/README.md`). `AssetStorage.prepare` runs on a pool thread (IO and decoding,
+  no GL). `build`, and `upload` for big textures, run on the render thread one slice per frame, inside this package's
   `GdxRuntime.withContext`. A new project gets a new cache, so a pool thread never prepares from a stale project. A
   failed asset is remembered and logged once, through the SLF4J `Logger` `AbyssusCore` gives `AssetLoading` (`Abyssus.assets`).
 - **Changed assets reload without reopening the view.** `AssetRefresh` (UI thread, reads on the pool) compares
   snapshots of the project's effective asset revisions: each `meta.json` as the editors hold it (unsaved text is captured
   on the UI thread by `unsavedAssetMeta` and handed in as immutable text, so pool threads never touch documents) plus the
-  stamps of the files it names. Only a real difference produces an `AssetRevisionBatch` (names plus a fresh `AssetFiles`
-  snapshot), so saving shown text, or Undo back to loaded text, costs nothing. A texture change also names the terrains
+  stamps of the files it names. Only a real difference produces an `AssetRevisionBatch` (names plus the unsaved
+  `meta.json` text, which `FileLoader` serves to later loads), so saving shown text, or Undo back to loaded text, costs nothing. A texture change also names the terrains
   that use it. `SceneFileEditor` feeds it VFS and document events and passes the batch to `SceneView.refreshAssets`;
   `SceneRenderer.queueAssetRevision` keeps batches (merged, in `PendingAssetRevision`) until `render` takes them, and
   `render` only runs while the canvas is safely on screen, so a hidden view reloads when it is shown. On the render
-  thread the batch gives each `SceneAssets` the new snapshot and invalidates the names (`AssetCache.invalidate`): the old
+  thread the batch gives `ViewAssets` the unsaved text and invalidates the names (`AssetStorage.invalidate`): the old
   asset keeps drawing until its replacement is built, then is disposed once; a superseded load is discarded. A terrain's
   mesh and CPU height data come from one `TerrainMesh`, so drawing, picking, Drop and shadows all see the same
   replacement (`drawnVersion` changes when an asset is replaced so Drop re-measures). Nothing moves entities.
@@ -106,6 +106,10 @@ The toolbar's Add Light menu offers Directional, Sun and Spot through `AddLightG
 the scene file and availability check; the panel supplies its current orbit target when a choice is made.
 The new entity is written as one Add Light command and selected in the Abyssus tree. Spot adds 5 to placement Y.
 Unreadable scene text disables creation (and the editor shows its existing parse-error state).
+
+The toolbar's Add Asset button (`add-asset`) works the same way through `AddAssetGroup`: `SceneFileEditor` passes
+`assetActions` and `canAddAsset` (readable scene and a project with models or terrains), and the panel supplies the
+orbit target. A view built without `assetActions` has no such button.
 
 ## Spotlight illumination
 
@@ -164,10 +168,16 @@ backend cannot represent becomes an explicit `RaySceneConversion.Fallback`. `Ray
 skinned entity's displayed pose on the render thread, after animations advanced, and `RayModelSkinning` (core)
 deforms the shared source mesh per instance on a worker.
 
-What the native renderer then draws, and its bounds, are in `raytracing/README.md` ("Scene shading (one bounce)"):
-per-light shadow rays, cutouts, one reflection bounce for PBR, sky and fog like raster, and front-to-back alpha
-blending that neither casts shadows nor appears in reflections. Whole-view raster fallback applies when the scene
-exceeds those bounds.
+What the native renderer then draws, and its bounds, are in `raytracing/README.md`: per-light shadow rays, cutouts,
+reflections up to the scene's saved depth, glass refraction for materials given a transmission override, sky and fog like
+raster, and front-to-back alpha blending that neither casts shadows nor appears in reflections. Whole-view raster
+fallback applies when the scene exceeds those bounds, when its saved `rayTracing` settings or optical overrides are
+malformed or name materials the model lacks, when glass is not a closed opaque-PBR solid, and when the backend lacks
+`sceneOptics` (`RayBackendService` checks each request).
+
+Each frame's conversion also carries the scene's saved settings (`SceneRaySettings`, from `SceneRenderParams`) and
+the entity's optical overrides (`RayMaterialOverrides`). An override copies only that entity's material, with
+transmission and IOR, into its own material index; meshes and textures stay shared with other instances.
 
 ## Ray Tracing mode
 
@@ -194,15 +204,35 @@ and never writes a scene file, so every edit, move, rotate, drop and undo reache
 
 ### Switching it from Abyssus Properties
 
-A selected scene row in the Abyssus Properties panel (`properties/SceneDetailsView`) has a **Ray Tracing** switch with the
+A selected scene row in the Abyssus Properties panel (`properties/SceneDetailsView.kt`) has a **Ray Tracing** switch with the
 same status, reason and Retry. It reaches the live view through `SceneRayControls`, a project service: each
 `SceneFileEditor` registers its view's `RayControl` (implemented by `SceneViewPanel`, which flips the same
 `RayViewRuntime`) by scene file, and `request` applies a change to every open view of that scene. With no
 Scene View open, switching it on opens one (`openSceneView`) and applies the request when that view registers. The
-switch follows the view's `RayModeState`, so it never disagrees with it, and nothing is persisted: the mode ends with the view and the
-scene file is never written.
+switch follows the view's `RayModeState`, so it never disagrees with it, and the switch persists nothing: the mode ends with
+the view and turning it on or off never writes the scene file.
+
+### Saved settings and glass in Abyssus Properties
+
+Below the switch, the same Rendering section edits the scene's saved `rayTracing` limits: **Target samples per pixel**
+(accumulated while the view is still), **Maximum rays per frame** (all queries of one submitted frame), and maximum
+reflection and refraction bounces. They are scene data, unlike the switch: each accepted edit is one `editSceneJson`
+command through `SceneRayEdits`, checked against the value the panel was built from (a newer value wins and the field
+says so), and Undo/Redo work from the panel through its hidden text editor on the scene. They stay editable with no view
+open or no ray tracing hardware, selecting a scene writes nothing, and a malformed saved value is shown beside its
+field, never rewritten. Every open view of the scene reads the new values on its next frame and discards older results.
+
+A selected model entity (or its Render component) lists its model's materials under **Ray Tracing materials** with
+**Transmission (%)** and **IOR** for each uniquely named PBR material, stored as overrides of that entity only
+(`RenderComponent.rayTracingMaterials`). Repeated or missing material identifiers and non-PBR materials get an
+explanation instead of editors; stored overrides for materials the model no longer has are listed, kept and never
+retargeted. The material table comes from `AssetLoading.rayModelMaterials` (no images decoded), cached per model file
+by the tool window. Raster rendering ignores both values.
 
 Native scene input uses `format: "abyssus"` and integral `formatVersion: 1`. Asset renderables dispatch on `kind: "asset"`
 and their folder reference, without class loading. Unknown native kinds draw nothing and remain raw; light and camera
 look-at resolution still uses the preserved entity ids and transforms. Unsupported enclosing documents are rejected
 before view construction, and unsupported asset metadata never reaches GPU build.
+
+The editor provider obtains loading and scene shaders from `AbyssusCore.assets`, JSON from `documents`, and native
+ray collaborators from `ray`. These groups initialize independently; the ray group closes only resources it created.

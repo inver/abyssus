@@ -16,7 +16,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.filetype.editSceneJson
-import net.nevinsky.abyssus.runtime.scene.SceneDto
 import net.nevinsky.abyssus.dto.SceneEntry
 
 private fun JsonNode.child(key: String): JsonNode? = when (this) {

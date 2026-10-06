@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Rgba
+
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.parseScene
 import org.junit.Assert.assertEquals

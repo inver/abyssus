@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.projectView
 
-import net.nevinsky.abyssus.assets.sky.hdr.HdrPreview
+import net.nevinsky.abyssus.core.assets.sky.hdr.HdrPreview
 import net.nevinsky.abyssus.AbyssusCore
 import com.intellij.openapi.components.service
 import com.intellij.icons.AllIcons
@@ -28,8 +28,8 @@ import java.awt.BorderLayout
 import java.awt.Component
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
-import net.nevinsky.abyssus.properties.hdrThumbnail
-import net.nevinsky.abyssus.properties.smallThumbnail
+import net.nevinsky.abyssus.ui.hdrThumbnail
+import net.nevinsky.abyssus.ui.smallThumbnail
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.Font
@@ -104,12 +104,18 @@ class SkyboxChooserDialog(
     private fun loadThumbnails(choices: List<SkyboxChoice>) {
         if (choices.none { it.folder != null }) return
         ApplicationManager.getApplication().executeOnPooledThread {
-            for (choice in choices) {
-                val dir = choice.folder ?: continue
-                choice.thumbs = if (choice.hdr != null) listOf(choice.hdr.file?.let { hdrThumbnail(dir, it, THUMB_PIXELS, hdrPreview) })
+            val result = choices.mapNotNull { choice ->
+                val dir = choice.folder ?: return@mapNotNull null
+                val images = if (choice.hdr != null) listOf(choice.hdr.file?.let { hdrThumbnail(dir, it, THUMB_PIXELS, hdrPreview) })
                 else choice.faceFiles.map { name -> name?.let { smallThumbnail(dir, it, THUMB_PIXELS) } }
-            }
-            ApplicationManager.getApplication().invokeLater({ if (!isDisposed) list.repaint() }, ModalityState.any())
+                choice to images.toList()
+            }.toList()
+            ApplicationManager.getApplication().invokeLater({
+                if (!isDisposed) {
+                    result.forEach { (choice, images) -> choice.thumbs = images }
+                    list.repaint()
+                }
+            }, ModalityState.any())
         }
     }
 

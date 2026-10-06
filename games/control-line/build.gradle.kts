@@ -38,6 +38,7 @@ dependencies {
     runtimeOnly("com.github.stephengold:jolt-jni-$buildPlatform:$joltVersion:ReleaseSp")
     testImplementation("junit:junit:4.13.2")
     testImplementation(testFixtures(project(":core")))
+    testImplementation(testFixtures(project(":gdx-model")))
 }
 
 java {
@@ -63,6 +64,8 @@ tasks.named<JavaExec>("run") {
 
 tasks.test {
     systemProperty("controlLine.project", gameProject.asFile.absolutePath)
+    // GL tests open a window: opt in with -Dabyssus.glTests=true
+    System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
 }
 
 // The component schema and play.json Abyssus reads (see physics/README.md and runtime/README.md). play.json holds
@@ -93,6 +96,30 @@ tasks.register<JavaExec>("generatePlaneModels") {
     description = "Writes the planes' and the pilot's glTF models into the bundled project."
     classpath = tools.runtimeClasspath
     mainClass.set("net.nevinsky.abyssus.games.controlline.tools.PlaneModels")
+    args(gameProject.asFile.absolutePath)
+}
+// Importers of bundled assets from outside sources (importers/): kept apart from tools/ so each builds on its own.
+val importers by sourceSets.creating {
+    kotlin.srcDir("importers")
+    compileClasspath += sourceSets["main"].runtimeClasspath
+    runtimeClasspath += sourceSets["main"].runtimeClasspath
+}
+dependencies {
+    "importersImplementation"(kotlin("stdlib"))
+}
+tasks.register<JavaExec>("importTrainer") {
+    group = "control line"
+    description = "Re-imports the trainer from FlightGear's Cessna 172R archive (downloaded into build/flightgear)."
+    classpath = importers.runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.games.controlline.tools.TrainerModel")
+    args(gameProject.asFile.absolutePath, layout.buildDirectory.dir("flightgear").get().asFile.absolutePath,
+        file("importers/GPL-2.0.txt").absolutePath)
+}
+tasks.register<JavaExec>("animateTrainer") {
+    group = "control line"
+    description = "Adds the crash clips to a freshly imported trainer model (importTrainer already does)."
+    classpath = importers.runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.games.controlline.tools.TrainerCrashAnimations")
     args(gameProject.asFile.absolutePath)
 }
 tasks.register<JavaExec>("generateField") {

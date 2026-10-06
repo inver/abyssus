@@ -36,7 +36,7 @@ libGDX's own `g3d` meshes use 16-bit indices, so one mesh can address at most 65
   - `loadData` parses a file without a GL context.
   - `decodeTextures` decodes the textures off the GL thread.
   - `build` creates the GPU resources with the GL context current.
-- `net.nevinsky.abyssus.lib.assets.assimp`: the Assimp to `ModelData` pipeline.
+- `net.nevinsky.abyssus.core.assimp`: the Assimp to `ModelData` pipeline.
 
 Procedural mesh building is not included: use libGDX's `ModelBuilder` / `MeshBuilder`.
 

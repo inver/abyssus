@@ -1,5 +1,8 @@
 # Tasks
 
+
+The fixed single-reflection depth and explicit dielectric-refraction exclusion below describe the original baseline. They are superseded by `add-scene-raytracing-settings`, which adds saved transport limits and per-instance transmission/IOR on both Metal and Vulkan. Alpha-blended reflection exclusions and unrelated platform, lifecycle and transparency requirements remain in force. Existing task completion evidence is unchanged.
+
 Proposed test classes and Gradle tasks below are to be added during implementation. Manual checks use copies of Untitled and Animated plus synthetic reflective/cutout scenes, never the original fixtures. Re-read current fixture contents before pinning names, ids or coordinates. Record device/platform measurements and manual outcomes in this change's verification.md during apply.
 
 ## 1. Backend feasibility and build foundation

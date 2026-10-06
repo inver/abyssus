@@ -22,6 +22,11 @@ interface RayRenderRequest {
     fun withRenderPlan(width: Int, height: Int, samples: Int, sampleOffset: Int, accumulationEpoch: Long): RayRenderRequest
 }
 
+/** Saved limits carried by the mailbox; adaptive policy and native work stay on the serial worker. */
+data class RayRenderSettings(val targetSamples: Int = 256, val maxRaysPerFrame: Long = 2097152) {
+    init { require(targetSamples in 1..4096 && maxRaysPerFrame in 1..67108864) }
+}
+
 /** Content revision covers transforms/lights/materials/environment/geometry beyond camera/pose keys.
  * The scene adapter supplies a conservative primary+shadow+reflection ray cost per sample.
  */
@@ -30,6 +35,7 @@ data class RayRenderInput(
     val raysPerSample: Int = 1,
     /** Caller-owned immutable presentation metadata, never inspected by native work or modified by this mailbox. */
     val metadata: Any? = null,
+    val settings: RayRenderSettings? = null, val settingsRevision: Long = 0,
 ) {
     init { require(raysPerSample > 0) }
 }
@@ -51,7 +57,7 @@ class RayRenderScheduler(
     private val maxMotionAgeNanos: Long = 100_000_000,
     private val log: Logger = NOPLogger.NOP_LOGGER,
 ) {
-    private data class History(val key: RayFrameKey, val display: RayDisplayKey, val content: Long, val raysPerSample: Int)
+    private data class History(val key: RayFrameKey, val display: RayDisplayKey, val content: Long, val raysPerSample: Int, val settings: RayRenderSettings?, val settingsRevision: Long)
     private data class Offered(val input: RayRenderInput, val nanos: Long)
     private data class Flight(val batch: RayRenderBatch, val offeredNanos: Long, val submittedNanos: Long, val lifetime: Long)
     private val lock = Any()
@@ -127,7 +133,7 @@ class RayRenderScheduler(
         val next = synchronized(lock) {
             val offered = pending ?: return@synchronized null
             pending = null
-            val quality = policy.choose(offered.input.display.width, offered.input.display.height, stableFrames, offered.input.raysPerSample)
+            val quality = policy.choose(offered.input.display.width, offered.input.display.height, stableFrames, offered.input.raysPerSample, offered.input.settings?.maxRaysPerFrame ?: policy.limits.maxRaysPerFrame)
             val size = quality.width to quality.height
             if (dimensions != size) log.atDebug().log { "Ray frame ${offered.input.display.width}x${offered.input.display.height} renders at ${size.first}x${size.second}, ${quality.samples} samples per batch, ${offered.input.raysPerSample} rays per sample" }
             if (dimensions != null && dimensions != size) {
@@ -135,7 +141,7 @@ class RayRenderScheduler(
                 samples = 0
             }
             dimensions = size
-            val count = minOf(quality.samples, policy.limits.maxAccumulatedSamples - samples)
+            val count = minOf(quality.samples, (offered.input.settings?.targetSamples ?: policy.limits.maxAccumulatedSamples) - samples)
             if (count <= 0) return@synchronized null
             val original = offered.input.request
             val request = original.withRenderPlan(quality.width, quality.height, count, samples, epoch)
@@ -146,10 +152,11 @@ class RayRenderScheduler(
         try { submit(next.batch) } catch (failure: Throwable) { inFlight = null; throw failure }
     }
 
-    private fun history(input: RayRenderInput) = History(input.request.key, input.display, input.contentRevision, input.raysPerSample)
+    private fun history(input: RayRenderInput) = History(input.request.key, input.display, input.contentRevision, input.raysPerSample, input.settings, input.settingsRevision)
     private fun compatible(rendered: RayRenderInput, desired: RayRenderInput) = rendered.display == desired.display &&
         rendered.request.key.sceneGeneration == desired.request.key.sceneGeneration &&
-        rendered.request.key.contextGeneration == desired.request.key.contextGeneration
+        rendered.request.key.contextGeneration == desired.request.key.contextGeneration &&
+        rendered.settingsRevision == desired.settingsRevision && rendered.settings == desired.settings
     private fun timely(completed: RayRenderCompleted, desired: RayRenderInput) =
         history(completed.batch.input) == history(desired) || clock() - completed.offeredNanos <= maxMotionAgeNanos
 }

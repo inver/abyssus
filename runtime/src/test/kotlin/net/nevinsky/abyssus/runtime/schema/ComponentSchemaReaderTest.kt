@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.runtime.schema
 
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.runtime.ecs.scene.BUILT_IN_COMPONENTS
+import net.nevinsky.abyssus.runtime.schema.BUILT_IN_COMPONENTS
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows

@@ -4,16 +4,16 @@
  */
 package net.nevinsky.abyssus.games.controlline
 
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.core.io.FileLoader
+import net.nevinsky.abyssus.runtime.SceneContext
+import net.nevinsky.abyssus.runtime.RuntimeSceneLoader
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.testing.warningsTo
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.json.JsonProcessor
 import net.nevinsky.abyssus.games.controlline.components.ControlLineComponents
 import net.nevinsky.abyssus.physics.PhysicsAssets
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.runtime.SceneLoading
-import net.nevinsky.abyssus.runtime.ecs.LoadedScene
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import java.nio.file.Path
 
@@ -22,16 +22,16 @@ fun bundledProject(): Path =
     Path.of(checkNotNull(System.getProperty("controlLine.project")) { "run through Gradle: controlLine.project is not set" })
 
 /** The bundled field scene with the game's components; [messages] collects the log. */
-fun loadField(messages: MutableList<String> = mutableListOf()): LoadedScene {
-    val loading = SceneLoading(JsonProcessor(), warningsTo(messages), registry = ControlLineComponents())
-    return requireNotNull(loading.load(bundledProject().resolve("scenes/Field.scene"))) { messages.joinToString("\n") }
+fun loadField(messages: MutableList<String> = mutableListOf()): SceneContext {
+    val loader = RuntimeSceneLoader(JsonProcessor(), FileLoader(bundledProject().toFile()), warningsTo(messages), ControlLineComponents())
+    return requireNotNull(loader.load("Field.scene")) { messages.joinToString("\n") }
 }
 
 /** A physics world over [scene] of the bundled project. */
-fun fieldWorld(scene: LoadedScene, messages: MutableList<String> = mutableListOf()): PhysicsWorld =
-    PhysicsWorld(scene.engine, PhysicsAssets(AssetFiles(bundledProject().toFile(), JsonProcessor())),
+fun fieldWorld(scene: SceneContext, messages: MutableList<String> = mutableListOf()): PhysicsWorld =
+    PhysicsWorld(scene.engine, PhysicsAssets(bundledProject().toFile()),
         warningsTo(messages), JoltNatives())
 
 /** The entity named [name]. */
-fun LoadedScene.named(name: String): Entity =
+fun SceneContext.named(name: String): Entity =
     engine.entities.single { it.getComponent(NameComponent::class.java)?.name == name }

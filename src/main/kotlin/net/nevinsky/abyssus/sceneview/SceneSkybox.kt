@@ -5,17 +5,16 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.loading.SceneAssets
-import net.nevinsky.abyssus.assets.sky.PreparedSky
-import net.nevinsky.abyssus.assets.sky.Sky
-import net.nevinsky.abyssus.assets.sky.hdr.HdrEnvironment
-import net.nevinsky.abyssus.assets.sky.hdr.HdrSky
+import net.nevinsky.abyssus.core.assets.sky.Sky
+import net.nevinsky.abyssus.core.assets.sky.hdr.HdrEnvironment
+import net.nevinsky.abyssus.core.assets.sky.hdr.HdrSky
 import net.nevinsky.abyssus.sceneview.skybox.SunDirection
 import java.io.File
 
@@ -24,7 +23,7 @@ import java.io.File
  * following the camera's orientation but not its position, so everything else is always in front of it. Call only on
  * the GL thread with the context current.
  */
-class SceneSkybox(private val assets: SceneAssets<PreparedSky, Sky>) : Disposable {
+class SceneSkybox(private val assets: AssetView<Sky>) : Disposable {
     val isLoading: Boolean get() = assets.isLoading
 
     private val sunDirection = Vector3()
@@ -45,12 +44,6 @@ class SceneSkybox(private val assets: SceneAssets<PreparedSky, Sky>) : Disposabl
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
     }
 
-    /** Loads [names] again from [files], the project's refreshed snapshot; the old sky stays drawn until its replacement is built. */
-    fun revise(files: AssetFiles, names: Set<String>) {
-        assets.replaceFiles(files)
-        assets.invalidate(names)
-    }
-
     /** The built sky named [name], or null while it loads or when it failed. */
     fun sky(name: String?): Sky? = name?.let(assets::get)
 
@@ -60,7 +53,7 @@ class SceneSkybox(private val assets: SceneAssets<PreparedSky, Sky>) : Disposabl
     /** The lighting environment of the HDR sky [name] once it is built; null for any other sky or while it builds. */
     fun environment(name: String?): HdrEnvironment? = (name?.let(assets::get) as? HdrSky)?.environment
 
-    /** Forgets every sky without GL calls: the context they were built in is gone (see [SceneAssets.abandon]). */
+    /** Forgets every sky without GL calls: the context they were built in is gone (see [ViewAssets.abandon]). */
     fun abandon() = assets.abandon()
 
     override fun dispose() {

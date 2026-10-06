@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.CameraPlacement
+
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

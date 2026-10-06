@@ -1,9 +1,9 @@
 package net.nevinsky.abyssus.sceneview.skybox
 
-import net.nevinsky.abyssus.sceneview.LightKind
-import net.nevinsky.abyssus.sceneview.LightPlacement
-import net.nevinsky.abyssus.sceneview.Rgba
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.LightKind
+import net.nevinsky.abyssus.editor.content.LightPlacement
+import net.nevinsky.abyssus.editor.content.Rgba
+import net.nevinsky.abyssus.editor.content.Vec3
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.math.sqrt

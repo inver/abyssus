@@ -8,7 +8,7 @@ using namespace metal;
 using namespace raytracing;
 
 struct SliceInstance { float4x4 transform; float4 color; uint4 offsets; };
-struct SliceCamera { float4 originNear; float4 forwardFar; float4 rightFov; float4 upAspect; float4 light; };
+struct SliceCamera { float4 originNear; float4 forwardFar; float4 rightFov; float4 upAspect; float4 light; float4 transport; float4 work; };
 
 static float3 surfaceNormal(uint instanceId, uint primitiveId, float3 direction,
     device const SliceInstance *instances, device const packed_float3 *vertices, device const uint *indices) {
@@ -109,7 +109,9 @@ static float4 binding(device const float *d,uint m,uint slot,float2 uv,float4 fa
     uint b=m+32+slot*8;
     return d[b]<0 ? fallback : sampleTexture(d,uint(d[b]),uv*float2(d[b+3],d[b+4])+float2(d[b+1],d[b+2]));
 }
-struct Surface { float3 position,normal;float2 uv,splat;uint material; };
+struct Work { uint queries,limit;int error;uint reflectionLimit,refractionLimit; };
+static bool queryAllowed(thread Work &work) { work.queries++;if(work.queries>work.limit) { work.error=-1;return false; }return true; }
+struct Surface { float3 position,normal,geometric;uint solid;float2 uv,splat;uint material; };
 static Surface sceneSurface(uint instanceId,uint primitiveId,float2 bary,float3 position,float3 direction,
     device const SliceInstance *instances,device const packed_float3 *vertices,device const uint *indices,device const float *d) {
     SliceInstance instance=instances[instanceId];
@@ -122,6 +124,8 @@ static Surface sceneSurface(uint instanceId,uint primitiveId,float2 bary,float3 
     float3 b=(instance.transform*float4(float3(vertices[ib]),1)).xyz;
     float3 c=(instance.transform*float4(float3(vertices[ic]),1)).xyz;
     float3 n=normalize(cross(b-a,c-a));
+    float detSign=dot(instance.transform[0].xyz,cross(instance.transform[1].xyz,instance.transform[2].xyz))<0?-1.0f:1.0f;
+    float3 geometric=n*detSign;
     if(d[aa+9]>.5f) {
         float3 localNormal=s3(d,aa)*weight.x+s3(d,ab)*weight.y+s3(d,ac)*weight.z;
         float3x3 matrix=float3x3(instance.transform[0].xyz,instance.transform[1].xyz,instance.transform[2].xyz);
@@ -147,7 +151,7 @@ static Surface sceneSurface(uint instanceId,uint primitiveId,float2 bary,float3 
         n=normalize(tangent*map.x+bitangent*map.y+n*map.z);
     }
     if(d[material+19]>.5f && dot(n,direction)>0) n=-n;
-    Surface surface={position,n,uv,local.xz/max(d[material+20],.0001f),material};return surface;
+    Surface surface={position,n,geometric,uint(d[uint(d[6])+instanceId]),uv,local.xz/max(d[material+20],.0001f),material};return surface;
 }
 static float4 sceneBase(Surface s,device const float *d) {
     uint m=s.material;
@@ -159,8 +163,8 @@ static float4 sceneBase(Surface s,device const float *d) {
     }
     return color;
 }
-#define CTX instance_acceleration_structure scene,device const SliceInstance *instances,device const packed_float3 *vertices,device const uint *indices,device const float *d
-#define ARGS scene,instances,vertices,indices,d
+#define CTX thread Work &work,instance_acceleration_structure scene,device const SliceInstance *instances,device const packed_float3 *vertices,device const uint *indices,device const float *d
+#define ARGS work,scene,instances,vertices,indices,d
 // Instance masks: bit 1 = visible to shadow and reflection rays, bit 2 = visible to primary rays (blended surfaces: bit 2 only).
 constant uint kSecondaryMask=1;
 constant uint kMaxCutoutLayers=8;
@@ -181,6 +185,7 @@ static Found traceMasked(float3 origin,float3 direction,float minimum,float maxi
         ray r;r.origin=origin+direction*start;r.direction=direction;
         r.min_distance=i==0?minimum:.0005f;r.max_distance=maximum-start;
         if(r.max_distance<=r.min_distance) return none;
+        if(!queryAllowed(work)) return none;
         intersector<triangle_data,instancing> query;
         auto hit=query.intersect(r,scene,mask);
         if(hit.type==intersection_type::none) return none;
@@ -275,20 +280,68 @@ static float3 shade(Surface s,float3 view,bool hasEnvironment,float3 environment
     }
     return result;
 }
-// PBR surfaces add one bounded reflection bounce; its hit is shaded without further scene reflections.
-static float3 shadeSurface(Surface s,float3 view,uint2 pixel,CTX) {
-    uint m=s.material;
-    if(!(d[m+16]>.5f && d[m+16]<1.5f)) return shade(s,view,false,float3(0),ARGS);
-    float roughness=clamp(d[m+14]*binding(d,m,4,s.uv,float4(1)).g,.04f,1.0f);
-    float3 direction=reflectionDirection(s.normal,view,roughness,pixel);
-    Found found=traceMasked(s.position+s.normal*.001f,direction,.001f,10000,kSecondaryMask,ARGS);
-    float3 radiance=skyColor(d,direction);
-    if(found.valid) {
-        Surface hit=sceneSurface(found.instance,found.primitive,found.bary,s.position+s.normal*.001f+direction*found.distance,direction,instances,vertices,indices,d);
-        radiance=shade(hit,-direction,false,float3(0),ARGS);
-    }
-    return shade(s,view,true,radiance,ARGS);
+// Single sampled continuation keeps work linear in the two independent event limits.
+float opticalSample(uint2 p, uint sampleIndex, uint event) {
+    uint seed=p.x*1973u+p.y*9277u+sampleIndex*26699u+event*31847u+89173u;
+    seed=(seed^(seed>>16u))*0x7feb352du; seed=(seed^(seed>>15u))*0x846ca68bu; seed=seed^(seed>>16u);
+    return float(seed&0xffffffu)/16777216.0f;
 }
+float dielectricFresnel(float cosine, float from, float to) {
+    if(from==to) return 0.0f;
+    float c=clamp(cosine,0.0f,1.0f), eta=from/to, sin2=eta*eta*(1.0f-c*c);
+    if(sin2>=1.0f) return 1.0f;
+    float ct=sqrt(1.0f-sin2), rs=(from*c-to*ct)/(from*c+to*ct), rp=(to*c-from*ct)/(to*c+from*ct);
+    return clamp((rs*rs+rp*rp)*0.5f,0.0f,1.0f);
+}
+float3 specularWeight(Surface s, float3 view,device const float *d) {
+    uint m=s.material;
+    float3 base=sceneBase(s,d).xyz;
+    float4 mr=binding(d,m,4u,s.uv,float4(1.0f));
+    float metallic=clamp(d[m+13u]*mr.b,0.0f,1.0f), roughness=clamp(d[m+14u]*mr.g,0.04f,1.0f);
+    float4 r=roughness*float4(-1.0f,-0.0275f,-0.572f,0.022f)+float4(1.0f,0.0425f,1.04f,-0.04f);
+    float nv=max(dot(s.normal,view),0.0001f), a004=min(r.x*r.x,exp2(-9.28f*nv))*r.x+r.y;
+    float2 brdf=float2(-1.04f,1.04f)*a004+r.zw;
+    return max((mix(float3(0.04f),base,metallic)*brdf.x+brdf.y)*binding(d,m,5u,s.uv,float4(1.0f)).r,float3(0.0f));
+}
+float3 shadeSurface(Surface s, float3 view, uint2 pixel, uint sampleIndex,CTX) {
+    uint reflections=0u, refractions=0u, reflectionLimit=uint(work.reflectionLimit), refractionLimit=uint(work.refractionLimit);
+    int medium=-1; float mediumIor=1.0f;
+    float3 result=float3(0.0f), throughput=float3(1.0f);
+    for(uint event=0u;event<=reflectionLimit+refractionLimit;event++) {
+        uint m=s.material;
+        if(!(d[m+16u]>0.5f && d[m+16u]<1.5f)) return result+throughput*shade(s,view,false,float3(0.0f),ARGS);
+        float transmission=refractionLimit>0u?d[m+21u]:0.0f;
+        if(transmission==0.0f && reflections==reflectionLimit) return result+throughput*shade(s,view,false,float3(0.0f),ARGS);
+        float roughness=clamp(d[m+14u]*binding(d,m,4u,s.uv,float4(1.0f)).g,0.04f,1.0f);
+        float3 direction=reflectionDirection(s.normal,view,roughness,pixel+uint2(sampleIndex*1973u+event*31847u,0u));
+        float3 weight=specularWeight(s,view,d); bool transmitted=false, entering=false;
+        if(transmission>0.0f) {
+            entering=dot(view,s.geometric)>0.0f;
+            if(medium>=0 && (medium!=int(s.solid) || entering)) { work.error=-2;return float3(0.0f); }
+            if(medium<0 && !entering) { medium=int(s.solid);mediumIor=d[m+22u]; }
+            float3 opposing=entering?s.geometric:-s.geometric;
+            float from=medium>=0?mediumIor:1.0f, to=entering?d[m+22u]:1.0f;
+            float3 refracted=refract(-view,opposing,from/to);
+            float F=dielectricFresnel(dot(view,opposing),from,to);
+            float3 reflectedWeight=weight*(1.0f-transmission)+float3(transmission*F);
+            float transmittedWeight=transmission*(1.0f-F), maximum=max(max(reflectedWeight.r,reflectedWeight.g),reflectedWeight.b);
+            float probability=maximum+transmittedWeight>0.0f?maximum/(maximum+transmittedWeight):1.0f;
+            if(dot(refracted,refracted)>0.0f && opticalSample(pixel,sampleIndex,event)>=probability) {
+                transmitted=true;direction=normalize(refracted);weight=float3(transmittedWeight/(1.0f-probability));
+            } else weight=reflectedWeight/max(probability,0.000001f);
+        }
+        result+=throughput*shade(s,view,true,float3(0.0f),ARGS)*(1.0f-transmission);
+        throughput*=weight;
+        if(transmitted?refractions==refractionLimit:reflections==reflectionLimit) return result+throughput*skyColor(d,direction);
+        if(transmitted) { refractions++;medium=entering?int(s.solid):-1;mediumIor=entering?d[m+22u]:1.0f; } else reflections++;
+        float3 origin=s.position+s.geometric*(dot(direction,s.geometric)>=0.0f?0.001f:-0.001f);
+        Found found=traceMasked(origin,direction,0.001f,10000.0f,kSecondaryMask,ARGS);
+        if(!found.valid) { if(medium>=0) work.error=-2;return result+throughput*skyColor(d,direction); }
+        s=sceneSurface(found.instance,found.primitive,found.bary,origin+direction*found.distance,direction,instances,vertices,indices,d);view=-direction;
+    }
+    work.error=-2;return float3(0.0f);
+}
+
 static float3 applyFog(device const float *d,float3 color,float distance) {
     if(d[22]<.5f) return color;
     float k=(1-exp(-1.0f))*d[20]*d[20];
@@ -304,18 +357,23 @@ kernel void rayScene(instance_acceleration_structure scene [[buffer(0)]],device 
     float3 direction=normalize(camera.forwardFar.xyz+camera.rightFov.xyz*ndc.x*camera.upAspect.w*camera.rightFov.w+camera.upAspect.xyz*ndc.y*camera.rightFov.w);
     float cosine=dot(direction,camera.forwardFar.xyz);
     float near=camera.originNear.w,far=camera.forwardFar.w;
-    float3 accumulated=float3(0);float transmittance=1,depth=1,start=0;bool finished=false;
+    Work work={0,uint(camera.work.x),0,uint(camera.transport.x),uint(camera.transport.y)};
+    float3 total=float3(0);float depth=1;
+    for(uint batchSample=0;batchSample<uint(camera.transport.z);batchSample++) {
+    work.queries=0;
+    float3 accumulated=float3(0);float transmittance=1,start=0;bool finished=false;
     // Primary rays composite alpha-blended layers front to back; holes in alpha-tested surfaces are skipped.
     for(uint layer=0;layer<kMaxBlendLayers+kMaxCutoutLayers && !finished;layer++) {
         ray primary;primary.origin=origin+direction*start;primary.direction=direction;
         primary.min_distance=layer==0?near/cosine:.0005f;primary.max_distance=far/cosine-start;
         if(primary.max_distance<=primary.min_distance) break;
+        if(!queryAllowed(work)) break;
         intersector<triangle_data,instancing> query;auto hit=query.intersect(primary,scene,0xff);
         if(hit.type==intersection_type::none) break;
         float travelled=start+hit.distance;
         Surface surface=sceneSurface(hit.instance_id,hit.primitive_id,hit.triangle_barycentric_coord,origin+direction*travelled,direction,instances,vertices,indices,d);
         if(isCutout(surface,d)) { start=travelled;continue; }
-        float3 color=applyFog(d,shadeSurface(surface,-direction,pixel,ARGS),travelled);
+        float3 color=applyFog(d,shadeSurface(surface,-direction,pixel,uint(camera.transport.w)+batchSample,ARGS),travelled);
         if(d[surface.material+17]>1.5f) {
             float alpha=clamp(sceneBase(surface,d).w*d[surface.material+15],0.0f,1.0f);
             accumulated+=transmittance*alpha*color;transmittance*=1-alpha;start=travelled;
@@ -327,5 +385,7 @@ kernel void rayScene(instance_acceleration_structure scene [[buffer(0)]],device 
         accumulated+=transmittance*color;transmittance=0;finished=true;
     }
     if(transmittance>0) accumulated+=transmittance*skyDisplay(d,direction);
-    colors[index]=float4(accumulated,1);depths[index]=depth;
+    total+=accumulated;
+    }
+    colors[index]=float4(total/camera.transport.z,work.error<0?float(work.error):1.0f);depths[index]=depth;
 }

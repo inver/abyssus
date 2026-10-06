@@ -13,7 +13,7 @@ import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.assets.terrain.generation.HeightmapImage
+import net.nevinsky.abyssus.terrain.generation.HeightmapImage
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
@@ -28,7 +28,6 @@ import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
-import net.nevinsky.abyssus.dto.textOf
 
 /** A square grayscale picture of a heightmap; a bordered blank square when there is no preview. */
 internal class HeightmapView(image: HeightmapImage? = null) : JComponent() {

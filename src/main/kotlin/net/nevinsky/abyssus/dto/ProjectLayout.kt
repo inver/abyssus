@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.dto
 
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.assets.ASSETS_DIR
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import java.io.File
 
 /**
@@ -14,9 +14,9 @@ import java.io.File
  * folder with one folder per asset, each described by its `meta.json`.
  */
 object ProjectLayout {
-    const val PROJECT_EXTENSION = net.nevinsky.abyssus.runtime.project.PROJECT_EXTENSION
-    const val SCENE_EXTENSION = net.nevinsky.abyssus.runtime.project.SCENE_EXTENSION
-    const val SCENES_DIR = net.nevinsky.abyssus.runtime.project.SCENES_DIR
+    val PROJECT_EXTENSION = net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.PROJECT_EXTENSION
+    val SCENE_EXTENSION = net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.SCENE_EXTENSION
+    val SCENES_DIR = net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.SCENES_DIR
 
     /** Exact, case-sensitive, suffix-based match: `.SCENE` and `.scene.bak` are not asset files. */
     val ASSET_EXTENSIONS = setOf(SCENE_EXTENSION, PROJECT_EXTENSION)

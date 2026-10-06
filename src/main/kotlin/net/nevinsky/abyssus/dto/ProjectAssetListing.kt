@@ -7,17 +7,16 @@ package net.nevinsky.abyssus.dto
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.assets.SPLAT_FIELDS
-import net.nevinsky.abyssus.assets.files.Asset
-import net.nevinsky.abyssus.assets.files.MetaBase
-import net.nevinsky.abyssus.assets.files.MetaType
-import net.nevinsky.abyssus.assets.json.JsonProcessor
-import net.nevinsky.abyssus.assets.json.obj
-import net.nevinsky.abyssus.assets.json.opt
-import net.nevinsky.abyssus.assets.json.text
+import net.nevinsky.abyssus.core.assets.terrain.SPLAT_FIELDS
+import net.nevinsky.abyssus.core.assets.Asset
+import net.nevinsky.abyssus.core.assets.AssetMeta
+import net.nevinsky.abyssus.core.assets.MetaType
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.runtime.obj
+import net.nevinsky.abyssus.runtime.opt
+import net.nevinsky.abyssus.runtime.text
 import java.io.File
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.assets.files.AssetMetaReader
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 
 /** Lists a project's asset folders through the VFS, as the Abyssus tree shows them, parsing `meta.json` with [json]. */
 class ProjectAssetListing(json: JsonProcessor) {
@@ -32,10 +31,12 @@ class ProjectAssetListing(json: JsonProcessor) {
             val document = metaFiles.inEditor(dir) ?: return@runCatchingKeepingCancellation null
 
             @Suppress("UNCHECKED_CAST")
-            val parsedMeta = document.typed(MetaBase::class.java as Class<MetaBase<Any>>) ?: return@runCatchingKeepingCancellation null
+            val bound = document.typed(AssetMeta::class.java as Class<AssetMeta<Any>>) ?: return@runCatchingKeepingCancellation null
+            // the name is the folder's, not a field of the file
+            val parsedMeta = AssetMeta(dir.name, bound.formatVersion, bound.version, bound.lastModified, bound.type, bound.additional, bound.uuid)
             val references = runCatchingKeepingCancellation { references(document.json) }.getOrDefault(emptyList())
-            Asset(dir.name, parsedMeta, File(dir.path), references)
-        }.getOrNull() ?: Asset(dir.name, MetaBase(0, 0L, MetaType.UNKNOWN, Any()), File(dir.path))
+            Asset(File(dir.path), parsedMeta, references)
+        }.getOrNull() ?: Asset(File(dir.path), AssetMeta(name = dir.name, type = MetaType.UNKNOWN, additional = Any()))
     }
 
     /**

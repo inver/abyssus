@@ -5,77 +5,32 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Quat
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+import net.nevinsky.abyssus.editor.content.LightPlacement
+import net.nevinsky.abyssus.editor.content.CameraPlacement
+
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.assets.json.float
-import net.nevinsky.abyssus.assets.json.obj
-import net.nevinsky.abyssus.assets.json.opt
-import net.nevinsky.abyssus.assets.json.text
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.runtime.scene.SceneDto
-import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_RANGE
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_NEAR
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FAR
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FOV
-import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_CONE_ANGLE
-import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_EDGE_SOFTNESS
-import net.nevinsky.abyssus.runtime.ecs.scene.SceneEcsPaths
-import net.nevinsky.abyssus.runtime.ecs.scene.ComponentCodecs
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.scene.Scene
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_RANGE
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_NEAR
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FAR
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_CONE_ANGLE
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_EDGE_SOFTNESS
+import net.nevinsky.abyssus.SceneEcsPaths
+import com.badlogic.ashley.core.Component
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.ecs.scene.ComponentReader
+import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
 import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
 import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
-
-/** [w] is 1 for the identity rotation, which native scenes leave out of the file together with the other default fields. */
-data class Quat(val x: Float, val y: Float, val z: Float, val w: Float) {
-    companion object {
-        val IDENTITY = Quat(0f, 0f, 0f, 1f)
-    }
-}
-
-/** Native `PositionComponent`: position 0, identity rotation and unit scale unless the file says otherwise. */
-data class PlacementTransform(val position: Vec3, val rotation: Quat, val scale: Vec3) {
-    companion object {
-        val IDENTITY = PlacementTransform(Vec3(0f, 0f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f))
-    }
-}
-
-/** An entity showing the asset folder [assetName]. [entityId] is its key under `ecs/entities`; picking reports it back. */
-data class AssetPlacement(val entityId: String, val assetName: String, val transform: PlacementTransform)
-
-enum class LightKind { DIRECTIONAL, POINT, SPOT }
-
-/** [direction] is the unit vector the light shines along (directional and spot); [position] matters for point and spot. */
-data class LightPlacement(
-    val entityId: String,
-    val kind: LightKind,
-    val color: Rgba,
-    val intensity: Float,
-    val position: Vec3,
-    val direction: Vec3,
-    val range: Float = LIGHT_RANGE,
-    val rotation: Quat = Quat.IDENTITY,
-    val coneAngle: Float = LIGHT_CONE_ANGLE,
-    val edgeSoftness: Float = LIGHT_EDGE_SOFTNESS,
-    /** The `PositionComponent.lookAtId` of the light, or null when it does not name a target. */
-    val lookAtId: String? = null,
-)
-
-/**
- * A camera entity. [direction] is the view direction from `viewPointPosition` (as in the file, not yet normalized);
- * it is overridden by the position of [lookAtId] while that resolves. [name] is the entity's `NameComponent` name,
- * or its id when unnamed.
- */
-data class CameraPlacement(
-    val entityId: String,
-    val name: String,
-    val position: Vec3,
-    val direction: Vec3,
-    val lookAtId: String?,
-    val near: Float = CAMERA_NEAR,
-    val far: Float = CAMERA_FAR,
-    val fieldOfView: Float = CAMERA_FOV,
-    val rotation: Quat = Quat.IDENTITY,
-)
+import net.nevinsky.abyssus.runtime.opt
+import net.nevinsky.abyssus.runtime.text
 
 /** What a scene shows besides its environment. */
 data class SceneContent(
@@ -96,21 +51,20 @@ data class SceneContent(
     companion object {
         val EMPTY = SceneContent()
 
-        fun of(scene: SceneDto): SceneContent {
-            val codecs = ComponentCodecs()
+        fun of(scene: Scene): SceneContent {
             val entities = SceneEcsPaths().entitiesIn(scene.ecs)?.properties().orEmpty().mapNotNull { (id, entity) ->
                 val components = SceneEcsPaths().componentsOf(entity) ?: return@mapNotNull null
-                runCatchingKeepingCancellation { decode(codecs, id, components) }.getOrNull()
+                runCatchingKeepingCancellation { decode(id, components) }.getOrNull()
             }
             val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled == true && it.isNotBlank() }
             return PlacementMapper().map(entities, skybox)
         }
 
         /**
-         * Reads the entity's components through the same codecs the Properties panel uses, so both show the same values,
+         * Reads the entity's components through the runtime loader the Properties panel uses, so both show the same values,
          * defaults included. The render asset is read as the file names it, whichever delegate class holds it.
          */
-        private fun decode(codecs: ComponentCodecs, id: String, components: JsonNode): DecodedEntity {
+        private fun decode(id: String, components: JsonNode): DecodedEntity {
             val position = components.opt("PositionComponent")
             val asset = components.opt("RenderComponent")?.opt("renderable")?.opt("asset")
             val assetType = asset?.text("type")
@@ -118,14 +72,21 @@ data class SceneContent(
             return DecodedEntity(
                 id,
                 SceneEcsPaths().entityName(components, id),
-                position?.let { codecs.read<PositionComponent>("PositionComponent", it) },
+                position?.let { read<PositionComponent>(it) },
                 position?.opt("localPosition") != null,
-                components.opt("TypeComponent")?.let { codecs.read<TypeComponent>("TypeComponent", it).type },
-                components.opt("CameraComponent")?.let { codecs.read<CameraComponent>("CameraComponent", it) },
-                components.opt("LightComponent")?.let { codecs.read<LightComponent>("LightComponent", it) },
+                components.opt("TypeComponent")?.let { read<TypeComponent>(it)?.type },
+                components.opt("CameraComponent")?.let { read<CameraComponent>(it) },
+                components.opt("LightComponent")?.let { read<LightComponent>(it) },
                 if (assetType != null && assetName != null) DecodedAsset(assetType, assetName) else null,
             )
         }
+
+        /** Binds components the way a scene load does, so the view and the Properties panel show the same values. */
+        private val components = ComponentReader(JsonProcessor().mapper, { _, _ -> null }, NOPLogger.NOP_LOGGER)
+
+        /** A component that cannot be bound is left out, so one bad value does not hide the entity. */
+        private inline fun <reified C : Component> read(node: JsonNode): C? =
+            runCatchingKeepingCancellation { components.read(C::class.java, node) }.getOrNull()
 
         /** The libGDX forward axis (-Z) rotated by [q]. */
         internal fun forward(q: Quat): Vec3 {

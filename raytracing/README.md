@@ -1,4 +1,4 @@
-# Ray tracing foundation and Metal/Vulkan feasibility slices
+# Ray tracing
 
 Plain JVM module without IntelliJ, Swing or libGDX dependencies. Its internal backend
 protocol has no extension point or binary compatibility promise. A provider probes
@@ -6,12 +6,15 @@ on the backend's serial worker and returns a backend or an unavailable reason co
 (the plugin localizes it). Construction loads no native libraries. Expected native
 load/init errors become unavailability; cancellation still propagates.
 
-The application composition root will inject one provider/backend. The Metal backend
+The plugin's application service lazily selects and injects one backend through `RayBackendService`. The Metal backend
 owns one device, queue and pipeline; each view owns an independent session containing
 its geometry, instance structures and readback buffers. All backend/session methods
 run on the same owner worker. Closing a view does not dispose another view's session.
-The module is a plugin dependency. The developer-only feasibility preview is wired
-into the Scene view; project asset/material rendering remains unimplemented.
+The module is a plugin dependency. The Scene view renders project models, terrain, materials, lights, sky and fog
+through immutable CPU snapshots. Ray Tracing is enabled from scene Properties, per view and off by default.
+See [scene view integration](../src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md) for conversion, lifecycle,
+GL presentation, saved settings and raster fallback. A separate synthetic feasibility preview remains available
+under the developer experiment flag.
 
 `RayFrame` copies linear RGBA floats and depth on input and output. HDR values above
 1 survive; exposure/tone/sRGB conversion belongs to presentation. Buffers are row-major
@@ -46,7 +49,7 @@ the actual library/shader from the jar, probes the GPU,
 creates two sessions and renders from the second after disposing the first. It requires
 a compatible Mac. Ordinary tests skip GPU cases unless `abyssus.metalTests=true`.
 
-## Slice scope and bounds
+## Synthetic feasibility slice
 
 The feasibility representation accepts triangle meshes with 32-bit indices, affine
 instance transforms, flat colors, one directional light and perfect mirrors. Static
@@ -55,22 +58,21 @@ top-level structure. Camera rays produce projected depth; visibility rays shadow
 only direct light; a reflection hit receives direct shading and misses use the fixed
 slice background. Only one native frame may be submitted per session. `submit` and
 `poll` never wait for the GPU; geometry preparation and disposal currently wait on
-the owner worker. Queued request replacement, stale-frame rejection and bounded
-failure/disposal for the complete editor remain pending the scheduler/lifecycle tasks.
-The common `RayQueuedSession` already bounds pending requests, rejects incompatible
+the owner worker. The complete scene renderer uses the scheduler and quality policy documented below.
+The common `RayQueuedSession` bounds pending requests, rejects incompatible
 structural/resize results and propagates injected device loss to every owned session.
 
 Initial caps: 128 meshes/instances, 32 MiB of input geometry, 4096 per dimension,
 4,194,304 pixels per frame, and native geometry builds bounded by the smaller of
-512 MiB and one quarter of the device's recommended working set. These are slice
-bounds; complete per-view/application budgets remain part of the asset/resource work.
+512 MiB and one quarter of the device's recommended working set. These are synthetic slice
+bounds; project scene capacities and snapshot budgets are documented below and in `core/README.md`.
 
 The staged conformance kit runs the feasibility/lifecycle cases on the fake and opt-in Metal backends. The optional
 30-second timing test reports native submission/readback throughput; it does not
 measure GL presentation, EDT upload cost or input-to-present latency and cannot pass
 the mandatory runIde gate.
 
-## Scene shading (one bounce)
+## Scene shading and optical paths
 
 `RaySceneRequest` carries an immutable `RaySceneSnapshot`: meshes, instances, materials, textures, lights, environment
 and fog. The Metal backend renders it with the `rayScene` kernel and the Vulkan backend with the equivalent compute
@@ -90,14 +92,31 @@ or `RayMaterialTest`.
 - **Cutouts.** An alpha-test hole (`alpha * opacity` below the cutoff) is invisible to shadow, reflection and primary
   rays (`cutoutHolesStayOpenInShadows`). Rays pass through `RAY_CUTOUT_HOLE_DEPTH` (8) holes in a row; the next one
   counts as solid (`cutoutHolesAreSkippedUpToAFixedDepthAndThenCountAsSolid`).
-- **Reflections.** A PBR surface traces one GGX-sampled reflection ray (roughness floor 0.04, a per-pixel hash, the
-  mirror direction when the sample points below the surface). The ray sees opaque and alpha-tested models and terrain,
-  including geometry outside the camera image (`smoothReflectionsIncludeOffscreenModelsAndSkyMisses`,
-  `reflectionsIncludeOffscreenTerrainAndRoughnessChangesTheResult`). A reflected hit gets direct light, emission and
-  ambient, with the ambient colour as its terminal specular, and spawns no further scene bounce
-  (`reflectedPbrSurfacesAreShadedWithoutAFurtherBounce`). A miss shows the sky. The traced radiance replaces the
-  ambient colour in the primary PBR specular term only; diffuse ambient is unchanged. Default and terrain materials
+- **Reflections.** A PBR surface traces GGX-sampled reflection rays (roughness floor 0.04, a per-pixel/sample/event
+  hash, the mirror direction when the sample points below the surface) up to the request's `maxReflectionBounces`
+  (0–16, default 1). The rays see opaque and alpha-tested models and terrain, including geometry outside the camera
+  image (`smoothReflectionsIncludeOffscreenModelsAndSkyMisses`, `reflectionsIncludeOffscreenTerrainAndRoughnessChangesTheResult`).
+  When the limit is reached, the last hit gets direct light, emission and ambient, with the ambient colour as its
+  terminal specular, and traces nothing further (`reflectedPbrSurfacesAreShadedWithoutAFurtherBounce`,
+  `secondMirrorRevealsTheHiddenObjectOnlyFromReflectionDepthTwo`); limit 0 uses that approximation on the primary hit
+  (`configurableReflectionZeroAndOnePreserveBoundedEnvironmentAndSceneHits`). A miss shows the sky. The traced radiance
+  replaces the ambient colour in the PBR specular term only; diffuse ambient is unchanged. Default and terrain materials
   gain no reflections.
+- **Glass.** A PBR material with `transmission` above 0 (from a scene-instance override, never inferred from alpha) is a
+  dielectric with `ior` (1–3, default 1.5) against air. Each event picks one continuation, reflected or refracted (Snell),
+  by Fresnel weight with probability-compensated throughput, so a uniform environment keeps its energy
+  (`fresnelSplitConservesEnergyInAUniformEnvironment`). Every surface crossing spends one of `maxRefractionBounces`
+  (0–16, default 0) and every reflection, including total internal reflection, one of `maxReflectionBounces`
+  (`closedSlabRefractionAtLimitsZeroOneAndTwo`, `totalInternalReflectionReflectsInsteadOfTransmitting`,
+  `mixedReflectionAndTransmissionPathsMatchTheReferenceAtEveryLimitPair`). An exhausted continuation shows the sky in its
+  direction. Refraction limit 0 shades the material as ordinary opaque PBR. Supported geometry: per entity, one
+  connected, closed, consistently outward-wound manifold whose parts all carry the same transmission material on opaque
+  PBR (`RayOpticalEligibility`, checked on the CPU before upload). The kernels track air or one solid: a camera inside
+  glass is inferred from the first backface; entering a second solid, or leaving into nothing while inside, fails the
+  whole frame (alpha -2), as does a path that would exceed its query bound (alpha -1); `requireNativeOpticalFrame`
+  turns both into exceptions at poll (`unsupportedTransmissionIsAnExplicitFailure`). Glass casts straight opaque shadows:
+  no coloured transmission shadows or caustics (`transmissiveSolidsCastStraightOpaqueShadows`). A backend whose
+  `RayCapabilities.sceneOptics` is false rejects requests with non-default depths or transmission (`requireOptics`).
 - **Sky.** A miss, primary or reflected, shows the equirectangular environment texture times its intensity (linear
   HDR values above 1 survive), oriented like the raster sky: the centre column faces -Z, the top row is +Y, and
   `rotation` turns it about +Y in degrees. With no texture, a miss shows the background colour
@@ -114,7 +133,8 @@ or `RayMaterialTest`.
 - **Transparency.** Alpha-blended surfaces are composited front to back over the opaque surface behind them, are
   shadowed like any receiver, and are invisible to shadow and reflection rays (`blendedSurfacesReceiveButDoNotCastShadows`,
   `overlappingBlendedLayersCompositeFrontToBackOverTheOpaqueSurface`, `blendedGeometryIsNotReflected`). They do not
-  write depth: the frame's depth is that of the first opaque surface, or 1. No refraction.
+  write depth: the frame's depth is that of the first opaque surface, or 1. They never refract; masked or blended
+  materials with transmission are rejected.
 - **Explicit fallback.** `RaySceneSnapshot.unsupportedReason()` reports a scene the backends reject, and `submit`
   throws `IllegalArgumentException` for it, so the view falls back to raster: more than `RAY_MAX_BLENDED_INSTANCES` (32)
   blended instances, more than 128 materials or textures, or more than 12 lights (`tooManyBlendedLayersAreAnExplicitFallback`,
@@ -123,8 +143,9 @@ or `RayMaterialTest`.
   pins twelve stacked panes, the count of the fixture Main Scene.)
 
 Instances carry a ray visibility mask (`RaySliceInstance.primaryOnly`): bit 1 for shadow/reflection rays, bit 2 for
-primary rays; blended instances use only bit 2. Metal accepts the 21-float instance record this needs. Accumulation
-across samples is not implemented: the kernel ignores `samples`, so roughness noise is static per pixel.
+primary rays; blended instances use only bit 2. Metal accepts the 21-float instance record this needs. A scene request
+evaluates `samples` (1–8) independent camera samples starting at `sampleOffset` and returns their mean; the session's
+`RayFrameAccumulator` weights consecutive batches of the same key, epoch, revision and limits by sample count.
 
 ## Geometry reuse and resource bounds
 
@@ -172,24 +193,23 @@ Defaults cap dimensions at 4096, pixels at 4,194,304, retained frame/presentatio
 payload at 128 MiB (80 bytes/pixel), samples at 8 per batch and 256 per accumulation
 epoch, and worst-case ray count at 2,097,152 per batch. The adapter supplies primary,
 visibility and reflection ray cost per sample; scene/native allocations are budgeted
-separately. The ray count is a soft budget: when a view costs more rays per pixel than it
-allows (a window with a dozen lights), the frame stays at the half-resolution floor with
-one sample rather than refusing the view. If even that floor exceeds a hard limit
-(dimension, pixel or memory), the policy throws `RayQualityLimitException` for explicit
-view fallback. It never silently lowers that floor. Scene/camera/pose/content changes or internal resolution changes start a new
+separately. All limits, including the intersection-query budget, are hard. If one sample at the half-resolution
+floor exceeds the query, dimension, pixel or memory bounds, the policy throws `RayQualityLimitException` for explicit
+view fallback. `RayWorkBudget` accounts for traversal retries and allowed secondary/shadow work (see below).
+It never silently lowers that floor. Scene/camera/pose/content changes or internal resolution changes start a new
 accumulation epoch. At its sample cap, unchanged work stops until quality or inputs
 change.
 
 The immutable `RayRenderBatch` carries internal dimensions, samples, accumulation
-epoch/offset and matching display input to the worker adapter. Wiring that adapter
-to complete scene shading and the Scene view remains later integration work; the
-existing native feasibility shader is unchanged.
+epoch/offset and matching display input to the worker adapter. The plugin's `RayViewRuntime` / `RayViewFeed`
+and `RayBackendService` connect it to full scene shading and safe GL presentation. The separate synthetic
+feasibility shader remains available for its dedicated tests.
 
 ```sh
 ./gradlew :raytracing:test --tests '*RayRenderSchedulerTest' --tests '*RayQualityPolicyTest'
 ```
 
-## Experimental GL presentation
+## Developer feasibility preview
 
 Use a copy of the fixture project, and run:
 
@@ -247,12 +267,12 @@ every wait. A loss injected through `RayDeviceHealth` leaves the device healthy,
 
 There are two shaders. `src/main/glsl/slice.comp` is the feasibility slice (primary visibility, one directional shadow ray,
 one mirror bounce); `src/main/glsl/scene.comp` is the full scene renderer of `RaySceneRequest`, a line-for-line port of the
-Metal `rayScene` kernel. The `compileSpirv` task builds them into `native/vulkan/slice.spv` and `native/vulkan/scene.spv`,
+Metal `rayScene` kernel. The `compileSpirv` task builds them into jar resources *native/vulkan/slice.spv* and *native/vulkan/scene.spv*,
 unoptimized (`-O` inlines the shading code tenfold and drivers optimize SPIR-V themselves). Both pipelines share one
 descriptor layout: the acceleration structure, instance, vertex and index buffers, the two output images, the camera
 uniform and, for the scene shader, the scene payload bound twice (bindings 7 and 8: the floats, and the RGBA8 texels that
-follow them in the same buffer). The slice shader ignores bindings 7 and 8. No `lwjgl-shaderc` is packaged. The task uses `glslangValidator` or `glslc` from `PATH`, then from `VULKAN_SDK/bin`, then from the Android NDK's
-`shader-tools` (under `ANDROID_HOME`, `ANDROID_SDK_ROOT` or `~/Android/Sdk`), or `-Pabyssus.glslc=/path/to/tool`. Without either it warns and ships no SPIR-V, and the backend
+follow them in the same buffer). The slice shader ignores bindings 7 and 8. No `lwjgl-shaderc` is packaged. The task uses `glslangValidator` or `glslc` from `PATH`, then from the `VULKAN_SDK` environment variable's `bin` directory, then from the Android NDK's
+`shader-tools` (under `ANDROID_HOME`, `ANDROID_SDK_ROOT` or the default Android SDK directory in the user's home), or `-Pabyssus.glslc=/path/to/tool`. Without either it warns and ships no SPIR-V, and the backend
 then reports `INITIALIZATION_FAILED`; `-Pabyssus.requireShaders=true` (used by the release and CI builds) turns
 that into a build error.
 
@@ -273,8 +293,32 @@ found with `VK_LAYER_PATH` plus `LD_LIBRARY_PATH` pointing at its directory.
 `verifyVulkanPackaging` checks the SPIR-V in the jar, that no shaderc is on the runtime classpath, the
 `lwjgl-vma` natives for every target, MoltenVK for macOS only, and that a probe without a loader returns
 `RUNTIME_NOT_FOUND` (one JVM per test class, because LWJGL's library choice is process-global). Metal
-packaging moved to `verifyMetalPackaging`; `verifyNativePackaging` runs both where they apply.
+packaging moved to `verifyMetalPackaging`; `verifyNativePackaging` runs both where they apply. When they render, both
+packaging tests also draw a glass slab through the packaged scene shader (`assertPackagedSceneOptics`), so a jar whose
+shader predates the version 3 scene payload or the 28-float camera fails there. Metal and Vulkan both report
+`sceneOptics`; the Metal kernel and `scene.comp` change together with `RaySceneEncoding` and `RaySceneRequest.nativeCamera`.
 
 On a machine without a GPU, Mesa's software driver (lavapipe, `mesa-vulkan-drivers`) exposes ray queries and
 runs the whole suite: `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json`. The first scene frame on a cold lavapipe
 compiles the shader on the CPU and can exceed the kit's 5 second wait once; rerun it.
+
+## Saved quality limits and query accounting
+
+`RayRenderInput` can carry a frozen `RayRenderSettings` target (1–4096 camera samples per pixel) and frame budget
+(1–67108864 intersection queries). Scheduler inputs without saved settings retain their constructor limits.
+Submissions contain at most eight samples; the last batch is clamped to the remaining target. A different internal
+resolution begins a new accumulation epoch. Backends evaluate each batch's samples independently and accumulate them
+in the session (`RayFrameAccumulator`).
+
+`RayWorkBudget` replaces the former primary + lights + one reflection estimate. Both current native primary loops
+allow 16 blended layers plus 8 cutout queries; secondary and shadow traversal allow 8 cutout retries. With opaque
+materials only, traversal needs one query per segment. For each potentially shaded primary layer, the conservative
+bound includes every allowed reflection/refraction event and each shadow-casting light at each shaded vertex,
+including the terminal surface. Reflection and refraction share one sampled continuation, never a binary tree.
+Frame multiplication uses checked Long arithmetic. The policy intersects this query budget with device dimensions,
+pixel and memory bounds. When one sample at half resolution does not fit, it reports `RayQualityLimitException`;
+it no longer exceeds the ray budget to preserve a large preview. Saved preferences are not rewritten by fallback.
+
+Changed settings carry an explicit input revision. They clear pending/completed publication and history while the
+same native session drains its in-flight work. The scheduler rejects older revisions even within its ordinary
+motion grace interval; stable unchanged content stops submitting at the target.

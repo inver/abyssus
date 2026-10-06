@@ -60,6 +60,14 @@ class Flight(
 
     val finished: Boolean get() = result != null
 
+    /** How fast the plane came down onto the ground when it crashed into it (m/s); 0 otherwise. */
+    var impactSpeed = 0f
+        private set
+
+    /** How badly the plane broke when it crashed into the ground; null while it flies or when it ended otherwise. */
+    var crash: CrashSeverity? = null
+        private set
+
     /** Seconds of fuel left. */
     val fuelLeft: Float get() = max(0f, rig.planeSettings.fuelTime - time)
 
@@ -71,6 +79,8 @@ class Flight(
         time = 0f
         tension = 0f
         result = null
+        impactSpeed = 0f
+        crash = null
         lastSample = null
         started = false
         lastVelocity.setZero()
@@ -94,6 +104,10 @@ class Flight(
             if (outcome.slackInAir && !wasSlack) scoring.keeper.linesSlack()
             if (ended != null) {
                 result = ended
+                if (ended == FlightEnd.CRASHED) {
+                    impactSpeed = max(0f, -lastVelocity.y)
+                    crash = crashSeverity(impactSpeed)
+                }
                 scoring.finish(landed = ended == FlightEnd.LANDED)
                 return
             }

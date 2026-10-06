@@ -5,6 +5,11 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayModeSnapshot
+
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.CameraPlacement
+
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -36,8 +41,8 @@ import javax.swing.JToggleButton
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import javax.swing.Timer
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
 
 /** An entry of the camera selector: [id] is the camera entity to look through, null for the free orbit view. */
 data class CameraChoice(val id: String?, val label: String) {
@@ -57,6 +62,9 @@ class SceneViewPanel internal constructor(
     private val renderer: SceneRenderer,
     private val lightActions: ((() -> Vec3) -> DefaultActionGroup)? = null,
     private val canAddLight: () -> Boolean = { lightActions != null },
+    /** The project's models and terrains to place at the orbit target; null: no Add Asset button. */
+    private val assetActions: ((() -> Vec3) -> DefaultActionGroup)? = null,
+    private val canAddAsset: () -> Boolean = { assetActions != null },
     ray: RayIntegration? = null,
     /** Play in this view; without a simulation provider there are no play controls. */
     private val play: PlayState = PlayState(null),
@@ -80,6 +88,7 @@ class SceneViewPanel internal constructor(
     private val rotateButton = JToggleButton(AbyssusBundle.message("sceneViewRotate"))
     private val dropButton = JButton(AbyssusBundle.message("sceneViewDrop"))
     private val addLightButton = JButton(AbyssusBundle.message("addLightTitle")).apply { name = "add-light" }
+    private val addAssetButton = JButton(AbyssusBundle.message("addAssetTitle")).apply { name = "add-asset" }
     private val cameraCombo = ComboBox<CameraChoice>()
     private val playButton = JButton(AbyssusBundle.message("sceneViewPlay")).apply { name = "play" }
     private val pauseButton = JButton(AbyssusBundle.message("sceneViewPause")).apply { name = "pause" }
@@ -127,7 +136,7 @@ class SceneViewPanel internal constructor(
      */
     internal fun installRay(integration: RayIntegration) {
         rayFeed?.close()
-        val feed = integration.newFeed("scene-view-${NEXT_VIEW.incrementAndGet()}")
+        val feed = integration.newFeed("scene-view-${NEXT_VIEW.incrementAndGet()}", renderer.assets)
         feed.runtime.mode.addListener { SwingUtilities.invokeLater { if (rayFeed === feed) refreshRay() } }
         rayFeed = feed
         renderer.rayFrameProvider = { context -> feed.frame(context) }
@@ -249,6 +258,15 @@ class SceneViewPanel internal constructor(
                 JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
             ).showUnderneathOf(addLightButton)
         }
+        addAssetButton.isFocusable = false
+        addAssetButton.toolTipText = AbyssusBundle.message("addAssetTooltip")
+        addAssetButton.addActionListener {
+            val actions = assetChoices() ?: return@addActionListener
+            JBPopupFactory.getInstance().createActionGroupPopup(
+                AbyssusBundle.message("addAssetTitle"), actions, DataManager.getInstance().getDataContext(this),
+                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
+            ).showUnderneathOf(addAssetButton)
+        }
         cameraCombo.isFocusable = false
         cameraCombo.toolTipText = AbyssusBundle.message("sceneViewCameraTooltip")
         cameraCombo.addActionListener {
@@ -261,6 +279,7 @@ class SceneViewPanel internal constructor(
             add(rotateButton)
             add(dropButton)
             add(addLightButton)
+            if (assetActions != null) add(addAssetButton)
             add(cameraCombo)
             if (play.available) addPlayControls(this)
             overlayToolbar()?.let { add(it) }
@@ -307,6 +326,9 @@ class SceneViewPanel internal constructor(
     /** Choices retain a supplier so placement follows the current orbit target at the moment of creation. */
     internal fun lightChoices(): DefaultActionGroup? = if (canAddLight()) lightActions?.invoke { orbit.target } else null
 
+    /** The Add Asset choices, placing at the orbit target when a choice is made; null while assets cannot be added. */
+    internal fun assetChoices(): DefaultActionGroup? = if (canAddAsset()) assetActions?.invoke { orbit.target } else null
+
     /** W/E switch the gizmo, D drops the selection, Esc cancels a drag, with focus anywhere in the view. */
     private fun bindKeys() {
         fun bind(key: Int, action: () -> Unit) {
@@ -347,6 +369,7 @@ class SceneViewPanel internal constructor(
             cameraCombo.isEnabled = !experimenting
             dropButton.isEnabled = editing && interaction.canDrop
             addLightButton.isEnabled = editing && lightActions != null && canAddLight()
+            addAssetButton.isEnabled = editing && assetActions != null && canAddAsset()
             syncPlayControls()
             cameraCombo.selectedItem = choices.firstOrNull { it.id == interaction.viewCamera } ?: choices.firstOrNull()
         } finally {

@@ -23,7 +23,7 @@ model, and a height field from its terrain's `terrain.data`. Both are read by `P
 
 ## The world
 
-`PhysicsWorld(engine, PhysicsAssets(AssetFiles(projectDir, json)), log, JoltNatives())`:
+`PhysicsWorld(engine, PhysicsAssets(projectDir, json), log, JoltNatives())`:
 
 - **Build:** one body per entity with a collider: dynamic, kinematic or static as its rigid body says, static without
   one. A rigid body without a collider is left out with one warning. Each entity's pose comes from its

@@ -48,6 +48,24 @@ class PlayProtocolTest {
     }
 
     @Test
+    fun wireIdsRemainStableForEveryFrame() {
+        val cases = listOf(
+            1 to PlayFrame.Hello(1, "token", "module"), 2 to PlayFrame.Ready,
+            3 to PlayFrame.Poses(7, 0.5, listOf(EntityPose(1, 2f, 3f, 4f, 0f, 0f, 0f, 1f))),
+            4 to PlayFrame.Lines(listOf(DebugLine(1f, 2f, 3f, 4f, 5f, 6f, -1))),
+            5 to PlayFrame.Telemetry(mapOf("speed" to "10")), 6 to PlayFrame.Error("error"),
+            20 to PlayFrame.Load("scene", "project", 7), 21 to PlayFrame.Play, 22 to PlayFrame.Pause,
+            23 to PlayFrame.Step, 24 to PlayFrame.Stop,
+            25 to PlayFrame.Input(PlayInput(PlayInput.Kind.MOUSE_MOVE, x = 8, y = 9)), 26 to PlayFrame.Bye,
+        )
+        for ((wireId, frame) in cases) {
+            val encoded = bytes(frame)
+            assertEquals(wireId, encoded[4].toInt() and 255)
+            assertEquals(frame, protocol.read(input(encoded)))
+        }
+    }
+
+    @Test
     fun badFramesAreRefused() {
         assertThrows(PlayProtocolException::class.java) { protocol.read(input(byteArrayOf(0, 0, 0, 1, 99))) }
         assertThrows(PlayProtocolException::class.java) { protocol.read(input(byteArrayOf(0x7f, 0, 0, 0, 1))) }

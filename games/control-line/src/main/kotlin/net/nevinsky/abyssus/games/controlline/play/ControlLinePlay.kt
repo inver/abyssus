@@ -15,7 +15,7 @@ import net.nevinsky.abyssus.games.controlline.flight.CONTROL_TENSION
 import net.nevinsky.abyssus.games.controlline.flight.Flight
 import net.nevinsky.abyssus.games.controlline.flight.Ground
 import net.nevinsky.abyssus.games.controlline.flight.LineRig
-import net.nevinsky.abyssus.games.controlline.flow.HandleInput
+import net.nevinsky.abyssus.games.controlline.input.HandleInput
 import net.nevinsky.abyssus.physics.ColliderComponent
 import net.nevinsky.abyssus.physics.ColliderShape
 import net.nevinsky.abyssus.physics.jolt.PhysicsWorld

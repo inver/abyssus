@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.dto
 
-import net.nevinsky.abyssus.filetype.SceneJson
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.vfs.VirtualFile
@@ -15,7 +14,7 @@ import net.nevinsky.abyssus.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.projectView.AbyssusRootNode
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.assets.files.Asset
+import net.nevinsky.abyssus.core.assets.Asset
 import net.nevinsky.abyssus.testAsset
 import java.util.UUID
 
@@ -53,10 +52,10 @@ class ProjectAssetsTest : BasePlatformTestCase() {
 
     fun testFixtureProjectListsNineAssetsInNameOrderWithTypes() {
         val dir = "Untitled"
-        myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
-        myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
-        java.io.File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach {
-            myFixture.copyFileToProject("$dir/assets/${it.name}/meta.json", "$dir/assets/${it.name}/meta.json")
+        myFixture.copyFileToProject("Tree/Untitled.abss", "$dir/Untitled.abss")
+        myFixture.copyFileToProject("Tree/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
+        java.io.File("$testDataPath/Tree/assets").listFiles { f -> f.isDirectory }!!.forEach {
+            myFixture.copyFileToProject("Tree/assets/${it.name}/meta.json", "$dir/assets/${it.name}/meta.json")
         }
         val assets = readAssets(myFixture.findFileInTempDir("$dir/Untitled.abss"))
         assertEquals(9, assets.size)

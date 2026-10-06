@@ -45,12 +45,12 @@
                 extensions="abss"/>
         <postStartupActivity implementation="net.nevinsky.abyssus.projectView.OpenAbyssusViewActivity"/>
         <projectViewPane implementation="net.nevinsky.abyssus.projectView.AbyssusProjectViewPane"/>
-        <fileEditorProvider implementation="net.nevinsky.abyssus.sceneview.SceneFileEditorProvider"/>
+        <fileEditorProvider implementation="net.nevinsky.abyssus.SceneFileEditorProvider"/>
         <toolWindow id="Abyssus Properties"
                     anchor="right"
                     canCloseContents="false"
-                    factoryClass="net.nevinsky.abyssus.properties.AbyssusPropertiesToolWindowFactory"/>
-        <notificationGroup id="Abyssus Component Schemas" displayType="BALLOON" key="schemaNotificationGroup"/>
+                    factoryClass="net.nevinsky.abyssus.AbyssusPropertiesToolWindowFactory"/>
+        <notificationGroup id="Abyssus Component Schemas" displayType="BALLOON" key="notification.group.Abyssus Component Schemas"/>
         <lang.parserDefinition
                 language="GLTF"
                 implementationClass="net.nevinsky.abyssus.language.GltfParserDefinition"/>
@@ -58,26 +58,33 @@
 
     <actions>
         <action id="Abyssus.RenameScene"
-                class="net.nevinsky.abyssus.projectView.RenameSceneAction"
-                text="Rename Scene...">
+                class="net.nevinsky.abyssus.projectView.RenameSceneAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
         <action id="Abyssus.NewTerrain"
-                class="net.nevinsky.abyssus.projectView.NewTerrainAction"
-                text="New Terrain...">
+                class="net.nevinsky.abyssus.projectView.NewTerrainAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
-        <action id="Abyssus.AddLight" class="net.nevinsky.abyssus.projectView.AddLightAction" text="Add Light">
+        <action id="Abyssus.ImportFlightGear"
+                class="net.nevinsky.abyssus.projectView.ImportFlightGearAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.AddLight" class="net.nevinsky.abyssus.projectView.AddLightAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
         </action>
+        <action id="Abyssus.AddAsset" class="net.nevinsky.abyssus.projectView.AddAssetAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddLight"/>
+        </action>
         <action id="Abyssus.AddComponent"
-                class="net.nevinsky.abyssus.projectView.AddComponentAction"
-                text="Add Component...">
+                class="net.nevinsky.abyssus.projectView.AddComponentAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.AddComponentOnEcs"
+                class="net.nevinsky.abyssus.projectView.AddComponentOnEcsAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
         <action id="Abyssus.RemoveComponent"
-                class="net.nevinsky.abyssus.projectView.RemoveComponentAction"
-                text="Remove Component">
+                class="net.nevinsky.abyssus.projectView.RemoveComponentAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
     </actions>

@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.physics.jolt
 
+
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector3
 import com.github.stephengold.joltjni.BoxShapeSettings
@@ -21,7 +22,7 @@ import com.github.stephengold.joltjni.Vec3
 import net.nevinsky.abyssus.physics.ColliderComponent
 import net.nevinsky.abyssus.physics.ColliderShape
 import net.nevinsky.abyssus.physics.PhysicsAssets
-import net.nevinsky.abyssus.runtime.ecs.render.AssetType
+import net.nevinsky.abyssus.core.assets.MetaType
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -64,7 +65,7 @@ internal class ShapeFactory(private val assets: PhysicsAssets, private val own: 
                 CapsuleShapeSettings(collider.halfHeight * largest, collider.radius * largest)
             }
             ColliderShape.CONVEX_HULL -> {
-                val name = assets.assetName(entity, AssetType.MODEL) ?: return Built.Refused("has a convex hull collider but no model")
+                val name = assets.assetName(entity, MetaType.MODEL) ?: return Built.Refused("has a convex hull collider but no model")
                 val points = try {
                     assets.modelPoints(name)
                 } catch (e: Exception) {
@@ -75,7 +76,7 @@ internal class ShapeFactory(private val assets: PhysicsAssets, private val own: 
                 ConvexHullShapeSettings(scaled.map { Vec3(it.x, it.y, it.z) })
             }
             ColliderShape.HEIGHT_FIELD -> {
-                val name = assets.assetName(entity, AssetType.TERRAIN) ?: return Built.Refused("has a height field collider but no terrain")
+                val name = assets.assetName(entity, MetaType.TERRAIN) ?: return Built.Refused("has a height field collider but no terrain")
                 val terrain = try {
                     assets.terrain(name)
                 } catch (e: Exception) {

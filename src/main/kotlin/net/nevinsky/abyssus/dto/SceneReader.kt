@@ -4,18 +4,16 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.runtime.SceneLoading
-import net.nevinsky.abyssus.runtime.scene.SceneDto
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.scene.Scene
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 
 @Service(Service.Level.APP)
-class SceneReader(private val loading: SceneLoading) : ConfigFileReader<SceneDto> {
-    /** What the platform creates: the one place this service looks up the core. */
-    constructor() : this(service<AbyssusCore>().scenes)
+class SceneReader(private val supplied: DocumentParsing? = null) : ConfigFileReader<Scene> {
+    private fun loading(): DocumentParsing = supplied ?: service<AbyssusCore>().documents.parsing
 
-    fun parse(text: String): SceneDto = loading.parse(text)
+    fun parse(text: String): Scene = loading().parse(text)
 
-    override fun read(file: VirtualFile): AssetReadResult<SceneDto> = runCatchingKeepingCancellation {
-        loading.parse(file.path) { textOf(file) }
+    override fun read(file: VirtualFile): AssetReadResult<Scene> = runCatchingKeepingCancellation {
+        loading().parse(file.path) { textOf(file) }
     }.let { AssetReadResult.of(it) }
 }

@@ -18,6 +18,12 @@ const val PLAY_PROTOCOL = 1
 /** The largest frame accepted, so a corrupt length cannot exhaust memory. */
 private const val MAX_FRAME = 64 * 1024 * 1024
 
+/** Stable wire discriminants, shared by both protocol directions. */
+internal enum class FrameType(val id: Int) {
+    HELLO(1), READY(2), POSES(3), LINES(4), TELEMETRY(5), ERROR(6),
+    LOAD(20), PLAY(21), PAUSE(22), STEP(23), STOP(24), INPUT(25), BYE(26),
+}
+
 /**
  * A frame of the play protocol between Abyssus Physics (the IDE) and a play host. Commands and events are UTF-8 JSON;
  * [Poses] and [Lines] are binary. Every frame on the wire is `int length`, `byte type`, then `length - 1` payload bytes,
@@ -80,9 +86,9 @@ class PlayProtocol(private val json: ObjectMapper = ObjectMapper()) {
         val payload = ByteArrayOutputStream()
         val data = DataOutputStream(payload)
         val type = when (frame) {
-            is PlayFrame.Hello -> 1.also { data.write(json(frame.protocol, frame.token, frame.module)) }
-            PlayFrame.Ready -> 2
-            is PlayFrame.Poses -> 3.also {
+            is PlayFrame.Hello -> FrameType.HELLO.also { data.write(json(frame.protocol, frame.token, frame.module)) }
+            PlayFrame.Ready -> FrameType.READY
+            is PlayFrame.Poses -> FrameType.POSES.also {
                 data.writeLong(frame.frame)
                 data.writeDouble(frame.simTime)
                 data.writeInt(frame.poses.size)
@@ -91,35 +97,35 @@ class PlayProtocol(private val json: ObjectMapper = ObjectMapper()) {
                     for (f in floatArrayOf(p.x, p.y, p.z, p.qx, p.qy, p.qz, p.qw)) data.writeFloat(f)
                 }
             }
-            is PlayFrame.Lines -> 4.also {
+            is PlayFrame.Lines -> FrameType.LINES.also {
                 data.writeInt(frame.lines.size)
                 for (l in frame.lines) {
                     for (f in floatArrayOf(l.x1, l.y1, l.z1, l.x2, l.y2, l.z2)) data.writeFloat(f)
                     data.writeInt(l.color)
                 }
             }
-            is PlayFrame.Telemetry -> 5.also {
+            is PlayFrame.Telemetry -> FrameType.TELEMETRY.also {
                 data.write(json.writeValueAsBytes(json.createObjectNode().also { o -> frame.values.forEach { (k, v) -> o.put(k, v) } }))
             }
-            is PlayFrame.Error -> 6.also { data.write(json.writeValueAsBytes(json.createObjectNode().put("message", frame.message))) }
-            is PlayFrame.Load -> 20.also {
+            is PlayFrame.Error -> FrameType.ERROR.also { data.write(json.writeValueAsBytes(json.createObjectNode().put("message", frame.message))) }
+            is PlayFrame.Load -> FrameType.LOAD.also {
                 data.write(json.writeValueAsBytes(json.createObjectNode()
                     .put("sceneText", frame.sceneText).put("projectDir", frame.projectDir).put("selection", frame.selection)))
             }
-            PlayFrame.Play -> 21
-            PlayFrame.Pause -> 22
-            PlayFrame.Step -> 23
-            PlayFrame.Stop -> 24
-            is PlayFrame.Input -> 25.also {
+            PlayFrame.Play -> FrameType.PLAY
+            PlayFrame.Pause -> FrameType.PAUSE
+            PlayFrame.Step -> FrameType.STEP
+            PlayFrame.Stop -> FrameType.STOP
+            is PlayFrame.Input -> FrameType.INPUT.also {
                 val e = frame.event
                 data.write(json.writeValueAsBytes(json.createObjectNode().put("kind", e.kind.name).put("key", e.key)
                     .put("button", e.button).put("x", e.x).put("y", e.y)))
             }
-            PlayFrame.Bye -> 26
+            PlayFrame.Bye -> FrameType.BYE
         }
         val bytes = payload.toByteArray()
         out.writeInt(bytes.size + 1)
-        out.writeByte(type)
+        out.writeByte(type.id)
         out.write(bytes)
         out.flush()
     }
@@ -142,10 +148,11 @@ class PlayProtocol(private val json: ObjectMapper = ObjectMapper()) {
 
     private fun decode(type: Int, payload: ByteArray): PlayFrame {
         val data = DataInputStream(payload.inputStream())
-        return when (type) {
-            1 -> obj(payload).let { PlayFrame.Hello(it.get("protocol").asInt(), it.get("token").asText(), it.get("module").asText()) }
-            2 -> PlayFrame.Ready
-            3 -> {
+        val frameType = FrameType.entries.firstOrNull { it.id == type } ?: throw PlayProtocolException("unknown frame type $type")
+        return when (frameType) {
+            FrameType.HELLO -> obj(payload).let { PlayFrame.Hello(it.get("protocol").asInt(), it.get("token").asText(), it.get("module").asText()) }
+            FrameType.READY -> PlayFrame.Ready
+            FrameType.POSES -> {
                 val frame = data.readLong()
                 val time = data.readDouble()
                 val count = data.readInt()
@@ -155,26 +162,25 @@ class PlayProtocol(private val json: ObjectMapper = ObjectMapper()) {
                         data.readFloat(), data.readFloat(), data.readFloat(), data.readFloat())
                 })
             }
-            4 -> {
+            FrameType.LINES -> {
                 val count = data.readInt()
                 if (count < 0 || count.toLong() * 28 > payload.size) throw PlayProtocolException("bad line count $count")
                 PlayFrame.Lines(List(count) {
                     DebugLine(data.readFloat(), data.readFloat(), data.readFloat(), data.readFloat(), data.readFloat(), data.readFloat(), data.readInt())
                 })
             }
-            5 -> PlayFrame.Telemetry(obj(payload).properties().associate { (k, v) -> k to v.asText() })
-            6 -> PlayFrame.Error(obj(payload).get("message").asText())
-            20 -> obj(payload).let { PlayFrame.Load(it.get("sceneText").asText(), it.get("projectDir").asText(), it.get("selection").asInt()) }
-            21 -> PlayFrame.Play
-            22 -> PlayFrame.Pause
-            23 -> PlayFrame.Step
-            24 -> PlayFrame.Stop
-            25 -> obj(payload).let {
+            FrameType.TELEMETRY -> PlayFrame.Telemetry(obj(payload).properties().associate { (k, v) -> k to v.asText() })
+            FrameType.ERROR -> PlayFrame.Error(obj(payload).get("message").asText())
+            FrameType.LOAD -> obj(payload).let { PlayFrame.Load(it.get("sceneText").asText(), it.get("projectDir").asText(), it.get("selection").asInt()) }
+            FrameType.PLAY -> PlayFrame.Play
+            FrameType.PAUSE -> PlayFrame.Pause
+            FrameType.STEP -> PlayFrame.Step
+            FrameType.STOP -> PlayFrame.Stop
+            FrameType.INPUT -> obj(payload).let {
                 PlayFrame.Input(PlayInput(PlayInput.Kind.valueOf(it.get("kind").asText()), it.get("key")?.asText().orEmpty(),
                     it.get("button")?.asInt() ?: 0, it.get("x")?.asInt() ?: 0, it.get("y")?.asInt() ?: 0))
             }
-            26 -> PlayFrame.Bye
-            else -> throw PlayProtocolException("unknown frame type $type")
+            FrameType.BYE -> PlayFrame.Bye
         }
     }
 

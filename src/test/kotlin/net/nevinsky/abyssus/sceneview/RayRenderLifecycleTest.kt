@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayModePhase
+
 import net.nevinsky.abyssus.raytracing.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -89,6 +91,34 @@ class RayRenderLifecycleTest {
             onEdt { view.retry(); view.offer(input(3), "recovered") }
             RayFakeDevice.await(what = "recovered frame") { view.latest()?.metadata == "recovered" }
         } finally { view.close(); service.close() }
+    }
+
+    @Test fun aBackendWithoutSceneOpticsFallsBackInsteadOfIgnoringSavedDepths() {
+        val device = RayFakeDevice()
+        val service = RayFakeDevice.service("metal" to device)
+        val view = service.newView<String>("no-optics")
+        try {
+            val base = input(1)
+            val deep = RayRenderInput((base.request as RaySceneRequest).let {
+                RaySceneRequest(it.key, it.width, it.height, it.camera, it.scene, maxReflectionBounces = 2)
+            }, base.display, base.contentRevision)
+            onEdt { view.setRequested(true); view.offer(deep, "deep") }
+            RayFakeDevice.await(what = "failure") { view.mode.phase == RayModePhase.Failed }
+            assertEquals("nothing reaches a backend that cannot honour the depths", 0, device.submitted.get())
+            assertTrue(view.mode.failure.orEmpty(), view.mode.failure.orEmpty().contains("scene optics"))
+            assertNull(view.latest())
+        } finally { view.close(); service.close() }
+        device.sceneOptics = true
+        val capable = RayFakeDevice.service("metal" to device)
+        val second = capable.newView<String>("optics")
+        try {
+            val base = input(1)
+            val deep = RayRenderInput((base.request as RaySceneRequest).let {
+                RaySceneRequest(it.key, it.width, it.height, it.camera, it.scene, maxReflectionBounces = 2)
+            }, base.display, base.contentRevision)
+            onEdt { second.setRequested(true); second.offer(deep, "deep") }
+            RayFakeDevice.await(what = "frame") { second.latest()?.metadata == "deep" }
+        } finally { second.close(); capable.close() }
     }
 
     @Test fun aPreparationFailureLeavesTheViewFailedWithNoLeakedSession() {

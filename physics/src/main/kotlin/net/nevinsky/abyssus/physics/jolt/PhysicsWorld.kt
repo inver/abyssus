@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.physics.jolt
 
+
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.EntityListener
 import com.badlogic.gdx.math.Matrix4
@@ -46,15 +47,13 @@ import net.nevinsky.abyssus.physics.PhysicsAssets
 import net.nevinsky.abyssus.physics.PhysicsBody
 import net.nevinsky.abyssus.physics.PhysicsConstraint
 import net.nevinsky.abyssus.physics.RigidBodyComponent
-import net.nevinsky.abyssus.runtime.ecs.NO_ENTITY
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.runtime.ecs.component.ParentComponent
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEngine
 import org.slf4j.Logger
-import kotlin.math.floor
 import kotlin.math.max
-import kotlin.math.min
 
 private const val LAYER_STATIC = 0
 private const val LAYER_MOVING = 1
@@ -89,7 +88,7 @@ class PhysicsWorld(
     private val constraintList = ArrayList<ConstraintRecord>()
     private val stepContacts = LinkedHashMap<Pair<Int, Int>, Contact>()
     private val ropeTension = RopeTension(this)
-    private var accumulated = 0.0
+    private val clock = FixedStepClock()
     private var closed = false
 
     private val removal = object : EntityListener {
@@ -140,12 +139,7 @@ class PhysicsWorld(
      * dropped. Returns the number of steps run.
      */
     fun advance(seconds: Float): Int = open {
-        require(seconds.isFinite() && seconds >= 0f) { "cannot advance by $seconds s" }
-        accumulated += seconds
-        val steps = min(floor(accumulated / PHYSICS_STEP + 1e-6).toInt(), MAX_STEPS_PER_ADVANCE)
-        accumulated = max(0.0, accumulated - steps * PHYSICS_STEP.toDouble())
-        // whole steps beyond the limit are dropped, only the fraction of a step is carried
-        if (accumulated >= PHYSICS_STEP) accumulated %= PHYSICS_STEP.toDouble()
+        val steps = clock.advance(seconds)
         runSteps(steps)
         steps
     }

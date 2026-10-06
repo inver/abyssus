@@ -5,18 +5,18 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.loading.SceneAssets
 import java.io.File
 
 /**
- * The entities of the scene that show one kind of loaded asset ([P] prepared, [A] built, [E] the entity): it loads the
+ * The entities of the scene that show one kind of loaded asset ([A] built, [E] the entity): it loads the
  * assets the placements name and keeps one entity per placement whose asset is ready, made by [place]. Models and
  * terrains differ only in their entity, so they share this. GL thread only.
  */
-open class PlacedAssets<P : Any, A : Disposable, E : PlacedEntity<A>>(
-    private val assets: SceneAssets<P, A>,
+open class PlacedAssets<A : Disposable, E : PlacedEntity<A>>(
+    private val assets: AssetView<A>,
     place: (AssetPlacement, A, E?) -> E,
 ) : Disposable {
     private val entities = PlacedEntities(place)
@@ -32,13 +32,7 @@ open class PlacedAssets<P : Any, A : Disposable, E : PlacedEntity<A>>(
         entities.update(placements, assets::get)
     }
 
-    /** Loads [names] again from [files], the project's refreshed snapshot; the old assets stay drawn until each replacement is built. */
-    fun revise(files: AssetFiles, names: Set<String>) {
-        assets.replaceFiles(files)
-        assets.invalidate(names)
-    }
-
-    /** Forgets everything without GL calls; see [net.nevinsky.abyssus.assets.loading.AssetCache.abandon]. */
+    /** Forgets everything without GL calls; see [ViewAssets.abandon]. */
     fun abandon() {
         entities.clear()
         assets.abandon()

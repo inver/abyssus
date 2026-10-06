@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.editor.content.Vec3
+
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.actionSystem.ActionManager
@@ -14,7 +16,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import java.io.File
 import net.nevinsky.abyssus.testMetaFiles
 
@@ -56,7 +58,8 @@ class ComponentActionsTest : BasePlatformTestCase() {
     }
 
     private fun scene() = componentTargetOf(entity("0"))!!.file
-    private fun components(id: String) = SceneJson.parse(FileDocumentManager.getInstance().getDocument(scene())!!.text)["ecs"]["entities"][id]["components"]
+    private fun components(id: String) = net.nevinsky.abyssus.SceneEcsPaths().components(
+        SceneJson.parse(FileDocumentManager.getInstance().getDocument(scene())!!.text), id)!!
 
     private class LightOn(val node: Any?) : AddLightAction() {
         override fun selected(e: AnActionEvent) = node
@@ -71,7 +74,7 @@ class ComponentActionsTest : BasePlatformTestCase() {
         assertFalse(visible(LightOn(abss())))
         assertTrue(ActionManager.getInstance().getAction("Abyssus.AddLight") is AddLightAction)
         var selected: String? = null
-        val choices = AddLightGroup(project, scene(), { net.nevinsky.abyssus.sceneview.Vec3(0f, 0f, 0f) }, { selected = it }).getChildren(null)
+        val choices = AddLightGroup(project, scene(), { net.nevinsky.abyssus.editor.content.Vec3(0f, 0f, 0f) }, { selected = it }).getChildren(null)
         assertEquals(listOf("Directional", "Sun", "Spot"), choices.map { it.templatePresentation.text })
         choices[2].actionPerformed(TestActionEvent.createTestEvent(choices[2]))
         assertEquals("7", selected)

@@ -57,6 +57,7 @@ class VulkanNativePackagingTest {
                 assertNotNull("Packaged shader must render a frame", frame)
                 assertTrue(frame!!.depthValues()[0] < 1f)
             }
+            backend.openSession("optics", RayLimits()).use(::assertPackagedSceneOptics)
         }
     }
 }

@@ -1,5 +1,7 @@
 # Spec Delta
 
+The fixed single-reflection depth and explicit dielectric-refraction exclusion below describe the original baseline. They are superseded by `add-scene-raytracing-settings`, which adds saved transport limits and per-instance transmission/IOR on both Metal and Vulkan. Alpha-blended reflection exclusions and unrelated platform, lifecycle and transparency requirements remain in force. Existing task completion evidence is unchanged.
+
 ## Purpose
 
 Lets users inspect ray-traced shadows and scene reflections during interactive scene editing on supported GPUs, with an explicit switch and reliable fallback.
@@ -86,7 +88,7 @@ Opaque and alpha-tested models and terrain SHALL cast and receive ray-traced sha
 
 ### Requirement: Scene geometry appears in reflections
 
-PBR model surfaces SHALL reflect opaque and alpha-tested scene geometry, including terrain, according to their existing metallic and roughness values. Reflections SHALL include geometry outside the camera image. Rays that miss geometry SHALL use the existing environment. Reflection recursion SHALL be bounded; transparent refraction and reflected alpha-blended geometry are outside this version.
+PBR model surfaces SHALL reflect opaque and alpha-tested scene geometry, including terrain, according to their existing metallic and roughness values. Reflections SHALL include geometry outside the camera image. Rays that miss geometry SHALL use the existing environment. Reflection recursion SHALL be bounded by the native scene limits specified in `scene-raytracing-settings`; explicit dielectric transmission follows `scene-raytracing-materials`. Reflected alpha-blended geometry remains excluded.
 
 #### Scenario: Offscreen reflection
 - **WHEN** a model outside the camera image lies in a smooth PBR surface's reflected direction

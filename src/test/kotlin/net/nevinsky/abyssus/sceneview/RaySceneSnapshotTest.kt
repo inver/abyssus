@@ -4,20 +4,21 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.GL20
+import net.nevinsky.abyssus.editor.document.SceneJson
+
+import net.nevinsky.abyssus.editor.ray.SceneRaySettingsCodec
+import net.nevinsky.abyssus.editor.ray.RaySceneFallback
+
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Rgba
+import net.nevinsky.abyssus.editor.content.Quat
+import net.nevinsky.abyssus.editor.content.PlacementTransform
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+import net.nevinsky.abyssus.editor.content.LightKind
+import net.nevinsky.abyssus.editor.content.LightPlacement
+
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import com.badlogic.gdx.graphics.VertexAttribute
-import com.badlogic.gdx.graphics.g3d.model.data.ModelMaterial
-import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
-import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
-import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.assets.model.RayModelSnapshotReader
-import net.nevinsky.abyssus.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.core.model.ModelData
-import net.nevinsky.abyssus.core.model.ModelMesh
-import net.nevinsky.abyssus.core.model.ModelMeshPart
+import net.nevinsky.abyssus.core.assets.model.RayModelSnapshot
 import net.nevinsky.abyssus.raytracing.RayColor
 import net.nevinsky.abyssus.raytracing.RayEnvironment
 import net.nevinsky.abyssus.sceneview.gizmo.DragResult
@@ -144,6 +145,41 @@ class RaySceneSnapshotTest {
         assertEquals(listOf("first:model", "first:model"), closed)
         owner.close(); owner.close()
         assertEquals(listOf("first:model", "first:model", "next:model"), closed)
+    }
+
+    @Test fun savedSettingsAndOpticsCopyMaterialsWithoutDuplicatingGeometry() {
+        val asset = rayTestModel(pbr = true)
+        val sources = RaySceneAssetState.Ready(mapOf("model" to asset), emptyMap())
+        val p = params(SceneContent(models = listOf(placement, placement.copy(entityId = "second")))).copy(
+            ecs = net.nevinsky.abyssus.editor.document.SceneJson.parse("""{"entities":{"entity":{"components":{"RenderComponent":{"rayTracingMaterials":{"red":{"transmission":1,"ior":1.4}}}}}}}"""),
+            rayTracing = SceneRaySettingsCodec().read(net.nevinsky.abyssus.editor.document.SceneJson.parse("""{"rayTracing":{"maxReflectionBounces":2}}""")))
+        val converter = RaySceneSnapshots()
+        val before = (converter.capture(p.copy(ecs = null), camera, LightSet.NONE, sources) as RaySceneConversion.Ready).frame
+        val after = (converter.capture(p, camera, LightSet.NONE, sources) as RaySceneConversion.Ready).frame
+        assertEquals(2, after.scene.meshes.size)
+        assertTrue(before.scene.meshes[0] === after.scene.meshes[0])
+        val edited = after.scene.instances.first { it.id.startsWith("entity/") }
+        val shared = after.scene.instances.first { it.id.startsWith("second/") }
+        assertEquals(1f, after.scene.materials[edited.material].transmission, 0f)
+        assertEquals(1.4f, after.scene.materials[edited.material].ior, 0f)
+        assertEquals(0f, after.scene.materials[shared.material].transmission, 0f)
+        assertEquals(setOf(RaySceneChange.MATERIAL), RaySceneDiff.between(before, after).changes)
+        assertEquals(2, after.settings.maxReflectionBounces)
+    }
+
+    @Test fun malformedSettingsPreventRayConversionButKeepOrdinarySceneParsing() {
+        val scene = net.nevinsky.abyssus.parseScene("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxRefractionBounces":null}}""")
+        val p = SceneRenderParams.from(scene, CameraParams.DEFAULT)
+        assertNull(p.rayTracing.settings)
+        assertTrue(RaySceneSnapshots().capture(p,camera,LightSet.NONE,assets) is RaySceneConversion.Fallback)
+    }
+
+    @Test fun unresolvedOverridesRemainStoredAndNeverRetargetAnotherMaterial() {
+        val ecs=net.nevinsky.abyssus.editor.document.SceneJson.parse("""{"entities":{"entity":{"components":{"RenderComponent":{"rayTracingMaterials":{"lost":{"transmission":1}}}}}}}""")
+        val p=params().copy(ecs=ecs)
+        val before=net.nevinsky.abyssus.editor.document.SceneJson.compact(ecs)
+        assertTrue(RaySceneSnapshots().capture(p,camera,LightSet.NONE,assets) is RaySceneConversion.Fallback)
+        assertEquals(before,net.nevinsky.abyssus.editor.document.SceneJson.compact(ecs))
     }
 
     private fun model(count: Int = 3): RayModelSnapshot = rayTestModel(count)

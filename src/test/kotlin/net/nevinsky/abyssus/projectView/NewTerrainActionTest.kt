@@ -19,12 +19,11 @@ import net.nevinsky.abyssus.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.assetfiles.AssetFileStore
 import net.nevinsky.abyssus.assetfiles.LocalAssetFileStore
-import net.nevinsky.abyssus.assets.files.AssetFiles
-import net.nevinsky.abyssus.assets.terrain.TerrainDataReader
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationDraft
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationSettings
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainPreview
-import net.nevinsky.abyssus.assets.terrain.generation.SourceSnapshot
+import net.nevinsky.abyssus.terrainData
+import net.nevinsky.abyssus.terrain.generation.TerrainGenerationDraft
+import net.nevinsky.abyssus.terrain.generation.TerrainGenerationSettings
+import net.nevinsky.abyssus.terrain.generation.TerrainPreview
+import net.nevinsky.abyssus.terrain.generation.SourceSnapshot
 import net.nevinsky.abyssus.dto.ProjectReader
 import net.nevinsky.abyssus.terrain.FolderNameError
 import net.nevinsky.abyssus.terrain.GeometryError
@@ -47,7 +46,7 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         File(projectDir, "scenes").mkdirs()
         File(projectDir, "scenes/Main.scene").writeText(sceneText)
         File(projectDir, "assets/existing").mkdirs()
-        File(projectDir, "assets/existing/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"fixed-uuid","type":"MODEL","additional":{}}""")
+        File(projectDir, "assets/existing/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"${java.util.UUID.nameUUIDFromBytes("fixed-uuid".toByteArray())}","type":"MODEL","additional":{}}""")
         abss = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(projectDir, "P.abss"))!!
         abss.parent.refresh(false, true)
     }
@@ -200,10 +199,9 @@ class NewTerrainActionTest : BasePlatformTestCase() {
     fun testTheNewTerrainLoadsAndWithoutItsRecipeToo() {
         create()
         File(projectDir, "assets/hills/abyssus-terrain.recipe.json").delete()
-        val files = AssetFiles(projectDir, service<AbyssusCore>().json).terrain("hills")!!
-        val data = TerrainDataReader().read(files.data, files.size, files.uv)
+        val data = terrainData(projectDir, "hills")
         assertEquals(17, data.resolution)
-        assertEquals(400, files.size)
+        assertEquals(400, data.size)
     }
 
     fun testTheNewAssetIsListedAsUnusedAndNothingIsPlaced() {
@@ -212,7 +210,7 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         val project = project.service<ProjectReader>().read(abss).obj!!
         val hills = project.assets.single { it.name == "hills" }
         assertTrue("no scene references it", hills.unused)
-        assertEquals("TERRAIN", hills.type)
+        assertEquals(net.nevinsky.abyssus.core.assets.MetaType.TERRAIN, hills.type)
         assertEquals(2, project.assets.size)
         assertFalse(File(projectDir, "scenes/Main.scene").readText().contains("hills"))
     }
@@ -242,7 +240,7 @@ class NewTerrainActionTest : BasePlatformTestCase() {
     fun testACollidingFolderIsRejectedWithoutChangingAnything() {
         assertNull("staging re-checks the name", service<AbyssusCore>().newTerrains.stage(projectDir, "existing", preview()))
         assertNull(service<AbyssusCore>().newTerrains.stage(projectDir, "../escape", preview()))
-        assertEquals("fixed-uuid", com.fasterxml.jackson.databind.ObjectMapper().readTree(File(projectDir, "assets/existing/meta.json")).get("uuid").asText())
+        assertEquals(java.util.UUID.nameUUIDFromBytes("fixed-uuid".toByteArray()).toString(), com.fasterxml.jackson.databind.ObjectMapper().readTree(File(projectDir, "assets/existing/meta.json")).get("uuid").asText())
         File(projectDir, "assets/hills").mkdirs()
         File(projectDir, "assets/hills/mine.txt").writeText("keep")
         val staged = NewTerrainFactoryFor("hills-staged")
@@ -276,11 +274,13 @@ class NewTerrainActionTest : BasePlatformTestCase() {
 
     fun testFreshUuidsAreUniqueInTheProject() {
         val core = service<AbyssusCore>()
-        val sequence = ArrayDeque(listOf("fixed-uuid", "fixed-uuid", "brand-new"))
+        val fixed = java.util.UUID.nameUUIDFromBytes("fixed-uuid".toByteArray())
+        val brandNew = java.util.UUID.nameUUIDFromBytes("brand-new".toByteArray())
+        val sequence = ArrayDeque(listOf(fixed, fixed, brandNew))
         val factory = NewTerrainFactory(core.json, core.terrainWriter, core.heightEncoder, core.terrainRecipes, randomUuid = { sequence.removeFirst() })
         val staged = factory.stage(projectDir, "hills", preview())!!
-        assertEquals("brand-new", staged.uuid)
-        assertTrue(String(staged.transaction.changes.first { it.path.endsWith("meta.json") }.after.let { (it as net.nevinsky.abyssus.assetfiles.FileSnapshot.Bytes).toByteArray() }).contains("\"uuid\":\"brand-new\""))
+        assertEquals(brandNew.toString(), staged.uuid)
+        assertTrue(String(staged.transaction.changes.first { it.path.endsWith("meta.json") }.after.let { (it as net.nevinsky.abyssus.assetfiles.FileSnapshot.Bytes).toByteArray() }).contains("\"uuid\":\"$brandNew\""))
         // the real generator never repeats within a run
         val real = (1..50).map { core.newTerrains.stage(projectDir, "t$it", preview())!!.uuid }
         assertEquals(50, real.toSet().size)

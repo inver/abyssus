@@ -149,6 +149,31 @@ class RayRenderSchedulerTest {
         assertEquals(1L, finer.input.request.key.cameraRevision)
     }
 
+    @Test fun targetsOne257And4096AccumulateAcrossEightSampleBatchesWithClampedLastBatch() {
+        for(target in listOf(1,257,4096)) {
+            val driver=Driver(RayQualityPolicy(RayQualityLimits(minimumScale=1.0)))
+            val saved=input(1).copy(settings=RayRenderSettings(target,67108864),settingsRevision=1)
+            repeat(target+10) {
+                driver.scheduler.offer(saved);driver.scheduler.pump();driver.finish();driver.scheduler.pump()
+            }
+            assertEquals(target,driver.submitted.sumOf { it.accumulation.sampleCount })
+            assertTrue(driver.submitted.all { it.accumulation.sampleCount in 1..8 })
+            assertEquals(target,driver.submitted.last().accumulation.let { it.sampleOffset+it.sampleCount })
+        }
+    }
+    @Test fun settingsRevisionImmediatelyRejectsOldCompletedAndInflightFrames() {
+        val driver=Driver()
+        val old=input(1).copy(settings=RayRenderSettings(),settingsRevision=1)
+        driver.scheduler.offer(old);driver.scheduler.pump()
+        val changed=old.copy(settings=RayRenderSettings(512,4194304),settingsRevision=2)
+        driver.scheduler.offer(changed);driver.finish();driver.scheduler.pump()
+        assertNull(driver.scheduler.latest())
+        assertEquals(0,driver.submitted.last().accumulation.sampleOffset)
+        driver.finish();driver.scheduler.pump();assertNotNull(driver.scheduler.latest())
+        driver.scheduler.offer(changed.copy(settingsRevision=3))
+        assertNull(driver.scheduler.latest())
+    }
+
     private class Driver(policy: RayQualityPolicy = RayQualityPolicy()) {
         var now = 0L
         val submitted = mutableListOf<RayRenderBatch>()

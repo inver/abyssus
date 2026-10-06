@@ -5,16 +5,22 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Rgba
+import net.nevinsky.abyssus.editor.content.Quat
+import net.nevinsky.abyssus.editor.content.PlacementTransform
+import net.nevinsky.abyssus.editor.content.LightKind
+
 import net.nevinsky.abyssus.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import net.nevinsky.abyssus.runtime.ecs.component.LIGHT_RANGE
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_NEAR
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FAR
-import net.nevinsky.abyssus.runtime.ecs.component.CAMERA_FOV
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_RANGE
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_NEAR
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FAR
+import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
 
 class SceneContentTest {
     private fun content(json: String) = SceneContent.of(parseScene(json))
@@ -23,7 +29,7 @@ class SceneContentTest {
 
     @Test
     fun mainSceneHasThreeModelsAndOneTerrain() {
-        val text = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
+        val text = File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()
         val c = content(text)
         assertEquals(
             listOf("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "model_fc33e1f1-015b-4524-9b10-aa417acd273c", "model_900f6f61-6384-434a-be81-56ce303fbb56"),
@@ -151,7 +157,7 @@ class SceneContentTest {
 
     @Test
     fun mainSceneHasTheFixtureCamera() {
-        val c = content(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
+        val c = content(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
         val cam = c.cameras.single()
         assertEquals("4", cam.entityId)
         assertEquals("Camera 4", cam.name)

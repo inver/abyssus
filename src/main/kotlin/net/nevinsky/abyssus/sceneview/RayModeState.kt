@@ -4,21 +4,11 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayModePhase
+import net.nevinsky.abyssus.editor.ray.RayModeSnapshot
+import net.nevinsky.abyssus.editor.ray.RayBackendSelection
+
 import net.nevinsky.abyssus.raytracing.RayBackendInfo
-
-enum class RayModePhase { Off, Checking, Preparing, Active, Unavailable, Failed }
-
-data class RayModeSnapshot(
-    val phase: RayModePhase = RayModePhase.Off,
-    val revision: Long = 0,
-    val backendInfo: RayBackendInfo? = null,
-    val failure: String? = null,
-    val unavailable: RayBackendSelection.Unavailable? = null,
-) {
-    val requested: Boolean get() = phase == RayModePhase.Checking || phase == RayModePhase.Preparing || phase == RayModePhase.Active
-    val active: Boolean get() = phase == RayModePhase.Active
-    val toggleEnabled: Boolean get() = phase != RayModePhase.Unavailable
-}
 
 /**
  * Pure per-view transitions. Revision tokens reject late preparation/completion after off, retry, hide or close.

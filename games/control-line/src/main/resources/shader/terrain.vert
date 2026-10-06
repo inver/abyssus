@@ -1,4 +1,5 @@
-// The game's terrain: the core TerrainMesh layout (position, normal, texcoord0), lit by one directional light, with fog.
+// The game's terrain: the core TerrainMesh layout (position, normal, texcoord0), lit by one directional light that casts
+// shadows (FieldShadows), with fog.
 attribute vec3 a_position;
 attribute vec3 a_normal;
 attribute vec2 a_texCoord0;
@@ -14,9 +15,11 @@ varying vec2 v_uv;
 varying vec2 v_splatUv;
 varying vec3 v_normal;
 varying float v_fog;
+varying vec3 v_worldPos;
 
 void main() {
     vec4 world = u_worldTrans * vec4(a_position, 1.0);
+    v_worldPos = world.xyz;
     v_uv = a_texCoord0;
     v_splatUv = a_position.xz / u_terrainSize;
     v_normal = normalize((u_worldTrans * vec4(a_normal, 0.0)).xyz);

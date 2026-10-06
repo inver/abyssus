@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.ecs.scene
 
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.runtime.ecs.EcsWriter
 import net.nevinsky.abyssus.runtime.ecs.scene.*
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
@@ -15,22 +17,22 @@ import net.nevinsky.abyssus.runtime.ecs.component.LightData
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
-import net.nevinsky.abyssus.runtime.scene.ColorDto
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.core.scene.Color
+import net.nevinsky.abyssus.editor.content.Vec3
 
 /** Sun is a directional light with different initial values, never a separate file type. */
 enum class LightPreset(
     val labelKey: String,
     val nameKey: String,
     val type: TypeComponent.Type,
-    val color: ColorDto,
+    val color: Color,
     val intensity: Float,
     val rotationDegrees: Float,
     val height: Float,
 ) {
-    DIRECTIONAL("lightDirectional", "lightDirectionalName", TypeComponent.Type.LIGHT_DIRECTIONAL, ColorDto(1f, 1f, 1f, 1f), 1f, -45f, 0f),
-    SUN("lightSun", "lightSunName", TypeComponent.Type.LIGHT_DIRECTIONAL, ColorDto(1f, 0.96f, 0.84f, 1f), 1.2f, -30f, 0f),
-    SPOT("lightSpot", "lightSpotName", TypeComponent.Type.LIGHT_SPOT, ColorDto(1f, 1f, 1f, 1f), 1f, -90f, 5f),
+    DIRECTIONAL("lightDirectional", "lightDirectionalName", TypeComponent.Type.LIGHT_DIRECTIONAL, Color(1f, 1f, 1f, 1f), 1f, -45f, 0f),
+    SUN("lightSun", "lightSunName", TypeComponent.Type.LIGHT_DIRECTIONAL, Color(1f, 0.96f, 0.84f, 1f), 1.2f, -30f, 0f),
+    SPOT("lightSpot", "lightSpotName", TypeComponent.Type.LIGHT_SPOT, Color(1f, 1f, 1f, 1f), 1f, -90f, 5f),
 }
 
 data class AddedLight(val result: EditResult, val entityId: String? = null)
@@ -38,10 +40,11 @@ data class AddedLight(val result: EditResult, val entityId: String? = null)
 /** Edits only the JSON tree; callers write it through editSceneJson as a single undoable command. */
 object LightEntities {
     private val nodes = JsonNodeFactory.instance
+    private val writer = EcsWriter(JsonProcessor().mapper)
     private val componentNames = listOf("NameComponent", "TypeComponent", "PositionComponent", "LightComponent")
 
     fun canAdd(root: JsonNode): Boolean {
-        if (root !is ObjectNode || net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().validate(root, net.nevinsky.abyssus.assets.format.DocumentKind.SCENE) != null) return false
+        if (root !is ObjectNode || net.nevinsky.abyssus.format.AbyssusDocumentFormat().validate(root, net.nevinsky.abyssus.format.DocumentKind.SCENE) != null) return false
         val ecs = root.get("ecs") ?: return true
         if (ecs !is ObjectNode) return false
         return listOf("entities", "archetypes").all { !ecs.has(it) || ecs.get(it) is ObjectNode }
@@ -51,8 +54,22 @@ object LightEntities {
         fun rejected() = AddedLight(EditResult.Rejected(AbyssusBundle.message("componentSceneUnreadable")))
         if (!canAdd(root) || listOf(position.x, position.y + preset.height, position.z).any { !it.isFinite() }) return rejected()
         val ecs = root.get("ecs") as? ObjectNode ?: nodes.objectNode()
-        val entities = ecs.get("entities") as? ObjectNode ?: nodes.objectNode()
+        // an older scene wraps its entities (and an archetype table) in the block; a native one is the entity map itself
+        val wrapped = ecs.get("entities") is ObjectNode || ecs.has("archetypes")
+        val entities = if (wrapped) ecs.get("entities") as? ObjectNode ?: nodes.objectNode() else ecs
         val id = nextId(entities) ?: return rejected()
+        if (!wrapped) {
+            val transform = PositionComponent(position.x, position.y + preset.height, position.z)
+            transform.localRotation.set(Vector3.X, preset.rotationDegrees)
+            val components = nodes.objectNode()
+            components.set<JsonNode>("NameComponent", writer.writeComponent(NameComponent(AbyssusBundle.message(preset.nameKey, id))))
+            components.set<JsonNode>("TypeComponent", writer.writeComponent(TypeComponent(preset.type)))
+            components.set<JsonNode>("PositionComponent", writer.writeComponent(transform))
+            components.set<JsonNode>("LightComponent", writer.writeComponent(LightComponent(LightData(preset.color, preset.intensity))))
+            ecs.set<JsonNode>(id, nodes.objectNode().set<JsonNode>("components", components))
+            if (!root.has("ecs")) (root as ObjectNode).set<JsonNode>("ecs", ecs)
+            return AddedLight(EditResult.Changed, id)
+        }
         val archetypes = ecs.get("archetypes") as? ObjectNode ?: nodes.objectNode()
         val matching = archetypes.properties().firstOrNull { (key, value) ->
             key.toIntOrNull()?.toString() == key && value.isArray && value.size() == componentNames.size &&
@@ -60,12 +77,12 @@ object LightEntities {
         }?.key
         val archetype = matching ?: nextId(archetypes) ?: return rejected()
         val components = nodes.objectNode()
-        components.set<JsonNode>("NameComponent", NameCodec().write(NameComponent(AbyssusBundle.message(preset.nameKey, id))))
-        components.set<JsonNode>("TypeComponent", TypeCodec().write(TypeComponent(preset.type)))
+        components.set<JsonNode>("NameComponent", writer.writeComponent(NameComponent(AbyssusBundle.message(preset.nameKey, id))))
+        components.set<JsonNode>("TypeComponent", writer.writeComponent(TypeComponent(preset.type)))
         val transform = PositionComponent(position.x, position.y + preset.height, position.z)
         transform.localRotation.set(Vector3.X, preset.rotationDegrees)
-        components.set<JsonNode>("PositionComponent", PositionCodec().write(transform))
-        components.set<JsonNode>("LightComponent", LightCodec().write(LightComponent(LightData(preset.color, preset.intensity))))
+        components.set<JsonNode>("PositionComponent", writer.writeComponent(transform))
+        components.set<JsonNode>("LightComponent", writer.writeComponent(LightComponent(LightData(preset.color, preset.intensity))))
         if (matching == null) archetypes.set<JsonNode>(archetype, nodes.arrayNode().also { a -> componentNames.forEach(a::add) })
         if (!ecs.has("archetypes")) ecs.set<JsonNode>("archetypes", archetypes)
         if (!ecs.has("entities")) ecs.set<JsonNode>("entities", entities)

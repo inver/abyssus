@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.editor.document.SceneJson
+
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -13,7 +16,7 @@ import com.intellij.openapi.wm.ToolWindowId
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
-import net.nevinsky.abyssus.assets.files.Asset
+import net.nevinsky.abyssus.core.assets.Asset
 import net.nevinsky.abyssus.dto.ProjectLayout
 
 private val LOG = Logger.getInstance("net.nevinsky.abyssus.projectView.AssetSelection")
@@ -23,10 +26,10 @@ fun assetsNodeProjectFile(node: Any?): VirtualFile? {
     val entry = (node as? DtoEntryNode)?.value ?: return null
     if (entry.name != "assets" || entry.value !is List<*>) return null
     return entry.source?.takeIf { it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
-        net.nevinsky.abyssus.assets.runCatchingKeepingCancellation {
-            net.nevinsky.abyssus.assets.format.AbyssusDocumentFormat().validate(
-                net.nevinsky.abyssus.filetype.SceneJson.parse(net.nevinsky.abyssus.dto.textOf(it)),
-                net.nevinsky.abyssus.assets.format.DocumentKind.PROJECT,
+        net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation {
+            net.nevinsky.abyssus.format.AbyssusDocumentFormat().validate(
+                net.nevinsky.abyssus.editor.document.SceneJson.parse(net.nevinsky.abyssus.dto.textOf(it)),
+                net.nevinsky.abyssus.format.DocumentKind.PROJECT,
             ) == null
         }.getOrDefault(false) }
 }

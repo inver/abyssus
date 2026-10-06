@@ -4,15 +4,19 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.SceneRaySettingsState
+import net.nevinsky.abyssus.editor.ray.RaySceneFallback
+import net.nevinsky.abyssus.ui.RayModeText
+
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import net.nevinsky.abyssus.assets.model.RayModelSkinning
-import net.nevinsky.abyssus.assets.sky.RaySkySnapshot
-import net.nevinsky.abyssus.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.core.assets.model.RayModelSkinning
+import net.nevinsky.abyssus.core.assets.sky.RaySkySnapshot
+import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
 
 /**
  * Connects one scene view's renderer to its [RayViewRuntime]. [frame] runs on the render thread once per frame: it
@@ -33,16 +37,29 @@ internal class RayViewFeed(
     private val reportFailure: (Throwable) -> Unit = {},
 ) : AutoCloseable {
     private class Job(
-        val epoch: Long, val params: SceneRenderParams, val camera: PerspectiveCamera, val lights: LightSet,
-        val state: RaySceneAssetState.Ready, val poses: Map<String, RayModelPose>, val activeCamera: String?,
-        val width: Int, val height: Int, val metadata: RayDisplayMetadata, val hdrAmbient: FloatArray?,
+        val epoch: Long,
+        val settingsRevision: Long,
+        val params: SceneRenderParams,
+        val camera: PerspectiveCamera,
+        val lights: LightSet,
+        val state: RaySceneAssetState.Ready,
+        val poses: Map<String, RayModelPose>,
+        val activeCamera: String?,
+        val width: Int,
+        val height: Int,
+        val metadata: RayDisplayMetadata,
+        val hdrAmbient: FloatArray?,
         val sky: RaySkySnapshot?,
     )
 
     private val pendingJob = AtomicReference<Job?>()
     private val running = AtomicBoolean()
     private val closed = AtomicBoolean()
-    @Volatile private var epoch = 0L
+    @Volatile
+    private var epoch = 0L
+    private var settingsRevision = 0L
+    private var settingsSignature: Pair<SceneRaySettingsState, Map<String, com.fasterxml.jackson.databind.JsonNode>>? =
+        null
 
     // Owned by the converter thread (the one worker that runs [drain]).
     private var lastFrame: RaySceneFrame? = null
@@ -57,6 +74,17 @@ internal class RayViewFeed(
     /** Render thread. The ray frame to present for [context], or null while raster should be shown. */
     fun frame(context: RayFrameContext): RaySceneDisplay? {
         if (closed.get()) return null
+        val overrides = net.nevinsky.abyssus.SceneEcsPaths().entitiesIn(context.params.ecs)?.properties()?.mapNotNull { (id, entity) ->
+            entity.path("components").path("RenderComponent").get("rayTracingMaterials")?.let { id to it }
+        }?.toMap().orEmpty()
+        val signature = context.params.rayTracing to overrides
+        if (settingsSignature != signature) {
+            settingsSignature = signature
+            settingsRevision++
+            epoch++
+            pendingJob.set(null)
+            runtime.invalidateSettingsWork()
+        }
         if (!runtime.mode.requested) {
             releaseWhenOff()
             return null
@@ -68,6 +96,7 @@ internal class RayViewFeed(
                 runtime.fail(state.failures.entries.joinToString { "${it.key}: ${it.value.displayMessage()}" })
                 return null
             }
+
             is RaySceneAssetState.Ready -> post(context, state)
         }
         val completed = runtime.latest() ?: return null
@@ -95,10 +124,21 @@ internal class RayViewFeed(
 
     private fun post(context: RayFrameContext, state: RaySceneAssetState.Ready) {
         lastFrameWasLive = true
-        val job = Job(epoch, context.params.copy(content = context.content), copy(context.camera), context.lights, state,
-            poses.capture(context.models), context.viewCamera, context.width, context.height,
-            RayDisplayMetadata.capture(context), context.hdrAmbient?.copyOf(),
-            state.sky ?: context.bakedSky?.invoke())
+        val job = Job(
+            epoch,
+            settingsRevision,
+            context.params.copy(content = context.content),
+            copy(context.camera),
+            context.lights,
+            state,
+            poses.capture(context.models),
+            context.viewCamera,
+            context.width,
+            context.height,
+            RayDisplayMetadata.capture(context),
+            context.hdrAmbient?.copyOf(),
+            state.sky ?: context.bakedSky?.invoke()
+        )
         pendingJob.set(job)
         if (running.compareAndSet(false, true)) executor.execute(::drain)
     }
@@ -109,13 +149,18 @@ internal class RayViewFeed(
                 val job = pendingJob.getAndSet(null) ?: break
                 if (job.epoch != epoch) continue
                 runCatchingKeepingCancellation { convert(job) }.onFailure { failure ->
-                    reportFailure(failure)
-                    runtime.fail(failure.displayMessage())
+                    if (job.epoch == epoch) {
+                        reportFailure(failure); runtime.fail(failure.displayMessage())
+                    }
                 }
             }
         } finally {
             running.set(false)
-            if (pendingJob.get() != null && !closed.get() && running.compareAndSet(false, true)) executor.execute(::drain)
+            if (pendingJob.get() != null && !closed.get() && running.compareAndSet(
+                    false,
+                    true
+                )
+            ) executor.execute(::drain)
         }
     }
 
@@ -124,20 +169,26 @@ internal class RayViewFeed(
         lastAssets = job.state
         val sky = job.sky
         val texture = sky?.let(::textureOf)
-        val ambientCube = job.hdrAmbient?.takeIf { it.size == 18 }?.let { cube -> List(6) { RayColor(cube[it * 3], cube[it * 3 + 1], cube[it * 3 + 2]) } }
+        val ambientCube = job.hdrAmbient?.takeIf { it.size == 18 }
+            ?.let { cube -> List(6) { RayColor(cube[it * 3], cube[it * 3 + 1], cube[it * 3 + 2]) } }
         val ambient = job.params.ambient?.let { RayColor(it.r, it.g, it.b) } ?: RayColor(0f, 0f, 0f)
         val clear = job.params.clear
-        val environment = RayEnvironment(ambient, RayColor(clear.r, clear.g, clear.b), texture = texture?.let { 0 }, hdr = sky?.hdr ?: false,
-            intensity = exposure(), ambientCube = ambientCube)
-        val conversion = snapshots.capture(job.params, job.camera, job.lights, job.state, emptyMap(), job.activeCamera, environment,
-            listOfNotNull(texture), job.poses, { mesh, palette -> skinning.deform(mesh, palette) },
-            environmentRevision = sky?.let { System.identityHashCode(it).toLong() } ?: 0L)
+        val environment = RayEnvironment(
+            ambient, RayColor(clear.r, clear.g, clear.b), texture = texture?.let { 0 }, hdr = sky?.hdr ?: false,
+            intensity = exposure(), ambientCube = ambientCube
+        )
+        val conversion =
+            snapshots.capture(
+                job.params, job.camera, job.lights, job.state, emptyMap(), job.activeCamera, environment,
+                listOfNotNull(texture), job.poses, { mesh, palette -> skinning.deform(mesh, palette) },
+                environmentRevision = sky?.let { System.identityHashCode(it).toLong() } ?: 0L)
         when (conversion) {
             is RaySceneConversion.Preparing -> return
             is RaySceneConversion.Fallback -> {
                 if (job.epoch == epoch) runtime.fail("${RayModeText.fallback(conversion.reason)}${conversion.detail?.let { " ($it)" } ?: ""}")
                 return
             }
+
             is RaySceneConversion.Ready -> publish(job, conversion.frame)
         }
     }
@@ -156,28 +207,49 @@ internal class RayViewFeed(
         if (diff.changes.any { it != RaySceneChange.CAMERA && it != RaySceneChange.POSE }) contentRevision++
         if (job.epoch != epoch) return
         val key = RayFrameKey(sceneGeneration, contextGeneration, cameraRevision, poseRevision)
-        val request = RaySceneRequest(key, job.width, job.height, frame.camera.rayCamera(), scene)
-        // one primary ray, one shadow ray per light, and one reflection ray when any material is PBR
-        val reflective = scene.materials.any { it.kind == RayMaterialKind.PBR }
-        val rays = 1 + scene.lights.size + if (reflective) 1 else 0
-        val input = RayRenderInput(request, RayDisplayKey(job.width, job.height, job.activeCamera ?: "free"), contentRevision, rays, job.metadata)
+        val settings = frame.settings
+        val request = RaySceneRequest(
+            key, job.width, job.height, frame.camera.rayCamera(), scene,
+            maxReflectionBounces = settings.maxReflectionBounces, maxRefractionBounces = settings.maxRefractionBounces,
+            maxRaysPerFrame = settings.maxRaysPerFrame.toLong(), settingsRevision = job.settingsRevision
+        )
+        val rays =
+            RayWorkBudget().perCameraSample(scene, settings.maxReflectionBounces, settings.maxRefractionBounces).toInt()
+        val input = RayRenderInput(
+            request,
+            RayDisplayKey(job.width, job.height, job.activeCamera ?: "free"),
+            contentRevision,
+            rays,
+            job.metadata,
+            RayRenderSettings(settings.targetSamplesPerPixel, settings.maxRaysPerFrame.toLong()),
+            job.settingsRevision
+        )
         runtime.offer(input, job.metadata)
     }
 
     private fun structurallySame(a: RaySceneAssetState.Ready, b: RaySceneAssetState.Ready) =
         a.models.keys == b.models.keys && a.terrains.keys == b.terrains.keys &&
-            a.models.all { (name, asset) -> b.models[name] === asset } && a.terrains.all { (name, asset) -> b.terrains[name] === asset }
+                a.models.all { (name, asset) -> b.models[name] === asset } && a.terrains.all { (name, asset) -> b.terrains[name] === asset }
 
     private fun textureOf(sky: RaySkySnapshot): RayTexture {
         skyTexture?.takeIf { it.first === sky }?.let { return it.second }
-        return RayTexture("sky", sky.width, sky.height, sky.rgba(), RayWrap.REPEAT, RayWrap.CLAMP_TO_EDGE, RayFilter.LINEAR).also { skyTexture = sky to it }
+        return RayTexture(
+            "sky",
+            sky.width,
+            sky.height,
+            sky.rgba(),
+            RayWrap.REPEAT,
+            RayWrap.CLAMP_TO_EDGE,
+            RayFilter.LINEAR
+        ).also { skyTexture = sky to it }
     }
 
     /** Frozen copy for the converter: a worker must never read the renderer's mutable camera. */
-    private fun copy(source: PerspectiveCamera) = PerspectiveCamera(source.fieldOfView, source.viewportWidth, source.viewportHeight).also {
-        it.position.set(source.position); it.direction.set(source.direction); it.up.set(source.up)
-        it.near = source.near; it.far = source.far; it.update()
-    }
+    private fun copy(source: PerspectiveCamera) =
+        PerspectiveCamera(source.fieldOfView, source.viewportWidth, source.viewportHeight).also {
+            it.position.set(source.position); it.direction.set(source.direction); it.up.set(source.up)
+            it.near = source.near; it.far = source.far; it.update()
+        }
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return

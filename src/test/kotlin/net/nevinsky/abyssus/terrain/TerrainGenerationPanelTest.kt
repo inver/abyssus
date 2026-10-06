@@ -14,7 +14,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
-import net.nevinsky.abyssus.assets.terrain.generation.TERRAIN_RECIPE_FILE
+import net.nevinsky.abyssus.terrain.generation.TERRAIN_RECIPE_FILE
 import net.nevinsky.abyssus.properties.AssetPropertiesPanel
 import net.nevinsky.abyssus.properties.PanelState
 import java.awt.Component
@@ -124,7 +124,7 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         assertEquals("metadata is byte for byte unchanged", metaBefore, text("meta.json"))
         assertTrue(recipeExists())
         assertTrue(text(TERRAIN_RECIPE_FILE).contains("\"seed\": 2024"))
-        assertEquals("1600 and 60.0 survive", true, text("meta.json").contains("\"size\":1600") && text("meta.json").contains("\"uv\":60.0"))
+        assertEquals("1600 and 60.0 survive", true, text("meta.json").contains("\"size\": 1600") && text("meta.json").contains("\"uv\": 60.0"))
         val reopened = shown()
         assertTrue(label(reopened, "terrain-recipe-status")!!.contains("Generated with the settings shown"))
         assertEquals("2024", field(reopened, "seed").text)
