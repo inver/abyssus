@@ -9,7 +9,7 @@ and the play protocol do not.
 
 ## Components
 
-Declared with `@SceneComponent` / `@Field` (see `runtime/README.md`) and registered by `PhysicsComponents`.
+Declared with `@SceneComponent` / `@Field` (see `projects/lib-runtime/README.md`) and registered by `PhysicsComponents`.
 
 | Component | Fields (default) |
 |---|---|
@@ -86,5 +86,5 @@ no longer exists stops Play with that message.
 once per process. Tests use the build machine's `DebugSp` jar. The `playHost` configuration resolves the four
 `ReleaseSp` jars (Linux64, Windows64, MacOSX64, MacOSX_ARM64) that the play host ships.
 
-Tests run with `./gradlew :physics:test`. They use the `Physics` fixture (`src/test/testData/project/Physics`).
+Tests run with `./gradlew :lib-physics:test`. They use the `Physics` fixture (`projects/plugin-abyssus/src/test/testData/project/Physics`).
 Required behavior is in the `physics-simulation` and `physics-components` specs.

@@ -509,8 +509,14 @@ private class Glb(val json: ObjectNode, private val bin: ByteBuffer) {
         return FloatArray(buffer.remaining()).also { buffer.get(it) }
     }
 
+    /** Indices: unsigned short when they fit (`GltfWriter`), unsigned int otherwise. */
     private fun ints(accessor: Int): IntArray {
-        val buffer = view(json["accessors"][accessor], 5125).asIntBuffer()
+        val node = json["accessors"][accessor]
+        if (node["componentType"].asInt() == 5123) {
+            val buffer = view(node, 5123).asShortBuffer()
+            return IntArray(buffer.remaining()) { buffer.get(it).toInt() and 0xFFFF }
+        }
+        val buffer = view(node, 5125).asIntBuffer()
         return IntArray(buffer.remaining()).also { buffer.get(it) }
     }
 

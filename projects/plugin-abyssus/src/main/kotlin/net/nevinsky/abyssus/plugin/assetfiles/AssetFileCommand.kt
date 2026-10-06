@@ -109,25 +109,41 @@ class AssetFileCommand(private val project: Project, private val store: AssetFil
     /**
      * [affected] are the files whose Undo stack the command joins (the `meta.json` shown in the properties panel, say), so
      * Undo from that context reaches it; empty makes it a global action. Call on the UI thread.
+     *
+     * With [handBack], the undo action is given to it instead of being registered, and the VFS is not refreshed: a
+     * caller that runs this inside its own command, with a later step that may fail, registers the action once every
+     * step succeeded (or [revert]s), and calls [flush] after its command.
      */
     fun execute(
         txn: AssetTransaction,
         affected: () -> List<VirtualFile> = { emptyList() },
         isCancelled: () -> Boolean = { false },
         onDone: () -> Unit = {},
+        handBack: ((AssetFileUndoAction) -> Unit)? = null,
     ): AssetCommandResult {
         var result: AssetCommandResult = AssetCommandResult.Cancelled
         WriteCommandAction.runWriteCommandAction(project, txn.name, null, {
             result = engine.apply(txn, forward = true) { !isCancelled() }
             if (result == AssetCommandResult.Done) {
-                UndoManager.getInstance(project).undoableActionPerformed(AssetFileUndoAction(txn, engine, affected()))
+                val action = AssetFileUndoAction(txn, engine, affected())
+                if (handBack != null) handBack(action) else UndoManager.getInstance(project).undoableActionPerformed(action)
             }
         })
         // the VFS learns of the files after the command, so the platform records nothing for them itself
-        store.flush(async = false)
+        if (handBack == null) store.flush(async = false)
         if (result == AssetCommandResult.Done) onDone()
         return result
     }
+
+    /** Takes back a transaction [execute] applied whose undo action was handed back and not registered. UI thread. */
+    fun revert(txn: AssetTransaction): AssetCommandResult {
+        var result: AssetCommandResult = AssetCommandResult.Cancelled
+        WriteCommandAction.runWriteCommandAction(project, txn.name, null, { result = engine.apply(txn, forward = false) })
+        return result
+    }
+
+    /** Refreshes the VFS for the files written since the last flush; call outside any command. */
+    fun flush() = store.flush(async = false)
 }
 
 /** Undo and Redo of an [AssetTransaction]: each re-checks the files and refuses, with the reason, when they changed since. */

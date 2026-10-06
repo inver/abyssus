@@ -1,0 +1,4 @@
+# Hand-written Abyssus test fixture: names wood.png, which this folder does not have
+newmtl Wood
+Kd 0.6 0.4 0.2
+map_Kd wood.png

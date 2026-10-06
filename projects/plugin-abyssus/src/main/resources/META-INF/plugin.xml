@@ -69,6 +69,10 @@
                 class="net.nevinsky.abyssus.plugin.projectView.ImportFlightGearAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
+        <action id="Abyssus.ImportModel"
+                class="net.nevinsky.abyssus.plugin.projectView.ImportModelAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.ImportFlightGear"/>
+        </action>
         <action id="Abyssus.AddLight" class="net.nevinsky.abyssus.plugin.projectView.AddLightAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
         </action>

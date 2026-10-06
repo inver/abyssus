@@ -12958,7 +12958,49 @@
             }
           }
         }
+      },
+      "633": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 633"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -59.719116,
+              "y": 1.4810364,
+              "z": -47.94683
+            },
+            "localRotation": {
+              "x": 0.0,
+              "y": 0.6958652,
+              "z": 0.0,
+              "w": 0.71817243
+            }
+          },
+          "RenderComponent": {
+            "renderable": {
+              "kind": "asset",
+              "shaderKey": "defaultShader",
+              "asset": {
+                "type": "MODEL",
+                "assetName": "model_3_storey_residential_building"
+              }
+            }
+          }
+        }
       }
+    },
+    "archetypes": {
+      "0": [
+        "NameComponent",
+        "TypeComponent",
+        "PositionComponent",
+        "RenderComponent"
+      ]
     }
   }
 }

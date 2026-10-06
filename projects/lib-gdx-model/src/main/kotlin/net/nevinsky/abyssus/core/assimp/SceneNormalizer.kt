@@ -34,9 +34,9 @@ internal object SceneNormalizer {
      * @param convertUnits also scale the scene to meters (FBX: `UnitScaleFactor` is in centimeters)
      * @return the matrix that converts the scene, `null` if the scene is already in the right system
      */
-    fun correction(scene: AIScene, convertUnits: Boolean): Matrix4? {
-        val meta = readMetaData(scene.mMetaData())
+    fun correction(scene: AIScene, convertUnits: Boolean): Matrix4? = correction(readMetaData(scene.mMetaData()), convertUnits)
 
+    fun correction(meta: Map<String, Number>, convertUnits: Boolean): Matrix4? {
         var result: Matrix4? = null
         if (meta.containsKey("UpAxis")) {
             result = axes(
@@ -53,6 +53,21 @@ internal object SceneNormalizer {
             }
         }
         return result
+    }
+
+    /** The unit and up axis the scene metadata states (FBX), without applying them. */
+    fun stated(scene: AIScene): StatedFrame = stated(readMetaData(scene.mMetaData()))
+
+    /** @param meta numeric scene metadata by key, as Assimp's FBX importer reports it */
+    fun stated(meta: Map<String, Number>): StatedFrame {
+        val unit = meta["UnitScaleFactor"]?.toDouble()?.takeIf { it > 0 }?.let { meterScale(it) }
+        val up = when (meta["UpAxis"]?.toInt()) {
+            0 -> UpAxis.X
+            1 -> UpAxis.Y
+            2 -> UpAxis.Z
+            else -> null
+        }
+        return StatedFrame(unit, up)
     }
 
     /**
@@ -99,6 +114,38 @@ internal object SceneNormalizer {
         return if (unitScaleFactor > 0) unitScaleFactor.toFloat() * METERS_PER_FBX_UNIT else 1f
     }
 
+    /**
+     * The correction Assimp's own importer already put on the root: its 3DS importer always turns Z up into Y up, and
+     * its FBX importer applies the axes the file states to the (in the file, untransformed) root node. `null` when
+     * the importer applied nothing.
+     *
+     * @param extension the source file's extension, lower case
+     */
+    fun importerCorrection(scene: AIScene, root: ModelNode, extension: String): Matrix4? {
+        if (extension == "3ds") {
+            return Matrix4().setToRotation(Vector3.X, -90f)
+        }
+        if (extension != "fbx" || (root.translation == null && root.rotation == null && root.scale == null)) {
+            return null
+        }
+        val meta = readMetaData(scene.mMetaData())
+        if (!meta.containsKey("UpAxis")) {
+            return null
+        }
+        return axes(
+            meta.getOrDefault("CoordAxis", 0).toInt(), meta.getOrDefault("CoordAxisSign", 1).toInt(),
+            meta.get("UpAxis")!!.toInt(), meta.getOrDefault("UpAxisSign", 1).toInt(),
+            meta.getOrDefault("FrontAxis", 2).toInt(), meta.getOrDefault("FrontAxisSign", 1).toInt()
+        )
+    }
+
+    /** Takes a correction applied by [apply] (or by the importer) back off the node. */
+    fun unapply(root: ModelNode, correction: Matrix4?) {
+        if (correction != null) {
+            apply(root, Matrix4(correction).inv())
+        }
+    }
+
     /** Multiplies the local transform of the node by the correction.  */
     fun apply(root: ModelNode, correction: Matrix4?) {
         if (correction == null) {
@@ -135,7 +182,7 @@ internal object SceneNormalizer {
     }
 
     /** Reads the numeric metadata entries (int, float and double) by key.  */
-    private fun readMetaData(meta: AIMetaData?): MutableMap<String, Number> {
+    fun readMetaData(meta: AIMetaData?): MutableMap<String, Number> {
         val res = HashMap<String, Number>()
         if (meta == null) {
             return res

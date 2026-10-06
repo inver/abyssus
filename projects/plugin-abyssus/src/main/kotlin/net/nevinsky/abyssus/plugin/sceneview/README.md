@@ -3,7 +3,7 @@
 The **Scene View** editor tab of a `.scene`: a libGDX render on an LWJGL3-AWT GL canvas inside a Swing panel, with
 picking, camera markers, look-through, move/rotate gizmos and Drop. Required behavior: `openspec/specs/scene-*`.
 
-The logic without IDE, Swing or GL lives in `editor-core` (see `editor-core/README.md`): the scene read model in its
+The logic without IDE, Swing or GL lives in `editor-core` (see `projects/lib-core-editor/README.md`): the scene read model in its
 scene package, picking, gizmo math, interaction and transform write-back in its pick package, and the ray tracing
 bridge in its ray package. Rows below marked *(editor-core)* are there; this package keeps the canvas, the renderer,
 the toolbar, Play and the view's asset storage.
@@ -45,7 +45,7 @@ the toolbar, Play and the view's asset storage.
   stable for 250 ms. On macOS a zero-sized surface aborts the JVM. A canvas disposed while hidden drops its context
   without making it current, so its GL objects can't be released. macOS also stops sizing that canvas's native
   surface with the component, so `SceneViewPanel` replaces such an "abandoned" canvas when the view is shown again.
-- **Asset loading lives in `core`** (`core/README.md`). `AssetStorage.prepare` runs on a pool thread (IO and decoding,
+- **Asset loading lives in `core`** (`projects/lib-core/README.md`). `AssetStorage.prepare` runs on a pool thread (IO and decoding,
   no GL). `build`, and `upload` for big textures, run on the render thread one slice per frame, inside this package's
   `GdxRuntime.withContext`. A new project gets a new cache, so a pool thread never prepares from a stale project. A
   failed asset is remembered and logged once, through the SLF4J `Logger` `AbyssusCore` gives `AssetLoading` (`Abyssus.assets`).
@@ -128,7 +128,7 @@ Default models, PBR models and terrain use the spotlight's rotated -Z axis, save
 Zero softness gives a sharp edge; positive softness gives a smooth inward fade without changing the outer boundary.
 All local lights fade from 75 percent of their range to zero at the range limit. Missing beam values use 45 degrees
 and 0.2 softness without writing the scene. Properties displays softness as percent; storage and compatibility
-limits are documented in `../../../../../../../../../../docs/ai/file-formats.md`.
+limits are documented in `docs/ai/file-formats.md`.
 
 ## Scene shadows
 
@@ -155,7 +155,7 @@ disabled during depth rendering. Coverage outside a projection remains lit.
 
 The depth shader supports the custom 32-bit mesh indices, posed bones and diffuse alpha-test cutouts. Materials
 with active alpha blending do not cast. Terrain uses its color mesh and transform as an opaque depth renderable.
-See `gdx-model/README.md` for the reusable atlas attribute and provider API.
+See `projects/lib-gdx-model/README.md` for the reusable atlas attribute and provider API.
 
 Resources belong to one canvas and are created, rendered and disposed inside `GdxRuntime.withContext` on the
 safe AWT render thread. A lost/hidden context abandons references without GL calls; recreation builds a fresh atlas
@@ -176,7 +176,7 @@ backend cannot represent becomes an explicit `RaySceneConversion.Fallback`. `Ray
 skinned entity's displayed pose on the render thread, after animations advanced, and `RayModelSkinning` (core)
 deforms the shared source mesh per instance on a worker.
 
-What the native renderer then draws, and its bounds, are in `raytracing/README.md`: per-light shadow rays, cutouts,
+What the native renderer then draws, and its bounds, are in `projects/lib-raytracing/README.md`: per-light shadow rays, cutouts,
 reflections up to the scene's saved depth, glass refraction for materials given a transmission override, sky and fog like
 raster, and front-to-back alpha blending that neither casts shadows nor appears in reflections. Whole-view raster
 fallback applies when the scene exceeds those bounds, when its saved `rayTracing` settings or optical overrides are
@@ -197,7 +197,7 @@ failure, and the tooltip of an active view names the backend and GPU. `RayBacken
 session (`-Dabyssus.raytracing.backend=auto|metal|vulkan|off`); nothing native loads until ray tracing is switched on.
 Probe results, the chosen backend and GPU, session limits, scene fallbacks and every failure go to `idea.log` through an SLF4J
 `Logger` (category `Abyssus.ray`; add `#Abyssus.ray` in Help | Diagnostic Tools | Debug Log Settings for the debug lines).
-See Logging in `../../../../../../../../../../docs/ai/conventions.md`.
+See Logging in `docs/ai/conventions.md`.
 
 Each frame `SceneRenderer` calls its `rayFrameProvider` (the panel's `RayViewFeed`) with a `RayFrameContext`: the
 preview-applied content, camera, lights, animated models and the built HDR sky's ambient colours. The feed copies that

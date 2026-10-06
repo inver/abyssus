@@ -158,6 +158,12 @@ class SceneFileEditor(
         reload()
     }
 
+    /** The scene file this tab shows. */
+    internal val sceneFile: VirtualFile get() = file
+
+    /** The live view, or null while the tab shows a message instead of a render. */
+    internal val sceneView: SceneView? get() = view
+
     /** Runs the re-read that is waiting for the typing pause, if any, without waiting; for tests. */
     internal fun flushPendingReload() = reloadQueue.flush()
 

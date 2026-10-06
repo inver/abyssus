@@ -1,8 +1,8 @@
 # Airfield environment
 
 The bundled `Field.scene` reconstructs the control-line circle ("Кордодром") at about 53.4829 N, 49.8472 E in Samara,
-south of Pribrezhnaya Street. The layout reference is the satellite screenshot `../pics/img.png`. The artistic brief is
-`../pics/about.txt`. Neither is survey data: every size, height and position below is an estimate, and the buildings
+south of Pribrezhnaya Street. The layout reference is the satellite screenshot `projects/app-game-control-line/project/pics/img.png`. The artistic brief is
+`projects/app-game-control-line/project/pics/about.txt`. Neither is survey data: every size, height and position below is an estimate, and the buildings
 are intended representations, not architectural replicas.
 
 ## Estimates and decisions
@@ -66,11 +66,11 @@ Models are GLB files with their textures as external files in `textures/`, as th
 3. `python3 layout.py` places the scenery, rejects anything within the clear radius, and writes `placements.json`,
    `layout.svg` and `field-environment.patch.json`. The patch carries the current scene's SHA-256.
 4. Apply the patch through the editor's scene writer:
-   `ABYSSUS_SCENE_PATCH=$PWD/games/control-line/project/environment/field-environment.patch.json ./gradlew :test --tests 'net.nevinsky.abyssus.plugin.filetype.ScenePatchApplicationTest'`.
+   `ABYSSUS_SCENE_PATCH=$PWD/projects/app-game-control-line/project/environment/field-environment.patch.json ./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.filetype.ScenePatchApplicationTest'`.
    It points the field entity at the site terrain, replaces every entity drawn with an airfield asset, and leaves
    everything else, including number text, as it was.
 
-`./gradlew :games:control-line:test` (`AirfieldEnvironmentTest`) checks that every model parses with its textures,
+`./gradlew :app-game-control-line:test` (`AirfieldEnvironmentTest`) checks that every model parses with its textures,
 that every asset is native and records its source, and that the scenery keeps the 28 m clear area.
 
 `previous/` holds the first version's tools and records (Kenney scenery). Its asset folders were moved out of the

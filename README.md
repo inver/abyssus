@@ -17,8 +17,9 @@ remain readable in the text editor; plugin editing and loading are refused. No i
   Toggle scene options, rename scenes and choose a scene's skybox from the tree.
 - **Abyssus Properties**: the `meta.json` of the selected asset, with skybox face previews; terrain size, texture
   repetition and textures, cube skybox faces and procedural sky parameters can be edited, terrain heights can be generated
-  from seeded noise, **New Terrain** on the Assets node creates a terrain asset, and **Import FlightGear Aircraft**
-  turns an aircraft from a FlightGear `.zip` into a model asset.
+  from seeded noise, **New Terrain** on the Assets node creates a terrain asset, **Import Model** turns an OBJ, FBX,
+  3DS, DAE, glTF or GLB file into a model asset with a live preview, and **Import FlightGear Aircraft** turns an
+  aircraft from a FlightGear `.zip` into a model asset.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
 - **Ray Tracing settings**: a selected scene's Properties switch turns Ray Tracing on for its open views (not saved), and
@@ -119,6 +120,29 @@ refreshes and the new asset is selected. Nothing is placed in a scene and no sce
 is marked unused until you add it to a scene. Undo removes the asset again, and Redo brings back the same files and
 `uuid`; Undo refuses while a scene or another asset uses it, or something was added to its folder.
 
+### Import Model
+
+Right-click an **Assets** node and choose **Import Model...**, then pick an `.obj`, `.fbx`, `.3ds`, `.dae`, `.gltf` or
+`.glb` file. Blender files are not read: export the model from Blender as glTF (File > Export > glTF 2.0) and import the
+`.glb`. The dialog shows a live preview of the model as it will be written, over a ground grid with a 1 m post (drag to
+orbit, wheel to zoom), and plays the animation chosen in its list. Choose:
+
+- the folder name (`model_` plus the file name by default);
+- the source unit (m, cm, mm, in, ft) and up axis (Y or Z), pre-filled from the file where it says (an FBX header, a
+  DAE `<asset>`; glTF is metres and Y up, 3DS is Z up) and marked as read from the file;
+- the size: the unit only, or scaled so the largest extent or the height is a number of metres;
+- **Add to scene**, on when a scene view is selected: Create also places the model at the point that view orbits
+  around and selects it. It is off, with the reason, when no scene view is open, the scene is playing, or its file
+  cannot be edited.
+
+The model always stands on y = 0 and is centred on X and Z. Create writes one model asset: `model.glb` with the node
+hierarchy, materials and, for animated files, the skeleton and every animation; textures as PNG files in `textures/`;
+and a `source.json` with the source path, checksum, frame and settings. Phong materials are approximated as
+metallic-roughness (the specular colour is lost), and cameras, lights, points and lines, missing textures, morph targets
+and unsupported glTF extensions are left out; the dialog lists each before Create. Nothing is written next to the
+source. Undo removes the folder, and the placed entity with it; Redo brings both back with the same files and `uuid`.
+Undo refuses once a scene uses the asset through another edit.
+
 ### Import FlightGear Aircraft
 
 Right-click an **Assets** node and choose **Import FlightGear Aircraft...**, then pick a FlightGear aircraft `.zip`. The
@@ -193,7 +217,7 @@ entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
 ### Physics (Abyssus Physics plugin)
 
-**Abyssus Physics** is a separate plugin, built from `physics-plugin/`, that depends on Abyssus. With it installed:
+**Abyssus Physics** is a separate plugin, built from `projects/plugin-abyssus-physics/`, that depends on Abyssus. With it installed:
 
 - **Add Component** offers **Rigid body**, **Collider** and **Constraint**. They are edited like other components,
   and sizes and masses must be greater than 0. Without the plugin, these components show as read-only JSON and are
@@ -207,7 +231,7 @@ entity; orbit, pan and zoom pause until **Free camera** is chosen again.
   scene or closing the tab returns the view to the scene as the document holds it. While playing, gizmos are off,
   and keys and mouse buttons go to the game. If the process dies, one notification shows its last output and the IDE
   keeps running.
-- A game makes Play run its own code by exporting `<project>/abyssus/play.json` (see `physics/README.md`). Without that file,
+- A game makes Play run its own code by exporting `<project>/abyssus/play.json` (see `projects/lib-physics/README.md`). Without that file,
   Play runs physics alone.
 
 Jolt, the physics engine, is loaded only by the play process, never by the IDE.
@@ -224,7 +248,7 @@ To add a project or scene file format, implement `ConfigFileReader` and wire it 
 ## Development
 
 See [AGENTS.md](AGENTS.md) for build, test and sandbox commands, and [the documentation map](docs/README.md)
-for architecture, native formats and module guides. The [Control Line game](games/control-line/README.md) demonstrates
+for architecture, native formats and module guides. The [Control Line game](projects/app-game-control-line/README.md) demonstrates
 custom components, schema export and Play through the separate physics host. Use a copy of its native project in the IDE.
 
 ## Installation

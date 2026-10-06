@@ -13,7 +13,7 @@ needs them.
 | `docs/ai/glossary.md` | Native Abyssus terms | What a word means here |
 | `docs/ai/conventions.md` | JSON, writing files, errors, UI text, code style | How code is written |
 | `docs/ai/testing.md` | Test layout, fixtures, GL tests, seams | How to test |
-| Package and module `README.md`s (`sceneview`, `projectView`, `editor-core`, `gdx-model`, `core`, `runtime`, `physics`, `raytracing`, `games/control-line`) | The non-obvious parts of one package | That package's internals |
+| Package and module `README.md`s (`sceneview`, `projectView`, `editor-core`, `gdx-model`, `core`, `runtime`, `physics`, `raytracing`, `projects/app-game-control-line`) | The non-obvious parts of one package | That package's internals |
 | `openspec/specs/` | One spec per capability | **Required behavior.** Read the capability before changing a feature |
 | `openspec/changes/` | Changes in progress: proposal, delta specs, design, tasks | What is being changed and why |
 | `openspec/changes/archive/` | Finished changes, dated | Why past decisions were made |
