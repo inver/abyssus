@@ -10,7 +10,7 @@
     <resource-bundle>messages.AbyssusPhysicsBundle</resource-bundle>
 
     <extensions defaultExtensionNs="net.nevinsky.abyssus">
-        <!-- generated at build time from net.nevinsky.abyssus.physics.PhysicsComponents -->
+        <!-- generated at build time from net.nevinsky.abyssus.lib.physics.PhysicsComponents -->
         <componentSchemas resource="/schemas/physics.schema.json"/>
         <sceneOverlay implementation="net.nevinsky.abyssus.plugin.physics.PhysicsOverlayProvider"/>
         <sceneSimulation implementation="net.nevinsky.abyssus.plugin.physics.PhysicsSimulationProvider"/>

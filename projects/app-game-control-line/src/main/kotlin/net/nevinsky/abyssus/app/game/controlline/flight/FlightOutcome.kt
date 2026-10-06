@@ -5,7 +5,7 @@
 package net.nevinsky.abyssus.app.game.controlline.flight
 
 import com.badlogic.ashley.core.Entity
-import net.nevinsky.abyssus.physics.Contact
+import net.nevinsky.abyssus.lib.physics.Contact
 
 /** How a flight ended, with the text GAME OVER shows. */
 enum class FlightEnd(val label: String) {

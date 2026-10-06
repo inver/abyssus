@@ -2,7 +2,7 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.physics.play
+package net.nevinsky.abyssus.lib.physics.play
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode

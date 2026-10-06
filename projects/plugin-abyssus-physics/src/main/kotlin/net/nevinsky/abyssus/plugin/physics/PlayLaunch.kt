@@ -4,16 +4,16 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
-import net.nevinsky.abyssus.physics.play.PLAY_FILE
-import net.nevinsky.abyssus.physics.play.PLAY_PROTOCOL
-import net.nevinsky.abyssus.physics.play.PlayFile
+import net.nevinsky.abyssus.lib.physics.play.PLAY_FILE
+import net.nevinsky.abyssus.lib.physics.play.PLAY_PROTOCOL
+import net.nevinsky.abyssus.lib.physics.play.PlayFile
 import java.io.File
 
 /** The play host's main class, in every play classpath. */
-const val PLAY_HOST_MAIN = "net.nevinsky.abyssus.physics.play.PlayHostMain"
+const val PLAY_HOST_MAIN = "net.nevinsky.abyssus.lib.physics.play.PlayHostMain"
 
 /** The module the bundled play host runs: physics alone. */
-const val PHYSICS_ONLY_MODULE = "net.nevinsky.abyssus.physics.play.PhysicsOnlyPlayModule"
+const val PHYSICS_ONLY_MODULE = "net.nevinsky.abyssus.lib.physics.play.PhysicsOnlyPlayModule"
 
 /** What to start for Play, or why Play cannot start. */
 sealed interface PlayLaunch {

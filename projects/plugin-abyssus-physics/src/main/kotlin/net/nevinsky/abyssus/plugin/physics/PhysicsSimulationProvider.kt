@@ -13,8 +13,8 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
-import net.nevinsky.abyssus.physics.play.PlayFrame
-import net.nevinsky.abyssus.physics.play.PlayInput
+import net.nevinsky.abyssus.lib.physics.play.PlayFrame
+import net.nevinsky.abyssus.lib.physics.play.PlayInput
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
 import net.nevinsky.abyssus.plugin.sceneview.SceneSimulation
 import net.nevinsky.abyssus.plugin.sceneview.SceneSimulationProvider
@@ -23,7 +23,7 @@ import net.nevinsky.abyssus.plugin.sceneview.SimulationListener
 import net.nevinsky.abyssus.plugin.sceneview.SimulationRequest
 
 /** This plugin's id, to find its bundled `play-host/` folder. */
-private const val PLUGIN_ID = "net.nevinsky.abyssus.physics"
+private const val PLUGIN_ID = "net.nevinsky.abyssus.lib.physics"
 
 /** Play in the Scene view through a play process (see [PlayLaunch]); poses come back over the play protocol. */
 class PhysicsSimulationProvider : SceneSimulationProvider {

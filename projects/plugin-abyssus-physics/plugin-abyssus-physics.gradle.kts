@@ -88,7 +88,7 @@ val exportPhysicsSchema by tasks.registering(JavaExec::class) {
     val projectPath = project.map { it.asFile.absolutePath }
     argumentProviders += CommandLineArgumentProvider {
         listOf(
-            "net.nevinsky.abyssus.physics.PhysicsComponents",
+            "net.nevinsky.abyssus.lib.physics.PhysicsComponents",
             projectPath.get()
         )
     }
@@ -107,7 +107,7 @@ val checkNoJolt by tasks.registering {
     val root = layout.projectDirectory.asFile
     inputs.files(sources)
     doLast {
-        val forbidden = Regex("""com\.github\.stephengold|net\.nevinsky\.abyssus\.physics\.jolt""")
+        val forbidden = Regex("""com\.github\.stephengold|net\.nevinsky\.abyssus\.lib\.physics\.jolt""")
         val found = sources.files.sorted().flatMap { file ->
             file.readLines().mapIndexedNotNull { i, line ->
                 if (forbidden.containsMatchIn(line)) "${file.relativeTo(root)}:${i + 1}: ${line.trim()}" else null

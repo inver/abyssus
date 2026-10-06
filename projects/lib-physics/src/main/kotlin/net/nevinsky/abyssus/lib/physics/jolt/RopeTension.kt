@@ -6,8 +6,8 @@ package net.nevinsky.abyssus.lib.physics.jolt
 
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.physics.MotionType
-import net.nevinsky.abyssus.physics.PHYSICS_STEP
+import net.nevinsky.abyssus.lib.physics.MotionType
+import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
 import kotlin.math.max
 
 /** A rope is slack while its anchors are more than this closer than its maximum (m). */

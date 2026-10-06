@@ -7,10 +7,10 @@ package net.nevinsky.abyssus.app.game.controlline
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
-import net.nevinsky.abyssus.physics.ColliderComponent
-import net.nevinsky.abyssus.physics.ColliderShape
-import net.nevinsky.abyssus.physics.MotionType
-import net.nevinsky.abyssus.physics.RigidBodyComponent
+import net.nevinsky.abyssus.lib.physics.ColliderComponent
+import net.nevinsky.abyssus.lib.physics.ColliderShape
+import net.nevinsky.abyssus.lib.physics.MotionType
+import net.nevinsky.abyssus.lib.physics.RigidBodyComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
 import org.junit.Assert.assertEquals

@@ -2,7 +2,7 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.physics.play
+package net.nevinsky.abyssus.lib.physics.play
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -28,7 +28,7 @@ class PlayExportTest {
             exportPlay(PhysicsOnlyPlayModule::class.java.name, listOf(relative, "", "/opt/lib/gdx.jar"), project)
             assertEquals(text, Files.readString(file))
             assertEquals(
-                "{\n  \"protocol\": 1,\n  \"module\": \"net.nevinsky.abyssus.physics.play.PhysicsOnlyPlayModule\",\n  \"classpath\": [\n" +
+                "{\n  \"protocol\": 1,\n  \"module\": \"net.nevinsky.abyssus.lib.physics.play.PhysicsOnlyPlayModule\",\n  \"classpath\": [\n" +
                     "    ${PlayFile().write(config).lines()[4].trim()}\n    \"/opt/lib/gdx.jar\"\n  ]\n}\n",
                 text,
             )

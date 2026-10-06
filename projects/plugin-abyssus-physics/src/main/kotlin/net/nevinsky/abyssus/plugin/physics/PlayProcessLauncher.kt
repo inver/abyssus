@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
-import net.nevinsky.abyssus.physics.play.PlayProtocol
+import net.nevinsky.abyssus.lib.physics.play.PlayProtocol
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.DataInputStream

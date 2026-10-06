@@ -6,8 +6,8 @@ package net.nevinsky.abyssus.plugin.physics
 
 import net.nevinsky.abyssus.lib.core.assets.displayMessage
 
-import net.nevinsky.abyssus.physics.play.PlayFrame
-import net.nevinsky.abyssus.physics.play.PlayProtocol
+import net.nevinsky.abyssus.lib.physics.play.PlayFrame
+import net.nevinsky.abyssus.lib.physics.play.PlayProtocol
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3

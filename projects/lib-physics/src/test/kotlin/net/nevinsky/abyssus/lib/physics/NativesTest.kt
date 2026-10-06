@@ -2,13 +2,13 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.physics
+package net.nevinsky.abyssus.lib.physics
 
 import com.github.stephengold.joltjni.BroadPhaseLayerInterfaceTable
 import com.github.stephengold.joltjni.ObjectLayerPairFilterTable
 import com.github.stephengold.joltjni.ObjectVsBroadPhaseLayerFilterTable
 import com.github.stephengold.joltjni.PhysicsSystem
-import net.nevinsky.abyssus.physics.jolt.JoltNatives
+import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import org.junit.Assert.assertTrue
 import org.junit.Test
 

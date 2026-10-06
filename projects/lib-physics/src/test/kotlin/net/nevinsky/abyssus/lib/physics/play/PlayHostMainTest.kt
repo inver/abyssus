@@ -2,9 +2,9 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.physics.play
+package net.nevinsky.abyssus.lib.physics.play
 
-import net.nevinsky.abyssus.physics.testProject
+import net.nevinsky.abyssus.lib.physics.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -27,7 +27,7 @@ class PlayHostMainTest {
             server.soTimeout = 20_000
             val java = File(System.getProperty("java.home"), "bin/java").path
             val process = ProcessBuilder(
-                java, "-cp", System.getProperty("java.class.path"), "net.nevinsky.abyssus.physics.play.PlayHostMain",
+                java, "-cp", System.getProperty("java.class.path"), "net.nevinsky.abyssus.lib.physics.play.PlayHostMain",
                 "--port", server.localPort.toString(), "--token", "secret", module,
             ).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()
             try {

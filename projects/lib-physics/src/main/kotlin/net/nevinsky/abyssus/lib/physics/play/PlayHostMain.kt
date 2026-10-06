@@ -4,7 +4,7 @@
  */
 @file:JvmName("PlayHostMain")
 
-package net.nevinsky.abyssus.physics.play
+package net.nevinsky.abyssus.lib.physics.play
 
 import org.slf4j.LoggerFactory
 import java.io.BufferedInputStream

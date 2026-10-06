@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
-import net.nevinsky.abyssus.physics.play.PlayModule
+import net.nevinsky.abyssus.lib.physics.play.PlayModule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows

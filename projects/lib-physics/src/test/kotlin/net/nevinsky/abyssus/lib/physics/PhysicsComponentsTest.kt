@@ -2,7 +2,7 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.physics
+package net.nevinsky.abyssus.lib.physics
 
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentSchemaReader
 import net.nevinsky.abyssus.lib.runtime.schema.SchemaJson

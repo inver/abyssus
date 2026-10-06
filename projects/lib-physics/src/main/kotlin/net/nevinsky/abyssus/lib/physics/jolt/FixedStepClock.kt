@@ -4,8 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.physics.jolt
 
-import net.nevinsky.abyssus.physics.MAX_STEPS_PER_ADVANCE
-import net.nevinsky.abyssus.physics.PHYSICS_STEP
+import net.nevinsky.abyssus.lib.physics.MAX_STEPS_PER_ADVANCE
+import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min

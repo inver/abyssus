@@ -10,52 +10,16 @@ import com.badlogic.ashley.core.EntityListener
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import com.github.stephengold.joltjni.Body
-import com.github.stephengold.joltjni.BodyCreationSettings
-import com.github.stephengold.joltjni.BodyInterface
-import com.github.stephengold.joltjni.BroadPhaseLayerInterfaceTable
-import com.github.stephengold.joltjni.CustomContactListener
-import com.github.stephengold.joltjni.DistanceConstraintSettings
-import com.github.stephengold.joltjni.FixedConstraintSettings
-import com.github.stephengold.joltjni.HingeConstraintSettings
-import com.github.stephengold.joltjni.Jolt
-import com.github.stephengold.joltjni.JobSystemSingleThreaded
-import com.github.stephengold.joltjni.JoltPhysicsObject
-import com.github.stephengold.joltjni.MassProperties
-import com.github.stephengold.joltjni.ObjectLayerPairFilterTable
-import com.github.stephengold.joltjni.ObjectVsBroadPhaseLayerFilterTable
-import com.github.stephengold.joltjni.PhysicsSystem
-import com.github.stephengold.joltjni.Quat
-import com.github.stephengold.joltjni.RVec3
-import com.github.stephengold.joltjni.TempAllocatorImpl
-import com.github.stephengold.joltjni.TwoBodyConstraintRef
-import com.github.stephengold.joltjni.TwoBodyConstraintSettings
-import com.github.stephengold.joltjni.Vec3
+import com.github.stephengold.joltjni.*
 import com.github.stephengold.joltjni.enumerate.EActivation
 import com.github.stephengold.joltjni.enumerate.EMotionType
 import com.github.stephengold.joltjni.enumerate.EOverrideMassProperties
-import net.nevinsky.abyssus.physics.ColliderComponent
-import net.nevinsky.abyssus.physics.ColliderShape
-import net.nevinsky.abyssus.physics.ConstraintComponent
-import net.nevinsky.abyssus.physics.ConstraintKind
-import net.nevinsky.abyssus.physics.Contact
-import net.nevinsky.abyssus.physics.GRAVITY
-import net.nevinsky.abyssus.physics.MAX_STEPS_PER_ADVANCE
-import net.nevinsky.abyssus.physics.MotionType
-import net.nevinsky.abyssus.physics.PHYSICS_STEP
-import net.nevinsky.abyssus.physics.PhysicsAssets
-import net.nevinsky.abyssus.physics.PhysicsBody
-import net.nevinsky.abyssus.physics.PhysicsConstraint
-import net.nevinsky.abyssus.physics.RigidBodyComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
-import net.nevinsky.abyssus.physics.jolt.FixedStepClock
-import net.nevinsky.abyssus.physics.jolt.JoltNatives
-import net.nevinsky.abyssus.physics.jolt.RopeTension
-import net.nevinsky.abyssus.physics.jolt.ShapeFactory
+import net.nevinsky.abyssus.lib.physics.*
 import org.slf4j.Logger
 import kotlin.math.abs
 import kotlin.math.max
@@ -73,7 +37,7 @@ private const val LAYER_MOVING = 1
  * time, and runs single-threaded, so a run is deterministic on one machine. [close] releases every native object;
  * afterwards every method throws [IllegalStateException].
  *
- * Needs Jolt's natives ([net.nevinsky.abyssus.physics.jolt.JoltNatives]); never use it in the IDE process.
+ * Needs Jolt's natives ([net.nevinsky.abyssus.lib.physics.jolt.JoltNatives]); never use it in the IDE process.
  */
 class PhysicsWorld(
     private val engine: SceneEngine,

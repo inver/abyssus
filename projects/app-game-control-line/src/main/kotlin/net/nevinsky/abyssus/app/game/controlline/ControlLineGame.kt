@@ -20,8 +20,8 @@ import net.nevinsky.abyssus.app.game.controlline.screens.GameUi
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.physics.PhysicsAssets
-import net.nevinsky.abyssus.physics.jolt.JoltNatives
+import net.nevinsky.abyssus.lib.physics.PhysicsAssets
+import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.util.concurrent.ExecutorService

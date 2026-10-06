@@ -14,9 +14,9 @@ import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.app.game.controlline.loadField
 import net.nevinsky.abyssus.app.game.controlline.named
-import net.nevinsky.abyssus.physics.PHYSICS_STEP
-import net.nevinsky.abyssus.physics.PhysicsAssets
-import net.nevinsky.abyssus.physics.jolt.JoltNatives
+import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
+import net.nevinsky.abyssus.lib.physics.PhysicsAssets
+import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
 

@@ -68,7 +68,7 @@ val exportComponentSchema by tasks.registering(JavaExec::class) {
 }
 val exportPlay by tasks.registering(JavaExec::class) {
     classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("net.nevinsky.abyssus.physics.play.PlayExportMain")
+    mainClass.set("net.nevinsky.abyssus.lib.physics.play.PlayExportMain")
     args("net.nevinsky.abyssus.app.game.controlline.play.ControlLinePlay", gameProject.asFile.absolutePath)
 }
 tasks.register("exportAbyssus") { dependsOn(exportComponentSchema, exportPlay) }

@@ -2,16 +2,16 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.physics
+package net.nevinsky.abyssus.lib.physics
 
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.runtime.SceneContext
-import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.testing.failOnWarnings
-import net.nevinsky.abyssus.physics.jolt.JoltNatives
+import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
+import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
+import net.nevinsky.abyssus.lib.runtime.SceneContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

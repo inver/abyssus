@@ -6,7 +6,7 @@
       <option name="externalProjectPath" value="$PROJECT_DIR$" />
       <option name="externalSystemIdString" value="GRADLE" />
       <option name="scriptParameters" value="runIdeForUiTests" />
-      <option name="scriptParameters" value="-PideProject=$PROJECT_DIR$/src/test/testData/project/Untitled" />
+      <option name="scriptParameters" value="-PideProject=$PROJECT_DIR$/projects/app-game-control-line/project/ControlLine" />
       <option name="taskDescriptions">
         <list />
       </option>

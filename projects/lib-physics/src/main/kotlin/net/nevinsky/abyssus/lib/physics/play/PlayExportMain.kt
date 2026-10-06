@@ -4,7 +4,7 @@
  */
 @file:JvmName("PlayExportMain")
 
-package net.nevinsky.abyssus.physics.play
+package net.nevinsky.abyssus.lib.physics.play
 
 import java.io.File
 import java.nio.file.Path
@@ -13,7 +13,7 @@ import kotlin.system.exitProcess
 /**
  * Writes `<project>/abyssus/play.json` for a game, beside its component schema (see `SchemaExportMain`). Run by the
  * game's Gradle `JavaExec` task on its runtime classpath with main class
- * `net.nevinsky.abyssus.physics.play.PlayExportMain` and two arguments: the class name of its [PlayModule] (with a
+ * `net.nevinsky.abyssus.lib.physics.play.PlayExportMain` and two arguments: the class name of its [PlayModule] (with a
  * no-argument constructor) and the project folder. The classpath written is the one this program runs on.
  */
 fun main(args: Array<String>) {

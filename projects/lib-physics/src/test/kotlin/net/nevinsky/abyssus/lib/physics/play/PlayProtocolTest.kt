@@ -2,7 +2,7 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.physics.play
+package net.nevinsky.abyssus.lib.physics.play
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -29,7 +29,7 @@ class PlayProtocolTest {
     @Test
     fun everyFrameTypeRoundTrips() {
         val frames = listOf(
-            PlayFrame.Hello(PLAY_PROTOCOL, "t0k3n", "net.nevinsky.abyssus.physics.play.PhysicsOnlyPlayModule"),
+            PlayFrame.Hello(PLAY_PROTOCOL, "t0k3n", "net.nevinsky.abyssus.lib.physics.play.PhysicsOnlyPlayModule"),
             PlayFrame.Ready,
             PlayFrame.Poses(42, 0.35, listOf(EntityPose(0, -3f, 2.5f, -3.25f, 0f, 0f, 0f, 1f), EntityPose(7, 1f, 2f, 3f, 0.5f, 0.5f, 0.5f, 0.5f))),
             PlayFrame.Poses(0, 0.0, emptyList()),

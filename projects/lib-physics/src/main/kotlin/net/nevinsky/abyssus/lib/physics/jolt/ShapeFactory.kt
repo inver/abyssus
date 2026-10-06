@@ -19,9 +19,9 @@ import com.github.stephengold.joltjni.ShapeRefC
 import com.github.stephengold.joltjni.ShapeSettings
 import com.github.stephengold.joltjni.SphereShapeSettings
 import com.github.stephengold.joltjni.Vec3
-import net.nevinsky.abyssus.physics.ColliderComponent
-import net.nevinsky.abyssus.physics.ColliderShape
-import net.nevinsky.abyssus.physics.PhysicsAssets
+import net.nevinsky.abyssus.lib.physics.ColliderComponent
+import net.nevinsky.abyssus.lib.physics.ColliderShape
+import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import kotlin.math.abs
 import kotlin.math.max

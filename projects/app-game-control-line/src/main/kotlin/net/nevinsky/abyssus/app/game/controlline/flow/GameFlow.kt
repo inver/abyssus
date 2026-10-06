@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightEnd
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
-import net.nevinsky.abyssus.physics.RigidBodyComponent
+import net.nevinsky.abyssus.lib.physics.RigidBodyComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
 import java.time.Instant
 

@@ -8,7 +8,7 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.physics.PhysicsComponents
+import net.nevinsky.abyssus.lib.physics.PhysicsComponents
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentSchemaReader
 import net.nevinsky.abyssus.lib.runtime.schema.SchemaJson
 import net.nevinsky.abyssus.lib.runtime.schema.SchemaVector

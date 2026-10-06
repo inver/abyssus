@@ -5,9 +5,9 @@
 package net.nevinsky.abyssus.app.game.controlline.play
 
 import net.nevinsky.abyssus.app.game.controlline.bundledProject
-import net.nevinsky.abyssus.physics.play.PlayFrame
-import net.nevinsky.abyssus.physics.play.PlayInput
-import net.nevinsky.abyssus.physics.play.PlayProtocol
+import net.nevinsky.abyssus.lib.physics.play.PlayFrame
+import net.nevinsky.abyssus.lib.physics.play.PlayInput
+import net.nevinsky.abyssus.lib.physics.play.PlayProtocol
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -58,7 +58,7 @@ class ControlLinePlayTest {
             server.soTimeout = 30_000
             val java = File(System.getProperty("java.home"), "bin/java").path
             val process = ProcessBuilder(
-                java, "-cp", System.getProperty("java.class.path"), "net.nevinsky.abyssus.physics.play.PlayHostMain",
+                java, "-cp", System.getProperty("java.class.path"), "net.nevinsky.abyssus.lib.physics.play.PlayHostMain",
                 "--port", server.localPort.toString(), "--token", "secret", ControlLinePlay::class.java.name,
             ).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()
             try {

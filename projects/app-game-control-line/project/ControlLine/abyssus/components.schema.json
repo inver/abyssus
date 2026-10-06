@@ -3,7 +3,7 @@
   "components": [
     {
       "name": "RigidBodyComponent",
-      "class": "net.nevinsky.abyssus.physics.RigidBodyComponent",
+      "class": "net.nevinsky.abyssus.lib.physics.RigidBodyComponent",
       "label": "Rigid body",
       "fields": [
         {
@@ -62,7 +62,7 @@
     },
     {
       "name": "ColliderComponent",
-      "class": "net.nevinsky.abyssus.physics.ColliderComponent",
+      "class": "net.nevinsky.abyssus.lib.physics.ColliderComponent",
       "label": "Collider",
       "fields": [
         {
@@ -117,7 +117,7 @@
     },
     {
       "name": "ConstraintComponent",
-      "class": "net.nevinsky.abyssus.physics.ConstraintComponent",
+      "class": "net.nevinsky.abyssus.lib.physics.ConstraintComponent",
       "label": "Constraint",
       "fields": [
         {

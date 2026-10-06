@@ -16,12 +16,12 @@ import net.nevinsky.abyssus.app.game.controlline.flight.Flight
 import net.nevinsky.abyssus.app.game.controlline.flight.Ground
 import net.nevinsky.abyssus.app.game.controlline.flight.LineRig
 import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
-import net.nevinsky.abyssus.physics.ColliderComponent
-import net.nevinsky.abyssus.physics.ColliderShape
+import net.nevinsky.abyssus.lib.physics.ColliderComponent
+import net.nevinsky.abyssus.lib.physics.ColliderShape
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.physics.play.DebugLine
-import net.nevinsky.abyssus.physics.play.PlayInput
-import net.nevinsky.abyssus.physics.play.PlayModule
+import net.nevinsky.abyssus.lib.physics.play.DebugLine
+import net.nevinsky.abyssus.lib.physics.play.PlayInput
+import net.nevinsky.abyssus.lib.physics.play.PlayModule
 import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistry

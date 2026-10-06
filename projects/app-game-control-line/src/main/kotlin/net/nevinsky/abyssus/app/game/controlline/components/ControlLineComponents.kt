@@ -5,7 +5,7 @@
 package net.nevinsky.abyssus.app.game.controlline.components
 
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.physics.PhysicsComponents
+import net.nevinsky.abyssus.lib.physics.PhysicsComponents
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistry
 
 /** The game's own components, without the physics ones (what Play's host adds to its own). */

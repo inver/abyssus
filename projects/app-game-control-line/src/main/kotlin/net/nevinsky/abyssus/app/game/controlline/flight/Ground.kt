@@ -7,9 +7,9 @@ package net.nevinsky.abyssus.app.game.controlline.flight
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.physics.ColliderComponent
-import net.nevinsky.abyssus.physics.ColliderShape
-import net.nevinsky.abyssus.physics.PhysicsAssets
+import net.nevinsky.abyssus.lib.physics.ColliderComponent
+import net.nevinsky.abyssus.lib.physics.ColliderShape
+import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine

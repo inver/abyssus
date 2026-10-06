@@ -2,15 +2,15 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.physics.play
+package net.nevinsky.abyssus.lib.physics.play
 
 import com.badlogic.ashley.core.EntitySystem
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.physics.PHYSICS_STEP
-import net.nevinsky.abyssus.physics.PhysicsAssets
-import net.nevinsky.abyssus.physics.PhysicsComponents
-import net.nevinsky.abyssus.physics.jolt.JoltNatives
+import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
+import net.nevinsky.abyssus.lib.physics.PhysicsAssets
+import net.nevinsky.abyssus.lib.physics.PhysicsComponents
+import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
 import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.NO_ENTITY
