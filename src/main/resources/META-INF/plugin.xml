@@ -45,7 +45,7 @@
                 extensions="abss"/>
         <postStartupActivity implementation="net.nevinsky.abyssus.projectView.OpenAbyssusViewActivity"/>
         <projectViewPane implementation="net.nevinsky.abyssus.projectView.AbyssusProjectViewPane"/>
-        <fileEditorProvider implementation="net.nevinsky.abyssus.sceneview.SceneFileEditorProvider"/>
+        <fileEditorProvider implementation="net.nevinsky.abyssus.SceneFileEditorProvider"/>
         <toolWindow id="Abyssus Properties"
                     anchor="right"
                     canCloseContents="false"

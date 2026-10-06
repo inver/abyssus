@@ -25,7 +25,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 - [x] 1.1 Move `Vec3`, `Quat`, `PlacementTransform` and the placement records out of `sceneview/SceneContent.kt` into a
   leaf package; fix `ecs`, `projectView` and `sceneview` imports. Verify with `SceneContentTest`,
   `ComponentEditorTest`, and the allowlist entry `ecs → sceneview` removed.
-- [ ] 1.2 Introduce `SceneViewHost` (four to six methods) implemented by the project view pane, and give
+- [x] 1.2 Introduce `SceneViewHost` (four to six methods) implemented by the project view pane, and give
   `SceneFileEditor` the host by constructor; drop its five `projectView` imports. Verify with `SceneFileEditorTest`,
   `AbyssusViewTest`, and the `sceneview → projectView` allowlist entry removed.
 - [ ] 1.3 Introduce `SceneFacts` (read-only view of content, selection and ray mode) and make `properties` use it

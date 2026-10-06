@@ -41,7 +41,7 @@ class SceneTextEditorTest : BasePlatformTestCase() {
         val doc = FileDocumentManager.getInstance().getDocument(file)!!
         com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) { doc.setText(minified) }
         // select the Scene View tab, then the text tab again
-        manager.setSelectedEditor(file, net.nevinsky.abyssus.sceneview.SceneFileEditorProvider.EDITOR_TYPE_ID)
+        manager.setSelectedEditor(file, net.nevinsky.abyssus.SceneFileEditorProvider.EDITOR_TYPE_ID)
         val text = manager.getEditors(file).first { it is TextEditor }
         manager.setSelectedEditor(file, "text-editor")
         assertNotNull(text)

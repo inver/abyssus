@@ -5,6 +5,11 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.SceneFileEditorProvider
+
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Quat
+
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.dto.textOf
@@ -77,6 +82,30 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         }
         override fun dispose() {
             disposed = true
+        }
+    }
+
+    fun testTreeSelectionAndPickAreForwardedThroughHost() {
+        val scene = file("host/Main.scene")
+        var treeSelection: ((String) -> Unit)? = null
+        var picked: String? = null
+        val host = object : SceneViewHost {
+            override fun listen(file: com.intellij.openapi.vfs.VirtualFile, parent: com.intellij.openapi.Disposable, selected: (String) -> Unit) { treeSelection = selected }
+            override fun select(file: com.intellij.openapi.vfs.VirtualFile, entityId: String) { picked = entityId }
+            override fun lightActions(file: com.intellij.openapi.vfs.VirtualFile, position: () -> Vec3) = com.intellij.openapi.actionSystem.DefaultActionGroup()
+            override fun assetActions(file: com.intellij.openapi.vfs.VirtualFile, position: () -> Vec3) = com.intellij.openapi.actionSystem.DefaultActionGroup()
+            override fun canAddLight(file: com.intellij.openapi.vfs.VirtualFile) = false
+            override fun canAddAsset(file: com.intellij.openapi.vfs.VirtualFile) = false
+        }
+        lateinit var view: FakeView
+        val editor = newSceneEditor(project, scene, host = host) { params -> FakeView(params).also { view = it } }
+        try {
+            treeSelection!!("12")
+            assertEquals("12", view.selected)
+            view.onPick!!("7")
+            assertEquals("7", picked)
+        } finally {
+            editor.dispose()
         }
     }
 

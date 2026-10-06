@@ -13,7 +13,6 @@
 : properties -> schema
 : properties -> terrain
 : sceneview -> ecs
-: sceneview -> projectView
 : sceneview -> terrain
 : schema -> ecs
 : terrain -> properties

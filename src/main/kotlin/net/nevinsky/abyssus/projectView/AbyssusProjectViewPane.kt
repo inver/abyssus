@@ -49,7 +49,8 @@ import net.nevinsky.abyssus.AbyssusCore
 
 // Platform project-view implementation APIs supply its native selection, toolbar and tree lifecycle.
 // Keep that integration here; the public ViewSettings/node contracts do not construct a custom pane.
-class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project) {
+class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
+    net.nevinsky.abyssus.sceneview.SceneViewHost by ProjectSceneViewHost(project) {
     init {
         // a plugin edit of a scene or project file changes what the tree shows (names, toggles, counts)
         project.messageBus.connect(this).subscribe(AbyssusSceneEdited.TOPIC, AbyssusSceneEdited { updateFromRoot(true) })

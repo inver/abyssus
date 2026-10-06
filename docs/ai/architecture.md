@@ -53,7 +53,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 
 ### A scene file to the scene view
 
-1. `SceneFileEditor` reads the scene and its project's `mainCamera` through `SceneParamsSource.EDITOR_TEXT`. It uses
+1. `SceneFileEditor` receives tree integration through the pane's `SceneViewHost` and reads the scene and its project's `mainCamera` through `SceneParamsSource.EDITOR_TEXT`. It uses
    the unsaved editor text when there is any. It re-reads on every document or VFS change of those files.
 2. `SceneRenderParams.from` → `SceneContent.of` turns the `ecs` JSON into placements: `models`, `terrains`,
    `lights`, `cameras`, plus the skybox name. The view reads the JSON through runtime component codecs; it does not run the Ashley engine.

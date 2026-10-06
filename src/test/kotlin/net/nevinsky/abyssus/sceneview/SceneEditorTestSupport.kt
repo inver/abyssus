@@ -16,5 +16,6 @@ internal fun newSceneEditor(
     project: Project,
     file: VirtualFile,
     paramsSource: SceneParamsSource = SceneParamsSource.editorText(service<SceneReader>()),
+    host: SceneViewHost = net.nevinsky.abyssus.projectView.ProjectSceneViewHost(project),
     viewFactory: (SceneRenderParams) -> SceneView,
-) = SceneFileEditor(project, file, service<AbyssusCore>().json, project.service<SceneRayControls>(), paramsSource, viewFactory)
+) = SceneFileEditor(project, file, service<AbyssusCore>().json, project.service<SceneRayControls>(), paramsSource, host, viewFactory)
