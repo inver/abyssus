@@ -17,7 +17,8 @@ remain readable in the text editor; plugin editing and loading are refused. No i
   Toggle scene options, rename scenes and choose a scene's skybox from the tree.
 - **Abyssus Properties**: the `meta.json` of the selected asset, with skybox face previews; terrain size, texture
   repetition and textures, cube skybox faces and procedural sky parameters can be edited, terrain heights can be generated
-  from seeded noise, and **New Terrain** on the Assets node creates a terrain asset.
+  from seeded noise, **New Terrain** on the Assets node creates a terrain asset, and **Import FlightGear Aircraft**
+  turns an aircraft from a FlightGear `.zip` into a model asset.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
 - **Ray Tracing settings**: a selected scene's Properties switch turns Ray Tracing on for its open views (not saved), and
@@ -115,6 +116,18 @@ terrain is written as a native Abyssus terrain asset (`meta.json` with a fresh `
 refreshes and the new asset is selected. Nothing is placed in a scene and no scene or project file is changed, so the asset
 is marked unused until you add it to a scene. Undo removes the asset again, and Redo brings back the same files and
 `uuid`; Undo refuses while a scene or another asset uses it, or something was added to its folder.
+
+### Import FlightGear Aircraft
+
+Right-click an **Assets** node and choose **Import FlightGear Aircraft...**, then pick a FlightGear aircraft `.zip`. The
+dialog shows the aircraft (choose one when the archive has several), its authors and licence (with a warning when the
+archive states none), a folder name, the size (original metres or a wingspan in metres) and its named parts. Parts the
+aircraft hides at rest, such as a spinning propeller disc, start unticked. It also lists what is not imported:
+instrument panels, line surfaces, missing or unsupported textures. **Create** writes one model asset: `model.glb` with
+the parts as named nodes, nose toward +Z, up +Y, left wing toward +X, standing on y = 0; SGI textures converted to PNG
+in `textures/`; any licence files from the archive; and a `source.json` with the archive, its checksum, the licence
+and the settings. No scene or project file changes, so the asset is unused until you place it. Undo removes the folder
+and Redo restores the same files. Animations, flight models, sounds, panels and effects are not imported.
 
 Select an **entity** to see all its components, or one **component** to see only that one. Each component the plugin
 models lists its fields with an editor: type a value and press Enter (or leave the field) to save it, or pick from the

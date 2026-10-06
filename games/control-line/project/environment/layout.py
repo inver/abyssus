@@ -6,7 +6,8 @@ Reads site_plan.py and each built model's bounds (source.json written by build_e
 rejects any whose transformed footprint comes within the clear radius of the pilot, and writes:
 - placements.json: every instance (asset, position, rotation, scale, footprint) with the estimates used;
 - layout.svg: a north-up placement diagram (not a render);
-- field-environment.patch.json: the scene edit for apply through editSceneJson (never applied here).
+- field-environment.patch.json: the scene edit, applied through editSceneJson by ScenePatchApplicationTest
+  (never applied here).
 """
 import hashlib
 import json
@@ -349,18 +350,22 @@ def main():
                       for item in layout.items],
     }, indent=1) + "\n")
     (HERE / "layout.svg").write_text(svg(layout))
+    field = ["ecs", "entities", "0", "components"]
+    operations = [
+        {"op": "set", "path": field + ["RenderComponent", "renderable", "asset", "assetName"], "value": "terrain_airfield_site"},
+        {"op": "set", "path": field + ["PositionComponent", "localPosition", "x"], "value": -plan.SITE_SIZE / 2},
+        {"op": "set", "path": field + ["PositionComponent", "localPosition", "y"], "value": 0},
+        {"op": "set", "path": field + ["PositionComponent", "localPosition", "z"], "value": -plan.SITE_SIZE / 2},
+        {"op": "removeEntitiesWithAssets", "prefixes": ["model_airfield_", "terrain_airfield_"], "keep": ["0"]},
+    ] + [{"op": "set", "path": ["ecs", "entities", key], "value": value} for key, value in entities.items()]
     (HERE / "field-environment.patch.json").write_text(json.dumps({
-        "patchVersion": 2,
-        "target": "ControlLine/scenes/Field.scene",
-        "expectedSha256": hashlib.sha256(SCENE.read_bytes()).hexdigest(),
-        "fieldEntity": "0",
-        "fieldAsset": "terrain_airfield_site",
-        "fieldPosition": {"x": -plan.SITE_SIZE / 2, "y": 0, "z": -plan.SITE_SIZE / 2},
-        "removeAssetsPrefix": ["model_airfield_", "terrain_airfield_"],
-        "appendEntities": entities,
-        "instructions": "Apply through editSceneJson after checking expectedSha256: point the field entity at the new "
-                        "site terrain and position, remove every other entity drawn with an airfield asset, append "
-                        "appendEntities. Unrelated keys and number text stay as they are. No scenery colliders.",
+        "note": "Apply with ScenePatchApplicationTest (ABYSSUS_SCENE_PATCH): points the field at the site terrain, "
+                "replaces every entity drawn with an airfield asset, and adds the scenery. No scenery colliders.",
+        "documents": [{
+            "target": "../ControlLine/scenes/Field.scene",
+            "expectedSha256": hashlib.sha256(SCENE.read_bytes()).hexdigest(),
+            "operations": operations,
+        }],
     }, indent=1) + "\n")
 
 

@@ -28,6 +28,13 @@ code is in `net.nevinsky.abyssus.core.assets`.
 | `core.assets.texture` | `TextureLoader` (`TEXTURE` and `PIXMAP_TEXTURE` assets: image decoded off the GL thread, uploaded as a mipmapped repeating texture), `PreparedTexture` (the decoded image; `release()` hands the `Pixmap` to a caller that uploads it itself) and `TextureMeta` |
 | `core.assets.sky` | `Sky` (a drawable background) and `RaySkySnapshot`; `cube/` six-face skyboxes, `procedural/` skies drawn by the asset's own GLSL, `hdr/` OpenEXR skies and their lighting environment. Each has a `*Loader` and a `*RaySnapshotLoader` |
 
+`core.flightgear` converts a FlightGear aircraft archive into the files of one native `MODEL` asset, without GL:
+`FlightGearArchive` (the zip, read lazily; `Aircraft/` paths, zip-slip and size limits), `FlightGearModelXmlReader`
+(model XML: AC3D path, offsets, nested models, panels, `select` animations), `RestState` (conditions with every
+property 0), `Ac3dReader`, `SgiImage` (SGI to PNG), `GlbWriter` (glTF 2.0 binary with external images) and
+`FlightGearImport` (inspection, then staging: frame, scale, textures, `meta.json`, `source.json`). The plugin's Import
+FlightGear Aircraft and the Control Line trainer tool use it.
+
 `core.project` holds filesystem `Project` / `ProjectLoader`; the `core` scene package holds scene DTOs and `SceneLoader`.
 These and `AssetMetaLoader` currently bind JSON without enforcing the editor's native document validator; see
 `docs/reviews/documentation-audit-2026-10-06.md` for the gap against the required format contract.

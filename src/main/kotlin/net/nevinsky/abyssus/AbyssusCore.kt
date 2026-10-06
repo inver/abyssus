@@ -58,6 +58,7 @@ class AbyssusCore : Disposable {
     val terrainWriter = TerrainAssetWriter(json, heightEncoder)
     val terrainRecipes = TerrainRecipeCodec(json)
     val newTerrains = net.nevinsky.abyssus.terrain.NewTerrainFactory(json, terrainWriter, heightEncoder, terrainRecipes)
+    val flightGearImport = net.nevinsky.abyssus.core.flightgear.FlightGearImport(json, net.nevinsky.abyssus.core.format.AbyssusDocumentFormat())
 
 
     /** The scene view's own GLSL (grid lines, overlay, terrain), from the plugin's resources. */

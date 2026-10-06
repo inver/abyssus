@@ -66,7 +66,7 @@ Models are GLB files with their textures as external files in `textures/`, as th
 3. `python3 layout.py` places the scenery, rejects anything within the clear radius, and writes `placements.json`,
    `layout.svg` and `field-environment.patch.json`. The patch carries the current scene's SHA-256.
 4. Apply the patch through the editor's scene writer:
-   `ABYSSUS_AIRFIELD_PATCH=$PWD/games/control-line/project/environment/field-environment.patch.json ./gradlew :test --tests 'net.nevinsky.abyssus.filetype.AirfieldPatchApplicationTest'`.
+   `ABYSSUS_SCENE_PATCH=$PWD/games/control-line/project/environment/field-environment.patch.json ./gradlew :test --tests 'net.nevinsky.abyssus.filetype.ScenePatchApplicationTest'`.
    It points the field entity at the site terrain, replaces every entity drawn with an airfield asset, and leaves
    everything else, including number text, as it was.
 

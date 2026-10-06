@@ -72,6 +72,20 @@ fun checkGeometry(size: Int?, resolution: Int?): GeometryError? = when {
     else -> null
 }
 
+/** A random `uuid` (from [random]) that no asset folder in [assetsDir] already uses. Reads every `meta.json`. */
+fun uniqueAssetUuid(json: JsonProcessor, assetsDir: File, random: () -> UUID = { UUID.randomUUID() }): UUID {
+    val used = assetsDir.listFiles { f -> f.isDirectory }.orEmpty().mapNotNull { dir ->
+        runCatchingKeepingCancellation {
+            File(dir, META_FILE).takeIf { it.isFile }?.let {
+                AssetMetaReader(json).read(it.readText()).json.text("uuid")
+            }
+        }.getOrNull()
+    }.toSet()
+    var uuid = random()
+    while (uuid.toString() in used) uuid = random()
+    return uuid
+}
+
 fun FolderNameError.message(): String = AbyssusBundle.message("newTerrainNameError.$name")
 
 fun GeometryError.message(): String = AbyssusBundle.message("newTerrainGeometryError.$name")
@@ -96,7 +110,7 @@ class NewTerrainFactory(
         val name = rawName.trim()
         val assetsDir = File(projectDir, ASSETS_DIR)
         if (checkFolderName(assetsDir, name) != null) return null
-        val uuid = uniqueUuid(assetsDir)
+        val uuid = uniqueAssetUuid(json, assetsDir, randomUuid)
         val files = writer.create(uuid, clock(), preview.size, preview.heights)
         val recipe = TerrainRecipe(preview.settings, preview.size, preview.resolution, sha256Hex(files.heightBytes))
         val base = "$ASSETS_DIR/$name"
@@ -117,17 +131,4 @@ class NewTerrainFactory(
         return NewTerrain(name, uuid.toString(), transaction)
     }
 
-    /** A random `uuid` no asset folder of the project already uses. */
-    private fun uniqueUuid(assetsDir: File): UUID {
-        val used = assetsDir.listFiles { f -> f.isDirectory }.orEmpty().mapNotNull { dir ->
-            runCatchingKeepingCancellation {
-                File(dir, META_FILE).takeIf { it.isFile }?.let {
-                    AssetMetaReader(json).read(it.readText()).json.text("uuid")
-                }
-            }.getOrNull()
-        }.toSet()
-        var uuid = randomUuid()
-        while (uuid.toString() in used) uuid = randomUuid()
-        return uuid
-    }
 }

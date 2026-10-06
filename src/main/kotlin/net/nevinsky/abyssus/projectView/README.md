@@ -17,6 +17,7 @@ the row actions that call `editSceneJson` (`src/main/kotlin/net/nevinsky/abyssus
 | `ComponentActions.kt`, `ComponentTarget.kt` | The **Add Component...** / **Remove Component** tree actions and the entity or component a row stands for |
 | `EnabledToggle.kt` | The writes built on `editSceneJson`: `toggleEnabled`, `renameScene`, `setSkybox` |
 | `RenameSceneAction` | Right-click **Rename Scene...** |
+| `ImportFlightGearAction.kt`, `FlightGearImportSettings.kt` | Right-click **Import FlightGear Aircraft...** on the Assets node: the dialog over a Swing-free settings model, `importFlightGear` (stage off the EDT through `core.flightgear`, then one undoable `AssetFileCommand`) and `importTransaction` |
 | `SkyboxChoices.kt`, `SkyboxPickerModel`, `SkyboxChooserDialog` | The skybox list, its filter and selection logic, and the dialog |
 | `EntitySelection.kt` | Selects an entity's row when the scene view picks it |
 | `AbyssusSelection` | Publishes the selected node on `AbyssusSelectionListener.TOPIC` (the properties panel listens) |

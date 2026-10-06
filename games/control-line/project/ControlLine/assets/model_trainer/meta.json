@@ -6,7 +6,7 @@
   "uuid": "9f9bfe6b-49c0-3c75-bcfb-bd0d217a70f2",
   "type": "MODEL",
   "additional": {
-    "file": "model.gltf",
+    "file": "model.glb",
     "format": "GLTF",
     "binary": true,
     "materials": []

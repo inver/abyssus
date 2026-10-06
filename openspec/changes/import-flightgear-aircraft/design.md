@@ -123,6 +123,14 @@ It is documented in `docs/ai/file-formats.md` as an asset side file that the loa
   `BundledProjectTest.parkedPlanesRestOnTheGround` decide whether that holds. If takeoff changes, the fix is the
   leadout height or the parked pose, never the flight model.
 - `tools/PlaneModels.kt` keeps the racer, stunter and pilot.
+- Found during implementation:
+  - The planes' models have their origin at the centre of gravity, which physics, the leadouts and the parked pose
+    rely on. So `FlightGearImportRequest` gained an `origin`: `Ground` (the default, as the spec requires for the
+    dialog), or a `SourcePoint` in FlightGear's body frame. The trainer uses the estimated centre of gravity
+    (x 0.35 m aft, at the cabin's mid-height), so it parks at y = 0.136 m.
+  - At this base, `tools/` does not compile: `FieldAssets.kt` still names terrain generation that the
+    asset-loading refactor moved out of `core`. So the trainer tool lives in its own `importers` source set, and
+    `FieldAssets.kt` is left for that refactor.
 
 ### Threads
 

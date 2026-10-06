@@ -1,0 +1,63 @@
+{
+  "importer": "flightgear",
+  "archive": "c172r.zip",
+  "archiveSha256": "592fe840e6ab9f69619fe25045bd3b766a9931c1d36965b3b255cbabe6162b2e",
+  "aircraft": "c172r",
+  "description": "Cessna 172R",
+  "authors": "Tony Peden (FDM), David Megginson (3D Models), John Check (2D Instruments)",
+  "model": "Models/c172-dpm.xml",
+  "license": "GPL-2.0-or-later",
+  "licenseFiles": [
+    "COPYING"
+  ],
+  "size": {
+    "span": 1.0
+  },
+  "excludedParts": [
+    "Cabin",
+    "Compass",
+    "Mixture",
+    "Pedal.1",
+    "Pedal.2",
+    "Pedal.3",
+    "Pedal.4",
+    "Pedestal",
+    "Propeller.2",
+    "Seat.1",
+    "Seat.2",
+    "Seat.3",
+    "Seat.4",
+    "Throttle",
+    "Yoke.1",
+    "Yoke.2"
+  ],
+  "skipped": [
+    {
+      "item": "1 instrument panel(s) in c172-dpm.xml",
+      "reason": "panels are not imported"
+    },
+    {
+      "item": "Wings: 1 line surfaces",
+      "reason": "lines are not imported"
+    },
+    {
+      "item": "RightHTail: 1 line surfaces",
+      "reason": "lines are not imported"
+    },
+    {
+      "item": "LeftFlap: 1 line surfaces",
+      "reason": "lines are not imported"
+    },
+    {
+      "item": "RightFlap: 1 line surfaces",
+      "reason": "lines are not imported"
+    },
+    {
+      "item": "LeftHTail: 1 line surfaces",
+      "reason": "lines are not imported"
+    }
+  ],
+  "frame": "nose +Z, up +Y, left wing +X; origin at FlightGear body point (0.35, 0.0, 0.0) m",
+  "licenseNote": "FlightGear aircraft licence; the archive itself states none. Bundled as a separately licensed asset.",
+  "credit": "3D model by David Megginson (FlightGear c172r)"
+}

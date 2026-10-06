@@ -209,7 +209,22 @@ or the schema or generator identifier is unknown, or the file is malformed, the 
 why, and a draft starts from the defaults above. An identifier is never reinterpreted: new noise gets a new
 identifier. Heights come from world-local OpenSimplex2 fractal noise (`x / (resolution - 1) * size`), mapped onto
 `minHeight..maxHeight`, so a height means the same at any resolution.
+### Imported FlightGear models
 
+Import FlightGear Aircraft writes an ordinary `MODEL` folder: `meta.json` (`additional.file` `model.glb`, `format`
+`GLTF`, `binary` true, a fresh `uuid`), `model.glb` with its textures as external files in `textures/` (SGI images
+converted to PNG), the archive's licence files (`COPYING`, `LICENSE*`), and a `source.json` the loader ignores:
+
+```json
+{ "importer": "flightgear", "archive": "c172r.zip", "archiveSha256": "...", "aircraft": "c172r",
+  "description": "Cessna 172R", "authors": "...", "model": "Models/c172-dpm.xml",
+  "license": "unknown", "licenseFiles": [], "size": { "span": 1.0 },
+  "excludedParts": ["Propeller.2"], "skipped": [{ "item": "...", "reason": "..." }],
+  "frame": "nose +Z, up +Y, left wing +X; centred on span and length; lowest point at y = 0" }
+```
+
+`license` is the set file's `license` entry, `see <file>` for licence files in the archive, or `unknown`. Each glTF node
+is one named AC3D part. See `core/src/main/kotlin/net/nevinsky/abyssus/core/flightgear/FlightGearImport.kt`.
 
 **`SKYBOX_PROCEDURAL` is a native asset type.** The scene view
 draws it as a fullscreen triangle with the folder's own shaders (single-scattering Rayleigh + Mie, ray-marched per

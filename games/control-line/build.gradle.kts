@@ -95,6 +95,23 @@ tasks.register<JavaExec>("generatePlaneModels") {
     mainClass.set("net.nevinsky.abyssus.games.controlline.tools.PlaneModels")
     args(gameProject.asFile.absolutePath)
 }
+// Importers of bundled assets from outside sources (importers/): kept apart from tools/ so each builds on its own.
+val importers by sourceSets.creating {
+    kotlin.srcDir("importers")
+    compileClasspath += sourceSets["main"].runtimeClasspath
+    runtimeClasspath += sourceSets["main"].runtimeClasspath
+}
+dependencies {
+    "importersImplementation"(kotlin("stdlib"))
+}
+tasks.register<JavaExec>("importTrainer") {
+    group = "control line"
+    description = "Re-imports the trainer from FlightGear's Cessna 172R archive (downloaded into build/flightgear)."
+    classpath = importers.runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.games.controlline.tools.TrainerModel")
+    args(gameProject.asFile.absolutePath, layout.buildDirectory.dir("flightgear").get().asFile.absolutePath,
+        file("importers/GPL-2.0.txt").absolutePath)
+}
 tasks.register<JavaExec>("generateField") {
     group = "control line"
     description = "Writes the field's terrain and textures into the bundled project."
