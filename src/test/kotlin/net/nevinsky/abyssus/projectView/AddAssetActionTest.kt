@@ -60,11 +60,13 @@ class AddAssetActionTest : BasePlatformTestCase() {
         val sections = items.filterIsInstance<Separator>().map { it.text }
         assertEquals(listOf("Models", "Terrains"), sections)
         val names = items.filter { it !is Separator }.map { it.templatePresentation.text }
-        assertEquals(listOf(
-            "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "model_828d51e4-8427-4769-bcb6-13f8f21f23e9",
-            "model_900f6f61-6384-434a-be81-56ce303fbb56", "model_fc33e1f1-015b-4524-9b10-aa417acd273c", "tree",
-            "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b",
-        ), names)
+        // the fixture's own folders by meta type, so an asset added to the fixture does not break this test
+        val byType = File("$testDataPath/Untitled/assets").listFiles { f -> File(f, "meta.json").isFile }!!
+            .groupBy({ Regex("\"type\"\\s*:\\s*\"(\\w+)\"").find(File(it, "meta.json").readText())?.groupValues?.get(1) }, { it.name })
+        val expected = byType["MODEL"].orEmpty().sorted() + byType["TERRAIN"].orEmpty().sorted()
+        assertTrue("tree" in expected && "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b" in expected)
+        assertEquals(expected, names)
+        assertTrue(names.none { it.startsWith("skybox") })
         assertTrue(ActionManager.getInstance().getAction("Abyssus.AddAsset") is AddAssetAction)
     }
 
