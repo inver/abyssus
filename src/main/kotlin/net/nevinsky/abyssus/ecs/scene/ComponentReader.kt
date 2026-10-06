@@ -33,7 +33,7 @@ private interface PublicFieldsOnly
  * vectors and colors by their public fields, an object that names only some fields merged over the component's own
  * defaults, and decimal text kept. Unlike a scene load it leaves entity references as the file has them.
  */
-class ComponentReader(mapper: ObjectMapper, resolver: AssetResolver, log: Logger) {
+class ComponentReader(mapper: ObjectMapper, resolver: AssetResolver, log: Logger) : net.nevinsky.abyssus.editor.document.SceneComponentDecoder {
     private val reader: ObjectReader = mapper.copy()
         .addMixIn(Vector3::class.java, PublicFieldsOnly::class.java)
         .addMixIn(Quaternion::class.java, PublicFieldsOnly::class.java)
@@ -47,5 +47,5 @@ class ComponentReader(mapper: ObjectMapper, resolver: AssetResolver, log: Logger
         )
 
     /** The [type] component [node] holds; throws when it cannot be bound. */
-    fun <C : Component> read(type: Class<C>, node: JsonNode): C = reader.forType(type).readValue(node)
+    override fun <C : Component> read(type: Class<C>, node: JsonNode): C = reader.forType(type).readValue(node)
 }

@@ -9,7 +9,7 @@ import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.SceneEcsPaths
+import net.nevinsky.abyssus.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
 import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
@@ -269,9 +269,9 @@ class ComponentEditor(schemas: List<ComponentSchema> = emptyList(), private val 
 
     fun kindOf(name: String): ComponentKind<*>? = byName[name]
 
-    private fun entities(root: JsonNode): JsonNode? = SceneEcsPaths().entities(root)
+    private fun entities(root: JsonNode): JsonNode? = SceneEntityTree(root).entities()
 
-    private fun componentsOf(root: JsonNode, entityId: String): ObjectNode? = SceneEcsPaths().components(root, entityId)
+    private fun componentsOf(root: JsonNode, entityId: String): ObjectNode? = SceneEntityTree(root).components(entityId)
 
     /** The modeled kinds [entityId] lacks, in the order the view lists them; empty when the entity is missing. */
     fun missingKinds(root: JsonNode, entityId: String): List<ComponentKind<*>> {
@@ -396,9 +396,8 @@ class ComponentEditor(schemas: List<ComponentSchema> = emptyList(), private val 
     /** An entity other than [entityId] that looks at it, has it as parent or ends a point-to-point at it. */
     private fun referrer(root: JsonNode, entityId: String): String? {
         val wanted = entityId.toIntOrNull() ?: return null
-        for ((id, entity) in entities(root)?.properties().orEmpty()) {
+        for ((id, c) in SceneEntityTree(root).componentsById()) {
             if (id == entityId) continue
-            val c = SceneEcsPaths().componentsOf(entity) ?: continue
             val refs = listOf(
                 c.get("PositionComponent")?.get("lookAtId"), c.get("ParentComponent")?.get("parentEntityId"),
                 c.get("Point2PointPositionComponent")?.get("entity1Id"), c.get("Point2PointPositionComponent")?.get("entity2Id"),
@@ -474,7 +473,7 @@ class ComponentEditor(schemas: List<ComponentSchema> = emptyList(), private val 
             var current: Int = target
             val seen = HashSet<Int>()
             while (current != NO_ENTITY && seen.add(current)) {
-                val next = SceneEcsPaths().componentsOf(entities.get(current.toString()))?.get("ParentComponent")?.get("parentEntityId")?.asInt(NO_ENTITY) ?: NO_ENTITY
+                val next = SceneEntityTree(root).components(current.toString())?.get("ParentComponent")?.get("parentEntityId")?.asInt(NO_ENTITY) ?: NO_ENTITY
                 if (next.toString() == entityId) return reject("componentParentCycle", label, target, entityId)
                 current = next
             }

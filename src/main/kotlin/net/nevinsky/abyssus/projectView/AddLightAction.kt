@@ -19,7 +19,7 @@ import net.nevinsky.abyssus.ecs.scene.LightPreset
 import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.dto.textOf
-import net.nevinsky.abyssus.SceneEcsPaths
+import net.nevinsky.abyssus.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.dto.SceneDocumentCache
 
 /** The same three choices in the tree and toolbar; placement is read when a choice is made. */
@@ -46,11 +46,10 @@ class AddLightGroup(
 
 /** Publish a new entity immediately, then select its row when the asynchronous tree refresh reaches it. */
 internal fun selectCreatedEntity(project: Project, file: VirtualFile, entityId: String) {
-    val entity = runCatchingKeepingCancellation {
-        SceneEcsPaths().entities(SceneJson.parse(textOf(file)))?.get(entityId)
-    }.getOrNull()
+    val tree = runCatchingKeepingCancellation { SceneEntityTree(SceneJson.parse(textOf(file))) }.getOrNull()
+    val entity = tree?.entities()?.get(entityId)
     if (entity?.isObject == true) {
-        val node = DtoEntryNode(project, file.path, DtoRow(entityId, entity), file, SceneEcsPaths().entityKeys(SceneJson.parse(textOf(file))))
+        val node = DtoEntryNode(project, file.path, DtoRow(entityId, entity), file, tree.entityKeys())
         AbyssusSelection.of(project).select(node)
     }
     selectEntityInAbyssusView(project, file, entityId)

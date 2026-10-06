@@ -28,7 +28,7 @@ import net.nevinsky.abyssus.ecs.scene.FieldKind
 import net.nevinsky.abyssus.ecs.scene.FieldValue
 import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.projectView.*
-import net.nevinsky.abyssus.SceneEcsPaths
+import net.nevinsky.abyssus.editor.document.SceneDocument
 import net.nevinsky.abyssus.editor.ray.RayDataError
 import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
 import net.nevinsky.abyssus.editor.ray.RayMaterialOverrides
@@ -168,9 +168,9 @@ fun readEntityState(target: ComponentTarget, services: PanelServices): PanelStat
                 null
             )
         }
-    val entity = SceneEcsPaths().entities(root)?.get(target.entityId)?.takeIf { it.isObject }
+    val entity = SceneDocument(root).entity(target.entityId)
         ?: return PanelState.Empty(AbyssusBundle.message("propertiesEntityGone", target.entityId), null)
-    val components = entity.get("components")?.takeIf { it.isObject }
+    val components = entity.components
     val kinds = target.kind?.let { listOf(it) } ?: components?.fieldNames()?.asSequence()?.toList().orEmpty()
     val assets = SceneComponentEdits.renderAssets(target.file, services.metaFiles).map { it.name }
     val byType = SceneComponentEdits.assetsByType(target.file, services.metaFiles).orEmpty()
@@ -204,7 +204,7 @@ fun readEntityState(target: ComponentTarget, services: PanelServices): PanelStat
             }, null)
         }
     }
-    val name = SceneEcsPaths().entityName(components, target.entityId)
+    val name = entity.name
     val addable = if (target.kind == null) editor.missingKinds(root, target.entityId).map { it.name } else emptyList()
     val optics = if (kinds.contains(RENDER_COMPONENT)) components?.get(RENDER_COMPONENT)
         ?.let { readOptics(target, it, services) } else null

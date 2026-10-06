@@ -39,15 +39,15 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 
 ## 2. Stage 2: one typed scene document layer (S4, S6)
 
-- [ ] 2.1 Pin the current outputs: for the Untitled fixture, record `SceneContent.of`, `RaySceneSnapshots.capture`
+- [x] 2.1 Pin the current outputs: for the Untitled fixture, record `SceneContent.of`, `RaySceneSnapshots.capture`
   inputs, the tree rows and the panel state as test expectations. Verify they pass before any change.
-- [ ] 2.2 Add `SceneDocument` and `EntityView` (design D4) beside `SceneEcsPaths`, with tests comparing them with the
+- [x] 2.2 Add `SceneDocument` and `EntityView` (design D4) beside `SceneEcsPaths`, with tests comparing them with the
   pinned outputs. Verify with the new `SceneDocumentTest`.
-- [ ] 2.3 Switch callers one at a time (`SceneContent`, `RaySceneSnapshots`, `RayViewFeed`, `PanelState`, `DtoTree`,
+- [x] 2.3 Switch callers one at a time (`SceneContent`, `RaySceneSnapshots`, `RayViewFeed`, `PanelState`, `DtoTree`,
   `EntitySelection`, `AddLightAction`, then the writers `SceneTransformWriter`, `SceneRayEdits`, `ComponentEditor`,
   `LightEntities`), running the pinned tests after each. Verify that `rg -n 'SceneEcsPaths|"components"' src/main` lists
   only `SceneDocument`; the shared format check's reserved-field paths stay in `core.format`.
-- [ ] 2.4 Make `SceneEcsPaths` private to `SceneDocument` and record the ADR in design D3 (editor keeps the JSON model,
+- [x] 2.4 Make `SceneEcsPaths` private to `SceneDocument` and record the ADR in design D3 (editor keeps the JSON model,
   games keep Ashley; both share the codecs). Verify with `./gradlew check`.
 
 ## 3. Stage 3: extract `editor-core` (S1, S2); replaces `refactor-solid-dedup` phases 4 and 7

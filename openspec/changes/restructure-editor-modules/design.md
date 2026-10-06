@@ -68,6 +68,13 @@ round-tripping. The decision is to keep both and add the missing layer between: 
 (D4) built on the same component codecs that `runtime` owns, which already guarantees both agree on defaults. Revisit
 only if the codec layer grows a second copy of component rules.
 
+**ADR (accepted 2026-10-06, stage 2):** the editor keeps the JSON document as its model; games and Play keep the
+Ashley `SceneEngine`; both bind components through the shared `runtime` codecs. The entity layout
+(`ecs[.entities].<id>.components`) is defined once, by the private `SceneEcsPaths` in
+`editor/document/SceneDocument.kt`: readers go through `SceneDocument` / `EntityView`, writers through
+`SceneEntityTree` (address lookup, entity insertion, archetype matching) on a tree that `editSceneJson` has already
+admitted. No other main source names `components` or the entity map.
+
 ### D4. `SceneDocument` (stage 2)
 
 A small immutable read facade over a parsed `JsonNode` root:

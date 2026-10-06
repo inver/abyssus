@@ -20,7 +20,8 @@ import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FAR
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_CONE_ANGLE
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_EDGE_SOFTNESS
-import net.nevinsky.abyssus.SceneEcsPaths
+import net.nevinsky.abyssus.editor.document.EntityView
+import net.nevinsky.abyssus.editor.document.sceneDocumentFromEcs
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.ecs.scene.ComponentReader
@@ -52,9 +53,9 @@ data class SceneContent(
         val EMPTY = SceneContent()
 
         fun of(scene: Scene): SceneContent {
-            val entities = SceneEcsPaths().entitiesIn(scene.ecs)?.properties().orEmpty().mapNotNull { (id, entity) ->
-                val components = SceneEcsPaths().componentsOf(entity) ?: return@mapNotNull null
-                runCatchingKeepingCancellation { decode(id, components) }.getOrNull()
+            val entities = sceneDocumentFromEcs(scene.ecs, components).entities().mapNotNull { entity ->
+                if (entity.components == null) return@mapNotNull null
+                runCatchingKeepingCancellation { decode(entity) }.getOrNull()
             }
             val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled == true && it.isNotBlank() }
             return PlacementMapper().map(entities, skybox)
@@ -64,14 +65,15 @@ data class SceneContent(
          * Reads the entity's components through the runtime loader the Properties panel uses, so both show the same values,
          * defaults included. The render asset is read as the file names it, whichever delegate class holds it.
          */
-        private fun decode(id: String, components: JsonNode): DecodedEntity {
+        private fun decode(entity: EntityView): DecodedEntity {
+            val components = entity.components!!
             val position = components.opt("PositionComponent")
             val asset = components.opt("RenderComponent")?.opt("renderable")?.opt("asset")
             val assetType = asset?.text("type")
             val assetName = asset?.text("assetName")
             return DecodedEntity(
-                id,
-                SceneEcsPaths().entityName(components, id),
+                entity.id,
+                entity.name,
                 position?.let { read<PositionComponent>(it) },
                 position?.opt("localPosition") != null,
                 components.opt("TypeComponent")?.let { read<TypeComponent>(it)?.type },

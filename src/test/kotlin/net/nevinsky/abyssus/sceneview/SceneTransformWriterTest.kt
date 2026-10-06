@@ -20,7 +20,7 @@ import java.io.File
 class SceneTransformWriterTest {
     private val text = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
 
-    private fun components(root: JsonNode, id: String) = net.nevinsky.abyssus.SceneEcsPaths().components(root, id)!!
+    private fun components(root: JsonNode, id: String) = net.nevinsky.abyssus.editor.document.SceneEntityTree(root).components(id)!!
 
     @Test
     fun droppingAModelChangesOnlyYAndPreservesNumberText() {
