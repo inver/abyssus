@@ -2,16 +2,18 @@
 
 ## Purpose
 
-Lets users bring an OBJ, FBX or 3DS model into an Abyssus project as an ordinary native glTF model asset. Before
-anything is written, they can check its size, orientation and animations in a live preview.
+Lets users bring an OBJ, FBX, 3DS, DAE, glTF or GLB model into an Abyssus project as an ordinary native glTF model
+asset, and optionally place it in the open scene. Before anything is written, they can check its size, orientation and
+animations in a live preview.
 
 ## ADDED Requirements
 
 ### Requirement: Import is offered on the Assets node
 
 Import Model... SHALL be available on the Assets node of a recognised project. It SHALL let the user choose one `.obj`,
-`.fbx` or `.3ds` file. A project whose `.abss` file fails native validation SHALL be refused before the dialog opens,
-and nothing SHALL be written.
+`.fbx`, `.3ds`, `.dae`, `.gltf` or `.glb` file. A project whose `.abss` file fails native validation SHALL be refused
+before the dialog opens, and nothing SHALL be written. A Blender file (`.blend`) SHALL be refused with a message that
+the format is not supported and that the model can be exported from Blender as glTF.
 
 #### Scenario: Import into the Untitled project
 
@@ -22,6 +24,11 @@ and nothing SHALL be written.
 
 - **WHEN** the project's `.abss` file has no `format: "abyssus"` marker
 - **THEN** the action says the project file is not a supported native document, and no dialog opens
+
+#### Scenario: A Blender file
+
+- **WHEN** the user picks `ship.blend` through the chooser's all-files filter
+- **THEN** the action says Blender files are not supported and suggests exporting glTF from Blender, and nothing is written
 
 ### Requirement: An unreadable source is rejected
 
@@ -59,7 +66,7 @@ The unit and up axis SHALL start from what the source file states, and the user 
 - a 3DS file: metres (with the file's own master scale applied) and Z up;
 - an OBJ file, or an FBX file that states neither: metres and Y up.
 
-The dialog SHALL show which values came from the file.
+The dialog SHALL show which values came from the file or its format.
 
 #### Scenario: An FBX file in centimetres, Z up
 
@@ -70,6 +77,27 @@ The dialog SHALL show which values came from the file.
 
 - **WHEN** the chosen file is an OBJ
 - **THEN** the unit shows m and the up axis shows Y, both marked as defaults
+
+### Requirement: Unit and up axis of DAE and glTF sources
+
+A DAE file's unit and up axis SHALL start from its `<asset>` element (`unit meter` and `up_axis`), or metres and Y up
+when it states neither. An `up_axis` of `X_UP` SHALL pre-fill Y, and the dialog SHALL say that the file states X up,
+which is not offered. A glTF or GLB file SHALL start from metres and Y up, marked as defined by the format.
+
+#### Scenario: A DAE file in centimetres, Z up
+
+- **WHEN** the chosen DAE file's `<asset>` has `<unit meter="0.01"/>` and `<up_axis>Z_UP</up_axis>`
+- **THEN** the unit shows cm and the up axis shows Z, both marked as read from the file, and the preview shows the model upright at its stated size
+
+#### Scenario: A DAE file that states X up
+
+- **WHEN** the chosen DAE file states `X_UP`
+- **THEN** the up axis shows Y, and the dialog says the file states X up, which is not offered
+
+#### Scenario: A glTF file
+
+- **WHEN** the chosen file is a `.glb`
+- **THEN** the unit shows m and the up axis shows Y, both marked as defined by the format
 
 ### Requirement: Placement and size of the imported model
 
@@ -92,8 +120,8 @@ rest pose.
 
 The written model SHALL keep the source's named node hierarchy, its meshes and its materials. Base colour, base colour
 texture, normal map, opacity and two-sidedness SHALL be kept. Other material terms SHALL be approximated as
-metallic-roughness. For a skinned and animated source, the skeleton, the vertex weights and every animation, with its
-name and timing, SHALL be kept.
+metallic-roughness. For a skinned and animated source, the skeleton, the vertex weights and
+every animation, with its name and timing, SHALL be kept.
 
 #### Scenario: An animated FBX character
 
@@ -104,6 +132,16 @@ name and timing, SHALL be kept.
 
 - **WHEN** a 3DS model whose material names a texture file beside it is imported
 - **THEN** the asset's model shows that texture
+
+### Requirement: glTF materials are kept as they are
+
+A glTF or GLB source's metallic and roughness factors and textures, and its occlusion texture, SHALL be kept as they
+are, and SHALL NOT be reported as approximated.
+
+#### Scenario: A glTF model's PBR material
+
+- **WHEN** a `.glb` whose material has metallic 1 and roughness 0.3 is imported
+- **THEN** the asset's model has metallic 1 and roughness 0.3, and nothing is reported as approximated
 
 ### Requirement: What is left out is reported
 
@@ -116,10 +154,22 @@ The dialog SHALL list each before Create, and the asset's source record SHALL re
 - **WHEN** an OBJ file's `.mtl` names `wood.png` and that file does not exist
 - **THEN** the dialog lists `wood.png` as missing, Create stays enabled, and the material keeps its colour
 
+### Requirement: glTF features the model cannot hold are reported
+
+From a glTF or GLB source, morph targets and material or texture extensions the renderer does not use (such as
+`KHR_materials_transmission` or `KHR_texture_transform`) SHALL be left out, listed in the dialog before Create, and
+recorded in the asset's source record.
+
+#### Scenario: A glTF model with morph targets
+
+- **WHEN** a `.gltf` file whose mesh has morph targets is imported
+- **THEN** the dialog lists the morph targets as left out, and the written model has the mesh in its base shape
+
 ### Requirement: Textures become files of the asset
 
 Textures used by the kept materials SHALL be written as PNG files inside the new asset folder, and the model SHALL refer
-to them there. This covers files next to the source and textures embedded in an FBX file. Two materials using the same
+to them there. This covers files next to the source, textures embedded in an FBX or GLB file, and textures held as
+data URIs in a glTF file. Two materials using the same
 image SHALL share one file.
 
 #### Scenario: An FBX file with an embedded texture
@@ -169,36 +219,91 @@ while the dialog is open and after it closes. Reading and converting the source 
 
 Create SHALL write a new asset folder. Its `meta.json` SHALL have `format: "abyssus"`, integral `formatVersion: 1`, a
 fresh `uuid`, `type: "MODEL"`, and `additional` with `file: "model.glb"`, `format: "GLTF"` and `binary: true`. A
-`source.json` SHALL record the source file name, its SHA-256 and format, the stated and chosen unit and up axis, the
-size setting, and everything left out or approximated.
+`source.json` SHALL record the source file name, its path, its SHA-256 and format, the stated and chosen unit and up
+axis, the size setting, and everything left out or approximated.
 
 #### Scenario: The asset after import
 
 - **WHEN** `crate.obj` is imported into the Untitled project as `model_crate`
 - **THEN** `assets/model_crate` holds `meta.json`, `model.glb`, `source.json` and its textures, and the Untitled assets list shows `model_crate` as an unused MODEL
 
+### Requirement: The source path is recorded
+
+`source.json` SHALL record the source's path as `sourcePath`. It SHALL be relative to the folder of the project's
+`.abss` file, with `/` separators, when the source is inside that folder, and absolute otherwise.
+
+#### Scenario: A source inside the project
+
+- **WHEN** `sources/crate.obj` beside the Untitled project's `.abss` file is imported
+- **THEN** `source.json` records `sourcePath` as `sources/crate.obj`
+
+#### Scenario: A source outside the project
+
+- **WHEN** `/home/user/Downloads/crate.obj` is imported
+- **THEN** `source.json` records `sourcePath` as `/home/user/Downloads/crate.obj`
+
 ### Requirement: Import changes only the new asset folder
 
-The import SHALL NOT change the project's scenes or `.abss` file. It SHALL NOT write anything next to the source file,
-including textures extracted from it.
+Without placement, the import SHALL NOT change the project's scenes. With placement, it SHALL change only the chosen
+scene, by adding one entity. The import SHALL NOT change the project's `.abss` file, and it SHALL NOT write anything next
+to the source file, including textures extracted from it.
 
 #### Scenario: The source folder is left alone
 
 - **WHEN** an FBX file with embedded textures is imported from a folder outside the project
 - **THEN** that folder holds exactly the same files as before the import
 
+### Requirement: Placement in the open scene is offered
+
+The dialog SHALL offer to add the imported model to the scene of the selected scene view, naming that scene. The option
+SHALL be on by default when such a view exists. It SHALL be disabled, with the reason, when no scene view is open, when
+the view is in Play, or when its scene cannot be read as a native scene.
+
+#### Scenario: No scene view open
+
+- **WHEN** the import dialog opens while no scene view is open
+- **THEN** the placement option is disabled and says no scene view is open, and Create writes only the asset folder
+
+#### Scenario: A scene in Play
+
+- **WHEN** the selected scene view is playing
+- **THEN** the placement option is disabled and says the scene is playing
+
+### Requirement: The imported model is placed like Add Asset
+
+With placement on, Create SHALL add one entity to that scene, as Add Asset from the Scene view does: the next entity
+id, the name `Model <id>`, type `OBJECT`, a render component naming the new asset with shader key `defaultShader`, and
+the position the view orbits around when Create is chosen. The new entity SHALL be selected afterwards. If the scene
+cannot take the entity at Create, nothing SHALL be written, and the reason SHALL be reported.
+
+#### Scenario: Import and place
+
+- **WHEN** `crate.obj` is imported with placement on while the `Main Scene.scene` view, whose highest entity id is `8`, orbits the point `(10, 0, -4)`
+- **THEN** `assets/model_crate` is created, the scene gains entity `9` named `Model 9` at `(10, 0, -4)` with a render component of asset `MODEL` `model_crate`, and entity `9` is selected
+
+#### Scenario: The scene is refused at Create
+
+- **WHEN** placement is on and the scene file was made unreadable after the dialog opened
+- **THEN** Create reports that the scene cannot be edited, and neither the asset folder nor the scene is written
+
 ### Requirement: Undoable import
 
-An import SHALL be one undoable operation of the Import Model action. Undo SHALL remove the created folder. Redo SHALL
-restore the same files, bytes and `uuid`. A failure while writing SHALL leave no partial folder, and SHALL report the
-reason. Undo SHALL be refused, with a reason, once a scene references the asset.
+An import SHALL be one undoable operation of the Import Model action. Undo SHALL remove the created folder and, with
+placement, the added entity. Redo SHALL restore the same files, bytes and `uuid`, and the same entity. A failure while
+writing SHALL leave no partial folder and no added entity, and SHALL report the reason. Undo SHALL be refused, with a
+reason, once a scene references the asset through an edit other than the import's own placement.
 
 #### Scenario: Undo an import
 
 - **WHEN** the user imports `crate.obj` into the Untitled project and then chooses Undo
 - **THEN** `assets/model_crate` is gone and the Untitled assets list is as before
 
+#### Scenario: Undo an import that placed the model
+
+- **WHEN** the user imports `crate.obj` with placement into `Main Scene.scene` and then chooses Undo once
+- **THEN** entity `9` is gone from the scene, `assets/model_crate` is gone, and Redo brings both back
+
 #### Scenario: Undo after the asset was placed
 
-- **WHEN** the user imports `crate.obj`, places `model_crate` in `Main Scene.scene`, and then tries to undo the import
+- **WHEN** the user imports `crate.obj`, places `model_crate` in `Main Scene.scene` by a separate Add Asset, and then tries to undo the import
 - **THEN** the undo is refused with a message that a scene uses the asset

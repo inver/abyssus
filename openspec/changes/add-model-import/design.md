@@ -14,6 +14,11 @@ See proposal.md for motivation. What exists today:
   - It always rotates the root to Y up.
   - It converts units only when `convertUnits` is set; the default is off, because FBX units are used inconsistently.
   - OBJ and 3DS report no such metadata. Assimp applies a 3DS file's master scale itself.
+  - Assimp's Collada importer applies a DAE file's `<asset>` unit and `up_axis` to the root itself, unless the import
+    properties `IMPORT_COLLADA_IGNORE_UNIT_SIZE` and `IMPORT_COLLADA_IGNORE_UP_DIRECTION` are set. It does not report
+    the stated values in the scene metadata.
+  - glTF is metres and +Y up by definition. Assimp's glTF 2 importer reads metallic-roughness into
+    `PbrModelMaterial` directly and drops morph targets and the extensions it does not know.
 - **Embedded textures.** `TextureProcessor` writes them to `embeddedTextureDir`. `AssimpModelLoader.loadData` passes
   `<model folder>/embedded`, which would write next to an import's source file.
 - **The FlightGear glTF writer.** `core.flightgear.GlbWriter` writes static glTF from its own `GltfNode` /
@@ -28,6 +33,10 @@ See proposal.md for motivation. What exists today:
   - Its `initGL` creates a `GdxRuntime` context, and `disposeGL` releases resources inside it. A canvas disposed while
     hidden is abandoned and leaks its GL objects.
   - `OrbitCamera` is plain math. `SceneModels` drives `AnimationController` per entity.
+- **Placement.** `SceneComponentEdits.addAsset(project, file, asset, position, cache, metaFiles)` adds the entity
+  through `editSceneJson`, itself a `WriteCommandAction`. A scene view's Add Asset passes `orbit.target` of its
+  `SceneViewPanel`, and the panel disables adding while it plays. `AssetFileCommand.execute` is also a
+  `WriteCommandAction`, and registers a global `AssetFileUndoAction`.
 
 ## Goals / Non-Goals
 
@@ -42,6 +51,7 @@ See proposal.md for motivation. What exists today:
 - No new `ModelMeta.Format`.
 - No glTF features the renderer doesn't use: morph targets, cameras, lights or extensions (the writer declares none).
 - No PBR export beyond what `PbrModelMaterial` holds.
+- No Blender input, and no external converter process.
 
 ## Decisions
 
@@ -95,7 +105,15 @@ one BIN chunk.
 
 `SceneNormalizer` gains `stated(scene): StatedFrame(unitMetres: Float?, upAxis: Axis?)`. `AssimpModelDataLoader`
 gains a `normalize: Boolean = true` option.
-- The import loads with `normalize = false`, so the user's chosen unit and up axis are the whole transform.
+- The import loads with `normalize = false`, so the user's chosen unit and up axis are the whole transform. For a DAE
+  file, `normalize = false` also sets both Collada ignore properties, so Assimp does not apply the stated frame either.
+- The stated frame by format:
+  - FBX: from the metadata, as above;
+  - DAE: from `ColladaAsset.read(file)`, a small StAX reader in `gdx-model` (`core.assimp`) that reads only
+    `COLLADA/asset/unit@meter` and `COLLADA/asset/up_axis`. `X_UP` is returned as stated but unsupported, and the
+    form pre-fills Y with a note;
+  - glTF and GLB: a constant 1 m and Y, marked as defined by the format;
+  - OBJ: nothing; 3DS: Z up.
 - The detected values only pre-fill the dialog.
 - The existing behaviour of runtime loads is unchanged.
 
@@ -183,16 +201,57 @@ None of these classes has an `object`, so `checkNoSingletons` holds. All are tes
   - It then selects the new asset in the Abyssus view, as `importFlightGear` does.
 - User-facing text goes in `AbyssusBundle.properties`.
 
+### 7. glTF and GLB input is converted, not copied
+
+A `.gltf` or `.glb` source goes through the same pipeline as every other format: Assimp, `ModelData`, the transform,
+`GltfWriter`.
+- The preview still shows what is written, and grounding, centring, fit-to-size and `source.json` apply as for any
+  other source.
+- Its PBR materials arrive as `PbrModelMaterial`, so `PhongToPbr` is not used and nothing is reported as approximated.
+- What the writer cannot hold is left out and listed: morph targets, the `KHR_materials_*` and `KHR_texture_transform`
+  extensions, and KTX2 or WebP images (ImageIO cannot read them). `ModelSource` finds the extensions from the source's
+  `extensionsUsed` (the JSON chunk of a GLB), because Assimp drops them silently.
+- Textures in a GLB's BIN chunk or in data URIs come out through the embedded-texture folder, like FBX's.
+
+Rejected: copying a conforming GLB as is. It skips grounding and centring, needs a second "is it conforming" check,
+and makes the preview show something other than the written bytes. Converting loses nothing the renderer uses.
+
+### 8. Placement in the same command
+
+With Add to scene on, Create runs one outer `CommandProcessor.executeCommand` named after the action. The two nested
+`WriteCommandAction`s, `AssetFileCommand.execute` and then `SceneComponentEdits.addAsset`, join it, so the platform
+records one undo step.
+- **Which scene:** the scene file of the selected scene view (`FileEditorManager.selectedEditors`, the first
+  `SceneFileEditor`), taken when the dialog opens. Its `SceneViewPanel` exposes the orbit target and whether it plays.
+  Both are read again on the EDT at Create.
+- **The form:** `ModelImportForm` holds the placement target (scene name, or the reason it is disabled), so the
+  disabled states are tested headless.
+- **Before any write:** Create checks that the scene still reads as a native scene through `SceneDocumentCache`, and
+  that the view is not playing. If either fails, it reports the reason and writes nothing.
+- **Order and rollback:** the folder is written first, then the entity. `AssetFileCommand.execute` gains an option
+  to hand back its `AssetFileUndoAction` instead of registering it, and the outer command registers it only after
+  both writes succeed. If `addAsset` returns anything other than `Changed`, the outer command applies the folder
+  transaction in reverse within the same command and registers nothing. The reason is reported, and no undo step is
+  recorded.
+- **Undo:** the platform undoes the group in reverse, so the entity goes first. When `AssetReferenceGuard` then checks
+  the folder's Undo, it sees the scene without that entity. A reference added by any other edit still blocks the
+  Undo, as before.
+- **Afterwards:** the new entity is selected, as Add Asset does, instead of the asset folder.
+
 ### `source.json` of a model import
 
 ```
-{ "importer": "model", "source": "hero.fbx", "sourceSha256": "...", "sourceFormat": "FBX",
+{ "importer": "model", "source": "hero.fbx", "sourcePath": "sources/hero.fbx", "sourceSha256": "...",
+  "sourceFormat": "FBX",
   "stated": { "unit": "cm", "upAxis": "Z" }, "chosen": { "unit": "cm", "upAxis": "Z" },
   "size": "original" | { "largestExtent": 2.0 } | { "height": 1.8 },
   "animations": ["Idle", "Run"],
   "skipped": [ { "item": "Camera001", "reason": "camera" }, { "item": "wood.png", "reason": "missing" } ],
   "approximated": [ { "item": "Body", "reason": "specular colour dropped" } ] }
 ```
+
+`sourcePath` is relative to the folder of the `.abss` file, with `/` separators, when the source is under it.
+Otherwise it is the absolute path. `sourceFormat` is one of `OBJ`, `FBX`, `3DS`, `DAE`, `GLTF` and `GLB`.
 
 It is documented in `docs/ai/file-formats.md` beside the FlightGear one.
 
@@ -201,7 +260,7 @@ It is documented in `docs/ai/file-formats.md` beside the FlightGear one.
 | Piece | Thread |
 |---|---|
 | Opening the source, the transform, texture gathering, GLB writing, staging | Pooled background thread, cancellable (`runCatchingKeepingCancellation`) |
-| Dialog, form model, `AssetFileCommand` | EDT; the write runs in a write action |
+| Dialog, form model, `AssetFileCommand`, placement | EDT; both writes run in one command, each in a write action |
 | Preview `Model` build, texture upload, drawing, disposal | AWT thread, inside `GdxRuntime.withContext` with the canvas's own context, only while `glSafe` |
 
 `ModelData` is handed from the pool to the AWT thread as an immutable snapshot. A new transform produces a new
@@ -213,10 +272,15 @@ All fixtures are small and committed under `core/src/test/resources/modelimport/
 - `crate.obj` + `crate.mtl` + `wood.png`: a 100-unit cube, hand-written;
 - `crate_missing.obj`: its `.mtl` names a missing texture;
 - `box.3ds`: Z-up, textured;
-- `rig.fbx`: two bones, two animations (`Idle`, `Run`), one embedded texture, UnitScaleFactor 1 (cm) and Z up.
+- `rig.fbx`: two bones, two animations (`Idle`, `Run`), one embedded texture, UnitScaleFactor 1 (cm) and Z up;
+- `crate.dae`: the 100-unit cube, hand-written, `<unit meter="0.01"/>`, `Z_UP`, using `wood.png`;
+- `crate_xup.dae`: the same with `X_UP`;
+- `crate.glb`: a textured cube with metallic 1 and roughness 0.3, the texture in the BIN chunk;
+- `animated.gltf`: a copy of `gdx-model`'s test resource (animations kept), plus `morph.gltf`, a hand-written triangle
+  with one morph target and `KHR_texture_transform` in `extensionsUsed`.
 
-The 3DS and FBX files are produced once by `MakeImportFixtures`, a test class that runs only with
-`-Dabyssus.makeFixtures=true`. It builds the scene in code and writes it through Assimp's exporters (`3ds`, `fbx`).
+The 3DS, FBX and GLB files are produced once by `MakeImportFixtures`, a test class that runs only with
+`-Dabyssus.makeFixtures=true`. It builds the scene in code and writes it through Assimp's exporters (`3ds`, `fbx`, `glb2`).
 Their SHA-256s are pinned in `ModelSourceTest`, so a regenerated fixture is noticed. If Assimp's FBX exporter cannot
 write the skin and animations faithfully, a small CC0 FBX (with its licence noted beside it) replaces the generated
 `rig.fbx`.
@@ -236,6 +300,14 @@ write the skin and animations faithfully, a small CC0 FBX (with its licence note
   textures one per frame like `PreparedModel`. Staging streams textures one at a time.
 - **[FlightGear output changes when its writer is replaced]** → `FlightGearImportTest` keeps its assertions, and the
   Trainer is re-imported, with the game's flight and parking tests as the gate.
+- **[The Collada ignore-unit-size property]** → `IMPORT_COLLADA_IGNORE_UNIT_SIZE` may have no constant in
+  lwjgl-assimp. It is set by its string name. `ModelSourceTest` checks that `crate.dae` loads at 100 units, not 1, with
+  `normalize = false`.
+- **[Undo order of the merged command]** → If the platform does not undo the entity before the folder, the reference
+  guard would block the import's own Undo. `ImportModelTest` checks a single Undo and Redo with placement on.
+  Otherwise, the guard is given the entity id the import added, and ignores that one reference.
+- **[Absolute paths in `source.json`]** → A source outside the project records the user's local folder layout in a
+  file that may be committed. This is accepted for re-import. A source copied into the project gives a relative path.
 - **[A hostile source file]** → Assimp runs in-process, as it does for every model the editor loads today. The import
   adds no new parser.
 

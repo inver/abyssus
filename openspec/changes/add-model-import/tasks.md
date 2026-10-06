@@ -7,6 +7,11 @@
   - `AssimpLoadingTest.parsesGltfIntoModelData` still passes;
   - new `SceneNormalizerTest` cases: FBX metadata with `UpAxis` 2 and `UnitScaleFactor` 1 gives Z and 0.01 m; no
     metadata gives nulls; `normalize = false` leaves the root transform as identity.
+- [ ] 1.1a `ColladaAsset.read(file)` (StAX, `core.assimp`) reads `asset/unit@meter` and `asset/up_axis`. With
+  `normalize = false`, a DAE load also sets `IMPORT_COLLADA_IGNORE_UNIT_SIZE` (by its string name if lwjgl-assimp has
+  no constant) and `IMPORT_COLLADA_IGNORE_UP_DIRECTION`. Verify: `ColladaAssetTest` (0.01 and Z for a cm, Z-up file;
+  nulls without `<asset>`; `X_UP` reported as stated but unsupported), and a `normalize = false` load of a 100-unit
+  Z-up cm DAE gives an identity root and 100-unit extents.
 - [ ] 1.2 `PhongToPbr`: diffuse to base colour, metallic 0, shininess to roughness (0.8 without it), opacity below 1 to
   `BLEND`, specular reported as dropped. Verify: `PhongToPbrTest` covers each mapping and the default roughness.
 - [ ] 1.3 `GltfWriter` (`net.nevinsky.abyssus.core.gltf` in `gdx-model`, libGDX `JsonWriter`, no new dependency): nodes with TRS
@@ -25,8 +30,10 @@
 ## 2. Import pipeline in `core.modelimport` (headless)
 
 - [ ] 2.1 Add the fixtures under `core/src/test/resources/modelimport/`: `crate.obj` / `crate.mtl` / `wood.png`,
-  `crate_missing.obj`, `box.3ds`, `rig.fbx` (two bones, `Idle` and `Run`, one embedded texture, cm, Z up). Generate
-  the binary ones with `MakeImportFixtures`, which runs only with `-Dabyssus.makeFixtures=true`, and pin their SHA-256s.
+  `crate_missing.obj`, `box.3ds`, `rig.fbx` (two bones, `Idle` and `Run`, one embedded texture, cm, Z up),
+  hand-written `crate.dae` (cm, Z up) and `crate_xup.dae`, `crate.glb` (metallic 1, roughness 0.3, texture in the BIN
+  chunk), a copy of `gdx-model`'s `animated.gltf`, and hand-written `morph.gltf` (one morph target,
+  `KHR_texture_transform`). Generate the binary ones with `MakeImportFixtures`, which runs only with `-Dabyssus.makeFixtures=true`, and pin their SHA-256s.
   If Assimp's FBX export loses the skin or animations, use a small CC0 FBX instead and note its licence beside it.
   Verify: `./gradlew :core:test --tests '*MakeImportFixtures*' -Dabyssus.makeFixtures=true` writes them, and
   `ModelSourceTest.fixturesArePinned` passes.
@@ -36,6 +43,9 @@
   - `rig.fbx` reports cm, Z and `Idle` / `Run`;
   - `crate.obj` reports nulls;
   - `box.3ds` is reported as Z up;
+  - `crate.dae` reports cm and Z, and `crate_xup.dae` reports X up as unsupported;
+  - `crate.glb` and `animated.gltf` report m and Y as defined by the format; `animated.gltf` lists its animations;
+  - `morph.gltf` lists the morph target and `KHR_texture_transform` as left out;
   - `crate_missing.obj` lists `wood.png` as missing;
   - the fixture folder's file list is unchanged after open and close;
   - a truncated FBX throws an import error with a reason.
@@ -62,7 +72,11 @@
   - the meta passes `AbyssusDocumentFormat`;
   - the GLB reloads through `AssimpModelLoader.loadData` with its texture;
   - `rig.fbx`'s GLB still has both animations with their durations and two joints;
-  - `source.json` lists the stated and chosen frame and the skipped items.
+  - `crate.glb`'s GLB keeps metallic 1 and roughness 0.3, its texture becomes `textures/*.png`, and nothing is listed
+    as approximated;
+  - `crate.dae` imported with its stated cm and Z is 1 m on each side, upright;
+  - `source.json` lists the stated and chosen frame and the skipped items;
+  - `sourcePath` is `sources/crate.obj` for a source under the project folder, and absolute for one outside it.
 - [ ] 2.7 Document `core.modelimport` in `core/README.md`, and the model import's `source.json` in
   `docs/ai/file-formats.md`. Verify: `scripts/check-docs.sh` passes.
 - [ ] 2.8 Confirm `core` stays singleton-free. Verify: `./gradlew :core:checkNoSingletons :core:test`.
@@ -87,19 +101,32 @@
   (a taken `tree` disables Create; FBX values are marked as read from the file; an unreadable source disables Create
   and shows its reason).
 - [ ] 4.3 `ImportModelAction` on the Assets node, registered in `plugin.xml` beside `Abyssus.ImportFlightGear`, with
-  its texts in `AbyssusBundle.properties`. Create stages on the pool and writes with `AssetFileCommand` and
+  its texts in `AbyssusBundle.properties`. The chooser accepts `.obj`, `.fbx`, `.3ds`, `.dae`, `.gltf` and `.glb`, and
+  a `.blend` is refused with the export-to-glTF hint. Create stages on the pool and writes with `AssetFileCommand` and
   `AssetReferenceGuard`, then selects the asset. Verify: `ImportModelTest` on a copy of Untitled:
   - `crate.obj` creates `assets/model_crate`, listed as an unused MODEL, and the scenes and `.abss` are unchanged;
   - Undo removes it, and Redo restores identical bytes and `uuid`;
   - Undo is refused once `Main Scene.scene` names `model_crate`;
-  - a non-native `.abss` is refused before the dialog opens.
+  - a non-native `.abss` is refused before the dialog opens;
+  - a `.blend` is refused with the hint, and nothing is written.
+- [ ] 4.3a Placement: `ModelImportForm` holds the target scene or the reason it is disabled (no scene view, playing,
+  unreadable). `AssetFileCommand.execute` can hand back its undo action instead of registering it. Create runs one
+  outer command: it checks the scene, writes the folder, calls `SceneComponentEdits.addAsset` at the view's orbit
+  target, registers the undo action only when both succeed, otherwise reverses the folder and records nothing. Then it
+  selects the new entity. Verify: `ModelImportFormTest` covers the three disabled reasons. `ImportModelTest` on a copy
+  of Untitled covers:
+  - placement into `Main Scene.scene` at `(10, 0, -4)` adds entity `9`, `Model 9`, with asset `MODEL` `model_crate`;
+  - one Undo removes the entity and the folder, and one Redo restores both with identical bytes and `uuid`;
+  - a scene made unreadable before Create leaves no folder, no scene change, and no undo step;
+  - Undo stays refused when `model_crate` was also placed by a separate Add Asset.
 - [ ] 4.4 Document the action, the form and the preview in `src/main/kotlin/net/nevinsky/abyssus/projectView/README.md`,
-  the user section of `README.md`, and `CHANGELOG.md`. Verify: `scripts/check-docs.sh` passes, and
+  the user section of `README.md` (formats, the Blender hint, Add to scene), and `CHANGELOG.md`. Verify: `scripts/check-docs.sh` passes, and
   `./gradlew patchPluginXml` succeeds.
 
 ## 5. Plugin: dialog and live preview
 
-- [ ] 5.1 `ImportModelDialog` binds `ModelImportForm`. It opens the source on the pool with cancellable progress and
+- [ ] 5.1 `ImportModelDialog` binds `ModelImportForm`, including the Add to scene checkbox naming the scene, or
+  disabled with its reason. It opens the source on the pool with cancellable progress and
   recomputes only the transform on each settings change. Verify: `ModelImportFormTest.settingsChangeReusesSource`
   (the source is opened once over three setting changes).
 - [ ] 5.2 `ModelPreviewCanvas`: a `GuardedGLCanvas` with its own `GdxRuntime` context. It draws the model, grid, 1 m
@@ -121,6 +148,14 @@
   errors in `idea.log`, and on macOS the JVM does not abort.
 - [ ] 6.4 runIde check 4: Undo the import from check 1 while the crate is not placed (the folder is removed), then
   Redo (the folder returns). Place it, then try Undo again. Expected: the undo is refused, naming the scene.
+
+- [ ] 6.5 runIde check 5: import a real DAE (exported from SketchUp or Blender) and a real GLB (for example a Khronos
+  sample model). Expected: the DAE's unit and up axis are pre-filled from the file and the model stands upright at the
+  right size; the GLB's materials look the same as in a glTF viewer, and anything left out is listed.
+- [ ] 6.6 runIde check 6: with `Main Scene.scene` open and orbiting a point away from the origin, import `crate.obj`
+  with Add to scene on. Expected: the crate appears at the orbit point, its entity is selected, and one Undo removes
+  both the crate and `model_crate`, and Redo brings both back. Open the dialog while the scene plays: the option is
+  disabled.
 
 ## 7. Integration
 
