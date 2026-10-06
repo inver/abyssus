@@ -3,13 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.dto
+package net.nevinsky.abyssus.editor.document
 
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.core.scene.Scene
-import net.nevinsky.abyssus.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.format.DocumentKind
 import org.slf4j.Logger
 
 /**

@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.dto
 
+import net.nevinsky.abyssus.editor.document.DocumentParsing
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project

@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.filetype
+package net.nevinsky.abyssus.editor.document
 
-import net.nevinsky.abyssus.editor.document.SceneJson
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

@@ -105,7 +105,7 @@ fun inspectArchive(archiveFile: File, cancel: () -> Unit = {}): List<FlightGearI
 private fun projectRefusal(abss: VirtualFile): String? {
     val core = service<AbyssusCore>()
     return runCatchingKeepingCancellation {
-        core.format.requireSupported(core.json.readObject(net.nevinsky.abyssus.dto.textOf(abss)), net.nevinsky.abyssus.format.DocumentKind.PROJECT)
+        core.format.requireSupported(core.json.readObject(net.nevinsky.abyssus.dto.textOf(abss)), net.nevinsky.abyssus.editor.document.DocumentKind.PROJECT)
     }.exceptionOrNull()?.let { with(it) { documentDisplayMessage() } }
 }
 

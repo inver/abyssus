@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.format
+package net.nevinsky.abyssus.editor.document
 
 // Source compatibility for editor callers; native admission belongs to the plain JVM core.
 typealias DocumentKind = net.nevinsky.abyssus.core.format.DocumentKind

@@ -5,6 +5,13 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.editor.document.isSceneComponentEntry
+import net.nevinsky.abyssus.editor.document.isSceneEcsEntry
+import net.nevinsky.abyssus.editor.document.isSceneEntityEntry
+import net.nevinsky.abyssus.editor.document.sceneComponentRows
+import net.nevinsky.abyssus.editor.document.sceneDocumentFromEcs
+import net.nevinsky.abyssus.editor.document.sceneEcsRows
+import net.nevinsky.abyssus.editor.document.sceneEntityView
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.core.assets.Asset

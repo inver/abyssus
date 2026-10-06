@@ -8,10 +8,10 @@ package net.nevinsky.abyssus
 import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
-import net.nevinsky.abyssus.dto.AssetMetaReader
-import net.nevinsky.abyssus.dto.DocumentParsing
+import net.nevinsky.abyssus.editor.document.AssetMetaReader
+import net.nevinsky.abyssus.editor.document.DocumentParsing
 import net.nevinsky.abyssus.dto.MetaFiles
-import net.nevinsky.abyssus.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.editor.document.AbyssusDocumentFormat
 import net.nevinsky.abyssus.projectView.HdrPreviewSource
 import net.nevinsky.abyssus.raytracing.MetalRayBackendFactory
 import net.nevinsky.abyssus.raytracing.VulkanRayBackendFactory

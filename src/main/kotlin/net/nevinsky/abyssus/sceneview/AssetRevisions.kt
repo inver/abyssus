@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.sceneview
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.core.assets.terrain.SPLAT_FIELDS
-import net.nevinsky.abyssus.dto.AssetMetaReader
+import net.nevinsky.abyssus.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation

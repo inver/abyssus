@@ -58,7 +58,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 - [x] 3.2 Create the `editor-core` Gradle module (plain Kotlin, depends on `core`, `runtime`, `raytracing`,
   `gdx-model`, Jackson; `checkNoSingletons` and the shared checks from `refactor-solid-dedup` 5.3). Verify with
   `./gradlew :editor-core:build` on an empty module and the classpath test of design D8.
-- [ ] 3.3 Slice `document`: `SceneJson`, `JsonFormat`, the editor-facing format type aliases, `DocumentParsing`,
+- [x] 3.3 Slice `document`: `SceneJson`, `JsonFormat`, the editor-facing format type aliases, `DocumentParsing`,
   `AssetMetaReader`, `SceneDocument` and their editor tests. Keep `AbyssusDocumentFormat`, its rejection types and
   core validation tests in `core.format`; consumers and aliases use that implementation. Verify with
   `./gradlew :editor-core:test :test :core:test :runtime:test`, unchanged rejection reasons, no duplicate validator

@@ -33,7 +33,7 @@ fun interface AbyssusSceneEdited {
 fun editSceneJson(project: Project, file: VirtualFile, commandName: String, mutate: (JsonNode) -> Boolean): Boolean {
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
     val kind = documentKind(file) ?: return false
-    val format = net.nevinsky.abyssus.format.AbyssusDocumentFormat()
+    val format = net.nevinsky.abyssus.editor.document.AbyssusDocumentFormat()
     val original = document.text
     val root = runCatchingKeepingCancellation {
         SceneJson().parse(original).also { format.requireSupported(it, kind) }

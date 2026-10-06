@@ -2,9 +2,8 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.dto
+package net.nevinsky.abyssus.editor.document
 import net.nevinsky.abyssus.core.io.JsonProcessor
-import net.nevinsky.abyssus.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.core.assets.MetaType
 import org.junit.Assert.*
 import org.junit.Test

@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.runtime.obj
 import net.nevinsky.abyssus.runtime.text
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.dto.AssetMetaReader
+import net.nevinsky.abyssus.editor.document.AssetMetaReader
 import java.io.File
 
 /**

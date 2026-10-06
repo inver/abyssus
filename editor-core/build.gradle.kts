@@ -39,5 +39,5 @@ tasks.test {
 }
 
 // Pure constant holders only (design D11); behavior is injected.
-extra["abyssusSingletonExcludes"] = listOf<String>()
+extra["abyssusSingletonExcludes"] = listOf<String>("net/nevinsky/abyssus/editor/content/Placements.kt")
 apply(from = rootProject.file("gradle/checks.gradle.kts"))

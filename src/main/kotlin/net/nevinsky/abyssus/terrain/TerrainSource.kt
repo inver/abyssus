@@ -56,8 +56,8 @@ sealed interface TerrainSource {
  * parsed as [meta]: size, the height file and the recipe beside it. Reads files, so off the EDT.
  */
 fun readTerrainSource(folder: File, metaText: String, meta: JsonNode, choices: AssetReferenceChoices, recipes: TerrainRecipeCodec): TerrainSource {
-    net.nevinsky.abyssus.format.AbyssusDocumentFormat().validate(meta, net.nevinsky.abyssus.format.DocumentKind.ASSET)?.let {
-        return TerrainSource.Unusable(net.nevinsky.abyssus.format.UnsupportedDocumentFormat(net.nevinsky.abyssus.format.DocumentKind.ASSET, it).documentDisplayMessage())
+    net.nevinsky.abyssus.editor.document.AbyssusDocumentFormat().validate(meta, net.nevinsky.abyssus.editor.document.DocumentKind.ASSET)?.let {
+        return TerrainSource.Unusable(net.nevinsky.abyssus.editor.document.UnsupportedDocumentFormat(net.nevinsky.abyssus.editor.document.DocumentKind.ASSET, it).documentDisplayMessage())
     }
     val additional = meta.obj("additional") ?: return unusable("terrainNoAdditional")
     val size = additional.get("size")?.takeIf { it.isIntegralNumber && it.canConvertToInt() }?.intValue()?.takeIf { it > 0 }

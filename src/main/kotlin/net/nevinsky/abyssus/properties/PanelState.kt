@@ -12,8 +12,8 @@ import net.nevinsky.abyssus.ui.thumbnail
 
 import net.nevinsky.abyssus.editor.ray.SceneRaySettingsState
 import net.nevinsky.abyssus.editor.ray.SceneRaySettingsCodec
-import net.nevinsky.abyssus.format.DocumentKind
-import net.nevinsky.abyssus.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.editor.document.DocumentKind
+import net.nevinsky.abyssus.editor.document.AbyssusDocumentFormat
 import java.io.File
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.application.runReadAction
