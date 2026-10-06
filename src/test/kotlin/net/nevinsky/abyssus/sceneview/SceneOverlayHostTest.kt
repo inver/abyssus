@@ -17,7 +17,7 @@ import java.io.File
 
 class SceneOverlayHostTest {
     private val scene = parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
-    private val content = SceneContent.of(scene)
+    private val content = sceneContentOf(scene)
 
     private fun view(onTop: Boolean = false) =
         OverlayView(content, scene.ecs, null, null, PerspectiveCamera(), 600, playing = false, onTop = onTop)

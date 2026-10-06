@@ -58,7 +58,7 @@ class SceneViewPanelRayTest : BasePlatformTestCase() {
 
     private fun context(renderer: SceneRenderer): RayFrameContext {
         val camera = PerspectiveCamera(60f, 8f, 8f).apply { position.set(0f, 0f, 5f); lookAt(0f, 0f, 0f); update() }
-        return RayFrameContext(renderer.params, SceneContent.EMPTY, camera, LightSet.NONE, emptyList(), 8, 8, renderer.state.viewCamera)
+        return RayFrameContext(renderer.params, SceneContent(), camera, LightSet.NONE, emptyList(), 8, 8, renderer.state.viewCamera)
     }
 
     fun testTheSceneViewToolbarHasNoRayTracingControl() {

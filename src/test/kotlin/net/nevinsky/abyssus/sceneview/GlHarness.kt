@@ -36,7 +36,7 @@ object GlHarness {
     fun render(
         params: SceneRenderParams,
         frames: Int,
-        orbit: OrbitCamera = OrbitCamera.from(params.camera),
+        orbit: OrbitCamera = OrbitCamera(params.camera),
         executor: java.util.concurrent.Executor? = null,
         framebufferSize: Pair<Int, Int>? = null,
         afterFrame: (SceneRenderer, Int) -> Unit = { _, _ -> },

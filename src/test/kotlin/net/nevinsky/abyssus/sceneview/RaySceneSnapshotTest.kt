@@ -96,7 +96,7 @@ class RaySceneSnapshotTest {
 
     @Test fun `asset deletion and project replacement require structural rebuild`() {
         val before = ready()
-        val removed = ready(params(SceneContent.EMPTY))
+        val removed = ready(params(SceneContent()))
         assertTrue(removed.scene.instances.isEmpty())
         assertTrue(RaySceneDiff.between(before, removed).rebuild)
         val replaced = ready(params(project = "replacement"))
@@ -139,7 +139,7 @@ class RaySceneSnapshotTest {
         owner.update(File("first"), repeated); owner.update(File("first"), repeated)
         assertEquals(listOf("first:model"), opened)
         assertTrue(owner.poll() is RaySceneAssetState.Ready)
-        owner.update(File("first"), SceneContent.EMPTY)
+        owner.update(File("first"), SceneContent())
         assertEquals(listOf("first:model"), closed)
         owner.update(File("first"), repeated); owner.update(File("next"), repeated)
         assertEquals(listOf("first:model", "first:model"), closed)
@@ -169,7 +169,7 @@ class RaySceneSnapshotTest {
 
     @Test fun malformedSettingsPreventRayConversionButKeepOrdinarySceneParsing() {
         val scene = net.nevinsky.abyssus.parseScene("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxRefractionBounces":null}}""")
-        val p = SceneRenderParams.from(scene, CameraParams.DEFAULT)
+        val p = renderParamsOf(scene, CameraParams.DEFAULT)
         assertNull(p.rayTracing.settings)
         assertTrue(RaySceneSnapshots().capture(p,camera,LightSet.NONE,assets) is RaySceneConversion.Fallback)
     }

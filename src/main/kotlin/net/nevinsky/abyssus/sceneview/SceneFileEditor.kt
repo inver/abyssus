@@ -204,7 +204,7 @@ class SceneFileEditor(
     internal fun applyTransform(entityId: String, edit: TransformEdit): Boolean {
         val isRotate = edit.rotation != null || edit.target != null
         val command = AbyssusBundle.message(if (isRotate) "commandRotateEntity" else "commandMoveEntity")
-        return editSceneJson(project, file, command) { root -> SceneTransformWriter.apply(root, entityId, edit) }
+        return editSceneJson(project, file, command) { root -> SceneTransformWriter().apply(root, entityId, edit) }
     }
 
     /** The scene's document, so that Undo and Redo in this tab reach the edits made here. */

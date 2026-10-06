@@ -15,11 +15,31 @@ import kotlin.math.sin
 
 fun aspectOf(width: Int, height: Int): Float? = if (width > 0 && height > 0) width.toFloat() / height else null
 
+private const val ORBIT_SPEED = 0.005f
+private const val PAN_SPEED = 0.0015f
+private const val ZOOM_BASE = 0.9f
+private const val MIN_DISTANCE = 0.1f
+private const val MAX_DISTANCE = 5000f
+private const val MAX_PITCH = 1.5533f // 89 degrees
+private const val DEFAULT_DISTANCE = 10f
+
 /**
  * Orbit camera around [target]. The eye sits at `target + (cos p sin y, sin p, cos p cos y) * distance`,
  * so yaw 0 / pitch 0 looks down -Z.
  */
 class OrbitCamera(var target: Vec3, var distance: Float, var yaw: Float, var pitch: Float) {
+    /** An orbit [DEFAULT_DISTANCE] in front of [camera], looking where it looks. */
+    constructor(camera: CameraParams) : this(
+        Vec3(
+            camera.position.x + camera.direction.x * DEFAULT_DISTANCE,
+            camera.position.y + camera.direction.y * DEFAULT_DISTANCE,
+            camera.position.z + camera.direction.z * DEFAULT_DISTANCE,
+        ),
+        DEFAULT_DISTANCE,
+        atan2(-camera.direction.x, -camera.direction.z),
+        asin((-camera.direction.y).coerceIn(-1f, 1f)).coerceIn(-MAX_PITCH, MAX_PITCH),
+    )
+
 
     fun position(): Vec3 {
         val cp = cos(pitch)
@@ -47,7 +67,7 @@ class OrbitCamera(var target: Vec3, var distance: Float, var yaw: Float, var pit
     }
 
     fun reset(camera: CameraParams) {
-        val fresh = from(camera)
+        val fresh = OrbitCamera(camera)
         target = fresh.target
         distance = fresh.distance
         yaw = fresh.yaw
@@ -56,30 +76,5 @@ class OrbitCamera(var target: Vec3, var distance: Float, var yaw: Float, var pit
 
     fun zoom(wheelClicks: Float) {
         distance = (distance * ZOOM_BASE.pow(wheelClicks)).coerceIn(MIN_DISTANCE, MAX_DISTANCE)
-    }
-
-    companion object {
-        private const val ORBIT_SPEED = 0.005f
-        private const val PAN_SPEED = 0.0015f
-        private const val ZOOM_BASE = 0.9f
-        private const val MIN_DISTANCE = 0.1f
-        private const val MAX_DISTANCE = 5000f
-        private const val MAX_PITCH = 1.5533f // 89 degrees
-        private const val DEFAULT_DISTANCE = 10f
-
-        fun from(camera: CameraParams): OrbitCamera {
-            val d = camera.direction
-            val target = Vec3(
-                camera.position.x + d.x * DEFAULT_DISTANCE,
-                camera.position.y + d.y * DEFAULT_DISTANCE,
-                camera.position.z + d.z * DEFAULT_DISTANCE,
-            )
-            return OrbitCamera(
-                target,
-                DEFAULT_DISTANCE,
-                atan2(-d.x, -d.z),
-                asin((-d.y).coerceIn(-1f, 1f)).coerceIn(-MAX_PITCH, MAX_PITCH),
-            )
-        }
     }
 }

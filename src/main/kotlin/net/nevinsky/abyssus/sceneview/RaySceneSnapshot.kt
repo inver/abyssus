@@ -123,7 +123,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
             assets.failures.keys.joinToString()
         )
         assets as RaySceneAssetState.Ready
-        val content = ScenePreview.apply(params.content, preview)
+        val content = ScenePreview().apply(params.content, preview)
         val missing =
             content.models.mapNotNull { if (it.assetName !in assets.models) "model:${it.assetName}" else null } +
                     content.terrains.mapNotNull { if (it.assetName !in assets.terrains) "terrain:${it.assetName}" else null }

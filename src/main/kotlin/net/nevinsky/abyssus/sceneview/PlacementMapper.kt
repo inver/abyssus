@@ -65,7 +65,7 @@ class PlacementMapper {
         val resolved = lights.map { light ->
             // A point light shines every way, so only directional and spot lights face a look-at target.
             val target = light.lookAtId?.takeIf { light.kind != LightKind.POINT }?.let(positions::get)
-            val direction = if (target != null) SceneContent.aim(light.position, target) ?: SceneContent.forward(light.rotation) else SceneContent.forward(light.rotation)
+            val direction = if (target != null) aimDirection(light.position, target) ?: forwardOf(light.rotation) else forwardOf(light.rotation)
             light.copy(direction = direction)
         }
         return SceneContent(models, terrains, resolved, skybox, cameras, positions, handleIds)
@@ -99,7 +99,7 @@ class PlacementMapper {
         val light: LightData = entity.light?.light ?: LightData()
         return LightPlacement(
             entity.id, kind, Rgba(light.color.r, light.color.g, light.color.b, 1f), light.intensity.coerceAtLeast(0f),
-            transform.position, SceneContent.forward(transform.rotation), light.range, transform.rotation,
+            transform.position, forwardOf(transform.rotation), light.range, transform.rotation,
             light.coneAngle, light.edgeSoftness, entity.position?.lookAtRef,
         )
     }

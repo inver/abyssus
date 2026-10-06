@@ -49,15 +49,15 @@ class SnapshotSceneQueriesTest {
 
     private class Fixture(val state: SceneViewState, val queries: SnapshotSceneQueries)
 
-    private fun fixture(boxes: List<SnapshotBox>, content: SceneContent = SceneContent.EMPTY, terrains: List<TerrainTarget> = emptyList()): Fixture {
+    private fun fixture(boxes: List<SnapshotBox>, content: SceneContent = SceneContent(), terrains: List<TerrainTarget> = emptyList()): Fixture {
         val state = SceneViewState()
-        val frame = FrameSnapshot(FrameSnapshot.copyOf(camera()), boxes, terrains, 7L)
+        val frame = FrameSnapshot(copyOfCamera(camera()), boxes, terrains, 7L)
         return Fixture(state, SnapshotSceneQueries({ frame }, state) { content })
     }
 
     @Test
     fun theNearestBoxUnderTheCursorIsPicked() {
-        val f = fixture(listOf(FrameSnapshot.boxOf("far", unit, at(0f, 0f, -6f)), FrameSnapshot.boxOf("near", unit, at(0f, 0f, 0f))))
+        val f = fixture(listOf(snapshotBoxOf("far", unit, at(0f, 0f, -6f)), snapshotBoxOf("near", unit, at(0f, 0f, 0f))))
         assertEquals("near", f.queries.pick(width / 2, height / 2, width, height))
         assertNull(f.queries.pick(2, 2, width, height))
     }
@@ -65,7 +65,7 @@ class SnapshotSceneQueriesTest {
     @Test
     fun noFrameYetMeansNothingIsFound() {
         val state = SceneViewState()
-        val queries = SnapshotSceneQueries({ null }, state) { SceneContent.EMPTY }
+        val queries = SnapshotSceneQueries({ null }, state) { SceneContent() }
         assertNull(queries.pick(10, 10, width, height))
         assertNull(queries.rayAt(10, 10, width, height))
         assertNull(queries.groundBelow("x"))
@@ -75,7 +75,7 @@ class SnapshotSceneQueriesTest {
 
     @Test
     fun anObjectAboveAnotherRestsOnItsTop() {
-        val f = fixture(listOf(FrameSnapshot.boxOf("floor", unit, at(0f, 0f, 0f)), FrameSnapshot.boxOf("above", unit, at(0f, 5f, 0f))))
+        val f = fixture(listOf(snapshotBoxOf("floor", unit, at(0f, 0f, 0f)), snapshotBoxOf("above", unit, at(0f, 5f, 0f))))
         assertEquals(2f, f.queries.groundBelow("above")!!, 1e-5f)
         assertEquals(5f, f.queries.lowestPoint("above")!!, 1e-5f)
         assertNull("nothing under the floor", f.queries.groundBelow("floor"))
@@ -85,14 +85,14 @@ class SnapshotSceneQueriesTest {
     @Test
     fun theViewCameraAndTerrainsCannotDrop() {
         val content = SceneContent(models = listOf(placement("a", 0f, 5f, 0f)))
-        val f = fixture(listOf(FrameSnapshot.boxOf("floor", unit, at(0f, 0f, 0f)), FrameSnapshot.boxOf("a", unit, at(0f, 5f, 0f))), content)
+        val f = fixture(listOf(snapshotBoxOf("floor", unit, at(0f, 0f, 0f)), snapshotBoxOf("a", unit, at(0f, 5f, 0f))), content)
         f.state.viewCamera = "a"
         assertNull(f.queries.groundBelow("a"))
     }
 
     @Test
     fun aPreviewMovesTheBoxForLaterQueries() {
-        val f = fixture(listOf(FrameSnapshot.boxOf("floor", unit, at(0f, 0f, 0f)), FrameSnapshot.boxOf("a", unit, at(0f, 5f, 0f))), SceneContent(models = listOf(placement("a", 0f, 5f, 0f))))
+        val f = fixture(listOf(snapshotBoxOf("floor", unit, at(0f, 0f, 0f)), snapshotBoxOf("a", unit, at(0f, 5f, 0f))), SceneContent(models = listOf(placement("a", 0f, 5f, 0f))))
         assertEquals(5f, f.queries.lowestPoint("a")!!, 1e-5f)
         f.state.preview = mapOf("a" to DragResult(PlacementTransform(Vec3(0f, 9f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f)), null))
         assertEquals(9f, f.queries.lowestPoint("a")!!, 1e-5f)
@@ -100,7 +100,7 @@ class SnapshotSceneQueriesTest {
 
     @Test
     fun theBoxesArePutTogetherOncePerSnapshotAndPreview() {
-        val f = fixture(listOf(FrameSnapshot.boxOf("floor", unit, at(0f, 0f, 0f)), FrameSnapshot.boxOf("a", unit, at(0f, 5f, 0f))), SceneContent(models = listOf(placement("a", 0f, 5f, 0f))))
+        val f = fixture(listOf(snapshotBoxOf("floor", unit, at(0f, 0f, 0f)), snapshotBoxOf("a", unit, at(0f, 5f, 0f))), SceneContent(models = listOf(placement("a", 0f, 5f, 0f))))
         repeat(5) {
             f.queries.lowestPoint("a")
             f.queries.groundBelow("a")
@@ -116,7 +116,7 @@ class SnapshotSceneQueriesTest {
     @Test
     fun aGizmoHandleUnderTheCursorIsHit() {
         val content = SceneContent(models = listOf(placement("a", 0f, 1f, 0f)))
-        val f = fixture(listOf(FrameSnapshot.boxOf("a", unit, at(0f, 1f, 0f))), content)
+        val f = fixture(listOf(snapshotBoxOf("a", unit, at(0f, 1f, 0f))), content)
         f.state.selectedId = "a"
         val handles = f.queries.gizmoHandles(height)
         assertNotNull(handles)

@@ -22,12 +22,12 @@ class OrbitCameraTest {
     @Test
     fun fromReproducesCameraPosition() {
         val params = CameraParams(Vec3(4.8f, 3.3f, 6.0f), Vec3(-0.9485f, -0.1088f, -0.2975f), 1f, 100f, 67f)
-        assertVec(params.position, OrbitCamera.from(params).position(), 0.05f)
+        assertVec(params.position, OrbitCamera(params).position(), 0.05f)
     }
 
     @Test
     fun fromDefaultCameraLooksAtTarget() {
-        val cam = OrbitCamera.from(CameraParams.DEFAULT)
+        val cam = OrbitCamera(CameraParams.DEFAULT)
         val p = cam.position()
         val d = CameraParams.DEFAULT.direction
         assertVec(Vec3(p.x + d.x * cam.distance, p.y + d.y * cam.distance, p.z + d.z * cam.distance), cam.target)
@@ -81,7 +81,7 @@ class OrbitCameraTest {
     @Test
     fun resetReturnsToTheGivenCamera() {
         val params = CameraParams(Vec3(4.8f, 3.3f, 6.0f), Vec3(-0.9485f, -0.1088f, -0.2975f), 1f, 100f, 67f)
-        val cam = OrbitCamera.from(CameraParams.DEFAULT)
+        val cam = OrbitCamera(CameraParams.DEFAULT)
         cam.orbit(200f, 50f)
         cam.zoom(3f)
         cam.reset(params)

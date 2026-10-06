@@ -55,7 +55,7 @@ data class SceneRenderParams(
     val ambient: Rgba?,
     val fog: FogParams?,
     val camera: CameraParams,
-    val content: SceneContent = SceneContent.EMPTY,
+    val content: SceneContent = SceneContent(),
     val projectDir: File? = null,
     /** The scene's `ecs` block as read, for scene overlays that draw components the view does not model. */
     val ecs: JsonNode? = null,
@@ -64,40 +64,41 @@ data class SceneRenderParams(
     companion object {
         val DEFAULT_CLEAR = Rgba(0.1f, 0.1f, 0.15f, 1f)
         val DEFAULT = SceneRenderParams(DEFAULT_CLEAR, null, null, CameraParams.DEFAULT)
-
-        fun from(scene: Scene, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
-            val fog = fogOf(scene)
-            return SceneRenderParams(
-                fog?.color ?: DEFAULT_CLEAR,
-                ambientOf(scene),
-                fog,
-                camera,
-                SceneContent.of(scene),
-                projectDir,
-                scene.ecs,
-                SceneRaySettingsCodec().read(SceneJson().mapper.createObjectNode().also { root ->
-                    scene.rayTracing?.let { root.set<JsonNode>("rayTracing", SceneJson().mapper.valueToTree(it)) }
-                }),
-            )
-        }
-
-        private fun ambientOf(scene: Scene): Rgba? {
-            if (scene.ambientLightEnabled != true) return null
-            val light = scene.ambientLight ?: return null
-            val c = light.color ?: return null
-            val k = (light.intensity ?: 1f).coerceAtLeast(0f)
-            return Rgba(c.r * k, c.g * k, c.b * k, 1f)
-        }
-
-        private fun fogOf(scene: Scene): FogParams? {
-            if (scene.fogEnabled != true) return null
-            val fog = scene.fog ?: return null
-            val c = fog.color ?: return null
-            val density = fog.density?.takeIf { it > 0f && it.isFinite() } ?: return null
-            val gradient = fog.gradient?.takeIf { it > 0f && it.isFinite() } ?: 1f
-            return FogParams(Rgba(c.r, c.g, c.b, 1f), density, gradient)
-        }
     }
+}
+
+/** The view parameters of [scene], seen through [camera]; [projectDir] holds its assets. */
+fun renderParamsOf(scene: Scene, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
+    val fog = fogOf(scene)
+    return SceneRenderParams(
+        fog?.color ?: SceneRenderParams.DEFAULT_CLEAR,
+        ambientOf(scene),
+        fog,
+        camera,
+        sceneContentOf(scene),
+        projectDir,
+        scene.ecs,
+        SceneRaySettingsCodec().read(SceneJson().mapper.createObjectNode().also { root ->
+            scene.rayTracing?.let { root.set<JsonNode>("rayTracing", SceneJson().mapper.valueToTree(it)) }
+        }),
+    )
+}
+
+private fun ambientOf(scene: Scene): Rgba? {
+    if (scene.ambientLightEnabled != true) return null
+    val light = scene.ambientLight ?: return null
+    val c = light.color ?: return null
+    val k = (light.intensity ?: 1f).coerceAtLeast(0f)
+    return Rgba(c.r * k, c.g * k, c.b * k, 1f)
+}
+
+private fun fogOf(scene: Scene): FogParams? {
+    if (scene.fogEnabled != true) return null
+    val fog = scene.fog ?: return null
+    val c = fog.color ?: return null
+    val density = fog.density?.takeIf { it > 0f && it.isFinite() } ?: return null
+    val gradient = fog.gradient?.takeIf { it > 0f && it.isFinite() } ?: 1f
+    return FogParams(Rgba(c.r, c.g, c.b, 1f), density, gradient)
 }
 
 internal fun normalized(v: Vec3): Vec3? {
@@ -106,7 +107,7 @@ internal fun normalized(v: Vec3): Vec3? {
 }
 
 /** The `mainCamera` of the `.abss` project a scene belongs to. */
-object MainCamera {
+class MainCamera {
     fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
         val root = SceneJson().parse(abssText).takeIf { it.isObject } ?: return null
         if (net.nevinsky.abyssus.editor.document.AbyssusDocumentFormat()

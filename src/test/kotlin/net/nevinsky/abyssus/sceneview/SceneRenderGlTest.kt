@@ -34,7 +34,7 @@ class SceneRenderGlTest {
     private fun params(project: String, scene: String, patch: (String) -> String = { it }): SceneRenderParams {
         val dir = File("src/test/testData/project/$project")
         val text = patch(File(dir, "scenes/$scene").readText())
-        return SceneRenderParams.from(parseScene(text), CameraParams.DEFAULT, dir)
+        return renderParamsOf(parseScene(text), CameraParams.DEFAULT, dir)
     }
 
     private fun edit(text: String, change: (ObjectNode) -> Unit): String = SceneJson().compact(SceneJson().parseObject(text).also(change))
@@ -66,9 +66,9 @@ class SceneRenderGlTest {
                 for (id in listOf("0", "2")) {
                     val entity = renderer.drawnModels.first { it.placement.entityId == id }
                     val footprint = OrientedBox(entity.localBounds, entity.instance.transform!!)
-                    val height = ScenePicker.restHeight(footprint, emptyList(), listOf(terrain))!!
+                    val height = ScenePicker().restHeight(footprint, emptyList(), listOf(terrain))!!
                     assertEquals(0f, height, 1e-5f)
-                    assertTrue(!ScenePicker.isResting(footprint.bottom, height))
+                    assertTrue(!ScenePicker().isResting(footprint.bottom, height))
                 }
                 assertEquals(0f, renderer.queries.groundBelow("0")!!, 1e-5f)
                 assertNull(renderer.queries.groundBelow("1"))
@@ -98,7 +98,7 @@ class SceneRenderGlTest {
             previous = renderer.drawnVersion
             if (frame == 180) {
                 loaded = now.size == 4
-                renderer.params = p.copy(content = SceneContent.EMPTY)
+                renderer.params = p.copy(content = SceneContent())
             }
             if (frame == 219) removed = now.isEmpty()
         }
@@ -115,13 +115,13 @@ class SceneRenderGlTest {
         var written = 0
         var version = 0L
         val result = GlHarness.render(p, 220) { renderer, _ ->
-            val input = interaction ?: SceneInteraction(renderer.state, renderer.queries, OrbitCamera.from(p.camera)).also {
+            val input = interaction ?: SceneInteraction(renderer.state, renderer.queries, OrbitCamera(p.camera)).also {
                 interaction = it
                 renderer.state.selectedId = "0"
                 it.onTransform = { id, edit ->
-                    val selected = ScenePreview.selected(renderer.content, id)!!
+                    val selected = ScenePreview().selected(renderer.content, id)!!
                     val moved = net.nevinsky.abyssus.sceneview.gizmo.DragResult(selected.transform.copy(position = edit.position!!), selected.direction)
-                    renderer.params = p.copy(content = ScenePreview.apply(p.content, id, moved))
+                    renderer.params = p.copy(content = ScenePreview().apply(p.content, id, moved))
                     it.paramsChanged(renderer.params)
                     written++
                     true
@@ -245,7 +245,7 @@ class SceneRenderGlTest {
             val text = edit(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()) { root ->
                 noFog(root); root.put("skyboxEnabled", true); root.put("skyboxName", "sky")
             }
-            block(SceneRenderParams.from(parseScene(text), CameraParams.DEFAULT, dir))
+            block(renderParamsOf(parseScene(text), CameraParams.DEFAULT, dir))
         } finally {
             dir.deleteRecursively()
         }
@@ -323,7 +323,7 @@ class SceneRenderGlTest {
                     if (keep != null) entities.fieldNames().asSequence().toList().filter { it !in keep }.forEach(entities::remove)
                     variant(root)
                 }
-                val r = GlHarness.render(SceneRenderParams.from(parseScene(patched), CameraParams.DEFAULT, dir), 240)
+                val r = GlHarness.render(renderParamsOf(parseScene(patched), CameraParams.DEFAULT, dir), 240)
                 assertNull(r.error)
                 r.image
             }

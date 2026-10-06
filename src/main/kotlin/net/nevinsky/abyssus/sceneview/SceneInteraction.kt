@@ -98,10 +98,10 @@ class SceneInteraction(
         val id = selectedId ?: return null
         val content = queries.content
         if (isDragging || id == state.viewCamera || content.terrains.any { it.entityId == id }) return null
-        val selected = ScenePreview.selected(content, id) ?: return null
+        val selected = ScenePreview().selected(content, id) ?: return null
         val lowest = queries.lowestPoint(id) ?: return null
         val height = queries.groundBelow(id) ?: return null
-        if (!height.isFinite() || ScenePicker.isResting(lowest, height)) return null
+        if (!height.isFinite() || ScenePicker().isResting(lowest, height)) return null
         val p = selected.transform.position
         return Vec3(p.x, (p.y.toDouble() + height.toDouble() - lowest.toDouble()).toFloat(), p.z)
     }
@@ -110,7 +110,7 @@ class SceneInteraction(
     fun drop() {
         val id = selectedId ?: return
         val position = dropPosition() ?: return
-        val selected = ScenePreview.selected(queries.content, id) ?: return
+        val selected = ScenePreview().selected(queries.content, id) ?: return
         val result = DragResult(selected.transform.copy(position = position), selected.direction)
         state.preview = mapOf(id to result)
         val written = onTransform?.invoke(id, TransformEdit(position = position)) ?: false
@@ -201,9 +201,9 @@ class SceneInteraction(
         val content = queries.sceneContent
         val handleId = content.lights.firstOrNull { it.entityId == id }?.let(content::aimHandleOf)
         // A rotate drag on a light aimed at a direction handle moves the handle instead of the light's own rotation.
-        val handleAt = handleId?.let { ScenePreview.aimedTarget(content, id, result) }
+        val handleAt = handleId?.let { ScenePreview().aimedTarget(content, id, result) }
         if (handleId != null && handleAt != null) return TransformEdit(target = TargetMove(handleId, handleAt))
-        return TransformEdit(rotation = result.transform.rotation, direction = result.direction.takeIf { ScenePreview.isCamera(content, id) })
+        return TransformEdit(rotation = result.transform.rotation, direction = result.direction.takeIf { ScenePreview().isCamera(content, id) })
     }
 
     /** The cursor moved without a button: brightens the handle under it. */
@@ -241,10 +241,10 @@ class SceneInteraction(
         refreshDropAfterFrame = true
         state.preview = emptyMap()
         var changed = false
-        selectedId?.let { if (!ScenePreview.contains(params.content, it)) { selectedId = null; changed = true } }
+        selectedId?.let { if (!ScenePreview().contains(params.content, it)) { selectedId = null; changed = true } }
         state.viewCamera?.let { id -> if (params.content.cameras.none { it.entityId == id }) { state.viewCamera = null; changed = true } }
         val dragging = gesture as? Gesture.Dragging
-        if (dragging != null && !ScenePreview.contains(params.content, dragging.entityId)) gesture = Gesture.Cancelled
+        if (dragging != null && !ScenePreview().contains(params.content, dragging.entityId)) gesture = Gesture.Cancelled
         if (changed || canDrop != lastCanDrop) stateChanged()
     }
 }

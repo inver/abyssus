@@ -26,9 +26,9 @@ class SceneMarkersTest {
         }
     }
 
-    private fun main() = SceneContent.of(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
+    private fun main() = sceneContentOf(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
 
-    private fun content(entities: String) = SceneContent.of(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{$entities}}}"""))
+    private fun content(entities: String) = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{$entities}}}"""))
 
     private fun light(id: String, type: String, x: Float = 0f) =
         """"$id":{"components":{"TypeComponent":{"type":"$type"},"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":$x}}}}"""
@@ -39,16 +39,16 @@ class SceneMarkersTest {
     fun aRayThroughTheCameraBodyPicksTheCamera() {
         val c = main()
         val p = c.cameras.single().position
-        val targets = SceneMarkers.targets(c)
+        val targets = SceneMarkers().targets(c)
         val r = ray(Vector3(p.x, p.y, p.z + 10f), Vector3(p.x, p.y, p.z))
-        assertEquals("4", ScenePicker.pick(r, targets, emptyList(), 1000f))
+        assertEquals("4", ScenePicker().pick(r, targets, emptyList(), 1000f))
     }
 
     @Test
     fun aRayThroughALightMarkerPicksTheLight() {
         val c = content(light("9", "LIGHT_POINT", x = 4f))
         val r = ray(Vector3(4f, 0f, 10f), Vector3(4f, 0f, 0f))
-        assertEquals("9", ScenePicker.pick(r, SceneMarkers.targets(c), emptyList(), 100f))
+        assertEquals("9", ScenePicker().pick(r, SceneMarkers().targets(c), emptyList(), 100f))
     }
 
     @Test
@@ -56,23 +56,23 @@ class SceneMarkersTest {
         val c = content(light("9", "LIGHT_POINT"))
         val nearer = BoxTarget("model", BoundingBox(Vector3(-1f, -1f, 3f), Vector3(1f, 1f, 5f)))
         val r = ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f))
-        assertEquals("model", ScenePicker.pick(r, SceneMarkers.targets(c) + nearer, emptyList(), 100f))
+        assertEquals("model", ScenePicker().pick(r, SceneMarkers().targets(c) + nearer, emptyList(), 100f))
     }
 
     @Test
     fun theViewCameraHasNoMarkerTarget() {
         val c = main()
         // only the scene's lights (7 and 8) remain pickable markers
-        assertEquals(listOf("7", "8"), SceneMarkers.targets(c, skipCamera = "4").map { it.entityId })
-        assertNull(ScenePicker.pick(ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f)), SceneMarkers.targets(c, "4"), emptyList(), 100f))
+        assertEquals(listOf("7", "8"), SceneMarkers().targets(c, skipCamera = "4").map { it.entityId })
+        assertNull(ScenePicker().pick(ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f)), SceneMarkers().targets(c, "4"), emptyList(), 100f))
     }
 
     @Test
     fun aCameraDrawsABodyAndAFrustum() {
         val out = Recorder()
-        SceneMarkers.draw(out, main(), 1.5f)
+        SceneMarkers().draw(out, main(), 1.5f)
         val skipped = Recorder()
-        SceneMarkers.draw(skipped, main(), 1.5f, skipCamera = "4")
+        SceneMarkers().draw(skipped, main(), 1.5f, skipCamera = "4")
         // the camera: 12 frustum edges, 12 body edges and 4 lens lines; the rest are the two lights' markers
         assertEquals(28, out.lines.size - skipped.lines.size)
         assertEquals(26, skipped.lines.size)
@@ -80,7 +80,7 @@ class SceneMarkersTest {
 
     @Test
     fun directionalAndSpotLightsHaveADirectionLineButPointLightsDoNot() {
-        fun lines(type: String): Int = Recorder().also { SceneMarkers.draw(it, content(light("1", type)), 1f) }.lines.size
+        fun lines(type: String): Int = Recorder().also { SceneMarkers().draw(it, content(light("1", type)), 1f) }.lines.size
         assertEquals(12, lines("LIGHT_POINT"))
         assertEquals(13, lines("LIGHT_DIRECTIONAL"))
         assertEquals(13, lines("LIGHT_SPOT"))
@@ -89,8 +89,8 @@ class SceneMarkersTest {
     @Test
     fun boundsOfFindsCamerasAndLightsOnly() {
         val c = content(light("1", "LIGHT_POINT") + "," + """"2":{"components":{"CameraComponent":{"camera":{}}}}""")
-        assertTrue(SceneMarkers.boundsOf(c, "1") != null)
-        assertTrue(SceneMarkers.boundsOf(c, "2") != null)
-        assertNull(SceneMarkers.boundsOf(c, "3"))
+        assertTrue(SceneMarkers().boundsOf(c, "1") != null)
+        assertTrue(SceneMarkers().boundsOf(c, "2") != null)
+        assertNull(SceneMarkers().boundsOf(c, "3"))
     }
 }

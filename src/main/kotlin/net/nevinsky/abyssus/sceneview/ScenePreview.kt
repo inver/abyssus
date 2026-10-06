@@ -16,7 +16,7 @@ import net.nevinsky.abyssus.sceneview.gizmo.DragResult
 class Selected(val transform: PlacementTransform, val direction: Vec3?)
 
 /** Applies the transform an in-progress drag proposes over the scene's placements, and finds the selection's transform. No GL needed. */
-object ScenePreview {
+class ScenePreview {
     /**
      * Where a rotate drag on a handle-aimed light must put its handle: the light's position plus the turned direction
      * times the start distance from the light to its handle (1 when that distance is 0). Null when [entityId] is not a
@@ -55,8 +55,8 @@ object ScenePreview {
                     val target = it.lookAtId?.takeIf { _ -> it.kind != LightKind.POINT }?.let(content.entityPositions::get)
                     val direction = when {
                         // A move re-aims a look-at light at its unmoved target; a rotate uses the turned direction.
-                        target != null && t.position != it.position -> SceneContent.aim(t.position, target) ?: SceneContent.forward(t.rotation)
-                        else -> result.direction ?: SceneContent.forward(t.rotation)
+                        target != null && t.position != it.position -> aimDirection(t.position, target) ?: forwardOf(t.rotation)
+                        else -> result.direction ?: forwardOf(t.rotation)
                     }
                     it.copy(position = t.position, rotation = t.rotation, direction = direction)
                 }
@@ -87,7 +87,7 @@ object ScenePreview {
         content.models.firstOrNull { it.entityId == entityId }?.let { return Selected(it.transform, null) }
         content.terrains.firstOrNull { it.entityId == entityId }?.let { return Selected(it.transform, null) }
         content.cameras.firstOrNull { it.entityId == entityId }?.let {
-            val direction = CameraFrustum.directionOf(it, content.entityPositions)
+            val direction = cameraDirectionOf(it, content.entityPositions)
             return Selected(PlacementTransform(it.position, it.rotation, Vec3(1f, 1f, 1f)), direction)
         }
         content.lights.firstOrNull { it.entityId == entityId }?.let {

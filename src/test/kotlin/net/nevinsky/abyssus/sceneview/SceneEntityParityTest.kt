@@ -47,7 +47,7 @@ class SceneEntityParityTest {
     @Test
     fun lightPlacementsEqualThePanelValues() {
         val root = scene()
-        val content = SceneContent.of(parseScene(root.toString()))
+        val content = sceneContentOf(parseScene(root.toString()))
         assertEquals(setOf("7", "8"), content.lights.map { it.entityId }.toSet())
         for (light in content.lights) {
             val id = light.entityId
@@ -70,7 +70,7 @@ class SceneEntityParityTest {
     @Test
     fun cameraAndModelPlacementsEqualThePanelValues() {
         val root = scene()
-        val content = SceneContent.of(parseScene(root.toString()))
+        val content = sceneContentOf(parseScene(root.toString()))
         val camera = content.cameras.single()
         fun cam(field: String) = value(root, camera.entityId, "CameraComponent", field)
         assertEquals(cam("camera.near"), camera.near, 0f)
@@ -93,7 +93,7 @@ class SceneEntityParityTest {
         val entities = root.get("ecs") as ObjectNode
         entities.set<JsonNode>("h", SceneJson().parse("""{"archetype":1,"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}}"""))
         ((entities.get("7").get("components") as ObjectNode).get("PositionComponent") as ObjectNode).put("lookAtId", "h")
-        val content = SceneContent.of(parseScene(root.toString()))
+        val content = sceneContentOf(parseScene(root.toString()))
         assertEquals("h", content.lights.single { it.entityId == "7" }.lookAtId)
         assertEquals("h", content.aimHandleOf(content.lights.single { it.entityId == "7" }))
     }

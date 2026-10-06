@@ -22,21 +22,20 @@ class FrameSnapshot(
     val boxes: List<SnapshotBox>,
     val terrains: List<TerrainTarget>,
     val drawnVersion: Long,
-) {
-    companion object {
-        /** A copy of [source] as of now, with its matrices updated. */
-        fun copyOf(source: PerspectiveCamera): PerspectiveCamera =
-            PerspectiveCamera(source.fieldOfView, source.viewportWidth, source.viewportHeight).also {
-                it.position.set(source.position)
-                it.direction.set(source.direction)
-                it.up.set(source.up)
-                it.near = source.near
-                it.far = source.far
-                it.update()
-            }
+)
 
-        fun boxOf(id: String, local: BoundingBox, world: Matrix4) = SnapshotBox(id, BoundingBox(local), Matrix4(world))
-
-        fun terrainOf(target: TerrainTarget) = TerrainTarget(target.entityId, target.data, Matrix4(target.world))
+/** A copy of [source] as of now, with its matrices updated. */
+fun copyOfCamera(source: PerspectiveCamera): PerspectiveCamera =
+    PerspectiveCamera(source.fieldOfView, source.viewportWidth, source.viewportHeight).also {
+        it.position.set(source.position)
+        it.direction.set(source.direction)
+        it.up.set(source.up)
+        it.near = source.near
+        it.far = source.far
+        it.update()
     }
-}
+
+fun snapshotBoxOf(id: String, local: BoundingBox, world: Matrix4) = SnapshotBox(id, BoundingBox(local), Matrix4(world))
+
+fun snapshotTerrainOf(target: TerrainTarget) = TerrainTarget(target.entityId, target.data, Matrix4(target.world))
+

@@ -10,11 +10,11 @@ import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.sceneview.toVector3
 import kotlin.math.abs
 
-/** Finds the gizmo handle under a ray. No GL needed. */
-object GizmoHit {
-    /** How close, in pixels, a ray must pass to a handle to grab it. */
-    const val TOLERANCE_PIXELS = 8f
+/** How close, in pixels, a ray must pass to a handle to grab it. */
+const val TOLERANCE_PIXELS = 8f
 
+/** Finds the gizmo handle under a ray. No GL needed. */
+class GizmoHit {
     /** The handle of [handles] nearest along [ray] that it passes within [TOLERANCE_PIXELS] of, or null. */
     fun find(ray: Ray, handles: GizmoHandles): GizmoAxis? {
         val tolerance = TOLERANCE_PIXELS * handles.worldPerPixel
@@ -56,7 +56,7 @@ object GizmoHit {
     private fun ringHit(ray: Ray, handles: GizmoHandles, axis: GizmoAxis, tolerance: Float): Float? {
         val origin = handles.origin.toVector3()
         val normal = handles.axisVector(axis)
-        val t = GizmoMath.rayPlane(ray, origin, normal) ?: return null
+        val t = GizmoMath().rayPlane(ray, origin, normal) ?: return null
         val point = Vector3(ray.origin).mulAdd(ray.direction, t)
         return if (abs(point.dst(origin) - handles.size) <= tolerance) t else null
     }

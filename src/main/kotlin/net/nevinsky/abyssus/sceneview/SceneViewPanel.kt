@@ -65,7 +65,7 @@ class SceneViewPanel internal constructor(
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     private val frame = GdxFrame()
-    private val orbit = OrbitCamera.from(initial.camera)
+    private val orbit = OrbitCamera(initial.camera)
     private val interaction = SceneInteraction(renderer.state, renderer.queries, orbit)
     private var gdx: GdxContext? = null
 

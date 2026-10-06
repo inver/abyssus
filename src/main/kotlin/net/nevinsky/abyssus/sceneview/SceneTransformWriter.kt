@@ -28,7 +28,7 @@ data class TransformEdit(
 data class TargetMove(val entityId: String, val position: Vec3)
 
 /** Writes a [TransformEdit] into a scene's JSON tree, touching only the values that change. */
-object SceneTransformWriter {
+class SceneTransformWriter {
     /**
      * Sets `PositionComponent.localPosition` / `localRotation` of the entity [entityId] under `ecs.entities`, adding
      * missing objects and fields. For an entity with a `CameraComponent.camera` object it also sets that object's

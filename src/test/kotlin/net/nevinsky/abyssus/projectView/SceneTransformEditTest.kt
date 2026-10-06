@@ -19,7 +19,7 @@ class SceneTransformEditTest : BasePlatformTestCase() {
     fun testMoveKeepsIndentationAndEveryOtherLine() {
         val file = myFixture.addFileToProject("p/Main Scene.scene", original).virtualFile
         val moved = editSceneJson(project, file, "Move Entity") { root ->
-            SceneTransformWriter.apply(root, "0", TransformEdit(position = Vec3(-1.035308f, 0.9123962f, -3.2570944f)))
+            SceneTransformWriter().apply(root, "0", TransformEdit(position = Vec3(-1.035308f, 0.9123962f, -3.2570944f)))
         }
         assertTrue(moved)
         val after = String(file.contentsToByteArray())
@@ -36,7 +36,7 @@ class SceneTransformEditTest : BasePlatformTestCase() {
     fun testNothingIsWrittenWhenTheEditChangesNothing() {
         val file = myFixture.addFileToProject("p/Same.scene", original).virtualFile
         assertFalse(editSceneJson(project, file, "Move Entity") { root ->
-            SceneTransformWriter.apply(root, "0", TransformEdit(position = Vec3(-3.035308f, 0.9123962f, -3.2570944f)))
+            SceneTransformWriter().apply(root, "0", TransformEdit(position = Vec3(-3.035308f, 0.9123962f, -3.2570944f)))
         })
         assertEquals(original, String(file.contentsToByteArray()))
     }
@@ -54,7 +54,7 @@ class SceneTransformEditTest : BasePlatformTestCase() {
         val file = myFixture.addFileToProject("p/Event.scene", original).virtualFile
         val events = eventsDuring {
             assertTrue(editSceneJson(project, file, "Move Entity") { root ->
-                SceneTransformWriter.apply(root, "0", TransformEdit(position = Vec3(1f, 0.9123962f, -3.2570944f)))
+                SceneTransformWriter().apply(root, "0", TransformEdit(position = Vec3(1f, 0.9123962f, -3.2570944f)))
             })
         }
         assertEquals(listOf(file), events)

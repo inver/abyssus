@@ -48,72 +48,69 @@ data class SceneContent(
 ) {
     /** The id of the direction handle (a `HANDLE` entity) [light] looks at, or null when it looks at none. */
     fun aimHandleOf(light: LightPlacement): String? = light.lookAtId?.takeIf { it in handleIds }
+}
 
-    companion object {
-        val EMPTY = SceneContent()
-
-        fun of(scene: Scene): SceneContent {
-            val entities = sceneDocumentFromEcs(scene.ecs, components).entities().mapNotNull { entity ->
-                if (entity.components == null) return@mapNotNull null
-                runCatchingKeepingCancellation { decode(entity) }.getOrNull()
-            }
-            val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled == true && it.isNotBlank() }
-            return PlacementMapper().map(entities, skybox)
-        }
-
-        /**
-         * Reads the entity's components through the runtime loader the Properties panel uses, so both show the same values,
-         * defaults included. The render asset is read as the file names it, whichever delegate class holds it.
-         */
-        private fun decode(entity: EntityView): DecodedEntity {
-            val components = entity.components!!
-            val position = components.opt("PositionComponent")
-            val asset = components.opt("RenderComponent")?.opt("renderable")?.opt("asset")
-            val assetType = asset?.text("type")
-            val assetName = asset?.text("assetName")
-            return DecodedEntity(
-                entity.id,
-                entity.name,
-                position?.let { read<PositionComponent>(it) },
-                position?.opt("localPosition") != null,
-                components.opt("TypeComponent")?.let { read<TypeComponent>(it)?.type },
-                components.opt("CameraComponent")?.let { read<CameraComponent>(it) },
-                components.opt("LightComponent")?.let { read<LightComponent>(it) },
-                if (assetType != null && assetName != null) DecodedAsset(assetType, assetName) else null,
-            )
-        }
-
-        /** Binds components the way a scene load does, so the view and the Properties panel show the same values. */
-        private val components = ComponentReader(JsonProcessor().mapper, { _, _ -> null }, NOPLogger.NOP_LOGGER)
-
-        /** A component that cannot be bound is left out, so one bad value does not hide the entity. */
-        private inline fun <reified C : Component> read(node: JsonNode): C? =
-            runCatchingKeepingCancellation { components.read(C::class.java, node) }.getOrNull()
-
-        /** The libGDX forward axis (-Z) rotated by [q]. */
-        internal fun forward(q: Quat): Vec3 {
-            val len = kotlin.math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w)
-            if (len < 1e-6f) return Vec3(0f, 0f, -1f)
-            val x = q.x / len
-            val y = q.y / len
-            val z = q.z / len
-            val w = q.w / len
-            // q * (0, 0, -1) * q^-1
-            return Vec3(0f - 2f * (x * z + w * y), 0f - 2f * (y * z - w * x), 0f - (1f - 2f * (x * x + y * y)))
-        }
-
-        /**
-         * The unit direction from [from] toward [to], or null when the two are (almost) the same point. Shared by
-         * look-at lights and look-at cameras so the two can't drift apart.
-         */
-        internal fun aim(from: Vec3, to: Vec3): Vec3? {
-            val dx = to.x - from.x
-            val dy = to.y - from.y
-            val dz = to.z - from.z
-            val len2 = dx * dx + dy * dy + dz * dz
-            if (len2 < 1e-12f || !len2.isFinite()) return null
-            val len = kotlin.math.sqrt(len2)
-            return Vec3(dx / len, dy / len, dz / len)
-        }
+/** What [scene] places, read through the runtime component codecs. */
+fun sceneContentOf(scene: Scene): SceneContent {
+    val entities = sceneDocumentFromEcs(scene.ecs, components).entities().mapNotNull { entity ->
+        if (entity.components == null) return@mapNotNull null
+        runCatchingKeepingCancellation { decode(entity) }.getOrNull()
     }
+    val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled == true && it.isNotBlank() }
+    return PlacementMapper().map(entities, skybox)
+}
+
+/**
+ * Reads the entity's components through the runtime loader the Properties panel uses, so both show the same values,
+ * defaults included. The render asset is read as the file names it, whichever delegate class holds it.
+ */
+private fun decode(entity: EntityView): DecodedEntity {
+    val components = entity.components!!
+    val position = components.opt("PositionComponent")
+    val asset = components.opt("RenderComponent")?.opt("renderable")?.opt("asset")
+    val assetType = asset?.text("type")
+    val assetName = asset?.text("assetName")
+    return DecodedEntity(
+        entity.id,
+        entity.name,
+        position?.let { read<PositionComponent>(it) },
+        position?.opt("localPosition") != null,
+        components.opt("TypeComponent")?.let { read<TypeComponent>(it)?.type },
+        components.opt("CameraComponent")?.let { read<CameraComponent>(it) },
+        components.opt("LightComponent")?.let { read<LightComponent>(it) },
+        if (assetType != null && assetName != null) DecodedAsset(assetType, assetName) else null,
+    )
+}
+
+/** Binds components the way a scene load does, so the view and the Properties panel show the same values. */
+private val components = ComponentReader(JsonProcessor().mapper, { _, _ -> null }, NOPLogger.NOP_LOGGER)
+
+/** A component that cannot be bound is left out, so one bad value does not hide the entity. */
+private inline fun <reified C : Component> read(node: JsonNode): C? =
+    runCatchingKeepingCancellation { components.read(C::class.java, node) }.getOrNull()
+
+/** The libGDX forward axis (-Z) rotated by [q]. */
+fun forwardOf(q: Quat): Vec3 {
+    val len = kotlin.math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w)
+    if (len < 1e-6f) return Vec3(0f, 0f, -1f)
+    val x = q.x / len
+    val y = q.y / len
+    val z = q.z / len
+    val w = q.w / len
+    // q * (0, 0, -1) * q^-1
+    return Vec3(0f - 2f * (x * z + w * y), 0f - 2f * (y * z - w * x), 0f - (1f - 2f * (x * x + y * y)))
+}
+
+/**
+ * The unit direction from [from] toward [to], or null when the two are (almost) the same point. Shared by
+ * look-at lights and look-at cameras so the two can't drift apart.
+ */
+fun aimDirection(from: Vec3, to: Vec3): Vec3? {
+    val dx = to.x - from.x
+    val dy = to.y - from.y
+    val dz = to.z - from.z
+    val len2 = dx * dx + dy * dy + dz * dz
+    if (len2 < 1e-12f || !len2.isFinite()) return null
+    val len = kotlin.math.sqrt(len2)
+    return Vec3(dx / len, dy / len, dz / len)
 }

@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview.gizmo
 
+import net.nevinsky.abyssus.sceneview.sceneContentOf
 import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.sceneview.SceneContent
 import net.nevinsky.abyssus.editor.content.Vec3
@@ -16,7 +17,7 @@ import java.io.File
 
 class GizmoHandlesTest {
     private fun handles(eyeZ: Float) =
-        GizmoHandles.of(Vec3(0f, 0f, 0f), GizmoMode.MOVE, Vec3(0f, 0f, eyeZ), 60f, 600)
+        GizmoHandles(Vec3(0f, 0f, 0f), GizmoMode.MOVE, Vec3(0f, 0f, eyeZ), 60f, 600)
 
     @Test
     fun handleLengthDoublesWhenTheEyeDistanceDoubles() {
@@ -26,12 +27,12 @@ class GizmoHandlesTest {
     @Test
     fun handleSpansAConstantNumberOfPixels() {
         val h = handles(10f)
-        assertEquals(GizmoHandles.SIZE_PIXELS, h.size / h.worldPerPixel, 1e-3f)
+        assertEquals(GIZMO_SIZE_PIXELS, h.size / h.worldPerPixel, 1e-3f)
         assertEquals(h.size, h.tip(GizmoAxis.X).x, 1e-5f)
         assertEquals(0f, h.tip(GizmoAxis.X).y, 0f)
     }
 
-    private fun content(text: String) = SceneContent.of(parseScene(text))
+    private fun content(text: String) = sceneContentOf(parseScene(text))
 
     @Test
     fun lookAtCameraAndPointLightCannotRotate() {

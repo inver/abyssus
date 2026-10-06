@@ -19,10 +19,11 @@ class BoxTarget(val entityId: String, val bounds: BoundingBox)
 /** A terrain entity as seen by picking: its height field and its world transform. */
 class TerrainTarget(val entityId: String, val data: TerrainData, val world: Matrix4)
 
-/** Finds the entity under a ray: the nearest hit among model bounding boxes and terrain surfaces. No GL needed. */
-object ScenePicker {
-    const val REST_EPS = 0.0001f
+/** How far above a surface a box may sit and still count as resting on it. */
+const val REST_EPS = 0.0001f
 
+/** Finds the entity under a ray: the nearest hit among model bounding boxes and terrain surfaces. No GL needed. */
+class ScenePicker {
     fun isResting(lowest: Float, height: Float): Boolean = kotlin.math.abs(height - lowest) < REST_EPS
 
     /** Highest real surface under the projected box; no invented ground plane or ray-distance limit. */

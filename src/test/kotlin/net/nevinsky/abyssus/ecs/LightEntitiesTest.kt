@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.ecs
 
+import net.nevinsky.abyssus.sceneview.sceneContentOf
 import net.nevinsky.abyssus.editor.components.EditResult
 import net.nevinsky.abyssus.editor.components.LightEntities
 import net.nevinsky.abyssus.editor.components.LightPreset
@@ -57,7 +58,7 @@ class LightEntitiesTest {
             val root = empty()
             val added = LightEntities(ResourceEditorMessages()).add(root, preset, Vec3(10f, 0f, -4f))
             assertEquals("0", added.entityId)
-            val light = SceneContent.of(parseScene(root.toString())).lights.single()
+            val light = sceneContentOf(parseScene(root.toString())).lights.single()
             assertEquals(if (preset == LightPreset.SPOT) LightKind.SPOT else LightKind.DIRECTIONAL, light.kind)
             assertEquals(Vec3(10f, if (preset == LightPreset.SPOT) 5f else 0f, -4f), light.position)
             val y = when (preset) { LightPreset.DIRECTIONAL -> -0.7071068f; LightPreset.SUN -> -0.5f; LightPreset.SPOT -> -1f }
@@ -84,7 +85,7 @@ class LightEntitiesTest {
             val added = LightEntities(ResourceEditorMessages()).add(root, LightPreset.SUN, Vec3(0f, 0f, 0f))
             assertEquals(EditResult.Changed, added.result)
             assertEquals("0", added.entityId)
-            assertEquals(1, SceneContent.of(parseScene(root.toString())).lights.size)
+            assertEquals(1, sceneContentOf(parseScene(root.toString())).lights.size)
         }
     }
 

@@ -28,7 +28,7 @@ class RayRealSceneTest {
     private fun snapshot(): RaySceneFrame {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
         val loading = AssetLoading(JsonProcessor(), printingLog, Executor(Runnable::run), ShaderSource("/shader/sky", AssetLoading::class.java))
-        val content = SceneContent.of(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
+        val content = sceneContentOf(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
         val assets = RaySceneAssets(ViewAssets(loading))
         assets.update(project, content)
         val state = assets.poll()

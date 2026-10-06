@@ -23,7 +23,7 @@ import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FAR
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
 
 class SceneContentTest {
-    private fun content(json: String) = SceneContent.of(parseScene(json))
+    private fun content(json: String) = sceneContentOf(parseScene(json))
 
     private fun entity(components: String) = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"7":{"archetype":1,"components":$components}}}}"""
 
@@ -152,7 +152,7 @@ class SceneContentTest {
 
     @Test
     fun noEcsIsEmpty() {
-        assertEquals(SceneContent.EMPTY, content("{}"))
+        assertEquals(SceneContent(), content("{}"))
     }
 
     @Test

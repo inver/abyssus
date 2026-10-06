@@ -40,7 +40,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             choices[1].actionPerformed(TestActionEvent.createTestEvent(choices[1]))
             assertEquals("0", selected)
             val document = FileDocumentManager.getInstance().getDocument(file)!!
-            val light = SceneContent.of(net.nevinsky.abyssus.parseScene(document.text)).lights.single()
+            val light = sceneContentOf(net.nevinsky.abyssus.parseScene(document.text)).lights.single()
             assertEquals(Vec3(10f, 0f, -4f), light.position)
             WriteCommandAction.runWriteCommandAction(project) { document.setText("not json") }
             panel.setParams(params)

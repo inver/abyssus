@@ -18,7 +18,7 @@ import kotlin.math.atan2
 /** What a drag has done to the object so far; [direction] is the turned direction for objects that have one. */
 data class DragResult(val transform: PlacementTransform, val direction: Vec3?)
 
-internal object GizmoMath {
+internal class GizmoMath {
     /** The distance along [ray] to the plane through [point] with [normal], or null when parallel or behind. */
     fun rayPlane(ray: Ray, point: Vector3, normal: Vector3): Float? {
         val denominator = normal.dot(ray.direction)
@@ -54,7 +54,7 @@ class GizmoDrag(
     private val origin = start.position.toVector3()
     private val axisVector = axis.direction.toVector3()
     private val startParameter: Float? = when (mode) {
-        GizmoMode.MOVE -> GizmoMath.rayLine(startRay, origin, axisVector)
+        GizmoMode.MOVE -> GizmoMath().rayLine(startRay, origin, axisVector)
         GizmoMode.ROTATE -> null
     }
     private val startArm: Vector3? = when (mode) {
@@ -78,7 +78,7 @@ class GizmoDrag(
 
     private fun move(ray: Ray): DragResult? {
         val from = startParameter ?: return null
-        val to = GizmoMath.rayLine(ray, origin, axisVector) ?: return null
+        val to = GizmoMath().rayLine(ray, origin, axisVector) ?: return null
         val shift = Vector3(axisVector).scl(to - from)
         val p = Vector3(origin).add(shift)
         return DragResult(start.copy(position = p.toVec3()), startDirection)
@@ -96,7 +96,7 @@ class GizmoDrag(
 
     /** The vector from the object to where [ray] crosses the ring's plane. */
     private fun armOf(ray: Ray): Vector3? {
-        val t = GizmoMath.rayPlane(ray, origin, axisVector) ?: return null
+        val t = GizmoMath().rayPlane(ray, origin, axisVector) ?: return null
         val arm = Vector3(ray.origin).mulAdd(ray.direction, t).sub(origin)
         return arm.takeIf { it.len2() > 1e-12f }
     }

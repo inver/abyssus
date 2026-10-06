@@ -14,18 +14,19 @@ import net.nevinsky.abyssus.editor.content.CameraPlacement
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 
+private const val CAMERA_BOUNDS_HALF = 0.5f
+private const val LIGHT_BOUNDS_HALF = 0.3f
+private const val LIGHT_RADIUS = 0.3f
+private const val DIRECTION_LINE_LENGTH = 2f
+
+private val BODY_COLOR = Rgba(0.85f, 0.85f, 0.9f, 1f)
+private val FRUSTUM_COLOR = Rgba(0.55f, 0.7f, 0.95f, 1f)
+
 /**
  * The line geometry and pick bounds of the objects a scene places that have no model: cameras (a body and a frustum)
  * and lights (a small octahedron, with a direction line for directional and spot lights). No GL needed.
  */
-object SceneMarkers {
-    private const val CAMERA_BOUNDS_HALF = 0.5f
-    private const val LIGHT_BOUNDS_HALF = 0.3f
-    private const val LIGHT_RADIUS = 0.3f
-    private const val DIRECTION_LINE_LENGTH = 2f
-
-    private val BODY_COLOR = Rgba(0.85f, 0.85f, 0.9f, 1f)
-    private val FRUSTUM_COLOR = Rgba(0.55f, 0.7f, 0.95f, 1f)
+class SceneMarkers {
 
     fun cameraBounds(position: Vec3): BoundingBox = boundsAround(position, CAMERA_BOUNDS_HALF)
 
@@ -54,7 +55,7 @@ object SceneMarkers {
     }
 
     fun drawCamera(out: LineSink, camera: CameraPlacement, positions: Map<String, Vec3>, aspect: Float) {
-        val frustum = CameraFrustum.of(camera, positions, aspect)
+        val frustum = cameraFrustumOf(camera, positions, aspect)
         val c = frustum.corners
         for (ring in 0..1) for (i in 0 until 4) out.line(c[ring * 4 + i], c[ring * 4 + (i + 1) % 4], FRUSTUM_COLOR)
         for (i in 0 until 4) out.line(c[i], c[4 + i], FRUSTUM_COLOR)
@@ -64,7 +65,7 @@ object SceneMarkers {
     /** A box with a lens pyramid on the front, facing [direction]. */
     private fun drawBody(out: LineSink, position: Vec3, direction: Vec3) {
         val d = direction.toVector3()
-        val (right, up) = CameraFrustum.sideAxes(d)
+        val (right, up) = cameraSideAxes(d)
         val eye = position.toVector3()
         fun at(r: Float, u: Float, f: Float) = Vector3(eye).mulAdd(right, r).mulAdd(up, u).mulAdd(d, f).toVec3()
         val w = 0.3f

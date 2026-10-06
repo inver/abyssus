@@ -9,9 +9,6 @@ import net.nevinsky.abyssus.editor.content.PlacementTransform
 
 import net.nevinsky.abyssus.editor.content.AssetPlacement
 
-import com.badlogic.gdx.math.Matrix4
-import com.badlogic.gdx.math.Quaternion
-import com.badlogic.gdx.math.Vector3
 
 /** An entity drawn from a loaded asset. */
 interface PlacedEntity<A> {
@@ -41,10 +38,3 @@ class PlacedEntities<A : Any, E : PlacedEntity<A>>(private val place: (AssetPlac
 
     fun clear() = entities.clear()
 }
-
-/** The world matrix of [this] placement transform. */
-fun PlacementTransform.toMatrix(out: Matrix4 = Matrix4()): Matrix4 = out.set(
-    Vector3(position.x, position.y, position.z),
-    Quaternion(rotation.x, rotation.y, rotation.z, rotation.w),
-    Vector3(scale.x, scale.y, scale.z),
-)

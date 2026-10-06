@@ -60,7 +60,7 @@ class SceneRenderer(
             val poses = state.poses
             if (poses.isEmpty()) return c
             posed?.takeIf { c === posedBase && poses === posedPoses }?.let { return it }
-            return ScenePreview.withPoses(c, poses).also {
+            return ScenePreview().withPoses(c, poses).also {
                 posed = it
                 posedBase = c
                 posedPoses = poses
@@ -72,7 +72,7 @@ class SceneRenderer(
         get() {
             val c = posedContent
             val p = state.preview
-            return if (p.isEmpty()) c else ScenePreview.apply(c, p)
+            return if (p.isEmpty()) c else ScenePreview().apply(c, p)
         }
 
     /** Other plugins' overlays for this view; drawn after the markers, then again over everything. */
@@ -139,9 +139,9 @@ class SceneRenderer(
     /** Copies what was drawn so the queries need neither this renderer nor GL. */
     internal fun publishSnapshot() {
         snapshot = FrameSnapshot(
-            FrameSnapshot.copyOf(camera),
-            models.drawn.map { FrameSnapshot.boxOf(it.placement.entityId, it.localBounds, it.instance.transform!!) },
-            terrains.drawn.map { FrameSnapshot.terrainOf(TerrainTarget(it.placement.entityId, it.terrain.data, it.world)) },
+            copyOfCamera(camera),
+            models.drawn.map { snapshotBoxOf(it.placement.entityId, it.localBounds, it.instance.transform!!) },
+            terrains.drawn.map { snapshotTerrainOf(TerrainTarget(it.placement.entityId, it.terrain.data, it.world)) },
             drawnVersion,
         )
     }
@@ -281,7 +281,7 @@ class SceneRenderer(
         camera.viewportWidth = width.toFloat()
         camera.viewportHeight = height.toFloat()
         if (through != null) {
-            val direction = CameraFrustum.directionOf(through, c.entityPositions)
+            val direction = cameraDirectionOf(through, c.entityPositions)
             camera.fieldOfView = through.fieldOfView.takeIf { it > 0f && it < 180f } ?: CAMERA_FOV
             camera.near = through.near.coerceAtLeast(MIN_NEAR)
             camera.far = through.far.coerceAtLeast(camera.near + MIN_NEAR)
@@ -311,13 +311,13 @@ class SceneRenderer(
         drawnCameraMarkers = c.cameras.count { it.entityId != state.viewCamera }
         val aspect = aspectOf(width, height) ?: return
         lines.begin(displayCamera, depthTest = true)
-        SceneMarkers.draw(lines, c, aspect, state.viewCamera)
+        SceneMarkers().draw(lines, c, aspect, state.viewCamera)
         overlays?.draw(overlayView(c, displayCamera, height, onTop = false), lines)
         lines.end()
         lines.begin(displayCamera, depthTest = false)
         state.selectedId?.let { id ->
             boundsOf(c, id)?.let { SelectionBox.draw(lines, it) }
-            SnapshotSceneQueries.gizmoHandles(c, displayCamera, state, height)?.let {
+            gizmoHandlesFor(c, displayCamera, state, height)?.let {
                 GizmoDraw.draw(lines, it, state.hoveredAxis)
                 drewGizmo = true
             }
@@ -339,7 +339,7 @@ class SceneRenderer(
         terrains.drawn.firstOrNull { it.placement.entityId == id }?.let {
             return BoundingBox(it.localBounds).mul(c.terrains.firstOrNull { terrain -> terrain.entityId == id }?.transform?.toMatrix() ?: it.world)
         }
-        return SceneMarkers.boundsOf(c, id)
+        return SceneMarkers().boundsOf(c, id)
     }
 
     private fun renderContent(p: SceneRenderParams, c: SceneContent, atlas: ShadowAtlasAttribute?) {

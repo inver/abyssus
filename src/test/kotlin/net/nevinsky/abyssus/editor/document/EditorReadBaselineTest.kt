@@ -1,5 +1,7 @@
 package net.nevinsky.abyssus.editor.document
 
+import net.nevinsky.abyssus.sceneview.renderParamsOf
+import net.nevinsky.abyssus.sceneview.sceneContentOf
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.parseScene
@@ -20,7 +22,7 @@ class EditorReadBaselineTest : BasePlatformTestCase() {
 
     fun testContentAndRayCaptureInputs() {
         val scene = parseScene(text)
-        val content = SceneContent.of(scene)
+        val content = sceneContentOf(scene)
         assertEquals(listOf("0", "2", "6", "9"), content.models.map { it.entityId })
         assertEquals(listOf("1"), content.terrains.map { it.entityId })
         assertEquals(listOf("7", "8", "10"), content.lights.map { it.entityId })
@@ -28,7 +30,7 @@ class EditorReadBaselineTest : BasePlatformTestCase() {
         assertEquals(setOf("3"), content.handleIds)
         assertEquals("skybox_physical", content.skybox)
         assertEquals(Vec3(-3.035308f, .9123962f, -3.2570944f), content.models.first().transform.position)
-        val params = SceneRenderParams.from(scene, CameraParams.DEFAULT)
+        val params = renderParamsOf(scene, CameraParams.DEFAULT)
         assertEquals(content, params.content)
         assertEquals(net.nevinsky.abyssus.core.io.JsonProcessor().readObject(text).get("ecs"), params.ecs)
         assertEquals(CameraParams.DEFAULT, params.camera)

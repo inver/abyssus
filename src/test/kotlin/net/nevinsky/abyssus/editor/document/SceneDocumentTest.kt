@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.editor.document
 
+import net.nevinsky.abyssus.sceneview.sceneContentOf
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.editor.components.ComponentReader
@@ -23,7 +24,7 @@ class SceneDocumentTest {
         val entity = document.entity("0")!!
         assertEquals("Model 0", entity.name)
         assertEquals(-3.035308f, entity.component(PositionComponent::class.java)!!.localPosition.x, 0f)
-        val content = SceneContent.of(parseScene(text))
+        val content = sceneContentOf(parseScene(text))
         assertEquals(content.models.first().assetName, document.renderAsset("0")!!.name)
         assertEquals(content.skybox, document.skybox())
         assertEquals(listOf("ecs", "0", "components"), document.locate("0"))
