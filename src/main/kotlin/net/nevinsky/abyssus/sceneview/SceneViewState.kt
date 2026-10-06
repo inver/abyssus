@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Pose
 import net.nevinsky.abyssus.sceneview.gizmo.DragResult
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoAxis
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode

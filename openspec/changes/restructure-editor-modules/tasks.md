@@ -52,7 +52,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 
 ## 3. Stage 3: extract `editor-core` (S1, S2); replaces `refactor-solid-dedup` phases 4 and 7
 
-- [ ] 3.1 Split the mixed files inside the plugin first (design D2/D7): the Swing-free parts of `PanelState`,
+- [x] 3.1 Split the mixed files inside the plugin first (design D2/D7): the Swing-free parts of `PanelState`,
   `SceneFileEditor`, `SceneViewPanel` (toolbar state, input forwarding, camera choices), `AbyssusProjectViewPane`
   and `AssetPropertiesPanel` into their own files. Verify with the existing tests unchanged.
 - [ ] 3.2 Create the `editor-core` Gradle module (plain Kotlin, depends on `core`, `runtime`, `raytracing`,

@@ -164,6 +164,20 @@ place `FlightReport` with flight and `HandleInput` in input so game flow and fli
 Verify these moves with the existing `:gdx-model:test`, `:runtime:test` and `:games:control-line:test` suites and the
 cycle guard with their allowlist entries removed. The end-of-stage-1 allowlist remains entirely empty.
 
+### D11. Messages and singletons in `editor-core` (decided 2026-10-06, before stage 3)
+
+- **Messages.** `AbyssusBundle` is an IntelliJ `DynamicBundle`, so `editor-core` cannot use it. The keys
+  `editor-core` uses move to `editor-core/src/main/resources/messages/AbyssusEditorBundle.properties`. `editor-core` code
+  takes an injected `EditorMessages` (`message(key, vararg params)`). The plugin supplies `EditorBundle`, a
+  `DynamicBundle` over that same resource (the `editor-core` jar is on the plugin classloader); headless callers use
+  `ResourceEditorMessages`, a plain `ResourceBundle` over it. Both read one file, so the plugin and a headless
+  caller give the same reason text. The resource is not named `EditorBundle`: the platform ships a
+  `messages.EditorBundle`, and a second file of that name shadows it on a shared test classpath. IDE-only text stays in `AbyssusBundle.properties`.
+- **Singletons.** `checkNoSingletons` applies to `editor-core`. Behavior singletons (`object X` with functions,
+  companion factories such as `SceneContent.of`) become classes wired by constructor or created at the call site,
+  in commits before the slice's move. Pure constant holders (a companion or object with only `const val`s or an
+  `EMPTY` value) may be listed in `abyssusSingletonExcludes`.
+
 ## Risks / Trade-offs
 
 - **Churn and merge conflicts** with every open change touching `sceneview/`. Mitigation: order (land or rebase first),

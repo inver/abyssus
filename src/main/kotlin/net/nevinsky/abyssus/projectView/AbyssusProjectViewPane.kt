@@ -220,12 +220,10 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
         val visitor = TreeVisitor { path ->
             val entry = (TreeUtil.getUserObject(path.lastPathComponent) as? DtoEntryNode)?.value
             val asset = (TreeUtil.getUserObject(path.lastPathComponent) as? AbyssusAssetNode)?.virtualFile?.path
-            when {
-                entry?.path == entryPath -> TreeVisitor.Action.INTERRUPT
-                entry != null && entryPath.startsWith(entry.path + "/") -> TreeVisitor.Action.CONTINUE
-                asset != null && entryPath.startsWith("$asset/") -> TreeVisitor.Action.CONTINUE
-                entry == null && asset == null -> TreeVisitor.Action.CONTINUE // view root
-                else -> TreeVisitor.Action.SKIP_CHILDREN
+            when (reselectStep(entryPath, entry?.path, asset)) {
+                ReselectStep.FOUND -> TreeVisitor.Action.INTERRUPT
+                ReselectStep.DESCEND -> TreeVisitor.Action.CONTINUE
+                ReselectStep.SKIP -> TreeVisitor.Action.SKIP_CHILDREN
             }
         }
         TreeUtil.promiseSelect(this, visitor).onSuccess { path ->

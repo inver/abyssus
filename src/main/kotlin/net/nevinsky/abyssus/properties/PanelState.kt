@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.EditorBundle
+
 import net.nevinsky.abyssus.editor.meta.AssetReferenceChoices
 import net.nevinsky.abyssus.ui.thumbnail
 
@@ -24,19 +26,9 @@ import net.nevinsky.abyssus.SKYBOX_FACES
 import net.nevinsky.abyssus.core.assets.sky.hdr.HdrPreview
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.textOf
-import net.nevinsky.abyssus.ecs.scene.FieldKind
-import net.nevinsky.abyssus.ecs.scene.FieldValue
 import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.projectView.*
-import net.nevinsky.abyssus.editor.document.SceneDocument
-import net.nevinsky.abyssus.editor.ray.RayDataError
-import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
-import net.nevinsky.abyssus.editor.ray.RayMaterialOverrides
-import net.nevinsky.abyssus.editor.ray.RayOpticalField
-import java.awt.RenderingHints
 import java.awt.image.BufferedImage
-import java.io.ByteArrayInputStream
-import javax.imageio.ImageIO
 import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
 
 /** What the panel shows. */
@@ -75,32 +67,6 @@ sealed interface PanelState {
         val optics: RenderOptics? = null,
     ) : PanelState
 }
-
-/**
- * A model entity's scene-instance optical overrides (`RenderComponent.rayTracingMaterials`). [materials] follows the
- * model's material table; [unresolved] lists stored identifiers the model no longer has, kept and never retargeted;
- * [problem] says why the table could not be read, in which case nothing is editable.
- */
-data class RenderOptics(
-    val materials: List<OpticalMaterialRow>,
-    val identities: List<RayMaterialIdentity>,
-    val unresolved: List<String>,
-    val problem: String? = null,
-)
-
-/**
- * One material of the model: [error] is why it has no optical editors (a missing or repeated identifier, not PBR); [stored]
- * holds the document's nodes for its fields, which an edit must still find, and [errors] the malformed ones.
- */
-data class OpticalMaterialRow(
-    val id: String?,
-    val error: RayDataError?,
-    val stored: Map<RayOpticalField, JsonNode?>,
-    val errors: Map<RayOpticalField, RayDataError>,
-)
-
-/** One component of an entity: its [fields] when the plugin edits it, else the file's JSON as [raw] text, read only. */
-data class ComponentSection(val kind: String, val label: String, val fields: List<FieldValue>, val raw: String?)
 
 /** One face of a skybox: [file] is what `meta.json` names (or `null`), [image] its thumbnail, null when it cannot be shown. */
 data class FaceCell(val face: String, val file: String, val image: BufferedImage?)
@@ -158,97 +124,21 @@ private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreview
 fun readEntityState(target: ComponentTarget, services: PanelServices): PanelState {
     val root = runCatchingKeepingCancellation {
         SceneJson.parse(runReadAction { textOf(target.file) }).also {
-            net.nevinsky.abyssus.format.AbyssusDocumentFormat()
-                .requireSupported(it, net.nevinsky.abyssus.format.DocumentKind.SCENE)
+            AbyssusDocumentFormat().requireSupported(it, DocumentKind.SCENE)
         }
+    }.getOrElse { return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.displayMessage()), null) }
+    val assets = EntityAssetChoices(
+        SceneComponentEdits.renderAssets(target.file, services.metaFiles).map { it.name },
+        SceneComponentEdits.assetsByType(target.file, services.metaFiles).orEmpty(),
+    )
+    return when (val read = readEntitySections(root, target.entityId, target.kind, services.schemas.editorFor(target.file), assets, EditorBundle)) {
+        is EntitySections.Gone -> PanelState.Empty(read.message, null)
+        is EntitySections.Read -> PanelState.EntityDetails(target, read.name, read.sections, read.addable, read.render?.let { render ->
+            readRenderOptics(render, { assetName ->
+                ProjectLayout.projectDirFor(target.file)?.let { services.rayMaterials(it, assetName) }
+            }, EditorBundle)
+        })
     }
-        .getOrElse {
-            return PanelState.Empty(
-                AbyssusBundle.message("propertiesSceneUnreadable", it.displayMessage()),
-                null
-            )
-        }
-    val entity = SceneDocument(root).entity(target.entityId)
-        ?: return PanelState.Empty(AbyssusBundle.message("propertiesEntityGone", target.entityId), null)
-    val components = entity.components
-    val kinds = target.kind?.let { listOf(it) } ?: components?.fieldNames()?.asSequence()?.toList().orEmpty()
-    val assets = SceneComponentEdits.renderAssets(target.file, services.metaFiles).map { it.name }
-    val byType = SceneComponentEdits.assetsByType(target.file, services.metaFiles).orEmpty()
-    val editor = services.schemas.editorFor(target.file)
-    val sections = kinds.map { kind ->
-        val modeled = editor.kindOf(kind)
-        val fields = editor.read(root, target.entityId, kind)
-        when {
-            components?.has(kind) != true ->
-                return PanelState.Empty(
-                    AbyssusBundle.message(
-                        "propertiesComponentGone",
-                        target.entityId,
-                        kind.removeSuffix("Component")
-                    ), null
-                )
-
-            modeled == null || fields == null -> ComponentSection(
-                kind,
-                kind.removeSuffix("Component").ifEmpty { kind },
-                emptyList(),
-                SceneJson.pretty(components!![kind])
-            )
-
-            else -> ComponentSection(kind, modeled.label, fields.map { field ->
-                when {
-                    field.kind != FieldKind.ASSET_NAME -> field
-                    field.assetType != null -> field.copy(choices = (listOf("") + byType[field.assetType].orEmpty() + field.value).distinct())
-                    else -> field.copy(choices = (assets + field.value).filter(String::isNotEmpty).distinct())
-                }
-            }, null)
-        }
-    }
-    val name = entity.name
-    val addable = if (target.kind == null) editor.missingKinds(root, target.entityId).map { it.name } else emptyList()
-    val optics = if (kinds.contains(RENDER_COMPONENT)) components?.get(RENDER_COMPONENT)
-        ?.let { readOptics(target, it, services) } else null
-    return PanelState.EntityDetails(target, name, sections, addable, optics)
-}
-
-private const val RENDER_COMPONENT = "RenderComponent"
-
-/** The optical overrides of a Render component that draws a model asset, against that model's material table. */
-private fun readOptics(target: ComponentTarget, render: JsonNode, services: PanelServices): RenderOptics? {
-    val asset = render.path("renderable").path("asset")
-    if (asset.path("type").asText() != "MODEL") return null
-    val assetName = asset.path("assetName").asText().ifEmpty { return null }
-    val codec = RayMaterialOverrides()
-    val stored = codec.read(render)
-    val identities = runCatchingKeepingCancellation {
-        ProjectLayout.projectDirFor(target.file)?.let { services.rayMaterials(it, assetName) }
-    }.getOrElse {
-        return RenderOptics(
-            emptyList(),
-            emptyList(),
-            stored.values.keys.toList(),
-            AbyssusBundle.message("propertiesOpticsUnreadable", it.displayMessage())
-        )
-    }
-        ?: return RenderOptics(
-            emptyList(),
-            emptyList(),
-            stored.values.keys.toList(),
-            AbyssusBundle.message("propertiesOpticsNoModel", assetName)
-        )
-    val map = render.get("rayTracingMaterials")
-    val rows = identities.map { it.id }.distinct().map { id ->
-        val block = id?.let { map?.get(it) }
-        OpticalMaterialRow(
-            id, if (id == null) RayDataError.MATERIAL_ID else codec.eligible(id, identities),
-            RayOpticalField.entries.associateWith { block?.get(it.key) },
-            RayOpticalField.entries.mapNotNull { field -> stored.errors["$id.${field.key}"]?.let { field to it } }
-                .toMap()
-        )
-    }
-    val known = identities.mapNotNullTo(HashSet()) { it.id }
-    val problem = stored.errors["rayTracingMaterials"]?.let { AbyssusBundle.message("propertiesRayError${it.name}") }
-    return RenderOptics(rows, identities, stored.values.keys.filter { it !in known }, problem)
 }
 
 private fun faces(folder: VirtualFile, meta: AssetMeta.Loaded): List<FaceCell> {

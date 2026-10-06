@@ -12,7 +12,6 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import java.io.File
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.command.undo.DocumentReference
@@ -102,17 +101,17 @@ class SceneFileEditor(
     init {
         reload()
         assetRefresh?.let { refresh ->
-            val assetsPath = File(ProjectLayout.projectDirFor(file)!!.absoluteFile, ASSETS_DIR).path + File.separator
+            val assets = AssetsFolder(ProjectLayout.projectDirFor(file)!!)
             refresh.start()
             project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
                 override fun after(events: List<VFileEvent>) {
-                    if (events.any { (File(it.path).path + File.separator).startsWith(assetsPath) }) refresh.changed()
+                    if (events.any { assets.holds(it.path) }) refresh.changed()
                 }
             })
             EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
                 override fun documentChanged(event: DocumentEvent) {
                     val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
-                    if (changed.name == META_FILE && File(changed.path).path.startsWith(assetsPath)) refresh.changed()
+                    if (changed.name == META_FILE && assets.contains(changed.path)) refresh.changed()
                 }
             }, this)
         }
@@ -260,11 +259,11 @@ class SceneFileEditor(
  * on the UI thread, so the background read of the assets never touches documents.
  */
 internal fun unsavedAssetMeta(projectDir: File): Map<File, String> {
-    val assetsPath = File(projectDir.absoluteFile, ASSETS_DIR).path + File.separator
+    val assets = AssetsFolder(projectDir)
     val manager = FileDocumentManager.getInstance()
     return manager.unsavedDocuments.mapNotNull { document ->
         val file = manager.getFile(document)?.takeIf { it.name == META_FILE } ?: return@mapNotNull null
         val io = File(file.path).absoluteFile
-        if (io.path.startsWith(assetsPath)) io to document.text else null
+        if (assets.contains(io.path)) io to document.text else null
     }.toMap()
 }

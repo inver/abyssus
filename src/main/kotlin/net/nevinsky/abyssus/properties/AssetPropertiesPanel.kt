@@ -310,16 +310,13 @@ class AssetPropertiesPanel(
         box.add(header(d))
         box.add(columnHeader())
         val rows = JPanel(VerticalLayout(0)).apply { border = JBUI.Borders.empty(4, 0) }
-        val editable = d.fields.associateBy { it.key }
-        val shown = HashSet<String>()
-        for (row in d.meta.rows) {
-            val field = editable[row.name]?.takeIf { row.kind == RowKind.ADDITIONAL }
-            if (field != null) shown += field.key
-            rows.add(if (field != null) fieldRow(d, field) else rowOf(row))
-        }
         // supported fields a file omits (procedural sky defaults) are listed with their effective value
-        if (d.meta.rows.any { it.kind == RowKind.HEADING }) d.fields.filter { it.key !in shown }
-            .forEach { rows.add(fieldRow(d, it)) }
+        for (row in detailRows(d.meta.rows, d.fields)) rows.add(
+            when (row) {
+                is DetailRow.Field -> fieldRow(d, row.state)
+                is DetailRow.Plain -> rowOf(row.row)
+            }
+        )
         box.add(rows)
         when (val terrain = d.terrain) {
             is TerrainSource.Unusable -> box.add(terrainUnusableNote(terrain.reason))

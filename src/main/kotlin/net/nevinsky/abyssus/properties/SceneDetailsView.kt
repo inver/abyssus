@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.EditorBundle
 import com.intellij.openapi.Disposable
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBCheckBox
@@ -91,7 +92,7 @@ internal class SceneDetailsView(
             })
             add(JBLabel(AbyssusBundle.message("propertiesRaySaved")).apply { font = JBFont.label().asBold(); border = JBUI.Borders.emptyTop(6) })
             state.raySettings.errors["rayTracing"]?.let { error ->
-                add(JBLabel(AbyssusBundle.message("propertiesRayError${error.name}")).apply { name = "ray-settings-error"; foreground = JBColor.RED })
+                add(JBLabel(EditorBundle.message("propertiesRayError${error.name}")).apply { name = "ray-settings-error"; foreground = JBColor.RED })
             }
             for (field in SceneRayField.entries) add(settingRow(field))
         }
@@ -105,7 +106,7 @@ internal class SceneDetailsView(
             // a non-object block cannot take a targeted edit; the scene JSON must be corrected first
             isEnabled = "rayTracing" !in state.raySettings.errors
         }
-        val initial = state.raySettings.errors[field.key]?.let { AbyssusBundle.message("propertiesRayError${it.name}") }
+        val initial = state.raySettings.errors[field.key]?.let { EditorBundle.message("propertiesRayError${it.name}") }
             ?: AbyssusBundle.message("propertiesRayConflict").takeIf { conflict == field.key } ?: ""
         val error = JBLabel(initial).apply {
             name = "ray-setting-${field.key}-error"; foreground = JBColor.RED
@@ -121,7 +122,7 @@ internal class SceneDetailsView(
                     error.text = AbyssusBundle.message("propertiesRayConflict")
                     onConflict(field.key)
                 }
-                is RayDataEdit.Rejected -> error.text = AbyssusBundle.message("propertiesRayError${result.error.name}")
+                is RayDataEdit.Rejected -> error.text = EditorBundle.message("propertiesRayError${result.error.name}")
             }
         }
         editor.addActionListener { commit() }

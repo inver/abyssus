@@ -9,6 +9,9 @@ import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
 
 data class Vec3(val x: Float, val y: Float, val z: Float)
 
+/** An entity's simulated position and rotation; its authored scale is kept. */
+data class Pose(val position: Vec3, val rotation: Quat)
+
 data class Rgba(val r: Float, val g: Float, val b: Float, val a: Float)
 
 /** [w] is 1 for the identity rotation, which native scenes leave out of the file together with the other default fields. */

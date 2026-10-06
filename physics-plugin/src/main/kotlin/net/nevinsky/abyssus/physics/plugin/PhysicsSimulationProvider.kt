@@ -15,7 +15,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import net.nevinsky.abyssus.physics.play.PlayFrame
 import net.nevinsky.abyssus.physics.play.PlayInput
-import net.nevinsky.abyssus.sceneview.Pose
+import net.nevinsky.abyssus.editor.content.Pose
 import net.nevinsky.abyssus.sceneview.SceneSimulation
 import net.nevinsky.abyssus.sceneview.SceneSimulationProvider
 import net.nevinsky.abyssus.sceneview.SimulationInput

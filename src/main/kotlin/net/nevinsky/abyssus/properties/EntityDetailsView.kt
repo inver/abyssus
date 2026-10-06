@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.EditorBundle
 import com.intellij.ide.DataManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
@@ -174,13 +175,13 @@ internal class EntityDetailsView(
         })
         val id = row.id
         if (id == null || row.error != null) {
-            box.add(JBLabel("<html>${AbyssusBundle.message("propertiesRayError${(row.error ?: RayDataError.MATERIAL_ID).name}")}</html>").apply {
+            box.add(JBLabel("<html>${EditorBundle.message("propertiesRayError${(row.error ?: RayDataError.MATERIAL_ID).name}")}</html>").apply {
                 foreground = secondary(); name = "optics-error-${id ?: ""}"
             })
             return box
         }
         val error =
-            JBLabel(row.errors.values.firstOrNull()?.let { AbyssusBundle.message("propertiesRayError${it.name}") }
+            JBLabel(row.errors.values.firstOrNull()?.let { EditorBundle.message("propertiesRayError${it.name}") }
                 ?: "").apply {
                 foreground = JBColor.RED; name = "optics-error-$id"
             }
@@ -218,7 +219,7 @@ internal class EntityDetailsView(
                         }
 
                         is RayDataEdit.Rejected -> {
-                            error.text = AbyssusBundle.message("propertiesRayError${result.error.name}"); editor.text =
+                            error.text = EditorBundle.message("propertiesRayError${result.error.name}"); editor.text =
                                 text
                         }
                     }
