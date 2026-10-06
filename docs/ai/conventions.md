@@ -3,21 +3,21 @@
 ## Languages and generated code
 
 - **Kotlin for application code.** GLTF grammar inputs live in
-  `src/main/java/net/nevinsky/abyssus/language/psi/` (`Gltf.bnf`, `Gltf.flex`). The vendored FastNoiseLite implementation
-  is Java in `core/src/main/java/`; Metal/Vulkan native code and shaders live in `raytracing/src/main`.
-- **Generated code:** the lexer and parser are generated into `src/main/gen` by the `generateGltfParser` / `generateGltfLexer` Gradle tasks (run before compiling), and the directory is git-ignored. Never edit it;
+  `projects/plugin-abyssus/src/main/java/net/nevinsky/abyssus/language/psi/` (`Gltf.bnf`, `Gltf.flex`). The vendored FastNoiseLite implementation
+  is Java in `projects/lib-core/src/main/java/`; Metal/Vulkan native code and shaders live in `projects/lib-raytracing/src/main`.
+- **Generated code:** the lexer and parser are generated into `projects/plugin-abyssus/src/main/gen` by the `generateGltfParser` / `generateGltfLexer` Gradle tasks (run before compiling), and the directory is git-ignored. Never edit it;
   change the grammar instead.
 - **Package-private libGDX code:** `com.badlogic.gdx.backends.lwjgl3.GdxGlBridge` lives in libGDX's package on
   purpose, to reach backend code that is package-private.
 - **License header:** start new source files with the Apache 2.0 header (copy it from
-  `src/main/kotlin/net/nevinsky/abyssus/AbyssusBundle.kt`). Most files have it; a few newer ones, mostly in `ecs/`,
+  `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/AbyssusBundle.kt`). Most files have it; a few newer ones, mostly in `ecs/`,
   don't yet. libGDX-derived files in `gdx-model` keep their original headers.
 
 ## Module boundary
 
-`gdx-model` depends only on libGDX, LWJGL Assimp and the slf4j API (`gdx-model/build.gradle.kts`). Nothing in it may import
+`gdx-model` depends only on libGDX, LWJGL Assimp and the slf4j API (`projects/lib-gdx-model/lib-gdx-model.gradle.kts`). Nothing in it may import
 `com.intellij.*` or `net.nevinsky.abyssus` plugin packages. The plugin depends on it with
-`implementation(project(":gdx-model"))`.
+`implementation(project(":lib-gdx-model"))`.
 
 ## Logging
 
@@ -26,7 +26,7 @@
   constructors (`RuntimeSceneLoader`, `PhysicsWorld`, `PlayHost`, `AssetLoading`,
   `MetalRayBackendFactory`, `VulkanRayBackendFactory`, `RayRenderScheduler`); `gdx-model`'s static loaders read
   `ModelLogging.logger`. Debug messages are lazy: `log.atDebug().log { "..." }`.
-- **The binding to the IDE logger is `IntellijLogger`** (`src/main/kotlin/net/nevinsky/abyssus/log/IntellijLogger.kt`), an
+- **The binding to the IDE logger is `IntellijLogger`** (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/log/IntellijLogger.kt`), an
   SLF4J `Logger` over `com.intellij.openapi.diagnostic.Logger`, created by `IntellijLoggerFactory` and held by
   `AbyssusCore.loggers`. The composition root passes `getLogger("assets")`, `("scenes")`, `("ray")` and `("model")` (the last installed
   into `ModelLogging`), so everything lands in `idea.log` under `Abyssus.<category>` and obeys Debug Log Settings. It is
@@ -39,7 +39,7 @@
 
 ## JSON
 
-- **Always use `SceneJson`** (`editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/document/SceneJson.kt`), never a fresh
+- **Always use `SceneJson`** (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/document/SceneJson.kt`), never a fresh
   `ObjectMapper`. It keeps key order and `null` members, and keeps float text exactly (`RawNumberNode`). Reading and
   writing a file therefore never changes numbers you didn't touch.
 - **Binding:** bind files to DTOs with `SceneJson().bind` / `SceneReader.parse` (`SceneJson` is stateless; every
@@ -47,12 +47,12 @@
   property declaration order is the order the tree shows.
 - **Non-row fields:** mark them `@get:JsonIgnore` (for example `SceneEntry.file`, `AssetInfo.unused`) so the tree
   doesn't list them.
-- **Optional values:** read them from a `JsonNode` with the helpers in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/JsonNodes.kt`
+- **Optional values:** read them from a `JsonNode` with the helpers in `projects/lib-runtime/src/main/kotlin/net/nevinsky/abyssus/lib/runtime/JsonNodes.kt`
   (`opt`, `text`, `float`, `obj`), which treat absent and JSON `null` alike.
 - **Wiring:** pass collaborators in through constructors. A `service<...>()` lookup belongs only in an action, a
   provider, a tool window factory, the Abyssus pane, or a deferred service accessor. Constructors must not look up other services;
   injected collaborators or lazy access keep unrelated service groups uninitialized.
-- **Writing a file:** use `editSceneJson` (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneDocumentWriter.kt`); its text transform is
+- **Writing a file:** use `editSceneJson` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`); its text transform is
   `editor-core`'s `DocumentTextEditor`, re-serialized with `SceneJson().inStyleOf`, so a pretty file stays pretty and a
   compact one stays compact. Address entities through `SceneDocument` / `SceneEntityTree`, never by `"ecs"` / `"components"` keys.
 
@@ -90,7 +90,7 @@ command name in the message bundle.
 ## Errors and cancellation
 
 - **Catching:** use `runCatchingKeepingCancellation`
-  (`core/src/main/kotlin/net/nevinsky/abyssus/core/assets/Cancellation.kt`), not `runCatching`. It rethrows
+  (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/assets/Cancellation.kt`), not `runCatching`. It rethrows
   `CancellationException`, which includes `ProcessCanceledException`, which the platform requires.
   `./gradlew checkNoRunCatching` (part of `check`) fails on a `runCatching {` in the plugin, `core`, `runtime`, `physics`, `raytracing`, `physics-plugin` or Control Line.
   Source rules share `gradle/checks.gradle.kts`; module singleton exclusions remain explicit in each build file.
@@ -100,9 +100,9 @@ command name in the message bundle.
 
 ## UI text
 
-User-visible strings go in `src/main/resources/messages/AbyssusBundle.properties` and are read with
+User-visible strings go in `projects/plugin-abyssus/src/main/resources/messages/AbyssusBundle.properties` and are read with
 `AbyssusBundle.message(key, args)`. Text that `editor-core` produces (rejections, entity names, ray fallback reasons)
-goes in `editor-core/src/main/resources/messages/AbyssusEditorBundle.properties`; that code takes an `EditorMessages`
+goes in `projects/lib-core-editor/src/main/resources/messages/AbyssusEditorBundle.properties`; that code takes an `EditorMessages`
 by constructor or parameter, the plugin passes `EditorBundle`, a caller without the IDE `ResourceEditorMessages`.
 Escape non-ASCII characters as `\uXXXX` in both files.
 

@@ -29,12 +29,12 @@ if needed. The bridge uses the Gradle JVM's JNI headers. The deployment target i
 13.0 and the shader language is Metal 3.0. No shader compilation happens at runtime.
 
 ```sh
-./gradlew :raytracing:compileKotlin :raytracing:test
-./gradlew :raytracing:buildMetalNative -Pabyssus.metalArch=arm64
-./gradlew :raytracing:buildMetalNative -Pabyssus.metalArch=x86_64
-./gradlew :raytracing:verifyNativePackaging
-./gradlew :raytracing:test -Dabyssus.metalTests=true
-./gradlew :raytracing:test --tests '*MetalRayBackendTimingTest' -Dabyssus.metalTests=true -Dabyssus.metalTimingTests=true
+./gradlew :lib-raytracing:compileKotlin :lib-raytracing:test
+./gradlew :lib-raytracing:buildMetalNative -Pabyssus.metalArch=arm64
+./gradlew :lib-raytracing:buildMetalNative -Pabyssus.metalArch=x86_64
+./gradlew :lib-raytracing:verifyNativePackaging
+./gradlew :lib-raytracing:test -Dabyssus.metalTests=true
+./gradlew :lib-raytracing:test --tests '*MetalRayBackendTimingTest' -Dabyssus.metalTests=true -Dabyssus.metalTimingTests=true
 ```
 
 The default native architecture is the build JVM's architecture. Cross-compiling
@@ -65,7 +65,7 @@ structural/resize results and propagates injected device loss to every owned ses
 Initial caps: 128 meshes/instances, 32 MiB of input geometry, 4096 per dimension,
 4,194,304 pixels per frame, and native geometry builds bounded by the smaller of
 512 MiB and one quarter of the device's recommended working set. These are synthetic slice
-bounds; project scene capacities and snapshot budgets are documented below and in `core/README.md`.
+bounds; project scene capacities and snapshot budgets are documented below and in `projects/lib-core/README.md`.
 
 The staged conformance kit runs the feasibility/lifecycle cases on the fake and opt-in Metal backends. The optional
 30-second timing test reports native submission/readback throughput; it does not
@@ -206,7 +206,7 @@ and `RayBackendService` connect it to full scene shading and safe GL presentatio
 feasibility shader remains available for its dedicated tests.
 
 ```sh
-./gradlew :raytracing:test --tests '*RayRenderSchedulerTest' --tests '*RayQualityPolicyTest'
+./gradlew :lib-raytracing:test --tests '*RayRenderSchedulerTest' --tests '*RayQualityPolicyTest'
 ```
 
 ## Developer feasibility preview
@@ -214,9 +214,9 @@ feasibility shader remains available for its dedicated tests.
 Use a copy of the fixture project, and run:
 
 ```sh
-./gradlew runIde -PideProject=/path/to/copy -PrayExperiment=true
-./gradlew :test --tests '*RayFrameCompositionGlTest' -Dabyssus.glTests=true
-./gradlew :test --tests '*RayFeasibilityPresentationTimingGlTest' -Dabyssus.glTests=true -Dabyssus.rayTimingTests=true
+./gradlew :plugin-abyssus:runIde -PideProject=/path/to/copy -PrayExperiment=true
+./gradlew :plugin-abyssus:test --tests '*RayFrameCompositionGlTest' -Dabyssus.glTests=true
+./gradlew :plugin-abyssus:test --tests '*RayFeasibilityPresentationTimingGlTest' -Dabyssus.glTests=true -Dabyssus.rayTimingTests=true
 ```
 
 Open a scene's Scene view and enable **Metal feasibility preview**. This developer
@@ -277,13 +277,13 @@ then reports `INITIALIZATION_FAILED`; `-Pabyssus.requireShaders=true` (used by t
 that into a build error.
 
 ```sh
-./gradlew :raytracing:test                                    # Vulkan cases skip without a device flag
-./gradlew :raytracing:test --tests '*VulkanRayBackendTest' -Dabyssus.vulkanTests=true
-./gradlew :raytracing:test -Dabyssus.vulkanTests=true -Dabyssus.raytracing.validation=true
-./gradlew :raytracing:verifyVulkanPackaging                   # jar-based; add -Dabyssus.vulkanTests=true to render
-./gradlew :raytracing:verifyNativePackaging                   # Vulkan, plus Metal on a Mac
-./gradlew :raytracing:test --tests '*VulkanRayBackendTimingTest' -Dabyssus.vulkanTests=true -Dabyssus.vulkanTimingTests=true
-./gradlew :test --tests '*RayRealSceneTest' -Dabyssus.vulkanTests=true   # the fixture's Main Scene through the real backend
+./gradlew :lib-raytracing:test                                    # Vulkan cases skip without a device flag
+./gradlew :lib-raytracing:test --tests '*VulkanRayBackendTest' -Dabyssus.vulkanTests=true
+./gradlew :lib-raytracing:test -Dabyssus.vulkanTests=true -Dabyssus.raytracing.validation=true
+./gradlew :lib-raytracing:verifyVulkanPackaging                   # jar-based; add -Dabyssus.vulkanTests=true to render
+./gradlew :lib-raytracing:verifyNativePackaging                   # Vulkan, plus Metal on a Mac
+./gradlew :lib-raytracing:test --tests '*VulkanRayBackendTimingTest' -Dabyssus.vulkanTests=true -Dabyssus.vulkanTimingTests=true
+./gradlew :plugin-abyssus:test --tests '*RayRealSceneTest' -Dabyssus.vulkanTests=true   # the fixture's Main Scene through the real backend
 ```
 
 `-Dabyssus.raytracing.validation=true` enables the Khronos validation layer (and `VK_EXT_debug_utils`) and

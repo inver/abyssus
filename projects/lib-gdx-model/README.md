@@ -37,6 +37,22 @@ libGDX's own `g3d` meshes use 16-bit indices, so one mesh can address at most 65
   - `decodeTextures` decodes the textures off the GL thread.
   - `build` creates the GPU resources with the GL context current.
 - `net.nevinsky.abyssus.lib.core.assimp`: the Assimp to `ModelData` pipeline.
+  - `AssimpModelDataLoader(normalize = true)` converts the up axis a file states to Y: FBX metadata, and a DAE file's
+    `<asset>` unit and up axis, which Assimp's Collada importer applies itself. With `normalize = false` the root keeps
+    the file's own transform and the Collada importer is told to ignore `<asset>`: an import that lets the user choose
+    the unit and up axis applies them itself.
+  - `loadScene` also returns the frame the file states (`StatedFrame`: metres per unit and up axis, `null` where the
+    FBX metadata says nothing) and what the `ModelData` leaves out (`LeftOut`: cameras, lights, point and line meshes,
+    morph targets). `ColladaAsset.read` reads a DAE file's stated unit and up axis; `X_UP` is reported as stated.
+- The glTF writer (package `gltf`, beside `assimp`):
+  - `GltfWriter.write(data, images, generator)` writes a `ModelData` as one binary glTF 2.0 (GLB) with libGDX's
+    `JsonWriter`: the node hierarchy with translation, rotation and scale, mesh attributes as accessors, 16- or 32-bit
+    indices, skins with inverse bind matrices, LINEAR animations and metallic-roughness materials. Images are external
+    URIs from `images` (texture file name to URI). The bytes depend only on the input. Invalid data (indices or joints
+    out of range, weights not summing to 1) throws `GltfWriteException`. Morph targets, cameras, lights and extensions
+    are never written.
+  - `PhongToPbr` maps a Phong-style material to metallic-roughness (diffuse to base colour, metallic 0, shininess to
+    roughness, opacity below 1 to `BLEND`) and names what it drops, such as the specular colour.
 
 Procedural mesh building is not included: use libGDX's `ModelBuilder` / `MeshBuilder`.
 
@@ -46,5 +62,5 @@ See [origin and license](../docs/third-party/gdx-model-origin.md) for the inheri
 
 ## Tests
 
-`./gradlew :gdx-model:test` runs the CPU tests. Add `-Dabyssus.glTests=true` to also run the GL tests, which open a
+`./gradlew :lib-gdx-model:test` runs the CPU tests. Add `-Dabyssus.glTests=true` to also run the GL tests, which open a
 small window.

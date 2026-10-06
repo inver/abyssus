@@ -9,7 +9,7 @@ it compile-only from Abyssus's classloader and never bundles it.
 
 - **No IDE:** no `com.intellij`, Swing or AWT import in `src/main`. The Gradle classpath has no platform artifact, and
   `NoPlatformClasspathTest` checks the test classpath and the imports.
-- **Wired by constructors:** no `object` or `companion object` with behavior (`./gradlew :editor-core:checkNoSingletons`).
+- **Wired by constructors:** no `object` or `companion object` with behavior (`./gradlew :lib-core-editor:checkNoSingletons`).
   Pure constant holders (`Placements.kt`, `SceneRenderParams.kt`) are listed in `abyssusSingletonExcludes`.
 - **Messages:** user-facing text goes in `src/main/resources/messages/AbyssusEditorBundle.properties` and is read
   through an injected `EditorMessages`. The plugin passes `EditorBundle` (a `DynamicBundle` over the same file); a
@@ -31,9 +31,39 @@ it compile-only from Abyssus's classloader and never bundles it.
 | `meta` | `AssetMetaEditor` and field descriptions, `MetaRows`, `AssetReferenceChoices`, the panel's entity sections and asset field states |
 | `ray` | The ray tracing bridge: `RayBackendService`, `RayBackendSelector`, `RayViewRuntime`, `RayViewFeed`, `RaySceneSnapshots`, `RaySkyBaker`, `RayModeState`, diagnostics |
 | `headless` | `HeadlessEditing` (spec `headless-scene-editing`) |
+| `flightgear` | The FlightGear aircraft import: archive, model XML, AC3D and SGI readers, `FlightGearImport` |
+| `modelimport` | The model import: `ModelSource`, `ImportSettings`, `ImportTransform`, `TextureGather`, `ModelImport` |
 
 The package graph has no cycle (`./gradlew checkPackageCycles`): `content` is a leaf, `document` and `components`
 build on it, `scene` reads the document through the component codecs, and `pick` and `ray` build on `scene`.
+
+## Imports
+
+Both imports stage the files of a new asset folder, without GL or the IDE; the plugin writes them as one undoable
+command.
+
+`flightgear` converts a FlightGear aircraft archive into the files of one native `MODEL` asset, without GL:
+`FlightGearArchive` (the zip, read lazily; `Aircraft/` paths, zip-slip and size limits), `FlightGearModelXmlReader`
+(model XML: AC3D path, offsets, nested models, panels, `select` animations), `RestState` (conditions with every
+property 0), `Ac3dReader`, `SgiImage` (SGI to PNG, encoded with `Deflater`: no AWT) and
+`FlightGearImport` (inspection, then staging: frame, scale, textures, `meta.json`, `source.json`), which builds a
+`ModelData` and writes it with `gdx-model`'s `GltfWriter` (glTF 2.0 binary with external images). The plugin's Import
+FlightGear Aircraft and the Control Line trainer tool use it.
+
+`modelimport` converts an OBJ, FBX, 3DS, DAE, glTF or GLB file into the files of one native `MODEL` asset, without
+GL, so the plugin's Import Model dialog can preview exactly what it writes:
+- `ModelSource` (opened by `ModelSourceOpener`) reads the file once through Assimp without applying any unit or axis
+  (`normalize = false`), extracting embedded textures to a temp folder that `close()` deletes. It reports the frame the
+  file states or its format defines (`SourceFrame`), the animations, the SHA-256, what is left out (cameras, lights,
+  points and lines, morph targets, glTF extensions, missing or unreadable textures) and what `PhongToPbr` approximated.
+- `ImportSettings` / `ImportSettingsRules`: the folder name (valid, unique among the asset folders, `model_<stem>` by
+  default), the unit, the up axis (Y or Z) and the fit (`FitSize`).
+- `ImportTransform` rotates the up axis to Y, scales by the unit, measures the rest pose, fits, grounds and centres,
+  as one `import_root` node around the source roots; the source data is never changed.
+- `TextureGather` writes the used images as `textures/<name>.png` (ImageIO; PNG kept as is, others re-encoded),
+  deduplicated by content.
+- `ModelImport.stage` produces `meta.json`, `model.glb` (`gdx-model`'s `GltfWriter`), the textures and `source.json`,
+  with an `ImportReport` (size in metres, animations, textures, what was left out or approximated).
 
 ## Scene documents
 
@@ -65,7 +95,7 @@ asset-property edits, returning the edited text or a `Refusal` with the reason t
 
 ## Tests
 
-`./gradlew :editor-core:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`). Tests run
-from the repository root, so they read fixtures under `src/test/testData/project/` by the same paths as the plugin's
+`./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`). Tests run
+from the repository root, so they read fixtures under `projects/plugin-abyssus/src/test/testData/project/` by the same paths as the plugin's
 tests. The test
 fixtures (`parseScene`, `testProject`, `testAsset`, `terrainData`, `rayTestModel`) are shared with the plugin's tests.

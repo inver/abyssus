@@ -38,11 +38,9 @@ import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.assets.displayMessage
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.flightgear.FlightGearArchive
-import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
-import net.nevinsky.abyssus.lib.core.flightgear.FlightGearImportRequest
-import net.nevinsky.abyssus.lib.core.flightgear.FlightGearInspection
-import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearArchive
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImportRequest
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearInspection
 import net.nevinsky.abyssus.plugin.terrain.message
 import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
 import java.awt.BorderLayout
@@ -102,14 +100,6 @@ fun inspectArchive(archiveFile: File, cancel: () -> Unit = {}): List<FlightGearI
     }
 }
 
-/** Why [abss] cannot receive an import (its `.abss` is not a supported native document), or null. */
-private fun projectRefusal(abss: VirtualFile): String? {
-    val core = service<AbyssusCore>()
-    return runCatchingKeepingCancellation {
-        core.format.requireSupported(core.json.readObject(textOf(abss)), net.nevinsky.abyssus.lib.core.editor.document.DocumentKind.PROJECT)
-    }.exceptionOrNull()?.let { with(it) { documentDisplayMessage() } }
-}
-
 /**
  * Stages [request] from [archiveFile] under a modal progress and writes it under [abss]'s project as one undoable
  * command, then selects the new asset. [report] receives a reason when the project, the archive or the write fails.
@@ -132,7 +122,7 @@ fun importFlightGear(
     }
     val staged = runCatchingKeepingCancellation {
         if (ApplicationManager.getApplication().isDispatchThread && !ApplicationManager.getApplication().isUnitTestMode) {
-            ProgressManager.getInstance().runProcessWithProgressSynchronously<net.nevinsky.abyssus.lib.core.flightgear.StagedImport, Exception>(
+            ProgressManager.getInstance().runProcessWithProgressSynchronously<net.nevinsky.abyssus.lib.core.editor.flightgear.StagedImport, Exception>(
                 stage, AbyssusBundle.message("importFlightGearConverting"), true, project)
         } else stage()
     }.getOrElse { report(AbyssusBundle.message("importFlightGearFailed", it.displayMessage())); return null }

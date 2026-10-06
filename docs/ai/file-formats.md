@@ -1,12 +1,12 @@
 # File formats
 
 Abyssus owns the JSON format of project `.abss`, scene `.scene` and asset `meta.json` documents.
-The plugin reads them with `SceneJson` (`editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/document/SceneJson.kt`),
+The plugin reads them with `SceneJson` (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/document/SceneJson.kt`),
 which keeps key order, `null` members and the exact text of numbers. Writes must keep those, too. The user-facing
 description of what the tree shows is in `README.md` ("Abyssus view"); this page is the format reference.
 
-Examples: `src/test/testData/project/Untitled/` (models, terrain, skybox, a camera) and
-`src/test/testData/project/Animated/` (an animated model).
+Examples: `projects/plugin-abyssus/src/test/testData/project/Untitled/` (models, terrain, skybox, a camera) and
+`projects/plugin-abyssus/src/test/testData/project/Animated/` (an animated model).
 
 ## Native document identity
 
@@ -16,7 +16,7 @@ Version 1 requires these root members in each project, scene and asset metadata 
 { "format": "abyssus", "formatVersion": 1 }
 ```
 
-`AbyssusDocumentFormat` (`core/src/main/kotlin/net/nevinsky/abyssus/core/format/AbyssusDocumentFormat.kt`)
+`AbyssusDocumentFormat` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/format/AbyssusDocumentFormat.kt`)
 validates document identity and reserved scene fields on the caller's thread, without GL or platform services.
 Only the exact string `abyssus` and integral JSON version `1` are supported. Missing/null/foreign markers, string
 or fractional versions (including `1.0`), negative versions and future versions are unsupported. Asset metadata's
@@ -29,7 +29,7 @@ keys and exact number text. External model/image formats and the terrain recipe 
 
 ## Project layout
 
-`ProjectLayout` (`src/main/kotlin/net/nevinsky/abyssus/dto/ProjectLayout.kt`) defines it:
+`ProjectLayout` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/dto/ProjectLayout.kt`) defines it:
 
 ```
 <project>/
@@ -48,14 +48,14 @@ keys and exact number text. External model/image formats and the terrain recipe 
 The plugin reads only:
 - `name`: the project label; the file name is used when it is missing.
 - `mainCamera`: `position`, `viewPointPosition` (the view direction), `near`, `far` and `fieldOfView`. It is the
-  scene view's starting camera (`MainCamera` in `editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/scene/SceneRenderParams.kt`).
+  scene view's starting camera (`MainCamera` in `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/scene/SceneRenderParams.kt`).
 
 Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored. The plugin never writes an `.abss`
 (beyond `SceneFormatListener`'s formatting).
 
 ## `.scene`
 
-Top level, bound to `Scene` (`core/src/main/kotlin/net/nevinsky/abyssus/core/scene/Scene.kt`):
+Top level, bound to `Scene` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/scene/Scene.kt`):
 
 | Key | Meaning |
 |---|---|
@@ -93,7 +93,7 @@ The components the plugin reads:
 empty `PositionComponent: {}` is valid. Writers add fields when they change them (`SceneTransformWriter`,
 `PositionCodec`).
 
-**Light defaults** (`runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/component/LightComponent.kt`). A light that leaves a value out has: `intensity` 1; the
+**Light defaults** (`projects/lib-runtime/src/main/kotlin/net/nevinsky/abyssus/lib/runtime/ecs/component/LightComponent.kt`). A light that leaves a value out has: `intensity` 1; the
 whole `color` object missing means white, but a channel missing inside a `color` object is 0 (the alpha channel never
 affects lighting); `range` 100; `coneAngle` 45 and `edgeSoftness` 0.2. The scene view, the Properties panel and edits
 all read lights through the same codecs, so they show and use these values alike. The file is never rewritten to state
@@ -149,7 +149,7 @@ the runtime keeps the whole component raw with a warning. Schema limits are edit
 
 ### The component schema (`abyssus/components.schema.json`)
 
-The game exports what it registers (`SchemaExportMain`, see `runtime/README.md`) so Abyssus can edit those
+The game exports what it registers (`SchemaExportMain`, see `projects/lib-runtime/README.md`) so Abyssus can edit those
 components without loading game classes. It is not a native document (no `format` marker); `version` must be `1`.
 
 ```json
@@ -192,7 +192,7 @@ the float count (the fixture's is 180). Generating a terrain changes none of thi
 
 New terrain metadata is one compact line with native markers first (`format`, `formatVersion`), then `version` 1, `lastModified`, `uuid`, `type` `TERRAIN`,
 `additional` with `terrainFile`, `size`, `uv` 1.0 and the six splat fields null; see `TerrainAssetWriter` in
-`editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/terrain`.
+`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/terrain`.
 
 How generated heights were made is kept in a recipe file beside the
 heights (`TERRAIN_RECIPE_FILE`; a terrain loads without it):
@@ -225,7 +225,36 @@ converted to PNG), the archive's licence files (`COPYING`, `LICENSE*`), and a `s
 ```
 
 `license` is the set file's `license` entry, `see <file>` for licence files in the archive, or `unknown`. Each glTF node
-is one named AC3D part. See `core/src/main/kotlin/net/nevinsky/abyssus/core/flightgear/FlightGearImport.kt`.
+is one named AC3D part. See `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/flightgear/FlightGearImport.kt`.
+
+### Imported models
+
+Import Model writes an ordinary `MODEL` folder: `meta.json` (`additional.file` `model.glb`, `format` `GLTF`, `binary`
+true, `materials` empty, a fresh `uuid`), `model.glb` (the converted model: metres, +Y up, standing on y = 0 and
+centred on X and Z, with its node hierarchy, skins and every animation), its textures as PNG files in `textures/`, and
+a `source.json` the loader ignores:
+
+```json
+{ "importer": "model", "source": "hero.fbx", "sourcePath": "sources/hero.fbx", "sourceSha256": "...",
+  "sourceFormat": "FBX",
+  "stated": { "unit": "cm", "upAxis": "Z" }, "chosen": { "unit": "cm", "upAxis": "Z" },
+  "size": "original",
+  "animations": ["Idle", "Run"],
+  "skipped": [{ "item": "Camera001", "reason": "camera" }, { "item": "wood.png", "reason": "missing" }],
+  "approximated": [{ "item": "Body", "reason": "specular colour dropped" }] }
+```
+
+- `sourcePath` is relative to the folder of the `.abss` file, with forward slashes, when the source is inside it, and
+  absolute otherwise; a later re-import finds the source through it.
+- `sourceFormat` is one of `OBJ`, `FBX`, `3DS`, `DAE`, `GLTF` and `GLB`.
+- `stated` is what the file states (FBX header, DAE `<asset>`) or its format defines (glTF: `m`, `Y`; 3DS: `m`,
+  `Z`); its values are `null` when neither says anything (OBJ). A DAE `X_UP` is recorded as `"X"`. `chosen` is what the
+  import applied.
+- `size` is `"original"`, `{ "largestExtent": <metres> }` or `{ "height": <metres> }`.
+- `skipped` reasons: `camera`, `light`, `points or lines`, `morph targets`, `glTF extension`, `missing`,
+  `unsupported texture format`.
+
+See `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/modelimport/ModelImport.kt`.
 
 **`SKYBOX_PROCEDURAL` is a native asset type.** The scene view
 draws it as a fullscreen triangle with the folder's own shaders (single-scattering Rayleigh + Mie, ray-marched per
@@ -242,12 +271,12 @@ loading. Scanline and tiled files, including the base level of mipmapped files, 
 ripmapped and subsampled color channels are rejected. RGB channels are found by name (including layer prefixes);
 Y or a lone channel can provide grayscale. Alpha is not used. Pixels are kept as RGB half floats: negative/NaN
 radiance becomes zero and positive values saturate at 65504. The horizontal centre faces `-Z`, the top row `+Y`.
-The fixture is `src/test/testData/project/Untitled/assets/skybox_hdr/`, whose metadata names `sky.exr`.
+The fixture is `projects/plugin-abyssus/src/test/testData/project/Untitled/assets/skybox_hdr/`, whose metadata names `sky.exr`.
 Radiance `.hdr` decoding and extension-based file discovery are not implemented by the current loader.
 
 ### Reachability ("unused")
 
-`ProjectReader` (`src/main/kotlin/net/nevinsky/abyssus/dto/ProjectReader.kt`) decides which assets are used:
+`ProjectReader` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/dto/ProjectReader.kt`) decides which assets are used:
 
 - **Roots:** a scene reaches asset folders by name through every `assetName` and `shaderKey` in its `ecs`, and its
   `skyboxName`.

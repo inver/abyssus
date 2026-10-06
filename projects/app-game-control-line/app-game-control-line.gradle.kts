@@ -97,6 +97,8 @@ val importers by sourceSets.creating {
 }
 dependencies {
     "importersImplementation"(kotlin("stdlib"))
+    // the FlightGear import lives in the editing library
+    "importersImplementation"(project(":lib-core-editor"))
 }
 tasks.register<JavaExec>("importTrainer") {
     group = "control line"

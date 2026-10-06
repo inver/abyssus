@@ -515,6 +515,10 @@ class SceneViewPanel internal constructor(
 
     override fun stopPlay() = play.documentChanging()
 
+    override fun placementPoint(): Vec3 = orbit.target
+
+    override val playing: Boolean get() = play.active
+
     /** This view's play state; for tests. */
     internal val playState: PlayState get() = play
 

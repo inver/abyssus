@@ -5,7 +5,7 @@ A native Abyssus project for game-declared components (`add-custom-components`).
 and entity `1` (`Pilot`, no plane). `assets/tree` is copied from `Untitled`.
 
 `abyssus/components.schema.json` is the exported schema of the test-only `PlaneComponent` in
-`runtime/src/test/kotlin/net/nevinsky/abyssus/runtime/schema/PlaneComponent.kt`, one field of each type.
+`projects/lib-runtime/src/test/kotlin/net/nevinsky/abyssus/lib/runtime/schema/PlaneComponent.kt`, one field of each type.
 `SchemaFileTest` requires the export to reproduce it byte for byte, so change both together.
 
 Don't open this folder as the `runIde` project: edits there change what tests assert on. Use a copy.

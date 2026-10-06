@@ -7,14 +7,15 @@ package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.assetfiles.AssetReferenceGuard
+import net.nevinsky.abyssus.plugin.assetfiles.PlacedEntity
 import net.nevinsky.abyssus.plugin.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.plugin.assetfiles.FileChange
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
-import net.nevinsky.abyssus.lib.core.flightgear.FlightGearImportRequest
-import net.nevinsky.abyssus.lib.core.flightgear.FlightGearInspection
-import net.nevinsky.abyssus.lib.core.flightgear.ImportSize
-import net.nevinsky.abyssus.lib.core.flightgear.StagedImport
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImportRequest
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearInspection
+import net.nevinsky.abyssus.lib.core.editor.flightgear.ImportSize
+import net.nevinsky.abyssus.lib.core.editor.flightgear.StagedImport
 import net.nevinsky.abyssus.lib.core.editor.terrain.FolderNameError
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
 import java.io.File
@@ -63,16 +64,32 @@ class FlightGearImportSettings(private val assetsDir: File, val inspection: Flig
  * The undoable write of a [StagedImport] into [projectDir]'s assets: every file new, the folder (and its
  * sub-folders, and `assets` when missing) created, and Undo refused once a scene references the asset.
  */
-fun importTransaction(projectDir: File, staged: StagedImport): AssetTransaction {
+fun importTransaction(projectDir: File, staged: StagedImport): AssetTransaction = assetFolderTransaction(
+    projectDir, AbyssusBundle.message("commandImportFlightGear"), staged.folder, staged.uuid.toString(), staged.files,
+)
+
+/**
+ * The undoable write of a new asset folder [folder] with [files] (paths inside it) into [projectDir]'s assets: every file
+ * new, the folder (its sub-folders, and `assets` when missing) created, and Undo refused once a scene references the
+ * asset, except through the entity [ignoring] gives (one the same command placed).
+ */
+fun assetFolderTransaction(
+    projectDir: File,
+    name: String,
+    folder: String,
+    uuid: String,
+    files: Map<String, ByteArray>,
+    ignoring: () -> PlacedEntity? = { null },
+): AssetTransaction {
     val assetsDir = File(projectDir, ASSETS_DIR)
-    val base = "$ASSETS_DIR/${staged.folder}"
-    val subFolders = staged.files.keys.filter { it.contains('/') }.map { it.substringBeforeLast('/') }
+    val base = "$ASSETS_DIR/$folder"
+    val subFolders = files.keys.filter { it.contains('/') }.map { it.substringBeforeLast('/') }
         .flatMap { path -> path.split('/').indices.map { path.split('/').take(it + 1).joinToString("/") } }
         .distinct().sortedBy { it.count { c -> c == '/' } }
     return AssetTransaction(
-        AbyssusBundle.message("commandImportFlightGear"),
-        changes = staged.files.map { (path, bytes) -> FileChange("$base/$path", FileSnapshot.Absent, FileSnapshot.Bytes(bytes)) },
+        name,
+        changes = files.map { (path, bytes) -> FileChange("$base/$path", FileSnapshot.Absent, FileSnapshot.Bytes(bytes)) },
         createdDirs = (if (assetsDir.isDirectory) emptyList() else listOf(ASSETS_DIR)) + base + subFolders.map { "$base/$it" },
-        guard = AssetReferenceGuard(projectDir).let { guard -> { guard.blocker(staged.folder, staged.uuid.toString()) } },
+        guard = AssetReferenceGuard(projectDir).let { guard -> { guard.blocker(folder, uuid, ignoring()) } },
     )
 }

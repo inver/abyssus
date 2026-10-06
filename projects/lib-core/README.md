@@ -6,9 +6,9 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 
 ## Rules
 
-- **No IntelliJ or plugin imports.** Depends on `:gdx-model`, libGDX, SLF4J, Jackson and LWJGL TinyEXR for OpenEXR decoding.
+- **No IntelliJ or plugin imports.** Depends on `:lib-gdx-model`, libGDX, SLF4J, Jackson and LWJGL TinyEXR for OpenEXR decoding.
 - **Wired by constructors.** No `object` or `companion object` in `src/main` (a `data object` case of a sealed type is a
-  value and is fine); pure constants are top-level `const val`. `./gradlew :core:checkNoSingletons`, part of `check`,
+  value and is fine); pure constants are top-level `const val`. `./gradlew :lib-core:checkNoSingletons`, part of `check`,
   enforces it; `AbyssusProjectLayout` and `GeometryUtils` are its only exceptions. Collaborators are passed in; nothing
   is looked up globally.
 - **Files go through `FileLoader`, metas through `AssetMetaLoader`.** Loaders and stores take them (one pair per project
@@ -36,13 +36,6 @@ labels use original dimensions, while previews retain their existing reduction a
 `RayTracing` limit properties are nullable integers. Standalone consumers compiled against primitive accessors
 must rebuild against this core version.
 
-`core.flightgear` converts a FlightGear aircraft archive into the files of one native `MODEL` asset, without GL:
-`FlightGearArchive` (the zip, read lazily; `Aircraft/` paths, zip-slip and size limits), `FlightGearModelXmlReader`
-(model XML: AC3D path, offsets, nested models, panels, `select` animations), `RestState` (conditions with every
-property 0), `Ac3dReader`, `SgiImage` (SGI to PNG), `GlbWriter` (glTF 2.0 binary with external images) and
-`FlightGearImport` (inspection, then staging: frame, scale, textures, `meta.json`, `source.json`). The plugin's Import
-FlightGear Aircraft and the Control Line trainer tool use it.
-
 `core.project` holds filesystem `Project` / `ProjectLoader`; the `core` scene package holds scene DTOs and `SceneLoader`.
 These and `AssetMetaLoader` validate native identity with `core.format.AbyssusDocumentFormat` before binding.
 Unsupported project/scene documents throw; unsupported metadata returns null and reports the reason once per file revision.
@@ -52,7 +45,7 @@ The vendored Java noise implementation is under `src/main/java/`; generator and 
 Sky shaders are in `src/main/resources/shader/sky/`.
 
 Terrain generation, noise, the `meta.json` field editor and the composition root (`AssetLoading`) are not here: they
-live in the plugin (`src/main/kotlin/net/nevinsky/abyssus/terrain/`, `AssetMetaEditor.kt`, `AssetLoading.kt`).
+live in the plugin (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/terrain/`, `AssetMetaEditor.kt`, `AssetLoading.kt`).
 
 ## References between assets
 
@@ -180,8 +173,8 @@ and never touch the GPU caches or GL.
 
 ## Tests
 
-`./gradlew :core:test`; GL tests opt in with `-Dabyssus.glTests=true`. Tests read the repository's
-`src/test/testData/project` fixtures through `testProject(name)`; `testFileLoader` and `testMetaLoader` build a project's
+`./gradlew :lib-core:test`; GL tests opt in with `-Dabyssus.glTests=true`. Tests read the repository's
+`projects/plugin-abyssus/src/test/testData/project` fixtures through `testProject(name)`; `testFileLoader` and `testMetaLoader` build a project's
 loaders, and `exrFixture()` gives the bundled EXR sky as a file (`TestData.kt`). The GL context is `gdx-model`'s `TestGl`
 test fixture. `HdrFixtures` and `RecordingLogger` are in `src/testFixtures`, shared with the plugin's tests. `AssetStorageTest` covers the loading pipeline with a fake loader and a
 queued executor.

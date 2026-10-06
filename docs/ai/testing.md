@@ -5,55 +5,55 @@
 | What | Command |
 |---|---|
 | All module tests and verification tasks | `./gradlew check` (CI requires compiled shaders; see `AGENTS.md`) |
-| Core tests | `./gradlew :core:test` |
-| Physics library / plugin tests | `./gradlew :physics:test` / `./gradlew :physics-plugin:test` |
-| Ray tracing contracts / jar packaging | `./gradlew :raytracing:test` / `./gradlew :raytracing:verifyNativePackaging` |
-| Control Line tests | `./gradlew :games:control-line:test` |
-| Runtime tests | `./gradlew :runtime:test` |
-| Plugin tests | `./gradlew :test` |
-| `editor-core` tests | `./gradlew :editor-core:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.ScenePickerTest'`) |
-| `gdx-model` tests | `./gradlew :gdx-model:test` |
-| One class | `./gradlew :test --tests 'net.nevinsky.abyssus.projectView.SkyboxPickerModelTest'` |
-| One method | `./gradlew :test --tests 'net.nevinsky.abyssus.AbyssusViewTest.testNodeTree'` |
+| Core tests | `./gradlew :lib-core:test` |
+| Physics library / plugin tests | `./gradlew :lib-physics:test` / `./gradlew :plugin-abyssus-physics:test` |
+| Ray tracing contracts / jar packaging | `./gradlew :lib-raytracing:test` / `./gradlew :lib-raytracing:verifyNativePackaging` |
+| Control Line tests | `./gradlew :app-game-control-line:test` |
+| Runtime tests | `./gradlew :lib-runtime:test` |
+| Plugin tests | `./gradlew :plugin-abyssus:test` |
+| `editor-core` tests | `./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.ScenePickerTest'`) |
+| `gdx-model` tests | `./gradlew :lib-gdx-model:test` |
+| One class | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.projectView.SkyboxPickerModelTest'` |
+| One method | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.AbyssusViewTest.testNodeTree'` |
 | GL tests too | add `-Dabyssus.glTests=true` (opens a window; needs a display) |
 
-**Use `:test` with `--tests`.** Plain `test --tests X` also runs the other modules' tests, which fail with
-"No tests found". For a library module, name it: `./gradlew :core:test --tests '<class>'`.
+**Use `:plugin-abyssus:test` with `--tests`.** Plain `test --tests X` also runs the other modules' tests, which fail with
+"No tests found". For a library module, name it: `./gradlew :lib-core:test --tests '<class>'`.
 
-**After moving classes between packages or modules, build clean** (`./gradlew :clean :editor-core:clean`): stale
+**After moving classes between packages or modules, build clean** (`./gradlew :plugin-abyssus:clean :lib-core-editor:clean`): stale
 classes of the old packages otherwise fail tests with `NoSuchMethodError` / `NoClassDefFoundError`.
 Results are in each module's `build/test-results/test/*.xml` and `build/reports/tests/test/`; a later run overwrites them.
 CI also runs Plugin Verifier and Qodana separately from `check`.
 
 ## Layout
 
-- `src/test/kotlin/net/nevinsky/abyssus/`: plugin tests, mirroring the main packages (`projectView/`, `sceneview/`,
+- `projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/`: plugin tests, mirroring the main packages (`projectView/`, `sceneview/`,
   `properties/`, `dto/`, `filetype/`, `terrain/`), plus `editor/`: `EditorMessagesParityTest` and
   `HeadlessSceneEditingTest`, which compares `editor-core`'s headless edits with the plugin's own write path.
-- `editor-core/src/test/kotlin/`: the editing engine's tests by package (`document`, `components`, `scene`, `pick`,
+- `projects/lib-core-editor/src/test/kotlin/`: the editing engine's tests by package (`document`, `components`, `scene`, `pick`,
   `terrain`, `meta`, `ray`, `headless`), plain JUnit with no IntelliJ class on the classpath (`NoPlatformClasspathTest`).
-  They run from the repository root, so they read fixtures under `src/test/testData/project/` by the same paths as the
+  They run from the repository root, so they read fixtures under `projects/plugin-abyssus/src/test/testData/project/` by the same paths as the
   plugin's tests.
-- `gdx-model/src/test/kotlin/`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`).
-- `core/src/test/kotlin/`: asset reading and loading tests, plain JUnit with no IntelliJ classes. They read the shared
+- `projects/lib-gdx-model/src/test/kotlin/`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`).
+- `projects/lib-core/src/test/kotlin/`: asset reading and loading tests, plain JUnit with no IntelliJ classes. They read the shared
   fixtures through `testProject(name)` (Gradle passes the folder as `abyssus.testData`) and get a project's
   `FileLoader` and `AssetMetaLoader` from `testFileLoader(dir)` / `testMetaLoader(dir)` (`TestData.kt`); loaders and
   stores are wired by hand in each test. `exrFixture()` extracts the bundled EXR sky to a real file. `AssetStorageTest`
   covers the loading pipeline with a fake loader; `AssetLoadingGlTest` covers the `asset-loading` spec on real GL.
-- `runtime/src/test/kotlin/`: scene loading, schemas, ECS codecs, components, loader, writer and
+- `projects/lib-runtime/src/test/kotlin/`: scene loading, schemas, ECS codecs, components, loader, writer and
   systems. Plain JUnit, no IntelliJ or GL; `testProject(name)` uses the same `abyssus.testData` fixture root.
-- `physics/src/test/kotlin/`: physics components, `PhysicsWorld`, rope tension and the Jolt natives. Plain JUnit, no
+- `projects/lib-physics/src/test/kotlin/`: physics components, `PhysicsWorld`, rope tension and the Jolt natives. Plain JUnit, no
   IntelliJ or GL. They load the build machine's `DebugSp` Jolt natives, and use `testProject(name)` and
   `loadPhysicsScene()`.
-- `games/control-line/src/test/kotlin/`: the Control Line game's flight, track, scoring, screen flow and Play module,
+- `projects/app-game-control-line/src/test/kotlin/`: the Control Line game's flight, track, scoring, screen flow and Play module,
   headless (Jolt's `ReleaseSp` natives for the build machine, no window). They read the bundled project
-  `games/control-line/project/ControlLine` through `bundledProject()` / `loadField()`, and fly it with `FieldFlight`;
+  `projects/app-game-control-line/project/ControlLine` through `bundledProject()` / `loadField()`, and fly it with `FieldFlight`;
   `ControlLinePlayTest` runs `PlayHostMain` in a child process. `CrashClipGlTest` is the one GL test there (opt-in).
-- `physics-plugin/src/test/kotlin/`: overlay geometry, game/fallback launch selection and bundled play-host packaging.
-- `raytracing/src/test/kotlin/`: backend contracts, fake backend, snapshots, scheduling, budgets, optics, accumulation
+- `projects/plugin-abyssus-physics/src/test/kotlin/`: overlay geometry, game/fallback launch selection and bundled play-host packaging.
+- `projects/lib-raytracing/src/test/kotlin/`: backend contracts, fake backend, snapshots, scheduling, budgets, optics, accumulation
   and native packaging. Metal and Vulkan device tests opt in separately with `-Dabyssus.metalTests=true` and
-  `-Dabyssus.vulkanTests=true`; these are not enabled by `abyssus.glTests`. See `raytracing/README.md` for toolchains
-  and dedicated timing gates. Plugin ray integration tests live under `src/test/kotlin/`.
+  `-Dabyssus.vulkanTests=true`; these are not enabled by `abyssus.glTests`. See `projects/lib-raytracing/README.md` for toolchains
+  and dedicated timing gates. Plugin ray integration tests live under `projects/plugin-abyssus/src/test/kotlin/`.
 - Shared test helpers live in `testFixtures` source sets: `gdx-model`'s `TestGl` (a GL 3.2 core context for one
   block), `core`'s `HdrFixtures` (Radiance files from a pixel function) and `editor-core`'s `parseScene`,
   `testProject`, `testAsset`, `terrainData` and `rayTestModel` (used by the plugin's tests too). Plugin GL tests build their renderer with
@@ -70,7 +70,7 @@ Two kinds of tests:
 
 ## Fixtures
 
-`src/test/testData/project/`:
+`projects/plugin-abyssus/src/test/testData/project/`:
 - **`Tree/`:** a stable nine-entity native scene snapshot, its project document and nine asset metadata folders,
   without binary payloads. Tree, asset-listing and runtime ECS/scene suites use it to pin identities and counts
   independently of `Untitled`. The real-ray regression uses this scene with Untitled's binary assets.
@@ -96,7 +96,7 @@ unmarked and future-version documents are written inline in `AbyssusDocumentForm
 `NativeDocumentWriteGuardTest`, so rejection cases need not sit beside native fixtures. Editor tests that
 assert a rejection also assert the document text and disk bytes are unchanged.
 
-**Don't edit fixtures through the IDE.** Opening `src/test/testData/project/Untitled` as the `runIde` project and
+**Don't edit fixtures through the IDE.** Opening `projects/plugin-abyssus/src/test/testData/project/Untitled` as the `runIde` project and
 using the eye, Rename Scene, the skybox chooser or gizmo drags changes the files the tests assert on.
 `AbyssusViewTest` and runtime scene regressions use the stable `Tree` snapshot. Other tests that pin Untitled's
 coordinates or asset counts still break when that project is edited; use a disposable copy for interactive work.
@@ -107,10 +107,10 @@ clear only fixture-creation history before the first panel edit, then retain exa
 
 ## GL tests
 
-- **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `LargeMeshGlTest`, `core`'s `*GlTest`, Control Line's `CrashClipGlTest`) run only with
+- **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `ModelPreviewCanvasGlTest`, `LargeMeshGlTest`, `core`'s `*GlTest`, Control Line's `CrashClipGlTest`) run only with
   `-Dabyssus.glTests=true` on a machine with a display. Otherwise `GlHarness.enabled` is false and they are skipped
   (counted as skipped, not failed).
-- **Harness:** `GlHarness` (`src/test/kotlin/net/nevinsky/abyssus/sceneview/GlHarness.kt`) renders a few frames on
+- **Harness:** `GlHarness` (`projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/sceneview/GlHarness.kt`) renders a few frames on
   an AWT GL canvas inside `GdxRuntime.withContext` and runs checks after each frame.
 
 ## GL-free seams
