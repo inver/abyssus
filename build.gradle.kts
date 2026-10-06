@@ -253,4 +253,5 @@ extra["abyssusRunCatchingRoots"] = listOf(
     "raytracing/src/main/kotlin", "physics-plugin/src/main/kotlin", "games/control-line/src/main/kotlin",
 )
 apply(from = "gradle/checks.gradle.kts")
+apply(from = "gradle/package-cycles.gradle.kts")
 apply(from = "gradle/plugin-verification.gradle.kts")
