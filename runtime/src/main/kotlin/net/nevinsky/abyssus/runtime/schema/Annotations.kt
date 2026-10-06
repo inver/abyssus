@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.runtime.schema
 
+import net.nevinsky.abyssus.runtime.json.number
+
 /**
  * Marks an Ashley component class as a game component stored in scene files under the short [name]
  * (`ecs.entities.<id>.components.<name>`). [label] is what the editor shows; empty means [name] without `Component`.

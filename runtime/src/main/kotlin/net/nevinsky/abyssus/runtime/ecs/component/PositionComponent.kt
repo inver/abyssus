@@ -1,5 +1,7 @@
 package net.nevinsky.abyssus.runtime.ecs.component
 
+import net.nevinsky.abyssus.runtime.json.number
+
 import net.nevinsky.abyssus.runtime.ecs.vectorDiff
 import net.nevinsky.abyssus.runtime.ecs.quaternionDiff
 import net.nevinsky.abyssus.runtime.ecs.putIf

@@ -142,3 +142,5 @@ in `ComponentSchemaReader`, encode/decode handling in `SchemaJson`, and the edit
 `src/main/kotlin/net/nevinsky/abyssus/ecs/scene/ComponentEditor.kt`. Update schema-file validation and UI handling
 where the new type needs them. Tests must cover inferred defaults, exact wire text, default omission, unusable input
 and applicable limits for every type.
+
+Built-in reserved component names live in `schema/BuiltInComponents.kt`; the shared JSON float spelling helper lives in `json/SceneNumbers.kt`. Schema decoding does not depend on the ECS loader.

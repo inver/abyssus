@@ -9,7 +9,7 @@ import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.projectView.RenderAsset
 import net.nevinsky.abyssus.runtime.ecs.EcsLoader
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEngine
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.Vec3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test

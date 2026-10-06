@@ -9,7 +9,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.sceneview.SceneTransformWriter
 import net.nevinsky.abyssus.sceneview.TransformEdit
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.Vec3
 import java.io.File
 import net.nevinsky.abyssus.filetype.editSceneJson
 

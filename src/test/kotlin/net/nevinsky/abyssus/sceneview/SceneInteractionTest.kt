@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.sceneview.gizmo.GizmoAxis

@@ -17,7 +17,7 @@ import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.ecs.scene.LightEntities
 import net.nevinsky.abyssus.ecs.scene.LightPreset
 import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.dto.textOf
 import net.nevinsky.abyssus.SceneEcsPaths
 import net.nevinsky.abyssus.dto.SceneDocumentCache

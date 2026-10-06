@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+
+import net.nevinsky.abyssus.editor.content.CameraPlacement
+
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.tan
 

@@ -69,7 +69,8 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 | `flight` | `Aero`, `LineRig`, `Ground`, `Flight` / `FlightSystem`, `FlightOutcome`, `FlightSession` | no |
 | `track` | `SphereTrack`, `Maneuvers`, `Laps` | no |
 | `score` | `ScoreKeeper`, `FlightScoring`, `ScoreTable` | no |
-| `flow` | `GameFlow` (the screen state machine), `HandleInput` | no |
+| `flow` | `GameFlow` (the screen state machine) | no |
+| `input` | `HandleInput` (keyboard and mouse tilt) | no |
 | `render`, `screens` | `FieldScene`, `FieldRenderer` (with `shader/terrain.*`), `FieldShadows` (the sun's shadow map), `Cameras`, `GameUi` | yes |
 | `play` | `ControlLinePlay : PlayModule` | no |
 

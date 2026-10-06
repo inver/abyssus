@@ -10,8 +10,8 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import net.nevinsky.abyssus.core.model.Model
 import net.nevinsky.abyssus.core.model.ModelData
-import net.nevinsky.abyssus.lib.assets.assimp.AssimpFlags
-import net.nevinsky.abyssus.lib.assets.assimp.AssimpModelDataLoader
+import net.nevinsky.abyssus.core.assimp.AssimpFlags
+import net.nevinsky.abyssus.core.assimp.AssimpModelDataLoader
 
 /**
  * Loads a model file through Assimp. Trimmed copy of Mundus' `AssimpModelLoader` (no exporter, no import preview).

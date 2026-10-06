@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+
 import com.badlogic.gdx.utils.Disposable
 import java.io.File
 

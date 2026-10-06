@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.games.controlline.flow
 
+import net.nevinsky.abyssus.games.controlline.flight.FlightReport
+
 import net.nevinsky.abyssus.games.controlline.components.PlaneClass
 import net.nevinsky.abyssus.games.controlline.flight.FieldFlight
 import net.nevinsky.abyssus.games.controlline.flight.FlightEnd

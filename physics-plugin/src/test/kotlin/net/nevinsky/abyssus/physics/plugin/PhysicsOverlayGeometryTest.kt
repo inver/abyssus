@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.core.JsonProcessor
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.sceneview.SceneContent
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.Vec3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

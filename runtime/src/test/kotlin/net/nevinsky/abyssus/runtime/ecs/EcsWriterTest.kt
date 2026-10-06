@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.runtime.ecs
 
+import net.nevinsky.abyssus.runtime.json.number
+
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.core.JsonProcessor
 import java.io.File

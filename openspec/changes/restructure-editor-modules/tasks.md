@@ -22,7 +22,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 
 ## 1. Stage 1: break the cycles (S3, S5)
 
-- [ ] 1.1 Move `Vec3`, `Quat`, `PlacementTransform` and the placement records out of `sceneview/SceneContent.kt` into a
+- [x] 1.1 Move `Vec3`, `Quat`, `PlacementTransform` and the placement records out of `sceneview/SceneContent.kt` into a
   leaf package; fix `ecs`, `projectView` and `sceneview` imports. Verify with `SceneContentTest`,
   `ComponentEditorTest`, and the allowlist entry `ecs → sceneview` removed.
 - [ ] 1.2 Introduce `SceneViewHost` (four to six methods) implemented by the project view pane, and give

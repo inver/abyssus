@@ -19,7 +19,7 @@ import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import net.nevinsky.abyssus.games.controlline.flight.FlightSession
-import net.nevinsky.abyssus.games.controlline.flow.FlightReport
+import net.nevinsky.abyssus.games.controlline.flight.FlightReport
 import net.nevinsky.abyssus.games.controlline.flow.GameFlow
 import net.nevinsky.abyssus.games.controlline.flow.NAME_LENGTH
 import net.nevinsky.abyssus.games.controlline.flow.Screen

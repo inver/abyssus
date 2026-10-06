@@ -20,7 +20,7 @@ import net.nevinsky.abyssus.ecs.scene.SceneEntities
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.ecs.scene.LightEntities
 import net.nevinsky.abyssus.ecs.scene.LightPreset
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.properties.AssetMeta
 import net.nevinsky.abyssus.properties.loadAssetMeta
 import net.nevinsky.abyssus.core.assets.MetaType

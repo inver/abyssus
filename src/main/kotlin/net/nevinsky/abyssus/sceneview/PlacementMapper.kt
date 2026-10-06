@@ -5,6 +5,15 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Rgba
+import net.nevinsky.abyssus.editor.content.Quat
+import net.nevinsky.abyssus.editor.content.PlacementTransform
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+import net.nevinsky.abyssus.editor.content.LightKind
+import net.nevinsky.abyssus.editor.content.LightPlacement
+import net.nevinsky.abyssus.editor.content.CameraPlacement
+
 import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
 import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
 import net.nevinsky.abyssus.runtime.ecs.component.LightData

@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.games.controlline.flow
 
+import net.nevinsky.abyssus.games.controlline.flight.FlightReport
+
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.games.controlline.components.PlaneClass
 import net.nevinsky.abyssus.games.controlline.components.PlaneComponent
@@ -38,9 +40,6 @@ fun planeChoices(entities: Map<Int, Entity>): List<PlaneChoice> = entities.mapNo
         entity.getComponent(RigidBodyComponent::class.java)?.mass ?: 0f, plane.fuelTime,
     )
 }.sortedWith(compareBy<PlaneChoice> { it.name }.thenBy { it.entityId })
-
-/** How a flight went, as GAME OVER shows it. */
-data class FlightReport(val plane: String, val end: FlightEnd, val score: Int, val laps: Int, val bestCombo: Int, val flightTime: Float)
 
 /** The screens of the game and what each one holds. */
 sealed interface Screen {

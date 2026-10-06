@@ -13,9 +13,9 @@ import net.nevinsky.abyssus.ecs.scene.*
 import net.nevinsky.abyssus.runtime.ecs.scene.*
 import net.nevinsky.abyssus.filetype.SceneJson
 import net.nevinsky.abyssus.parseScene
-import net.nevinsky.abyssus.sceneview.LightKind
+import net.nevinsky.abyssus.editor.content.LightKind
 import net.nevinsky.abyssus.sceneview.SceneContent
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.Vec3
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File

@@ -147,6 +147,15 @@ from `core` or `runtime` to `editor-core` and no second validator implementation
 Extract only when a concrete user exists: a standalone viewer app, GL tests without the IDE test framework, or build
 time dominated by the render code. If none holds at that point, record "not needed" and stop.
 
+### D10. Remove pre-existing library and game cycles
+
+The user authorized removing all scanned package cycles (2026-10-06), including the baseline cycles outside the
+editing engine. Keep this behavior-preserving: place the Assimp conversion pipeline under `core.assimp` beside its
+model consumers; let runtime schemas own reserved built-in names and share numeric JSON spelling through `runtime.json`;
+place `FlightReport` with flight and `HandleInput` in input so game flow and flight depend in one direction.
+Verify these moves with the existing `:gdx-model:test`, `:runtime:test` and `:games:control-line:test` suites and the
+cycle guard with their allowlist entries removed. The end-of-stage-1 allowlist remains entirely empty.
+
 ## Risks / Trade-offs
 
 - **Churn and merge conflicts** with every open change touching `sceneview/`. Mitigation: order (land or rebase first),

@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+import net.nevinsky.abyssus.editor.content.LightPlacement
+
 import java.io.File
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import com.badlogic.gdx.Gdx

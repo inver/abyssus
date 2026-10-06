@@ -4,6 +4,11 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Quat
+import net.nevinsky.abyssus.editor.content.PlacementTransform
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.AssetLoading
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource

@@ -88,8 +88,6 @@ Current sites containing `SceneEcsPaths`, `"ecs"` or `"components"` (the proposa
 
 Shared native admission now lives in `core.format`; its reserved-field paths are intentionally retained there.
 
-## Reproduction
-
 ## Package-cycle guard verification
 
 `./gradlew checkPackageCycles --console=plain` passes with the captured transition allowlist.
@@ -107,7 +105,12 @@ Scope conflict found before stage 1: the all-module allowlist also contains exis
 allowlist, but those refactors are outside the change's editing-engine scope. Stage 1 awaits a decision on retaining
 those baseline entries while emptying the plugin entries, or widening the refactor scope.
 
+## Reproduction
+
 Baseline: `./gradlew check --console=plain`.
 Counts and edges: scan `src/main/kotlin/**/*.kt`, count files/lines by declared package, then count internal `import net.nevinsky.abyssus.*` lines by source and target package.
 Scene layout sites: `rg -l 'SceneEcsPaths|"ecs"|"components"' src/main/kotlin`.
 Overlap list: `rg -l 'sceneview|RaySceneSnapshot|ComponentEditor|PanelState' openspec/changes/*/tasks.md`.
+
+The user authorized removing the library and game cycles and continuing implementation. Their mechanical moves
+passed the existing module tests and the cycle guard with those entries removed; task 1.1 placement tests passed too.

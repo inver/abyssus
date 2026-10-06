@@ -8,9 +8,9 @@ package net.nevinsky.abyssus.sceneview.gizmo
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
-import net.nevinsky.abyssus.sceneview.PlacementTransform
-import net.nevinsky.abyssus.sceneview.Quat
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.PlacementTransform
+import net.nevinsky.abyssus.editor.content.Quat
+import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.sceneview.toVec3
 import net.nevinsky.abyssus.sceneview.toVector3
 import kotlin.math.atan2

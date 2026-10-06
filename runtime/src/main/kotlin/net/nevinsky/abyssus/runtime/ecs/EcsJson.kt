@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.runtime.ecs
 
+import net.nevinsky.abyssus.runtime.json.number
+
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Quaternion
@@ -27,12 +29,6 @@ import net.nevinsky.abyssus.runtime.schema.GameComponents
 import net.nevinsky.abyssus.runtime.schema.SceneComponent
 import java.math.BigDecimal
 import kotlin.math.abs
-
-/** The short names of the components the runtime models itself; a game component cannot take one. */
-val BUILT_IN_COMPONENTS: Set<String> = linkedSetOf(
-    "NameComponent", "TypeComponent", "ParentComponent", "PositionComponent", "CameraComponent", "LightComponent",
-    "Point2PointPositionComponent", "RenderComponent",
-)
 
 private val BUILT_IN_TYPES: List<Class<out Component>> = listOf(
     NameComponent::class.java, TypeComponent::class.java, ParentComponent::class.java, PositionComponent::class.java,
@@ -125,14 +121,6 @@ private class FloatSerializer : StdSerializer<Any>(Any::class.java) {
 }
 
 private val nodes = JsonNodeFactory.instance
-
-/** A float as the scene file writes it: whole numbers without a fraction, others with the shortest float text. */
-fun number(value: Float): JsonNode {
-    val v = if (value.isFinite()) value else 0f
-    return if (v == Math.rint(v.toDouble()).toFloat() && abs(v) < 1e9f) IntNode.valueOf(v.toInt()) else DecimalNode(
-        BigDecimal(v.toString())
-    )
-}
 
 /** An object of the [fields] that differ from their default; null when none do. */
 private fun diff(vararg fields: Triple<String, Float, Float>): ObjectNode? {

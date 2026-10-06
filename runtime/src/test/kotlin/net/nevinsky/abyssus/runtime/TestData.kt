@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.runtime
 
+import net.nevinsky.abyssus.runtime.json.number
+
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.io.File
 

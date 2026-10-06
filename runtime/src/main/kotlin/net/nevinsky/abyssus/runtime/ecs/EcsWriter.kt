@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.runtime.ecs
 
+import net.nevinsky.abyssus.runtime.json.number
+
 import net.nevinsky.abyssus.core.format.AbyssusDocumentFormat
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity

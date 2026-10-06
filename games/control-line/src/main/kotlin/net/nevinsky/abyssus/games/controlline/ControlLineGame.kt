@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.games.controlline.flight.CONTROL_TENSION
 import net.nevinsky.abyssus.games.controlline.flight.FlightSession
 import net.nevinsky.abyssus.games.controlline.flow.GameFlow
-import net.nevinsky.abyssus.games.controlline.flow.HandleInput
+import net.nevinsky.abyssus.games.controlline.input.HandleInput
 import net.nevinsky.abyssus.games.controlline.flow.Screen
 import net.nevinsky.abyssus.games.controlline.render.*
 import net.nevinsky.abyssus.games.controlline.score.ScoreTable

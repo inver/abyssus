@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.sceneview.shadows
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Rgba
+
 import net.nevinsky.abyssus.sceneview.*
 import org.junit.Assert.*
 import org.junit.Test

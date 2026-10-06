@@ -5,6 +5,11 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Rgba
+import net.nevinsky.abyssus.editor.content.LightKind
+import net.nevinsky.abyssus.editor.content.LightPlacement
+
 import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.attributes.DirectionalLightsAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.PointLightsAttribute

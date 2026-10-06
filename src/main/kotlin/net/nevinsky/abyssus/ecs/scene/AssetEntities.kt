@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.runtime.ecs.EcsWriter
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.Vec3
 
 /** The result of adding an entity: [entityId] is the new entity's id when [result] is [EditResult.Changed]. */
 data class AddedEntity(val result: EditResult, val entityId: String? = null)

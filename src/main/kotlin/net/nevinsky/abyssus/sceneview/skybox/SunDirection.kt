@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.sceneview.skybox
 
-import net.nevinsky.abyssus.sceneview.LightKind
-import net.nevinsky.abyssus.sceneview.LightPlacement
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.LightKind
+import net.nevinsky.abyssus.editor.content.LightPlacement
+import net.nevinsky.abyssus.editor.content.Vec3
 import kotlin.math.sqrt
 
 /** Where the sun is: the unit vector from the viewer toward it. */
