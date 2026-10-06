@@ -5,24 +5,26 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.core.assets.Asset
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.dto.ProjectDto
 
 @Service(Service.Level.PROJECT)
 class ProjectReader(
     val project: Project,
-    private val json: JsonProcessor,
-    private val scenes: SceneReader,
-    private val loading: DocumentParsing,
+    json: JsonProcessor?,
+    scenes: SceneReader?,
+    loading: DocumentParsing?,
 ) : ConfigFileReader<net.nevinsky.abyssus.dto.ProjectDto> {
-    private val assetListing = ProjectAssetListing(json)
+    constructor(project: Project) : this(project, null, null, null)
 
-    /** What the platform creates: the one place this service looks up what it needs. */
-    constructor(project: Project) : this(project, service<AbyssusCore>().json, service<SceneReader>(), service<AbyssusCore>().documents)
+    private val json by lazy { json ?: service<AbyssusCore>().documents.json }
+    private val scenes by lazy { scenes ?: service<SceneReader>() }
+    private val loading by lazy { loading ?: service<AbyssusCore>().documents.parsing }
+    private val assetListing by lazy { ProjectAssetListing(this.json) }
 
     override fun stamp(file: VirtualFile): Long {
         return (ProjectLayout.sceneFiles(file)

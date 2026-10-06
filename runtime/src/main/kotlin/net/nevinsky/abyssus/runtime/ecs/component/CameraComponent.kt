@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FAR
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.CAMERA_NEAR
-import net.nevinsky.abyssus.runtime.ecs.number
+import net.nevinsky.abyssus.runtime.json.number
 import net.nevinsky.abyssus.runtime.ecs.putIf
 import net.nevinsky.abyssus.runtime.ecs.vectorDiff
 

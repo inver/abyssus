@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.core.assets.sky.procedural
 
 import net.nevinsky.abyssus.core.assets.testMetaLoader
 import net.nevinsky.abyssus.core.assets.testProject
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.MetaType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

@@ -1,7 +1,7 @@
 # File formats
 
 Abyssus owns the JSON format of project `.abss`, scene `.scene` and asset `meta.json` documents.
-The plugin reads them with `SceneJson` (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneJson.kt`),
+The plugin reads them with `SceneJson` (`src/main/kotlin/net/nevinsky/abyssus/editor/document/SceneJson.kt`),
 which keeps key order, `null` members and the exact text of numbers. Writes must keep those, too. The user-facing
 description of what the tree shows is in `README.md` ("Abyssus view"); this page is the format reference.
 
@@ -16,7 +16,7 @@ Version 1 requires these root members in each project, scene and asset metadata 
 { "format": "abyssus", "formatVersion": 1 }
 ```
 
-`AbyssusDocumentFormat` (`src/main/kotlin/net/nevinsky/abyssus/format/AbyssusDocumentFormat.kt`)
+`AbyssusDocumentFormat` (`core/src/main/kotlin/net/nevinsky/abyssus/core/format/AbyssusDocumentFormat.kt`)
 validates document identity and reserved scene fields on the caller's thread, without GL or platform services.
 Only the exact string `abyssus` and integral JSON version `1` are supported. Missing/null/foreign markers, string
 or fractional versions (including `1.0`), negative versions and future versions are unsupported. Asset metadata's
@@ -121,8 +121,9 @@ direction (`SceneContent`).
 Component map keys such as `PositionComponent` are stable schema identifiers independent of their implementation
 packages. Optional `archetypes` lists use these short identifiers. `ecs.componentIdentifiers` and
 `RenderComponent.renderable.class` are rejected even when the scene has native markers; they are not aliases.
-These reserved paths are checked by the editor validator. The plain JVM ECS helpers currently lack that guard;
-see `docs/reviews/documentation-audit-2026-10-06.md` for the implementation gap.
+These reserved paths are checked by the shared validator in editor and JVM readers. Raw ECS loads validate before
+changing the engine; writers and direct render serialization also reject them. Both the short and fully qualified
+built-in RenderComponent names are checked; unrelated extension components remain opaque.
 
 ```json
 { "renderable": { "kind": "asset", "shaderKey": "pbr",
@@ -282,8 +283,9 @@ Native version 1 scenes may contain a root `rayTracing` object. Omitted fields u
 | `maxRefractionBounces` | 0 | 0–16 |
 
 A present null, fraction, string or out-of-range value is malformed. Ordinary scene editing remains available;
-the raw Properties reader reports the error. This is the required contract; the render path currently binds
-through a typed DTO first and may coerce malformed values or reject the whole scene. See the documentation audit.
+the raw Properties reader reports the error. Explicit null limits survive typed DTO binding and are rejected by
+the render settings codec. Other malformed types may still be coerced during binding or reject the whole scene;
+see the documentation audit for this remaining gap.
 Editor writes never repair unrelated fields or insert their defaults. Runtime Ray Tracing enable state
 is separate and is not saved. Resetting one preference removes only that field, then an empty known container.
 Unknown members and unrelated number text remain intact.

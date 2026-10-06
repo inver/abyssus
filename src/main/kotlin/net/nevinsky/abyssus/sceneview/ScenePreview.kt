@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.PlacementTransform
+import net.nevinsky.abyssus.editor.content.LightKind
+
 import net.nevinsky.abyssus.sceneview.gizmo.DragResult
 
 /** The entity a gizmo acts on: where it is, and the direction it faces when it has one (a camera, a directional or spot light). */

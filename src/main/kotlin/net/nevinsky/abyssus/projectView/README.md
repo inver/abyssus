@@ -40,6 +40,8 @@ the row actions that call `editSceneJson` (`src/main/kotlin/net/nevinsky/abyssus
   because toggle folding, icons and write-back match on it.
 - **Painting a selected disabled row:** the platform repaints selected rows in the selection colour.
   `GrayKeepingRenderer` keeps the gray on disabled rows so they still read as disabled while selected.
+- **HDR sizes come from headers.** `hdrSkyInfo` reads the EXR data window off the EDT without decoding pixels.
+  An unreadable header keeps the filename with unknown dimensions; preview failures still show their own reason.
 
 ## Add Light
 

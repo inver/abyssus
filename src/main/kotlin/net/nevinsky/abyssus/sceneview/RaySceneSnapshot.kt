@@ -4,6 +4,18 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.SceneRaySettings
+import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
+import net.nevinsky.abyssus.editor.ray.RayMaterialOverrides
+import net.nevinsky.abyssus.editor.ray.RaySceneFallback
+
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Rgba
+
+import net.nevinsky.abyssus.editor.content.Quat
+import net.nevinsky.abyssus.editor.content.PlacementTransform
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.VertexAttributes
@@ -63,7 +75,7 @@ sealed interface RaySceneConversion {
     data class Fallback(val reason: RaySceneFallback, val detail: String? = null) : RaySceneConversion
 }
 
-enum class RaySceneFallback { ASSET_FAILURE, RESOURCE_LIMIT, UNSUPPORTED_GEOMETRY }
+
 
 enum class RaySceneChange { STRUCTURE, TRANSFORM, POSE, CAMERA, LIGHT, MATERIAL, ENVIRONMENT }
 data class RaySceneDiff(val changes: Set<RaySceneChange>) {

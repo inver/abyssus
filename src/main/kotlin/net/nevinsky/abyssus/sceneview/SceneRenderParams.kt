@@ -5,9 +5,15 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.SceneRaySettingsState
+import net.nevinsky.abyssus.editor.ray.SceneRaySettingsCodec
+
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Rgba
+
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.runtime.float
 import net.nevinsky.abyssus.runtime.obj
@@ -15,10 +21,6 @@ import java.io.File
 import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.sqrt
-
-data class Vec3(val x: Float, val y: Float, val z: Float)
-
-data class Rgba(val r: Float, val g: Float, val b: Float, val a: Float)
 
 /** [direction] is the unit vector the camera looks along. */
 data class CameraParams(

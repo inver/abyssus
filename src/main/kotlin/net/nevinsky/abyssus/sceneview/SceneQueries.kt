@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.collision.BoundingBox

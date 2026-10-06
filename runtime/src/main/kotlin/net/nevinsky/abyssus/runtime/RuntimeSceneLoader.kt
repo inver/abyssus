@@ -4,8 +4,8 @@
  */
 package net.nevinsky.abyssus.runtime
 
-import net.nevinsky.abyssus.core.FileLoader
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.FileLoader
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.core.scene.SceneLoader

@@ -7,20 +7,18 @@ package net.nevinsky.abyssus
 
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.core.FileLoader
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.FileLoader
+import net.nevinsky.abyssus.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.core.format.DocumentKind
+import org.slf4j.helpers.NOPLogger
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.MetaType
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.core.assets.loading.AssetLoader
 import net.nevinsky.abyssus.core.assets.loading.AssetStorage
-import net.nevinsky.abyssus.core.assets.sky.cube.SkyboxMeta
-import net.nevinsky.abyssus.core.assets.sky.hdr.HdrSkyMeta
-import net.nevinsky.abyssus.core.assets.sky.procedural.ProceduralSkyMeta
-import net.nevinsky.abyssus.core.assets.terrain.TerrainMeta
-import net.nevinsky.abyssus.core.assets.texture.TextureMeta
-import java.util.UUID
+import net.nevinsky.abyssus.core.assets.AssetMetaBinder
 import net.nevinsky.abyssus.core.assets.loading.CompositeAssetLoader
 import net.nevinsky.abyssus.core.assets.loading.PreparedAsset
 import net.nevinsky.abyssus.core.assets.loading.RaySnapshotLoader
@@ -148,7 +146,7 @@ class ProjectAssets internal constructor(
                 MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas),
                 MetaType.SKYBOX_HDR to hdrSkyLoader,
             ),
-        )),
+        ), log),
         log,
     )
 
@@ -160,38 +158,24 @@ class ProjectAssets internal constructor(
  * disk), and from the disk through [delegate] otherwise. Assets an asset needs (a terrain's textures) are still found
  * from the saved metadata.
  */
-private class UnsavedMetaLoader(
+internal class UnsavedMetaLoader(
     private val json: JsonProcessor,
     private val files: FileLoader,
     private val unsaved: () -> Map<File, String>,
     private val delegate: CompositeAssetLoader,
+    private val log: Logger = NOPLogger.NOP_LOGGER,
+    private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
+    private val binder: AssetMetaBinder = AssetMetaBinder(json),
 ) : AssetLoader<PreparedAsset, Disposable> by delegate {
     override fun prepare(name: String): PreparedAsset? {
         val file = files.folder(name)?.let { File(it, META_FILE).absoluteFile }
         val text = file?.let { unsaved()[it] } ?: return delegate.prepare(name)
-        return delegate.loadPrepared(parse(name, text) ?: return null)
-    }
-
-    private fun parse(name: String, text: String): AssetMeta<Any>? = runCatchingKeepingCancellation {
-        val node = json.readObject(text)
-        val type = node["type"]?.asText()?.let { n -> MetaType.entries.firstOrNull { it.name == n } } ?: MetaType.UNKNOWN
-        val block = node["additional"]?.takeIf { it.isObject } ?: json.readObject("{}")
-        val additional: Any = additionalClass(type)?.let { json.bind(block, it) } ?: json.bind(block, Map::class.java)
-        AssetMeta(
-            name = name, formatVersion = node["formatVersion"]?.asInt(1) ?: 1, version = node["version"]?.asInt(1) ?: 1,
-            lastModified = node["lastModified"]?.asLong(0) ?: 0, type = type, additional = additional,
-            uuid = node["uuid"]?.asText()?.let { runCatching { UUID.fromString(it) }.getOrNull() },
-        )
-    }.getOrNull()
-
-    private fun additionalClass(type: MetaType): Class<*>? = when (type) {
-        MetaType.MODEL -> ModelMeta::class.java
-        MetaType.TERRAIN -> TerrainMeta::class.java
-        MetaType.SKYBOX -> SkyboxMeta::class.java
-        MetaType.SKYBOX_PROCEDURAL -> ProceduralSkyMeta::class.java
-        MetaType.SKYBOX_HDR -> HdrSkyMeta::class.java
-        MetaType.TEXTURE, MetaType.PIXMAP_TEXTURE -> TextureMeta::class.java
-        else -> null
+        val meta = runCatchingKeepingCancellation {
+            val node = json.readObject(text)
+            format.requireSupported(node, DocumentKind.ASSET)
+            binder.bind(name, node)
+        }.onFailure { log.warn("Unsaved metadata for $name: ${it.message}", it) }.getOrNull() ?: return null
+        return delegate.loadPrepared(meta)
     }
 }
 

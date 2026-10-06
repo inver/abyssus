@@ -4,11 +4,13 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import com.intellij.openapi.actionSystem.Separator
 import net.nevinsky.abyssus.projectView.AddAssetGroup
 import net.nevinsky.abyssus.projectView.AddLightGroup

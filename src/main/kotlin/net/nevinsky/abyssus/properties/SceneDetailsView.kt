@@ -16,13 +16,13 @@ import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.textOf
 import net.nevinsky.abyssus.filetype.SceneIcons
-import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.sceneview.RayDataEdit
-import net.nevinsky.abyssus.sceneview.RayModePhase
-import net.nevinsky.abyssus.sceneview.RayModeText
-import net.nevinsky.abyssus.sceneview.SceneRayControls
-import net.nevinsky.abyssus.sceneview.SceneRayEdits
-import net.nevinsky.abyssus.sceneview.SceneRayField
+import net.nevinsky.abyssus.editor.document.SceneJson
+import net.nevinsky.abyssus.editor.ray.RayDataEdit
+import net.nevinsky.abyssus.editor.ray.RayModePhase
+import net.nevinsky.abyssus.ui.RayModeText
+import net.nevinsky.abyssus.SceneRayControls
+import net.nevinsky.abyssus.filetype.SceneRayEdits
+import net.nevinsky.abyssus.editor.ray.SceneRayField
 import java.awt.BorderLayout
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
@@ -45,6 +45,7 @@ internal class SceneDetailsView(
     private val conflict: String? = null,
     private val onConflict: (String) -> Unit = {},
 ) : JPanel(BorderLayout()) {
+    private val facts: net.nevinsky.abyssus.editor.facts.SceneFacts<*> = controls
     private val file = state.file
     private val switch = JBCheckBox(AbyssusBundle.message("propertiesSceneRayTracing")).apply { name = "ray-tracing-switch" }
     private val status = JBLabel().apply { name = "ray-tracing-status"; foreground = secondary() }
@@ -140,7 +141,7 @@ internal class SceneDetailsView(
 
     /** Brings the switch, status, reason and Retry in line with the open view's mode (or with a pending request). */
     private fun refresh() {
-        val mode = controls.mode(file)
+        val mode = facts.rayMode(file.path)
         val pending = controls.isPending(file)
         updating = true
         try {

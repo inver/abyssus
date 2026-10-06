@@ -9,12 +9,12 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.games.controlline.flight.CONTROL_TENSION
 import net.nevinsky.abyssus.games.controlline.flight.FlightSession
 import net.nevinsky.abyssus.games.controlline.flow.GameFlow
-import net.nevinsky.abyssus.games.controlline.flow.HandleInput
+import net.nevinsky.abyssus.games.controlline.input.HandleInput
 import net.nevinsky.abyssus.games.controlline.flow.Screen
 import net.nevinsky.abyssus.games.controlline.render.*
 import net.nevinsky.abyssus.games.controlline.score.ScoreTable
@@ -115,7 +115,9 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
             scene,
             cameras.camera,
             lines,
-            hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null
+            hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null,
+            clips = s?.flight?.crash?.let { mapOf(s.plane to it.clip) }.orEmpty(),
+            seconds = seconds,
         )
         ui.update(s, seconds)
         ui.draw()

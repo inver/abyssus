@@ -4,10 +4,17 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayModePhase
+
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Quat
+import net.nevinsky.abyssus.editor.content.PlacementTransform
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.AssetLoading
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.raytracing.RayUnavailableReason
 import org.junit.After
 import org.junit.Assert.*
@@ -150,7 +157,8 @@ class RayViewFeedTest {
         val environment = scene.environment
         assertEquals(0, environment.texture)
         assertTrue("an HDR sky is flagged so primary misses are tone mapped", environment.hdr)
-        assertEquals(64, scene.textures[0].width)
+        assertEquals(1024, scene.textures[0].width)
+        assertEquals(512, scene.textures[0].height)
         assertEquals("sky", scene.textures[0].id)
         assertEquals(6, environment.ambientCube!!.size)
         assertEquals(.1f, environment.ambientCube!![0].r, 1e-6f)

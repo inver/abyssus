@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.core.assets.sky.cube
 
 import com.badlogic.gdx.graphics.Pixmap
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource

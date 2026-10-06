@@ -11,7 +11,7 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.core.format.DocumentKind
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader

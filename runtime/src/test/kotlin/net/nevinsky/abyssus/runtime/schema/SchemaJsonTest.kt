@@ -78,6 +78,24 @@ class SchemaJsonTest {
         assertEquals(5, problems.size)
     }
 
+    @Test fun everyTypeRejectsAnArrayAndKeepsItsDefault() {
+        assertEquals(FieldType.entries.toSet(), schema.fields.map { it.type }.toSet())
+        for (field in schema.fields) {
+            val problems = mutableListOf<String>()
+            val values = decode("""{"${field.name}": []}""", problems)
+            assertEquals(field.name, field.default, values[field.name])
+            assertEquals(field.name, 1, problems.size)
+            assertTrue(problems.single(), problems.single().contains("field ${field.name}:"))
+            assertEquals(field.name, "{}", json.encode(schema, values).toString())
+        }
+    }
+
+    @Test fun wholeValuesOutsideTheirLimitKeepTheDefault() {
+        val problems = mutableListOf<String>()
+        assertEquals(60, decode("""{"fuelSeconds": -1}""", problems)["fuelSeconds"])
+        assertEquals(listOf("field fuelSeconds: -1 is below the minimum 0; the default 60 is used"), problems)
+    }
+
     @Test fun aVectorAxisOutsideItsLimitFallsBackNamingTheAxis() {
         val box = ComponentSchemaReader().read(BoxComponent::class.java)
         assertEquals(0.0, box.fields.single().min)

@@ -7,7 +7,7 @@ picking, camera markers, look-through, move/rotate gizmos and Drop. Required beh
 
 | Class | Role |
 |---|---|
-| `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo. The provider is where the tab's collaborators are looked up and passed in |
+| `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo. The provider in the root package is where the tab's collaborators are looked up and passed in; `SceneViewHost` carries tree selection and Add actions |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
 | `SceneContent`, `PlacementMapper` | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. The components are decoded by the same codecs the Properties panel uses (`DecodedEntity`), so both show the same values and defaults; `PlacementMapper` (pure) maps them. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
 | `LightSet`, `SpotCone` | Deterministic light selection and CPU cone/range attenuation math |
@@ -233,3 +233,6 @@ Native scene input uses `format: "abyssus"` and integral `formatVersion: 1`. Ass
 and their folder reference, without class loading. Unknown native kinds draw nothing and remain raw; light and camera
 look-at resolution still uses the preserved entity ids and transforms. Unsupported enclosing documents are rejected
 before view construction, and unsupported asset metadata never reaches GPU build.
+
+The editor provider obtains loading and scene shaders from `AbyssusCore.assets`, JSON from `documents`, and native
+ray collaborators from `ray`. These groups initialize independently; the ray group closes only resources it created.

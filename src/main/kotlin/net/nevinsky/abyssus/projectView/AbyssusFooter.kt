@@ -23,7 +23,7 @@ import java.awt.Color
 import java.awt.FlowLayout
 import javax.swing.BorderFactory
 import javax.swing.JPanel
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 
 /** The numbers under the tree. */
 data class FooterCounts(val scenes: Int, val assets: Int, val unused: Int)

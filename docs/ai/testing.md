@@ -39,7 +39,7 @@ CI also runs Plugin Verifier and Qodana separately from `check`.
 - `games/control-line/src/test/kotlin/`: the Control Line game's flight, track, scoring, screen flow and Play module,
   headless (Jolt's `ReleaseSp` natives for the build machine, no window). They read the bundled project
   `games/control-line/project/ControlLine` through `bundledProject()` / `loadField()`, and fly it with `FieldFlight`;
-  `ControlLinePlayTest` runs `PlayHostMain` in a child process.
+  `ControlLinePlayTest` runs `PlayHostMain` in a child process. `CrashClipGlTest` is the one GL test there (opt-in).
 - `physics-plugin/src/test/kotlin/`: overlay geometry, game/fallback launch selection and bundled play-host packaging.
 - `raytracing/src/test/kotlin/`: backend contracts, fake backend, snapshots, scheduling, budgets, optics, accumulation
   and native packaging. Metal and Vulkan device tests opt in separately with `-Dabyssus.metalTests=true` and
@@ -61,6 +61,9 @@ Two kinds of tests:
 ## Fixtures
 
 `src/test/testData/project/`:
+- **`Tree/`:** a stable nine-entity native scene snapshot, its project document and nine asset metadata folders,
+  without binary payloads. Tree, asset-listing and runtime ECS/scene suites use it to pin identities and counts
+  independently of `Untitled`. The real-ray regression uses this scene with Untitled's binary assets.
 - **`Untitled/`:** a native Abyssus project with `Untitled.abss` and `scenes/Main Scene.scene`. The scene has models,
   terrain, a skybox, directional lights and `Spot Light 8`, `Camera 4` looking at entity 3, and a parented entity. `assets/` holds 4 models, `tree`,
   a terrain, `skybox_default`, `skybox_physical` (a procedural sky) and `skybox_hdr` (an OpenEXR sky named by its
@@ -85,12 +88,16 @@ assert a rejection also assert the document text and disk bytes are unchanged.
 
 **Don't edit fixtures through the IDE.** Opening `src/test/testData/project/Untitled` as the `runIde` project and
 using the eye, Rename Scene, the skybox chooser or gizmo drags changes the files the tests assert on.
-`AbyssusViewTest` reads the scene name from the file for this reason. A test that pins exact coordinates breaks when
-an object was dragged.
+`AbyssusViewTest` and runtime scene regressions use the stable `Tree` snapshot. Other tests that pin Untitled's
+coordinates or asset counts still break when that project is edited; use a disposable copy for interactive work.
+
+HDR preview platform tests require real filesystem-backed EXR files and TinyEXR's native binaries. The root build
+adds those classifiers with `testRuntimeOnly`; this test setup does not add them to plugin packaging. Undo tests
+clear only fixture-creation history before the first panel edit, then retain exact Undo/Redo assertions.
 
 ## GL tests
 
-- **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `LargeMeshGlTest`, `core`'s `*GlTest`) run only with
+- **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `LargeMeshGlTest`, `core`'s `*GlTest`, Control Line's `CrashClipGlTest`) run only with
   `-Dabyssus.glTests=true` on a machine with a display. Otherwise `GlHarness.enabled` is false and they are skipped
   (counted as skipped, not failed).
 - **Harness:** `GlHarness` (`src/test/kotlin/net/nevinsky/abyssus/sceneview/GlHarness.kt`) renders a few frames on

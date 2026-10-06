@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.dto
 
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.format.AbyssusDocumentFormat

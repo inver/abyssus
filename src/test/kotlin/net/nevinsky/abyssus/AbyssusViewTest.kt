@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus
 
+import net.nevinsky.abyssus.editor.document.SceneJson
+
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.projectView.impl.AbstractProjectViewPane
@@ -41,14 +43,16 @@ class AbyssusViewTest : BasePlatformTestCase() {
 
     /** Copies only the project file and its scenes; the binary assets exceed the test VFS size limit. */
     private fun fixture(): VirtualFile {
-        myFixture.copyFileToProject("Untitled/Untitled.abss", "Untitled/Untitled.abss")
-        myFixture.copyFileToProject("Untitled/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
+        myFixture.copyFileToProject("Tree/Untitled.abss", "Untitled/Untitled.abss")
+        val sceneText = java.io.File("$testDataPath/Tree/scenes/Main Scene.scene").readText()
+        myFixture.addFileToProject("Untitled/scenes/Main Scene.scene",
+            net.nevinsky.abyssus.editor.document.SceneJson.pretty(net.nevinsky.abyssus.editor.document.SceneJson.parse(sceneText)))
         return myFixture.findFileInTempDir("Untitled")
     }
 
-    /** The scene's current name: the fixture may have been renamed through the IDE's Rename Scene action. */
+    /** Tree assertions use a stable scene independently of the interactive Untitled project. */
     private val fixtureSceneName: String by lazy {
-        parseScene(java.io.File("$testDataPath/Untitled/scenes/Main Scene.scene").readText()).name!!
+        parseScene(java.io.File("$testDataPath/Tree/scenes/Main Scene.scene").readText()).name!!
     }
 
     private fun add(path: String, text: String): VirtualFile = myFixture.addFileToProject(path, text).virtualFile
@@ -96,14 +100,23 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals(0.001f, scene.fog!!.density!!, 0f)
         assertEquals(0.3f, scene.ambientLight!!.intensity!!, 0f)
         assertEquals("skybox_physical", scene.skyboxName)
-        assertEquals(listOf("id", "name", "ambientLightEnabled", "ambientLight", "fogEnabled", "fog", "skyboxEnabled", "skyboxName", "ecs"),
+        assertEquals(listOf("id", "name", "ambientLightEnabled", "ambientLight", "fogEnabled", "fog", "skyboxEnabled", "skyboxName", "rayTracingEnabled", "rayTracing", "ecs"),
             childrenOf(scene).map { it.name })
         assertEquals(before.toList(), file.contentsToByteArray().toList())
     }
 
     fun testRowNamesAndOrderAreStable() {
         assertEquals(listOf("name", "scenes", "assets"), childrenOf(ProjectDto("n", emptyList(), emptyList())).map { it.name })
-        assertEquals(listOf("type", "uuid"), childrenOf(testAsset("a", "u", "MODEL", listOf("r"), true)).map { it.name })
+        val asset = testAsset("a", "u", "MODEL", listOf("r"), true)
+        val assetRows = childrenOf(asset).map { it.name }
+        // JVM reflection may discover the derived getters before or after uuid.
+        // Both retain the stored-property order and all three derived rows.
+        val assetOrders = listOf(
+            listOf("baseDir", "meta", "references", "unused", "uuid", "name", "type"),
+            listOf("baseDir", "meta", "references", "unused", "name", "type", "uuid"),
+        )
+        assertTrue("Unexpected asset row order: $assetRows", assetRows in assetOrders)
+        assertEquals(assetRows, childrenOf(asset).map { it.name })
         assertEquals(listOf("error"), childrenOf(SceneError(add("e.scene", "x"), "boom")).map { it.name })
         val fog = parseScene("""{"fog":{"color":{"r":1,"g":2,"b":3,"a":4},"density":0.5}}""").fog!!
         assertEquals(listOf("color", "density", "gradient"), childrenOf(fog).map { it.name })
@@ -124,9 +137,11 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertTrue(!service<SceneReader>().read(add("empty.scene", "")).success)
         assertTrue(!service<SceneReader>().read(add("bad.scene", "{oops")).success)
         val scene = parseScene("""{"format":"abyssus","formatVersion":1}""")
-        assertEquals(Scene(), scene)
-        assertEquals(9, childrenOf(scene).size)
-        assertTrue(childrenOf(scene).all { it.value == null })
+        assertEquals(scene.id, java.util.UUID.fromString(scene.id).toString())
+        assertEquals(Scene(id = scene.id), scene)
+        assertEquals(11, childrenOf(scene).size)
+        assertTrue(childrenOf(scene).filter { it.name.endsWith("Enabled") }.all { it.value == false })
+        assertTrue(childrenOf(scene).filter { it.name != "id" && !it.name.endsWith("Enabled") }.all { it.value == null })
     }
 
     fun testProjectReaderLoadsScenesFolder() {
@@ -139,12 +154,12 @@ class AbyssusViewTest : BasePlatformTestCase() {
 
     fun testProjectOrderAndMissingFolder() {
         add("p/a.abss", """{"format":"abyssus","formatVersion":1,"name":"p"}""")
-        add("p/scenes/b.scene", """{"format":"abyssus","formatVersion":1,"name":"B"}""")
-        add("p/scenes/a.scene", """{"format":"abyssus","formatVersion":1,"name":"A"}""")
-        add("p/scenes/c.scene", """{"format":"abyssus","formatVersion":1}""")
+        add("p/scenes/b.scene", """{"format":"abyssus","formatVersion":1,"id":1,"name":"B"}""")
+        add("p/scenes/a.scene", """{"format":"abyssus","formatVersion":1,"id":0,"name":"A"}""")
+        add("p/scenes/c.scene", """{"format":"abyssus","formatVersion":1,"id":2}""")
         add("p/scenes/d.scene", "broken")
         val items = (project.service<ProjectReader>().read(myFixture.findFileInTempDir("p/a.abss")).obj!!).scenes.mapIndexed { i, it -> elementLabel("scenes", it, i) }
-        assertEquals(listOf("A", "B", "scenes[2]", "d.scene"), items)
+        assertEquals(listOf("A (0)", "B (1)", "scenes[2] (2)", "d.scene"), items)
         add("q/a.abss", """{"format":"abyssus","formatVersion":1,"name":"q"}""")
         val none = project.service<ProjectReader>().read(myFixture.findFileInTempDir("q/a.abss")).obj!!
         assertTrue((none as ProjectDto).scenes.isEmpty())
@@ -170,7 +185,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         fixture()
         val scene = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()
         val top = children(scene).map { text(it) }
-        assertEquals(listOf("ambientLight", "fog", "skybox: skybox_physical", "ecs  9 entities"), top)
+        assertEquals(listOf("ambientLight", "fog", "skybox: skybox_physical", "rayTracing: null", "ecs  9 entities"), top)
         assertTrue(top.none { it.startsWith("id") || it.startsWith("name") })
         assertTrue("skybox: skybox_physical" in top)
         assertTrue(top.none { it.endsWith("Enabled: true") || it.endsWith("Enabled: false") })

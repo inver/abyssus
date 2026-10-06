@@ -17,8 +17,9 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.core.JsonProcessor
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.core.AnimationController
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.core.ModelBatch
 import net.nevinsky.abyssus.core.ModelInstance
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
@@ -87,6 +88,7 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
     private val blank = Texture(Pixmap(1, 1, Pixmap.Format.RGBA8888).apply { setColor(Color.WHITE); fill() }, false)
     private val shapes = ShapeRenderer()
     private val instances = HashMap<Entity, Pair<Model, ModelInstance>>()
+    private val playing = HashMap<Entity, Pair<String, AnimationController>>()
     private var scene: FieldScene? = null
     private val environment = Environment()
     private val sun = DirectionalLight()
@@ -96,10 +98,18 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
     fun loaded(field: FieldScene): Boolean =
         field.models.all { assets.getAs<Model>(it.second) != null } && field.terrains.all { assets.getAs<TerrainMesh>(it.second) != null }
 
-    /** Draws [field] seen from [camera] with [lines]; [hidden] (the pilot whose eyes the camera is) is left out. */
-    fun draw(field: FieldScene, camera: Camera, lines: List<LineSegment> = emptyList(), hidden: Entity? = null) {
+    /**
+     * Draws [field] seen from [camera] with [lines]; [hidden] (the pilot whose eyes the camera is) is left out. Each
+     * entity in [clips] plays that clip of its model once, from when it first appears there, and then holds its last
+     * frame; [seconds] is the frame's time. A model without the clip is drawn as it is.
+     */
+    fun draw(
+        field: FieldScene, camera: Camera, lines: List<LineSegment> = emptyList(), hidden: Entity? = null,
+        clips: Map<Entity, String> = emptyMap(), seconds: Float = 0f,
+    ) {
         if (scene !== field) {
             instances.clear()
+            playing.clear()
             scene = field
             environment.clear()
             environment.set(ColorAttribute(ColorAttribute.AmbientLight, field.ambient))
@@ -124,6 +134,7 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
         }
 
         val drawn = drawnModels(field)
+        animate(drawn, clips, seconds)
         val terrains = field.terrains.mapNotNull { (entity, name) ->
             assets.getAs<TerrainMesh>(name)?.let { it to field.position(entity).getTransform() }
         }
@@ -179,9 +190,22 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
     private fun drawnModels(field: FieldScene): List<Pair<Entity, ModelInstance>> = field.models.mapNotNull { (entity, name) ->
         val model = assets.getAs<Model>(name) ?: return@mapNotNull null
         val instance = instances[entity]?.takeIf { it.first === model }?.second
-            ?: ModelInstance(model).also { instances[entity] = model to it }
+            ?: ModelInstance(model).also {
+                instances[entity] = model to it
+                playing.remove(entity)
+            }
         instance.transform!!.set(field.position(entity).getTransform())
         entity to instance
+    }
+
+    /** Starts the [clips] not yet playing on the [drawn] models, and advances every playing clip by [seconds]. */
+    private fun animate(drawn: List<Pair<Entity, ModelInstance>>, clips: Map<Entity, String>, seconds: Float) {
+        for ((entity, instance) in drawn) {
+            val clip = clips[entity] ?: continue
+            if (playing[entity]?.first == clip || instance.getAnimation(clip) == null) continue
+            playing[entity] = clip to AnimationController(instance).also { it.setAnimation(clip, 1) }
+        }
+        for ((_, controller) in playing.values) controller.update(seconds)
     }
 
     override fun dispose() {

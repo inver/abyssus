@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.format.DocumentKind
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.runtime.text
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 

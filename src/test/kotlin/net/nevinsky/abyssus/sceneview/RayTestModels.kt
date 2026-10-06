@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.core.io.FileLoader
+
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.VertexAttribute
@@ -38,5 +40,5 @@ internal fun rayTestModel(count: Int = 3, pbr: Boolean = false): RayModelSnapsho
             id = "node"; translation = Vector3(0f, 1f, 0f)
             parts = arrayOf("red", "green").map { name -> ModelNodePart().apply { meshPartId = name; materialId = name } }.toTypedArray()
         })
-        return ModelRaySnapshotLoader(net.nevinsky.abyssus.core.FileLoader(java.io.File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
+        return ModelRaySnapshotLoader(net.nevinsky.abyssus.core.io.FileLoader(java.io.File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
     }

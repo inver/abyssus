@@ -4,7 +4,13 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.ray.RayDataEdit
+import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
+import net.nevinsky.abyssus.editor.ray.RayOpticalOverride
+import net.nevinsky.abyssus.editor.ray.RayOpticalField
+import net.nevinsky.abyssus.editor.ray.RayMaterialOverrides
+
+import net.nevinsky.abyssus.editor.document.SceneJson
 import org.junit.Assert.*
 import org.junit.Test
 

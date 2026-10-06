@@ -4,6 +4,11 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayBackendAttempt
+import net.nevinsky.abyssus.editor.ray.RayBackendSelection
+
+import net.nevinsky.abyssus.core.assets.displayMessage as failureMessage
+
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
@@ -14,7 +19,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.SwingUtilities
-import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
 
 /**
  * Application owner of providers, devices and one serial native worker. Each view gets an independent session and
@@ -150,7 +155,7 @@ internal class RayBackendService(
             view.clearPublication()
             publish { view.mode.failed(revision, failure.displayMessage()) }
         }
-        report("Ray tracing stopped for view ${view.viewId}: ${failure.message ?: failure.javaClass.simpleName}", failure)
+        report("Ray tracing stopped for view ${view.viewId}: ${failure.failureMessage()}", failure)
         disposeBinding(view)
     }
 

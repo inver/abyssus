@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.core.flightgear
 
 import com.badlogic.gdx.files.FileHandle
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.core.format.DocumentKind
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader

@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.core.assets
 
-import net.nevinsky.abyssus.core.FileLoader
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.FileLoader
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.core.assets.texture.TextureMeta
@@ -129,7 +129,7 @@ class AssetMetaLoaderTest {
 
     @Test
     fun theFolderIsTheNameAndASparseMetaGetsDefaults() {
-        val dir = project { it.meta("sparse", """{"type":"MODEL"}""") }
+        val dir = project { it.meta("sparse", """{"format":"abyssus","formatVersion":1,"type":"MODEL"}""") }
         val meta = AssetMetaLoader(JsonProcessor(), FileLoader(dir)).loadBaseMeta("sparse")!!
         assertEquals("sparse", meta.name)
         assertEquals(1, meta.version)

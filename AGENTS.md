@@ -46,7 +46,7 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
 - `gdx-model/`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import), with inherited sources documented in `docs/third-party/gdx-model-origin.md`.
   See `gdx-model/README.md`.
 - `core/`: a plain JVM library, root package `net.nevinsky.abyssus.core`: project layout and file access
-  (`AbyssusProjectLayout`, `FileLoader`, `JsonProcessor`), asset metas (`AssetMeta`, `AssetMetaLoader`), the loading
+  (`core.io.AbyssusProjectLayout`, `core.io.FileLoader`, `core.io.JsonProcessor`), asset metas (`AssetMeta`, `AssetMetaLoader`), the loading
   pipeline (`AssetLoader`, `CompositeAssetLoader`, `AssetStorage`), the optional CPU snapshots for ray tracing (`RaySnapshotStore`), and the
   loaders with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).
   The plugin wires it in `AssetLoading` (root package). See `core/README.md`.

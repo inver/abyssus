@@ -5,13 +5,14 @@
 
 package net.nevinsky.abyssus.core.assets.terrain
 
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.core.assets.AssetIndex
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.loading.AssetLoader
 import net.nevinsky.abyssus.core.assets.loading.BuiltAssets
 import java.nio.ByteBuffer
+import net.nevinsky.abyssus.core.assets.parseUuidOrNull
 import java.util.*
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -37,7 +38,7 @@ class TerrainLoader(
         for (field in SPLAT_FIELDS) {
             val reference = additional.splat(field) ?: continue
             val folder =
-                runCatching { folders?.get(UUID.fromString(reference)) }.getOrNull() ?: continue // unknown: left out
+                parseUuidOrNull(reference)?.let { folders?.get(it) } ?: continue // unknown: left out
             splats[field] = folder
         }
         return PreparedTerrain(data, splats)

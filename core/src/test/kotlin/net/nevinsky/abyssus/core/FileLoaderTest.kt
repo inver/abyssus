@@ -1,5 +1,7 @@
 package net.nevinsky.abyssus.core
 
+import net.nevinsky.abyssus.core.io.FileLoader
+
 import net.nevinsky.abyssus.core.assets.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

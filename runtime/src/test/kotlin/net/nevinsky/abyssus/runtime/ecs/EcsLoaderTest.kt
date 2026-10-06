@@ -33,7 +33,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
-internal val UNTITLED = testProject("Untitled")
+// Stable scene/asset identities, independent of the interactive Untitled project.
+internal val UNTITLED = testProject("Tree")
 
 internal fun untitledAssets() = FolderAssetResolver(File(UNTITLED, "assets").list().orEmpty().toList())
 

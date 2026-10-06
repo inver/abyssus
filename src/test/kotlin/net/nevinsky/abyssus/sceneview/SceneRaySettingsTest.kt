@@ -4,7 +4,12 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.ray.SceneRaySettings
+import net.nevinsky.abyssus.editor.ray.SceneRayField
+import net.nevinsky.abyssus.editor.ray.RayDataEdit
+import net.nevinsky.abyssus.editor.ray.SceneRaySettingsCodec
+
+import net.nevinsky.abyssus.editor.document.SceneJson
 import org.junit.Assert.*
 import org.junit.Test
 

@@ -54,39 +54,5 @@ tasks.test {
     systemProperty("abyssus.testData", rootProject.file("src/test/testData").absolutePath)
 }
 
-// Code in this module is wired by constructors: no `object` declarations and no `companion object` (a `data object`
-// case of a sealed type is a value and is allowed; object expressions such as `object : Runnable` are fine).
-val checkNoSingletons by tasks.registering {
-    val sources = fileTree("src/main/kotlin") {
-        include("**/*.kt")
-        exclude(
-            "net/nevinsky/abyssus/core/AbyssusProjectLayout.kt",
-            "net/nevinsky/abyssus/core/GeometryUtils.kt"
-        )
-    }
-
-    val root = layout.projectDirectory.asFile
-    inputs.files(sources)
-    doLast {
-        val declaration =
-            Regex("""^\s*(?:(?:private|internal|public|protected)\s+)*(companion\s+object\b|object\s+[A-Za-z_])""")
-        val found = sources.files.sorted().flatMap { file ->
-            file.readLines().mapIndexedNotNull { i, line ->
-                if (declaration.containsMatchIn(line)) {
-                    "${file.relativeTo(root)}:${i + 1}: ${line.trim()}"
-                } else null
-            }
-        }
-        if (found.isNotEmpty()) {
-            throw GradleException(
-                "Singletons are not allowed in :core; inject an instance instead:\n" + found.joinToString(
-                    "\n"
-                )
-            )
-        }
-    }
-}
-
-tasks.check {
-    dependsOn(checkNoSingletons)
-}
+extra["abyssusSingletonExcludes"] = listOf<String>("net/nevinsky/abyssus/core/io/AbyssusProjectLayout.kt", "net/nevinsky/abyssus/core/io/GeometryUtils.kt")
+apply(from = rootProject.file("gradle/checks.gradle.kts"))

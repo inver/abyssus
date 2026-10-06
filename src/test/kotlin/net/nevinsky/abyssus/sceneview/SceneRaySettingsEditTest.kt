@@ -4,11 +4,17 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.SceneRayField
+import net.nevinsky.abyssus.editor.ray.RayDataEdit
+import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
+import net.nevinsky.abyssus.editor.ray.RayOpticalField
+import net.nevinsky.abyssus.filetype.SceneRayEdits
+
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 
 class SceneRaySettingsEditTest : BasePlatformTestCase() {
     private val original=SceneJson.pretty(SceneJson.parse("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxReflectionBounces":3},"other":2.500,"ecs":{"entities":{"0":{"components":{"RenderComponent":{}}}}}}"""))

@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.EditError
 import net.nevinsky.abyssus.EditOutcome
 import net.nevinsky.abyssus.FieldValue
 import net.nevinsky.abyssus.filetype.editSceneJson
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.AssetMetaEditor
 
 /** What came of one asset property edit. Only [Changed] wrote anything. */

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.core.assets.META_VERSION_DEFAULT
 import net.nevinsky.abyssus.core.assets.MetaType
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.NEW_TERRAIN_UV_DEFAULT
 import net.nevinsky.abyssus.TERRAIN_META_FILE_NAME_DEFAULT
 import net.nevinsky.abyssus.core.assets.terrain.SPLAT_FIELDS

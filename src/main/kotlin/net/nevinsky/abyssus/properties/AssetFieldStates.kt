@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.meta.AssetReferenceChoices
+import net.nevinsky.abyssus.editor.meta.AssetChoice
+
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle

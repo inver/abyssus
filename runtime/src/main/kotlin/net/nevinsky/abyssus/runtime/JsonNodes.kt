@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.runtime
 
+import net.nevinsky.abyssus.runtime.json.number
+
 import com.fasterxml.jackson.databind.JsonNode
 
 /** The child [name] unless it is absent or an explicit JSON null. */

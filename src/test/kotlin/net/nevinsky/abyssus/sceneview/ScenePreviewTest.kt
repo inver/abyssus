@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Quat
+import net.nevinsky.abyssus.editor.content.PlacementTransform
+
 import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.sceneview.gizmo.DragResult
 import org.junit.Assert.assertEquals

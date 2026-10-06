@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.filetype
 
+import net.nevinsky.abyssus.editor.document.SceneJson
+
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager

@@ -1,5 +1,7 @@
 package net.nevinsky.abyssus.core
 
+import net.nevinsky.abyssus.core.io.JsonProcessor
+
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.MetaType

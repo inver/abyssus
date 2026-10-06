@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos

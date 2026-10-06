@@ -6,9 +6,9 @@
 package net.nevinsky.abyssus.core.project
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.PROJECT_EXTENSION
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.SCENES_DIR
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.SCENE_EXTENSION
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.PROJECT_EXTENSION
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.SCENES_DIR
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.SCENE_EXTENSION
 import net.nevinsky.abyssus.core.scene.Scene
 import java.nio.file.Files
 import java.nio.file.Path

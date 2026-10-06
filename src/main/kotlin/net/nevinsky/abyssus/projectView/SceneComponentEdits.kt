@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.editor.content.RenderAsset
+
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -20,27 +22,25 @@ import net.nevinsky.abyssus.ecs.scene.SceneEntities
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.ecs.scene.LightEntities
 import net.nevinsky.abyssus.ecs.scene.LightPreset
-import net.nevinsky.abyssus.sceneview.Vec3
-import net.nevinsky.abyssus.properties.AssetMeta
-import net.nevinsky.abyssus.properties.loadAssetMeta
+import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.filetype.editSceneJson
 import net.nevinsky.abyssus.dto.MetaFiles
 import net.nevinsky.abyssus.dto.SceneDocumentCache
-
-/** A model or terrain a render component may show: [type] is `MODEL` or `TERRAIN`, [name] its asset folder. */
-data class RenderAsset(val type: String, val name: String)
 
 /**
  * Adds, changes and removes components of a scene's entities as undoable commands on the scene file. The rules are
  * [ComponentEditor]'s; nothing is written unless an edit comes back [EditResult.Changed].
  */
 object SceneComponentEdits {
+    private fun readMeta(folder: VirtualFile, metaFiles: MetaFiles) =
+        net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation { metaFiles.inEditor(folder) }.getOrNull()
+
     /** The models and terrains of the project [sceneFile] belongs to; empty for a scene outside a project. */
     fun renderAssets(sceneFile: VirtualFile, metaFiles: MetaFiles): List<RenderAsset> {
         val abss = ProjectLayout.abssFor(sceneFile) ?: return emptyList()
         return ProjectLayout.assetFolders(abss).mapNotNull { folder ->
-            val type = (loadAssetMeta(folder, metaFiles) as? AssetMeta.Loaded)?.type
+            val type = readMeta(folder, metaFiles)?.type
             if (type == MetaType.MODEL || type == MetaType.TERRAIN) RenderAsset(type.name, folder.name) else null
         }.sortedBy { it.name }
     }
@@ -52,7 +52,7 @@ object SceneComponentEdits {
     fun assetsByType(sceneFile: VirtualFile, metaFiles: MetaFiles): Map<String, Set<String>>? {
         val abss = ProjectLayout.abssFor(sceneFile) ?: return null
         return ProjectLayout.assetFolders(abss).mapNotNull { folder ->
-            (loadAssetMeta(folder, metaFiles) as? AssetMeta.Loaded)?.type?.let { it.name to folder.name }
+            readMeta(folder, metaFiles)?.type?.let { it.name to folder.name }
         }.groupBy({ it.first }, { it.second }).mapValues { it.value.toSortedSet() }
     }
 
@@ -96,7 +96,7 @@ object SceneComponentEdits {
     private fun terrainSize(sceneFile: VirtualFile, name: String, metaFiles: MetaFiles): Float? {
         val abss = ProjectLayout.abssFor(sceneFile) ?: return null
         val folder = ProjectLayout.assetFolders(abss).firstOrNull { it.name == name } ?: return null
-        val size = (loadAssetMeta(folder, metaFiles) as? AssetMeta.Loaded)?.json?.path("additional")?.path("size") ?: return null
+        val size = readMeta(folder, metaFiles)?.json?.path("additional")?.path("size") ?: return null
         return size.takeIf { it.isNumber }?.floatValue()
     }
 

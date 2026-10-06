@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.ui.thumbnail
+
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.progress.ProgressManager
@@ -26,7 +28,7 @@ import net.nevinsky.abyssus.core.assets.sky.hdr.HdrPreview
 /** The `meta.json` types of the assets a scene's `skyboxName` can name. */
 private val SKY_TYPES = setOf(MetaType.SKYBOX, MetaType.SKYBOX_PROCEDURAL, MetaType.SKYBOX_HDR)
 
-/** The OpenEXR sky pieces the chooser and the Properties panel need: a thumbnail. */
+/** The OpenEXR sky pieces the chooser and the Properties panel need: header dimensions and a thumbnail. */
 interface HdrPreviewSource {
     val preview: HdrPreview
 }
@@ -113,14 +115,16 @@ fun loadSkyboxChoices(project: Project, abss: VirtualFile, metaFiles: MetaFiles,
 
 /**
  * The `.exr` image an HDR sky folder uses: the file its `meta.json` names when the folder has it, else the first `.exr`
- * by name. The size is not read here (the chooser then shows no size): decoding an image for it would cost more than
- * listing the choices should.
+ * by name. Reads only its header for the original size; no image pixels are decoded. Call off the EDT.
  */
 fun hdrSkyInfo(folder: VirtualFile, meta: JsonNode?, source: HdrPreviewSource): HdrSkyInfo {
     val files = folder.children.filter { !it.isDirectory }.map { it.name }
     val named = meta?.obj("additional")?.text("file")?.takeIf { it in files }
     val file = named ?: files.sorted().firstOrNull { it.endsWith(".exr", ignoreCase = true) } ?: return HdrSkyInfo(null)
-    return HdrSkyInfo(file)
+    val dimensions = runCatchingKeepingCancellation {
+        source.preview.dimensions(java.io.File(folder.path, file))
+    }.getOrNull() ?: return HdrSkyInfo(file)
+    return HdrSkyInfo(file, dimensions.first, dimensions.second)
 }
 
 /** The `.abss` project of a scene's own `skyboxName` row, which is what gets the chooser; null for any other row. */

@@ -5,8 +5,8 @@
 package net.nevinsky.abyssus.runtime
 
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.core.FileLoader
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.FileLoader
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
 import net.nevinsky.abyssus.runtime.ecs.render.RenderComponent
@@ -29,7 +29,7 @@ class RuntimeSceneLoaderTest {
     private val json = JsonProcessor()
 
     private fun loader(
-        project: File = testProject("Untitled"),
+        project: File = testProject("Tree"),
         messages: MutableList<String> = mutableListOf(),
         registry: ComponentRegistry = ComponentRegistry { emptyList() },
     ) = RuntimeSceneLoader(json, FileLoader(project), warningsTo(messages), registry)
@@ -81,14 +81,14 @@ class RuntimeSceneLoaderTest {
 
     @Test
     fun unsavedTextLoadsWithoutReadingTheFile() {
-        val before = Files.readAllBytes(testProject("Untitled").toPath().resolve("scenes/$main"))
+        val before = Files.readAllBytes(testProject("Tree").toPath().resolve("scenes/$main"))
         val text = String(before).replace("Model 0", "Plane")
         val missingFolder = Files.createTempDirectory("runtime-unsaved")
         try {
             val loaded = requireNotNull(loader(missingFolder.toFile()).loadFromText(text))
             assertEquals("Plane", loaded.engine.ids[0]!!.getComponent(NameComponent::class.java).name)
             assertEquals((0..8).toSet(), loaded.engine.ids.ids)
-            assertArrayEquals(before, Files.readAllBytes(testProject("Untitled").toPath().resolve("scenes/$main")))
+            assertArrayEquals(before, Files.readAllBytes(testProject("Tree").toPath().resolve("scenes/$main")))
             assertFalse(Files.exists(missingFolder.resolve("scenes/$main")))
         } finally {
             Files.delete(missingFolder)
@@ -111,7 +111,7 @@ class RuntimeSceneLoaderTest {
         val temp = Files.createTempDirectory("runtime-scenes")
         try {
             Files.createDirectory(temp.resolve("scenes"))
-            Files.copy(testProject("Untitled").toPath().resolve("scenes/$main"), temp.resolve("scenes/$main"))
+            Files.copy(testProject("Tree").toPath().resolve("scenes/$main"), temp.resolve("scenes/$main"))
             Files.writeString(temp.resolve("scenes/Broken.scene"), "not JSON")
             val messages = mutableListOf<String>()
             val loader = loader(temp.toFile(), messages)
@@ -131,7 +131,7 @@ class RuntimeSceneLoaderTest {
         val pool = Executors.newFixedThreadPool(2)
         try {
             val logs = listOf(mutableListOf<String>(), mutableListOf<String>())
-            val loaders = listOf(loader(testProject("Untitled"), logs[0]), loader(testProject("Animated"), logs[1]))
+            val loaders = listOf(loader(testProject("Tree"), logs[0]), loader(testProject("Animated"), logs[1]))
             val names = listOf(main, "Main.scene")
             val loaded = pool.invokeAll(names.mapIndexed { i, name -> Callable { requireNotNull(loaders[i].load(name)) } })
                 .map { it.get() }

@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.ecs.scene
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -24,7 +24,7 @@ class SceneEntitiesTest {
 
     @Test
     fun theNextIdIsOneAboveTheHighestAndAnEmptySceneStartsAtZero() {
-        val main = SceneJson.parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
+        val main = SceneJson.parse(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
         assertEquals("9", SceneEntities.insert(main) { components("NameComponent") })
         assertTrue(main["ecs"]["9"]["components"].has("NameComponent"))
         val empty = SceneJson.parse("""{"format":"abyssus","formatVersion":1}""")

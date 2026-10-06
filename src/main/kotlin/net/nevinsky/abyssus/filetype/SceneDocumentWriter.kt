@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.filetype
 
+import net.nevinsky.abyssus.editor.document.SceneJson
+
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager

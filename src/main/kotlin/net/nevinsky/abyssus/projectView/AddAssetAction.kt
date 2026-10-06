@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.dto.SceneDocumentCache
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.Vec3
 
 /**
  * The project's models and terrains to place in [file]'s scene, under Models and Terrains, by folder name. The same
@@ -31,7 +31,7 @@ class AddAssetGroup(
     select: (String) -> Unit = { selectCreatedEntity(project, file, it) },
 ) : DefaultActionGroup(AbyssusBundle.message("addAssetTitle"), true), DumbAware {
     init {
-        val assets = SceneComponentEdits.renderAssets(file, service<AbyssusCore>().metaFiles)
+        val assets = SceneComponentEdits.renderAssets(file, service<AbyssusCore>().assets.metaFiles)
         for ((type, title) in listOf(MetaType.MODEL to "addAssetModels", MetaType.TERRAIN to "addAssetTerrains")) {
             val ofType = assets.filter { it.type == type.name }
             if (ofType.isEmpty()) continue
@@ -47,7 +47,7 @@ class AddAssetGroup(
                 }
 
                 override fun actionPerformed(e: AnActionEvent) {
-                    val added = SceneComponentEdits.addAsset(project, file, asset, position(), SceneDocumentCache.of(project), service<AbyssusCore>().metaFiles)
+                    val added = SceneComponentEdits.addAsset(project, file, asset, position(), SceneDocumentCache.of(project), service<AbyssusCore>().assets.metaFiles)
                     reportRejection(project, added.result)
                     added.entityId?.let(select)
                 }
@@ -61,7 +61,7 @@ internal fun canAddAsset(file: VirtualFile, cache: SceneDocumentCache): Boolean 
 
 /** Whether [file]'s project has a model or terrain to offer. */
 internal fun hasRenderAssets(file: VirtualFile): Boolean =
-    SceneComponentEdits.renderAssets(file, service<AbyssusCore>().metaFiles).isNotEmpty()
+    SceneComponentEdits.renderAssets(file, service<AbyssusCore>().assets.metaFiles).isNotEmpty()
 
 /** Add Asset on a scene row of the tree: the chosen asset is placed at the scene's origin. */
 open class AddAssetAction : AbyssusTreeAction<VirtualFile>() {

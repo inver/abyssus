@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Rgba
+
 import com.badlogic.gdx.math.collision.BoundingBox
 
 /** The highlight drawn around the selected entity: the twelve edges of its world bounds. */

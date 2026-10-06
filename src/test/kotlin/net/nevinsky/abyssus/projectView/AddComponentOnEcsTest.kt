@@ -16,20 +16,20 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import java.io.File
 
 /** Add Component... on a scene's `ecs` row: a new entity holding the chosen component. */
 class AddComponentOnEcsTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
 
-    private fun copyProject(sceneFixture: String = "Untitled/scenes/Main Scene.scene") {
+    private fun copyProject(sceneFixture: String = "Tree/scenes/Main Scene.scene") {
         val dir = "Untitled"
-        myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
+        myFixture.copyFileToProject("Tree/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject(sceneFixture, "$dir/scenes/Main Scene.scene")
-        File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
+        File("$testDataPath/Tree/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
             d.listFiles { f -> f.isFile && f.extension == "json" }!!.forEach {
-                myFixture.copyFileToProject("$dir/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
+                myFixture.copyFileToProject("Tree/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
             }
         }
     }

@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.core.assets.terrain
 
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.core.assets.testMetaLoader
 import net.nevinsky.abyssus.core.assets.testProject
 import org.junit.Assert.assertArrayEquals

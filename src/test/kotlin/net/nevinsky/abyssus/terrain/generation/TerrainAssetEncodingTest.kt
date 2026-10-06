@@ -9,10 +9,10 @@ import net.nevinsky.abyssus.TERRAIN_DATA_FILE
 import net.nevinsky.abyssus.terrain.TerrainAssetWriter
 import net.nevinsky.abyssus.terrain.TerrainHeightEncoder
 import net.nevinsky.abyssus.terrain.sha256Hex
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.terrain.TerrainLoader
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.terrain.noise.FastNoiseSamplerFactory
 import net.nevinsky.abyssus.testProject
 import org.junit.Assert.assertArrayEquals
@@ -63,7 +63,8 @@ class TerrainAssetEncodingTest {
     @Test
     fun `the fixture meta differs only in uv`() {
         val fixtureText = File(fixture, "meta.json").readText()
-        assertEquals(fixtureText.replace("\"uv\":60.0", "\"uv\":1.0"), writer.meta(java.util.UUID.fromString("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), 1699293063182L, 1600))
+        // The fixture is pretty printed; new asset metadata is compact, with the same field order and values.
+        assertEquals(json.readObject(fixtureText.replace("\"uv\": 60.0", "\"uv\": 1.0")).toString(), writer.meta(java.util.UUID.fromString("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), 1699293063182L, 1600))
     }
 
     @Test

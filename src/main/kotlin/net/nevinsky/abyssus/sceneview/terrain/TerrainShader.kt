@@ -16,7 +16,7 @@ import com.badlogic.gdx.math.Matrix3
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.sceneview.FogParams
 import net.nevinsky.abyssus.sceneview.LightSet
-import net.nevinsky.abyssus.sceneview.Rgba
+import net.nevinsky.abyssus.editor.content.Rgba
 import net.nevinsky.abyssus.sceneview.TerrainEntity
 import net.nevinsky.abyssus.core.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.core.shader.ShadowAtlasBindings

@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.games.controlline.flow
 
+import net.nevinsky.abyssus.games.controlline.input.HandleInput
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

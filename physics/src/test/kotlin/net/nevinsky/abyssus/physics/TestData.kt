@@ -4,8 +4,8 @@
  */
 package net.nevinsky.abyssus.physics
 
-import net.nevinsky.abyssus.core.JsonProcessor
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.runtime.SceneContext
 import net.nevinsky.abyssus.runtime.RuntimeSceneLoader
 import com.badlogic.ashley.core.Entity

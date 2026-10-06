@@ -27,11 +27,10 @@ Tests use plain JUnit and `testProject(name)` with Gradle's shared `abyssus.test
 `openspec/specs/scene-loading`.
 
 Native version 1 documents have root `format: "abyssus"` and integral `formatVersion: 1`; asset metadata's `version`
-is independent. The editor owns `AbyssusDocumentFormat` in its `format` package and guards its document readers and edits.
-The plain JVM `SceneLoader`, `ProjectLoader`, `AssetMetaLoader` and raw ECS helpers currently do not share that
-validator; callers must not assume they enforce native admission. This is a gap against the native document spec
-(see `docs/reviews/documentation-audit-2026-10-06.md`). `componentIdentifiers` and renderable `class` fields
-are forbidden by that contract. Asset renderables use `kind: "asset"`. Unknown native kinds keep their raw payload and do not render.
+is independent. `core.format.AbyssusDocumentFormat` guards JVM project, scene and metadata readers as well as editor reads and edits.
+Raw `EcsLoader` validates reserved fields before changing the engine; `EcsWriter` checks its completed output.
+Direct render serialization and deserialization reject renderable `class` fields. `componentIdentifiers` is also forbidden.
+Asset renderables use `kind: "asset"`. Unknown native kinds keep their raw payload and do not render.
 No importer is provided.
 
 ## Loading components: `EcsLoader`
@@ -117,8 +116,8 @@ no-argument constructor. Built-in codecs keep their names. A component is writte
 (`ecs.entities.<id>.components.PlaneComponent`) with no identifier table, and `EcsLoader` reads it by that name or by
 its fully qualified class name. A program that does not register a component keeps it raw and writes it back unchanged.
 
-`SchemaJson` is the one encoding of these values: `EcsWriter` (the game, with classes) and the editor (without)
-both go through it, and `SchemaJsonRoundTripTest` holds them to the same text.
+`SchemaJson` encodes and decodes editor values using exported schemas. Runtime `EcsWriter` binds game classes
+through Jackson; `SchemaJsonRoundTripTest` holds the two paths to the same text.
 
 **Exporting the schema** lets Abyssus edit the components without loading game classes. `SchemaExportMain` writes
 `<project>/abyssus/components.schema.json` (`SchemaFile`: stable bytes, version 1). Arguments: the
@@ -134,3 +133,14 @@ tasks.register<JavaExec>("exportComponentSchema") {
 ```
 
 Required behavior: `openspec/specs/custom-scene-components` and `openspec/specs/component-schemas`.
+
+## Adding a schema field type
+
+Field types retain their explicit switches: the DECIMAL/VECTOR handler prototype increased code size and was not
+adopted. Add the enum entry and value contract in `schema/ComponentSchema.kt`, Java inference and default conversion
+in `ComponentSchemaReader`, encode/decode handling in `SchemaJson`, and the editor field mapping in
+`src/main/kotlin/net/nevinsky/abyssus/ecs/scene/ComponentEditor.kt`. Update schema-file validation and UI handling
+where the new type needs them. Tests must cover inferred defaults, exact wire text, default omission, unusable input
+and applicable limits for every type.
+
+Built-in reserved component names live in `schema/BuiltInComponents.kt`; the shared JSON float spelling helper lives in `json/SceneNumbers.kt`. Schema decoding does not depend on the ECS loader.

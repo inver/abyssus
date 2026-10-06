@@ -16,8 +16,8 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.ecs.scene.LightEntities
 import net.nevinsky.abyssus.ecs.scene.LightPreset
-import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.document.SceneJson
+import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.dto.textOf
 import net.nevinsky.abyssus.SceneEcsPaths
 import net.nevinsky.abyssus.dto.SceneDocumentCache
@@ -31,7 +31,7 @@ class AddLightGroup(
 ) : DefaultActionGroup(AbyssusBundle.message("addLightTitle"), true), DumbAware {
     init {
         for (preset in LightPreset.entries) add(object : AnAction(AbyssusBundle.message(preset.labelKey)), DumbAware {
-            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+            override fun getActionUpdateThread() = ActionUpdateThread.BGT
             override fun update(e: AnActionEvent) {
                 e.presentation.isEnabled = canAddLight(file, SceneDocumentCache.of(project))
             }

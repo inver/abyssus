@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.raytracing
 
+import java.util.concurrent.CancellationException
+
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.raytracing.VulkanDeviceContext.Access
@@ -736,9 +738,8 @@ internal class VulkanRaySession(
                 uploadScene(RaySceneEncoding(scene).encode())
                 lastScene = scene
             }
-            enqueue(request.key, request.width, request.height, request.camera, scene.instances.map {
-                RaySliceInstance(it.mesh, it.transform().toList(), listOf(1f, 1f, 1f), primaryOnly = scene.materials[it.material].alphaMode == RayAlphaMode.BLEND)
-            }, scene = true, nativeCamera = request.nativeCamera())
+            enqueue(request.key, request.width, request.height, request.camera, request.instances(),
+                scene = true, nativeCamera = request.nativeCamera())
         }
     }
 
@@ -780,7 +781,13 @@ internal class VulkanRaySession(
         if (closed) return
         closed = true
         // Work in flight must finish before its buffers go away, except after a loss where waits could block.
-        if (pending != null && !backend.lost()) runCatching { waitForFence() }
+        if (pending != null && !backend.lost()) try {
+            waitForFence()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Throwable) {
+            // Disposal is best effort after a device/fence failure; cancellation still belongs to the caller.
+        }
         pending = null
         if (!backend.lost()) context.waitIdle(false)
         releaseFrame()

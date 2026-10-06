@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.schema
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 
 /** The `componentSchemas` extension point: a contribution is offered while its plugin is loaded, and only then. */
 class ComponentSchemaContributionTest : BasePlatformTestCase() {

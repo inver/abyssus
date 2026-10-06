@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.sceneview.gizmo
 
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.sceneview.LineSink
-import net.nevinsky.abyssus.sceneview.Rgba
+import net.nevinsky.abyssus.editor.content.Rgba
 import net.nevinsky.abyssus.sceneview.toVec3
 import net.nevinsky.abyssus.sceneview.toVector3
 import kotlin.math.PI

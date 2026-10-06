@@ -4,7 +4,7 @@ import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_INTENSITY
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_RANGE
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_CONE_ANGLE
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_EDGE_SOFTNESS
-import net.nevinsky.abyssus.runtime.ecs.number
+import net.nevinsky.abyssus.runtime.json.number
 import net.nevinsky.abyssus.runtime.ecs.colorNode
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.databind.node.ObjectNode

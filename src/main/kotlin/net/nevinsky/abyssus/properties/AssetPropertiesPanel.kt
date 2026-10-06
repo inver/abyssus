@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.meta.AssetChoice
+import net.nevinsky.abyssus.ui.thumbnail
+
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
@@ -38,7 +41,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.FieldKind
 import net.nevinsky.abyssus.FieldValue
 import net.nevinsky.abyssus.ParseOutcome

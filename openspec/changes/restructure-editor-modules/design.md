@@ -35,11 +35,20 @@ raytracing ---------------/        ^
 types) and Jackson. It never depends on the plugin. `physics-plugin` stays compile-only on `runtime`; it gains
 compile-only on `editor-core` only for the overlay types it already uses.
 
+Native admission remains in `core.format`: `AbyssusDocumentFormat`, `DocumentKind`, `FormatProblem`,
+`FormatRejection` and `UnsupportedDocumentFormat` are shared by core filesystem loaders, runtime ECS boundaries,
+the plugin and the headless API. The completed `share-native-document-validation` change established this ownership.
+Moving the implementation to `editor-core` would make `core` and `runtime` depend on their consumer and create
+module cycles. Keep the implementation and its core tests in `core`; move the existing editor-facing type aliases
+to `editor.document` with the parsing consumers. Aliases continue to name the same shared types; validation rules
+and rejection reasons stay unchanged. Neither `core` nor `runtime` depends on `editor-core`.
+
 ### D2. What goes where
 
 | Module / package | Contents (current location) |
 |---|---|
-| `editor-core` `…editor.document` | `SceneJson`, `JsonFormat`, `AbyssusDocumentFormat`, `DocumentParsing`, `AssetMetaReader`, `SceneDocument` (new, stage 2) |
+| `core` `…core.format` (retained) | `AbyssusDocumentFormat`, document/rejection types and core validation tests |
+| `editor-core` `…editor.document` | `SceneJson`, `JsonFormat`, editor-facing format type aliases, `DocumentParsing`, `AssetMetaReader`, `SceneDocument` (new, stage 2) |
 | `…editor.components` | `ComponentCodec`, built-in kinds, `SchemaCodec`, `ComponentEditor`, `ComponentReader`, `LightEntities`, schema merge |
 | `…editor.content` | `Vec3`, `Quat`, placements, `SceneContent`, `SceneRenderParams`, `PlacementMapper` |
 | `…editor.pick` | `ScenePicker`, `SceneQueries`, `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction`, `ScenePreview`, `SceneTransformWriter` |
@@ -63,7 +72,9 @@ only if the codec layer grows a second copy of component rules.
 
 A small immutable read facade over a parsed `JsonNode` root:
 `entities(): List<EntityView>`, `EntityView.component<C>()`, `lookAtTarget(entityId)`, `renderAsset(entityId)`,
-`skybox()`. It is the only owner of the strings `ecs`, `entities`, `components`. `SceneEcsPaths` becomes private to it.
+`skybox()`. It owns the editor's entity traversal and addressing layout (`ecs`, `entities`, `components`);
+the shared validator in `core.format` retains the reserved-field paths it needs for native admission.
+`SceneEcsPaths` becomes private to `SceneDocument`.
 Writers still mutate the tree directly, but obtain paths from the same class (`SceneDocument.locate(entityId)`), so
 the layout has one definition. Tests: build it from the Untitled fixture and compare with `SceneContent` output
 before the switch (same entities, same values), then switch callers one at a time.
@@ -84,7 +95,8 @@ before the switch (same entities, same values), then switch callers one at a tim
 ### D6. The shared root package (S5)
 
 Move `AbyssusProjectLayout`, `FileLoader`, `GeometryUtils` and `JsonProcessor` from `net.nevinsky.abyssus.core` to
-`net.nevinsky.abyssus.core.io` (and `…core.project` for the layout). After that `net.nevinsky.abyssus.core` itself
+`net.nevinsky.abyssus.core.io`, including the layout constants. `core.project` contains loaders that use the IO
+helpers; placing the constants there would introduce `io → project → io`, so the constants share the IO leaf. After that `net.nevinsky.abyssus.core` itself
 exists only in `gdx-model`. Renaming `gdx-model`'s packages is a larger mechanical change (51 importing files) with
 a clear gain only if the module is published; recorded as Open Question 1.
 
@@ -95,6 +107,29 @@ One slice at a time, in this order: document → components → content → pick
 rename so imports update, (4) run `./gradlew check`, (5) one commit. A slice that needs a class from a later slice
 takes only the interface (placed in the earlier module) and leaves the implementation behind.
 
+Overlap order recorded before extraction (2026-10-06), from
+`rg -l 'sceneview|RaySceneSnapshot|ComponentEditor|PanelState' openspec/changes/*/tasks.md`:
+
+| Change | Order relative to stage 3 |
+|---|---|
+| `repair-ray-editor-regressions` | Lands first; implementation and tasks already complete. |
+| `repair-native-test-regressions` | Lands first; implementation and tasks already complete. |
+| `add-scene-asset-entities` | Lands first; implementation complete, remaining manual verification stays with that change. |
+| `add-scene-raytracing` | Existing implemented tasks land first; remaining work rebases onto extracted paths. |
+| `add-scene-raytracing-settings` | Existing implemented tasks land first; remaining work rebases onto extracted paths. |
+| `add-project-fps-counter` | Rebases onto extracted paths before implementation. |
+| `add-sky-clouds` | Rebases onto extracted paths before implementation. |
+| `add-scene-view-antialiasing` | Rebases onto extracted paths before implementation. |
+| `add-cloud-scene-lighting` | Rebases onto extracted paths before implementation. |
+| `add-realistic-water` | Rebases onto extracted paths before implementation. |
+| `merge-physics-into-abyssus` | Rebases onto extracted paths before implementation; extension packaging follows D1. |
+| `restructure-editor-modules` | This change owns extraction. |
+
+The scan lists planning artifacts, not separate Git branches: “rebases” means subsequent implementation uses the
+new module/package paths. Already implemented work is present in this checkout. Re-scan before stage 3 for newly
+overlapping work. `add-remote-asset-library` and `add-weather-preset-creation`, named in the proposal, also adopt the
+new paths when implemented even though their task text does not match this scan.
+
 ### D8. Testing
 
 Tests that need no IDE fixture move to `editor-core/src/test` and run as plain JUnit; shared fixtures keep coming from
@@ -103,10 +138,24 @@ the tree stay in the plugin. New: a parity test per slice (same Untitled fixture
 move), `checkPackageCycles`, and a classpath test that `editor-core` has no `com.intellij` class (a resource scan of
 its runtime classpath).
 
+The document slice also runs `:core:test` and `:runtime:test` to retain admission at filesystem and raw ECS
+boundaries. Its editor parsing tests use the shared validator through the moved aliases; the headless refusal
+parity test compares the same rejection reason with the plugin. Verify that the build introduces no dependency
+from `core` or `runtime` to `editor-core` and no second validator implementation.
+
 ### D9. Stage 4 criteria (`editor-render`)
 
 Extract only when a concrete user exists: a standalone viewer app, GL tests without the IDE test framework, or build
 time dominated by the render code. If none holds at that point, record "not needed" and stop.
+
+### D10. Remove pre-existing library and game cycles
+
+The user authorized removing all scanned package cycles (2026-10-06), including the baseline cycles outside the
+editing engine. Keep this behavior-preserving: place the Assimp conversion pipeline under `core.assimp` beside its
+model consumers; let runtime schemas own reserved built-in names and share numeric JSON spelling through `runtime.json`;
+place `FlightReport` with flight and `HandleInput` in input so game flow and flight depend in one direction.
+Verify these moves with the existing `:gdx-model:test`, `:runtime:test` and `:games:control-line:test` suites and the
+cycle guard with their allowlist entries removed. The end-of-stage-1 allowlist remains entirely empty.
 
 ## Risks / Trade-offs
 

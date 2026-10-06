@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.runtime.ecs
 
+import net.nevinsky.abyssus.runtime.json.number
+
+import net.nevinsky.abyssus.core.format.AbyssusDocumentFormat
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.databind.InjectableValues
@@ -50,6 +53,7 @@ class EcsLoader(
     private val resolver: AssetResolver = AssetResolver { _, _ -> null },
     private val log: Logger,
     game: GameComponents = GameComponents(),
+    private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
 ) {
     /**
      * A copy of the caller's mapper set up for components (see [forEcs]) that also merges an object into the value a
@@ -65,6 +69,7 @@ class EcsLoader(
     fun componentClass(key: String): Class<out Component>? = types.resolve(key)
 
     fun load(ecs: JsonNode, engine: SceneEngine): SceneEcsDocument {
+        format.requireEcs(ecs)
         val warnings = SceneEcsWarnings(log)
         val reader = mapper.reader(
             InjectableValues.Std()

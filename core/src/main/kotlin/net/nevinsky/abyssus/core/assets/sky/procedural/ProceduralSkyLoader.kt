@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.core.assets.sky.procedural
 
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.loading.AssetLoader

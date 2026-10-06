@@ -4,8 +4,13 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.SceneRaySettingsCodec
+
+import net.nevinsky.abyssus.editor.content.PlacementTransform
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File

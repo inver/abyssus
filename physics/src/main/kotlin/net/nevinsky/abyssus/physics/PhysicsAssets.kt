@@ -9,8 +9,8 @@ import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.core.FileLoader
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.FileLoader
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.core.assets.loading.CompositeAssetLoader

@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Rgba
+
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera

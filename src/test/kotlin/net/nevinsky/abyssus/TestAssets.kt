@@ -1,11 +1,11 @@
 package net.nevinsky.abyssus
 
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.core.assets.Asset
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.MetaType
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.core.assets.terrain.TerrainLoader

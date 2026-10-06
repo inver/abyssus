@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.properties
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.core.assets.MetaType
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import java.io.File
 import java.time.ZoneOffset
 import net.nevinsky.abyssus.testMetaFiles

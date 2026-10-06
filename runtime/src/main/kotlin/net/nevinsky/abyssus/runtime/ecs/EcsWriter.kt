@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.runtime.ecs
 
+import net.nevinsky.abyssus.runtime.json.number
+
+import net.nevinsky.abyssus.core.format.AbyssusDocumentFormat
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.databind.JsonNode
@@ -35,6 +38,7 @@ import net.nevinsky.abyssus.runtime.schema.GameComponents
 class EcsWriter(
     mapper: ObjectMapper,
     game: GameComponents = GameComponents(),
+    private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
 ) {
     private val mapper: ObjectMapper = mapper.forEcsWriting()
     private val types = ComponentTypes(game)
@@ -43,10 +47,14 @@ class EcsWriter(
     fun write(engine: SceneEngine, document: SceneEcsDocument): ObjectNode {
         val entities = nodes.objectNode()
         for ((id, entity) in byId(engine)) entities.set<JsonNode>(id.toString(), writeEntity(id, entity, document))
-        if (!document.wrapped) return entities
+        if (!document.wrapped) {
+            format.requireEcs(entities)
+            return entities
+        }
         val out = nodes.objectNode()
         out.set<JsonNode>("entities", entities)
         document.extras.forEach { (key, node) -> out.set<JsonNode>(key, node) }
+        format.requireEcs(out)
         return out
     }
 

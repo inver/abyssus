@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.runtime.ecs
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.scene.Color
 import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
 import net.nevinsky.abyssus.runtime.ecs.component.LightComponent

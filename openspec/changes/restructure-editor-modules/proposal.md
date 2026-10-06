@@ -19,6 +19,10 @@ structure problem. Findings, each measured on this checkout:
 
 ## What Changes
 
+The completed `share-native-document-validation` prerequisite places `AbyssusDocumentFormat` and its rejection
+types in `core.format`, shared by editor, filesystem and runtime callers. That implementation and its core tests
+stay in `core`; stage 3 moves only the editor-facing format aliases and parsing consumers into `editor-core`.
+
 Behavior-preserving, in four stages. Each stage ends with `./gradlew check` green and is its own set of commits, so
 the work can stop after any stage.
 
@@ -30,7 +34,7 @@ the work can stop after any stage.
   typed component access through the existing codecs, `lookAt` resolution, and the only code that knows the
   `ecs.entities.<id>.components` layout. `SceneContent`, `RaySceneSnapshot`, `PanelState`, the tree and the writers
   use it. The JSON tree, key order and number text stay the document's own; no new write path.
-- **Stage 3: extract `editor-core`, a plain JVM module (S1, S2).** Move, in dependency order, the format and JSON
+- **Stage 3: extract `editor-core`, a plain JVM module (S1, S2).** Move, in dependency order, the editor format aliases and JSON
   layer, components and schemas editing, terrain generation, asset meta editing, scene content, picking, gizmo math,
   transform edits and the ray tracing bridge. The module depends on `core`, `runtime`, `raytracing` and `gdx-model`
   and may not import IntelliJ, Swing or AWT (the Gradle classpath enforces it). The plugin keeps only IDE glue:
@@ -76,6 +80,8 @@ None. Everything else is a regression check: `scene-component-editing`, `scene-o
   (the Swing, tree and IDE-fixture tests stay).
 - **Imports** change in most plugin files (package rename); no logic change.
 - **Interaction with other work:**
+  - `share-native-document-validation` is implemented first. Preserve its shared `core.format` validator and
+    rejection types; `core` and `runtime` must not gain a dependency on `editor-core`.
   - `refactor-solid-dedup` runs first for phases 1–3 and 5 (they are small and make the moves cleaner); its phases 4 and
     7 (split `SceneViewPanel`, `ComponentEditor.kt`) are folded into stage 3 here and should not be done twice. Its
     task list says so.

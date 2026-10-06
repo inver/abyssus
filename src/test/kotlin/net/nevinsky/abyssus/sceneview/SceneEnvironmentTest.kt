@@ -1,5 +1,7 @@
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Rgba
+
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

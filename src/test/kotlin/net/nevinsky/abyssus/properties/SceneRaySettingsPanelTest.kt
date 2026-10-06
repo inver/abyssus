@@ -7,8 +7,8 @@ package net.nevinsky.abyssus.properties
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBTextField
-import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.sceneview.SceneRayControls
+import net.nevinsky.abyssus.editor.document.SceneJson
+import net.nevinsky.abyssus.SceneRayControls
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JLabel

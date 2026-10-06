@@ -5,10 +5,13 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Rgba
+import net.nevinsky.abyssus.editor.content.LightKind
+
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.ecs.scene.ComponentEditor
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -16,12 +19,12 @@ import java.io.File
 
 /** The scene view and the Properties panel read an entity through the same codecs, so they show the same values. */
 class SceneEntityParityTest {
-    private val fixture = File("src/test/testData/project/Untitled/scenes/Main Scene.scene")
+    private val fixture = File("src/test/testData/project/Tree/scenes/Main Scene.scene")
 
     /** A copy of `Main Scene` in memory: entity 7 gets a LightComponent and a spotlight 8 omits range, cone and softness. */
     private fun scene(): ObjectNode {
         val root = SceneJson.parse(fixture.readText()) as ObjectNode
-        val entities = root.get("ecs").get("entities") as ObjectNode
+        val entities = root.get("ecs") as ObjectNode
         (entities.get("7").get("components") as ObjectNode).set<JsonNode>(
             "LightComponent",
             SceneJson.parse("""{"light":{"color":{"r":1,"g":0.96,"b":0.84,"a":1},"intensity":1.2}}"""),
@@ -86,7 +89,7 @@ class SceneEntityParityTest {
     @Test
     fun aTextualHandleTargetIsReadTheSameWay() {
         val root = scene()
-        val entities = root.get("ecs").get("entities") as ObjectNode
+        val entities = root.get("ecs") as ObjectNode
         entities.set<JsonNode>("h", SceneJson.parse("""{"archetype":1,"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}}"""))
         ((entities.get("7").get("components") as ObjectNode).get("PositionComponent") as ObjectNode).put("lookAtId", "h")
         val content = SceneContent.of(parseScene(root.toString()))

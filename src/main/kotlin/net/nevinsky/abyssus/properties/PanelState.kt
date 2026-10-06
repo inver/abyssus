@@ -5,8 +5,11 @@
 
 package net.nevinsky.abyssus.properties
 
-import net.nevinsky.abyssus.sceneview.SceneRaySettingsState
-import net.nevinsky.abyssus.sceneview.SceneRaySettingsCodec
+import net.nevinsky.abyssus.editor.meta.AssetReferenceChoices
+import net.nevinsky.abyssus.ui.thumbnail
+
+import net.nevinsky.abyssus.editor.ray.SceneRaySettingsState
+import net.nevinsky.abyssus.editor.ray.SceneRaySettingsCodec
 import net.nevinsky.abyssus.format.DocumentKind
 import net.nevinsky.abyssus.format.AbyssusDocumentFormat
 import java.io.File
@@ -14,7 +17,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.SKYBOX_FACES
@@ -23,18 +26,18 @@ import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.textOf
 import net.nevinsky.abyssus.ecs.scene.FieldKind
 import net.nevinsky.abyssus.ecs.scene.FieldValue
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.projectView.*
 import net.nevinsky.abyssus.SceneEcsPaths
-import net.nevinsky.abyssus.sceneview.RayDataError
-import net.nevinsky.abyssus.sceneview.RayMaterialIdentity
-import net.nevinsky.abyssus.sceneview.RayMaterialOverrides
-import net.nevinsky.abyssus.sceneview.RayOpticalField
+import net.nevinsky.abyssus.editor.ray.RayDataError
+import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
+import net.nevinsky.abyssus.editor.ray.RayMaterialOverrides
+import net.nevinsky.abyssus.editor.ray.RayOpticalField
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
-import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
 
 /** What the panel shows. */
 sealed interface PanelState {
@@ -255,46 +258,6 @@ private fun faces(folder: VirtualFile, meta: AssetMeta.Loaded): List<FaceCell> {
         FaceCell(face, file ?: AbyssusBundle.message("dtoNullValue"), file?.let { thumbnail(folder, it) })
     }
 }
-
-/** The file [fileName] in [folder], or null when the folder is gone or holds no such file (a directory does not count). */
-private fun imageFile(folder: VirtualFile, fileName: String): VirtualFile? =
-    folder.takeIf { it.isValid }?.findChild(fileName)?.takeIf { it.isValid && !it.isDirectory }
-
-private fun thumbnail(
-    folder: VirtualFile,
-    fileName: String,
-    maxWidth: Int = THUMBNAIL_WIDTH,
-    maxHeight: Int = THUMBNAIL_HEIGHT
-): BufferedImage? = runCatchingKeepingCancellation {
-    val file = imageFile(folder, fileName) ?: return@runCatchingKeepingCancellation null
-    val source =
-        ImageIO.read(ByteArrayInputStream(file.contentsToByteArray())) ?: return@runCatchingKeepingCancellation null
-    scaled(source, maxWidth, maxHeight)
-}.getOrNull()
-
-private fun scaled(source: BufferedImage, maxWidth: Int, maxHeight: Int): BufferedImage {
-    val ratio = minOf(maxWidth.toDouble() / source.width, maxHeight.toDouble() / source.height, 1.0)
-    val w = maxOf(1, (source.width * ratio).toInt())
-    val h = maxOf(1, (source.height * ratio).toInt())
-    val out = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
-    out.createGraphics().apply {
-        setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
-        drawImage(source, 0, 0, w, h, null)
-        dispose()
-    }
-    return out
-}
-
-/** A tone-mapped thumbnail at most [width] wide of the OpenEXR image [fileName] in [folder], or null when it is absent or unreadable. Off the EDT. */
-fun hdrThumbnail(folder: VirtualFile, fileName: String, width: Int, preview: HdrPreview): BufferedImage? =
-    runCatchingKeepingCancellation {
-        val file = imageFile(folder, fileName) ?: return@runCatchingKeepingCancellation null
-        preview.image(File(file.path), width)
-    }.getOrNull()
-
-/** A small square-bounded thumbnail of the image [fileName] in [folder], or null when it is absent or cannot be decoded. Safe off the EDT. */
-fun smallThumbnail(folder: VirtualFile, fileName: String, size: Int): BufferedImage? =
-    thumbnail(folder, fileName, size, size)
 
 private fun readTerrainNow(
     folder: VirtualFile,

@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.terrain.generation
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.terrain.sha256Hex
 import net.nevinsky.abyssus.terrain.noise.FAST_NOISE_LITE_REVISION

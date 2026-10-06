@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.AssetPlacement
+
 import com.badlogic.gdx.math.collision.BoundingBox
 import net.nevinsky.abyssus.core.AnimationController
 import net.nevinsky.abyssus.core.ModelInstance

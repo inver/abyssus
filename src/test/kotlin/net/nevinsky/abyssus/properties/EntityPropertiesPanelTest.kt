@@ -16,7 +16,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.projectView.AbyssusRootNode
 import net.nevinsky.abyssus.projectView.AbyssusSelection
@@ -92,7 +92,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
 
     private fun text(f: VirtualFile) = FileDocumentManager.getInstance().getDocument(f)!!.text
 
-    private fun components(f: VirtualFile, id: String) = SceneJson.parse(text(f))["ecs"]["entities"][id]["components"]
+    private fun components(f: VirtualFile, id: String) = net.nevinsky.abyssus.SceneEcsPaths().components(SceneJson.parse(text(f)), id)!!
 
     fun testEntityShowsItsComponents() {
         copyProject()
@@ -266,7 +266,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
                 assertTrue((named(p, "error-LightComponent-coneAngle") as JBLabel).text.contains("180"))
                 val doc = FileDocumentManager.getInstance().getDocument(f)!!
                 val root = SceneJson.parse(doc.text)
-                (root["ecs"]["entities"]["0"]["components"]["LightComponent"]["light"] as com.fasterxml.jackson.databind.node.ObjectNode).put("coneAngle", 60)
+                (net.nevinsky.abyssus.SceneEcsPaths().components(root, "0")!!["LightComponent"]["light"] as com.fasterxml.jackson.databind.node.ObjectNode).put("coneAngle", 60)
                 WriteCommandAction.runWriteCommandAction(project) { doc.setText(SceneJson.inStyleOf(doc.text, root)) }
                 assertEquals("60", (named(p, "field-LightComponent-coneAngle") as JBTextField).text)
             }
@@ -299,7 +299,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         p.show(component("0", "TypeComponent"))
         val doc = FileDocumentManager.getInstance().getDocument(sceneFile())!!
         val root = SceneJson.parse(doc.text)
-        (root["ecs"]["entities"]["0"]["components"] as com.fasterxml.jackson.databind.node.ObjectNode).remove("TypeComponent")
+        net.nevinsky.abyssus.SceneEcsPaths().components(root, "0")!!.remove("TypeComponent")
         WriteCommandAction.runWriteCommandAction(project) { doc.setText(SceneJson.inStyleOf(doc.text, root)) }
         val state = p.state as PanelState.Empty
         assertTrue(state.message, state.message.contains("no longer has"))

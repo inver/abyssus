@@ -7,7 +7,7 @@ package net.nevinsky.abyssus
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.core.assets.MetaType
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -31,7 +31,7 @@ class AssetMetaEditorTest {
     private fun rejected(outcome: EditOutcome): EditError = (outcome as EditOutcome.Rejected).error
 
     @Test fun legacyMetadataIsRefusedWithoutMutation() {
-        val root = net.nevinsky.abyssus.core.JsonProcessor().readObject("""{"type":"TERRAIN","additional":{"size":100}}""")
+        val root = net.nevinsky.abyssus.core.io.JsonProcessor().readObject("""{"type":"TERRAIN","additional":{"size":100}}""")
         val before = root.toString()
         val outcome = AssetMetaEditor(AssetFieldDescriptions()).edit(root, "size", FieldValue.Int(100), FieldValue.Int(200))
         org.junit.Assert.assertTrue(outcome is EditOutcome.Rejected)

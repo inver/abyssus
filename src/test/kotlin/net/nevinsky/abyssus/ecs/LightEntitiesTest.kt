@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.ecs
 
+import net.nevinsky.abyssus.core.io.JsonProcessor
+
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
@@ -11,11 +13,11 @@ import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
 import net.nevinsky.abyssus.ecs.scene.*
 import net.nevinsky.abyssus.runtime.ecs.scene.*
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.parseScene
-import net.nevinsky.abyssus.sceneview.LightKind
+import net.nevinsky.abyssus.editor.content.LightKind
 import net.nevinsky.abyssus.sceneview.SceneContent
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.Vec3
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
@@ -63,7 +65,7 @@ class LightEntitiesTest {
             assertEquals(100f, light.range, 0f)
             if (preset == LightPreset.SUN) { assertTrue(light.intensity > 1f); assertTrue(light.color.b < light.color.r) }
             val engine = SceneEngine()
-            val document = net.nevinsky.abyssus.runtime.ecs.EcsLoader(net.nevinsky.abyssus.core.JsonProcessor().mapper, log = org.slf4j.helpers.NOPLogger.NOP_LOGGER).load(root["ecs"], engine)
+            val document = net.nevinsky.abyssus.runtime.ecs.EcsLoader(net.nevinsky.abyssus.core.io.JsonProcessor().mapper, log = org.slf4j.helpers.NOPLogger.NOP_LOGGER).load(root["ecs"], engine)
             assertTrue(document.warnings.toString(), document.warnings.isEmpty())
             val entity = engine.ids[0]!!
             assertNotNull(entity.getComponent(NameComponent::class.java))

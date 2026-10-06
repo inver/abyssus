@@ -10,8 +10,8 @@ import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.terrain.generation.RecipeStatus
 import net.nevinsky.abyssus.terrain.generation.SourceSnapshot
-import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.properties.AssetReferenceChoices
+import net.nevinsky.abyssus.editor.document.SceneJson
+import net.nevinsky.abyssus.editor.meta.AssetReferenceChoices
 import java.io.File
 
 class NativeTerrainSourceTest : BasePlatformTestCase() {

@@ -223,9 +223,7 @@ class MetalRaySession internal constructor(
             RaySceneEncoding(scene).encode().let { bridge.setSceneData(handle,it.floats,it.bytes) }
             lastScene=scene
         }
-        submit(request.key,request.width,request.height,request.camera,scene.instances.map {
-            RaySliceInstance(it.mesh,it.transform().toList(),listOf(1f,1f,1f),primaryOnly=scene.materials[it.material].alphaMode==RayAlphaMode.BLEND)
-        }, request.nativeCamera())
+        submit(request.key,request.width,request.height,request.camera,request.instances(), request.nativeCamera())
     }
 
     override fun dispose() {

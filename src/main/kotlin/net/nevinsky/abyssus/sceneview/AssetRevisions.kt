@@ -9,10 +9,10 @@ import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.core.assets.terrain.SPLAT_FIELDS
 import net.nevinsky.abyssus.dto.AssetMetaReader
 import net.nevinsky.abyssus.core.assets.MetaType
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.terrain.sha256Hex
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.runtime.obj
 import net.nevinsky.abyssus.runtime.text
 import java.io.File

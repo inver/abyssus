@@ -35,11 +35,11 @@ import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.assetfiles.LocalAssetFileStore
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.core.assets.displayMessage
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.core.flightgear.FlightGearArchive
-import net.nevinsky.abyssus.filetype.documentDisplayMessage
+import net.nevinsky.abyssus.ui.documentDisplayMessage
 import net.nevinsky.abyssus.core.flightgear.FlightGearImportRequest
 import net.nevinsky.abyssus.core.flightgear.FlightGearInspection
 import net.nevinsky.abyssus.terrain.message

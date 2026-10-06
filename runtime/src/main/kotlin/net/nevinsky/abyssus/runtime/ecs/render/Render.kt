@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import net.nevinsky.abyssus.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.core.ModelBatch
 import net.nevinsky.abyssus.core.ModelInstance
 import net.nevinsky.abyssus.core.RenderableProvider
@@ -110,9 +111,11 @@ private data class AssetData(val type: MetaType? = null, val assetName: String? 
  * an asset the project lacks loads without a renderable and keeps the file's `renderable` object, which is written back.
  */
 class RenderComponentDeserializer : StdDeserializer<RenderComponent>(RenderComponent::class.java) {
+    private val format = AbyssusDocumentFormat()
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): RenderComponent {
         val node: JsonNode = p.readValueAsTree()
         val raw = node.get("renderable")?.takeIf { it.isObject } ?: return RenderComponent()
+        format.requireRenderable(raw)
         val resolver = ctxt.findInjectableValue(AssetResolver::class.java.name, null, null) as AssetResolver
         val warnings = ctxt.findInjectableValue(SceneEcsWarnings::class.java.name, null, null) as SceneEcsWarnings
         val data = ctxt.readTreeAsValue(raw, RenderableData::class.java)
@@ -141,10 +144,12 @@ class RenderComponentDeserializer : StdDeserializer<RenderComponent>(RenderCompo
  * file's own `renderable` object.
  */
 class RenderComponentSerializer : StdSerializer<RenderComponent>(RenderComponent::class.java) {
+    private val format = AbyssusDocumentFormat()
     override fun serialize(component: RenderComponent, gen: JsonGenerator, provider: SerializerProvider) {
         val nodes = JsonNodeFactory.instance
         val renderable = component.renderable
         val raw = component.raw
+        raw?.let(format::requireRenderable)
         if (renderable !is RenderableObjectDelegate) {
             gen.writeTree(nodes.objectNode().putIf("renderable", raw))
             return

@@ -6,8 +6,8 @@ package net.nevinsky.abyssus.games.controlline.flight
 
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.games.controlline.flow.FlightReport
-import net.nevinsky.abyssus.games.controlline.flow.HandleInput
+import net.nevinsky.abyssus.games.controlline.flight.FlightReport
+import net.nevinsky.abyssus.games.controlline.input.HandleInput
 import net.nevinsky.abyssus.physics.MAX_STEPS_PER_ADVANCE
 import net.nevinsky.abyssus.physics.PHYSICS_STEP
 import net.nevinsky.abyssus.physics.PhysicsAssets

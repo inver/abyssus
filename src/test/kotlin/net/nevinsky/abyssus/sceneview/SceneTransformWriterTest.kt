@@ -5,8 +5,11 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Vec3
+import net.nevinsky.abyssus.editor.content.Quat
+
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -17,7 +20,7 @@ import java.io.File
 class SceneTransformWriterTest {
     private val text = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
 
-    private fun components(root: JsonNode, id: String) = root.get("ecs").get("entities").get(id).get("components")
+    private fun components(root: JsonNode, id: String) = net.nevinsky.abyssus.SceneEcsPaths().components(root, id)!!
 
     @Test
     fun droppingAModelChangesOnlyYAndPreservesNumberText() {
@@ -200,7 +203,7 @@ class SceneTransformWriterTest {
     @Test
     fun aRotationAppendsFourRotationFieldsAndNothingElse() {
         val expected = original().replace(
-            """"z":-3.2570944}},"Render""", """"z":-3.2570944},"localRotation":{"x":0.0,"y":0.7071,"z":0.0,"w":0.7071}},"Render""",
+            """"z":-3.2570944}},"RenderComponent""", """"z":-3.2570944},"localRotation":{"x":0.0,"y":0.7071,"z":0.0,"w":0.7071}},"RenderComponent""",
         )
         assertEquals(expected, written("0", TransformEdit(rotation = Quat(0f, 0.7071f, 0f, 0.7071f))))
     }

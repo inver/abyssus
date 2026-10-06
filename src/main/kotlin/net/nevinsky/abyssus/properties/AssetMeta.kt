@@ -10,9 +10,9 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.dto.MetaFiles
-import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
 
 sealed interface AssetMeta {
     /** The asset's `meta.json` as a table: [type] is the Meta `type` ([MetaType.UNKNOWN] when absent, not text or not known). */

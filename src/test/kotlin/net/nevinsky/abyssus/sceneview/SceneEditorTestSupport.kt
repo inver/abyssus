@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.SceneRayControls
+
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -16,5 +18,6 @@ internal fun newSceneEditor(
     project: Project,
     file: VirtualFile,
     paramsSource: SceneParamsSource = SceneParamsSource.editorText(service<SceneReader>()),
+    host: SceneViewHost = net.nevinsky.abyssus.projectView.ProjectSceneViewHost(project),
     viewFactory: (SceneRenderParams) -> SceneView,
-) = SceneFileEditor(project, file, service<AbyssusCore>().json, project.service<SceneRayControls>(), paramsSource, viewFactory)
+) = SceneFileEditor(project, file, service<AbyssusCore>().json, project.service<SceneRayControls>(), paramsSource, host, viewFactory)

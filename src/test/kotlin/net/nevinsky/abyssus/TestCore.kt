@@ -5,10 +5,12 @@
 
 package net.nevinsky.abyssus
 
+import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
+
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import net.nevinsky.abyssus.properties.PanelServices
-import net.nevinsky.abyssus.sceneview.SceneRayControls
+import net.nevinsky.abyssus.SceneRayControls
 
 /** The collaborators production code is handed by its provider, factory or action, for tests that call it directly. */
 internal val testCore: AbyssusCore get() = service()
@@ -17,7 +19,7 @@ internal fun testMetaFiles() = testCore.metaFiles
 
 internal fun testPanelServices(
     project: Project,
-    rayMaterials: (java.io.File, String) -> List<net.nevinsky.abyssus.sceneview.RayMaterialIdentity>? = { _, _ -> null },
+    rayMaterials: (java.io.File, String) -> List<net.nevinsky.abyssus.editor.ray.RayMaterialIdentity>? = { _, _ -> null },
 ) = testCore.let {
     PanelServices(
         it.metaFiles, it.hdrPreviews, it.json, it.assetFields, it.assetEditor,

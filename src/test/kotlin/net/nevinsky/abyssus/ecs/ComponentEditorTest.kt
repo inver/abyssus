@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.ecs
 
+import net.nevinsky.abyssus.core.io.JsonProcessor
+
 import com.fasterxml.jackson.databind.JsonNode
 import java.io.File
 import net.nevinsky.abyssus.runtime.ecs.EcsConfigurator
@@ -13,7 +15,7 @@ import net.nevinsky.abyssus.ecs.scene.ComponentEditor
 import net.nevinsky.abyssus.ecs.scene.EditResult
 import net.nevinsky.abyssus.ecs.scene.FieldKind
 import net.nevinsky.abyssus.runtime.schema.SchemaFile
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -271,8 +273,8 @@ class ComponentEditorTest {
         assertEquals(EditResult.Changed, editor.update(root, "4", "CameraComponent", "camera.fieldOfView", "50"))
         assertEquals(EditResult.Changed, editor.remove(root, "0", "LightComponent"))
         // camera field changed; everything else equals the original
-        (root["ecs"]["entities"]["4"]["components"]["CameraComponent"]["camera"] as com.fasterxml.jackson.databind.node.ObjectNode)
-            .set<JsonNode>("fieldOfView", original["ecs"]["entities"]["4"]["components"]["CameraComponent"]["camera"]["fieldOfView"])
+        (root["ecs"]["4"]["components"]["CameraComponent"]["camera"] as com.fasterxml.jackson.databind.node.ObjectNode)
+            .set<JsonNode>("fieldOfView", original["ecs"]["4"]["components"]["CameraComponent"]["camera"]["fieldOfView"])
         assertEquals(original.toString(), root.toString())
     }
 
@@ -284,7 +286,7 @@ class ComponentEditorTest {
         editor.update(root, "4", "CameraComponent", "camera.near", "0.25")
         editor.update(root, "0", "PositionComponent", "localPosition.y", "2.5")
         val configurator = EcsConfigurator(
-            net.nevinsky.abyssus.core.JsonProcessor().mapper,
+            net.nevinsky.abyssus.core.io.JsonProcessor().mapper,
             FolderAssetResolver(File("src/test/testData/project/Untitled/assets").list().orEmpty().toList()),
             org.slf4j.helpers.NOPLogger.NOP_LOGGER,
             net.nevinsky.abyssus.runtime.schema.GameComponents(),

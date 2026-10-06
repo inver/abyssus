@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.physics.plugin
 
+import net.nevinsky.abyssus.core.assets.displayMessage
+
 import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
@@ -57,7 +59,7 @@ internal class PhysicsSimulation(private val project: Project, private val liste
         } catch (e: PlayStartException) {
             return failToStart(e.message.orEmpty(), e.output)
         } catch (e: Exception) {
-            return failToStart(e.message ?: e.javaClass.simpleName, "")
+            return failToStart(e.displayMessage(), "")
         }
         if (stopped) {
             started.stop()

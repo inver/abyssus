@@ -21,12 +21,20 @@ code is in `net.nevinsky.abyssus.core.assets`.
 | Package | What |
 |---|---|
 | `core` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `GeometryUtils` |
-| `core.assets` | `AssetMeta` and `MetaType` (the `meta.json` model; `uuid` is null when a meta declares none), `AssetMetaLoader` (reads a `meta.json` into an `AssetMeta` named after its folder, with `additional` bound to the class of its `type`; cached by timestamp and size), `AssetIndex` (the asset folder of a `uuid`), `Asset`, `runCatchingKeepingCancellation`, `Throwables` |
+| `core.assets` | `AssetMeta` and `MetaType` (the `meta.json` model; `uuid` is null when a meta declares none), `AssetMetaBinder` (one injectable settings-class registration map and metadata binding rule), `AssetMetaLoader` (validates and reads saved `meta.json`, binds through the binder, caches by timestamp and size), `AssetIndex` (the asset folder of a `uuid`), `Asset`, `runCatchingKeepingCancellation`, `Throwables` |
 | `core.assets.loading` | `AssetLoader` (prepare / dependencies / upload / build / discard), `CompositeAssetLoader` (one loader for every asset kind, by `MetaType`), `AssetStorage` (the cache and owner of built assets: load once, fail once, slice GPU work per frame, load dependencies first) with `BuiltAssets`, `RaySnapshotStore` with `RaySnapshotLoader`, `RaySnapshot` and the leases (see below), `TextureUploadQueue`, `ShaderSource` (GLSL from a resource folder) |
 | `core.assets.model` | `ModelLoader` (glTF and other formats through `gdx-model`'s Assimp loader), `ModelMeta`, the ray model snapshot types and `ModelRaySnapshotLoader` |
 | `core.assets.terrain` | `TerrainLoader`, `TerrainData`, `TerrainMesh`, `TerrainMeta`, `RayTerrainSnapshot` and `TerrainRaySnapshotLoader` |
 | `core.assets.texture` | `TextureLoader` (`TEXTURE` and `PIXMAP_TEXTURE` assets: image decoded off the GL thread, uploaded as a mipmapped repeating texture), `PreparedTexture` (the decoded image; `release()` hands the `Pixmap` to a caller that uploads it itself) and `TextureMeta` |
 | `core.assets.sky` | `Sky` (a drawable background) and `RaySkySnapshot`; `cube/` six-face skyboxes, `procedural/` skies drawn by the asset's own GLSL, `hdr/` OpenEXR skies and their lighting environment. Each has a `*Loader` and a `*RaySnapshotLoader` |
+
+`ExrLoader.dimensions` and `HdrPreview.dimensions` read the EXR data-window dimensions without decoding pixels.
+Header parsing is shared with decoding; native headers and images each have explicit cleanup. Chooser and panel
+labels use original dimensions, while previews retain their existing reduction and tone mapping.
+
+`Scene.rayTracing` retains explicit null limits for editor validation; omitted limits keep their defaults.
+`RayTracing` limit properties are nullable integers. Standalone consumers compiled against primitive accessors
+must rebuild against this core version.
 
 `core.flightgear` converts a FlightGear aircraft archive into the files of one native `MODEL` asset, without GL:
 `FlightGearArchive` (the zip, read lazily; `Aircraft/` paths, zip-slip and size limits), `FlightGearModelXmlReader`
@@ -36,8 +44,9 @@ property 0), `Ac3dReader`, `SgiImage` (SGI to PNG), `GlbWriter` (glTF 2.0 binary
 FlightGear Aircraft and the Control Line trainer tool use it.
 
 `core.project` holds filesystem `Project` / `ProjectLoader`; the `core` scene package holds scene DTOs and `SceneLoader`.
-These and `AssetMetaLoader` currently bind JSON without enforcing the editor's native document validator; see
-`docs/reviews/documentation-audit-2026-10-06.md` for the gap against the required format contract.
+These and `AssetMetaLoader` validate native identity with `core.format.AbyssusDocumentFormat` before binding.
+Unsupported project/scene documents throw; unsupported metadata returns null and reports the reason once per file revision.
+Admission checks do not modify document text or write files.
 The vendored Java noise implementation is under `src/main/java/`; generator and recipe orchestration live in the plugin.
 
 Sky shaders are in `src/main/resources/shader/sky/`.

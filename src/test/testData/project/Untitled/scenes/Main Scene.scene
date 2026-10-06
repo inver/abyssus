@@ -27,316 +27,375 @@
   "skyboxEnabled": true,
   "skyboxName": "skybox_physical",
   "ecs": {
-      "0": {
-        "archetype": 1,
-        "components": {
-          "NameComponent": {
-            "name": "Model 0"
-          },
-          "PickableComponent": {
-            "pickerIdAttribute": {
-              "a": 255,
-              "b": 0,
-              "g": 0,
-              "r": 0
-            }
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -3.035308,
-              "y": 0.9123962,
-              "z": -3.2570944
-            }
-          },
-          "RenderComponent": {
-            "renderable": {
-              "kind": "asset",
-              "shaderKey": "defaultShader",
-              "asset": {
-                "type": "MODEL",
-                "assetName": "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"
-              }
-            }
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
+    "0": {
+      "archetype": 1,
+      "components": {
+        "NameComponent": {
+          "name": "Model 0"
+        },
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 0
           }
-        }
-      },
-      "1": {
-        "archetype": 1,
-        "components": {
-          "NameComponent": {
-            "name": "Terrain"
-          },
-          "PickableComponent": {
-            "pickerIdAttribute": {
-              "a": 255,
-              "b": 0,
-              "g": 0,
-              "r": 1
-            }
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -38.25267,
-              "y": 0.0,
-              "z": -32.7754
-            }
-          },
-          "RenderComponent": {
-            "renderable": {
-              "kind": "asset",
-              "shaderKey": "terrain",
-              "asset": {
-                "type": "TERRAIN",
-                "assetName": "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
-              }
-            }
-          },
-          "TypeComponent": {
-            "type": "TERRAIN"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -3.035308,
+            "y": 0.9123962,
+            "z": -3.2570944
           }
-        }
-      },
-      "2": {
-        "archetype": 1,
-        "components": {
-          "NameComponent": {
-            "name": "Model 2"
-          },
-          "PickableComponent": {
-            "pickerIdAttribute": {
-              "a": 255,
-              "b": 0,
-              "g": 0,
-              "r": 2
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"
             }
+          }
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        }
+      }
+    },
+    "1": {
+      "archetype": 1,
+      "components": {
+        "NameComponent": {
+          "name": "Terrain"
+        },
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 1
+          }
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -38.25267,
+            "y": 0.0,
+            "z": -32.7754
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "terrain",
+            "asset": {
+              "type": "TERRAIN",
+              "assetName": "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
+            }
+          }
+        },
+        "TypeComponent": {
+          "type": "TERRAIN"
+        }
+      }
+    },
+    "2": {
+      "archetype": 1,
+      "components": {
+        "NameComponent": {
+          "name": "Model 2"
+        },
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 2
+          }
+        },
+        "PositionComponent": {
+          "localRotation": {
+            "w": -0.6457829,
+            "x": 0.63250726,
+            "y": 0.30553034,
+            "z": 0.29924944
           },
-          "PositionComponent": {
-            "localRotation": {
-              "w": -0.6457829,
-              "x": 0.63250726,
-              "y": 0.30553034,
-              "z": 0.29924944
+          "localPosition": {
+            "x": -5.250234,
+            "y": 2.462766,
+            "z": 6.35708
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_fc33e1f1-015b-4524-9b10-aa417acd273c"
+            }
+          }
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        }
+      }
+    },
+    "3": {
+      "archetype": 1,
+      "components": {
+        "NameComponent": {
+          "name": "'Direction' handle"
+        },
+        "ParentComponent": {
+          "parentEntityId": 4
+        },
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 3
+          }
+        },
+        "PositionComponent": {},
+        "RenderComponent": {
+          "renderable": {
+            "kind": "direction-handle-marker"
+          }
+        },
+        "TypeComponent": {
+          "type": "HANDLE"
+        }
+      }
+    },
+    "4": {
+      "archetype": 2,
+      "components": {
+        "CameraComponent": {
+          "camera": {
+            "viewPointPosition": {
+              "x": 0.94449997,
+              "y": -0.32707876,
+              "z": -0.03064643
             },
-            "localPosition": {
-              "x": -5.250234,
-              "y": 2.462766,
-              "z": 6.35708
-            }
-          },
-          "RenderComponent": {
-            "renderable": {
-              "kind": "asset",
-              "shaderKey": "defaultShader",
-              "asset": {
-                "type": "MODEL",
-                "assetName": "model_fc33e1f1-015b-4524-9b10-aa417acd273c"
-              }
-            }
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          }
-        }
-      },
-      "3": {
-        "archetype": 1,
-        "components": {
-          "NameComponent": {
-            "name": "'Direction' handle"
-          },
-          "ParentComponent": {
-            "parentEntityId": 4
-          },
-          "PickableComponent": {
-            "pickerIdAttribute": {
-              "a": 255,
-              "b": 0,
-              "g": 0,
-              "r": 3
-            }
-          },
-          "PositionComponent": {},
-          "RenderComponent": {
-            "renderable": {
-              "kind": "direction-handle-marker"
-            }
-          },
-          "TypeComponent": {
-            "type": "HANDLE"
-          }
-        }
-      },
-      "4": {
-        "archetype": 2,
-        "components": {
-          "CameraComponent": {
-            "camera": {
-              "viewPointPosition": {
-                "x": 0.94449997,
-                "y": -0.32707876,
-                "z": -0.03064643
-              },
-              "position": {
-                "x": -23.56657,
-                "y": 12.318308,
-                "z": -0.84287655
-              },
-              "far": 100,
-              "near": 1,
-              "fieldOfView": 67
-            }
-          },
-          "DependenciesComponent": {
-            "dependencies": [
-              5,
-              4
-            ]
-          },
-          "NameComponent": {
-            "name": "Camera 4"
-          },
-          "PickableComponent": {
-            "pickerIdAttribute": {
-              "a": 255,
-              "b": 0,
-              "g": 0,
-              "r": 4
-            }
-          },
-          "PositionComponent": {
-            "localRotation": {
-              "w": 0.7085326,
-              "x": -0.11914976,
-              "y": -0.6859156,
-              "z": -0.115346394
-            },
-            "lookAtId": 3,
-            "localPosition": {
+            "position": {
               "x": -23.56657,
               "y": 12.318308,
               "z": -0.84287655
-            }
-          },
-          "RenderComponent": {
-            "renderable": {
-              "kind": "camera-marker",
-              "shaderKey": "defaultShader"
-            }
-          },
-          "TypeComponent": {
-            "type": "CAMERA"
-          }
-        }
-      },
-      "5": {
-        "archetype": 3,
-        "components": {
-          "Point2PointPositionComponent": {
-            "entity1Id": 4,
-            "entity2Id": 3
-          },
-          "RenderComponent": {
-            "renderable": {
-              "kind": "direction-line-marker"
-            }
-          }
-        }
-      },
-      "6": {
-        "archetype": 1,
-        "components": {
-          "NameComponent": {
-            "name": "Model 6"
-          },
-          "PickableComponent": {
-            "pickerIdAttribute": {
-              "a": 255,
-              "b": 0,
-              "g": 0,
-              "r": 6
-            }
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 9.440927,
-              "y": 0.0,
-              "z": 0.0
             },
-            "localRotation": {
-              "x": 0.0,
-              "y": 0.49121734,
-              "z": 0.0,
-              "w": -0.87103707
-            }
+            "far": 100,
+            "near": 1,
+            "fieldOfView": 67
+          }
+        },
+        "DependenciesComponent": {
+          "dependencies": [
+            5,
+            4
+          ]
+        },
+        "NameComponent": {
+          "name": "Camera 4"
+        },
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 4
+          }
+        },
+        "PositionComponent": {
+          "localRotation": {
+            "w": 0.7085326,
+            "x": -0.11914976,
+            "y": -0.6859156,
+            "z": -0.115346394
           },
-          "RenderComponent": {
-            "renderable": {
-              "kind": "asset",
-              "shaderKey": "pbr",
-              "asset": {
-                "type": "MODEL",
-                "assetName": "model_900f6f61-6384-434a-be81-56ce303fbb56"
-              }
-            }
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
+          "lookAtId": 3,
+          "localPosition": {
+            "x": -23.56657,
+            "y": 12.318308,
+            "z": -0.84287655
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "camera-marker",
+            "shaderKey": "defaultShader"
+          }
+        },
+        "TypeComponent": {
+          "type": "CAMERA"
+        }
+      }
+    },
+    "5": {
+      "archetype": 3,
+      "components": {
+        "Point2PointPositionComponent": {
+          "entity1Id": 4,
+          "entity2Id": 3
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "direction-line-marker"
           }
         }
-      },
-      "7": {
-        "archetype": 4,
-        "components": {
-          "NameComponent": {
-            "name": "Directional Light 7"
+      }
+    },
+    "6": {
+      "archetype": 1,
+      "components": {
+        "NameComponent": {
+          "name": "Model 6"
+        },
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 6
+          }
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 9.440927,
+            "y": 0.0,
+            "z": 0.0
           },
-          "TypeComponent": {
-            "type": "LIGHT_DIRECTIONAL"
+          "localRotation": {
+            "x": 0.0,
+            "y": 0.49121734,
+            "z": 0.0,
+            "w": -0.87103707
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "pbr",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_900f6f61-6384-434a-be81-56ce303fbb56"
+            }
+          }
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        }
+      }
+    },
+    "7": {
+      "archetype": 4,
+      "components": {
+        "NameComponent": {
+          "name": "Directional Light 7"
+        },
+        "TypeComponent": {
+          "type": "LIGHT_DIRECTIONAL"
+        },
+        "PositionComponent": {
+          "localRotation": {
+            "x": 0.38268328,
+            "w": -0.9238796
           },
-          "PositionComponent": {
-            "localRotation": {
-              "x": 0.38268328,
-              "w": -0.9238796
+          "localPosition": {
+            "x": -4.6727066,
+            "y": 6.4600496,
+            "z": 16.883846
+          }
+        }
+      }
+    },
+    "8": {
+      "archetype": 4,
+      "components": {
+        "NameComponent": {
+          "name": "Spot Light 8"
+        },
+        "TypeComponent": {
+          "type": "LIGHT_SPOT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 10,
+            "y": 20,
+            "z": 10
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
             },
-            "localPosition": {
-              "x": -4.6727066,
-              "y": 6.4600496,
-              "z": 16.883846
-            }
+            "intensity": 1
           }
         }
-      },
-      "8": {
-        "archetype": 4,
-        "components": {
-          "NameComponent": {
-            "name": "Spot Light 8"
-          },
-          "TypeComponent": {
-            "type": "LIGHT_SPOT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 10,
-              "y": 20,
-              "z": 10
-            }
-          },
-          "LightComponent": {
-            "light": {
-              "color": {
-                "r": 1,
-                "g": 1,
-                "b": 1,
-                "a": 1
-              },
-              "intensity": 1
+      }
+    },
+    "9": {
+      "components": {
+        "NameComponent": {
+          "name": "Model 9"
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.0,
+            "y": 21.632797,
+            "z": 0.0
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_extra500"
             }
           }
         }
       }
+    },
+    "10": {
+      "components": {
+        "NameComponent": {
+          "name": "Directional Light 10"
+        },
+        "TypeComponent": {
+          "type": "LIGHT_DIRECTIONAL"
+        },
+        "PositionComponent": {
+          "localRotation": {
+            "x": 0.38268328,
+            "w": -0.9238796
+          },
+          "localPosition": {
+            "x": 0.0,
+            "y": 15.445426,
+            "z": 0.0
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            },
+            "intensity": 1
+          }
+        }
+      }
+    }
   }
 }

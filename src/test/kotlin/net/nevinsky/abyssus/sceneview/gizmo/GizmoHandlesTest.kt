@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.sceneview.gizmo
 
 import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.sceneview.SceneContent
-import net.nevinsky.abyssus.sceneview.Vec3
+import net.nevinsky.abyssus.editor.content.Vec3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
