@@ -100,5 +100,5 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 - [x] 6.1 Update `AGENTS.md` (layout, hard rules: new module, no IntelliJ import in `editor-core`), `docs/ai/architecture.md`
   (module graph, scene document layer), `docs/ai/conventions.md`, `docs/ai/testing.md`, `editor-core/README.md` and the
   package READMEs. Verify with `scripts/check-docs.sh`.
-- [ ] 6.2 Run `./gradlew check` and `scripts/check-docs.sh`; report anything failing for other reasons with its cause.
+- [x] 6.2 Run `./gradlew check` and `scripts/check-docs.sh`; report anything failing for other reasons with its cause.
 - [ ] 6.3 Archive the change, which adds `headless-scene-editing` to `openspec/specs/`.

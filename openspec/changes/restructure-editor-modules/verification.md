@@ -16,3 +16,5 @@
   `build/distributions/abyssus-0.0.1.zip` holds `abyssus/lib/editor-core.jar` once (with
   `messages/AbyssusEditorBundle.properties`, in no other jar). `physics-plugin.zip`'s `lib` holds only
   `physics-plugin-0.0.1.jar` and `physics.jar`; its `play-host` folder has no `editor-core.jar`.
+- 6.2: `./gradlew clean` then `./gradlew check --continue` passed (94 tasks, exit 0); `scripts/check-docs.sh` passed
+  (212 paths). The GL tests are opt-in and not part of `check`; see 3.5 for their pre-existing failures.
