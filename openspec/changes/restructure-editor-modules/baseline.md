@@ -90,6 +90,23 @@ Shared native admission now lives in `core.format`; its reserved-field paths are
 
 ## Reproduction
 
+## Package-cycle guard verification
+
+`./gradlew checkPackageCycles --console=plain` passes with the captured transition allowlist.
+Adding two temporary packages (`cycleProbeA` and `cycleProbeB`) importing each other makes the guard fail with
+both new cyclic edges. The temporary files were removed; `./gradlew check --console=plain` then passed
+(86 actionable tasks: 9 executed, 77 up-to-date), and `scripts/check-docs.sh` passed (199 paths in 6 files).
+Configuration caching stored and reused the guard successfully.
+
+The scan groups immediate child packages beneath each module's common `net.nevinsky.abyssus` package prefix;
+root helpers and foreign packages are outside that grouping. It checks main Kotlin import lines separately per
+module, without loading application code or resolving dependencies.
+
+Scope conflict found before stage 1: the all-module allowlist also contains existing `gdx-model` (`core` ↔ `lib`),
+`runtime` (`ecs` ↔ `schema`), and Control Line (`flight` ↔ `flow`) cycles. Task 1.4 requires an entirely empty
+allowlist, but those refactors are outside the change's editing-engine scope. Stage 1 awaits a decision on retaining
+those baseline entries while emptying the plugin entries, or widening the refactor scope.
+
 Baseline: `./gradlew check --console=plain`.
 Counts and edges: scan `src/main/kotlin/**/*.kt`, count files/lines by declared package, then count internal `import net.nevinsky.abyssus.*` lines by source and target package.
 Scene layout sites: `rg -l 'SceneEcsPaths|"ecs"|"components"' src/main/kotlin`.

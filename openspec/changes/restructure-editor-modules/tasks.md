@@ -17,7 +17,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 - [x] 0.2 List open changes touching `sceneview/`, ray files, `ComponentEditor` or `PanelState`
   (`rg -l 'sceneview|RaySceneSnapshot|ComponentEditor|PanelState' openspec/changes/*/tasks.md`); for each, record in
   design D7 whether it lands first or rebases. Verify that the list is in the design.
-- [ ] 0.3 Add `checkPackageCycles` (a Gradle import-scan task, second path segment per module) with an allowlist of
+- [x] 0.3 Add `checkPackageCycles` (a Gradle import-scan task, second path segment per module) with an allowlist of
   today's cycles. Verify it passes with the allowlist and fails when a new cycle is added temporarily.
 
 ## 1. Stage 1: break the cycles (S3, S5)
