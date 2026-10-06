@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.testing.failOnWarnings
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
-import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
+import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -13,7 +13,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.testing.warningsTo
 import net.nevinsky.abyssus.lib.core.testing.failOnWarnings
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
-import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
+import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.physics.PHYSICS_STEP
 import net.nevinsky.abyssus.physics.PhysicsConstraint
-import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
+import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
 import kotlin.math.asin
 import kotlin.math.atan2

@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.physics.PHYSICS_STEP
 import net.nevinsky.abyssus.physics.PhysicsAssets
 import net.nevinsky.abyssus.physics.PhysicsComponents
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
-import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
+import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
 import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent

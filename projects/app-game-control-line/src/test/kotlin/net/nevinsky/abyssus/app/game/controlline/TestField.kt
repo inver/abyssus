@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.lib.core.testing.warningsTo
 import net.nevinsky.abyssus.app.game.controlline.components.ControlLineComponents
 import net.nevinsky.abyssus.physics.PhysicsAssets
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
-import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
+import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
 import java.nio.file.Path
 

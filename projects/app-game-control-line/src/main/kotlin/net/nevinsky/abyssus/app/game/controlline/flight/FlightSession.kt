@@ -6,13 +6,12 @@ package net.nevinsky.abyssus.app.game.controlline.flight
 
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.app.game.controlline.flight.FlightReport
 import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
 import net.nevinsky.abyssus.physics.MAX_STEPS_PER_ADVANCE
 import net.nevinsky.abyssus.physics.PHYSICS_STEP
 import net.nevinsky.abyssus.physics.PhysicsAssets
 import net.nevinsky.abyssus.physics.jolt.JoltNatives
-import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
+import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
 import org.slf4j.Logger

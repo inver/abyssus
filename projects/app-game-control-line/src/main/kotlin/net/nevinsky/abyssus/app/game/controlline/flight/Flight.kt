@@ -10,7 +10,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.score.FlightScoring
 import net.nevinsky.abyssus.app.game.controlline.track.SphereTrack
 import net.nevinsky.abyssus.app.game.controlline.track.TrackSample
-import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
+import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
 import kotlin.math.max
 

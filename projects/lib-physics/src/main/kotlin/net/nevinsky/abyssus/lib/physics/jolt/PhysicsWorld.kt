@@ -2,7 +2,7 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.physics.jolt
+package net.nevinsky.abyssus.lib.physics.jolt
 
 
 import com.badlogic.ashley.core.Entity
@@ -52,7 +52,12 @@ import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
+import net.nevinsky.abyssus.physics.jolt.FixedStepClock
+import net.nevinsky.abyssus.physics.jolt.JoltNatives
+import net.nevinsky.abyssus.physics.jolt.RopeTension
+import net.nevinsky.abyssus.physics.jolt.ShapeFactory
 import org.slf4j.Logger
+import kotlin.math.abs
 import kotlin.math.max
 
 private const val LAYER_STATIC = 0
@@ -68,7 +73,7 @@ private const val LAYER_MOVING = 1
  * time, and runs single-threaded, so a run is deterministic on one machine. [close] releases every native object;
  * afterwards every method throws [IllegalStateException].
  *
- * Needs Jolt's natives ([JoltNatives]); never use it in the IDE process.
+ * Needs Jolt's natives ([net.nevinsky.abyssus.physics.jolt.JoltNatives]); never use it in the IDE process.
  */
 class PhysicsWorld(
     private val engine: SceneEngine,
@@ -355,7 +360,7 @@ class PhysicsWorld(
     }
 
     private fun perpendicular(axis: Vector3): Vector3 {
-        val helper = if (kotlin.math.abs(axis.y) < 0.9f) Vector3.Y else Vector3.X
+        val helper = if (abs(axis.y) < 0.9f) Vector3.Y else Vector3.X
         return Vector3(axis).crs(helper).nor()
     }
 

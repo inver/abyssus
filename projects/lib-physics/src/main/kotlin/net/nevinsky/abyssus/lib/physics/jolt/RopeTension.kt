@@ -2,9 +2,10 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.physics.jolt
+package net.nevinsky.abyssus.lib.physics.jolt
 
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.physics.MotionType
 import net.nevinsky.abyssus.physics.PHYSICS_STEP
 import kotlin.math.max

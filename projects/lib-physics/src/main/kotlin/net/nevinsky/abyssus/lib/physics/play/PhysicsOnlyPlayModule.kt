@@ -5,7 +5,7 @@
 package net.nevinsky.abyssus.physics.play
 
 import net.nevinsky.abyssus.physics.ConstraintKind
-import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
+import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
 import java.util.Locale
 

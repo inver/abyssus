@@ -6,7 +6,7 @@ package net.nevinsky.abyssus.physics.play
 
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.EntitySystem
-import net.nevinsky.abyssus.physics.jolt.PhysicsWorld
+import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistry
 
