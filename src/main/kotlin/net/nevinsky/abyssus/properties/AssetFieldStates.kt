@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.meta.message
+import net.nevinsky.abyssus.EditorBundle
 import net.nevinsky.abyssus.editor.meta.AssetFieldState
 import net.nevinsky.abyssus.editor.meta.assetFieldStates
 import net.nevinsky.abyssus.editor.meta.AssetChoice
@@ -18,7 +20,7 @@ import net.nevinsky.abyssus.core.assets.MetaType
 import java.io.File
 
 /** The localized reason for a refused edit. */
-fun editErrorMessage(error: EditError): String = AbyssusBundle.message("assetEditError.${error.name}")
+fun editErrorMessage(error: EditError): String = error.message(EditorBundle)
 
 /** What a choice reads as in a chooser: its label, `None` for no value, or the stored value marked as not found. */
 fun choiceLabel(choice: AssetChoice): String = when {

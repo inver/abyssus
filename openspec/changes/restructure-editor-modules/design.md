@@ -57,6 +57,7 @@ and rejection reasons stay unchanged. Neither `core` nor `runtime` depends on `e
 | `…editor.terrain` | generation, noise, recipe, new-terrain file logic |
 | `…editor.meta` | `AssetMetaEditor`, field descriptions, `MetaRows`, `AssetReferenceChoices`, `PanelState` (the part without Swing) |
 | `…editor.ray` | `RaySceneSnapshots`, `RayViewFeed`, `RayViewRuntime`, `RayBackendService`, `RayFeasibilityLoop`, `RayModeState`, `RaySkyBaker`, `RayBackendSelector`, `RayDiagnostics` and the other plain `Ray*` files; `RayIntegration` (wired from `CoreServices`) stays in the plugin |
+| `…editor.headless` | `HeadlessEditing`: validate and edit native documents as text (spec `headless-scene-editing`), over `DocumentTextEditor` in `editor.document`, the transform the plugin's `editSceneJson` also runs |
 | plugin (root) | `editSceneJson`, project view pane, tree nodes, actions, tool window factories, dialogs and forms (Swing), `SceneViewPanel`, `SceneFileEditor`, `GuardedGLCanvas`, file types, listeners, `AbyssusCore`, VFS wiring |
 
 `content` stays a leaf (D5): the read model that depends on `document` and `components` lives in `editor.scene`, and

@@ -74,7 +74,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
   terrain and meta tests and `NewTerrainActionTest` in the plugin.
 - [x] 3.7 Slice `ray`: the plain `Ray*` files and `RaySceneSnapshots`. Verify with the moved ray tests, `:raytracing:test`
   and `SceneViewPanelRayTest` in the plugin.
-- [ ] 3.8 Add the headless API for spec `headless-scene-editing`: validate and edit by text in, text out (no `Project`,
+- [x] 3.8 Add the headless API for spec `headless-scene-editing`: validate and edit by text in, text out (no `Project`,
   no VFS), using the shared `core.format` validator and rejection types. Verify with `HeadlessSceneEditingTest`:
   the move, the refusal (including the same rejection reason) and the asset-property scenarios of the
   spec, each compared with the plugin's `editSceneJson` result on the same text.

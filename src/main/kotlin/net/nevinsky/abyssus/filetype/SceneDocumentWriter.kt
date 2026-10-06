@@ -5,7 +5,8 @@
 
 package net.nevinsky.abyssus.filetype
 
-import net.nevinsky.abyssus.editor.document.SceneJson
+import net.nevinsky.abyssus.editor.document.DocumentTextEditor
+import net.nevinsky.abyssus.editor.document.TextEditOutcome
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.command.WriteCommandAction
@@ -13,7 +14,6 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.Topic
-import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 
 /** Told after a plugin edit wrote [file] (a scene or project file), so views of it can refresh. */
 fun interface AbyssusSceneEdited {
@@ -33,16 +33,10 @@ fun interface AbyssusSceneEdited {
 fun editSceneJson(project: Project, file: VirtualFile, commandName: String, mutate: (JsonNode) -> Boolean): Boolean {
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
     val kind = documentKind(file) ?: return false
-    val format = net.nevinsky.abyssus.editor.document.AbyssusDocumentFormat()
     val original = document.text
-    val root = runCatchingKeepingCancellation {
-        SceneJson().parse(original).also { format.requireSupported(it, kind) }
-    }.getOrNull() ?: return false
-    if (!mutate(root) || format.validate(root, kind) != null || document.text != original) {
-        return false
-    }
-    val text = SceneJson().inStyleOf(original, root)
-    if (text == original) {
+    // the text transform is the editing library's, shared with callers that have no IDE
+    val text = (DocumentTextEditor().edit(original, kind, mutate) as? TextEditOutcome.Edited)?.text ?: return false
+    if (document.text != original) {
         return false
     }
     WriteCommandAction.runWriteCommandAction(project, commandName, null, {

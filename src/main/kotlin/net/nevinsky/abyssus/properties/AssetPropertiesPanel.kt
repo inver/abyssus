@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.EditorBundle
+
 import net.nevinsky.abyssus.editor.meta.ADDITIONAL
 import net.nevinsky.abyssus.editor.meta.AssetFieldState
 import net.nevinsky.abyssus.editor.meta.DetailRow
@@ -422,7 +424,7 @@ class AssetPropertiesPanel(
         val error = JBLabel("").apply { foreground = JBColor.RED; name = "asset-error-${state.key}" }
         if (conflictKey == state.key) {
             conflictKey = null
-            error.text = AbyssusBundle.message("assetFieldConflict")
+            error.text = EditorBundle.message("assetFieldConflict")
         }
         val editor = fieldEditor(d, state, error)
         editor.name = "asset-field-${state.key}"
@@ -495,7 +497,7 @@ class AssetPropertiesPanel(
             }
 
             is AssetEditResult.Conflict -> {
-                error.text = AbyssusBundle.message("assetFieldConflict")
+                error.text = EditorBundle.message("assetFieldConflict")
                 revert()
                 conflictKey = state.key
                 refresh()
