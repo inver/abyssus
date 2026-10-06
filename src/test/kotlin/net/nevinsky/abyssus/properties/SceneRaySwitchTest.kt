@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.ray.RaySceneAssets
 import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.document.SceneJson
 

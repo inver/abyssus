@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview.shadows
 
-import net.nevinsky.abyssus.sceneview.LightSet
+import net.nevinsky.abyssus.editor.scene.LightSet
 
 enum class ShadowLightKind { DIRECTIONAL, POINT, SPOT }
 

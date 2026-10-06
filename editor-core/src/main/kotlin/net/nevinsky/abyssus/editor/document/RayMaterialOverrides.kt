@@ -2,7 +2,7 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.editor.ray
+package net.nevinsky.abyssus.editor.document
 
 import net.nevinsky.abyssus.editor.document.RayDataEdit
 import net.nevinsky.abyssus.editor.document.RayDataError

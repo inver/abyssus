@@ -4,6 +4,9 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayBackendService
+import net.nevinsky.abyssus.editor.ray.RaySceneAssets
+import net.nevinsky.abyssus.editor.ray.RayViewFeed
 import net.nevinsky.abyssus.EditorBundle
 import net.nevinsky.abyssus.core.assets.displayMessage
 

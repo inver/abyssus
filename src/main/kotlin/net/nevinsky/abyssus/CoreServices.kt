@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus
 
 import javax.swing.SwingUtilities
-import net.nevinsky.abyssus.sceneview.rayBackendSelectorFromStartup
+import net.nevinsky.abyssus.editor.ray.rayBackendSelectorFromStartup
 import net.nevinsky.abyssus.editor.meta.AssetFieldDescriptions
 import net.nevinsky.abyssus.editor.meta.AssetMetaEditor
 import com.intellij.util.concurrency.AppExecutorUtil
@@ -19,8 +19,8 @@ import net.nevinsky.abyssus.editor.document.AbyssusDocumentFormat
 import net.nevinsky.abyssus.projectView.HdrPreviewSource
 import net.nevinsky.abyssus.raytracing.MetalRayBackendFactory
 import net.nevinsky.abyssus.raytracing.VulkanRayBackendFactory
-import net.nevinsky.abyssus.sceneview.RayBackendSelector
-import net.nevinsky.abyssus.sceneview.RayBackendService
+import net.nevinsky.abyssus.editor.ray.RayBackendSelector
+import net.nevinsky.abyssus.editor.ray.RayBackendService
 import net.nevinsky.abyssus.terrain.NewTerrainFactory
 import net.nevinsky.abyssus.editor.terrain.TerrainAssetWriter
 import net.nevinsky.abyssus.editor.terrain.TerrainHeightEncoder

@@ -2,13 +2,13 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.editor.document
 
 import net.nevinsky.abyssus.editor.document.RayDataEdit
-import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
-import net.nevinsky.abyssus.editor.ray.RayOpticalOverride
-import net.nevinsky.abyssus.editor.ray.RayOpticalField
-import net.nevinsky.abyssus.editor.ray.RayMaterialOverrides
+import net.nevinsky.abyssus.editor.document.RayMaterialIdentity
+import net.nevinsky.abyssus.editor.document.RayOpticalOverride
+import net.nevinsky.abyssus.editor.document.RayOpticalField
+import net.nevinsky.abyssus.editor.document.RayMaterialOverrides
 
 import net.nevinsky.abyssus.editor.document.SceneJson
 import org.junit.Assert.*

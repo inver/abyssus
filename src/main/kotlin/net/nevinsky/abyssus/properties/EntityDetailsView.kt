@@ -32,7 +32,7 @@ import net.nevinsky.abyssus.projectView.addComponentGroup
 import net.nevinsky.abyssus.projectView.reportRejection
 import net.nevinsky.abyssus.editor.document.RayDataEdit
 import net.nevinsky.abyssus.editor.document.RayDataError
-import net.nevinsky.abyssus.editor.ray.RayOpticalField
+import net.nevinsky.abyssus.editor.document.RayOpticalField
 import net.nevinsky.abyssus.filetype.SceneRayEdits
 import java.awt.BorderLayout
 import java.awt.Dimension

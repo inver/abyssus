@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview.shadows
 
+import net.nevinsky.abyssus.editor.scene.LightSet
+import net.nevinsky.abyssus.editor.scene.ModelEntity
 import net.nevinsky.abyssus.editor.scene.toVector3
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.PerspectiveCamera

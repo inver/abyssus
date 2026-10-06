@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.editor.terrain.TerrainHeightEncoder
 import net.nevinsky.abyssus.editor.terrain.TerrainRecipeCodec
 import net.nevinsky.abyssus.dto.MetaFiles
 import net.nevinsky.abyssus.projectView.HdrPreviewSource
-import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
+import net.nevinsky.abyssus.editor.document.RayMaterialIdentity
 import net.nevinsky.abyssus.SceneRayControls
 import java.io.File
 import net.nevinsky.abyssus.schema.ComponentSchemas

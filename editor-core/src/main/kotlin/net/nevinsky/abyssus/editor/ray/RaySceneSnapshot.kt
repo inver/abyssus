@@ -2,16 +2,16 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.editor.ray
 
+import net.nevinsky.abyssus.editor.scene.LightSet
 import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.content.toMatrix
 import net.nevinsky.abyssus.editor.scene.toVec3
 import net.nevinsky.abyssus.editor.pick.ScenePreview
 import net.nevinsky.abyssus.editor.document.SceneRaySettings
-import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
-import net.nevinsky.abyssus.editor.ray.RayMaterialOverrides
-import net.nevinsky.abyssus.editor.ray.RaySceneFallback
+import net.nevinsky.abyssus.editor.document.RayMaterialIdentity
+import net.nevinsky.abyssus.editor.document.RayMaterialOverrides
 
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Rgba

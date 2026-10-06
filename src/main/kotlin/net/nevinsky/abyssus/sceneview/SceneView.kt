@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.pick.TransformEdit
 import com.intellij.openapi.Disposable

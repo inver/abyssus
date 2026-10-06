@@ -8,9 +8,9 @@ import net.nevinsky.abyssus.editor.document.SceneRayField
 import net.nevinsky.abyssus.editor.document.RayDataError
 import net.nevinsky.abyssus.editor.document.RayDataEdit
 import net.nevinsky.abyssus.editor.document.SceneRaySettingsCodec
-import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
-import net.nevinsky.abyssus.editor.ray.RayOpticalField
-import net.nevinsky.abyssus.editor.ray.RayMaterialOverrides
+import net.nevinsky.abyssus.editor.document.RayMaterialIdentity
+import net.nevinsky.abyssus.editor.document.RayOpticalField
+import net.nevinsky.abyssus.editor.document.RayMaterialOverrides
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode

@@ -2,8 +2,14 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.editor.ray
 
+import net.nevinsky.abyssus.editor.ray.RayModelPoses
+import net.nevinsky.abyssus.editor.ray.RaySceneAssetState
+import net.nevinsky.abyssus.editor.ray.RaySceneConversion
+import net.nevinsky.abyssus.editor.ray.RaySceneSnapshots
+import net.nevinsky.abyssus.editor.scene.ModelEntity
+import net.nevinsky.abyssus.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.editor.scene.SceneContent
 import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.core.io.FileLoader

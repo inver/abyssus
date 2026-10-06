@@ -72,7 +72,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 - [x] 3.6 Slice `terrain` and `meta`: terrain generation, noise, recipe and new-terrain file logic; `AssetMetaEditor`,
   field descriptions, `MetaRows`, `AssetReferenceChoices`, the pure part of `PanelState`. Verify with the moved
   terrain and meta tests and `NewTerrainActionTest` in the plugin.
-- [ ] 3.7 Slice `ray`: the plain `Ray*` files and `RaySceneSnapshots`. Verify with the moved ray tests, `:raytracing:test`
+- [x] 3.7 Slice `ray`: the plain `Ray*` files and `RaySceneSnapshots`. Verify with the moved ray tests, `:raytracing:test`
   and `SceneViewPanelRayTest` in the plugin.
 - [ ] 3.8 Add the headless API for spec `headless-scene-editing`: validate and edit by text in, text out (no `Project`,
   no VFS), using the shared `core.format` validator and rejection types. Verify with `HeadlessSceneEditingTest`:

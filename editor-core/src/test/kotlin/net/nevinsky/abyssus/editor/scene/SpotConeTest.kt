@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.editor.scene
 
+import net.nevinsky.abyssus.editor.scene.SpotCone
 import net.nevinsky.abyssus.editor.scene.forwardOf
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Quat

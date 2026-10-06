@@ -3,8 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.editor.scene
 
+import net.nevinsky.abyssus.editor.scene.MAX_DIRECTIONAL
+import net.nevinsky.abyssus.editor.scene.MAX_POINT
+import net.nevinsky.abyssus.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.editor.scene.lightSetOf
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Rgba
 import net.nevinsky.abyssus.editor.content.LightKind

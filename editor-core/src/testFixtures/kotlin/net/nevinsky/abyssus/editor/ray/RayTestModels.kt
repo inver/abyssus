@@ -2,7 +2,7 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.editor.ray
 
 import net.nevinsky.abyssus.core.io.FileLoader
 
@@ -22,7 +22,7 @@ import net.nevinsky.abyssus.core.model.ModelMesh
 import net.nevinsky.abyssus.core.model.ModelMeshPart
 
 /** One node with two mesh parts (red, green) over a shared mesh, read the way the scene view reads models. */
-internal fun rayTestModel(count: Int = 3, pbr: Boolean = false): RayModelSnapshot {
+fun rayTestModel(count: Int = 3, pbr: Boolean = false): RayModelSnapshot {
         val data = ModelData()
         data.meshes.add(ModelMesh().apply {
             id = "mesh"; attributes = arrayOf(VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0))

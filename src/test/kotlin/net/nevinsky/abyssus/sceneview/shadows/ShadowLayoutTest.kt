@@ -5,7 +5,12 @@
 
 package net.nevinsky.abyssus.sceneview.shadows
 
-import net.nevinsky.abyssus.sceneview.NO_LIGHTS
+import net.nevinsky.abyssus.editor.scene.DirectionalSource
+import net.nevinsky.abyssus.editor.scene.LightSet
+import net.nevinsky.abyssus.editor.scene.PointSource
+import net.nevinsky.abyssus.editor.scene.SpotCone
+import net.nevinsky.abyssus.editor.scene.SpotSource
+import net.nevinsky.abyssus.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Rgba
 

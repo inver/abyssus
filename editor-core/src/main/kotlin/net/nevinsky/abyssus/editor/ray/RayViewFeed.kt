@@ -2,13 +2,12 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.editor.ray
 
+import net.nevinsky.abyssus.editor.scene.LightSet
 import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.document.SceneRaySettingsState
-import net.nevinsky.abyssus.editor.ray.RaySceneFallback
 import net.nevinsky.abyssus.editor.EditorMessages
-import net.nevinsky.abyssus.editor.ray.message
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.core.assets.model.RayModelSkinning
@@ -29,7 +28,7 @@ import net.nevinsky.abyssus.editor.document.documentDisplayMessage
  * view's existing state, which is all this reads.
  */
 class RayViewFeed(
-    internal val runtime: RayViewRuntime<RayDisplayMetadata>,
+    val runtime: RayViewRuntime<RayDisplayMetadata>,
     private val assets: RaySceneAssets,
     private val executor: Executor,
     private val messages: EditorMessages,

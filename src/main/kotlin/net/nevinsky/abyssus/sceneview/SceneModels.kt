@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.ModelEntity
 import net.nevinsky.abyssus.editor.content.toMatrix
 import net.nevinsky.abyssus.editor.content.AssetPlacement
 

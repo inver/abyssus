@@ -5,6 +5,15 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayFrameContext
+import net.nevinsky.abyssus.editor.ray.RaySceneDisplay
+import net.nevinsky.abyssus.editor.ray.RaySkyBaker
+import net.nevinsky.abyssus.editor.scene.AssetRevisionBatch
+import net.nevinsky.abyssus.editor.scene.MAX_POINT
+import net.nevinsky.abyssus.editor.scene.ModelEntity
+import net.nevinsky.abyssus.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.editor.scene.PendingAssetRevision
+import net.nevinsky.abyssus.editor.scene.lightSetOf
 import net.nevinsky.abyssus.editor.scene.SceneContent
 import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.scene.cameraDirectionOf

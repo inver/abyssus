@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview.terrain
 
-import net.nevinsky.abyssus.sceneview.MAX_POINT
+import net.nevinsky.abyssus.editor.scene.MAX_POINT
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
@@ -16,7 +16,7 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.math.Matrix3
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.editor.scene.FogParams
-import net.nevinsky.abyssus.sceneview.LightSet
+import net.nevinsky.abyssus.editor.scene.LightSet
 import net.nevinsky.abyssus.editor.content.Rgba
 import net.nevinsky.abyssus.sceneview.TerrainEntity
 import net.nevinsky.abyssus.core.shader.ShadowAtlasAttribute

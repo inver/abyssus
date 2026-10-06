@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.ModelEntity
 import net.nevinsky.abyssus.editor.scene.CameraParams
 import net.nevinsky.abyssus.editor.scene.SceneContent
 import net.nevinsky.abyssus.editor.scene.SceneRenderParams

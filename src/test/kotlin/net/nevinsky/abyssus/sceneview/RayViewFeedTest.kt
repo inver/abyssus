@@ -4,6 +4,15 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.rayTestModel
+import net.nevinsky.abyssus.editor.ray.RayAssetLease
+import net.nevinsky.abyssus.editor.ray.RayFrameContext
+import net.nevinsky.abyssus.editor.ray.RaySceneAssets
+import net.nevinsky.abyssus.editor.ray.RaySceneDisplay
+import net.nevinsky.abyssus.editor.ray.RaySceneSnapshots
+import net.nevinsky.abyssus.editor.ray.RaySnapshotLimits
+import net.nevinsky.abyssus.editor.ray.RayViewFeed
+import net.nevinsky.abyssus.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.editor.scene.SceneContent
 import net.nevinsky.abyssus.editor.scene.SceneRenderParams

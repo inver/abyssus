@@ -16,7 +16,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.projectView.ComponentTarget
-import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
+import net.nevinsky.abyssus.editor.document.RayMaterialIdentity
 import net.nevinsky.abyssus.testMetaFiles
 import net.nevinsky.abyssus.testPanelServices
 import java.awt.Component

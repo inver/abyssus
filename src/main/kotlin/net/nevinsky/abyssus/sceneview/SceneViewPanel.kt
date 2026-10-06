@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayViewFeed
+import net.nevinsky.abyssus.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.editor.pick.SceneInteraction

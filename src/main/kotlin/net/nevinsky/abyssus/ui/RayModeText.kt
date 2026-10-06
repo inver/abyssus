@@ -35,10 +35,13 @@ internal object RayModeText {
     }
 
     /** Every probed backend's reason, or why none was probed. */
-    fun reason(unavailable: RayBackendSelection.Unavailable): String = when {
-        unavailable.invalidPreference != null -> AbyssusBundle.message("rayReasonUnknownBackend", unavailable.invalidPreference)
-        unavailable.attempts.isEmpty() -> AbyssusBundle.message("rayReasonNoBackend")
-        else -> unavailable.attempts.joinToString("; ") { reason(it) }
+    fun reason(unavailable: RayBackendSelection.Unavailable): String {
+        val invalid = unavailable.invalidPreference
+        return when {
+            invalid != null -> AbyssusBundle.message("rayReasonUnknownBackend", invalid)
+            unavailable.attempts.isEmpty() -> AbyssusBundle.message("rayReasonNoBackend")
+            else -> unavailable.attempts.joinToString("; ") { reason(it) }
+        }
     }
 
     fun fallback(reason: RaySceneFallback): String = reason.message(EditorBundle)

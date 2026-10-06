@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.editor.scene
 
+import net.nevinsky.abyssus.editor.scene.AssetRevisionTracker
+import net.nevinsky.abyssus.editor.scene.ProjectRevisions
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

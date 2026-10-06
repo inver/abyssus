@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayBackendSelector
+import net.nevinsky.abyssus.editor.ray.RayBackendService
 import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.CopyOnWriteArrayList
