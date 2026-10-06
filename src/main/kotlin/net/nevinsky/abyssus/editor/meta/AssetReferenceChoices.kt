@@ -19,6 +19,9 @@ import java.io.File
  * relative path, null for none), [label] what the user reads, [resolved] false for a stored value that names nothing
  * usable. An unresolved entry is only ever the current value; it is shown, never offered as a new choice.
  */
+private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "bmp", "gif")
+private const val MAX_FACE_DEPTH = 3
+
 data class AssetChoice(val value: String?, val label: String, val resolved: Boolean = true)
 
 /**
@@ -80,10 +83,5 @@ class AssetReferenceChoices(private val json: JsonProcessor) {
         val file = runCatchingKeepingCancellation { File(folder, name).canonicalFile }.getOrNull() ?: return null
         // Path.startsWith compares whole path elements, so `skybox2` is not inside `skybox`
         return file.takeIf { it.toPath() != root && it.toPath().startsWith(root) }
-    }
-
-    private companion object {
-        val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "bmp", "gif")
-        const val MAX_FACE_DEPTH = 3
     }
 }

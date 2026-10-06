@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.editor.document.SceneJson
@@ -21,10 +22,10 @@ class MetaRowsTest : BasePlatformTestCase() {
 
     private fun terrainFolder() = File("$testDataPath/Untitled/assets").listFiles { f -> f.name.startsWith("terrain_") }!!.single().name
 
-    private fun rows(json: String) = metaRowsOf(SceneJson().parseObject(json), ZoneOffset.UTC)
+    private fun rows(json: String) = metaRowsOf(SceneJson().parseObject(json), ResourceEditorMessages(), ZoneOffset.UTC)
 
     fun testSkyboxListsTopLevelFieldsThenAdditionalFacesInFileOrder() {
-        val rows = metaRowsOf(sample("skybox_default"), ZoneOffset.UTC)
+        val rows = metaRowsOf(sample("skybox_default"), ResourceEditorMessages(), ZoneOffset.UTC)
         assertEquals(listOf("format", "formatVersion", "version", "lastModified", "type", "additional", "top", "bottom", "left", "right", "front", "back"), rows.map { it.name })
         assertEquals("SKYBOX", rows.single { it.name == "type" }.value)
         assertEquals(RowKind.HEADING, rows.single { it.name == "additional" }.kind)
@@ -34,7 +35,7 @@ class MetaRowsTest : BasePlatformTestCase() {
     }
 
     fun testTerrainShowsNumbersAsWrittenAndNullAsNull() {
-        val rows = metaRowsOf(sample(terrainFolder()), ZoneOffset.UTC).associateBy { it.name }
+        val rows = metaRowsOf(sample(terrainFolder()), ResourceEditorMessages(), ZoneOffset.UTC).associateBy { it.name }
         assertEquals("1600", rows.getValue("size").value)
         assertEquals("60.0", rows.getValue("uv").value)
         assertEquals("null", rows.getValue("splatMap").value)
@@ -42,7 +43,7 @@ class MetaRowsTest : BasePlatformTestCase() {
     }
 
     fun testModelListSummarisesAnEmptyListAndShowsBooleans() {
-        val rows = metaRowsOf(sample("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"), ZoneOffset.UTC).associateBy { it.name }
+        val rows = metaRowsOf(sample("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"), ResourceEditorMessages(), ZoneOffset.UTC).associateBy { it.name }
         assertEquals("0 items", rows.getValue("materials").value)
         assertEquals("true", rows.getValue("binary").value)
         assertEquals("29e9be61-6594-4f82-a6cf-44ccf09f71fb", rows.getValue("uuid").value)

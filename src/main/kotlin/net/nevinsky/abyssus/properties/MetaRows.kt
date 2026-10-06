@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.properties
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.AbyssusBundle
+import net.nevinsky.abyssus.editor.EditorMessages
 import net.nevinsky.abyssus.projectView.scalarOf
 import java.time.Instant
 import java.time.ZoneId
@@ -23,19 +23,19 @@ private val LAST_MODIFIED = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
  * The rows of an asset's `meta.json`: its top-level fields in file order (`additional` excluded), then an `additional`
  * heading and the fields of `additional`. Every field present is listed, whatever the asset type.
  */
-fun metaRowsOf(meta: JsonNode, zone: ZoneId = ZoneId.systemDefault()): List<PropertyRow> {
+fun metaRowsOf(meta: JsonNode, messages: EditorMessages, zone: ZoneId = ZoneId.systemDefault()): List<PropertyRow> {
     val rows = mutableListOf<PropertyRow>()
     val additional = meta.get(ADDITIONAL)
     for ((name, value) in meta.properties()) {
         if (name == ADDITIONAL) continue
-        rows += PropertyRow(name, valueText(name, value, zone))
+        rows += PropertyRow(name, valueText(name, value, zone, messages))
     }
     if (additional != null) {
-        rows += PropertyRow(AbyssusBundle.message("propertiesAdditional"), "", RowKind.HEADING)
+        rows += PropertyRow(messages.message("propertiesAdditional"), "", RowKind.HEADING)
         if (additional.isObject) {
-            for ((name, value) in additional.properties()) rows += PropertyRow(name, valueText(name, value, zone), RowKind.ADDITIONAL)
+            for ((name, value) in additional.properties()) rows += PropertyRow(name, valueText(name, value, zone, messages), RowKind.ADDITIONAL)
         } else {
-            rows += PropertyRow(ADDITIONAL, valueText(ADDITIONAL, additional, zone), RowKind.ADDITIONAL)
+            rows += PropertyRow(ADDITIONAL, valueText(ADDITIONAL, additional, zone, messages), RowKind.ADDITIONAL)
         }
     }
     return rows
@@ -43,9 +43,9 @@ fun metaRowsOf(meta: JsonNode, zone: ZoneId = ZoneId.systemDefault()): List<Prop
 
 const val ADDITIONAL = "additional"
 
-private fun valueText(name: String, value: JsonNode, zone: ZoneId): String = when {
-    value.isArray -> AbyssusBundle.message("propertiesListSummary", value.size())
-    value.isObject -> AbyssusBundle.message("propertiesObjectSummary", value.size())
+private fun valueText(name: String, value: JsonNode, zone: ZoneId, messages: EditorMessages): String = when {
+    value.isArray -> messages.message("propertiesListSummary", value.size())
+    value.isObject -> messages.message("propertiesObjectSummary", value.size())
     name == "lastModified" && value.isIntegralNumber -> LAST_MODIFIED.format(Instant.ofEpochMilli(value.longValue()).atZone(zone))
-    else -> scalarOf(value)?.toString() ?: AbyssusBundle.message("dtoNullValue")
+    else -> scalarOf(value)?.toString() ?: messages.message("dtoNullValue")
 }

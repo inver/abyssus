@@ -145,7 +145,7 @@ private fun faces(folder: VirtualFile, meta: AssetMeta.Loaded): List<FaceCell> {
     val additional = meta.json.get("additional")
     return SKYBOX_FACES.map { face ->
         val file = additional?.get(face)?.takeIf { it.isTextual }?.asText()
-        FaceCell(face, file ?: AbyssusBundle.message("dtoNullValue"), file?.let { thumbnail(folder, it) })
+        FaceCell(face, file ?: EditorBundle.message("dtoNullValue"), file?.let { thumbnail(folder, it) })
     }
 }
 
