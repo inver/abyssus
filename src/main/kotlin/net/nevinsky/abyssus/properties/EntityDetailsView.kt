@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.meta.ComponentSection
+import net.nevinsky.abyssus.editor.meta.OpticalMaterialRow
+import net.nevinsky.abyssus.editor.meta.RenderOptics
+import net.nevinsky.abyssus.EditorBundle
 import com.intellij.ide.DataManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
@@ -18,17 +22,17 @@ import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.ecs.scene.EditResult
-import net.nevinsky.abyssus.ecs.scene.FieldKind
-import net.nevinsky.abyssus.ecs.scene.FieldValue
+import net.nevinsky.abyssus.editor.components.EditResult
+import net.nevinsky.abyssus.editor.components.FieldKind
+import net.nevinsky.abyssus.editor.components.FieldValue
 import net.nevinsky.abyssus.filetype.ComponentIcons
 import net.nevinsky.abyssus.filetype.PropertyIcons
 import net.nevinsky.abyssus.projectView.SceneComponentEdits
 import net.nevinsky.abyssus.projectView.addComponentGroup
 import net.nevinsky.abyssus.projectView.reportRejection
-import net.nevinsky.abyssus.editor.ray.RayDataEdit
-import net.nevinsky.abyssus.editor.ray.RayDataError
-import net.nevinsky.abyssus.editor.ray.RayOpticalField
+import net.nevinsky.abyssus.editor.document.RayDataEdit
+import net.nevinsky.abyssus.editor.document.RayDataError
+import net.nevinsky.abyssus.editor.document.RayOpticalField
 import net.nevinsky.abyssus.filetype.SceneRayEdits
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -174,13 +178,13 @@ internal class EntityDetailsView(
         })
         val id = row.id
         if (id == null || row.error != null) {
-            box.add(JBLabel("<html>${AbyssusBundle.message("propertiesRayError${(row.error ?: RayDataError.MATERIAL_ID).name}")}</html>").apply {
+            box.add(JBLabel("<html>${EditorBundle.message("propertiesRayError${(row.error ?: RayDataError.MATERIAL_ID).name}")}</html>").apply {
                 foreground = secondary(); name = "optics-error-${id ?: ""}"
             })
             return box
         }
         val error =
-            JBLabel(row.errors.values.firstOrNull()?.let { AbyssusBundle.message("propertiesRayError${it.name}") }
+            JBLabel(row.errors.values.firstOrNull()?.let { EditorBundle.message("propertiesRayError${it.name}") }
                 ?: "").apply {
                 foreground = JBColor.RED; name = "optics-error-$id"
             }
@@ -218,7 +222,7 @@ internal class EntityDetailsView(
                         }
 
                         is RayDataEdit.Rejected -> {
-                            error.text = AbyssusBundle.message("propertiesRayError${result.error.name}"); editor.text =
+                            error.text = EditorBundle.message("propertiesRayError${result.error.name}"); editor.text =
                                 text
                         }
                     }

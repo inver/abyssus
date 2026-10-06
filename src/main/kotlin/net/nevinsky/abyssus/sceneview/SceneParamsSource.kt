@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.CameraParams
+import net.nevinsky.abyssus.editor.scene.MainCamera
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.scene.renderParamsOf
 import net.nevinsky.abyssus.editor.document.SceneJson
 
 import com.intellij.openapi.vfs.VirtualFile
@@ -28,10 +32,10 @@ fun interface SceneParamsSource {
         fun editorText(reader: SceneReader) = SceneParamsSource { file ->
             val camera = ProjectLayout.abssFor(file)?.let { abss ->
                 val text = textOf(abss)
-                net.nevinsky.abyssus.format.AbyssusDocumentFormat().requireSupported(net.nevinsky.abyssus.editor.document.SceneJson.parse(text), net.nevinsky.abyssus.format.DocumentKind.PROJECT)
-                MainCamera.parse(text)
+                net.nevinsky.abyssus.editor.document.AbyssusDocumentFormat().requireSupported(net.nevinsky.abyssus.editor.document.SceneJson().parse(text), net.nevinsky.abyssus.editor.document.DocumentKind.PROJECT)
+                MainCamera().parse(text)
             } ?: CameraParams.DEFAULT
-            SceneRenderParams.from(reader.parse(textOf(file)), camera, ProjectLayout.projectDirFor(file))
+            renderParamsOf(reader.parse(textOf(file)), camera, ProjectLayout.projectDirFor(file))
         }
     }
 }

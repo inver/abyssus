@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus
 
+import net.nevinsky.abyssus.editor.parseScene
+import net.nevinsky.abyssus.editor.testAsset
 import net.nevinsky.abyssus.editor.document.SceneJson
 
 import com.intellij.ide.projectView.PresentationData
@@ -46,7 +48,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         myFixture.copyFileToProject("Tree/Untitled.abss", "Untitled/Untitled.abss")
         val sceneText = java.io.File("$testDataPath/Tree/scenes/Main Scene.scene").readText()
         myFixture.addFileToProject("Untitled/scenes/Main Scene.scene",
-            net.nevinsky.abyssus.editor.document.SceneJson.pretty(net.nevinsky.abyssus.editor.document.SceneJson.parse(sceneText)))
+            net.nevinsky.abyssus.editor.document.SceneJson().pretty(net.nevinsky.abyssus.editor.document.SceneJson().parse(sceneText)))
         return myFixture.findFileInTempDir("Untitled")
     }
 

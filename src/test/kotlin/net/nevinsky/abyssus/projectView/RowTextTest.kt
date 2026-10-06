@@ -13,7 +13,7 @@ class RowTextTest : BasePlatformTestCase() {
     private fun entry(name: String, value: Any?, vararg keys: String) =
         DtoEntry("/p/$name", name, value, null, null, null, keys.toList())
 
-    private fun json(text: String) = SceneJson.parse(text)
+    private fun json(text: String) = SceneJson().parse(text)
 
     fun testFoldersAreLabelledAndCounted() {
         assertEquals(RowText("Scenes", "2"), rowText(entry("scenes", listOf(1, 2))))

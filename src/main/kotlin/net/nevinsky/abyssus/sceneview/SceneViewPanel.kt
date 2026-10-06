@@ -5,10 +5,16 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayViewFeed
+import net.nevinsky.abyssus.editor.scene.AssetRevisionBatch
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.editor.pick.SceneInteraction
+import net.nevinsky.abyssus.editor.pick.TransformEdit
+import net.nevinsky.abyssus.editor.pick.ViewSize
 import net.nevinsky.abyssus.editor.ray.RayModeSnapshot
 
 import net.nevinsky.abyssus.editor.content.Vec3
-import net.nevinsky.abyssus.editor.content.CameraPlacement
 
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionManager
@@ -20,7 +26,7 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
 import com.intellij.openapi.diagnostic.thisLogger
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
+import net.nevinsky.abyssus.editor.pick.GizmoMode
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GLCapabilities
 import org.lwjgl.opengl.awt.GLData
@@ -44,15 +50,6 @@ import javax.swing.Timer
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
 
-/** An entry of the camera selector: [id] is the camera entity to look through, null for the free orbit view. */
-data class CameraChoice(val id: String?, val label: String) {
-    override fun toString() = label
-}
-
-/** "Free camera" followed by the scene's cameras by name (their id when unnamed, which [CameraPlacement.name] already is). */
-fun cameraChoices(content: SceneContent, freeLabel: String): List<CameraChoice> =
-    listOf(CameraChoice(null, freeLabel)) + content.cameras.map { CameraChoice(it.entityId, it.name) }
-
 /**
  * Swing panel hosting a core-profile GL canvas that renders a scene with libGDX. Orbit/pan/zoom with the mouse; click
  * selects an object, whose gizmo (Move: W, Rotate: E) can be dragged; a selector looks through a camera entity.
@@ -75,7 +72,7 @@ class SceneViewPanel internal constructor(
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     private val frame = GdxFrame()
-    private val orbit = OrbitCamera.from(initial.camera)
+    private val orbit = OrbitCamera(initial.camera)
     private val interaction = SceneInteraction(renderer.state, renderer.queries, orbit)
     private var gdx: GdxContext? = null
 
@@ -361,15 +358,18 @@ class SceneViewPanel internal constructor(
     private fun syncControls() {
         updatingControls = true
         try {
-            moveButton.isSelected = interaction.mode == GizmoMode.MOVE
-            rotateButton.isSelected = interaction.mode == GizmoMode.ROTATE
-            val editing = !experimenting && !play.active
-            moveButton.isEnabled = editing
-            rotateButton.isEnabled = editing
-            cameraCombo.isEnabled = !experimenting
-            dropButton.isEnabled = editing && interaction.canDrop
-            addLightButton.isEnabled = editing && lightActions != null && canAddLight()
-            addAssetButton.isEnabled = editing && assetActions != null && canAddAsset()
+            val toolbar = toolbarState(
+                interaction.mode, experimenting, play.active, interaction.canDrop,
+                lightActions != null && canAddLight(), assetActions != null && canAddAsset(),
+            )
+            moveButton.isSelected = toolbar.moveSelected
+            rotateButton.isSelected = toolbar.rotateSelected
+            moveButton.isEnabled = toolbar.gizmoEnabled
+            rotateButton.isEnabled = toolbar.gizmoEnabled
+            cameraCombo.isEnabled = toolbar.cameraEnabled
+            dropButton.isEnabled = toolbar.dropEnabled
+            addLightButton.isEnabled = toolbar.addLightEnabled
+            addAssetButton.isEnabled = toolbar.addAssetEnabled
             syncPlayControls()
             cameraCombo.selectedItem = choices.firstOrNull { it.id == interaction.viewCamera } ?: choices.firstOrNull()
         } finally {
@@ -383,10 +383,11 @@ class SceneViewPanel internal constructor(
             return
         }
         val phase = play.phase
-        playButton.isEnabled = phase == PlayState.Phase.IDLE || phase == PlayState.Phase.FAILED || phase == PlayState.Phase.PAUSED
-        pauseButton.isEnabled = phase == PlayState.Phase.PLAYING
-        stepButton.isEnabled = phase == PlayState.Phase.PAUSED
-        stopButton.isEnabled = play.active
+        val controls = playControls(phase, play.active)
+        playButton.isEnabled = controls.play
+        pauseButton.isEnabled = controls.pause
+        stepButton.isEnabled = controls.step
+        stopButton.isEnabled = controls.stop
         playStatus.text = when (phase) {
             PlayState.Phase.IDLE -> ""
             PlayState.Phase.STARTING -> AbyssusBundle.message("sceneViewPlayStarting")

@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.pick.OrbitCamera
 import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import org.lwjgl.opengl.GL
@@ -36,7 +38,7 @@ object GlHarness {
     fun render(
         params: SceneRenderParams,
         frames: Int,
-        orbit: OrbitCamera = OrbitCamera.from(params.camera),
+        orbit: OrbitCamera = OrbitCamera(params.camera),
         executor: java.util.concurrent.Executor? = null,
         framebufferSize: Pair<Int, Int>? = null,
         afterFrame: (SceneRenderer, Int) -> Unit = { _, _ -> },

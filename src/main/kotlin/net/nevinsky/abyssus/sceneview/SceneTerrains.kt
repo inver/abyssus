@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.PlacedEntity
+import net.nevinsky.abyssus.editor.content.toMatrix
 import net.nevinsky.abyssus.editor.content.AssetPlacement
 
 import com.badlogic.gdx.math.Matrix4

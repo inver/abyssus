@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.editor.document.scalarOf
 import net.nevinsky.abyssus.ui.thumbnail
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -21,7 +22,7 @@ import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.runtime.text
 import net.nevinsky.abyssus.dto.SceneEntry
 import net.nevinsky.abyssus.core.assets.MetaType
-import net.nevinsky.abyssus.SKYBOX_FACES
+import net.nevinsky.abyssus.editor.meta.SKYBOX_FACES
 import net.nevinsky.abyssus.dto.MetaFiles
 import net.nevinsky.abyssus.core.assets.sky.hdr.HdrPreview
 

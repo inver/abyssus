@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.meta.PropertyRow
+import net.nevinsky.abyssus.editor.meta.metaRowsOf
+import net.nevinsky.abyssus.EditorBundle
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
@@ -29,7 +32,7 @@ fun loadAssetMeta(folder: VirtualFile, metaFiles: MetaFiles): AssetMeta {
         ?: return AssetMeta.Failed(folder, AbyssusBundle.message("propertiesMetaMissing", folder.name))
     return runCatchingKeepingCancellation { metaFiles.inEditor(folder) }.fold(
         onSuccess = { document ->
-            document?.let { AssetMeta.Loaded(folder, it.type, metaRowsOf(it.json), it.json) }
+            document?.let { AssetMeta.Loaded(folder, it.type, metaRowsOf(it.json, EditorBundle), it.json) }
                 ?: AssetMeta.Failed(folder, AbyssusBundle.message("propertiesMetaMissing", folder.name))
         },
         onFailure = {

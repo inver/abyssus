@@ -43,7 +43,7 @@ import net.nevinsky.abyssus.ui.documentDisplayMessage
 import net.nevinsky.abyssus.core.flightgear.FlightGearImportRequest
 import net.nevinsky.abyssus.core.flightgear.FlightGearInspection
 import net.nevinsky.abyssus.terrain.message
-import net.nevinsky.abyssus.terrain.uniqueAssetUuid
+import net.nevinsky.abyssus.editor.terrain.uniqueAssetUuid
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.io.File
@@ -105,7 +105,7 @@ fun inspectArchive(archiveFile: File, cancel: () -> Unit = {}): List<FlightGearI
 private fun projectRefusal(abss: VirtualFile): String? {
     val core = service<AbyssusCore>()
     return runCatchingKeepingCancellation {
-        core.format.requireSupported(core.json.readObject(net.nevinsky.abyssus.dto.textOf(abss)), net.nevinsky.abyssus.format.DocumentKind.PROJECT)
+        core.format.requireSupported(core.json.readObject(net.nevinsky.abyssus.dto.textOf(abss)), net.nevinsky.abyssus.editor.document.DocumentKind.PROJECT)
     }.exceptionOrNull()?.let { with(it) { documentDisplayMessage() } }
 }
 

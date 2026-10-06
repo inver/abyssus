@@ -4,16 +4,25 @@
 
 | Module | What | Depends on |
 |---|---|---|
-| root (`src/`) | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.10) | `:runtime`, `:core`, `:gdx-model`, `:raytracing`, Jackson, libGDX, LWJGL3-AWT |
+| root (`src/`) | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.10): IDE glue over `editor-core` (tree, tool windows, dialogs, the GL canvas and renderer, actions, file types, VFS) | `:editor-core`, `:runtime`, `:core`, `:gdx-model`, `:raytracing`, Jackson, libGDX, LWJGL3-AWT |
+| `editor-core/` | Plain JVM editing engine: scene documents and the write transform, component editing, the scene read model, picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge, `HeadlessEditing` | `:core`, `:runtime`, `:raytracing`, `:gdx-model` |
 | `runtime/` | Plain JVM Ashley components, codecs, systems, schema export and scene loading (DTOs and filesystem parsing in `core`) | `:core`, Ashley |
-| `physics-plugin/` | **Abyssus Physics**, an IntelliJ plugin depending on Abyssus: physics overlay, Play through a separate play process, generated physics schema, bundled `play-host` folder | root plugin (`localPlugin`), `:physics` (without its dependencies), `:runtime` compile-only |
+| `physics-plugin/` | **Abyssus Physics**, an IntelliJ plugin depending on Abyssus: physics overlay, Play through a separate play process, generated physics schema, bundled `play-host` folder | root plugin (`localPlugin`), `:physics` (without its dependencies), `:runtime` and `:editor-core` compile-only |
 | `physics/` | Plain JVM physics: the physics components and `PhysicsWorld` (Jolt through jolt-jni), run in a game or the play host, never in the IDE | `:runtime`, jolt-jni |
 | `games/control-line/` | **Control Line**, a libGDX desktop game (LWJGL3): flight on Jolt lines, scoring, screens, its bundled native project and its `PlayModule` for Play in Abyssus | `:physics`, libGDX LWJGL3 backend, jolt-jni natives of the build machine |
 | `core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline (`AssetStorage`), CPU ray snapshots (`RaySnapshotStore`), and the models, terrains and skies it builds | `:gdx-model`, Jackson, libGDX |
 | `gdx-model/` | Plain JVM library: libGDX model runtime with 32-bit mesh indices and an Assimp importer | libGDX, LWJGL Assimp |
 | `raytracing/` | Plain JVM ray tracing: backend contracts, immutable scene snapshots and linear host frames, the scheduler and quality policy, and optional native Metal and Vulkan backends | Kotlin stdlib, LWJGL Vulkan and VMA |
 
-`gdx-model`, `core`, `runtime` and `physics` must not import IntelliJ or plugin code (see their READMEs). `core` is wired by constructors:
+```
+gdx-model <- core <- runtime <- physics
+                 \       \
+                  \       +-- editor-core <- plugin (root) <- physics-plugin
+raytracing ---------------/
+```
+
+`gdx-model`, `core`, `runtime`, `physics` and `editor-core` must not import IntelliJ or plugin code (see their READMEs;
+`editor-core` also has no Swing or AWT). Inside every module the package graph is acyclic (`checkPackageCycles`). `core` is wired by constructors:
 its composition root `AssetLoading` takes a `JsonProcessor`, an SLF4J `Logger`, an executor and the sky `ShaderSource`; in
 the IDE the light application service `AbyssusCore.assets` builds one (IDE log, IDE pool) and hands it to every scene view.
 `AbyssusCore` creates four groups independently on first access: `documents` owns JSON, native validation and parsing;
@@ -55,15 +64,15 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 
 1. `SceneFileEditor` receives tree integration through the pane's `SceneViewHost` and reads the scene and its project's `mainCamera` through `SceneParamsSource.EDITOR_TEXT`. It uses
    the unsaved editor text when there is any. It re-reads on every document or VFS change of those files.
-2. `SceneRenderParams.from` → `SceneContent.of` turns the `ecs` JSON into placements: `models`, `terrains`,
+2. `renderParamsOf` → `sceneContentOf` (the scene package of `editor-core`) reads the `ecs` JSON through `SceneDocument` into placements: `models`, `terrains`,
    `lights`, `cameras`, plus the skybox name. The view reads the JSON through runtime component codecs; it does not run the Ashley engine.
    A light's or camera's direction resolves its `PositionComponent.lookAtId` to an entity's `localPosition` when that
    target exists and is not at the entity itself; otherwise it uses the entity's `localRotation`. `handleIds` records
    the `HANDLE` entities that a light may be aimed at.
 3. `SceneViewPanel` hosts a `GuardedGLCanvas`. A Swing `Timer` renders frames through
    `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each holding a
-   `core` `AssetStorage` built by `AssetLoading`) and draws markers (`SceneMarkers`) and gizmos
-   (`sceneview/gizmo/`).
+   `core` `AssetStorage` built by `AssetLoading`) and draws markers (`editor-core`'s `SceneMarkers` through a
+   `LineSink`) and gizmos (`sceneview/gizmo/GizmoDraw.kt` over `editor-core`'s `GizmoHandles`).
 4. An HDR sky also lights the content. `core`'s `HdrSkyLoader` decodes the `.exr` through TinyEXR on the pool thread, then
    `HdrEnvironmentBuild` builds a specular cube, an irradiance cube and six axis colors on the GPU, one step per
    frame. Once built, `SceneSkybox.environment` hands them to `SceneRenderer`, which (`SceneAmbient.of`) swaps
@@ -80,7 +89,8 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 
 ### Clicks, drags and writes
 
-- **Mouse and keys:** `SceneInteraction` handles them, over the `SceneViewState` (selection, gizmo mode, preview,
+- **Mouse and keys:** `SceneInteraction` (`editor-core`, `editor.pick`, like everything in this list but the panel and
+  the renderer) handles them, over the `SceneViewState` (selection, gizmo mode, preview,
   camera looked through; owned by the panel) and `SceneQueries` (`SnapshotSceneQueries` over the `FrameSnapshot` the
   renderer publishes after each frame). A click picks (`ScenePicker` over model bounds, terrain
   heights and marker bounds). It selects in the view, and `selectEntityInAbyssusView` selects the entity's row in
@@ -94,7 +104,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
   re-check after loading changes, outside the GL context. New scene params also invalidate the next frame's query
   so changed transforms and Undo update availability even when the drawn entity ids stay the same.
 - **On release:** `SceneFileEditor.applyTransform` calls `editSceneJson` with
-  `SceneTransformWriter.apply`, which writes only the changed `localPosition` / `localRotation`, plus the camera's
+  `SceneTransformWriter().apply`, which writes only the changed `localPosition` / `localRotation`, plus the camera's
   `position` / `viewPointPosition`. The document change triggers the re-read above.
 - **Undo:** `SceneFileEditor` is a `DocumentReferenceProvider`, so Undo in the scene view tab reaches these edits.
 - **Look-through:** the camera selector in the toolbar renders from a camera entity instead of the orbit camera.
@@ -102,15 +112,19 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 
 ### Every write
 
-The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) and asset property edits (`AssetMetaEdits`, over the plugin's
-`AssetMetaEditor`; reference and face choices come from `src/main/kotlin/net/nevinsky/abyssus/editor/meta/AssetReferenceChoices.kt`) all go through `editSceneJson`
+The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) and asset property edits (`AssetMetaEdits`, over `editor-core`'s
+`AssetMetaEditor`; reference and face choices come from `editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/meta/AssetReferenceChoices.kt`) all go through `editSceneJson`
 (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneDocumentWriter.kt`):
 
-1. Parse the document with `SceneJson`.
-2. Mutate the tree.
-3. Re-serialize with `SceneJson.inStyleOf`, which keeps indentation, key order and number text.
-4. Replace the text in a `WriteCommandAction` and save.
-5. Publish `AbyssusSceneEdited.TOPIC` (the file). The Abyssus pane listens and refreshes itself; the writer knows no UI.
+1. `DocumentTextEditor` (`editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/document/DocumentTextEditor.kt`)
+   parses the document with `SceneJson` and admits it, lets the caller mutate the tree, admits the result and
+   re-serializes it with `SceneJson().inStyleOf`, which keeps indentation, key order and number text.
+2. Unless the document changed meanwhile, replace the text in a `WriteCommandAction` and save.
+3. Publish `AbyssusSceneEdited.TOPIC` (the file). The Abyssus pane listens and refreshes itself; the writer knows no UI.
+
+`HeadlessEditing` (`editor-core`, `editor.headless`) runs the same `DocumentTextEditor` on text with no IDE, so a
+caller without the plugin validates and edits a scene, project or `meta.json` with byte-identical results and the same
+refusals (spec `headless-scene-editing`).
 
 Terrain regeneration and creation are the exception (binary heights, new files and folders cannot be a document edit):
 they go through `AssetFileCommand` (`assetfiles/AssetFileCommand.kt`), described in `docs/ai/conventions.md`, with
@@ -123,9 +137,16 @@ fail it between any two writes. No scene or project file is written that way.
 bound into that class with Jackson (`readValue`), with no per-component codec. Components it doesn't model are carried
 raw. `EcsWriter` writes the engine back in native format with Jackson too (`valueToTree`), without defaults.
 Systems are in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/system/`. The Control Line game and the Play host load Ashley engines through `RuntimeSceneLoader`; the editor view
-decodes JSON directly. `ComponentEditor` is used by the plugin: it adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
+decodes JSON directly. `ComponentEditor` (`editor-core`, `editor.components`) adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
 checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the properties panel and the tree actions. See
-`src/main/kotlin/net/nevinsky/abyssus/ecs/README.md`.
+`editor-core/README.md`.
+
+### The scene document layer
+
+The editor keeps the parsed JSON tree as its model (unknown keys, key order, omitted defaults and number text stay the
+file's); games and Play keep the Ashley `SceneEngine`; both bind components through `runtime`'s codecs. The entity
+layout (`ecs[.entities].<id>.components`) is known only to `editor-core`'s `SceneDocument.kt`: readers go through
+`SceneDocument` / `EntityView`, writers address and insert entities through `SceneEntityTree`.
 
 **Component schemas.** `ComponentEditor` is built per scene by the `ComponentSchemas` project service
 (`src/main/kotlin/net/nevinsky/abyssus/schema/ComponentSchemas.kt`): the built-in kinds plus one kind per component of
@@ -153,7 +174,8 @@ is a constructor-built validator over parsed `JsonNode`s with no Swing, IntelliJ
 `.abss` / `.scene` / `meta.json` header (`format: "abyssus"`, integral `formatVersion: 1`) and reserved scene fields
 (`ecs.componentIdentifiers`, renderable `class`), returning a `FormatRejection` or null. Extension payloads are opaque.
 
-`DocumentParsing` guards editor project/scene binding; `AssetMetaReader` guards editor metadata reads.
+`DocumentParsing` guards editor project/scene binding; `AssetMetaReader` guards editor metadata reads (both in
+`editor-core`, `editor.document`, which also holds the editor-facing aliases of the `core.format` types).
 `editSceneJson` validates current and candidate document text on the EDT, and `SceneFormatListener` guards formatting.
 Rejections surface through `documentDisplayMessage` and localized `unsupportedFormat.*` messages.
 
@@ -198,7 +220,7 @@ The editor retains source aliases in its `format` package. None of these checks 
 - **A new built-in ECS component:** write the Ashley component with Jackson-friendly properties (a no-argument
   constructor; a `@JsonSerialize` / `@JsonDeserialize` class for a shape that is not plain properties), add it to the
   registered type list in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/EcsJson.kt` and
-  the editor kind/codec definitions in `src/main/kotlin/net/nevinsky/abyssus/ecs/scene/ComponentEditor.kt`.
+  the editor kind/codec definitions in `editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/components/BuiltInComponentKinds.kt`.
 - **A game component:** annotate the class (`@SceneComponent`, `@Field`), register it through a `ComponentRegistry`
   passed to `RuntimeSceneLoader`, and export its schema; no plugin change. See `runtime/README.md`.
 - **`net.nevinsky.abyssus.componentSchemas` (IDE extension point, dynamic):** another plugin contributes a component

@@ -4,6 +4,12 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayBackendService
+import net.nevinsky.abyssus.editor.ray.RayFrameContext
+import net.nevinsky.abyssus.editor.ray.RaySceneAssets
+import net.nevinsky.abyssus.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.ray.RayModePhase
 import net.nevinsky.abyssus.ui.RayModeText
 
@@ -58,7 +64,7 @@ class SceneViewPanelRayTest : BasePlatformTestCase() {
 
     private fun context(renderer: SceneRenderer): RayFrameContext {
         val camera = PerspectiveCamera(60f, 8f, 8f).apply { position.set(0f, 0f, 5f); lookAt(0f, 0f, 0f); update() }
-        return RayFrameContext(renderer.params, SceneContent.EMPTY, camera, LightSet.NONE, emptyList(), 8, 8, renderer.state.viewCamera)
+        return RayFrameContext(renderer.params, SceneContent(), camera, NO_LIGHTS, emptyList(), 8, 8, renderer.state.viewCamera)
     }
 
     fun testTheSceneViewToolbarHasNoRayTracingControl() {
@@ -90,7 +96,7 @@ class SceneViewPanelRayTest : BasePlatformTestCase() {
         val renderer = testRenderer()
         renderer.state.selectedId = "selected-entity"
         renderer.state.viewCamera = "camera-1"
-        renderer.state.preview = mapOf("selected-entity" to net.nevinsky.abyssus.sceneview.gizmo.DragResult(
+        renderer.state.preview = mapOf("selected-entity" to net.nevinsky.abyssus.editor.pick.DragResult(
             PlacementTransform(Vec3(1f, 2f, 3f), Quat.IDENTITY, Vec3(1f, 1f, 1f)), null))
         val preview = renderer.state.preview
         val device = RayFakeDevice()

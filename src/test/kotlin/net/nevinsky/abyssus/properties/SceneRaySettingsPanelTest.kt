@@ -28,7 +28,7 @@ class SceneRaySettingsPanelTest:BasePlatformTestCase() {
         val field=named(view,"ray-setting-maxReflectionBounces") as JBTextField
         assertEquals("1",field.text);assertTrue(field.isEnabled)
         field.text="2";field.postActionEvent()
-        assertEquals(2,SceneJson.parse(document.text)["rayTracing"]["maxReflectionBounces"].intValue())
+        assertEquals(2,SceneJson().parse(document.text)["rayTracing"]["maxReflectionBounces"].intValue())
     }
     fun testInvalidAndSupersededEditsShowErrorsWithoutOverwritingTheDocument() {
         val file=file();val document=FileDocumentManager.getInstance().getDocument(file)!!
@@ -39,7 +39,7 @@ class SceneRaySettingsPanelTest:BasePlatformTestCase() {
         val fresh=view(file);val other=named(fresh,"ray-setting-targetSamplesPerPixel") as JBTextField
         other.text="4";other.postActionEvent()
         field.text="8";field.postActionEvent()
-        assertEquals(4,SceneJson.parse(document.text)["rayTracing"]["targetSamplesPerPixel"].intValue())
+        assertEquals(4,SceneJson().parse(document.text)["rayTracing"]["targetSamplesPerPixel"].intValue())
         assertTrue((named(view,"ray-setting-targetSamplesPerPixel-error") as JLabel).text.contains("changed"))
         assertTrue("a rebuilt view keeps the explanation",(named(SceneDetailsView(SceneRayControls(project) { _,_->error("no view") },
             readSceneState(file,"Settings") as PanelState.UISceneState,testRootDisposable,conflict="targetSamplesPerPixel"),

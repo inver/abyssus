@@ -5,6 +5,11 @@
 
 package net.nevinsky.abyssus.schema
 
+import net.nevinsky.abyssus.editor.components.ContributedSchemaText
+import net.nevinsky.abyssus.editor.components.ProjectSchemaText
+import net.nevinsky.abyssus.editor.components.SchemaMerge
+import net.nevinsky.abyssus.editor.components.SchemaSnapshot
+import net.nevinsky.abyssus.EditorBundle
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
@@ -23,7 +28,7 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.textOf
-import net.nevinsky.abyssus.ecs.scene.ComponentEditor
+import net.nevinsky.abyssus.editor.components.ComponentEditor
 import net.nevinsky.abyssus.ui.documentDisplayMessage
 import net.nevinsky.abyssus.runtime.schema.SCHEMA_FILE
 import java.util.concurrent.ConcurrentHashMap
@@ -47,7 +52,7 @@ fun interface ComponentSchemasListener {
  */
 @Service(Service.Level.PROJECT)
 class ComponentSchemas(private val project: Project) : Disposable {
-    private val merge = SchemaMerge()
+    private val merge = SchemaMerge(EditorBundle)
     private val snapshots = ConcurrentHashMap<String, SchemaSnapshot>()
     private val noProject = "" // the key for scenes outside an Abyssus project
     @Volatile private var contributions: List<ContributedSchemaText>? = null

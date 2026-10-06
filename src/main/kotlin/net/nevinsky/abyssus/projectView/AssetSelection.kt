@@ -27,9 +27,9 @@ fun assetsNodeProjectFile(node: Any?): VirtualFile? {
     if (entry.name != "assets" || entry.value !is List<*>) return null
     return entry.source?.takeIf { it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
         net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation {
-            net.nevinsky.abyssus.format.AbyssusDocumentFormat().validate(
-                net.nevinsky.abyssus.editor.document.SceneJson.parse(net.nevinsky.abyssus.dto.textOf(it)),
-                net.nevinsky.abyssus.format.DocumentKind.PROJECT,
+            net.nevinsky.abyssus.editor.document.AbyssusDocumentFormat().validate(
+                net.nevinsky.abyssus.editor.document.SceneJson().parse(net.nevinsky.abyssus.dto.textOf(it)),
+                net.nevinsky.abyssus.editor.document.DocumentKind.PROJECT,
             ) == null
         }.getOrDefault(false) }
 }

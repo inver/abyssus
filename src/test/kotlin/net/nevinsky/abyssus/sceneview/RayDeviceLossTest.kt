@@ -4,6 +4,9 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayBackendSelector
+import net.nevinsky.abyssus.editor.ray.RayBackendService
+import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.editor.ray.RayModePhase
 
 import net.nevinsky.abyssus.raytracing.*
@@ -101,7 +104,7 @@ class RayDeviceLossTest {
 
     private fun service(device: Device) = RayBackendService(
         RayBackendSelector("metal", "Mac OS X", mapOf("metal" to { device })),
-        publish = { SwingUtilities.invokeLater(it) },
+        messages = ResourceEditorMessages(), publish = { SwingUtilities.invokeLater(it) },
     )
 
     private class Device : RayBackendProvider {

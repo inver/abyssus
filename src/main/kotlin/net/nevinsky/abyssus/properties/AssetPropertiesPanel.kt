@@ -5,6 +5,14 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.EditorBundle
+
+import net.nevinsky.abyssus.editor.meta.ADDITIONAL
+import net.nevinsky.abyssus.editor.meta.AssetFieldState
+import net.nevinsky.abyssus.editor.meta.DetailRow
+import net.nevinsky.abyssus.editor.meta.PropertyRow
+import net.nevinsky.abyssus.editor.meta.RowKind
+import net.nevinsky.abyssus.editor.meta.detailRows
 import net.nevinsky.abyssus.editor.meta.AssetChoice
 import net.nevinsky.abyssus.ui.thumbnail
 
@@ -42,9 +50,9 @@ import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.FieldKind
-import net.nevinsky.abyssus.FieldValue
-import net.nevinsky.abyssus.ParseOutcome
+import net.nevinsky.abyssus.editor.meta.FieldKind
+import net.nevinsky.abyssus.editor.meta.FieldValue
+import net.nevinsky.abyssus.editor.meta.ParseOutcome
 import net.nevinsky.abyssus.core.assets.Asset
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.ProjectLayout
@@ -310,16 +318,13 @@ class AssetPropertiesPanel(
         box.add(header(d))
         box.add(columnHeader())
         val rows = JPanel(VerticalLayout(0)).apply { border = JBUI.Borders.empty(4, 0) }
-        val editable = d.fields.associateBy { it.key }
-        val shown = HashSet<String>()
-        for (row in d.meta.rows) {
-            val field = editable[row.name]?.takeIf { row.kind == RowKind.ADDITIONAL }
-            if (field != null) shown += field.key
-            rows.add(if (field != null) fieldRow(d, field) else rowOf(row))
-        }
         // supported fields a file omits (procedural sky defaults) are listed with their effective value
-        if (d.meta.rows.any { it.kind == RowKind.HEADING }) d.fields.filter { it.key !in shown }
-            .forEach { rows.add(fieldRow(d, it)) }
+        for (row in detailRows(d.meta.rows, d.fields)) rows.add(
+            when (row) {
+                is DetailRow.Field -> fieldRow(d, row.state)
+                is DetailRow.Plain -> rowOf(row.row)
+            }
+        )
         box.add(rows)
         when (val terrain = d.terrain) {
             is TerrainSource.Unusable -> box.add(terrainUnusableNote(terrain.reason))
@@ -419,7 +424,7 @@ class AssetPropertiesPanel(
         val error = JBLabel("").apply { foreground = JBColor.RED; name = "asset-error-${state.key}" }
         if (conflictKey == state.key) {
             conflictKey = null
-            error.text = AbyssusBundle.message("assetFieldConflict")
+            error.text = EditorBundle.message("assetFieldConflict")
         }
         val editor = fieldEditor(d, state, error)
         editor.name = "asset-field-${state.key}"
@@ -492,7 +497,7 @@ class AssetPropertiesPanel(
             }
 
             is AssetEditResult.Conflict -> {
-                error.text = AbyssusBundle.message("assetFieldConflict")
+                error.text = EditorBundle.message("assetFieldConflict")
                 revert()
                 conflictKey = state.key
                 refresh()

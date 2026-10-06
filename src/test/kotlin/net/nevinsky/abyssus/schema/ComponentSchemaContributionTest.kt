@@ -23,7 +23,7 @@ class ComponentSchemaContributionTest : BasePlatformTestCase() {
         val scene = myFixture.copyFileToProject("Untitled/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
         myFixture.copyFileToProject("Untitled/Untitled.abss", "Untitled/Untitled.abss")
         val schemas = ComponentSchemas.of(project)
-        val root = SceneJson.parse(String(scene.contentsToByteArray()))
+        val root = SceneJson().parse(String(scene.contentsToByteArray()))
         assertNull(schemas.editorFor(scene).kindOf("MarkerComponent"))
 
         val plugin = Disposer.newDisposable()

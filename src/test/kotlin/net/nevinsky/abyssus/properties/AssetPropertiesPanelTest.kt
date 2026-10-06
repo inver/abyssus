@@ -24,7 +24,7 @@ import net.nevinsky.abyssus.projectView.DtoEntryNode
 import java.awt.Component
 import java.awt.Container
 import java.io.File
-import net.nevinsky.abyssus.SKYBOX_FACES
+import net.nevinsky.abyssus.editor.meta.SKYBOX_FACES
 import net.nevinsky.abyssus.testPanelServices
 
 class AssetPropertiesPanelTest : BasePlatformTestCase() {
@@ -489,7 +489,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         assertEquals("Main Scene.scene", editor.file.name)
         type(find(p, "ray-setting-targetSamplesPerPixel") as JBTextField, "512")
         val edited = metaText(path)
-        assertEquals(512, net.nevinsky.abyssus.editor.document.SceneJson.parse(edited)["rayTracing"]["targetSamplesPerPixel"].intValue())
+        assertEquals(512, net.nevinsky.abyssus.editor.document.SceneJson().parse(edited)["rayTracing"]["targetSamplesPerPixel"].intValue())
         assertEquals("the panel refreshes from the document", "512", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
         val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
         undo.undo(editor)

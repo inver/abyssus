@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.editor.document.scalarOf
+import net.nevinsky.abyssus.EditorBundle
+
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.icons.AllIcons
 import com.intellij.ide.projectView.PresentationData
@@ -181,7 +184,7 @@ class DtoEntryNode(
         val secondaryAttrs = if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.GRAY_ATTRIBUTES
         if (isScalar(v.value)) {
             presentation.addText("${shown.label}: ", attrs)
-            presentation.addText((scalarOf(v.value) ?: AbyssusBundle.message("dtoNullValue")).toString(), secondaryAttrs)
+            presentation.addText((scalarOf(v.value) ?: EditorBundle.message("dtoNullValue")).toString(), secondaryAttrs)
         } else {
             presentation.addText(shown.label, attrs)
             shown.secondary?.let { presentation.addText("  $it", secondaryAttrs) }

@@ -39,10 +39,11 @@
 
 ## JSON
 
-- **Always use `SceneJson`** (`src/main/kotlin/net/nevinsky/abyssus/editor/document/SceneJson.kt`), never a fresh
+- **Always use `SceneJson`** (`editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/document/SceneJson.kt`), never a fresh
   `ObjectMapper`. It keeps key order and `null` members, and keeps float text exactly (`RawNumberNode`). Reading and
   writing a file therefore never changes numbers you didn't touch.
-- **Binding:** bind files to DTOs with `SceneJson.bind` / `SceneReader.parse`. Unknown fields are ignored, and
+- **Binding:** bind files to DTOs with `SceneJson().bind` / `SceneReader.parse` (`SceneJson` is stateless; every
+  instance shares one mapper). Unknown fields are ignored, and
   property declaration order is the order the tree shows.
 - **Non-row fields:** mark them `@get:JsonIgnore` (for example `SceneEntry.file`, `AssetInfo.unused`) so the tree
   doesn't list them.
@@ -51,8 +52,9 @@
 - **Wiring:** pass collaborators in through constructors. A `service<...>()` lookup belongs only in an action, a
   provider, a tool window factory, the Abyssus pane, or a deferred service accessor. Constructors must not look up other services;
   injected collaborators or lazy access keep unrelated service groups uninitialized.
-- **Writing a file:** use `editSceneJson` (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneDocumentWriter.kt`), re-serialized with `SceneJson.inStyleOf`, so a pretty file stays pretty
-  and a compact one stays compact.
+- **Writing a file:** use `editSceneJson` (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneDocumentWriter.kt`); its text transform is
+  `editor-core`'s `DocumentTextEditor`, re-serialized with `SceneJson().inStyleOf`, so a pretty file stays pretty and a
+  compact one stays compact. Address entities through `SceneDocument` / `SceneEntityTree`, never by `"ecs"` / `"components"` keys.
 
 ## Writing files
 
@@ -66,7 +68,7 @@ Readers never write (`ConfigFileReader` implementations never write and never th
 - saved ray settings and per-instance optical overrides (`SceneRayEdits`),
 - asset property edits in the properties panel (`AssetMetaEdits` in `properties/AssetMetaEdits.kt`): one `additional` key
   of an asset's `meta.json` per command, named Edit Asset Property. The rules (which keys, validation, defaults, stale
-  values) are the plugin's `AssetMetaEditor`'s, which works on any JSON tree and never touches `version`, `uuid`, `type`,
+  values) are `editor-core`'s `AssetMetaEditor`'s, which works on any JSON tree and never touches `version`, `uuid`, `type`,
   `lastModified` or unknown keys.
 
 **The one other write path: terrain files.** A scene or project file edit never takes it. Regenerating a terrain
@@ -99,15 +101,19 @@ command name in the message bundle.
 ## UI text
 
 User-visible strings go in `src/main/resources/messages/AbyssusBundle.properties` and are read with
-`AbyssusBundle.message(key, args)`. Escape non-ASCII characters as `\uXXXX` in that file.
+`AbyssusBundle.message(key, args)`. Text that `editor-core` produces (rejections, entity names, ray fallback reasons)
+goes in `editor-core/src/main/resources/messages/AbyssusEditorBundle.properties`; that code takes an `EditorMessages`
+by constructor or parameter, the plugin passes `EditorBundle`, a caller without the IDE `ResourceEditorMessages`.
+Escape non-ASCII characters as `\uXXXX` in both files.
 
 ## Code style
 
 - **KDoc:** explains *why* and the contract (thread, null meaning, what is never written), not what the next line
   does. Match the comment density of the file you edit.
-- **Keep logic testable:** keep math and decisions in plain classes without Swing or GL (`ScenePicker`, `GizmoDrag`,
-  `SceneMarkers`, `SkyboxPickerModel`, `PanelState`) so they get unit tests. The Swing or GL class only forwards to
-  them.
+- **Keep logic testable:** keep math and decisions in plain classes without Swing or GL so they get unit tests; logic
+  that needs no IDE type belongs in `editor-core` (`ScenePicker`, `GizmoDrag`, `SceneMarkers`, `EntitySections`,
+  `toolbarState`), and the plugin's Swing or GL class only forwards to it. A pure part that still needs a Swing or
+  IntelliJ type (`SkyboxPickerModel`, `PanelState`) stays in the plugin as its own file.
 - **Names:** `*Dto` for bound file models, `*Reader` for file readers, `*Codec` for ECS component mappers, `*Test`
   for test classes.
 

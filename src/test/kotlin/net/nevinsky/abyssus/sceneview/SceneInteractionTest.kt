@@ -5,12 +5,24 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.pick.DragResult
+import net.nevinsky.abyssus.editor.scene.CameraParams
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.editor.pick.REST_EPS
+import net.nevinsky.abyssus.editor.pick.SceneInteraction
+import net.nevinsky.abyssus.editor.pick.ScenePreview
+import net.nevinsky.abyssus.editor.pick.SceneQueries
+import net.nevinsky.abyssus.editor.pick.TransformEdit
+import net.nevinsky.abyssus.editor.pick.ViewSize
 import net.nevinsky.abyssus.editor.content.Vec3
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.parseScene
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoAxis
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
+import net.nevinsky.abyssus.editor.parseScene
+import net.nevinsky.abyssus.editor.pick.GizmoAxis
+import net.nevinsky.abyssus.editor.pick.GizmoMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -27,7 +39,7 @@ class SceneInteractionTest {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
     }
 
-    private val mainParams = SceneRenderParams.from(
+    private val mainParams = renderParamsOf(
         parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
         CameraParams.DEFAULT,
     )
@@ -42,7 +54,7 @@ class SceneInteractionTest {
         override fun groundBelow(entityId: String): Float? = if (ground != null) ground.invoke(entityId) else real.groundBelow(entityId)
     }
 
-    private fun setup(orbit: OrbitCamera = OrbitCamera.from(CameraParams.DEFAULT), ground: ((String) -> Float?)? = null): Setup {
+    private fun setup(orbit: OrbitCamera = OrbitCamera(CameraParams.DEFAULT), ground: ((String) -> Float?)? = null): Setup {
         val renderer = testRenderer().also { it.params = mainParams }
         renderer.updateCamera(width, height, orbit)
         val interaction = SceneInteraction(renderer.state, FakeQueries(renderer.queries, ground), orbit)
@@ -118,13 +130,13 @@ class SceneInteractionTest {
     }
     @Test fun aLightDropsUsingItsMarkerBottom() {
         val s = setup(ground = { 2f })
-        val light = SceneContent.of(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"9":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":1,"y":8,"z":3}}}}}}}"""))
+        val light = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"9":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":1,"y":8,"z":3}}}}}}}"""))
         s.renderer.params = mainParams.copy(content = light); s.renderer.state.selectedId = "9"
         assertTrue(s.interaction.canDrop)
         s.interaction.drop()
         val position = s.transforms.single().second.position!!
         assertEquals(1f, position.x, 0f); assertEquals(3f, position.z, 0f)
-        assertEquals(2.3f, position.y, ScenePicker.REST_EPS)
+        assertEquals(2.3f, position.y, REST_EPS)
         assertFalse(s.interaction.canDrop)
     }
 
@@ -135,9 +147,9 @@ class SceneInteractionTest {
     @Test fun aSynchronousDocumentRefreshKeepsTheDroppedPreview() {
         val s = droppingCamera(0f)
         s.interaction.onTransform = { id, edit ->
-            val result = net.nevinsky.abyssus.sceneview.gizmo.DragResult(
-                ScenePreview.selected(s.renderer.content, id)!!.transform.copy(position = edit.position!!), null)
-            val fresh = mainParams.copy(content = ScenePreview.apply(mainParams.content, id, result))
+            val result = net.nevinsky.abyssus.editor.pick.DragResult(
+                ScenePreview().selected(s.renderer.content, id)!!.transform.copy(position = edit.position!!), null)
+            val fresh = mainParams.copy(content = ScenePreview().apply(mainParams.content, id, result))
             s.renderer.params = fresh; s.interaction.paramsChanged(fresh); true
         }
         s.interaction.drop(); assertFalse(s.interaction.canDrop)
@@ -226,7 +238,7 @@ class SceneInteractionTest {
     fun theSelectorListsFreeCameraAndTheSceneCamerasByName() {
         assertEquals(listOf("Free camera", "Camera 4"), cameraChoices(mainParams.content, "Free camera").map { it.label })
         assertEquals(listOf(null, "4"), cameraChoices(mainParams.content, "Free camera").map { it.id })
-        val unnamed = SceneContent.of(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"8":{"components":{"CameraComponent":{}}}}}}"""))
+        val unnamed = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"8":{"components":{"CameraComponent":{}}}}}}"""))
         assertEquals("8", cameraChoices(unnamed, "Free camera")[1].label)
     }
 
@@ -344,7 +356,7 @@ class SceneInteractionTest {
 
     @Test
     fun rotatingAHandleAimedLightEmitsAHandleMove() {
-        val params = SceneRenderParams.from(
+        val params = renderParamsOf(
             parseScene(File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()),
             CameraParams.DEFAULT,
         )

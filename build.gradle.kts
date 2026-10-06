@@ -52,6 +52,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     // HdrFixtures: Radiance test images from a pixel function
     testImplementation(testFixtures(project(":core")))
+    // parseScene, testProject and the other scene helpers shared with editor-core's tests
+    testImplementation(testFixtures(project(":editor-core")))
 
     // JSON reading/writing for asset files; the platform does not ship jackson-databind, so it is bundled
     implementation("com.fasterxml.jackson.core:jackson-databind:${properties("jacksonVersion").get()}")
@@ -93,6 +95,11 @@ dependencies {
         exclude(group = "org.slf4j")
     }
     implementation(project(":raytracing")) {
+        exclude(group = "org.jetbrains.kotlin")
+        exclude(group = "org.slf4j")
+    }
+    // The editing engine without the IDE (see editor-core/README.md); the plugin keeps the IDE glue
+    implementation(project(":editor-core")) {
         exclude(group = "org.jetbrains.kotlin")
         exclude(group = "org.slf4j")
     }
@@ -249,7 +256,7 @@ tasks.named("compileKotlin") { dependsOn(generateGltfParser, generateGltfLexer) 
 tasks.named("compileJava") { dependsOn(generateGltfParser, generateGltfLexer) }
 
 extra["abyssusRunCatchingRoots"] = listOf(
-    "src/main/kotlin", "core/src/main/kotlin", "runtime/src/main/kotlin", "physics/src/main/kotlin",
+    "src/main/kotlin", "core/src/main/kotlin", "runtime/src/main/kotlin", "physics/src/main/kotlin", "editor-core/src/main/kotlin",
     "raytracing/src/main/kotlin", "physics-plugin/src/main/kotlin", "games/control-line/src/main/kotlin",
 )
 apply(from = "gradle/checks.gradle.kts")

@@ -5,8 +5,9 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.editor.content.Vec3
-import net.nevinsky.abyssus.editor.content.Quat
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.pick.LineSink
+import net.nevinsky.abyssus.editor.content.Pose
 
 import com.badlogic.gdx.graphics.Camera
 import com.fasterxml.jackson.databind.JsonNode
@@ -16,9 +17,6 @@ import com.intellij.openapi.extensions.ExtensionPointName
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import java.io.File
-
-/** An entity's simulated position and rotation; its authored scale is kept. */
-data class Pose(val position: Vec3, val rotation: Quat)
 
 /**
  * What an overlay sees of its Scene view in one drawing pass. [content] holds the poses the view shows (authored, or

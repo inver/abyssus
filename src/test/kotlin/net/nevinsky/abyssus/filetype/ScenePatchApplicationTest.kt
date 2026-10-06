@@ -31,7 +31,7 @@ import java.security.MessageDigest
 class ScenePatchApplicationTest : BasePlatformTestCase() {
     fun testApplyTheStagedPatch() {
         val patchFile = System.getenv("ABYSSUS_SCENE_PATCH")?.let(::File) ?: return
-        val patch = SceneJson.parse(patchFile.readText())
+        val patch = SceneJson().parse(patchFile.readText())
         for (document in patch.get("documents")) {
             val target = File(patchFile.parentFile, document.get("target").asText()).canonicalFile
             val actual = MessageDigest.getInstance("SHA-256").digest(target.readBytes()).joinToString("") { "%02x".format(it) }

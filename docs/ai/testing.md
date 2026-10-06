@@ -11,20 +11,29 @@
 | Control Line tests | `./gradlew :games:control-line:test` |
 | Runtime tests | `./gradlew :runtime:test` |
 | Plugin tests | `./gradlew :test` |
+| `editor-core` tests | `./gradlew :editor-core:test` (one class: `--tests 'net.nevinsky.abyssus.editor.pick.ScenePickerTest'`) |
 | `gdx-model` tests | `./gradlew :gdx-model:test` |
 | One class | `./gradlew :test --tests 'net.nevinsky.abyssus.projectView.SkyboxPickerModelTest'` |
 | One method | `./gradlew :test --tests 'net.nevinsky.abyssus.AbyssusViewTest.testNodeTree'` |
 | GL tests too | add `-Dabyssus.glTests=true` (opens a window; needs a display) |
 
-**Use `:test` with `--tests`.** Plain `test --tests X` also runs `:gdx-model:test` and `:core:test`, which fail with
-"No tests found". For `core`, use `./gradlew :core:test --tests '<class>'`.
+**Use `:test` with `--tests`.** Plain `test --tests X` also runs the other modules' tests, which fail with
+"No tests found". For a library module, name it: `./gradlew :core:test --tests '<class>'`.
+
+**After moving classes between packages or modules, build clean** (`./gradlew :clean :editor-core:clean`): stale
+classes of the old packages otherwise fail tests with `NoSuchMethodError` / `NoClassDefFoundError`.
 Results are in each module's `build/test-results/test/*.xml` and `build/reports/tests/test/`; a later run overwrites them.
 CI also runs Plugin Verifier and Qodana separately from `check`.
 
 ## Layout
 
 - `src/test/kotlin/net/nevinsky/abyssus/`: plugin tests, mirroring the main packages (`projectView/`, `sceneview/`,
-  `ecs/`, `properties/`, `dto/`, `filetype/`).
+  `properties/`, `dto/`, `filetype/`, `terrain/`), plus `editor/`: `EditorMessagesParityTest` and
+  `HeadlessSceneEditingTest`, which compares `editor-core`'s headless edits with the plugin's own write path.
+- `editor-core/src/test/kotlin/`: the editing engine's tests by package (`document`, `components`, `scene`, `pick`,
+  `terrain`, `meta`, `ray`, `headless`), plain JUnit with no IntelliJ class on the classpath (`NoPlatformClasspathTest`).
+  They run from the repository root, so they read fixtures under `src/test/testData/project/` by the same paths as the
+  plugin's tests.
 - `gdx-model/src/test/kotlin/`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`).
 - `core/src/test/kotlin/`: asset reading and loading tests, plain JUnit with no IntelliJ classes. They read the shared
   fixtures through `testProject(name)` (Gradle passes the folder as `abyssus.testData`) and get a project's
@@ -46,7 +55,8 @@ CI also runs Plugin Verifier and Qodana separately from `check`.
   `-Dabyssus.vulkanTests=true`; these are not enabled by `abyssus.glTests`. See `raytracing/README.md` for toolchains
   and dedicated timing gates. Plugin ray integration tests live under `src/test/kotlin/`.
 - Shared test helpers live in `testFixtures` source sets: `gdx-model`'s `TestGl` (a GL 3.2 core context for one
-  block) and `core`'s `HdrFixtures` (Radiance files from a pixel function). Plugin GL tests build their renderer with
+  block), `core`'s `HdrFixtures` (Radiance files from a pixel function) and `editor-core`'s `parseScene`,
+  `testProject`, `testAsset`, `terrainData` and `rayTestModel` (used by the plugin's tests too). Plugin GL tests build their renderer with
   `testRenderer()` (`sceneview/TestRendering.kt`), wired the way `AbyssusCore` wires it in the IDE.
 - Plugin tests use JUnit 4 (`junit:junit:4.13.2`) and the IntelliJ test framework.
 
@@ -54,9 +64,9 @@ Two kinds of tests:
 
 - **Platform tests:** these extend `BasePlatformTestCase` and need the VFS, documents, PSI or project services. Use
   `myFixture.addFileToProject` for inline files and `myFixture.copyFileToProject` for fixtures. They run on the EDT.
-- **Plain JUnit tests:** plain classes for logic with no platform (`ScenePickerTest`, `SceneInteractionTest`,
-  `StableGateTest`, `TerrainDataTest`, gizmo tests). Prefer this kind: keep new logic in a class that doesn't need
-  Swing, GL or the platform.
+- **Plain JUnit tests:** plain classes for logic with no platform (`editor-core`'s tests, and in the plugin
+  `SceneInteractionTest`, `StableGateTest`, `SceneToolbarStateTest`). Prefer this kind: keep new logic in
+  `editor-core`, in a class that doesn't need Swing, GL or the platform.
 
 ## Fixtures
 
@@ -114,14 +124,15 @@ clear only fixture-creation history before the first panel edit, then retain exa
   `SceneRenderGlTest` covers loaded bounds, fixture resting heights and drawn-list versions on real GL. Toolbar/key
   focus and the complete drop interaction still need the sandbox IDE check in the OpenSpec change.
 - **Picking and gizmos:** `SceneRenderer.pick` and the gizmo hit tests use CPU data only. `ScenePicker`,
-  `SceneMarkers`, `ScenePreview` and `sceneview/gizmo/` are plain math.
+  `SceneMarkers`, `ScenePreview` and the gizmo math are plain `editor-core` code (its pick package).
 - **Dialogs:** `SkyboxChooserDialog` can be built in a platform test and driven through its internal test hooks;
   `SkyboxPickerModel` holds its logic.
-- **Properties panel:** `PanelState`, `readAssetState` and `readEntityState` hold its logic without Swing. Entity editors are
+- **Properties panel:** `PanelState`, `readAssetState` and `readEntityState` hold its logic without Swing; the parts
+  without IDE types (`readEntitySections`, `readRenderOptics`, `assetFieldStates`, `detailRows`) are in `editor-core`. Entity editors are
   found by component name in `EntityPropertiesPanelTest` (`field-<Kind>-<field>`, `remove-<Kind>`, `add-component`).
 - **Design screenshots:** `DesignScreenshotTest` paints the tree, the properties panel states, the skybox chooser rows and
   an icon sheet to `build/screenshots/*.png`, and writes what differs from the design canvas ("Abyssus Panel Design": icon
   colours, chooser row height) to `build/screenshots/<name>-diff.txt`. The design is HTML, so pixels are not compared. The test
   fails on a difference only with `-Dabyssus.designStrict=true`.
-- **Component edits:** `ComponentEditorTest` runs on JSON trees; `SceneComponentEditsTest` checks the undoable writes;
+- **Component edits:** `ComponentEditorTest` (`editor-core`) runs on JSON trees; `SceneComponentEditsTest` checks the undoable writes;
   `ComponentActionsTest` subclasses the tree actions to supply the selected node.

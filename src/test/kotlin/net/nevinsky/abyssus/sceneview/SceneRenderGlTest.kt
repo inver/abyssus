@@ -5,6 +5,17 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.ModelEntity
+import net.nevinsky.abyssus.editor.scene.CameraParams
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.editor.pick.OrientedBox
+import net.nevinsky.abyssus.editor.pick.SceneInteraction
+import net.nevinsky.abyssus.editor.pick.ScenePicker
+import net.nevinsky.abyssus.editor.pick.ScenePreview
+import net.nevinsky.abyssus.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Rgba
 import net.nevinsky.abyssus.editor.content.PlacementTransform
@@ -13,7 +24,7 @@ import net.nevinsky.abyssus.editor.content.LightPlacement
 
 import net.nevinsky.abyssus.editor.document.SceneJson
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.parseScene
+import net.nevinsky.abyssus.editor.parseScene
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -34,10 +45,10 @@ class SceneRenderGlTest {
     private fun params(project: String, scene: String, patch: (String) -> String = { it }): SceneRenderParams {
         val dir = File("src/test/testData/project/$project")
         val text = patch(File(dir, "scenes/$scene").readText())
-        return SceneRenderParams.from(parseScene(text), CameraParams.DEFAULT, dir)
+        return renderParamsOf(parseScene(text), CameraParams.DEFAULT, dir)
     }
 
-    private fun edit(text: String, change: (ObjectNode) -> Unit): String = SceneJson.compact(SceneJson.parseObject(text).also(change))
+    private fun edit(text: String, change: (ObjectNode) -> Unit): String = SceneJson().compact(SceneJson().parseObject(text).also(change))
 
     private fun noFog(root: ObjectNode) {
         root.put("fogEnabled", false)
@@ -66,9 +77,9 @@ class SceneRenderGlTest {
                 for (id in listOf("0", "2")) {
                     val entity = renderer.drawnModels.first { it.placement.entityId == id }
                     val footprint = OrientedBox(entity.localBounds, entity.instance.transform!!)
-                    val height = ScenePicker.restHeight(footprint, emptyList(), listOf(terrain))!!
+                    val height = ScenePicker().restHeight(footprint, emptyList(), listOf(terrain))!!
                     assertEquals(0f, height, 1e-5f)
-                    assertTrue(!ScenePicker.isResting(footprint.bottom, height))
+                    assertTrue(!ScenePicker().isResting(footprint.bottom, height))
                 }
                 assertEquals(0f, renderer.queries.groundBelow("0")!!, 1e-5f)
                 assertNull(renderer.queries.groundBelow("1"))
@@ -98,7 +109,7 @@ class SceneRenderGlTest {
             previous = renderer.drawnVersion
             if (frame == 180) {
                 loaded = now.size == 4
-                renderer.params = p.copy(content = SceneContent.EMPTY)
+                renderer.params = p.copy(content = SceneContent())
             }
             if (frame == 219) removed = now.isEmpty()
         }
@@ -115,13 +126,13 @@ class SceneRenderGlTest {
         var written = 0
         var version = 0L
         val result = GlHarness.render(p, 220) { renderer, _ ->
-            val input = interaction ?: SceneInteraction(renderer.state, renderer.queries, OrbitCamera.from(p.camera)).also {
+            val input = interaction ?: SceneInteraction(renderer.state, renderer.queries, OrbitCamera(p.camera)).also {
                 interaction = it
                 renderer.state.selectedId = "0"
                 it.onTransform = { id, edit ->
-                    val selected = ScenePreview.selected(renderer.content, id)!!
-                    val moved = net.nevinsky.abyssus.sceneview.gizmo.DragResult(selected.transform.copy(position = edit.position!!), selected.direction)
-                    renderer.params = p.copy(content = ScenePreview.apply(p.content, id, moved))
+                    val selected = ScenePreview().selected(renderer.content, id)!!
+                    val moved = net.nevinsky.abyssus.editor.pick.DragResult(selected.transform.copy(position = edit.position!!), selected.direction)
+                    renderer.params = p.copy(content = ScenePreview().apply(p.content, id, moved))
                     it.paramsChanged(renderer.params)
                     written++
                     true
@@ -245,7 +256,7 @@ class SceneRenderGlTest {
             val text = edit(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()) { root ->
                 noFog(root); root.put("skyboxEnabled", true); root.put("skyboxName", "sky")
             }
-            block(SceneRenderParams.from(parseScene(text), CameraParams.DEFAULT, dir))
+            block(renderParamsOf(parseScene(text), CameraParams.DEFAULT, dir))
         } finally {
             dir.deleteRecursively()
         }
@@ -323,7 +334,7 @@ class SceneRenderGlTest {
                     if (keep != null) entities.fieldNames().asSequence().toList().filter { it !in keep }.forEach(entities::remove)
                     variant(root)
                 }
-                val r = GlHarness.render(SceneRenderParams.from(parseScene(patched), CameraParams.DEFAULT, dir), 240)
+                val r = GlHarness.render(renderParamsOf(parseScene(patched), CameraParams.DEFAULT, dir), 240)
                 assertNull(r.error)
                 r.image
             }
@@ -403,7 +414,7 @@ class SceneRenderGlTest {
         val lit = params("Untitled", "Main Scene.scene") {
             edit(it) { root ->
                 noFog(root)
-                (root.get("ecs").get("entities") as ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>("99", SceneJson.parse(light))
+                (root.get("ecs").get("entities") as ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>("99", SceneJson().parse(light))
             }
         }
         val isolated = lit.copy(content = lit.content.copy(lights = lit.content.lights.filter { it.entityId == "99" }))
@@ -629,7 +640,7 @@ class SceneRenderGlTest {
     @Test
     fun aSelectedModelRendersItsGizmoWithoutErrors() {
         val p = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
-        for (mode in net.nevinsky.abyssus.sceneview.gizmo.GizmoMode.entries) {
+        for (mode in net.nevinsky.abyssus.editor.pick.GizmoMode.entries) {
             var gizmo = false
             val r = GlHarness.render(p, 120) { renderer, _ ->
                 renderer.state.selectedId = "0"

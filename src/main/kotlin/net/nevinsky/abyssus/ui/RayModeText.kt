@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.ui
 
+import net.nevinsky.abyssus.editor.ray.message
+import net.nevinsky.abyssus.EditorBundle
 import net.nevinsky.abyssus.editor.ray.RayModePhase
 import net.nevinsky.abyssus.editor.ray.RayModeSnapshot
 import net.nevinsky.abyssus.editor.ray.RayBackendAttempt
@@ -33,17 +35,16 @@ internal object RayModeText {
     }
 
     /** Every probed backend's reason, or why none was probed. */
-    fun reason(unavailable: RayBackendSelection.Unavailable): String = when {
-        unavailable.invalidPreference != null -> AbyssusBundle.message("rayReasonUnknownBackend", unavailable.invalidPreference)
-        unavailable.attempts.isEmpty() -> AbyssusBundle.message("rayReasonNoBackend")
-        else -> unavailable.attempts.joinToString("; ") { reason(it) }
+    fun reason(unavailable: RayBackendSelection.Unavailable): String {
+        val invalid = unavailable.invalidPreference
+        return when {
+            invalid != null -> AbyssusBundle.message("rayReasonUnknownBackend", invalid)
+            unavailable.attempts.isEmpty() -> AbyssusBundle.message("rayReasonNoBackend")
+            else -> unavailable.attempts.joinToString("; ") { reason(it) }
+        }
     }
 
-    fun fallback(reason: RaySceneFallback): String = AbyssusBundle.message(when (reason) {
-        RaySceneFallback.ASSET_FAILURE -> "rayFallbackAssetFailure"
-        RaySceneFallback.RESOURCE_LIMIT -> "rayFallbackResourceLimit"
-        RaySceneFallback.UNSUPPORTED_GEOMETRY -> "rayFallbackUnsupportedGeometry"
-    })
+    fun fallback(reason: RaySceneFallback): String = reason.message(EditorBundle)
 
     /** The inline label for the mode, or null when ray tracing is simply off. */
     fun status(snapshot: RayModeSnapshot): String? = when (snapshot.phase) {

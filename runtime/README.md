@@ -139,7 +139,7 @@ Required behavior: `openspec/specs/custom-scene-components` and `openspec/specs/
 Field types retain their explicit switches: the DECIMAL/VECTOR handler prototype increased code size and was not
 adopted. Add the enum entry and value contract in `schema/ComponentSchema.kt`, Java inference and default conversion
 in `ComponentSchemaReader`, encode/decode handling in `SchemaJson`, and the editor field mapping in
-`src/main/kotlin/net/nevinsky/abyssus/ecs/scene/ComponentEditor.kt`. Update schema-file validation and UI handling
+`editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/components/SchemaCodec.kt` (`schemaFields`). Update schema-file validation and UI handling
 where the new type needs them. Tests must cover inferred defaults, exact wire text, default omission, unusable input
 and applicable limits for every type.
 

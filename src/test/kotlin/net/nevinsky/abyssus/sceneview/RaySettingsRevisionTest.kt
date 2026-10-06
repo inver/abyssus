@@ -4,7 +4,17 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.editor.ray.SceneRaySettingsCodec
+import net.nevinsky.abyssus.editor.ray.rayTestModel
+import net.nevinsky.abyssus.editor.ray.RayAssetLease
+import net.nevinsky.abyssus.editor.ray.RayBackendService
+import net.nevinsky.abyssus.editor.ray.RayFrameContext
+import net.nevinsky.abyssus.editor.ray.RaySceneAssets
+import net.nevinsky.abyssus.editor.ray.RayViewFeed
+import net.nevinsky.abyssus.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.document.SceneRaySettingsCodec
 
 import net.nevinsky.abyssus.editor.content.PlacementTransform
 import net.nevinsky.abyssus.editor.content.AssetPlacement
@@ -23,9 +33,9 @@ class RaySettingsRevisionTest {
     private val content=SceneContent(models=listOf(AssetPlacement("entity","model",PlacementTransform.IDENTITY)))
     private val camera=PerspectiveCamera(60f,8f,8f).apply { position.set(0f,0f,2f);direction.set(0f,0f,-1f);update() }
     private fun context(target:Int)=RayFrameContext(SceneRenderParams.DEFAULT.copy(content=content,projectDir=File("project"),
-        rayTracing=SceneRaySettingsCodec().read(SceneJson.parse("""{"rayTracing":{"targetSamplesPerPixel":$target}}"""))),content,camera,LightSet.NONE,emptyList(),8,8,null)
+        rayTracing=SceneRaySettingsCodec().read(SceneJson().parse("""{"rayTracing":{"targetSamplesPerPixel":$target}}"""))),content,camera,NO_LIGHTS,emptyList(),8,8,null)
     private fun feed(service:RayBackendService,id:String,executor:Executor=Executor(Runnable::run))=RayViewFeed(service.newView(id),
-        RaySceneAssets({_,_->RayAssetLease({model},{null},{})},{_,_->error("terrain")}),executor)
+        RaySceneAssets({_,_->RayAssetLease({model},{null},{})},{_,_->error("terrain")}),executor,ResourceEditorMessages())
 
     @Test fun settingsClearOldPublicationBeforeAStalledConversionAndReuseTheSession() {
         val device=RayFakeDevice();val service=RayFakeDevice.service("metal" to device)

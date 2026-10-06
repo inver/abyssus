@@ -5,15 +5,19 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.CameraParams
+import net.nevinsky.abyssus.editor.scene.cameraDirectionOf
+import net.nevinsky.abyssus.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Quat
 import net.nevinsky.abyssus.editor.content.PlacementTransform
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.parseScene
-import net.nevinsky.abyssus.sceneview.gizmo.DragResult
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoAxis
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
+import net.nevinsky.abyssus.editor.parseScene
+import net.nevinsky.abyssus.editor.pick.DragResult
+import net.nevinsky.abyssus.editor.pick.GizmoAxis
+import net.nevinsky.abyssus.editor.pick.GizmoMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -30,7 +34,7 @@ class SceneRendererCameraTest {
     }
 
     private fun renderer(): SceneRenderer {
-        val params = SceneRenderParams.from(
+        val params = renderParamsOf(
             parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
             CameraParams.DEFAULT,
         )
@@ -43,7 +47,7 @@ class SceneRendererCameraTest {
     fun lookingThroughACameraUsesItsPositionDirectionAndLens() {
         val r = renderer()
         r.state.viewCamera = "4"
-        r.updateCamera(width, height, OrbitCamera.from(CameraParams.DEFAULT))
+        r.updateCamera(width, height, OrbitCamera(CameraParams.DEFAULT))
         val cam = r.frameCamera
         assertEquals(-23.56657f, cam.position.x, 1e-4f)
         assertEquals(12.318308f, cam.position.y, 1e-4f)
@@ -61,7 +65,7 @@ class SceneRendererCameraTest {
     @Test
     fun clearingTheViewCameraRestoresTheOrbitEye() {
         val r = renderer()
-        val orbit = OrbitCamera.from(CameraParams.DEFAULT)
+        val orbit = OrbitCamera(CameraParams.DEFAULT)
         r.updateCamera(width, height, orbit)
         val before = Vector3(r.frameCamera.position)
         r.state.viewCamera = "4"
@@ -78,7 +82,7 @@ class SceneRendererCameraTest {
     @Test
     fun aMissingViewCameraFallsBackToTheOrbit() {
         val r = renderer()
-        val orbit = OrbitCamera.from(CameraParams.DEFAULT)
+        val orbit = OrbitCamera(CameraParams.DEFAULT)
         r.state.viewCamera = "99"
         r.updateCamera(width, height, orbit)
         assertEquals(orbit.position().x, r.frameCamera.position.x, 0f)
@@ -150,12 +154,12 @@ class SceneRendererCameraTest {
     fun movingTheLookAtTargetTurnsTheCameraFrustum() {
         val r = renderer()
         val camera = r.params.content.cameras.single()
-        val before = CameraFrustum.directionOf(camera, r.params.content.entityPositions)
+        val before = cameraDirectionOf(camera, r.params.content.entityPositions)
         val target = r.params.content.entityPositions.getValue("3")
         val moved = PlacementTransform(Vec3(target.x, target.y + 20f, target.z), Quat.IDENTITY, Vec3(1f, 1f, 1f))
         r.state.preview = mapOf("3" to DragResult(moved, null))
         val c = r.content
-        val after = CameraFrustum.directionOf(c.cameras.single(), c.entityPositions)
+        val after = cameraDirectionOf(c.cameras.single(), c.entityPositions)
         assertTrue(after.y > before.y + 0.5f)
     }
 }

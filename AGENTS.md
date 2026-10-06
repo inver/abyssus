@@ -17,7 +17,8 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | `runtime` tests only | `./gradlew :runtime:test` |
 | `physics` tests only | `./gradlew :physics:test` |
 | `core` tests only | `./gradlew :core:test` (one class: `./gradlew :core:test --tests 'net.nevinsky.abyssus.core.assets.loading.AssetStorageTest'`) |
-| One test class | `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.OrbitCameraTest'` |
+| `editor-core` tests only | `./gradlew :editor-core:test` (one class: `./gradlew :editor-core:test --tests 'net.nevinsky.abyssus.editor.pick.OrbitCameraTest'`) |
+| One plugin test class | `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneViewPanelTest'` |
 | Also run GL tests (open a window) | add `-Dabyssus.glTests=true` |
 | Sandbox IDE | `./gradlew runIde` (open a project with `-PideProject=/path/to/project`) |
 | Sandbox IDE with Abyssus Physics | `./gradlew :physics-plugin:runIde` |
@@ -27,22 +28,27 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | Plugin zip | `./gradlew buildPlugin` (to `build/distributions/`) |
 | Docs path check | `scripts/check-docs.sh` |
 
-Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` and `core` and fails there with
+Use `:test`, not `test`, with `--tests`: plain `test` also runs in the other modules and fails there with
 "No tests found".
 
 ## Layout
 
 - `src/main/kotlin/net/nevinsky/abyssus/`: the plugin (Kotlin), registered in `src/main/resources/META-INF/plugin.xml`.
-  - `dto/`: reads `.abss` / `.scene` files and asset folders (`ProjectLayout`, `SceneReader`, `ProjectReader`, `ProjectAssetListing`).
+  The plugin is IDE glue; the editing logic is in `editor-core`.
+  - `dto/`: reads `.abss` / `.scene` files and asset folders through the VFS (`ProjectLayout`, `SceneReader`, `ProjectReader`, `ProjectAssetListing`).
   - `projectView/`: the Abyssus tree, eye toggles, Rename Scene and the skybox chooser. `filetype/` holds `editSceneJson`.
-  - `properties/`: the Abyssus Properties tool window.
-  - `sceneview/`: the scene view: GL canvas, renderer, picking, cameras, gizmos, transform write-back. Asset loading
-    itself is in `core`.
-  - `ecs/scene/`: `ComponentEditor` edits components in scene JSON; `LightEntities` creates light entities.
-    Ashley components, codecs, systems and scene loading live in `runtime`.
+  - `properties/`: the Abyssus Properties tool window (Swing views over `editor-core`'s panel model).
+  - `sceneview/`: the scene view: GL canvas, renderer, shadows, fog, sky and gizmo drawing, the toolbar, Play, and the
+    view's asset storage (`ViewAssets`). Picking, cameras, gizmo math and transform write-back are in `editor-core`.
   - `schema/`: component schemas for game components: the `componentSchemas` extension point and the
     `ComponentSchemas` project service that builds each scene's `ComponentEditor`.
-  - `filetype/`, `language/`: file types, icons, scene JSON, the GLTF PSI.
+  - `terrain/`: the New Terrain dialog and the regeneration controls; generation itself is in `editor-core`.
+  - `filetype/`, `language/`: file types, icons, the GLTF PSI.
+- `editor-core/`: a plain JVM library, root package `net.nevinsky.abyssus.editor`: scene documents (`SceneJson`,
+  `SceneDocument`, `DocumentTextEditor`), component editing (`ComponentEditor`, `LightEntities`), the scene read model
+  (`SceneContent`), picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge, and the
+  headless editing API (`HeadlessEditing`). Ashley components, codecs and systems stay in `runtime`. See
+  `editor-core/README.md`.
 - `gdx-model/`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import), with inherited sources documented in `docs/third-party/gdx-model-origin.md`.
   See `gdx-model/README.md`.
 - `core/`: a plain JVM library, root package `net.nevinsky.abyssus.core`: project layout and file access
@@ -65,11 +71,11 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   `PlaneComponent` / `PilotComponent` are game components, and its `PlayModule` flies a plane in Play. Open a copy of
   that project in the IDE, never the committed folder (its tests assert on the scene). See `games/control-line/README.md`.
 - `src/main/java/`: only the grammar sources `Gltf.bnf` / `Gltf.flex`; `src/main/gen` is generated from them.
-- `src/test/kotlin/`, `gdx-model/src/test/kotlin/`, `core/src/test/kotlin/`, `runtime/src/test/kotlin/`,
-  `physics/src/test/kotlin/`, `physics-plugin/src/test/kotlin/`, `raytracing/src/test/kotlin/`,
-  `games/control-line/src/test/kotlin/`: tests. Fixtures in `src/test/testData/project/`
-  (shared with `core`'s tests). Test helpers shared across modules live in `testFixtures` source sets
-  (`gdx-model`: `TestGl`; `core`: `HdrFixtures`).
+- `src/test/kotlin/`, `editor-core/src/test/kotlin/`, `gdx-model/src/test/kotlin/`, `core/src/test/kotlin/`,
+  `runtime/src/test/kotlin/`, `physics/src/test/kotlin/`, `physics-plugin/src/test/kotlin/`,
+  `raytracing/src/test/kotlin/`, `games/control-line/src/test/kotlin/`: tests. Fixtures in `src/test/testData/project/`
+  (shared with `core`'s and `editor-core`'s tests). Test helpers shared across modules live in `testFixtures` source
+  sets (`gdx-model`: `TestGl`; `core`: `HdrFixtures`; `editor-core`: `parseScene`, `testProject`, `rayTestModel`).
 - `openspec/`: specs and changes (see Workflow). `docs/superpowers/`: one historic design and plan.
 
 ## Hard rules
@@ -82,7 +88,7 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
 - **`physics` stays a plain JVM library wired by constructors**, like `runtime` (`./gradlew :physics:checkNoSingletons`
   is part of `check`). **Jolt never loads in the IDE process:** only a game or the play host calls `JoltNatives`.
 - **Extension plugins bundle only their own code.** `physics-plugin` ships its jar and `physics.jar`; libGDX,
-  `runtime`, `core` and `gdx-model` come from Abyssus's classloader (`Gdx.*` is process-global). Its main sources may
+  `runtime`, `editor-core`, `core` and `gdx-model` come from Abyssus's classloader (`Gdx.*` is process-global). Its main sources may
   not name `com.github.stephengold` or `net.nevinsky.abyssus.physics.jolt` (`./gradlew :physics-plugin:checkNoJolt`,
   part of `check`).
 - **Don't edit `src/main/gen`.** It is git-ignored and regenerated from `Gltf.bnf` / `Gltf.flex`.
@@ -92,8 +98,15 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   `./gradlew :core:checkNoSingletons` (part of `check`) fails otherwise.
 - **`runtime` stays a plain JVM library wired by constructors**: no IntelliJ or plugin imports, and no `object` or
   `companion object` in `runtime/src/main`. `./gradlew :runtime:checkNoSingletons` is part of `check`.
+- **`editor-core` stays a plain JVM library wired by constructors**: no IntelliJ, Swing or AWT imports (its classpath
+  has no platform artifact; `NoPlatformClasspathTest` checks), and no `object` or `companion object` with behavior in
+  `editor-core/src/main` (`./gradlew :editor-core:checkNoSingletons`, part of `check`; pure constant holders are listed
+  in its `abyssusSingletonExcludes`). Neither `core` nor `runtime` depends on it.
+- **No package cycles:** `./gradlew checkPackageCycles` (part of `check`) fails on a cycle between the packages of a
+  module; its allowlist `gradle/package-cycles.allowlist` stays empty.
 - **Write scene files only through `editSceneJson`** (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneDocumentWriter.kt`).
-  It edits the document as one undoable command and keeps the file's formatting and number text. The only other
+  It edits the document as one undoable command and keeps the file's formatting and number text; the text transform
+  itself is `editor-core`'s `DocumentTextEditor`, which `HeadlessEditing` uses without the IDE. The only other
   writer is `SceneFormatListener`, which pretty-prints a `.scene` / `.abss` opened in the text editor.
 - **Never change numbers or key order you didn't mean to change.** Parse with `SceneJson`, which keeps both.
 - **`Gdx.*` is process-global inside the IDE.** Run libGDX code only inside `GdxRuntime.withContext`, on the AWT
@@ -103,7 +116,9 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in `gdx-model` a
   aborts the JVM.
 - **Catch with `runCatchingKeepingCancellation`**, not `runCatching`, around anything that may be cancelled
   (`./gradlew checkNoRunCatching`, part of `check`, fails otherwise).
-- **User-facing text goes in `src/main/resources/messages/AbyssusBundle.properties`** via `AbyssusBundle.message`.
+- **User-facing text goes in `src/main/resources/messages/AbyssusBundle.properties`** via `AbyssusBundle.message`;
+  text that `editor-core` produces goes in `editor-core/src/main/resources/messages/AbyssusEditorBundle.properties`,
+  read through an injected `EditorMessages` (the plugin passes `EditorBundle`).
 - **Keep the `<!-- Plugin description -->` markers in `README.md`.** `patchPluginXml` copies that block into the
   plugin and fails without them.
 - **Don't use `src/test/testData/project/Untitled` as the `runIde` project.** Edits made in the IDE (gizmo drags,
@@ -125,5 +140,5 @@ When a change makes a doc wrong, update the doc in the same change and run `scri
 - `docs/ai/glossary.md`: Native Abyssus terms.
 - `docs/ai/conventions.md`: code conventions.
 - `docs/ai/testing.md`: test layout, fixtures, GL tests.
-- Package notes: `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md`,
-  `src/main/kotlin/net/nevinsky/abyssus/projectView/README.md`, `src/main/kotlin/net/nevinsky/abyssus/ecs/README.md`.
+- Package and module notes: `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md`,
+  `src/main/kotlin/net/nevinsky/abyssus/projectView/README.md`, `editor-core/README.md`.

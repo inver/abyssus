@@ -1,10 +1,6 @@
 package net.nevinsky.abyssus.ui
 
-import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.core.assets.displayMessage
-import net.nevinsky.abyssus.format.UnsupportedDocumentFormat
+import net.nevinsky.abyssus.EditorBundle
+import net.nevinsky.abyssus.editor.document.documentDisplayMessage
 
-fun Throwable.documentDisplayMessage(): String = when (this) {
-    is UnsupportedDocumentFormat -> AbyssusBundle.message("unsupportedFormat.${reason.problem.name}", reason.path)
-    else -> displayMessage()
-}
+fun Throwable.documentDisplayMessage(): String = documentDisplayMessage(EditorBundle)

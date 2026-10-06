@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayFeasibilityLoop
+import net.nevinsky.abyssus.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.editor.content.Vec3
 
 import net.nevinsky.abyssus.raytracing.*

@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.AssetRevisionBatch
+import net.nevinsky.abyssus.editor.scene.AssetRevisionTracker
+import net.nevinsky.abyssus.editor.scene.MetaTextSource
+import net.nevinsky.abyssus.editor.scene.ProjectRevisions
 import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation

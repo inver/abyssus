@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.dto
 
+import net.nevinsky.abyssus.editor.document.AssetMetaReader
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.core.assets.terrain.SPLAT_FIELDS

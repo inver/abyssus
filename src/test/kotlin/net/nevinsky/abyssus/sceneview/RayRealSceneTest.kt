@@ -4,11 +4,18 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RaySceneAssetState
+import net.nevinsky.abyssus.editor.ray.RaySceneConversion
+import net.nevinsky.abyssus.editor.ray.RaySceneFrame
+import net.nevinsky.abyssus.editor.ray.RaySceneSnapshots
+import net.nevinsky.abyssus.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.scene.sceneContentOf
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.AssetLoading
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.core.io.JsonProcessor
-import net.nevinsky.abyssus.parseScene
+import net.nevinsky.abyssus.editor.parseScene
 import net.nevinsky.abyssus.raytracing.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
@@ -28,14 +35,14 @@ class RayRealSceneTest {
     private fun snapshot(): RaySceneFrame {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
         val loading = AssetLoading(JsonProcessor(), printingLog, Executor(Runnable::run), ShaderSource("/shader/sky", AssetLoading::class.java))
-        val content = SceneContent.of(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
-        val assets = RaySceneAssets(ViewAssets(loading))
+        val content = sceneContentOf(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
+        val assets = raySceneAssetsOf(ViewAssets(loading))
         assets.update(project, content)
         val state = assets.poll()
         assertTrue("the scene's assets must load: $state", state is RaySceneAssetState.Ready)
         val camera = PerspectiveCamera(60f, 160f, 90f).apply { position.set(0f, 60f, 140f); lookAt(0f, 0f, 0f); near = .5f; far = 3000f; update() }
         val params = SceneRenderParams.DEFAULT.copy(content = content, projectDir = project)
-        val conversion = RaySceneSnapshots().capture(params, camera, LightSet.NONE, state, activeCameraId = null)
+        val conversion = RaySceneSnapshots().capture(params, camera, NO_LIGHTS, state, activeCameraId = null)
         assertTrue("a real scene must convert with the default limits: $conversion", conversion is RaySceneConversion.Ready)
         return (conversion as RaySceneConversion.Ready).frame
     }

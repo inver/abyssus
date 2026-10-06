@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.content.Pose
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 
 /**

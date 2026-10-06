@@ -4,6 +4,10 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RaySceneDisplay
+import net.nevinsky.abyssus.editor.ray.captureRayDisplay
+import net.nevinsky.abyssus.editor.scene.FogParams
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.content.Rgba
 import net.nevinsky.abyssus.editor.content.PlacementTransform
 import net.nevinsky.abyssus.editor.content.AssetPlacement
@@ -26,7 +30,7 @@ class RayFrameCompositionGlTest {
             if (index == 0) renderer.rayFrameProvider = { context ->
                 RaySceneDisplay(RayFrame(RayFrameKey(1, 1, 1, 1), 2, 2,
                     FloatArray(16) { if (it % 4 == 0 || it % 4 == 3) 1f else 0f }, FloatArray(4)),
-                    RayDisplayMetadata.capture(context))
+                    captureRayDisplay(context))
             }
             if (index > 0) {
                 assertTrue(renderer.presentedRayFrame)
@@ -49,7 +53,7 @@ class RayFrameCompositionGlTest {
         assumeTrue(GlHarness.enabled)
         val rendered = GlHarness.render(SceneRenderParams.DEFAULT, 3) { renderer, index ->
             renderer.rayFrameProvider = { context ->
-                val metadata = RayDisplayMetadata.capture(context)
+                val metadata = captureRayDisplay(context)
                 val stale = if (index == 0) metadata.copy(width = metadata.width + 1)
                 else metadata.copy(content = metadata.content.copy(models = listOf(AssetPlacement("deleted", "model", PlacementTransform.IDENTITY))))
                 RaySceneDisplay(RayFrame(RayFrameKey(1, 1, 1, 1), 1, 1, floatArrayOf(1f, 0f, 0f, 1f), floatArrayOf(0f)), stale)
@@ -65,7 +69,7 @@ class RayFrameCompositionGlTest {
         val rendered = GlHarness.render(params, 2) { renderer, index ->
             if (index == 0) renderer.rayFrameProvider = { context ->
                 RaySceneDisplay(RayFrame(RayFrameKey(1, 1, 1, 1), 1, 1,
-                    floatArrayOf(0.2f, 0.4f, 0.6f, 1f), floatArrayOf(0f)), RayDisplayMetadata.capture(context))
+                    floatArrayOf(0.2f, 0.4f, 0.6f, 1f), floatArrayOf(0f)), captureRayDisplay(context))
             }
             else {
                 val pixel = BufferUtils.newByteBuffer(4)

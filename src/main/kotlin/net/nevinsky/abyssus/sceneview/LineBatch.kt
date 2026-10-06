@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.pick.LineSink
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Rgba
 
@@ -16,11 +17,6 @@ import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.utils.Disposable
-
-/** Somewhere to draw colored line segments; the marker and gizmo geometry is written against it so tests need no GL. */
-interface LineSink {
-    fun line(from: Vec3, to: Vec3, color: Rgba)
-}
 
 /**
  * Draws colored line segments in world space with the camera given to [begin], batched into one dynamic mesh.

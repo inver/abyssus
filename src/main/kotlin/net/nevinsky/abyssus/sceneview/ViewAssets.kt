@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayAssetLease
+import net.nevinsky.abyssus.editor.ray.RaySceneAssets
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.AssetLoading
 import net.nevinsky.abyssus.ProjectAssets
@@ -106,3 +108,23 @@ class AssetView<T : Disposable>(private val owner: ViewAssets, private val type:
 
     override fun dispose() = owner.release(this)
 }
+
+/** The CPU ray assets of [assets], the scene view's own: leases come from its project's ray caches. */
+fun raySceneAssetsOf(assets: ViewAssets): RaySceneAssets = RaySceneAssets(
+    { project, name -> assets.project(project).rayModels.acquire(name).let { lease ->
+        RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close)
+    } },
+    { project, name -> assets.project(project).rayTerrains.acquire(name).let { lease ->
+        RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close)
+    } },
+    { project, models, terrains ->
+        assets.current?.takeIf { it.projectDir == project.absoluteFile }?.let {
+            models.forEach(it.rayModels::invalidate)
+            terrains.forEach(it.rayTerrains::invalidate)
+        }
+    },
+    { project, name -> assets.project(project).raySkies.acquire(name).let { lease ->
+        RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close)
+    } },
+    { project, name -> assets.current?.takeIf { it.projectDir == project.absoluteFile }?.raySkies?.invalidate(name) },
+)

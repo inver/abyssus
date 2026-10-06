@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.ModelLogging
 import net.nevinsky.abyssus.core.flightgear.FlightGearImport
 import net.nevinsky.abyssus.core.format.AbyssusDocumentFormat as CoreDocumentFormat
-import net.nevinsky.abyssus.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.editor.document.AbyssusDocumentFormat
 import net.nevinsky.abyssus.log.IntellijLoggerFactory
 
 /** Application composition root. Groups build only on first use; entry points pass narrow collaborators onward. */

@@ -9,7 +9,7 @@ import net.nevinsky.abyssus.core.flightgear.FlightGearAircraft
 import net.nevinsky.abyssus.core.flightgear.FlightGearInspection
 import net.nevinsky.abyssus.core.flightgear.ImportPart
 import net.nevinsky.abyssus.core.flightgear.ImportSize
-import net.nevinsky.abyssus.terrain.FolderNameError
+import net.nevinsky.abyssus.editor.terrain.FolderNameError
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

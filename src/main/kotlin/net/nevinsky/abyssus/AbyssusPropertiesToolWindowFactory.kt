@@ -14,9 +14,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
-import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
-import net.nevinsky.abyssus.SceneRayControls
+import net.nevinsky.abyssus.editor.document.RayMaterialIdentity
 
 class AbyssusPropertiesToolWindowFactory : ToolWindowFactory, DumbAware {
     private val tables = java.util.concurrent.ConcurrentHashMap<java.io.File, Pair<Long, List<RayMaterialIdentity>>>()

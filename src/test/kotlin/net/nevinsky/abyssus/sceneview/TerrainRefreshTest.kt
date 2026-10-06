@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.PlacedEntities
+import net.nevinsky.abyssus.editor.scene.PlacedEntity
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Quat
 import net.nevinsky.abyssus.editor.content.PlacementTransform

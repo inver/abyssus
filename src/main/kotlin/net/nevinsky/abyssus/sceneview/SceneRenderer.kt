@@ -5,6 +5,33 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayFrameContext
+import net.nevinsky.abyssus.editor.ray.RaySceneDisplay
+import net.nevinsky.abyssus.editor.ray.RaySkyBaker
+import net.nevinsky.abyssus.editor.scene.AssetRevisionBatch
+import net.nevinsky.abyssus.editor.scene.MAX_POINT
+import net.nevinsky.abyssus.editor.scene.ModelEntity
+import net.nevinsky.abyssus.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.editor.scene.PendingAssetRevision
+import net.nevinsky.abyssus.editor.scene.lightSetOf
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.scene.cameraDirectionOf
+import net.nevinsky.abyssus.editor.content.toMatrix
+import net.nevinsky.abyssus.editor.pick.FrameSnapshot
+import net.nevinsky.abyssus.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.editor.pick.SceneMarkers
+import net.nevinsky.abyssus.editor.pick.ScenePreview
+import net.nevinsky.abyssus.editor.pick.SceneQueries
+import net.nevinsky.abyssus.editor.pick.SceneViewState
+import net.nevinsky.abyssus.editor.pick.SnapshotSceneQueries
+import net.nevinsky.abyssus.editor.pick.TerrainTarget
+import net.nevinsky.abyssus.editor.pick.aspectOf
+import net.nevinsky.abyssus.editor.pick.copyOfCamera
+import net.nevinsky.abyssus.editor.pick.gizmoHandlesFor
+import net.nevinsky.abyssus.editor.pick.snapshotBoxOf
+import net.nevinsky.abyssus.editor.pick.snapshotTerrainOf
+import net.nevinsky.abyssus.editor.content.Pose
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.AssetPlacement
 import net.nevinsky.abyssus.editor.content.LightPlacement
@@ -59,7 +86,7 @@ class SceneRenderer(
             val poses = state.poses
             if (poses.isEmpty()) return c
             posed?.takeIf { c === posedBase && poses === posedPoses }?.let { return it }
-            return ScenePreview.withPoses(c, poses).also {
+            return ScenePreview().withPoses(c, poses).also {
                 posed = it
                 posedBase = c
                 posedPoses = poses
@@ -71,7 +98,7 @@ class SceneRenderer(
         get() {
             val c = posedContent
             val p = state.preview
-            return if (p.isEmpty()) c else ScenePreview.apply(c, p)
+            return if (p.isEmpty()) c else ScenePreview().apply(c, p)
         }
 
     /** Other plugins' overlays for this view; drawn after the markers, then again over everything. */
@@ -92,7 +119,7 @@ class SceneRenderer(
     private var skybox: SceneSkybox? = null
     private var overlay: LoadingOverlay? = null
     private var lightsKey: Pair<List<LightPlacement>, Vec3>? = null
-    private var lights = LightSet.NONE
+    private var lights = NO_LIGHTS
     private var lineBatch: LineBatch? = null
     private var gridModel: Model? = null
     private var grid: ModelInstance? = null
@@ -138,9 +165,9 @@ class SceneRenderer(
     /** Copies what was drawn so the queries need neither this renderer nor GL. */
     internal fun publishSnapshot() {
         snapshot = FrameSnapshot(
-            FrameSnapshot.copyOf(camera),
-            models.drawn.map { FrameSnapshot.boxOf(it.placement.entityId, it.localBounds, it.instance.transform!!) },
-            terrains.drawn.map { FrameSnapshot.terrainOf(TerrainTarget(it.placement.entityId, it.terrain.data, it.world)) },
+            copyOfCamera(camera),
+            models.drawn.map { snapshotBoxOf(it.placement.entityId, it.localBounds, it.instance.transform!!) },
+            terrains.drawn.map { snapshotTerrainOf(TerrainTarget(it.placement.entityId, it.terrain.data, it.world)) },
             drawnVersion,
         )
     }
@@ -183,7 +210,7 @@ class SceneRenderer(
         updateDrawnVersion()
         batch = ModelBatch(FogShaderProvider { fogCoefficient })
         contentShaders = DefaultShaderProvider(net.nevinsky.abyssus.core.shader.ShaderConfig().apply {
-            numSpotLights = LightSet.MAX_POINT
+            numSpotLights = MAX_POINT
         }).also { contentBatch = ContentBatch(it) }
         terrainShader = TerrainShader(shaders)
         skybox = SceneSkybox(AssetView(assets, net.nevinsky.abyssus.core.assets.sky.Sky::class.java))
@@ -280,7 +307,7 @@ class SceneRenderer(
         camera.viewportWidth = width.toFloat()
         camera.viewportHeight = height.toFloat()
         if (through != null) {
-            val direction = CameraFrustum.directionOf(through, c.entityPositions)
+            val direction = cameraDirectionOf(through, c.entityPositions)
             camera.fieldOfView = through.fieldOfView.takeIf { it > 0f && it < 180f } ?: CAMERA_FOV
             camera.near = through.near.coerceAtLeast(MIN_NEAR)
             camera.far = through.far.coerceAtLeast(camera.near + MIN_NEAR)
@@ -310,13 +337,13 @@ class SceneRenderer(
         drawnCameraMarkers = c.cameras.count { it.entityId != state.viewCamera }
         val aspect = aspectOf(width, height) ?: return
         lines.begin(displayCamera, depthTest = true)
-        SceneMarkers.draw(lines, c, aspect, state.viewCamera)
+        SceneMarkers().draw(lines, c, aspect, state.viewCamera)
         overlays?.draw(overlayView(c, displayCamera, height, onTop = false), lines)
         lines.end()
         lines.begin(displayCamera, depthTest = false)
         state.selectedId?.let { id ->
             boundsOf(c, id)?.let { SelectionBox.draw(lines, it) }
-            SnapshotSceneQueries.gizmoHandles(c, displayCamera, state, height)?.let {
+            gizmoHandlesFor(c, displayCamera, state, height)?.let {
                 GizmoDraw.draw(lines, it, state.hoveredAxis)
                 drewGizmo = true
             }
@@ -338,7 +365,7 @@ class SceneRenderer(
         terrains.drawn.firstOrNull { it.placement.entityId == id }?.let {
             return BoundingBox(it.localBounds).mul(c.terrains.firstOrNull { terrain -> terrain.entityId == id }?.transform?.toMatrix() ?: it.world)
         }
-        return SceneMarkers.boundsOf(c, id)
+        return SceneMarkers().boundsOf(c, id)
     }
 
     private fun renderContent(p: SceneRenderParams, c: SceneContent, atlas: ShadowAtlasAttribute?) {
@@ -363,7 +390,7 @@ class SceneRenderer(
         val key = c.lights to target
         if (key == lightsKey) return
         lightsKey = key
-        lights = LightSet.of(c.lights, target)
+        lights = lightSetOf(c.lights, target)
         lights.applyTo(environment)
     }
 

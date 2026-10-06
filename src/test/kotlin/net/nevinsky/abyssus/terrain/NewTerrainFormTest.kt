@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.terrain
 
+import net.nevinsky.abyssus.editor.terrain.FolderNameError
 import com.intellij.openapi.components.service
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
