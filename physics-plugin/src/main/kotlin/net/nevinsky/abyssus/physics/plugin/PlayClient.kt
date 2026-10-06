@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.physics.plugin
 
+import net.nevinsky.abyssus.core.assets.displayMessage
+
 import net.nevinsky.abyssus.physics.play.PlayFrame
 import net.nevinsky.abyssus.physics.play.PlayProtocol
 import net.nevinsky.abyssus.sceneview.Pose
@@ -97,7 +99,7 @@ class PlayClient internal constructor(
         } catch (e: Exception) {
             if (state == State.STOPPED) return
             val code = if (process.waitFor(2, TimeUnit.SECONDS)) process.exitValue() else null
-            fail(code?.let { AbyssusPhysicsBundle.message("playExited", it) } ?: (e.message ?: e.javaClass.simpleName))
+            fail(code?.let { AbyssusPhysicsBundle.message("playExited", it) } ?: (e.displayMessage()))
         }
     }
 

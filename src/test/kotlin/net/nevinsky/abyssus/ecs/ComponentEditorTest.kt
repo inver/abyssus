@@ -271,8 +271,8 @@ class ComponentEditorTest {
         assertEquals(EditResult.Changed, editor.update(root, "4", "CameraComponent", "camera.fieldOfView", "50"))
         assertEquals(EditResult.Changed, editor.remove(root, "0", "LightComponent"))
         // camera field changed; everything else equals the original
-        (root["ecs"]["entities"]["4"]["components"]["CameraComponent"]["camera"] as com.fasterxml.jackson.databind.node.ObjectNode)
-            .set<JsonNode>("fieldOfView", original["ecs"]["entities"]["4"]["components"]["CameraComponent"]["camera"]["fieldOfView"])
+        (root["ecs"]["4"]["components"]["CameraComponent"]["camera"] as com.fasterxml.jackson.databind.node.ObjectNode)
+            .set<JsonNode>("fieldOfView", original["ecs"]["4"]["components"]["CameraComponent"]["camera"]["fieldOfView"])
         assertEquals(original.toString(), root.toString())
     }
 

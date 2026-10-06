@@ -75,8 +75,7 @@ internal class RayViewFeed(
         }?.toMap().orEmpty()
         val signature = context.params.rayTracing to overrides
         if (settingsSignature != signature) {
-            //todo
-//            settingsSignature = signature
+            settingsSignature = signature
             settingsRevision++
             epoch++
             pendingJob.set(null)

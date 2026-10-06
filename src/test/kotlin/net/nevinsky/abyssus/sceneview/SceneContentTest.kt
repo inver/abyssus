@@ -23,7 +23,7 @@ class SceneContentTest {
 
     @Test
     fun mainSceneHasThreeModelsAndOneTerrain() {
-        val text = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
+        val text = File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()
         val c = content(text)
         assertEquals(
             listOf("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "model_fc33e1f1-015b-4524-9b10-aa417acd273c", "model_900f6f61-6384-434a-be81-56ce303fbb56"),
@@ -151,7 +151,7 @@ class SceneContentTest {
 
     @Test
     fun mainSceneHasTheFixtureCamera() {
-        val c = content(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
+        val c = content(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
         val cam = c.cameras.single()
         assertEquals("4", cam.entityId)
         assertEquals("Camera 4", cam.name)

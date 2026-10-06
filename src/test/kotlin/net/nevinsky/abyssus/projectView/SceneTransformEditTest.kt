@@ -29,7 +29,8 @@ class SceneTransformEditTest : BasePlatformTestCase() {
         val changed = before.indices.filter { before[it] != now[it] }
         assertEquals(changed.toString(), 1, changed.size)
         assertTrue(now[changed.single()], now[changed.single()].startsWith("            \"x\": -1.035308") || now[changed.single()].contains("\"x\": -1.035"))
-        assertEquals(SceneJson.parse(original).get("ecs").get("entities").size(), SceneJson.parse(after).get("ecs").get("entities").size())
+        val paths = net.nevinsky.abyssus.SceneEcsPaths()
+        assertEquals(paths.entities(SceneJson.parse(original))!!.size(), paths.entities(SceneJson.parse(after))!!.size())
     }
 
     fun testNothingIsWrittenWhenTheEditChangesNothing() {

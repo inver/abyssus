@@ -19,7 +19,7 @@ class AssetEntitiesTest {
     private val tree = RenderAsset("MODEL", "tree")
     private val terrain = RenderAsset("TERRAIN", "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")
 
-    private fun mainScene() = SceneJson.parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
+    private fun mainScene() = SceneJson.parse(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
     private fun empty() = SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{}}""")
     /** The entity's position; the writer leaves out zero coordinates. */
     private fun position(entity: JsonNode) = entity["components"]["PositionComponent"]["localPosition"].let {

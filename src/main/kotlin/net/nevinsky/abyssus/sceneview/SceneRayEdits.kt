@@ -38,12 +38,12 @@ object SceneRayEdits {
     }
 
     private fun edit(project: Project, file: VirtualFile, mutate: (ObjectNode) -> RayDataEdit): RayDataEdit {
-        var result = RayDataEdit.Rejected(RayDataError.OBJECT)
+        var result: RayDataEdit = RayDataEdit.Rejected(RayDataError.OBJECT)
         if (file.extension != "scene") {
             return result
         }
         editSceneJson(project, file, AbyssusBundle.message("commandEditSceneRaySettings")) { root ->
-//            result = mutate(root as ObjectNode)
+            result = mutate(root as ObjectNode)
             result == RayDataEdit.Changed
         }
         return result

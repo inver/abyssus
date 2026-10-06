@@ -23,13 +23,13 @@ import java.io.File
 class AddComponentOnEcsTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
 
-    private fun copyProject(sceneFixture: String = "Untitled/scenes/Main Scene.scene") {
+    private fun copyProject(sceneFixture: String = "Tree/scenes/Main Scene.scene") {
         val dir = "Untitled"
-        myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
+        myFixture.copyFileToProject("Tree/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject(sceneFixture, "$dir/scenes/Main Scene.scene")
-        File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
+        File("$testDataPath/Tree/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
             d.listFiles { f -> f.isFile && f.extension == "json" }!!.forEach {
-                myFixture.copyFileToProject("$dir/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
+                myFixture.copyFileToProject("Tree/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
             }
         }
     }

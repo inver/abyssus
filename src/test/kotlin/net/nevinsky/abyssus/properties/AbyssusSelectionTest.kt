@@ -26,10 +26,10 @@ class AbyssusSelectionTest : BasePlatformTestCase() {
 
     private fun copyProject() {
         val dir = "Untitled"
-        myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
-        myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
-        File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach {
-            myFixture.copyFileToProject("$dir/assets/${it.name}/meta.json", "$dir/assets/${it.name}/meta.json")
+        myFixture.copyFileToProject("Tree/Untitled.abss", "$dir/Untitled.abss")
+        myFixture.copyFileToProject("Tree/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
+        File("$testDataPath/Tree/assets").listFiles { f -> f.isDirectory }!!.forEach {
+            myFixture.copyFileToProject("Tree/assets/${it.name}/meta.json", "$dir/assets/${it.name}/meta.json")
         }
     }
 

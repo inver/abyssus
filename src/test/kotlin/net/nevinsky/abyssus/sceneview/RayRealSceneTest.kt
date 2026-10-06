@@ -20,7 +20,7 @@ import java.util.concurrent.Executor
  * The fixture project's Main Scene is a real scene: a few hundred model parts, a dozen blended panes and several
  * 2048x2048 textures. It once failed ray tracing with "RESOURCE_LIMIT: Scene exceeds instance, triangle or byte limits"
  * because the caps were sized for toy scenes. These tests keep it working. They assert nothing about the fixture's exact
- * contents (it is edited in the IDE), only that a real scene stays inside the bounds and renders.
+ * contents, only that the stable native scene snapshot stays inside the bounds and renders using real binary assets.
  */
 class RayRealSceneTest {
     private val project = File("src/test/testData/project/Untitled").absoluteFile
@@ -28,7 +28,7 @@ class RayRealSceneTest {
     private fun snapshot(): RaySceneFrame {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
         val loading = AssetLoading(JsonProcessor(), printingLog, Executor(Runnable::run), ShaderSource("/shader/sky", AssetLoading::class.java))
-        val content = SceneContent.of(parseScene(project.resolve("scenes/Main Scene.scene").readText()))
+        val content = SceneContent.of(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
         val assets = RaySceneAssets(ViewAssets(loading))
         assets.update(project, content)
         val state = assets.poll()

@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.core.assets.displayMessage as failureMessage
+
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
@@ -150,7 +152,7 @@ internal class RayBackendService(
             view.clearPublication()
             publish { view.mode.failed(revision, failure.displayMessage()) }
         }
-        report("Ray tracing stopped for view ${view.viewId}: ${failure.message ?: failure.javaClass.simpleName}", failure)
+        report("Ray tracing stopped for view ${view.viewId}: ${failure.failureMessage()}", failure)
         disposeBinding(view)
     }
 

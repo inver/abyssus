@@ -15,7 +15,11 @@
 
 `gdx-model`, `core`, `runtime` and `physics` must not import IntelliJ or plugin code (see their READMEs). `core` is wired by constructors:
 its composition root `AssetLoading` takes a `JsonProcessor`, an SLF4J `Logger`, an executor and the sky `ShaderSource`; in
-the IDE the light application service `AbyssusCore` builds one (IDE log, IDE pool) and hands it to every scene view.
+the IDE the light application service `AbyssusCore.assets` builds one (IDE log, IDE pool) and hands it to every scene view.
+`AbyssusCore` creates four groups independently on first access: `documents` owns JSON, native validation and parsing;
+`assets` owns metadata, loading, property descriptions and previews; `terrain` owns generation and file staging;
+`ray` owns the backend service and conversion worker. Actions, providers and factories pass the group collaborators
+they need. Disposal closes only initialized ray resources; reading a document does not create native workers.
 The plugin's `SceneReader` and `ProjectReader` use `DocumentParsing` and `JsonProcessor` to validate and bind
 scene and project text while retaining their VFS stamps and listings. Filesystem callers use `core`'s `SceneLoader`.
 `SceneEntry(file, scene)` keeps editor sources out of the runtime DTO. Filesystem callers use `core`'s `Project` (`file()`, `sceneFiles()`) and
@@ -144,7 +148,7 @@ and bounds, and `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` for t
 
 ## Native document validation
 
-The plugin's `AbyssusDocumentFormat` (`src/main/kotlin/net/nevinsky/abyssus/format/AbyssusDocumentFormat.kt`)
+The shared `AbyssusDocumentFormat` (`core/src/main/kotlin/net/nevinsky/abyssus/core/format/AbyssusDocumentFormat.kt`)
 is a constructor-built validator over parsed `JsonNode`s with no Swing, IntelliJ or GL dependencies. It checks the
 `.abss` / `.scene` / `meta.json` header (`format: "abyssus"`, integral `formatVersion: 1`) and reserved scene fields
 (`ecs.componentIdentifiers`, renderable `class`), returning a `FormatRejection` or null. Extension payloads are opaque.
@@ -153,9 +157,11 @@ is a constructor-built validator over parsed `JsonNode`s with no Swing, IntelliJ
 `editSceneJson` validates current and candidate document text on the EDT, and `SceneFormatListener` guards formatting.
 Rejections surface through `documentDisplayMessage` and localized `unsupportedFormat.*` messages.
 
-The plain JVM loaders in `core` and raw ECS helpers in `runtime` do not currently invoke this validator. The requirement
-to validate before loading still applies, but is not enforced at all of those boundaries. See
-`docs/reviews/documentation-audit-2026-10-06.md`; do not treat the editor's guard as proof that a direct JVM load is guarded.
+`ProjectLoader`, `SceneLoader` and `AssetMetaLoader` validate parsed trees before binding.
+Saved metadata and editor unsaved metadata both use `AssetMetaBinder` after admission; adding a typed asset kind
+requires one settings-class registration in its constructor map. Runtime raw ECS loading
+checks reserved fields before engine mutation; ECS writing and direct render binding use the same validator.
+The editor retains source aliases in its `format` package. None of these checks writes or normalizes input files.
 
 ## Threading
 
@@ -236,3 +242,6 @@ A frame that fails its per-path query bound or meets an unsupported dielectric m
 `RayQueuedSession` then accepts new work at once. In Properties, `SceneDetailsView` edits the four settings and
 `EntityDetailsView` the per-material optics through `SceneRayEdits` (one `editSceneJson` command each); see the
 scene view README.
+
+Schema field types use explicit switches in `ComponentSchemaReader`, `SchemaJson` and the editor's field mapping.
+The checklist for adding a type is in `runtime/README.md`; no handler registry is installed.

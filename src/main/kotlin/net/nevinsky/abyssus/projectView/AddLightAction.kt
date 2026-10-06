@@ -31,7 +31,7 @@ class AddLightGroup(
 ) : DefaultActionGroup(AbyssusBundle.message("addLightTitle"), true), DumbAware {
     init {
         for (preset in LightPreset.entries) add(object : AnAction(AbyssusBundle.message(preset.labelKey)), DumbAware {
-            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+            override fun getActionUpdateThread() = ActionUpdateThread.BGT
             override fun update(e: AnActionEvent) {
                 e.presentation.isEnabled = canAddLight(file, SceneDocumentCache.of(project))
             }

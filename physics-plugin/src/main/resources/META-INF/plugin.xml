@@ -17,7 +17,7 @@
     </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
-        <notificationGroup id="Abyssus Physics" displayType="BALLOON" key="notificationGroup"/>
+        <notificationGroup id="Abyssus Physics" displayType="BALLOON" key="notification.group.Abyssus Physics"/>
     </extensions>
 
 </idea-plugin>

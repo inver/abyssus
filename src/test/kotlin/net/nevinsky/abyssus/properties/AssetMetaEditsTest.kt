@@ -20,7 +20,7 @@ private fun update(project: com.intellij.openapi.project.Project, dir: com.intel
     AssetMetaEdits.update(project, dir, key, expected, value, testCore.assetEditor)
 
 class AssetMetaEditsTest : BasePlatformTestCase() {
-    private val terrainMeta = File("src/test/testData/project/Untitled/assets/terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b/meta.json").readText()
+    private val terrainMeta = File("src/test/testData/project/Untitled/assets/terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b/meta.json").readText().trimEnd() + "\n"
     private val physicalMeta = File("src/test/testData/project/Untitled/assets/skybox_physical/meta.json").readText()
 
     private fun textOf(f: VirtualFile) = FileDocumentManager.getInstance().getDocument(f)!!.text
@@ -34,7 +34,7 @@ class AssetMetaEditsTest : BasePlatformTestCase() {
     fun testOneFieldEditChangesOnlyThatValue() {
         val (dir, meta, _) = open("terrain", terrainMeta)
         assertEquals(AssetEditResult.Changed, update(project, dir, "size", FieldValue.Int(1600), FieldValue.Int(800)))
-        assertEquals(terrainMeta.replace("\"size\":1600", "\"size\":800"), textOf(meta))
+        assertEquals(terrainMeta.replace("\"size\": 1600", "\"size\": 800"), textOf(meta))
     }
 
     fun testUndoAndRedoRestoreTheExactText() {
@@ -42,10 +42,10 @@ class AssetMetaEditsTest : BasePlatformTestCase() {
         val undo = UndoManager.getInstance(project)
         assertEquals(AssetEditResult.Changed, update(project, dir, "uv", FieldValue.Real(60f), FieldValue.Real(30f)))
         val edited = textOf(meta)
-        assertTrue(edited, edited.contains("\"uv\":30.0"))
+        assertTrue(edited, edited.contains("\"uv\": 30.0"))
         undo.undo(editor)
         assertEquals(terrainMeta, textOf(meta))
-        assertTrue(textOf(meta).contains("\"uv\":60.0"))
+        assertTrue(textOf(meta).contains("\"uv\": 60.0"))
         undo.redo(editor)
         assertEquals(edited, textOf(meta))
     }
@@ -64,9 +64,9 @@ class AssetMetaEditsTest : BasePlatformTestCase() {
         val (dir, meta, _) = open("terrain", terrainMeta)
         update(project, dir, "size", FieldValue.Int(1600), FieldValue.Int(1))
         val after = textOf(meta)
-        assertTrue(after.contains("\"lastModified\":1699293063182"))
-        assertTrue(after.contains("\"uuid\":\"2cf70bf7-f7ee-4c41-934c-e40df1d35c8b\""))
-        assertTrue(after.contains("\"type\":\"TERRAIN\""))
+        assertTrue(after.contains("\"lastModified\": 1699293063182"))
+        assertTrue(after.contains("\"uuid\": \"2cf70bf7-f7ee-4c41-934c-e40df1d35c8b\""))
+        assertTrue(after.contains("\"type\": \"TERRAIN\""))
     }
 
     fun testAnOmittedDefaultIsNotMaterializedByAnEqualEdit() {
@@ -104,7 +104,7 @@ class AssetMetaEditsTest : BasePlatformTestCase() {
     fun testUnsavedTextIsWhatIsEdited() {
         val (dir, meta, _) = open("terrain", terrainMeta)
         com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) {
-            FileDocumentManager.getInstance().getDocument(meta)!!.setText(terrainMeta.replace("\"size\":1600", "\"size\":1000"))
+            FileDocumentManager.getInstance().getDocument(meta)!!.setText(terrainMeta.replace("\"size\": 1600", "\"size\": 1000"))
         }
         assertEquals(AssetEditResult.Conflict(FieldValue.Int(1000)), update(project, dir, "size", FieldValue.Int(1600), FieldValue.Int(5)))
         assertEquals(AssetEditResult.Changed, update(project, dir, "size", FieldValue.Int(1000), FieldValue.Int(5)))

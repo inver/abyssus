@@ -42,6 +42,21 @@ in `plugin.xml`; every action group and action has an id; user text goes through
 | P8 | Dynamic-plugin unloading is untested: Abyssus holds native libGDX/Assimp/LWJGL state and a global `Gdx.*`, and `physics-plugin` borrows its classloader. The three extension points are dynamic, but nothing shows an install, update or unload works without a restart. | Dynamic plugin requirements | both plugins |
 | P9 | The CI workflow uses `actions/checkout@v3`, `cache@v3`, `upload-artifact@v3` and `codecov-action@v3`, which are deprecated. Also the `SceneFormatListener` rewrites a document on open; it is documented in `conventions.md` and kept, only noted here. | Build hygiene | `.github/workflows/*.yml` |
 
+## Prerequisite
+
+`share-native-document-validation` closes the existing admission gaps in core/runtime and unsaved editor metadata.
+Its reader guards are implemented; validation stays before binding in every path. The user authorized scoped
+continuation against the earlier failing baseline; the prerequisite and parent full-check gates now pass (see
+tasks.md and verification.md).
+
+`repair-native-test-regressions` records the subsequently authorized test-only prerequisite. It updates stale fixture
+setup and expectations without changing current production logic or weakening assertions that expose defects.
+
+`repair-ray-editor-regressions` records the separately authorized production prerequisite: restore ray mutations
+and settings-signature tracking, preserve rejection of explicit null ray limits, and read EXR header dimensions.
+All three prerequisites have complete task gates. The parent remains open for transferred structural work,
+remote CI, manual IDE verification and archive.
+
 ## What Changes
 
 Refactors only; **no user-visible behavior and no file format change**.
@@ -52,8 +67,8 @@ Refactors only; **no user-visible behavior and no file format change**.
 - **Rule compliance (F2).** A small `parseUuidOrNull` replaces the `runCatching { UUID... }` calls; the remaining
   `message ?: ...` sites use `displayMessage()`. The `checkNoRunCatching` scope grows to `raytracing`, `runtime`,
   `physics` and `physics-plugin`.
-- **Field type as a strategy (F3).** One `FieldTypeHandler` per `FieldType` (encode, decode, default, display
-  parts); a registry replaces the five `when` blocks.
+- **Field type consistency (F3).** Retain exhaustive switches after the prototype failed its size gate and the user
+  approved continuation. Strengthen behavior checks and document all switch sites; no strategy registry is introduced.
 - **Split `ComponentEditor.kt` (F4)** into the codec contract, the built-in kinds, `SchemaCodec` and the editor.
 - **Split the big UI classes (F5)** by responsibility: toolbar, input forwarding and canvas host out of
   `SceneViewPanel`; row building and thumbnail out of `AssetPropertiesPanel`.
@@ -123,7 +138,7 @@ stay the same text); the plugin verifier becomes a build check, not a specified 
   `properties/AssetPropertiesPanel`, `dto/AssetMetaReader`, and the entry points that call `service<AbyssusCore>()`.
 - **`core`:** `AssetMetaLoader`, `AssetIndex`, `TerrainLoader`, a new meta-binding class.
 - **`runtime`:** `schema/SchemaJson`, `schema/ComponentSchemaReader`.
-- **`physics`:** `play/PlayProtocol`; `PhysicsWorld` only if task 9.2 finds a clean seam.
+- **`physics`:** `play/PlayProtocol`; `PhysicsWorld` only if task 9.3 finds a clean seam.
 - **`raytracing`, `physics-plugin`:** `runCatching` and `displayMessage` sites; the backend diff in task 9.1.
 - **Build and CI:** root, `core`, `runtime`, `physics`, `physics-plugin` Gradle files; `.github/workflows/*.yml`.
 - **Resources:** both `plugin.xml` files, `AbyssusBundle.properties`, `AbyssusPhysicsBundle.properties`.

@@ -1,6 +1,7 @@
 # Verification — 2026-10-06
 
-Implementation tasks 1.1, 1.2 and 2.1 are complete. Integration task 3.1 remains open; the prerequisite is not archived. After the user instructed continuation, refactor-solid-dedup began its scoped fixes with integration gates retained as open.
+All four tasks are complete. The prerequisite is not archived. The blocked results below are historical;
+the authorized continuation now passes the full integration gate.
 
 ## Regression evidence
 
@@ -12,7 +13,7 @@ Implementation tasks 1.1, 1.2 and 2.1 are complete. Integration task 3.1 remains
 - Strict validation of both `share-native-document-validation` and `refactor-solid-dedup` passed. `git diff --check` passed.
 - Fresh-context review found no important correctness regressions. Its two coverage suggestions (matching format reasons and carried legacy renderable rejection) were added and verified.
 
-## Full integration gate remains blocked
+## Historical blocked integration gate
 
 `./gradlew check --continue` failed. Log: `/private/tmp/abyssus-native-validation-check.log`.
 
@@ -21,4 +22,12 @@ Implementation tasks 1.1, 1.2 and 2.1 are complete. Integration task 3.1 remains
 - Root plugin suite: 880 tests, 69 failures, 40 skipped. Examples include expectations for nine scene fields despite existing ray fields, equality of randomly generated scene IDs, and tests expecting wrapped ECS entity maps from an unwrapped fixture. Other failures need separate diagnosis; no clean baseline checkout was run to classify every failure.
 - Initial physics-plugin failures called an obsolete `FileLoader` constructor from cached test classes. Rebuilding that module resolved all five failures; its 11 tests now pass.
 
-The unchecked integration task requires a passing full check. The user subsequently instructed continuation; the refactor tasks/design now record that baseline continuation, while integration gates stay open. The four UUID runCatching violations have been fixed under refactor phase 2.
+The user subsequently instructed continuation. The four UUID runCatching violations were fixed under refactor phase 2.
+
+## Passing integration after authorized prerequisites
+
+`./gradlew check --continue --console=plain` passes with 1,644 tests, zero failures/errors and 177 skipped.
+Editor: 917/40 skipped; core: 216/13; runtime: 99/0; physics: 39/0; physics-plugin: 11/0;
+raytracing: 229/114; gdx-model: 27/9; Control Line: 106/1. Counts include skipped tests.
+Source checks and coverage verification pass. Log: `/private/tmp/abyssus-solid-continuation-check.log`.
+Docs checking passes for 199 paths; strict OpenSpec validation passes. Task 3.1 is now complete.

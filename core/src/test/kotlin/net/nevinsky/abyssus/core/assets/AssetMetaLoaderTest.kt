@@ -129,7 +129,7 @@ class AssetMetaLoaderTest {
 
     @Test
     fun theFolderIsTheNameAndASparseMetaGetsDefaults() {
-        val dir = project { it.meta("sparse", """{"type":"MODEL"}""") }
+        val dir = project { it.meta("sparse", """{"format":"abyssus","formatVersion":1,"type":"MODEL"}""") }
         val meta = AssetMetaLoader(JsonProcessor(), FileLoader(dir)).loadBaseMeta("sparse")!!
         assertEquals("sparse", meta.name)
         assertEquals(1, meta.version)

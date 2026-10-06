@@ -20,16 +20,18 @@ class AbyssusPropertiesToolWindowFactory : ToolWindowFactory, DumbAware {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val core = service<AbyssusCore>()
+        val assets = core.assets
+        val terrain = core.terrain
         val services = PanelServices(
-            core.metaFiles, core.hdrPreviews, core.json, core.assetFields, core.assetEditor,
-            core.terrainGenerator, core.heightEncoder, core.terrainRecipes, project.service<SceneRayControls>(),
+            assets.metaFiles, assets.hdrPreviews, core.documents.json, assets.fields, assets.editor,
+            terrain.generator, terrain.heightEncoder, terrain.recipes, project.service<SceneRayControls>(),
             net.nevinsky.abyssus.schema.ComponentSchemas.of(project),
         ) { dir, name ->
             // the panel re-reads an entity on every scene edit; parse each model file once per modification
-            core.loading.modelFile(dir, name)?.let { model ->
+            assets.loading.modelFile(dir, name)?.let { model ->
                 val stamp = model.lastModified()
                 tables[model.canonicalFile]?.takeIf { it.first == stamp }?.second
-                    ?: core.loading.rayModelMaterials(dir, name)?.map { RayMaterialIdentity(it.id, it.pbr) }
+                    ?: assets.loading.rayModelMaterials(dir, name)?.map { RayMaterialIdentity(it.id, it.pbr) }
                         ?.also { tables[model.canonicalFile] = stamp to it }
             }
         }

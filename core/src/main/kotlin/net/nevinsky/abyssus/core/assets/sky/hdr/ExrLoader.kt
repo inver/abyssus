@@ -34,7 +34,39 @@ class ExrLoader(private val fileLoader: FileLoader) {
      * files are read. Throws [IllegalStateException] ([ExrFormatException] for the image checks) for a file that is not a single-part OpenEXR image, has no colour
      * channels or only subsampled ones, is not 2:1 or is over [MAX_HDR_HEIGHT] tall.
      */
-    fun decode(file: File, maxWidth: Int = MAX_HDR_WIDTH): HdrImage {
+    fun decode(file: File, maxWidth: Int = MAX_HDR_WIDTH): HdrImage = withHeader(file) { header, stack, error ->
+        if (header.tiled() && header.tile_level_mode() == TinyEXR.TINYEXR_TILE_RIPMAP_LEVELS) {
+            throw IllegalStateException("ripmapped EXR files are not supported")
+        }
+        // ask for floats whatever the file stores, so every channel is read the same way
+        for (c in 0 until header.num_channels()) {
+            header.requested_pixel_types().put(c, TinyEXR.TINYEXR_PIXELTYPE_FLOAT)
+        }
+        val channels = colourChannels(header)
+        val image = EXRImage.calloc(stack)
+        TinyEXR.InitEXRImage(image)
+        try {
+            if (TinyEXR.LoadEXRImageFromFile(image, header, file.absolutePath, error) != TinyEXR.TINYEXR_SUCCESS) {
+                throw IllegalStateException("EXR image error: ${message(error)}")
+            }
+            convert(image, channels, maxWidth)
+        } finally {
+            TinyEXR.FreeEXRImage(image)
+        }
+    }
+
+    /** Full image dimensions from the data window; reads no pixel data and allocates no image. */
+    fun dimensions(file: File): Pair<Int, Int> = withHeader(file) { header, _, _ ->
+        val window = header.data_window()
+        val width = window.max_x().toLong() - window.min_x() + 1
+        val height = window.max_y().toLong() - window.min_y() + 1
+        check(height in 1..MAX_HDR_HEIGHT.toLong() && width == height * 2) {
+            "Unsupported EXR dimensions: $width x $height"
+        }
+        width.toInt() to height.toInt()
+    }
+
+    private fun <T> withHeader(file: File, read: (EXRHeader, MemoryStack, org.lwjgl.PointerBuffer) -> T): T {
         val path = file.absolutePath
         MemoryStack.stackPush().use { stack ->
             val version = EXRVersion.malloc(stack)
@@ -43,29 +75,15 @@ class ExrLoader(private val fileLoader: FileLoader) {
             }
             if (version.multipart()) throw IllegalStateException("multipart EXR files are not supported")
 
-            val error = stack.mallocPointer(1)
+            val error = stack.callocPointer(1)
             val header = EXRHeader.calloc(stack)
             TinyEXR.InitEXRHeader(header)
-            val image = EXRImage.calloc(stack)
-            TinyEXR.InitEXRImage(image)
             try {
                 if (TinyEXR.ParseEXRHeaderFromFile(header, version, path, error) != TinyEXR.TINYEXR_SUCCESS) {
                     throw IllegalStateException("EXR header error: ${message(error)}")
                 }
-                if (header.tiled() && header.tile_level_mode() == TinyEXR.TINYEXR_TILE_RIPMAP_LEVELS) {
-                    throw IllegalStateException("ripmapped EXR files are not supported")
-                }
-                // ask for floats whatever the file stores, so every channel is read the same way
-                for (c in 0 until header.num_channels()) {
-                    header.requested_pixel_types().put(c, TinyEXR.TINYEXR_PIXELTYPE_FLOAT)
-                }
-                val channels = colourChannels(header)
-                if (TinyEXR.LoadEXRImageFromFile(image, header, path, error) != TinyEXR.TINYEXR_SUCCESS) {
-                    throw IllegalStateException("EXR image error: ${message(error)}")
-                }
-                return convert(image, channels, maxWidth)
+                return read(header, stack, error)
             } finally {
-                TinyEXR.FreeEXRImage(image)
                 TinyEXR.FreeEXRHeader(header)
             }
         }

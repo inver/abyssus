@@ -233,3 +233,6 @@ Native scene input uses `format: "abyssus"` and integral `formatVersion: 1`. Ass
 and their folder reference, without class loading. Unknown native kinds draw nothing and remain raw; light and camera
 look-at resolution still uses the preserved entity ids and transforms. Unsupported enclosing documents are rejected
 before view construction, and unsupported asset metadata never reaches GPU build.
+
+The editor provider obtains loading and scene shaders from `AbyssusCore.assets`, JSON from `documents`, and native
+ray collaborators from `ray`. These groups initialize independently; the ray group closes only resources it created.

@@ -56,7 +56,8 @@ class ComponentActionsTest : BasePlatformTestCase() {
     }
 
     private fun scene() = componentTargetOf(entity("0"))!!.file
-    private fun components(id: String) = SceneJson.parse(FileDocumentManager.getInstance().getDocument(scene())!!.text)["ecs"]["entities"][id]["components"]
+    private fun components(id: String) = net.nevinsky.abyssus.SceneEcsPaths().components(
+        SceneJson.parse(FileDocumentManager.getInstance().getDocument(scene())!!.text), id)!!
 
     private class LightOn(val node: Any?) : AddLightAction() {
         override fun selected(e: AnActionEvent) = node

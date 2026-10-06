@@ -117,7 +117,7 @@ class ScenePickerTest {
         println("Camera 4: terrain=$ground lowest=${camera.position.y - 0.5f}")
         org.junit.Assert.assertTrue(kotlin.math.abs(camera.position.y - 0.5f - ground) > ScenePicker.REST_EPS)
         val root = net.nevinsky.abyssus.filetype.SceneJson.parse(java.io.File(dir, "scenes/Main Scene.scene").readText())
-        val components = root["ecs"]["entities"]["4"]["components"]
+        val components = root["ecs"]["4"]["components"]
         assertEquals(components["PositionComponent"]["localPosition"], components["CameraComponent"]["camera"]["position"])
     }
 

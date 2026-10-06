@@ -25,11 +25,11 @@ class AddAssetActionTest : BasePlatformTestCase() {
 
     private fun copyProject() {
         val dir = "Untitled"
-        myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
-        myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
-        File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
+        myFixture.copyFileToProject("Tree/Untitled.abss", "$dir/Untitled.abss")
+        myFixture.copyFileToProject("Tree/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
+        File("$testDataPath/Tree/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
             d.listFiles { f -> f.isFile && f.extension == "json" }!!.forEach {
-                myFixture.copyFileToProject("$dir/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
+                myFixture.copyFileToProject("Tree/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
             }
         }
     }

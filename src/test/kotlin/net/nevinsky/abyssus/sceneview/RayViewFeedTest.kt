@@ -150,7 +150,8 @@ class RayViewFeedTest {
         val environment = scene.environment
         assertEquals(0, environment.texture)
         assertTrue("an HDR sky is flagged so primary misses are tone mapped", environment.hdr)
-        assertEquals(64, scene.textures[0].width)
+        assertEquals(1024, scene.textures[0].width)
+        assertEquals(512, scene.textures[0].height)
         assertEquals("sky", scene.textures[0].id)
         assertEquals(6, environment.ambientCube!!.size)
         assertEquals(.1f, environment.ambientCube!![0].r, 1e-6f)

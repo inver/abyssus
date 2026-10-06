@@ -190,6 +190,11 @@ class RaySceneRequest(override val key: RayFrameKey, override val width: Int, ov
         if(!capabilities.sceneOptics && (maxReflectionBounces!=1 || maxRefractionBounces!=0 || scene.materials.any { it.transmission>0f }))
             throw UnsupportedOperationException("Backend does not support scene optics")
     }
+    /** Common placement ABI; blended instances take primary rays only in both native backends. */
+    internal fun instances(): List<RaySliceInstance> = scene.instances.map {
+        RaySliceInstance(it.mesh, it.transform().toList(), listOf(1f, 1f, 1f),
+            primaryOnly = scene.materials[it.material].alphaMode == RayAlphaMode.BLEND)
+    }
     /** 28 float camera ABI: lens/light, transport (R,T,samples,offset), per-sample and per-frame query budgets. */
     internal fun nativeCamera(): FloatArray = camera.uniforms(width,height).copyOf(28).also {
         it[20]=maxReflectionBounces.toFloat();it[21]=maxRefractionBounces.toFloat();it[22]=samples.toFloat();it[23]=sampleOffset.toFloat()

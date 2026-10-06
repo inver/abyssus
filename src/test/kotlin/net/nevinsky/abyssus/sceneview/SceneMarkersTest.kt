@@ -23,7 +23,7 @@ class SceneMarkersTest {
         }
     }
 
-    private fun main() = SceneContent.of(parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()))
+    private fun main() = SceneContent.of(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
 
     private fun content(entities: String) = SceneContent.of(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{$entities}}}"""))
 

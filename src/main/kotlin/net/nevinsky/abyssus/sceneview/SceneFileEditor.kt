@@ -70,15 +70,16 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
 
     override fun createEditor(project: Project, file: VirtualFile): FileEditor {
         val core = service<AbyssusCore>()
+        val assets = core.assets
         val reader = service<SceneReader>()
         val documents = project.service<SceneDocumentCache>()
         // Ray tracing is optional: a missing service (e.g. a test without the application services) leaves raster only.
-        val ray = runCatchingKeepingCancellation { RayIntegration.of(core) }.getOrNull()
+        val ray = runCatchingKeepingCancellation { RayIntegration.of(core.ray) }.getOrNull()
         return SceneFileEditor(
-            project, file, core.json, project.service<SceneRayControls>(), SceneParamsSource.editorText(reader),
+            project, file, core.documents.json, project.service<SceneRayControls>(), SceneParamsSource.editorText(reader),
         ) { params ->
             SceneViewPanel(
-                params, SceneRenderer(ViewAssets(core.loading), core.sceneShaders),
+                params, SceneRenderer(ViewAssets(assets.loading), assets.sceneShaders),
                 lightActions = { position -> AddLightGroup(project, file, position) },
                 canAddLight = { canAddLight(file, documents) },
                 assetActions = { position -> AddAssetGroup(project, file, position) },

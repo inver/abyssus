@@ -46,7 +46,7 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         File(projectDir, "scenes").mkdirs()
         File(projectDir, "scenes/Main.scene").writeText(sceneText)
         File(projectDir, "assets/existing").mkdirs()
-        File(projectDir, "assets/existing/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"fixed-uuid","type":"MODEL","additional":{}}""")
+        File(projectDir, "assets/existing/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"${java.util.UUID.nameUUIDFromBytes("fixed-uuid".toByteArray())}","type":"MODEL","additional":{}}""")
         abss = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(projectDir, "P.abss"))!!
         abss.parent.refresh(false, true)
     }
@@ -210,7 +210,7 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         val project = project.service<ProjectReader>().read(abss).obj!!
         val hills = project.assets.single { it.name == "hills" }
         assertTrue("no scene references it", hills.unused)
-        assertEquals("TERRAIN", hills.type)
+        assertEquals(net.nevinsky.abyssus.core.assets.MetaType.TERRAIN, hills.type)
         assertEquals(2, project.assets.size)
         assertFalse(File(projectDir, "scenes/Main.scene").readText().contains("hills"))
     }
@@ -240,7 +240,7 @@ class NewTerrainActionTest : BasePlatformTestCase() {
     fun testACollidingFolderIsRejectedWithoutChangingAnything() {
         assertNull("staging re-checks the name", service<AbyssusCore>().newTerrains.stage(projectDir, "existing", preview()))
         assertNull(service<AbyssusCore>().newTerrains.stage(projectDir, "../escape", preview()))
-        assertEquals("fixed-uuid", com.fasterxml.jackson.databind.ObjectMapper().readTree(File(projectDir, "assets/existing/meta.json")).get("uuid").asText())
+        assertEquals(java.util.UUID.nameUUIDFromBytes("fixed-uuid".toByteArray()).toString(), com.fasterxml.jackson.databind.ObjectMapper().readTree(File(projectDir, "assets/existing/meta.json")).get("uuid").asText())
         File(projectDir, "assets/hills").mkdirs()
         File(projectDir, "assets/hills/mine.txt").writeText("keep")
         val staged = NewTerrainFactoryFor("hills-staged")

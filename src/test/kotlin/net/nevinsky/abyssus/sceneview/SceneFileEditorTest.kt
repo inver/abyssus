@@ -202,7 +202,10 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         }
     }
 
-    private val mainScene get() = java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
+    // Pin the test copy to the native writer's indentation before checking one-line edits and exact Undo.
+    private val mainScene get() = net.nevinsky.abyssus.filetype.SceneJson.pretty(
+        net.nevinsky.abyssus.filetype.SceneJson.parse(java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
+    )
 
     private fun textOf(f: com.intellij.openapi.vfs.VirtualFile) =
         com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(f)!!.text
@@ -307,7 +310,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val root = net.nevinsky.abyssus.filetype.SceneJson.parse(
             java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText(),
         ) as com.fasterxml.jackson.databind.node.ObjectNode
-        val entities = root.get("ecs").get("entities") as com.fasterxml.jackson.databind.node.ObjectNode
+        val entities = root.get("ecs") as com.fasterxml.jackson.databind.node.ObjectNode
         (entities.get("7").get("components") as com.fasterxml.jackson.databind.node.ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>(
             "LightComponent",
             net.nevinsky.abyssus.filetype.SceneJson.parse("""{"light":{"color":{"r":1,"g":0.96,"b":0.84,"a":1},"intensity":1.2}}"""),
@@ -334,8 +337,8 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             assertEquals(45f, lights.getValue("8").coneAngle, 0f)
             assertEquals(0.2f, lights.getValue("8").edgeSoftness, 0f)
             for (id in listOf("7", "8")) {
-                val entry = net.nevinsky.abyssus.projectView.DtoRow(id, net.nevinsky.abyssus.filetype.SceneJson.parse(prepared)["ecs"]["entities"][id])
-                val node = net.nevinsky.abyssus.projectView.DtoEntryNode(project, f.path, entry, f, listOf("ecs", "entities"))
+                val entry = net.nevinsky.abyssus.projectView.DtoRow(id, net.nevinsky.abyssus.filetype.SceneJson.parse(prepared)["ecs"][id])
+                val node = net.nevinsky.abyssus.projectView.DtoEntryNode(project, f.path, entry, f, listOf("ecs"))
                 net.nevinsky.abyssus.projectView.AbyssusSelection.of(project).select(node)
                 assertEquals(id, views.single().selected)
                 // the Properties panel reads the same entity: opening it must not write either

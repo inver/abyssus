@@ -24,7 +24,7 @@ class SceneEntitiesTest {
 
     @Test
     fun theNextIdIsOneAboveTheHighestAndAnEmptySceneStartsAtZero() {
-        val main = SceneJson.parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
+        val main = SceneJson.parse(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
         assertEquals("9", SceneEntities.insert(main) { components("NameComponent") })
         assertTrue(main["ecs"]["9"]["components"].has("NameComponent"))
         val empty = SceneJson.parse("""{"format":"abyssus","formatVersion":1}""")

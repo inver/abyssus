@@ -2,8 +2,11 @@
 
 ## Context
 
+Prerequisite: `share-native-document-validation` supplies shared core admission and guards raw runtime ECS and unsaved metadata.
 See `proposal.md` for the findings F1–F10. This is a behavior-preserving refactor, so the existing tests are the
 safety net; each phase must leave `./gradlew check` green before the next starts.
+On 2026-10-06 the user instructed continuation against the recorded failing baseline. The separately approved
+prerequisites now restore a passing full check; the integration gates are complete (see tasks.md and verification.md).
 
 Constraints:
 - **Writes:** every scene or `meta.json` edit still goes through `editSceneJson`. No new write path.
@@ -42,14 +45,28 @@ into the shared Gradle script (D7) and covers all JVM modules.
 
 ### D3. Strategy per `FieldType` (F3)
 
-`FieldTypeHandler` in `runtime/schema/` with `encode`, `decode`, `defaultFor`, `fromJava` and `parts` (how many editable
-sub-values and their names). `FieldTypes` is a map built in a constructor and passed to `SchemaJson`,
-`ComponentSchemaReader` and the plugin's editor. Where a handler is needed for the panel (`FieldKind`), the plugin
-adds a display mapping beside it, not inside `runtime` (runtime has no UI notion).
-*Why a strategy and not an enum method:* `FieldType` is part of the exported schema; adding behavior to it would put
-codec dependencies on the schema model. The registry keeps the enum a pure tag.
-*Risk:* the `when` blocks are exhaustive today, so the compiler catches a missing type; the registry must keep that
-guarantee. Handler registration is checked by a test that every `FieldType.entries` has a handler.
+The prototype below was evaluated and rejected. Production retains exhaustive `FieldType` switches in
+`SchemaJson`, `ComponentSchemaReader` and the editor mapping. No handler registry is introduced.
+
+#### Task 3.1 result — 2026-10-06
+
+The DECIMAL/VECTOR candidate is retained under `prototype/runtime/schema/` (outside production source sets).
+Its two behavior tests passed with `./gradlew :runtime:test --tests '*FieldTypeHandlerPrototypeTest'` before moving
+it out of the runtime module. Tests cover finite values, partial axes, Java conversion, defaults and limit/error text.
+
+| Compared code | Nonblank code lines |
+|---|---:|
+| Existing SchemaJson decimal/vector encode/decode arms, including the vector closing brace | 9 |
+| Existing ComponentSchemaReader inference and schemaValue arms | 4 |
+| Existing ComponentEditor fieldsOf arms | 2 |
+| Existing total | 15 |
+| Candidate contract and two handlers | 34 |
+
+Counts exclude comments/imports and give the candidate the benefit of excluding shared validation helpers entirely:
+those could be relocated without growth. Registry wiring, inference adapters and remaining plugin display mapping
+would add lines. Even replacing the candidate's vector limit loop with the existing limitedAxes helper would not
+make it smaller. Task 3.1 therefore fails its explicit acceptance gate; retain the switches. No field-type production change remains.
+The user then instructed continuation with the existing switches retained: tasks 3.3/3.4 are withdrawn, and the remaining phases continue.
 
 ### D4. Split by reason to change (F4, F5) — executed in `restructure-editor-modules` stage 3
 
@@ -140,3 +157,60 @@ category (static caches, a leaked disposable, the native libraries).
 
 - Should the extracted `SceneToolbar` live in `sceneview/` or a new `sceneview/toolbar/` package? Default: new package.
 - (Resolved upstream) `AssetMetaEditor` stays in the plugin; the docs now say so.
+
+## Implementation inventory — 2026-10-06
+
+D6: the original core lookups occur in eight source files (nine expressions). SceneReader and ProjectReader use
+documents; PropertiesToolWindowFactory uses documents/assets/terrain; ComponentActions and ProjectViewPane use assets;
+SceneFileEditorProvider uses documents/assets/ray; NewTerrainAction uses documents/terrain. Groups are lazy and
+compatibility getters forward to them. Cache and reader service constructors now defer lookup until a read.
+
+D11 action classification: RenameSceneAction, NewTerrainAction, AbyssusTreeAction (including component actions) and
+UnusedFilter read the selected Swing tree/pane and remain EDT. The three AddLightGroup preset actions read scene data
+only and use BGT. AddLightActionTest exercises all three updates on the platform pool under a read action.
+
+D8 backend comparison: owner-thread guards, one pending request, cache invalidation and accumulation have similar
+contracts, but Metal delegates submit/poll/destruction to JNI while Vulkan owns fences, command buffers, descriptor
+sets and mapped half-float readback. Vulkan additionally guards device loss and logs refusal. Those blocks cannot
+be shared without changing behavior. The scene-instance mapping is identical (mesh, copied transform, white
+multiplier and BLEND primary-ray flag); it now lives in `RaySceneRequest.instances()`. Existing `dirtyMeshes`,
+`shadingUnchanged`, scene encoding and frame accumulation are already shared. No common native session base is added.
+
+D8 physics seams: ShapeFactory already separates shapes, tested by flat hull refusal, convex hull acceptance and
+terrain/static/falling cases. Body mutation is exercised by thrust, kinematic movement, reset and entity removal;
+constraints by rope creation/removal and invalid limits; contacts by landing. These still share native ownership
+and body maps. The fixed-step accumulator has its own `advanceRunsFixedStepsAndCarriesTheRemainder` test, covering
+zero-step calls, carried fractions and overflow dropping. Only that seam is extracted to `FixedStepClock`; native
+stepping, body write-back and contact collection remain in PhysicsWorld.
+
+D9 verifier baseline: `./gradlew verifyPlugin` completed against IC-252.28539.97 and recommended IU builds
+253.33813.55, 261.27258.48, 262.10968.63 and 263.6259.32. Abyssus is binary compatible on all five, but the Gradle
+gate fails on internal API usages: IC reports seven (six generated ToolWindowFactory default bridges and the
+EyeTree RenderingUtil.CUSTOM_SELECTION_BACKGROUND field). The same tree field appears on every target; IU-262 also
+reports PluginManager.getPluginByClass in SceneFileEditorProvider.pluginName. Later IDEs additionally report
+deprecated/experimental and scheduled-for-removal usage. Full reports are in `build/reports/pluginVerifier`.
+The unqualified command also verified physics-plugin, which fails because the mandatory local Abyssus dependency
+is unavailable to the verifier. CI now calls the root `:verifyPlugin`; extension dependency verification needs its
+own resolution before it can be claimed green. Log: `/private/tmp/abyssus-solid-verifier.log`.
+
+The documented ignored-problems mechanism lists compatibility errors, not arbitrary internal API reports.
+`gradle/plugin-verification.gradle.kts` now finalizes root `verifyPlugin` with `checkPluginInternalApis`, matching
+complete report descriptions against eight exact entries in `gradle/plugin-internal-api-allowlist.txt`. There are no
+wildcards: a new caller of an accepted API still fails. Compatibility and override-only usages retain the verifier's
+default failure policy; internal usages use this exact comparison. Missing verifier reports fail the comparison.
+An injected unknown report line failed; removing it restored success, including configuration-cache reuse.
+At this baseline stage task 10.3 remained unchecked pending both verifier and AbyssusViewTest verification;
+the passing continuation below completes it.
+
+Continuation: the remaining AddAsset and AddComponent entry points now select `assets.metaFiles`, and the
+FlightGear construction uses imports rather than inline qualified names. The stable Tree snapshot isolates the
+tree suite from interactive edits. All 21 AbyssusViewTest cases pass, along with the NewTerrain, ComponentActions
+and SceneFileEditor group. Constructor inspection confirms the four reader/cache services defer lookups until use.
+
+Root `:verifyPlugin` now passes all five targets with the exact allowlist and verdict/detail consistency check
+(`/private/tmp/abyssus-solid-verifier-continuation.log`). Task 10.3 is complete. With user-authorized test-runtime
+TinyEXR natives, all five SkyboxChooserDialogTest cases pass; task 10.7 is complete. Neither native test dependency
+nor fixture isolation changes production behavior or plugin packaging.
+
+CI task 10.2 is edited locally: supported action versions, Java 21, root `:verifyPlugin`, and removal of the obsolete
+listProductsReleases call. A remote branch workflow has not been run; its verification checkbox stays open.

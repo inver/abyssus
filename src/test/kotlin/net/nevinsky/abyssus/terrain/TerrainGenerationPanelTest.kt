@@ -124,7 +124,7 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         assertEquals("metadata is byte for byte unchanged", metaBefore, text("meta.json"))
         assertTrue(recipeExists())
         assertTrue(text(TERRAIN_RECIPE_FILE).contains("\"seed\": 2024"))
-        assertEquals("1600 and 60.0 survive", true, text("meta.json").contains("\"size\":1600") && text("meta.json").contains("\"uv\":60.0"))
+        assertEquals("1600 and 60.0 survive", true, text("meta.json").contains("\"size\": 1600") && text("meta.json").contains("\"uv\": 60.0"))
         val reopened = shown()
         assertTrue(label(reopened, "terrain-recipe-status")!!.contains("Generated with the settings shown"))
         assertEquals("2024", field(reopened, "seed").text)

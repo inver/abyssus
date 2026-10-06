@@ -34,9 +34,8 @@ class ParsedScene(val root: JsonNode, val scene: Scene)
  * An unreadable text is remembered too, so it is not re-read either. Entries go when the file is deleted or moved.
  */
 @Service(Service.Level.PROJECT)
-class SceneDocumentCache(project: Project, private val parse: (String) -> ParsedScene) : Disposable {
-    /** What the platform creates. */
-    constructor(project: Project) : this(project, { text -> parsedScene(service<SceneReader>(), text) })
+class SceneDocumentCache(project: Project, private val parse: ((String) -> ParsedScene)?) : Disposable {
+    constructor(project: Project) : this(project, null)
 
     private class Entry(val stamp: Long, val document: Boolean, val parsed: ParsedScene?)
 
@@ -57,7 +56,7 @@ class SceneDocumentCache(project: Project, private val parse: (String) -> Parsed
         val stamp = document?.modificationStamp ?: file.modificationStamp
         entries[file]?.takeIf { it.stamp == stamp && it.document == (document != null) }?.let { return it.parsed }
         val text = document?.text ?: String(file.contentsToByteArray(), file.charset)
-        val parsed = runCatchingKeepingCancellation { parse(text) }.getOrNull()
+        val parsed = runCatchingKeepingCancellation { parse?.invoke(text) ?: parsedScene(service<SceneReader>(), text) }.getOrNull()
         entries[file] = Entry(stamp, document != null, parsed)
         return parsed
     }

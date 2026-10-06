@@ -101,7 +101,7 @@ open class AddComponentAction : AbyssusTreeAction<ComponentTarget>() {
     internal fun choices(project: Project, target: ComponentTarget): DefaultActionGroup {
         val root = SceneDocumentCache.of(project).read(target.file)?.root ?: return DefaultActionGroup()
         val kinds = ComponentSchemas.of(project).editorFor(target.file).missingKinds(root, target.entityId).map { it.name }
-        return addComponentGroup(project, target.file, target.entityId, kinds, service<AbyssusCore>().metaFiles)
+        return addComponentGroup(project, target.file, target.entityId, kinds, service<AbyssusCore>().assets.metaFiles)
     }
 
     override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) {
@@ -140,7 +140,7 @@ open class AddComponentOnEcsAction : AbyssusTreeAction<VirtualFile>() {
     /** The kinds a new entity can start with, each creating one when chosen. */
     internal fun choices(project: Project, target: VirtualFile): DefaultActionGroup {
         val kinds = ComponentSchemas.of(project).editorFor(target).kinds.map { it.name }.filter { it != "NameComponent" }
-        val metaFiles = service<AbyssusCore>().metaFiles
+        val metaFiles = service<AbyssusCore>().assets.metaFiles
         return addComponentGroup(project, target, kinds, metaFiles) { name, initial ->
             val added = SceneComponentEdits.addAsNewEntity(project, target, name, metaFiles, initial)
             reportRejection(project, added.result)

@@ -22,7 +22,7 @@ class AssetIndex(private val fileLoader: FileLoader, private val metaLoader: Ass
 
     /** The asset folder whose meta declares [uuid] (as text); null when [uuid] is not a `uuid` or no folder has it. */
     fun folder(uuid: String?): String? {
-        val id = uuid?.let { runCatching { UUID.fromString(it) }.getOrNull() } ?: return null
+        val id = parseUuidOrNull(uuid) ?: return null
         return folders()[id]
     }
 }

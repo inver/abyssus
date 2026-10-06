@@ -11,6 +11,9 @@ import kotlin.math.roundToInt
 
 /** Small tone-mapped pictures of HDR skies for the chooser and the properties panel. No GL; call off the EDT. */
 class HdrPreview(private val loader: ExrLoader, private val curve: ToneCurve) {
+    /** Original dimensions without decoding pixels or applying preview reduction. Call off the EDT. */
+    fun dimensions(file: File): Pair<Int, Int> = loader.dimensions(file)
+
     /**
      * The `.exr` [file] decoded at no more than about twice [maxWidth] (halved while reading), tone mapped as the scene
      * view draws it, and scaled to at most [maxWidth] wide. Throws [ExrFormatException] for an unreadable image.

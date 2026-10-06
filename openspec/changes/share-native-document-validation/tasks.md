@@ -11,4 +11,4 @@
 
 ## 3. Integration
 
-- [ ] 3.1 Run `./gradlew check`, `scripts/check-docs.sh` and `openspec validate share-native-document-validation --strict`; record pre-existing failures separately and leave this gate open if check cannot pass. Do not silently broaden scope.
+- [x] 3.1 Run `./gradlew check`, `scripts/check-docs.sh` and `openspec validate share-native-document-validation --strict`; record pre-existing failures separately and leave this gate open if check cannot pass. Do not silently broaden scope.

@@ -61,6 +61,9 @@ Two kinds of tests:
 ## Fixtures
 
 `src/test/testData/project/`:
+- **`Tree/`:** a stable nine-entity native scene snapshot, its project document and nine asset metadata folders,
+  without binary payloads. Tree, asset-listing and runtime ECS/scene suites use it to pin identities and counts
+  independently of `Untitled`. The real-ray regression uses this scene with Untitled's binary assets.
 - **`Untitled/`:** a native Abyssus project with `Untitled.abss` and `scenes/Main Scene.scene`. The scene has models,
   terrain, a skybox, directional lights and `Spot Light 8`, `Camera 4` looking at entity 3, and a parented entity. `assets/` holds 4 models, `tree`,
   a terrain, `skybox_default`, `skybox_physical` (a procedural sky) and `skybox_hdr` (an OpenEXR sky named by its
@@ -85,8 +88,12 @@ assert a rejection also assert the document text and disk bytes are unchanged.
 
 **Don't edit fixtures through the IDE.** Opening `src/test/testData/project/Untitled` as the `runIde` project and
 using the eye, Rename Scene, the skybox chooser or gizmo drags changes the files the tests assert on.
-`AbyssusViewTest` reads the scene name from the file for this reason. A test that pins exact coordinates breaks when
-an object was dragged.
+`AbyssusViewTest` and runtime scene regressions use the stable `Tree` snapshot. Other tests that pin Untitled's
+coordinates or asset counts still break when that project is edited; use a disposable copy for interactive work.
+
+HDR preview platform tests require real filesystem-backed EXR files and TinyEXR's native binaries. The root build
+adds those classifiers with `testRuntimeOnly`; this test setup does not add them to plugin packaging. Undo tests
+clear only fixture-creation history before the first panel edit, then retain exact Undo/Redo assertions.
 
 ## GL tests
 

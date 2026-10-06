@@ -104,12 +104,18 @@ class SkyboxChooserDialog(
     private fun loadThumbnails(choices: List<SkyboxChoice>) {
         if (choices.none { it.folder != null }) return
         ApplicationManager.getApplication().executeOnPooledThread {
-            for (choice in choices) {
-                val dir = choice.folder ?: continue
-                choice.thumbs = if (choice.hdr != null) listOf(choice.hdr.file?.let { hdrThumbnail(dir, it, THUMB_PIXELS, hdrPreview) })
+            val result = choices.mapNotNull { choice ->
+                val dir = choice.folder ?: return@mapNotNull null
+                val images = if (choice.hdr != null) listOf(choice.hdr.file?.let { hdrThumbnail(dir, it, THUMB_PIXELS, hdrPreview) })
                 else choice.faceFiles.map { name -> name?.let { smallThumbnail(dir, it, THUMB_PIXELS) } }
-            }
-            ApplicationManager.getApplication().invokeLater({ if (!isDisposed) list.repaint() }, ModalityState.any())
+                choice to images.toList()
+            }.toList()
+            ApplicationManager.getApplication().invokeLater({
+                if (!isDisposed) {
+                    result.forEach { (choice, images) -> choice.thumbs = images }
+                    list.repaint()
+                }
+            }, ModalityState.any())
         }
     }
 

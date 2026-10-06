@@ -30,11 +30,13 @@ import java.util.concurrent.ConcurrentHashMap
 @Service(Service.Level.PROJECT)
 class AssetReadCache(
     val project: Project,
-    private val sceneReader: ConfigFileReader<*>,
-    private val projectReader: ConfigFileReader<*>,
+    sceneReader: ConfigFileReader<*>?,
+    projectReader: ConfigFileReader<*>?,
 ) : Disposable {
-    /** What the platform creates: the one place this service looks up its readers. */
-    constructor(project: Project) : this(project, service<SceneReader>(), project.service<ProjectReader>())
+    constructor(project: Project) : this(project, null, null)
+
+    private val sceneReader by lazy { sceneReader ?: service<SceneReader>() }
+    private val projectReader by lazy { projectReader ?: project.service<ProjectReader>() }
 
     private data class Entry(val stamp: Long, val result: AssetReadResult<*>)
 
