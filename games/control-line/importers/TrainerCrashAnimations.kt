@@ -7,6 +7,7 @@
 package net.nevinsky.abyssus.games.controlline.tools
 
 import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -28,6 +29,9 @@ private const val WING_ROOT_X = 0.0615f
 
 /** Where the tail cone breaks off the cabin (model z, metres). */
 private const val TAIL_BREAK_Z = -0.30f
+
+/** The ground under the parked trainer: where its main wheels touch (model y, metres). */
+private const val GROUND_Y = -0.136f
 
 /** Samples per second of the written clips (linear interpolation in between). */
 private const val SAMPLE_RATE = 30
@@ -116,7 +120,7 @@ fun withCrashAnimations(glb: ByteArray, mapper: ObjectMapper = ObjectMapper()): 
 
 private fun crashLittle() = Clip(CRASH_LITTLE).apply {
     track("Trainer") {
-        key(0.18f, move = v(0f, -0.036f, 0.02f), turn = v(4f, 0f, 3f), ease = Ease.IN)
+        key(0.18f, move = v(0f, -0.036f, 0.02f), turn = v(4f, 0f, 3f), ease = Ease.IN, land = true)
         key(0.30f, move = v(0f, -0.028f, 0.04f), turn = v(2.5f, 0.5f, 2f), ease = Ease.OUT)
         key(0.42f, move = v(0f, -0.036f, 0.05f), turn = v(4f, 1f, 3f), ease = Ease.IN)
         key(1.2f, move = v(0f, -0.036f, 0.07f), turn = v(4f, 2f, 3f), ease = Ease.OUT)
@@ -134,23 +138,23 @@ private fun crashLittle() = Clip(CRASH_LITTLE).apply {
     track("RightWheel") {
         key(0.10f, turn = v(5f, 0f, -35f), ease = Ease.IN)
         key(0.30f, move = v(-0.06f, -0.01f, -0.06f), turn = v(-60f, -20f, -80f))
-        key(0.65f, move = v(-0.12f, -0.035f, -0.17f), turn = v(-250f, -35f, -95f), ease = Ease.OUT)
+        key(0.65f, move = v(-0.12f, -0.035f, -0.17f), turn = v(-250f, -35f, -95f), ease = Ease.OUT, land = true)
         key(1.0f, move = v(-0.13f, -0.036f, -0.19f), turn = v(-270f, -40f, -90f), ease = Ease.OUT)
     }
 }
 
 private fun crashMedium() = Clip(CRASH_MEDIUM).apply {
     track("Trainer") {
-        key(0.10f, move = v(0f, -0.012f, 0.03f), turn = v(0f, 2f, -9f), ease = Ease.IN)
+        key(0.10f, move = v(0f, -0.012f, 0.03f), turn = v(0f, 2f, -9f), ease = Ease.IN, land = true)
         key(0.30f, move = v(0f, -0.008f, 0.06f), turn = v(-1f, 8f, -4f), ease = Ease.OUT)
         key(0.55f, move = v(0f, -0.004f, 0.08f), turn = v(0f, 14f, -2f))
         key(1.6f, move = v(0f, 0f, 0.09f), turn = v(0f, 22f, -1.5f), ease = Ease.OUT)
     }
     track("LeftWing") {
         key(0.10f, turn = v(0f, 0f, 4f), ease = Ease.IN)
-        key(0.28f, turn = v(-4f, 26f, -30f), ease = Ease.IN)
-        key(0.40f, turn = v(-3f, 22f, -27f), ease = Ease.OUT)
-        key(0.55f, turn = v(-4f, 25f, -31f), ease = Ease.IN)
+        key(0.28f, turn = v(-4f, 26f, -20f), ease = Ease.IN)
+        key(0.40f, turn = v(-3f, 22f, -17f), ease = Ease.OUT)
+        key(0.55f, turn = v(-4f, 25f, -20f), ease = Ease.IN)
     }
     track("LeftAileron") {
         key(0.30f, turn = v(-35f, 0f, 0f), ease = Ease.IN)
@@ -162,9 +166,9 @@ private fun crashMedium() = Clip(CRASH_MEDIUM).apply {
     }
     track("Tail") {
         key(0.18f, turn = v(-4f, 0f, 0f), ease = Ease.IN)
-        key(0.36f, turn = v(-12f, -9f, 10f), ease = Ease.IN)
-        key(0.48f, turn = v(-9f, -8f, 9f), ease = Ease.OUT)
-        key(0.62f, turn = v(-12f, -10f, 11f), ease = Ease.IN)
+        key(0.36f, turn = v(-18f, -9f, 10f), ease = Ease.IN)
+        key(0.48f, turn = v(-14f, -8f, 9f), ease = Ease.OUT)
+        key(0.62f, turn = v(-18f, -10f, 11f), ease = Ease.IN)
     }
     track("LeftElevator") {
         key(0.40f, turn = v(-30f, 0f, 0f), ease = Ease.IN)
@@ -184,38 +188,38 @@ private fun crashFull() = Clip(CRASH_FULL).apply {
     track("Trainer") {
         key(0.12f, move = v(0f, -0.03f, 0.05f), turn = v(22f, 3f, -6f), ease = Ease.IN)
         key(0.35f, move = v(0.01f, -0.02f, 0.12f), turn = v(30f, 15f, -14f), ease = Ease.OUT)
-        key(0.70f, move = v(0.03f, -0.045f, 0.2f), turn = v(10f, 28f, -18f), ease = Ease.IN)
+        key(0.70f, move = v(0.03f, -0.045f, 0.2f), turn = v(10f, 28f, -18f), ease = Ease.IN, land = true)
         key(0.85f, move = v(0.035f, -0.04f, 0.22f), turn = v(7f, 31f, -15f), ease = Ease.OUT)
         key(2.2f, move = v(0.04f, -0.045f, 0.25f), turn = v(8f, 35f, -16f), ease = Ease.OUT)
     }
     track("Propeller") {
         key(0.10f, turn = v(-40f, 0f, 25f), ease = Ease.IN)
         key(0.50f, move = v(0.10f, 0.02f, 0.18f), turn = v(-90f, 200f, 120f))
-        key(0.90f, move = v(0.16f, -0.08f, 0.28f), turn = v(-90f, 320f, 180f), ease = Ease.IN)
+        key(0.90f, move = v(0.16f, -0.08f, 0.28f), turn = v(-90f, 320f, 180f), ease = Ease.IN, land = true)
         key(1.4f, move = v(0.17f, -0.08f, 0.31f), turn = v(-90f, 340f, 180f), ease = Ease.OUT)
     }
     track("NoseWheel") {
         key(0.10f, turn = v(70f, 0f, 0f), ease = Ease.IN)
         key(0.50f, move = v(-0.03f, 0.03f, -0.20f), turn = v(300f, 40f, 30f))
-        key(1.0f, move = v(-0.06f, -0.05f, -0.40f), turn = v(450f, 60f, 90f), ease = Ease.IN)
+        key(1.0f, move = v(-0.06f, -0.05f, -0.40f), turn = v(450f, 60f, 90f), ease = Ease.IN, land = true)
         key(1.5f, move = v(-0.065f, -0.05f, -0.45f), turn = v(460f, 70f, 90f), ease = Ease.OUT)
     }
     track("LeftWheel") {
         key(0.12f, turn = v(10f, 0f, 60f), ease = Ease.IN)
         key(0.55f, move = v(0.18f, 0.04f, -0.10f), turn = v(-200f, 30f, 150f))
-        key(1.1f, move = v(0.30f, -0.04f, -0.22f), turn = v(-360f, 40f, 270f), ease = Ease.IN)
+        key(1.1f, move = v(0.30f, -0.04f, -0.22f), turn = v(-360f, 40f, 270f), ease = Ease.IN, land = true)
         key(1.6f, move = v(0.33f, -0.04f, -0.26f), turn = v(-370f, 40f, 270f), ease = Ease.OUT)
     }
     track("RightWheel") {
         key(0.12f, turn = v(10f, 0f, -60f), ease = Ease.IN)
         key(0.60f, move = v(-0.15f, 0.05f, -0.05f), turn = v(-180f, -20f, -160f))
-        key(1.2f, move = v(-0.26f, -0.04f, -0.12f), turn = v(-340f, -30f, -270f), ease = Ease.IN)
+        key(1.2f, move = v(-0.26f, -0.04f, -0.12f), turn = v(-340f, -30f, -270f), ease = Ease.IN, land = true)
         key(1.7f, move = v(-0.29f, -0.04f, -0.14f), turn = v(-360f, -30f, -270f), ease = Ease.OUT)
     }
     track("LeftWing") {
         key(0.20f, turn = v(-5f, 10f, -10f), ease = Ease.IN)
         key(0.60f, move = v(0.12f, 0.10f, -0.06f), turn = v(-20f, 60f, 80f))
-        key(1.1f, move = v(0.18f, -0.02f, -0.20f), turn = v(-10f, 75f, 175f), ease = Ease.IN)
+        key(1.1f, move = v(0.18f, -0.02f, -0.20f), turn = v(-10f, 75f, 175f), ease = Ease.IN, land = true)
         key(1.3f, move = v(0.19f, -0.01f, -0.22f), turn = v(-8f, 78f, 172f), ease = Ease.OUT)
         key(1.6f, move = v(0.19f, -0.02f, -0.22f), turn = v(-9f, 78f, 176f), ease = Ease.OUT)
     }
@@ -243,7 +247,7 @@ private fun crashFull() = Clip(CRASH_FULL).apply {
     track("Tail") {
         key(0.20f, turn = v(10f, 0f, 0f), ease = Ease.IN)
         key(0.60f, move = v(-0.04f, 0.10f, -0.12f), turn = v(70f, -30f, 40f))
-        key(1.1f, move = v(-0.08f, 0.01f, -0.22f), turn = v(10f, -60f, 85f), ease = Ease.IN)
+        key(1.1f, move = v(-0.08f, 0.01f, -0.22f), turn = v(10f, -60f, 85f), ease = Ease.IN, land = true)
         key(1.3f, move = v(-0.085f, 0.02f, -0.23f), turn = v(8f, -62f, 80f), ease = Ease.OUT)
         key(1.6f, move = v(-0.085f, 0.01f, -0.23f), turn = v(9f, -62f, 84f), ease = Ease.OUT)
     }
@@ -286,13 +290,23 @@ private enum class Ease { LINEAR, IN, OUT }
 /** A pose relative to rest: [move] in the parent's frame, [turn] degrees about x (pitch), y (yaw) and z (roll). */
 private class Key(val time: Float, val move: Vec, val turn: Vec, val ease: Ease)
 
+/**
+ * One part's motion. The part never goes below the ground: its height is raised where a key would sink it. From
+ * [landsAt] on it rests on the ground, its height set so that its lowest point touches it.
+ */
 private class Track(val node: String) {
     val keys = mutableListOf(Key(0f, Vec(0f, 0f, 0f), Vec(0f, 0f, 0f), Ease.LINEAR))
+    var landsAt: Float? = null
+        private set
 
-    /** The pose at [time], reached from the previous key along [ease]. Keys come in time order. */
-    fun key(time: Float, move: Vec = Vec(0f, 0f, 0f), turn: Vec = Vec(0f, 0f, 0f), ease: Ease = Ease.LINEAR) {
+    /**
+     * The pose at [time], reached from the previous key along [ease]. Keys come in time order. A [land] key puts the
+     * part on the ground from then on.
+     */
+    fun key(time: Float, move: Vec = Vec(0f, 0f, 0f), turn: Vec = Vec(0f, 0f, 0f), ease: Ease = Ease.LINEAR, land: Boolean = false) {
         check(time > keys.last().time) { "$node: keys out of order at $time" }
         keys += Key(time, move, turn, ease)
+        if (land && landsAt == null) landsAt = time
     }
 
     fun at(time: Float): Pair<Vec, Vec> {
@@ -318,6 +332,74 @@ private class Clip(val name: String) {
     fun track(node: String, block: Track.() -> Unit) {
         tracks += Track(node).apply(block)
     }
+}
+
+/**
+ * Samples a clip's tracks over [root]'s parts, parents first, keeping each tracked part above the ground ([GROUND_Y])
+ * and on it from its landing. A tracked part's body is its own triangles and those of the parts it carries that the
+ * clip does not move.
+ */
+private class Settle(private val root: Part, private val clip: Clip) {
+    private val tracks = clip.tracks.associateBy { it.node }
+    private val bodies = HashMap<String, FloatArray>()
+
+    init {
+        fun collect(part: Part, offset: Vec, into: MutableList<Float>) {
+            for (p in part.prims) for (i in p.positions.indices step 3) {
+                into += p.positions[i] - part.pivot.x + offset.x
+                into += p.positions[i + 1] - part.pivot.y + offset.y
+                into += p.positions[i + 2] - part.pivot.z + offset.z
+            }
+            for (child in part.children) if (child.name !in tracks) collect(child, offset + (child.pivot - part.pivot), into)
+        }
+        fun visit(part: Part) {
+            if (part.name in tracks) bodies[part.name] = ArrayList<Float>().also { collect(part, Vec(0f, 0f, 0f), it) }.toFloatArray()
+            part.children.forEach(::visit)
+        }
+        visit(root)
+        check(bodies.keys == tracks.keys) { "${clip.name}: no parts ${tracks.keys - bodies.keys}" }
+    }
+
+    /** Each tracked part's translations (three floats per time) and rotations (four), in its parent's frame. */
+    fun sample(times: FloatArray): Map<String, Pair<FloatArray, FloatArray>> {
+        val out = tracks.keys.associateWith { FloatArray(times.size * 3) to FloatArray(times.size * 4) }
+        for ((i, time) in times.withIndex()) visit(root, Vec(0f, 0f, 0f), Quaternion(), Vector3(), time, i, out)
+        return out
+    }
+
+    private fun visit(part: Part, parentPivot: Vec, parentTurn: Quaternion, parentAt: Vector3, time: Float, i: Int, out: Map<String, Pair<FloatArray, FloatArray>>) {
+        val rest = part.pivot - parentPivot
+        val local = Vector3(rest.x, rest.y, rest.z)
+        val turn = Quaternion()
+        val track = tracks[part.name]
+        if (track != null) {
+            val (move, angles) = track.at(time)
+            local.add(move.x, move.y, move.z)
+            turn.setEulerAngles(angles.y, angles.x, angles.z)
+        }
+        val worldTurn = Quaternion(parentTurn).mul(turn)
+        val at = parentTurn.transform(Vector3(local)).add(parentAt)
+        if (track != null) {
+            val body = bodies.getValue(part.name)
+            var lowest = Float.POSITIVE_INFINITY
+            val v = Vector3()
+            for (k in body.indices step 3) lowest = minOf(lowest, worldTurn.transform(v.set(body[k], body[k + 1], body[k + 2])).y + at.y)
+            val landed = track.landsAt?.let { time >= it } ?: false
+            val rise = if (landed || lowest < GROUND_Y) GROUND_Y - lowest else 0f
+            if (body.isNotEmpty() && rise != 0f) {
+                at.y += rise
+                local.add(Quaternion(parentTurn).conjugate().transform(Vector3(0f, rise, 0f)))
+            }
+            val (translations, rotations) = out.getValue(part.name)
+            translations[3 * i] = clean(local.x); translations[3 * i + 1] = clean(local.y); translations[3 * i + 2] = clean(local.z)
+            rotations[4 * i] = clean(turn.x); rotations[4 * i + 1] = clean(turn.y)
+            rotations[4 * i + 2] = clean(turn.z); rotations[4 * i + 3] = clean(turn.w)
+        }
+        for (child in part.children) visit(child, part.pivot, worldTurn, at, time, i, out)
+    }
+
+    /** Rounds away float noise, and -0 to 0. */
+    private fun clean(f: Float): Float = if (abs(f) < 1e-7f) 0f else f
 }
 
 // ---- geometry ----
@@ -477,13 +559,11 @@ private class Glb(val json: ObjectNode, private val bin: ByteBuffer) {
         }
 
         val indexOf = HashMap<String, Int>()
-        val restOf = HashMap<String, Vec>()
         fun add(part: Part, parentPivot: Vec): Int {
             val node = nodes.addObject().put("name", part.name)
             val index = nodes.size() - 1
             indexOf[part.name] = index
             val rest = part.pivot - parentPivot
-            restOf[part.name] = rest
             if (!rest.isZero()) node.putArray("translation").add(rest.x).add(rest.y).add(rest.z)
             if (part.prims.isNotEmpty()) {
                 val mesh = meshes.addObject().put("name", part.name)
@@ -521,21 +601,10 @@ private class Glb(val json: ObjectNode, private val bin: ByteBuffer) {
             val count = (clip.duration * SAMPLE_RATE).roundToInt() + 1
             val times = FloatArray(count) { minOf(it.toFloat() / SAMPLE_RATE, clip.duration) }
             val input = floats(times, 1, "SCALAR", null, true)
+            val poses = Settle(root, clip).sample(times)
             for (track in clip.tracks) {
                 val node = checkNotNull(indexOf[track.node]) { "${clip.name}: no node ${track.node}" }
-                val rest = restOf.getValue(track.node)
-                val translations = FloatArray(count * 3)
-                val rotations = FloatArray(count * 4)
-                val q = Quaternion()
-                for ((i, time) in times.withIndex()) {
-                    val (move, turn) = track.at(time)
-                    translations[3 * i] = rest.x + move.x
-                    translations[3 * i + 1] = rest.y + move.y
-                    translations[3 * i + 2] = rest.z + move.z
-                    q.setEulerAngles(turn.y, turn.x, turn.z)
-                    rotations[4 * i] = clean(q.x); rotations[4 * i + 1] = clean(q.y)
-                    rotations[4 * i + 2] = clean(q.z); rotations[4 * i + 3] = clean(q.w)
-                }
+                val (translations, rotations) = poses.getValue(track.node)
                 for ((path, values) in listOf("translation" to floats(translations, 3, "VEC3", null, false), "rotation" to floats(rotations, 4, "VEC4", null, false))) {
                     samplers.addObject().put("input", input).put("output", values).put("interpolation", "LINEAR")
                     channels.addObject().put("sampler", samplers.size() - 1).putObject("target").put("node", node).put("path", path)
@@ -556,9 +625,6 @@ private class Glb(val json: ObjectNode, private val bin: ByteBuffer) {
         glb.putInt(data.size).putInt(0x004E4942).put(data)
         return glb.array()
     }
-
-    /** Rounds away float noise so that equal poses write equal bytes, and -0 as 0. */
-    private fun clean(f: Float): Float = if (abs(f) < 1e-7f) 0f else f
 
     companion object {
         fun read(bytes: ByteArray, mapper: ObjectMapper): Glb {
