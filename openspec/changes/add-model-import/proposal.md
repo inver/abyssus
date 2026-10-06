@@ -34,7 +34,7 @@ written.
 - **Provenance:** `source.json` records the source file name and SHA-256, its format, the detected and chosen unit and
   up axis, the size setting, and everything that was left out.
 - **The FlightGear importer moves onto the new shared glTF writer.** Its models keep the same nodes, materials, frame and
-  size, and its tests keep passing. This amends a task of the open `import-flightgear-aircraft` change.
+  size, and its tests keep passing. The archived `flightgear-aircraft-import` requirements are unaffected.
 
 Native fields:
 - The import writes a new asset `meta.json`:
@@ -64,8 +64,8 @@ Out of scope:
 ### Modified Capabilities
 
 None. Imported assets are ordinary glTF model assets, so `scene-model-rendering`, `scene-model-animation` and
-`abyssus-project-assets` hold as written. The open `import-flightgear-aircraft` change keeps its requirements; only its
-implementation moves onto the shared writer.
+`abyssus-project-assets` hold as written. `flightgear-aircraft-import` keeps its requirements; only its implementation
+moves onto the shared writer.
 
 ## Impact
 

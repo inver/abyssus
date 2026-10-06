@@ -9,7 +9,7 @@
     metadata gives nulls; `normalize = false` leaves the root transform as identity.
 - [ ] 1.2 `PhongToPbr`: diffuse to base colour, metallic 0, shininess to roughness (0.8 without it), opacity below 1 to
   `BLEND`, specular reported as dropped. Verify: `PhongToPbrTest` covers each mapping and the default roughness.
-- [ ] 1.3 `GltfWriter` (`net.nevinsky.abyssus.lib.assets.gltf`, libGDX `JsonWriter`, no new dependency): nodes with TRS
+- [ ] 1.3 `GltfWriter` (`net.nevinsky.abyssus.core.gltf` in `gdx-model`, libGDX `JsonWriter`, no new dependency): nodes with TRS
   and hierarchy, the mesh attributes as accessors, 16- or 32-bit indices, skins with inverse bind matrices, LINEAR
   animations, PBR materials, external image URIs, deterministic bytes, and its own validation. Verify:
   `GltfWriterTest`:
@@ -69,9 +69,9 @@
 
 ## 3. FlightGear on the shared writer
 
-- [ ] 3.1 Amend `openspec/changes/import-flightgear-aircraft/tasks.md` and its `design.md` (the `GlbWriter` bullet) to
-  say the GLB is now written by `gdx-model`'s `GltfWriter`, from `ModelData`. Verify: the amended text names
-  `GltfWriter`, and `openspec validate import-flightgear-aircraft` passes.
+- [ ] 3.1 Update every doc that names `core.flightgear.GlbWriter` (`core/README.md`, `docs/ai/`) to name `gdx-model`'s
+  `GltfWriter`, and confirm `openspec/specs/flightgear-aircraft-import/spec.md` names no writer. Verify:
+  `grep -rn GlbWriter docs core/README.md openspec/specs` finds nothing, and `scripts/check-docs.sh` passes.
 - [ ] 3.2 `FlightGearImport` builds `ModelData` and calls `GltfWriter`. Delete `core.flightgear.GlbWriter`, its `Gltf*`
   types and `GlbWriterTest`, moving that test's still-relevant checks into `GltfWriterTest`. Verify:
   `./gradlew :core:test --tests 'net.nevinsky.abyssus.core.flightgear.*'` passes unchanged, apart from the removed

@@ -60,7 +60,7 @@ Rejected alternatives:
 - Keeping the source file (option A in exploration). It needs per-load unit and axis fields in `meta.json`, writes
   `embedded/` on load, and ties correctness to the Assimp version a game ships.
 
-### 2. `GltfWriter` in `gdx-model` (`net.nevinsky.abyssus.lib.assets.gltf`)
+### 2. `GltfWriter` in `gdx-model` (`net.nevinsky.abyssus.core.gltf`, beside `core.assimp`)
 
 The writer is plain Kotlin, constructor-built, and uses libGDX `JsonWriter` so `gdx-model` keeps its dependencies.
 `write(data: ModelData, images: Map<String, String>, generator: String): ByteArray` produces one GLB: JSON chunk, then
@@ -131,7 +131,7 @@ None of these classes has an `object`, so `checkNoSingletons` holds. All are tes
 - **`ModelImport.stage(source, settings): StagedImport`:** produces the file map (`meta.json`, `model.glb`,
   `textures/*.png`, `source.json`) and the report.
   - `meta.json` is written with native markers first, then `version`, `lastModified`, a fresh `uuid`, `type` and
-    `additional`, as `TerrainAssetWriter` does.
+    `additional`, as `terrain.TerrainAssetWriter` does.
   - It is validated with `AbyssusDocumentFormat` before it is returned.
 - **`ImportSettings`:** a value type (`folderName`, `unit`, `upAxis`, `fit: None | LargestExtent(m) | Height(m)`)
   with validation.
@@ -144,7 +144,8 @@ None of these classes has an `object`, so `checkNoSingletons` holds. All are tes
 `GltfWriter`. `core.flightgear.GlbWriter` and its `Gltf*` types are deleted.
 - `FlightGearImportTest`'s assertions on nodes, materials, frame and size must keep passing.
 - The Control Line Trainer's committed `model.glb` is re-imported with `importTrainer`, and the game tests are re-run.
-- A task in `import-flightgear-aircraft/tasks.md` is amended to say this.
+- The archived `flightgear-aircraft-import` spec names no writer, so it needs no change. `docs/ai/` and `core/README.md`
+  mentions of `GlbWriter` are updated.
 
 ### 6. Plugin: action, settings model, dialog, preview
 
