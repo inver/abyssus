@@ -39,7 +39,19 @@ internal fun reportRejection(project: Project, result: EditResult) {
  * The choices for adding a component to [entityId] of [file]: one action per modeled kind the entity lacks, a Render
  * component being offered once per model or terrain of the project. Empty when the entity has everything.
  */
-fun addComponentGroup(project: Project, file: VirtualFile, entityId: String, kinds: List<String>, metaFiles: MetaFiles): DefaultActionGroup {
+fun addComponentGroup(project: Project, file: VirtualFile, entityId: String, kinds: List<String>, metaFiles: MetaFiles): DefaultActionGroup =
+    addComponentGroup(project, file, kinds, metaFiles) { name, initial ->
+        reportRejection(project, SceneComponentEdits.add(project, file, entityId, name, metaFiles, initial))
+    }
+
+/**
+ * The choices for adding a component of one of [kinds] in [file]'s project, a Render component being offered once per
+ * model or terrain; [add] receives the kind and its initial field values (the asset of a render component).
+ */
+fun addComponentGroup(
+    project: Project, file: VirtualFile, kinds: List<String>, metaFiles: MetaFiles,
+    add: (kind: String, initial: Map<String, String>) -> Unit,
+): DefaultActionGroup {
     val group = DefaultActionGroup()
     val editor = ComponentSchemas.of(project).editorFor(file)
     for (name in kinds) {
@@ -60,24 +72,14 @@ fun addComponentGroup(project: Project, file: VirtualFile, entityId: String, kin
                         templatePresentation.setText("${asset.type.lowercase()} ${asset.name}", false)
                     }
 
-                    override fun actionPerformed(e: AnActionEvent) = reportRejection(
-                        project,
-                        SceneComponentEdits.add(
-                            project,
-                            file,
-                            entityId,
-                            name,
-                            metaFiles,
-                            mapOf("assetType" to asset.type, "assetName" to asset.name),
-                        ),
-                    )
+                    override fun actionPerformed(e: AnActionEvent) =
+                        add(name, mapOf("assetType" to asset.type, "assetName" to asset.name))
                 })
             }
             group.add(sub)
         } else {
             group.add(object : AnAction(label) {
-                override fun actionPerformed(e: AnActionEvent) =
-                    reportRejection(project, SceneComponentEdits.add(project, file, entityId, name, metaFiles))
+                override fun actionPerformed(e: AnActionEvent) = add(name, emptyMap())
             })
         }
     }
@@ -112,6 +114,44 @@ open class AddComponentAction : AbyssusTreeAction<ComponentTarget>() {
                 JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
                 true
             )
+            .showInBestPositionFor(e.dataContext)
+    }
+}
+
+/** The scene file whose `ecs` row [node] is, or null. The tree lists a wrapped scene's entities under it too. */
+internal fun ecsRowSceneOf(node: Any?): VirtualFile? {
+    val entry = (node as? DtoEntryNode)?.value ?: return null
+    val file = entry.source?.takeIf { it.isValid && it.extension == "scene" } ?: return null
+    return file.takeIf { entry.name == "ecs" && entry.parentKeys.isEmpty() }
+}
+
+/**
+ * Right-click "Add Component..." on a scene's `ecs` row: every modeled kind but Name; choosing one creates a new
+ * entity (`Entity <id>`) holding it, as one undoable edit, and selects it.
+ */
+open class AddComponentOnEcsAction : AbyssusTreeAction<VirtualFile>() {
+    init { templatePresentation.text = AbyssusBundle.message("addComponentAction") }
+
+    override fun targetOf(node: Any?): VirtualFile? = ecsRowSceneOf(node)
+
+    override fun isEnabled(e: AnActionEvent, target: VirtualFile) =
+        e.project?.let { canAddLight(target, SceneDocumentCache.of(it)) } ?: false
+
+    /** The kinds a new entity can start with, each creating one when chosen. */
+    internal fun choices(project: Project, target: VirtualFile): DefaultActionGroup {
+        val kinds = ComponentSchemas.of(project).editorFor(target).kinds.map { it.name }.filter { it != "NameComponent" }
+        val metaFiles = service<AbyssusCore>().metaFiles
+        return addComponentGroup(project, target, kinds, metaFiles) { name, initial ->
+            val added = SceneComponentEdits.addAsNewEntity(project, target, name, metaFiles, initial)
+            reportRejection(project, added.result)
+            added.entityId?.let { selectCreatedEntity(project, target, it) }
+        }
+    }
+
+    override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
+        JBPopupFactory.getInstance()
+            .createActionGroupPopup(AbyssusBundle.message("addComponentTitle"), choices(project, target), e.dataContext,
+                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true)
             .showInBestPositionFor(e.dataContext)
     }
 }

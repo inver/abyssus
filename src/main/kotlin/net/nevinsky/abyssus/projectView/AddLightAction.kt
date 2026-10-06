@@ -27,7 +27,7 @@ class AddLightGroup(
     project: Project,
     file: VirtualFile,
     position: () -> Vec3,
-    select: (String) -> Unit = { selectCreatedLight(project, file, it) },
+    select: (String) -> Unit = { selectCreatedEntity(project, file, it) },
 ) : DefaultActionGroup(AbyssusBundle.message("addLightTitle"), true), DumbAware {
     init {
         for (preset in LightPreset.entries) add(object : AnAction(AbyssusBundle.message(preset.labelKey)), DumbAware {
@@ -44,8 +44,8 @@ class AddLightGroup(
     }
 }
 
-/** Publish immediately, then select the corresponding row when the asynchronous tree refresh reaches it. */
-private fun selectCreatedLight(project: Project, file: VirtualFile, entityId: String) {
+/** Publish a new entity immediately, then select its row when the asynchronous tree refresh reaches it. */
+internal fun selectCreatedEntity(project: Project, file: VirtualFile, entityId: String) {
     val entity = runCatchingKeepingCancellation {
         SceneEcsPaths().entities(SceneJson.parse(textOf(file)))?.get(entityId)
     }.getOrNull()

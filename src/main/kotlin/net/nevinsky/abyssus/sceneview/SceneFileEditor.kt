@@ -39,7 +39,10 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.filetype.editSceneJson
+import net.nevinsky.abyssus.projectView.AddAssetGroup
 import net.nevinsky.abyssus.projectView.AddLightGroup
+import net.nevinsky.abyssus.projectView.canAddAsset
+import net.nevinsky.abyssus.projectView.hasRenderAssets
 import net.nevinsky.abyssus.projectView.canAddLight
 import net.nevinsky.abyssus.projectView.AbyssusSelectionListener
 import net.nevinsky.abyssus.projectView.componentTargetOf
@@ -78,6 +81,8 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
                 params, SceneRenderer(ViewAssets(core.loading), core.sceneShaders),
                 lightActions = { position -> AddLightGroup(project, file, position) },
                 canAddLight = { canAddLight(file, documents) },
+                assetActions = { position -> AddAssetGroup(project, file, position) },
+                canAddAsset = { canAddAsset(file, documents) && hasRenderAssets(file) },
                 ray = ray,
                 play = playState(),
                 simulationRequest = { selection -> simulationRequest(project, file, selection) },

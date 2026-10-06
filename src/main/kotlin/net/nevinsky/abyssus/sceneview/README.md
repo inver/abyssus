@@ -107,6 +107,10 @@ the scene file and availability check; the panel supplies its current orbit targ
 The new entity is written as one Add Light command and selected in the Abyssus tree. Spot adds 5 to placement Y.
 Unreadable scene text disables creation (and the editor shows its existing parse-error state).
 
+The toolbar's Add Asset button (`add-asset`) works the same way through `AddAssetGroup`: `SceneFileEditor` passes
+`assetActions` and `canAddAsset` (readable scene and a project with models or terrains), and the panel supplies the
+orbit target. A view built without `assetActions` has no such button.
+
 ## Spotlight illumination
 
 `LightSet` retains each light's entity id and separates directional, point and spot sources. It selects at most two

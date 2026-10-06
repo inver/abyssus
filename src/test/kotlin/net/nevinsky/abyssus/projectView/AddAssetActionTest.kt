@@ -1,0 +1,111 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package net.nevinsky.abyssus.projectView
+
+import com.intellij.ide.projectView.ViewSettings
+import com.intellij.ide.util.treeView.AbstractTreeNode
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.Separator
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.command.undo.UndoManager
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.testFramework.TestActionEvent
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.sceneview.Vec3
+import java.io.File
+
+/** Add Asset on a scene of a copy of the Untitled project. */
+class AddAssetActionTest : BasePlatformTestCase() {
+    override fun getTestDataPath() = "src/test/testData/project"
+
+    private fun copyProject() {
+        val dir = "Untitled"
+        myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
+        myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
+        File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
+            d.listFiles { f -> f.isFile && f.extension == "json" }!!.forEach {
+                myFixture.copyFileToProject("$dir/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
+            }
+        }
+    }
+
+    private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
+    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+    private fun abss() = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
+    private fun sceneNode() = children(children(abss()).single { label(it) == "scenes" }).single()
+    private fun scene() = viewableSceneFile(sceneNode())!!
+    private fun document() = FileDocumentManager.getInstance().getDocument(scene())!!
+    private fun entities() = SceneJson.parse(document().text)["ecs"]
+
+    private class AddOn(val node: Any?) : AddAssetAction() {
+        override fun selected(e: AnActionEvent) = node
+    }
+
+    private fun visible(action: AnAction): Boolean {
+        val event = TestActionEvent.createTestEvent(action)
+        action.update(event)
+        return event.presentation.isEnabledAndVisible
+    }
+
+    private fun group(selected: (String) -> Unit = {}, at: Vec3 = Vec3(0f, 0f, 0f)) = AddAssetGroup(project, scene(), { at }, selected).getChildren(null)
+
+    fun testTheGroupListsTheProjectsModelsAndTerrainsOnly() {
+        copyProject()
+        val items = group()
+        val sections = items.filterIsInstance<Separator>().map { it.text }
+        assertEquals(listOf("Models", "Terrains"), sections)
+        val names = items.filter { it !is Separator }.map { it.templatePresentation.text }
+        assertEquals(listOf(
+            "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "model_828d51e4-8427-4769-bcb6-13f8f21f23e9",
+            "model_900f6f61-6384-434a-be81-56ce303fbb56", "model_fc33e1f1-015b-4524-9b10-aa417acd273c", "tree",
+            "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b",
+        ), names)
+        assertTrue(ActionManager.getInstance().getAction("Abyssus.AddAsset") is AddAssetAction)
+    }
+
+    fun testAddingAModelWritesTheNextEntityAndUndoRestoresTheScene() {
+        copyProject()
+        myFixture.openFileInEditor(scene())
+        val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+        val before = document().text
+        var selected: String? = null
+        val tree = group({ selected = it }, Vec3(10f, 0f, -4f)).first { it.templatePresentation.text == "tree" }
+        tree.actionPerformed(TestActionEvent.createTestEvent(tree))
+        assertEquals("9", selected)
+        val entity = entities()["9"]["components"]
+        assertEquals("Model 9", entity["NameComponent"]["name"].asText())
+        assertEquals("tree", entity["RenderComponent"]["renderable"]["asset"]["assetName"].asText())
+        assertEquals(10f, entity["PositionComponent"]["localPosition"]["x"].floatValue())
+        UndoManager.getInstance(project).undo(editor)
+        assertEquals(before, document().text)
+    }
+
+    fun testATerrainFromTheTreeIsCentredOnTheOrigin() {
+        copyProject()
+        val terrain = group().filter { it !is Separator }.first { it.templatePresentation.text.startsWith("terrain_") }
+        terrain.actionPerformed(TestActionEvent.createTestEvent(terrain))
+        val position = entities()["9"]["components"]["PositionComponent"]["localPosition"]
+        assertEquals(-800f, position["x"].floatValue())
+        assertEquals(-800f, position["z"].floatValue())
+        assertEquals("Terrain 9", entities()["9"]["components"]["NameComponent"]["name"].asText())
+    }
+
+    fun testOnlySceneRowsOfferItAndAnUnreadableSceneDisablesIt() {
+        copyProject()
+        assertTrue(visible(AddOn(sceneNode())))
+        assertFalse(visible(AddOn(abss())))
+        WriteCommandAction.runWriteCommandAction(project) { document().setText("{ not json") }
+        assertFalse(visible(AddOn(sceneNode())))
+    }
+
+    fun testASceneOutsideAProjectHasNothingToAdd() {
+        val loose = myFixture.addFileToProject("loose/Alone.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
+        assertFalse(hasRenderAssets(loose))
+        assertTrue(AddAssetGroup(project, loose, { Vec3(0f, 0f, 0f) }).getChildren(null).isEmpty())
+    }
+}

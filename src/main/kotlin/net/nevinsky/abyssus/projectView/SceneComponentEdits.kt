@@ -13,7 +13,11 @@ import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.ecs.scene.ComponentEditor
 import net.nevinsky.abyssus.schema.ComponentSchemas
 import net.nevinsky.abyssus.ecs.scene.EditResult
+import net.nevinsky.abyssus.ecs.scene.AddedEntity
 import net.nevinsky.abyssus.ecs.scene.AddedLight
+import net.nevinsky.abyssus.ecs.scene.AssetEntities
+import net.nevinsky.abyssus.ecs.scene.SceneEntities
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.ecs.scene.LightEntities
 import net.nevinsky.abyssus.ecs.scene.LightPreset
 import net.nevinsky.abyssus.sceneview.Vec3
@@ -69,6 +73,48 @@ object SceneComponentEdits {
             if (cache.read(file) == null) return@editSceneJson false
             added = LightEntities.add(root, preset, position)
             added.result == EditResult.Changed
+        }
+        return added
+    }
+
+    /**
+     * Adds [asset] of the project to the scene at [position] as one undoable command (a terrain centred on it, sized from
+     * its `meta.json`); the result names the new entity.
+     */
+    fun addAsset(project: Project, file: VirtualFile, asset: RenderAsset, position: Vec3, cache: SceneDocumentCache, metaFiles: MetaFiles): AddedEntity {
+        val size = if (asset.type == MetaType.TERRAIN.name) terrainSize(file, asset.name, metaFiles) else null
+        var added = AddedEntity(EditResult.Rejected(AbyssusBundle.message("componentSceneUnreadable")))
+        editSceneJson(project, file, AbyssusBundle.message("commandAddAsset")) { root ->
+            if (cache.read(file) == null) return@editSceneJson false
+            added = AssetEntities.add(root, asset, position, size)
+            added.result == EditResult.Changed
+        }
+        return added
+    }
+
+    /** A terrain asset's world size from its `meta.json`, or null when it cannot be read. */
+    private fun terrainSize(sceneFile: VirtualFile, name: String, metaFiles: MetaFiles): Float? {
+        val abss = ProjectLayout.abssFor(sceneFile) ?: return null
+        val folder = ProjectLayout.assetFolders(abss).firstOrNull { it.name == name } ?: return null
+        val size = (loadAssetMeta(folder, metaFiles) as? AssetMeta.Loaded)?.json?.path("additional")?.path("size") ?: return null
+        return size.takeIf { it.isNumber }?.floatValue()
+    }
+
+    /**
+     * Creates a new entity (`Entity <id>`) holding a [kindName] component started from [initial], as one undoable command;
+     * nothing is written when the component is refused. In an older wrapped scene its archetype follows its components.
+     */
+    fun addAsNewEntity(project: Project, file: VirtualFile, kindName: String, metaFiles: MetaFiles, initial: Map<String, String> = emptyMap()): AddedEntity {
+        var added = AddedEntity(EditResult.Rejected(AbyssusBundle.message("componentSceneUnreadable")))
+        editSceneJson(project, file, AbyssusBundle.message("commandAddComponent")) { root ->
+            val id = SceneEntities.insert(root) { id ->
+                JsonNodeFactory.instance.objectNode().set(
+                    "NameComponent", JsonNodeFactory.instance.objectNode().put("name", AbyssusBundle.message("newEntityName", id)),
+                )
+            } ?: return@editSceneJson false
+            val result = editor(project, file).add(root, id, kindName, initial, assetNames(file, metaFiles), assetsByType(file, metaFiles))
+            added = AddedEntity(result, id.takeIf { result == EditResult.Changed })
+            result == EditResult.Changed && SceneEntities.matchArchetype(root, id)
         }
         return added
     }

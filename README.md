@@ -58,9 +58,11 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   shown and unaffected by that filter.
 - Unreadable files stay in the tree with a placeholder. Right-click an entity and choose **Add Component...** to add a
   component it lacks (Name, Type, Parent, Position, Camera, Light, Point2Point or Render; a Render component asks for a
-  model or terrain of the project), or right-click a component and choose **Remove Component**. Components the plugin
+  model or terrain of the project), or right-click a component and choose **Remove Component**. **Add Component...** on
+  a scene's **ecs** row starts a new entity instead: the chosen component goes into a new entity named `Entity <id>`,
+  which is then selected. Components the plugin
   does not model (`Pickable`, `Dependencies`, ...) cannot be removed. The eye, **Rename Scene...**, **Choose**, and
-  these component actions and **Add Light** on a scene row write the file as undoable edits.
+  these component actions, **Add Light** and **Add Asset** on a scene row write the file as undoable edits.
 
 ## Abyssus Properties panel
 
@@ -175,6 +177,11 @@ backend requirements, rendering limits and native toolchains.
 **Add Light** in the toolbar creates a Directional light, Sun or Spot at the current orbit target and selects it.
 The same menu on a scene row places it at the origin; Spot sits 5 units above that point. A Sun starts warm and
 brighter, with a low direction. Its light component's **Range** field sets a positive reach (default 100).
+
+**Add Asset** in the toolbar, and on a scene row, lists the project's models and terrains (by folder name, under
+Models and Terrains) and adds the chosen one as a new entity named `Model <id>` or `Terrain <id>`. It has a type,
+a position and a render component that names the asset. From the toolbar it is placed at the orbit target, from the
+tree at the origin; a terrain is centred on that point using its size. The new entity is selected, and Undo removes it.
 Each creation is one undoable scene edit. These new light entities use the plugin's own component structure.
 
 For a spotlight, Properties also offers **Cone angle (degrees)** for its full beam width and **Edge softness (%)**
