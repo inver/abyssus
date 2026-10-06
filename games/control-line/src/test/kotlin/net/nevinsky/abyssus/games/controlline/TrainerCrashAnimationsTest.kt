@@ -6,13 +6,12 @@ package net.nevinsky.abyssus.games.controlline
 
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
-import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.core.loader.AssimpModelLoader
 import net.nevinsky.abyssus.physics.PhysicsAssets
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 /** The trainer's crash clips (`importers/TrainerCrashAnimations.kt`), as the game's Assimp loader reads them. */
 class TrainerCrashAnimationsTest {
@@ -50,10 +49,10 @@ class TrainerCrashAnimationsTest {
         for (animation in data.animations) for (channel in animation.nodeAnimations) {
             val node = checkNotNull(nodes[channel.nodeId]) { "${animation.id}: no node ${channel.nodeId}" }
             val start = channel.translation.first()
-            assertEquals(0f, start.keytime, "${animation.id}/${channel.nodeId}")
-            assertTrue(start.value.epsilonEquals(node.translation ?: Vector3.Zero, 1e-5f), "${animation.id}/${channel.nodeId}: ${start.value}")
-            assertTrue(channel.rotation.first().value.equals(Quaternion()) || channel.rotation.first().value.isIdentity(1e-5f),
-                "${animation.id}/${channel.nodeId}: ${channel.rotation.first().value}")
+            assertEquals("${animation.id}/${channel.nodeId}", 0f, start.keytime, 0f)
+            assertTrue("${animation.id}/${channel.nodeId}: ${start.value}", start.value.epsilonEquals(node.translation ?: Vector3.Zero, 1e-5f))
+            assertTrue("${animation.id}/${channel.nodeId}: ${channel.rotation.first().value}",
+                channel.rotation.first().value.isIdentity(1e-5f))
         }
     }
 
