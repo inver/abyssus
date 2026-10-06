@@ -112,6 +112,13 @@ tasks.register<JavaExec>("importTrainer") {
     args(gameProject.asFile.absolutePath, layout.buildDirectory.dir("flightgear").get().asFile.absolutePath,
         file("importers/GPL-2.0.txt").absolutePath)
 }
+tasks.register<JavaExec>("animateTrainer") {
+    group = "control line"
+    description = "Adds the crash clips to a freshly imported trainer model (importTrainer already does)."
+    classpath = importers.runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.games.controlline.tools.TrainerCrashAnimations")
+    args(gameProject.asFile.absolutePath)
+}
 tasks.register<JavaExec>("generateField") {
     group = "control line"
     description = "Writes the field's terrain and textures into the bundled project."

@@ -45,9 +45,9 @@ val TRAINER_CENTRE_OF_GRAVITY = ImportOrigin.SourcePoint(0.35, 0.0, 0.0)
 /**
  * Re-imports the bundled trainer (`assets/model_trainer`) from FlightGear's Cessna 172R through `core`'s FlightGear
  * import: downloads the archive into the cache folder (checking [C172R_SHA256]), scales it to [TRAINER_SPAN], leaves
- * out [TRAINER_LEFT_OUT] and puts its origin at [TRAINER_CENTRE_OF_GRAVITY]. Writes `model.glb`, `textures/`,
- * `source.json` and `COPYING` (GPL-2.0), and keeps `meta.json`, whose `additional.file` is edited through the editor's
- * scene writer. Running it again gives the same bytes. Run by `./gradlew :games:control-line:importTrainer`.
+ * out [TRAINER_LEFT_OUT] and puts its origin at [TRAINER_CENTRE_OF_GRAVITY]. Writes `model.glb` (with the crash
+ * clips of [withCrashAnimations]), `textures/`, `source.json` and `COPYING` (GPL-2.0), and keeps `meta.json`, whose
+ * `additional.file` is edited through the editor's scene writer. Running it again gives the same bytes. Run by `./gradlew :games:control-line:importTrainer`.
  *
  * Usage: `TrainerModel <project folder> <cache folder> <GPL-2.0 text>`
  */
@@ -66,7 +66,8 @@ fun main(args: Array<String>) {
     File(folder, "textures").deleteRecursively()
     for ((path, bytes) in staged.files) {
         if (path == "meta.json") continue
-        File(folder, path).apply { parentFile.mkdirs() }.writeBytes(bytes)
+        val written = if (path == IMPORTED_MODEL_FILE) withCrashAnimations(bytes) else bytes
+        File(folder, path).apply { parentFile.mkdirs() }.writeBytes(written)
     }
     val source = json.readObject(File(folder, "source.json").readText()) as ObjectNode
     source.put("license", "GPL-2.0-or-later")
