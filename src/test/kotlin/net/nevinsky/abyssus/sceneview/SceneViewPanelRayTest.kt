@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.ray.RayModePhase
 import net.nevinsky.abyssus.ui.RayModeText
 
@@ -90,7 +92,7 @@ class SceneViewPanelRayTest : BasePlatformTestCase() {
         val renderer = testRenderer()
         renderer.state.selectedId = "selected-entity"
         renderer.state.viewCamera = "camera-1"
-        renderer.state.preview = mapOf("selected-entity" to net.nevinsky.abyssus.sceneview.gizmo.DragResult(
+        renderer.state.preview = mapOf("selected-entity" to net.nevinsky.abyssus.editor.pick.DragResult(
             PlacementTransform(Vec3(1f, 2f, 3f), Quat.IDENTITY, Vec3(1f, 1f, 1f)), null))
         val preview = renderer.state.preview
         val device = RayFakeDevice()

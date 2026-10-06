@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.core.io.FileLoader
 
 import net.nevinsky.abyssus.editor.content.PlacementTransform

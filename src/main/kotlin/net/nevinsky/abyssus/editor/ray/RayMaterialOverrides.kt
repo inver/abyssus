@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.editor.ray
 
+import net.nevinsky.abyssus.editor.document.RayDataEdit
+import net.nevinsky.abyssus.editor.document.RayDataError
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 

@@ -4,11 +4,13 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.scene.sceneContentOf
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.AssetLoading
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.core.io.JsonProcessor
-import net.nevinsky.abyssus.parseScene
+import net.nevinsky.abyssus.editor.parseScene
 import net.nevinsky.abyssus.raytracing.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue

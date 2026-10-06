@@ -4,10 +4,10 @@
  */
 package net.nevinsky.abyssus.filetype
 
-import net.nevinsky.abyssus.editor.ray.SceneRayField
-import net.nevinsky.abyssus.editor.ray.RayDataError
-import net.nevinsky.abyssus.editor.ray.RayDataEdit
-import net.nevinsky.abyssus.editor.ray.SceneRaySettingsCodec
+import net.nevinsky.abyssus.editor.document.SceneRayField
+import net.nevinsky.abyssus.editor.document.RayDataError
+import net.nevinsky.abyssus.editor.document.RayDataEdit
+import net.nevinsky.abyssus.editor.document.SceneRaySettingsCodec
 import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
 import net.nevinsky.abyssus.editor.ray.RayOpticalField
 import net.nevinsky.abyssus.editor.ray.RayMaterialOverrides
@@ -17,7 +17,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.filetype.editSceneJson
 
 /** Platform adapter: every accepted edit is one native document command. */
 object SceneRayEdits {

@@ -4,6 +4,9 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.FogParams
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Rgba
 import net.nevinsky.abyssus.editor.content.Quat
@@ -14,7 +17,7 @@ import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.raytracing.RayColor
 import net.nevinsky.abyssus.raytracing.RayEnvironment
 import net.nevinsky.abyssus.raytracing.RayFog
-import net.nevinsky.abyssus.sceneview.gizmo.DragResult
+import net.nevinsky.abyssus.editor.pick.DragResult
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File

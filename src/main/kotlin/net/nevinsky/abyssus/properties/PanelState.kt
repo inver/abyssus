@@ -10,8 +10,8 @@ import net.nevinsky.abyssus.EditorBundle
 import net.nevinsky.abyssus.editor.meta.AssetReferenceChoices
 import net.nevinsky.abyssus.ui.thumbnail
 
-import net.nevinsky.abyssus.editor.ray.SceneRaySettingsState
-import net.nevinsky.abyssus.editor.ray.SceneRaySettingsCodec
+import net.nevinsky.abyssus.editor.document.SceneRaySettingsState
+import net.nevinsky.abyssus.editor.document.SceneRaySettingsCodec
 import net.nevinsky.abyssus.editor.document.DocumentKind
 import net.nevinsky.abyssus.editor.document.AbyssusDocumentFormat
 import java.io.File

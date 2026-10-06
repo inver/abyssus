@@ -1,18 +1,18 @@
 package net.nevinsky.abyssus.editor.document
 
-import net.nevinsky.abyssus.sceneview.renderParamsOf
-import net.nevinsky.abyssus.sceneview.sceneContentOf
+import net.nevinsky.abyssus.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.editor.scene.sceneContentOf
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.editor.content.Vec3
-import net.nevinsky.abyssus.parseScene
+import net.nevinsky.abyssus.editor.parseScene
 import net.nevinsky.abyssus.projectView.ComponentTarget
 import net.nevinsky.abyssus.projectView.ecsRows
 import net.nevinsky.abyssus.projectView.entityRows
 import net.nevinsky.abyssus.properties.PanelState
 import net.nevinsky.abyssus.properties.readEntityState
-import net.nevinsky.abyssus.sceneview.CameraParams
-import net.nevinsky.abyssus.sceneview.SceneContent
-import net.nevinsky.abyssus.sceneview.SceneRenderParams
+import net.nevinsky.abyssus.editor.scene.CameraParams
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.testPanelServices
 import java.io.File
 

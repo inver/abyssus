@@ -14,7 +14,7 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.math.Matrix3
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.sceneview.FogParams
+import net.nevinsky.abyssus.editor.scene.FogParams
 import net.nevinsky.abyssus.sceneview.LightSet
 import net.nevinsky.abyssus.editor.content.Rgba
 import net.nevinsky.abyssus.sceneview.TerrainEntity

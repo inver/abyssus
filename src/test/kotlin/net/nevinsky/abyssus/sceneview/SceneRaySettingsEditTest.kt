@@ -4,8 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.editor.ray.SceneRayField
-import net.nevinsky.abyssus.editor.ray.RayDataEdit
+import net.nevinsky.abyssus.editor.document.SceneRayField
+import net.nevinsky.abyssus.editor.document.RayDataEdit
 import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
 import net.nevinsky.abyssus.editor.ray.RayOpticalField
 import net.nevinsky.abyssus.filetype.SceneRayEdits

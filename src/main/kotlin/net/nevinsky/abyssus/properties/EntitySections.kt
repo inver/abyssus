@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.editor.EditorMessages
 import net.nevinsky.abyssus.editor.document.SceneDocument
 import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.editor.document.documentDisplayMessage
-import net.nevinsky.abyssus.editor.ray.RayDataError
+import net.nevinsky.abyssus.editor.document.RayDataError
 import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
 import net.nevinsky.abyssus.editor.ray.RayMaterialOverrides
 import net.nevinsky.abyssus.editor.ray.RayOpticalField

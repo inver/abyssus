@@ -5,6 +5,11 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.editor.pick.SceneInteraction
+import net.nevinsky.abyssus.editor.pick.TransformEdit
+import net.nevinsky.abyssus.editor.pick.ViewSize
 import net.nevinsky.abyssus.editor.ray.RayModeSnapshot
 
 import net.nevinsky.abyssus.editor.content.Vec3
@@ -19,7 +24,7 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
 import com.intellij.openapi.diagnostic.thisLogger
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
+import net.nevinsky.abyssus.editor.pick.GizmoMode
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GLCapabilities
 import org.lwjgl.opengl.awt.GLData

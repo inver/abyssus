@@ -4,7 +4,9 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.editor.ray.SceneRaySettingsCodec
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.document.SceneRaySettingsCodec
 
 import net.nevinsky.abyssus.editor.content.PlacementTransform
 import net.nevinsky.abyssus.editor.content.AssetPlacement

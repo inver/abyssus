@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.CameraParams
+import net.nevinsky.abyssus.editor.scene.MainCamera
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.scene.renderParamsOf
 import net.nevinsky.abyssus.editor.document.SceneJson
 
 import com.intellij.openapi.vfs.VirtualFile

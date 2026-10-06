@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.SceneRayControls
 
 import com.intellij.openapi.components.service

@@ -5,6 +5,16 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.CameraParams
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.editor.pick.OrientedBox
+import net.nevinsky.abyssus.editor.pick.SceneInteraction
+import net.nevinsky.abyssus.editor.pick.ScenePicker
+import net.nevinsky.abyssus.editor.pick.ScenePreview
+import net.nevinsky.abyssus.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Rgba
 import net.nevinsky.abyssus.editor.content.PlacementTransform
@@ -13,7 +23,7 @@ import net.nevinsky.abyssus.editor.content.LightPlacement
 
 import net.nevinsky.abyssus.editor.document.SceneJson
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.parseScene
+import net.nevinsky.abyssus.editor.parseScene
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -120,7 +130,7 @@ class SceneRenderGlTest {
                 renderer.state.selectedId = "0"
                 it.onTransform = { id, edit ->
                     val selected = ScenePreview().selected(renderer.content, id)!!
-                    val moved = net.nevinsky.abyssus.sceneview.gizmo.DragResult(selected.transform.copy(position = edit.position!!), selected.direction)
+                    val moved = net.nevinsky.abyssus.editor.pick.DragResult(selected.transform.copy(position = edit.position!!), selected.direction)
                     renderer.params = p.copy(content = ScenePreview().apply(p.content, id, moved))
                     it.paramsChanged(renderer.params)
                     written++
@@ -629,7 +639,7 @@ class SceneRenderGlTest {
     @Test
     fun aSelectedModelRendersItsGizmoWithoutErrors() {
         val p = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
-        for (mode in net.nevinsky.abyssus.sceneview.gizmo.GizmoMode.entries) {
+        for (mode in net.nevinsky.abyssus.editor.pick.GizmoMode.entries) {
             var gizmo = false
             val r = GlHarness.render(p, 120) { renderer, _ ->
                 renderer.state.selectedId = "0"

@@ -27,8 +27,8 @@ import net.nevinsky.abyssus.filetype.PropertyIcons
 import net.nevinsky.abyssus.projectView.SceneComponentEdits
 import net.nevinsky.abyssus.projectView.addComponentGroup
 import net.nevinsky.abyssus.projectView.reportRejection
-import net.nevinsky.abyssus.editor.ray.RayDataEdit
-import net.nevinsky.abyssus.editor.ray.RayDataError
+import net.nevinsky.abyssus.editor.document.RayDataEdit
+import net.nevinsky.abyssus.editor.document.RayDataError
 import net.nevinsky.abyssus.editor.ray.RayOpticalField
 import net.nevinsky.abyssus.filetype.SceneRayEdits
 import java.awt.BorderLayout

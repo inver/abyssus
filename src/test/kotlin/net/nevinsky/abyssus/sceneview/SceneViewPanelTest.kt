@@ -4,6 +4,9 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.CameraParams
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.editor.content.Vec3
 
 import com.intellij.openapi.command.WriteCommandAction
@@ -40,7 +43,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             choices[1].actionPerformed(TestActionEvent.createTestEvent(choices[1]))
             assertEquals("0", selected)
             val document = FileDocumentManager.getInstance().getDocument(file)!!
-            val light = sceneContentOf(net.nevinsky.abyssus.parseScene(document.text)).lights.single()
+            val light = sceneContentOf(net.nevinsky.abyssus.editor.parseScene(document.text)).lights.single()
             assertEquals(Vec3(10f, 0f, -4f), light.position)
             WriteCommandAction.runWriteCommandAction(project) { document.setText("not json") }
             panel.setParams(params)

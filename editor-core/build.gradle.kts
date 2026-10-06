@@ -8,6 +8,7 @@
 // plugin bundles it and keeps only IDE glue. See editor-core/README.md.
 plugins {
     `java-library`
+    `java-test-fixtures`
     id("org.jetbrains.kotlin.jvm")
 }
 
@@ -22,6 +23,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation(testFixtures(project(":core")))
     testImplementation(testFixtures(project(":gdx-model")))
+    // scene and asset helpers for tests (parseScene, testProject, ...), shared with the plugin's tests
+    testFixturesImplementation(kotlin("stdlib"))
 }
 
 java {
@@ -42,5 +45,8 @@ tasks.test {
 }
 
 // Pure constant holders only (design D11); behavior is injected.
-extra["abyssusSingletonExcludes"] = listOf<String>("net/nevinsky/abyssus/editor/content/Placements.kt")
+extra["abyssusSingletonExcludes"] = listOf<String>(
+    "net/nevinsky/abyssus/editor/content/Placements.kt",
+    "net/nevinsky/abyssus/editor/scene/SceneRenderParams.kt",
+)
 apply(from = rootProject.file("gradle/checks.gradle.kts"))

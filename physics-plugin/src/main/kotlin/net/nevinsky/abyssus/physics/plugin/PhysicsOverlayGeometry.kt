@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.runtime.schema.ComponentSchemaReader
 import net.nevinsky.abyssus.runtime.schema.SchemaJson
 import net.nevinsky.abyssus.runtime.schema.SchemaVector
 import net.nevinsky.abyssus.editor.content.Rgba
-import net.nevinsky.abyssus.sceneview.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneContent
 import net.nevinsky.abyssus.editor.content.Vec3
 import kotlin.math.PI
 import kotlin.math.abs

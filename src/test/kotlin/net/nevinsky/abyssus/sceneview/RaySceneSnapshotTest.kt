@@ -4,9 +4,14 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.CameraParams
+import net.nevinsky.abyssus.editor.scene.FogParams
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.scene.renderParamsOf
 import net.nevinsky.abyssus.editor.document.SceneJson
 
-import net.nevinsky.abyssus.editor.ray.SceneRaySettingsCodec
+import net.nevinsky.abyssus.editor.document.SceneRaySettingsCodec
 import net.nevinsky.abyssus.editor.ray.RaySceneFallback
 
 import net.nevinsky.abyssus.editor.content.Vec3
@@ -21,7 +26,7 @@ import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.core.assets.model.RayModelSnapshot
 import net.nevinsky.abyssus.raytracing.RayColor
 import net.nevinsky.abyssus.raytracing.RayEnvironment
-import net.nevinsky.abyssus.sceneview.gizmo.DragResult
+import net.nevinsky.abyssus.editor.pick.DragResult
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
@@ -168,7 +173,7 @@ class RaySceneSnapshotTest {
     }
 
     @Test fun malformedSettingsPreventRayConversionButKeepOrdinarySceneParsing() {
-        val scene = net.nevinsky.abyssus.parseScene("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxRefractionBounces":null}}""")
+        val scene = net.nevinsky.abyssus.editor.parseScene("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxRefractionBounces":null}}""")
         val p = renderParamsOf(scene, CameraParams.DEFAULT)
         assertNull(p.rayTracing.settings)
         assertTrue(RaySceneSnapshots().capture(p,camera,LightSet.NONE,assets) is RaySceneConversion.Fallback)

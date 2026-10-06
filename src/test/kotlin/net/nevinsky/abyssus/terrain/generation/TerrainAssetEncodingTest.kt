@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.terrain.noise.FastNoiseSamplerFactory
-import net.nevinsky.abyssus.testProject
+import net.nevinsky.abyssus.editor.testProject
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Rule

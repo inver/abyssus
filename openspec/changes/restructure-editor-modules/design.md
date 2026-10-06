@@ -48,14 +48,20 @@ and rejection reasons stay unchanged. Neither `core` nor `runtime` depends on `e
 | Module / package | Contents (current location) |
 |---|---|
 | `core` `…core.format` (retained) | `AbyssusDocumentFormat`, document/rejection types and core validation tests |
-| `editor-core` `…editor.document` | `SceneJson`, `JsonFormat`, editor-facing format type aliases, `DocumentParsing`, `AssetMetaReader`, `SceneDocument` (new, stage 2) |
+| `editor-core` `…editor` | `EditorMessages`, `ResourceEditorMessages` (D11) |
+| `…editor.document` | `SceneJson`, `JsonFormat`, editor-facing format type aliases, `DocumentParsing`, `AssetMetaReader`, `SceneDocument` and `SceneEntityTree` (stage 2), `SceneRaySettings` (the scene's `rayTracing` block) |
 | `…editor.components` | `ComponentCodec`, built-in kinds, `SchemaCodec`, `ComponentEditor`, `ComponentReader`, `LightEntities`, schema merge |
-| `…editor.content` | `Vec3`, `Quat`, placements, `SceneContent`, `SceneRenderParams`, `PlacementMapper` |
-| `…editor.pick` | `ScenePicker`, `SceneQueries`, `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction`, `ScenePreview`, `SceneTransformWriter` |
+| `…editor.content` | leaf value types: `Vec3`, `Quat`, `Pose`, placements, `RenderAsset`, `PlacementTransform.toMatrix` |
+| `…editor.scene` | the read model built from the document: `SceneContent`, `SceneRenderParams`, `PlacementMapper`, `CameraFrustum` |
+| `…editor.pick` | `ScenePicker`, `SceneQueries`, `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction`, `ScenePreview`, `SceneTransformWriter`, `SceneMarkers` with `LineSink`, `FrameSnapshot`, `SceneViewState` |
 | `…editor.terrain` | generation, noise, recipe, new-terrain file logic |
 | `…editor.meta` | `AssetMetaEditor`, field descriptions, `MetaRows`, `AssetReferenceChoices`, `PanelState` (the part without Swing) |
 | `…editor.ray` | `RaySceneSnapshots`, `RayViewFeed`, `RayViewRuntime`, `RayFeasibilityLoop`, `RayModeState`, `RayMaterialOverrides`, `RaySkyBaker`, `RayBackendSelector` and the other plain `Ray*` files |
 | plugin (root) | `editSceneJson`, project view pane, tree nodes, actions, tool window factories, dialogs and forms (Swing), `SceneViewPanel`, `SceneFileEditor`, `GuardedGLCanvas`, file types, listeners, `AbyssusCore`, VFS wiring |
+
+`content` stays a leaf (D5): the read model that depends on `document` and `components` lives in `editor.scene`, and
+`SceneRaySettings` is in `document` so that `scene` does not depend on `ray` while `ray` depends on `scene`. Both
+placements were found by the cycle guard during stage 3.
 
 Files that mix both (for example `PanelState`, `SceneFileEditor`, `AbyssusProjectViewPane`) are split first inside the
 plugin: pure part, then IDE shell. A pure part that still needs a Swing type is not moved.

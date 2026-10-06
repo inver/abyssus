@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.FogParams
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.content.Rgba
 import net.nevinsky.abyssus.editor.content.PlacementTransform
 import net.nevinsky.abyssus.editor.content.AssetPlacement

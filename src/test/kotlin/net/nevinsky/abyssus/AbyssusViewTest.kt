@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus
 
+import net.nevinsky.abyssus.editor.parseScene
+import net.nevinsky.abyssus.editor.testAsset
 import net.nevinsky.abyssus.editor.document.SceneJson
 
 import com.intellij.ide.projectView.PresentationData

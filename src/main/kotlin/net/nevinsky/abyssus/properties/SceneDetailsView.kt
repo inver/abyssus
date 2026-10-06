@@ -18,12 +18,12 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.dto.textOf
 import net.nevinsky.abyssus.filetype.SceneIcons
 import net.nevinsky.abyssus.editor.document.SceneJson
-import net.nevinsky.abyssus.editor.ray.RayDataEdit
+import net.nevinsky.abyssus.editor.document.RayDataEdit
 import net.nevinsky.abyssus.editor.ray.RayModePhase
 import net.nevinsky.abyssus.ui.RayModeText
 import net.nevinsky.abyssus.SceneRayControls
 import net.nevinsky.abyssus.filetype.SceneRayEdits
-import net.nevinsky.abyssus.editor.ray.SceneRayField
+import net.nevinsky.abyssus.editor.document.SceneRayField
 import java.awt.BorderLayout
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent

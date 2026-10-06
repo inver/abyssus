@@ -5,15 +5,19 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.CameraParams
+import net.nevinsky.abyssus.editor.scene.cameraDirectionOf
+import net.nevinsky.abyssus.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Quat
 import net.nevinsky.abyssus.editor.content.PlacementTransform
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.parseScene
-import net.nevinsky.abyssus.sceneview.gizmo.DragResult
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoAxis
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
+import net.nevinsky.abyssus.editor.parseScene
+import net.nevinsky.abyssus.editor.pick.DragResult
+import net.nevinsky.abyssus.editor.pick.GizmoAxis
+import net.nevinsky.abyssus.editor.pick.GizmoMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

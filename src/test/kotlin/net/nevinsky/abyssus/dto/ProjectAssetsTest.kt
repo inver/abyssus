@@ -15,7 +15,7 @@ import net.nevinsky.abyssus.projectView.AbyssusRootNode
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.core.assets.Asset
-import net.nevinsky.abyssus.testAsset
+import net.nevinsky.abyssus.editor.testAsset
 import java.util.UUID
 
 class ProjectAssetsTest : BasePlatformTestCase() {

@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.pick.TransformEdit
 import net.nevinsky.abyssus.editor.document.SceneJson
 
 import net.nevinsky.abyssus.SceneRayControls

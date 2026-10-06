@@ -11,7 +11,6 @@ import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.core.assets.Asset
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.dto.ProjectDto
 
 @Service(Service.Level.PROJECT)
 class ProjectReader(

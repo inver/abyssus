@@ -16,9 +16,9 @@ import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.terrain.TerrainMeta
-import net.nevinsky.abyssus.sceneview.LineSink
+import net.nevinsky.abyssus.editor.pick.LineSink
 import net.nevinsky.abyssus.sceneview.OverlayView
-import net.nevinsky.abyssus.sceneview.SceneContent
+import net.nevinsky.abyssus.editor.scene.SceneContent
 import net.nevinsky.abyssus.sceneview.SceneOverlay
 import net.nevinsky.abyssus.sceneview.SceneOverlayProvider
 import java.io.File

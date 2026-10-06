@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.pick.TransformEdit
 import com.intellij.openapi.Disposable
 import javax.swing.JComponent
 

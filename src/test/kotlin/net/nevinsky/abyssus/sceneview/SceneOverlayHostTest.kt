@@ -5,11 +5,13 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.editor.pick.LineSink
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Rgba
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import net.nevinsky.abyssus.parseScene
+import net.nevinsky.abyssus.editor.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

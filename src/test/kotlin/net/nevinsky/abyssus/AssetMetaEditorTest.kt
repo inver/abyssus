@@ -8,7 +8,7 @@ package net.nevinsky.abyssus
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.core.io.JsonProcessor
-import net.nevinsky.abyssus.testProject
+import net.nevinsky.abyssus.editor.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

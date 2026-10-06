@@ -5,9 +5,10 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.SceneContent
 import net.nevinsky.abyssus.editor.content.CameraPlacement
 import net.nevinsky.abyssus.editor.content.Vec3
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
+import net.nevinsky.abyssus.editor.pick.GizmoMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

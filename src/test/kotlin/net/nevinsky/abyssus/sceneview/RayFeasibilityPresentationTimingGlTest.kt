@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test

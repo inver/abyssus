@@ -4,7 +4,11 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.editor.ray.SceneRaySettings
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.content.toMatrix
+import net.nevinsky.abyssus.editor.scene.toVec3
+import net.nevinsky.abyssus.editor.pick.ScenePreview
+import net.nevinsky.abyssus.editor.document.SceneRaySettings
 import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
 import net.nevinsky.abyssus.editor.ray.RayMaterialOverrides
 import net.nevinsky.abyssus.editor.ray.RaySceneFallback
@@ -26,7 +30,7 @@ import net.nevinsky.abyssus.core.assets.model.*
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.core.assets.terrain.RayTerrainSnapshot
 import net.nevinsky.abyssus.raytracing.*
-import net.nevinsky.abyssus.sceneview.gizmo.DragResult
+import net.nevinsky.abyssus.editor.pick.DragResult
 
 /** Immutable render-thread camera capture. The actual camera preserves orbit and look-through lens/up conventions. */
 data class RayCameraSnapshot(

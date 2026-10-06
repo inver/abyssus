@@ -48,7 +48,7 @@ keys and exact number text. External model/image formats and the terrain recipe 
 The plugin reads only:
 - `name`: the project label; the file name is used when it is missing.
 - `mainCamera`: `position`, `viewPointPosition` (the view direction), `near`, `far` and `fieldOfView`. It is the
-  scene view's starting camera (`MainCamera` in `sceneview/SceneRenderParams.kt`).
+  scene view's starting camera (`MainCamera` in `editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/scene/SceneRenderParams.kt`).
 
 Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored. The plugin never writes an `.abss`
 (beyond `SceneFormatListener`'s formatting).

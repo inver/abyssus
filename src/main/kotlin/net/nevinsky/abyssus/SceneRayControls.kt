@@ -24,10 +24,10 @@ import com.intellij.openapi.vfs.VirtualFile
 class SceneRayControls @JvmOverloads constructor(
     val project: Project,
     private val open: (Project, VirtualFile) -> Unit = { p, f -> openSceneView(p, f) },
-) : net.nevinsky.abyssus.editor.facts.SceneFacts<net.nevinsky.abyssus.sceneview.SceneContent> {
-    private val sceneFacts = LinkedHashMap<VirtualFile, LinkedHashMap<Disposable, Pair<net.nevinsky.abyssus.sceneview.SceneContent, String?>>>()
+) : net.nevinsky.abyssus.editor.facts.SceneFacts<net.nevinsky.abyssus.editor.scene.SceneContent> {
+    private val sceneFacts = LinkedHashMap<VirtualFile, LinkedHashMap<Disposable, Pair<net.nevinsky.abyssus.editor.scene.SceneContent, String?>>>()
 
-    internal fun recordFacts(file: VirtualFile, parent: Disposable, content: net.nevinsky.abyssus.sceneview.SceneContent) {
+    internal fun recordFacts(file: VirtualFile, parent: Disposable, content: net.nevinsky.abyssus.editor.scene.SceneContent) {
         val owners = sceneFacts.getOrPut(file) { LinkedHashMap() }
         if (parent !in owners) Disposer.register(parent) {
             owners.remove(parent)

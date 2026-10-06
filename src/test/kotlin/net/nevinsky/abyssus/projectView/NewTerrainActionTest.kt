@@ -19,7 +19,7 @@ import net.nevinsky.abyssus.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.assetfiles.AssetFileStore
 import net.nevinsky.abyssus.assetfiles.LocalAssetFileStore
-import net.nevinsky.abyssus.terrainData
+import net.nevinsky.abyssus.editor.terrainData
 import net.nevinsky.abyssus.terrain.generation.TerrainGenerationDraft
 import net.nevinsky.abyssus.terrain.generation.TerrainGenerationSettings
 import net.nevinsky.abyssus.terrain.generation.TerrainPreview

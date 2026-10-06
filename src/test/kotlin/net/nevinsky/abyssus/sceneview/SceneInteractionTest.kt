@@ -5,12 +5,24 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.pick.DragResult
+import net.nevinsky.abyssus.editor.scene.CameraParams
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.editor.pick.REST_EPS
+import net.nevinsky.abyssus.editor.pick.SceneInteraction
+import net.nevinsky.abyssus.editor.pick.ScenePreview
+import net.nevinsky.abyssus.editor.pick.SceneQueries
+import net.nevinsky.abyssus.editor.pick.TransformEdit
+import net.nevinsky.abyssus.editor.pick.ViewSize
 import net.nevinsky.abyssus.editor.content.Vec3
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.parseScene
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoAxis
-import net.nevinsky.abyssus.sceneview.gizmo.GizmoMode
+import net.nevinsky.abyssus.editor.parseScene
+import net.nevinsky.abyssus.editor.pick.GizmoAxis
+import net.nevinsky.abyssus.editor.pick.GizmoMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -135,7 +147,7 @@ class SceneInteractionTest {
     @Test fun aSynchronousDocumentRefreshKeepsTheDroppedPreview() {
         val s = droppingCamera(0f)
         s.interaction.onTransform = { id, edit ->
-            val result = net.nevinsky.abyssus.sceneview.gizmo.DragResult(
+            val result = net.nevinsky.abyssus.editor.pick.DragResult(
                 ScenePreview().selected(s.renderer.content, id)!!.transform.copy(position = edit.position!!), null)
             val fresh = mainParams.copy(content = ScenePreview().apply(mainParams.content, id, result))
             s.renderer.params = fresh; s.interaction.paramsChanged(fresh); true

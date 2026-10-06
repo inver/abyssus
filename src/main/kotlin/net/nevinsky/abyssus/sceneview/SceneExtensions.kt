@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.SceneContent
+import net.nevinsky.abyssus.editor.pick.LineSink
 import net.nevinsky.abyssus.editor.content.Pose
 
 import com.badlogic.gdx.graphics.Camera

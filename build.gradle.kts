@@ -52,6 +52,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     // HdrFixtures: Radiance test images from a pixel function
     testImplementation(testFixtures(project(":core")))
+    // parseScene, testProject and the other scene helpers shared with editor-core's tests
+    testImplementation(testFixtures(project(":editor-core")))
 
     // JSON reading/writing for asset files; the platform does not ship jackson-databind, so it is bundled
     implementation("com.fasterxml.jackson.core:jackson-databind:${properties("jacksonVersion").get()}")

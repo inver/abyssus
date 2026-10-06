@@ -4,7 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.editor.ray.SceneRaySettingsState
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.document.SceneRaySettingsState
 import net.nevinsky.abyssus.editor.ray.RaySceneFallback
 import net.nevinsky.abyssus.ui.RayModeText
 

@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.pick.Selected
 import net.nevinsky.abyssus.editor.ray.RayBackendAttempt
 import net.nevinsky.abyssus.editor.ray.RayBackendSelection
 

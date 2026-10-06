@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.editor.pick.SceneTransformWriter
+import net.nevinsky.abyssus.editor.pick.TransformEdit
 import net.nevinsky.abyssus.SceneRayControls
 
 import com.intellij.openapi.application.ApplicationManager

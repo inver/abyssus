@@ -65,7 +65,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
   implementation, and no dependency from `core` or `runtime` to `editor-core`.
 - [x] 3.4 Slice `components`: the four files of the component editor (with `refactor-solid-dedup` 4.1 done here),
   `ComponentReader`, `LightEntities`, `SchemaMerge`. Verify with `:editor-core:test` and `ComponentActionsTest`.
-- [ ] 3.5 Slice `content` and `pick`: `SceneContent`, `SceneRenderParams`, `PlacementMapper`, `ScenePicker`,
+- [x] 3.5 Slice `content` and `pick`: `SceneContent`, `SceneRenderParams`, `PlacementMapper`, `ScenePicker`,
   `SceneQueries`, `TerrainRestHeight`, `OrbitCamera`, gizmo math, `SceneInteraction`, `ScenePreview`,
   `SceneTransformWriter`. Verify with `SceneInteractionTest`, `ScenePickerTest`, `GizmoDragTest`,
   `SceneTransformWriterTest` (moved) and (GL) `SceneRenderGlTest` still passing in the plugin.
