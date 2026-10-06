@@ -8,8 +8,8 @@ package net.nevinsky.abyssus.runtime.schema
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.testing.warningsTo
-import net.nevinsky.abyssus.core.FileLoader
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.FileLoader
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.runtime.RuntimeSceneLoader
 import net.nevinsky.abyssus.runtime.loadComponent
 import net.nevinsky.abyssus.runtime.testJson

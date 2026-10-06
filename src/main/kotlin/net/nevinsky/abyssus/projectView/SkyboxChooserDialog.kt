@@ -28,8 +28,8 @@ import java.awt.BorderLayout
 import java.awt.Component
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
-import net.nevinsky.abyssus.properties.hdrThumbnail
-import net.nevinsky.abyssus.properties.smallThumbnail
+import net.nevinsky.abyssus.ui.hdrThumbnail
+import net.nevinsky.abyssus.ui.smallThumbnail
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.Font

@@ -23,7 +23,7 @@ import net.nevinsky.abyssus.terrain.generation.TerrainRecipe
 import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
 import java.io.File
 import kotlin.random.Random
-import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
 
 /**
  * The logic behind the terrain regeneration controls for one existing terrain: the draft (settings, latest request,

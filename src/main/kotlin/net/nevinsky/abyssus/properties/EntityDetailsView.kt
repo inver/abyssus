@@ -26,10 +26,10 @@ import net.nevinsky.abyssus.filetype.PropertyIcons
 import net.nevinsky.abyssus.projectView.SceneComponentEdits
 import net.nevinsky.abyssus.projectView.addComponentGroup
 import net.nevinsky.abyssus.projectView.reportRejection
-import net.nevinsky.abyssus.sceneview.RayDataEdit
-import net.nevinsky.abyssus.sceneview.RayDataError
-import net.nevinsky.abyssus.sceneview.RayOpticalField
-import net.nevinsky.abyssus.sceneview.SceneRayEdits
+import net.nevinsky.abyssus.editor.ray.RayDataEdit
+import net.nevinsky.abyssus.editor.ray.RayDataError
+import net.nevinsky.abyssus.editor.ray.RayOpticalField
+import net.nevinsky.abyssus.filetype.SceneRayEdits
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Font

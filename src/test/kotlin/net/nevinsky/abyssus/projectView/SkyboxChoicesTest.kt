@@ -5,13 +5,15 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.ui.thumbnail
+
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.testAsset
 import net.nevinsky.abyssus.dto.ProjectDto
 import net.nevinsky.abyssus.dto.SceneEntry
 import net.nevinsky.abyssus.parseScene
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.testMetaFiles
 import net.nevinsky.abyssus.testCore
 

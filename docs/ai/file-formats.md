@@ -1,7 +1,7 @@
 # File formats
 
 Abyssus owns the JSON format of project `.abss`, scene `.scene` and asset `meta.json` documents.
-The plugin reads them with `SceneJson` (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneJson.kt`),
+The plugin reads them with `SceneJson` (`src/main/kotlin/net/nevinsky/abyssus/editor/document/SceneJson.kt`),
 which keeps key order, `null` members and the exact text of numbers. Writes must keep those, too. The user-facing
 description of what the tree shows is in `README.md` ("Abyssus view"); this page is the format reference.
 

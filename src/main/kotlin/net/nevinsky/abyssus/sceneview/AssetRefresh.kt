@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import java.io.File
 

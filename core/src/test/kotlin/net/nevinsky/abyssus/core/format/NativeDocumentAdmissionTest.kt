@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.core.format
 
-import net.nevinsky.abyssus.core.FileLoader
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.FileLoader
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.project.ProjectLoader
 import net.nevinsky.abyssus.core.scene.SceneLoader

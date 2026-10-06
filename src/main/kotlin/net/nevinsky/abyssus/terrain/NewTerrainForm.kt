@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.terrain
 
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField

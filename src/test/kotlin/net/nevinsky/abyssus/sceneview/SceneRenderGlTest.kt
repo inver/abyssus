@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.editor.content.PlacementTransform
 import net.nevinsky.abyssus.editor.content.LightKind
 import net.nevinsky.abyssus.editor.content.LightPlacement
 
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.parseScene
 import org.junit.Assert.assertFalse

@@ -4,6 +4,14 @@
  */
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.document.SceneJson
+
+import net.nevinsky.abyssus.editor.ray.RayModePhase
+import net.nevinsky.abyssus.editor.ray.RayModeSnapshot
+import net.nevinsky.abyssus.editor.ray.RayBackendAttempt
+import net.nevinsky.abyssus.editor.ray.RayBackendSelection
+import net.nevinsky.abyssus.SceneRayControls
+
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.Disposable
@@ -145,7 +153,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         assertTrue(samples.isEnabled)
         samples.text = "64"; samples.postActionEvent()
         val saved = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!.text
-        assertEquals(64, net.nevinsky.abyssus.filetype.SceneJson.parse(saved)["rayTracing"]["targetSamplesPerPixel"].intValue())
+        assertEquals(64, net.nevinsky.abyssus.editor.document.SceneJson.parse(saved)["rayTracing"]["targetSamplesPerPixel"].intValue())
     }
 
     fun testFailureShowsItsReasonAndARetryThatReachesTheView() {

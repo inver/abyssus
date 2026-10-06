@@ -39,7 +39,7 @@
 
 ## JSON
 
-- **Always use `SceneJson`** (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneJson.kt`), never a fresh
+- **Always use `SceneJson`** (`src/main/kotlin/net/nevinsky/abyssus/editor/document/SceneJson.kt`), never a fresh
   `ObjectMapper`. It keeps key order and `null` members, and keeps float text exactly (`RawNumberNode`). Reading and
   writing a file therefore never changes numbers you didn't touch.
 - **Binding:** bind files to DTOs with `SceneJson.bind` / `SceneReader.parse`. Unknown fields are ignored, and

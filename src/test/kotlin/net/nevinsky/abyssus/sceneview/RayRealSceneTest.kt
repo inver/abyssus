@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.sceneview
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.AssetLoading
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.parseScene
 import net.nevinsky.abyssus.raytracing.*
 import org.junit.Assert.*

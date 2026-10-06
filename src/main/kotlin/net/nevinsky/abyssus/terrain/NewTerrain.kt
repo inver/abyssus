@@ -10,12 +10,12 @@ import net.nevinsky.abyssus.assetfiles.AssetReferenceGuard
 import net.nevinsky.abyssus.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.assetfiles.FileChange
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.runtime.text
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.TERRAIN_DATA_FILE
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.dto.AssetMetaReader
 import net.nevinsky.abyssus.terrain.generation.MIN_TERRAIN_RESOLUTION
 import net.nevinsky.abyssus.terrain.generation.TERRAIN_RECIPE_FILE

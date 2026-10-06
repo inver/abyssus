@@ -5,7 +5,7 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.graphics.Texture
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.core.assets.loading.CompositeAssetLoader
 import net.nevinsky.abyssus.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.core.assets.model.ModelLoader

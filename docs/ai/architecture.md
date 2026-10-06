@@ -103,7 +103,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 ### Every write
 
 The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) and asset property edits (`AssetMetaEdits`, over the plugin's
-`AssetMetaEditor`; reference and face choices come from `properties/AssetReferenceChoices.kt`) all go through `editSceneJson`
+`AssetMetaEditor`; reference and face choices come from `src/main/kotlin/net/nevinsky/abyssus/editor/meta/AssetReferenceChoices.kt`) all go through `editSceneJson`
 (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneDocumentWriter.kt`):
 
 1. Parse the document with `SceneJson`.
@@ -245,3 +245,9 @@ scene view README.
 
 Schema field types use explicit switches in `ComponentSchemaReader`, `SchemaJson` and the editor's field mapping.
 The checklist for adding a type is in `runtime/README.md`; no handler registry is installed.
+
+The properties panel reads live view state through the read-only `editor.facts.SceneFacts` interface. Its generic
+content type lets the contract stay independent of render code. `SceneRayControls` in the plugin root implements
+content, selection and ray-mode queries, removes facts on editor disposal, and retains the separate ray commands.
+Pure ray settings, optical overrides and diagnostic records live in `editor.ray`; their localized wording lives
+in `ui.RayModeText`, and `filetype.SceneRayEdits` owns the IDE document-command adapter.

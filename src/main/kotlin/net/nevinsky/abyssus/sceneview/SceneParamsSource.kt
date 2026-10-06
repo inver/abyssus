@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.document.SceneJson
+
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.SceneReader
@@ -26,7 +28,7 @@ fun interface SceneParamsSource {
         fun editorText(reader: SceneReader) = SceneParamsSource { file ->
             val camera = ProjectLayout.abssFor(file)?.let { abss ->
                 val text = textOf(abss)
-                net.nevinsky.abyssus.format.AbyssusDocumentFormat().requireSupported(net.nevinsky.abyssus.filetype.SceneJson.parse(text), net.nevinsky.abyssus.format.DocumentKind.PROJECT)
+                net.nevinsky.abyssus.format.AbyssusDocumentFormat().requireSupported(net.nevinsky.abyssus.editor.document.SceneJson.parse(text), net.nevinsky.abyssus.format.DocumentKind.PROJECT)
                 MainCamera.parse(text)
             } ?: CameraParams.DEFAULT
             SceneRenderParams.from(reader.parse(textOf(file)), camera, ProjectLayout.projectDirFor(file))

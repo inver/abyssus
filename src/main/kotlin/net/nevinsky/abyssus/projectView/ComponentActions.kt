@@ -20,7 +20,7 @@ import net.nevinsky.abyssus.AbyssusBundle
 import com.intellij.openapi.project.ProjectLocator
 import net.nevinsky.abyssus.schema.ComponentSchemas
 import net.nevinsky.abyssus.ecs.scene.EditResult
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.dto.textOf
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.MetaFiles

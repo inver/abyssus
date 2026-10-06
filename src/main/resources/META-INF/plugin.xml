@@ -49,7 +49,7 @@
         <toolWindow id="Abyssus Properties"
                     anchor="right"
                     canCloseContents="false"
-                    factoryClass="net.nevinsky.abyssus.properties.AbyssusPropertiesToolWindowFactory"/>
+                    factoryClass="net.nevinsky.abyssus.AbyssusPropertiesToolWindowFactory"/>
         <notificationGroup id="Abyssus Component Schemas" displayType="BALLOON" key="notification.group.Abyssus Component Schemas"/>
         <lang.parserDefinition
                 language="GLTF"

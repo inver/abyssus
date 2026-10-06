@@ -8,8 +8,8 @@ package net.nevinsky.abyssus.terrain
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.runtime.obj
 import net.nevinsky.abyssus.runtime.text
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
@@ -19,8 +19,8 @@ import net.nevinsky.abyssus.terrain.generation.RecipeStatus
 import net.nevinsky.abyssus.terrain.generation.SourceSnapshot
 import net.nevinsky.abyssus.terrain.generation.TERRAIN_RECIPE_FILE
 import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
-import net.nevinsky.abyssus.properties.AssetReferenceChoices
-import net.nevinsky.abyssus.filetype.documentDisplayMessage
+import net.nevinsky.abyssus.editor.meta.AssetReferenceChoices
+import net.nevinsky.abyssus.ui.documentDisplayMessage
 import java.io.File
 import kotlin.math.roundToInt
 import kotlin.math.sqrt

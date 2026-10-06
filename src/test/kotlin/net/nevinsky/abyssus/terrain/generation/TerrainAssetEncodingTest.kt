@@ -9,10 +9,10 @@ import net.nevinsky.abyssus.TERRAIN_DATA_FILE
 import net.nevinsky.abyssus.terrain.TerrainAssetWriter
 import net.nevinsky.abyssus.terrain.TerrainHeightEncoder
 import net.nevinsky.abyssus.terrain.sha256Hex
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.core.assets.terrain.TerrainLoader
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.terrain.noise.FastNoiseSamplerFactory
 import net.nevinsky.abyssus.testProject
 import org.junit.Assert.assertArrayEquals

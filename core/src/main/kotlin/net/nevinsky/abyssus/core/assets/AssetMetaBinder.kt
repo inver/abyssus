@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.core.assets
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.model.ModelMeta
 import net.nevinsky.abyssus.core.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.core.assets.sky.hdr.HdrSkyMeta

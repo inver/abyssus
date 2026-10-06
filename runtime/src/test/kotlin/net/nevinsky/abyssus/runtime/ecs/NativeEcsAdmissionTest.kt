@@ -2,7 +2,7 @@ package net.nevinsky.abyssus.runtime.ecs
 
 import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.databind.InjectableValues
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.runtime.ecs.component.IdComponent
 import net.nevinsky.abyssus.runtime.ecs.render.RenderComponent

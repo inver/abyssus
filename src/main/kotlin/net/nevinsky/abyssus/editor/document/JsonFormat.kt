@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.filetype
+package net.nevinsky.abyssus.editor.document
+
+import net.nevinsky.abyssus.core.io.JsonProcessor
 
 import com.fasterxml.jackson.core.util.DefaultIndenter
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter

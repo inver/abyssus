@@ -14,7 +14,7 @@ import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.ecs.scene.EditResult
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import java.io.File
 import net.nevinsky.abyssus.dto.textOf
 import net.nevinsky.abyssus.testMetaFiles

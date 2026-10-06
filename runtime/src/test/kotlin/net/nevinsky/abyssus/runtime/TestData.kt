@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.runtime
 
+import net.nevinsky.abyssus.core.io.JsonProcessor
+
 import net.nevinsky.abyssus.runtime.json.number
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -45,11 +47,11 @@ fun testConfigurator(
     resolver: net.nevinsky.abyssus.runtime.ecs.render.AssetResolver = net.nevinsky.abyssus.runtime.ecs.render.AssetResolver { _, _ -> null },
     log: org.slf4j.Logger = org.slf4j.helpers.NOPLogger.NOP_LOGGER,
     game: net.nevinsky.abyssus.runtime.schema.GameComponents = net.nevinsky.abyssus.runtime.schema.GameComponents(),
-) = net.nevinsky.abyssus.runtime.ecs.EcsConfigurator(net.nevinsky.abyssus.core.JsonProcessor().mapper, resolver, log, game)
+) = net.nevinsky.abyssus.runtime.ecs.EcsConfigurator(net.nevinsky.abyssus.core.io.JsonProcessor().mapper, resolver, log, game)
 
 /** [component] as the scene file holds it, written by [net.nevinsky.abyssus.runtime.ecs.EcsWriter]. */
 fun writeComponent(
     component: com.badlogic.ashley.core.Component,
     game: net.nevinsky.abyssus.runtime.schema.GameComponents = net.nevinsky.abyssus.runtime.schema.GameComponents(),
 ): com.fasterxml.jackson.databind.JsonNode =
-    net.nevinsky.abyssus.runtime.ecs.EcsWriter(net.nevinsky.abyssus.core.JsonProcessor().mapper, game).writeComponent(component)
+    net.nevinsky.abyssus.runtime.ecs.EcsWriter(net.nevinsky.abyssus.core.io.JsonProcessor().mapper, game).writeComponent(component)

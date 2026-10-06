@@ -10,7 +10,7 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import java.io.File
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.command.undo.DocumentReference
@@ -52,9 +52,9 @@ import java.beans.PropertyChangeListener
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.dto.SceneReader
 import net.nevinsky.abyssus.dto.SceneDocumentCache
 import com.intellij.openapi.command.undo.UndoManager

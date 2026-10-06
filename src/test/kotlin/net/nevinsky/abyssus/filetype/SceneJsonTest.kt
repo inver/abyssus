@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.filetype
 
+import net.nevinsky.abyssus.editor.document.SceneJson
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

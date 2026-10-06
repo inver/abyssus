@@ -22,7 +22,7 @@ import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_CONE_ANGLE
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.LIGHT_EDGE_SOFTNESS
 import net.nevinsky.abyssus.SceneEcsPaths
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.ecs.scene.ComponentReader
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent

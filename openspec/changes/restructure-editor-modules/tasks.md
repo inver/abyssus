@@ -28,12 +28,12 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 - [x] 1.2 Introduce `SceneViewHost` (four to six methods) implemented by the project view pane, and give
   `SceneFileEditor` the host by constructor; drop its five `projectView` imports. Verify with `SceneFileEditorTest`,
   `AbyssusViewTest`, and the `sceneview → projectView` allowlist entry removed.
-- [ ] 1.3 Introduce `SceneFacts` (read-only view of content, selection and ray mode) and make `properties` use it
+- [x] 1.3 Introduce `SceneFacts` (read-only view of content, selection and ray mode) and make `properties` use it
   instead of 20 `sceneview` types. Verify with `EntityPropertiesPanelTest`, `AssetPropertiesPanelTest`,
   `SceneDetailsViewTest` and the `properties → sceneview` entry removed.
-- [ ] 1.4 Resolve `terrain ↔ properties`, `projectView ↔ properties` and `dto ↔ filetype` (design D5). Verify with the
+- [x] 1.4 Resolve `terrain ↔ properties`, `projectView ↔ properties` and `dto ↔ filetype` (design D5). Verify with the
   terrain test package, `ProjectAssetsTest`, and an empty allowlist in `checkPackageCycles`.
-- [ ] 1.5 Move `AbyssusProjectLayout`, `FileLoader`, `GeometryUtils`, `JsonProcessor` out of the shared
+- [x] 1.5 Move `AbyssusProjectLayout`, `FileLoader`, `GeometryUtils`, `JsonProcessor` out of the shared
   `net.nevinsky.abyssus.core` root into `core.io` / `core.project` (98 importing files, by IDE rename). Verify with
   `./gradlew check` and `rg -n '^package net.nevinsky.abyssus.core$' core/src/main` returning nothing.
 

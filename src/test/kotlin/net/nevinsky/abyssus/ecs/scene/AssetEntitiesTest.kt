@@ -4,9 +4,11 @@
  */
 package net.nevinsky.abyssus.ecs.scene
 
+import net.nevinsky.abyssus.core.io.JsonProcessor
+
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.filetype.SceneJson
-import net.nevinsky.abyssus.projectView.RenderAsset
+import net.nevinsky.abyssus.editor.document.SceneJson
+import net.nevinsky.abyssus.editor.content.RenderAsset
 import net.nevinsky.abyssus.runtime.ecs.EcsLoader
 import net.nevinsky.abyssus.runtime.ecs.scene.SceneEngine
 import net.nevinsky.abyssus.editor.content.Vec3
@@ -69,7 +71,7 @@ class AssetEntitiesTest {
     fun anEmptySceneStartsAtZeroAndTheRuntimeLoadsIt() {
         val root = empty()
         assertEquals("0", AssetEntities.add(root, tree, Vec3(1f, 2f, 3f)).entityId)
-        val document = EcsLoader(net.nevinsky.abyssus.core.JsonProcessor().mapper, log = org.slf4j.helpers.NOPLogger.NOP_LOGGER)
+        val document = EcsLoader(net.nevinsky.abyssus.core.io.JsonProcessor().mapper, log = org.slf4j.helpers.NOPLogger.NOP_LOGGER)
             .load(root["ecs"], SceneEngine())
         // loaded without a project, the only complaint is the missing folder: the render component itself is understood
         assertEquals(listOf("render asset MODEL tree has no folder in the project assets"), document.warnings.map { it.toString() })

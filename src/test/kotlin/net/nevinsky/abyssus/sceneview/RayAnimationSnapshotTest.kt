@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.core.io.FileLoader
+
 import net.nevinsky.abyssus.editor.content.PlacementTransform
 import net.nevinsky.abyssus.editor.content.AssetPlacement
 
@@ -158,6 +160,6 @@ class RayAnimationSnapshotTest {
                 bones = ArrayMap<String, Matrix4>().apply { put("joint", Matrix4()) }
             })
         })
-        return ModelRaySnapshotLoader(net.nevinsky.abyssus.core.FileLoader(java.io.File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
+        return ModelRaySnapshotLoader(net.nevinsky.abyssus.core.io.FileLoader(java.io.File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
     }
 }

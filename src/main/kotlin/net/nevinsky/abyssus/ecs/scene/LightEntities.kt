@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.ecs.scene
 
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.runtime.ecs.EcsWriter
 import net.nevinsky.abyssus.runtime.ecs.scene.*
 import com.badlogic.gdx.math.Vector3

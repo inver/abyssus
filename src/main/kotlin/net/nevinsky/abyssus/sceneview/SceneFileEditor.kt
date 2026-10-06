@@ -5,12 +5,14 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.SceneRayControls
+
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.AbyssusCore
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import java.io.File
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.command.undo.DocumentReference
@@ -44,9 +46,9 @@ import java.beans.PropertyChangeListener
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.dto.SceneReader
 import net.nevinsky.abyssus.dto.SceneDocumentCache
 import com.intellij.openapi.command.undo.UndoManager
@@ -114,7 +116,10 @@ class SceneFileEditor(
                 }
             }, this)
         }
-        host.listen(file, this) { entityId -> view?.selectEntity(entityId) }
+        host.listen(file, this) { entityId ->
+            rayControls.selected(file, this, entityId)
+            view?.selectEntity(entityId)
+        }
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 if (events.any { it is VFileContentChangeEvent && isSource(it.file) }) {
@@ -172,6 +177,7 @@ class SceneFileEditor(
     }
 
     private fun showScene(params: SceneRenderParams) {
+        rayControls.recordFacts(file, this, params.content)
         view?.let {
             it.setParams(params)
             return
@@ -184,7 +190,10 @@ class SceneFileEditor(
             return
         }
         created.onFailure = { e -> ApplicationManager.getApplication().invokeLater { showGlFailure(e) } }
-        created.onPick = { entityId -> host.select(file, entityId) }
+        created.onPick = { entityId ->
+            rayControls.selected(file, this, entityId)
+            host.select(file, entityId)
+        }
         created.onTransform = ::applyTransform
         (created as? RayControlProvider)?.rayControl?.let { rayControls.register(file, it, created) }
         view = created
@@ -237,6 +246,7 @@ class SceneFileEditor(
 
     override fun dispose() {
         disposed = true
+        rayControls.forgetFacts(file, this)
         reloads.dispose()
         reloadQueue.cancelAllUpdates()
         assetRefresh?.dispose()

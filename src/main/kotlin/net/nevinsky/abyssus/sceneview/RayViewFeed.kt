@@ -4,6 +4,10 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.SceneRaySettingsState
+import net.nevinsky.abyssus.editor.ray.RaySceneFallback
+import net.nevinsky.abyssus.ui.RayModeText
+
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.core.assets.model.RayModelSkinning
 import net.nevinsky.abyssus.core.assets.sky.RaySkySnapshot
@@ -12,7 +16,7 @@ import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
 
 /**
  * Connects one scene view's renderer to its [RayViewRuntime]. [frame] runs on the render thread once per frame: it

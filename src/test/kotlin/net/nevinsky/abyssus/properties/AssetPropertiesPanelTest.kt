@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.document.SceneJson
+import net.nevinsky.abyssus.editor.meta.AssetChoice
+
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.command.WriteCommandAction
@@ -310,7 +313,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         p.show(asset("skybox_default"))
         for (face in SKYBOX_FACES) {
             val combo = field(p, face) as com.intellij.openapi.ui.ComboBox<*>
-            assertEquals("skybox_default.png", (combo.selectedItem as net.nevinsky.abyssus.properties.AssetChoice).value)
+            assertEquals("skybox_default.png", (combo.selectedItem as net.nevinsky.abyssus.editor.meta.AssetChoice).value)
         }
     }
 
@@ -423,7 +426,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.showFolder(folder)
         @Suppress("UNCHECKED_CAST")
-        val combo = field(p, "left") as com.intellij.openapi.ui.ComboBox<net.nevinsky.abyssus.properties.AssetChoice>
+        val combo = field(p, "left") as com.intellij.openapi.ui.ComboBox<net.nevinsky.abyssus.editor.meta.AssetChoice>
         val other = (0 until combo.itemCount).map { combo.getItemAt(it) }.single { it.value == "other.png" }
         combo.selectedItem = other
         val after = FileDocumentManager.getInstance().getDocument(meta)!!.text
@@ -486,7 +489,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         assertEquals("Main Scene.scene", editor.file.name)
         type(find(p, "ray-setting-targetSamplesPerPixel") as JBTextField, "512")
         val edited = metaText(path)
-        assertEquals(512, net.nevinsky.abyssus.filetype.SceneJson.parse(edited)["rayTracing"]["targetSamplesPerPixel"].intValue())
+        assertEquals(512, net.nevinsky.abyssus.editor.document.SceneJson.parse(edited)["rayTracing"]["targetSamplesPerPixel"].intValue())
         assertEquals("the panel refreshes from the document", "512", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
         val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
         undo.undo(editor)

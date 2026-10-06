@@ -7,14 +7,14 @@ package net.nevinsky.abyssus.properties
 
 import net.nevinsky.abyssus.AssetFieldDescriptions
 import net.nevinsky.abyssus.AssetMetaEditor
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.terrain.generation.TerrainGenerator
 import net.nevinsky.abyssus.terrain.TerrainHeightEncoder
 import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
 import net.nevinsky.abyssus.dto.MetaFiles
 import net.nevinsky.abyssus.projectView.HdrPreviewSource
-import net.nevinsky.abyssus.sceneview.RayMaterialIdentity
-import net.nevinsky.abyssus.sceneview.SceneRayControls
+import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
+import net.nevinsky.abyssus.SceneRayControls
 import java.io.File
 import net.nevinsky.abyssus.schema.ComponentSchemas
 
@@ -40,4 +40,6 @@ class PanelServices(
      * EDT; it may parse the model file and may throw.
      */
     val rayMaterials: (File, String) -> List<RayMaterialIdentity>? = { _, _ -> null },
-)
+) {
+    val facts: net.nevinsky.abyssus.editor.facts.SceneFacts<*> get() = rayControls
+}

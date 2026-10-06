@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus
 
 import com.intellij.util.concurrency.AppExecutorUtil
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.dto.AssetMetaReader
 import net.nevinsky.abyssus.dto.DocumentParsing

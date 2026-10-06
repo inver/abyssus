@@ -4,6 +4,10 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayModePhase
+import net.nevinsky.abyssus.editor.ray.RayBackendAttempt
+import net.nevinsky.abyssus.editor.ray.RayBackendSelection
+
 import net.nevinsky.abyssus.raytracing.*
 import org.junit.Assert.*
 import org.junit.Test

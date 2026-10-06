@@ -2,9 +2,9 @@ package net.nevinsky.abyssus.core.assets
 
 import net.nevinsky.abyssus.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.core.format.DocumentKind
-import net.nevinsky.abyssus.core.JsonProcessor
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.io.FileLoader
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import java.io.File

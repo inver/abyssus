@@ -1,6 +1,6 @@
 package net.nevinsky.abyssus.core.assets
 
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.model.ModelMeta
 import net.nevinsky.abyssus.core.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.core.assets.sky.hdr.HdrSkyMeta

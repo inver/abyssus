@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.core.assets.terrain.SPLAT_FIELDS
 import net.nevinsky.abyssus.core.assets.Asset
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.MetaType
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.runtime.obj
 import net.nevinsky.abyssus.runtime.opt
 import net.nevinsky.abyssus.runtime.text

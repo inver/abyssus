@@ -4,8 +4,8 @@
  */
 package net.nevinsky.abyssus.core.project
 
-import net.nevinsky.abyssus.core.FileLoader
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.FileLoader
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

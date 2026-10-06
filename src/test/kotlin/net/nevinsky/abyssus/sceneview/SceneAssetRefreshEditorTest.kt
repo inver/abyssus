@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.core.io.JsonProcessor
+
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.util.Disposer
@@ -71,7 +73,7 @@ class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
         settle()
         assertEquals(setOf("hills"), view.revisions.single().names)
         val text = view.revisions.single().unsaved[File(meta.path).absoluteFile]!!
-        assertEquals(250, net.nevinsky.abyssus.core.JsonProcessor().readObject(text).get("additional").get("size").asInt())
+        assertEquals(250, net.nevinsky.abyssus.core.io.JsonProcessor().readObject(text).get("additional").get("size").asInt())
         FileDocumentManager.getInstance().saveDocument(document)
         settle()
         assertEquals("saving the shown text is not a new revision", 1, view.revisions.size)

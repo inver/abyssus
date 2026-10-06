@@ -21,7 +21,7 @@ import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
 import net.nevinsky.abyssus.runtime.ecs.render.AssetReference
 import net.nevinsky.abyssus.runtime.ecs.render.AssetResolver
 import net.nevinsky.abyssus.core.assets.MetaType
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.runtime.schema.BUILT_IN_COMPONENTS
 import net.nevinsky.abyssus.runtime.ecs.EcsWriter
 import net.nevinsky.abyssus.runtime.json.number

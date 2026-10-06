@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.core.format
 
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import org.junit.Assert.*
 import org.junit.Test
 

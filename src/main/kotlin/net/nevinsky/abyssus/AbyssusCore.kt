@@ -7,7 +7,7 @@ package net.nevinsky.abyssus
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.ModelLogging
 import net.nevinsky.abyssus.core.flightgear.FlightGearImport
 import net.nevinsky.abyssus.core.format.AbyssusDocumentFormat as CoreDocumentFormat

@@ -1,7 +1,7 @@
-package net.nevinsky.abyssus.core
+package net.nevinsky.abyssus.core.io
 
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.SCENES_DIR
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.SCENES_DIR
 import java.io.File
 
 class FileLoader(val projectDir: File) {

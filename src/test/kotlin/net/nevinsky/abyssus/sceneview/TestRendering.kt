@@ -4,7 +4,7 @@ import net.nevinsky.abyssus.AssetLoading
 import net.nevinsky.abyssus.testing.RecordingLogger
 import org.slf4j.Logger
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import java.util.concurrent.Executor
 
 /** Problems written to stderr, the way the IDE logger prints them in tests. */

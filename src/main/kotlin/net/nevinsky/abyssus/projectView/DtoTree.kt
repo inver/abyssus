@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.core.assets.Asset
 import net.nevinsky.abyssus.dto.SceneError
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.core.scene.Scene
 import net.nevinsky.abyssus.dto.SceneEntry
 import net.nevinsky.abyssus.SceneEcsPaths

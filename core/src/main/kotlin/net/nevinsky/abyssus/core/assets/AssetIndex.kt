@@ -1,6 +1,6 @@
 package net.nevinsky.abyssus.core.assets
 
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.FileLoader
 import java.util.UUID
 
 /**

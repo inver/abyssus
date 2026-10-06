@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.ui.thumbnail
+
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.testCore

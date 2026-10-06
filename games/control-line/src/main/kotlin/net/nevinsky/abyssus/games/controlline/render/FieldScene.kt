@@ -4,13 +4,13 @@
  */
 package net.nevinsky.abyssus.games.controlline.render
 
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.runtime.SceneContext
 import net.nevinsky.abyssus.runtime.RuntimeSceneLoader
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.games.controlline.components.ControlLineComponents
 import net.nevinsky.abyssus.games.controlline.components.PilotComponent
 import net.nevinsky.abyssus.games.controlline.flow.PlaneChoice

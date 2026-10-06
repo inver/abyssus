@@ -114,3 +114,7 @@ Overlap list: `rg -l 'sceneview|RaySceneSnapshot|ComponentEditor|PanelState' ope
 
 The user authorized removing the library and game cycles and continuing implementation. Their mechanical moves
 passed the existing module tests and the cycle guard with those entries removed; task 1.1 placement tests passed too.
+
+Stage 1 passed `./gradlew :clean check --continue --console=plain` and `scripts/check-docs.sh` with an empty cycle
+allowlist. Package moves required clean recompilation: stale inferred test signatures initially retained the former
+placement packages; a clean root build and clean extension build removed those binary references.

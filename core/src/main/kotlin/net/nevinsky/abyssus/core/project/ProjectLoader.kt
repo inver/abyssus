@@ -1,9 +1,9 @@
 package net.nevinsky.abyssus.core.project
 
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.core.format.DocumentKind
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 
 class ProjectLoader(
     private val jsonProcessor: JsonProcessor,

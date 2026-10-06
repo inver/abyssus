@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.core.assets
 
-import net.nevinsky.abyssus.core.FileLoader
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.FileLoader
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger

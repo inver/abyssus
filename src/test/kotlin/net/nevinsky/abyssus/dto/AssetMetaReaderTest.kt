@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 package net.nevinsky.abyssus.dto
-import net.nevinsky.abyssus.core.JsonProcessor
+import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.core.assets.MetaType
 import org.junit.Assert.*

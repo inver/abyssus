@@ -1,18 +1,1 @@
-# Transitional cyclic import edges; remove each as its cycle is broken.
-: dto -> filetype
-: ecs -> projectView
-: filetype -> dto
-: projectView -> ecs
-: projectView -> properties
-: projectView -> sceneview
-: projectView -> schema
-: projectView -> terrain
-: properties -> ecs
-: properties -> projectView
-: properties -> sceneview
-: properties -> schema
-: properties -> terrain
-: sceneview -> ecs
-: sceneview -> terrain
-: schema -> ecs
-: terrain -> properties
+# No allowed package cycles.

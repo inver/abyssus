@@ -7,11 +7,11 @@ package net.nevinsky.abyssus.assetfiles
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.ASSETS_DIR
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import java.io.File
 
 /**

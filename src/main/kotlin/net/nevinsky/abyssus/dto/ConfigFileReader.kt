@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.dto
 
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
 
 /** What reading a config file gave: the parsed [obj], or the [message] of why it could not be read. */
 sealed interface AssetReadResult<out T> {

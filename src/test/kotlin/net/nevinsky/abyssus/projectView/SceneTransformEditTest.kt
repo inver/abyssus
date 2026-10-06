@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.projectView
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.editor.document.SceneJson
 import net.nevinsky.abyssus.sceneview.SceneTransformWriter
 import net.nevinsky.abyssus.sceneview.TransformEdit
 import net.nevinsky.abyssus.editor.content.Vec3

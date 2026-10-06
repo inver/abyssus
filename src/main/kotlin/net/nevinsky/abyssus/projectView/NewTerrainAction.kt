@@ -29,7 +29,7 @@ import net.nevinsky.abyssus.terrain.NewTerrainForm
 import net.nevinsky.abyssus.terrain.NewTerrainRequest
 import java.io.File
 import javax.swing.JComponent
-import net.nevinsky.abyssus.filetype.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
 
 /**
  * Right-click New Terrain on the Assets node of a recognized project: a dialog for the folder name, world size,

@@ -4,20 +4,14 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ray.RayBackendAttempt
+import net.nevinsky.abyssus.editor.ray.RayBackendSelection
+
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.raytracing.*
 import java.util.Locale
-
-data class RayBackendAttempt(val backend: String, val reason: RayUnavailableReason, val detail: String? = null)
-
-/** Structured diagnostics stay independent of UI text; the toolbar localizes them at its boundary. */
-sealed interface RayBackendSelection {
-    data object Off : RayBackendSelection
-    data class Selected(val backend: RayBackend) : RayBackendSelection
-    data class Unavailable(val attempts: List<RayBackendAttempt>, val invalidPreference: String? = null) : RayBackendSelection
-}
 
 /**
  * Application-owned selection cache. Constructing a selector never constructs a native provider. Selection and

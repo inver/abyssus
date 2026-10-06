@@ -7,8 +7,8 @@ package net.nevinsky.abyssus.ecs.scene
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.core.JsonProcessor
-import net.nevinsky.abyssus.projectView.RenderAsset
+import net.nevinsky.abyssus.core.io.JsonProcessor
+import net.nevinsky.abyssus.editor.content.RenderAsset
 import net.nevinsky.abyssus.runtime.ecs.EcsWriter
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
 import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent

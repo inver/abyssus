@@ -24,7 +24,12 @@ val packageCycles = tasks.register("checkPackageCycles") {
             val prefixLength = if (parts.isEmpty()) 0 else parts.first().indices.takeWhile { index ->
                 parts.all { it.getOrNull(index) == parts.first()[index] }
             }.size
-            fun group(pkg: String): String = pkg.split('.').drop(prefixLength).firstOrNull() ?: "(root)"
+            fun group(pkg: String): String {
+                val segments = pkg.split('.').drop(prefixLength)
+                // The root temporarily contains editor slices; distinguish their neutral leaf packages.
+                return if (segments.firstOrNull() == "editor") segments.take(2).joinToString(".")
+                else segments.firstOrNull() ?: "(root)"
+            }
             val graph = mutableMapOf<String, MutableSet<String>>()
             for (text in texts) {
                 val pkg = declaration.find(text)?.groupValues?.get(1) ?: continue

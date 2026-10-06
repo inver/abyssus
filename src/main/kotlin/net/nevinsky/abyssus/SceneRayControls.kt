@@ -2,8 +2,12 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus
 
+import net.nevinsky.abyssus.editor.ray.RayModeSnapshot
+
+import net.nevinsky.abyssus.sceneview.openSceneView
+import net.nevinsky.abyssus.sceneview.RayControl
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
@@ -18,9 +22,36 @@ import com.intellij.openapi.vfs.VirtualFile
  */
 @Service(Service.Level.PROJECT)
 class SceneRayControls @JvmOverloads constructor(
-    internal val project: Project,
+    val project: Project,
     private val open: (Project, VirtualFile) -> Unit = { p, f -> openSceneView(p, f) },
-) {
+) : net.nevinsky.abyssus.editor.facts.SceneFacts<net.nevinsky.abyssus.sceneview.SceneContent> {
+    private val sceneFacts = LinkedHashMap<VirtualFile, LinkedHashMap<Disposable, Pair<net.nevinsky.abyssus.sceneview.SceneContent, String?>>>()
+
+    internal fun recordFacts(file: VirtualFile, parent: Disposable, content: net.nevinsky.abyssus.sceneview.SceneContent) {
+        val owners = sceneFacts.getOrPut(file) { LinkedHashMap() }
+        if (parent !in owners) Disposer.register(parent) {
+            owners.remove(parent)
+            if (owners.isEmpty()) sceneFacts.remove(file)
+        }
+        owners[parent] = content to owners[parent]?.second
+    }
+
+    internal fun selected(file: VirtualFile, parent: Disposable, entityId: String) {
+        val owners = sceneFacts[file] ?: return
+        val old = owners[parent] ?: return
+        owners[parent] = old.first to entityId
+    }
+
+    internal fun forgetFacts(file: VirtualFile, parent: Disposable) {
+        val owners = sceneFacts[file] ?: return
+        owners.remove(parent)
+        if (owners.isEmpty()) sceneFacts.remove(file)
+    }
+
+    override fun content(scenePath: String) = sceneFacts.entries.lastOrNull { it.key.path == scenePath }?.value?.values?.lastOrNull()?.first
+    override fun selection(scenePath: String) = sceneFacts.entries.lastOrNull { it.key.path == scenePath }?.value?.values?.lastOrNull()?.second
+    override fun rayMode(scenePath: String) = controls.entries.lastOrNull { it.key.path == scenePath }?.value?.lastOrNull()?.mode
+
     private val controls = LinkedHashMap<VirtualFile, MutableList<RayControl>>()
     private val pending = LinkedHashSet<VirtualFile>()
     private val listeners = mutableListOf<Pair<VirtualFile, () -> Unit>>()

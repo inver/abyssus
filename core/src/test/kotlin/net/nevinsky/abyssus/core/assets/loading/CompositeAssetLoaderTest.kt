@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.core.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.core.FileLoader
+import net.nevinsky.abyssus.core.io.FileLoader
 import net.nevinsky.abyssus.core.assets.AssetMeta
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.core.assets.testMetaLoader

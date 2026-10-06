@@ -7,8 +7,8 @@ package net.nevinsky.abyssus.dto
 
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.readText
-import net.nevinsky.abyssus.core.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.filetype.SceneJson
+import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.editor.document.SceneJson
 
 /**
  * Reads asset folders' `meta.json` through the virtual file system into the one [AssetMetaReader], so the Abyssus tree,

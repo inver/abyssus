@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.editor.document.SceneJson
+
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.diagnostic.Logger
@@ -26,7 +28,7 @@ fun assetsNodeProjectFile(node: Any?): VirtualFile? {
     return entry.source?.takeIf { it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
         net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation {
             net.nevinsky.abyssus.format.AbyssusDocumentFormat().validate(
-                net.nevinsky.abyssus.filetype.SceneJson.parse(net.nevinsky.abyssus.dto.textOf(it)),
+                net.nevinsky.abyssus.editor.document.SceneJson.parse(net.nevinsky.abyssus.dto.textOf(it)),
                 net.nevinsky.abyssus.format.DocumentKind.PROJECT,
             ) == null
         }.getOrDefault(false) }

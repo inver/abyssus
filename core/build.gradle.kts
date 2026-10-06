@@ -54,5 +54,5 @@ tasks.test {
     systemProperty("abyssus.testData", rootProject.file("src/test/testData").absolutePath)
 }
 
-extra["abyssusSingletonExcludes"] = listOf<String>("net/nevinsky/abyssus/core/AbyssusProjectLayout.kt", "net/nevinsky/abyssus/core/GeometryUtils.kt")
+extra["abyssusSingletonExcludes"] = listOf<String>("net/nevinsky/abyssus/core/io/AbyssusProjectLayout.kt", "net/nevinsky/abyssus/core/io/GeometryUtils.kt")
 apply(from = rootProject.file("gradle/checks.gradle.kts"))

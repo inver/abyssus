@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.document.SceneJson
+
+import net.nevinsky.abyssus.SceneRayControls
+
 import net.nevinsky.abyssus.SceneFileEditorProvider
 
 import net.nevinsky.abyssus.editor.content.Vec3
@@ -104,9 +108,13 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             assertEquals("12", view.selected)
             view.onPick!!("7")
             assertEquals("7", picked)
+            val facts: net.nevinsky.abyssus.editor.facts.SceneFacts<*> = project.getService(net.nevinsky.abyssus.SceneRayControls::class.java)
+            assertEquals(view.current.content, facts.content(scene.path))
+            assertEquals("7", facts.selection(scene.path))
         } finally {
             editor.dispose()
         }
+        assertNull(project.getService(net.nevinsky.abyssus.SceneRayControls::class.java).content(scene.path))
     }
 
     private fun fakeEditor(path: String, text: String, views: MutableList<FakeView>): Pair<SceneFileEditor, com.intellij.openapi.vfs.VirtualFile> {
@@ -155,7 +163,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"7":{"components":{"PositionComponent":{}}}}}}"""
         val (editor, file) = fakeEditor("selection/a.scene", text, views)
         try {
-            val entry = net.nevinsky.abyssus.projectView.DtoRow("7", net.nevinsky.abyssus.filetype.SceneJson.parse(text)["ecs"]["entities"]["7"])
+            val entry = net.nevinsky.abyssus.projectView.DtoRow("7", net.nevinsky.abyssus.editor.document.SceneJson.parse(text)["ecs"]["entities"]["7"])
             val node = net.nevinsky.abyssus.projectView.DtoEntryNode(project, file.path, entry, file, listOf("ecs", "entities"))
             net.nevinsky.abyssus.projectView.AbyssusSelection.of(project).select(node)
             assertEquals("7", views.single().selected)
@@ -232,8 +240,8 @@ class SceneFileEditorTest : BasePlatformTestCase() {
     }
 
     // Pin the test copy to the native writer's indentation before checking one-line edits and exact Undo.
-    private val mainScene get() = net.nevinsky.abyssus.filetype.SceneJson.pretty(
-        net.nevinsky.abyssus.filetype.SceneJson.parse(java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
+    private val mainScene get() = net.nevinsky.abyssus.editor.document.SceneJson.pretty(
+        net.nevinsky.abyssus.editor.document.SceneJson.parse(java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
     )
 
     private fun textOf(f: com.intellij.openapi.vfs.VirtualFile) =
@@ -336,23 +344,23 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     /** A copy of Untitled's `Main Scene` (the shared fixture is not touched) with a LightComponent on 7 and a spotlight 8. */
     private fun sceneWithOmittedLightValues(): String {
-        val root = net.nevinsky.abyssus.filetype.SceneJson.parse(
+        val root = net.nevinsky.abyssus.editor.document.SceneJson.parse(
             java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText(),
         ) as com.fasterxml.jackson.databind.node.ObjectNode
         val entities = root.get("ecs") as com.fasterxml.jackson.databind.node.ObjectNode
         (entities.get("7").get("components") as com.fasterxml.jackson.databind.node.ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>(
             "LightComponent",
-            net.nevinsky.abyssus.filetype.SceneJson.parse("""{"light":{"color":{"r":1,"g":0.96,"b":0.84,"a":1},"intensity":1.2}}"""),
+            net.nevinsky.abyssus.editor.document.SceneJson.parse("""{"light":{"color":{"r":1,"g":0.96,"b":0.84,"a":1},"intensity":1.2}}"""),
         )
         entities.set<com.fasterxml.jackson.databind.JsonNode>(
             "8",
-            net.nevinsky.abyssus.filetype.SceneJson.parse(
+            net.nevinsky.abyssus.editor.document.SceneJson.parse(
                 """{"archetype":1,"components":{"NameComponent":{"name":"Spot Light 8"},"TypeComponent":{"type":"LIGHT_SPOT"},
                 "PositionComponent":{"localPosition":{"x":1,"y":5,"z":2}},
                 "LightComponent":{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1}}}}""",
             ),
         )
-        return net.nevinsky.abyssus.filetype.SceneJson.compact(root)
+        return net.nevinsky.abyssus.editor.document.SceneJson.compact(root)
     }
 
     fun testOpeningTheViewAndSelectingLightsWithOmittedValuesLeavesTheTextAsItWas() {
@@ -366,7 +374,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             assertEquals(45f, lights.getValue("8").coneAngle, 0f)
             assertEquals(0.2f, lights.getValue("8").edgeSoftness, 0f)
             for (id in listOf("7", "8")) {
-                val entry = net.nevinsky.abyssus.projectView.DtoRow(id, net.nevinsky.abyssus.filetype.SceneJson.parse(prepared)["ecs"][id])
+                val entry = net.nevinsky.abyssus.projectView.DtoRow(id, net.nevinsky.abyssus.editor.document.SceneJson.parse(prepared)["ecs"][id])
                 val node = net.nevinsky.abyssus.projectView.DtoEntryNode(project, f.path, entry, f, listOf("ecs"))
                 net.nevinsky.abyssus.projectView.AbyssusSelection.of(project).select(node)
                 assertEquals(id, views.single().selected)
