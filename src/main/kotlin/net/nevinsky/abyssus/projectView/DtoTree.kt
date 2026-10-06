@@ -66,7 +66,7 @@ fun childrenOf(value: Any?): List<DtoRow> = when {
 }
 
 private fun beanProperties(bean: Any): List<DtoRow> =
-    SceneJson.mapper.serializationConfig.introspect(SceneJson.mapper.constructType(bean.javaClass)).findProperties().mapNotNull { p ->
+    SceneJson().mapper.serializationConfig.introspect(SceneJson().mapper.constructType(bean.javaClass)).findProperties().mapNotNull { p ->
         val accessor = p.accessor ?: return@mapNotNull null
         accessor.fixAccess(true)
         DtoRow(p.name, accessor.getValue(bean))

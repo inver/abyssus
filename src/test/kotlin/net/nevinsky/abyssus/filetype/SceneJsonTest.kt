@@ -18,7 +18,7 @@ class SceneJsonTest {
 
     @Test
     fun breaksMinifiedJsonIntoIndentedLines() {
-        val pretty = SceneJson.pretty(minified)!!
+        val pretty = SceneJson().pretty(minified)!!
         assertTrue(pretty.lines().size > 10)
         assertTrue(pretty, pretty.contains("\n  \"fog\": {\n    \"density\": 0.001,"))
         assertTrue(pretty.endsWith("}\n"))
@@ -26,7 +26,7 @@ class SceneJsonTest {
 
     @Test
     fun keepsKeyOrderAndNumberTextAndDoesNotEscapeHtml() {
-        val pretty = SceneJson.pretty(minified)!!
+        val pretty = SceneJson().pretty(minified)!!
         assertTrue(pretty.indexOf("\"id\"") < pretty.indexOf("\"name\""))
         assertTrue(pretty.indexOf("\"density\"") < pretty.indexOf("\"gradient\""))
         assertTrue(pretty, pretty.contains("\"r\": 1.0"))
@@ -37,35 +37,35 @@ class SceneJsonTest {
 
     @Test
     fun isIdempotent() {
-        val once = SceneJson.pretty(minified)!!
-        assertEquals(once, SceneJson.pretty(once))
+        val once = SceneJson().pretty(minified)!!
+        assertEquals(once, SceneJson().pretty(once))
     }
 
     @Test
     fun roundTripsToTheSameDocument() {
-        assertEquals(SceneJson.parse(minified), SceneJson.parse(SceneJson.pretty(minified)!!))
+        assertEquals(SceneJson().parse(minified), SceneJson().parse(SceneJson().pretty(minified)!!))
     }
 
     @Test
     fun invalidOrNonObjectJsonIsLeftAlone() {
-        assertNull(SceneJson.pretty("{ nope"))
-        assertNull(SceneJson.pretty(""))
-        assertNull(SceneJson.pretty("[1,2]"))
-        assertNull(SceneJson.pretty("42"))
-        assertNotNull(SceneJson.pretty("{}"))
+        assertNull(SceneJson().pretty("{ nope"))
+        assertNull(SceneJson().pretty(""))
+        assertNull(SceneJson().pretty("[1,2]"))
+        assertNull(SceneJson().pretty("42"))
+        assertNotNull(SceneJson().pretty("{}"))
     }
 
     @Test
     fun keepsNullMembersAtEveryLevel() {
         val withNulls = """{"format":"abyssus","formatVersion":1,"skyboxName":null,"fog":{"gradient":null,"color":{"r":1}},"list":[null,{"a":null}]}"""
-        val pretty = SceneJson.pretty(withNulls)!!
+        val pretty = SceneJson().pretty(withNulls)!!
         assertTrue(pretty, pretty.contains("\"skyboxName\": null"))
-        assertEquals(SceneJson.parse(withNulls), SceneJson.parse(pretty))
+        assertEquals(SceneJson().parse(withNulls), SceneJson().parse(pretty))
     }
 
     @Test
     fun compactKeepsNullsAndStaysOnOneLine() {
-        val element = SceneJson.parse("""{"a":null,"b":{"c":null},"d":"<x>"}""")
-        assertEquals("""{"a":null,"b":{"c":null},"d":"<x>"}""", SceneJson.compact(element))
+        val element = SceneJson().parse("""{"a":null,"b":{"c":null},"d":"<x>"}""")
+        assertEquals("""{"a":null,"b":{"c":null},"d":"<x>"}""", SceneJson().compact(element))
     }
 }

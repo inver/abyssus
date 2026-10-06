@@ -31,7 +31,7 @@ class RayMaterialPropertiesTest : BasePlatformTestCase() {
     private fun scene(overrides: String = ""): VirtualFile {
         myFixture.addFileToProject("p/p.abss", """{"format":"abyssus","formatVersion":1,"name":"p"}""")
         fun render(extra: String) = """{"renderable":{"kind":"asset","shaderKey":"pbr","asset":{"type":"MODEL","assetName":"bottle"}}$extra}"""
-        return myFixture.addFileToProject("p/scenes/s.scene", SceneJson.pretty(SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
+        return myFixture.addFileToProject("p/scenes/s.scene", SceneJson().pretty(SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "0":{"components":{"RenderComponent":${render(overrides)}}},
             "1":{"components":{"RenderComponent":${render("")}}}}}}"""))).virtualFile
     }
@@ -46,7 +46,7 @@ class RayMaterialPropertiesTest : BasePlatformTestCase() {
     private fun type(field: JBTextField, text: String) { field.text = text; field.postActionEvent() }
     private fun text(file: VirtualFile) = FileDocumentManager.getInstance().getDocument(file)!!.text
     private fun materials(file: VirtualFile, entity: String) =
-        SceneJson.parse(text(file))["ecs"]["entities"][entity]["components"]["RenderComponent"]["rayTracingMaterials"]
+        SceneJson().parse(text(file))["ecs"]["entities"][entity]["components"]["RenderComponent"]["rayTracingMaterials"]
 
     fun testTransmissionIsEditedInPercentAndStoredAsAFractionWithDefaultIorOmitted() {
         val file = scene()

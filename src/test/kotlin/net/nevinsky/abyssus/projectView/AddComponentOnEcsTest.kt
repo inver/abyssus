@@ -41,7 +41,7 @@ class AddComponentOnEcsTest : BasePlatformTestCase() {
     private fun ecsRow() = children(sceneNode()).single { label(it) == "ecs" }
     private fun scene() = viewableSceneFile(sceneNode())!!
     private fun document() = FileDocumentManager.getInstance().getDocument(scene())!!
-    private fun root() = SceneJson.parse(document().text)
+    private fun root() = SceneJson().parse(document().text)
 
     private class AddOn(val node: Any?) : AddComponentOnEcsAction() {
         override fun selected(e: AnActionEvent) = node

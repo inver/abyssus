@@ -20,14 +20,14 @@ class SceneEntitiesTest {
     private fun components(vararg names: String): ObjectNode =
         nodes.objectNode().also { c -> names.forEach { c.putObject(it) } }
 
-    private fun wrapped() = SceneJson.parse(File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
+    private fun wrapped() = SceneJson().parse(File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
 
     @Test
     fun theNextIdIsOneAboveTheHighestAndAnEmptySceneStartsAtZero() {
-        val main = SceneJson.parse(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
+        val main = SceneJson().parse(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
         assertEquals("9", SceneEntities.insert(main) { components("NameComponent") })
         assertTrue(main["ecs"]["9"]["components"].has("NameComponent"))
-        val empty = SceneJson.parse("""{"format":"abyssus","formatVersion":1}""")
+        val empty = SceneJson().parse("""{"format":"abyssus","formatVersion":1}""")
         assertEquals("0", SceneEntities.insert(empty) { components("NameComponent") })
         assertTrue(empty["ecs"]["0"].isObject)
     }
@@ -55,12 +55,12 @@ class SceneEntitiesTest {
         assertTrue(SceneEntities.matchArchetype(root, id))
         val archetype = root["ecs"]["archetypes"][root["ecs"]["entities"][id]["archetype"].asText()]
         assertEquals(setOf("NameComponent", "CameraComponent"), archetype.map { it.asText() }.toSet())
-        val native = SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{}}}}""")
+        val native = SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{}}}}""")
         assertTrue(SceneEntities.matchArchetype(native, "0"))
     }
 
     @Test
     fun aNonNativeSceneTakesNoEntity() {
-        assertNull(SceneEntities.insert(SceneJson.parse("""{"ecs":{}}""")) { components("NameComponent") })
+        assertNull(SceneEntities.insert(SceneJson().parse("""{"ecs":{}}""")) { components("NameComponent") })
     }
 }

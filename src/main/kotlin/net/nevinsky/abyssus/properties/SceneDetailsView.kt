@@ -115,7 +115,7 @@ internal class SceneDetailsView(
             when (val result = SceneRayEdits.setting(controls.project, file, field, expected, editor.text)) {
                 RayDataEdit.Changed, RayDataEdit.Unchanged -> {
                     error.text = ""
-                    expected = SceneJson.parse(textOf(file)).get("rayTracing")?.get(field.key)
+                    expected = SceneJson().parse(textOf(file)).get("rayTracing")?.get(field.key)
                     editor.text = expected?.toString() ?: field.default.toString()
                 }
                 RayDataEdit.Conflict -> {

@@ -21,8 +21,8 @@ class AssetEntitiesTest {
     private val tree = RenderAsset("MODEL", "tree")
     private val terrain = RenderAsset("TERRAIN", "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")
 
-    private fun mainScene() = SceneJson.parse(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
-    private fun empty() = SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{}}""")
+    private fun mainScene() = SceneJson().parse(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
+    private fun empty() = SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{}}""")
     /** The entity's position; the writer leaves out zero coordinates. */
     private fun position(entity: JsonNode) = entity["components"]["PositionComponent"]["localPosition"].let {
         Vec3(it.path("x").floatValue(), it.path("y").floatValue(), it.path("z").floatValue())
@@ -79,7 +79,7 @@ class AssetEntitiesTest {
 
     @Test
     fun aWrappedSceneGetsAMatchingArchetype() {
-        val root = SceneJson.parse(File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
+        val root = SceneJson().parse(File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
         val first = AssetEntities.add(root, tree, Vec3(0f, 0f, 0f))
         val ecs = root["ecs"]
         val entity = ecs["entities"][first.entityId]
@@ -93,7 +93,7 @@ class AssetEntitiesTest {
 
     @Test
     fun aNonNativeSceneOrAnotherAssetTypeIsRejected() {
-        val legacy = SceneJson.parse("""{"ecs":{}}""")
+        val legacy = SceneJson().parse("""{"ecs":{}}""")
         assertFalse(AssetEntities.add(legacy, tree, Vec3(0f, 0f, 0f)).result == EditResult.Changed)
         assertFalse(AssetEntities.add(empty(), RenderAsset("SKYBOX", "sky"), Vec3(0f, 0f, 0f)).result == EditResult.Changed)
         assertFalse(AssetEntities.add(empty(), tree, Vec3(Float.NaN, 0f, 0f)).result == EditResult.Changed)

@@ -118,7 +118,7 @@ class ScenePickerTest {
         val ground = ScenePicker.restHeight(OrientedBox(SceneMarkers.cameraBounds(camera.position), Matrix4()), emptyList(), listOf(TerrainTarget("1", data, placement.transform.toMatrix())))!!
         println("Camera 4: terrain=$ground lowest=${camera.position.y - 0.5f}")
         org.junit.Assert.assertTrue(kotlin.math.abs(camera.position.y - 0.5f - ground) > ScenePicker.REST_EPS)
-        val root = net.nevinsky.abyssus.editor.document.SceneJson.parse(java.io.File(dir, "scenes/Main Scene.scene").readText())
+        val root = net.nevinsky.abyssus.editor.document.SceneJson().parse(java.io.File(dir, "scenes/Main Scene.scene").readText())
         val components = root["ecs"]["4"]["components"]
         assertEquals(components["PositionComponent"]["localPosition"], components["CameraComponent"]["camera"]["position"])
     }

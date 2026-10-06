@@ -42,19 +42,22 @@ private class RawNumberNode(val text: String) : NumericNode() {
     override fun hashCode() = text.hashCode()
 }
 
+/** Unknown fields are ignored and properties keep declaration order, so a DTO lists its fields as the file does. */
+private val format = JsonFormat()
+
+private val sceneMapper: JsonMapper = format.mapperBuilder().build()
+
+private val nodes = JsonNodeFactory.instance
+
+private val prettyPrinter = format.prettyPrinter
+
 /**
  * Reading and writing of scene JSON, and the one [mapper] that binds asset files to their DTOs. Nulls are kept (a
  * scene's `"skyboxName": null` is data), key order and number text are unchanged, and HTML characters are not escaped.
+ * Stateless: every instance shares one mapper.
  */
-object SceneJson {
-    /** Unknown fields are ignored and properties keep declaration order, so a DTO lists its fields as the file does. */
-    private val format = JsonFormat()
-
-    val mapper: JsonMapper = format.mapperBuilder().build()
-
-    private val nodes = JsonNodeFactory.instance
-
-    private val prettyPrinter = format.prettyPrinter
+class SceneJson {
+    val mapper: JsonMapper get() = sceneMapper
 
     /** Parses [text] as exactly one JSON document; throws on malformed, empty or trailing input. */
     fun parse(text: String): JsonNode = mapper.createParser(text).use { p ->

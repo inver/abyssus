@@ -39,7 +39,7 @@ sealed interface PanelState {
     data class UISceneState(
         val file: VirtualFile,
         val name: String,
-        val rayRoot: JsonNode = SceneJson.parse("{}"),
+        val rayRoot: JsonNode = SceneJson().parse("{}"),
         val raySettings: SceneRaySettingsState = SceneRaySettingsCodec().read(rayRoot),
     ) : PanelState
 
@@ -123,7 +123,7 @@ private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreview
  */
 fun readEntityState(target: ComponentTarget, services: PanelServices): PanelState {
     val root = runCatchingKeepingCancellation {
-        SceneJson.parse(runReadAction { textOf(target.file) }).also {
+        SceneJson().parse(runReadAction { textOf(target.file) }).also {
             AbyssusDocumentFormat().requireSupported(it, DocumentKind.SCENE)
         }
     }.getOrElse { return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.displayMessage()), null) }
@@ -173,7 +173,7 @@ fun readTerrainSourceNow(folder: VirtualFile, services: PanelServices): net.nevi
 
 /** Current native scene preferences, read off the EDT independently of renderer availability. */
 fun readSceneState(file: VirtualFile, name: String): PanelState = runCatchingKeepingCancellation {
-    val root = SceneJson.parse(runReadAction { textOf(file) })
+    val root = SceneJson().parse(runReadAction { textOf(file) })
     AbyssusDocumentFormat().requireSupported(root, DocumentKind.SCENE)
     PanelState.UISceneState(file, name, root)
 }.getOrElse { PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.displayMessage()), null) }

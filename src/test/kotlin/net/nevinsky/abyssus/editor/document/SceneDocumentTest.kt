@@ -16,8 +16,8 @@ class SceneDocumentTest {
     private val text get() = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
 
     @Test fun fixtureReadViewAgreesWithPinnedContentWithoutChangingText() {
-        val root = SceneJson.parse(text)
-        val before = SceneJson.inStyleOf(text, root)
+        val root = SceneJson().parse(text)
+        val before = SceneJson().inStyleOf(text, root)
         val document = SceneDocument(root, decoder)
         assertEquals((0..10).map(Int::toString), document.entities().map { it.id })
         val entity = document.entity("0")!!
@@ -29,23 +29,23 @@ class SceneDocumentTest {
         assertEquals(listOf("ecs", "0", "components"), document.locate("0"))
         assertNotNull(document.lookAtTarget("4"))
         assertNull(document.lookAtTarget("0"))
-        assertEquals(before, SceneJson.inStyleOf(text, root))
+        assertEquals(before, SceneJson().inStyleOf(text, root))
     }
 
     @Test fun wrappedAddressAndExtensionPayloadAreRetained() {
         val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"7":{"components":{"PositionComponent":{},"WindComponent":{"gain":1.2300}}}},"archetypes":{}}}"""
-        val root = SceneJson.parse(text)
+        val root = SceneJson().parse(text)
         val document = SceneDocument(root, decoder)
         assertEquals(listOf("ecs", "entities", "7", "components"), document.locate("7"))
         assertEquals("7", document.entity("7")!!.name)
         assertEquals(0f, document.entity("7")!!.component(PositionComponent::class.java)!!.localPosition.x, 0f)
         assertNull(document.entity("missing"))
-        assertEquals(text, SceneJson.inStyleOf(text, root))
+        assertEquals(text, SceneJson().inStyleOf(text, root))
     }
 
     @Test fun nativeAdmissionPrecedesEnumeration() {
         assertThrows(UnsupportedDocumentFormat::class.java) {
-            SceneDocument(SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{"componentIdentifiers":{}}}"""), decoder)
+            SceneDocument(SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"componentIdentifiers":{}}}"""), decoder)
         }
     }
 }

@@ -15,13 +15,13 @@ import org.junit.Test
 
 class SceneRaySettingsTest {
     private val codec = SceneRaySettingsCodec()
-    private fun root(fields: String = "") = SceneJson.parseObject("""{"format":"abyssus","formatVersion":1$fields}""")
+    private fun root(fields: String = "") = SceneJson().parseObject("""{"format":"abyssus","formatVersion":1$fields}""")
 
     @Test fun absentFieldsReadDefaultsWithoutWriting() {
-        val r = root(); val before = SceneJson.compact(r)
+        val r = root(); val before = SceneJson().compact(r)
         assertEquals(SceneRaySettings(), codec.read(r).settings)
         assertTrue(codec.read(r).errors.isEmpty())
-        assertEquals(before, SceneJson.compact(r))
+        assertEquals(before, SceneJson().compact(r))
     }
     @Test fun allLimitsAreAcceptedAndAdjacentValuesRejected() {
         for (field in SceneRayField.entries) {
@@ -45,18 +45,18 @@ class SceneRaySettingsTest {
     @Test fun editsPruneDefaultsAndOnlyEmptyContainers() {
         val r = root(",\"rayTracing\":{\"maxReflectionBounces\":3,\"future\":2.500},\"other\":-0.00")
         assertEquals(RayDataEdit.Changed, codec.edit(r, SceneRayField.REFLECTIONS, r["rayTracing"]["maxReflectionBounces"], "1"))
-        assertEquals("""{"format":"abyssus","formatVersion":1,"rayTracing":{"future":2.500},"other":-0.00}""", SceneJson.compact(r))
+        assertEquals("""{"format":"abyssus","formatVersion":1,"rayTracing":{"future":2.500},"other":-0.00}""", SceneJson().compact(r))
         val empty = root(",\"rayTracing\":{\"maxRefractionBounces\":2}")
         assertEquals(RayDataEdit.Changed, codec.edit(empty, SceneRayField.REFRACTIONS, empty["rayTracing"]["maxRefractionBounces"], "0"))
         assertFalse(empty.has("rayTracing"))
     }
     @Test fun staleInvalidAndEqualEditsWriteNothing() {
         val r = root(",\"rayTracing\":{\"targetSamplesPerPixel\":512}")
-        val before=SceneJson.compact(r)
+        val before=SceneJson().compact(r)
         assertEquals(RayDataEdit.Conflict, codec.edit(r, SceneRayField.SAMPLES, null, "1024"))
         assertEquals(RayDataEdit.Unchanged, codec.edit(r, SceneRayField.SAMPLES, r["rayTracing"]["targetSamplesPerPixel"], "512"))
         for (value in listOf("abc", "1.1", "0", "4097")) assertTrue(codec.edit(r, SceneRayField.SAMPLES, r["rayTracing"]["targetSamplesPerPixel"], value) is RayDataEdit.Rejected)
-        assertEquals(before,SceneJson.compact(r))
+        assertEquals(before,SceneJson().compact(r))
     }
     @Test fun malformedFieldCanBeCorrectedWithoutRepairingOtherFields() {
         val r=root(",\"rayTracing\":{\"maxReflectionBounces\":null,\"maxRaysPerFrame\":-1}")

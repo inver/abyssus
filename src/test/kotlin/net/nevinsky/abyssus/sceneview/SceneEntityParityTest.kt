@@ -23,15 +23,15 @@ class SceneEntityParityTest {
 
     /** A copy of `Main Scene` in memory: entity 7 gets a LightComponent and a spotlight 8 omits range, cone and softness. */
     private fun scene(): ObjectNode {
-        val root = SceneJson.parse(fixture.readText()) as ObjectNode
+        val root = SceneJson().parse(fixture.readText()) as ObjectNode
         val entities = root.get("ecs") as ObjectNode
         (entities.get("7").get("components") as ObjectNode).set<JsonNode>(
             "LightComponent",
-            SceneJson.parse("""{"light":{"color":{"r":1,"g":0.96,"b":0.84,"a":1},"intensity":1.2}}"""),
+            SceneJson().parse("""{"light":{"color":{"r":1,"g":0.96,"b":0.84,"a":1},"intensity":1.2}}"""),
         )
         entities.set<JsonNode>(
             "8",
-            SceneJson.parse(
+            SceneJson().parse(
                 """{"archetype":1,"components":{"NameComponent":{"name":"Spot Light 8"},"TypeComponent":{"type":"LIGHT_SPOT"},
                 "PositionComponent":{"localPosition":{"x":1,"y":5,"z":2}},
                 "LightComponent":{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1}}}}""",
@@ -90,7 +90,7 @@ class SceneEntityParityTest {
     fun aTextualHandleTargetIsReadTheSameWay() {
         val root = scene()
         val entities = root.get("ecs") as ObjectNode
-        entities.set<JsonNode>("h", SceneJson.parse("""{"archetype":1,"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}}"""))
+        entities.set<JsonNode>("h", SceneJson().parse("""{"archetype":1,"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}}"""))
         ((entities.get("7").get("components") as ObjectNode).get("PositionComponent") as ObjectNode).put("lookAtId", "h")
         val content = SceneContent.of(parseScene(root.toString()))
         assertEquals("h", content.lights.single { it.entityId == "7" }.lookAtId)

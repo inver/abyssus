@@ -70,7 +70,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             assertEquals("0", selected)
             choices[1].actionPerformed(TestActionEvent.createTestEvent(choices[1]))
             val document = FileDocumentManager.getInstance().getDocument(file)!!
-            val ecs = SceneJson.parse(document.text)["ecs"]
+            val ecs = SceneJson().parse(document.text)["ecs"]
             fun at(id: String) = ecs[id]["components"]["PositionComponent"]["localPosition"].let {
                 Vec3(it.path("x").floatValue(), it.path("y").floatValue(), it.path("z").floatValue())
             }

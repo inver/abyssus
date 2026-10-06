@@ -111,7 +111,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
 
     fun testDetailLineCountsFacesAndSortsFormats() {
         val dto = ProjectDto("P", emptyList(), listOf(testAsset("sky", "1", "SKYBOX")))
-        val meta = SceneJson.parse(faces("a.png", "b.PNG", "c.jpg", "d.png", "e.jpg", "f.png"))
+        val meta = SceneJson().parse(faces("a.png", "b.PNG", "c.jpg", "d.png", "e.jpg", "f.png"))
         val choice = skyboxChoices(dto, mapOf("sky" to meta)).single()
         assertEquals(6, choice.faces)
         assertEquals(listOf("jpg", "png"), choice.formats)
@@ -120,7 +120,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
 
     fun testMissingFacesAndMetaDoNotFail() {
         val dto = ProjectDto("P", emptyList(), listOf(testAsset("partial", "1", "SKYBOX"), testAsset("bare", "2", "SKYBOX")))
-        val choices = skyboxChoices(dto, mapOf("partial" to SceneJson.parse(faces("a.png", "", "c.png")), "bare" to null))
+        val choices = skyboxChoices(dto, mapOf("partial" to SceneJson().parse(faces("a.png", "", "c.png")), "bare" to null))
         val partial = choices.first { it.name == "partial" }
         assertEquals(2, partial.faces)
         assertEquals("2 faces · png", partial.detail)

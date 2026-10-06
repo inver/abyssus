@@ -23,8 +23,8 @@ import org.junit.Test
 import java.io.File
 
 class LightEntitiesTest {
-    private fun fixture() = SceneJson.parse(File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
-    private fun empty() = SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""")
+    private fun fixture() = SceneJson().parse(File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
+    private fun empty() = SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""")
 
     @Test fun createsNextEntityAndPreservesExistingData() {
         val root = fixture()
@@ -77,7 +77,7 @@ class LightEntitiesTest {
 
     @Test fun missingEcsOrEntitiesIsAnEmptyScene() {
         for (text in listOf("""{"format":"abyssus","formatVersion":1}""", """{"format":"abyssus","formatVersion":1,"name":"Empty","ecs":{}}""")) {
-            val root = SceneJson.parse(text)
+            val root = SceneJson().parse(text)
             val added = LightEntities.add(root, LightPreset.SUN, Vec3(0f, 0f, 0f))
             assertEquals(EditResult.Changed, added.result)
             assertEquals("0", added.entityId)
@@ -86,7 +86,7 @@ class LightEntitiesTest {
     }
 
     @Test fun noncanonicalArchetypeKeysDoNotBecomeBrokenReferences() {
-        val root = SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{},"archetypes":{"01":["NameComponent","TypeComponent","PositionComponent","LightComponent"]}}}""")
+        val root = SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{},"archetypes":{"01":["NameComponent","TypeComponent","PositionComponent","LightComponent"]}}}""")
         LightEntities.add(root, LightPreset.SUN, Vec3(0f, 0f, 0f))
         val ecs = root["ecs"]
         val archetype = ecs["entities"]["0"]["archetype"].asText()
@@ -96,7 +96,7 @@ class LightEntitiesTest {
 
     @Test fun malformedBookkeepingIsRejectedWithoutMutation() {
         for (text in listOf("""{"format":"abyssus","formatVersion":1,"ecs":[]}""", "[]", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":[],"archetypes":{}}}""", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{},"archetypes":[]}}""")) {
-            val root = SceneJson.parse(text)
+            val root = SceneJson().parse(text)
             val before = root.toString()
             assertTrue(LightEntities.add(root, LightPreset.SUN, Vec3(0f, 0f, 0f)).result is EditResult.Rejected)
             assertEquals(before, root.toString())

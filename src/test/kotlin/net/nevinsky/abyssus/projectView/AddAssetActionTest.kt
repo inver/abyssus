@@ -40,7 +40,7 @@ class AddAssetActionTest : BasePlatformTestCase() {
     private fun sceneNode() = children(children(abss()).single { label(it) == "scenes" }).single()
     private fun scene() = viewableSceneFile(sceneNode())!!
     private fun document() = FileDocumentManager.getInstance().getDocument(scene())!!
-    private fun entities() = SceneJson.parse(document().text)["ecs"]
+    private fun entities() = SceneJson().parse(document().text)["ecs"]
 
     private class AddOn(val node: Any?) : AddAssetAction() {
         override fun selected(e: AnActionEvent) = node

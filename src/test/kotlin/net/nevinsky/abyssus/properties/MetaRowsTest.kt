@@ -17,11 +17,11 @@ private fun load(folder: com.intellij.openapi.vfs.VirtualFile) = loadAssetMeta(f
 class MetaRowsTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
 
-    private fun sample(folder: String) = SceneJson.parseObject(File("$testDataPath/Untitled/assets/$folder/meta.json").readText())
+    private fun sample(folder: String) = SceneJson().parseObject(File("$testDataPath/Untitled/assets/$folder/meta.json").readText())
 
     private fun terrainFolder() = File("$testDataPath/Untitled/assets").listFiles { f -> f.name.startsWith("terrain_") }!!.single().name
 
-    private fun rows(json: String) = metaRowsOf(SceneJson.parseObject(json), ZoneOffset.UTC)
+    private fun rows(json: String) = metaRowsOf(SceneJson().parseObject(json), ZoneOffset.UTC)
 
     fun testSkyboxListsTopLevelFieldsThenAdditionalFacesInFileOrder() {
         val rows = metaRowsOf(sample("skybox_default"), ZoneOffset.UTC)

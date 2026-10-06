@@ -59,7 +59,7 @@ data class SceneRenderParams(
     val projectDir: File? = null,
     /** The scene's `ecs` block as read, for scene overlays that draw components the view does not model. */
     val ecs: JsonNode? = null,
-    val rayTracing: SceneRaySettingsState = SceneRaySettingsCodec().read(SceneJson.mapper.createObjectNode()),
+    val rayTracing: SceneRaySettingsState = SceneRaySettingsCodec().read(SceneJson().mapper.createObjectNode()),
 ) {
     companion object {
         val DEFAULT_CLEAR = Rgba(0.1f, 0.1f, 0.15f, 1f)
@@ -75,8 +75,8 @@ data class SceneRenderParams(
                 SceneContent.of(scene),
                 projectDir,
                 scene.ecs,
-                SceneRaySettingsCodec().read(SceneJson.mapper.createObjectNode().also { root ->
-                    scene.rayTracing?.let { root.set<JsonNode>("rayTracing", SceneJson.mapper.valueToTree(it)) }
+                SceneRaySettingsCodec().read(SceneJson().mapper.createObjectNode().also { root ->
+                    scene.rayTracing?.let { root.set<JsonNode>("rayTracing", SceneJson().mapper.valueToTree(it)) }
                 }),
             )
         }
@@ -108,7 +108,7 @@ internal fun normalized(v: Vec3): Vec3? {
 /** The `mainCamera` of the `.abss` project a scene belongs to. */
 object MainCamera {
     fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
-        val root = SceneJson.parse(abssText).takeIf { it.isObject } ?: return null
+        val root = SceneJson().parse(abssText).takeIf { it.isObject } ?: return null
         if (net.nevinsky.abyssus.format.AbyssusDocumentFormat()
                 .validate(root, net.nevinsky.abyssus.format.DocumentKind.PROJECT) != null
         ) return null

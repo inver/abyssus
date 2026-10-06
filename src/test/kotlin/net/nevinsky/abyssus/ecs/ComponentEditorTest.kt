@@ -25,7 +25,7 @@ class ComponentEditorTest {
     private val editor = ComponentEditor()
 
     private fun scene(vararg entities: String) =
-        SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{${entities.joinToString(",")}},"archetypes":{"1":{"a":1}},"metadata":{"m":2}}}""")
+        SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{${entities.joinToString(",")}},"archetypes":{"1":{"a":1}},"metadata":{"m":2}}}""")
 
     private fun entity(id: Int, components: String) = """"$id":{"archetype":1,"components":{$components}}"""
 
@@ -267,7 +267,7 @@ class ComponentEditorTest {
     @Test
     fun mainSceneEditsKeepEverythingElse() {
         val file = File("src/test/testData/project/Untitled/scenes/Main Scene.scene")
-        val original = SceneJson.parse(file.readText())
+        val original = SceneJson().parse(file.readText())
         val root = original.deepCopy<JsonNode>()
         assertEquals(EditResult.Changed, editor.add(root, "0", "LightComponent"))
         assertEquals(EditResult.Changed, editor.update(root, "4", "CameraComponent", "camera.fieldOfView", "50"))
@@ -280,7 +280,7 @@ class ComponentEditorTest {
 
     @Test
     fun editedMainSceneLoadsWithoutNewWarnings() {
-        val original = SceneJson.parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
+        val original = SceneJson().parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
         val root = original.deepCopy<JsonNode>()
         editor.add(root, "0", "LightComponent")
         editor.update(root, "4", "CameraComponent", "camera.near", "0.25")
@@ -302,7 +302,7 @@ class ComponentEditorTest {
         for (node in listOf("3", "\"3\"", "\"-1\"", "\"h\"")) {
             val root = scene(entity(0, """"PositionComponent":{"lookAtId":$node,"localPosition":{"x":1}}"""))
             assertEquals(EditResult.Changed, editor.update(root, "0", "PositionComponent", "localPosition.x", "5"))
-            assertEquals(node, SceneJson.parse(node), components(root, 0)["PositionComponent"]["lookAtId"])
+            assertEquals(node, SceneJson().parse(node), components(root, 0)["PositionComponent"]["lookAtId"])
             assertEquals(5, components(root, 0)["PositionComponent"]["localPosition"]["x"].asInt())
         }
     }
@@ -311,7 +311,7 @@ class ComponentEditorTest {
 
     private val customDir = "src/test/testData/project/Custom"
     private val planeEditor = ComponentEditor(SchemaFile().parse(File("$customDir/abyssus/components.schema.json").readText()).components)
-    private fun customScene() = SceneJson.parse(File("$customDir/scenes/Field.scene").readText())
+    private fun customScene() = SceneJson().parse(File("$customDir/scenes/Field.scene").readText())
 
     @Test
     fun addAPlaneWritesAnEmptyObjectAndNoIdentifierTable() {

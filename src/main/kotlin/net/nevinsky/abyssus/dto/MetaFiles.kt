@@ -23,5 +23,5 @@ class MetaFiles(private val reader: AssetMetaReader) {
      * keep their text for display; null when the folder has none.
      */
     fun inEditor(folder: VirtualFile): MetaDocument? =
-        folder.findChild(META_FILE)?.let { reader.read(SceneJson.parseObject(textOf(it))) }
+        folder.findChild(META_FILE)?.let { reader.read(SceneJson().parseObject(textOf(it))) }
 }

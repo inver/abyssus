@@ -83,7 +83,7 @@ fun readEntitySections(
                 return EntitySections.Gone(messages.message("propertiesComponentGone", entityId, name.removeSuffix("Component")))
 
             modeled == null || fields == null ->
-                ComponentSection(name, name.removeSuffix("Component").ifEmpty { name }, emptyList(), SceneJson.pretty(components[name]))
+                ComponentSection(name, name.removeSuffix("Component").ifEmpty { name }, emptyList(), SceneJson().pretty(components[name]))
 
             else -> ComponentSection(name, modeled.label, fields.map { field ->
                 when {

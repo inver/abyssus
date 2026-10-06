@@ -36,7 +36,7 @@ class EditorReadBaselineTest : BasePlatformTestCase() {
     }
 
     fun testTreeRowsAndPanelState() {
-        val root = SceneJson.parse(text)
+        val root = SceneJson().parse(text)
         assertEquals((0..10).map(Int::toString), ecsRows(root.get("ecs")).map { it.name })
         assertEquals(listOf("NameComponent", "PickableComponent", "PositionComponent", "RenderComponent", "TypeComponent"),
             entityRows(root.get("ecs").get("0")).map { it.name })

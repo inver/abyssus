@@ -25,15 +25,15 @@ class SceneTransformWriterTest {
     @Test
     fun droppingAModelChangesOnlyYAndPreservesNumberText() {
         val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"PositionComponent":{"localPosition":{"x":1.230000,"y":5.000,"z":-2.34000}}}}}}}"""
-        val root = SceneJson.parse(text)
+        val root = SceneJson().parse(text)
         assertTrue(SceneTransformWriter.apply(root, "0", TransformEdit(position = Vec3(1.23f, 1f, -2.34f))))
-        assertEquals(text.replace("5.000", "1.0"), SceneJson.compact(root))
+        assertEquals(text.replace("5.000", "1.0"), SceneJson().compact(root))
     }
 
     @Test
     fun droppingACameraChangesOnlyBothYsAndPreservesTheRest() {
-        val root = SceneJson.parse(text)
-        val before = SceneJson.parse(text)
+        val root = SceneJson().parse(text)
+        val before = SceneJson().parse(text)
         val c = components(root, "4")
         val local = c["PositionComponent"]["localPosition"] as com.fasterxml.jackson.databind.node.ObjectNode
         val camera = c["CameraComponent"]["camera"]["position"] as com.fasterxml.jackson.databind.node.ObjectNode
@@ -45,12 +45,12 @@ class SceneTransformWriterTest {
         // Restoring the two changed values reproduces every key, value and original number text exactly.
         local.set<JsonNode>("y", components(before, "4")["PositionComponent"]["localPosition"]["y"])
         camera.set<JsonNode>("y", components(before, "4")["CameraComponent"]["camera"]["position"]["y"])
-        assertEquals(SceneJson.compact(before), SceneJson.compact(root))
+        assertEquals(SceneJson().compact(before), SceneJson().compact(root))
     }
 
     @Test
     fun movingAnEntityChangesOnlyItsLocalPositionX() {
-        val root = SceneJson.parse(text)
+        val root = SceneJson().parse(text)
         val before = components(root, "0").get("PositionComponent").get("localPosition")
         val y = before.get("y").asText()
         val z = before.get("z").asText()
@@ -60,14 +60,14 @@ class SceneTransformWriterTest {
         assertEquals(y, after.get("y").asText())
         assertEquals(z, after.get("z").asText())
         // every other entity and value is as it was
-        val untouched = SceneJson.parse(text)
+        val untouched = SceneJson().parse(text)
         (components(untouched, "0").get("PositionComponent").get("localPosition") as com.fasterxml.jackson.databind.node.ObjectNode).set<JsonNode>("x", after.get("x"))
         assertEquals(untouched, root)
     }
 
     @Test
     fun movingACameraChangesBothPositions() {
-        val root = SceneJson.parse(text)
+        val root = SceneJson().parse(text)
         val p = components(root, "4").get("PositionComponent").get("localPosition")
         val moved = Vec3(p.get("x").floatValue(), p.get("y").floatValue() + 1f, p.get("z").floatValue())
         assertTrue(SceneTransformWriter.apply(root, "4", TransformEdit(position = moved)))
@@ -79,7 +79,7 @@ class SceneTransformWriterTest {
 
     @Test
     fun rotatingACameraWritesItsViewPoint() {
-        val root = SceneJson.parse(text)
+        val root = SceneJson().parse(text)
         val dir = Vec3(1f, 0f, 0f)
         assertTrue(SceneTransformWriter.apply(root, "4", TransformEdit(rotation = Quat(0f, 0.7071f, 0f, 0.7071f), direction = dir)))
         val c = components(root, "4")
@@ -89,7 +89,7 @@ class SceneTransformWriterTest {
 
     @Test
     fun rotatingAnEntityWithoutLocalRotationAddsAllFourFields() {
-        val root = SceneJson.parse(text)
+        val root = SceneJson().parse(text)
         assertNull(components(root, "0").get("PositionComponent").get("localRotation"))
         assertTrue(SceneTransformWriter.apply(root, "0", TransformEdit(rotation = Quat(0f, 0.7071f, 0f, 0.7071f))))
         val q = components(root, "0").get("PositionComponent").get("localRotation")
@@ -99,32 +99,32 @@ class SceneTransformWriterTest {
 
     @Test
     fun anEntityWithoutAPositionComponentGetsOne() {
-        val root = SceneJson.parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"1":{"components":{"NameComponent":{"name":"a"}}}}}}""")
+        val root = SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"1":{"components":{"NameComponent":{"name":"a"}}}}}}""")
         assertTrue(SceneTransformWriter.apply(root, "1", TransformEdit(position = Vec3(1f, 0f, 0f))))
         assertEquals(1f, components(root, "1").get("PositionComponent").get("localPosition").get("x").floatValue(), 0f)
     }
 
     @Test
     fun anUnknownEntityReturnsFalse() {
-        val root = SceneJson.parse(text)
+        val root = SceneJson().parse(text)
         assertFalse(SceneTransformWriter.apply(root, "99", TransformEdit(position = Vec3(1f, 2f, 3f))))
-        assertEquals(SceneJson.parse(text), root)
+        assertEquals(SceneJson().parse(text), root)
     }
 
     @Test
     fun anEditEqualToTheCurrentValuesReturnsFalse() {
-        val root = SceneJson.parse(text)
+        val root = SceneJson().parse(text)
         val p = components(root, "0").get("PositionComponent").get("localPosition")
         val same = Vec3(p.get("x").floatValue(), p.get("y").floatValue(), p.get("z").floatValue())
         assertFalse(SceneTransformWriter.apply(root, "0", TransformEdit(position = same)))
         assertFalse(SceneTransformWriter.apply(root, "0", TransformEdit(rotation = Quat.IDENTITY)))
-        assertEquals(SceneJson.parse(text), root)
+        assertEquals(SceneJson().parse(text), root)
     }
 
     @Test
     fun aHandleMoveWritesTheHandlePosition() {
         val mundus = File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()
-        val root = SceneJson.parse(mundus)
+        val root = SceneJson().parse(mundus)
         val handle = components(root, "0").get("PositionComponent")
         // The fixture's handle has an empty PositionComponent and no localPosition.
         assertFalse(handle.has("localPosition"))
@@ -143,34 +143,34 @@ class SceneTransformWriterTest {
         val lightComponent = components(root, "1").get("LightComponent")
         assertEquals(0, lightComponent.size())
         // Every other entity is untouched.
-        val untouched = SceneJson.parse(mundus)
+        val untouched = SceneJson().parse(mundus)
         (components(untouched, "0").get("PositionComponent") as com.fasterxml.jackson.databind.node.ObjectNode)
             .set<JsonNode>("localPosition", written.get("localPosition"))
-        assertEquals(SceneJson.compact(untouched), SceneJson.compact(root))
+        assertEquals(SceneJson().compact(untouched), SceneJson().compact(root))
     }
 
     @Test
     fun aHandleMoveToTheSamePlaceChangesNothing() {
         val mundus = File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()
-        val root = SceneJson.parse(mundus)
+        val root = SceneJson().parse(mundus)
         val same = Vec3(0f, 10f, -10f)
         assertTrue(SceneTransformWriter.apply(root, "1", TransformEdit(target = TargetMove("0", same))))
         // Writing the same value again changes nothing.
         assertFalse(SceneTransformWriter.apply(root, "1", TransformEdit(target = TargetMove("0", same))))
         // The final state is the fixture with the handle's localPosition set and nothing else changed.
-        val expected = SceneJson.parse(mundus)
+        val expected = SceneJson().parse(mundus)
         (components(expected, "0").get("PositionComponent") as com.fasterxml.jackson.databind.node.ObjectNode)
             .set<JsonNode>("localPosition", components(root, "0").get("PositionComponent").get("localPosition"))
-        assertEquals(SceneJson.compact(expected), SceneJson.compact(root))
+        assertEquals(SceneJson().compact(expected), SceneJson().compact(root))
     }
 
     @Test
     fun aHandleMoveToAMissingEntityLeavesTheTreeAsItWas() {
         val mundus = File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()
-        val root = SceneJson.parse(mundus)
+        val root = SceneJson().parse(mundus)
         val edit = TransformEdit(rotation = Quat(0f, 1f, 0f, 0f), target = TargetMove("99", Vec3(0f, 10f, -10f)))
         assertFalse(SceneTransformWriter.apply(root, "1", edit))
-        assertEquals(SceneJson.compact(SceneJson.parse(mundus)), SceneJson.compact(root))
+        assertEquals(SceneJson().compact(SceneJson().parse(mundus)), SceneJson().compact(root))
     }
 
     @Test
@@ -178,21 +178,21 @@ class SceneTransformWriterTest {
         val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "h":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":5}},
             "l":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"PositionComponent":{"lookAtId":"h"}}}}}}"""
-        val root = SceneJson.parse(text)
+        val root = SceneJson().parse(text)
         val edit = TransformEdit(rotation = Quat(0f, 1f, 0f, 0f), target = TargetMove("h", Vec3(0f, 0f, -1f)))
         assertFalse(SceneTransformWriter.apply(root, "l", edit))
-        assertEquals(SceneJson.compact(SceneJson.parse(text)), SceneJson.compact(root))
+        assertEquals(SceneJson().compact(SceneJson().parse(text)), SceneJson().compact(root))
     }
 
     // Byte-for-byte: the expected text is the fixture's own text with only the intended values replaced. The values were
     // first produced by the writer before it read entities through SceneEcsPaths, so the move is a pure refactor.
     private fun written(id: String, edit: TransformEdit): String {
-        val root = SceneJson.parse(text)
+        val root = SceneJson().parse(text)
         assertTrue(SceneTransformWriter.apply(root, id, edit))
-        return SceneJson.compact(root)
+        return SceneJson().compact(root)
     }
 
-    private fun original() = SceneJson.compact(SceneJson.parse(text))
+    private fun original() = SceneJson().compact(SceneJson().parse(text))
 
     @Test
     fun aMoveWritesExactlyTheNewXAndNothingElse() {

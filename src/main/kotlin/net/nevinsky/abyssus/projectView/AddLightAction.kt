@@ -46,7 +46,7 @@ class AddLightGroup(
 
 /** Publish a new entity immediately, then select its row when the asynchronous tree refresh reaches it. */
 internal fun selectCreatedEntity(project: Project, file: VirtualFile, entityId: String) {
-    val tree = runCatchingKeepingCancellation { SceneEntityTree(SceneJson.parse(textOf(file))) }.getOrNull()
+    val tree = runCatchingKeepingCancellation { SceneEntityTree(SceneJson().parse(textOf(file))) }.getOrNull()
     val entity = tree?.entities()?.get(entityId)
     if (entity?.isObject == true) {
         val node = DtoEntryNode(project, file.path, DtoRow(entityId, entity), file, tree.entityKeys())

@@ -70,7 +70,7 @@ class SceneDocumentCache(project: Project, private val parse: ((String) -> Parse
         /** Binds [text] with [reader] and parses it as a JSON tree; throws when either cannot read it. */
         fun parsedScene(reader: SceneReader, text: String): ParsedScene {
             val scene = reader.parse(text)
-            return ParsedScene(SceneJson.parse(text), scene)
+            return ParsedScene(SceneJson().parse(text), scene)
         }
 
         fun of(project: Project): SceneDocumentCache = project.service()

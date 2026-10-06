@@ -23,13 +23,13 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
     private fun text(file: VirtualFile) = String(file.contentsToByteArray())
 
     fun testPrettyFileStaysPrettyAndLosesNothingWhenToggled() {
-        val pretty = SceneJson.pretty(compact)!!
+        val pretty = SceneJson().pretty(compact)!!
         val file = myFixture.addFileToProject("p/Main.scene", pretty).virtualFile
         assertTrue(toggleFog(file))
         val after = text(file)
         assertTrue(after, after.lines().size > 5)
         assertTrue(after.contains("\"fogEnabled\": false"))
-        assertEquals(SceneJson.parse(compact.replace("\"fogEnabled\":true", "\"fogEnabled\":false")), SceneJson.parse(after))
+        assertEquals(SceneJson().parse(compact.replace("\"fogEnabled\":true", "\"fogEnabled\":false")), SceneJson().parse(after))
         assertTrue("null member kept", after.contains("\"skyboxName\": null"))
     }
 
@@ -40,7 +40,7 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
     }
 
     fun testRenameKeepsPrettyFormatting() {
-        val file = myFixture.addFileToProject("p/Rename.scene", SceneJson.pretty(compact)!!).virtualFile
+        val file = myFixture.addFileToProject("p/Rename.scene", SceneJson().pretty(compact)!!).virtualFile
         assertTrue(renameScene(project, file, "Forest"))
         val after = text(file)
         assertTrue(after, after.contains("\n  \"name\": \"Forest\""))
@@ -68,17 +68,17 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
         val entry = DtoEntry("x/skyboxName", "skyboxName", "sky", true, "skyboxEnabled", file, emptyList())
         assertTrue(toggleEnabled(project, entry))
         assertEquals("""{"format":"abyssus","formatVersion":1,"skyboxEnabled":false,"skyboxName":"sky"}""", text(file))
-        assertNull(SceneJson.parse(text(file)).get("skybox"))
+        assertNull(SceneJson().parse(text(file)).get("skybox"))
     }
 
     fun testSettingASkyboxKeepsFormattingAndTheEnabledFlag() {
         val source = """{"format":"abyssus","formatVersion":1,"id":0,"name":"Main","skyboxEnabled":false,"skyboxName":null,"fogEnabled":true,"fog":{"density":0.001}}"""
-        val file = myFixture.addFileToProject("p/SetSky.scene", SceneJson.pretty(source)!!).virtualFile
+        val file = myFixture.addFileToProject("p/SetSky.scene", SceneJson().pretty(source)!!).virtualFile
         assertTrue(setSkybox(project, file, "skybox_default"))
         val after = text(file)
         assertTrue(after, after.lines().size > 5)
         assertTrue(after.contains("\"skyboxName\": \"skybox_default\""))
-        assertEquals(SceneJson.parse(source.replace("\"skyboxName\":null", "\"skyboxName\":\"skybox_default\"")), SceneJson.parse(after))
+        assertEquals(SceneJson().parse(source.replace("\"skyboxName\":null", "\"skyboxName\":\"skybox_default\"")), SceneJson().parse(after))
     }
 
     fun testClearingTheSkyboxWritesNull() {

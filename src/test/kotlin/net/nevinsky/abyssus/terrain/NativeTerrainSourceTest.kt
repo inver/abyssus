@@ -20,7 +20,7 @@ class NativeTerrainSourceTest : BasePlatformTestCase() {
         val core = service<AbyssusCore>()
         val choices = AssetReferenceChoices(core.json)
         for (text in listOf("{}", """{"format":"abyssus","formatVersion":2}""")) {
-            val rejected = readTerrainSource(File(folder.path), text, SceneJson.parse(text), choices, core.terrainRecipes)
+            val rejected = readTerrainSource(File(folder.path), text, SceneJson().parse(text), choices, core.terrainRecipes)
             assertTrue(rejected is TerrainSource.Unusable)
             val initial = TerrainSource.Ready("terrain", 400, 17, FileSnapshot.Bytes(ByteArray(17 * 17 * 4)),
                 FileSnapshot.Absent, RecipeStatus.Missing, SourceSnapshot("native", "hash", null, true), FileSnapshot.Bytes(byteArrayOf()))

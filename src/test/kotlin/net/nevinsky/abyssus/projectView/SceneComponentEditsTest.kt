@@ -26,7 +26,7 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
 
     private fun textOf(f: VirtualFile) = FileDocumentManager.getInstance().getDocument(f)!!.text
 
-    private fun components(f: VirtualFile, id: String) = net.nevinsky.abyssus.editor.document.SceneEntityTree(SceneJson.parse(textOf(f))).components(id)!!
+    private fun components(f: VirtualFile, id: String) = net.nevinsky.abyssus.editor.document.SceneEntityTree(SceneJson().parse(textOf(f))).components(id)!!
 
     private fun open(path: String, text: String = original): Pair<VirtualFile, TextEditor> {
         val f = myFixture.addFileToProject(path, text).virtualFile

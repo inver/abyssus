@@ -36,12 +36,12 @@ fun editSceneJson(project: Project, file: VirtualFile, commandName: String, muta
     val format = net.nevinsky.abyssus.format.AbyssusDocumentFormat()
     val original = document.text
     val root = runCatchingKeepingCancellation {
-        SceneJson.parse(original).also { format.requireSupported(it, kind) }
+        SceneJson().parse(original).also { format.requireSupported(it, kind) }
     }.getOrNull() ?: return false
     if (!mutate(root) || format.validate(root, kind) != null || document.text != original) {
         return false
     }
-    val text = SceneJson.inStyleOf(original, root)
+    val text = SceneJson().inStyleOf(original, root)
     if (text == original) {
         return false
     }

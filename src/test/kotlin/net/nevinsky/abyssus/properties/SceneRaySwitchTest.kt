@@ -153,7 +153,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         assertTrue(samples.isEnabled)
         samples.text = "64"; samples.postActionEvent()
         val saved = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!.text
-        assertEquals(64, net.nevinsky.abyssus.editor.document.SceneJson.parse(saved)["rayTracing"]["targetSamplesPerPixel"].intValue())
+        assertEquals(64, net.nevinsky.abyssus.editor.document.SceneJson().parse(saved)["rayTracing"]["targetSamplesPerPixel"].intValue())
     }
 
     fun testFailureShowsItsReasonAndARetryThatReachesTheView() {

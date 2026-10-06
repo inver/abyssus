@@ -37,7 +37,7 @@ class SceneRenderGlTest {
         return SceneRenderParams.from(parseScene(text), CameraParams.DEFAULT, dir)
     }
 
-    private fun edit(text: String, change: (ObjectNode) -> Unit): String = SceneJson.compact(SceneJson.parseObject(text).also(change))
+    private fun edit(text: String, change: (ObjectNode) -> Unit): String = SceneJson().compact(SceneJson().parseObject(text).also(change))
 
     private fun noFog(root: ObjectNode) {
         root.put("fogEnabled", false)
@@ -403,7 +403,7 @@ class SceneRenderGlTest {
         val lit = params("Untitled", "Main Scene.scene") {
             edit(it) { root ->
                 noFog(root)
-                (root.get("ecs").get("entities") as ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>("99", SceneJson.parse(light))
+                (root.get("ecs").get("entities") as ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>("99", SceneJson().parse(light))
             }
         }
         val isolated = lit.copy(content = lit.content.copy(lights = lit.content.lights.filter { it.entityId == "99" }))

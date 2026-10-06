@@ -29,7 +29,7 @@ class SceneTransformEditTest : BasePlatformTestCase() {
         val changed = before.indices.filter { before[it] != now[it] }
         assertEquals(changed.toString(), 1, changed.size)
         assertTrue(now[changed.single()], now[changed.single()].startsWith("            \"x\": -1.035308") || now[changed.single()].contains("\"x\": -1.035"))
-        fun entities(text: String) = net.nevinsky.abyssus.editor.document.SceneEntityTree(SceneJson.parse(text)).entities()!!
+        fun entities(text: String) = net.nevinsky.abyssus.editor.document.SceneEntityTree(SceneJson().parse(text)).entities()!!
         assertEquals(entities(original).size(), entities(after).size())
     }
 
