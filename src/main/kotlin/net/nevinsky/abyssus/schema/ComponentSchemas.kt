@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.schema
 
+import net.nevinsky.abyssus.EditorBundle
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
@@ -47,7 +48,7 @@ fun interface ComponentSchemasListener {
  */
 @Service(Service.Level.PROJECT)
 class ComponentSchemas(private val project: Project) : Disposable {
-    private val merge = SchemaMerge()
+    private val merge = SchemaMerge(EditorBundle)
     private val snapshots = ConcurrentHashMap<String, SchemaSnapshot>()
     private val noProject = "" // the key for scenes outside an Abyssus project
     @Volatile private var contributions: List<ContributedSchemaText>? = null

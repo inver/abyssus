@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.EditorBundle
 import net.nevinsky.abyssus.editor.content.RenderAsset
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -18,7 +20,6 @@ import net.nevinsky.abyssus.ecs.scene.EditResult
 import net.nevinsky.abyssus.ecs.scene.AddedEntity
 import net.nevinsky.abyssus.ecs.scene.AddedLight
 import net.nevinsky.abyssus.ecs.scene.AssetEntities
-import net.nevinsky.abyssus.ecs.scene.SceneEntities
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.ecs.scene.LightEntities
 import net.nevinsky.abyssus.ecs.scene.LightPreset
@@ -59,7 +60,7 @@ object SceneComponentEdits {
     private fun editor(project: Project, file: VirtualFile) = ComponentSchemas.of(project).editorFor(file)
 
     private fun run(project: Project, file: VirtualFile, command: String, edit: (JsonNode) -> EditResult): EditResult {
-        var result: EditResult = EditResult.Rejected(AbyssusBundle.message("componentSceneUnreadable"))
+        var result: EditResult = EditResult.Rejected(EditorBundle.message("componentSceneUnreadable"))
         editSceneJson(project, file, command) { root ->
             result = edit(root)
             result == EditResult.Changed
@@ -68,10 +69,10 @@ object SceneComponentEdits {
     }
 
     fun addLight(project: Project, file: VirtualFile, preset: LightPreset, position: Vec3, cache: SceneDocumentCache): AddedLight {
-        var added = AddedLight(EditResult.Rejected(AbyssusBundle.message("componentSceneUnreadable")))
+        var added = AddedLight(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
         editSceneJson(project, file, AbyssusBundle.message("commandAddLight")) { root ->
             if (cache.read(file) == null) return@editSceneJson false
-            added = LightEntities.add(root, preset, position)
+            added = LightEntities(EditorBundle).add(root, preset, position)
             added.result == EditResult.Changed
         }
         return added
@@ -83,10 +84,10 @@ object SceneComponentEdits {
      */
     fun addAsset(project: Project, file: VirtualFile, asset: RenderAsset, position: Vec3, cache: SceneDocumentCache, metaFiles: MetaFiles): AddedEntity {
         val size = if (asset.type == MetaType.TERRAIN.name) terrainSize(file, asset.name, metaFiles) else null
-        var added = AddedEntity(EditResult.Rejected(AbyssusBundle.message("componentSceneUnreadable")))
+        var added = AddedEntity(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
         editSceneJson(project, file, AbyssusBundle.message("commandAddAsset")) { root ->
             if (cache.read(file) == null) return@editSceneJson false
-            added = AssetEntities.add(root, asset, position, size)
+            added = AssetEntities(EditorBundle).add(root, asset, position, size)
             added.result == EditResult.Changed
         }
         return added
@@ -105,16 +106,16 @@ object SceneComponentEdits {
      * nothing is written when the component is refused. In an older wrapped scene its archetype follows its components.
      */
     fun addAsNewEntity(project: Project, file: VirtualFile, kindName: String, metaFiles: MetaFiles, initial: Map<String, String> = emptyMap()): AddedEntity {
-        var added = AddedEntity(EditResult.Rejected(AbyssusBundle.message("componentSceneUnreadable")))
+        var added = AddedEntity(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
         editSceneJson(project, file, AbyssusBundle.message("commandAddComponent")) { root ->
-            val id = SceneEntities.insert(root) { id ->
+            val id = SceneEntityTree(root).insert { id ->
                 JsonNodeFactory.instance.objectNode().set(
                     "NameComponent", JsonNodeFactory.instance.objectNode().put("name", AbyssusBundle.message("newEntityName", id)),
                 )
             } ?: return@editSceneJson false
             val result = editor(project, file).add(root, id, kindName, initial, assetNames(file, metaFiles), assetsByType(file, metaFiles))
             added = AddedEntity(result, id.takeIf { result == EditResult.Changed })
-            result == EditResult.Changed && SceneEntities.matchArchetype(root, id)
+            result == EditResult.Changed && SceneEntityTree(root).matchArchetype(id)
         }
         return added
     }

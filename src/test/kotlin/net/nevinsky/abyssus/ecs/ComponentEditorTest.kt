@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.ecs
 
+import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.core.io.JsonProcessor
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -22,7 +23,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ComponentEditorTest {
-    private val editor = ComponentEditor()
+    private val editor = ComponentEditor(ResourceEditorMessages())
 
     private fun scene(vararg entities: String) =
         SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{${entities.joinToString(",")}},"archetypes":{"1":{"a":1}},"metadata":{"m":2}}}""")
@@ -310,7 +311,7 @@ class ComponentEditorTest {
     // ---- schema-declared components, against the Custom fixture and its exported schema ----
 
     private val customDir = "src/test/testData/project/Custom"
-    private val planeEditor = ComponentEditor(SchemaFile().parse(File("$customDir/abyssus/components.schema.json").readText()).components)
+    private val planeEditor = ComponentEditor(ResourceEditorMessages(), SchemaFile().parse(File("$customDir/abyssus/components.schema.json").readText()).components)
     private fun customScene() = SceneJson().parse(File("$customDir/scenes/Field.scene").readText())
 
     @Test
@@ -352,7 +353,7 @@ class ComponentEditorTest {
                 net.nevinsky.abyssus.runtime.schema.SchemaVector(0.5f, 0.5f, 0.5f), min = 0.0, minExclusive = true,
             )),
         )
-        val boxEditor = ComponentEditor(listOf(box))
+        val boxEditor = ComponentEditor(ResourceEditorMessages(), listOf(box))
         val root = scene(entity(0, """"BoxComponent":{}"""))
         val result = boxEditor.update(root, "0", "BoxComponent", "halfExtents.y", "0")
         assertRejected(result)

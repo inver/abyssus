@@ -5,10 +5,10 @@
 
 package net.nevinsky.abyssus.schema
 
-import net.nevinsky.abyssus.AbyssusBundle
+import net.nevinsky.abyssus.editor.EditorMessages
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.ecs.scene.ComponentEditor
-import net.nevinsky.abyssus.ui.documentDisplayMessage
+import net.nevinsky.abyssus.editor.document.documentDisplayMessage
 import net.nevinsky.abyssus.runtime.schema.BUILT_IN_COMPONENTS
 import net.nevinsky.abyssus.runtime.schema.ComponentSchema
 import net.nevinsky.abyssus.runtime.schema.SchemaFile
@@ -20,9 +20,9 @@ data class ProjectSchemaText(val path: String, val text: String?, val error: Str
 data class ContributedSchemaText(val plugin: String, val resource: String, val text: String?)
 
 /** The component schemas in force for one project's scenes, with a message for each problem met reading them. */
-class SchemaSnapshot(val components: List<ComponentSchema>, val problems: List<String>) {
+class SchemaSnapshot(val components: List<ComponentSchema>, val problems: List<String>, private val messages: EditorMessages) {
     /** The editor for scenes under these schemas. */
-    val editor: ComponentEditor by lazy { ComponentEditor(components) }
+    val editor: ComponentEditor by lazy { ComponentEditor(messages, components) }
 }
 
 /**
@@ -30,7 +30,7 @@ class SchemaSnapshot(val components: List<ComponentSchema>, val problems: List<S
  * per short name (with one message naming the component and the plugin), the first contribution wins between plugins,
  * and a file that cannot be read declares nothing and gives one message naming it.
  */
-class SchemaMerge(private val file: SchemaFile = SchemaFile()) {
+class SchemaMerge(private val messages: EditorMessages, private val file: SchemaFile = SchemaFile()) {
     fun merge(project: ProjectSchemaText?, contributed: List<ContributedSchemaText>): SchemaSnapshot {
         val problems = ArrayList<String>()
         val byName = LinkedHashMap<String, ComponentSchema>()
@@ -38,27 +38,27 @@ class SchemaMerge(private val file: SchemaFile = SchemaFile()) {
 
         if (project != null) {
             val name = project.path
-            for (c in parse(project.text, project.error) { problems += AbyssusBundle.message("schemaFileProblem", name, it) }) {
+            for (c in parse(project.text, project.error) { problems += messages.message("schemaFileProblem", name, it) }) {
                 when {
-                    c.name in BUILT_IN_COMPONENTS -> problems += AbyssusBundle.message("schemaBuiltIn", c.name, name)
-                    c.name in byName -> problems += AbyssusBundle.message("schemaDuplicate", c.name, name)
+                    c.name in BUILT_IN_COMPONENTS -> problems += messages.message("schemaBuiltIn", c.name, name)
+                    c.name in byName -> problems += messages.message("schemaDuplicate", c.name, name)
                     else -> { byName[c.name] = c; owners[c.name] = null }
                 }
             }
         }
         for (contribution in contributed) {
-            val report = { message: String -> problems += AbyssusBundle.message("schemaPluginProblem", contribution.plugin, message) }
+            val report = { message: String -> problems += messages.message("schemaPluginProblem", contribution.plugin, message) }
             val error = if (contribution.text == null) "${contribution.resource} is missing" else null
             for (c in parse(contribution.text, error, report)) {
                 when {
-                    c.name in BUILT_IN_COMPONENTS -> problems += AbyssusBundle.message("schemaBuiltIn", c.name, contribution.plugin)
+                    c.name in BUILT_IN_COMPONENTS -> problems += messages.message("schemaBuiltIn", c.name, contribution.plugin)
                     c.name !in byName -> { byName[c.name] = c; owners[c.name] = contribution.plugin }
-                    owners[c.name] == null -> problems += AbyssusBundle.message("schemaConflict", c.name, contribution.plugin)
-                    else -> problems += AbyssusBundle.message("schemaDuplicate", c.name, contribution.plugin)
+                    owners[c.name] == null -> problems += messages.message("schemaConflict", c.name, contribution.plugin)
+                    else -> problems += messages.message("schemaDuplicate", c.name, contribution.plugin)
                 }
             }
         }
-        return SchemaSnapshot(byName.values.toList(), problems)
+        return SchemaSnapshot(byName.values.toList(), problems, messages)
     }
 
     private fun parse(text: String?, error: String?, report: (String) -> Unit): List<ComponentSchema> {
@@ -67,7 +67,7 @@ class SchemaMerge(private val file: SchemaFile = SchemaFile()) {
             return emptyList()
         }
         val parsed = runCatchingKeepingCancellation { file.parse(text) }
-            .getOrElse { report(it.documentDisplayMessage()); return emptyList() }
+            .getOrElse { report(it.documentDisplayMessage(messages)); return emptyList() }
         parsed.problems.forEach(report)
         return parsed.components
     }

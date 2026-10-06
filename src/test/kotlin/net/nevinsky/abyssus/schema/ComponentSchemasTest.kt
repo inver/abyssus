@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.schema
 
+import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -12,7 +13,7 @@ import java.io.File
 
 /** [SchemaMerge], the rule [ComponentSchemas] applies, as a pure function of the project's and contributed schemas. */
 class ComponentSchemasTest {
-    private val merge = SchemaMerge()
+    private val merge = SchemaMerge(ResourceEditorMessages())
     private val customSchema = File("src/test/testData/project/Custom/abyssus/components.schema.json").readText()
     private val project = ProjectSchemaText("Custom/abyssus/components.schema.json", customSchema)
 

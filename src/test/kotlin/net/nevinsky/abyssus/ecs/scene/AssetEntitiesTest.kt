@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.ecs.scene
 
+import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.core.io.JsonProcessor
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -32,7 +33,7 @@ class AssetEntitiesTest {
     fun aModelBecomesTheNextEntityAndNothingElseChanges() {
         val root = mainScene()
         val before = root.deepCopy<JsonNode>()
-        val added = AssetEntities.add(root, tree, Vec3(10f, 0f, -4f))
+        val added = AssetEntities(ResourceEditorMessages()).add(root, tree, Vec3(10f, 0f, -4f))
         assertEquals(EditResult.Changed, added.result)
         assertEquals("9", added.entityId)
         val entities = root["ecs"]
@@ -52,7 +53,7 @@ class AssetEntitiesTest {
     @Test
     fun aTerrainIsCentredOnThePoint() {
         val root = mainScene()
-        val added = AssetEntities.add(root, terrain, Vec3(0f, 0f, 0f), 1600f)
+        val added = AssetEntities(ResourceEditorMessages()).add(root, terrain, Vec3(0f, 0f, 0f), 1600f)
         val entity = root["ecs"][added.entityId]
         assertEquals("Terrain 9", entity["components"]["NameComponent"]["name"].asText())
         assertEquals("TERRAIN", entity["components"]["TypeComponent"]["type"].asText())
@@ -63,14 +64,14 @@ class AssetEntitiesTest {
     @Test
     fun aTerrainOfUnknownSizePutsItsCornerAtThePoint() {
         val root = mainScene()
-        val entity = root["ecs"][AssetEntities.add(root, terrain, Vec3(3f, 1f, 2f), null).entityId]
+        val entity = root["ecs"][AssetEntities(ResourceEditorMessages()).add(root, terrain, Vec3(3f, 1f, 2f), null).entityId]
         assertEquals(Vec3(3f, 1f, 2f), position(entity))
     }
 
     @Test
     fun anEmptySceneStartsAtZeroAndTheRuntimeLoadsIt() {
         val root = empty()
-        assertEquals("0", AssetEntities.add(root, tree, Vec3(1f, 2f, 3f)).entityId)
+        assertEquals("0", AssetEntities(ResourceEditorMessages()).add(root, tree, Vec3(1f, 2f, 3f)).entityId)
         val document = EcsLoader(net.nevinsky.abyssus.core.io.JsonProcessor().mapper, log = org.slf4j.helpers.NOPLogger.NOP_LOGGER)
             .load(root["ecs"], SceneEngine())
         // loaded without a project, the only complaint is the missing folder: the render component itself is understood
@@ -80,13 +81,13 @@ class AssetEntitiesTest {
     @Test
     fun aWrappedSceneGetsAMatchingArchetype() {
         val root = SceneJson().parse(File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
-        val first = AssetEntities.add(root, tree, Vec3(0f, 0f, 0f))
+        val first = AssetEntities(ResourceEditorMessages()).add(root, tree, Vec3(0f, 0f, 0f))
         val ecs = root["ecs"]
         val entity = ecs["entities"][first.entityId]
         val archetype = ecs["archetypes"][entity["archetype"].asText()].map { it.asText() }.toSet()
         assertEquals(setOf("NameComponent", "TypeComponent", "PositionComponent", "RenderComponent"), archetype)
         val archetypes = ecs["archetypes"].toString()
-        val second = AssetEntities.add(root, terrain, Vec3(0f, 0f, 0f), 100f)
+        val second = AssetEntities(ResourceEditorMessages()).add(root, terrain, Vec3(0f, 0f, 0f), 100f)
         assertEquals(archetypes, ecs["archetypes"].toString())
         assertEquals(entity["archetype"], ecs["entities"][second.entityId]["archetype"])
     }
@@ -94,8 +95,8 @@ class AssetEntitiesTest {
     @Test
     fun aNonNativeSceneOrAnotherAssetTypeIsRejected() {
         val legacy = SceneJson().parse("""{"ecs":{}}""")
-        assertFalse(AssetEntities.add(legacy, tree, Vec3(0f, 0f, 0f)).result == EditResult.Changed)
-        assertFalse(AssetEntities.add(empty(), RenderAsset("SKYBOX", "sky"), Vec3(0f, 0f, 0f)).result == EditResult.Changed)
-        assertFalse(AssetEntities.add(empty(), tree, Vec3(Float.NaN, 0f, 0f)).result == EditResult.Changed)
+        assertFalse(AssetEntities(ResourceEditorMessages()).add(legacy, tree, Vec3(0f, 0f, 0f)).result == EditResult.Changed)
+        assertFalse(AssetEntities(ResourceEditorMessages()).add(empty(), RenderAsset("SKYBOX", "sky"), Vec3(0f, 0f, 0f)).result == EditResult.Changed)
+        assertFalse(AssetEntities(ResourceEditorMessages()).add(empty(), tree, Vec3(Float.NaN, 0f, 0f)).result == EditResult.Changed)
     }
 }

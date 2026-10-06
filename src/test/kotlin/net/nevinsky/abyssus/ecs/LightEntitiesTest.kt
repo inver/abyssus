@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.ecs
 
+import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.core.io.JsonProcessor
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -29,7 +30,7 @@ class LightEntitiesTest {
     @Test fun createsNextEntityAndPreservesExistingData() {
         val root = fixture()
         val before = root.deepCopy<JsonNode>()
-        val added = LightEntities.add(root, LightPreset.DIRECTIONAL, Vec3(0f, 0f, 0f))
+        val added = LightEntities(ResourceEditorMessages()).add(root, LightPreset.DIRECTIONAL, Vec3(0f, 0f, 0f))
         assertEquals(EditResult.Changed, added.result)
         assertEquals("7", added.entityId)
         val ecs = root["ecs"]
@@ -43,7 +44,7 @@ class LightEntitiesTest {
         assertEquals(setOf("NameComponent", "TypeComponent", "PositionComponent", "LightComponent"), components)
         assertEquals(components, ecs["archetypes"][entity["archetype"].asText()].map { it.asText() }.toSet())
         val archetypes = ecs["archetypes"].toString()
-        val second = LightEntities.add(root, LightPreset.SPOT, Vec3(0f, 0f, 0f))
+        val second = LightEntities(ResourceEditorMessages()).add(root, LightPreset.SPOT, Vec3(0f, 0f, 0f))
         assertEquals("8", second.entityId)
         assertEquals(archetypes, ecs["archetypes"].toString())
         assertEquals(entity["archetype"], ecs["entities"]["8"]["archetype"])
@@ -52,7 +53,7 @@ class LightEntitiesTest {
     @Test fun emptySceneStartsAtZeroAndPresetsLoad() {
         for (preset in LightPreset.entries) {
             val root = empty()
-            val added = LightEntities.add(root, preset, Vec3(10f, 0f, -4f))
+            val added = LightEntities(ResourceEditorMessages()).add(root, preset, Vec3(10f, 0f, -4f))
             assertEquals("0", added.entityId)
             val light = SceneContent.of(parseScene(root.toString())).lights.single()
             assertEquals(if (preset == LightPreset.SPOT) LightKind.SPOT else LightKind.DIRECTIONAL, light.kind)
@@ -78,7 +79,7 @@ class LightEntitiesTest {
     @Test fun missingEcsOrEntitiesIsAnEmptyScene() {
         for (text in listOf("""{"format":"abyssus","formatVersion":1}""", """{"format":"abyssus","formatVersion":1,"name":"Empty","ecs":{}}""")) {
             val root = SceneJson().parse(text)
-            val added = LightEntities.add(root, LightPreset.SUN, Vec3(0f, 0f, 0f))
+            val added = LightEntities(ResourceEditorMessages()).add(root, LightPreset.SUN, Vec3(0f, 0f, 0f))
             assertEquals(EditResult.Changed, added.result)
             assertEquals("0", added.entityId)
             assertEquals(1, SceneContent.of(parseScene(root.toString())).lights.size)
@@ -87,7 +88,7 @@ class LightEntitiesTest {
 
     @Test fun noncanonicalArchetypeKeysDoNotBecomeBrokenReferences() {
         val root = SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{},"archetypes":{"01":["NameComponent","TypeComponent","PositionComponent","LightComponent"]}}}""")
-        LightEntities.add(root, LightPreset.SUN, Vec3(0f, 0f, 0f))
+        LightEntities(ResourceEditorMessages()).add(root, LightPreset.SUN, Vec3(0f, 0f, 0f))
         val ecs = root["ecs"]
         val archetype = ecs["entities"]["0"]["archetype"].asText()
         assertTrue(ecs["archetypes"].has(archetype))
@@ -98,7 +99,7 @@ class LightEntitiesTest {
         for (text in listOf("""{"format":"abyssus","formatVersion":1,"ecs":[]}""", "[]", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":[],"archetypes":{}}}""", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{},"archetypes":[]}}""")) {
             val root = SceneJson().parse(text)
             val before = root.toString()
-            assertTrue(LightEntities.add(root, LightPreset.SUN, Vec3(0f, 0f, 0f)).result is EditResult.Rejected)
+            assertTrue(LightEntities(ResourceEditorMessages()).add(root, LightPreset.SUN, Vec3(0f, 0f, 0f)).result is EditResult.Rejected)
             assertEquals(before, root.toString())
         }
     }

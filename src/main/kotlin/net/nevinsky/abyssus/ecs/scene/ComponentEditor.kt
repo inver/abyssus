@@ -8,32 +8,16 @@ package net.nevinsky.abyssus.ecs.scene
 import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.AbyssusBundle
+import net.nevinsky.abyssus.editor.EditorMessages
 import net.nevinsky.abyssus.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.runtime.ecs.EcsUtils.Companion.NO_ENTITY
-import net.nevinsky.abyssus.runtime.ecs.component.CameraComponent
-import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
-import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
-import net.nevinsky.abyssus.runtime.ecs.component.ParentComponent
-import net.nevinsky.abyssus.runtime.ecs.component.Point2PointPositionComponent
-import net.nevinsky.abyssus.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.runtime.ecs.component.TypeComponent
-import net.nevinsky.abyssus.runtime.ecs.render.AssetReference
-import net.nevinsky.abyssus.runtime.ecs.render.AssetResolver
-import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.runtime.schema.BUILT_IN_COMPONENTS
 import net.nevinsky.abyssus.runtime.ecs.EcsWriter
-import net.nevinsky.abyssus.runtime.json.number
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.runtime.ecs.render.RenderComponent
-import net.nevinsky.abyssus.runtime.ecs.render.RenderableObjectDelegate
 import net.nevinsky.abyssus.runtime.schema.ComponentSchema
-import net.nevinsky.abyssus.runtime.schema.FieldType
-import net.nevinsky.abyssus.runtime.schema.SchemaColor
-import net.nevinsky.abyssus.runtime.schema.SchemaField
 import net.nevinsky.abyssus.runtime.schema.SchemaJson
-import net.nevinsky.abyssus.runtime.schema.SchemaVector
 
 /** What an edit of a scene's JSON tree did. The tree is only touched for [Changed]. */
 sealed interface EditResult {
@@ -44,226 +28,23 @@ sealed interface EditResult {
     data class Rejected(val reason: String) : EditResult
 }
 
-enum class FieldKind { FLOAT, INT, BOOLEAN, TEXT, CHOICE, ENTITY_REF, ASSET_NAME }
-
-/** One editable value of a component, read and written as text. */
-class ComponentField<C : Component>(
-    val name: String,
-    val kind: FieldKind,
-    val get: (C) -> String,
-    val set: (C, String) -> Unit,
-    /** The values a [FieldKind.CHOICE] takes; an optional field also accepts the empty text. */
-    val choices: List<String> = emptyList(),
-    val optional: Boolean = false,
-    /** What the panel shows for the field, and the group it is listed under (none when empty). */
-    val label: String = name,
-    val group: String = "",
-    /** Limits of a number; [minExclusive] makes [min] itself refused. */
-    val min: Double? = null,
-    val max: Double? = null,
-    val minExclusive: Boolean = false,
-    /** For a schema's asset reference: the meta type the asset folder must have. */
-    val assetType: String? = null,
-)
-
-/** Reads and writes one kind of component as the native scene format holds it, under its short [name]. */
-interface ComponentCodec<C : Component> {
-    val name: String
-    val type: Class<C>
-
-    fun read(node: JsonNode): C
-
-    fun write(component: C): JsonNode
-}
-
-/** A built-in component bound by the runtime's own loader and writer, so defaults and number text match a scene load. */
-private class RuntimeCodec<C : Component>(
-    override val name: String,
-    override val type: Class<C>,
-    private val reader: ComponentReader,
-    private val writer: EcsWriter,
-) : ComponentCodec<C> {
-    override fun read(node: JsonNode): C = reader.read(type, node)
-
-    override fun write(component: C): JsonNode = writer.writeComponent(component)
-}
-
-/** A modeled kind of component: its file name, how to read and write it, how a new one starts and what it holds. */
-class ComponentKind<C : Component>(
-    val name: String,
-    internal val codec: ComponentCodec<C>,
-    val fields: List<ComponentField<C>>,
-    internal val create: () -> C,
-    /** The name the view shows: by default the file name without the `Component` suffix. */
-    val label: String = name.removeSuffix("Component").ifEmpty { name },
-)
-
-/** A field of an entity's component as the panel shows it. */
-data class FieldValue(
-    val field: String, val kind: FieldKind, val value: String, val choices: List<String>, val optional: Boolean,
-    val label: String = field, val group: String = "", val assetType: String? = null,
-)
-
-/** A schema-declared component as the editor holds it: its values by field name (see [SchemaField.default]). */
-class SchemaValues(val values: MutableMap<String, Any>) : Component
-
-/** Reads and writes a schema-declared component through [SchemaJson], with no game class. */
-class SchemaCodec(val schema: ComponentSchema, private val json: SchemaJson) : ComponentCodec<SchemaValues> {
-    override val name get() = schema.name
-    override val type = SchemaValues::class.java
-    override fun read(node: JsonNode) = SchemaValues(json.decode(schema, node))
-    override fun write(component: SchemaValues): JsonNode = json.encode(schema, component.values)
-}
-
-private fun f(v: Float) = number(v).asText()
-
-private fun <C : Component> floatField(name: String, get: (C) -> Float, set: (C, Float) -> Unit) =
-    ComponentField<C>(name, FieldKind.FLOAT, { f(get(it)) }, { c, t -> set(c, t.trim().toFloat()) })
-
-private fun <C : Component> refField(name: String, get: (C) -> Int, set: (C, Int) -> Unit) =
-    ComponentField<C>(name, FieldKind.ENTITY_REF, { get(it).toString() }, { c, t -> set(c, t.trim().toInt()) })
-
-private val MODEL_ASSETS = AssetResolver { type, name -> AssetReference(name, type) }
-
-private fun delegateOf(c: RenderComponent) = c.renderable as? RenderableObjectDelegate
-
-/**
- * The editor fields of a schema [field]: one per value, a vector or color as dotted decimals (`leadout.x`). A vector's
- * limits hold for each axis.
- */
-private fun schemaFields(field: SchemaField): List<ComponentField<SchemaValues>> {
-    fun <T : Any> one(kind: FieldKind, show: (T) -> String, parse: (String) -> Any, choices: List<String> = emptyList(), optional: Boolean = false) =
-        ComponentField<SchemaValues>(
-            field.name, kind, { @Suppress("UNCHECKED_CAST") show(it.values[field.name] as T) }, { c, t -> c.values[field.name] = parse(t) },
-            choices, optional, field.label, field.group, field.min, field.max, field.minExclusive, field.assetType,
-        )
-    fun parts(keys: List<String>, read: (Any) -> List<Float>, limited: Boolean, make: (List<Float>) -> Any) = keys.mapIndexed { i, key ->
-        ComponentField<SchemaValues>(
-            "${field.name}.$key", FieldKind.FLOAT, { f(read(it.values.getValue(field.name))[i]) },
-            { c, t -> c.values[field.name] = make(read(c.values.getValue(field.name)).toMutableList().also { p -> p[i] = t.trim().toFloat() }) },
-            label = "${field.label} $key", group = field.group,
-            min = field.min.takeIf { limited }, max = field.max.takeIf { limited }, minExclusive = limited && field.minExclusive,
-        )
-    }
-    return when (field.type) {
-        FieldType.DECIMAL -> listOf(one<Float>(FieldKind.FLOAT, ::f, { it.trim().toFloat() }))
-        FieldType.WHOLE -> listOf(one<Int>(FieldKind.INT, Int::toString, { it.trim().toInt() }))
-        FieldType.BOOLEAN -> listOf(one<Boolean>(FieldKind.BOOLEAN, Boolean::toString, { it.trim().toBooleanStrict() }))
-        FieldType.TEXT -> listOf(one<String>(FieldKind.TEXT, { it }, { it }, optional = true))
-        FieldType.CHOICE -> listOf(one<String>(FieldKind.CHOICE, { it }, { it.trim() }, field.choices))
-        FieldType.ENTITY -> listOf(one<Int>(FieldKind.ENTITY_REF, Int::toString, { it.trim().toInt() }))
-        FieldType.ASSET -> listOf(one<String>(FieldKind.ASSET_NAME, { it }, { it.trim() }, optional = true))
-        FieldType.VECTOR -> parts(listOf("x", "y", "z"), { (it as SchemaVector).let { v -> listOf(v.x, v.y, v.z) } }, limited = true) { SchemaVector(it[0], it[1], it[2]) }
-        FieldType.COLOR -> parts(listOf("r", "g", "b", "a"), { (it as SchemaColor).let { c -> listOf(c.r, c.g, c.b, c.a) } }, limited = false) { SchemaColor(it[0], it[1], it[2], it[3]) }
-    }
-}
-
 /**
  * Creates, updates and removes the modeled components of an entity in a scene's JSON tree (`ecs.entities.<id>`): the
  * built-in kinds and one kind per component of [schemas] (whose built-in names are ignored). Values go through the
  * component codecs, so defaults and number text match what a scene load and write do, and an update applies only the
  * keys that really differ onto the file's own component object.
  */
-class ComponentEditor(schemas: List<ComponentSchema> = emptyList(), private val json: SchemaJson = SchemaJson()) {
+class ComponentEditor(
+    private val messages: EditorMessages,
+    schemas: List<ComponentSchema> = emptyList(),
+    private val json: SchemaJson = SchemaJson(),
+) {
     private val mapper = JsonProcessor().mapper
     private val reader = ComponentReader(mapper, MODEL_ASSETS, NOPLogger.NOP_LOGGER)
     private val writer = EcsWriter(mapper)
 
-    private inline fun <reified C : Component> kind(
-        codecName: String,
-        fields: List<ComponentField<C>>,
-        noinline create: () -> C,
-    ): ComponentKind<C> = ComponentKind(codecName, RuntimeCodec(codecName, C::class.java, reader, writer), fields, create)
-
-    val kinds: List<ComponentKind<*>> = listOf(
-        kind<NameComponent>(
-            "NameComponent",
-            listOf(ComponentField("name", FieldKind.TEXT, { it.name.orEmpty() }, { c, t -> c.name = t.ifEmpty { null } }, optional = true)),
-        ) { NameComponent() },
-        kind<TypeComponent>(
-            "TypeComponent",
-            listOf(
-                ComponentField(
-                    "type", FieldKind.CHOICE, { it.type?.name.orEmpty() },
-                    { c, t -> c.type = TypeComponent.Type.entries.firstOrNull { e -> e.name == t } },
-                    choices = TypeComponent.Type.entries.map { it.name }, optional = true,
-                ),
-            ),
-        ) { TypeComponent() },
-        kind<ParentComponent>("ParentComponent", listOf(refField("parentEntityId", { it.parentEntityId }, { c, v -> c.parentEntityId = v }))) { ParentComponent() },
-        kind<PositionComponent>(
-            "PositionComponent",
-            listOf(
-                refField("lookAtId", { it.lookAtId }, { c, v -> c.lookAtId = v; c.lookAtRef = v.takeIf { it >= 0 }?.toString() }),
-                floatField("localPosition.x", { it.localPosition.x }, { c, v -> c.localPosition.x = v }),
-                floatField("localPosition.y", { it.localPosition.y }, { c, v -> c.localPosition.y = v }),
-                floatField("localPosition.z", { it.localPosition.z }, { c, v -> c.localPosition.z = v }),
-                floatField("localRotation.x", { it.localRotation.x }, { c, v -> c.localRotation.x = v }),
-                floatField("localRotation.y", { it.localRotation.y }, { c, v -> c.localRotation.y = v }),
-                floatField("localRotation.z", { it.localRotation.z }, { c, v -> c.localRotation.z = v }),
-                floatField("localRotation.w", { it.localRotation.w }, { c, v -> c.localRotation.w = v }),
-                floatField("localScale.x", { it.localScale.x }, { c, v -> c.localScale.x = v }),
-                floatField("localScale.y", { it.localScale.y }, { c, v -> c.localScale.y = v }),
-                floatField("localScale.z", { it.localScale.z }, { c, v -> c.localScale.z = v }),
-            ),
-        ) { PositionComponent() },
-        kind<CameraComponent>(
-            "CameraComponent",
-            listOf(
-                floatField("camera.position.x", { it.camera.position.x }, { c, v -> c.camera.position.x = v }),
-                floatField("camera.position.y", { it.camera.position.y }, { c, v -> c.camera.position.y = v }),
-                floatField("camera.position.z", { it.camera.position.z }, { c, v -> c.camera.position.z = v }),
-                floatField("camera.viewPointPosition.x", { it.camera.direction.x }, { c, v -> c.camera.direction.x = v }),
-                floatField("camera.viewPointPosition.y", { it.camera.direction.y }, { c, v -> c.camera.direction.y = v }),
-                floatField("camera.viewPointPosition.z", { it.camera.direction.z }, { c, v -> c.camera.direction.z = v }),
-                floatField("camera.far", { it.camera.far }, { c, v -> c.camera.far = v }),
-                floatField("camera.near", { it.camera.near }, { c, v -> c.camera.near = v }),
-                floatField("camera.fieldOfView", { it.camera.fieldOfView }, { c, v -> c.camera.fieldOfView = v }),
-            ),
-        ) { CameraComponent() },
-        kind<LightComponent>(
-            "LightComponent",
-            listOf(
-                floatField("color.r", { it.light.color.r }, { c, v -> c.light.color = c.light.color.copy(r = v) }),
-                floatField("color.g", { it.light.color.g }, { c, v -> c.light.color = c.light.color.copy(g = v) }),
-                floatField("color.b", { it.light.color.b }, { c, v -> c.light.color = c.light.color.copy(b = v) }),
-                floatField("color.a", { it.light.color.a }, { c, v -> c.light.color = c.light.color.copy(a = v) }),
-                floatField("intensity", { it.light.intensity }, { c, v -> c.light.intensity = v }),
-                floatField("range", { it.light.range }, { c, v -> c.light.range = v }),
-                floatField("coneAngle", { it.light.coneAngle }, { c, v -> c.light.coneAngle = v }),
-                floatField("edgeSoftness", { it.light.edgeSoftness * 100f }, { c, v -> c.light.edgeSoftness = v / 100f }),
-            ),
-        ) { LightComponent() },
-        kind<Point2PointPositionComponent>(
-            "Point2PointPositionComponent",
-            listOf(
-                refField("entity1Id", { it.entity1Id }, { c, v -> c.entity1Id = v }),
-                refField("entity2Id", { it.entity2Id }, { c, v -> c.entity2Id = v }),
-            ),
-        ) { Point2PointPositionComponent() },
-        kind<RenderComponent>(
-            "RenderComponent",
-            listOf(
-                ComponentField(
-                    "assetType", FieldKind.CHOICE, { delegateOf(it)?.asset?.type?.name.orEmpty() },
-                    { c, t -> delegateOf(c)?.let { d -> d.asset = AssetReference(d.asset.assetName, MetaType.valueOf(t)) } },
-                    choices = listOf(MetaType.MODEL, MetaType.TERRAIN).map { it.name },
-                ),
-                ComponentField(
-                    "assetName", FieldKind.ASSET_NAME, { delegateOf(it)?.asset?.assetName.orEmpty() },
-                    { c, t -> delegateOf(c)?.let { d -> d.asset = AssetReference(t, d.asset.type) } },
-                ),
-                ComponentField(
-                    "shaderKey", FieldKind.TEXT, { delegateOf(it)?.shaderKey.orEmpty() },
-                    { c, t -> delegateOf(c)?.shaderKey = t.ifEmpty { null } }, optional = true,
-                ),
-            ),
-        ) { RenderComponent(RenderableObjectDelegate(AssetReference("", MetaType.MODEL), null)) },
-    ) + schemas.filter { it.name !in BUILT_IN_COMPONENTS }.map { schema ->
-        ComponentKind(schema.name, SchemaCodec(schema, json), schema.fields.flatMap(::schemaFields), {
-            SchemaValues(schema.fields.associateTo(LinkedHashMap()) { it.name to it.default })
-        }, schema.label)
-    }
+    val kinds: List<ComponentKind<*>> = BuiltInComponentKinds(reader, writer).kinds +
+        schemas.filter { it.name !in BUILT_IN_COMPONENTS }.map { schemaKind(it, json) }
 
     private val byName = kinds.associateBy { it.name }
 
@@ -481,7 +262,7 @@ class ComponentEditor(schemas: List<ComponentSchema> = emptyList(), private val 
         return null
     }
 
-    private fun reject(key: String, vararg params: Any) = EditResult.Rejected(AbyssusBundle.message(key, *params))
+    private fun reject(key: String, vararg params: Any) = EditResult.Rejected(messages.message(key, *params))
 
     private fun rejected(key: String, vararg params: Any): EditResult = reject(key, *params)
 }

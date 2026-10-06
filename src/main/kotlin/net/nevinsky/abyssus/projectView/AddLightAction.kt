@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.EditorBundle
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -30,7 +31,7 @@ class AddLightGroup(
     select: (String) -> Unit = { selectCreatedEntity(project, file, it) },
 ) : DefaultActionGroup(AbyssusBundle.message("addLightTitle"), true), DumbAware {
     init {
-        for (preset in LightPreset.entries) add(object : AnAction(AbyssusBundle.message(preset.labelKey)), DumbAware {
+        for (preset in LightPreset.entries) add(object : AnAction(EditorBundle.message(preset.labelKey)), DumbAware {
             override fun getActionUpdateThread() = ActionUpdateThread.BGT
             override fun update(e: AnActionEvent) {
                 e.presentation.isEnabled = canAddLight(file, SceneDocumentCache.of(project))
@@ -56,7 +57,7 @@ internal fun selectCreatedEntity(project: Project, file: VirtualFile, entityId: 
 }
 
 internal fun canAddLight(file: VirtualFile, cache: SceneDocumentCache): Boolean =
-    cache.read(file)?.let { LightEntities.canAdd(it.root) } ?: false
+    cache.read(file)?.let { SceneEntityTree(it.root).canAdd() } ?: false
 
 /** Only scene rows can create an entity; the tree uses the origin as its placement point. */
 open class AddLightAction : AbyssusTreeAction<VirtualFile>() {

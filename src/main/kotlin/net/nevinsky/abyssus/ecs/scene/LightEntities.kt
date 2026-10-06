@@ -10,7 +10,8 @@ import net.nevinsky.abyssus.runtime.ecs.scene.*
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import net.nevinsky.abyssus.AbyssusBundle
+import net.nevinsky.abyssus.editor.EditorMessages
+import net.nevinsky.abyssus.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.runtime.ecs.component.LightComponent
 import net.nevinsky.abyssus.runtime.ecs.component.LightData
 import net.nevinsky.abyssus.runtime.ecs.component.NameComponent
@@ -37,20 +38,20 @@ enum class LightPreset(
 data class AddedLight(val result: EditResult, val entityId: String? = null)
 
 /** Edits only the JSON tree; callers write it through editSceneJson as a single undoable command. */
-object LightEntities {
+class LightEntities(private val messages: EditorMessages) {
     private val nodes = JsonNodeFactory.instance
     private val writer = EcsWriter(JsonProcessor().mapper)
 
-    fun canAdd(root: JsonNode): Boolean = SceneEntities.canAdd(root)
+    fun canAdd(root: JsonNode): Boolean = SceneEntityTree(root).canAdd()
 
     fun add(root: JsonNode, preset: LightPreset, position: Vec3): AddedLight {
-        fun rejected() = AddedLight(EditResult.Rejected(AbyssusBundle.message("componentSceneUnreadable")))
+        fun rejected() = AddedLight(EditResult.Rejected(messages.message("componentSceneUnreadable")))
         if (!canAdd(root) || listOf(position.x, position.y + preset.height, position.z).any { !it.isFinite() }) return rejected()
-        val id = SceneEntities.insert(root) { id ->
+        val id = SceneEntityTree(root).insert { id ->
             val transform = PositionComponent(position.x, position.y + preset.height, position.z)
             transform.localRotation.set(Vector3.X, preset.rotationDegrees)
             nodes.objectNode().apply {
-                set<JsonNode>("NameComponent", writer.writeComponent(NameComponent(AbyssusBundle.message(preset.nameKey, id))))
+                set<JsonNode>("NameComponent", writer.writeComponent(NameComponent(messages.message(preset.nameKey, id))))
                 set<JsonNode>("TypeComponent", writer.writeComponent(TypeComponent(preset.type)))
                 set<JsonNode>("PositionComponent", writer.writeComponent(transform))
                 set<JsonNode>("LightComponent", writer.writeComponent(LightComponent(LightData(preset.color, preset.intensity))))
