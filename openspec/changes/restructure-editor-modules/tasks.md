@@ -55,7 +55,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 - [x] 3.1 Split the mixed files inside the plugin first (design D2/D7): the Swing-free parts of `PanelState`,
   `SceneFileEditor`, `SceneViewPanel` (toolbar state, input forwarding, camera choices), `AbyssusProjectViewPane`
   and `AssetPropertiesPanel` into their own files. Verify with the existing tests unchanged.
-- [ ] 3.2 Create the `editor-core` Gradle module (plain Kotlin, depends on `core`, `runtime`, `raytracing`,
+- [x] 3.2 Create the `editor-core` Gradle module (plain Kotlin, depends on `core`, `runtime`, `raytracing`,
   `gdx-model`, Jackson; `checkNoSingletons` and the shared checks from `refactor-solid-dedup` 5.3). Verify with
   `./gradlew :editor-core:build` on an empty module and the classpath test of design D8.
 - [ ] 3.3 Slice `document`: `SceneJson`, `JsonFormat`, the editor-facing format type aliases, `DocumentParsing`,

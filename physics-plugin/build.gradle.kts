@@ -4,7 +4,7 @@
  */
 
 // Abyssus Physics: an IntelliJ plugin that depends on Abyssus (the root project). It bundles only its own code;
-// libGDX, `core`, `runtime` and `gdx-model` come from Abyssus's classloader, and Jolt never loads in the IDE.
+// libGDX, `core`, `runtime`, `editor-core` and `gdx-model` come from Abyssus's classloader, and Jolt never loads in the IDE.
 plugins {
     id("org.jetbrains.kotlin.jvm")
     id("org.jetbrains.intellij.platform")
@@ -48,6 +48,9 @@ dependencies {
     // runtime, core, gdx-model, libGDX, Ashley and Jackson load from Abyssus's classloader at run time
     compileOnly(project(":runtime"))
     testImplementation(project(":runtime"))
+    // the overlay and play types (editor.content placements) come from Abyssus's editor-core, never bundled here
+    compileOnly(project(":editor-core"))
+    testImplementation(project(":editor-core"))
     schemaExport(project(":physics"))
     playHostLibs(project(":physics"))
     playHostLibs(project(path = ":physics", configuration = "playHost"))

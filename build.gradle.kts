@@ -96,6 +96,11 @@ dependencies {
         exclude(group = "org.jetbrains.kotlin")
         exclude(group = "org.slf4j")
     }
+    // The editing engine without the IDE (see editor-core/README.md); the plugin keeps the IDE glue
+    implementation(project(":editor-core")) {
+        exclude(group = "org.jetbrains.kotlin")
+        exclude(group = "org.slf4j")
+    }
 }
 
 // Set the JVM language level used to build the project. IntelliJ 2025.2+ requires Java 21.
@@ -249,7 +254,7 @@ tasks.named("compileKotlin") { dependsOn(generateGltfParser, generateGltfLexer) 
 tasks.named("compileJava") { dependsOn(generateGltfParser, generateGltfLexer) }
 
 extra["abyssusRunCatchingRoots"] = listOf(
-    "src/main/kotlin", "core/src/main/kotlin", "runtime/src/main/kotlin", "physics/src/main/kotlin",
+    "src/main/kotlin", "core/src/main/kotlin", "runtime/src/main/kotlin", "physics/src/main/kotlin", "editor-core/src/main/kotlin",
     "raytracing/src/main/kotlin", "physics-plugin/src/main/kotlin", "games/control-line/src/main/kotlin",
 )
 apply(from = "gradle/checks.gradle.kts")
