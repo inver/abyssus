@@ -7,11 +7,14 @@ slices (a move commit contains no logic edit). Single plugin tests: `./gradlew :
 **Order:** `refactor-solid-dedup` phases 1, 2, 3 and 5 first. Its phases 4 and 7 are done here (tasks 3.x) and not
 twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (task 0.2).
 
+`share-native-document-validation` is implemented: its validator, rejection types and core tests stay in
+`core.format`. Task 3.3 moves the editor-facing aliases and consumers only (design D1/D2).
+
 ## 0. Preparation
 
-- [ ] 0.1 Record the baseline: `./gradlew check` result, the line and file count per package, the import-edge table of the
+- [x] 0.1 Record the baseline: `./gradlew check` result, the line and file count per package, the import-edge table of the
   proposal (S3) and the 14 `SceneEcsPaths` sites. Keep the commands that produced them in this file's commit message.
-- [ ] 0.2 List open changes touching `sceneview/`, ray files, `ComponentEditor` or `PanelState`
+- [x] 0.2 List open changes touching `sceneview/`, ray files, `ComponentEditor` or `PanelState`
   (`rg -l 'sceneview|RaySceneSnapshot|ComponentEditor|PanelState' openspec/changes/*/tasks.md`); for each, record in
   design D7 whether it lands first or rebases. Verify that the list is in the design.
 - [ ] 0.3 Add `checkPackageCycles` (a Gradle import-scan task, second path segment per module) with an allowlist of
@@ -43,7 +46,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 - [ ] 2.3 Switch callers one at a time (`SceneContent`, `RaySceneSnapshots`, `RayViewFeed`, `PanelState`, `DtoTree`,
   `EntitySelection`, `AddLightAction`, then the writers `SceneTransformWriter`, `SceneRayEdits`, `ComponentEditor`,
   `LightEntities`), running the pinned tests after each. Verify that `rg -n 'SceneEcsPaths|"components"' src/main` lists
-  only `SceneDocument` and the format check.
+  only `SceneDocument`; the shared format check's reserved-field paths stay in `core.format`.
 - [ ] 2.4 Make `SceneEcsPaths` private to `SceneDocument` and record the ADR in design D3 (editor keeps the JSON model,
   games keep Ashley; both share the codecs). Verify with `./gradlew check`.
 
@@ -55,8 +58,11 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 - [ ] 3.2 Create the `editor-core` Gradle module (plain Kotlin, depends on `core`, `runtime`, `raytracing`,
   `gdx-model`, Jackson; `checkNoSingletons` and the shared checks from `refactor-solid-dedup` 5.3). Verify with
   `./gradlew :editor-core:build` on an empty module and the classpath test of design D8.
-- [ ] 3.3 Slice `document`: `SceneJson`, `JsonFormat`, `AbyssusDocumentFormat`, `DocumentParsing`, `AssetMetaReader`,
-  `SceneDocument` and their tests. Verify with `./gradlew :editor-core:test :test`.
+- [ ] 3.3 Slice `document`: `SceneJson`, `JsonFormat`, the editor-facing format type aliases, `DocumentParsing`,
+  `AssetMetaReader`, `SceneDocument` and their editor tests. Keep `AbyssusDocumentFormat`, its rejection types and
+  core validation tests in `core.format`; consumers and aliases use that implementation. Verify with
+  `./gradlew :editor-core:test :test :core:test :runtime:test`, unchanged rejection reasons, no duplicate validator
+  implementation, and no dependency from `core` or `runtime` to `editor-core`.
 - [ ] 3.4 Slice `components`: the four files of the component editor (with `refactor-solid-dedup` 4.1 done here),
   `ComponentReader`, `LightEntities`, `SchemaMerge`. Verify with `:editor-core:test` and `ComponentActionsTest`.
 - [ ] 3.5 Slice `content` and `pick`: `SceneContent`, `SceneRenderParams`, `PlacementMapper`, `ScenePicker`,
@@ -69,7 +75,8 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 - [ ] 3.7 Slice `ray`: the plain `Ray*` files and `RaySceneSnapshots`. Verify with the moved ray tests, `:raytracing:test`
   and `SceneViewPanelRayTest` in the plugin.
 - [ ] 3.8 Add the headless API for spec `headless-scene-editing`: validate and edit by text in, text out (no `Project`,
-  no VFS). Verify with `HeadlessSceneEditingTest`: the move, the refusal and the asset-property scenarios of the
+  no VFS), using the shared `core.format` validator and rejection types. Verify with `HeadlessSceneEditingTest`:
+  the move, the refusal (including the same rejection reason) and the asset-property scenarios of the
   spec, each compared with the plugin's `editSceneJson` result on the same text.
 - [ ] 3.9 Check the plugin zip and `physics-plugin`: `./gradlew buildPlugin` contains `editor-core` once; `:physics-plugin:test`
   and `:physics-plugin:checkNoJolt` pass; the physics plugin does not bundle it.
