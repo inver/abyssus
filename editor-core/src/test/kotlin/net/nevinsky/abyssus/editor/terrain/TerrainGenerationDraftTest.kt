@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.terrain.generation
+package net.nevinsky.abyssus.editor.terrain
 
-import net.nevinsky.abyssus.terrain.noise.FastNoiseSamplerFactory
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

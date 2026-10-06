@@ -5,19 +5,26 @@
 
 package net.nevinsky.abyssus.terrain
 
+import net.nevinsky.abyssus.editor.terrain.FolderNameError
+import net.nevinsky.abyssus.editor.terrain.GeometryError
+import net.nevinsky.abyssus.editor.terrain.TerrainAssetWriter
+import net.nevinsky.abyssus.editor.terrain.TerrainHeightEncoder
+import net.nevinsky.abyssus.editor.terrain.checkFolderName
+import net.nevinsky.abyssus.editor.terrain.sha256Hex
+import net.nevinsky.abyssus.editor.terrain.uniqueAssetUuid
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assetfiles.AssetReferenceGuard
 import net.nevinsky.abyssus.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.assetfiles.FileChange
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.core.io.JsonProcessor
-import net.nevinsky.abyssus.TERRAIN_DATA_FILE
+import net.nevinsky.abyssus.editor.meta.TERRAIN_DATA_FILE
 import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.terrain.generation.TERRAIN_RECIPE_FILE
-import net.nevinsky.abyssus.terrain.generation.TerrainPreview
-import net.nevinsky.abyssus.terrain.generation.TerrainRecipe
-import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
+import net.nevinsky.abyssus.editor.terrain.TERRAIN_RECIPE_FILE
+import net.nevinsky.abyssus.editor.terrain.TerrainPreview
+import net.nevinsky.abyssus.editor.terrain.TerrainRecipe
+import net.nevinsky.abyssus.editor.terrain.TerrainRecipeCodec
 import java.io.File
 import java.util.*
 
@@ -29,7 +36,7 @@ fun GeometryError.message(): String = AbyssusBundle.message("newTerrainGeometryE
 class NewTerrain(val name: String, val uuid: String, val transaction: AssetTransaction)
 
 /**
- * Stages the files of a new terrain asset from a finished [net.nevinsky.abyssus.terrain.generation.TerrainPreview]: `meta.json` in native layout with a fresh
+ * Stages the files of a new terrain asset from a finished [net.nevinsky.abyssus.editor.terrain.TerrainPreview]: `meta.json` in native layout with a fresh
  * `uuid`, the big-endian heights, and the Abyssus recipe. Nothing is written here; no scene or project file is touched.
  */
 class NewTerrainFactory(

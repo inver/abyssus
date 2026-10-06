@@ -15,8 +15,8 @@ import net.nevinsky.abyssus.core.flightgear.FlightGearImportRequest
 import net.nevinsky.abyssus.core.flightgear.FlightGearInspection
 import net.nevinsky.abyssus.core.flightgear.ImportSize
 import net.nevinsky.abyssus.core.flightgear.StagedImport
-import net.nevinsky.abyssus.terrain.FolderNameError
-import net.nevinsky.abyssus.terrain.checkFolderName
+import net.nevinsky.abyssus.editor.terrain.FolderNameError
+import net.nevinsky.abyssus.editor.terrain.checkFolderName
 import java.io.File
 
 /** Why an import's size is refused. */

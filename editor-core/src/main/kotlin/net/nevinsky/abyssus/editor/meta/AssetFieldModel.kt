@@ -3,17 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.properties
+package net.nevinsky.abyssus.editor.meta
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.AssetField
-import net.nevinsky.abyssus.AssetFieldDescriptions
-import net.nevinsky.abyssus.AssetMetaEditor
-import net.nevinsky.abyssus.FieldKind
-import net.nevinsky.abyssus.FieldValue
 import net.nevinsky.abyssus.core.assets.MetaType
-import net.nevinsky.abyssus.editor.meta.AssetChoice
-import net.nevinsky.abyssus.editor.meta.AssetReferenceChoices
 import java.io.File
 
 /**

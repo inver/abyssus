@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.terrain
 
+import net.nevinsky.abyssus.editor.terrain.TerrainHeightEncoder
+import net.nevinsky.abyssus.editor.terrain.sha256Hex
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -15,12 +17,12 @@ import net.nevinsky.abyssus.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.assetfiles.FileChange
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.assetfiles.LocalAssetFileStore
-import net.nevinsky.abyssus.terrain.generation.RecipeStatus
-import net.nevinsky.abyssus.terrain.generation.TerrainGenerationDraft
-import net.nevinsky.abyssus.terrain.generation.TerrainGenerationSettings
-import net.nevinsky.abyssus.terrain.generation.TerrainGenerator
-import net.nevinsky.abyssus.terrain.generation.TerrainRecipe
-import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
+import net.nevinsky.abyssus.editor.terrain.RecipeStatus
+import net.nevinsky.abyssus.editor.terrain.TerrainGenerationDraft
+import net.nevinsky.abyssus.editor.terrain.TerrainGenerationSettings
+import net.nevinsky.abyssus.editor.terrain.TerrainGenerator
+import net.nevinsky.abyssus.editor.terrain.TerrainRecipe
+import net.nevinsky.abyssus.editor.terrain.TerrainRecipeCodec
 import java.io.File
 import kotlin.random.Random
 import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage

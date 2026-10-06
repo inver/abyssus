@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.editor.document.scalarOf
 import net.nevinsky.abyssus.EditorBundle
 
 import com.fasterxml.jackson.databind.JsonNode

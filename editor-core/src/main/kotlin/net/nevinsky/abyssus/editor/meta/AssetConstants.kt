@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus
+package net.nevinsky.abyssus.editor.meta
 
 /** The faces of a skybox in `meta.json`'s order: the property names of `SkyboxMeta`. */
 val SKYBOX_FACES = listOf("top", "bottom", "left", "right", "front", "back")

@@ -5,13 +5,15 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.meta.AssetFieldState
+import net.nevinsky.abyssus.editor.meta.assetFieldStates
 import net.nevinsky.abyssus.editor.meta.AssetChoice
 import net.nevinsky.abyssus.editor.meta.AssetReferenceChoices
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.EditError
+import net.nevinsky.abyssus.editor.meta.EditError
 import net.nevinsky.abyssus.core.assets.MetaType
 import java.io.File
 

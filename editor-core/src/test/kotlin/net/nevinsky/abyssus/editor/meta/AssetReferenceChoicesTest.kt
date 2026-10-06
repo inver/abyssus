@@ -3,10 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.properties
+package net.nevinsky.abyssus.editor.meta
 
-import net.nevinsky.abyssus.editor.meta.AssetReferenceChoices
-import net.nevinsky.abyssus.editor.meta.AssetChoice
 
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import org.junit.Assert.assertEquals

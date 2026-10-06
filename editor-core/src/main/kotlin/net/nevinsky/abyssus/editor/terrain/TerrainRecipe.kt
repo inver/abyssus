@@ -3,15 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.terrain.generation
+package net.nevinsky.abyssus.editor.terrain
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.terrain.sha256Hex
-import net.nevinsky.abyssus.terrain.noise.FAST_NOISE_LITE_REVISION
-import net.nevinsky.abyssus.terrain.noise.OPENSIMPLEX2_FBM_V1
 import net.nevinsky.abyssus.core.assets.displayMessage
 import net.nevinsky.abyssus.core.assets.terrain.MAX_TERRAIN_RESOLUTION
 

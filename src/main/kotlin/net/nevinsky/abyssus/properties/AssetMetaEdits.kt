@@ -8,12 +8,12 @@ package net.nevinsky.abyssus.properties
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.EditError
-import net.nevinsky.abyssus.EditOutcome
-import net.nevinsky.abyssus.FieldValue
+import net.nevinsky.abyssus.editor.meta.EditError
+import net.nevinsky.abyssus.editor.meta.EditOutcome
+import net.nevinsky.abyssus.editor.meta.FieldValue
 import net.nevinsky.abyssus.filetype.editSceneJson
 import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.AssetMetaEditor
+import net.nevinsky.abyssus.editor.meta.AssetMetaEditor
 
 /** What came of one asset property edit. Only [Changed] wrote anything. */
 sealed interface AssetEditResult {

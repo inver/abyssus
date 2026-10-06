@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.properties
+package net.nevinsky.abyssus.editor.meta
 
+import net.nevinsky.abyssus.editor.document.scalarOf
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.editor.EditorMessages
-import net.nevinsky.abyssus.projectView.scalarOf
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

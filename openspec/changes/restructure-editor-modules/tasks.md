@@ -69,7 +69,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
   `SceneQueries`, `TerrainRestHeight`, `OrbitCamera`, gizmo math, `SceneInteraction`, `ScenePreview`,
   `SceneTransformWriter`. Verify with `SceneInteractionTest`, `ScenePickerTest`, `GizmoDragTest`,
   `SceneTransformWriterTest` (moved) and (GL) `SceneRenderGlTest` still passing in the plugin.
-- [ ] 3.6 Slice `terrain` and `meta`: terrain generation, noise, recipe and new-terrain file logic; `AssetMetaEditor`,
+- [x] 3.6 Slice `terrain` and `meta`: terrain generation, noise, recipe and new-terrain file logic; `AssetMetaEditor`,
   field descriptions, `MetaRows`, `AssetReferenceChoices`, the pure part of `PanelState`. Verify with the moved
   terrain and meta tests and `NewTerrainActionTest` in the plugin.
 - [ ] 3.7 Slice `ray`: the plain `Ray*` files and `RaySceneSnapshots`. Verify with the moved ray tests, `:raytracing:test`

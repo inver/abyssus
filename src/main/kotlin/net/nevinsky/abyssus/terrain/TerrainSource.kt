@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.terrain
 
+import net.nevinsky.abyssus.editor.terrain.sha256Hex
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.assetfiles.FileSnapshot
@@ -14,11 +15,11 @@ import net.nevinsky.abyssus.runtime.obj
 import net.nevinsky.abyssus.runtime.text
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.core.assets.terrain.MAX_TERRAIN_RESOLUTION
-import net.nevinsky.abyssus.terrain.generation.MIN_TERRAIN_RESOLUTION
-import net.nevinsky.abyssus.terrain.generation.RecipeStatus
-import net.nevinsky.abyssus.terrain.generation.SourceSnapshot
-import net.nevinsky.abyssus.terrain.generation.TERRAIN_RECIPE_FILE
-import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
+import net.nevinsky.abyssus.editor.terrain.MIN_TERRAIN_RESOLUTION
+import net.nevinsky.abyssus.editor.terrain.RecipeStatus
+import net.nevinsky.abyssus.editor.terrain.SourceSnapshot
+import net.nevinsky.abyssus.editor.terrain.TERRAIN_RECIPE_FILE
+import net.nevinsky.abyssus.editor.terrain.TerrainRecipeCodec
 import net.nevinsky.abyssus.editor.meta.AssetReferenceChoices
 import net.nevinsky.abyssus.ui.documentDisplayMessage
 import java.io.File

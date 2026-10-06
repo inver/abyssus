@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus
+package net.nevinsky.abyssus.editor.meta
 
 import net.nevinsky.abyssus.core.assets.terrain.SPLAT_FIELDS
 import com.fasterxml.jackson.databind.JsonNode

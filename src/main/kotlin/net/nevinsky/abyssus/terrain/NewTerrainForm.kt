@@ -5,6 +5,15 @@
 
 package net.nevinsky.abyssus.terrain
 
+import net.nevinsky.abyssus.editor.terrain.FolderNameError
+import net.nevinsky.abyssus.editor.terrain.GeometryError
+import net.nevinsky.abyssus.editor.terrain.SourceSnapshot
+import net.nevinsky.abyssus.editor.terrain.TerrainGenerationDraft
+import net.nevinsky.abyssus.editor.terrain.TerrainGenerationSettings
+import net.nevinsky.abyssus.editor.terrain.TerrainGenerator
+import net.nevinsky.abyssus.editor.terrain.TerrainPreview
+import net.nevinsky.abyssus.editor.terrain.checkFolderName
+import net.nevinsky.abyssus.editor.terrain.checkGeometry
 import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
@@ -13,7 +22,6 @@ import com.intellij.ui.components.panels.VerticalLayout
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.terrain.generation.*
 import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent

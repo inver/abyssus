@@ -43,7 +43,7 @@ import net.nevinsky.abyssus.ui.documentDisplayMessage
 import net.nevinsky.abyssus.core.flightgear.FlightGearImportRequest
 import net.nevinsky.abyssus.core.flightgear.FlightGearInspection
 import net.nevinsky.abyssus.terrain.message
-import net.nevinsky.abyssus.terrain.uniqueAssetUuid
+import net.nevinsky.abyssus.editor.terrain.uniqueAssetUuid
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.io.File

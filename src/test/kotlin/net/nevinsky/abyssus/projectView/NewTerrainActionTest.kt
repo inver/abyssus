@@ -20,17 +20,17 @@ import net.nevinsky.abyssus.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.assetfiles.AssetFileStore
 import net.nevinsky.abyssus.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.editor.terrainData
-import net.nevinsky.abyssus.terrain.generation.TerrainGenerationDraft
-import net.nevinsky.abyssus.terrain.generation.TerrainGenerationSettings
-import net.nevinsky.abyssus.terrain.generation.TerrainPreview
-import net.nevinsky.abyssus.terrain.generation.SourceSnapshot
+import net.nevinsky.abyssus.editor.terrain.TerrainGenerationDraft
+import net.nevinsky.abyssus.editor.terrain.TerrainGenerationSettings
+import net.nevinsky.abyssus.editor.terrain.TerrainPreview
+import net.nevinsky.abyssus.editor.terrain.SourceSnapshot
 import net.nevinsky.abyssus.dto.ProjectReader
-import net.nevinsky.abyssus.terrain.FolderNameError
-import net.nevinsky.abyssus.terrain.GeometryError
+import net.nevinsky.abyssus.editor.terrain.FolderNameError
+import net.nevinsky.abyssus.editor.terrain.GeometryError
 import net.nevinsky.abyssus.terrain.NewTerrainFactory
 import net.nevinsky.abyssus.terrain.NewTerrainRequest
-import net.nevinsky.abyssus.terrain.checkFolderName
-import net.nevinsky.abyssus.terrain.checkGeometry
+import net.nevinsky.abyssus.editor.terrain.checkFolderName
+import net.nevinsky.abyssus.editor.terrain.checkGeometry
 import java.io.File
 import java.nio.file.Files
 

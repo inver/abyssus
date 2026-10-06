@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.meta.ADDITIONAL
+import net.nevinsky.abyssus.editor.meta.RowKind
+import net.nevinsky.abyssus.editor.meta.metaRowsOf
 import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.core.assets.MetaType

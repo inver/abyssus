@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.meta.PropertyRow
+import net.nevinsky.abyssus.editor.meta.metaRowsOf
 import net.nevinsky.abyssus.EditorBundle
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile

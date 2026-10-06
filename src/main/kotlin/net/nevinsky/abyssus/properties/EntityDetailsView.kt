@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.meta.ComponentSection
+import net.nevinsky.abyssus.editor.meta.OpticalMaterialRow
+import net.nevinsky.abyssus.editor.meta.RenderOptics
 import net.nevinsky.abyssus.EditorBundle
 import com.intellij.ide.DataManager
 import com.intellij.openapi.project.Project

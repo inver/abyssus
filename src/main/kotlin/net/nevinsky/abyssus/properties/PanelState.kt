@@ -5,6 +5,13 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.meta.AssetFieldState
+import net.nevinsky.abyssus.editor.meta.ComponentSection
+import net.nevinsky.abyssus.editor.meta.EntityAssetChoices
+import net.nevinsky.abyssus.editor.meta.EntitySections
+import net.nevinsky.abyssus.editor.meta.RenderOptics
+import net.nevinsky.abyssus.editor.meta.readEntitySections
+import net.nevinsky.abyssus.editor.meta.readRenderOptics
 import net.nevinsky.abyssus.EditorBundle
 
 import net.nevinsky.abyssus.editor.meta.AssetReferenceChoices
@@ -22,7 +29,7 @@ import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.SKYBOX_FACES
+import net.nevinsky.abyssus.editor.meta.SKYBOX_FACES
 import net.nevinsky.abyssus.core.assets.sky.hdr.HdrPreview
 import net.nevinsky.abyssus.dto.ProjectLayout
 import net.nevinsky.abyssus.dto.textOf

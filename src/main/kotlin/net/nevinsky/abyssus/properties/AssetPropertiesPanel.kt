@@ -5,6 +5,12 @@
 
 package net.nevinsky.abyssus.properties
 
+import net.nevinsky.abyssus.editor.meta.ADDITIONAL
+import net.nevinsky.abyssus.editor.meta.AssetFieldState
+import net.nevinsky.abyssus.editor.meta.DetailRow
+import net.nevinsky.abyssus.editor.meta.PropertyRow
+import net.nevinsky.abyssus.editor.meta.RowKind
+import net.nevinsky.abyssus.editor.meta.detailRows
 import net.nevinsky.abyssus.editor.meta.AssetChoice
 import net.nevinsky.abyssus.ui.thumbnail
 
@@ -42,9 +48,9 @@ import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.AbyssusBundle
 import net.nevinsky.abyssus.AbyssusCore
 import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.FieldKind
-import net.nevinsky.abyssus.FieldValue
-import net.nevinsky.abyssus.ParseOutcome
+import net.nevinsky.abyssus.editor.meta.FieldKind
+import net.nevinsky.abyssus.editor.meta.FieldValue
+import net.nevinsky.abyssus.editor.meta.ParseOutcome
 import net.nevinsky.abyssus.core.assets.Asset
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.dto.ProjectLayout

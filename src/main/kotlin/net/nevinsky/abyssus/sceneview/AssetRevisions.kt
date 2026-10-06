@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.core.assets.MetaType
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.terrain.sha256Hex
+import net.nevinsky.abyssus.editor.terrain.sha256Hex
 import net.nevinsky.abyssus.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.runtime.obj
 import net.nevinsky.abyssus.runtime.text

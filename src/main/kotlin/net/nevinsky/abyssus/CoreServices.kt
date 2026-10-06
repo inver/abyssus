@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus
 
+import net.nevinsky.abyssus.editor.meta.AssetFieldDescriptions
+import net.nevinsky.abyssus.editor.meta.AssetMetaEditor
 import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.core.io.JsonProcessor
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
@@ -18,11 +20,11 @@ import net.nevinsky.abyssus.raytracing.VulkanRayBackendFactory
 import net.nevinsky.abyssus.sceneview.RayBackendSelector
 import net.nevinsky.abyssus.sceneview.RayBackendService
 import net.nevinsky.abyssus.terrain.NewTerrainFactory
-import net.nevinsky.abyssus.terrain.TerrainAssetWriter
-import net.nevinsky.abyssus.terrain.TerrainHeightEncoder
-import net.nevinsky.abyssus.terrain.generation.TerrainGenerator
-import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
-import net.nevinsky.abyssus.terrain.noise.FastNoiseSamplerFactory
+import net.nevinsky.abyssus.editor.terrain.TerrainAssetWriter
+import net.nevinsky.abyssus.editor.terrain.TerrainHeightEncoder
+import net.nevinsky.abyssus.editor.terrain.TerrainGenerator
+import net.nevinsky.abyssus.editor.terrain.TerrainRecipeCodec
+import net.nevinsky.abyssus.editor.terrain.FastNoiseSamplerFactory
 import org.slf4j.Logger
 import java.util.concurrent.Executors
 

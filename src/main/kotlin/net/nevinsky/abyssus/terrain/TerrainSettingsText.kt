@@ -6,8 +6,8 @@
 package net.nevinsky.abyssus.terrain
 
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.terrain.generation.SettingsError
-import net.nevinsky.abyssus.terrain.generation.TerrainGenerationSettings
+import net.nevinsky.abyssus.editor.terrain.SettingsError
+import net.nevinsky.abyssus.editor.terrain.TerrainGenerationSettings
 import java.math.BigDecimal
 
 /** The seven generation settings an editor shows, by the key a test or editor name uses. */

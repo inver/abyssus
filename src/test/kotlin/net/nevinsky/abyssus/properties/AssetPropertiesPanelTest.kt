@@ -24,7 +24,7 @@ import net.nevinsky.abyssus.projectView.DtoEntryNode
 import java.awt.Component
 import java.awt.Container
 import java.io.File
-import net.nevinsky.abyssus.SKYBOX_FACES
+import net.nevinsky.abyssus.editor.meta.SKYBOX_FACES
 import net.nevinsky.abyssus.testPanelServices
 
 class AssetPropertiesPanelTest : BasePlatformTestCase() {

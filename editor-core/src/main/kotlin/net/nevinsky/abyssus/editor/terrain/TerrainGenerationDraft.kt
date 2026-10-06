@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.terrain.generation
+package net.nevinsky.abyssus.editor.terrain
 
 import kotlin.random.Random
 

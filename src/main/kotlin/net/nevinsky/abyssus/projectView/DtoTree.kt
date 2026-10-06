@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.projectView
 
+import net.nevinsky.abyssus.editor.document.scalarOf
 import net.nevinsky.abyssus.editor.document.isSceneComponentEntry
 import net.nevinsky.abyssus.editor.document.isSceneEcsEntry
 import net.nevinsky.abyssus.editor.document.isSceneEntityEntry
@@ -47,17 +48,6 @@ fun isScalar(value: Any?): Boolean = when (value) {
     else -> false
 }
 
-/** The text-or-number behind a scalar [value]; `null` for null and for a JSON null. */
-fun scalarOf(value: Any?): Any? = when {
-    value is JsonNode -> when {
-        value.isNull || value.isMissingNode -> null
-        value.isTextual -> value.asText()
-        value.isBoolean -> value.asBoolean()
-        value.isNumber -> value.numberValue()
-        else -> value.toString()
-    }
-    else -> value
-}
 
 /**
  * The children of [value] in order: a bound object lists the properties Jackson would serialize (declaration order, no

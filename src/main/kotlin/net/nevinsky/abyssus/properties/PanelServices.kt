@@ -5,12 +5,12 @@
 
 package net.nevinsky.abyssus.properties
 
-import net.nevinsky.abyssus.AssetFieldDescriptions
-import net.nevinsky.abyssus.AssetMetaEditor
+import net.nevinsky.abyssus.editor.meta.AssetFieldDescriptions
+import net.nevinsky.abyssus.editor.meta.AssetMetaEditor
 import net.nevinsky.abyssus.core.io.JsonProcessor
-import net.nevinsky.abyssus.terrain.generation.TerrainGenerator
-import net.nevinsky.abyssus.terrain.TerrainHeightEncoder
-import net.nevinsky.abyssus.terrain.generation.TerrainRecipeCodec
+import net.nevinsky.abyssus.editor.terrain.TerrainGenerator
+import net.nevinsky.abyssus.editor.terrain.TerrainHeightEncoder
+import net.nevinsky.abyssus.editor.terrain.TerrainRecipeCodec
 import net.nevinsky.abyssus.dto.MetaFiles
 import net.nevinsky.abyssus.projectView.HdrPreviewSource
 import net.nevinsky.abyssus.editor.ray.RayMaterialIdentity
