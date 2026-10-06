@@ -44,7 +44,7 @@ Host: macOS (Apple GPU, Metal). No Vulkan loader or device is installed (`/opt/h
 - Task 5.1: labels now match the spec (Target samples per pixel, Maximum rays per frame, Maximum reflection/refraction bounces), with help separating accumulated quality from per-frame work and showing ranges/defaults; a non-object `rayTracing` block is explained; a conflict message survives the panel's rebuild. SceneRaySettingsPanelTest (6) and SceneRaySwitchTest (11, incl. editing a limit while hardware is unavailable) pass.
 - Task 5.2: `AssetLoading.rayModelMaterials` (core, no images; RayModelSnapshotTest covers the loader's IDs) feeds `PanelServices.rayMaterials`; the tool window caches tables per model file and modification time. RayMaterialPropertiesTest (7) passes: percent conversion with default IOR omitted, two instances, invalid edits, repeated/non-PBR explanations, unresolved overrides kept, unreadable model, external change, stale-editor conflict and Undo/Redo.
 - Task 5.3: scene view README, README plugin description, CHANGELOG, core/README.md and docs/ai/architecture.md updated; `scripts/check-docs.sh` passes (175 paths).
-- Properties and scene view suites: `./gradlew :test --tests 'net.nevinsky.abyssus.properties.*' --tests 'net.nevinsky.abyssus.sceneview.*'`: 535 tests, 0 failures, 40 skipped (GL tests without `-Dabyssus.glTests=true`).
+- Properties and scene view suites: `./gradlew :test --tests 'net.nevinsky.abyssus.properties.*' --tests 'net.nevinsky.abyssus.plugin.sceneview.*'`: 535 tests, 0 failures, 40 skipped (GL tests without `-Dabyssus.glTests=true`).
 
 ## Manual runIde checks (not performed)
 

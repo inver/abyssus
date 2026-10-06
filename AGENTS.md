@@ -16,9 +16,9 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | Ray tracing tests / native jar packaging | `./gradlew :raytracing:test` / `./gradlew :raytracing:verifyNativePackaging` |
 | `runtime` tests only | `./gradlew :runtime:test` |
 | `physics` tests only | `./gradlew :physics:test` |
-| `core` tests only | `./gradlew :core:test` (one class: `./gradlew :core:test --tests 'net.nevinsky.abyssus.core.assets.loading.AssetStorageTest'`) |
-| `editor-core` tests only | `./gradlew :editor-core:test` (one class: `./gradlew :editor-core:test --tests 'net.nevinsky.abyssus.editor.pick.OrbitCameraTest'`) |
-| One plugin test class | `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneViewPanelTest'` |
+| `core` tests only | `./gradlew :core:test` (one class: `./gradlew :core:test --tests 'net.nevinsky.abyssus.lib.core.assets.loading.AssetStorageTest'`) |
+| `editor-core` tests only | `./gradlew :editor-core:test` (one class: `./gradlew :editor-core:test --tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`) |
+| One plugin test class | `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneViewPanelTest'` |
 | Also run GL tests (open a window) | add `-Dabyssus.glTests=true` |
 | Sandbox IDE | `./gradlew runIde` (open a project with `-PideProject=/path/to/project`) |
 | Sandbox IDE with Abyssus Physics | `./gradlew :physics-plugin:runIde` |
@@ -44,14 +44,14 @@ Use `:test`, not `test`, with `--tests`: plain `test` also runs in the other mod
     `ComponentSchemas` project service that builds each scene's `ComponentEditor`.
   - `terrain/`: the New Terrain dialog and the regeneration controls; generation itself is in `editor-core`.
   - `filetype/`, `language/`: file types, icons, the GLTF PSI.
-- `editor-core/`: a plain JVM library, root package `net.nevinsky.abyssus.editor`: scene documents (`SceneJson`,
+- `editor-core/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.core.editor`: scene documents (`SceneJson`,
   `SceneDocument`, `DocumentTextEditor`), component editing (`ComponentEditor`, `LightEntities`), the scene read model
   (`SceneContent`), picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge, and the
   headless editing API (`HeadlessEditing`). Ashley components, codecs and systems stay in `runtime`. See
   `editor-core/README.md`.
 - `gdx-model/`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import), with inherited sources documented in `docs/third-party/gdx-model-origin.md`.
   See `gdx-model/README.md`.
-- `core/`: a plain JVM library, root package `net.nevinsky.abyssus.core`: project layout and file access
+- `core/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.core`: project layout and file access
   (`core.io.AbyssusProjectLayout`, `core.io.FileLoader`, `core.io.JsonProcessor`), asset metas (`AssetMeta`, `AssetMetaLoader`), the loading
   pipeline (`AssetLoader`, `CompositeAssetLoader`, `AssetStorage`), the optional CPU snapshots for ray tracing (`RaySnapshotStore`), and the
   loaders with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).

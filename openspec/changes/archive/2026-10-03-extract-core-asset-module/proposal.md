@@ -37,7 +37,7 @@ terrain `.terra` data, `.hdr` images. Nothing is written by this change, and the
 
 - Converting plugin code outside the loading path to injected instances (`ScenePicker`, `SceneMarkers`, the bundle,
   the tree builders). Only code in `core` must be free of singletons.
-- Renaming `gdx-model`'s `net.nevinsky.abyssus.core.*` packages.
+- Renaming `gdx-model`'s `net.nevinsky.abyssus.lib.core.*` packages.
 - Moving rendering, picking, gizmos, cameras or the scene shaders that are not sky shaders into `core`.
 - A DI framework (Koin, Dagger). Wiring is plain constructors.
 - Any behaviour change in what is drawn, when assets load, or how failures look.

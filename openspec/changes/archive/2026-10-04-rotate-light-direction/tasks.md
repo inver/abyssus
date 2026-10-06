@@ -8,15 +8,15 @@
   `mundusLightsFaceTheirHandles` (`Lights/scenes/Mundus Lights.scene`: lights `1` and `4` have direction
   (0, -1, 0), and `handleIds` holds `0` and `3`), `aLightWithAMissingTargetFacesAlongItsRotation`, and
   `aLightAtItsTargetFacesAlongItsRotation`. Existing camera tests stay green.
-  Run `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneContentTest'` and
-  `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.CameraFrustumTest'`.
+  Run `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneContentTest'` and
+  `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.CameraFrustumTest'`.
 
 ## 2. Rotate rings
 
 - [x] 2.1 In `gizmo/GizmoHandles.kt`, make `canRotate` return false for a light whose `lookAtId` resolves to an
   entity not in `handleIds`. Verify with new `GizmoHandlesTest` cases: true for lights `1` and `4` of
   `Mundus Lights.scene`, false for an inline light aimed at a model, true for a light without `lookAtId`, false for
-  a point light. Run `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.gizmo.GizmoHandlesTest'`.
+  a point light. Run `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoHandlesTest'`.
 
 ## 3. Preview
 
@@ -26,7 +26,7 @@
   re-aim a look-at light at its unmoved target. Verify with a new `ScenePreviewTest`:
   `turningAHandleAimedLightMovesItsHandle` (light `1`, turned to (0, 0, -1): its direction is (0, 0, -1) and handle `0`
   is at (0, 10, -10)), `movingALookAtLightReAimsItAtItsUnmovedTarget`, and `aLightWithoutTargetUsesTheDraggedDirection`.
-  Run `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.ScenePreviewTest'`.
+  Run `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.ScenePreviewTest'`.
 
 ## 4. Edit and write
 
@@ -36,13 +36,13 @@
   an X-ring drag on light `1` of `Mundus Lights.scene` and checks that the emitted edit has a null `rotation` and a
   `target` for `0` at distance 10 from (0, 10, 0) along the previewed direction. The existing
   `rotatingARingWritesTheRotation` stays green.
-  Run `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneInteractionTest'`.
+  Run `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneInteractionTest'`.
 - [x] 4.2 In `SceneTransformWriter.apply`, write `edit.target` into the target entity's
   `PositionComponent.localPosition`. In `SceneFileEditor.applyTransform`, name such an edit "Rotate Entity". Verify
   with new `SceneTransformWriterTest` cases on `Mundus Lights.scene`: `aHandleMoveWritesTheHandlePosition` (handle `0`
   gets `localPosition` (0, 10, -10), light `1` and every other entity are unchanged, no key is added to any
   `LightComponent`) and `aHandleMoveToTheSamePlaceChangesNothing` (returns false).
-  Run `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneTransformWriterTest'`.
+  Run `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneTransformWriterTest'`.
 
 ## 5. Integration
 

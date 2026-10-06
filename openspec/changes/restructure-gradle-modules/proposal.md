@@ -3,7 +3,7 @@
 ## Why
 
 The repository root is both the build and the Abyssus plugin, while libraries, a second plugin and a game sit beside
-it under unrelated names (`core`, `physics-plugin`, `games/control-line`). Nothing in a module's name says whether it
+it under unrelated names (`core`, `editor-core`, `physics-plugin`, `games/control-line`). Nothing in a module's name says whether it
 is a plain library, an IntelliJ plugin or an application. The layout should make that obvious before
 `merge-physics-into-abyssus` folds the physics plugin into Abyssus.
 
@@ -23,6 +23,7 @@ is a plain library, an IntelliJ plugin or an application. The layout should make
   | `gdx-model` | `projects/lib-gdx-model` | `:lib-gdx-model` |
   | `core` | `projects/lib-core` | `:lib-core` |
   | `runtime` | `projects/lib-runtime` | `:lib-runtime` |
+  | `editor-core` | `projects/lib-editor-core` | `:lib-editor-core` |
   | `physics` | `projects/lib-physics` | `:lib-physics` |
   | `raytracing` | `projects/lib-raytracing` | `:lib-raytracing` |
   | `games/control-line` | `projects/app-control-line-game` | `:app-control-line-game` |
@@ -37,7 +38,7 @@ is a plain library, an IntelliJ plugin or an application. The layout should make
   match.
 - Out of scope:
   - Kotlin package names stay as they are (`net.nevinsky.abyssus.assets`, `...runtime`, `...physics`,
-    `...games.controlline`).
+    `...editor`, `...games.controlline`).
   - Plugin IDs, plugin names, the plugin zip contents and published artifact coordinates stay the same.
   - Merging the physics plugin into Abyssus belongs to `merge-physics-into-abyssus`.
 
@@ -59,7 +60,8 @@ updated as tasks.
 ## Impact
 
 - Build: `settings.gradle.kts`, every `build.gradle.kts`, and the root build script, which becomes plugin-version
-  declarations only. Cross-module checks with hardcoded paths change too: `checkNoRunCatching` scans `lib-core`.
+  declarations only. Cross-module checks with hardcoded paths change too: `checkNoRunCatching` scans the plugin and
+  every module's `src/main/kotlin`, so the scanned list grows by `lib-editor-core`.
 - Tests: the fixture paths in plugin tests (37 files use `src/test/testData` relative to the working folder) and in
   every module's `abyssus.testData` system property. Control Line's `controlLine.project` and the `Main.kt` fallback
   path also change.

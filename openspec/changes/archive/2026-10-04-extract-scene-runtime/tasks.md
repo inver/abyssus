@@ -27,7 +27,7 @@ Verification: `design-review-refactor` is archived; `git status --short src/main
 - [x] 2.1 `git mv` `ecs/component/`, `ecs/render/`, `ecs/system/`, `EcsConfigurator.kt`, `EcsUtils.kt` and, from
       `ecs/scene/`, `SceneEngine`, `SceneEcsLoader`, `SceneEcsWriter`, `ComponentCodecs`, `SceneEcsWarnings` (plus
       `ComponentDefaults` / `SceneEcsPaths` if `design-review-refactor` added them) to `runtime` under
-      `net.nevinsky.abyssus.runtime.ecs`, applying design decision 3: remove `WorldUtils`, add
+      `net.nevinsky.abyssus.lib.runtime.ecs`, applying design decision 3: remove `WorldUtils`, add
       `FolderAssetResolver`, turn the delegate's class name into a top-level `const val`, and give
       `SceneEcsWarnings` an `AssetLog`. `ComponentEditor` and `LightEntities` stay and import the new packages. Verify:
       `./gradlew :runtime:checkNoSingletons :compileKotlin` pass
@@ -37,7 +37,7 @@ Verification: `design-review-refactor` is archived; `git status --short src/main
       to `runtime/src/test` (plain JUnit, fixtures through `testProject`); loader tests pass a recording `AssetLog`.
       Add `SceneEcsLoaderTest.unmodeledComponentsAreLoggedOnceToTheCallersLog` (`PickableComponent` and
       `DependenciesComponent` of `Main Scene`, one message each). Verify:
-      `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.runtime.ecs.*'` passes, and
+      `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.lib.runtime.ecs.*'` passes, and
       `./gradlew :test --tests 'net.nevinsky.abyssus.ecs.ComponentEditorTest' --tests
       'net.nevinsky.abyssus.ecs.LightEntitiesTest'` passes
 
@@ -48,7 +48,7 @@ Verification: `design-review-refactor` is archived; `git status --short src/main
       without `file`. Point the plugin's `ProjectLayout` constants at `ProjectFolder`'s. Verify: `ProjectFolderTest`
       (`Untitled` lists `Main Scene.scene`; a folder without `.abss` has no project) and `SceneParserTest`
       (`Main Scene` is named `Ololo` with sky `skybox_physical`; a non-JSON text fails with a message) pass with
-      `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.runtime.*'`
+      `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.lib.runtime.*'`
 - [x] 3.2 Add the composition root `SceneLoading(json, log)` with `project`, `projectName`, `parse` and both `load`
       forms (design decision 2). Cover the `scene-loading` spec in `SceneLoadingTest`:
       `untitledProjectReadsOutsideTheIde`, `mainScenesEntitiesLoadOutsideTheIde` (ids 0 to 8, entity 0 `Model 0`
@@ -56,14 +56,14 @@ Verification: `design-review-refactor` is archived; `git status --short src/main
       `unsavedTextLoadsWithoutReadingTheFile` (entity 0 renamed `Plane`, file bytes unchanged),
       `anUnreadableSceneIsLoggedOnceAndOthersLoad` (in a temp copy of `Untitled`), and
       `twoLoadsShareNothing` (`Untitled` and `Animated/scenes/Main.scene` on two threads with two logs). Verify:
-      `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.runtime.SceneLoadingTest'` passes
+      `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.lib.runtime.SceneLoadingTest'` passes
 
 ## 4. Plugin wiring
 
 - [x] 4.1 `AbyssusCore` builds one `SceneLoading` from its `JsonProcessor` and an `AssetLog` writing
       `Logger.getInstance("Abyssus.scenes")`. `SceneReader` delegates `parse` to it; `ProjectReader` reads the
       `.abss` name through `projectName` and keeps its VFS listing and stamping (design decision 5). Verify:
-      `./gradlew :test --tests 'net.nevinsky.abyssus.dto.*'` passes
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.dto.*'` passes
 - [x] 4.2 Add the plugin's `SceneEntry(file, scene)`; `ProjectReader` puts it into `ProjectDto.scenes`; `DtoTree`,
       `AbyssusNodes`, `EnabledToggle`, `AbyssusFooter`, `SkyboxChoices` read the scene and file from it (design
       decision 4). Verify: `./gradlew :test --tests 'net.nevinsky.abyssus.AbyssusViewTest' --tests

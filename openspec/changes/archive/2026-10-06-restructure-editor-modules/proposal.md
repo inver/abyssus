@@ -14,7 +14,7 @@ structure problem. Findings, each measured on this checkout:
 | S2 | **The ray tracing bridge sits in the plugin.** About 15 plain files in `sceneview/` (`RaySceneSnapshot` 467 lines, `RayViewFeed`, `RayViewRuntime`, `RayFeasibilityLoop`, `RayModeState`, `RayModelPoses`, `RaySkyBaker`, `RayBackendSelector` and others) convert a scene into `raytracing` snapshots and schedule frames. None of it needs the IDE. | file list and imports |
 | S3 | **Package cycles inside the plugin.** `sceneview` ↔ `projectView` (5 + 3 imports), `projectView` ↔ `properties` (4 + 7), `terrain` ↔ `properties`, `dto` ↔ `filetype`, and `ecs` → `sceneview`. Causes: `Vec3` and `Quat` live in `sceneview/SceneContent.kt` but are used by `ecs` and `projectView`; `SceneFileEditor` imports five `projectView` symbols (the Add Light group, the selection topic and helpers); `properties` imports 20 `sceneview` symbols. | import edge count |
 | S4 | **The scene JSON layout is known in 14 files.** `SceneEcsPaths` (or `"ecs"`/`"components"` literals) is used in `SceneContent`, `RaySceneSnapshot`, `RayViewFeed`, `SceneTransformWriter`, `SceneRayEdits`, `ComponentEditor`, `LightEntities`, `PanelState`, `DtoTree`, `EntitySelection`, `AddLightAction` and the format check. A change to how entities are addressed touches all of them. | grep |
-| S5 | **A split package across two modules.** `net.nevinsky.abyssus.core` holds 16 files in `gdx-model` (`ModelInstance`, `ModelBatch`, `AnimationController`, …) and 4 in `core` (`AbyssusProjectLayout`, `FileLoader`, `GeometryUtils`, `JsonProcessor`), and `core`'s other packages share the root with `gdx-model`'s `core.mesh`/`core.model`/`core.shader`. Readers cannot tell the `core` module from the `core.*` packages of `gdx-model`. 98 files import the four `core` helpers; 51 import `gdx-model`'s classes. | package scan |
+| S5 | **A split package across two modules.** `net.nevinsky.abyssus.lib.core` holds 16 files in `gdx-model` (`ModelInstance`, `ModelBatch`, `AnimationController`, …) and 4 in `core` (`AbyssusProjectLayout`, `FileLoader`, `GeometryUtils`, `JsonProcessor`), and `core`'s other packages share the root with `gdx-model`'s `core.mesh`/`core.model`/`core.shader`. Readers cannot tell the `core` module from the `core.*` packages of `gdx-model`. 98 files import the four `core` helpers; 51 import `gdx-model`'s classes. | package scan |
 | S6 | **Three in-memory scene shapes.** The edited JSON tree (`SceneJson`), the editor read model (`SceneContent` placements built from component codecs) and the Ashley `SceneEngine` that games and Play use, plus `RaySceneSnapshot` reading the JSON a fourth way. The first and third differ on purpose (the editor keeps unknown keys and number text; a game wants typed components), but there is no single typed read layer over the JSON for the editor itself. | architecture doc, `SceneContent`, `RaySceneSnapshot:123` |
 
 ## What Changes
@@ -45,7 +45,7 @@ the work can stop after any stage.
 
 ### Package names
 
-New code goes to `net.nevinsky.abyssus.editor.*` (document, components, content, picking, terrain, meta, ray). Keeping
+New code goes to `net.nevinsky.abyssus.lib.core.editor.*` (document, components, content, picking, terrain, meta, ray). Keeping
 the old package names in a new module would reproduce S5, so this stage renames them; the moves are mechanical and each
 slice carries its tests.
 

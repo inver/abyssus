@@ -23,7 +23,7 @@ since-build 252, Java 21, Kotlin 2.4.10) in two Gradle modules:
   `com.badlogic.gdx.backends.lwjgl3.GdxGlBridge` reaches package-private libGDX backend code.
 - `:gdx-model`: plain JVM library (no IntelliJ dependency) with the Kotlin fork of Mundus'
   `lib-core`/`lib-assets` (32-bit-index meshes, `ModelBatch`, Assimp loader) in
-  `net.nevinsky.abyssus.core` / `lib.assets.assimp`; no longer diffs against upstream.
+  `net.nevinsky.abyssus.lib.core` / `lib.assets.assimp`; no longer diffs against upstream.
 Jackson for JSON (bundled `jackson-databind`); libGDX hosted on an LWJGL3-AWT GL canvas with `Gdx.*`
 shims (`GdxRuntime`); tests in `src/test/kotlin` and `gdx-model/src/test/kotlin`, fixtures in
 `src/test/testData/project/Untitled` and `.../Animated`; GL tests open a window and run only with

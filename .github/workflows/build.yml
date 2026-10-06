@@ -101,7 +101,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ steps.properties.outputs.pluginVerifierHomeDir }}/ides
-          key: plugin-verifier-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'gradle.properties') }}
+          key: plugin-verifier-${{ runner.os }}-${{ hashFiles('app-game-control-line.gradle.kts', 'gradle.properties') }}
 
       # Run Verify Plugin task and IntelliJ Plugin Verifier tool
       - name: Run Plugin Verification tasks

@@ -14,7 +14,7 @@
   Z-up cm DAE gives an identity root and 100-unit extents.
 - [ ] 1.2 `PhongToPbr`: diffuse to base colour, metallic 0, shininess to roughness (0.8 without it), opacity below 1 to
   `BLEND`, specular reported as dropped. Verify: `PhongToPbrTest` covers each mapping and the default roughness.
-- [ ] 1.3 `GltfWriter` (`net.nevinsky.abyssus.core.gltf` in `gdx-model`, libGDX `JsonWriter`, no new dependency): nodes with TRS
+- [ ] 1.3 `GltfWriter` (`net.nevinsky.abyssus.lib.core.gltf` in `gdx-model`, libGDX `JsonWriter`, no new dependency): nodes with TRS
   and hierarchy, the mesh attributes as accessors, 16- or 32-bit indices, skins with inverse bind matrices, LINEAR
   animations, PBR materials, external image URIs, deterministic bytes, and its own validation. Verify:
   `GltfWriterTest`:
@@ -88,7 +88,7 @@
   `grep -rn GlbWriter docs core/README.md openspec/specs` finds nothing, and `scripts/check-docs.sh` passes.
 - [ ] 3.2 `FlightGearImport` builds `ModelData` and calls `GltfWriter`. Delete `core.flightgear.GlbWriter`, its `Gltf*`
   types and `GlbWriterTest`, moving that test's still-relevant checks into `GltfWriterTest`. Verify:
-  `./gradlew :core:test --tests 'net.nevinsky.abyssus.core.flightgear.*'` passes unchanged, apart from the removed
+  `./gradlew :core:test --tests 'net.nevinsky.abyssus.lib.core.flightgear.*'` passes unchanged, apart from the removed
   `GlbWriterTest`.
 - [ ] 3.3 Re-import the Control Line Trainer with the new writer. Verify: `./gradlew :games:control-line:importTrainer`
   then `./gradlew :games:control-line:test` pass (`FlightTest`, `BundledProjectTest.parkedPlanesRestOnTheGround`).

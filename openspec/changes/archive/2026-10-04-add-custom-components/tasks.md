@@ -6,8 +6,8 @@
       identifiers, `AbyssusDocumentFormat` treats an unregistered or custom component payload as opaque, and the loader
       and writer keep an unknown component raw. No spike against another editor is needed. Verify:
       `./gradlew :core:test --tests 'net.nevinsky.abyssus.assets.format.AbyssusDocumentFormatTest'` (opaque custom
-      payload case) and `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.runtime.ecs.SceneEcsLoaderTest' --tests
-      'net.nevinsky.abyssus.runtime.ecs.SceneEcsWriterTest'` (unknown component kept) pass
+      payload case) and `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.lib.runtime.ecs.SceneEcsLoaderTest' --tests
+      'net.nevinsky.abyssus.lib.runtime.ecs.SceneEcsWriterTest'` (unknown component kept) pass
 - [x] 1.2 Record the rule for game components in `docs/ai/file-formats.md` under "Game components": they are native
       extension data keyed by short name, written without class names or identifier tables, and a scene that holds
       `ecs.componentIdentifiers` is rejected. Verify: `scripts/check-docs.sh` passes and `openspec validate
@@ -18,7 +18,7 @@
 - [x] 2.1 Add `src/test/testData/project/Custom` as design decision 8 (`.abss`, one scene with entities `0` and `1`,
       the `tree` model folder, `abyssus/components.schema.json`). Verify: `SceneLoadingTest` gains
       `customProjectLoadsWithoutItsGame` (the plane is kept raw with one warning) and passes with
-      `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.runtime.SceneLoadingTest'`
+      `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.lib.runtime.SceneLoadingTest'`
 
 ## 3. Runtime: declaring and encoding
 
@@ -26,7 +26,7 @@
       (design decision 1), with a test-only `PlaneComponent` in `runtime`'s test fixtures. Verify:
       `ComponentSchemaReaderTest` (plane schema: every field's type, default, limits, group; failures for a taken name,
       a `List` field and a class without a no-argument constructor, each naming the reason) passes with
-      `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.runtime.schema.*'`
+      `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.lib.runtime.schema.*'`
 - [x] 3.2 Add `SchemaJson` (design decision 2). Verify: `SchemaJsonTest` covers each scenario of "Declared components
       load", "Supported field types", "Defaults are not written" and "Unusable values fall back" in
       `custom-scene-components` (`lineLength` `"long"` and `2` fall back to `18` with one message each naming entity,
@@ -43,7 +43,7 @@
       (exporting the test `PlaneComponent` into a temp copy of `Custom` reproduces its `components.schema.json` byte
       for byte; a second export is byte-identical; the `abyssus` folder is created when missing; no `.scene` or
       `.abss` changes; unknown `version` and unknown field type are rejected per component with a message) passes with
-      `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.runtime.schema.*'`
+      `./gradlew :runtime:test --tests 'net.nevinsky.abyssus.lib.runtime.schema.*'`
 - [x] 4.2 Document declaring, registering and exporting components in `runtime/README.md`, with the `JavaExec` task a
       game adds. Verify: `scripts/check-docs.sh` passes and the snippet's class and argument names match
       `SchemaExportMain`

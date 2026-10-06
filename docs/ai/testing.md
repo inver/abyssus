@@ -11,7 +11,7 @@
 | Control Line tests | `./gradlew :games:control-line:test` |
 | Runtime tests | `./gradlew :runtime:test` |
 | Plugin tests | `./gradlew :test` |
-| `editor-core` tests | `./gradlew :editor-core:test` (one class: `--tests 'net.nevinsky.abyssus.editor.pick.ScenePickerTest'`) |
+| `editor-core` tests | `./gradlew :editor-core:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.ScenePickerTest'`) |
 | `gdx-model` tests | `./gradlew :gdx-model:test` |
 | One class | `./gradlew :test --tests 'net.nevinsky.abyssus.projectView.SkyboxPickerModelTest'` |
 | One method | `./gradlew :test --tests 'net.nevinsky.abyssus.AbyssusViewTest.testNodeTree'` |

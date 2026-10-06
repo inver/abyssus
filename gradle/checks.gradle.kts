@@ -15,14 +15,17 @@ fun registerSourceCheck(name: String, sources: FileCollection, pattern: Regex, m
     tasks.named("check") { dependsOn(check) }
 }
 
-if (extra.has("abyssusSingletonExcludes")) {
-    @Suppress("UNCHECKED_CAST")
-    val excluded = extra["abyssusSingletonExcludes"] as List<String>
-    registerSourceCheck("checkNoSingletons", fileTree("src/main/kotlin") {
-        include("**/*.kt")
-        exclude(excluded)
-    }, Regex("""^\s*(?:(?:private|internal|public|protected)\s+)*(companion\s+object\b|object\s+[A-Za-z_])"""),
-        "Singletons are not allowed in $path; inject an instance instead:")
+// The root applies this script before a module's own build script sets its excludes.
+afterEvaluate {
+    if (extra.has("abyssusSingletonExcludes")) {
+        @Suppress("UNCHECKED_CAST")
+        val excluded = extra["abyssusSingletonExcludes"] as List<String>
+        registerSourceCheck("checkNoSingletons", fileTree("src/main/kotlin") {
+            include("**/*.kt")
+            exclude(excluded)
+        }, Regex("""^\s*(?:(?:private|internal|public|protected)\s+)*(companion\s+object\b|object\s+[A-Za-z_])"""),
+            "Singletons are not allowed in $path; inject an instance instead:")
+    }
 }
 
 if (extra.has("abyssusRunCatchingRoots")) {

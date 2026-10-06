@@ -108,9 +108,9 @@ before the switch (same entities, same values), then switch callers one at a tim
 
 ### D6. The shared root package (S5)
 
-Move `AbyssusProjectLayout`, `FileLoader`, `GeometryUtils` and `JsonProcessor` from `net.nevinsky.abyssus.core` to
-`net.nevinsky.abyssus.core.io`, including the layout constants. `core.project` contains loaders that use the IO
-helpers; placing the constants there would introduce `io → project → io`, so the constants share the IO leaf. After that `net.nevinsky.abyssus.core` itself
+Move `AbyssusProjectLayout`, `FileLoader`, `GeometryUtils` and `JsonProcessor` from `net.nevinsky.abyssus.lib.core` to
+`net.nevinsky.abyssus.lib.core.io`, including the layout constants. `core.project` contains loaders that use the IO
+helpers; placing the constants there would introduce `io → project → io`, so the constants share the IO leaf. After that `net.nevinsky.abyssus.lib.core` itself
 exists only in `gdx-model`. Renaming `gdx-model`'s packages is a larger mechanical change (51 importing files) with
 a clear gain only if the module is published; recorded as Open Question 1.
 

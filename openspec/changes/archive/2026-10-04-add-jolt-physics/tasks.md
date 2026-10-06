@@ -68,14 +68,14 @@
       inside `GdxRuntime.withContext` (depth-tested, then on top), and disable a throwing overlay or provider for its
       view with one logged error. Verify: `SceneOverlayHostTest` (a fake overlay sees the entity positions of
       `Main Scene`; a throwing one is disabled once) passes with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneOverlayHostTest'`
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneOverlayHostTest'`
 - [x] 5.2 Generalise `ScenePreview` to placement overrides and add `PlayState` (design decision 8) to
       `SceneViewPanel`: no play controls without a provider; edits stop play first; gizmo keys disabled and input
       forwarded while playing; Escape stops. Verify: `PlayStateTest` (every transition, edit-stops-play, Escape,
       failure returns to authored poses) and a new `ScenePreviewTest` (a pose override replaces a placement; a drag
       preview still works) pass with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.PlayStateTest' --tests
-      'net.nevinsky.abyssus.sceneview.ScenePreviewTest'`
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.PlayStateTest' --tests
+      'net.nevinsky.abyssus.plugin.sceneview.ScenePreviewTest'`
 - [x] 5.3 Update `sceneview/README.md` and `docs/ai/architecture.md` (the two extension points, play state, pose
       overrides). Verify: `scripts/check-docs.sh` passes
 

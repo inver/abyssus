@@ -2,7 +2,7 @@
 val moduleSources = allprojects.associate { module ->
     module.path to module.fileTree("src/main/kotlin") { include("**/*.kt") }
 }
-val cycleAllowlist = layout.projectDirectory.file("gradle/package-cycles.allowlist").asFile
+val cycleAllowlist = rootProject.layout.projectDirectory.file("gradle/package-cycles.allowlist").asFile
 val packageCycles = tasks.register("checkPackageCycles") {
     val sourceSets = moduleSources
     val allowlistFile = cycleAllowlist

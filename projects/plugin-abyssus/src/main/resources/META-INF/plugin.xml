@@ -1,0 +1,96 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>net.nevinsky.abyssus</id>
+    <name>Abyssus - Libgdx Scene Editor</name>
+    <vendor>inver</vendor>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.json</depends>
+
+    <resource-bundle>messages.AbyssusBundle</resource-bundle>
+
+    <extensionPoints>
+        <!-- A component schema (format of abyssus/components.schema.json) in the contributing plugin's jar. -->
+        <extensionPoint name="componentSchemas"
+                        beanClass="net.nevinsky.abyssus.plugin.schema.ComponentSchemaBean"
+                        dynamic="true"/>
+        <!-- Lines a plugin draws in every Scene view (net.nevinsky.abyssus.plugin.SceneOverlayProvider). -->
+        <extensionPoint name="sceneOverlay"
+                        interface="net.nevinsky.abyssus.plugin.sceneview.SceneOverlayProvider"
+                        dynamic="true"/>
+        <!-- Play in the Scene view (net.nevinsky.abyssus.plugin.SceneSimulationProvider); the first one is used. -->
+        <extensionPoint name="sceneSimulation"
+                        interface="net.nevinsky.abyssus.plugin.sceneview.SceneSimulationProvider"
+                        dynamic="true"/>
+    </extensionPoints>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType
+                name="Gltf File"
+                implementationClass="net.nevinsky.abyssus.plugin.language.GltfFileType"
+                fieldName="INSTANCE"
+                language="GLTF"
+                extensions="gltf"/>
+        <fileType
+                name="Abyssus Scene"
+                implementationClass="net.nevinsky.abyssus.plugin.filetype.SceneFileType"
+                fieldName="INSTANCE"
+                language="JSON"
+                extensions="scene"/>
+        <fileType
+                name="Abyssus Project"
+                implementationClass="net.nevinsky.abyssus.plugin.filetype.AbyssusProjectFileType"
+                fieldName="INSTANCE"
+                language="JSON"
+                extensions="abss"/>
+        <postStartupActivity implementation="net.nevinsky.abyssus.plugin.projectView.OpenAbyssusViewActivity"/>
+        <projectViewPane implementation="net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane"/>
+        <fileEditorProvider implementation="net.nevinsky.abyssus.plugin.SceneFileEditorProvider"/>
+        <toolWindow id="Abyssus Properties"
+                    anchor="right"
+                    canCloseContents="false"
+                    factoryClass="net.nevinsky.abyssus.plugin.AbyssusPropertiesToolWindowFactory"/>
+        <notificationGroup id="Abyssus Component Schemas" displayType="BALLOON" key="notification.group.Abyssus Component Schemas"/>
+        <lang.parserDefinition
+                language="GLTF"
+                implementationClass="net.nevinsky.abyssus.plugin.language.GltfParserDefinition"/>
+    </extensions>
+
+    <actions>
+        <action id="Abyssus.RenameScene"
+                class="net.nevinsky.abyssus.plugin.projectView.RenameSceneAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.NewTerrain"
+                class="net.nevinsky.abyssus.plugin.projectView.NewTerrainAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.ImportFlightGear"
+                class="net.nevinsky.abyssus.plugin.projectView.ImportFlightGearAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.AddLight" class="net.nevinsky.abyssus.plugin.projectView.AddLightAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+        </action>
+        <action id="Abyssus.AddAsset" class="net.nevinsky.abyssus.plugin.projectView.AddAssetAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddLight"/>
+        </action>
+        <action id="Abyssus.AddComponent"
+                class="net.nevinsky.abyssus.plugin.projectView.AddComponentAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.AddComponentOnEcs"
+                class="net.nevinsky.abyssus.plugin.projectView.AddComponentOnEcsAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.RemoveComponent"
+                class="net.nevinsky.abyssus.plugin.projectView.RemoveComponentAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+    </actions>
+
+    <projectListeners>
+        <listener class="net.nevinsky.abyssus.plugin.filetype.SceneFormatListener"
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+    </projectListeners>
+</idea-plugin>

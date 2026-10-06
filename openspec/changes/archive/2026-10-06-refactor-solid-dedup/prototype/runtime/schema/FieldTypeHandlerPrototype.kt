@@ -1,11 +1,11 @@
-package net.nevinsky.abyssus.runtime.schema
+package net.nevinsky.abyssus.lib.runtime.schema
 
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.runtime.ecs.number
-import net.nevinsky.abyssus.runtime.schema.SchemaJson.Decoded
+import net.nevinsky.abyssus.lib.runtime.ecs.number
+import net.nevinsky.abyssus.lib.runtime.schema.SchemaJson.Decoded
 
 /** Task 3.1 candidate; kept independent until its size gate is evaluated. */
 internal interface FieldTypeHandlerPrototype {

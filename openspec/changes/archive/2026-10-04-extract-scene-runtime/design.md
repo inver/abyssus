@@ -49,7 +49,7 @@ JUnit 4, the shared `abyssus.testData` system property, and a `checkNoSingletons
 gets `implementation(project(":runtime"))` with the same Kotlin / SLF4J excludes as `:core`, and drops its own Ashley
 line.
 
-Root package `net.nevinsky.abyssus.runtime`:
+Root package `net.nevinsky.abyssus.lib.runtime`:
 
 | Package | Holds |
 |---|---|

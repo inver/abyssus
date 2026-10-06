@@ -33,7 +33,7 @@ See proposal.md - Why. After the three earlier changes:
 ### 1. Module and packages
 
 `games/control-line` (`:games:control-line`): Kotlin JVM 21, `application` plugin with `mainClass`
-`net.nevinsky.abyssus.games.controlline.MainKt`, depending on `:physics` (so `runtime`, `core`, `gdx-model`), the
+`net.nevinsky.abyssus.app.game.controlline.MainKt`, depending on `:physics` (so `runtime`, `core`, `gdx-model`), the
 full `gdx-backend-lwjgl3` with `gdx-platform:natives-desktop`, and jolt-jni natives for the build machine at runtime.
 
 | Package (`...games.controlline.`) | Holds | GL / Swing |

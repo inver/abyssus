@@ -1,0 +1,58 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package net.nevinsky.abyssus.plugin.filetype
+
+import net.nevinsky.abyssus.lib.core.editor.document.SceneRayField
+import net.nevinsky.abyssus.lib.core.editor.document.RayDataError
+import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
+import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
+import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
+import net.nevinsky.abyssus.lib.core.editor.document.RayOpticalField
+import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialOverrides
+
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+
+/** Platform adapter: every accepted edit is one native document command. */
+object SceneRayEdits {
+    fun setting(
+        project: Project,
+        file: VirtualFile,
+        field: SceneRayField,
+        expected: JsonNode?,
+        text: String
+    ): RayDataEdit = edit(project, file) { SceneRaySettingsCodec().edit(it, field, expected, text) }
+
+    fun material(
+        project: Project,
+        file: VirtualFile,
+        entity: String,
+        id: String,
+        field: RayOpticalField,
+        expected: JsonNode?,
+        text: String,
+        identities: List<RayMaterialIdentity>
+    ): RayDataEdit = edit(project, file) { root ->
+        val render =
+            net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree(root).components(entity)?.get("RenderComponent") as? ObjectNode
+                ?: return@edit RayDataEdit.Conflict
+        RayMaterialOverrides().edit(render, id, field, expected, text, identities)
+    }
+
+    private fun edit(project: Project, file: VirtualFile, mutate: (ObjectNode) -> RayDataEdit): RayDataEdit {
+        var result: RayDataEdit = RayDataEdit.Rejected(RayDataError.OBJECT)
+        if (file.extension != "scene") {
+            return result
+        }
+        editSceneJson(project, file, AbyssusBundle.message("commandEditSceneRaySettings")) { root ->
+            result = mutate(root as ObjectNode)
+            result == RayDataEdit.Changed
+        }
+        return result
+    }
+}

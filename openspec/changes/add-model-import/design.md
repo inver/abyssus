@@ -70,7 +70,7 @@ Rejected alternatives:
 - Keeping the source file (option A in exploration). It needs per-load unit and axis fields in `meta.json`, writes
   `embedded/` on load, and ties correctness to the Assimp version a game ships.
 
-### 2. `GltfWriter` in `gdx-model` (`net.nevinsky.abyssus.core.gltf`, beside `core.assimp`)
+### 2. `GltfWriter` in `gdx-model` (`net.nevinsky.abyssus.lib.core.gltf`, beside `core.assimp`)
 
 The writer is plain Kotlin, constructor-built, and uses libGDX `JsonWriter` so `gdx-model` keeps its dependencies.
 `write(data: ModelData, images: Map<String, String>, generator: String): ByteArray` produces one GLB: JSON chunk, then

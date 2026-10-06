@@ -33,7 +33,7 @@
       `AbyssusCore` exposing `json`; `dto/ProjectReader` and `dto/SceneReader` use `service<AbyssusCore>().json`.
       Verify: `./gradlew :core:test --tests 'net.nevinsky.abyssus.assets.json.JsonProcessorTest'` (new: skips unknown
       properties, takes an enum's default for an unknown value, keeps declaration order when pretty-printing) and
-      `./gradlew :test --tests 'net.nevinsky.abyssus.dto.*'` pass
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.dto.*'` pass
 - [x] 2.2 Move `MetaBase`, `MetaType`, `Asset`, `TerrainFiles` and the file part of `ProjectAssetFiles` to
       `core` (`assets.files`) as `AssetFiles(projectDir, json)`, replacing IntelliJ's `StringUtils` with
       `isNullOrBlank`, and add a `JsonProcessorTest` case parsing a `MetaBase` of every `MetaType` and an unknown type
@@ -42,7 +42,7 @@
       `dto/ProjectAssetListing.kt`, taking the `JsonProcessor`; drop the `@Service` on the old class and delete it.
       Verify: `ProjectAssetFilesTest` moved to `core` as plain JUnit `AssetFilesTest` passes with
       `./gradlew :core:test --tests 'net.nevinsky.abyssus.assets.files.AssetFilesTest'`, and
-      `./gradlew :test --tests 'net.nevinsky.abyssus.dto.*' --tests 'net.nevinsky.abyssus.AbyssusViewTest'` shows no
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.dto.*' --tests 'net.nevinsky.abyssus.AbyssusViewTest'` shows no
       failure that `HEAD` does not already have
 
 ## 3. The pipeline
@@ -106,7 +106,7 @@
       same no-display rule
 - [x] 6.3 Make the plugin's GL harness build `AssetLoading` directly (recording log, direct shaders), so plugin GL
       tests load assets with no IntelliJ application. Verify:
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneRenderGlTest.mainSceneDrawsModelsAndTerrain' -Dabyssus.glTests=true`
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneRenderGlTest.mainSceneDrawsModelsAndTerrain' -Dabyssus.glTests=true`
       passes (it draws 0 models on `HEAD`); run the GL suite with no other Gradle build running at the same time
 
 ## 7. Documentation and checks

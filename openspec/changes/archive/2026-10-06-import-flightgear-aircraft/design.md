@@ -37,7 +37,7 @@ alternative, keeping `.ac` and adding an `AC3D` format to `ModelMeta`, would wid
 the SGI textures, which nothing in the stack decodes. Baking the frame, the scale and the offsets also keeps the scenes
 free of import-specific transforms.
 
-### Plain JVM pieces in `core` (`net.nevinsky.abyssus.core.flightgear`)
+### Plain JVM pieces in `core` (`net.nevinsky.abyssus.lib.core.flightgear`)
 
 All are constructor-wired, with no `object`, so `checkNoSingletons` holds. All are free of Swing, GL and the platform,
 and are tested headless.

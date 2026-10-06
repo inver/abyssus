@@ -21,14 +21,14 @@
 
 - [x] 2.1 Add `SphereTrack`. Verify: `SphereTrackTest` (azimuth, elevation, climb angle and inverted flag for
       hand-made poses: level flight, straight up, overhead, upside down) passes with
-      `./gradlew :games:control-line:test --tests 'net.nevinsky.abyssus.games.controlline.track.*'`
+      `./gradlew :games:control-line:test --tests 'net.nevinsky.abyssus.app.game.controlline.track.*'`
 - [x] 2.2 Add the maneuver detectors (design decision 6). Verify: `ManeuversTest` covers each scenario of "Maneuvers
       are detected from the flight path" on synthetic paths (inside loop detected; half a loop not; figure 8
       replaces its loops), plus outside loop, inverted lap and wingover, with the same command as 2.1
 - [x] 2.3 Add `ScoreKeeper`. Verify: `ScoreKeeperTest` (three laps score 30 unmultiplied; chained loops score 50, 100,
       150 with best combo 3; combo resets after 12 s and on slack lines; landing after 30 lap points gives 230; a crash
       adds nothing) passes with `./gradlew :games:control-line:test --tests
-      'net.nevinsky.abyssus.games.controlline.score.*'`
+      'net.nevinsky.abyssus.app.game.controlline.score.*'`
 - [x] 2.4 Add `ScoreTable` (design decision 7). Verify: `ScoreTableTest` (eleventh flight replaces the 120 entry and
       keeps order; equal scores keep the earlier flight first; a non-JSON file becomes `scores.json.bad` with an empty
       table and the flag set) passes with the same command as 2.3
@@ -38,20 +38,20 @@
 - [x] 3.1 Add `Aero` (design decision 3) as pure functions. Verify: `AeroTest` (zero airspeed gives zero lift and
       drag; lift grows with the square of speed; past 15° lift stops growing and drag doubles; no thrust after fuel
       time; line drag matches `rho * d * L * V^2 / 8` per line) passes with
-      `./gradlew :games:control-line:test --tests 'net.nevinsky.abyssus.games.controlline.flight.AeroTest'`
+      `./gradlew :games:control-line:test --tests 'net.nevinsky.abyssus.app.game.controlline.flight.AeroTest'`
 - [x] 3.2 Add `LineRig` (design decision 4) on `PhysicsWorld`. Verify: `LineRigTest` (takeoff places the plane at its
       line length along the circle with taut lines; after half a lap the handle faces the plane and both lines end at
       the leadouts; below 1 N the elevator stays neutral when the tilt changes) passes with
-      `./gradlew :games:control-line:test --tests 'net.nevinsky.abyssus.games.controlline.flight.LineRigTest'`
+      `./gradlew :games:control-line:test --tests 'net.nevinsky.abyssus.app.game.controlline.flight.LineRigTest'`
 - [x] 3.3 Add `FlightSystem` and `FlightOutcome` (design decision 5). Verify: `FlightOutcomeTest` (full down from level
       flight crashes; a 2 m/s upright touch after the engine stops lands; a 2 m/s touch with the engine running does
       not end the flight; 2 s slack in the air crashes as "lines went slack") passes with
-      `./gradlew :games:control-line:test --tests 'net.nevinsky.abyssus.games.controlline.flight.FlightOutcomeTest'`
+      `./gradlew :games:control-line:test --tests 'net.nevinsky.abyssus.app.game.controlline.flight.FlightOutcomeTest'`
 - [x] 3.4 Tune `Aero`'s constants and the three planes' scene values until the flight scenarios pass. Verify:
       `FlightTest` (Trainer above 1 m within 5 s with neutral handle; Stunter's full up passes vertical and comes over
       the top within one lap; level-flight tension within 30% of `m * v^2 / L`; doubled thrust gives a higher steady
       speed; Racer's thrust is 0 after 60 s; Trainer flies 10 level laps with a held trim without crashing) passes with
-      `./gradlew :games:control-line:test --tests 'net.nevinsky.abyssus.games.controlline.flight.FlightTest'`; record
+      `./gradlew :games:control-line:test --tests 'net.nevinsky.abyssus.app.game.controlline.flight.FlightTest'`; record
       the tuned constants in `games/control-line/README.md`
 
 ## 4. Flow and input (no window)
@@ -60,7 +60,7 @@
       Start with the message; planes listed `Racer`, `Stunter`, `Trainer`; Escape pauses and Resume continues; a
       high-score crash asks for a name, saves, then offers Retry / Scores / Main menu; Retry restarts the same plane at
       score 0; Scores from GAME OVER highlights the saved rank and Back returns to GAME OVER) passes with
-      `./gradlew :games:control-line:test --tests 'net.nevinsky.abyssus.games.controlline.flow.*'`
+      `./gradlew :games:control-line:test --tests 'net.nevinsky.abyssus.app.game.controlline.flow.*'`
 - [x] 4.2 Add `HandleInput` (design decision 9). Verify: `HandleInputTest` (W reaches full up in 0.15 s and returns to
       neutral on release; mouse Y sets tilt by distance from centre; last-used device wins) passes with the same
       command as 4.1
@@ -80,7 +80,7 @@
 - [x] 6.1 Add `ControlLinePlay` (design decision 10). Verify: `ControlLinePlayTest` drives `PlayHostMain` over a test
       socket with selection `Trainer`: it takes off, a `W` input event raises the elevator, and a crash restarts the
       flight after 1 s, passing with `./gradlew :games:control-line:test --tests
-      'net.nevinsky.abyssus.games.controlline.play.*'`
+      'net.nevinsky.abyssus.app.game.controlline.play.*'`
 
 ## 7. Integration
 

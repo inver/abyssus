@@ -34,8 +34,8 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 - [x] 1.4 Resolve `terrain ↔ properties`, `projectView ↔ properties` and `dto ↔ filetype` (design D5). Verify with the
   terrain test package, `ProjectAssetsTest`, and an empty allowlist in `checkPackageCycles`.
 - [x] 1.5 Move `AbyssusProjectLayout`, `FileLoader`, `GeometryUtils`, `JsonProcessor` out of the shared
-  `net.nevinsky.abyssus.core` root into `core.io` / `core.project` (98 importing files, by IDE rename). Verify with
-  `./gradlew check` and `rg -n '^package net.nevinsky.abyssus.core$' core/src/main` returning nothing.
+  `net.nevinsky.abyssus.lib.core` root into `core.io` / `core.project` (98 importing files, by IDE rename). Verify with
+  `./gradlew check` and `rg -n '^package net.nevinsky.abyssus.lib.core$' core/src/main` returning nothing.
 
 ## 2. Stage 2: one typed scene document layer (S4, S6)
 

@@ -23,7 +23,7 @@
   - choosing `tree` writes entity `9` and Undo restores the file;
   - the action is disabled for invalid JSON and for a scene outside a project.
 - [x] 2.2 Scene view: the "Add Asset" button in `SceneViewPanel`, wired in `SceneFileEditor` with the orbit target.
-  Verify: `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneViewPanelTest'` gains a case: the button exists,
+  Verify: `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneViewPanelTest'` gains a case: the button exists,
   follows the editing state, and its choices place `tree` at the orbit target.
 - [x] 2.3 Docs: `README.md` user section, `projectView/README.md`, `sceneview/README.md`. Verify: `scripts/check-docs.sh`.
 
