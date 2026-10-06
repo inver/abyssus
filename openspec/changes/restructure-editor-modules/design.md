@@ -162,6 +162,11 @@ from `core` or `runtime` to `editor-core` and no second validator implementation
 Extract only when a concrete user exists: a standalone viewer app, GL tests without the IDE test framework, or build
 time dominated by the render code. If none holds at that point, record "not needed" and stop.
 
+**Decision (2026-10-06, task 4.1): not needed.** No standalone viewer or headless render user exists; the GL tests
+(`SceneRenderGlTest`, `RayFrameCompositionGlTest`) are already plain JUnit on `gdx-model`'s `GlHarness` and need no
+IDE test framework; and no build measurement shows the render code dominating build time. `SceneRenderer`, shadows,
+fog, sky, gizmo drawing and the GL canvas stay in the plugin. Revisit when one of the three users appears.
+
 ### D10. Remove pre-existing library and game cycles
 
 The user authorized removing all scanned package cycles (2026-10-06), including the baseline cycles outside the

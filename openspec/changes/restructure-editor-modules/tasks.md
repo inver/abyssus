@@ -83,7 +83,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 
 ## 4. Stage 4 decision (`editor-render`)
 
-- [ ] 4.1 Decide using design D9: write the decision and its reason in the design. If a concrete user exists, create the
+- [x] 4.1 Decide using design D9: write the decision and its reason in the design. If a concrete user exists, create the
   module and move `SceneRenderer`, shadows, fog, sky and gizmo drawing in slices like stage 3; otherwise close the task.
   Verify (if done) with `./gradlew check -Dabyssus.glTests=true` on a machine with a display.
 
