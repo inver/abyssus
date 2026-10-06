@@ -1,7 +1,7 @@
 # File formats
 
 Abyssus owns the JSON format of project `.abss`, scene `.scene` and asset `meta.json` documents.
-The plugin reads them with `SceneJson` (`src/main/kotlin/net/nevinsky/abyssus/editor/document/SceneJson.kt`),
+The plugin reads them with `SceneJson` (`editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/document/SceneJson.kt`),
 which keeps key order, `null` members and the exact text of numbers. Writes must keep those, too. The user-facing
 description of what the tree shows is in `README.md` ("Abyssus view"); this page is the format reference.
 
@@ -192,7 +192,7 @@ the float count (the fixture's is 180). Generating a terrain changes none of thi
 
 New terrain metadata is one compact line with native markers first (`format`, `formatVersion`), then `version` 1, `lastModified`, `uuid`, `type` `TERRAIN`,
 `additional` with `terrainFile`, `size`, `uv` 1.0 and the six splat fields null; see `TerrainAssetWriter` in
-`src/main/kotlin/net/nevinsky/abyssus/terrain/generation`.
+`editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/terrain`.
 
 How generated heights were made is kept in a recipe file beside the
 heights (`TERRAIN_RECIPE_FILE`; a terrain loads without it):

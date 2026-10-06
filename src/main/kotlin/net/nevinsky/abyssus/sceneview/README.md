@@ -3,31 +3,36 @@
 The **Scene View** editor tab of a `.scene`: a libGDX render on an LWJGL3-AWT GL canvas inside a Swing panel, with
 picking, camera markers, look-through, move/rotate gizmos and Drop. Required behavior: `openspec/specs/scene-*`.
 
+The logic without IDE, Swing or GL lives in `editor-core` (see `editor-core/README.md`): the scene read model in its
+scene package, picking, gizmo math, interaction and transform write-back in its pick package, and the ray tracing
+bridge in its ray package. Rows below marked *(editor-core)* are there; this package keeps the canvas, the renderer,
+the toolbar, Play and the view's asset storage.
+
 ## Pieces
 
 | Class | Role |
 |---|---|
 | `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo. The provider in the root package is where the tab's collaborators are looked up and passed in; `SceneViewHost` carries tree selection and Add actions |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
-| `SceneContent`, `PlacementMapper` | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. The components are decoded by the same codecs the Properties panel uses (`DecodedEntity`), so both show the same values and defaults; `PlacementMapper` (pure) maps them. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
-| `LightSet`, `SpotCone` | Deterministic light selection and CPU cone/range attenuation math |
+| `SceneContent`, `PlacementMapper` *(editor-core)* | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. The components are decoded by the same codecs the Properties panel uses (`DecodedEntity`), so both show the same values and defaults; `PlacementMapper` (pure) maps them. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
+| `LightSet`, `SpotCone` *(editor-core)* | Deterministic light selection and CPU cone/range attenuation math |
 | `shadows/` | Per-context atlas, stable tile allocation, fitted light cameras and shared model/terrain depth pass |
 | `SceneView` | Interface of the view, so tests can pass a fake (`viewFactory`) |
 | `SceneViewPanel` | Swing panel: GL canvas, Swing `Timer` frame loop, toolbar, keys (W / E / D / Esc) |
-| `SceneViewState` | What the user chose: selection, gizmo mode and hovered handle, the camera looked through, the drag/drop preview. The panel changes it; the renderer and the queries read it |
-| `SceneInteraction` | Mouse and key logic without Swing or GL, over a `SceneViewState` and `SceneQueries`: click → pick/select, drag → gizmo or orbit/pan (one `Gesture`: Idle, Dragging or Cancelled), Drop → a Y-only move |
-| `FrameSnapshot`, `SceneQueries`, `SnapshotSceneQueries` | What the last frame drew (camera copy, model boxes, terrain targets, `drawnVersion`), and the CPU-only questions asked of it: pick, ray, ground below, lowest point, gizmo handles and hits, drag start. Tested with hand-built snapshots |
+| `SceneViewState` *(editor-core)* | What the user chose: selection, gizmo mode and hovered handle, the camera looked through, the drag/drop preview. The panel changes it; the renderer and the queries read it |
+| `SceneInteraction` *(editor-core)* | Mouse and key logic without Swing or GL, over a `SceneViewState` and `SceneQueries`: click → pick/select, drag → gizmo or orbit/pan (one `Gesture`: Idle, Dragging or Cancelled), Drop → a Y-only move |
+| `FrameSnapshot`, `SceneQueries`, `SnapshotSceneQueries` *(editor-core)* | What the last frame drew (camera copy, model boxes, terrain targets, `drawnVersion`), and the CPU-only questions asked of it: pick, ray, ground below, lowest point, gizmo handles and hits, drag start. Tested with hand-built snapshots |
 | `SceneRenderer` | One frame: environment, skybox, grid, terrains, models, markers, highlight, gizmo. GL only: it publishes a `FrameSnapshot` after each frame and exposes `queries`. `GridModel` and `SelectionBox` build the grid and the highlight |
 | `PlacedAssets`, `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (an `AssetView` each over the view's `ViewAssets`, whose `ProjectAssets` from `AssetLoading` hold the one `core` `AssetStorage`) and per-entity instances (`PlacedEntities`); `SceneModels` and `SceneTerrains` extend `PlacedAssets` and `SceneSkybox` has the same `abandon` |
 | `skybox/` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights. The sky loaders, the HDR environment and the sky shaders are in `core` (`net.nevinsky.abyssus.core.assets.sky`) |
-| `SceneMarkers`, `CameraFrustum` | Camera body and frustum, light markers, and their pick bounds |
-| `ScenePicker` | Ray from a pixel, nearest hit over boxes and terrain heights (used by `SnapshotSceneQueries`) |
-| Drop: `OrientedBox`, `TerrainRestHeight`, `ScenePicker.restHeight` | Highest surface under a rotated box footprint; CPU-only bilinear terrain-cell maxima |
-| `ScenePreview` | Applies a drag or drop preview over the placements, and simulated poses (`withPoses`) while playing |
+| `SceneMarkers`, `CameraFrustum` *(editor-core)* | Camera body and frustum, light markers, and their pick bounds |
+| `ScenePicker` *(editor-core)* | Ray from a pixel, nearest hit over boxes and terrain heights (used by `SnapshotSceneQueries`) |
+| Drop: `OrientedBox`, `TerrainRestHeight`, `ScenePicker.restHeight` *(editor-core)* | Highest surface under a rotated box footprint; CPU-only bilinear terrain-cell maxima |
+| `ScenePreview` *(editor-core)* | Applies a drag or drop preview over the placements, and simulated poses (`withPoses`) while playing |
 | `SceneExtensions.kt`, `SceneOverlayHost` | The `sceneOverlay` and `sceneSimulation` extension points and the per-view overlay list that switches off a failing overlay |
 | `PlayState` | Play in one view without Swing or GL: `IDLE -> STARTING -> PLAYING <-> PAUSED -> IDLE`, plus `FAILED` |
-| `gizmo/` | Handle geometry (`GizmoHandles`), hit tests (`GizmoHit`), drag math (`GizmoDrag`), drawing (`GizmoDraw`) |
-| `SceneTransformWriter` | A finished transform → `PositionComponent` (and camera) fields in the scene JSON |
+| `gizmo/` | Drawing (`GizmoDraw`) over the handle geometry (`GizmoHandles`), hit tests (`GizmoHit`) and drag math (`GizmoDrag`) of `editor-core` |
+| `SceneTransformWriter` *(editor-core)* | A finished transform → `PositionComponent` (and camera) fields in the scene JSON |
 | `GdxRuntime`, `GuardedGLCanvas` | The `Gdx.*` shim, and the canvas that refuses unsafe GL |
 
 ## Things that are not obvious
@@ -160,6 +165,9 @@ reserves unit 6 for the atlas, between its six layer textures and irradiance on 
 texture binder. Atlas allocation and tile passes restore GL state even on failure.
 
 ## Ray tracing scene conversion
+
+The ray classes named here (`RaySceneSnapshots`, `RayViewFeed`, `RayViewRuntime`, `RayBackendService`, `RayModeState`) are in
+`editor-core`'s ray package; `RayIntegration`, `RayFramePresenter` and `SceneRayControls` stay in the plugin.
 
 `RaySceneSnapshots` converts the same preview-applied `SceneContent`, `LightSet`, camera and environment that raster
 draws into an immutable `RaySceneSnapshot`, from CPU asset companions only (never GL handles). `RaySceneDiff` classifies
