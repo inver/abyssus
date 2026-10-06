@@ -110,7 +110,7 @@ class SceneRenderer(
     private var skybox: SceneSkybox? = null
     private var overlay: LoadingOverlay? = null
     private var lightsKey: Pair<List<LightPlacement>, Vec3>? = null
-    private var lights = LightSet.NONE
+    private var lights = NO_LIGHTS
     private var lineBatch: LineBatch? = null
     private var gridModel: Model? = null
     private var grid: ModelInstance? = null
@@ -201,7 +201,7 @@ class SceneRenderer(
         updateDrawnVersion()
         batch = ModelBatch(FogShaderProvider { fogCoefficient })
         contentShaders = DefaultShaderProvider(net.nevinsky.abyssus.core.shader.ShaderConfig().apply {
-            numSpotLights = LightSet.MAX_POINT
+            numSpotLights = MAX_POINT
         }).also { contentBatch = ContentBatch(it) }
         terrainShader = TerrainShader(shaders)
         skybox = SceneSkybox(AssetView(assets, net.nevinsky.abyssus.core.assets.sky.Sky::class.java))
@@ -381,7 +381,7 @@ class SceneRenderer(
         val key = c.lights to target
         if (key == lightsKey) return
         lightsKey = key
-        lights = LightSet.of(c.lights, target)
+        lights = lightSetOf(c.lights, target)
         lights.applyTo(environment)
     }
 

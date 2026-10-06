@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.editor.ray.RayModePhase
 
 import net.nevinsky.abyssus.raytracing.*
@@ -152,9 +153,9 @@ class RayRenderLifecycleTest {
 
     @Test fun ordinaryRasterStartupLoadsNoNativeLibraryAndProbesNothing() {
         val created = AtomicInteger()
-        val selector = RayBackendSelector.fromStartup(property = { null }, osName = "Mac OS X",
+        val selector = rayBackendSelectorFromStartup(property = { null }, osName = "Mac OS X",
             providers = mapOf("metal" to { created.incrementAndGet(); RayFakeDevice() }, "vulkan" to { created.incrementAndGet(); RayFakeDevice() }))
-        val service = RayBackendService(selector)
+        val service = RayBackendService(selector, ResourceEditorMessages(), publish = { SwingUtilities.invokeLater(it) })
         try {
             val view = service.newView<String>("raster")
             repeat(20) { view.latest(); view.offer(input(it.toLong()), "ignored while off") }
@@ -167,7 +168,7 @@ class RayRenderLifecycleTest {
 
     @Test fun offLoadsNoRayTracingNativesEvenWhenToggled() {
         val created = AtomicInteger()
-        val service = RayBackendService(RayBackendSelector("off", "Mac OS X", mapOf("metal" to { created.incrementAndGet(); RayFakeDevice() })))
+        val service = RayBackendService(RayBackendSelector("off", "Mac OS X", mapOf("metal" to { created.incrementAndGet(); RayFakeDevice() })), ResourceEditorMessages(), publish = { SwingUtilities.invokeLater(it) })
         val view = service.newView<String>("off")
         try {
             onEdt { view.setRequested(true) }

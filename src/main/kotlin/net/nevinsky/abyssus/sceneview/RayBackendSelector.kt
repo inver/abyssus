@@ -18,7 +18,7 @@ import java.util.Locale
  * Application-owned selection cache. Constructing a selector never constructs a native provider. Selection and
  * invalidation belong to the application's serial native worker; views cannot cause probes by rendering a frame.
  */
-internal class RayBackendSelector(
+class RayBackendSelector(
     requestedBackend: String?,
     private val osName: String,
     providers: Map<String, () -> RayBackendProvider>,
@@ -84,14 +84,13 @@ internal class RayBackendSelector(
         }
         return capability
     }
-
-    companion object {
-        /** The composition root calls this once at startup, before any scene view or native work exists. */
-        fun fromStartup(
-            property: () -> String? = { System.getProperty("abyssus.raytracing.backend") },
-            osName: String = System.getProperty("os.name"),
-            providers: Map<String, () -> RayBackendProvider>,
-            log: Logger = NOPLogger.NOP_LOGGER,
-        ) = RayBackendSelector(property(), osName, providers, log)
-    }
 }
+
+/** The composition root calls this once at startup, before any scene view or native work exists. */
+fun rayBackendSelectorFromStartup(
+    property: () -> String? = { System.getProperty("abyssus.raytracing.backend") },
+    osName: String = System.getProperty("os.name"),
+    providers: Map<String, () -> RayBackendProvider>,
+    log: Logger = NOPLogger.NOP_LOGGER,
+) = RayBackendSelector(property(), osName, providers, log)
+

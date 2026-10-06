@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
@@ -65,7 +66,7 @@ internal class RayFakeDevice(private val name: String = "Metal", private val gpu
     companion object {
         fun service(vararg devices: Pair<String, RayFakeDevice>, backend: String = "auto", os: String = "Mac OS X") = RayBackendService(
             RayBackendSelector(backend, os, devices.associate { (name, device) -> name to { device } }),
-            publish = { SwingUtilities.invokeLater(it) },
+            messages = ResourceEditorMessages(), publish = { SwingUtilities.invokeLater(it) },
         )
 
         fun await(timeoutMillis: Long = 3000, what: String = "ray state", condition: () -> Boolean) {

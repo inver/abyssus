@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.raytracing.RayBackendInfo
  * Pure per-view transitions. Revision tokens reject late preparation/completion after off, retry, hide or close.
  * It holds no camera, selection or drag state: switching renderers cannot mutate the interaction model.
  */
-internal class RayModeState {
+class RayModeState {
     @Volatile var snapshot = RayModeSnapshot()
         private set
 

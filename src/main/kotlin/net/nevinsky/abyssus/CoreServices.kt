@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus
 
+import javax.swing.SwingUtilities
+import net.nevinsky.abyssus.sceneview.rayBackendSelectorFromStartup
 import net.nevinsky.abyssus.editor.meta.AssetFieldDescriptions
 import net.nevinsky.abyssus.editor.meta.AssetMetaEditor
 import com.intellij.util.concurrency.AppExecutorUtil
@@ -53,9 +55,9 @@ class TerrainServices(json: JsonProcessor) {
 internal class RayServices(log: Logger, val exposure: () -> Float) : AutoCloseable {
     val log = log
     private val serviceHolder = lazy {
-        RayBackendService(RayBackendSelector.fromStartup(providers = mapOf(
+        RayBackendService(rayBackendSelectorFromStartup(providers = mapOf(
             "metal" to { MetalRayBackendFactory(log = log) }, "vulkan" to { VulkanRayBackendFactory(log = log) },
-        ), log = log), log = log)
+        ), log = log), EditorBundle, publish = { SwingUtilities.invokeLater(it) }, log = log)
     }
     val service get() = serviceHolder.value
     private val converterHolder = lazy {

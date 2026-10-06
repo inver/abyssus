@@ -27,7 +27,7 @@ import kotlin.math.sin
  * procedural sky, which is arbitrary asset GLSL, into a ray texture. GL thread only, inside `GdxRuntime.withContext`;
  * the caller's framebuffer, viewport and depth state are restored. The result holds display values (not HDR).
  */
-internal class RaySkyBaker(private val faceSize: Int = 256) {
+class RaySkyBaker(private val faceSize: Int = 256) {
     private class Face(val direction: Vector3, val up: Vector3) {
         val right: Vector3 = Vector3(direction).crs(up).nor()
         val vertical: Vector3 = Vector3(right).crs(direction).nor()

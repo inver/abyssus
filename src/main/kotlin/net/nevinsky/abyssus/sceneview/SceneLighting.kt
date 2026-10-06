@@ -55,43 +55,43 @@ class LightSet(val directional: List<DirectionalSource>, val point: List<PointSo
                 s.range, s.cone.angle / 2f, s.cone.softness))
         }
     }
-
-    companion object {
-        const val MAX_DIRECTIONAL = 2
-        const val MAX_POINT = 5
-
-        val NONE = LightSet(emptyList(), emptyList())
-
-        /** Nearest lights with stable identity ties; unusable lights are skipped. */
-        fun of(lights: List<LightPlacement>, target: Vec3): LightSet {
-            val directional = lights.filter { it.kind == LightKind.DIRECTIONAL && usable(it) }
-                .sortedWith(compareBy<LightPlacement> { distance(it.position, target) }.thenBy { it.entityId })
-                .take(MAX_DIRECTIONAL)
-                .map { DirectionalSource(it.direction, scaled(it), it.entityId, it.position) }
-            val local = lights.filter { it.kind != LightKind.DIRECTIONAL && usable(it) }
-                .sortedWith(compareBy<LightPlacement> { distance(it.position, target) }.thenBy { it.entityId })
-                .take(MAX_POINT)
-            val point = local.filter { it.kind == LightKind.POINT }.map { PointSource(it.position, scaled(it), it.range, it.entityId) }
-            val spot = local.filter { it.kind == LightKind.SPOT }.map {
-                SpotSource(it.entityId, it.position, it.direction, scaled(it), it.range, SpotCone(it.coneAngle, it.edgeSoftness))
-            }
-            return LightSet(directional, point, spot)
-        }
-
-        private fun usable(l: LightPlacement) = l.intensity > 0f && l.intensity.isFinite() && l.range > 0f && l.range.isFinite() &&
-            (l.kind != LightKind.SPOT || (l.coneAngle.isFinite() && l.coneAngle > 0f && l.coneAngle < 180f &&
-                l.edgeSoftness.isFinite() && l.edgeSoftness in 0f..1f &&
-                (l.direction.x != 0f || l.direction.y != 0f || l.direction.z != 0f))) &&
-            listOf(l.color.r, l.color.g, l.color.b, l.position.x, l.position.y, l.position.z, l.direction.x, l.direction.y, l.direction.z)
-                .all { it.isFinite() }
-
-        private fun scaled(l: LightPlacement) = Rgba(l.color.r * l.intensity, l.color.g * l.intensity, l.color.b * l.intensity, 1f)
-
-        private fun distance(a: Vec3, b: Vec3): Float {
-            val dx = a.x - b.x
-            val dy = a.y - b.y
-            val dz = a.z - b.z
-            return sqrt(dx * dx + dy * dy + dz * dz)
-        }
-    }
 }
+
+const val MAX_DIRECTIONAL = 2
+
+const val MAX_POINT = 5
+
+val NO_LIGHTS = LightSet(emptyList(), emptyList())
+
+/** Nearest lights with stable identity ties; unusable lights are skipped. */
+fun lightSetOf(lights: List<LightPlacement>, target: Vec3): LightSet {
+    val directional = lights.filter { it.kind == LightKind.DIRECTIONAL && usable(it) }
+        .sortedWith(compareBy<LightPlacement> { distance(it.position, target) }.thenBy { it.entityId })
+        .take(MAX_DIRECTIONAL)
+        .map { DirectionalSource(it.direction, scaled(it), it.entityId, it.position) }
+    val local = lights.filter { it.kind != LightKind.DIRECTIONAL && usable(it) }
+        .sortedWith(compareBy<LightPlacement> { distance(it.position, target) }.thenBy { it.entityId })
+        .take(MAX_POINT)
+    val point = local.filter { it.kind == LightKind.POINT }.map { PointSource(it.position, scaled(it), it.range, it.entityId) }
+    val spot = local.filter { it.kind == LightKind.SPOT }.map {
+        SpotSource(it.entityId, it.position, it.direction, scaled(it), it.range, SpotCone(it.coneAngle, it.edgeSoftness))
+    }
+    return LightSet(directional, point, spot)
+}
+
+private fun usable(l: LightPlacement) = l.intensity > 0f && l.intensity.isFinite() && l.range > 0f && l.range.isFinite() &&
+    (l.kind != LightKind.SPOT || (l.coneAngle.isFinite() && l.coneAngle > 0f && l.coneAngle < 180f &&
+        l.edgeSoftness.isFinite() && l.edgeSoftness in 0f..1f &&
+        (l.direction.x != 0f || l.direction.y != 0f || l.direction.z != 0f))) &&
+    listOf(l.color.r, l.color.g, l.color.b, l.position.x, l.position.y, l.position.z, l.direction.x, l.direction.y, l.direction.z)
+        .all { it.isFinite() }
+
+private fun scaled(l: LightPlacement) = Rgba(l.color.r * l.intensity, l.color.g * l.intensity, l.color.b * l.intensity, 1f)
+
+private fun distance(a: Vec3, b: Vec3): Float {
+    val dx = a.x - b.x
+    val dy = a.y - b.y
+    val dz = a.z - b.z
+    return sqrt(dx * dx + dy * dy + dz * dz)
+}
+

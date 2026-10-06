@@ -9,7 +9,7 @@ import net.nevinsky.abyssus.editor.ray.RayModePhase
 import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.atomic.AtomicBoolean
 
-internal class RayViewCompleted<T>(private val completed: RayRenderCompleted, val metadata: T) {
+class RayViewCompleted<T>(private val completed: RayRenderCompleted, val metadata: T) {
     val frame get() = completed.frame
     val batch get() = completed.batch
     val offeredNanos get() = completed.offeredNanos
@@ -19,7 +19,7 @@ internal class RayViewCompleted<T>(private val completed: RayRenderCompleted, va
  * A view's CPU boundary. Control changes, offers and reads never call native code or await the worker. The metadata
  * value must be frozen by its caller; it travels with the submitted input so older motion frames retain their camera.
  */
-internal class RayViewRuntime<T> internal constructor(
+class RayViewRuntime<T> internal constructor(
     private val service: RayBackendService,
     internal val viewId: String,
     internal val limits: RayLimits,

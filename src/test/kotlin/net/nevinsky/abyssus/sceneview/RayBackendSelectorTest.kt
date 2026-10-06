@@ -89,7 +89,7 @@ class RayBackendSelectorTest {
     @Test fun startupPreferenceIsCapturedOnceAndInvalidPreferenceDoesNotProbe() {
         var preference = "off"
         var reads = 0
-        val selector = RayBackendSelector.fromStartup({ reads++; preference }, "Mac OS X",
+        val selector = rayBackendSelectorFromStartup({ reads++; preference }, "Mac OS X",
             mapOf("metal" to { error("off must not construct Metal") }))
         preference = "metal"
         repeat(2) { assertEquals(RayBackendSelection.Off, selector.select()) }

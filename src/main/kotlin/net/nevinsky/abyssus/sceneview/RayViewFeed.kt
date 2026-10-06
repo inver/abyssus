@@ -7,7 +7,8 @@ package net.nevinsky.abyssus.sceneview
 import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.document.SceneRaySettingsState
 import net.nevinsky.abyssus.editor.ray.RaySceneFallback
-import net.nevinsky.abyssus.ui.RayModeText
+import net.nevinsky.abyssus.editor.EditorMessages
+import net.nevinsky.abyssus.editor.ray.message
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.core.assets.model.RayModelSkinning
@@ -17,7 +18,7 @@ import net.nevinsky.abyssus.raytracing.*
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.editor.document.documentDisplayMessage
 
 /**
  * Connects one scene view's renderer to its [RayViewRuntime]. [frame] runs on the render thread once per frame: it
@@ -27,10 +28,11 @@ import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
  * the latest job. Nothing here writes a scene file: edits, selection and camera changes reach the renderer through the
  * view's existing state, which is all this reads.
  */
-internal class RayViewFeed(
+class RayViewFeed(
     internal val runtime: RayViewRuntime<RayDisplayMetadata>,
     private val assets: RaySceneAssets,
     private val executor: Executor,
+    private val messages: EditorMessages,
     private val exposure: () -> Float = { 1f },
     private val snapshots: RaySceneSnapshots = RaySceneSnapshots(),
     private val poses: RayModelPoses = RayModelPoses(),
@@ -94,7 +96,7 @@ internal class RayViewFeed(
         when (val state = assets.poll()) {
             is RaySceneAssetState.Preparing -> return null
             is RaySceneAssetState.Failed -> {
-                runtime.fail(state.failures.entries.joinToString { "${it.key}: ${it.value.displayMessage()}" })
+                runtime.fail(state.failures.entries.joinToString { "${it.key}: ${it.value.documentDisplayMessage(messages)}" })
                 return null
             }
 
@@ -136,7 +138,7 @@ internal class RayViewFeed(
             context.viewCamera,
             context.width,
             context.height,
-            RayDisplayMetadata.capture(context),
+            captureRayDisplay(context),
             context.hdrAmbient?.copyOf(),
             state.sky ?: context.bakedSky?.invoke()
         )
@@ -151,7 +153,7 @@ internal class RayViewFeed(
                 if (job.epoch != epoch) continue
                 runCatchingKeepingCancellation { convert(job) }.onFailure { failure ->
                     if (job.epoch == epoch) {
-                        reportFailure(failure); runtime.fail(failure.displayMessage())
+                        reportFailure(failure); runtime.fail(failure.documentDisplayMessage(messages))
                     }
                 }
             }
@@ -186,7 +188,7 @@ internal class RayViewFeed(
         when (conversion) {
             is RaySceneConversion.Preparing -> return
             is RaySceneConversion.Fallback -> {
-                if (job.epoch == epoch) runtime.fail("${RayModeText.fallback(conversion.reason)}${conversion.detail?.let { " ($it)" } ?: ""}")
+                if (job.epoch == epoch) runtime.fail("${conversion.reason.message(messages)}${conversion.detail?.let { " ($it)" } ?: ""}")
                 return
             }
 
@@ -197,10 +199,10 @@ internal class RayViewFeed(
     private fun publish(job: Job, frame: RaySceneFrame) {
         val scene = frame.scene
         scene.unsupportedReason()?.let { reason ->
-            if (job.epoch == epoch) runtime.fail("${RayModeText.fallback(RaySceneFallback.RESOURCE_LIMIT)} ($reason)")
+            if (job.epoch == epoch) runtime.fail("${RaySceneFallback.RESOURCE_LIMIT.message(messages)} ($reason)")
             return
         }
-        val diff = RaySceneDiff.between(lastFrame, frame)
+        val diff = raySceneDiff(lastFrame, frame)
         lastFrame = frame
         if (diff.rebuild) sceneGeneration++
         if (RaySceneChange.CAMERA in diff.changes) cameraRevision++

@@ -85,24 +85,23 @@ enum class RaySceneChange { STRUCTURE, TRANSFORM, POSE, CAMERA, LIGHT, MATERIAL,
 data class RaySceneDiff(val changes: Set<RaySceneChange>) {
     val rebuild: Boolean get() = RaySceneChange.STRUCTURE in changes
     val resetsHistory: Boolean get() = changes.isNotEmpty()
-
-    companion object {
-        fun between(previous: RaySceneFrame?, next: RaySceneFrame): RaySceneDiff {
-            if (previous == null) return RaySceneDiff(setOf(RaySceneChange.STRUCTURE))
-            val changes = mutableSetOf<RaySceneChange>()
-            if (previous.projectId != next.projectId || previous.assets != next.assets || previous.topology != next.topology)
-                changes += RaySceneChange.STRUCTURE
-            if (previous.assets != next.assets || previous.scene.materials != next.scene.materials || previous.settings != next.settings) changes += RaySceneChange.MATERIAL
-            if (previous.transforms != next.transforms) changes += RaySceneChange.TRANSFORM
-            if (previous.poses != next.poses) changes += RaySceneChange.POSE
-            if (previous.camera != next.camera) changes += RaySceneChange.CAMERA
-            if (previous.scene.lights != next.scene.lights) changes += RaySceneChange.LIGHT
-            if (previous.scene.environment != next.scene.environment || previous.scene.fog != next.scene.fog || previous.environmentRevision != next.environmentRevision)
-                changes += RaySceneChange.ENVIRONMENT
-            return RaySceneDiff(changes)
-        }
-    }
 }
+
+fun raySceneDiff(previous: RaySceneFrame?, next: RaySceneFrame): RaySceneDiff {
+    if (previous == null) return RaySceneDiff(setOf(RaySceneChange.STRUCTURE))
+    val changes = mutableSetOf<RaySceneChange>()
+    if (previous.projectId != next.projectId || previous.assets != next.assets || previous.topology != next.topology)
+        changes += RaySceneChange.STRUCTURE
+    if (previous.assets != next.assets || previous.scene.materials != next.scene.materials || previous.settings != next.settings) changes += RaySceneChange.MATERIAL
+    if (previous.transforms != next.transforms) changes += RaySceneChange.TRANSFORM
+    if (previous.poses != next.poses) changes += RaySceneChange.POSE
+    if (previous.camera != next.camera) changes += RaySceneChange.CAMERA
+    if (previous.scene.lights != next.scene.lights) changes += RaySceneChange.LIGHT
+    if (previous.scene.environment != next.scene.environment || previous.scene.fog != next.scene.fog || previous.environmentRevision != next.environmentRevision)
+        changes += RaySceneChange.ENVIRONMENT
+    return RaySceneDiff(changes)
+}
+
 
 /** CPU-only conversion from the same preview and selected lights used by raster. Never reads GL mesh/texture handles. */
 class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimits()) {

@@ -99,7 +99,7 @@ class RayAnimationSnapshotTest {
         val content = SceneContent(models = listOf(
             AssetPlacement("moving", "model", PlacementTransform.IDENTITY), AssetPlacement("still", "model", PlacementTransform.IDENTITY)))
         val frame = (RaySceneSnapshots().capture(
-            SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("project")), camera(), LightSet.NONE,
+            SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("project")), camera(), NO_LIGHTS,
             RaySceneAssetState.Ready(mapOf("model" to snapshot), emptyMap()), poses = poses,
             deform = { mesh, palette -> RayModelSkinning().deform(mesh, palette) },
         ) as RaySceneConversion.Ready).frame.scene

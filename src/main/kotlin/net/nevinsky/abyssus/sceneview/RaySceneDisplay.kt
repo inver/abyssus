@@ -16,7 +16,7 @@ import java.io.File
 import java.util.Collections
 
 /** Borrowed frame data; consumed on the render thread before publishing immutable worker inputs. */
-internal class RayFrameContext(
+class RayFrameContext(
     val params: SceneRenderParams, val content: SceneContent, val camera: PerspectiveCamera,
     val lights: LightSet, val models: Collection<ModelEntity>, val width: Int, val height: Int,
     val viewCamera: String?,
@@ -26,7 +26,7 @@ internal class RayFrameContext(
     val bakedSky: (() -> net.nevinsky.abyssus.core.assets.sky.RaySkySnapshot?)? = null,
 )
 
-internal data class RayDisplayCamera(
+data class RayDisplayCamera(
     val position: Vec3, val direction: Vec3, val up: Vec3,
     val fieldOfView: Float, val near: Float, val far: Float,
 ) {
@@ -44,26 +44,25 @@ internal data class RayDisplayCamera(
 }
 
 /** Matched camera/content for overlays; mutable libGDX objects never enter a worker mailbox. */
-internal data class RayDisplayMetadata(
+data class RayDisplayMetadata(
     val camera: RayDisplayCamera, val content: SceneContent,
     val width: Int, val height: Int, val viewCamera: String?,
     val projectDir: File?, val ambient: Rgba?, val fog: FogParams?,
-) {
-    companion object {
-        fun capture(context: RayFrameContext): RayDisplayMetadata {
-            val camera = context.camera
-            fun vec(value: com.badlogic.gdx.math.Vector3) = Vec3(value.x, value.y, value.z)
-            fun <T> frozen(values: List<T>) = Collections.unmodifiableList(values.toList())
-            val content = context.content.copy(
-                models = frozen(context.content.models), terrains = frozen(context.content.terrains),
-                lights = frozen(context.content.lights), cameras = frozen(context.content.cameras),
-                entityPositions = Collections.unmodifiableMap(context.content.entityPositions.toMap()),
-            )
-            return RayDisplayMetadata(RayDisplayCamera(vec(camera.position), vec(camera.direction), vec(camera.up),
-                camera.fieldOfView, camera.near, camera.far), content, context.width, context.height,
-                context.viewCamera, context.params.projectDir, context.params.ambient, context.params.fog)
-        }
-    }
+)
+
+fun captureRayDisplay(context: RayFrameContext): RayDisplayMetadata {
+    val camera = context.camera
+    fun vec(value: com.badlogic.gdx.math.Vector3) = Vec3(value.x, value.y, value.z)
+    fun <T> frozen(values: List<T>) = Collections.unmodifiableList(values.toList())
+    val content = context.content.copy(
+        models = frozen(context.content.models), terrains = frozen(context.content.terrains),
+        lights = frozen(context.content.lights), cameras = frozen(context.content.cameras),
+        entityPositions = Collections.unmodifiableMap(context.content.entityPositions.toMap()),
+    )
+    return RayDisplayMetadata(RayDisplayCamera(vec(camera.position), vec(camera.direction), vec(camera.up),
+        camera.fieldOfView, camera.near, camera.far), content, context.width, context.height,
+        context.viewCamera, context.params.projectDir, context.params.ambient, context.params.fog)
 }
 
-internal class RaySceneDisplay(val frame: RayFrame, val metadata: RayDisplayMetadata)
+
+class RaySceneDisplay(val frame: RayFrame, val metadata: RayDisplayMetadata)

@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview.shadows
 
+import net.nevinsky.abyssus.sceneview.NO_LIGHTS
 import net.nevinsky.abyssus.editor.content.Vec3
 import net.nevinsky.abyssus.editor.content.Rgba
 
@@ -48,6 +49,6 @@ class ShadowLayoutTest {
         val removal=layout.allocate(lights(listOf("p2"),listOf("s2","s3"),listOf("d1"))).associateBy { it.entityId }
         for(id in listOf("p2","s2","d1")) assertEquals(first[id],removal[id])
         assertFalse(removal.containsKey("p1"))
-        assertEquals(emptyList<ShadowAllocation>(),layout.allocate(LightSet.NONE))
+        assertEquals(emptyList<ShadowAllocation>(),layout.allocate(NO_LIGHTS))
     }
 }

@@ -45,7 +45,7 @@ class RaySceneSnapshotTest {
     private fun params(content: SceneContent = SceneContent(models = listOf(placement)), project: String = "project") =
         SceneRenderParams.DEFAULT.copy(content = content, projectDir = File(project))
     private fun ready(params: SceneRenderParams = params(), preview: Map<String, DragResult> = emptyMap(),
-        lights: LightSet = LightSet.NONE, active: String? = null, environment: RayEnvironment? = null): RaySceneFrame =
+        lights: LightSet = NO_LIGHTS, active: String? = null, environment: RayEnvironment? = null): RaySceneFrame =
         (RaySceneSnapshots().capture(params, camera, lights, assets, preview, active, environment) as RaySceneConversion.Ready).frame
 
     @Test fun `drag preview changes only instance transforms and keeps shared geometry`() {
@@ -59,12 +59,12 @@ class RaySceneSnapshotTest {
         assertEquals(5f, moved[13], 0f) // node local Y 1 scaled by entity 2, then entity Y 3
         assertArrayEquals(before.scene.instances.first { it.id.startsWith("other/") }.transform(),
             after.scene.instances.first { it.id.startsWith("other/") }.transform(), 0f)
-        assertEquals(setOf(RaySceneChange.TRANSFORM), RaySceneDiff.between(before, after).changes)
+        assertEquals(setOf(RaySceneChange.TRANSFORM), raySceneDiff(before, after).changes)
     }
 
     @Test fun `mesh parts retain materials channels and unsigned 32 bit indices`() {
         val large = model(65_538)
-        val frame = (RaySceneSnapshots().capture(params(), camera, LightSet.NONE,
+        val frame = (RaySceneSnapshots().capture(params(), camera, NO_LIGHTS,
             RaySceneAssetState.Ready(mapOf("model" to large), emptyMap())) as RaySceneConversion.Ready).frame
         assertArrayEquals(intArrayOf(0, 65_536, 65_537), frame.scene.meshes[0].indices())
         assertEquals(65_538 * 3, frame.scene.meshes[0].normals()!!.size)
@@ -77,13 +77,13 @@ class RaySceneSnapshotTest {
     @Test fun `selected light identities and order are copied from raster light set`() {
         val sources = (0..7).map { i -> LightPlacement("light-$i", LightKind.POINT, Rgba(1f, .5f, 0f, 1f), 2f,
             Vec3(i.toFloat(), 0f, 0f), Vec3(0f, -1f, 0f), range = 10f) }
-        val set = LightSet.of(sources.reversed(), Vec3(0f, 0f, 0f))
+        val set = lightSetOf(sources.reversed(), Vec3(0f, 0f, 0f))
         val frame = ready(params(SceneContent(lights = sources)), lights = set)
         assertEquals(set.point.map { it.entityId }, frame.scene.lights.map { it.id })
         assertEquals(5, frame.scene.lights.size)
         assertEquals(20f, frame.scene.lights.first().color.r, 0f) // raster binder multiplies color by range
         val chosen = LightSet(set.directional, set.point.reversed(), set.spot)
-        assertEquals(setOf(RaySceneChange.LIGHT), RaySceneDiff.between(frame, ready(params(SceneContent(lights = sources)), lights = chosen)).changes)
+        assertEquals(setOf(RaySceneChange.LIGHT), raySceneDiff(frame, ready(params(SceneContent(lights = sources)), lights = chosen)).changes)
     }
 
     @Test fun `camera look through captures actual view lens and active entity`() {
@@ -95,7 +95,7 @@ class RaySceneSnapshotTest {
         assertEquals(12f, after.camera.position.x, 0f)
         assertEquals(43f, after.camera.fieldOfView, 0f)
         assertEquals(camera.view.`val`.toList(), after.camera.view)
-        assertEquals(setOf(RaySceneChange.CAMERA), RaySceneDiff.between(before, after).changes)
+        assertEquals(setOf(RaySceneChange.CAMERA), raySceneDiff(before, after).changes)
         assertEquals(4f, before.camera.position.x, 0f)
     }
 
@@ -103,22 +103,22 @@ class RaySceneSnapshotTest {
         val before = ready()
         val removed = ready(params(SceneContent()))
         assertTrue(removed.scene.instances.isEmpty())
-        assertTrue(RaySceneDiff.between(before, removed).rebuild)
+        assertTrue(raySceneDiff(before, removed).rebuild)
         val replaced = ready(params(project = "replacement"))
-        assertTrue(RaySceneDiff.between(before, replaced).rebuild)
+        assertTrue(raySceneDiff(before, replaced).rebuild)
     }
 
     @Test fun `resource limits cause explicit whole scene fallback`() {
-        val result = RaySceneSnapshots(RaySnapshotLimits(maxInstances = 1)).capture(params(), camera, LightSet.NONE, assets)
+        val result = RaySceneSnapshots(RaySnapshotLimits(maxInstances = 1)).capture(params(), camera, NO_LIGHTS, assets)
         assertEquals(RaySceneFallback.RESOURCE_LIMIT, (result as RaySceneConversion.Fallback).reason)
-        val byteResult = RaySceneSnapshots(RaySnapshotLimits(maxBytes = 1)).capture(params(), camera, LightSet.NONE, assets)
+        val byteResult = RaySceneSnapshots(RaySnapshotLimits(maxBytes = 1)).capture(params(), camera, NO_LIGHTS, assets)
         assertEquals(RaySceneFallback.RESOURCE_LIMIT, (byteResult as RaySceneConversion.Fallback).reason)
     }
 
     @Test fun `pending and failed displayed assets stay explicit`() {
         val snapshots = RaySceneSnapshots()
-        assertTrue(snapshots.capture(params(), camera, LightSet.NONE, RaySceneAssetState.Ready(emptyMap(), emptyMap())) is RaySceneConversion.Preparing)
-        val failed = snapshots.capture(params(), camera, LightSet.NONE, RaySceneAssetState.Failed(mapOf("model:model" to IllegalStateException())))
+        assertTrue(snapshots.capture(params(), camera, NO_LIGHTS, RaySceneAssetState.Ready(emptyMap(), emptyMap())) is RaySceneConversion.Preparing)
+        val failed = snapshots.capture(params(), camera, NO_LIGHTS, RaySceneAssetState.Failed(mapOf("model:model" to IllegalStateException())))
         assertEquals(RaySceneFallback.ASSET_FAILURE, (failed as RaySceneConversion.Fallback).reason)
     }
 
@@ -131,7 +131,7 @@ class RaySceneSnapshotTest {
         val environment = RayEnvironment(ambient = RayColor(0f, 0f, 0f), hdr = true, intensity = 3f, rotation = 15f)
         val after = ready(p, environment = environment)
         assertEquals(environment, after.scene.environment)
-        assertEquals(setOf(RaySceneChange.ENVIRONMENT), RaySceneDiff.between(frame, after).changes)
+        assertEquals(setOf(RaySceneChange.ENVIRONMENT), raySceneDiff(frame, after).changes)
     }
 
     @Test fun `companion leases share repeated assets release deletion and replace project`() {
@@ -159,8 +159,8 @@ class RaySceneSnapshotTest {
             ecs = net.nevinsky.abyssus.editor.document.SceneJson().parse("""{"entities":{"entity":{"components":{"RenderComponent":{"rayTracingMaterials":{"red":{"transmission":1,"ior":1.4}}}}}}}"""),
             rayTracing = SceneRaySettingsCodec().read(net.nevinsky.abyssus.editor.document.SceneJson().parse("""{"rayTracing":{"maxReflectionBounces":2}}""")))
         val converter = RaySceneSnapshots()
-        val before = (converter.capture(p.copy(ecs = null), camera, LightSet.NONE, sources) as RaySceneConversion.Ready).frame
-        val after = (converter.capture(p, camera, LightSet.NONE, sources) as RaySceneConversion.Ready).frame
+        val before = (converter.capture(p.copy(ecs = null), camera, NO_LIGHTS, sources) as RaySceneConversion.Ready).frame
+        val after = (converter.capture(p, camera, NO_LIGHTS, sources) as RaySceneConversion.Ready).frame
         assertEquals(2, after.scene.meshes.size)
         assertTrue(before.scene.meshes[0] === after.scene.meshes[0])
         val edited = after.scene.instances.first { it.id.startsWith("entity/") }
@@ -168,7 +168,7 @@ class RaySceneSnapshotTest {
         assertEquals(1f, after.scene.materials[edited.material].transmission, 0f)
         assertEquals(1.4f, after.scene.materials[edited.material].ior, 0f)
         assertEquals(0f, after.scene.materials[shared.material].transmission, 0f)
-        assertEquals(setOf(RaySceneChange.MATERIAL), RaySceneDiff.between(before, after).changes)
+        assertEquals(setOf(RaySceneChange.MATERIAL), raySceneDiff(before, after).changes)
         assertEquals(2, after.settings.maxReflectionBounces)
     }
 
@@ -176,14 +176,14 @@ class RaySceneSnapshotTest {
         val scene = net.nevinsky.abyssus.editor.parseScene("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxRefractionBounces":null}}""")
         val p = renderParamsOf(scene, CameraParams.DEFAULT)
         assertNull(p.rayTracing.settings)
-        assertTrue(RaySceneSnapshots().capture(p,camera,LightSet.NONE,assets) is RaySceneConversion.Fallback)
+        assertTrue(RaySceneSnapshots().capture(p,camera,NO_LIGHTS,assets) is RaySceneConversion.Fallback)
     }
 
     @Test fun unresolvedOverridesRemainStoredAndNeverRetargetAnotherMaterial() {
         val ecs=net.nevinsky.abyssus.editor.document.SceneJson().parse("""{"entities":{"entity":{"components":{"RenderComponent":{"rayTracingMaterials":{"lost":{"transmission":1}}}}}}}""")
         val p=params().copy(ecs=ecs)
         val before=net.nevinsky.abyssus.editor.document.SceneJson().compact(ecs)
-        assertTrue(RaySceneSnapshots().capture(p,camera,LightSet.NONE,assets) is RaySceneConversion.Fallback)
+        assertTrue(RaySceneSnapshots().capture(p,camera,NO_LIGHTS,assets) is RaySceneConversion.Fallback)
         assertEquals(before,net.nevinsky.abyssus.editor.document.SceneJson().compact(ecs))
     }
 

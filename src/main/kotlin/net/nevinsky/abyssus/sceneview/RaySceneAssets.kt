@@ -18,25 +18,6 @@ class RaySceneAssets(
     private val acquireSky: (File, String) -> RayAssetLease<RaySkySnapshot>? = { _, _ -> null },
     private val invalidateSky: (File, String) -> Unit = { _, _ -> },
 ) : AutoCloseable {
-    constructor(assets: ViewAssets) : this(
-        { project, name -> assets.project(project).rayModels.acquire(name).let { lease ->
-            RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close)
-        } },
-        { project, name -> assets.project(project).rayTerrains.acquire(name).let { lease ->
-            RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close)
-        } },
-        { project, models, terrains ->
-            assets.current?.takeIf { it.projectDir == project.absoluteFile }?.let {
-                models.forEach(it.rayModels::invalidate)
-                terrains.forEach(it.rayTerrains::invalidate)
-            }
-        },
-        { project, name -> assets.project(project).raySkies.acquire(name).let { lease ->
-            RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close)
-        } },
-        { project, name -> assets.current?.takeIf { it.projectDir == project.absoluteFile }?.raySkies?.invalidate(name) },
-    )
-
     private var project: String? = null
     private val models = linkedMapOf<String, RayAssetLease<RayModelSnapshot>>()
     private val terrains = linkedMapOf<String, RayAssetLease<RayTerrainSnapshot>>()

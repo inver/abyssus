@@ -19,19 +19,21 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.swing.SwingUtilities
-import net.nevinsky.abyssus.ui.documentDisplayMessage as displayMessage
+import net.nevinsky.abyssus.editor.EditorMessages
+import net.nevinsky.abyssus.editor.document.documentDisplayMessage
 
 /**
  * Application owner of providers, devices and one serial native worker. Each view gets an independent session and
  * scheduler; a shared-device loss clears all their CPU publications before native cleanup. No shutdown waits on EDT.
  */
-internal class RayBackendService(
+class RayBackendService(
     private val selector: RayBackendSelector,
+    private val messages: EditorMessages,
     private val worker: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor { task ->
         Thread(task, "abyssus-ray-worker").apply { isDaemon = true }
     },
-    private val publish: (() -> Unit) -> Unit = { SwingUtilities.invokeLater(it) },
+    /** Runs a mode change where the view reads it (the plugin passes the EDT). */
+    private val publish: (() -> Unit) -> Unit,
     private val clock: () -> Long = System::nanoTime,
     private val reportFailure: (Throwable) -> Unit = {},
     private val log: Logger = NOPLogger.NOP_LOGGER,
@@ -154,7 +156,7 @@ internal class RayBackendService(
         }
         if (view.wanted(revision)) {
             view.clearPublication()
-            publish { view.mode.failed(revision, failure.displayMessage()) }
+            publish { view.mode.failed(revision, failure.documentDisplayMessage(messages)) }
         }
         report("Ray tracing stopped for view ${view.viewId}: ${failure.failureMessage()}", failure)
         disposeBinding(view)
@@ -166,7 +168,7 @@ internal class RayBackendService(
         // Invalidate every publication before starting cleanup, which may need to drain already submitted work.
         for ((view, binding) in affected) {
             view.clearPublication()
-            publish { view.mode.failed(binding.revision, failure.displayMessage()) }
+            publish { view.mode.failed(binding.revision, failure.documentDisplayMessage(messages)) }
         }
         report("Ray tracing device lost (${backend.info.name} on ${backend.info.gpu}): ${failure.message}", failure)
         affected.forEach { (view, _) -> disposeBinding(view) }

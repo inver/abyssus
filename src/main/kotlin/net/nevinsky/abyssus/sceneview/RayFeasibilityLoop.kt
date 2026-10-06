@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /** Temporary feasibility driver: one native submission and one replaceable CPU request, with no EDT waits. */
-internal class RayFeasibilityLoop(private val probe: () -> RayCapability) : AutoCloseable {
+class RayFeasibilityLoop(private val probe: () -> RayCapability) : AutoCloseable {
     class Completed(val frame: RayFrame, val offeredNanos: Long)
     private class Offered(val request: RayRequest, val nanos: Long)
     private val worker = Executors.newSingleThreadScheduledExecutor { task ->

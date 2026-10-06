@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.EditorBundle
 import net.nevinsky.abyssus.core.assets.displayMessage
 
 import net.nevinsky.abyssus.RayServices
@@ -23,11 +24,11 @@ internal class RayIntegration(
 ) {
     /** A feed whose CPU asset interest goes through [viewAssets], the assets of the view it is for. */
     fun newFeed(viewId: String, viewAssets: ViewAssets): RayViewFeed =
-        RayViewFeed(service.newView(viewId), assets(viewAssets), executor, exposure, reportFailure = reportFailure)
+        RayViewFeed(service.newView(viewId), assets(viewAssets), executor, EditorBundle, exposure, reportFailure = reportFailure)
 
     companion object {
         fun of(ray: RayServices) = RayIntegration(
-            ray.service, { viewAssets -> RaySceneAssets(viewAssets) }, ray.converter, ray.exposure,
+            ray.service, { viewAssets -> raySceneAssetsOf(viewAssets) }, ray.converter, ray.exposure,
             ray.log.let { log -> { failure: Throwable -> log.warn("Ray tracing stopped: ${failure.displayMessage()}", failure) } },
         )
     }

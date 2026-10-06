@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.sceneview
 
+import net.nevinsky.abyssus.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.editor.scene.SceneContent
 import net.nevinsky.abyssus.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.editor.ray.RayModePhase
@@ -48,10 +49,10 @@ class RayViewFeedTest {
 
     private fun feed(executor: Executor = Executor(Runnable::run), assets: RaySceneAssets = assets(), snapshots: RaySceneSnapshots = RaySceneSnapshots(),
         id: String = "view"): RayViewFeed =
-        RayViewFeed(service.newView(id), assets, executor, snapshots = snapshots).also { closers += it }
+        RayViewFeed(service.newView(id), assets, executor, ResourceEditorMessages(), snapshots = snapshots).also { closers += it }
 
     private fun context(content: SceneContent = SceneContent(models = listOf(placement)), hdrAmbient: FloatArray? = null) =
-        RayFrameContext(SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("project")), content, camera, LightSet.NONE, emptyList(), 8, 8, null, hdrAmbient)
+        RayFrameContext(SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("project")), content, camera, NO_LIGHTS, emptyList(), 8, 8, null, hdrAmbient)
 
     private fun presented(feed: RayViewFeed, content: SceneContent = SceneContent(models = listOf(placement))): RaySceneDisplay? {
         var display: RaySceneDisplay? = null
@@ -152,7 +153,7 @@ class RayViewFeedTest {
         val ambient = FloatArray(18) { (it / 3 + 1) * .1f }
         SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
         RayFakeDevice.await(what = "a scene with the transferred sky") {
-            feed.frame(RayFrameContext(SceneRenderParams.DEFAULT.copy(content = content, projectDir = project), content, camera, LightSet.NONE, emptyList(), 8, 8, null, ambient))
+            feed.frame(RayFrameContext(SceneRenderParams.DEFAULT.copy(content = content, projectDir = project), content, camera, NO_LIGHTS, emptyList(), 8, 8, null, ambient))
             device.lastScene?.environment?.texture != null
         }
         val scene = device.lastScene!!
@@ -179,7 +180,7 @@ class RayViewFeedTest {
         val content = SceneContent(models = listOf(placement), skybox = "skybox_physical") // a procedural sky has no CPU form
         SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
         RayFakeDevice.await(what = "a scene without a sky texture") {
-            feed.frame(RayFrameContext(SceneRenderParams.DEFAULT.copy(content = content, projectDir = project), content, camera, LightSet.NONE, emptyList(), 8, 8, null))
+            feed.frame(RayFrameContext(SceneRenderParams.DEFAULT.copy(content = content, projectDir = project), content, camera, NO_LIGHTS, emptyList(), 8, 8, null))
             device.lastScene != null
         }
         assertNull(device.lastScene!!.environment.texture)
@@ -192,7 +193,7 @@ class RayViewFeedTest {
         val content = SceneContent(models = listOf(placement), skybox = "procedural")
         SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
         RayFakeDevice.await(what = "a scene with the baked sky") {
-            feed.frame(RayFrameContext(SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("project")), content, camera, LightSet.NONE,
+            feed.frame(RayFrameContext(SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("project")), content, camera, NO_LIGHTS,
                 emptyList(), 8, 8, null, null) { baked })
             device.lastScene?.environment?.texture != null
         }

@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.sceneview.terrain
 
+import net.nevinsky.abyssus.sceneview.MAX_POINT
 import net.nevinsky.abyssus.core.assets.loading.ShaderSource
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
@@ -110,7 +111,7 @@ class TerrainShader(shaders: ShaderSource) : Disposable {
     }
 
     private companion object {
-        const val MAX = 5 // at least LightSet.MAX_POINT and MAX_DIRECTIONAL; the array size in terrain.frag
+        const val MAX = 5 // at least MAX_POINT and MAX_DIRECTIONAL; the array size in terrain.frag
         const val IRRADIANCE_UNIT = 7 // after the splat units (0 to assets.terrain.SPLAT_UNIT)
         const val SHADOW_UNIT = 6 // 2D atlas between splat (0..5) and HDR cube (7)
     }
