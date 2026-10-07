@@ -37,6 +37,18 @@ data class SpotSource(val entityId: String, val position: Vec3, val direction: V
  * Point and spot lights share the local-light ceiling.
  */
 class LightSet(val directional: List<DirectionalSource>, val point: List<PointSource>, val spot: List<SpotSource> = emptyList()) {
+    /**
+     * This set with the color of the directional light of entity [entityId] (the sun) times [scale], as clouds over
+     * the sun dim it; every other light is the same. This set itself when [scale] is 1 or the sun is not in it.
+     */
+    fun withSunScale(entityId: String?, scale: Float): LightSet {
+        if (entityId == null || scale == 1f || directional.none { it.entityId == entityId }) return this
+        val scaled = directional.map {
+            if (it.entityId != entityId) it else it.copy(color = Rgba(it.color.r * scale, it.color.g * scale, it.color.b * scale, it.color.a))
+        }
+        return LightSet(scaled, point, spot)
+    }
+
     /** Replaces the directional and point lights of [environment]; the ambient light is left alone. */
     fun applyTo(environment: Environment) {
         environment.remove(DirectionalLightsAttribute.Type)

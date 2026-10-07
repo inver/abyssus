@@ -4,7 +4,7 @@
 
 ### Requirement: Clouds dim the sun
 
-While the scene's sky draws enabled clouds, the scene's sun SHALL be dimmed by the clouds between the orbit target and
+While the scene's sky draws clouds, the scene's sun SHALL be dimmed by the clouds between the orbit target and
 the sun. The sun is the brightest directional light, the one that positions the procedural sun. Its intensity SHALL be
 multiplied by the clouds' transmittance along the sun direction, never below 10%, and SHALL change smoothly as clouds
 drift. Other lights, the ambient light and the HDR environment SHALL be unaffected, and no file SHALL change.
@@ -22,10 +22,10 @@ drift. Other lights, the ambient light and the HDR environment SHALL be unaffect
 
 #### Scenario: Clear sky
 
-- **WHEN** no cloud lies along the sun direction, or the sky has no enabled clouds
+- **WHEN** no cloud lies along the sun direction, or the sky has no clouds to draw
 - **THEN** entity `7` lights the scene at its full intensity, as before this change
 
 #### Scenario: Storm floor
 
-- **WHEN** the sky uses `builtin:storm` and the sun is fully covered
+- **WHEN** the sky's cloud asset holds dense, thick storm clouds (the `storm` template) and the sun is fully covered
 - **THEN** the sun light is dimmed to no less than 10% of its intensity

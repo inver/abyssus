@@ -1,0 +1,85 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
+
+import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.testing.failOnWarnings
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class SunOcclusionTest {
+    private val radius = AtmosphereParams().planetRadius
+    private val sun = Vector3(0.3f, 0.8f, 0.2f).nor()
+    private val occlusion = SunOcclusion()
+
+    private fun clouds(vararg bands: CloudBand) = CloudSettings(bands = bands.associateBy { it.level })
+
+    private fun step(clouds: CloudSettings?, delta: Float, time: Double = 0.0) =
+        occlusion.update(clouds, sun, 0f, 0f, radius, 100f, time, delta)
+
+    private val overcast = clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 1f))
+    private val clear = clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 0f))
+
+    @Test
+    fun aCloudOnTheSunRayDimsIt() {
+        val value = step(overcast, 0f)
+        assertTrue("dimmed to $value", value < 0.5f)
+    }
+
+    @Test
+    fun aClearRayGivesFullSun() {
+        assertEquals(1f, step(clear, 0f), 0f)
+    }
+
+    @Test
+    fun noCloudsGiveFullSun() {
+        assertEquals(1f, step(null, 0.016f), 0f)
+        assertEquals(1f, step(CloudSettings(), 0.016f), 0f)
+    }
+
+    @Test
+    fun stormFloorIsTenPercent() {
+        val json = JsonProcessor()
+        val template = javaClass.getResourceAsStream("/clouds/templates/storm.json")!!.use { String(it.readAllBytes()) }
+        val asIs = CloudSettingsReader(failOnWarnings()).read("storm", json.readObject(template)["additional"])
+        val covered = asIs.copy(bands = asIs.bands.mapValues { it.value.copy(coverage = 1f) })
+        assertEquals(SUN_OCCLUSION_FLOOR, step(covered, 0f), 1e-6f)
+        for (t in 0 until 200) {
+            val value = occlusion.instant(asIs, sun, t * 97f, t * -61f, radius, 100f, t * 3.0)
+            assertTrue("$value at $t", value >= SUN_OCCLUSION_FLOOR)
+        }
+    }
+
+    @Test
+    fun changesAreSmoothedOverAboutHalfASecond() {
+        step(clear, 0f)
+        var value = 1f
+        repeat(30) { value = step(overcast, 1f / 60f) } // half a second at 60 frames per second
+        val goal = occlusion.instant(overcast, sun, 0f, 0f, radius, 100f, 0.0)
+        val reached = (1f - value) / (1f - goal)
+        assertTrue("after 0.5 s ${reached * 100}% of the way", reached in 0.55f..0.7f)
+        repeat(150) { value = step(overcast, 1f / 60f) }
+        assertEquals(goal, value, 0.01f * (1f - goal))
+    }
+
+    @Test
+    fun cloudsDisappearingResetAtOnce() {
+        step(overcast, 0f)
+        assertEquals(1f, step(null, 1f / 60f), 0f)
+        assertTrue("starts from its target again", step(overcast, 1f / 60f) < 0.5f)
+    }
+
+    @Test
+    fun theBandIsHitAboveTheViewer() {
+        val up = bandDistance(Vector3(0f, 1f, 0f), 1500f, radius, 100f)!!
+        assertEquals(1400f, up, 0.5f)
+        val low = bandDistance(Vector3(1f, 0.05f, 0f).nor(), 1500f, radius, 100f)!!
+        assertTrue("a low sun crosses the band far away: $low", low > 20_000f)
+    }
+}

@@ -25,7 +25,7 @@ sky or with the view.
 exists and adds none.
 
 **Unused marking.** The unused rule lives in the open change `show-project-assets` (`ProjectReader.usedAssets` walks
-references by `uuid` from a root set of folder names). A preset is named by folder name, not by `uuid`.
+references by `uuid` from a root set of folder names). A sky names its cloud asset by `uuid`, so it is one more reference.
 
 ## Goals / Non-Goals
 
@@ -44,25 +44,26 @@ references by `uuid` from a root set of folder names). A preset is named by fold
 
 ### 1. The cloud description lives in `core`, parsed in `prepare`
 Add `core/.../sky/clouds/`. Every type here is pure, immutable and unit-tested:
-- `CloudSettings(enabled, technique, presetName, bands)`.
+- `CloudSettings(technique, bands)`.
 - `CloudBand(level, type, base, top, coverage, density, windX, windZ)`.
 - `CloudType`: an enum with its band and defaults.
 - `CloudBandLimits`.
 
-`ProceduralSkyAdditional` gains `clouds: JsonNode?`. Binding stays lenient, so an invalid band doesn't fail the sky.
-`CloudSettingsReader` validates the bands, skipping and reporting invalid ones through `AssetLog` (spec: *Invalid band*).
+**Clouds are an asset, loaded like a terrain's textures.** `MetaType` gains `CLOUDS`; its `additional` holds
+`technique` and the bands. `CloudsLoader.prepare` (pool thread) reads them with `CloudSettingsReader`, which validates
+the bands, skipping and logging invalid ones (spec: *Invalid band*), and makes the volumetric noise; `build` uploads the
+noise as 3D textures into the built `Clouds`.
 
-**Preset resolution** also runs in `prepare`, on the pool thread:
-- `WeatherPresetReader` reads `assets/<preset>/meta.json` through `AssetFiles`.
-- Built-ins come from `core/src/main/resources/clouds/builtin-{fair,overcast,storm}.json`, loaded through a
-  constructor-injected `BuiltinPresets`. No `object`, as the `core` rule requires.
-- The sky's bands replace the preset's band by band.
-- A missing or unreadable preset is logged once and resolves to the sky's own bands.
+`ProceduralSkyMeta.clouds` stays a raw `JsonNode`, so a value of the wrong kind never fails the sky; a textual value is
+the cloud asset's `uuid`. `ProceduralSkyLoader.prepare` resolves it to a folder through `AssetIndex` (an unknown `uuid`
+is logged and the sky has no clouds) and returns it from `dependencies`, so the one `AssetStorage` loads the cloud asset
+first. `ProceduralSky` reads the built `Clouds` from `BuiltAssets` on every draw, as `TerrainMesh` reads its splat
+textures: a reloaded cloud asset is picked up without rebuilding the sky, and the sky never owns or disposes it.
 
-`MetaType` gains `WEATHER_PRESET`. Built-in names use the `builtin:` prefix, which can't be a folder name because
-`AssetFiles.folder` rejects `:` once a check is added there.
-
-*Alternative:* resolve the preset when drawing. Rejected: it would mean file IO on the GL thread.
+*Alternatives:* inline bands in the sky with folder-named presets and built-ins (the first version of this change).
+Replaced: one weather setup is shared by `uuid` like every other asset reference, the unused walk needs no name rule,
+and the noise is made once per cloud asset instead of once per sky. Built-in presets are dropped; their metas stay in
+`core`'s resources as templates for `add-weather-preset-creation`.
 
 ### 2. One coverage field, written twice (Kotlin and GLSL)
 `CloudField` is the deterministic coverage model. For a band and a world point `(x, z)` at time `t`, it computes
@@ -105,8 +106,10 @@ low), so lower bands hide higher ones.
 - **Shells:** 8 ray-sphere slices from `base` to `top`, with a height profile per type and darker bases.
 - **Volumetric:**
   - Ray-marched in an offscreen `RGBA16F` target at half the view's framebuffer size.
-  - A 128³ base noise and a 32³ detail noise, both `R8`. They are generated in `prepare` on the pool thread and
-    uploaded as 3D textures through `Gdx.gl30`, which is available in the 3.2 core context.
+  - A 64³ base noise (Perlin-Worley) and a 32³ detail noise (inverted Worley), both `R8`, from `FastNoiseLite`. It does
+    not repeat, so a margin at each face fades into the copy shifted by one volume, which makes them tile. They belong
+    to the cloud asset: generated in its `prepare` on the pool thread and uploaded as 3D textures through `Gdx.gl30`
+    (available in the 3.2 core context) in its `build`.
   - 48 primary steps and 6 light steps, with blue-noise jitter.
   - Temporal accumulation with reprojection by the camera's previous view-projection matrix. The history resets when
     the camera jumps (look-through switch, resize, more than 10° of rotation in one frame).
@@ -129,7 +132,7 @@ two seconds over 33 ms per frame. The first report sets the override to *Shells*
 sticky, and the combo then refuses *Volumetric* with a tooltip.
 
 The note is a short label in the toolbar (`AbyssusBundle`), never a dialog. The toolbar combo is disabled when the
-current sky has no enabled clouds. The sky reports `hasClouds` once built.
+current sky names no cloud asset it can draw. The sky reports `hasClouds` once built.
 
 ### 5. Sun occlusion scales the sun light per frame
 `SunOcclusion` is a pure class. Each frame it:
@@ -147,16 +150,14 @@ Shadows, other lights, ambient and HDR are untouched (spec: *Other lights unaffe
 
 The time source is the view's `SkyClock` (EDT): it advances by the frame delta and can be set to a fixed time in tests.
 
-### 6. Presets in the tree, unused marking and the chooser
-- `AssetIcons` gains a weather preset icon, and the tree shows `WEATHER_PRESET` like other typed assets.
-- The unused walk gains name references. For each used `SKYBOX_PROCEDURAL`, a `clouds.preset` that is not a
-  `builtin:` name adds that folder to the used set before the `uuid` walk continues.
-  - If `show-project-assets` is still open when this lands, a task amends its delta spec's reference list.
-  - If it has been archived, this change's `weather-presets` requirement covers the rule.
-- `SkyboxChoices` reads `clouds.enabled` from the metas it already loads, for the `· clouds` detail line.
+### 6. Cloud assets in the tree, unused marking and the chooser
+- `AssetIcons` gains a cloud icon, and the tree shows `CLOUDS` like other typed assets.
+- `ProjectAssetListing` adds a sky's textual `clouds` to the asset's `uuid` references, so the unused walk follows it
+  like a terrain's splat fields. `show-project-assets` is archived; this change's `cloud-assets` requirement states it.
+- `SkyboxChoices` reads `clouds` from the metas it already loads, for the `· clouds` detail line.
 
 ### 7. Threading summary
-- **Pool thread:** parsing, preset resolution, noise generation, ambient estimates.
+- **Pool thread:** parsing, cloud asset reading and noise generation.
 - **AWT render thread inside `GdxRuntime.withContext`:** every GL call (shader builds, 3D texture upload, offscreen
   targets, drawing), only while `GuardedGLCanvas.glSafe`.
 - **EDT, no GL:** `CloudViewState`, `CloudFrameBudget`, `SunOcclusion` and `SkyClock`.
@@ -173,7 +174,7 @@ The time source is the view's `SkyClock` (EDT): it advances by the frame delta a
 - Sun dimming flickers as clouds drift → exponential smoothing; occlusion uses the low-frequency coverage only.
 - `design-review-refactor` changes `SkyLoader` and splits `SceneRenderer` → whichever lands second rebases. The
   `CloudRenderer` strategy and `SkyFrame` don't depend on its internals.
-- Preset edits don't show until the sky reloads → documented. They follow `add-asset-editing-and-terrain-generation`'s
+- Cloud asset edits don't show until the cloud asset reloads → documented. They follow `add-asset-editing-and-terrain-generation`'s
   reload once it lands.
 
 ## Migration Plan

@@ -54,6 +54,8 @@ class SkyboxChoice(
     val unused: Boolean,
     val procedural: Boolean = false,
     val hdr: HdrSkyInfo? = null,
+    /** True for a procedural sky whose `additional.clouds` names a cloud asset. */
+    val clouds: Boolean = false,
 ) {
     /** The asset folder; null for a choice that was not read from disk. */
     var folder: VirtualFile? = null
@@ -68,12 +70,15 @@ class SkyboxChoice(
     /** The asset's `meta.json` type, which picks the row's icon. */
     val type: MetaType get() = if (hdr != null) MetaType.SKYBOX_HDR else if (procedural) MetaType.SKYBOX_PROCEDURAL else MetaType.SKYBOX
 
-    /** `6 faces · png`; just the count when no face names an extension; `HDR · 64 × 32` or `HDR` for an HDR sky. */
+    /**
+     * `6 faces · png`; just the count when no face names an extension; `HDR · 64 × 32` or `HDR` for an HDR sky;
+     * `procedural sky`, or `procedural sky · clouds` when it names a cloud asset.
+     */
     val detail: String
         get() = if (hdr != null) {
             if (hdr.width > 0) AbyssusBundle.message("skyboxHdrSize", hdr.width.toString(), hdr.height.toString())
             else AbyssusBundle.message("skyboxHdr")
-        } else if (procedural) AbyssusBundle.message("skyboxProcedural")
+        } else if (procedural) AbyssusBundle.message(if (clouds) "skyboxProceduralClouds" else "skyboxProcedural")
         else if (formats.isEmpty()) AbyssusBundle.message("skyboxFaces", faces)
         else AbyssusBundle.message("skyboxFacesFormats", faces, formats.joinToString(", "))
 }
@@ -91,7 +96,8 @@ fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>, hdr: Map<S
         val formats = files.mapNotNull { f -> f.substringAfterLast('.', "").lowercase().takeIf { it.isNotEmpty() } }.distinct().sorted()
         val procedural = asset.meta.type == MetaType.SKYBOX_PROCEDURAL
         val hdrInfo = if (asset.meta.type == MetaType.SKYBOX_HDR) hdr[asset.name] ?: HdrSkyInfo(null) else null
-        SkyboxChoice(asset.name, files.size, formats, references.count { asset.name in it }, asset.unused, procedural, hdrInfo).also { choice ->
+        val clouds = procedural && additional?.get("clouds")?.let { it.isTextual && it.textValue().isNotBlank() } == true
+        SkyboxChoice(asset.name, files.size, formats, references.count { asset.name in it }, asset.unused, procedural, hdrInfo, clouds).also { choice ->
             choice.faceFiles = if (hdrInfo != null) listOfNotNull(hdrInfo.file)
             else THUMB_ORDER.map { key -> additional?.text(key)?.takeIf { it.isNotBlank() } }
         }

@@ -48,7 +48,8 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   file, with the `type` and `uuid` from the folder's `meta.json`. An asset no scene reaches is grayed and
   marked `unused`. A scene reaches an asset by folder name through `assetName` and `shaderKey` values in its
   `ecs` and through `skyboxName`; a reached asset in turn reaches the assets its `meta.json` references by
-  `uuid` (terrain `splatMap`/`splatBase`/`splatR`/`splatG`/`splatB`/`splatA`, model `materials`).
+  `uuid` (terrain `splatMap`/`splatBase`/`splatR`/`splatG`/`splatB`/`splatA`, model `materials`), and a reached
+  procedural sky reaches the cloud asset (`CLOUDS`) its `clouds` names. Cloud assets have their own icon.
   A `shaderKey` with no matching folder is a bundled editor shader and is ignored. Files named inside a
   `meta.json` (textures of a material, shader sources) are not followed.
 - A project's `scenes` and `assets` rows are labelled `Scenes` and `Assets` with their count. In a scene, `ecs` shows its
@@ -171,7 +172,10 @@ project's `assets` folder beside the `.abss`:
 - the scene's **models** (`RenderComponent` entities of type `MODEL`), textured, at each entity's position,
   rotation and scale; a model that has animations plays its first one on a loop;
 - the scene's **terrain** (height data and splat textures of a `TERRAIN` asset);
-- the **skybox** named by `skyboxName` when `skyboxEnabled`;
+- the **skybox** named by `skyboxName` when `skyboxEnabled`; a procedural sky's **clouds** (the `CLOUDS` asset its `meta.json`
+  `additional.clouds` names by `uuid`: low, mid and high bands and a technique, shared by every sky naming it) drift with their wind and dim the sun light when they cover it. The toolbar's
+  **Clouds** choice (*Asset*, *Layered*, *Shells*, *Volumetric*) overrides the sky's technique in that view only and
+  writes nothing; volumetric clouds that keep the view slower than 30 frames per second switch to shells with a note;
 - the **light entities** (directional, point and spot, with cone and edge softness) on top of the scene's
   ambient light and fog, each with a small marker (and a direction line for directional and spot lights);
 - the **camera entities**, each as a small body with its view frustum (near, far, field of view), pointing at its

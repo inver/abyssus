@@ -1,5 +1,9 @@
 package net.nevinsky.abyssus.lib.core.assets
 
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
@@ -72,7 +76,8 @@ class AssetLoadingGlTest {
                 MetaType.TEXTURE to TextureLoader(files, metas),
                 MetaType.PIXMAP_TEXTURE to TextureLoader(files, metas),
                 MetaType.SKYBOX to SkyboxLoader(files, metas, skyShaders()),
-                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas),
+                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas, skyShaders(), log),
+                MetaType.CLOUDS to CloudsLoader(metas, JsonProcessor(), log),
                 MetaType.SKYBOX_HDR to HdrSkyLoader(metas, ExrLoader(files), skyShaders(), ToneCurve()),
             ),
         )
@@ -129,6 +134,36 @@ class AssetLoadingGlTest {
                 val before = assets.getAs<Texture>("tex")
                 assets.retain(setOf("terr"))
                 assertSame("retaining the terrain keeps its texture", before, assets.getAs<Texture>("tex"))
+            } finally {
+                assets.dispose()
+            }
+        }
+        assertEquals(emptyList<String>(), logged)
+    }
+
+    @Test
+    fun aSkyLoadsItsCloudAssetFirstAndDrawsFromIt() {
+        val dir = Files.createTempDirectory("clouds").toFile().also(dirs::add)
+        File(untitled, "assets/skybox_physical").copyRecursively(File(dir, "assets/sky"))
+        File(dir, "assets/weather").mkdirs()
+        File(dir, "assets/weather/meta.json").writeText(
+            """{"format":"abyssus","formatVersion":1,"uuid":"00000000-0000-0000-0000-0000000000c1","type":"CLOUDS","additional":{"low":{"type":"cumulus"}}}"""
+        )
+        val skyMeta = File(dir, "assets/sky/meta.json")
+        skyMeta.writeText(skyMeta.readText().replace("\"sunIntensity\": 20.0", "\"sunIntensity\": 20.0,\n    \"clouds\": \"00000000-0000-0000-0000-0000000000c1\""))
+        val logged = mutableListOf<String>()
+        TestGl.run {
+            val assets = Project(dir, warningsTo(logged)).assets()
+            try {
+                loadAll(assets, setOf("sky"))
+                val sky = assets.getAs<ProceduralSky>("sky")!!
+                val clouds = assets.getAs<Clouds>("weather")
+                assertNotNull("the cloud asset was loaded by the same storage", clouds)
+                assertSame(clouds, sky.cloudAsset)
+                assertEquals(setOf(CloudLevel.LOW), sky.clouds!!.bands.keys)
+                assertTrue("its noise textures were made", clouds!!.baseNoise != 0)
+                assets.retain(setOf("sky"))
+                assertSame("retaining the sky keeps its clouds", clouds, assets.getAs<Clouds>("weather"))
             } finally {
                 assets.dispose()
             }

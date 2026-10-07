@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.sky.Sky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 
 /** A six-face skybox on a cube mesh, drawn with [program] (`skybox.vert` / `skybox.frag`), which it owns. */
 class SkyboxCube(prepared: PreparedSkybox, private val program: ShaderProgram) : Sky {
@@ -29,7 +30,7 @@ class SkyboxCube(prepared: PreparedSkybox, private val program: ShaderProgram) :
         prepared.dispose()
     }
 
-    override fun draw(camera: Camera, sun: Vector3) {
+    override fun draw(camera: Camera, frame: SkyFrame) {
         rotationOnlyViewProj(camera, viewProj)
         program.bind()
         program.setUniformMatrix("u_viewProj", viewProj)

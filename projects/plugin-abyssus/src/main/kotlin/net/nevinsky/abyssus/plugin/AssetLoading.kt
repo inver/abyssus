@@ -39,6 +39,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.RayTerrainSnapshot
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
@@ -143,7 +144,8 @@ class ProjectAssets internal constructor(
                 MetaType.TEXTURE to textureLoader,
                 MetaType.PIXMAP_TEXTURE to textureLoader,
                 MetaType.SKYBOX to skyboxLoader,
-                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas),
+                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas, skyShaders, log),
+                MetaType.CLOUDS to CloudsLoader(metas, json, log),
                 MetaType.SKYBOX_HDR to hdrSkyLoader,
             ),
         ), log),

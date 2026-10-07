@@ -59,4 +59,23 @@ class NodeIconsTest : BasePlatformTestCase() {
         assertSame(ComponentIcons.GENERIC, icon(components.getValue("Name")))
         assertSame(AssetIcons.forType("MODEL"), icon(components.getValue("Render")))
     }
+
+    fun testCloudAssetsHaveTheirOwnIcon() {
+        val preset = AssetIcons.forType("CLOUDS")
+        assertSame(preset, AssetIcons.forType(net.nevinsky.abyssus.lib.core.assets.MetaType.CLOUDS))
+        assertNotSame(AssetIcons.UNKNOWN, preset)
+        assertNotSame(AssetIcons.forType("SKYBOX_PROCEDURAL"), preset)
+
+        myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
+        myFixture.addFileToProject(
+            "p/assets/clouds_storm/meta.json",
+            """{"format":"abyssus","formatVersion":1,"version":1,"type":"CLOUDS","additional":{"low":{"type":"stratocumulus"},"mid":{"type":"altostratus"}}}""",
+        )
+        fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+        val abss = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
+        val assets = children(abss).single { label(it) == "assets" }
+        val row = children(assets).single()
+        assertTrue(text(row), text(row).contains("clouds_storm"))
+        assertSame(preset, icon(row))
+    }
 }

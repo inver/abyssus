@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.BufferUtils
 import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
 import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 import net.nevinsky.abyssus.lib.core.assets.sky.Sky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -54,7 +55,7 @@ class RaySkyBaker(private val faceSize: Int = 256) {
                 Gdx.gl.glClearColor(0f, 0f, 0f, 1f)
                 Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
                 Gdx.gl.glDisable(GL20.GL_DEPTH_TEST); Gdx.gl.glDepthMask(false); Gdx.gl.glDisable(GL20.GL_CULL_FACE)
-                sky.draw(camera, sunDirection)
+                sky.draw(camera, SkyFrame(sunDirection, clouds = false))
                 Gdx.gl.glDepthMask(true); Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
                 val pixels = BufferUtils.newByteBuffer(faceSize * faceSize * 4)
                 Gdx.gl.glReadPixels(0, 0, faceSize, faceSize, GL20.GL_RGBA, GL20.GL_UNSIGNED_BYTE, pixels)

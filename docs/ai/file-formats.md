@@ -178,7 +178,8 @@ contribute files in the same format (`docs/ai/architecture.md`, Extension points
 | `MODEL` | `file`, `format`, `binary`, `materials` (material asset `uuid`s) |
 | `TERRAIN` | `terrainFile`, `size`, `uv`, `splatMap`, `splatBase`, `splatR`, `splatG`, `splatB`, `splatA` (texture asset `uuid`s) |
 | `SKYBOX` | `top`, `bottom`, `left`, `right`, `front`, `back` (image files in the folder) |
-| `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults) |
+| `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults); optional `clouds`: the `uuid` of a `CLOUDS` asset (see *Clouds* below) |
+| `CLOUDS` | `technique` and up to three cloud bands `low`, `mid`, `high` (see *Clouds* below) |
 | `SKYBOX_HDR` | `file`: the OpenEXR image file inside the asset folder |
 | `TEXTURE`, `PIXMAP_TEXTURE`, `MATERIAL`, `SHADER` | Recognized for icons; not drawn by the scene view |
 
@@ -264,6 +265,54 @@ pixel; the fixture is `assets/skybox_physical`). The plugin supplies these unifo
 `u_heightMie`, `u_mieG`, `u_sunIntensity`. The vertex shader takes `attribute vec2 a_position` (the three corners of
 the triangle). A missing file or a compile error skips that sky and logs it.
 
+**Clouds** are their own asset, type `CLOUDS`, which a `SKYBOX_PROCEDURAL` names by `uuid` in `additional.clouds`, the
+way a terrain names its splat textures. Several skies can share one. The view draws them over the sky asset's own
+atmosphere with plugin shaders (`projects/lib-core/src/main/resources/shader/sky/clouds_*`), so they work with any
+asset `sky.frag`. Nothing is written back.
+
+```json
+{ "format": "abyssus", "formatVersion": 1, "uuid": "...", "type": "CLOUDS", "additional": {
+  "technique": "shells",
+  "low":  { "type": "cumulus", "base": 800, "top": 2000, "coverage": 0.4, "density": 0.8, "wind": [4, 1] },
+  "high": { "type": "cirrus" }
+} }
+```
+
+- A sky without `clouds`, with a `uuid` no asset declares (logged), or naming an asset with no valid band draws as
+  without clouds. A `clouds` value that is not text is ignored.
+- `technique`: `layered`, `shells` (the default) or `volumetric`. The scene view's Clouds toolbar choice can override
+  it per view without writing it.
+- `low`, `mid`, `high`: bands. `type` is required; every other field takes the type's default when omitted.
+  `base` / `top` are altitudes in metres, `base` below `top`, both inside the level's limits; `coverage` is 0 to 1;
+  `density` is 0 or more; `wind` is two numbers, metres per second along x and z. A band that breaks a rule is
+  skipped and logged, and the other bands and the sky still draw.
+- Loading: the sky lists the cloud asset as a dependency, so the asset storage loads it first and the sky reads the
+  built asset on every draw; an edited cloud asset shows once it is loaded again. The cloud asset also owns the
+  volumetric technique's tileable 3D noise (FastNoiseLite Perlin-Worley, 64³ base and 32³ detail), made when it is
+  prepared and uploaded when it is built.
+- `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and storm examples of `CLOUDS` metas
+  (not loaded by the plugin; a creation action is a later change).
+
+| Level | Altitudes (m) | Types |
+|---|---|---|
+| `low` | 300–2500 | `cumulus`, `stratus`, `stratocumulus` |
+| `mid` | 2000–7000 | `altocumulus`, `altostratus` |
+| `high` | 6000–13000 | `cirrus`, `cirrostratus` |
+
+Type defaults (`CloudType` in `core`):
+
+| Type | `base` | `top` | `coverage` | `density` | `wind` |
+|---|---|---|---|---|---|
+| `cumulus` | 800 | 2000 | 0.4 | 0.8 | [4, 1] |
+| `stratus` | 400 | 900 | 0.85 | 0.5 | [3, 0.5] |
+| `stratocumulus` | 600 | 1600 | 0.6 | 0.7 | [5, 1.5] |
+| `altocumulus` | 3000 | 4200 | 0.45 | 0.5 | [10, 2] |
+| `altostratus` | 3500 | 5500 | 0.75 | 0.4 | [12, 3] |
+| `cirrus` | 8000 | 9500 | 0.35 | 0.15 | [25, 5] |
+| `cirrostratus` | 8500 | 10500 | 0.6 | 0.12 | [22, 4] |
+
+**`CLOUDS` is a native asset type.** The Abyssus view lists it with its own icon.
+
 **`SKYBOX_HDR` is a native asset type.** `additional.file` names a single-part OpenEXR image inside the asset
 folder. `ExrLoader` in `core` decodes it through TinyEXR off the GL thread. The image must be equirectangular
 (width = 2 × height, height at most 4096); it is reduced by block averaging to at most 4096 pixels wide for raster
@@ -280,7 +329,8 @@ Radiance `.hdr` decoding and extension-based file discovery are not implemented 
 
 - **Roots:** a scene reaches asset folders by name through every `assetName` and `shaderKey` in its `ecs`, and its
   `skyboxName`.
-- **References:** a reached asset reaches others by `uuid` through terrain `splat*` fields and model `materials`.
+- **References:** a reached asset reaches others by `uuid` through terrain `splat*` fields, model `materials`,
+  and a reached procedural sky reaches the `CLOUDS` asset its `clouds` names.
   Files named inside `meta.json` are not followed.
 - **Unused:** an asset reached by no scene of the project is unused.
 - **Bundled shaders:** a `shaderKey` naming no folder is a bundled shader and is ignored.

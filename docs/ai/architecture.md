@@ -79,6 +79,18 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    `ColorAttribute.AmbientLight` for `gdx-model`'s `EnvironmentLightAttribute` after drawing the grid: the PBR shader
    samples both cubes, the default shader takes the six colors as its ambient cubemap, and `TerrainShader` samples the
    irradiance cube. Without a built HDR sky the content is lit by the ambient color exactly as before.
+   A procedural sky may have **clouds** (`core`'s `assets.sky.clouds`): a `CLOUDS` asset its `additional.clouds` names
+   by `uuid`. `ProceduralSkyLoader` resolves the `uuid` to a folder (`AssetIndex`) and names it in `dependencies`, so the
+   one `AssetStorage` loads it first; `CloudsLoader.prepare` reads its bands and technique and makes the volumetric 3D
+   noise (FastNoiseLite) on the pool thread, and its build uploads the noise. The sky reads the built `Clouds` from
+   `BuiltAssets` on every draw, as `TerrainMesh` reads its splat textures, and never owns it. Every `Sky.draw` takes a `SkyFrame(sun, timeSeconds, technique, clouds)`;
+   `ProceduralSky` draws the asset's atmosphere, then a plugin-owned cloud pass blended premultiplied over it through a
+   `CloudRenderer` strategy (`LayeredClouds`, `ShellClouds`, `VolumetricClouds`, built lazily by `CloudTechniques`, which
+   steps down volumetric to shells to layered to none when one cannot be built). All techniques and `SunOcclusion` share
+   one coverage field, `CloudField` in Kotlin and `clouds_common.glsl` (kept equal by `CloudFieldParityGlTest`).
+   `SceneRenderer` advances the view's `SkyClock`, passes `SceneViewState.cloudTechnique` (the toolbar's per-view
+   override, `CloudViewState`), and scales the sun light (`SunDirection.sunLight`) by `SunOcclusion` each frame for the
+   environment and `TerrainShader`; shadows, other lights and ray tracing use the unscaled set.
 5. `SceneShadows` captures model and terrain renderables after their single animation/transform update, then draws
    bounded depth tiles before the color passes. Its per-canvas `ShadowResources` restores framebuffer and render
    state and falls back to direct lighting if allocation or depth rendering fails. Default/PBR models and terrain
@@ -197,6 +209,9 @@ The editor retains source aliases in its `format` package. None of these checks 
 - **Asset loading:** `AssetStorage.prepare` runs on a pool thread and does file IO and decoding, no GL. Building GPU
   objects happens on the render thread in `pump`, sliced per frame for big textures and for an HDR sky's
   environment passes (`HdrEnvironmentBuild`, which restores the framebuffer, viewport and state it changes).
+  Cloud assets (bands and noise) are read and made in `prepare`; cloud shaders, 3D noise textures and the volumetric
+  half-resolution targets are created on the render thread. `CloudViewState`, `CloudFrameBudget`, `SunOcclusion` and
+  `SkyClock` are pure and run on the EDT with the frame.
   Reloading a changed asset follows the same split: `AssetRefresh` reads on the pool and delivers on the EDT, and
   invalidation, disposal, build and upload happen only inside `withContext` on a frame `GuardedGLCanvas` allows.
 - **GL safety:** `GuardedGLCanvas` refuses GL until the canvas has been on screen with a non-zero size for 250 ms.

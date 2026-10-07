@@ -41,13 +41,14 @@ class ProjectAssetListing(json: JsonProcessor) {
     }
 
     /**
-     * The `uuid`s a `meta.json` holds in the fields Abyssus resolves to other assets: the splat textures and the
-     * `materials` list. Files named in `meta.json` live in the asset's own folder and are not references.
+     * The `uuid`s a `meta.json` holds in the fields Abyssus resolves to other assets: the splat textures, the
+     * `materials` list and a procedural sky's `clouds`. Files named in `meta.json` live in the asset's own folder and
+     * are not references.
      */
     private fun references(meta: JsonNode): List<String> {
         val additional = meta.obj("additional") ?: return emptyList()
         val materials = additional.opt("materials")?.takeIf { it.isArray }
             ?.mapNotNull { it.takeIf(JsonNode::isTextual)?.asText() }.orEmpty()
-        return SPLAT_FIELDS.mapNotNull { additional.text(it) } + materials
+        return SPLAT_FIELDS.mapNotNull { additional.text(it) } + materials + listOfNotNull(additional.text("clouds"))
     }
 }

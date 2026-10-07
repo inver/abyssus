@@ -7,42 +7,44 @@ sky asset and drawn by a choice of techniques that trade realism for speed.
 
 ## ADDED Requirements
 
-### Requirement: Cloud description in the sky asset
+### Requirement: Sky names a cloud asset
 
-A `SKYBOX_PROCEDURAL` asset's `meta.json` `additional` MAY hold a `clouds` object with `enabled` (boolean), `technique`
-(`layered`, `shells` or `volumetric`) and up to three bands `low`, `mid` and `high`. A missing `clouds`, or `enabled`
-false, SHALL draw the sky exactly as without clouds. A missing `technique` SHALL mean `shells`.
+A `SKYBOX_PROCEDURAL` asset's `meta.json` `additional` MAY hold `clouds`: the `uuid` of a `CLOUDS` asset (see
+`cloud-assets`), whose bands the sky draws with that asset's `technique`. A missing `clouds`, a `uuid` no asset
+declares, a value that is not text, or a cloud asset with no valid band SHALL draw the sky exactly as without clouds.
+A `uuid` no asset declares SHALL be logged once.
 
 #### Scenario: Fixture sky stays cloudless
 
 - **WHEN** a copy of `Untitled`'s `Main Scene` uses `skybox_physical`, whose `meta.json` has no `clouds`
 - **THEN** the sky is drawn exactly as before this change
 
-#### Scenario: Clouds enabled
+#### Scenario: Clouds named
 
-- **WHEN** `skybox_physical`'s `additional` gains `"clouds": {"enabled": true, "low": {"type": "cumulus", "coverage": 0.5}}`
+- **WHEN** the copy gets a `CLOUDS` asset `clouds_fair` with `"low": {"type": "cumulus", "coverage": 0.5}`, and
+  `skybox_physical`'s `additional` gains `"clouds"` set to its `uuid`
 - **THEN** the view shows cumulus clouds over the atmosphere after the sky is loaded again
 
-#### Scenario: Clouds disabled
+#### Scenario: Unknown cloud asset
 
-- **WHEN** the same `clouds` object has `"enabled": false`
-- **THEN** the sky is drawn without clouds
+- **WHEN** `clouds` holds a `uuid` that no asset of the project declares
+- **THEN** the sky is drawn without clouds and the problem is logged once
 
 ### Requirement: Cloud bands
 
-Each band SHALL hold a `type`, `base` and `top` altitudes in metres, `coverage` (0 to 1), `density` (0 or more) and
+A cloud asset's bands `low`, `mid` and `high` each SHALL hold a `type`, `base` and `top` altitudes in metres, `coverage` (0 to 1), `density` (0 or more) and
 `wind` (two numbers, metres per second along x and z). Types SHALL be per band: low `cumulus`, `stratus`,
 `stratocumulus`; mid `altocumulus`, `altostratus`; high `cirrus`, `cirrostratus`. Altitudes SHALL be within the band:
 low 300–2500, mid 2000–7000, high 6000–13000, with `base` below `top`. An omitted field SHALL take its type's default.
 
 #### Scenario: Type defaults
 
-- **WHEN** a band is `"low": {"type": "cumulus"}`
+- **WHEN** a cloud asset's band is `"low": {"type": "cumulus"}`
 - **THEN** it uses cumulus defaults: base 800, top 2000, coverage 0.4, density 0.8 and a light wind
 
 #### Scenario: Three levels at once
 
-- **WHEN** `clouds` has a low `cumulus`, a mid `altocumulus` and a high `cirrus` band
+- **WHEN** the sky's cloud asset has a low `cumulus`, a mid `altocumulus` and a high `cirrus` band
 - **THEN** all three are drawn, the cirrus above and behind the others, and lower bands hide the higher ones where
   they overlap
 
@@ -87,15 +89,15 @@ All three SHALL show clouds in the same places with the same coverage and wind, 
 
 #### Scenario: Technique from the asset
 
-- **WHEN** a sky's `clouds.technique` is `volumetric` and a scene view opens on it
+- **WHEN** a sky's cloud asset has `"technique": "volumetric"` and a scene view opens on it
 - **THEN** the view draws volumetric clouds
 
 ### Requirement: Per-view technique override
 
 The scene view toolbar SHALL offer a Clouds choice of *Asset*, *Layered*, *Shells* and *Volumetric*. *Asset* (the
-default for every newly opened view) SHALL use the asset's `technique`; any other choice SHALL override it in that view
+default for every newly opened view) SHALL use the cloud asset's `technique`; any other choice SHALL override it in that view
 only. The choice SHALL NOT change any file, SHALL NOT affect other open views, and SHALL be disabled when the scene's
-sky has no enabled clouds.
+sky has no clouds to draw.
 
 #### Scenario: Override in one view
 
@@ -109,7 +111,7 @@ sky has no enabled clouds.
 
 #### Scenario: No clouds
 
-- **WHEN** the scene names a skybox without enabled clouds, or a non-procedural skybox
+- **WHEN** the scene names a procedural skybox without a cloud asset to draw, or a non-procedural skybox
 - **THEN** the Clouds choice is disabled
 
 ### Requirement: Volumetric falls back to shells
@@ -142,5 +144,5 @@ sky without clouds. The atmosphere and the rest of the scene SHALL still render,
 
 #### Scenario: Volumetric resources unavailable
 
-- **WHEN** the volumetric noise texture cannot be created
+- **WHEN** the cloud asset's volumetric noise textures cannot be created
 - **THEN** the view draws shells, logs the reason once, and the rest of the scene renders

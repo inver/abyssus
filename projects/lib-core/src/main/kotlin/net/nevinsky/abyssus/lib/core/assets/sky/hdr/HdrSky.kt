@@ -12,6 +12,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.io.GeometryUtils.Companion.createFullscreenTriangle
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.lib.core.assets.sky.Sky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 
 /**
  * A built HDR sky: draws its equirectangular image as the background, tone mapped by [curve], and holds
@@ -23,7 +24,7 @@ class HdrSky(val environment: HdrEnvironment, shaders: ShaderSource, private val
     private val invViewProj = Matrix4()
 
     /** Draws the sky seen from [camera]'s orientation. The caller sets depth and cull state. */
-    override fun draw(camera: Camera, sun: Vector3) {
+    override fun draw(camera: Camera, frame: SkyFrame) {
         rotationOnlyViewProj(camera, invViewProj).inv()
         program.bind()
         environment.equirect.bind(0)

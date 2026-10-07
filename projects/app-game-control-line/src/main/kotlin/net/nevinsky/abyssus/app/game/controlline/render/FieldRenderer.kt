@@ -30,6 +30,7 @@ import net.nevinsky.abyssus.lib.core.assets.loading.PreparedAsset
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.Sky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
@@ -90,6 +91,9 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
     private val instances = HashMap<Entity, Pair<Model, ModelInstance>>()
     private val playing = HashMap<Entity, Pair<String, AnimationController>>()
     private var scene: FieldScene? = null
+
+    /** Seconds of play drawn so far: the sky's clouds drift by it. */
+    private var skyTime = 0.0
     private val environment = Environment()
     private val sun = DirectionalLight()
     private val shadows = FieldShadows()
@@ -107,6 +111,7 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
         field: FieldScene, camera: Camera, lines: List<LineSegment> = emptyList(), hidden: Entity? = null,
         clips: Map<Entity, String> = emptyMap(), seconds: Float = 0f,
     ) {
+        skyTime += seconds
         if (scene !== field) {
             instances.clear()
             playing.clear()
@@ -129,7 +134,7 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
             Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
             Gdx.gl.glDepthMask(false)
             Gdx.gl.glDisable(GL20.GL_CULL_FACE)
-            sky.draw(camera, field.sunDirection)
+            sky.draw(camera, SkyFrame(field.sunDirection, skyTime))
             Gdx.gl.glDepthMask(true)
         }
 

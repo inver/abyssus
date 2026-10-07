@@ -18,6 +18,7 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
 import net.nevinsky.abyssus.lib.core.assets.sky.Sky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -37,7 +38,8 @@ class RaySkyBakerGlTest {
             it.setVertices(floatArrayOf(-1f, -1f, 3f, -1f, -1f, 3f))
         }
         private val inverse = Matrix4()
-        override fun draw(camera: Camera, sun: Vector3) {
+        override fun draw(camera: Camera, frame: SkyFrame) {
+            val sun = frame.sun
             inverse.set(camera.view); inverse.setTranslation(0f, 0f, 0f); inverse.mulLeft(camera.projection); inverse.inv()
             program.bind(); program.setUniformMatrix("u_invViewProj", inverse); mesh.render(program, GL20.GL_TRIANGLES)
         }

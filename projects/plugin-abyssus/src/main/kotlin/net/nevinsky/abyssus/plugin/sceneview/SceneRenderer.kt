@@ -11,6 +11,7 @@ import net.nevinsky.abyssus.lib.core.editor.ray.RaySkyBaker
 import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.lib.core.editor.scene.MAX_POINT
 import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
+import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.PendingAssetRevision
 import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
@@ -54,7 +55,14 @@ import net.nevinsky.abyssus.lib.core.shader.EnvironmentLightAttribute
 import net.nevinsky.abyssus.lib.core.shader.ShaderProvider
 import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
 import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw
+import net.nevinsky.abyssus.plugin.sceneview.skybox.SkyClock
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SunDirection
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SunOcclusion
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.SKY_CAMERA_HEIGHT
 import net.nevinsky.abyssus.plugin.sceneview.terrain.TerrainShader
 import net.nevinsky.abyssus.plugin.sceneview.shadows.SceneShadows
 import net.nevinsky.abyssus.lib.core.shader.ShadowAtlasAttribute
@@ -120,6 +128,37 @@ class SceneRenderer(
     private var overlay: LoadingOverlay? = null
     private var lightsKey: Pair<List<LightPlacement>, Vec3>? = null
     private var lights = NO_LIGHTS
+
+    /** [lights] with the sun dimmed by the clouds over it: what the environment and the terrain shader light with. */
+    private var frameLights = NO_LIGHTS
+    private var frameLightsKey: Triple<LightSet, String?, Float>? = null
+    private val sunOcclusion = SunOcclusion()
+
+    /** The time this view's sky is drawn at; clouds drift by it. */
+    internal val skyClock = SkyClock()
+
+    /** The share of the sun's light the clouds let through in the last frame (1 without clouds). */
+    internal val sunScale: Float get() = sunOcclusion.transmittance
+
+    /** The lights the last frame lit the scene with (the sun dimmed by clouds), for tests. */
+    internal val litLights: LightSet get() = frameLights
+
+    /** The cloud technique the last frame drew; null when it drew no clouds. */
+    internal var drawnCloudTechnique: CloudTechnique? = null
+        private set
+
+    /**
+     * True when the sky of [p] is a procedural sky whose `meta.json` names a cloud asset it can still draw (once built,
+     * a sky whose cloud asset is missing or empty, or that every technique failed for, has none). Reads the metadata, no
+     * GL: the view's Clouds choice follows it.
+     */
+    internal fun cloudsEnabled(p: SceneRenderParams = params): Boolean {
+        val name = p.content.skybox ?: return false
+        val dir = p.projectDir ?: return false
+        val meta = assets.project(dir).metas.loadBaseMeta(name)?.takeIf { it.type == MetaType.SKYBOX_PROCEDURAL } ?: return false
+        if (meta.typedAdditional<ProceduralSkyMeta>().cloudsReference == null) return false
+        return (skybox?.sky(name) as? ProceduralSky)?.hasClouds ?: true
+    }
     private var lineBatch: LineBatch? = null
     private var gridModel: Model? = null
     private var grid: ModelInstance? = null
@@ -247,7 +286,9 @@ class SceneRenderer(
         applyEnvironment(p)
         applyCamera(width, height, orbit)
         val c = content
+        skyClock.advance(deltaSeconds)
         applyLights(c, orbit)
+        applySunScale(c, orbit)
         models.update(c.models, p.projectDir, deltaSeconds)
         terrains.update(c.terrains, p.projectDir)
         updateDrawnVersion()
@@ -264,13 +305,15 @@ class SceneRenderer(
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
 
         if (rayDisplay == null) {
-            skybox?.draw(camera, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights))
+            skybox?.draw(camera, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights), skyClock.seconds, state.cloudTechnique)
+            drawnCloudTechnique = (skybox?.sky(p.content.skybox) as? ProceduralSky)?.drawnTechnique
             batch.begin(camera)
             batch.render(grid, environment)
             batch.end()
             renderContent(p, c, atlas)
             drawOverlays(width, height)
         } else {
+            drawnCloudTechnique = null
             val matched = rayDisplay.metadata
             matched.camera.applyTo(rayCamera, width, height)
             val presenter = rayPresenter ?: RayFramePresenter().also { rayPresenter = it }
@@ -378,7 +421,7 @@ class SceneRenderer(
             environment.set(EnvironmentLightAttribute(sky.specular, sky.irradiance, sky.levels, sky.ambient))
         }
         if (atlas != null) environment.set(atlas)
-        terrainShader?.draw(camera, terrains.drawn, p.ambient, p.fog, lights, sky?.irradiance, atlas)
+        terrainShader?.draw(camera, terrains.drawn, p.ambient, p.fog, frameLights, sky?.irradiance, atlas)
         contentBatch.begin(camera)
         for (entity in models.drawn) contentBatch.render(entity.instance, environment, ShaderProvider.DEFAULT_SHADER_KEY)
         contentBatch.end()
@@ -391,7 +434,25 @@ class SceneRenderer(
         if (key == lightsKey) return
         lightsKey = key
         lights = lightSetOf(c.lights, target)
-        lights.applyTo(environment)
+    }
+
+    /**
+     * Dims the sun light by the clouds of the scene's procedural sky between the orbit target and the sun, every frame
+     * (the clouds drift), and applies the lights to the environment when they changed. Other lights are untouched.
+     */
+    private fun applySunScale(c: SceneContent, orbit: OrbitCamera) {
+        val sky = skybox?.sky(c.skybox) as? ProceduralSky
+        val sun = SunDirection.of(c.lights)
+        val scale = sunOcclusion.update(
+            sky?.clouds, Vector3(sun.x, sun.y, sun.z), orbit.target.x, orbit.target.z,
+            sky?.params?.planetRadius ?: 0f, SKY_CAMERA_HEIGHT, skyClock.seconds, skyClock.lastStep,
+        )
+        val sunId = SunDirection.sunLight(c.lights)?.entityId
+        val key = Triple(lights, sunId, scale)
+        if (key == frameLightsKey) return
+        frameLightsKey = key
+        frameLights = lights.withSunScale(sunId, scale)
+        frameLights.applyTo(environment)
     }
 
     /** Fog color comes from the environment; density through [net.nevinsky.abyssus.plugin.sceneview.fog.FogShader] (see [FogParams] for what cannot be matched). */

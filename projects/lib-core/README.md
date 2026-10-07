@@ -27,6 +27,7 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 | `core.assets.terrain` | `TerrainLoader`, `TerrainData`, `TerrainMesh`, `TerrainMeta`, `RayTerrainSnapshot` and `TerrainRaySnapshotLoader` |
 | `core.assets.texture` | `TextureLoader` (`TEXTURE` and `PIXMAP_TEXTURE` assets: image decoded off the GL thread, uploaded as a mipmapped repeating texture), `PreparedTexture` (the decoded image; `release()` hands the `Pixmap` to a caller that uploads it itself) and `TextureMeta` |
 | `core.assets.sky` | `Sky` (a drawable background) and `RaySkySnapshot`; `cube/` six-face skyboxes, `procedural/` skies drawn by the asset's own GLSL, `hdr/` OpenEXR skies and their lighting environment. Each has a `*Loader` and a `*RaySnapshotLoader` |
+| `core.assets.sky.clouds` | The clouds of a procedural sky: `CloudSettings`, `CloudBand`, `CloudType` (level and defaults), `CloudLevel` with its `CloudBandLimits`, `CloudTechnique`; `CloudSettingsReader` (validates bands, skipping and logging bad ones); `CloudsLoader` and `Clouds` (the `CLOUDS` asset: bands, technique and the volumetric 3D noise from `CloudNoiseGenerator`, built on FastNoiseLite), which a procedural sky names by `uuid` and loads as a dependency; `CloudField`, the cloud techniques and `SunOcclusion` |
 
 `ExrLoader.dimensions` and `HdrPreview.dimensions` read the EXR data-window dimensions without decoding pixels.
 Header parsing is shared with decoding; native headers and images each have explicit cleanup. Chooser and panel
@@ -42,7 +43,8 @@ Unsupported project/scene documents throw; unsupported metadata returns null and
 Admission checks do not modify document text or write files.
 The vendored Java noise implementation is under `src/main/java/`; generator and recipe orchestration live in the plugin.
 
-Sky shaders are in `src/main/resources/shader/sky/`.
+Sky shaders are in `src/main/resources/shader/sky/`. `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and
+storm examples of `CLOUDS` metas; nothing loads them yet.
 
 Terrain generation, noise, the `meta.json` field editor and the composition root (`AssetLoading`) are not here: they
 live in the plugin (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/terrain/`, `AssetMetaEditor.kt`, `AssetLoading.kt`).
