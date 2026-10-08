@@ -5,9 +5,11 @@
 
 package net.nevinsky.abyssus.lib.runtime.ecs
 
-import net.nevinsky.abyssus.lib.runtime.json.number
-
 import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.io.File
 import net.nevinsky.abyssus.lib.runtime.schema.GameComponents
@@ -128,18 +130,18 @@ class EcsWriterTest {
     fun entitiesAreWrittenInAscendingOrderOfTheirIdComponentNotTheOrderTheyWereAdded() {
         val scene = testConfigurator().load(testJson("""{"10":{"components":{}},"2":{"components":{}},"1":{"components":{}}}"""))
         val extra = com.badlogic.ashley.core.Entity().also {
-            it.add(net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent("late"))
+            it.add(NameComponent("late"))
             scene.engine.addEntity(it)
         }
         val added = com.badlogic.ashley.core.Entity().also {
-            it.add(net.nevinsky.abyssus.lib.runtime.ecs.component.IdComponent(5L))
+            it.add(IdComponent(5L))
             scene.engine.addEntity(it)
         }
         val written = writer().write(scene.engine, scene.document)
         assertEquals(listOf("1", "2", "5", "10", "11"), written.fieldNames().asSequence().toList())
         assertEquals("""{"name":"late"}""", written["11"]["components"]["NameComponent"].toString())
-        assertEquals(extra, scene.engine.entities.last { it.getComponent(net.nevinsky.abyssus.lib.runtime.ecs.component.IdComponent::class.java) == null })
-        assertEquals(added, scene.engine.entities.first { it.getComponent(net.nevinsky.abyssus.lib.runtime.ecs.component.IdComponent::class.java)?.id == 5L })
+        assertEquals(extra, scene.engine.entities.last { it.getComponent(IdComponent::class.java) == null })
+        assertEquals(added, scene.engine.entities.first { it.getComponent(IdComponent::class.java)?.id == 5L })
     }
 
     @Test
@@ -154,8 +156,8 @@ class EcsWriterTest {
     fun aComponentTheFileDidNotHaveIsAddedUnderItsShortNameAndARemovedOneIsDropped() {
         val scene = testConfigurator().load(testJson("""{"entities":{"0":{"components":{"NameComponent":{"name":"A"},"TypeComponent":{"type":"OBJECT"}}}}}"""))
         val entity = scene.engine.ids[0]!!
-        entity.remove(net.nevinsky.abyssus.lib.runtime.ecs.component.TypeComponent::class.java)
-        entity.add(net.nevinsky.abyssus.lib.runtime.ecs.component.ParentComponent(0))
+        entity.remove(TypeComponent::class.java)
+        entity.add(ParentComponent(0))
         val written = writer().write(scene.engine, scene.document)["entities"]["0"]["components"]
         assertEquals(listOf("NameComponent", "ParentComponent"), written.fieldNames().asSequence().toList())
         assertEquals("""{"parentEntityId":0}""", written["ParentComponent"].toString())

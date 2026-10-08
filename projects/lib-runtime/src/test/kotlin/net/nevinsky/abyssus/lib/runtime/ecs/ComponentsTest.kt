@@ -10,9 +10,9 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.ModelInstance
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.model.Model
-import net.nevinsky.abyssus.lib.runtime.ecs.component.ParentComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.Point2PointPositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.render.AssetReference
 import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderableObjectDelegate
 import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderableSceneObject

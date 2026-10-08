@@ -16,7 +16,7 @@ import org.junit.Before
 import org.junit.Test
 
 class SkyGeometryTest {
-    private val sky = object : Sky {
+    private val sky = object : SkyRenderer {
         override fun draw(camera: Camera, frame: SkyFrame) = Unit
         override fun dispose() = Unit
     }

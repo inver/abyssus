@@ -9,22 +9,23 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
-import net.nevinsky.abyssus.lib.core.io.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 
 /**
  * Clouds drawn one fullscreen pass per band, the band's fragment shader [fragment] (after `clouds_common.glsl` and
  * `clouds_light.glsl`) deciding what each pixel sees of it. Far bands first, so lower ones hide higher ones.
  */
-open class BandPassClouds(shaders: ShaderSource, fragment: String, private val field: CloudField) : CloudRenderer {
-    private val program: ShaderProgram = shaders.program("clouds.vert", "clouds_common.glsl", "clouds_light.glsl", fragment)
+open class BandPassClouds(shaders: ShaderSource, fragment: String, private val field: CloudField) : CloudRenderer() {
+    private val program: ShaderProgram =
+        shaders.program("clouds.vert", "clouds_common.glsl", "clouds_light.glsl", fragment)
     private val mesh: Mesh = createFullscreenTriangle()
 
     override fun draw(scene: CloudScene) {
         withPremultipliedBlend {
             program.bind()
-            program.setCloudFrame(scene)
-            for (band in scene.clouds.settings.bandsFarToNear) {
-                program.setCloudBand(band, field, scene.timeSeconds)
+            setCloudFrame(program, scene)
+            for (band in scene.clouds.settings.bandsFarToNear()) {
+                setCloudBand(program, band, field, scene.timeSeconds)
                 mesh.render(program, GL20.GL_TRIANGLES)
             }
         }

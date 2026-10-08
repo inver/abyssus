@@ -8,17 +8,16 @@ package net.nevinsky.abyssus.lib.core.io
 import com.fasterxml.jackson.core.util.DefaultIndenter
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
 import com.fasterxml.jackson.core.util.Separators
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.MapperFeature
+import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import org.slf4j.Logger
 
 /**
  * Binds native JSON (`.abss`, `.scene`, asset `meta.json`) to Kotlin classes: unknown properties are skipped, unknown
  * enum values take their default, and properties keep declaration order. Create one and pass it to what needs it.
  */
-class JsonProcessor {
+class JsonProcessor(private val log: Logger) {
     private val prettyPrinter: DefaultPrettyPrinter = DefaultPrettyPrinter(
         Separators.createDefaultInstance()
             .withObjectFieldValueSpacing(Separators.Spacing.AFTER)
@@ -41,6 +40,14 @@ class JsonProcessor {
     /** [text] as a JSON tree; throws when it is not a JSON object. */
     fun readObject(text: String): JsonNode =
         mapper.readTree(text)?.takeIf { it.isObject } ?: throw IllegalArgumentException("expected a JSON object")
+
+    fun ecsReader(): Pair<ObjectReader, EcsReadWarnings> {
+        val warnings = EcsReadWarnings(log)
+        val reader = mapper.reader(
+            InjectableValues.Std().addValue(EcsReadWarnings::class.java.name, warnings),
+        )
+        return Pair(reader, warnings)
+    }
 
     //todo add validation on parsing for formats
     fun <T> parse(text: String, clazz: Class<T>): T {

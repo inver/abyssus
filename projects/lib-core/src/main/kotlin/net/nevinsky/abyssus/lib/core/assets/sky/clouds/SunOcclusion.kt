@@ -36,7 +36,7 @@ class SunOcclusion(private val field: CloudField = CloudField()) {
      * draws them. The first update after [reset] (or after clouds appear) jumps straight to it.
      */
     fun update(
-        clouds: CloudSettings?,
+        clouds: CloudMeta?,
         sun: Vector3,
         targetX: Float,
         targetZ: Float,
@@ -61,7 +61,7 @@ class SunOcclusion(private val field: CloudField = CloudField()) {
 
     /** The unsmoothed transmittance (see [update]). */
     fun instant(
-        clouds: CloudSettings,
+        clouds: CloudMeta,
         sun: Vector3,
         targetX: Float,
         targetZ: Float,
@@ -71,14 +71,29 @@ class SunOcclusion(private val field: CloudField = CloudField()) {
     ): Float {
         if (!clouds.visible) return 1f
         var depth = 0f
-        for (band in clouds.bands.values) {
-            val mid = (band.base + band.top) / 2f
-            val t = bandDistance(sun, mid, planetRadius, cameraHeight) ?: continue
-            val coverage = field.coverage(band, targetX + sun.x * t, targetZ + sun.z * t, field.windOffset(band, timeSeconds))
-            val path = band.thickness / max(abs(sun.y), 0.1f)
-            depth += CLOUD_EXTINCTION * band.density * field.column(band.type, coverage) * path
-        }
+        depth += getDepthFromBand(clouds.low, sun, targetX, targetZ, planetRadius, cameraHeight, timeSeconds)
+        depth += getDepthFromBand(clouds.mid, sun, targetX, targetZ, planetRadius, cameraHeight, timeSeconds)
+        depth += getDepthFromBand(clouds.high, sun, targetX, targetZ, planetRadius, cameraHeight, timeSeconds)
         return max(exp(-depth), SUN_OCCLUSION_FLOOR)
+    }
+
+    fun getDepthFromBand(
+        band: CloudMeta.CloudBand?,
+        sun: Vector3,
+        targetX: Float,
+        targetZ: Float,
+        planetRadius: Float,
+        cameraHeight: Float,
+        timeSeconds: Double,
+    ): Float {
+        if (band == null) return 0f
+        val mid = (band.base + band.top) / 2f
+        val t = bandDistance(sun, mid, planetRadius, cameraHeight) ?: return 0f
+        val coverage = field.coverage(
+            band, targetX + sun.x * t, targetZ + sun.z * t, field.windOffset(band, timeSeconds)
+        )
+        val path = band.thickness / max(abs(sun.y), 0.1f)
+        return CLOUD_EXTINCTION * band.density * field.column(band.type, coverage) * path
     }
 
     /** Forgets the smoothed value: the next [update] starts from its target. */

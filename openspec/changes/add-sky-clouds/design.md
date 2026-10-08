@@ -44,13 +44,13 @@ references by `uuid` from a root set of folder names). A sky names its cloud ass
 
 ### 1. The cloud description lives in `core`, parsed in `prepare`
 Add `core/.../sky/clouds/`. Every type here is pure, immutable and unit-tested:
-- `CloudSettings(technique, bands)`.
+- `CloudMeta(technique, bands)`.
 - `CloudBand(level, type, base, top, coverage, density, windX, windZ)`.
 - `CloudType`: an enum with its band and defaults.
 - `CloudBandLimits`.
 
 **Clouds are an asset, loaded like a terrain's textures.** `MetaType` gains `CLOUDS`; its `additional` holds
-`technique` and the bands. `CloudsLoader.prepare` (pool thread) reads them with `CloudSettingsReader`, which validates
+`technique` and the bands. `CloudsLoader.prepare` (pool thread) reads them with `CloudMetaReader`, which validates
 the bands, skipping and logging invalid ones (spec: *Invalid band*), and makes the volumetric noise; `build` uploads the
 noise as 3D textures into the built `Clouds`.
 

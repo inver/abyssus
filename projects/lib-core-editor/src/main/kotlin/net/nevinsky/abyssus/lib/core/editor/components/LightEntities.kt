@@ -6,18 +6,17 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.runtime.ecs.EcsWriter
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.*
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.runtime.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.LightData
-import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.scene.Color
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightData
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.dto.ColorDto
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
 /** Sun is a directional light with different initial values, never a separate file type. */
@@ -25,14 +24,14 @@ enum class LightPreset(
     val labelKey: String,
     val nameKey: String,
     val type: TypeComponent.Type,
-    val color: Color,
+    val color: ColorDto,
     val intensity: Float,
     val rotationDegrees: Float,
     val height: Float,
 ) {
-    DIRECTIONAL("lightDirectional", "lightDirectionalName", TypeComponent.Type.LIGHT_DIRECTIONAL, Color(1f, 1f, 1f, 1f), 1f, -45f, 0f),
-    SUN("lightSun", "lightSunName", TypeComponent.Type.LIGHT_DIRECTIONAL, Color(1f, 0.96f, 0.84f, 1f), 1.2f, -30f, 0f),
-    SPOT("lightSpot", "lightSpotName", TypeComponent.Type.LIGHT_SPOT, Color(1f, 1f, 1f, 1f), 1f, -90f, 5f),
+    DIRECTIONAL("lightDirectional", "lightDirectionalName", TypeComponent.Type.LIGHT_DIRECTIONAL, ColorDto(1f, 1f, 1f, 1f), 1f, -45f, 0f),
+    SUN("lightSun", "lightSunName", TypeComponent.Type.LIGHT_DIRECTIONAL, ColorDto(1f, 0.96f, 0.84f, 1f), 1.2f, -30f, 0f),
+    SPOT("lightSpot", "lightSpotName", TypeComponent.Type.LIGHT_SPOT, ColorDto(1f, 1f, 1f, 1f), 1f, -90f, 5f),
 }
 
 data class AddedLight(val result: EditResult, val entityId: String? = null)

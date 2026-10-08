@@ -13,7 +13,7 @@ import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.core.io.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

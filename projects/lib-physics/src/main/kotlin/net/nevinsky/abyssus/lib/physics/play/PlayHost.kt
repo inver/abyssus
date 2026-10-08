@@ -13,9 +13,9 @@ import net.nevinsky.abyssus.lib.physics.PhysicsComponents
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.NO_ENTITY
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistry
 import org.slf4j.Logger
 import java.io.DataInputStream

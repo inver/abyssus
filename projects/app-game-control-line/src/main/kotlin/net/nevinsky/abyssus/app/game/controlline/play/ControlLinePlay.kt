@@ -22,8 +22,8 @@ import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.physics.play.DebugLine
 import net.nevinsky.abyssus.lib.physics.play.PlayInput
 import net.nevinsky.abyssus.lib.physics.play.PlayModule
-import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistry
 import java.util.Locale
 

@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 
 /*
  * The only code that knows how a scene file addresses its entities. Readers use [SceneDocument]; writers mutate the

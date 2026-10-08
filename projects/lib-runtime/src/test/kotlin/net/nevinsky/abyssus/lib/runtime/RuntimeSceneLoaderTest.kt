@@ -7,11 +7,11 @@ package net.nevinsky.abyssus.lib.runtime
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderableObjectDelegate
-import net.nevinsky.abyssus.lib.core.project.Project
+import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistrationException
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistry
 import net.nevinsky.abyssus.lib.runtime.schema.PlaneComponent
@@ -115,7 +115,7 @@ class RuntimeSceneLoaderTest {
             Files.writeString(temp.resolve("scenes/Broken.scene"), "not JSON")
             val messages = mutableListOf<String>()
             val loader = loader(temp.toFile(), messages)
-            val names = Project(dir = temp).sceneFiles().map { it.fileName.toString() }
+            val names = ProjectDto(dir = temp).sceneFiles().map { it.fileName.toString() }
             assertEquals(listOf("Broken.scene", main), names)
             val scenes = names.mapNotNull(loader::load)
             assertEquals(1, scenes.size)

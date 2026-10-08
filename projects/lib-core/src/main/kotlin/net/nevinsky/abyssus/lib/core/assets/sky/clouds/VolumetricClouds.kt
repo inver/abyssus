@@ -15,7 +15,7 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
-import net.nevinsky.abyssus.lib.core.io.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import kotlin.math.abs
 
 private const val GL_RGBA16F = 0x881A
@@ -35,7 +35,7 @@ private const val HISTORY_RESET_DEGREES = 10f
  * or a float render target cannot be made, so the sky falls back to shells. Holds per-view GL objects: one instance per
  * sky, and skies are per view.
  */
-class VolumetricClouds(shaders: ShaderSource, private val field: CloudField) : CloudRenderer {
+class VolumetricClouds(shaders: ShaderSource, private val field: CloudField) : CloudRenderer() {
     init {
         checkNotNull(Gdx.gl30) { "volumetric clouds need OpenGL 3" }
     }
@@ -132,14 +132,14 @@ class VolumetricClouds(shaders: ShaderSource, private val field: CloudField) : C
         val mesh = checkNotNull(mesh)
         withPremultipliedBlend {
             march.bind()
-            march.setCloudFrame(scene, height.toFloat())
+            setCloudFrame(march, scene, height.toFloat())
             bindTexture(0, GL_TEXTURE_3D, scene.clouds.baseNoise)
             bindTexture(1, GL_TEXTURE_3D, scene.clouds.detailNoise)
             march.setUniformi("u_baseNoise", 0)
             march.setUniformi("u_detailNoise", 1)
             march.setUniformf("u_frame", (frame % 64).toFloat())
-            for (band in scene.clouds.settings.bandsFarToNear) {
-                march.setCloudBand(band, field, scene.timeSeconds)
+            for (band in scene.clouds.settings.bandsFarToNear()) {
+                setCloudBand(march, band, field, scene.timeSeconds)
                 mesh.render(march, GL20.GL_TRIANGLES)
             }
         }
@@ -185,7 +185,13 @@ class VolumetricClouds(shaders: ShaderSource, private val field: CloudField) : C
         Gdx.gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, framebuffer)
         attach(current)
         val status = Gdx.gl.glCheckFramebufferStatus(GL20.GL_FRAMEBUFFER)
-        check(status == GL20.GL_FRAMEBUFFER_COMPLETE) { "16-bit float cloud target is incomplete (status 0x${status.toString(16)})" }
+        check(status == GL20.GL_FRAMEBUFFER_COMPLETE) {
+            "16-bit float cloud target is incomplete (status 0x${
+                status.toString(
+                    16
+                )
+            })"
+        }
         resetHistory()
     }
 

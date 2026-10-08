@@ -11,9 +11,9 @@ import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.runtime.ecs.EcsWriter
-import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
 /** The result of adding an entity: [entityId] is the new entity's id when [result] is [EditResult.Changed]. */

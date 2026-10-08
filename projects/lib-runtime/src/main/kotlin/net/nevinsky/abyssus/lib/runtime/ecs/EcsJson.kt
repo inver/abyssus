@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.lib.runtime.ecs
 
-import net.nevinsky.abyssus.lib.runtime.json.number
-
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Quaternion
@@ -17,18 +15,18 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.introspect.*
 import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.databind.node.DecimalNode
 import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import net.nevinsky.abyssus.lib.runtime.ecs.component.*
+import net.nevinsky.abyssus.lib.core.util.EcsUtils
+import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
+import net.nevinsky.abyssus.lib.core.util.number
+import net.nevinsky.abyssus.lib.core.util.number
 import net.nevinsky.abyssus.lib.runtime.schema.Field
 import net.nevinsky.abyssus.lib.runtime.schema.GameComponents
 import net.nevinsky.abyssus.lib.runtime.schema.SceneComponent
-import java.math.BigDecimal
-import kotlin.math.abs
 
 private val BUILT_IN_TYPES: List<Class<out Component>> = listOf(
     NameComponent::class.java, TypeComponent::class.java, ParentComponent::class.java, PositionComponent::class.java,
@@ -120,22 +118,11 @@ private class FloatSerializer : StdSerializer<Any>(Any::class.java) {
         gen.writeTree(number((value as Number).toFloat()))
 }
 
-private val nodes = JsonNodeFactory.instance
-
-/** An object of the [fields] that differ from their default; null when none do. */
-private fun diff(vararg fields: Triple<String, Float, Float>): ObjectNode? {
-    val out = nodes.objectNode()
-    for ((name, value, default) in fields) if (value != default) out.set<JsonNode>(name, number(value))
-    return out.takeIf { it.size() > 0 }
-}
-
-internal fun vectorDiff(v: Vector3, default: Float = 0f) =
-    diff(Triple("x", v.x, default), Triple("y", v.y, default), Triple("z", v.z, default))
 
 internal fun quaternionDiff(q: Quaternion) =
     diff(Triple("x", q.x, 0f), Triple("y", q.y, 0f), Triple("z", q.z, 0f), Triple("w", q.w, 1f))
 
-internal fun colorNode(c: net.nevinsky.abyssus.lib.core.scene.Color): ObjectNode = nodes.objectNode()
+internal fun colorNode(c: net.nevinsky.abyssus.lib.core.dto.ColorDto): ObjectNode = nodes.objectNode()
     .set<ObjectNode>("r", number(c.r)).set<ObjectNode>("g", number(c.g))
     .set<ObjectNode>("b", number(c.b)).set<ObjectNode>("a", number(c.a))
 

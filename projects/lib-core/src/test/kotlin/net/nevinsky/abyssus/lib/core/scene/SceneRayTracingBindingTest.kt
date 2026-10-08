@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.core.scene
 
+import net.nevinsky.abyssus.lib.core.dto.RayTracingDto
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
@@ -17,7 +18,7 @@ class SceneRayTracingBindingTest {
 
     @Test fun omittedLimitsKeepTheirEffectiveDefaults() {
         val scene = loader.parse("""{"format":"abyssus","formatVersion":1,"rayTracing":{}}""")
-        assertEquals(RayTracing(), scene.rayTracing)
+        assertEquals(RayTracingDto(), scene.rayTracing)
     }
 
     @Test fun eachExplicitNullLimitSurvivesBindingForLaterValidation() {

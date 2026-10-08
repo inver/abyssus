@@ -1,18 +1,16 @@
 package net.nevinsky.abyssus.lib.core.assets
 
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.graphics.Texture
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.CompositeAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
+import net.nevinsky.abyssus.lib.core.assets.loading.CompositeAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxCube
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
@@ -24,16 +22,12 @@ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.core.model.Model
 import net.nevinsky.abyssus.lib.core.testing.warningsTo
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
@@ -77,7 +71,7 @@ class AssetLoadingGlTest {
                 MetaType.PIXMAP_TEXTURE to TextureLoader(files, metas),
                 MetaType.SKYBOX to SkyboxLoader(files, metas, skyShaders()),
                 MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas, skyShaders(), log),
-                MetaType.CLOUDS to CloudsLoader(metas, JsonProcessor(), log),
+                MetaType.CLOUDS to CloudsLoader(metas),
                 MetaType.SKYBOX_HDR to HdrSkyLoader(metas, ExrLoader(files), skyShaders(), ToneCurve()),
             ),
         )
@@ -118,12 +112,19 @@ class AssetLoadingGlTest {
         File(untitled, "assets/$mainSceneTerrain").copyRecursively(File(dir, "assets/terr"))
         File(dir, "assets/tex").mkdirs()
         val pixmap = Pixmap(2, 2, Pixmap.Format.RGBA8888)
-        try { PixmapIO.writePNG(FileHandle(File(dir, "assets/tex/a.png")), pixmap) } finally { pixmap.dispose() }
+        try {
+            PixmapIO.writePNG(FileHandle(File(dir, "assets/tex/a.png")), pixmap)
+        } finally {
+            pixmap.dispose()
+        }
         File(dir, "assets/tex/meta.json").writeText(
             """{"format":"abyssus","formatVersion":1,"uuid":"00000000-0000-0000-0000-000000000001","type":"TEXTURE","additional":{"file":"a.png"}}"""
         )
         val terrainMeta = File(dir, "assets/terr/meta.json")
-        terrainMeta.writeText(terrainMeta.readText().replace("\"splatBase\":null", "\"splatBase\":\"00000000-0000-0000-0000-000000000001\""))
+        terrainMeta.writeText(
+            terrainMeta.readText()
+                .replace("\"splatBase\":null", "\"splatBase\":\"00000000-0000-0000-0000-000000000001\"")
+        )
         val logged = mutableListOf<String>()
         TestGl.run {
             val assets = Project(dir, warningsTo(logged)).assets()
@@ -150,7 +151,12 @@ class AssetLoadingGlTest {
             """{"format":"abyssus","formatVersion":1,"uuid":"00000000-0000-0000-0000-0000000000c1","type":"CLOUDS","additional":{"low":{"type":"cumulus"}}}"""
         )
         val skyMeta = File(dir, "assets/sky/meta.json")
-        skyMeta.writeText(skyMeta.readText().replace("\"sunIntensity\": 20.0", "\"sunIntensity\": 20.0,\n    \"clouds\": \"00000000-0000-0000-0000-0000000000c1\""))
+        skyMeta.writeText(
+            skyMeta.readText().replace(
+                "\"sunIntensity\": 20.0",
+                "\"sunIntensity\": 20.0,\n    \"clouds\": \"00000000-0000-0000-0000-0000000000c1\""
+            )
+        )
         val logged = mutableListOf<String>()
         TestGl.run {
             val assets = Project(dir, warningsTo(logged)).assets()
@@ -160,7 +166,7 @@ class AssetLoadingGlTest {
                 val clouds = assets.getAs<Clouds>("weather")
                 assertNotNull("the cloud asset was loaded by the same storage", clouds)
                 assertSame(clouds, sky.cloudAsset)
-                assertEquals(setOf(CloudLevel.LOW), sky.clouds!!.bands.keys)
+                assertEquals(CloudLevel.LOW, sky.clouds!!.low?.level)
                 assertTrue("its noise textures were made", clouds!!.baseNoise != 0)
                 assets.retain(setOf("sky"))
                 assertSame("retaining the sky keeps its clouds", clouds, assets.getAs<Clouds>("weather"))

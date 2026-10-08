@@ -19,14 +19,14 @@ import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.scene.Scene
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A scene's text read as the plugin needs it: [root] is the JSON tree (with its original number text) and [scene] the
  * bound DTO. Both are shared between callers: read them, never change them (an edit parses the document afresh).
  */
-class ParsedScene(val root: JsonNode, val scene: Scene)
+class ParsedScene(val root: JsonNode, val scene: SceneDto)
 
 /**
  * The parsed text of scene files as the editors show it (unsaved text included), keyed by the document's modification

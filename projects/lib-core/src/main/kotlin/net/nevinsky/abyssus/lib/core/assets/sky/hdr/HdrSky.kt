@@ -8,17 +8,16 @@ package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Matrix4
-import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.io.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
-import net.nevinsky.abyssus.lib.core.assets.sky.Sky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 
 /**
  * A built HDR sky: draws its equirectangular image as the background, tone mapped by [curve], and holds
  * the [environment] the scene is lit by. GL thread only.
  */
-class HdrSky(val environment: HdrEnvironment, shaders: ShaderSource, private val curve: ToneCurve) : Sky {
+class HdrSky(val environment: HdrEnvironment, shaders: ShaderSource, private val curve: ToneCurve) : SkyRenderer {
     private val program = shaders.program("hdrsky.vert", "hdr_common.glsl", "hdrsky.frag")
     private val mesh = createFullscreenTriangle()
     private val invViewProj = Matrix4()

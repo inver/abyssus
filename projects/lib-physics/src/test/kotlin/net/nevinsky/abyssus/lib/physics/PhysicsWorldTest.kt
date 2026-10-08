@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.lib.core.testing.warningsTo
 import net.nevinsky.abyssus.lib.core.testing.failOnWarnings
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

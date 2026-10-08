@@ -8,8 +8,8 @@ GL tests need `-Dabyssus.glTests=true` and a display.
 
 ## 1. Cloud description and the cloud asset (core, headless)
 
-- [x] 1.1 Add `CloudType` (band and defaults), `CloudBand`, `CloudBandLimits` and `CloudSettings`, and a
-  `CloudSettingsReader` that validates bands and logs skipped ones. Verify with `CloudSettingsReaderTest`:
+- [x] 1.1 Add `CloudType` (band and defaults), `CloudBand`, `CloudBandLimits` and `CloudMeta`, and a
+  `CloudMetaReader` that validates bands and logs skipped ones. Verify with `CloudMetaReaderTest`:
   - cumulus defaults (base 800, top 2000, coverage 0.4, density 0.8);
   - a missing `technique` means `shells`;
   - no bands means nothing to draw, and the fair, overcast and storm templates are valid cloud assets;

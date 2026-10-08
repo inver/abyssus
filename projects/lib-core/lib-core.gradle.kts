@@ -17,10 +17,12 @@ dependencies {
     // the root sets kotlin.stdlib.default.dependency=false for the IDE plugin; a standalone library needs it
     implementation(kotlin("stdlib"))
     api(project(":lib-gdx-model"))
+    api(libs.ashley)
+    implementation(libs.lwjgl.tinyexr)
+
     api(libs.slf4j.api)
     api(libs.jackson.databind)
     api(libs.jackson.module.kotlin)
-    implementation(libs.lwjgl.tinyexr)
 
     testImplementation(libs.junit4)
     // GL tests use gdx-model's TestGl context; HdrFixtures (Radiance files from a pixel function) is shared with the
@@ -38,5 +40,6 @@ tasks.test {
 
 extra["abyssusSingletonExcludes"] = listOf(
     "net/nevinsky/abyssus/lib/core/io/AbyssusProjectLayout.kt",
-    "net/nevinsky/abyssus/lib/core/io/GeometryUtils.kt"
+    "net/nevinsky/abyssus/lib/core/util/GeometryUtils.kt",
+    "net/nevinsky/abyssus/lib/core/util/EcsUtils.kt"
 )

@@ -14,11 +14,11 @@ import com.github.stephengold.joltjni.*
 import com.github.stephengold.joltjni.enumerate.EActivation
 import com.github.stephengold.joltjni.enumerate.EMotionType
 import com.github.stephengold.joltjni.enumerate.EOverrideMassProperties
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.NO_ENTITY
-import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.ParentComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import net.nevinsky.abyssus.lib.physics.*
 import org.slf4j.Logger
 import kotlin.math.abs

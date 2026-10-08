@@ -6,20 +6,13 @@ package net.nevinsky.abyssus.app.game.controlline.render
 
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.graphics.Camera
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.Pixmap
-import com.badlogic.gdx.graphics.Texture
-import com.badlogic.gdx.graphics.g3d.Environment
+import com.badlogic.gdx.graphics.*
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.AnimationController
-import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.ModelBatch
 import net.nevinsky.abyssus.lib.core.ModelInstance
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
@@ -29,8 +22,8 @@ import net.nevinsky.abyssus.lib.core.assets.loading.CompositeAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.PreparedAsset
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
-import net.nevinsky.abyssus.lib.core.assets.sky.Sky
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
@@ -39,8 +32,11 @@ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.core.model.Model
+import net.nevinsky.abyssus.lib.core.scene.SceneEnvironment
 import net.nevinsky.abyssus.lib.core.shader.DefaultShaderProvider
 import net.nevinsky.abyssus.lib.core.shader.ShaderProvider
 import org.slf4j.Logger
@@ -51,7 +47,12 @@ import java.util.concurrent.Executor
  * The one asset storage of the project in [projectDir], wired by constructors like the plugin does: a composite over
  * every kind of asset, prepared on [executor] and built (and owned) by the storage on the GL thread.
  */
-fun fieldAssets(projectDir: File, json: JsonProcessor, log: Logger, executor: Executor): AssetStorage<PreparedAsset, Disposable> {
+fun fieldAssets(
+    projectDir: File,
+    json: JsonProcessor,
+    log: Logger,
+    executor: Executor
+): AssetStorage<PreparedAsset, Disposable> {
     val files = FileLoader(projectDir)
     val metas = AssetMetaLoader(json, files, log)
     val skyShaders = ShaderSource("/shader/sky", ShaderSource::class.java)
@@ -94,7 +95,7 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
 
     /** Seconds of play drawn so far: the sky's clouds drift by it. */
     private var skyTime = 0.0
-    private val environment = Environment()
+    private val environment = SceneEnvironment()
     private val sun = DirectionalLight()
     private val shadows = FieldShadows()
 
@@ -122,7 +123,11 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
             sun.set(field.sunColor, Vector3(field.sunDirection).scl(-1f))
             environment.add(sun)
         }
-        val wanted = field.models.map { it.second }.toSet() + field.terrains.map { it.second } + setOfNotNull(field.skyName)
+        val wanted = buildSet {
+            addAll(field.models.map { it.second }.toSet())
+            field.terrains.mapTo(this) { it.second }
+            addAll(setOfNotNull(field.skyName))
+        }
         wanted.forEach(assets::request)
         assets.pump()
 
@@ -130,7 +135,7 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
         Gdx.gl.glClearColor(fog.r, fog.g, fog.b, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
 
-        field.skyName?.let { assets.getAs<Sky>(it) }?.let { sky ->
+        field.skyName?.let { assets.getAs<SkyRenderer>(it) }?.let { sky ->
             Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
             Gdx.gl.glDepthMask(false)
             Gdx.gl.glDisable(GL20.GL_CULL_FACE)
@@ -192,16 +197,17 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
     }
 
     /** The scene's models that are built, each with its instance placed at the entity's transform. */
-    private fun drawnModels(field: FieldScene): List<Pair<Entity, ModelInstance>> = field.models.mapNotNull { (entity, name) ->
-        val model = assets.getAs<Model>(name) ?: return@mapNotNull null
-        val instance = instances[entity]?.takeIf { it.first === model }?.second
-            ?: ModelInstance(model).also {
-                instances[entity] = model to it
-                playing.remove(entity)
-            }
-        instance.transform!!.set(field.position(entity).getTransform())
-        entity to instance
-    }
+    private fun drawnModels(field: FieldScene): List<Pair<Entity, ModelInstance>> =
+        field.models.mapNotNull { (entity, name) ->
+            val model = assets.getAs<Model>(name) ?: return@mapNotNull null
+            val instance = instances[entity]?.takeIf { it.first === model }?.second
+                ?: ModelInstance(model).also {
+                    instances[entity] = model to it
+                    playing.remove(entity)
+                }
+            instance.transform!!.set(field.position(entity).getTransform())
+            entity to instance
+        }
 
     /** Starts the [clips] not yet playing on the [drawn] models, and advances every playing clip by [seconds]. */
     private fun animate(drawn: List<Pair<Entity, ModelInstance>>, clips: Map<Entity, String>, seconds: Float) {

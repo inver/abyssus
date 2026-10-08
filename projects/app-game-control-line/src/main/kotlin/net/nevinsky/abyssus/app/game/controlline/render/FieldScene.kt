@@ -4,23 +4,22 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.render
 
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.runtime.SceneContext
-import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.app.game.controlline.components.ControlLineComponents
 import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
 import net.nevinsky.abyssus.app.game.controlline.flow.PlaneChoice
 import net.nevinsky.abyssus.app.game.controlline.flow.planeChoices
-import net.nevinsky.abyssus.lib.runtime.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderableObjectDelegate
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.render.RenderComponent
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
+import net.nevinsky.abyssus.lib.runtime.SceneContext
 import org.slf4j.Logger
 import java.nio.file.Path
 
@@ -74,12 +73,12 @@ class FieldScene(val loaded: SceneContext) {
             1f
         )
 
-    val ambient: Color = loaded.scene.ambientLight?.takeIf { loaded.scene.ambientLightEnabled != false }
-        ?.let { color(it.color ?: net.nevinsky.abyssus.lib.core.scene.Color(1f, 1f, 1f, 1f), it.intensity ?: 0.3f) }
+    val ambient: Color = loaded.scene.ambientLight?.takeIf { loaded.scene.ambientLightEnabled }
+        ?.let { color(it.color ?: net.nevinsky.abyssus.lib.core.dto.ColorDto(1f, 1f, 1f, 1f), it.intensity ?: 0.3f) }
         ?: Color(0.3f, 0.3f, 0.3f, 1f)
 
-    val fogColor: Color? =
-        loaded.scene.fog?.takeIf { loaded.scene.fogEnabled == true }?.color?.let { Color(it.r, it.g, it.b, 1f) }
+    val fogColor: Color? = loaded.scene.fog?.takeIf { loaded.scene.fogEnabled }
+        ?.color?.let { Color(it.r, it.g, it.b, 1f) }
     val fogDensity: Float = loaded.scene.fog?.density ?: 0f
     val fogGradient: Float = loaded.scene.fog?.gradient ?: 1.5f
 
@@ -95,11 +94,11 @@ class FieldScene(val loaded: SceneContext) {
     }
 
     private fun asset(e: Entity, type: MetaType): String? {
-        val asset =
-            (e.getComponent(RenderComponent::class.java)?.renderable as? RenderableObjectDelegate)?.asset ?: return null
-        return asset.assetName.takeIf { asset.type == type }
+        val meta = e.getComponent(RenderComponent::class.java)?.renderable
+            ?.meta ?: return null
+        return meta.name.takeIf { meta.type == type }
     }
 
-    private fun color(c: net.nevinsky.abyssus.lib.core.scene.Color, intensity: Float) =
+    private fun color(c: net.nevinsky.abyssus.lib.core.dto.ColorDto, intensity: Float) =
         Color(c.r * intensity, c.g * intensity, c.b * intensity, 1f)
 }

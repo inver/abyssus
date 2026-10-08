@@ -5,17 +5,18 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsLoader
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
+import org.slf4j.helpers.NOPLogger
 import java.io.File
 
 class AssetEntitiesTest {
@@ -72,7 +73,7 @@ class AssetEntitiesTest {
     fun anEmptySceneStartsAtZeroAndTheRuntimeLoadsIt() {
         val root = empty()
         assertEquals("0", AssetEntities(ResourceEditorMessages()).add(root, tree, Vec3(1f, 2f, 3f)).entityId)
-        val document = EcsLoader(net.nevinsky.abyssus.lib.core.io.JsonProcessor().mapper, log = org.slf4j.helpers.NOPLogger.NOP_LOGGER)
+        val document = EcsLoader(JsonProcessor().mapper, log = NOPLogger.NOP_LOGGER)
             .load(root["ecs"], SceneEngine())
         // loaded without a project, the only complaint is the missing folder: the render component itself is understood
         assertEquals(listOf("render asset MODEL tree has no folder in the project assets"), document.warnings.map { it.toString() })

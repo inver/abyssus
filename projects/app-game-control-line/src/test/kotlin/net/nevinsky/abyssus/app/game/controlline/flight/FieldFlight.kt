@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 
 /**
  * A flight of the bundled field's [planeName], stepped as the game steps it: [Flight.update] before each fixed step.

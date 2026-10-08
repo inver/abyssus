@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.lib.core.editor
 
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.scene.Scene
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -13,7 +13,7 @@ import java.io.File
 import java.util.UUID
 
 /** Parses scene JSON without the platform: the reader is an application service, [JsonProcessor] is plain. */
-fun parseScene(text: String): Scene = JsonProcessor().parse(text, Scene::class.java)
+fun parseScene(text: String): SceneDto = JsonProcessor().parse(text, SceneDto::class.java)
 
 /** An asset as the project reader lists it, for tests that need no folder on disk. [uuid] is any text, folded into a UUID. */
 fun testAsset(

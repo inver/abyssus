@@ -5,22 +5,20 @@
 
 package net.nevinsky.abyssus.lib.runtime.ecs
 
-import net.nevinsky.abyssus.lib.runtime.json.number
-
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.runtime.ecs.component.IdComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEcsDocument
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.scene.SceneEcsDocument
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import net.nevinsky.abyssus.lib.runtime.schema.GameComponents
 
 /**
- * Writes a [SceneEngine] as an `ecs` block in the native format, the counterpart of [EcsLoader]: every component is
+ * Writes a [SceneEngine] as an `ecs` block in the native format, the counterpart of [net.nevinsky.abyssus.lib.core.ecs.EcsLoader]: every component is
  * turned into JSON by Jackson ([ObjectMapper.valueToTree]), with no per-component codec.
  *
  * - Entities are written in ascending order of their [IdComponent]'s id; an entity without one follows, numbered after
@@ -70,7 +68,8 @@ class EcsWriter(
         val withId = engine.entities.mapNotNull { e -> e.getComponent(IdComponent::class.java)?.let { it.id to e } }
             .sortedBy { it.first }
         var nextId = (withId.lastOrNull()?.first ?: -1L) + 1
-        val withoutId = engine.entities.filter { it.getComponent(IdComponent::class.java) == null }.map { nextId++ to it }
+        val withoutId =
+            engine.entities.filter { it.getComponent(IdComponent::class.java) == null }.map { nextId++ to it }
         return withId + withoutId
     }
 
@@ -82,7 +81,10 @@ class EcsWriter(
         // what the loader could not bind, after the components: unless the entity has a component of that class now
         document.carried[id]?.forEach { (key, node) ->
             val type = types.resolve(key)
-            if ((type == null || entity.getComponent(type) == null) && !components.has(key)) components.set<JsonNode>(key, node)
+            if ((type == null || entity.getComponent(type) == null) && !components.has(key)) components.set<JsonNode>(
+                key,
+                node
+            )
         }
         return nodes.objectNode().set<ObjectNode>("components", components)
     }

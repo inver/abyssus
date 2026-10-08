@@ -62,11 +62,12 @@ class CloudNoiseGenerator {
     }
 
     /** A [size]³ tileable volume of [noise] (made for that size), as bytes. */
-    fun volume(size: Int, noise: (Int) -> (Float, Float, Float) -> Float): ByteArray {
+    private fun volume(size: Int, noise: (Int) -> (Float, Float, Float) -> Float): ByteArray {
         val sample = noise(size)
         val values = FloatArray(size * size * size)
         val s = size.toFloat()
         val margin = s * tileMargin
+
         // the weight of the wrapped copy along one axis: 0 inside, rising to 1 at the far face
         fun wrapped(c: Int): Float = ((c + 1 - (s - margin)) / margin).coerceIn(0f, 1f)
         IntStream.range(0, size).parallel().forEach { z ->
@@ -80,7 +81,8 @@ class CloudNoiseGenerator {
                         val ax = corner and 1
                         val ay = corner shr 1 and 1
                         val az = corner shr 2 and 1
-                        val weight = (if (ax == 1) wx else 1f - wx) * (if (ay == 1) wy else 1f - wy) * (if (az == 1) wz else 1f - wz)
+                        val weight =
+                            (if (ax == 1) wx else 1f - wx) * (if (ay == 1) wy else 1f - wy) * (if (az == 1) wz else 1f - wz)
                         if (weight > 0f) sum += weight * sample(x - ax * s, y - ay * s, z - az * s)
                     }
                     values[(z * size + y) * size + x] = sum

@@ -6,21 +6,22 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.runtime.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.*
+import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import org.junit.Assert.*
 import org.junit.Test
+import org.slf4j.helpers.NOPLogger
 import java.io.File
 
 class LightEntitiesTest {
@@ -66,7 +67,7 @@ class LightEntitiesTest {
             assertEquals(100f, light.range, 0f)
             if (preset == LightPreset.SUN) { assertTrue(light.intensity > 1f); assertTrue(light.color.b < light.color.r) }
             val engine = SceneEngine()
-            val document = net.nevinsky.abyssus.lib.runtime.ecs.EcsLoader(net.nevinsky.abyssus.lib.core.io.JsonProcessor().mapper, log = org.slf4j.helpers.NOPLogger.NOP_LOGGER).load(root["ecs"], engine)
+            val document = EcsLoader(JsonProcessor().mapper, log = NOPLogger.NOP_LOGGER).load(root["ecs"], engine)
             assertTrue(document.warnings.toString(), document.warnings.isEmpty())
             val entity = engine.ids[0]!!
             assertNotNull(entity.getComponent(NameComponent::class.java))

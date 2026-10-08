@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.app.game.controlline.components.ControlLineComponent
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import java.nio.file.Path
 
 /** The bundled `ControlLine` project, supplied by Gradle so tests do not depend on their working directory. */

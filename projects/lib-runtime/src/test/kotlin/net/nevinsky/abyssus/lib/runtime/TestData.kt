@@ -4,11 +4,6 @@
  */
 package net.nevinsky.abyssus.lib.runtime
 
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-
-import net.nevinsky.abyssus.lib.runtime.json.number
-
-import com.fasterxml.jackson.databind.ObjectMapper
 import java.io.File
 
 /** Shared native test fixtures, supplied by Gradle so tests do not depend on their working directory. */
@@ -25,7 +20,7 @@ fun testJson(text: String): com.fasterxml.jackson.databind.JsonNode =
         .nodeFactory(com.fasterxml.jackson.databind.node.JsonNodeFactory.withExactBigDecimals(true))
         .build().readTree(text)
 
-/** The component of class [type] that [net.nevinsky.abyssus.lib.runtime.ecs.EcsLoader] makes of [node] (one entity, id 0). */
+/** The component of class [type] that [net.nevinsky.abyssus.lib.core.ecs.EcsLoader] makes of [node] (one entity, id 0). */
 fun <C : com.badlogic.ashley.core.Component> loadComponent(
     type: Class<C>,
     node: com.fasterxml.jackson.databind.JsonNode,

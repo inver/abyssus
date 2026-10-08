@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.lib.runtime.SceneContext
 import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.core.testing.warningsTo
-import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import java.io.File
 
 /** Shared native test fixtures, supplied by Gradle so tests do not depend on their working directory. */

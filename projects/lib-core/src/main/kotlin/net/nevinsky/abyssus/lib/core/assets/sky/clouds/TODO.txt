@@ -1,4 +1,0 @@
-Replace CloudNoise implementation to usage of
-  /Users/inv3r/Development/gamedev/abyssus/projects/lib-core/src/main/java/net/nevinsky/abyssus/lib/core/assets/terrain/noise/fastnoise/FastNoiseLite.java
-Extract cloud with weather as separate asset
-Load clouds in sky  like terrain loads texture assets

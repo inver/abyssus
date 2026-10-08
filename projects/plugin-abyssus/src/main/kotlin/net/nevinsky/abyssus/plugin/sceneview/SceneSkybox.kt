@@ -12,7 +12,7 @@ import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.core.assets.sky.Sky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
@@ -25,7 +25,7 @@ import java.io.File
  * following the camera's orientation but not its position, so everything else is always in front of it. Call only on
  * the GL thread with the context current.
  */
-class SceneSkybox(private val assets: AssetView<Sky>) : Disposable {
+class SceneSkybox(private val assets: AssetView<SkyRenderer>) : Disposable {
     val isLoading: Boolean get() = assets.isLoading
 
     private val sunDirection = Vector3()
@@ -50,7 +50,7 @@ class SceneSkybox(private val assets: AssetView<Sky>) : Disposable {
     }
 
     /** The built sky named [name], or null while it loads or when it failed. */
-    fun sky(name: String?): Sky? = name?.let(assets::get)
+    fun sky(name: String?): SkyRenderer? = name?.let(assets::get)
 
     /** Keeps the sky named [name] loading (and a replaced one released) without drawing it, e.g. while a ray frame is shown. */
     fun update(name: String?, projectDir: File?) = assets.update(projectDir, setOfNotNull(name))

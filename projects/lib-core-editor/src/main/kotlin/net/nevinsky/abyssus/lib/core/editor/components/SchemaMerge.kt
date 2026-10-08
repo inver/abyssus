@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.components
 
-import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.documentDisplayMessage
 import net.nevinsky.abyssus.lib.runtime.schema.BUILT_IN_COMPONENTS
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentSchema
@@ -19,7 +19,11 @@ data class ProjectSchemaText(val path: String, val text: String?, val error: Str
 data class ContributedSchemaText(val plugin: String, val resource: String, val text: String?)
 
 /** The component schemas in force for one project's scenes, with a message for each problem met reading them. */
-class SchemaSnapshot(val components: List<ComponentSchema>, val problems: List<String>, private val messages: EditorMessages) {
+class SchemaSnapshot(
+    val components: List<ComponentSchema>,
+    val problems: List<String>,
+    private val messages: EditorMessages
+) {
     /** The editor for scenes under these schemas. */
     val editor: ComponentEditor by lazy { ComponentEditor(messages, components) }
 }
@@ -37,22 +41,44 @@ class SchemaMerge(private val messages: EditorMessages, private val file: Schema
 
         if (project != null) {
             val name = project.path
-            for (c in parse(project.text, project.error) { problems += messages.message("schemaFileProblem", name, it) }) {
-                when {
-                    c.name in BUILT_IN_COMPONENTS -> problems += messages.message("schemaBuiltIn", c.name, name)
-                    c.name in byName -> problems += messages.message("schemaDuplicate", c.name, name)
-                    else -> { byName[c.name] = c; owners[c.name] = null }
+            for (c in parse(project.text, project.error) {
+                problems += messages.message(
+                    "schemaFileProblem",
+                    name,
+                    it
+                )
+            }) {
+                when (c.name) {
+                    in BUILT_IN_COMPONENTS -> problems += messages.message("schemaBuiltIn", c.name, name)
+                    in byName -> problems += messages.message("schemaDuplicate", c.name, name)
+                    else -> {
+                        byName[c.name] = c; owners[c.name] = null
+                    }
                 }
             }
         }
         for (contribution in contributed) {
-            val report = { message: String -> problems += messages.message("schemaPluginProblem", contribution.plugin, message) }
+            val report =
+                { message: String -> problems += messages.message("schemaPluginProblem", contribution.plugin, message) }
             val error = if (contribution.text == null) "${contribution.resource} is missing" else null
             for (c in parse(contribution.text, error, report)) {
                 when {
-                    c.name in BUILT_IN_COMPONENTS -> problems += messages.message("schemaBuiltIn", c.name, contribution.plugin)
-                    c.name !in byName -> { byName[c.name] = c; owners[c.name] = contribution.plugin }
-                    owners[c.name] == null -> problems += messages.message("schemaConflict", c.name, contribution.plugin)
+                    c.name in BUILT_IN_COMPONENTS -> problems += messages.message(
+                        "schemaBuiltIn",
+                        c.name,
+                        contribution.plugin
+                    )
+
+                    c.name !in byName -> {
+                        byName[c.name] = c; owners[c.name] = contribution.plugin
+                    }
+
+                    owners[c.name] == null -> problems += messages.message(
+                        "schemaConflict",
+                        c.name,
+                        contribution.plugin
+                    )
+
                     else -> problems += messages.message("schemaDuplicate", c.name, contribution.plugin)
                 }
             }

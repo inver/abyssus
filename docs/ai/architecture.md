@@ -148,7 +148,7 @@ fail it between any two writes. No scene or project file is written that way.
 `EcsLoader` reads a scene's `ecs` block into an Ashley `SceneEngine`: each component entry is keyed by a class name and
 bound into that class with Jackson (`readValue`), with no per-component codec. Components it doesn't model are carried
 raw. `EcsWriter` writes the engine back in native format with Jackson too (`valueToTree`), without defaults.
-Systems are in `projects/lib-runtime/src/main/kotlin/net/nevinsky/abyssus/lib/runtime/ecs/system/`. The Control Line game and the Play host load Ashley engines through `RuntimeSceneLoader`; the editor view
+Systems are in `../../projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/system`. The Control Line game and the Play host load Ashley engines through `RuntimeSceneLoader`; the editor view
 decodes JSON directly. `ComponentEditor` (`editor-core`, `editor.components`) adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
 checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the properties panel and the tree actions. See
 `projects/lib-core-editor/README.md`.

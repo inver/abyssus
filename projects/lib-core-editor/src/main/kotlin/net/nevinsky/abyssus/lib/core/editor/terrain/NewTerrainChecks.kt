@@ -9,7 +9,7 @@ import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
-import net.nevinsky.abyssus.lib.runtime.text
+import net.nevinsky.abyssus.lib.core.util.text
 import java.io.File
 import java.nio.file.Files
 import java.util.UUID

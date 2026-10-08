@@ -15,9 +15,8 @@ import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
-import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
-import net.nevinsky.abyssus.lib.core.assets.sky.Sky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
@@ -28,7 +27,7 @@ import org.lwjgl.opengl.GL32C.glGetError
 /** Opt-in (`-Dabyssus.glTests=true`): the procedural-sky bake lands each world direction where the raster sky shows it. */
 class RaySkyBakerGlTest {
     /** Paints each pixel with its own world direction, built like a procedural sky does, from the inverse view-projection. */
-    private class DirectionSky : Sky {
+    private class DirectionSky : SkyRenderer {
         private val program = ShaderProgram(
             "attribute vec2 a_position;\nuniform mat4 u_invViewProj;\nvarying vec3 v_dir;\n" +
                 "void main() { vec4 p = u_invViewProj * vec4(a_position, 1.0, 1.0); v_dir = p.xyz / p.w; gl_Position = vec4(a_position, 1.0, 1.0); }",

@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.runtime.json.number
+import net.nevinsky.abyssus.lib.core.util.number
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentSchema
 import net.nevinsky.abyssus.lib.runtime.schema.FieldType
 import net.nevinsky.abyssus.lib.runtime.schema.SchemaColor

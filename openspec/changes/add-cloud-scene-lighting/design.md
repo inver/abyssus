@@ -3,7 +3,7 @@
 ## Context
 
 See `proposal.md`, and `add-sky-clouds`' design, which this builds on. It provides:
-- `CloudSettings` / `CloudField` (Kotlin) and `clouds_common.glsl`;
+- `CloudMeta` / `CloudField` (Kotlin) and `clouds_common.glsl`;
 - `SunOcclusion`;
 - `SkyFrame` with time and technique;
 - `SunDirection.sunLight`.

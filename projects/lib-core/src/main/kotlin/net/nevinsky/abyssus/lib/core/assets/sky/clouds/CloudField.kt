@@ -31,7 +31,7 @@ class CloudField {
      * The band's drift after [timeSeconds], in noise units, wrapped into the noise period. Done in doubles. A cloud at
      * noise point `n` is seen at `x = n - offset`, so the offset runs against the wind for clouds to move with it.
      */
-    fun windOffset(band: CloudBand, timeSeconds: Double): FloatArray {
+    fun windOffset(band: CloudMeta.CloudBand, timeSeconds: Double): FloatArray {
         val type = band.type
         val u = -band.windX * timeSeconds / (type.scale * type.stretch)
         val v = -band.windZ * timeSeconds / type.scale
@@ -39,7 +39,7 @@ class CloudField {
     }
 
     /** The cloud coverage of [band] above [x] / [z] metres, 0 (clear) to 1 (full), drifted by [offset]. */
-    fun coverage(band: CloudBand, x: Float, z: Float, offset: FloatArray): Float {
+    fun coverage(band: CloudMeta.CloudBand, x: Float, z: Float, offset: FloatArray): Float {
         val type = band.type
         val u = x / (type.scale * type.stretch) + offset[0]
         val v = z / type.scale + offset[1]
@@ -54,7 +54,7 @@ class CloudField {
      * heaped clouds are domes, only dense columns reaching the top; layered ones are slabs with soft edges.
      */
     fun shape(type: CloudType, coverage: Float, h: Float): Float {
-        if (h < 0f || h > 1f) return 0f
+        if (h !in 0f..1f) return 0f
         return when (type.profile) {
             CloudProfile.HEAPED -> saturate((coverage - h * h * 0.8f) / 0.2f) * smoothstep(0f, 0.08f, h)
             CloudProfile.LAYERED -> coverage * smoothstep(0f, 0.15f, h) * (1f - smoothstep(0.85f, 1f, h))
@@ -65,7 +65,7 @@ class CloudField {
     /** The band's [shape] averaged over its height: how dense a column of it is where the coverage is [coverage]. */
     fun column(type: CloudType, coverage: Float): Float =
         0.25f * (shape(type, coverage, 0.125f) + shape(type, coverage, 0.375f) + shape(type, coverage, 0.625f) +
-            shape(type, coverage, 0.875f))
+                shape(type, coverage, 0.875f))
 
     /** Fractal sum of [octaves] of [noise], each twice the frequency and half the amplitude, normalized to 0..1. */
     fun fbm(u: Float, v: Float, seed: Int, octaves: Int): Float {
@@ -115,16 +115,17 @@ class CloudField {
         return h
     }
 
-    private fun grad(x: Float, y: Float, seed: Int, dx: Float, dy: Float): Float = when (hash(x.toInt(), y.toInt(), seed) and 7) {
-        0 -> dx
-        1 -> -dx
-        2 -> dy
-        3 -> -dy
-        4 -> (dx + dy) * 0.70710677f
-        5 -> (-dx + dy) * 0.70710677f
-        6 -> (dx - dy) * 0.70710677f
-        else -> (-dx - dy) * 0.70710677f
-    }
+    private fun grad(x: Float, y: Float, seed: Int, dx: Float, dy: Float): Float =
+        when (hash(x.toInt(), y.toInt(), seed) and 7) {
+            0 -> dx
+            1 -> -dx
+            2 -> dy
+            3 -> -dy
+            4 -> (dx + dy) * 0.70710677f
+            5 -> (-dx + dy) * 0.70710677f
+            6 -> (dx - dy) * 0.70710677f
+            else -> (-dx - dy) * 0.70710677f
+        }
 
     private fun wrap(value: Double): Float {
         val p = CLOUD_NOISE_PERIOD.toDouble()

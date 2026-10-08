@@ -14,11 +14,11 @@ import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 
-import net.nevinsky.abyssus.lib.runtime.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.LightData
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightData
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 
 /** The asset a `RenderComponent` shows: `renderable.asset.type` and `assetName`. */
 class DecodedAsset(val type: String, val name: String)

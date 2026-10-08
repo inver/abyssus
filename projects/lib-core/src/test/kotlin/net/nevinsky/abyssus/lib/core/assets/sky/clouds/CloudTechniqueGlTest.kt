@@ -49,7 +49,7 @@ class CloudTechniqueGlTest {
     private val noise by lazy { CloudNoiseGenerator().generate() }
 
     private fun clouds(vararg bands: CloudBand, technique: CloudTechnique = CloudTechnique.LAYERED) =
-        CloudSettings(technique, bands.associateBy { it.level })
+        CloudMeta(technique, bands.associateBy { it.level })
 
     /** Scattered cumulus: clear sky between clouds, so the techniques' cloud masks can be compared. */
     private val scattered = clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 0.45f))
@@ -60,7 +60,7 @@ class CloudTechniqueGlTest {
      * asset's textures go with the test's context.
      */
     private fun sky(
-        clouds: CloudSettings?, log: RecordingLogger = RecordingLogger(), cloudNoise: CloudNoise? = noise,
+        clouds: CloudMeta?, log: RecordingLogger = RecordingLogger(), cloudNoise: CloudNoise? = noise,
         factory: ((CloudTechnique) -> CloudRenderer)? = null,
     ): ProceduralSky {
         val asset = clouds?.let { Clouds("clouds_test", it, cloudNoise) }
@@ -114,7 +114,7 @@ class CloudTechniqueGlTest {
     }
 
     private fun render(
-        clouds: CloudSettings?, technique: CloudTechnique? = null, sun: Vector3 = noon, elevation: Float = 60f, frames: Int = 1,
+        clouds: CloudMeta?, technique: CloudTechnique? = null, sun: Vector3 = noon, elevation: Float = 60f, frames: Int = 1,
     ): Image {
         var image: Image? = null
         TestGl.run {
@@ -155,7 +155,7 @@ class CloudTechniqueGlTest {
     fun layered() {
         val cloudless = render(null)
         assertTrue("no clouds", render(clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 0f))).rgb.contentEquals(cloudless.rgb))
-        assertTrue("a cloud asset without bands", render(CloudSettings()).rgb.contentEquals(cloudless.rgb))
+        assertTrue("a cloud asset without bands", render(CloudMeta()).rgb.contentEquals(cloudless.rgb))
         assertTrue("clouds left out of the frame", run {
             var image: Image? = null
             TestGl.run {

@@ -67,7 +67,7 @@ import net.nevinsky.abyssus.plugin.sceneview.terrain.TerrainShader
 import net.nevinsky.abyssus.plugin.sceneview.shadows.SceneShadows
 import net.nevinsky.abyssus.lib.core.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.core.ModelBatch as ContentBatch
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FOV
 
 /**
  * Draws a scene's environment, a ground grid and the content the scene places (skybox, terrains, models), and picks
@@ -252,7 +252,7 @@ class SceneRenderer(
             numSpotLights = MAX_POINT
         }).also { contentBatch = ContentBatch(it) }
         terrainShader = TerrainShader(shaders)
-        skybox = SceneSkybox(AssetView(assets, net.nevinsky.abyssus.lib.core.assets.sky.Sky::class.java))
+        skybox = SceneSkybox(AssetView(assets, net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer::class.java))
         overlay = LoadingOverlay(shaders)
         lineBatch = LineBatch(shaders)
         gridModel = GridModel.build().also { grid = ModelInstance(it) }

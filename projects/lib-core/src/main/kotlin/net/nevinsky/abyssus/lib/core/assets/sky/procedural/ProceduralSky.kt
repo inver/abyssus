@@ -9,21 +9,12 @@ import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
-import net.nevinsky.abyssus.lib.core.assets.sky.Sky
-import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudRenderer
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudScene
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudSettings
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechniques
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.LayeredClouds
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.ShellClouds
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.VolumetricClouds
-import net.nevinsky.abyssus.lib.core.io.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.*
+import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 
@@ -49,7 +40,7 @@ class ProceduralSky(
     shaders: ShaderSource = ShaderSource("/shader/sky"),
     log: Logger = NOPLogger.NOP_LOGGER,
     cloudFactory: ((CloudTechnique) -> CloudRenderer)? = null,
-) : Sky {
+) : SkyRenderer {
     /** The atmosphere the asset's shader is given; clouds sit on its planet. */
     val params: AtmosphereParams = prepared.params
 
@@ -59,7 +50,7 @@ class ProceduralSky(
     val cloudAsset: Clouds? get() = cloudsName?.let { assets.get(it) as? Clouds }
 
     /** The weather this sky draws now, or null without a built cloud asset. */
-    val clouds: CloudSettings? get() = cloudAsset?.settings
+    val clouds: CloudMeta? get() = cloudAsset?.settings
 
     private val program = ShaderProgram(prepared.vertex, prepared.fragment).also {
         if (!it.isCompiled) {

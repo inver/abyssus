@@ -3,12 +3,11 @@ package net.nevinsky.abyssus.lib.core.assets.sky.cube
 import com.badlogic.gdx.graphics.*
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
-import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.assets.sky.Sky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 
 /** A six-face skybox on a cube mesh, drawn with [program] (`skybox.vert` / `skybox.frag`), which it owns. */
-class SkyboxCube(prepared: PreparedSkybox, private val program: ShaderProgram) : Sky {
+class SkyboxCube(prepared: PreparedSkybox, private val program: ShaderProgram) : SkyRenderer {
     private val viewProj = Matrix4()
     private val cubemap = prepared.faces.let { Cubemap(it[0], it[1], it[2], it[3], it[4], it[5]) }
     private val mesh = Mesh(true, 8, 36, VertexAttribute.Position()).also {

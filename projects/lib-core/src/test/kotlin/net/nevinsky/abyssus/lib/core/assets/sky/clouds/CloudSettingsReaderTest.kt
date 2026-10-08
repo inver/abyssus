@@ -12,10 +12,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class CloudSettingsReaderTest {
+class CloudMetaReaderTest {
     private val json = JsonProcessor()
     private val log = RecordingLogger()
-    private val reader = CloudSettingsReader(log)
+    private val reader = CloudMetaReader(log)
 
     private fun read(text: String?) = reader.read("sky", text?.let(json::readObject))
 

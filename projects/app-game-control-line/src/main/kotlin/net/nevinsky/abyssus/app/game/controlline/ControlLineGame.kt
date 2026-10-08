@@ -19,7 +19,7 @@ import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.app.game.controlline.screens.GameUi
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import org.slf4j.LoggerFactory

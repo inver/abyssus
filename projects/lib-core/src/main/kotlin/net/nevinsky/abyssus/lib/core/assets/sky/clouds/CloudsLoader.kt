@@ -9,28 +9,48 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import org.slf4j.Logger
 
 private const val GL_R8 = 0x8229
 private const val GL_RED = 0x1903
 internal const val GL_TEXTURE_3D = 0x806F
 private const val GL_TEXTURE_WRAP_R = 0x8072
 
-/** A `CLOUDS` asset read from disk: its [settings] and the volumetric technique's [noise]; no GL resources. */
-class PreparedClouds(val name: String, val settings: CloudSettings, val noise: CloudNoise?)
+/**
+ * Loads `CLOUDS` assets: [prepare] reads the bands and technique (bad bands are skipped and logged to [log]) and, when
+ * there is a band, makes the 3D noise; [build] uploads the noise. Skies name the asset by `uuid` and load it as a
+ * dependency.
+ */
+class CloudsLoader(
+    private val metaLoader: AssetMetaLoader,
+    private val noise: CloudNoiseGenerator = CloudNoiseGenerator(),
+) : AssetLoader<PreparedClouds, Clouds> {
+    override fun loadPrepared(meta: AssetMeta<Any>): PreparedClouds {
+        val additional = meta.typedAdditional<CloudMeta>()
+        return PreparedClouds(meta.name, additional, if (additional.visible) noise.generate() else null)
+    }
+
+    override fun prepare(name: String): PreparedClouds? =
+        metaLoader.loadBaseMeta(name)?.let(::loadPrepared)
+
+    override fun build(prepared: PreparedClouds, assets: BuiltAssets) =
+        Clouds(prepared.name, prepared.meta, prepared.noise)
+
+    override fun discard(prepared: PreparedClouds) = Unit
+}
+
+/** A `CLOUDS` asset read from disk: its [meta] and the volumetric technique's [noise]; no GL resources. */
+data class PreparedClouds(val name: String, val meta: CloudMeta, val noise: CloudNoise?)
 
 /**
  * A built `CLOUDS` asset: the weather ([settings]) skies draw, and the volumetric technique's 3D noise textures
  * ([baseNoise], [detailNoise]; 0 when they could not be created, the reason in [noiseFailure]). Skies read it from the
  * asset storage on every draw, like a terrain its splat textures, and never own or dispose it. GL thread only.
  */
-class Clouds(val name: String, val settings: CloudSettings, noise: CloudNoise?) : Disposable {
+class Clouds(val name: String, val settings: CloudMeta, noise: CloudNoise?) : Disposable {
     var baseNoise = 0
         private set
     var detailNoise = 0
@@ -86,28 +106,3 @@ class Clouds(val name: String, val settings: CloudSettings, noise: CloudNoise?) 
     override fun dispose() = deleteNoise()
 }
 
-/**
- * Loads `CLOUDS` assets: [prepare] reads the bands and technique (bad bands are skipped and logged to [log]) and, when
- * there is a band, makes the 3D noise; [build] uploads the noise. Skies name the asset by `uuid` and load it as a
- * dependency.
- */
-class CloudsLoader(
-    private val metaLoader: AssetMetaLoader,
-    private val json: JsonProcessor,
-    log: Logger,
-    private val noise: CloudNoiseGenerator = CloudNoiseGenerator(),
-) : AssetLoader<PreparedClouds, Clouds> {
-    private val reader = CloudSettingsReader(log)
-
-    override fun loadPrepared(meta: AssetMeta<Any>): PreparedClouds {
-        val additional: JsonNode = json.valueToTree(meta.additional)
-        val settings = reader.read(meta.name, additional)
-        return PreparedClouds(meta.name, settings, if (settings.visible) noise.generate() else null)
-    }
-
-    override fun prepare(name: String): PreparedClouds? = metaLoader.loadBaseMeta(name)?.let(::loadPrepared)
-
-    override fun build(prepared: PreparedClouds, assets: BuiltAssets) = Clouds(prepared.name, prepared.settings, prepared.noise)
-
-    override fun discard(prepared: PreparedClouds) = Unit
-}

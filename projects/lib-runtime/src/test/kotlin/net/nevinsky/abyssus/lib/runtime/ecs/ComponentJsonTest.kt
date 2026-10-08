@@ -6,11 +6,10 @@
 package net.nevinsky.abyssus.lib.runtime.ecs
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.scene.Color
-import net.nevinsky.abyssus.lib.runtime.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.dto.ColorDto
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderableObjectDelegate
 import net.nevinsky.abyssus.lib.runtime.loadComponent
@@ -22,7 +21,6 @@ import net.nevinsky.abyssus.lib.runtime.schema.SceneComponent
 import net.nevinsky.abyssus.lib.runtime.testJson
 import org.junit.Assert.*
 import org.junit.Test
-import org.slf4j.helpers.NOPLogger
 
 class ComponentJsonTest {
     @Test
@@ -83,7 +81,7 @@ class ComponentJsonTest {
         val nested = light("""{"light":{"color":{"r":1,"g":0.5,"b":0.25,"a":1},"intensity":0.8}}""")
         val direct = light("""{"color":{"r":1,"g":0.5,"b":0.25,"a":1},"intensity":0.8}""")
         for (light in listOf(nested, direct)) {
-            assertEquals(Color(1f, 0.5f, 0.25f, 1f), light.light.color)
+            assertEquals(ColorDto(1f, 0.5f, 0.25f, 1f), light.light.color)
             assertEquals(0.8f, light.light.intensity, 0f)
         }
         assertTrue(nested.nested)

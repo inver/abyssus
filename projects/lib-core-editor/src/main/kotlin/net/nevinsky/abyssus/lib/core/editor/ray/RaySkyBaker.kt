@@ -15,7 +15,7 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
 import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
 import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
-import net.nevinsky.abyssus.lib.core.assets.sky.Sky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import kotlin.math.PI
 import kotlin.math.abs
@@ -23,7 +23,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Renders a built [Sky] into a [RaySkySnapshot]: six 90 degree faces drawn with the sky's own shader into an offscreen
+ * Renders a built [SkyRenderer] into a [RaySkySnapshot]: six 90 degree faces drawn with the sky's own shader into an offscreen
  * framebuffer, then resampled into the equirectangular layout ray backends sample. This is the only way to get a
  * procedural sky, which is arbitrary asset GLSL, into a ray texture. GL thread only, inside `GdxRuntime.withContext`;
  * the caller's framebuffer, viewport and depth state are restored. The result holds display values (not HDR).
@@ -40,7 +40,7 @@ class RaySkyBaker(private val faceSize: Int = 256) {
         Face(Vector3(0f, 0f, 1f), Vector3(0f, 1f, 0f)), Face(Vector3(0f, 0f, -1f), Vector3(0f, 1f, 0f)),
     )
 
-    fun bake(sky: Sky, sun: Vec3): RaySkySnapshot {
+    fun bake(sky: SkyRenderer, sun: Vec3): RaySkySnapshot {
         val viewport = BufferUtils.newIntBuffer(16).also { Gdx.gl.glGetIntegerv(GL20.GL_VIEWPORT, it) }
         val bound = BufferUtils.newIntBuffer(16).also { Gdx.gl.glGetIntegerv(GL20.GL_FRAMEBUFFER_BINDING, it) }
         val buffer = FrameBuffer(Pixmap.Format.RGBA8888, faceSize, faceSize, false)

@@ -13,25 +13,19 @@ import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.scene.Scene
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.LIGHT_RANGE
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.CAMERA_NEAR
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.CAMERA_FAR
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.LIGHT_CONE_ANGLE
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.LIGHT_EDGE_SOFTNESS
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.editor.document.EntityView
 import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
 import org.slf4j.helpers.NOPLogger
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.runtime.opt
-import net.nevinsky.abyssus.lib.runtime.text
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.util.opt
+import net.nevinsky.abyssus.lib.core.util.text
 
 /** What a scene shows besides its environment. */
 data class SceneContent(
@@ -51,7 +45,7 @@ data class SceneContent(
 }
 
 /** What [scene] places, read through the runtime component codecs. */
-fun sceneContentOf(scene: Scene): SceneContent {
+fun sceneContentOf(scene: SceneDto): SceneContent {
     val entities = sceneDocumentFromEcs(scene.ecs, components).entities().mapNotNull { entity ->
         if (entity.components == null) return@mapNotNull null
         runCatchingKeepingCancellation { decode(entity) }.getOrNull()

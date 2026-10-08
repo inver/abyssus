@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.runtime
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.scene.Scene
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.scene.SceneLoader
 import net.nevinsky.abyssus.lib.runtime.ecs.EcsConfigurator
 import net.nevinsky.abyssus.lib.runtime.ecs.render.FolderAssetResolver
@@ -55,8 +55,11 @@ class RuntimeSceneLoader(
         context(sceneLoader.parse(text), log)
     }
 
-    private fun context(scene: Scene, sceneLog: Logger): SceneContext {
-        val loaded = EcsConfigurator(jsonProcessor.mapper, FolderAssetResolver(fileLoader.assetNames()), sceneLog, game)
+    private fun context(scene: SceneDto, sceneLog: Logger): SceneContext {
+        val loaded = EcsConfigurator(
+            jsonProcessor.mapper,
+            FolderAssetResolver(fileLoader.assetNames()), sceneLog, game
+        )
             .load(scene.ecs ?: jsonProcessor.readObject("{}"))
         return SceneContext(loaded.engine, scene, loaded.document)
     }

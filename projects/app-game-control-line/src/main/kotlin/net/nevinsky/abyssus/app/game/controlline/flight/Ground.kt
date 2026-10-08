@@ -10,9 +10,9 @@ import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.physics.ColliderComponent
 import net.nevinsky.abyssus.lib.physics.ColliderShape
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 
 /**
  * The field's ground: the height of the height-field terrain under a point, as the physics sees it ([field]'s terrain

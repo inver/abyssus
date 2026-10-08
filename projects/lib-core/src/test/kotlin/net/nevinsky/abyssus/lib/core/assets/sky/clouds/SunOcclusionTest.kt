@@ -18,9 +18,9 @@ class SunOcclusionTest {
     private val sun = Vector3(0.3f, 0.8f, 0.2f).nor()
     private val occlusion = SunOcclusion()
 
-    private fun clouds(vararg bands: CloudBand) = CloudSettings(bands = bands.associateBy { it.level })
+    private fun clouds(vararg bands: CloudBand) = CloudMeta(bands = bands.associateBy { it.level })
 
-    private fun step(clouds: CloudSettings?, delta: Float, time: Double = 0.0) =
+    private fun step(clouds: CloudMeta?, delta: Float, time: Double = 0.0) =
         occlusion.update(clouds, sun, 0f, 0f, radius, 100f, time, delta)
 
     private val overcast = clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 1f))
@@ -40,14 +40,14 @@ class SunOcclusionTest {
     @Test
     fun noCloudsGiveFullSun() {
         assertEquals(1f, step(null, 0.016f), 0f)
-        assertEquals(1f, step(CloudSettings(), 0.016f), 0f)
+        assertEquals(1f, step(CloudMeta(), 0.016f), 0f)
     }
 
     @Test
     fun stormFloorIsTenPercent() {
         val json = JsonProcessor()
         val template = javaClass.getResourceAsStream("/clouds/templates/storm.json")!!.use { String(it.readAllBytes()) }
-        val asIs = CloudSettingsReader(failOnWarnings()).read("storm", json.readObject(template)["additional"])
+        val asIs = CloudMetaReader(failOnWarnings()).read("storm", json.readObject(template)["additional"])
         val covered = asIs.copy(bands = asIs.bands.mapValues { it.value.copy(coverage = 1f) })
         assertEquals(SUN_OCCLUSION_FLOOR, step(covered, 0f), 1e-6f)
         for (t in 0 until 200) {

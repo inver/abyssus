@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
-import net.nevinsky.abyssus.lib.core.io.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.utils.Disposable

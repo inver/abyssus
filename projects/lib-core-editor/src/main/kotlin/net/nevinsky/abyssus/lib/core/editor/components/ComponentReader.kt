@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.lib.runtime.ecs.render.AssetResolver
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEcsWarnings
+import net.nevinsky.abyssus.lib.core.io.EcsReadWarnings
 import org.slf4j.Logger
 
 @JsonAutoDetect(
@@ -43,7 +43,7 @@ class ComponentReader(mapper: ObjectMapper, resolver: AssetResolver, log: Logger
         .reader(
             InjectableValues.Std()
                 .addValue(AssetResolver::class.java.name, resolver)
-                .addValue(SceneEcsWarnings::class.java.name, SceneEcsWarnings(log)),
+                .addValue(EcsReadWarnings::class.java.name, EcsReadWarnings(log)),
         )
 
     /** The [type] component [node] holds; throws when it cannot be bound. */

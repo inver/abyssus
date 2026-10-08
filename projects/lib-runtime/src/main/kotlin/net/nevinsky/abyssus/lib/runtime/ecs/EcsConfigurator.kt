@@ -9,12 +9,17 @@ import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Engine
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import net.nevinsky.abyssus.lib.core.scene.Scene
-import net.nevinsky.abyssus.lib.runtime.ecs.component.IdComponent
+import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
+import net.nevinsky.abyssus.lib.core.ecs.system.LookAtSystem
+import net.nevinsky.abyssus.lib.core.ecs.system.RenderComponentSystem
+import net.nevinsky.abyssus.lib.core.ecs.system.SynchronizeCameraComponentSystem
+import net.nevinsky.abyssus.lib.core.ecs.system.SynchronizeRenderComponentSystem
+import net.nevinsky.abyssus.lib.core.ecs.system.SynchronizeRenderPoint2PointSystem
 import net.nevinsky.abyssus.lib.runtime.ecs.render.AssetResolver
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEcsDocument
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
-import net.nevinsky.abyssus.lib.runtime.ecs.system.*
+import net.nevinsky.abyssus.lib.core.scene.SceneEcsDocument
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import net.nevinsky.abyssus.lib.runtime.schema.GameComponents
 import org.slf4j.Logger
 
@@ -22,7 +27,7 @@ import org.slf4j.Logger
 class LoadedScene(
     val engine: SceneEngine,
     val document: SceneEcsDocument,
-    val scene: Scene = Scene(),
+    val scene: SceneDto = SceneDto(),
 )
 
 /**

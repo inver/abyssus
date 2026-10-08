@@ -16,9 +16,9 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectDto
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.sceneReferences
-import net.nevinsky.abyssus.lib.runtime.obj
+import net.nevinsky.abyssus.lib.core.util.obj
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.runtime.text
+import net.nevinsky.abyssus.lib.core.util.text
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.editor.meta.SKYBOX_FACES

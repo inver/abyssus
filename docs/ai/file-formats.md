@@ -55,7 +55,7 @@ Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored
 
 ## `.scene`
 
-Top level, bound to `Scene` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/scene/Scene.kt`):
+Top level, bound to `Scene` (`../../projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/dto/SceneDto.kt`):
 
 | Key | Meaning |
 |---|---|
@@ -93,7 +93,7 @@ The components the plugin reads:
 empty `PositionComponent: {}` is valid. Writers add fields when they change them (`SceneTransformWriter`,
 `PositionCodec`).
 
-**Light defaults** (`projects/lib-runtime/src/main/kotlin/net/nevinsky/abyssus/lib/runtime/ecs/component/LightComponent.kt`). A light that leaves a value out has: `intensity` 1; the
+**Light defaults** (`../../projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/component`). A light that leaves a value out has: `intensity` 1; the
 whole `color` object missing means white, but a channel missing inside a `color` object is 0 (the alpha channel never
 affects lighting); `range` 100; `coneAngle` 45 and `edgeSoftness` 0.2. The scene view, the Properties panel and edits
 all read lights through the same codecs, so they show and use these values alike. The file is never rewritten to state

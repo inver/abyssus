@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.runtime.schema.BUILT_IN_COMPONENTS
 import net.nevinsky.abyssus.lib.runtime.ecs.EcsWriter

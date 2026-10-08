@@ -2,14 +2,15 @@ package net.nevinsky.abyssus.lib.runtime.ecs
 
 import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.databind.InjectableValues
+import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
-import net.nevinsky.abyssus.lib.runtime.ecs.component.IdComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.render.AssetResolver
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEcsWarnings
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEcsDocument
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.io.EcsReadWarnings
+import net.nevinsky.abyssus.lib.core.scene.SceneEcsDocument
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
@@ -47,7 +48,7 @@ class NativeEcsAdmissionTest {
         assertTrue(raw.has("class"))
         val reader = json.mapper.reader(InjectableValues.Std()
             .addValue(AssetResolver::class.java.name, AssetResolver { _, _ -> null })
-            .addValue(SceneEcsWarnings::class.java.name, SceneEcsWarnings(NOPLogger.NOP_LOGGER)))
+            .addValue(EcsReadWarnings::class.java.name, EcsReadWarnings(NOPLogger.NOP_LOGGER)))
         val failure = assertThrows(Exception::class.java) {
             reader.forType(RenderComponent::class.java).readValue<RenderComponent>("""{"renderable":{"class":null}}""")
         }

@@ -11,8 +11,8 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.runtime.obj
-import net.nevinsky.abyssus.lib.runtime.text
+import net.nevinsky.abyssus.lib.core.util.obj
+import net.nevinsky.abyssus.lib.core.util.text
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.terrain.MAX_TERRAIN_RESOLUTION
 import net.nevinsky.abyssus.lib.core.editor.terrain.MIN_TERRAIN_RESOLUTION
