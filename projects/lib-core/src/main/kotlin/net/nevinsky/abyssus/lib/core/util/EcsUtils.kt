@@ -3,8 +3,6 @@ package net.nevinsky.abyssus.lib.core.util
 
 class EcsUtils {
     companion object {
-
-
         @JvmStatic
         val NO_ENTITY = -1
 

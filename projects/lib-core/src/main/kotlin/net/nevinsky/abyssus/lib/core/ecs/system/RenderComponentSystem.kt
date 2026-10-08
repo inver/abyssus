@@ -4,21 +4,31 @@ import com.badlogic.ashley.core.ComponentMapper
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.Family
 import com.badlogic.ashley.systems.IteratingSystem
-import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderContext
+import com.badlogic.gdx.graphics.g3d.utils.RenderContext
+import net.nevinsky.abyssus.lib.core.ModelBatch
+import net.nevinsky.abyssus.lib.core.ecs.component.render.RenderComponent
 
 /** Draws every renderable once per update, with the context set by [setRenderData]; does nothing without one. */
-class RenderComponentSystem(priority: Int = 0) :
-    IteratingSystem(Family.all(RenderComponent::class.java).get(), priority) {
+class RenderComponentSystem(priority: Int = 0) : IteratingSystem(
+    Family.all(RenderComponent::class.java).get(), priority
+) {
     private val mapper = ComponentMapper.getFor(RenderComponent::class.java)
+    private var modelBatch: ModelBatch? = null
     private var context: RenderContext? = null
 
-    fun setRenderData(context: RenderContext?) {
+    fun setRenderData(modelBatch: ModelBatch, context: RenderContext?) {
         this.context = context
+        this.modelBatch = modelBatch
     }
 
     override fun processEntity(entity: Entity, deltaTime: Float) {
-        val context = context ?: return
-        mapper[entity].renderable?.render(context, deltaTime)
+        if (context == null || modelBatch == null) {
+            return
+        }
+        val renderable = mapper[entity].renderable
+        if (renderable.modelInstance == null) {
+            return
+        }
+        modelBatch!!.render(renderable.modelInstance!!, renderable.shaderKey)
     }
 }

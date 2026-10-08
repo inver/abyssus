@@ -5,25 +5,24 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
-import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
+import com.badlogic.gdx.utils.Disposable
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
+import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.render.RenderComponent
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.EcsReadWarnings
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.scene.SceneEcsDocument
+import net.nevinsky.abyssus.lib.core.scene.EcsLoadingWarns
 import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.util.obj
-import net.nevinsky.abyssus.lib.runtime.ecs.render.AssetResolver
-import net.nevinsky.abyssus.lib.runtime.schema.GameComponents
-import org.slf4j.Logger
 
 /**
  * Loads the `ecs` block of a scene file into a [SceneEngine] with Jackson: each entry of an entity's `components` is
@@ -40,7 +39,7 @@ import org.slf4j.Logger
  * class name the scene files have always used (`NameComponent`, or the short name of a registered game component). Only
  * the built-in components and the classes registered in [game] can be named: a scene is project data, so a class name
  * in it never loads an arbitrary class. Anything else, and a component whose value Jackson cannot bind, is carried raw
- * (see [SceneEcsDocument.carried]) with one warning, so a scene can be written back unchanged. References to ids that are
+ * (see [EcsLoadingWarns.carried]) with one warning, so a scene can be written back unchanged. References to ids that are
  * not in the file become [NO_ENTITY].
  *
  * An `ecs` block is the entity map itself (`{"0": {...}, "1": {...}}`); an older block wraps it in an `entities` member
@@ -51,26 +50,12 @@ import org.slf4j.Logger
  */
 class EcsLoader(
     private val json: JsonProcessor,
-    mapper: ObjectMapper,
-    private val resolver: AssetResolver = AssetResolver { _, _ -> null },
-    private val log: Logger,
-    game: GameComponents = GameComponents(),
+    private val assetStorage: AssetStorage<Any, Disposable>,
+    private val componentRegistry: ComponentRegistry,
     private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
 ) {
-    /**
-     * A copy of the caller's mapper set up for components (see [net.nevinsky.abyssus.lib.runtime.ecs.forEcs]) that also merges an object into the value a
-     * property already holds, so a vector or color the file only partly names keeps the rest of the component's own
-     * default, and keeps decimal text (`7.000`), which a component that carries the file's own node (a light, a
-     * render component) writes back.
-     */
-    private val mapper: ObjectMapper = mapper.forEcs().setDefaultMergeable(true)
 
-    private val types = ComponentTypes(game)
-
-    /** The component class [key] names (a fully qualified class name or a short name); null when it names none that may load. */
-    private fun componentClass(key: String): Class<out Component>? = types.resolve(key)
-
-    fun load(ecs: JsonNode, engine: SceneEngine): SceneEcsDocument {
+    fun load(ecs: JsonNode, engine: SceneEngine): EcsLoadingWarns {
         format.requireEcs(ecs)
 
         val readerAndWarnings = json.ecsReader()
@@ -82,44 +67,39 @@ class EcsLoader(
                 readerAndWarnings.second.warn("entity id '$key' is not a number; the entity is skipped")
                 return@forEach
             }
-            val raw = HashMap<String, JsonNode>()
-            val entity = readEntity(id, node, reader, warnings, raw)
-            if (raw.isNotEmpty()) {
-                carried[id.toLong()] = raw
+            val carriedRaw = HashMap<String, JsonNode>()
+            val entity = readEntity(id, value, readerAndWarnings, carriedRaw)
+            if (carriedRaw.isNotEmpty()) {
+                carried[id.toLong()] = carriedRaw
             }
             engine.addEntity(entity)
             engine.ids.register(id, entity)
         }
-        resolveReferences(engine, warnings)
-
-        val extras = LinkedHashMap<String, JsonNode>()
-        if (wrapped) ecs.properties()
-            .forEach { (key, node) -> if (key != "entities" && key != "archetypes") extras[key] = node }
-        return SceneEcsDocument(extras, warnings.messages, carried, wrapped)
+        resolveReferences(engine, readerAndWarnings)
+        return EcsLoadingWarns(readerAndWarnings.second.messages, carried)
     }
 
     /** The entity of [id]; what it cannot bind goes to [carried] under the key the file gave it. */
     private fun readEntity(
         id: Int,
         node: JsonNode,
-        reader: ObjectReader,
-        warnings: EcsReadWarnings,
+        readerAndWarnings: Pair<ObjectReader, EcsReadWarnings>,
         carried: MutableMap<String, JsonNode>,
     ): Entity {
         val entity = Entity()
         entity.add(IdComponent(id.toLong()))
         node.obj("components")?.properties()?.forEach { (name, value) ->
-            val type = componentClass(name)
+            val type = componentRegistry.get(name)
             if (type == null) {
                 carried[name] = value
-                warnings.warn("component $name is not modeled and is kept unchanged")
+                readerAndWarnings.second.warn("component $name is not modeled and is kept unchanged")
                 return@forEach
             }
             val component = try {
-                reader.forType(type).readValue<Component>(value)
+                readerAndWarnings.first.readValue(value, type)
             } catch (e: Exception) {
                 carried[name] = value
-                warnings.warn(
+                readerAndWarnings.second.warn(
                     "entity $id: component $name could not be read (${
                         e.message?.lineSequence()?.first()
                     }) and is kept unchanged"
@@ -131,22 +111,35 @@ class EcsLoader(
         return entity
     }
 
-    private fun resolveReferences(engine: SceneEngine, warnings: EcsReadWarnings) {
-        fun check(from: Long, kind: String, target: Int): Int {
-            if (target == NO_ENTITY || target in engine.ids) return target
-            warnings.warn("entity $from: $kind refers to entity $target, which is not in the scene")
-            return NO_ENTITY
-        }
+    private fun resolveReferences(engine: SceneEngine, warnings: Pair<ObjectReader, EcsReadWarnings>) {
         for (entity in engine.entities) {
             val from = entity.getComponent(IdComponent::class.java).id
             entity.getComponent(PositionComponent::class.java)
-                ?.let { it.lookAtId = check(from, "look-at", it.lookAtId) }
+                ?.let { it.lookAtId = check(engine, warnings, from, "look-at", it.lookAtId) }
             entity.getComponent(ParentComponent::class.java)
-                ?.let { it.parentEntityId = check(from, "parent", it.parentEntityId) }
+                ?.let { it.parentEntityId = check(engine, warnings, from, "parent", it.parentEntityId) }
             entity.getComponent(Point2PointPositionComponent::class.java)?.let {
-                it.entity1Id = check(from, "point-to-point entity1", it.entity1Id)
-                it.entity2Id = check(from, "point-to-point entity2", it.entity2Id)
+                it.entity1Id = check(engine, warnings, from, "point-to-point entity1", it.entity1Id)
+                it.entity2Id = check(engine, warnings, from, "point-to-point entity2", it.entity2Id)
+            }
+            entity.getComponent(RenderComponent::class.java)?.let {
+                //todo link asset to entity in async mode, like future
+//                val modelInstance = assetStorage.request()
             }
         }
+    }
+
+    private fun check(
+        engine: SceneEngine,
+        warnings: Pair<ObjectReader, EcsReadWarnings>,
+        from: Long,
+        kind: String,
+        target: Int
+    ): Int {
+        if (target == NO_ENTITY || target in engine.ids) {
+            return target
+        }
+        warnings.second.warn("entity $from: $kind refers to entity $target, which is not in the scene")
+        return NO_ENTITY
     }
 }

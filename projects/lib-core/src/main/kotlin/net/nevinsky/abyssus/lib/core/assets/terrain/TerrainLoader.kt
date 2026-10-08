@@ -32,13 +32,13 @@ class TerrainLoader(
     override fun loadPrepared(meta: AssetMeta<Any>): PreparedTerrain {
         val additional = meta.typedAdditional<TerrainMeta>()
         val data = read(meta.name, additional)
-        val folders =
-            SPLAT_FIELDS.mapNotNull { additional.splat(it) }.takeIf { it.isNotEmpty() }?.let { index.folders() }
-        val splats = LinkedHashMap<String, String>()
+        val folders = SPLAT_FIELDS.mapNotNull { additional.splat(it) }.takeIf { it.isNotEmpty() }
+            ?.let { index.folders() }
+        val splats = HashMap<String, String>()
         for (field in SPLAT_FIELDS) {
             val reference = additional.splat(field) ?: continue
-            val folder =
-                parseUuidOrNull(reference)?.let { folders?.get(it) } ?: continue // unknown: left out
+            val folder = parseUuidOrNull(reference)
+                ?.let { folders?.get(it) } ?: continue // unknown: left out
             splats[field] = folder
         }
         return PreparedTerrain(data, splats)

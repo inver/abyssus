@@ -7,7 +7,6 @@ import com.badlogic.ashley.systems.IteratingSystem
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.scene.SceneEntityIds
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.positionOf
 
 class SynchronizeCameraComponentSystem(private val ids: SceneEntityIds, priority: Int = 0) :
     IteratingSystem(Family.all(PositionComponent::class.java, CameraComponent::class.java).get(), priority) {
@@ -19,7 +18,8 @@ class SynchronizeCameraComponentSystem(private val ids: SceneEntityIds, priority
         val position = positionMapper[entity]
         camera.position.set(position.localPosition)
         if (position.lookAtId >= 0) {
-            positionOf(ids, position.lookAtId)?.let { camera.lookAt(it.localPosition) }
+            ids.positionOf(position.lookAtId, PositionComponent::class.java)
+                ?.let { camera.lookAt(it.localPosition) }
         }
     }
 }

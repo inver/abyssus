@@ -5,8 +5,11 @@ import com.badlogic.gdx.utils.Pool
 import net.nevinsky.abyssus.lib.core.ModelInstance
 import net.nevinsky.abyssus.lib.core.Renderable
 import net.nevinsky.abyssus.lib.core.RenderableProvider
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 
 interface RenderableSceneObject : RenderableProvider {
+    val meta: AssetMeta<Any>
+
     /** Null for a reference that carries no geometry. */
     val modelInstance: ModelInstance
 

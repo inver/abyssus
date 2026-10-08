@@ -21,8 +21,10 @@ class LookAtSystem(private val ids: SceneEntityIds, priority: Int = 0) :
 
     override fun processEntity(entity: Entity, deltaTime: Float) {
         val component = mapper[entity]
-        if (component.lookAtId < 0) return
-        val target = positionOf(ids, component.lookAtId) ?: return
+        if (component.lookAtId < 0) {
+            return
+        }
+        val target = ids.positionOf(component.lookAtId, PositionComponent::class.java) ?: return
 
         tmp1.set(component.localPosition)
         tmp2.set(target.localPosition).sub(tmp1).nor()
@@ -38,6 +40,4 @@ class LookAtSystem(private val ids: SceneEntityIds, priority: Int = 0) :
         component.localRotation.set(quat.x, quat.y, quat.z, quat.w)
     }
 
-    fun positionOf(ids: SceneEntityIds, id: Int): PositionComponent? =
-        ids[id]?.getComponent(PositionComponent::class.java)
 }
