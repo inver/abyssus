@@ -6,7 +6,7 @@ Requires `restructure-gradle-modules` to be applied first; paths are post-restru
 
 ## 1. The project physics switch (headless)
 
-- [ ] 1.1 Add `ProjectSettingsReader` (`dto/`, platform-free). It validates with `AbyssusDocumentFormat`, then reads
+- [x] 1.1 Add `ProjectSettingsReader` (`dto/`, platform-free). It validates with `AbyssusDocumentFormat`, then reads
   `physicsEnabled`. Verify with `ProjectSettingsReaderTest`:
   - `Untitled.abss` is off with no problems;
   - `Physics.abss` with the key is on;
