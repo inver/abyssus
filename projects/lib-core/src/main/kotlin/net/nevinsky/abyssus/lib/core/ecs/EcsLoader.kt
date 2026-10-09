@@ -55,7 +55,7 @@ class EcsLoader(
     private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
 ) {
 
-    fun load(ecs: JsonNode, engine: SceneEngine): EcsLoadingWarns {
+    fun loadToEngine(ecs: JsonNode, engine: SceneEngine): EcsLoadingWarns {
         format.requireEcs(ecs)
 
         val readerAndWarnings = json.ecsReader()

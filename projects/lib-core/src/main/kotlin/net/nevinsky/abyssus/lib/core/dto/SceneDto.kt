@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.dto
 
+import com.fasterxml.jackson.databind.JsonNode
 import java.util.*
 
 data class SceneDto(
@@ -19,5 +20,6 @@ data class SceneDto(
     val skyboxName: String? = null,
     val rayTracing: RayTracingDto? = null,
     val rayTracingEnabled: Boolean = rayTracing != null,
-    //ecs should be read externally
+    // parsing ecs graph should be done externally of deserializing scene
+    val ecs: JsonNode? = null
 )

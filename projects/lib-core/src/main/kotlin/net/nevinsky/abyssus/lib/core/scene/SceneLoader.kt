@@ -1,9 +1,9 @@
 package net.nevinsky.abyssus.lib.core.scene
 
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 class SceneLoader(
@@ -11,7 +11,9 @@ class SceneLoader(
     private val fileLoader: FileLoader,
     private val format: AbyssusDocumentFormat = AbyssusDocumentFormat()
 ) {
-    /** The scene file [sceneName] of the project's `scenes` folder. */
+    /**
+     * Load [SceneDto] from file exclude ecs structure
+     */
     fun load(sceneName: String): SceneDto = parse(fileLoader.loadSceneFile(sceneName).readText())
 
     /** The scene [text] holds, for text that is not (or not yet) a file: an editor's unsaved buffer. */

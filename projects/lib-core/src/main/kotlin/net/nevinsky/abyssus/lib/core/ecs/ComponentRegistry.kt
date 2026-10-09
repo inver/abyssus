@@ -32,4 +32,8 @@ class ComponentRegistry {
         }
         componentMap[name] = clazz
     }
+
+    fun registerAll(map: Map<String, Class<out Component>>) {
+        map.forEach { (key, value) -> register(key, value) }
+    }
 }
