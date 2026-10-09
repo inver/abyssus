@@ -224,7 +224,7 @@ entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 **Abyssus Physics** is a separate plugin, built from `projects/plugin-abyssus-physics/`, that depends on Abyssus. With it installed:
 
 - Physics components currently remain read-only JSON in the Properties panel. Collider and constraint overlays
-  are unavailable while that integration is being reworked; see [current source status](docs/reviews/2026-10-09-current-source.md).
+  are unavailable while that integration is being reworked.
 - **Play**, **Pause**, **Step** and **Stop** run the scene's physics in a separate process. Play uses the scene as
   the editor holds it, unsaved text included. Simulated poses are shown but never written: Stop, Esc, editing the
   scene or closing the tab returns the view to the scene as the document holds it. While playing, gizmos are off,

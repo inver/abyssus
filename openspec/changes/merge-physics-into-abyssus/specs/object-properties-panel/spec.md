@@ -13,8 +13,12 @@ The panel SHALL show the Meta of the asset selected in the Abyssus view and SHAL
 - **THEN** the panel shows `Nothing selected.` and a hint to select a skybox, model or terrain under Assets to see its `meta.json`
 
 #### Scenario: Selection is not an asset
-- **WHEN** the selected node is not an asset, an entity, a component or a project file (a scene or a setting)
+- **WHEN** the selected node is not an asset, an entity, a component or a project file (for example, a setting)
 - **THEN** the panel shows `Nothing to show: <name> is <what it is>.` and the same hint
+
+#### Scenario: Scene selection retains its properties
+- **WHEN** the user selects a scene node in the Abyssus view
+- **THEN** the panel keeps showing the scene's existing properties, including its ray tracing preferences
 
 ## ADDED Requirements
 
@@ -40,3 +44,7 @@ follow edits made to the `.abss` elsewhere, and SHALL show the switch read-only 
 #### Scenario: Edit the project text
 - **WHEN** `"physicsEnabled": true` is typed into the `.abss` in the text editor while the project is selected
 - **THEN** the checkbox becomes ticked without reselecting
+
+#### Scenario: Unsupported project
+- **WHEN** the selected `.abss` has unsupported or missing native format markers and `physicsEnabled: true`
+- **THEN** physics remains off, the panel explains the unsupported format and the checkbox cannot write the file

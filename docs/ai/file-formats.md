@@ -76,8 +76,8 @@ ecs: { "<id>": { components: { "<Name>Component": {...}, ... } }, ... }
 ```
 
 The editor document layer supports both shapes. The current `EcsLoader` only enumerates the wrapped `entities`
-map, and `editor-core`'s `EcsWriter` produces that shape without carrying block metadata or archetypes. See
-`docs/reviews/2026-10-09-current-source.md` for the current mismatch with required round-trip behavior.
+map, and `editor-core`'s `EcsWriter` produces that shape without carrying block metadata or archetypes. This differs
+from the required round-trip behavior in `openspec/specs/scene-ecs-components/spec.md`.
 
 The native component fields described by the specs and fixtures:
 
@@ -155,8 +155,8 @@ files, not native `.abss`, `.scene` or asset documents. The current `ComponentSc
 or contributions from the `componentSchemas` extension point. They do not enable editing game or physics
 components, and the source set has no `SchemaExportMain` or schema export task.
 
-Required schema behavior remains in the `component-schemas` and `custom-scene-components` specs; the
-implementation gap is recorded in `docs/reviews/2026-10-09-current-source.md`.
+Required schema behavior remains in the `component-schemas` and `custom-scene-components` specs; the current
+implementation does not yet provide it.
 
 ## Asset `meta.json`
 

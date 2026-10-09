@@ -9,7 +9,6 @@ fun properties(key: String) = providers.gradleProperty(key)
 fun environment(key: String) = providers.environmentVariable(key)
 
 plugins {
-    base
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "2.4.20" apply false
     // IntelliJ Platform Gradle Plugin

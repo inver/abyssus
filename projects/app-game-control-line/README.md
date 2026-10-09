@@ -41,8 +41,7 @@ handles W / S or Up / Down input and publishes telemetry. The current Gradle fil
 when the classpath changes. Without that launch file, Abyssus Physics selects its bundled physics-only host.
 
 Play gives a module no project folder, so the game's Play ground is flat at height 0, where the field's flying
-circle is. Current source limitations are recorded in
-[the source review](../../docs/reviews/2026-10-09-current-source.md).
+circle is.
 
 ## Crashes
 

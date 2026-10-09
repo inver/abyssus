@@ -24,8 +24,8 @@ Physics being installed turns physics on in its project properties.
 
 ### Requirement: Physics components are edited only with physics on
 
-With physics on for a project, Abyssus SHALL offer the three physics components in "Add component" and edit them like
-any schema-declared component. With physics off, it SHALL NOT offer them, and existing physics components SHALL be
+With physics on for a project, Abyssus SHALL offer the three physics components in "Add component" and edit their fields like
+other modeled components. With physics off, it SHALL NOT offer them, and existing physics components SHALL be
 shown as read-only JSON and kept unchanged.
 
 #### Scenario: Physics off

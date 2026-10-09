@@ -65,8 +65,7 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   `projects/lib-physics/README.md`.
 - `projects/plugin-abyssus-physics/`: **Abyssus Physics**, a second IntelliJ plugin that depends on Abyssus
   (`localPlugin(project(":plugin-abyssus"))`). It holds the physics overlay (`sceneOverlay`), Play through a play process
-  (`sceneSimulation`) and the bundled `play-host` folder. Overlay geometry is currently inactive; see the
-  current-source review in `docs/reviews/2026-10-09-current-source.md`.
+  (`sceneSimulation`) and the bundled `play-host` folder. Overlay geometry is currently inactive.
 - `projects/app-game-control-line/`: **Control Line**, a libGDX desktop game (LWJGL3) on `core` and `physics` that proves the
   editor-for-games chain: its native project `projects/app-game-control-line/project/ControlLine` is authored in Abyssus, its
   `PlaneComponent` / `PilotComponent` are game components, and its `PlayModule` flies a plane in Play. Open a copy of

@@ -72,8 +72,8 @@ executor, registry and scene/ECS loaders. A headless caller may pass null shader
 GL assets. The host must shut down `executor` and dispose built assets in a valid GL context (or abandon them
 when that context has been lost). `EcsWriter` lives in `editor-core`; neither core nor physics depends on it.
 
-The native fixtures and required cloud format do not yet match every Jackson binding path. See
-[the current-source review](../../docs/reviews/2026-10-09-current-source.md) for those gaps.
+The native fixtures and required cloud format do not yet match every Jackson binding path. The
+[cloud asset spec](../../openspec/specs/cloud-assets/spec.md) describes the required behavior.
 
 ## References between assets
 
