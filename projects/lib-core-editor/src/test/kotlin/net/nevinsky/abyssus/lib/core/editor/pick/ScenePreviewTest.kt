@@ -80,28 +80,28 @@ class ScenePreviewTest {
     @Test
     fun aimedTargetIsANullWhenTheLightLooksAtANonHandle() {
         val aimedAtModel = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "m":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"a"}}},
+            "0":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"a"}}},
                 "PositionComponent":{"localPosition":{"x":1}}}},
-            "l":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
-                "PositionComponent":{"lookAtId":"m","localPosition":{"x":5}}}}}}}"""))
+            "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
+                "PositionComponent":{"lookAtId":0,"localPosition":{"x":5}}}}}}}"""))
         val turned = DragResult(
             PlacementTransform(Vec3(5f, 0f, 0f), Quat(0f, 0f, 0f, 1f), Vec3(1f, 1f, 1f)),
             Vec3(-1f, 0f, 0f),
         )
-        assertNull(ScenePreview().aimedTarget(aimedAtModel, "l", turned))
+        assertNull(ScenePreview().aimedTarget(aimedAtModel, "1", turned))
     }
 
     @Test
     fun aimedTargetUsesADistanceOfOneWhenTheHandleIsAtTheLight() {
         val atLight = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "h":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"x":5}}}},
-            "l":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
-                "PositionComponent":{"lookAtId":"h","localPosition":{"x":5}}}}}}}"""))
+            "2":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"x":5}}}},
+            "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
+                "PositionComponent":{"lookAtId":2,"localPosition":{"x":5}}}}}}}"""))
         val turned = DragResult(
             PlacementTransform(Vec3(5f, 0f, 0f), Quat(0f, 0f, 0f, 1f), Vec3(1f, 1f, 1f)),
             Vec3(0f, 0f, -1f),
         )
-        val target = ScenePreview().aimedTarget(atLight, "l", turned)
+        val target = ScenePreview().aimedTarget(atLight, "1", turned)
         assertNotNull(target)
         assertEquals(Vec3(5f, 0f, -1f), target!!)
     }

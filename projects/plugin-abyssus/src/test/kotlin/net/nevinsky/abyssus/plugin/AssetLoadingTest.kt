@@ -39,7 +39,7 @@ class AssetLoadingTest {
                     }
                     1 -> assertNull(saved)
                     2 -> { assertEquals(MetaType.UNKNOWN, saved!!.type); assertTrue(saved.additional is Map<*, *>) }
-                    3 -> { assertEquals(MetaType.MODEL, saved!!.type); assertNull(saved.uuid) }
+                    3 -> { assertNull(saved); assertNull(unsaved) }
                 }
                 assertEquals(text, file.readText())
             }

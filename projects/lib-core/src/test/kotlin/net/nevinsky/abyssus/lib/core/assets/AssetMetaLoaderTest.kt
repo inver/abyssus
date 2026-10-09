@@ -49,7 +49,7 @@ class AssetMetaLoaderTest {
     @Test
     fun anUnknownTypeIsUnknownAndABrokenMetaIsNull() {
         val dir = project {
-            it.meta("odd", """{"format":"abyssus","formatVersion":1,"type":"SOMETHING_NEW"}""")
+            it.meta("odd", """{"format":"abyssus","formatVersion":1,"type":"SOMETHING_NEW","additional":{}}""")
             it.meta("bad", "{ not json")
         }
         val loader = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir))
@@ -108,7 +108,7 @@ class AssetMetaLoaderTest {
             loader.loadBaseMeta("with")!!.uuid
         )
         assertNull(loader.loadBaseMeta("without")!!.uuid)
-        assertNull(loader.loadBaseMeta("bad")!!.uuid)
+        assertNull(loader.loadBaseMeta("bad"))
         dir.deleteRecursively()
     }
 
@@ -129,11 +129,26 @@ class AssetMetaLoaderTest {
 
     @Test
     fun theFolderIsTheNameAndASparseMetaGetsDefaults() {
-        val dir = project { it.meta("sparse", """{"format":"abyssus","formatVersion":1,"type":"MODEL"}""") }
+        val dir = project { it.meta("sparse", """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{}}""") }
         val meta = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir)).loadBaseMeta("sparse")!!
         assertEquals("sparse", meta.name)
         assertEquals(1, meta.version)
         assertEquals(MetaType.MODEL, meta.type)
         dir.deleteRecursively()
     }
+    @Test
+    fun aMissingAdditionalBlockIsReportedWithoutChangingTheFile() {
+        val text = """{"format":"abyssus","formatVersion":1,"type":"MODEL"}"""
+        val dir = project { it.meta("missing", text) }
+        try {
+            val messages = mutableListOf<String>()
+            val loader = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir), warningsTo(messages))
+            assertNull(loader.loadBaseMeta("missing"))
+            assertNull(loader.loadBaseMeta("missing"))
+            assertEquals(1, messages.size)
+            assertTrue(messages.single().contains("additional"))
+            assertEquals(text, File(dir, "assets/missing/meta.json").readText())
+        } finally { dir.deleteRecursively() }
+    }
+
 }

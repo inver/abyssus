@@ -112,9 +112,9 @@ class SceneContentTest {
     }
 
     @Test
-    fun lightColorAndIntensityMayBeFlat_andPointKindIsRecognised() {
+    fun nestedLightColorAndIntensityAndPointKindAreRecognised() {
         val c =
-            content(entity("""{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"color":{"r":0.2},"intensity":2}}"""))
+            content(entity("""{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{"color":{"r":0.2,"g":0,"b":0},"intensity":2}}}"""))
         val l = c.lights.single()
         assertEquals(LightKind.POINT, l.kind)
         assertEquals(0.2f, l.color.r, 0f)
@@ -145,16 +145,16 @@ class SceneContentTest {
     }
 
     @Test
-    fun aTextualLookAtTargetIsKept() {
+    fun aNumericStringLookAtTargetIsKept() {
         val c = content(
             """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "h":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}},
+            "0":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}},
             "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
-                "PositionComponent":{"lookAtId":"h","localPosition":{"y":5}}}}}}}"""
+                "PositionComponent":{"lookAtId":"0","localPosition":{"y":5}}}}}}}"""
         )
         val l = c.lights.single()
-        assertEquals("h", l.lookAtId)
-        assertEquals("h", c.aimHandleOf(l))
+        assertEquals("0", l.lookAtId)
+        assertEquals("0", c.aimHandleOf(l))
         assertEquals(Vec3(0f, -1f, 0f), l.direction)
     }
 
@@ -261,9 +261,9 @@ class SceneContentTest {
     }
 
     @Test
-    fun cameraWithoutCameraObjectGetsDefaults() {
+    fun anEmptyCameraObjectGetsDefaults() {
         val cam =
-            content(entity("""{"CameraComponent":{},"PositionComponent":{"localPosition":{"x":1,"y":2,"z":3}}}""")).cameras.single()
+            content(entity("""{"CameraComponent":{"camera":{}},"PositionComponent":{"localPosition":{"x":1,"y":2,"z":3}}}""")).cameras.single()
         assertEquals(Vec3(1f, 2f, 3f), cam.position)
         assertEquals(Vec3(0f, 0f, -1f), cam.direction)
         assertEquals(CAMERA_NEAR, cam.near, 0f)

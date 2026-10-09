@@ -73,7 +73,7 @@ class PhysicsWorldTest {
             val scene = requireNotNull(physicsLoader(project, warningsTo(messages)).loadFromText(
                 """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
                   "0":{"components":{"NameComponent":{"name":"Flat"},"ColliderComponent":{"shape":"CONVEX_HULL"},
-                    "RenderComponent":{"renderable":{"kind":"asset","shaderKey":"defaultShader","asset":{"type":"MODEL","assetName":"flat"}}}}},
+                    "RenderComponent":{"shaderKey":"defaultShader","type":"MODEL","assetName":"flat"}}},
                   "1":{"components":{"NameComponent":{"name":"Ball"},"PositionComponent":{"localPosition":{"y":5}},
                     "RigidBodyComponent":{},"ColliderComponent":{"shape":"SPHERE"}}}}}}""",
             ))

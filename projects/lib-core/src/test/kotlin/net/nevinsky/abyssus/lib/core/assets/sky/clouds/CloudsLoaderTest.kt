@@ -40,7 +40,7 @@ class CloudsLoaderTest {
 
     @Test
     fun readsTheBandsAndTechniqueAndMakesTheNoise() {
-        asset("clouds_storm", """{"technique": "volumetric", "low": {"type": "stratocumulus"}, "mid": {"type": "altostratus", "coverage": 0.9}}""")
+        asset("clouds_storm", """{"technique": "VOLUMETRIC", "low": {"level":"LOW","type": "STRATOCUMULUS"}, "mid": {"level":"MID","type": "ALTOSTRATUS", "coverage": 0.9}}""")
         assertEquals(MetaType.CLOUDS, metas.loadBaseMeta("clouds_storm")!!.type)
         val prepared = loader.prepare("clouds_storm")!!.staged
         assertEquals(CloudTechnique.VOLUMETRIC, prepared.meta.technique)
@@ -51,10 +51,14 @@ class CloudsLoaderTest {
     }
 
     @Test
-    fun aBadBandIsSkippedAndLoggedOnce() {
-        asset("clouds_bad", """{"low": {"type": "cirrus"}, "high": {"type": "cirrus"}}""")
-        val prepared = loader.prepare("clouds_bad")!!.staged
-        assertEquals(setOf(CloudLevel.HIGH), prepared.meta.bandsFarToNear().map { it.level }.toSet())
+    fun aMalformedBandRejectsTheAssetAndIsLoggedOnce() {
+        asset("clouds_bad", """{"low": {"level":"LOW","type": "UNKNOWN_TYPE"}, "high": {"level":"HIGH","type": "CIRRUS"}}""")
+        val file = File(dir, "assets/clouds_bad/meta.json")
+        val before = file.readText()
+        assertNull(loader.prepare("clouds_bad"))
+        assertNull(loader.prepare("clouds_bad"))
+        assertEquals(before, file.readText())
+        assertTrue(log.warnings.single().contains("CloudType"))
         assertEquals(1, log.warnings.size)
     }
 

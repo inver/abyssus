@@ -150,7 +150,7 @@ class ImportModelTest : BasePlatformTestCase() {
         assertEquals("OBJECT", components["TypeComponent"]["type"].asText())
         val position = components["PositionComponent"]["localPosition"]
         assertEquals(listOf(10.0, 0.0, -4.0), listOf("x", "y", "z").map { position[it]?.asDouble() ?: 0.0 })
-        val asset = components["RenderComponent"]["renderable"]["asset"]
+        val asset = components["RenderComponent"]
         assertEquals("MODEL", asset["type"].asText())
         assertEquals("model_crate", asset["assetName"].asText())
         assertTrue(File(projectDir, "assets/model_crate/model.glb").isFile)

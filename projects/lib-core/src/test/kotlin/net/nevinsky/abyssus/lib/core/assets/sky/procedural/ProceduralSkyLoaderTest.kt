@@ -65,7 +65,7 @@ class ProceduralSkyLoaderTest {
             meta.writeText(meta.readText().replace("\"sunIntensity\": 20.0", "\"sunIntensity\": 20.0,\n    \"clouds\": $clouds"))
             File(dir, "assets/clouds_fair").mkdirs()
             File(dir, "assets/clouds_fair/meta.json").writeText(
-                """{"format": "abyssus", "formatVersion": 1, "uuid": "$cloudsUuid", "type": "CLOUDS", "additional": {"low": {"type": "cumulus"}}}"""
+                """{"format": "abyssus", "formatVersion": 1, "uuid": "$cloudsUuid", "type": "CLOUDS", "additional": {"low": {"level":"LOW","type": "CUMULUS"}}}"""
             )
             test(dir)
         } finally {

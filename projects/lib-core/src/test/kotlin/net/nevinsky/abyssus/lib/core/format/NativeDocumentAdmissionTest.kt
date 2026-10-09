@@ -54,7 +54,7 @@ class NativeDocumentAdmissionTest {
             assertEquals(1, messages.size)
             assertTrue(messages.single().contains("format"))
             assertEquals(invalid, file.readText())
-            val repaired = """{"format":"abyssus","formatVersion":1,"type":"MODEL","extra":1.00}"""
+            val repaired = """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{},"extra":1.00}"""
             file.writeText(repaired)
             assertEquals("model", loader.loadBaseMeta("model")!!.name)
             assertEquals(repaired, file.readText())

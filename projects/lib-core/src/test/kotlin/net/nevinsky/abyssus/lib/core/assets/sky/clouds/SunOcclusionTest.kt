@@ -7,7 +7,6 @@ package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMetaReader
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
@@ -15,8 +14,6 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SUN_OCCLUSION_FLOOR
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SunOcclusion
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.bandDistance
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.testing.failOnWarnings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -53,9 +50,10 @@ class SunOcclusionTest {
 
     @Test
     fun stormFloorIsTenPercent() {
-        val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
-        val template = javaClass.getResourceAsStream("/clouds/templates/storm.json")!!.use { String(it.readAllBytes()) }
-        val asIs = CloudMetaReader(failOnWarnings()).read("storm", json.readObject(template)["additional"])
+        val asIs = clouds(
+            CloudBand(CloudLevel.LOW, CloudType.STRATOCUMULUS, base = 500f, top = 2200f, coverage = 0.92f, density = 1.6f, windX = 16f, windZ = 7f),
+            CloudBand(CloudLevel.MID, CloudType.ALTOSTRATUS, base = 3000f, top = 6000f, coverage = 0.85f, density = 0.9f, windX = 24f, windZ = 9f),
+        )
         val covered = asIs.copy(low = asIs.low?.copy(coverage = 1f), mid = asIs.mid?.copy(coverage = 1f), high = asIs.high?.copy(coverage = 1f))
         assertEquals(SUN_OCCLUSION_FLOOR, step(covered, 0f), 1e-6f)
         for (t in 0 until 200) {

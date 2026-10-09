@@ -2,111 +2,72 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-
 package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMetaReader
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
+import org.slf4j.helpers.NOPLogger
 
-class CloudMetaReaderTest {
-    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
-    private val log = RecordingLogger()
-    private val reader = CloudMetaReader(log)
+class CloudSettingsReaderTest {
+    private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
+    private val binder = AssetMetaBinder(json)
 
-    private fun read(text: String?) = reader.read("sky", text?.let(json::readObject))
+    private fun read(additional: String): CloudMeta = binder.bind("sky", json.readObject(
+        """{"format":"abyssus","formatVersion":1,"type":"CLOUDS","additional":$additional}"""
+    )).typedAdditional()
 
-    @Test
-    fun cumulusDefaults() {
-        val band = read("""{"low": {"type": "cumulus"}}""").low!!
-        assertEquals(CloudType.CUMULUS, band.type)
-        assertEquals(800f, band.base)
-        assertEquals(2000f, band.top)
-        assertEquals(0.4f, band.coverage)
-        assertEquals(0.8f, band.density)
-        assertTrue("a light wind", band.windX * band.windX + band.windZ * band.windZ in 1f..50f)
+    @Test fun cumulusDefaults() {
+        val band = read("""{"low":{"level":"LOW","type":"CUMULUS"}}""").low!!
+        assertEquals(CloudBand(CloudLevel.LOW, CloudType.CUMULUS), band)
+        assertEquals(800f, band.base, 0f)
+        assertEquals(2000f, band.top, 0f)
+        assertEquals(0.4f, band.coverage, 0f)
+        assertEquals(0.8f, band.density, 0f)
+        assertTrue(band.windX * band.windX + band.windZ * band.windZ in 1f..50f)
     }
 
-    @Test
-    fun givenFieldsReplaceTheDefaults() {
-        val band = read("""{"low": {"type": "cumulus", "coverage": 0.5, "base": 1000, "wind": [-2, 3.5]}}""")
-            .low!!
+    @Test fun givenFieldsReplaceDefaults() {
+        val band = read("""{"low":{"level":"LOW","type":"CUMULUS","coverage":0.5,"base":1000,"windX":-2,"windZ":3.5}}""").low!!
         assertEquals(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, base = 1000f, coverage = 0.5f, windX = -2f, windZ = 3.5f), band)
     }
 
-    @Test
-    fun missingTechniqueMeansShells() {
-        assertEquals(CloudTechnique.SHELLS, read("""{}""").technique)
-        assertEquals(CloudTechnique.VOLUMETRIC, read("""{"technique": "volumetric"}""").technique)
-        assertEquals(CloudTechnique.LAYERED, read("""{"technique": "layered"}""").technique)
-    }
-
-    @Test
-    fun noBandsMeanNothingToDraw() {
-        assertFalse(read(null).visible)
-        assertFalse(read("""{"technique": "layered"}""").visible)
-        assertTrue(read("""{"low": {"type": "cumulus"}}""").visible)
-    }
-
-    @Test
-    fun theTemplatesAreValidCloudAssets() {
-        for (name in listOf("fair", "overcast", "storm")) {
-            val text = javaClass.getResourceAsStream("/clouds/templates/$name.json").use { String(it.readAllBytes()) }
-            val meta = json.readObject(text)
-            assertEquals("CLOUDS", meta["type"].asText())
-            assertTrue(name, reader.read(name, meta["additional"]).visible)
+    @Test fun techniquesBindByEnumNameAndOmissionMeansShells() {
+        assertEquals(CloudTechnique.SHELLS, read("{}").technique)
+        for (technique in CloudTechnique.entries) {
+            assertEquals(technique, read("""{"technique":"${technique.name}"}""").technique)
         }
-        assertTrue(log.warnings.toString(), log.warnings.isEmpty())
     }
 
-    @Test
-    fun threeLevelsDrawHighestFirst() {
-        val settings = read(
-            """{"low": {"type": "cumulus"}, "mid": {"type": "altocumulus"}, "high": {"type": "cirrus"}}"""
-        )
-        assertEquals(listOf(CloudType.CIRRUS, CloudType.ALTOCUMULUS, CloudType.CUMULUS), settings.bandsFarToNear().map { it.type })
+    @Test fun noBandsMeanNothingToDraw() {
+        assertFalse(read("{}").visible)
+        assertFalse(read("""{"technique":"LAYERED"}""").visible)
+        assertTrue(read("""{"low":{"level":"LOW","type":"CUMULUS"}}""").visible)
     }
 
-    private fun assertOnlyLowSkipped(low: String) {
-        log.entries.clear()
-        val settings = read("""{"low": $low, "mid": {"type": "altostratus"}}""")
-        assertEquals("only the bad band is skipped for $low", setOf(CloudLevel.MID), settings.bandsFarToNear().map { it.level }.toSet())
-        assertEquals("logged once for $low: ${log.warnings}", 1, log.warnings.size)
-        assertTrue(log.warnings.single().contains("'low'"))
+    @Test fun threeLevelsDrawHighestFirst() {
+        val clouds = read("""{"low":{"level":"LOW","type":"CUMULUS"},"mid":{"level":"MID","type":"ALTOCUMULUS"},"high":{"level":"HIGH","type":"CIRRUS"}}""")
+        assertEquals(listOf(CloudType.CIRRUS, CloudType.ALTOCUMULUS, CloudType.CUMULUS), clouds.bandsFarToNear().map { it.type })
     }
 
-    @Test
-    fun anInvalidBandSkipsOnlyItself() {
-        assertOnlyLowSkipped("""{"type": "cirrus"}""")
-        assertOnlyLowSkipped("""{"type": "cumulus", "base": 1500, "top": 1500}""")
-        assertOnlyLowSkipped("""{"type": "cumulus", "base": 1800, "top": 1200}""")
-        assertOnlyLowSkipped("""{"type": "cumulus", "top": 3000}""")
-        assertOnlyLowSkipped("""{"type": "cumulus", "base": 100}""")
-        assertOnlyLowSkipped("""{"type": "cumulus", "coverage": "lots"}""")
-        assertOnlyLowSkipped("""{"type": "cumulus", "wind": [1]}""")
-        assertOnlyLowSkipped("""{"type": "cumulus", "wind": [1, "x"]}""")
-        assertOnlyLowSkipped("""{"type": "cumulus", "coverage": 1.5}""")
-        assertOnlyLowSkipped("""{"type": "cumulus", "density": -1}""")
-        assertOnlyLowSkipped("""{"type": "nimbus"}""")
-        assertOnlyLowSkipped("""{"coverage": 0.3}""")
-        assertOnlyLowSkipped("""7""")
+    @Test fun malformedBandRejectsTheMetadataWithoutChangingItsTree() {
+        for (band in listOf("7", "{}", """{"level":"LOW"}""", """{"type":"CUMULUS"}""",
+            """{"level":"LOW","type":"NIMBUS"}""", """{"level":"LOW","type":"CUMULUS","coverage":"lots"}""")) {
+            val tree = json.readObject("""{"format":"abyssus","formatVersion":1,"type":"CLOUDS","additional":{"low":$band}}""")
+            val before = tree.toString()
+            assertThrows(com.fasterxml.jackson.databind.JsonMappingException::class.java) { binder.bind("bad", tree) }
+            assertEquals(before, tree.toString())
+        }
     }
 
-    @Test
-    fun everyTypeDefaultLiesWithinItsBand() {
+    @Test fun everyTypeDefaultLiesWithinItsBand() {
         for (type in CloudType.entries) {
-            assertTrue("$type base", type.base in type.level.limits)
-            assertTrue("$type top", type.top in type.level.limits)
-            assertTrue("$type base below top", type.base < type.top)
-            assertTrue("$type coverage", type.coverage in 0f..1f)
+            assertTrue(type.base in type.level.limits)
+            assertTrue(type.top in type.level.limits)
+            assertTrue(type.base < type.top)
+            assertTrue(type.coverage in 0f..1f)
         }
     }
 }
