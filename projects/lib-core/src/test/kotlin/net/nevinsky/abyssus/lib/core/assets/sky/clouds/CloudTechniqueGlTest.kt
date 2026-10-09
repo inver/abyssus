@@ -7,40 +7,22 @@ package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
-import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.PerspectiveCamera
-import com.badlogic.gdx.graphics.Pixmap
+import com.badlogic.gdx.graphics.*
+import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.PreparedProceduralSky
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
 import net.nevinsky.abyssus.lib.core.assets.skyShaders
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
-import com.badlogic.gdx.graphics.Mesh
-import com.badlogic.gdx.graphics.VertexAttribute
-import com.badlogic.gdx.graphics.VertexAttributes.Usage
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudNoise
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudNoiseGenerator
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudRenderer
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.LayeredClouds
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.ShellClouds
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.VolumetricClouds
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
@@ -62,10 +44,14 @@ class CloudTechniqueGlTest {
     private val noise by lazy { CloudNoiseGenerator().generate() }
 
     private fun clouds(vararg bands: CloudBand, technique: CloudTechnique = CloudTechnique.LAYERED) =
-        CloudMeta(technique, low = bands.firstOrNull { it.level == CloudLevel.LOW }, mid = bands.firstOrNull { it.level == CloudLevel.MID }, high = bands.firstOrNull { it.level == CloudLevel.HIGH })
+        CloudMeta(
+            technique,
+            low = bands.firstOrNull { it.level == CloudLevel.LOW },
+            mid = bands.firstOrNull { it.level == CloudLevel.MID },
+            high = bands.firstOrNull { it.level == CloudLevel.HIGH })
 
     /** Scattered cumulus: clear sky between clouds, so the techniques' cloud masks can be compared. */
-    private val scattered = clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 0.45f))
+    private val scattered = clouds(CloudBand(CloudType.CUMULUS, CloudLevel.LOW, coverage = 0.45f))
 
     /**
      * The fixture's procedural sky drawing [clouds] as its cloud asset `clouds_test` (built here, with [cloudNoise])
@@ -87,13 +73,14 @@ class CloudTechniqueGlTest {
     }
 
     /** A camera at the origin looking [elevation] degrees above the horizon toward -Z, 90 degrees wide. */
-    private fun camera(elevation: Float = 60f, yaw: Float = 0f, size: Int = SIZE) = PerspectiveCamera(90f, size.toFloat(), size.toFloat()).apply {
-        near = 0.1f
-        far = 100f
-        direction.set(0f, 0f, -1f).rotate(Vector3.X, elevation).rotate(Vector3.Y, yaw)
-        up.set(Vector3.Y)
-        update()
-    }
+    private fun camera(elevation: Float = 60f, yaw: Float = 0f, size: Int = SIZE) =
+        PerspectiveCamera(90f, size.toFloat(), size.toFloat()).apply {
+            near = 0.1f
+            far = 100f
+            direction.set(0f, 0f, -1f).rotate(Vector3.X, elevation).rotate(Vector3.Y, yaw)
+            up.set(Vector3.Y)
+            update()
+        }
 
     private class Image(val width: Int, val height: Int, val rgb: IntArray) {
         fun red(i: Int) = rgb[i] shr 16 and 255
@@ -119,7 +106,7 @@ class CloudTechniqueGlTest {
             buffer.end()
             return Image(size, size, IntArray(size * size) { i ->
                 ((pixels.get(i * 4).toInt() and 255) shl 16) or ((pixels.get(i * 4 + 1).toInt() and 255) shl 8) or
-                    (pixels.get(i * 4 + 2).toInt() and 255)
+                        (pixels.get(i * 4 + 2).toInt() and 255)
             })
         } finally {
             buffer.dispose()
@@ -127,7 +114,11 @@ class CloudTechniqueGlTest {
     }
 
     private fun render(
-        clouds: CloudMeta?, technique: CloudTechnique? = null, sun: Vector3 = noon, elevation: Float = 60f, frames: Int = 1,
+        clouds: CloudMeta?,
+        technique: CloudTechnique? = null,
+        sun: Vector3 = noon,
+        elevation: Float = 60f,
+        frames: Int = 1,
     ): Image {
         var image: Image? = null
         TestGl.run {
@@ -144,10 +135,13 @@ class CloudTechniqueGlTest {
     }
 
     /** The pixels where [image] differs from [clear] (the same sky without clouds) by more than [threshold]. */
-    private fun mask(image: Image, clear: Image, threshold: Int = 24): BooleanArray = BooleanArray(image.rgb.size) { i ->
-        val d = Math.abs(image.red(i) - clear.red(i)) + Math.abs(image.green(i) - clear.green(i)) + Math.abs(image.blue(i) - clear.blue(i))
-        d > threshold
-    }
+    private fun mask(image: Image, clear: Image, threshold: Int = 24): BooleanArray =
+        BooleanArray(image.rgb.size) { i ->
+            val d = Math.abs(image.red(i) - clear.red(i)) + Math.abs(image.green(i) - clear.green(i)) + Math.abs(
+                image.blue(i) - clear.blue(i)
+            )
+            d > threshold
+        }
 
     /**
      * How well two techniques' images [a] and [b] of the same sky agree on where clouds are: of the pixels one of them
@@ -167,7 +161,10 @@ class CloudTechniqueGlTest {
     @Test
     fun layered() {
         val cloudless = render(null)
-        assertTrue("no clouds", render(clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 0f))).rgb.contentEquals(cloudless.rgb))
+        assertTrue(
+            "no clouds",
+            render(clouds(CloudBand(CloudType.CUMULUS, CloudLevel.LOW, coverage = 0f))).rgb.contentEquals(cloudless.rgb)
+        )
         assertTrue("a cloud asset without bands", render(CloudMeta()).rgb.contentEquals(cloudless.rgb))
         assertTrue("clouds left out of the frame", run {
             var image: Image? = null
@@ -179,7 +176,7 @@ class CloudTechniqueGlTest {
             image!!.rgb.contentEquals(cloudless.rgb)
         })
 
-        val overcast = render(clouds(CloudBand(CloudLevel.LOW, CloudType.STRATUS, coverage = 1f)), elevation = 90f)
+        val overcast = render(clouds(CloudBand(CloudType.STRATUS, CloudLevel.LOW, coverage = 1f)), elevation = 90f)
         val clearZenith = render(null, elevation = 90f)
         val centre = overcast.at(SIZE / 2, SIZE / 2)
         assertTrue("the zenith is covered", mask(overcast, clearZenith).let { m -> m[centre] && share(m) > 0.95 })
@@ -188,11 +185,16 @@ class CloudTechniqueGlTest {
             overcast.red(centre) > overcast.blue(centre) * 0.75,
         )
 
-        val thick = clouds(CloudBand(CloudLevel.LOW, CloudType.STRATUS, coverage = 1f))
+        val thick = clouds(CloudBand(CloudType.STRATUS, CloudLevel.LOW, coverage = 1f))
         val day = render(thick, elevation = 10f)
         val evening = render(thick, sun = sunset, elevation = 10f)
-        fun warmth(image: Image) = (0 until image.rgb.size).sumOf { image.red(it) }.toDouble() / maxOf(1, (0 until image.rgb.size).sumOf { image.blue(it) })
-        assertTrue("sunset clouds are warmer: ${warmth(evening)} vs ${warmth(day)}", warmth(evening) > warmth(day) * 1.2)
+        fun warmth(image: Image) = (0 until image.rgb.size).sumOf { image.red(it) }.toDouble() / maxOf(
+            1,
+            (0 until image.rgb.size).sumOf { image.blue(it) })
+        assertTrue(
+            "sunset clouds are warmer: ${warmth(evening)} vs ${warmth(day)}",
+            warmth(evening) > warmth(day) * 1.2
+        )
 
         assertModelStaysInFront()
     }
@@ -200,7 +202,7 @@ class CloudTechniqueGlTest {
     private fun assertModelStaysInFront() {
         var image: Image? = null
         TestGl.run {
-            val sky = sky(clouds(CloudBand(CloudLevel.LOW, CloudType.STRATUS, coverage = 1f)))
+            val sky = sky(clouds(CloudBand(CloudType.STRATUS, CloudLevel.LOW, coverage = 1f)))
             val program = ShaderProgram(
                 "attribute vec2 a_position;\nvoid main() { gl_Position = vec4(a_position, 0.5, 1.0); }",
                 "void main() { gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); }",
@@ -269,10 +271,12 @@ class CloudTechniqueGlTest {
                 resetsAfterTurn = renderer.historyResets - before - resetsAfterNudge
 
                 // a resized view with no clouds left in its sky must show none of the previous history
-                val empty = sky(clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 0f)), factory = { VolumetricClouds(
-                    skyShaders(),
-                    CloudField()
-                ).also { volumetricRenderer[0] = it } })
+                val empty = sky(clouds(CloudBand(CloudType.CUMULUS, CloudLevel.LOW, coverage = 0f)), factory = {
+                    VolumetricClouds(
+                        skyShaders(),
+                        CloudField()
+                    ).also { volumetricRenderer[0] = it }
+                })
                 try {
                     repeat(3) { capture { empty.draw(camera(60f), frame) } }
                     leaked = capture(SIZE * 2) { empty.draw(camera(60f, size = SIZE * 2), frame) }
@@ -302,6 +306,7 @@ class CloudTechniqueGlTest {
                 CloudTechnique.VOLUMETRIC -> VolumetricClouds(skyShaders(), CloudField())
             }
         }
+
         val cases = listOf(
             arrayOf<CloudTechnique>() to CloudTechnique.VOLUMETRIC,
             arrayOf(CloudTechnique.VOLUMETRIC) to CloudTechnique.SHELLS,
@@ -317,7 +322,9 @@ class CloudTechniqueGlTest {
             TestGl.run {
                 val sky = sky(scattered, log, factory = failing(*broken))
                 try {
-                    repeat(3) { image = capture { sky.draw(camera(), SkyFrame(noon, 30.0, CloudTechnique.VOLUMETRIC)) } }
+                    repeat(3) {
+                        image = capture { sky.draw(camera(), SkyFrame(noon, 30.0, CloudTechnique.VOLUMETRIC)) }
+                    }
                     drawn = sky.drawnTechnique
                     hasClouds = sky.hasClouds
                 } finally {

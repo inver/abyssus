@@ -31,7 +31,7 @@ Displayed opaque and alpha-tested models and terrain SHALL cast and receive shad
 ### Requirement: Clouds cast shadows from the sun
 
 While the scene's procedural sky draws enabled clouds, terrain and models SHALL be shaded by the clouds between them
-and the sun, the brightest directional light. The shade SHALL drift with each band's wind, match where the sky shows
+and the sun, the brightest usable directional light. The shade SHALL drift with each band's wind, match where the sky shows
 clouds, attenuate only the sun light, and combine with that light's own scene shadow. Within the cloud shadow area, it
 SHALL replace the uniform sun dimming of `scene-entity-lights`; beyond it, that dimming SHALL apply.
 
@@ -41,9 +41,30 @@ SHALL replace the uniform sun dimming of `scene-entity-lights`; beyond it, that 
   seconds
 - **THEN** dark patches move across the terrain along the low band's wind direction
 
+#### Scenario: Outside the shadow area
+
+- **WHEN** a surface lies beyond the cloud shadow area
+- **THEN** the existing uniform sun dimming applies, with a smooth transition at the boundary
+
+#### Scenario: Shadow resource failure
+
+- **WHEN** a cloud shadow resource cannot be built
+- **THEN** uniform sun dimming continues, the view remains interactive, and no modal error appears
+
+#### Scenario: Sun not rendered
+
+- **WHEN** the brightest usable directional light is outside the rendered light budget, or no usable directional light exists
+- **THEN** cloud shadows do not attenuate a different light
+
+#### Scenario: Cloud asset reload
+
+- **WHEN** the cloud asset is changed or removed while the view remains open
+- **THEN** cloud shadows follow the newly displayed clouds, and no stale cloud pattern remains
+
 #### Scenario: Only the sun is shaded
 
-- **WHEN** a cloud shadow covers the part of the terrain that `Spot Light 8` lights
+- **WHEN** a copy of `Main Scene` makes entity `7` the brightest usable directional light within the light budget,
+  and a cloud shadow covers the part of the terrain that `Spot Light 8` lights
 - **THEN** entity `7`'s (the sun's) contribution is reduced there and the spot light's is unchanged
 
 #### Scenario: Combined with a model shadow
@@ -60,3 +81,8 @@ SHALL replace the uniform sun dimming of `scene-entity-lights`; beyond it, that 
 
 - **WHEN** the sky's clouds are disabled or the scene has no procedural sky
 - **THEN** no cloud shadows are drawn and shadows are as before this change
+
+#### Scenario: Cloud drawing failed
+
+- **WHEN** every cloud drawing technique has failed and the sky is drawn without clouds
+- **THEN** no cloud shadows remain on models or terrain

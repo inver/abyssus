@@ -99,3 +99,10 @@ asset-property edits, returning the edited text or a `Refusal` with the reason t
 `./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`). Tests use
 `projects/plugin-abyssus` as their working directory, so `src/test/testData/project/` resolves to the shared fixtures.
 The test fixtures (`parseScene`, `testProject`, `testAsset`, `terrainData`, `rayTestModel`) are shared with the plugin's tests.
+
+## Weather snapshots
+
+`weather/WeatherPresetDraft` validates native sky and cloud metadata and snapshots the cloud UUID the sky names.
+It uses core's cloud settings binder, writes canonical `CLOUDS` metadata with every known band default explicit,
+and retains unknown extension members and unchanged numeric literals. Source documents retain omitted defaults
+and are never edited. The caller supplies the new UUID and timestamp; this class performs no file IO or GL work.

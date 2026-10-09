@@ -74,6 +74,10 @@
                 class="net.nevinsky.abyssus.plugin.projectView.NewTerrainAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
+        <action id="Abyssus.NewWeatherPreset"
+                class="net.nevinsky.abyssus.plugin.projectView.NewWeatherPresetAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
         <action id="Abyssus.ImportFlightGear"
                 class="net.nevinsky.abyssus.plugin.projectView.ImportFlightGearAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>

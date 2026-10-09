@@ -206,6 +206,15 @@ class SceneViewPanel internal constructor(
     }
 
     private var canvas: GuardedGLCanvas = newCanvas()
+    private fun newCanvasHost() = CanvasOverlayHost(canvas) {
+        try {
+            canvas.captureFrame { capabilities?.let { GL.setCapabilities(it) } }
+        } catch (e: Exception) {
+            thisLogger().warn("Failed to capture the scene beneath an IDE overlay", e)
+            null
+        }
+    }
+    private var canvasHost = newCanvasHost()
 
     private val timer: Timer = Timer(FRAME_MILLIS) {
         if (!canvas.glSafe()) return@Timer
@@ -222,7 +231,7 @@ class SceneViewPanel internal constructor(
 
     init {
         add(buildToolbar(), BorderLayout.NORTH)
-        add(canvas, BorderLayout.CENTER)
+        add(canvasHost, BorderLayout.CENTER)
         attachInput(canvas)
         bindKeys()
         forwardKeys()
@@ -546,10 +555,11 @@ class SceneViewPanel internal constructor(
     private fun replaceAbandonedCanvas() {
         if (!abandoned) return
         abandoned = false
-        remove(canvas)
+        remove(canvasHost)
         canvas = newCanvas()
         attachInput(canvas)
-        add(canvas, BorderLayout.CENTER)
+        canvasHost = newCanvasHost()
+        add(canvasHost, BorderLayout.CENTER)
     }
 
     override var onPick: ((String) -> Unit)?
@@ -606,6 +616,7 @@ class SceneViewPanel internal constructor(
 
     override fun dispose() {
         stopLoop()
+        canvasHost.stop()
         play.stop()
         overlays?.dispose()
         experiment?.stop()

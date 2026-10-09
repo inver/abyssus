@@ -29,16 +29,23 @@ data class CloudMeta(
      * (0 or more), drifting at [windX] / [windZ] metres per second.
      */
     data class CloudBand(
-        val level: CloudLevel,
         val type: CloudType,
+        val level: CloudLevel = type.level,
         val base: Float = type.base,
         val top: Float = type.top,
         val coverage: Float = type.coverage,
         val density: Float = type.density,
-        val windX: Float = type.windX,
-        val windZ: Float = type.windZ,
+        var windX: Float = type.windX,
+        var windZ: Float = type.windZ,
     ) {
         val thickness: Float get() = top - base
+        fun setWind(arr: Array<Float>?) {
+            if (arr == null || arr.size != 2) {
+                return
+            }
+            windX = arr[0]
+            windZ = arr[1]
+        }
     }
 }
 

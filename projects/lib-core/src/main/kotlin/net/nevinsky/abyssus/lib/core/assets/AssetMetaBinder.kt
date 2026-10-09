@@ -9,6 +9,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.core.assets.texture.TextureMeta
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import kotlin.reflect.full.primaryConstructor
 
 /** Binds an admitted metadata tree; callers validate native identity before invoking [bind]. No IO or GL. */
 class AssetMetaBinder(
@@ -30,7 +31,12 @@ class AssetMetaBinder(
         val baseMeta = json.bind(tree, AssetMeta::class.java)
         val block = tree["additional"]?.takeIf { it.isObject } ?: json.readObject("{}")
         val additional: Any = settings[baseMeta.type]?.let {
-            json.bind(block, it)
+            try {
+                return@let json.bind(block, it)
+            } catch (e: Exception) {
+                return@let it.kotlin.primaryConstructor?.callBy(mapOf())
+            }
+//            if (it == CloudMeta::class.java) CloudSettingsReader(json.log).read(block) else json.bind(block, it)
         } ?: json.bind(block, Map::class.java)
         return AssetMeta(
             name = name,

@@ -70,9 +70,9 @@ Readers never write (`ConfigFileReader` implementations never write and never th
   values) are `editor-core`'s `AssetMetaEditor`'s, which works on any JSON tree and never touches `version`, `uuid`, `type`,
   `lastModified` or unknown keys.
 
-**The one other write path: terrain files.** A scene or project file edit never takes it. Regenerating a terrain
-replaces a binary height file and an Abyssus recipe, and creating one makes a folder with new files; none of that is a
-JSON document edit, so `AssetFileCommand` (`assetfiles/AssetFileCommand.kt`) runs it as one named write command over
+**Asset creation and terrain files use asset transactions.** A scene or project file edit never takes it. Regenerating a terrain
+replaces a binary height file and an Abyssus recipe, and creating a terrain or a weather snapshot makes a folder with new files; none of that is an edit of an
+existing JSON document, so `AssetFileCommand` (`assetfiles/AssetFileCommand.kt`) runs it as one named write command over
 immutable `FileSnapshot`s staged beforehand. It checks the starting state inside the command (a changed file is a
 conflict, an existing folder a collision, and nothing is written), writes with `java.io` and refreshes the VFS after the
 command (a VFS write inside a command would also be recorded by the platform's own file undo, which would fight ours),

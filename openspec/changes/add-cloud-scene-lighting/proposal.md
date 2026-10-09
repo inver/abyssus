@@ -2,12 +2,13 @@
 
 ## Why
 
-`add-sky-clouds` puts clouds in the sky and dims the sun uniformly while a cloud covers it. A real sky does more:
+The archived `add-sky-clouds` change puts clouds in the sky and dims the sun uniformly while a cloud covers it. A real sky does more:
 clouds cast moving shadows across the ground, and an overcast sky lights a scene with flat grey light where a clear
 one gives blue light from above. Without these, the scene below doesn't match the sky above it. This change adds both,
 and lets other features that reflect the sky show the clouds.
 
-Depends on `add-sky-clouds`.
+Builds on `scene-sky-clouds`, `cloud-assets` and `scene-entity-lights`, implemented and archived on 2026-10-09.
+The lighting cube, spatial cloud shadows and `lightsScene` opt-in are not implemented in the current sources.
 
 ## What Changes
 
@@ -37,7 +38,9 @@ Depends on `add-sky-clouds`.
   parameters; the scene's `skyboxName`, `skyboxEnabled`, ambient light and light entities.
 - **Written:** nothing.
 
-**File format:** no change beyond the new optional `lightsScene` boolean in the plugin's own `SKYBOX_PROCEDURAL` type.
+**File format:** no change beyond the new optional `lightsScene` boolean in `lib-core`'s `SKYBOX_PROCEDURAL` metadata.
+Only the literal boolean `true` opts in; absent, false or incorrectly typed values keep ambient lighting. Native
+metadata validation remains mandatory (`format: "abyssus"`, integral `formatVersion: 1`); no migration or file writes.
 
 ### Out of scope
 
@@ -53,7 +56,7 @@ Depends on `add-sky-clouds`.
 
 ### New Capabilities
 
-None. `scene-sky-clouds` comes from `add-sky-clouds`.
+None. `scene-sky-clouds` and `cloud-assets` are existing main capabilities.
 
 ### Modified Capabilities
 - `scene-shadows`:
@@ -64,20 +67,22 @@ None. `scene-sky-clouds` comes from `add-sky-clouds`.
 
 ## Impact
 
-- **`core`:**
-  - a linear atmosphere shader for lighting, plus the cloud field, rendered into a cube;
+- **`lib-core`:**
+  - a linear atmosphere shader and a linear shell-cloud output path rendered into a cube;
   - `HdrEnvironmentBuild` accepts a cube source as well as an equirect image;
   - double-buffered environments with a cross-fade.
-- **Plugin:**
-  - `SceneRenderer` / `SceneAmbient` (a lighting procedural sky);
+- **`plugin-abyssus`:**
+  - `SceneRenderer` / `SceneSkybox` / `SceneAmbient` (a lighting procedural sky);
   - a cloud shadow map pass;
   - `TerrainShader` and the terrain shaders (a cloud factor on the sun light);
   - `SunOcclusion` (turned off where shadows apply).
-- **`gdx-model`:** a generic per-directional-light visibility texture attribute for `DefaultShader` and `PbrShader`.
-  It is not cloud-specific, so `gdx-model` stays a plain reusable library.
+- **`lib-gdx`:** a generic per-directional-light visibility texture attribute for `DefaultShader` and `PbrShader`.
+  It is not cloud-specific, so `lib-gdx` stays a plain reusable library.
+- **`lib-core-editor` / `lib-raytracing`:** `LightSet` integration and the existing ray environment/snapshot path;
+  cloud-aware sky snapshots and sun visibility need explicit transport and backend conformance coverage.
 - **Coordination:**
   - `scene-shadows` atlas code;
   - `add-realistic-water` and `add-scene-raytracing` deltas (cloudy-sky environment);
-  - `design-review-refactor` (`SceneRenderer` split).
+  - the existing module split from archived `design-review-refactor`; no pending refactor dependency.
 - **Docs:** `docs/ai/file-formats.md` (`lightsScene`), `docs/ai/architecture.md`, the sceneview README, the user
   section of `README.md`, and the changelog.
