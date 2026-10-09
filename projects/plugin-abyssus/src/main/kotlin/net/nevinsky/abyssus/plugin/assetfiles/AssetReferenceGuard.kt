@@ -12,8 +12,8 @@ import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DI
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import java.io.File
 
 /** An entity [entityId] of the scene file [scene]. */
@@ -38,14 +38,14 @@ class AssetReferenceGuard(private val projectDir: File) {
         val sceneFiles = (scenes.map { it.absoluteFile } + unsaved.keys.filter { it.extension == ProjectLayout.SCENE_EXTENSION && it.parentFile?.name == ProjectLayout.SCENES_DIR })
             .distinct().sortedBy { it.name }
         for (scene in sceneFiles) {
-            val root = text(scene)?.let { runCatchingKeepingCancellation { SceneJson().parse(it).also { root -> net.nevinsky.abyssus.lib.gdx.editor.document.AbyssusDocumentFormat().requireSupported(root, net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind.SCENE) } }.getOrNull() } ?: continue
+            val root = text(scene)?.let { runCatchingKeepingCancellation { SceneJson().parse(it).also { root -> net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat().requireSupported(root, net.nevinsky.abyssus.lib.core.editor.document.DocumentKind.SCENE) } }.getOrNull() } ?: continue
             if (ignoring != null && ignoring.scene.absoluteFile == scene) (SceneEntityTree(root).entities() as? ObjectNode)?.remove(ignoring.entityId)
             if (names(root).contains(name)) return "${scene.name} uses $name"
         }
         val assets = File(projectDir, ASSETS_DIR)
         val metas = assets.listFiles { f -> f.isDirectory && f.name != name }.orEmpty().map { File(it, META_FILE).absoluteFile }
         for (meta in (metas + unsaved.keys.filter { it.name == META_FILE && it.parentFile?.parentFile?.absoluteFile == assets.absoluteFile && it.parentFile.name != name }).distinct().sortedBy { it.path }) {
-            val root = text(meta)?.let { runCatchingKeepingCancellation { SceneJson().parse(it).also { root -> net.nevinsky.abyssus.lib.gdx.editor.document.AbyssusDocumentFormat().requireSupported(root, net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind.ASSET) } }.getOrNull() } ?: continue
+            val root = text(meta)?.let { runCatchingKeepingCancellation { SceneJson().parse(it).also { root -> net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat().requireSupported(root, net.nevinsky.abyssus.lib.core.editor.document.DocumentKind.ASSET) } }.getOrNull() } ?: continue
             if (holds(root.get("additional"), uuid)) return "${meta.parentFile.name} uses $name"
         }
         return null

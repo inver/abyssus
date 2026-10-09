@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera

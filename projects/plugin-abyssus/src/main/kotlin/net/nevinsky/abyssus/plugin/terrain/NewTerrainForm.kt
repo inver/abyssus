@@ -5,15 +5,15 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.FolderNameError
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.GeometryError
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.SourceSnapshot
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainGenerationDraft
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainGenerationSettings
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainGenerator
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainPreview
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.checkFolderName
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.checkGeometry
+import net.nevinsky.abyssus.lib.core.editor.terrain.FolderNameError
+import net.nevinsky.abyssus.lib.core.editor.terrain.GeometryError
+import net.nevinsky.abyssus.lib.core.editor.terrain.SourceSnapshot
+import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerationDraft
+import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerationSettings
+import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerator
+import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainPreview
+import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
+import net.nevinsky.abyssus.lib.core.editor.terrain.checkGeometry
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel

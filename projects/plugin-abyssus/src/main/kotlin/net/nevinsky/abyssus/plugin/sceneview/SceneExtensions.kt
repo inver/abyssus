@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.gdx.editor.pick.LineSink
-import net.nevinsky.abyssus.lib.gdx.editor.content.Pose
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
+import net.nevinsky.abyssus.lib.core.editor.content.Pose
 
 import com.badlogic.gdx.graphics.Camera
 import com.fasterxml.jackson.databind.JsonNode
@@ -49,8 +49,13 @@ interface SceneOverlay : Disposable {
     override fun dispose() {}
 }
 
+/** Shared JVM default, including for old binaries that implement both provider interfaces. */
+interface SceneProviderAvailability {
+    fun isAvailable(project: Project, file: VirtualFile): Boolean = true
+}
+
 /** The `net.nevinsky.abyssus.sceneOverlay` extension: makes a [SceneOverlay] for each Scene view that opens. */
-interface SceneOverlayProvider {
+interface SceneOverlayProvider : SceneProviderAvailability {
     fun create(project: Project, file: VirtualFile): SceneOverlay
 
     companion object {
@@ -102,7 +107,7 @@ interface SceneSimulation {
  * The `net.nevinsky.abyssus.sceneSimulation` extension: Play in the Scene view. With one installed, the view shows Play,
  * Pause, Step and Stop. [start] must return at once; the simulation reports through the listener when it runs.
  */
-interface SceneSimulationProvider {
+interface SceneSimulationProvider : SceneProviderAvailability {
     fun start(request: SimulationRequest, listener: SimulationListener): SceneSimulation
 
     companion object {

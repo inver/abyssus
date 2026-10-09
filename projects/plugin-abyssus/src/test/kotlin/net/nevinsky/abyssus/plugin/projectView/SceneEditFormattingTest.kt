@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.plugin.projectView
 
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 class SceneEditFormattingTest : BasePlatformTestCase() {
     private val compact = """{"format":"abyssus","formatVersion":1,"id":0,"name":"Main","skyboxName":null,"fogEnabled":true,"fog":{"density":0.001}}"""

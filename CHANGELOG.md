@@ -5,6 +5,8 @@
 ## [Unreleased]
 
 ### Changed
+- `lib-core-editor` packages now use `net.nevinsky.abyssus.lib.core.editor`; consumers and extension providers using editor types must update imports and rebuild.
+- Physics ships in Abyssus and is enabled per native project with `physicsEnabled: true` in its `.abss`. Existing projects must enable Physics in project properties once.
 - Abyssus is now an independent libGDX scene editor using native format version 1. Projects, scenes and asset metadata
   require `format: "abyssus"` and integral `formatVersion: 1`; renderables use stable native kinds and components use short names.
 - Older unmarked files and files from other editors are unsupported. Plugin loading, editing and automatic formatting refuse them without
@@ -31,6 +33,7 @@
 - The model runtime and Assimp importer live in their own `gdx-model` library module (no IntelliJ or gdx-gltf dependency)
 
 ### Removed
+- The separate Abyssus Physics plugin. Uninstall it when upgrading; Abyssus declares its former ID incompatible.
 - Template sample tool window, frame listener and project service
 
 ### Fixed

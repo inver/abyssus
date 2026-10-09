@@ -4,13 +4,13 @@
  */
 package net.nevinsky.abyssus.plugin.filetype
 
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneRayField
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayDataError
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayDataEdit
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneRaySettingsCodec
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayMaterialIdentity
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayOpticalField
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayMaterialOverrides
+import net.nevinsky.abyssus.lib.core.editor.document.SceneRayField
+import net.nevinsky.abyssus.lib.core.editor.document.RayDataError
+import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
+import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
+import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
+import net.nevinsky.abyssus.lib.core.editor.document.RayOpticalField
+import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialOverrides
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -39,7 +39,7 @@ object SceneRayEdits {
         identities: List<RayMaterialIdentity>
     ): RayDataEdit = edit(project, file) { root ->
         val render =
-            net.nevinsky.abyssus.lib.gdx.editor.document.SceneEntityTree(root).components(entity)?.get("RenderComponent") as? ObjectNode
+            net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree(root).components(entity)?.get("RenderComponent") as? ObjectNode
                 ?: return@edit RayDataEdit.Conflict
         RayMaterialOverrides().edit(render, id, field, expected, text, identities)
     }

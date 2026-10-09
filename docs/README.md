@@ -34,5 +34,4 @@ requirement belongs in a dated review, not an unannounced rewrite of the spec.
 - **Path check:** `scripts/check-docs.sh` fails when `AGENTS.md` or `docs/ai/*.md` name a repository path that
   doesn't exist. Run it before committing doc changes.
 - **What gets documented:** the current source checkout. Planned behavior stays in the change artifacts; known
-  gaps between implementation and required behavior belong in a dated review. The latest source-layout review is
-  [2026-10-09](reviews/2026-10-09-current-source.md).
+  gaps between implementation and required behavior belong in a dated review.

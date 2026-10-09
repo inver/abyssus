@@ -1,17 +1,17 @@
-package net.nevinsky.abyssus.lib.gdx.editor.document
+package net.nevinsky.abyssus.lib.core.editor.document
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.renderParamsOf
-import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.plugin.projectView.ComponentTarget
 import net.nevinsky.abyssus.plugin.projectView.ecsRows
 import net.nevinsky.abyssus.plugin.projectView.entityRows
 import net.nevinsky.abyssus.plugin.properties.PanelState
 import net.nevinsky.abyssus.plugin.properties.readEntityState
-import net.nevinsky.abyssus.lib.gdx.editor.scene.CameraParams
+import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.plugin.testPanelServices
 import java.io.File
 

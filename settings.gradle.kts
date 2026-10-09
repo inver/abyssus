@@ -12,7 +12,6 @@ include(":lib-core")
 include(":lib-raytracing")
 include(":lib-core-editor")
 include(":lib-physics")
-include(":plugin-abyssus-physics")
 include(":plugin-abyssus")
 include(":app-game-control-line")
 

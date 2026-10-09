@@ -7,10 +7,10 @@ package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
-import net.nevinsky.abyssus.lib.gdx.editor.modelimport.LengthUnit
-import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ModelImportException
-import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ModelSource
-import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ModelSourceOpener
+import net.nevinsky.abyssus.lib.core.editor.modelimport.LengthUnit
+import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelImportException
+import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSource
+import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSourceOpener
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

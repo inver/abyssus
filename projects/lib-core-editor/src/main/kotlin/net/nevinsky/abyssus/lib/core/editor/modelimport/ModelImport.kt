@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.modelimport
+package net.nevinsky.abyssus.lib.core.editor.modelimport
 
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
@@ -72,7 +72,7 @@ class ModelImport(
         val leftOut = (source.leftOut + gathered.leftOut).distinct()
 
         val files = LinkedHashMap<String, ByteArray>()
-        val meta = json.mapper.createObjectNode()
+        val meta = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode()
         meta.put("format", "abyssus").put("formatVersion", 1).put("version", 1).put("lastModified", lastModified)
             .put("uuid", uuid.toString()).put("type", "MODEL")
         meta.putObject("additional").put("file", MODEL_FILE).put("format", "GLTF").put("binary", true)

@@ -1,6 +1,6 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
+import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

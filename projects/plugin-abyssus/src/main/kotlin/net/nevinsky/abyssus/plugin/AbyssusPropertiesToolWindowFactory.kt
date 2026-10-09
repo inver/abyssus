@@ -14,7 +14,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayMaterialIdentity
+import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
 import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap

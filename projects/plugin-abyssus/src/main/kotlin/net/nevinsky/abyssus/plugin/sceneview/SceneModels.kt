@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.gdx.editor.content.toMatrix
-import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
+import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
 import net.nevinsky.abyssus.lib.gdx.AnimationController
 import net.nevinsky.abyssus.lib.gdx.ModelInstance

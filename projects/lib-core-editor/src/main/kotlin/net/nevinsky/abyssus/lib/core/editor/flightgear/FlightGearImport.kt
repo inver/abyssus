@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.flightgear
+package net.nevinsky.abyssus.lib.core.editor.flightgear
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
@@ -194,7 +194,7 @@ class FlightGearImport(
         val licenseFiles = archive.licenseFiles(aircraft.folder)
         for (path in licenseFiles) files[path.substringAfterLast('/')] = archive.read(path)!!
 
-        val meta = json.mapper.createObjectNode()
+        val meta = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode()
         meta.put("format", "abyssus").put("formatVersion", 1).put("version", 1).put("lastModified", lastModified)
             .put("uuid", uuid.toString()).put("type", "MODEL")
         meta.putObject("additional").put("file", IMPORTED_MODEL_FILE).put("format", "GLTF").put("binary", true)

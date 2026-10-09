@@ -33,7 +33,7 @@
   which cannot be changed from a plugin; the plugin zip excludes `org.slf4j` and uses the platform's API classes.
   SLF4J `error` is logged as an IDE *warn*, because `Logger.error` raises the IDE-error dialog.
 - **Outside the IDE** (the play host, the Control Line game) `physics`'s runtime dependency `slf4j-simple` binds SLF4J to
-  stderr; Abyssus Physics bundles `physics` without its dependencies, so it never reaches the IDE.
+  stderr; Abyssus bundles `physics` without its dependencies, so it never reaches the IDE.
 - **Tests** use `RecordingLogger`, `warningsTo(list)` or `failOnWarnings()` (`core` test fixtures) or `NOPLogger.NOP_LOGGER`; `raytracing` has its own small recorder.
 
 ## JSON
@@ -91,7 +91,7 @@ command name in the message bundle.
 - **Catching:** use `runCatchingKeepingCancellation`
   (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/assets/Cancellation.kt`), not `runCatching`. It rethrows
   `CancellationException`, which includes `ProcessCanceledException`, which the platform requires.
-  `./gradlew checkNoRunCatching` (part of `check`) fails on a `runCatching {` in the plugin, `core`, `editor-core`, `physics`, `raytracing`, `plugin-abyssus-physics` or Control Line.
+  `./gradlew checkNoRunCatching` (part of `check`) fails on a `runCatching {` in the plugin, `core`, `editor-core`, `physics`, `raytracing` or Control Line.
   Source rules share `gradle/checks.gradle.kts`; module singleton exclusions remain explicit in each build file.
 - **Failure text:** show `Throwable.displayMessage()` (the message, or the class name when it has none).
 - **Unreadable files:** an unreadable file or asset becomes a visible failure (an error row, a status message, a

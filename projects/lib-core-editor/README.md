@@ -2,8 +2,7 @@
 
 The editing engine of Abyssus without the IDE: a plain JVM library on `core`, `raytracing` and `lib-gdx`.
 The plugin bundles it (in its `lib` folder) and keeps only IDE glue: `editSceneJson`'s undoable command,
-the tree, tool windows, dialogs, the GL canvas and renderer, actions, file types and VFS wiring. Abyssus Physics takes
-it compile-only from Abyssus's classloader and never bundles it.
+the tree, tool windows, dialogs, the GL canvas and renderer, actions, file types and VFS wiring. Physics editing kinds are supplied by plugin composition; this library has no physics dependency.
 
 ## Rules
 
@@ -17,7 +16,10 @@ it compile-only from Abyssus's classloader and never bundles it.
   the same text.
 - **Documents:** validation stays in `core.format`; this module only adds the editor-facing aliases.
 
-## Packages (`net.nevinsky.abyssus.lib.gdx.editor`)
+## Packages (`net.nevinsky.abyssus.lib.core.editor`)
+
+All source and test packages use this namespace. Consumers of the former `net.nevinsky.abyssus.lib.gdx.editor`
+namespace, including extension providers that use editor value types, must update their imports and rebuild.
 
 | Package | Holds |
 |---|---|
@@ -76,9 +78,8 @@ construction) and `EntityView`; writers address and insert entities through `Sce
 ## Components
 
 `ComponentEditor(EditorMessages)` creates the built-in kinds using `ComponentReader` and `EcsWriter`. The plugin
-obtains it through `ComponentSchemas.of(project).editorFor(sceneFile)`, which currently returns one built-in-only
-editor. Updates validate built-in values and references, then patch only changed fields. Render additions require
-an asset name. Game and physics components remain read-only JSON; editing another component preserves them.
+obtains it through `ComponentSchemas.of(project).editorFor(sceneFile)`, which returns built-in kinds plus injected physics kinds when the native project enables physics. Updates validate built-in values and references, then patch only changed fields. Render additions require
+an asset name. Game components and disabled physics components remain read-only JSON; editing another component preserves them.
 Project schema files and extension contributions do not currently add editable kinds.
 
 `LightEntities` adds a Name, Type, Position and Light entity: `LightPreset` supplies Directional (white, intensity 1,
@@ -95,6 +96,6 @@ asset-property edits, returning the edited text or a `Refusal` with the reason t
 
 ## Tests
 
-`./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCameraTest'`). Tests use
+`./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`). Tests use
 `projects/plugin-abyssus` as their working directory, so `src/test/testData/project/` resolves to the shared fixtures.
 The test fixtures (`parseScene`, `testProject`, `testAsset`, `terrainData`, `rayTestModel`) are shared with the plugin's tests.

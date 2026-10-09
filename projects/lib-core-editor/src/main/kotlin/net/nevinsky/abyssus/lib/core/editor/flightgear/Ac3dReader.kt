@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.flightgear
+package net.nevinsky.abyssus.lib.core.editor.flightgear
 
 /** An AC3D material: diffuse colour and transparency (0 opaque, 1 invisible). */
 data class Ac3dMaterial(val name: String, val r: Float, val g: Float, val b: Float, val transparency: Float)

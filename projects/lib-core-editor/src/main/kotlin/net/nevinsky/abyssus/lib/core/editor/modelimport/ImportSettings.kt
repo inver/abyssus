@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.modelimport
+package net.nevinsky.abyssus.lib.core.editor.modelimport
 
 import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import java.util.Locale

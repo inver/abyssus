@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.gdx.editor.meta.ComponentSection
-import net.nevinsky.abyssus.lib.gdx.editor.meta.OpticalMaterialRow
-import net.nevinsky.abyssus.lib.gdx.editor.meta.RenderOptics
+import net.nevinsky.abyssus.lib.core.editor.meta.ComponentSection
+import net.nevinsky.abyssus.lib.core.editor.meta.OpticalMaterialRow
+import net.nevinsky.abyssus.lib.core.editor.meta.RenderOptics
 import net.nevinsky.abyssus.plugin.EditorBundle
 import com.intellij.ide.DataManager
 import com.intellij.openapi.project.Project
@@ -22,17 +22,17 @@ import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.lib.gdx.editor.components.EditResult
-import net.nevinsky.abyssus.lib.gdx.editor.components.FieldKind
-import net.nevinsky.abyssus.lib.gdx.editor.components.FieldValue
+import net.nevinsky.abyssus.lib.core.editor.components.EditResult
+import net.nevinsky.abyssus.lib.core.editor.components.FieldKind
+import net.nevinsky.abyssus.lib.core.editor.components.FieldValue
 import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
 import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
 import net.nevinsky.abyssus.plugin.projectView.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
 import net.nevinsky.abyssus.plugin.projectView.reportRejection
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayDataEdit
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayDataError
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayOpticalField
+import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
+import net.nevinsky.abyssus.lib.core.editor.document.RayDataError
+import net.nevinsky.abyssus.lib.core.editor.document.RayOpticalField
 import net.nevinsky.abyssus.plugin.filetype.SceneRayEdits
 import java.awt.BorderLayout
 import java.awt.Dimension

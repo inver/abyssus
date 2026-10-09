@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneTransformWriter
-import net.nevinsky.abyssus.lib.gdx.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.plugin.SceneRayControls
 
 import com.intellij.openapi.application.ApplicationManager
@@ -36,6 +36,12 @@ import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.components.JBLabel
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import java.awt.BorderLayout
@@ -92,6 +98,19 @@ class SceneFileEditor(
     internal var statusText: String? = null
         private set
 
+    // Physics availability is handled separately; it is not a render input.
+    private var projectInputs: JsonNode? = projectInputs()
+
+    private fun projectInputs(text: String? = null): JsonNode? = runCatchingKeepingCancellation {
+        val abss = ProjectLayout.abssFor(file) ?: return@runCatchingKeepingCancellation null
+        val root = SceneJson().parse(text ?: textOf(abss))
+        AbyssusDocumentFormat().requireSupported(root, DocumentKind.PROJECT)
+        (root as ObjectNode).also { it.remove("physicsEnabled") }
+    }.getOrNull()
+
+    private fun hasRenderChange(changed: VirtualFile, text: String? = null): Boolean =
+        changed == file || projectInputs(text).let { it == null || it != projectInputs }
+
     init {
         reload()
         assetRefresh?.let { refresh ->
@@ -115,26 +134,28 @@ class SceneFileEditor(
         }
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
-                if (events.any { it is VFileContentChangeEvent && isSource(it.file) }) {
+                if (events.any { it is VFileContentChangeEvent && isSource(it.file) && hasRenderChange(it.file) }) {
                     ApplicationManager.getApplication().invokeLater { if (!disposed) reloadNow() }
                 }
             }
         })
         // a plugin edit (gizmo, panel, tree, Add Light, ...) is shown at once, not after the typing pause
         project.messageBus.connect(this).subscribe(AbyssusSceneEdited.TOPIC, AbyssusSceneEdited { edited ->
-            if (isSource(edited)) reloadNow()
+            if (isSource(edited) && hasRenderChange(edited)) reloadNow()
         })
         // unsaved edits in the text tabs of the scene or of its project file: typing waits for a pause, Undo and Redo do not
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
             // any edit, from a text tab, the panel, the tree or a gizmo, stops play before it applies
             override fun beforeDocumentChange(event: DocumentEvent) {
                 val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
-                if (isSource(changed)) view?.stopPlay()
+                if (!isSource(changed)) return
+                val next = event.document.text.replaceRange(event.offset, event.offset + event.oldLength, event.newFragment.toString())
+                if (hasRenderChange(changed, next)) view?.stopPlay()
             }
 
             override fun documentChanged(event: DocumentEvent) {
                 val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
-                if (!isSource(changed)) return
+                if (!isSource(changed) || !hasRenderChange(changed)) return
                 val undoing = UndoManager.getInstance(project).let { it.isUndoInProgress || it.isRedoInProgress }
                 if (undoing) reloadNow() else reloadAfterPause()
             }
@@ -176,6 +197,7 @@ class SceneFileEditor(
     }
 
     private fun showScene(params: SceneRenderParams) {
+        projectInputs = projectInputs()
         rayControls.recordFacts(file, this, params.content)
         view?.let {
             it.setParams(params)

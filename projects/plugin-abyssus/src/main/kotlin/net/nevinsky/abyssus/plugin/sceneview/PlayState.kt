@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.content.Pose
+import net.nevinsky.abyssus.lib.core.editor.content.Pose
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 
 /**
@@ -39,6 +39,22 @@ class PlayState(
 
     private var simulation: SceneSimulation? = null
     private var generation = 0
+    private val disabled = mutableSetOf<SceneSimulationProvider>()
+
+    /** Availability refreshes retain a still-available provider, including third-party Play. */
+    fun refreshProviders(candidates: List<SceneSimulationProvider>) {
+        val available = candidates.filterNot { it in disabled }
+        if (provider !in available) updateProvider(available.firstOrNull())
+    }
+
+    fun updateProvider(next: SceneSimulationProvider?) {
+        val selected = next?.takeUnless { it in disabled }
+        if (provider === selected) return
+        stop()
+        provider = selected
+        failure = null
+        change(Phase.IDLE)
+    }
 
     /** Starts a simulation from [request] when idle or failed; resumes a paused one. */
     fun play(request: () -> SimulationRequest) {
@@ -120,6 +136,7 @@ class PlayState(
 
     private fun disable(error: Throwable) {
         logError("Scene simulation of $source failed and is switched off for this view", error)
+        provider?.let { disabled += it }
         provider = null
         val sim = simulation
         simulation = null

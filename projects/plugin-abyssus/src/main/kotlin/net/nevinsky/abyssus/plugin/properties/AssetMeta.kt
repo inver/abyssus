@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.gdx.editor.meta.PropertyRow
-import net.nevinsky.abyssus.lib.gdx.editor.meta.metaRowsOf
+import net.nevinsky.abyssus.lib.core.editor.meta.PropertyRow
+import net.nevinsky.abyssus.lib.core.editor.meta.metaRowsOf
 import net.nevinsky.abyssus.plugin.EditorBundle
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile

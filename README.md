@@ -22,6 +22,8 @@ remain readable in the text editor; plugin editing and loading are refused. No i
   aircraft from a FlightGear `.zip` into a model asset.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
+- **Built-in Physics**: select a project’s `.abss` file and enable **Physics** in Properties for editable physics
+  components, collider/constraint overlays and Play in a separate process.
 - **Ray Tracing settings**: a selected scene's Properties switch turns Ray Tracing on for its open views (not saved), and
   its target samples, ray budget and reflection and refraction depths are saved in the scene and undoable. A model
   entity's PBR materials can be given Transmission and IOR to render as glass; these overrides apply to that entity only.
@@ -219,12 +221,16 @@ be undone; resetting a default omits its saved field. These beam fields are part
 The toolbar's camera selector (**Free camera** and the scene's cameras by name) renders the view through a camera
 entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
-### Physics (Abyssus Physics plugin)
+### Physics
 
-**Abyssus Physics** is a separate plugin, built from `projects/plugin-abyssus-physics/`, that depends on Abyssus. With it installed:
+Physics is built into Abyssus. Select the project's `.abss` file in the Abyssus tree and tick **Physics** in
+**Abyssus Properties**. This saves the optional `physicsEnabled` boolean as one undoable edit; missing means off.
+The checkbox and scene controls follow unsaved text edits and Undo/Redo. Unsupported project documents stay read-only.
+The separate Abyssus Physics plugin must be uninstalled; the IDE marks it incompatible with this build.
 
-- Physics components currently remain read-only JSON in the Properties panel. Collider and constraint overlays
-  are unavailable while that integration is being reworked; see [current source status](docs/reviews/2026-10-09-current-source.md).
+- Enabling Physics makes rigid bodies, colliders and constraints editable and offers them in **Add Component**.
+  **Show Physics** draws collider wireframes and constraint anchors, including selected and simulated objects.
+  Disabling Physics restores read-only raw physics data and removes built-in physics overlay/Play actions.
 - **Play**, **Pause**, **Step** and **Stop** run the scene's physics in a separate process. Play uses the scene as
   the editor holds it, unsaved text included. Simulated poses are shown but never written: Stop, Esc, editing the
   scene or closing the tab returns the view to the scene as the document holds it. While playing, gizmos are off,
@@ -233,6 +239,7 @@ entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 - A game makes Play run its own code by exporting `<project>/abyssus/play.json` (see `projects/lib-physics/README.md`). Without that file,
   Play runs physics alone.
 
+Disabling Physics during Play stops that session and restores authored poses without changing scene files or Undo history.
 Jolt, the physics engine, is loaded only by the play process, never by the IDE.
 
 The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `lib-gdx` module, a

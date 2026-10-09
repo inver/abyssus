@@ -3,22 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.meta
+package net.nevinsky.abyssus.lib.core.editor.meta
 
-import net.nevinsky.abyssus.lib.gdx.editor.document.renderAssetOf
+import net.nevinsky.abyssus.lib.core.editor.document.renderAssetOf
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.gdx.editor.components.ComponentEditor
-import net.nevinsky.abyssus.lib.gdx.editor.components.FieldKind
-import net.nevinsky.abyssus.lib.gdx.editor.components.FieldValue
-import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneDocument
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.gdx.editor.document.documentDisplayMessage
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayDataError
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayMaterialIdentity
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayMaterialOverrides
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayOpticalField
+import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
+import net.nevinsky.abyssus.lib.core.editor.components.FieldKind
+import net.nevinsky.abyssus.lib.core.editor.components.FieldValue
+import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.document.SceneDocument
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.documentDisplayMessage
+import net.nevinsky.abyssus.lib.core.editor.document.RayDataError
+import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
+import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialOverrides
+import net.nevinsky.abyssus.lib.core.editor.document.RayOpticalField
 
 /**
  * A model entity's scene-instance optical overrides (`RenderComponent.rayTracingMaterials`). [materials] follows the

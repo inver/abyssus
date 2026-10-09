@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.editor.document
+package net.nevinsky.abyssus.lib.core.editor.document
 
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind

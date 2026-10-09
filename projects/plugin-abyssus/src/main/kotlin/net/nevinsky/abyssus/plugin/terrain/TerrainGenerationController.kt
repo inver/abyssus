@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainHeightEncoder
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.sha256Hex
+import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainHeightEncoder
+import net.nevinsky.abyssus.lib.core.editor.terrain.sha256Hex
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -17,12 +17,12 @@ import net.nevinsky.abyssus.plugin.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.plugin.assetfiles.FileChange
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.RecipeStatus
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainGenerationDraft
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainGenerationSettings
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainGenerator
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainRecipe
-import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainRecipeCodec
+import net.nevinsky.abyssus.lib.core.editor.terrain.RecipeStatus
+import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerationDraft
+import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerationSettings
+import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerator
+import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainRecipe
+import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainRecipeCodec
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.io.File
 import kotlin.random.Random

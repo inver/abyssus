@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.flightgear
+package net.nevinsky.abyssus.lib.core.editor.flightgear
 
-import net.nevinsky.abyssus.lib.gdx.editor.flightgear.fixtureArchive
-import net.nevinsky.abyssus.lib.gdx.editor.flightgear.writeZip
+import net.nevinsky.abyssus.lib.core.editor.flightgear.fixtureArchive
+import net.nevinsky.abyssus.lib.core.editor.flightgear.writeZip
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Rule

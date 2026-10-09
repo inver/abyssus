@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.content.Pose
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
+import net.nevinsky.abyssus.lib.core.editor.content.Pose
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Quat
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -25,6 +25,36 @@ class PlayStateTest {
     private val project = Proxy.newProxyInstance(javaClass.classLoader, arrayOf(Project::class.java)) { _, _, _ -> null } as Project
     private val file: VirtualFile = LightVirtualFile("Main Scene.scene", "{}")
     private fun request() = SimulationRequest(project, file, "{}", File("."), "0")
+
+    @Test fun unavailableProviderStopsStartupPauseAndPlayingAndDiscardsLateCallbacks() {
+        for (phase in listOf(Phase.STARTING,Phase.PLAYING,Phase.PAUSED)) {
+            val provider = FakeProvider()
+            val play = PlayState(provider)
+            play.play(::request)
+            if (phase != Phase.STARTING) provider.listener!!.started()
+            if (phase == Phase.PAUSED) play.pause()
+            val callback = provider.listener!!
+            play.updateProvider(null)
+            play.updateProvider(null)
+            callback.started()
+            assertEquals(Phase.IDLE,play.phase)
+            assertFalse(play.available)
+            assertNull(play.poses())
+            assertEquals(1,provider.started.single().commands.count { it == "stop" })
+            play.updateProvider(provider)
+            assertTrue(play.available)
+        }
+    }
+
+    @Test fun unchangedThirdPartyProviderKeepsPlaying() {
+        val provider = FakeProvider()
+        val play = PlayState(provider)
+        play.play(::request)
+        provider.listener!!.started()
+        play.updateProvider(provider)
+        assertEquals(Phase.PLAYING,play.phase)
+        assertTrue(provider.started.single().commands.isEmpty())
+    }
 
     private class FakeSimulation : SceneSimulation {
         val commands = mutableListOf<String>()

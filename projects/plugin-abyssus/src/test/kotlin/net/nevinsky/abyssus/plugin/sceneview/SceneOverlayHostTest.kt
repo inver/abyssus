@@ -5,13 +5,13 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
-import net.nevinsky.abyssus.lib.gdx.editor.pick.LineSink
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
+import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import net.nevinsky.abyssus.lib.gdx.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -38,6 +38,28 @@ class SceneOverlayHostTest {
         override fun line(from: Vec3, to: Vec3, color: Rgba) {
             centres += Vec3((from.x + to.x) / 2, (from.y + to.y) / 2, (from.z + to.z) / 2)
         }
+    }
+
+    @Test
+    fun unavailableOverlaysHaveNoDrawsOrActionsAndCanReturn() {
+        var enabled = false
+        val physics = MarkerOverlay()
+        val other = MarkerOverlay()
+        val host = SceneOverlayHost(listOf(NamedOverlay("Physics", physics, false) { enabled },
+            NamedOverlay("Other", other))) { m, e -> throw AssertionError(m, e) }
+        host.draw(view(), Recorder())
+        assertEquals(listOf("Other"), host.overlays.map { it.source })
+        assertEquals(0, physics.seen.size)
+        enabled = true
+        host.refreshAvailability()
+        host.draw(view(), Recorder())
+        assertEquals(listOf("Physics", "Other"), host.overlays.map { it.source })
+        assertEquals(1, physics.seen.size)
+        enabled = false
+        host.refreshAvailability()
+        host.draw(view(), Recorder())
+        assertEquals(1, physics.seen.size)
+        assertEquals(3, other.seen.size)
     }
 
     @Test

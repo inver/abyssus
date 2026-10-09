@@ -5,13 +5,12 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.gdx.editor.meta.ADDITIONAL
-import net.nevinsky.abyssus.lib.gdx.editor.meta.RowKind
-import net.nevinsky.abyssus.lib.gdx.editor.meta.metaRowsOf
-import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.meta.RowKind
+import net.nevinsky.abyssus.lib.core.editor.meta.metaRowsOf
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import java.io.File
 import java.time.ZoneOffset
 import net.nevinsky.abyssus.plugin.testMetaFiles

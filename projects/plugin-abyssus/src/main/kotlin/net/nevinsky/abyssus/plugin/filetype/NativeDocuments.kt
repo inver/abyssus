@@ -5,7 +5,7 @@
 package net.nevinsky.abyssus.plugin.filetype
 
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.PROJECT_EXTENSION
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.SCENE_EXTENSION

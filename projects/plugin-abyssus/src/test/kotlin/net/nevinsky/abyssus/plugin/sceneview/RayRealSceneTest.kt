@@ -4,18 +4,18 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssetState
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneConversion
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneFrame
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneSnapshots
-import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssetState
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneConversion
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneFrame
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneSnapshots
+import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.plugin.AssetLoading
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.raytracing.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue

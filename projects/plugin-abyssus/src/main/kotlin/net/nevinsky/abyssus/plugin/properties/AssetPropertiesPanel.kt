@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
+import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
@@ -36,7 +39,9 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.gdx.editor.meta.*
+import net.nevinsky.abyssus.lib.core.editor.meta.PropertyRow
+import net.nevinsky.abyssus.lib.core.editor.meta.RowKind
+import net.nevinsky.abyssus.lib.core.editor.meta.*
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
@@ -66,6 +71,8 @@ class AssetPropertiesPanel(
     private val background: (Runnable) -> Unit = { AppExecutorUtil.getAppExecutorService().execute(it) },
     private val ui: (Runnable) -> Unit = { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
 ) : JPanel(CardLayout()), UiDataProvider {
+    private val projectSettings = project.service<AbyssusProjectSettings>()
+    private var projectFile: VirtualFile? = null
     private val cards = layout as CardLayout
     private val content = JPanel(BorderLayout())
     private val empty = JPanel(GridBagLayout())
@@ -111,6 +118,8 @@ class AssetPropertiesPanel(
         project.messageBus.connect(parentDisposable).subscribe(
             ComponentSchemasListener.TOPIC,
             ComponentSchemasListener { ui { if (!disposed && scene != null) refresh() } })
+        project.messageBus.connect(parentDisposable).subscribe(ProjectSettingsListener.TOPIC,
+            ProjectSettingsListener { file, _ -> if (file == projectFile) ui { if (!disposed) refresh() } })
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
                 if (touches(FileDocumentManager.getInstance().getFile(event.document))) refresh()
@@ -125,7 +134,7 @@ class AssetPropertiesPanel(
     /** True when [file] is the shown asset's folder or a file in it (its `meta.json` or a face image). */
     private fun touches(file: VirtualFile?): Boolean {
         if (file == null) return false
-        if (file == scene) return true
+        if (file == scene || file == projectFile) return true
         val shown = folder ?: return false
         return file == shown || file.parent == shown
     }
@@ -159,6 +168,7 @@ class AssetPropertiesPanel(
         if (assetFolder != terrainFolder) useTerrain(null) // another selection: its draft and pending preview are discarded
         val entity = if (assetFolder == null) componentTargetOf(node) else null
         scene = entity?.file
+        projectFile = null
         if (entity != null) {
             background {
                 val result = readEntityState(entity, services)
@@ -167,6 +177,15 @@ class AssetPropertiesPanel(
             return
         }
         if (assetFolder == null) {
+            val selectedFile = (node as? AbyssusAssetNode)?.virtualFile ?: node as? VirtualFile
+            if (selectedFile?.isValid == true && selectedFile.extension == "abss") {
+                projectFile = selectedFile
+                background {
+                    val result = readProjectState(selectedFile, selectedFile.name, projectSettings)
+                    ui { if (token == generation && !disposed) apply(result) }
+                }
+                return
+            }
             val sceneFile = viewableSceneFile(node)?.takeIf { it.isValid && ProjectLayout.isScene(it) }
             if (sceneFile != null) {
                 scene = sceneFile
@@ -234,6 +253,16 @@ class AssetPropertiesPanel(
 
     private fun render(newState: PanelState) {
         when (newState) {
+            is PanelState.Project -> {
+                useTerrain(null)
+                useUndoEditor(newState.file)
+                content.removeAll()
+                content.add(JBScrollPane(ProjectDetailsView(newState, projectSettings)).apply {
+                    border = BorderFactory.createEmptyBorder()
+                }, BorderLayout.CENTER)
+                cards.show(this, DETAILS)
+            }
+
             is PanelState.UISceneState -> {
                 useTerrain(null)
                 useUndoEditor(newState.file)
