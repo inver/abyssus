@@ -3,17 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.scene
+package net.nevinsky.abyssus.lib.gdx.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
+import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightKind
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.gdx.editor.components.ComponentEditor
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.File
@@ -88,13 +88,13 @@ class SceneEntityParityTest {
     }
 
     @Test
-    fun aTextualHandleTargetIsReadTheSameWay() {
+    fun aNumericStringHandleTargetIsReadTheSameWay() {
         val root = scene()
         val entities = root.get("ecs") as ObjectNode
-        entities.set<JsonNode>("h", SceneJson().parse("""{"archetype":1,"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}}"""))
-        ((entities.get("7").get("components") as ObjectNode).get("PositionComponent") as ObjectNode).put("lookAtId", "h")
+        entities.set<JsonNode>("9", SceneJson().parse("""{"archetype":1,"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}}"""))
+        ((entities.get("7").get("components") as ObjectNode).get("PositionComponent") as ObjectNode).put("lookAtId", "9")
         val content = sceneContentOf(parseScene(root.toString()))
-        assertEquals("h", content.lights.single { it.entityId == "7" }.lookAtId)
-        assertEquals("h", content.aimHandleOf(content.lights.single { it.entityId == "7" }))
+        assertEquals("9", content.lights.single { it.entityId == "7" }.lookAtId)
+        assertEquals("9", content.aimHandleOf(content.lights.single { it.entityId == "7" }))
     }
 }

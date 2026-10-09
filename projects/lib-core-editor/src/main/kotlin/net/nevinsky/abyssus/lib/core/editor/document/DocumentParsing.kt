@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.document
+package net.nevinsky.abyssus.lib.gdx.editor.document
 
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.scene.Scene
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import org.slf4j.Logger
 
 /**
@@ -29,14 +29,14 @@ class DocumentParsing(
     fun projectName(source: String, readText: () -> String): String? =
         reportedOrThrow("project $source") { projectName(readText()) }
 
-    fun parse(text: String): Scene {
+    fun parse(text: String): SceneDto {
         val root = json.readObject(text)
         format.requireSupported(root, DocumentKind.SCENE)
-        return json.bind(root, Scene::class.java)
+        return json.bind(root, SceneDto::class.java)
     }
 
     /** Includes failures obtaining the text (an editor's filesystem) in the same logging boundary. */
-    fun parse(source: String, readText: () -> String): Scene = reportedOrThrow("scene $source") { parse(readText()) }
+    fun parse(source: String, readText: () -> String): SceneDto = reportedOrThrow("scene $source") { parse(readText()) }
 
     private fun <T> reportedOrThrow(source: String, read: () -> T): T = runCatchingKeepingCancellation(read)
         .getOrElse { error -> log.warn("Could not read $source: ${error.message}", error); throw error }

@@ -4,13 +4,13 @@
  */
 package net.nevinsky.abyssus.plugin.ui
 
-import net.nevinsky.abyssus.lib.core.editor.ray.message
+import net.nevinsky.abyssus.lib.gdx.editor.ray.message
 import net.nevinsky.abyssus.plugin.EditorBundle
-import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
-import net.nevinsky.abyssus.lib.core.editor.ray.RayModeSnapshot
-import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendAttempt
-import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendSelection
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneFallback
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModePhase
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModeSnapshot
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayBackendAttempt
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayBackendSelection
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneFallback
 
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.raytracing.RayUnavailableReason

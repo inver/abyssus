@@ -17,7 +17,7 @@ import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import com.intellij.openapi.project.ProjectLocator
 import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
-import net.nevinsky.abyssus.lib.core.editor.components.EditResult
+import net.nevinsky.abyssus.lib.gdx.editor.components.EditResult
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.plugin.AbyssusCore

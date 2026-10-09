@@ -2,20 +2,21 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.core.editor.components
+package net.nevinsky.abyssus.lib.gdx.editor.components
 
-import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsLoader
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEngine
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
+import org.slf4j.helpers.NOPLogger
 import java.io.File
 
 class AssetEntitiesTest {
@@ -40,11 +41,11 @@ class AssetEntitiesTest {
         val entity = entities["9"]["components"]
         assertEquals("Model 9", entity["NameComponent"]["name"].asText())
         assertEquals("OBJECT", entity["TypeComponent"]["type"].asText())
-        val renderable = entity["RenderComponent"]["renderable"]
-        assertEquals("asset", renderable["kind"].asText())
+        val renderable = entity["RenderComponent"]
+        assertFalse(renderable.has("renderable"))
         assertEquals("defaultShader", renderable["shaderKey"].asText())
-        assertEquals("MODEL", renderable["asset"]["type"].asText())
-        assertEquals("tree", renderable["asset"]["assetName"].asText())
+        assertEquals("MODEL", renderable["type"].asText())
+        assertEquals("tree", renderable["assetName"].asText())
         assertEquals(Vec3(10f, 0f, -4f), position(entities["9"]))
         for ((id, old) in before["ecs"].properties()) assertEquals(old.toString(), entities[id].toString())
         for ((key, old) in before.properties()) if (key != "ecs") assertEquals(old, root[key])
@@ -57,7 +58,7 @@ class AssetEntitiesTest {
         val entity = root["ecs"][added.entityId]
         assertEquals("Terrain 9", entity["components"]["NameComponent"]["name"].asText())
         assertEquals("TERRAIN", entity["components"]["TypeComponent"]["type"].asText())
-        assertEquals("terrain", entity["components"]["RenderComponent"]["renderable"]["shaderKey"].asText())
+        assertEquals("terrain", entity["components"]["RenderComponent"]["shaderKey"].asText())
         assertEquals(Vec3(-800f, 0f, -800f), position(entity))
     }
 
@@ -69,13 +70,19 @@ class AssetEntitiesTest {
     }
 
     @Test
-    fun anEmptySceneStartsAtZeroAndTheRuntimeLoadsIt() {
+    fun anEmptySceneStartsAtZeroAndTheRuntimeLoadsItsWrappedEntityMap() {
         val root = empty()
         assertEquals("0", AssetEntities(ResourceEditorMessages()).add(root, tree, Vec3(1f, 2f, 3f)).entityId)
-        val document = EcsLoader(net.nevinsky.abyssus.lib.core.io.JsonProcessor().mapper, log = org.slf4j.helpers.NOPLogger.NOP_LOGGER)
-            .load(root["ecs"], SceneEngine())
-        // loaded without a project, the only complaint is the missing folder: the render component itself is understood
-        assertEquals(listOf("render asset MODEL tree has no folder in the project assets"), document.warnings.map { it.toString() })
+        val json = JsonProcessor(NOPLogger.NOP_LOGGER)
+        val engine = SceneEngine()
+        val wrapped = json.readObject("{}").let { it as com.fasterxml.jackson.databind.node.ObjectNode }
+        wrapped.set<JsonNode>("entities", root["ecs"])
+        val document = EcsLoader(json, net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry()).loadToEngine(wrapped, engine)
+        assertEquals(emptyList<String>(), document.warnings)
+        assertEquals(1, engine.entities.size())
+        val render = engine.entities.first().getComponent(net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent::class.java)
+        assertEquals(net.nevinsky.abyssus.lib.core.assets.MetaType.MODEL, render.type)
+        assertEquals("tree", render.assetName)
     }
 
     @Test

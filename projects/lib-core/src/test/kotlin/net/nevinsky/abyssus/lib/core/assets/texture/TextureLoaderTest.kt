@@ -41,7 +41,7 @@ class TextureLoaderTest {
     @Test
     fun decodesTheImageOfATextureAsset() {
         asset("tex")
-        val pixmap = loader.prepare("tex")!!.release()
+        val pixmap = loader.prepare("tex")!!.staged.release()
         try {
             assertEquals(2, pixmap.width)
             assertEquals(3, pixmap.height)
@@ -53,7 +53,7 @@ class TextureLoaderTest {
     @Test
     fun aPixmapTextureIsATexture() {
         asset("tex", type = "PIXMAP_TEXTURE")
-        loader.prepare("tex")!!.dispose()
+        loader.prepare("tex")!!.staged.dispose()
     }
 
     @Test
@@ -77,13 +77,13 @@ class TextureLoaderTest {
     @Test
     fun releaseHandsOverTheImageOnceAndDisposeIsIdempotent() {
         asset("tex")
-        val prepared = loader.prepare("tex")!!
+        val prepared = loader.prepare("tex")!!.staged
         prepared.release().dispose()
         assertThrows(IllegalStateException::class.java) { prepared.release() }
         prepared.dispose()
         prepared.dispose()
-        val other = loader.prepare("tex")!!
-        loader.discard(other)
-        loader.discard(other)
+        val other = loader.prepare("tex")!!.staged
+        loader.discardStaged(other)
+        loader.discardStaged(other)
     }
 }

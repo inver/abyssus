@@ -14,7 +14,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
-import net.nevinsky.abyssus.lib.core.editor.terrain.TERRAIN_RECIPE_FILE
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.TERRAIN_RECIPE_FILE
 import net.nevinsky.abyssus.plugin.properties.AssetPropertiesPanel
 import net.nevinsky.abyssus.plugin.properties.PanelState
 import java.awt.Component

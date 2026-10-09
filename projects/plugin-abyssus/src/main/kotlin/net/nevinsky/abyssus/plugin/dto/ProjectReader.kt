@@ -1,13 +1,13 @@
 package net.nevinsky.abyssus.plugin.dto
 
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
+import net.nevinsky.abyssus.lib.gdx.editor.document.DocumentParsing
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.AbyssusCore
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.scene.Scene
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
@@ -75,7 +75,7 @@ class ProjectReader(
 }
 
 /** What a scene names directly: `assetName` and `shaderKey` values in its ECS data, and `skyboxName`. */
-fun sceneReferences(scene: Scene): Set<String> {
+fun sceneReferences(scene: SceneDto): Set<String> {
     val names = mutableSetOf<String>()
     scene.ecs?.let { ecs ->
         for (field in listOf("assetName", "shaderKey")) ecs.findValues(field)

@@ -18,7 +18,7 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.lib.core.scene.Scene
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import java.awt.Color
 import java.awt.FlowLayout
 import javax.swing.BorderFactory
@@ -44,7 +44,7 @@ fun footerCounts(project: Project): FooterCounts {
                 assets += root.assets.size
                 unused += root.assets.count { it.unused }
             }
-            is Scene -> scenes++
+            is SceneDto -> scenes++
             else -> if (file.extension == ProjectLayout.SCENE_EXTENSION) scenes++
         }
     }

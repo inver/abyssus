@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.pick
+package net.nevinsky.abyssus.lib.gdx.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.scene.aimDirection
-import net.nevinsky.abyssus.lib.core.editor.scene.cameraDirectionOf
-import net.nevinsky.abyssus.lib.core.editor.scene.forwardOf
-import net.nevinsky.abyssus.lib.core.editor.content.Pose
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.editor.scene.aimDirection
+import net.nevinsky.abyssus.lib.gdx.editor.scene.cameraDirectionOf
+import net.nevinsky.abyssus.lib.gdx.editor.scene.forwardOf
+import net.nevinsky.abyssus.lib.gdx.editor.content.Pose
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightKind
 
 
 /** The entity a gizmo acts on: where it is, and the direction it faces when it has one (a camera, a directional or spot light). */

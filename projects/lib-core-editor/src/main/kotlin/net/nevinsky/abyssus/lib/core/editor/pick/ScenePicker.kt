@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.pick
+package net.nevinsky.abyssus.lib.gdx.editor.pick
 
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.math.Intersector

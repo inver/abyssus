@@ -3,22 +3,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.scene
+package net.nevinsky.abyssus.lib.gdx.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
-import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
+import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
+import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
+import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightKind
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.content.CameraPlacement
 
-import net.nevinsky.abyssus.lib.runtime.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.LightData
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.dto.LightDto
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 
 /** The asset a `RenderComponent` shows: `renderable.asset.type` and `assetName`. */
 class DecodedAsset(val type: String, val name: String)
@@ -82,10 +83,14 @@ class PlacementMapper {
         val camera = component.camera
         val position = if (entity.hasLocalPosition) transform.position else Vec3(camera.position.x, camera.position.y, camera.position.z)
         return CameraPlacement(
-            entity.id, entity.name, position, Vec3(camera.direction.x, camera.direction.y, camera.direction.z), entity.position?.lookAtRef,
+            entity.id, entity.name, position, Vec3(camera.direction.x, camera.direction.y, camera.direction.z), lookAtOf(entity),
             camera.near, camera.far, camera.fieldOfView, transform.rotation,
         )
     }
+
+    /** The id of the entity [entity] looks at, as the file names it; null for none. */
+    private fun lookAtOf(entity: DecodedEntity): String? =
+        entity.position?.lookAtId?.takeIf { it != NO_ENTITY }?.toString()
 
     /** A `LIGHT_<KIND>` entity, or one that has a `LightComponent` and no other kind (a directional light). */
     private fun lightOf(entity: DecodedEntity, transform: PlacementTransform): LightPlacement? {
@@ -96,11 +101,11 @@ class PlacementMapper {
             type == TypeComponent.Type.LIGHT_SPOT -> LightKind.SPOT
             else -> LightKind.DIRECTIONAL
         }
-        val light: LightData = entity.light?.light ?: LightData()
+        val light: LightDto = entity.light?.light ?: LightDto()
         return LightPlacement(
             entity.id, kind, Rgba(light.color.r, light.color.g, light.color.b, 1f), light.intensity.coerceAtLeast(0f),
             transform.position, forwardOf(transform.rotation), light.range, transform.rotation,
-            light.coneAngle, light.edgeSoftness, entity.position?.lookAtRef,
+            light.coneAngle, light.edgeSoftness, lookAtOf(entity),
         )
     }
 }

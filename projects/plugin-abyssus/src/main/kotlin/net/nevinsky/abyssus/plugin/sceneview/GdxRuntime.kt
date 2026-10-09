@@ -22,7 +22,15 @@ import java.lang.Short
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.Any
+import kotlin.Array
+import kotlin.Int
+import kotlin.Long
+import kotlin.arrayOf
 import kotlin.concurrent.withLock
+import kotlin.emptyArray
+import kotlin.getValue
+import kotlin.lazy
 
 /** Per-frame values reported by the `Gdx.graphics` shim. Touched only on the AWT thread. */
 class GdxFrame {
@@ -82,7 +90,7 @@ object GdxRuntime {
     // Same prefixes Lwjgl3Application installs for GL3: libGDX shaders are GLSL 1.20 and the canvas is a core profile.
     private const val VERTEX_PREFIX = "#version 150\n#define attribute in\n#define varying out\n"
     private const val FRAGMENT_PREFIX = "#version 150\n#define varying in\n#define texture2D texture\n" +
-        "#define textureCube texture\n#define gl_FragColor fragColor\nout vec4 fragColor;\n"
+            "#define textureCube texture\n#define gl_FragColor fragColor\nout vec4 fragColor;\n"
 
     init {
         GdxNativesLoader.load()

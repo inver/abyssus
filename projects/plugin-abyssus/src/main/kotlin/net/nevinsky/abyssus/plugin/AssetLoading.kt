@@ -16,14 +16,11 @@ import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
-import net.nevinsky.abyssus.lib.core.assets.loading.CompositeAssetLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.PreparedAsset
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotStore
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
 import net.nevinsky.abyssus.lib.core.assets.model.ModelRaySnapshotLoader
@@ -39,21 +36,22 @@ import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.RayTerrainSnapshot
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.core.model.PbrModelMaterial
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 import org.slf4j.Logger
 import java.io.File
 import java.util.concurrent.Executor
 
 /**
  * Builds the asset loading graph of a project from what the caller provides: [json] for `meta.json`, [log] for
- * problems, [executor] for the off-GL-thread `prepare` step and [skyShaders] for the sky programs (`/shader/sky` in this
+ * problems, [executor] for the off-GL-thread `prepare` step and [shaders] for the sky programs (the defaults bundled in this
  * module). Everything per project (file access, meta reading, the [AssetStorage] that owns the built assets, the
  * optional CPU ray snapshots) is made by [project] and owned by one view.
  */
@@ -61,7 +59,7 @@ class AssetLoading(
     val json: JsonProcessor,
     val log: Logger,
     private val executor: Executor,
-    private val skyShaders: ShaderSource,
+    private val shaders: ShaderStorage,
 ) {
     val toneCurve = ToneCurve()
 
@@ -75,7 +73,7 @@ class AssetLoading(
      * editors hold them), which a view replaces with [ProjectAssets.unsaved] as they change.
      */
     fun project(projectDir: File, unsaved: Map<File, String> = emptyMap()): ProjectAssets =
-        ProjectAssets(projectDir, unsaved, json, log, executor, skyShaders, toneCurve, assimp)
+        ProjectAssets(projectDir, unsaved, json, log, executor, shaders, toneCurve, assimp)
 
     /** The model file the `meta.json` of asset [name] names, or null when it names none or the asset is not a model. */
     fun modelFile(projectDir: File, name: String): File? {
@@ -105,7 +103,7 @@ class ProjectAssets internal constructor(
     json: JsonProcessor,
     log: Logger,
     executor: Executor,
-    skyShaders: ShaderSource,
+    shaders: ShaderStorage,
     toneCurve: ToneCurve,
     assimp: AssimpModelLoader,
 ) : Disposable {
@@ -123,6 +121,7 @@ class ProjectAssets internal constructor(
     val rayTerrains: RaySnapshotStore<RayTerrainSnapshot, Nothing> =
         RaySnapshotStore(executor, metas, TerrainRaySnapshotLoader(terrainLoader, textureLoader), "terrain")
 
+    private val skyShaders = shaders.withAssets(files)
     private val skyboxLoader = SkyboxLoader(files, metas, skyShaders)
     private val hdrSkyLoader = HdrSkyLoader(metas, ExrLoader(files), skyShaders, toneCurve)
     val raySkies: RaySnapshotStore<RaySkySnapshot, Nothing> = RaySnapshotStore(
@@ -133,49 +132,50 @@ class ProjectAssets internal constructor(
         "sky",
     )
 
-    val storage: AssetStorage<PreparedAsset, Disposable> = AssetStorage(
+    val storage: AssetStorage = AssetStorage(
+        log,
         executor,
-        UnsavedMetaLoader(json, files, { unsaved }, CompositeAssetLoader(
-            metas,
+        UnsavedMetas(json, files, { unsaved }, metas, log)::load,
+    ).also {
+        it.registerAll(
             mapOf(
                 MetaType.MODEL to ModelLoader(metas, assimp, files, rayModels),
                 MetaType.TERRAIN to terrainLoader,
                 MetaType.TEXTURE to textureLoader,
                 MetaType.PIXMAP_TEXTURE to textureLoader,
                 MetaType.SKYBOX to skyboxLoader,
-                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas),
+                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas, skyShaders, log),
+                MetaType.CLOUDS to CloudsLoader(metas),
                 MetaType.SKYBOX_HDR to hdrSkyLoader,
             ),
-        ), log),
-        log,
-    )
+        )
+    }
 
     override fun dispose() = storage.dispose()
 }
 
 /**
- * Loads an asset from the `meta.json` text an editor holds when that is not on the disk yet (core's loaders read the
- * disk), and from the disk through [delegate] otherwise. Assets an asset needs (a terrain's textures) are still found
- * from the saved metadata.
+ * Reads the base metadata of an asset from the `meta.json` text an editor holds when that is not on the disk yet (core's
+ * loaders read the disk), and from the disk through [saved] otherwise. Unsaved text that is unsupported yields no meta,
+ * never the saved one.
  */
-internal class UnsavedMetaLoader(
+internal class UnsavedMetas(
     private val json: JsonProcessor,
     private val files: FileLoader,
     private val unsaved: () -> Map<File, String>,
-    private val delegate: CompositeAssetLoader,
+    private val saved: AssetMetaLoader,
     private val log: Logger = NOPLogger.NOP_LOGGER,
     private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
     private val binder: AssetMetaBinder = AssetMetaBinder(json),
-) : AssetLoader<PreparedAsset, Disposable> by delegate {
-    override fun prepare(name: String): PreparedAsset? {
+) {
+    fun load(name: String): AssetMeta<Any>? {
         val file = files.folder(name)?.let { File(it, META_FILE).absoluteFile }
-        val text = file?.let { unsaved()[it] } ?: return delegate.prepare(name)
-        val meta = runCatchingKeepingCancellation {
+        val text = file?.let { unsaved()[it] } ?: return saved.loadBaseMeta(name)
+        return runCatchingKeepingCancellation {
             val node = json.readObject(text)
             format.requireSupported(node, DocumentKind.ASSET)
             binder.bind(name, node)
-        }.onFailure { log.warn("Unsaved metadata for $name: ${it.message}", it) }.getOrNull() ?: return null
-        return delegate.loadPrepared(meta)
+        }.onFailure { log.warn("Unsaved metadata for $name: ${it.message}", it) }.getOrNull()
     }
 }
 

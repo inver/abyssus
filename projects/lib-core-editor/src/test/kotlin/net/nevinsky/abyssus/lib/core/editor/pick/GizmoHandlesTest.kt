@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.pick
+package net.nevinsky.abyssus.lib.gdx.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
-import net.nevinsky.abyssus.lib.core.editor.parseScene
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.gdx.editor.parseScene
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -66,11 +66,11 @@ class GizmoHandlesTest {
         assertTrue(canRotate(mundus, "4"))
         // A light aimed at something other than a handle (a model) only moves.
         val aimedAtModel = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "m":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"a"}}},
+            "0":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"a"}}},
                 "PositionComponent":{"localPosition":{"x":1}}}},
-            "l":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
-                "PositionComponent":{"lookAtId":"m","localPosition":{"x":5}}}}}}}""")
-        assertFalse(canRotate(aimedAtModel, "l"))
+            "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
+                "PositionComponent":{"lookAtId":0,"localPosition":{"x":5}}}}}}}""")
+        assertFalse(canRotate(aimedAtModel, "1"))
         // A light without a look-at target keeps its rings; a point light never has any.
         val noTarget = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
             "d":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{}}}}}}""")

@@ -5,11 +5,11 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import net.nevinsky.abyssus.lib.gdx.editor.pick.LineSink
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
 
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
@@ -22,7 +22,7 @@ import com.badlogic.gdx.utils.Disposable
  * Draws colored line segments in world space with the camera given to [begin], batched into one dynamic mesh.
  * Call only with the GL context current.
  */
-class LineBatch(shaders: ShaderSource) : LineSink, Disposable {
+class LineBatch(shaders: ShaderStorage) : LineSink, Disposable {
     private val program = shaders.program("lines")
     private val mesh = Mesh(
         false, MAX_VERTICES, 0,

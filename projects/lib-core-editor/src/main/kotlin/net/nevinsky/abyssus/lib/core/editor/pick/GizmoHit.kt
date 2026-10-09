@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.pick
+package net.nevinsky.abyssus.lib.gdx.editor.pick
 
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
+import net.nevinsky.abyssus.lib.gdx.editor.scene.toVector3
 import kotlin.math.abs
 
 /** How close, in pixels, a ray must pass to a handle to grab it. */

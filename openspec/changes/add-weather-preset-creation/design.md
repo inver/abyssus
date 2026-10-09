@@ -3,7 +3,7 @@
 ## Context
 
 See `proposal.md` and the delta spec.
-- **From `add-sky-clouds`:** `CloudSettingsReader`, `WeatherPresetReader`, `BuiltinPresets`, band-by-band merging and
+- **From `add-sky-clouds`:** `CloudMetaReader`, `WeatherPresetReader`, `BuiltinPresets`, band-by-band merging and
   `MetaType.WEATHER_PRESET`, all in `core`.
 - **From `add-asset-editing-and-terrain-generation`:**
   - `AssetFileCommand`, which creates asset folders with staged bytes, one named undoable command, expected-state

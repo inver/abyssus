@@ -7,6 +7,9 @@ package net.nevinsky.abyssus.lib.core.assets.model
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.math.Matrix4
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelMesh
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelSkinning
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelVertexAttribute
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -40,7 +43,12 @@ class RayModelSkinningTest {
 
     private fun mesh(values: FloatArray = floatArrayOf(1f, 2f, 3f, 0f, 1f, 0f, 0f, .25f, 1f, .75f)) = RayModelMesh(
         "skin", values, 40,
-        listOf(attribute(Usage.Position, 3, 0), attribute(Usage.Normal, 3, 12), attribute(Usage.BoneWeight, 2, 24), attribute(Usage.BoneWeight, 2, 32, 1)),
+        listOf(
+            attribute(Usage.Position, 3, 0),
+            attribute(Usage.Normal, 3, 12),
+            attribute(Usage.BoneWeight, 2, 24),
+            attribute(Usage.BoneWeight, 2, 32, 1)
+        ),
         emptyList(),
     )
     private fun attribute(usage: Int, components: Int, offset: Int, unit: Int = 0) =

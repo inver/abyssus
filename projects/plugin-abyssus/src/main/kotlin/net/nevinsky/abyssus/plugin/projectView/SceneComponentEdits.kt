@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.plugin.EditorBundle
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.gdx.editor.content.RenderAsset
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.project.Project
@@ -15,14 +15,14 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
-import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.components.AddedEntity
-import net.nevinsky.abyssus.lib.core.editor.components.AddedLight
-import net.nevinsky.abyssus.lib.core.editor.components.AssetEntities
+import net.nevinsky.abyssus.lib.gdx.editor.components.EditResult
+import net.nevinsky.abyssus.lib.gdx.editor.components.AddedEntity
+import net.nevinsky.abyssus.lib.gdx.editor.components.AddedLight
+import net.nevinsky.abyssus.lib.gdx.editor.components.AssetEntities
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import net.nevinsky.abyssus.lib.core.editor.components.LightEntities
-import net.nevinsky.abyssus.lib.core.editor.components.LightPreset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.components.LightEntities
+import net.nevinsky.abyssus.lib.gdx.editor.components.LightPreset
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import net.nevinsky.abyssus.plugin.dto.MetaFiles

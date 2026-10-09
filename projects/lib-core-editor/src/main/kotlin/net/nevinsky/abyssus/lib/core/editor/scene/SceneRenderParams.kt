@@ -3,20 +3,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.scene
+package net.nevinsky.abyssus.lib.gdx.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsState
-import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneRaySettingsState
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneRaySettingsCodec
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.scene.Scene
-import net.nevinsky.abyssus.lib.runtime.float
-import net.nevinsky.abyssus.lib.runtime.obj
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.util.float
+import net.nevinsky.abyssus.lib.core.util.obj
 import java.io.File
 import kotlin.math.exp
 import kotlin.math.pow
@@ -68,7 +68,7 @@ data class SceneRenderParams(
 }
 
 /** The view parameters of [scene], seen through [camera]; [projectDir] holds its assets. */
-fun renderParamsOf(scene: Scene, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
+fun renderParamsOf(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
     val fog = fogOf(scene)
     return SceneRenderParams(
         fog?.color ?: SceneRenderParams.DEFAULT_CLEAR,
@@ -84,7 +84,7 @@ fun renderParamsOf(scene: Scene, camera: CameraParams, projectDir: File? = null)
     )
 }
 
-private fun ambientOf(scene: Scene): Rgba? {
+private fun ambientOf(scene: SceneDto): Rgba? {
     if (scene.ambientLightEnabled != true) return null
     val light = scene.ambientLight ?: return null
     val c = light.color ?: return null
@@ -92,7 +92,7 @@ private fun ambientOf(scene: Scene): Rgba? {
     return Rgba(c.r * k, c.g * k, c.b * k, 1f)
 }
 
-private fun fogOf(scene: Scene): FogParams? {
+private fun fogOf(scene: SceneDto): FogParams? {
     if (scene.fogEnabled != true) return null
     val fog = scene.fog ?: return null
     val c = fog.color ?: return null
@@ -110,8 +110,8 @@ internal fun normalized(v: Vec3): Vec3? {
 class MainCamera {
     fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
         val root = SceneJson().parse(abssText).takeIf { it.isObject } ?: return null
-        if (net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat()
-                .validate(root, net.nevinsky.abyssus.lib.core.editor.document.DocumentKind.PROJECT) != null
+        if (net.nevinsky.abyssus.lib.gdx.editor.document.AbyssusDocumentFormat()
+                .validate(root, net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind.PROJECT) != null
         ) return null
         val cam = root.obj("mainCamera") ?: return null
         val position = cam.vec("position") ?: return null

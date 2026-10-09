@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.flightgear
+package net.nevinsky.abyssus.lib.gdx.editor.flightgear
 
 import java.io.ByteArrayOutputStream
 import java.io.File

@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.ray
+package net.nevinsky.abyssus.lib.gdx.editor.ray
 
-import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
 
 /** Why the view went back to raster, as the user reads it. */
 fun RaySceneFallback.message(messages: EditorMessages): String = messages.message(

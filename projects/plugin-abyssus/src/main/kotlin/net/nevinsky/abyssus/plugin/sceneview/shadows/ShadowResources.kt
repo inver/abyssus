@@ -11,8 +11,8 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.core.shader.ShadowAtlasAttribute
-import net.nevinsky.abyssus.lib.core.shader.ShadowLightRecord
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightRecord
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 
 /** GL resources belong to one active canvas context. Construct, render, and dispose only on its safe GL thread. */

@@ -3,16 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.flightgear
+package net.nevinsky.abyssus.lib.gdx.editor.flightgear
 
 import com.badlogic.gdx.files.FileHandle
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.core.editor.flightgear.fixtureArchive
-import net.nevinsky.abyssus.lib.core.editor.flightgear.fixtureSkinPixel
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -31,7 +29,7 @@ import javax.imageio.ImageIO
 class FlightGearImportTest {
     @get:Rule
     val temp = TemporaryFolder()
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val importer = FlightGearImport(json, AbyssusDocumentFormat())
     private val uuid = UUID.fromString("6f1c2b5e-7d0a-4c39-9e61-1d3a2f5b8c90")
 

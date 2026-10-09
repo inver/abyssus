@@ -1,18 +1,17 @@
-package net.nevinsky.abyssus.lib.core.editor.document
+package net.nevinsky.abyssus.lib.gdx.editor.document
 
-import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
-import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.gdx.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.parseScene
 import net.nevinsky.abyssus.plugin.projectView.ComponentTarget
 import net.nevinsky.abyssus.plugin.projectView.ecsRows
 import net.nevinsky.abyssus.plugin.projectView.entityRows
 import net.nevinsky.abyssus.plugin.properties.PanelState
 import net.nevinsky.abyssus.plugin.properties.readEntityState
-import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.scene.CameraParams
 import net.nevinsky.abyssus.plugin.testPanelServices
 import java.io.File
 
@@ -32,7 +31,7 @@ class EditorReadBaselineTest : BasePlatformTestCase() {
         assertEquals(Vec3(-3.035308f, .9123962f, -3.2570944f), content.models.first().transform.position)
         val params = renderParamsOf(scene, CameraParams.DEFAULT)
         assertEquals(content, params.content)
-        assertEquals(net.nevinsky.abyssus.lib.core.io.JsonProcessor().readObject(text).get("ecs"), params.ecs)
+        assertEquals(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(text).get("ecs"), params.ecs)
         assertEquals(CameraParams.DEFAULT, params.camera)
         assertNotNull(params.rayTracing.settings)
     }

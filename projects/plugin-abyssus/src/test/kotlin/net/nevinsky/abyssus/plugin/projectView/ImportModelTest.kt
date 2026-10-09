@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import com.intellij.openapi.command.undo.UndoManager
-import com.intellij.openapi.command.undo.UnexpectedUndoException
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.util.io.FileUtil
@@ -15,16 +14,16 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.assimp.UpAxis
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
+import net.nevinsky.abyssus.lib.gdx.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.editor.modelimport.ImportSettings
-import net.nevinsky.abyssus.lib.core.editor.modelimport.LengthUnit
-import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSource
-import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSourceOpener
+import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ImportSettings
+import net.nevinsky.abyssus.lib.gdx.editor.modelimport.LengthUnit
+import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ModelSource
+import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ModelSourceOpener
 import net.nevinsky.abyssus.plugin.AbyssusCore
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.dto.ProjectReader
@@ -105,12 +104,12 @@ class ImportModelTest : BasePlatformTestCase() {
         importModel(project, abss, source("crate.obj"), crate, null) { fail(it) }
         val folder = File(projectDir, "assets/model_crate")
         val made = tree(folder)
-        val uuid = JsonProcessor().readObject(File(folder, "meta.json").readText())["uuid"].asText()
+        val uuid = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(File(folder, "meta.json").readText())["uuid"].asText()
         UndoManager.getInstance(project).undo(null)
         assertFalse(folder.exists())
         UndoManager.getInstance(project).redo(null)
         assertEquals(made, tree(folder))
-        assertEquals(uuid, JsonProcessor().readObject(File(folder, "meta.json").readText())["uuid"].asText())
+        assertEquals(uuid, JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(File(folder, "meta.json").readText())["uuid"].asText())
     }
 
     fun testUndoIsRefusedOnceASceneNamesTheAsset() {
@@ -151,7 +150,7 @@ class ImportModelTest : BasePlatformTestCase() {
         assertEquals("OBJECT", components["TypeComponent"]["type"].asText())
         val position = components["PositionComponent"]["localPosition"]
         assertEquals(listOf(10.0, 0.0, -4.0), listOf("x", "y", "z").map { position[it]?.asDouble() ?: 0.0 })
-        val asset = components["RenderComponent"]["renderable"]["asset"]
+        val asset = components["RenderComponent"]
         assertEquals("MODEL", asset["type"].asText())
         assertEquals("model_crate", asset["assetName"].asText())
         assertTrue(File(projectDir, "assets/model_crate/model.glb").isFile)

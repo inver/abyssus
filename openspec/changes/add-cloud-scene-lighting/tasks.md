@@ -26,7 +26,7 @@ need `-Dabyssus.glTests=true`. Single plugin tests: `./gradlew :test --tests '<c
 - [ ] 2.2 Add the same fade to `terrain.frag` / `TerrainShader`. Verify with the opt-in `TerrainSkyFadeGlTest`.
 - [ ] 2.3 Do runIde check 1 on a copy of `Untitled` with `lightsScene: true`:
   1. A clear noon sky gives blue sky light.
-  2. `builtin:overcast` gives greyer, even light.
+  2. A cloud asset made from the overcast template gives greyer, even light.
   3. Rotating entity `7` to sunset gives warm light.
   4. The changes fade without jumps.
   5. Removing `lightsScene` returns the original look.
@@ -48,7 +48,7 @@ need `-Dabyssus.glTests=true`. Single plugin tests: `./gradlew :test --tests '<c
   - the spot light is unchanged;
   - a model shadow and a cloud shadow combine without going below the no-sun level;
   - no cloud shadows without clouds.
-- [ ] 3.4 Do runIde check 2 on a copy of `Untitled` with `builtin:fair`:
+- [ ] 3.4 Do runIde check 2 on a copy of `Untitled` with a cloud asset made from the fair template:
   1. Patches drift across the terrain along the wind.
   2. They match the clouds overhead.
   3. `Spot Light 8`'s area keeps its spot light.

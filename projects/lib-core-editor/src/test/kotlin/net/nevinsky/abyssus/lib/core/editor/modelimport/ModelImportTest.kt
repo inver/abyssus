@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.modelimport
+package net.nevinsky.abyssus.lib.gdx.editor.modelimport
 
 import com.badlogic.gdx.files.FileHandle
-import net.nevinsky.abyssus.lib.core.assimp.UpAxis
+import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.core.model.ModelData
-import net.nevinsky.abyssus.lib.core.model.PbrModelMaterial
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -23,7 +23,7 @@ import java.nio.file.Files
 import java.util.UUID
 
 class ModelImportTest {
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val format = AbyssusDocumentFormat()
     private val import = ModelImport(json, format)
     private val fixtures = importFixtures()

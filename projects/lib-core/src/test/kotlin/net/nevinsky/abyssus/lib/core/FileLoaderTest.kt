@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.core
+package net.nevinsky.abyssus.lib.gdx
 
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 

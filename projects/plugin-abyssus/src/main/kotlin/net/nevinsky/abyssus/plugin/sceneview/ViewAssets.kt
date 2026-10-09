@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.ray.RayAssetLease
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssets
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayAssetLease
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssets
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.plugin.AssetLoading
 import net.nevinsky.abyssus.plugin.ProjectAssets
@@ -62,7 +62,7 @@ class ViewAssets(private val loading: AssetLoading) : Disposable {
         views[view] = names
         names.forEach(storage::request)
         storage.retain(views.values.flatMapTo(HashSet()) { it })
-        storage.pump()
+        storage.update()
     }
 
     internal fun get(name: String): Disposable? = project?.storage?.get(name)

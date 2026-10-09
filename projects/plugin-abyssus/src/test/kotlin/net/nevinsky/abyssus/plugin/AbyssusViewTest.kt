@@ -5,9 +5,8 @@
 
 package net.nevinsky.abyssus.plugin
 
-import net.nevinsky.abyssus.lib.core.editor.parseScene
-import net.nevinsky.abyssus.lib.core.editor.testAsset
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.parseScene
+import net.nevinsky.abyssus.lib.gdx.editor.testAsset
 
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ViewSettings
@@ -25,7 +24,7 @@ import net.nevinsky.abyssus.plugin.projectView.childrenOf
 import net.nevinsky.abyssus.plugin.projectView.elementLabel
 import net.nevinsky.abyssus.plugin.dto.ProjectReader
 import net.nevinsky.abyssus.plugin.dto.SceneReader
-import net.nevinsky.abyssus.lib.core.scene.Scene
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 import net.nevinsky.abyssus.plugin.projectView.foldToggles
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectFileType
@@ -48,7 +47,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         myFixture.copyFileToProject("Tree/Untitled.abss", "Untitled/Untitled.abss")
         val sceneText = java.io.File("$testDataPath/Tree/scenes/Main Scene.scene").readText()
         myFixture.addFileToProject("Untitled/scenes/Main Scene.scene",
-            net.nevinsky.abyssus.lib.core.editor.document.SceneJson().pretty(net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(sceneText)))
+            net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().pretty(net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(sceneText)))
         return myFixture.findFileInTempDir("Untitled")
     }
 
@@ -102,7 +101,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals(0.001f, scene.fog!!.density!!, 0f)
         assertEquals(0.3f, scene.ambientLight!!.intensity!!, 0f)
         assertEquals("skybox_physical", scene.skyboxName)
-        assertEquals(listOf("id", "name", "ambientLightEnabled", "ambientLight", "fogEnabled", "fog", "skyboxEnabled", "skyboxName", "rayTracingEnabled", "rayTracing", "ecs"),
+        assertEquals(listOf("id", "name", "ambientLightEnabled", "ambientLight", "fogEnabled", "fog", "skyboxEnabled", "skyboxName", "rayTracing", "rayTracingEnabled", "ecs"),
             childrenOf(scene).map { it.name })
         assertEquals(before.toList(), file.contentsToByteArray().toList())
     }
@@ -140,7 +139,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertTrue(!service<SceneReader>().read(add("bad.scene", "{oops")).success)
         val scene = parseScene("""{"format":"abyssus","formatVersion":1}""")
         assertEquals(scene.id, java.util.UUID.fromString(scene.id).toString())
-        assertEquals(Scene(id = scene.id), scene)
+        assertEquals(SceneDto(id = scene.id), scene)
         assertEquals(11, childrenOf(scene).size)
         assertTrue(childrenOf(scene).filter { it.name.endsWith("Enabled") }.all { it.value == false })
         assertTrue(childrenOf(scene).filter { it.name != "id" && !it.name.endsWith("Enabled") }.all { it.value == null })

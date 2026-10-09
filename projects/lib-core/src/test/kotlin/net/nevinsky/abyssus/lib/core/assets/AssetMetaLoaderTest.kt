@@ -5,7 +5,7 @@ import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.core.assets.texture.TextureMeta
-import net.nevinsky.abyssus.lib.core.testing.warningsTo
+import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
@@ -39,7 +39,7 @@ class AssetMetaLoaderTest {
                 """{"format":"abyssus","formatVersion":1,"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":10,"uv":2.0}}"""
             )
         }
-        val loader = AssetMetaLoader(JsonProcessor(), FileLoader(dir))
+        val loader = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir))
         val additional = loader.loadBaseMeta("terr")!!.typedAdditional<TerrainMeta>()
         assertEquals("terrain.data", additional.terrainFile)
         assertEquals(10, additional.size)
@@ -49,10 +49,10 @@ class AssetMetaLoaderTest {
     @Test
     fun anUnknownTypeIsUnknownAndABrokenMetaIsNull() {
         val dir = project {
-            it.meta("odd", """{"format":"abyssus","formatVersion":1,"type":"SOMETHING_NEW"}""")
+            it.meta("odd", """{"format":"abyssus","formatVersion":1,"type":"SOMETHING_NEW","additional":{}}""")
             it.meta("bad", "{ not json")
         }
-        val loader = AssetMetaLoader(JsonProcessor(), FileLoader(dir))
+        val loader = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir))
         assertEquals(MetaType.UNKNOWN, loader.loadBaseMeta("odd")!!.type)
         assertNull(loader.loadBaseMeta("bad"))
         dir.deleteRecursively()
@@ -62,7 +62,7 @@ class AssetMetaLoaderTest {
     fun aBrokenMetaIsReportedOncePerRevision() {
         val messages = mutableListOf<String>()
         val dir = project { it.meta("bad", "{ not json") }
-        val loader = AssetMetaLoader(JsonProcessor(), FileLoader(dir), warningsTo(messages))
+        val loader = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir), warningsTo(messages))
         assertNull(loader.loadBaseMeta("bad"))
         assertNull(loader.loadBaseMeta("bad"))
         assertEquals(1, messages.size)
@@ -79,7 +79,7 @@ class AssetMetaLoaderTest {
             )
         }
         val file = File(dir, "assets/sky/meta.json")
-        val loader = AssetMetaLoader(JsonProcessor(), FileLoader(dir))
+        val loader = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir))
         assertEquals("t.png", loader.loadBaseMeta("sky")!!.typedAdditional<SkyboxMeta>().top)
         // same length and modification time: the stamp is unchanged, so the cached read answers
         val stamp = file.lastModified()
@@ -102,13 +102,13 @@ class AssetMetaLoaderTest {
             it.meta("without", """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{}}""")
             it.meta("bad", """{"format":"abyssus","formatVersion":1,"uuid":"nope","type":"MODEL","additional":{}}""")
         }
-        val loader = AssetMetaLoader(JsonProcessor(), FileLoader(dir))
+        val loader = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir))
         assertEquals(
             java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"),
             loader.loadBaseMeta("with")!!.uuid
         )
         assertNull(loader.loadBaseMeta("without")!!.uuid)
-        assertNull(loader.loadBaseMeta("bad")!!.uuid)
+        assertNull(loader.loadBaseMeta("bad"))
         dir.deleteRecursively()
     }
 
@@ -121,7 +121,7 @@ class AssetMetaLoaderTest {
                 """{"format":"abyssus","formatVersion":1,"type":"PIXMAP_TEXTURE","additional":{"file":"b.png"}}"""
             )
         }
-        val loader = AssetMetaLoader(JsonProcessor(), FileLoader(dir))
+        val loader = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir))
         assertEquals("a.png", loader.loadBaseMeta("a")!!.typedAdditional<TextureMeta>().file)
         assertEquals("b.png", loader.loadBaseMeta("b")!!.typedAdditional<TextureMeta>().file)
         dir.deleteRecursively()
@@ -129,11 +129,26 @@ class AssetMetaLoaderTest {
 
     @Test
     fun theFolderIsTheNameAndASparseMetaGetsDefaults() {
-        val dir = project { it.meta("sparse", """{"format":"abyssus","formatVersion":1,"type":"MODEL"}""") }
-        val meta = AssetMetaLoader(JsonProcessor(), FileLoader(dir)).loadBaseMeta("sparse")!!
+        val dir = project { it.meta("sparse", """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{}}""") }
+        val meta = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir)).loadBaseMeta("sparse")!!
         assertEquals("sparse", meta.name)
         assertEquals(1, meta.version)
         assertEquals(MetaType.MODEL, meta.type)
         dir.deleteRecursively()
     }
+    @Test
+    fun aMissingAdditionalBlockIsReportedWithoutChangingTheFile() {
+        val text = """{"format":"abyssus","formatVersion":1,"type":"MODEL"}"""
+        val dir = project { it.meta("missing", text) }
+        try {
+            val messages = mutableListOf<String>()
+            val loader = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir), warningsTo(messages))
+            assertNull(loader.loadBaseMeta("missing"))
+            assertNull(loader.loadBaseMeta("missing"))
+            assertEquals(1, messages.size)
+            assertTrue(messages.single().contains("additional"))
+            assertEquals(text, File(dir, "assets/missing/meta.json").readText())
+        } finally { dir.deleteRecursively() }
+    }
+
 }

@@ -5,12 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
-import net.nevinsky.abyssus.lib.core.editor.scene.PendingAssetRevision
-import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.editor.scene.AssetRevisionBatch
+import net.nevinsky.abyssus.lib.gdx.editor.scene.PendingAssetRevision
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -31,7 +28,7 @@ class AssetRefreshTest {
     private val assets get() = File(tmp.root, "assets")
 
     private fun refresh() = AssetRefresh(
-        tmp.root, JsonProcessor(),
+        tmp.root, JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER),
         unsavedMeta = { unsavedReads++; unsaved },
         background = { backgroundQueue += it },
         ui = { uiQueue += it },
@@ -56,7 +53,7 @@ class AssetRefreshTest {
     private fun terrainSize(batch: AssetRevisionBatch): Int {
         val meta = File(assets, "hills/meta.json").absoluteFile
         val text = batch.unsaved[meta] ?: meta.readText()
-        return JsonProcessor().readObject(text).get("additional").get("size").asInt()
+        return JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(text).get("additional").get("size").asInt()
     }
 
     private fun project() {
@@ -100,7 +97,7 @@ class AssetRefreshTest {
         settle()
         assertEquals(setOf("hills"), delivered.single().names)
         assertEquals("the snapshot reads the unsaved text", 300, terrainSize(delivered.single()))
-        assertEquals("the disk still holds the old size", 100, JsonProcessor().readObject(meta.readText()).get("additional").get("size").asInt())
+        assertEquals("the disk still holds the old size", 100, JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(meta.readText()).get("additional").get("size").asInt())
 
         // saved: the document is no longer unsaved and the disk holds the same text
         write("hills/meta.json", terrainMeta(300))

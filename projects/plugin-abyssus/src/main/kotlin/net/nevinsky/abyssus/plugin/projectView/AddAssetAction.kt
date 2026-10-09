@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusCore
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 
 /**
  * The project's models and terrains to place in [file]'s scene, under Models and Terrains, by folder name. The same

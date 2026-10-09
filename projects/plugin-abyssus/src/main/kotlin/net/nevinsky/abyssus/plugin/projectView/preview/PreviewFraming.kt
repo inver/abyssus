@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.plugin.projectView.preview
 
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import kotlin.math.max
 import kotlin.math.sin
 

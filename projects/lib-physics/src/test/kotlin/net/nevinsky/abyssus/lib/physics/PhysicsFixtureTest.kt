@@ -4,12 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.physics
 
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.testing.warningsTo
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -19,10 +15,11 @@ class PhysicsFixtureTest {
     fun loadsWithPhysicsComponents() {
         val messages = mutableListOf<String>()
         val scene = loadPhysicsScene(messages)
-        // the physics components add no warning to those Untitled's own markers and unmodeled components give
-        val untitled = mutableListOf<String>()
-        RuntimeSceneLoader(JsonProcessor(), FileLoader(testProject("Untitled")), warningsTo(untitled)).load("Main Scene.scene")
-        assertEquals(untitled.map { it.substringAfter(": ") }, messages.map { it.substringAfter(": ") })
+        assertEquals(setOf(
+            "component PickableComponent is not modeled and is kept unchanged",
+            "component DependenciesComponent is not modeled and is kept unchanged",
+        ), messages.toSet())
+        assertEquals(2, messages.size)
         assertTrue(messages.none { "RigidBody" in it || "Collider" in it || "Constraint" in it })
 
         val model0 = scene.named("Model 0")

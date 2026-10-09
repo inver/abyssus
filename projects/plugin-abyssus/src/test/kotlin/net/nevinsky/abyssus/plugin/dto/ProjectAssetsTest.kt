@@ -15,7 +15,7 @@ import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.assets.Asset
-import net.nevinsky.abyssus.lib.core.editor.testAsset
+import net.nevinsky.abyssus.lib.gdx.editor.testAsset
 import java.util.UUID
 
 class ProjectAssetsTest : BasePlatformTestCase() {
@@ -154,6 +154,23 @@ class ProjectAssetsTest : BasePlatformTestCase() {
             "materials",
         )
         assertEquals(listOf("dead", "mat2"), readAssets(abss).filter { it.unused }.map { it.name })
+    }
+
+    fun testCloudAssetIsUsedThroughTheSkyThatNamesIt() {
+        fun sky(label: String, clouds: String) =
+            meta("SKYBOX_PROCEDURAL", label, """{"vertex":"sky.vert","fragment":"sky.frag","clouds":"${u(clouds)}"}""")
+        val abss = project(
+            mapOf("S" to """{"format":"abyssus","formatVersion":1,"skyboxName":"sky","ecs":{}}"""),
+            mapOf(
+                "sky" to sky("us", "uw"),
+                "clouds_storm" to meta("CLOUDS", "uw", """{"low":{"type":"stratocumulus"}}"""),
+                "clouds_fair" to meta("CLOUDS", "uf", """{"low":{"type":"cumulus"}}"""),
+                "other_sky" to sky("uo", "uf"),
+            ),
+            "clouds",
+        )
+        assertEquals("a cloud asset only an unused sky names is unused", listOf("clouds_fair", "other_sky"),
+            readAssets(abss).filter { it.unused }.map { it.name })
     }
 
     fun testCyclesTerminateAndUnknownUuidsAreIgnored() {

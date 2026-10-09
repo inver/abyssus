@@ -4,18 +4,18 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendService
-import net.nevinsky.abyssus.lib.core.editor.ray.RayFrameContext
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssets
-import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayBackendService
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayFrameContext
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssets
+import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModePhase
 import net.nevinsky.abyssus.plugin.ui.RayModeText
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
+import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -96,7 +96,7 @@ class SceneViewPanelRayTest : BasePlatformTestCase() {
         val renderer = testRenderer()
         renderer.state.selectedId = "selected-entity"
         renderer.state.viewCamera = "camera-1"
-        renderer.state.preview = mapOf("selected-entity" to net.nevinsky.abyssus.lib.core.editor.pick.DragResult(
+        renderer.state.preview = mapOf("selected-entity" to net.nevinsky.abyssus.lib.gdx.editor.pick.DragResult(
             PlacementTransform(Vec3(1f, 2f, 3f), Quat.IDENTITY, Vec3(1f, 1f, 1f)), null))
         val preview = renderer.state.preview
         val device = RayFakeDevice()

@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.pick
+package net.nevinsky.abyssus.lib.gdx.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
-import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.gdx.editor.content.toMatrix
 
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
@@ -112,15 +111,15 @@ class ScenePickerTest {
 
     @Test fun fixtureTerrainAndCameraAreValidForDrop() {
         val dir = java.io.File("src/test/testData/project/Untitled")
-        val content = sceneContentOf(net.nevinsky.abyssus.lib.core.editor.parseScene(java.io.File(dir, "scenes/Main Scene.scene").readText()))
+        val content = sceneContentOf(net.nevinsky.abyssus.lib.gdx.editor.parseScene(java.io.File(dir, "scenes/Main Scene.scene").readText()))
         val placement = content.terrains.single()
-        val data = net.nevinsky.abyssus.lib.core.editor.terrainData(dir, placement.assetName)
+        val data = net.nevinsky.abyssus.lib.gdx.editor.terrainData(dir, placement.assetName)
         org.junit.Assert.assertTrue(data.heights.all { it == 0f })
         val camera = content.cameras.single()
         val ground = ScenePicker().restHeight(OrientedBox(SceneMarkers().cameraBounds(camera.position), Matrix4()), emptyList(), listOf(TerrainTarget("1", data, placement.transform.toMatrix())))!!
         println("Camera 4: terrain=$ground lowest=${camera.position.y - 0.5f}")
         org.junit.Assert.assertTrue(kotlin.math.abs(camera.position.y - 0.5f - ground) > REST_EPS)
-        val root = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(java.io.File(dir, "scenes/Main Scene.scene").readText())
+        val root = net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(java.io.File(dir, "scenes/Main Scene.scene").readText())
         val components = root["ecs"]["4"]["components"]
         assertEquals(components["PositionComponent"]["localPosition"], components["CameraComponent"]["camera"]["position"])
     }

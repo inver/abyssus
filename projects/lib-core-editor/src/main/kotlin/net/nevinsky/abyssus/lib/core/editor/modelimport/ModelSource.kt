@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.modelimport
+package net.nevinsky.abyssus.lib.gdx.editor.modelimport
 
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.VertexAttributes
@@ -11,14 +11,14 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import com.badlogic.gdx.utils.Array
 import com.fasterxml.jackson.databind.ObjectMapper
-import net.nevinsky.abyssus.lib.core.assimp.AssimpFlags
-import net.nevinsky.abyssus.lib.core.assimp.AssimpImportException
-import net.nevinsky.abyssus.lib.core.assimp.AssimpModelDataLoader
-import net.nevinsky.abyssus.lib.core.assimp.ColladaAsset
-import net.nevinsky.abyssus.lib.core.assimp.LeftOut
-import net.nevinsky.abyssus.lib.core.assimp.UpAxis
-import net.nevinsky.abyssus.lib.core.gltf.PhongToPbr
-import net.nevinsky.abyssus.lib.core.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.assimp.AssimpFlags
+import net.nevinsky.abyssus.lib.gdx.assimp.AssimpImportException
+import net.nevinsky.abyssus.lib.gdx.assimp.AssimpModelDataLoader
+import net.nevinsky.abyssus.lib.gdx.assimp.ColladaAsset
+import net.nevinsky.abyssus.lib.gdx.assimp.LeftOut
+import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
+import net.nevinsky.abyssus.lib.gdx.gltf.PhongToPbr
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer

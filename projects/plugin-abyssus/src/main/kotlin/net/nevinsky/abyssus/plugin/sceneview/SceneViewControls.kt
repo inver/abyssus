@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.editor.pick.GizmoMode
 
 /** An entry of the camera selector: [id] is the camera entity to look through, null for the free orbit view. */
 data class CameraChoice(val id: String?, val label: String) {

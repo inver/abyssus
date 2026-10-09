@@ -5,10 +5,12 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.graphics.Texture
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.CompositeAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
+import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxCube
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
@@ -20,16 +22,12 @@ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.core.model.Model
-import net.nevinsky.abyssus.lib.core.testing.warningsTo
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.model.Model
+import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
@@ -60,32 +58,31 @@ class AssetLoadingGlTest {
     )
     private val mainSceneTerrain = "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
 
-    /** The loaders of one project folder, wired by hand as the plugin does: one composite over every kind of asset. */
+    /** The loaders of one project folder, wired by hand as the plugin does: one storage over every kind of asset. */
     private inner class Project(val dir: File, val log: Logger = NOPLogger.NOP_LOGGER) {
         val files = FileLoader(dir)
         val metas = testMetaLoader(dir, log, files)
-        private val composite = CompositeAssetLoader(
-            metas,
+        private val loaders: Map<MetaType, AssetLoader<*, *, *>> =
             mapOf(
                 MetaType.MODEL to ModelLoader(metas, AssimpModelLoader(), files),
                 MetaType.TERRAIN to TerrainLoader(files, metas),
                 MetaType.TEXTURE to TextureLoader(files, metas),
                 MetaType.PIXMAP_TEXTURE to TextureLoader(files, metas),
                 MetaType.SKYBOX to SkyboxLoader(files, metas, skyShaders()),
-                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas),
+                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas, skyShaders(), log),
+                MetaType.CLOUDS to CloudsLoader(metas),
                 MetaType.SKYBOX_HDR to HdrSkyLoader(metas, ExrLoader(files), skyShaders(), ToneCurve()),
-            ),
-        )
+            )
 
         /** The one storage of this project: it builds and owns every kind of asset. */
-        fun assets() = AssetStorage(Executor(Runnable::run), composite, log)
+        fun assets() = AssetStorage(log, Executor(Runnable::run), metas::loadBaseMeta).also { it.registerAll(loaders) }
     }
 
     /** Requests [names] and pumps frame after frame, as the scene view does, until nothing is loading. */
-    private fun loadAll(assets: AssetStorage<*, *>, names: Set<String>, frames: Int = 400) {
+    private fun loadAll(assets: AssetStorage, names: Set<String>, frames: Int = 400) {
         repeat(frames) {
             names.forEach(assets::request)
-            assets.pump()
+            assets.update()
             if (!assets.isLoading()) return
         }
         error("still loading after $frames frames")
@@ -113,12 +110,19 @@ class AssetLoadingGlTest {
         File(untitled, "assets/$mainSceneTerrain").copyRecursively(File(dir, "assets/terr"))
         File(dir, "assets/tex").mkdirs()
         val pixmap = Pixmap(2, 2, Pixmap.Format.RGBA8888)
-        try { PixmapIO.writePNG(FileHandle(File(dir, "assets/tex/a.png")), pixmap) } finally { pixmap.dispose() }
+        try {
+            PixmapIO.writePNG(FileHandle(File(dir, "assets/tex/a.png")), pixmap)
+        } finally {
+            pixmap.dispose()
+        }
         File(dir, "assets/tex/meta.json").writeText(
             """{"format":"abyssus","formatVersion":1,"uuid":"00000000-0000-0000-0000-000000000001","type":"TEXTURE","additional":{"file":"a.png"}}"""
         )
         val terrainMeta = File(dir, "assets/terr/meta.json")
-        terrainMeta.writeText(terrainMeta.readText().replace("\"splatBase\":null", "\"splatBase\":\"00000000-0000-0000-0000-000000000001\""))
+        terrainMeta.writeText(
+            terrainMeta.readText()
+                .replace("\"splatBase\":null", "\"splatBase\":\"00000000-0000-0000-0000-000000000001\"")
+        )
         val logged = mutableListOf<String>()
         TestGl.run {
             val assets = Project(dir, warningsTo(logged)).assets()
@@ -129,6 +133,41 @@ class AssetLoadingGlTest {
                 val before = assets.getAs<Texture>("tex")
                 assets.retain(setOf("terr"))
                 assertSame("retaining the terrain keeps its texture", before, assets.getAs<Texture>("tex"))
+            } finally {
+                assets.dispose()
+            }
+        }
+        assertEquals(emptyList<String>(), logged)
+    }
+
+    @Test
+    fun aSkyLoadsItsCloudAssetFirstAndDrawsFromIt() {
+        val dir = Files.createTempDirectory("clouds").toFile().also(dirs::add)
+        File(untitled, "assets/skybox_physical").copyRecursively(File(dir, "assets/sky"))
+        File(dir, "assets/weather").mkdirs()
+        File(dir, "assets/weather/meta.json").writeText(
+            """{"format":"abyssus","formatVersion":1,"uuid":"00000000-0000-0000-0000-0000000000c1","type":"CLOUDS","additional":{"low":{"type":"cumulus"}}}"""
+        )
+        val skyMeta = File(dir, "assets/sky/meta.json")
+        skyMeta.writeText(
+            skyMeta.readText().replace(
+                "\"sunIntensity\": 20.0",
+                "\"sunIntensity\": 20.0,\n    \"clouds\": \"00000000-0000-0000-0000-0000000000c1\""
+            )
+        )
+        val logged = mutableListOf<String>()
+        TestGl.run {
+            val assets = Project(dir, warningsTo(logged)).assets()
+            try {
+                loadAll(assets, setOf("sky"))
+                val sky = assets.getAs<ProceduralSky>("sky")!!
+                val clouds = assets.getAs<Clouds>("weather")
+                assertNotNull("the cloud asset was loaded by the same storage", clouds)
+                assertSame(clouds, sky.cloudAsset)
+                assertEquals(CloudLevel.LOW, sky.clouds!!.low?.level)
+                assertTrue("its noise textures were made", clouds!!.baseNoise != 0)
+                assets.retain(setOf("sky"))
+                assertSame("retaining the sky keeps its clouds", clouds, assets.getAs<Clouds>("weather"))
             } finally {
                 assets.dispose()
             }
@@ -169,7 +208,7 @@ class AssetLoadingGlTest {
             val models = Project(untitled, warningsTo(logged)).assets()
             try {
                 loadAll(models, setOf("model_missing", mainSceneModels[0]))
-                repeat(20) { models.request("model_missing"); models.request(mainSceneModels[0]); models.pump() }
+                repeat(20) { models.request("model_missing"); models.request(mainSceneModels[0]); models.update() }
                 assertNull(models.get("model_missing"))
                 assertNotNull(models.get(mainSceneModels[0]))
             } finally {
@@ -191,7 +230,7 @@ class AssetLoadingGlTest {
             val models = Project(dir, warningsTo(logged)).assets()
             try {
                 loadAll(models, setOf(model))
-                repeat(50) { models.request(model); models.pump() }
+                repeat(50) { models.request(model); models.update() }
                 assertNull(models.get(model))
             } finally {
                 models.dispose()

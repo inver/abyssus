@@ -4,14 +4,14 @@
  */
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssets
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssets
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 
-import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
-import net.nevinsky.abyssus.lib.core.editor.ray.RayModeSnapshot
-import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendAttempt
-import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendSelection
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModePhase
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModeSnapshot
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayBackendAttempt
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayBackendSelection
 import net.nevinsky.abyssus.plugin.SceneRayControls
 
 import com.intellij.ide.projectView.ViewSettings
@@ -155,7 +155,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         assertTrue(samples.isEnabled)
         samples.text = "64"; samples.postActionEvent()
         val saved = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!.text
-        assertEquals(64, net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(saved)["rayTracing"]["targetSamplesPerPixel"].intValue())
+        assertEquals(64, net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(saved)["rayTracing"]["targetSamplesPerPixel"].intValue())
     }
 
     fun testFailureShowsItsReasonAndARetryThatReachesTheView() {

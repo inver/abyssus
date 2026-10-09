@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
+import com.fasterxml.jackson.databind.JsonNode
+
 class ProceduralSkyMeta(
     val vertex: String? = null,
     val fragment: String? = null,
@@ -16,7 +18,13 @@ class ProceduralSkyMeta(
     val heightMie: Float? = null,
     val mieG: Float? = null,
     val sunIntensity: Float? = null,
+    /** The `uuid` of the `CLOUDS` asset this sky draws; kept raw so a value of the wrong kind never fails the sky. */
+    val clouds: JsonNode? = null,
 ) {
+    /** The cloud asset `uuid` [clouds] names, as text; null when it names none. */
+    val cloudsReference: String?
+        get() = clouds?.takeIf { it.isTextual }?.textValue()?.takeIf { it.isNotBlank() }
+
     val params: AtmosphereParams
         get() {
             val d = AtmosphereParams()
