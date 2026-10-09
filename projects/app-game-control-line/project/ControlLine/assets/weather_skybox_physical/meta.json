@@ -1,0 +1,33 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1791575331900,
+  "uuid": "0b563728-eb30-4ec4-b21b-407aadc732ba",
+  "type": "CLOUDS",
+  "additional": {
+    "technique": "shells",
+    "low": {
+      "type": "CUMULUS",
+      "base": 800,
+      "top": 2000,
+      "coverage": 0.3,
+      "density": 0.7,
+      "wind": [
+        4.0,
+        1.0
+      ]
+    },
+    "high": {
+      "type": "CIRRUS",
+      "base": 8000,
+      "top": 9500,
+      "coverage": 0.25,
+      "density": 0.1,
+      "wind": [
+        20.0,
+        4.0
+      ]
+    }
+  }
+}

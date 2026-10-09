@@ -287,13 +287,20 @@ asset `sky.frag`. Nothing is written back.
   volumetric technique's tileable 3D noise (FastNoiseLite Perlin-Worley, 64³ base and 32³ detail), made when it is
   prepared and uploaded when it is built.
 - `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and storm examples of `CLOUDS` metas
-  (not loaded by the plugin; a creation action is a later change).
+  (not loaded as built-in references; the creation action snapshots a sky's existing cloud asset).
 
 | Level | Altitudes (m) | Types |
 |---|---|---|
 | `low` | 300–2500 | `cumulus`, `stratus`, `stratocumulus` |
 | `mid` | 2000–7000 | `altocumulus`, `altostratus` |
 | `high` | 6000–13000 | `cirrus`, `cirrostratus` |
+
+The runtime and weather snapshot writer share `CloudSettingsReader` through `AssetMetaBinder`. Canonical
+metadata uses the lowercase keys and `wind` array above; existing enum-name values, explicit `level` and
+`windX`/`windZ` are also read without rewriting source files. Invalid bands are skipped independently.
+A newly created weather snapshot is an ordinary `CLOUDS` asset with a fresh UUID, creation timestamp and every
+known band default explicit. Unknown native extension members and unchanged numeric text are retained in it;
+reading or copying a source does not materialize its omitted defaults in the source document.
 
 Type defaults (`CloudType` in `core`):
 

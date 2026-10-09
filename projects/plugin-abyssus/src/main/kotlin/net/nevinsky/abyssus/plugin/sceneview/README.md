@@ -45,6 +45,11 @@ the toolbar, Play and the view's asset storage.
   stable for 250 ms. On macOS a zero-sized surface aborts the JVM. A canvas disposed while hidden drops its context
   without making it current, so its GL objects can't be released. macOS also stops sizing that canvas's native
   surface with the component, so `SceneViewPanel` replaces such an "abandoned" canvas when the view is shown again.
+- **IDE overlays take precedence over the native surface.** `CanvasOverlayHost` detects overlapping Swing siblings
+  above the scene, captures the displayed framebuffer once while GL is safe, and hides the native canvas. Swing paints
+  that snapshot beneath the notification until overlap ends, then live rendering resumes through the surface safety
+  gate. Rendering pauses during overlap; no continuous readback is performed. Removing or disposing the view stops
+  overlay monitoring and releases the snapshot.
 - **Asset loading lives in `core`** (`projects/lib-core/README.md`). `AssetLoader.prepare` runs on a pool thread (IO and decoding,
   no GL). `build`, and `upload` for big textures, run on the render thread one slice per frame, inside this package's
   `GdxRuntime.withContext`. A new project gets a new cache, so a pool thread never prepares from a stale project. A

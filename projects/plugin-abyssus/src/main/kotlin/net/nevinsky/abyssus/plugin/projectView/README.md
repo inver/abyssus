@@ -49,7 +49,7 @@ Physics component add/edit choices follow the selected scene's native project se
   node when the refreshed one is equal. Leaving any of those out leaves a row stale after an edit.
 - **After an edit the row is selected again.** An edit changes the row's identity, so the refresh drops the selection
   onto the parent. `reselect` walks back to the same path and restores its expansion.
-- **Every write goes through `editSceneJson`.** It parses the document with `SceneJson`, lets the caller mutate the
+- **Every edit of an existing JSON document goes through `editSceneJson`.** It parses the document with `SceneJson`, lets the caller mutate the
   tree (returning false writes nothing), re-serializes in the file's style, replaces the text in a named
   `WriteCommandAction`, saves, and publishes `AbyssusSceneEdited.TOPIC`, on which this pane refreshes itself. A new writer should use it and add a `command*` message.
 - **Where an entry writes back.** An entry knows its `source` file and the `parentKeys` leading to its container. A
@@ -76,3 +76,16 @@ from `SceneComponentEdits.renderAssets`, under Models / Terrains, labelled with 
 on the JSON tree. It is written as one undoable Add Asset command and selected with `selectCreatedEntity`, which
 Add Light uses too. Disabled for unreadable scene text, a scene outside a project, or a project without models and
 terrains.
+
+## New Weather Preset from Sky
+
+`NewWeatherPresetAction` appears only on a supported procedural sky asset row with a nonblank textual
+`additional.clouds` reference. `NewWeatherPresetFactory` validates the owning project, resolves the UUID among
+its native asset metadata with unsaved text taking precedence, and re-reads the source on Create.
+`WeatherPresetDraft` in editor-core snapshots the canonical settings without loading clouds or generating noise.
+
+The dialog suggests `weather_<sky>` and shares New Terrain's folder-name validation. The factory stages one new
+metadata file through `AssetTransaction`; `AssetFileCommand.execute` owns rollback and Undo/Redo, and
+`AssetReferenceGuard` refuses deletion once saved or unsaved documents reference the snapshot.
+`selectAssetInAbyssusView` selects the created cloud asset after refresh. Its UUID, timestamp and bytes remain
+stable on Redo. Source cloud metadata, the sky, scenes and project are never edited by creation.

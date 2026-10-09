@@ -5,20 +5,14 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CLOUD_NOISE_PERIOD
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 import kotlin.math.abs
 
 class CloudFieldTest {
     private val field = CloudField()
-    private val cumulus = CloudBand(CloudLevel.LOW, CloudType.CUMULUS, windX = 10f, windZ = -4f)
+    private val cumulus = CloudBand(CloudType.CUMULUS, CloudLevel.LOW, windX = 10f, windZ = -4f)
     private val points = listOf(0f to 0f, 1234.5f to -987.25f, -40_000f to 25_000f, 77_777f to 3f)
     private val times = listOf(0.0, 12.5, 3600.0)
 
@@ -29,11 +23,17 @@ class CloudFieldTest {
         0.53421235f, 0.5381302f, 0.60638356f, 0.746299f, 0.3471419f, 0.38986513f, 0.8017738f,
     )
 
-    private fun sampleFbm(): FloatArray = listOf(0.1f to 0.2f, 3.7f to -12.25f, 63.9f to 0.05f, -100.3f to 7.77f, 1000.5f to 1000.5f)
-        .flatMap { (u, v) -> listOf(field.fbm(u, v, 0, 4), field.fbm(u, v, 5, 5), field.noise(u, v, 3,
-            CLOUD_NOISE_PERIOD
-        )) }
-        .toFloatArray()
+    private fun sampleFbm(): FloatArray =
+        listOf(0.1f to 0.2f, 3.7f to -12.25f, 63.9f to 0.05f, -100.3f to 7.77f, 1000.5f to 1000.5f)
+            .flatMap { (u, v) ->
+                listOf(
+                    field.fbm(u, v, 0, 4), field.fbm(u, v, 5, 5), field.noise(
+                        u, v, 3,
+                        CLOUD_NOISE_PERIOD
+                    )
+                )
+            }
+            .toFloatArray()
 
     private fun sample(): FloatArray = times.flatMap { t ->
         val offset = field.windOffset(cumulus, t)
@@ -63,7 +63,12 @@ class CloudFieldTest {
         val still = field.windOffset(cumulus, 0.0)
         for ((x, z) in points) {
             val later = field.coverage(cumulus, x + cumulus.windX * t.toFloat(), z + cumulus.windZ * t.toFloat(), moved)
-            assertEquals("the cloud at ($x, $z) is downwind after $t s", field.coverage(cumulus, x, z, still), later, 2e-3f)
+            assertEquals(
+                "the cloud at ($x, $z) is downwind after $t s",
+                field.coverage(cumulus, x, z, still),
+                later,
+                2e-3f
+            )
         }
     }
 
@@ -101,6 +106,7 @@ class CloudFieldTest {
             for (x in 0 until 100) for (z in 0 until 100) sum += field.coverage(band, x * 977f, z * 1009f, offset)
             return sum / 10_000
         }
+
         val shares = listOf(0.2f, 0.4f, 0.6f, 0.8f).map(::share)
         assertEquals(shares.sorted(), shares)
         assertTrue("0.4 is scattered, not overcast: $shares", shares[1] in 0.1..0.7)

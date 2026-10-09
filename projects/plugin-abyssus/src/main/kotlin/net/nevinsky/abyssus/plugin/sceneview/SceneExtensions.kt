@@ -43,7 +43,10 @@ interface SceneOverlay : Disposable {
     /** Called twice a frame: once depth-tested ([OverlayView.onTop] false), then over everything. */
     fun draw(view: OverlayView, lines: LineSink)
 
-    /** Actions for this view's toolbar, such as a toggle that shows or hides the overlay. EDT only. */
+    /**
+     * Actions for this view's toolbar, such as a toggle that shows or hides the overlay. EDT only.
+     * Called on each toolbar update; retain the same action instances across calls.
+     */
     fun actions(): List<AnAction> = emptyList()
 
     override fun dispose() {}

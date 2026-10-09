@@ -114,6 +114,17 @@ without it. The panel restores the settings from a recipe that still matches the
 (missing, malformed, an unknown version, or heights, size or resolution that changed) and offers the defaults instead.
 Heights that are not a square grid of 2 to 255 per side cannot be regenerated.
 
+### Keep weather from a sky
+
+Right-click a procedural sky asset that references clouds and choose **New Weather Preset from Sky...**.
+Choose a new folder name (suggested: `weather_<sky>`). Abyssus creates a reusable `CLOUDS` asset with a fresh UUID,
+its stored drawing technique and its cloud bands with all defaults resolved. Unsaved metadata edits are copied;
+the view's Clouds override is not. The new asset is selected and starts unused. Assign its UUID to another sky's
+`additional.clouds` to use it.
+
+Creation leaves the source clouds, sky, scenes and project unchanged. Undo removes an unchanged, unreferenced
+new folder; Redo restores the same snapshot. Missing or unreadable clouds and invalid folder names are refused.
+
 ### New Terrain
 
 Right-click an **Assets** node and choose **New Terrain...**: pick a folder name (it must be new and stay inside
