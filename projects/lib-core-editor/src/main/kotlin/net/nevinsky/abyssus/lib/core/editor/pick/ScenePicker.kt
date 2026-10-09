@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.pick
+package net.nevinsky.abyssus.lib.gdx.editor.pick
 
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.math.Intersector
@@ -11,7 +11,7 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainData
 
 /** A model entity as seen by picking: its world-space bounds. */
 class BoxTarget(val entityId: String, val bounds: BoundingBox)

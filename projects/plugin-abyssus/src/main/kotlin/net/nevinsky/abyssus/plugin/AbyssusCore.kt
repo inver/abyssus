@@ -7,13 +7,13 @@ package net.nevinsky.abyssus.plugin
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.ModelLogging
-import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImport
-import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelImport
-import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSourceOpener
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat as CoreDocumentFormat
-import net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.ModelLogging
+import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearImport
+import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ModelImport
+import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ModelSourceOpener
+import net.nevinsky.abyssus.lib.gdx.format.AbyssusDocumentFormat as CoreDocumentFormat
+import net.nevinsky.abyssus.lib.gdx.editor.document.AbyssusDocumentFormat
 import net.nevinsky.abyssus.plugin.log.IntellijLoggerFactory
 
 /** Application composition root. Groups build only on first use; entry points pass narrow collaborators onward. */

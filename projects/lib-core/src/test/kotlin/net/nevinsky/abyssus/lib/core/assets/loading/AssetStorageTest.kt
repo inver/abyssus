@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets.loading
+package net.nevinsky.abyssus.lib.gdx.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.core.assets.AssetMeta
-import net.nevinsky.abyssus.lib.core.testing.RecordingLogger
+import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
+import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import org.slf4j.Logger
-import net.nevinsky.abyssus.lib.core.assets.loading.exception.DependencyFailedException
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.assets.loading.exception.AssetAbsentException
+import net.nevinsky.abyssus.lib.gdx.assets.loading.exception.DependencyFailedException
+import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.gdx.assets.loading.exception.AssetAbsentException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.core.assets.sky.procedural
+package net.nevinsky.abyssus.lib.gdx.assets.sky.procedural
 
 import com.badlogic.gdx.math.Vector3
 import org.junit.Assert.assertEquals

@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets.sky.clouds
+package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.testing.failOnWarnings
+import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.AtmosphereParams
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.testing.failOnWarnings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

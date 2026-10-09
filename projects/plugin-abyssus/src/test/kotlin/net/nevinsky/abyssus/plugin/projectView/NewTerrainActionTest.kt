@@ -19,18 +19,18 @@ import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileStore
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
-import net.nevinsky.abyssus.lib.core.editor.terrainData
-import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerationDraft
-import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerationSettings
-import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainPreview
-import net.nevinsky.abyssus.lib.core.editor.terrain.SourceSnapshot
+import net.nevinsky.abyssus.lib.gdx.editor.terrainData
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainGenerationDraft
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainGenerationSettings
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainPreview
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.SourceSnapshot
 import net.nevinsky.abyssus.plugin.dto.ProjectReader
-import net.nevinsky.abyssus.lib.core.editor.terrain.FolderNameError
-import net.nevinsky.abyssus.lib.core.editor.terrain.GeometryError
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.FolderNameError
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.GeometryError
 import net.nevinsky.abyssus.plugin.terrain.NewTerrainFactory
 import net.nevinsky.abyssus.plugin.terrain.NewTerrainRequest
-import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
-import net.nevinsky.abyssus.lib.core.editor.terrain.checkGeometry
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.checkFolderName
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.checkGeometry
 import java.io.File
 import java.nio.file.Files
 
@@ -210,7 +210,7 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         val project = project.service<ProjectReader>().read(abss).obj!!
         val hills = project.assets.single { it.name == "hills" }
         assertTrue("no scene references it", hills.unused)
-        assertEquals(net.nevinsky.abyssus.lib.core.assets.MetaType.TERRAIN, hills.type)
+        assertEquals(net.nevinsky.abyssus.lib.gdx.assets.MetaType.TERRAIN, hills.type)
         assertEquals(2, project.assets.size)
         assertFalse(File(projectDir, "scenes/Main.scene").readText().contains("hills"))
     }

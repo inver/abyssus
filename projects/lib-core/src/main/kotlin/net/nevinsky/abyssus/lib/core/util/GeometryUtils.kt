@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.core.util
+package net.nevinsky.abyssus.lib.gdx.util
 
 import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.VertexAttribute

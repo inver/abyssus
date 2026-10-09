@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets.sky
+package net.nevinsky.abyssus.lib.gdx.assets.sky
 
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.gdx.assets.sky.clouds.CloudTechnique
 
 /**
  * A built sky that draws itself as the background: following [Camera]'s orientation but not its position. The caller

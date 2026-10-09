@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.core.ecs.component
+package net.nevinsky.abyssus.lib.gdx.ecs.component
 
 import com.badlogic.ashley.core.Component
 

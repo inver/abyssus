@@ -5,10 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.editor.scene.AssetRevisionBatch
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
 
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -76,7 +76,7 @@ class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
         settle()
         assertEquals(setOf("hills"), view.revisions.single().names)
         val text = view.revisions.single().unsaved[File(meta.path).absoluteFile]!!
-        assertEquals(250, net.nevinsky.abyssus.lib.core.io.JsonProcessor().readObject(text).get("additional").get("size").asInt())
+        assertEquals(250, net.nevinsky.abyssus.lib.gdx.io.JsonProcessor().readObject(text).get("additional").get("size").asInt())
         FileDocumentManager.getInstance().saveDocument(document)
         settle()
         assertEquals("saving the shown text is not a new revision", 1, view.revisions.size)

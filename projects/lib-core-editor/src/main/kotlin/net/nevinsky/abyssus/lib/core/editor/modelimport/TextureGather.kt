@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.modelimport
+package net.nevinsky.abyssus.lib.gdx.editor.modelimport
 
-import net.nevinsky.abyssus.lib.core.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException

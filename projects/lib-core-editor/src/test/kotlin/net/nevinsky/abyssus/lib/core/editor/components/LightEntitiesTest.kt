@@ -2,23 +2,23 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.core.editor.components
+package net.nevinsky.abyssus.lib.gdx.editor.components
 
-import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
-import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
-import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.parseScene
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.scene.SceneEngine
+import net.nevinsky.abyssus.lib.gdx.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.gdx.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.gdx.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.gdx.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.parseScene
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightKind
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.scene.SceneEngine
 import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger

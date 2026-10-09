@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.scene
+package net.nevinsky.abyssus.lib.gdx.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
-import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightKind
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightPlacement
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g3d.Environment
@@ -20,7 +20,7 @@ import com.badlogic.gdx.graphics.g3d.environment.PointLight
 import com.badlogic.gdx.graphics.g3d.environment.SpotLight
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.sqrt
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.LIGHT_RANGE
+import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.LIGHT_RANGE
 
 /** A directional light: [color] already multiplied by the light's intensity. */
 data class DirectionalSource(val direction: Vec3, val color: Rgba, val entityId: String = "", val position: Vec3 = Vec3(0f, 0f, 0f))

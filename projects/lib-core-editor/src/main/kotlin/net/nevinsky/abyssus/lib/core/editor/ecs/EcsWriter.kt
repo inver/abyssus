@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.core.editor.ecs
+package net.nevinsky.abyssus.lib.gdx.editor.ecs
 
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
@@ -13,11 +13,11 @@ import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.core.scene.EcsLoadingWarns
-import net.nevinsky.abyssus.lib.core.scene.SceneEngine
+import net.nevinsky.abyssus.lib.gdx.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.gdx.ecs.component.IdComponent
+import net.nevinsky.abyssus.lib.gdx.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.gdx.scene.EcsLoadingWarns
+import net.nevinsky.abyssus.lib.gdx.scene.SceneEngine
 import java.math.BigDecimal
 import kotlin.math.abs
 
@@ -50,7 +50,7 @@ private fun ObjectMapper.forEcsWriting(): ObjectMapper = copy()
 
 /**
  * Writes a [SceneEngine] as an `ecs` block in the native format, the counterpart of
- * [net.nevinsky.abyssus.lib.core.ecs.EcsLoader]: every component is turned into JSON by Jackson, with no per-component
+ * [net.nevinsky.abyssus.lib.gdx.ecs.EcsLoader]: every component is turned into JSON by Jackson, with no per-component
  * codec.
  *
  * - Entities are written in ascending order of their [IdComponent]'s id; an entity without one follows, numbered after
@@ -83,8 +83,8 @@ class EcsWriter(
     fun writeComponent(component: Component): JsonNode = mapper.valueToTree(component)
 
     /**
-     * The entities of [engine] with the id they are written under, ascending by their [net.nevinsky.abyssus.lib.core.ecs.component.IdComponent]'s id, so the order
-     * of the result never depends on the order entities were added in. An entity without an [net.nevinsky.abyssus.lib.core.ecs.component.IdComponent] follows, in
+     * The entities of [engine] with the id they are written under, ascending by their [net.nevinsky.abyssus.lib.gdx.ecs.component.IdComponent]'s id, so the order
+     * of the result never depends on the order entities were added in. An entity without an [net.nevinsky.abyssus.lib.gdx.ecs.component.IdComponent] follows, in
      * engine order, numbered after the largest id.
      */
     private fun byId(engine: SceneEngine): List<Pair<Long, Entity>> {

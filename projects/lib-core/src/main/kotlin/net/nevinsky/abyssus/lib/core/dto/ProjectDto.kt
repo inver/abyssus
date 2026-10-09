@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.dto
+package net.nevinsky.abyssus.lib.gdx.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.PROJECT_EXTENSION
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.SCENES_DIR
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.SCENE_EXTENSION
+import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.PROJECT_EXTENSION
+import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.SCENES_DIR
+import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.SCENE_EXTENSION
 import java.nio.file.Files
 import java.nio.file.Path
 

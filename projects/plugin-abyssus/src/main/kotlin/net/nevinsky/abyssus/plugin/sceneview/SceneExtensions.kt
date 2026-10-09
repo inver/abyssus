@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
-import net.nevinsky.abyssus.lib.core.editor.content.Pose
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.editor.pick.LineSink
+import net.nevinsky.abyssus.lib.gdx.editor.content.Pose
 
 import com.badlogic.gdx.graphics.Camera
 import com.fasterxml.jackson.databind.JsonNode

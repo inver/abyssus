@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.plugin.projectView.preview
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.GdxNativesLoader
-import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCamera
 import org.junit.Assert.assertTrue
 import org.junit.Test
 

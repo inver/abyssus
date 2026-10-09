@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets.sky.clouds
+package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
@@ -14,8 +14,8 @@ import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.gdx.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.gdx.util.GeometryUtils.Companion.createFullscreenTriangle
 import kotlin.math.abs
 
 private const val GL_RGBA16F = 0x881A

@@ -3,23 +3,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets.model
+package net.nevinsky.abyssus.lib.gdx.assets.model
 
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
-import net.nevinsky.abyssus.lib.core.assets.AssetMeta
-import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
-import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotStore
-import net.nevinsky.abyssus.lib.core.assets.loading.TextureUploadQueue
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.core.loader.PreloadedTextureProvider
-import net.nevinsky.abyssus.lib.core.model.Model
-import net.nevinsky.abyssus.lib.core.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
+import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.gdx.assets.loading.AssetLoader
+import net.nevinsky.abyssus.lib.gdx.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.gdx.assets.loading.Prepared
+import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshotStore
+import net.nevinsky.abyssus.lib.gdx.assets.loading.TextureUploadQueue
+import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.loader.PreloadedTextureProvider
+import net.nevinsky.abyssus.lib.gdx.model.Model
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import kotlin.coroutines.cancellation.CancellationException
 
 

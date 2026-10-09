@@ -2,11 +2,11 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.core.editor.ray
+package net.nevinsky.abyssus.lib.gdx.editor.ray
 
-import net.nevinsky.abyssus.lib.core.editor.pick.Selected
+import net.nevinsky.abyssus.lib.gdx.editor.pick.Selected
 
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.lib.raytracing.*

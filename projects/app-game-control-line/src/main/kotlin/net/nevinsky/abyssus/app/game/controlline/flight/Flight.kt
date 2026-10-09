@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.app.game.controlline.score.FlightScoring
 import net.nevinsky.abyssus.app.game.controlline.track.SphereTrack
 import net.nevinsky.abyssus.app.game.controlline.track.TrackSample
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
 import kotlin.math.max
 
 /**

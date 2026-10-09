@@ -2,20 +2,15 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.core.editor.ray
+package net.nevinsky.abyssus.lib.gdx.editor.ray
 
-import net.nevinsky.abyssus.lib.core.editor.ray.RayModelPoses
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssetState
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneConversion
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneSnapshots
-import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.editor.scene.ModelEntity
+import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
 
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
@@ -30,22 +25,22 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.ArrayMap
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSkinning
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.lib.core.assets.model.ModelRaySnapshotLoader
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSource
-import net.nevinsky.abyssus.lib.core.AnimationController
-import net.nevinsky.abyssus.lib.core.ModelInstance
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.core.mesh.MeshPart
-import net.nevinsky.abyssus.lib.core.model.Model
-import net.nevinsky.abyssus.lib.core.model.ModelData
-import net.nevinsky.abyssus.lib.core.model.ModelMesh
-import net.nevinsky.abyssus.lib.core.model.ModelMeshPart
-import net.nevinsky.abyssus.lib.core.node.Animation
-import net.nevinsky.abyssus.lib.core.node.Node
-import net.nevinsky.abyssus.lib.core.node.NodeAnimation
-import net.nevinsky.abyssus.lib.core.node.NodePart
+import net.nevinsky.abyssus.lib.gdx.assets.model.RayModelSkinning
+import net.nevinsky.abyssus.lib.gdx.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.lib.gdx.assets.model.ModelRaySnapshotLoader
+import net.nevinsky.abyssus.lib.gdx.assets.model.RayModelSource
+import net.nevinsky.abyssus.lib.gdx.AnimationController
+import net.nevinsky.abyssus.lib.gdx.ModelInstance
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.mesh.MeshPart
+import net.nevinsky.abyssus.lib.gdx.model.Model
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
+import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
+import net.nevinsky.abyssus.lib.gdx.node.Animation
+import net.nevinsky.abyssus.lib.gdx.node.Node
+import net.nevinsky.abyssus.lib.gdx.node.NodeAnimation
+import net.nevinsky.abyssus.lib.gdx.node.NodePart
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
@@ -168,6 +163,6 @@ class RayAnimationSnapshotTest {
                 bones = ArrayMap<String, Matrix4>().apply { put("joint", Matrix4()) }
             })
         })
-        return ModelRaySnapshotLoader(net.nevinsky.abyssus.lib.core.io.FileLoader(java.io.File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
+        return ModelRaySnapshotLoader(net.nevinsky.abyssus.lib.gdx.io.FileLoader(java.io.File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
     }
 }

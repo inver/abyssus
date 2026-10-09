@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.meta
+package net.nevinsky.abyssus.lib.gdx.editor.meta
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.editor.testProject
+import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.editor.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -31,7 +31,7 @@ class AssetMetaEditorTest {
     private fun rejected(outcome: EditOutcome): EditError = (outcome as EditOutcome.Rejected).error
 
     @Test fun legacyMetadataIsRefusedWithoutMutation() {
-        val root = net.nevinsky.abyssus.lib.core.io.JsonProcessor().readObject("""{"type":"TERRAIN","additional":{"size":100}}""")
+        val root = net.nevinsky.abyssus.lib.gdx.io.JsonProcessor().readObject("""{"type":"TERRAIN","additional":{"size":100}}""")
         val before = root.toString()
         val outcome = AssetMetaEditor(AssetFieldDescriptions()).edit(root, "size", FieldValue.Int(100), FieldValue.Int(200))
         org.junit.Assert.assertTrue(outcome is EditOutcome.Rejected)

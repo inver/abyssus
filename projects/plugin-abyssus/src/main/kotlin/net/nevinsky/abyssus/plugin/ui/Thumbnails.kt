@@ -1,8 +1,8 @@
 package net.nevinsky.abyssus.plugin.ui
 
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrPreview
+import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.gdx.assets.sky.hdr.HdrPreview
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream

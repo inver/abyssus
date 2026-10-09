@@ -1,11 +1,11 @@
-package net.nevinsky.abyssus.lib.core.format
+package net.nevinsky.abyssus.lib.gdx.format
 
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.project.ProjectLoader
-import net.nevinsky.abyssus.lib.core.scene.SceneLoader
-import net.nevinsky.abyssus.lib.core.testing.warningsTo
+import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.gdx.project.ProjectLoader
+import net.nevinsky.abyssus.lib.gdx.scene.SceneLoader
+import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File

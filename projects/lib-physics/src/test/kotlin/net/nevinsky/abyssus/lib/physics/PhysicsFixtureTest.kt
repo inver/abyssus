@@ -5,8 +5,8 @@
 package net.nevinsky.abyssus.lib.physics
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.testing.warningsTo
+import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -5,14 +5,14 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.PlacedEntity
-import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.scene.PlacedEntity
+import net.nevinsky.abyssus.lib.gdx.editor.content.toMatrix
+import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
 
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
+import net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainMesh
 
 class TerrainEntity(override val placement: AssetPlacement, val terrain: TerrainMesh, val world: Matrix4) : PlacedEntity<TerrainMesh> {
     override val asset: TerrainMesh get() = terrain

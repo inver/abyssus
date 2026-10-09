@@ -6,7 +6,7 @@ package net.nevinsky.abyssus.app.game.controlline.flight
 
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.track.wrapDegrees
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

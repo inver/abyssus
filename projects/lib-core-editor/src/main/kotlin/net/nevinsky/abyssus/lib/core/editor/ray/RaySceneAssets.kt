@@ -2,12 +2,12 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.core.editor.ray
+package net.nevinsky.abyssus.lib.gdx.editor.ray
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
-import net.nevinsky.abyssus.lib.core.assets.terrain.RayTerrainSnapshot
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.lib.gdx.assets.sky.RaySkySnapshot
+import net.nevinsky.abyssus.lib.gdx.assets.terrain.RayTerrainSnapshot
 import java.io.File
 
 /** Per-view optional CPU interest. Reconciliation and polling never wait for asset preparation or touch GL. */

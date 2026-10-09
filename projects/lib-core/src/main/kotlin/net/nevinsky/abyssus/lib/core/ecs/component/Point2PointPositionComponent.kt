@@ -1,9 +1,9 @@
-package net.nevinsky.abyssus.lib.core.ecs.component
+package net.nevinsky.abyssus.lib.gdx.ecs.component
 
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.annotation.JsonIgnore
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
+import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.NO_ENTITY
 
 class Point2PointPositionComponent(var entity1Id: Int = NO_ENTITY, var entity2Id: Int = NO_ENTITY) : Component {
     /** Derived from the two entities' positions on every frame; never part of the file. */

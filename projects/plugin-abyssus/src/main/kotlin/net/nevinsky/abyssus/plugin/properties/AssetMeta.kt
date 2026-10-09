@@ -5,15 +5,15 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.meta.PropertyRow
-import net.nevinsky.abyssus.lib.core.editor.meta.metaRowsOf
+import net.nevinsky.abyssus.lib.gdx.editor.meta.PropertyRow
+import net.nevinsky.abyssus.lib.gdx.editor.meta.metaRowsOf
 import net.nevinsky.abyssus.plugin.EditorBundle
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 

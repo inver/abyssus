@@ -17,7 +17,7 @@ it compile-only from Abyssus's classloader and never bundles it.
   the same text.
 - **Documents:** validation stays in `core.format`; this module only adds the editor-facing aliases.
 
-## Packages (`net.nevinsky.abyssus.lib.core.editor`)
+## Packages (`net.nevinsky.abyssus.lib.gdx.editor`)
 
 | Package | Holds |
 |---|---|
@@ -95,7 +95,7 @@ asset-property edits, returning the edited text or a `Refusal` with the reason t
 
 ## Tests
 
-`./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`). Tests run
+`./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCameraTest'`). Tests run
 from the repository root, so they read fixtures under `projects/plugin-abyssus/src/test/testData/project/` by the same paths as the plugin's
 tests. The test
 fixtures (`parseScene`, `testProject`, `testAsset`, `terrainData`, `rayTestModel`) are shared with the plugin's tests.

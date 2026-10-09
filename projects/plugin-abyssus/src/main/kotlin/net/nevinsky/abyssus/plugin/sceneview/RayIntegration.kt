@@ -4,11 +4,11 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendService
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssets
-import net.nevinsky.abyssus.lib.core.editor.ray.RayViewFeed
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayBackendService
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssets
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayViewFeed
 import net.nevinsky.abyssus.plugin.EditorBundle
-import net.nevinsky.abyssus.lib.core.assets.displayMessage
+import net.nevinsky.abyssus.lib.gdx.assets.displayMessage
 
 import net.nevinsky.abyssus.plugin.RayServices
 import java.util.concurrent.Executor

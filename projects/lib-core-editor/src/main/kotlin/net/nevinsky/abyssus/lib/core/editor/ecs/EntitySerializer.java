@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.core.editor.ecs;
+package net.nevinsky.abyssus.lib.gdx.editor.ecs;
 
 public class EntitySerializer implements Json.Serializer<Entity> {
     private final TransientChecker transientChecker = new TransientChecker();

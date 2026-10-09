@@ -2,13 +2,13 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.core.scene
+package net.nevinsky.abyssus.lib.gdx.scene
 
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
-import net.nevinsky.abyssus.lib.core.ecs.system.LookAtSystem
-import net.nevinsky.abyssus.lib.core.ecs.system.SynchronizeCameraComponentSystem
+import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
+import net.nevinsky.abyssus.lib.gdx.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.gdx.ecs.system.LookAtSystem
+import net.nevinsky.abyssus.lib.gdx.ecs.system.SynchronizeCameraComponentSystem
 import org.slf4j.Logger
 
 /**

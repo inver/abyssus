@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCamera
 import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import org.lwjgl.opengl.GL

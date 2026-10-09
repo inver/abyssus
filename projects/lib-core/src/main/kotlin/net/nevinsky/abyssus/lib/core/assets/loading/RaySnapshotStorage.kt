@@ -1,8 +1,8 @@
-package net.nevinsky.abyssus.lib.core.assets.loading
+package net.nevinsky.abyssus.lib.gdx.assets.loading
 
-import net.nevinsky.abyssus.lib.core.assets.AssetMeta
-import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
+import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
 import java.util.concurrent.Executor
 
 /** Immutable optional CPU copy of an asset for ray tracing. */

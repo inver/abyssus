@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin
 
-import net.nevinsky.abyssus.lib.core.editor.parseScene
-import net.nevinsky.abyssus.lib.core.editor.testAsset
+import net.nevinsky.abyssus.lib.gdx.editor.parseScene
+import net.nevinsky.abyssus.lib.gdx.editor.testAsset
 
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ViewSettings
@@ -24,7 +24,7 @@ import net.nevinsky.abyssus.plugin.projectView.childrenOf
 import net.nevinsky.abyssus.plugin.projectView.elementLabel
 import net.nevinsky.abyssus.plugin.dto.ProjectReader
 import net.nevinsky.abyssus.plugin.dto.SceneReader
-import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 import net.nevinsky.abyssus.plugin.projectView.foldToggles
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectFileType
@@ -47,7 +47,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         myFixture.copyFileToProject("Tree/Untitled.abss", "Untitled/Untitled.abss")
         val sceneText = java.io.File("$testDataPath/Tree/scenes/Main Scene.scene").readText()
         myFixture.addFileToProject("Untitled/scenes/Main Scene.scene",
-            net.nevinsky.abyssus.lib.core.editor.document.SceneJson().pretty(net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(sceneText)))
+            net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().pretty(net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(sceneText)))
         return myFixture.findFileInTempDir("Untitled")
     }
 

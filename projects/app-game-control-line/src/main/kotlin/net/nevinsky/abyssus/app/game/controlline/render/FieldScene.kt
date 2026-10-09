@@ -10,12 +10,12 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
 import net.nevinsky.abyssus.app.game.controlline.flow.PlaneChoice
 import net.nevinsky.abyssus.app.game.controlline.flow.planeChoices
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.util.EcsUtils
-import net.nevinsky.abyssus.lib.core.scene.SceneContext
+import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.gdx.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.gdx.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.gdx.util.EcsUtils
+import net.nevinsky.abyssus.lib.gdx.scene.SceneContext
 
 /** The field scene's file in the project. */
 const val FIELD_SCENE = "scenes/Field.scene"

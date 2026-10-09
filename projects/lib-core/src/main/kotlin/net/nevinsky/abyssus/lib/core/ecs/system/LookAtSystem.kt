@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.core.ecs.system
+package net.nevinsky.abyssus.lib.gdx.ecs.system
 
 import com.badlogic.ashley.core.ComponentMapper
 import com.badlogic.ashley.core.Entity
@@ -6,8 +6,8 @@ import com.badlogic.ashley.core.Family
 import com.badlogic.ashley.systems.IteratingSystem
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.scene.SceneEntityIds
+import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.gdx.scene.SceneEntityIds
 import kotlin.math.acos
 import kotlin.math.atan
 

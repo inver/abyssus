@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.core.assets
+package net.nevinsky.abyssus.lib.gdx.assets
 
 import org.junit.Assert.*
 import org.junit.Test

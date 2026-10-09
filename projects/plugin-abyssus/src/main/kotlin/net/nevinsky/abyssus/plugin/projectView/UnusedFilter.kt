@@ -14,7 +14,7 @@ import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.gdx.assets.Asset
 
 /** The "Show Only Unused Assets" choice of a project's Abyssus view; off by default and remembered per project. */
 object UnusedFilter {

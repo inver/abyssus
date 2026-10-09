@@ -7,7 +7,7 @@ pluginManagement {
     includeBuild("build-logic")
 }
 
-include(":lib-gdx-model")
+include(":lib-gdx")
 include(":lib-core")
 include(":lib-raytracing")
 include(":lib-core-editor")

@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets.sky.cube
+package net.nevinsky.abyssus.lib.gdx.assets.sky.cube
 
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.assets.skyShaders
-import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.testProject
+import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.gdx.assets.skyShaders
+import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader
+import net.nevinsky.abyssus.lib.gdx.assets.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test

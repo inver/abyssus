@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.terrain
+package net.nevinsky.abyssus.lib.gdx.editor.terrain
 
-import net.nevinsky.abyssus.lib.core.editor.meta.TERRAIN_DATA_FILE
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.editor.testProject
+import net.nevinsky.abyssus.lib.gdx.editor.meta.TERRAIN_DATA_FILE
+import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainLoader
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.editor.testProject
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -40,7 +40,7 @@ class TerrainAssetEncodingTest {
     fun `the 180 resolution fixture round trips byte for byte`() {
         val original = File(fixture, "terrain.data").readBytes()
         val data = java.nio.ByteBuffer.wrap(original).asFloatBuffer().let { buffer -> FloatArray(buffer.remaining()).also(buffer::get) }
-            .let { heights -> net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData(Math.round(Math.sqrt(heights.size.toDouble())).toInt(), heights, 1600, 60f) }
+            .let { heights -> net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainData(Math.round(Math.sqrt(heights.size.toDouble())).toInt(), heights, 1600, 60f) }
         assertEquals(180, data.resolution)
         assertArrayEquals(original, encoder.encode(data.heights))
     }

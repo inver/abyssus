@@ -2,35 +2,35 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.core.editor.ray
+package net.nevinsky.abyssus.lib.gdx.editor.ray
 
-import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
-import net.nevinsky.abyssus.lib.core.editor.scene.toVec3
-import net.nevinsky.abyssus.lib.core.editor.pick.ScenePreview
-import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettings
-import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
-import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialOverrides
+import net.nevinsky.abyssus.lib.gdx.editor.scene.LightSet
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.content.toMatrix
+import net.nevinsky.abyssus.lib.gdx.editor.scene.toVec3
+import net.nevinsky.abyssus.lib.gdx.editor.pick.ScenePreview
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneRaySettings
+import net.nevinsky.abyssus.lib.gdx.editor.document.RayMaterialIdentity
+import net.nevinsky.abyssus.lib.gdx.editor.document.RayMaterialOverrides
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
 
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
+import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
 
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import com.badlogic.gdx.math.Matrix4
-import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_LAYERS
-import net.nevinsky.abyssus.lib.core.assets.model.*
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.assets.terrain.RayTerrainSnapshot
+import net.nevinsky.abyssus.lib.gdx.assets.terrain.SPLAT_LAYERS
+import net.nevinsky.abyssus.lib.gdx.assets.model.*
+import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.gdx.assets.terrain.RayTerrainSnapshot
 import net.nevinsky.abyssus.lib.raytracing.*
-import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
+import net.nevinsky.abyssus.lib.gdx.editor.pick.DragResult
 
 /** Immutable render-thread camera capture. The actual camera preserves orbit and look-through lens/up conventions. */
 data class RayCameraSnapshot(
@@ -133,7 +133,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         if (missing.isNotEmpty()) return RaySceneConversion.Preparing(missing.distinct())
         val result = runCatchingKeepingCancellation {
             val builder = Builder(limits, environmentTextures, deform) { shared.getOrPut(it) { HashMap() } }
-            val document = net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs(params.ecs)
+            val document = net.nevinsky.abyssus.lib.gdx.editor.document.sceneDocumentFromEcs(params.ecs)
             for (placement in content.models) {
                 val render = document.entity(placement.entityId)?.componentNode("RenderComponent")
                 builder.model(placement, assets.models.getValue(placement.assetName), poses[placement.entityId], render)

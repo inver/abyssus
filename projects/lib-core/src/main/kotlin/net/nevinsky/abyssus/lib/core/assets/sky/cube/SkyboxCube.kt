@@ -1,10 +1,10 @@
-package net.nevinsky.abyssus.lib.core.assets.sky.cube
+package net.nevinsky.abyssus.lib.gdx.assets.sky.cube
 
 import com.badlogic.gdx.graphics.*
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
-import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
-import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
+import net.nevinsky.abyssus.lib.gdx.assets.sky.SkyRenderer
+import net.nevinsky.abyssus.lib.gdx.assets.sky.SkyFrame
 
 /** A six-face skybox on a cube mesh, drawn with [program] (`skybox.vert` / `skybox.frag`), which it owns. */
 class SkyboxCube(prepared: PreparedSkybox, private val program: ShaderProgram) : SkyRenderer {

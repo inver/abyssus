@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneTransformWriter
+import net.nevinsky.abyssus.lib.gdx.editor.pick.TransformEdit
 import net.nevinsky.abyssus.plugin.SceneRayControls
 
 import com.intellij.openapi.application.ApplicationManager
@@ -36,15 +36,15 @@ import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.components.JBLabel
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.util.Alarm
 import com.intellij.util.ui.update.MergingUpdateQueue

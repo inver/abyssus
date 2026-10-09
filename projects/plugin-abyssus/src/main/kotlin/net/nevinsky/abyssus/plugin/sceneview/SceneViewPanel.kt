@@ -5,16 +5,16 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.ray.RayViewFeed
-import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.lib.core.editor.pick.SceneInteraction
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.core.editor.pick.ViewSize
-import net.nevinsky.abyssus.lib.core.editor.ray.RayModeSnapshot
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayViewFeed
+import net.nevinsky.abyssus.lib.gdx.editor.scene.AssetRevisionBatch
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneInteraction
+import net.nevinsky.abyssus.lib.gdx.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.gdx.editor.pick.ViewSize
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModeSnapshot
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionManager
@@ -24,7 +24,7 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
 import com.intellij.openapi.diagnostic.thisLogger
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
+import net.nevinsky.abyssus.lib.gdx.editor.pick.GizmoMode
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GLCapabilities
 import org.lwjgl.opengl.awt.GLData
@@ -46,7 +46,7 @@ import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import javax.swing.Timer
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.gdx.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudFrameBudget
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudViewState

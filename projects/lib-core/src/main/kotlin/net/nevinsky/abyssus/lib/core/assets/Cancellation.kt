@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets
+package net.nevinsky.abyssus.lib.gdx.assets
 
 import kotlin.coroutines.cancellation.CancellationException
 

@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.filetype
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode

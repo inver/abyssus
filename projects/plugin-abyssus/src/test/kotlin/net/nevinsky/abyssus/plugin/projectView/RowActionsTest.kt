@@ -34,7 +34,7 @@ class RowActionsTest : BasePlatformTestCase() {
     }
 
     private fun entryOf(unused: Boolean) =
-        DtoEntry("/p/assets/0", "0", net.nevinsky.abyssus.lib.core.editor.testAsset("a", "u", "SKYBOX", emptyList(), unused), null, null, null, emptyList())
+        DtoEntry("/p/assets/0", "0", net.nevinsky.abyssus.lib.gdx.editor.testAsset("a", "u", "SKYBOX", emptyList(), unused), null, null, null, emptyList())
 
     private fun paint(action: RowAction): BufferedImage {
         val w = action.width(host)

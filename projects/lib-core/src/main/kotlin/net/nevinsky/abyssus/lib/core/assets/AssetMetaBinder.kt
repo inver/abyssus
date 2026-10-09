@@ -1,14 +1,14 @@
-package net.nevinsky.abyssus.lib.core.assets
+package net.nevinsky.abyssus.lib.gdx.assets
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
-import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyMeta
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
-import net.nevinsky.abyssus.lib.core.assets.texture.TextureMeta
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.assets.model.ModelMeta
+import net.nevinsky.abyssus.lib.gdx.assets.sky.clouds.CloudMeta
+import net.nevinsky.abyssus.lib.gdx.assets.sky.cube.SkyboxMeta
+import net.nevinsky.abyssus.lib.gdx.assets.sky.hdr.HdrSkyMeta
+import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.ProceduralSkyMeta
+import net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainMeta
+import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureMeta
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
 
 /** Binds an admitted metadata tree; callers validate native identity before invoking [bind]. No IO or GL. */
 class AssetMetaBinder(

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets.sky.clouds
+package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
@@ -14,14 +14,14 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
-import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.PreparedProceduralSky
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
-import net.nevinsky.abyssus.lib.core.assets.skyShaders
-import net.nevinsky.abyssus.lib.core.assets.testProject
-import net.nevinsky.abyssus.lib.core.testing.RecordingLogger
+import net.nevinsky.abyssus.lib.gdx.assets.sky.SkyFrame
+import net.nevinsky.abyssus.lib.gdx.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.AtmosphereParams
+import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.PreparedProceduralSky
+import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.ProceduralSky
+import net.nevinsky.abyssus.lib.gdx.assets.skyShaders
+import net.nevinsky.abyssus.lib.gdx.assets.testProject
+import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.VertexAttributes.Usage

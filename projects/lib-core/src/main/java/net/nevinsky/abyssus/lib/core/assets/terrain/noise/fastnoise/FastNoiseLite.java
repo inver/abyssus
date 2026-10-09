@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.core.assets.terrain.noise.fastnoise;
+package net.nevinsky.abyssus.lib.gdx.assets.terrain.noise.fastnoise;
 
 // MIT License
 //

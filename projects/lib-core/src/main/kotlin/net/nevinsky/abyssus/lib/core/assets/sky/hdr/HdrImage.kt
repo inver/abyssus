@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets.sky.hdr
+package net.nevinsky.abyssus.lib.gdx.assets.sky.hdr
 
 /** An equirectangular image as RGB half floats, row by row from the top, the layout an `RGB16F` texture takes. */
 class HdrImage(val width: Int, val height: Int, val rgb: ShortArray) {

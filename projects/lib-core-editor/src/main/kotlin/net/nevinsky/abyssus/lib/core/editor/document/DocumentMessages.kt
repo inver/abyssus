@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.document
+package net.nevinsky.abyssus.lib.gdx.editor.document
 
-import net.nevinsky.abyssus.lib.core.assets.displayMessage
-import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
-import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.gdx.assets.displayMessage
+import net.nevinsky.abyssus.lib.gdx.format.UnsupportedDocumentFormat
+import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
 
 /** Why a document could not be used, as shown to the user: a native-format refusal names its problem and path. */
 fun Throwable.documentDisplayMessage(messages: EditorMessages): String = when (this) {

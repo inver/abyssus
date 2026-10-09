@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets.sky.procedural
+package net.nevinsky.abyssus.lib.gdx.assets.sky.procedural
 
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
-import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
-import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.*
-import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.gdx.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.gdx.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.gdx.assets.sky.SkyRenderer
+import net.nevinsky.abyssus.lib.gdx.assets.sky.SkyFrame
+import net.nevinsky.abyssus.lib.gdx.assets.sky.clouds.*
+import net.nevinsky.abyssus.lib.gdx.util.GeometryUtils.Companion.createFullscreenTriangle
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 

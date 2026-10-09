@@ -10,7 +10,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.Topic
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.gdx.assets.Asset
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 
 fun interface AbyssusSelectionListener {

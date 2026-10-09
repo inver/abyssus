@@ -5,10 +5,10 @@
 package net.nevinsky.abyssus.lib.physics
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.testing.failOnWarnings
+import net.nevinsky.abyssus.lib.gdx.testing.failOnWarnings
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.core.scene.SceneContext
+import net.nevinsky.abyssus.lib.gdx.scene.SceneContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

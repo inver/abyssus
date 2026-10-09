@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.core.assets.sky.hdr
+package net.nevinsky.abyssus.lib.gdx.assets.sky.hdr
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.filetype
 
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
-import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.gdx.editor.document.DocumentTextEditor
+import net.nevinsky.abyssus.lib.gdx.editor.document.TextEditOutcome
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.command.WriteCommandAction

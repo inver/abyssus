@@ -5,19 +5,19 @@
 
 package net.nevinsky.abyssus.plugin.dto
 
-import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
+import net.nevinsky.abyssus.lib.gdx.editor.document.AssetMetaReader
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
-import net.nevinsky.abyssus.lib.core.assets.Asset
-import net.nevinsky.abyssus.lib.core.assets.AssetMeta
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.util.obj
-import net.nevinsky.abyssus.lib.core.util.opt
-import net.nevinsky.abyssus.lib.core.util.text
+import net.nevinsky.abyssus.lib.gdx.assets.terrain.SPLAT_FIELDS
+import net.nevinsky.abyssus.lib.gdx.assets.Asset
+import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
+import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.util.obj
+import net.nevinsky.abyssus.lib.gdx.util.opt
+import net.nevinsky.abyssus.lib.gdx.util.text
 import java.io.File
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
 
 /** Lists a project's asset folders through the VFS, as the Abyssus tree shows them, parsing `meta.json` with [json]. */
 class ProjectAssetListing(json: JsonProcessor) {

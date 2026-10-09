@@ -27,7 +27,7 @@ import javax.swing.JPanel
 import javax.swing.UIManager
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
-import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.gdx.assets.Asset
 import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
 import net.nevinsky.abyssus.plugin.projectView.DtoEntry

@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import java.io.File
 
 /** The `assets` folder of the project in [projectDir], for telling which changed paths belong to its assets. */

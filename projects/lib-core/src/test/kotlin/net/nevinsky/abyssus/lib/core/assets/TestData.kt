@@ -1,8 +1,8 @@
-package net.nevinsky.abyssus.lib.core.assets
+package net.nevinsky.abyssus.lib.gdx.assets
 
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.assets.loading.ShaderStorage
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import java.io.File

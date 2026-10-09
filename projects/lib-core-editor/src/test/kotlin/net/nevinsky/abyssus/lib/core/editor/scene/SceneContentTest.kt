@@ -3,24 +3,24 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.scene
+package net.nevinsky.abyssus.lib.gdx.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
+import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
+import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightKind
 
-import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.gdx.editor.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.LIGHT_RANGE
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_NEAR
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FAR
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FOV
+import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.LIGHT_RANGE
+import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_NEAR
+import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_FAR
+import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_FOV
 
 class SceneContentTest {
     private fun content(json: String) = sceneContentOf(parseScene(json))

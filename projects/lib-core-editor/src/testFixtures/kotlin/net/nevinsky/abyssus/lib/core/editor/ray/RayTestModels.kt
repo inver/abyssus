@@ -2,9 +2,9 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.core.editor.ray
+package net.nevinsky.abyssus.lib.gdx.editor.ray
 
-import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
@@ -13,13 +13,13 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelMaterial
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.lib.core.assets.model.ModelRaySnapshotLoader
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSource
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.core.model.ModelData
-import net.nevinsky.abyssus.lib.core.model.ModelMesh
-import net.nevinsky.abyssus.lib.core.model.ModelMeshPart
+import net.nevinsky.abyssus.lib.gdx.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.lib.gdx.assets.model.ModelRaySnapshotLoader
+import net.nevinsky.abyssus.lib.gdx.assets.model.RayModelSource
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
+import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
 
 /** One node with two mesh parts (red, green) over a shared mesh, read the way the scene view reads models. */
 fun rayTestModel(count: Int = 3, pbr: Boolean = false): RayModelSnapshot {
@@ -34,11 +34,11 @@ fun rayTestModel(count: Int = 3, pbr: Boolean = false): RayModelSnapshot {
             } }.toTypedArray()
         })
         listOf("red" to Color.RED, "green" to Color.GREEN).forEach { (name, color) ->
-            data.materials.add(if (pbr) net.nevinsky.abyssus.lib.core.model.PbrModelMaterial().apply { id = name; diffuse = Color(color); baseColor = Color(color); metallic = 0f; roughness = 0.2f } else ModelMaterial().apply { id = name; diffuse = Color(color) })
+            data.materials.add(if (pbr) net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial().apply { id = name; diffuse = Color(color); baseColor = Color(color); metallic = 0f; roughness = 0.2f } else ModelMaterial().apply { id = name; diffuse = Color(color) })
         }
         data.nodes.add(ModelNode().apply {
             id = "node"; translation = Vector3(0f, 1f, 0f)
             parts = arrayOf("red", "green").map { name -> ModelNodePart().apply { meshPartId = name; materialId = name } }.toTypedArray()
         })
-        return ModelRaySnapshotLoader(net.nevinsky.abyssus.lib.core.io.FileLoader(java.io.File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
+        return ModelRaySnapshotLoader(net.nevinsky.abyssus.lib.gdx.io.FileLoader(java.io.File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
     }

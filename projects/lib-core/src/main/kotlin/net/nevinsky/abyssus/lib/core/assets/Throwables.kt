@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets
+package net.nevinsky.abyssus.lib.gdx.assets
 
 /** The message to show for this failure: its own, or the class name when it has none. */
 fun Throwable.displayMessage(): String = message ?: javaClass.simpleName

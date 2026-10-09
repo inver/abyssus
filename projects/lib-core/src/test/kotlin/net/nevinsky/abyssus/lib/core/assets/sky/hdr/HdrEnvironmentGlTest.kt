@@ -1,8 +1,8 @@
-package net.nevinsky.abyssus.lib.core.assets.sky.hdr
+package net.nevinsky.abyssus.lib.gdx.assets.sky.hdr
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
-import net.nevinsky.abyssus.lib.core.assets.skyShaders
+import net.nevinsky.abyssus.lib.gdx.assets.skyShaders
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.utils.BufferUtils
 import org.junit.Assert.assertEquals

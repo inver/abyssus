@@ -1,8 +1,8 @@
 # core
 
 Asset reading and loading for native Abyssus projects, as a plain JVM library: the Abyssus plugin uses it, and so can any
-libGDX tool or test that has a project folder and a GL context. Root package `net.nevinsky.abyssus.lib.core`; the asset
-code is in `net.nevinsky.abyssus.lib.core.assets`.
+libGDX tool or test that has a project folder and a GL context. Root package `net.nevinsky.abyssus.lib.gdx`; the asset
+code is in `net.nevinsky.abyssus.lib.gdx.assets`.
 
 ## Rules
 

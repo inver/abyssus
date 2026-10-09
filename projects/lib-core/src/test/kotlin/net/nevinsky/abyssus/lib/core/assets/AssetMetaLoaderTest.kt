@@ -1,11 +1,11 @@
-package net.nevinsky.abyssus.lib.core.assets
+package net.nevinsky.abyssus.lib.gdx.assets
 
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
-import net.nevinsky.abyssus.lib.core.assets.texture.TextureMeta
-import net.nevinsky.abyssus.lib.core.testing.warningsTo
+import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.assets.sky.cube.SkyboxMeta
+import net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainMeta
+import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureMeta
+import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File

@@ -11,8 +11,8 @@ import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.meta.EditError
-import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
+import net.nevinsky.abyssus.lib.gdx.editor.meta.EditError
+import net.nevinsky.abyssus.lib.gdx.editor.meta.FieldValue
 import java.io.File
 import net.nevinsky.abyssus.plugin.testCore
 

@@ -3,21 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor
+package net.nevinsky.abyssus.lib.gdx.editor
 
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentKind
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEdit
-import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEditing
-import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
-import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.headless.HeadlessEdit
+import net.nevinsky.abyssus.lib.gdx.editor.headless.HeadlessEditing
+import net.nevinsky.abyssus.lib.gdx.editor.meta.FieldValue
+import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneTransformWriter
+import net.nevinsky.abyssus.lib.gdx.editor.pick.TransformEdit
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import net.nevinsky.abyssus.plugin.projectView.ComponentTarget
 import net.nevinsky.abyssus.plugin.properties.AssetEditResult

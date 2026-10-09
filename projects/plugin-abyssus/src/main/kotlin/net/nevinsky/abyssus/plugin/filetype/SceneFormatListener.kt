@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.filetype
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -35,8 +35,8 @@ class SceneFormatListener : FileEditorManagerListener {
     private fun format(project: Project, file: VirtualFile) {
         val document = FileDocumentManager.getInstance().getDocument(file)?.takeIf { it.isWritable } ?: return
         val kind = documentKind(file) ?: return
-        val root = net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation { SceneJson().parse(document.text) }.getOrNull() ?: return
-        if (net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat().validate(root, kind) != null) return
+        val root = net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation { SceneJson().parse(document.text) }.getOrNull() ?: return
+        if (net.nevinsky.abyssus.lib.gdx.editor.document.AbyssusDocumentFormat().validate(root, kind) != null) return
         val pretty = SceneJson().pretty(root)
         if (pretty == document.text) return
         WriteCommandAction.runWriteCommandAction(project, AbyssusBundle.message("commandFormatSceneJson"), null, { document.setText(pretty) })

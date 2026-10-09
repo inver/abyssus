@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.components
+package net.nevinsky.abyssus.lib.gdx.editor.components
 
-import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
 
 import com.fasterxml.jackson.databind.JsonNode
 import java.io.File
 import net.nevinsky.abyssus.lib.runtime.ecs.EcsConfigurator
 import net.nevinsky.abyssus.lib.runtime.ecs.render.FolderAssetResolver
 import net.nevinsky.abyssus.lib.runtime.schema.SchemaFile
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -283,7 +283,7 @@ class ComponentEditorTest {
         editor.update(root, "4", "CameraComponent", "camera.near", "0.25")
         editor.update(root, "0", "PositionComponent", "localPosition.y", "2.5")
         val configurator = EcsConfigurator(
-            net.nevinsky.abyssus.lib.core.io.JsonProcessor().mapper,
+            net.nevinsky.abyssus.lib.gdx.io.JsonProcessor().mapper,
             FolderAssetResolver(File("src/test/testData/project/Untitled/assets").list().orEmpty().toList()),
             org.slf4j.helpers.NOPLogger.NOP_LOGGER,
             net.nevinsky.abyssus.lib.runtime.schema.GameComponents(),

@@ -13,7 +13,7 @@ import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.lib.core.editor.terrain.HeightmapImage
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.HeightmapImage
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout

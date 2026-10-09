@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets.loading
+package net.nevinsky.abyssus.lib.gdx.assets.loading
 
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
-import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 
 /** The classpath folder of the shaders bundled with this module. */
 const val DEFAULT_SHADER_ROOT = "/shader/sky"

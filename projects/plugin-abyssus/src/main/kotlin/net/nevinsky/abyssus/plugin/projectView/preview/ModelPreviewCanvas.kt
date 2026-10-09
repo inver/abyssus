@@ -24,16 +24,16 @@ import com.badlogic.gdx.utils.BufferUtils
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
-import net.nevinsky.abyssus.lib.core.AnimationController
-import net.nevinsky.abyssus.lib.core.ModelInstance
-import net.nevinsky.abyssus.lib.core.assets.model.PreparedModel
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.core.model.Model
-import net.nevinsky.abyssus.lib.core.model.ModelData
-import net.nevinsky.abyssus.lib.core.shader.DefaultShaderProvider
-import net.nevinsky.abyssus.lib.core.shader.ShaderProvider
+import net.nevinsky.abyssus.lib.gdx.AnimationController
+import net.nevinsky.abyssus.lib.gdx.ModelInstance
+import net.nevinsky.abyssus.lib.gdx.assets.model.PreparedModel
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.model.Model
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
+import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.sceneview.GdxContext
 import net.nevinsky.abyssus.plugin.sceneview.GdxFrame
@@ -53,7 +53,7 @@ import javax.swing.SwingConstants
 import javax.swing.Timer
 import com.badlogic.gdx.graphics.g3d.Model as GdxModel
 import com.badlogic.gdx.graphics.g3d.ModelInstance as GdxModelInstance
-import net.nevinsky.abyssus.lib.core.ModelBatch as ContentBatch
+import net.nevinsky.abyssus.lib.gdx.ModelBatch as ContentBatch
 
 /**
  * A model as the preview draws it: the transformed [data], its [pixmaps] decoded off the AWT thread (the canvas takes

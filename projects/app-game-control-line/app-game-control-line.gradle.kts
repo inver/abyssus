@@ -36,7 +36,7 @@ dependencies {
     runtimeOnly("com.github.stephengold:jolt-jni-$joltJniBuildPlatform:${libs.versions.jolt.get()}:ReleaseSp")
     testImplementation(libs.junit4)
     testImplementation(testFixtures(project(":lib-core")))
-    testImplementation(testFixtures(project(":lib-gdx-model")))
+    testImplementation(testFixtures(project(":lib-gdx")))
 }
 
 val gameProject = layout.projectDirectory.dir("project/ControlLine")

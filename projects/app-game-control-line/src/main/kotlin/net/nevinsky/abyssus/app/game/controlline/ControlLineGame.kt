@@ -18,12 +18,12 @@ import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
 import net.nevinsky.abyssus.app.game.controlline.render.*
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.app.game.controlline.screens.GameUi
-import net.nevinsky.abyssus.lib.core.BaseCtx
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.gdx.BaseCtx
+import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
-import net.nevinsky.abyssus.lib.core.scene.RuntimeSceneLoader
+import net.nevinsky.abyssus.lib.gdx.scene.RuntimeSceneLoader
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.util.concurrent.ExecutorService

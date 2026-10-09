@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets.sky.clouds
+package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
 
-import net.nevinsky.abyssus.lib.core.assets.terrain.noise.fastnoise.FastNoiseLite
+import net.nevinsky.abyssus.lib.gdx.assets.terrain.noise.fastnoise.FastNoiseLite
 import java.util.stream.IntStream
 
 /** The edge length, in texels, of the volumetric technique's base noise. */

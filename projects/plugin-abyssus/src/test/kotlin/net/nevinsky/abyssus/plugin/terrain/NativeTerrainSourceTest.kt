@@ -8,10 +8,10 @@ import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.plugin.AbyssusCore
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
-import net.nevinsky.abyssus.lib.core.editor.terrain.RecipeStatus
-import net.nevinsky.abyssus.lib.core.editor.terrain.SourceSnapshot
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.RecipeStatus
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.SourceSnapshot
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.meta.AssetReferenceChoices
 import java.io.File
 
 class NativeTerrainSourceTest : BasePlatformTestCase() {

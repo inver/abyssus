@@ -15,7 +15,7 @@
 
 ## Module boundary
 
-`gdx-model` depends only on libGDX, LWJGL Assimp and the slf4j API (`projects/lib-gdx-model/lib-gdx-model.gradle.kts`). Nothing in it may import
+`gdx-model` depends only on libGDX, LWJGL Assimp and the slf4j API (`../../projects/lib-gdx`). Nothing in it may import
 `com.intellij.*` or `net.nevinsky.abyssus` plugin packages. The plugin depends on it with
 `implementation(project(":lib-gdx-model"))`.
 

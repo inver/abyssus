@@ -11,13 +11,13 @@ import net.nevinsky.abyssus.plugin.assetfiles.PlacedEntity
 import net.nevinsky.abyssus.plugin.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.plugin.assetfiles.FileChange
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
-import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImportRequest
-import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearInspection
-import net.nevinsky.abyssus.lib.core.editor.flightgear.ImportSize
-import net.nevinsky.abyssus.lib.core.editor.flightgear.StagedImport
-import net.nevinsky.abyssus.lib.core.editor.terrain.FolderNameError
-import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
+import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearImportRequest
+import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearInspection
+import net.nevinsky.abyssus.lib.gdx.editor.flightgear.ImportSize
+import net.nevinsky.abyssus.lib.gdx.editor.flightgear.StagedImport
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.FolderNameError
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.checkFolderName
 import java.io.File
 
 /** Why an import's size is refused. */

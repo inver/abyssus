@@ -18,12 +18,12 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
 import java.awt.Color
 import java.awt.FlowLayout
 import javax.swing.BorderFactory
 import javax.swing.JPanel
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.plugin.dto.ProjectDto
 
 /** The numbers under the tree. */

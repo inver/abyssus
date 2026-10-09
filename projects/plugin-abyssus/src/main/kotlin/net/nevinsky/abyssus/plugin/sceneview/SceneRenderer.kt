@@ -5,40 +5,40 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.ray.RayFrameContext
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneDisplay
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySkyBaker
-import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
-import net.nevinsky.abyssus.lib.core.editor.scene.MAX_POINT
-import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
-import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.core.editor.scene.PendingAssetRevision
-import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.scene.cameraDirectionOf
-import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
-import net.nevinsky.abyssus.lib.core.editor.pick.FrameSnapshot
-import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.lib.core.editor.pick.SceneMarkers
-import net.nevinsky.abyssus.lib.core.editor.pick.ScenePreview
-import net.nevinsky.abyssus.lib.core.editor.pick.SceneQueries
-import net.nevinsky.abyssus.lib.core.editor.pick.SceneViewState
-import net.nevinsky.abyssus.lib.core.editor.pick.SnapshotSceneQueries
-import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
-import net.nevinsky.abyssus.lib.core.editor.pick.aspectOf
-import net.nevinsky.abyssus.lib.core.editor.pick.copyOfCamera
-import net.nevinsky.abyssus.lib.core.editor.pick.gizmoHandlesFor
-import net.nevinsky.abyssus.lib.core.editor.pick.snapshotBoxOf
-import net.nevinsky.abyssus.lib.core.editor.pick.snapshotTerrainOf
-import net.nevinsky.abyssus.lib.core.editor.content.Pose
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayFrameContext
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneDisplay
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySkyBaker
+import net.nevinsky.abyssus.lib.gdx.editor.scene.AssetRevisionBatch
+import net.nevinsky.abyssus.lib.gdx.editor.scene.MAX_POINT
+import net.nevinsky.abyssus.lib.gdx.editor.scene.ModelEntity
+import net.nevinsky.abyssus.lib.gdx.editor.scene.LightSet
+import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.lib.gdx.editor.scene.PendingAssetRevision
+import net.nevinsky.abyssus.lib.gdx.editor.scene.lightSetOf
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.scene.cameraDirectionOf
+import net.nevinsky.abyssus.lib.gdx.editor.content.toMatrix
+import net.nevinsky.abyssus.lib.gdx.editor.pick.FrameSnapshot
+import net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneMarkers
+import net.nevinsky.abyssus.lib.gdx.editor.pick.ScenePreview
+import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneQueries
+import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneViewState
+import net.nevinsky.abyssus.lib.gdx.editor.pick.SnapshotSceneQueries
+import net.nevinsky.abyssus.lib.gdx.editor.pick.TerrainTarget
+import net.nevinsky.abyssus.lib.gdx.editor.pick.aspectOf
+import net.nevinsky.abyssus.lib.gdx.editor.pick.copyOfCamera
+import net.nevinsky.abyssus.lib.gdx.editor.pick.gizmoHandlesFor
+import net.nevinsky.abyssus.lib.gdx.editor.pick.snapshotBoxOf
+import net.nevinsky.abyssus.lib.gdx.editor.pick.snapshotTerrainOf
+import net.nevinsky.abyssus.lib.gdx.editor.content.Pose
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightPlacement
 
 import java.io.File
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.gdx.assets.loading.ShaderStorage
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
@@ -50,24 +50,24 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.intellij.openapi.Disposable
-import net.nevinsky.abyssus.lib.core.shader.DefaultShaderProvider
-import net.nevinsky.abyssus.lib.core.shader.EnvironmentLightAttribute
-import net.nevinsky.abyssus.lib.core.shader.ShaderProvider
+import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
+import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
 import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
 import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SkyClock
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SunDirection
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SunOcclusion
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.SKY_CAMERA_HEIGHT
+import net.nevinsky.abyssus.lib.gdx.assets.sky.clouds.SunOcclusion
+import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.ProceduralSky
+import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.ProceduralSkyMeta
+import net.nevinsky.abyssus.lib.gdx.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.SKY_CAMERA_HEIGHT
 import net.nevinsky.abyssus.plugin.sceneview.terrain.TerrainShader
 import net.nevinsky.abyssus.plugin.sceneview.shadows.SceneShadows
-import net.nevinsky.abyssus.lib.core.shader.ShadowAtlasAttribute
-import net.nevinsky.abyssus.lib.core.ModelBatch as ContentBatch
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FOV
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
+import net.nevinsky.abyssus.lib.gdx.ModelBatch as ContentBatch
+import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_FOV
 
 /**
  * Draws a scene's environment, a ground grid and the content the scene places (skybox, terrains, models), and picks
@@ -118,8 +118,8 @@ class SceneRenderer(
     /** Asset changes waiting for a frame that can safely replace GL resources; merged until [render] takes them. */
     private val pendingRevision = PendingAssetRevision()
 
-    private val models = SceneModels(AssetView(assets, net.nevinsky.abyssus.lib.core.model.Model::class.java))
-    private val terrains = SceneTerrains(AssetView(assets, net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh::class.java))
+    private val models = SceneModels(AssetView(assets, net.nevinsky.abyssus.lib.gdx.model.Model::class.java))
+    private val terrains = SceneTerrains(AssetView(assets, net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainMesh::class.java))
     private var terrainShader: TerrainShader? = null
     private var shadows: SceneShadows? = null
     internal var shadowedLightIds: Set<String> = emptySet()
@@ -248,11 +248,11 @@ class SceneRenderer(
         terrainShader = null
         updateDrawnVersion()
         batch = ModelBatch(FogShaderProvider { fogCoefficient })
-        contentShaders = DefaultShaderProvider(net.nevinsky.abyssus.lib.core.shader.ShaderConfig().apply {
+        contentShaders = DefaultShaderProvider(net.nevinsky.abyssus.lib.gdx.shader.ShaderConfig().apply {
             numSpotLights = MAX_POINT
         }).also { contentBatch = ContentBatch(it) }
         terrainShader = TerrainShader(shaders)
-        skybox = SceneSkybox(AssetView(assets, net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer::class.java))
+        skybox = SceneSkybox(AssetView(assets, net.nevinsky.abyssus.lib.gdx.assets.sky.SkyRenderer::class.java))
         overlay = LoadingOverlay(shaders)
         lineBatch = LineBatch(shaders)
         gridModel = GridModel.build().also { grid = ModelInstance(it) }
@@ -522,14 +522,14 @@ class SceneRenderer(
         const val MIN_NEAR = 0.01f
     }
 
-    private class BakedSky(val key: Triple<String, File?, Vec3>, val snapshot: net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot?)
+    private class BakedSky(val key: Triple<String, File?, Vec3>, val snapshot: net.nevinsky.abyssus.lib.gdx.assets.sky.RaySkySnapshot?)
     private var bakedSky: BakedSky? = null
     private val skyBaker = RaySkyBaker()
 
     /** The procedural sky rendered into a ray texture once per sky and sun direction; null while it loads or fails to bake. */
-    private fun bakedProceduralSky(c: SceneContent, p: SceneRenderParams): net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot? {
+    private fun bakedProceduralSky(c: SceneContent, p: SceneRenderParams): net.nevinsky.abyssus.lib.gdx.assets.sky.RaySkySnapshot? {
         val name = c.skybox ?: return null
-        val sky = skybox?.sky(name) as? net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky ?: return null
+        val sky = skybox?.sky(name) as? net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.ProceduralSky ?: return null
         val sun = SunDirection.of(c.lights)
         val key = Triple(name, p.projectDir, sun)
         bakedSky?.takeIf { it.key == key }?.let { return it.snapshot }

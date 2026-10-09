@@ -3,29 +3,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.scene
+package net.nevinsky.abyssus.lib.gdx.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
+import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.content.CameraPlacement
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.editor.document.EntityView
-import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
+import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
+import net.nevinsky.abyssus.lib.gdx.editor.document.EntityView
+import net.nevinsky.abyssus.lib.gdx.editor.document.sceneDocumentFromEcs
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.editor.components.ComponentReader
 import org.slf4j.helpers.NOPLogger
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.core.util.opt
-import net.nevinsky.abyssus.lib.core.util.text
+import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.gdx.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.gdx.ecs.component.CameraComponent
+import net.nevinsky.abyssus.lib.gdx.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.gdx.util.opt
+import net.nevinsky.abyssus.lib.gdx.util.text
 
 /** What a scene shows besides its environment. */
 data class SceneContent(

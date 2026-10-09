@@ -1,8 +1,8 @@
-package net.nevinsky.abyssus.lib.core.ecs
+package net.nevinsky.abyssus.lib.gdx.ecs
 
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.lib.core.ecs.component.*
-import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.gdx.ecs.component.*
+import net.nevinsky.abyssus.lib.gdx.ecs.component.RenderComponent
 
 class ComponentRegistry {
 

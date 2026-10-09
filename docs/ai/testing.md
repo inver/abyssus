@@ -11,7 +11,7 @@
 | Control Line tests | `./gradlew :app-game-control-line:test` |
 | Runtime tests | `./gradlew :lib-runtime:test` |
 | Plugin tests | `./gradlew :plugin-abyssus:test` |
-| `editor-core` tests | `./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.ScenePickerTest'`) |
+| `editor-core` tests | `./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.gdx.editor.pick.ScenePickerTest'`) |
 | `gdx-model` tests | `./gradlew :lib-gdx-model:test` |
 | One class | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.projectView.SkyboxPickerModelTest'` |
 | One method | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.AbyssusViewTest.testNodeTree'` |
@@ -34,7 +34,7 @@ CI also runs Plugin Verifier and Qodana separately from `check`.
   `terrain`, `meta`, `ray`, `headless`), plain JUnit with no IntelliJ class on the classpath (`NoPlatformClasspathTest`).
   They run from the repository root, so they read fixtures under `projects/plugin-abyssus/src/test/testData/project/` by the same paths as the
   plugin's tests.
-- `projects/lib-gdx-model/src/test/kotlin/`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`).
+- `../../projects/lib-gdx`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`).
 - `projects/lib-core/src/test/kotlin/`: asset reading and loading tests, plain JUnit with no IntelliJ classes. They read the shared
   fixtures through `testProject(name)` (Gradle passes the folder as `abyssus.testData`) and get a project's
   `FileLoader` and `AssetMetaLoader` from `testFileLoader(dir)` / `testMetaLoader(dir)` (`TestData.kt`); loaders and

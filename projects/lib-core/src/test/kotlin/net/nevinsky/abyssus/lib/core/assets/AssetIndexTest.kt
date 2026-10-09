@@ -1,6 +1,6 @@
-package net.nevinsky.abyssus.lib.core.assets
+package net.nevinsky.abyssus.lib.gdx.assets
 
-import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -17,7 +17,7 @@ class AssetIndexTest {
     fun cleanUp() = dirs.forEach(File::deleteRecursively)
 
     private val dir: File = Files.createTempDirectory("index").toFile().also(dirs::add)
-    private val files = net.nevinsky.abyssus.lib.core.io.FileLoader(dir)
+    private val files = net.nevinsky.abyssus.lib.gdx.io.FileLoader(dir)
     private val index = AssetIndex(files, testMetaLoader(dir, fileLoader = files))
 
     private fun asset(folder: String, uuid: String?, type: String = "TEXTURE") {

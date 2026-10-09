@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.plugin.dto
 
 import com.intellij.openapi.progress.ProcessCanceledException
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail

@@ -4,29 +4,29 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.ray.rayTestModel
-import net.nevinsky.abyssus.lib.core.editor.ray.RayAssetLease
-import net.nevinsky.abyssus.lib.core.editor.ray.RayFrameContext
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssets
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneDisplay
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneSnapshots
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySnapshotLimits
-import net.nevinsky.abyssus.lib.core.editor.ray.RayViewFeed
-import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
+import net.nevinsky.abyssus.lib.gdx.editor.ray.rayTestModel
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayAssetLease
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayFrameContext
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssets
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneDisplay
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneSnapshots
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySnapshotLimits
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayViewFeed
+import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModePhase
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
+import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.plugin.AssetLoading
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
 import net.nevinsky.abyssus.lib.raytracing.RayUnavailableReason
 import org.junit.After
 import org.junit.Assert.*
@@ -198,7 +198,7 @@ class RayViewFeedTest {
 
     @Test fun aBakedProceduralSkyReachesTheRendererAsADisplayValueTexture() {
         val feed = feed()
-        val baked = net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot(4, 2, FloatArray(4 * 2 * 4) { .25f }, hdr = false)
+        val baked = net.nevinsky.abyssus.lib.gdx.assets.sky.RaySkySnapshot(4, 2, FloatArray(4 * 2 * 4) { .25f }, hdr = false)
         val content = SceneContent(models = listOf(placement), skybox = "procedural")
         SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
         RayFakeDevice.await(what = "a scene with the baked sky") {

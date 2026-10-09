@@ -16,7 +16,7 @@ plugins {
 dependencies {
     // the root sets kotlin.stdlib.default.dependency=false for the IDE plugin; a standalone library needs it
     implementation(kotlin("stdlib"))
-    api(project(":lib-gdx-model"))
+    api(project(":lib-gdx"))
     api(libs.ashley)
     implementation(libs.lwjgl.tinyexr)
 
@@ -27,7 +27,7 @@ dependencies {
     testImplementation(libs.junit4)
     // GL tests use gdx-model's TestGl context; HdrFixtures (Radiance files from a pixel function) is shared with the
     // plugin's tests as this module's test fixture
-    testImplementation(testFixtures(project(":lib-gdx-model")))
+    testImplementation(testFixtures(project(":lib-gdx")))
     testFixturesImplementation(kotlin("stdlib"))
 }
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.assets.terrain
+package net.nevinsky.abyssus.lib.gdx.assets.terrain
 
 import kotlin.math.sqrt
 

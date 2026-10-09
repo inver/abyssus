@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.core.editor.ray
+package net.nevinsky.abyssus.lib.gdx.editor.ray
 
 import net.nevinsky.abyssus.lib.raytracing.RayBackendInfo
 import net.nevinsky.abyssus.lib.raytracing.RayBackend

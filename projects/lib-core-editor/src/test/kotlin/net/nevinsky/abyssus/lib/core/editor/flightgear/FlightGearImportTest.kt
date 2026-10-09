@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.flightgear
+package net.nevinsky.abyssus.lib.gdx.editor.flightgear
 
 import com.badlogic.gdx.files.FileHandle
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.core.editor.flightgear.fixtureArchive
-import net.nevinsky.abyssus.lib.core.editor.flightgear.fixtureSkinPixel
+import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.gdx.format.DocumentKind
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.editor.flightgear.fixtureArchive
+import net.nevinsky.abyssus.lib.gdx.editor.flightgear.fixtureSkinPixel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

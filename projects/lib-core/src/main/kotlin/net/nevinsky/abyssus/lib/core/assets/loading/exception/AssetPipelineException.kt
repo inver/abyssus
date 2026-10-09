@@ -1,6 +1,6 @@
-package net.nevinsky.abyssus.lib.core.assets.loading.exception
+package net.nevinsky.abyssus.lib.gdx.assets.loading.exception
 
-import net.nevinsky.abyssus.lib.core.assets.loading.AssetState
+import net.nevinsky.abyssus.lib.gdx.assets.loading.AssetState
 
 open class AssetPipelineException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
 

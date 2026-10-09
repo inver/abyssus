@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.dto
+package net.nevinsky.abyssus.lib.gdx.dto
 
 import com.fasterxml.jackson.databind.JsonNode
 import java.util.*

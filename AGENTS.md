@@ -16,8 +16,8 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | Ray tracing tests / native jar packaging | `./gradlew :lib-raytracing:test` / `./gradlew :lib-raytracing:verifyNativePackaging` |
 | `runtime` tests only | `./gradlew :lib-runtime:test` |
 | `physics` tests only | `./gradlew :lib-physics:test` |
-| `core` tests only | `./gradlew :lib-core:test` (one class: `./gradlew :lib-core:test --tests 'net.nevinsky.abyssus.lib.core.assets.loading.AssetStorageTest'`) |
-| `editor-core` tests only | `./gradlew :lib-core-editor:test` (one class: `./gradlew :lib-core-editor:test --tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`) |
+| `core` tests only | `./gradlew :lib-core:test` (one class: `./gradlew :lib-core:test --tests 'net.nevinsky.abyssus.lib.gdx.assets.loading.AssetStorageTest'`) |
+| `editor-core` tests only | `./gradlew :lib-core-editor:test` (one class: `./gradlew :lib-core-editor:test --tests 'net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCameraTest'`) |
 | One plugin test class | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneViewPanelTest'` |
 | Also run GL tests (open a window) | add `-Dabyssus.glTests=true` |
 | Sandbox IDE | `./gradlew :plugin-abyssus:runIde` (open a project with `-PideProject=/path/to/project`) |
@@ -44,15 +44,15 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
     `ComponentSchemas` project service that builds each scene's `ComponentEditor`.
   - `terrain/`: the New Terrain dialog and the regeneration controls; generation itself is in `editor-core`.
   - `filetype/`, `language/`: file types, icons, the GLTF PSI.
-- `projects/lib-core-editor/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.core.editor`: scene documents (`SceneJson`,
+- `projects/lib-core-editor/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.gdx.editor`: scene documents (`SceneJson`,
   `SceneDocument`, `DocumentTextEditor`), component editing (`ComponentEditor`, `LightEntities`), the scene read model
   (`SceneContent`), picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge, and the
   headless editing API (`HeadlessEditing`), and the FlightGear and model imports that stage new MODEL asset folders
   (`flightgear`, `modelimport`). Ashley components, codecs and systems stay in `runtime`. See
   `projects/lib-core-editor/README.md`.
-- `projects/lib-gdx-model/`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import, a binary glTF writer), with inherited sources documented in `docs/third-party/gdx-model-origin.md`.
-  See `projects/lib-gdx-model/README.md`.
-- `projects/lib-core/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.core`: project layout and file access
+- `projects/lib-gdx`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import, a binary glTF writer), with inherited sources documented in `docs/third-party/gdx-model-origin.md`.
+  See `projects/lib-gdx`.
+- `projects/lib-core/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.gdx`: project layout and file access
   (`core.io.AbyssusProjectLayout`, `core.io.FileLoader`, `core.io.JsonProcessor`), asset metas (`AssetMeta`, `AssetMetaLoader`), the loading
   pipeline (`AssetLoader`, `AssetStorage`), the optional CPU snapshots for ray tracing (`RaySnapshotStore`), the
   loaders with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).
@@ -72,7 +72,7 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   `PlaneComponent` / `PilotComponent` are game components, and its `PlayModule` flies a plane in Play. Open a copy of
   that project in the IDE, never the committed folder (its tests assert on the scene). See `projects/app-game-control-line/README.md`.
 - `projects/plugin-abyssus/src/main/java/`: only the grammar sources `Gltf.bnf` / `Gltf.flex`; `projects/plugin-abyssus/src/main/gen` is generated from them.
-- `projects/plugin-abyssus/src/test/kotlin/`, `projects/lib-core-editor/src/test/kotlin/`, `projects/lib-gdx-model/src/test/kotlin/`, `projects/lib-core/src/test/kotlin/`,
+- `projects/plugin-abyssus/src/test/kotlin/`, `projects/lib-core-editor/src/test/kotlin/`, `projects/lib-gdx`, `projects/lib-core/src/test/kotlin/`,
   `projects/lib-runtime/src/test/kotlin/`, `projects/lib-physics/src/test/kotlin/`, `projects/plugin-abyssus-physics/src/test/kotlin/`,
   `projects/lib-raytracing/src/test/kotlin/`, `projects/app-game-control-line/src/test/kotlin/`: tests. Fixtures in `projects/plugin-abyssus/src/test/testData/project/`
   (shared with `core`'s and `editor-core`'s tests). Test helpers shared across modules live in `testFixtures` source

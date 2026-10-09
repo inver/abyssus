@@ -5,16 +5,16 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 
 import net.nevinsky.abyssus.plugin.SceneRayControls
 
 import net.nevinsky.abyssus.plugin.SceneFileEditorProvider
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
 
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -165,7 +165,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"7":{"components":{"PositionComponent":{}}}}}}"""
         val (editor, file) = fakeEditor("selection/a.scene", text, views)
         try {
-            val entry = net.nevinsky.abyssus.plugin.projectView.DtoRow("7", net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(text)["ecs"]["entities"]["7"])
+            val entry = net.nevinsky.abyssus.plugin.projectView.DtoRow("7", net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(text)["ecs"]["entities"]["7"])
             val node = net.nevinsky.abyssus.plugin.projectView.DtoEntryNode(project, file.path, entry, file, listOf("ecs", "entities"))
             net.nevinsky.abyssus.plugin.projectView.AbyssusSelection.of(project).select(node)
             assertEquals("7", views.single().selected)
@@ -242,8 +242,8 @@ class SceneFileEditorTest : BasePlatformTestCase() {
     }
 
     // Pin the test copy to the native writer's indentation before checking one-line edits and exact Undo.
-    private val mainScene get() = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().pretty(
-        net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
+    private val mainScene get() = net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().pretty(
+        net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
     )
 
     private fun textOf(f: com.intellij.openapi.vfs.VirtualFile) =
@@ -256,7 +256,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             val old = views[0].current.content.models.first { it.entityId == "0" }.transform.position
             val result = net.nevinsky.abyssus.plugin.projectView.SceneComponentEdits
                 .update(project, f, "0", "PositionComponent", "localPosition.x", (old.x + 3f).toString(), testMetaFiles())
-            assertEquals(net.nevinsky.abyssus.lib.core.editor.components.EditResult.Changed, result)
+            assertEquals(net.nevinsky.abyssus.lib.gdx.editor.components.EditResult.Changed, result)
             assertEquals(old.x + 3f, views[0].current.content.models.first { it.entityId == "0" }.transform.position.x, 1e-4f)
         } finally {
             com.intellij.openapi.util.Disposer.dispose(editor)
@@ -346,23 +346,23 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     /** A copy of Untitled's `Main Scene` (the shared fixture is not touched) with a LightComponent on 7 and a spotlight 8. */
     private fun sceneWithOmittedLightValues(): String {
-        val root = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(
+        val root = net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(
             java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText(),
         ) as com.fasterxml.jackson.databind.node.ObjectNode
         val entities = root.get("ecs") as com.fasterxml.jackson.databind.node.ObjectNode
         (entities.get("7").get("components") as com.fasterxml.jackson.databind.node.ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>(
             "LightComponent",
-            net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse("""{"light":{"color":{"r":1,"g":0.96,"b":0.84,"a":1},"intensity":1.2}}"""),
+            net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse("""{"light":{"color":{"r":1,"g":0.96,"b":0.84,"a":1},"intensity":1.2}}"""),
         )
         entities.set<com.fasterxml.jackson.databind.JsonNode>(
             "8",
-            net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(
+            net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(
                 """{"archetype":1,"components":{"NameComponent":{"name":"Spot Light 8"},"TypeComponent":{"type":"LIGHT_SPOT"},
                 "PositionComponent":{"localPosition":{"x":1,"y":5,"z":2}},
                 "LightComponent":{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1}}}}""",
             ),
         )
-        return net.nevinsky.abyssus.lib.core.editor.document.SceneJson().compact(root)
+        return net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().compact(root)
     }
 
     fun testOpeningTheViewAndSelectingLightsWithOmittedValuesLeavesTheTextAsItWas() {
@@ -376,7 +376,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             assertEquals(45f, lights.getValue("8").coneAngle, 0f)
             assertEquals(0.2f, lights.getValue("8").edgeSoftness, 0f)
             for (id in listOf("7", "8")) {
-                val entry = net.nevinsky.abyssus.plugin.projectView.DtoRow(id, net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(prepared)["ecs"][id])
+                val entry = net.nevinsky.abyssus.plugin.projectView.DtoRow(id, net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(prepared)["ecs"][id])
                 val node = net.nevinsky.abyssus.plugin.projectView.DtoEntryNode(project, f.path, entry, f, listOf("ecs"))
                 net.nevinsky.abyssus.plugin.projectView.AbyssusSelection.of(project).select(node)
                 assertEquals(id, views.single().selected)
