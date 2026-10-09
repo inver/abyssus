@@ -44,7 +44,7 @@ class RuntimeSceneLoader(
         if (scene.ecs == null) {
             return SceneContext(engine, scene)
         }
-        val warnings = ecsLoader.loadToEngine(scene.ecs!!, engine)
+        val warnings = ecsLoader.loadToEngine(scene.ecs, engine)
         return SceneContext(engine, scene, warnings)
     }
 

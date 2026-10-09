@@ -77,28 +77,6 @@ intellijPlatform {
     buildSearchableOptions = false
 }
 
-// The physics components' schema is generated from PhysicsComponents, never written by hand, and bundled as this
-// plugin's componentSchemas resource (/schemas/physics.schema.json).
-val exportPhysicsSchema by tasks.registering(JavaExec::class) {
-    val project = layout.buildDirectory.dir("generated/physicsSchemaProject")
-    classpath = schemaExport
-    mainClass.set("net.nevinsky.abyssus.lib.runtime.schema.SchemaExportMain")
-    val projectPath = project.map { it.asFile.absolutePath }
-    argumentProviders += CommandLineArgumentProvider {
-        listOf(
-            "net.nevinsky.abyssus.lib.physics.PhysicsComponents",
-            projectPath.get()
-        )
-    }
-    outputs.dir(project)
-}
-val physicsSchemaResource by tasks.registering(Sync::class) {
-    from(exportPhysicsSchema.map { it.outputs.files.singleFile.resolve("abyssus/components.schema.json") })
-    rename { "physics.schema.json" }
-    into(layout.buildDirectory.dir("generated/physicsSchema/schemas"))
-}
-sourceSets["main"].resources.srcDir(physicsSchemaResource.map { it.destinationDir.parentFile })
-
 // Jolt's natives must never load in the IDE: the plugin's own code may not name jolt-jni or physics' Jolt package.
 val checkNoJolt by tasks.registering {
     val sources = fileTree("src/main") { include("**/*.kt", "**/*.java", "**/*.xml") }

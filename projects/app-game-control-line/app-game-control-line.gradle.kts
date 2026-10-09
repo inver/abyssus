@@ -59,20 +59,6 @@ tasks.test {
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
 }
 
-// The component schema and play.json Abyssus reads (see physics/README.md and runtime/README.md). play.json holds
-// absolute paths, so it is git-ignored.
-val exportComponentSchema by tasks.registering(JavaExec::class) {
-    classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("net.nevinsky.abyssus.lib.runtime.schema.SchemaExportMain")
-    args("net.nevinsky.abyssus.app.game.controlline.components.ControlLineComponents", gameProject.asFile.absolutePath)
-}
-val exportPlay by tasks.registering(JavaExec::class) {
-    classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("net.nevinsky.abyssus.lib.physics.play.PlayExportMain")
-    args("net.nevinsky.abyssus.app.game.controlline.play.ControlLinePlay", gameProject.asFile.absolutePath)
-}
-tasks.register("exportAbyssus") { dependsOn(exportComponentSchema, exportPlay) }
-
 // Generators of the bundled project's assets (tools/): their output is committed, so the game needs none of them.
 val tools by sourceSets.creating {
     kotlin.srcDir("tools")

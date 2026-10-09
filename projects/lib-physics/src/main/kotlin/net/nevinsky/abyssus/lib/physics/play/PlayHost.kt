@@ -164,7 +164,7 @@ class PlayHost(
         // the scene loader only needs the storage to exist: nothing is drawn here, so no asset loader is registered
         val storage = AssetStorage(log)
         val loaded = try {
-            RuntimeSceneLoader(SceneLoader(json, files), EcsLoader(json, storage, registry), log)
+            RuntimeSceneLoader(SceneLoader(json, files), EcsLoader(json, registry), log)
                 .loadFromText(command.sceneText)
                 ?: throw IllegalArgumentException("the scene text is not a supported Abyssus scene")
         } catch (e: Exception) {

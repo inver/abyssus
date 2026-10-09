@@ -26,7 +26,7 @@ import java.util.concurrent.Executors
 /**
  * Context for dependency injection
  */
-class BaseCtx(val projectDir: String, shadersPath: String, shadersAnchor: Class<*>, val logger: Logger) {
+class BaseCtx(val projectDir: String, shadersPath: String?, shadersAnchor: Class<*>?, val logger: Logger) {
     val jsonProcessor: JsonProcessor
     val fileLoader: FileLoader
     val metaLoader: AssetMetaLoader
@@ -46,7 +46,11 @@ class BaseCtx(val projectDir: String, shadersPath: String, shadersAnchor: Class<
         executor = Executors.newFixedThreadPool(2) { r ->
             Thread(r, "asset-prepare").apply { isDaemon = true }
         }
-        shaderStorage = ShaderStorage().withResources(shadersPath, shadersAnchor)
+        shaderStorage = if (shadersPath != null && shadersAnchor != null) {
+            ShaderStorage().withResources(shadersPath, shadersAnchor)
+        } else {
+            ShaderStorage()
+        }
         assetStorage = AssetStorage(log, executor, metaLoader::loadBaseMeta).also {
             it.registerAll(
                 mapOf(
@@ -62,6 +66,6 @@ class BaseCtx(val projectDir: String, shadersPath: String, shadersAnchor: Class<
         }
         componentRegistry = ComponentRegistry()
         sceneLoader = SceneLoader(jsonProcessor, fileLoader)
-        ecsLoader = EcsLoader(jsonProcessor, assetStorage, componentRegistry)
+        ecsLoader = EcsLoader(jsonProcessor, componentRegistry)
     }
 }

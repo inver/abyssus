@@ -9,12 +9,10 @@ import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
-import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.EcsReadWarnings
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -49,7 +47,6 @@ import net.nevinsky.abyssus.lib.core.util.obj
  */
 class EcsLoader(
     private val json: JsonProcessor,
-    private val assetStorage: AssetStorage,
     private val componentRegistry: ComponentRegistry,
     private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
 ) {
@@ -120,10 +117,6 @@ class EcsLoader(
             entity.getComponent(Point2PointPositionComponent::class.java)?.let {
                 it.entity1Id = check(engine, warnings, from, "point-to-point entity1", it.entity1Id)
                 it.entity2Id = check(engine, warnings, from, "point-to-point entity2", it.entity2Id)
-            }
-            entity.getComponent(RenderComponent::class.java)?.let {
-                //todo link asset to entity in async mode, like future
-//                val modelInstance = assetStorage.request()
             }
         }
     }
