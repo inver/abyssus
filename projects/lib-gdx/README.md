@@ -1,4 +1,4 @@
-# gdx-model
+# lib-gdx
 
 A libGDX 3D model runtime with **32-bit mesh indices** and an **Assimp importer**. It is a plain JVM library: it has no
 IntelliJ dependency, so any libGDX project can use it.
@@ -58,9 +58,9 @@ Procedural mesh building is not included: use libGDX's `ModelBuilder` / `MeshBui
 
 ## Origin
 
-See [origin and license](../docs/third-party/gdx-model-origin.md) for the inherited sources, original commit and changes.
+See [origin and license](../../docs/third-party/gdx-model-origin.md) for the inherited sources, original commit and changes.
 
 ## Tests
 
-`./gradlew :lib-gdx-model:test` runs the CPU tests. Add `-Dabyssus.glTests=true` to also run the GL tests, which open a
+`./gradlew :lib-gdx:test` runs the CPU tests. Add `-Dabyssus.glTests=true` to also run the GL tests, which open a
 small window.

@@ -24,7 +24,7 @@ the toolbar, Play and the view's asset storage.
 | `FrameSnapshot`, `SceneQueries`, `SnapshotSceneQueries` *(editor-core)* | What the last frame drew (camera copy, model boxes, terrain targets, `drawnVersion`), and the CPU-only questions asked of it: pick, ray, ground below, lowest point, gizmo handles and hits, drag start. Tested with hand-built snapshots |
 | `SceneRenderer` | One frame: environment, skybox, grid, terrains, models, markers, highlight, gizmo. GL only: it publishes a `FrameSnapshot` after each frame and exposes `queries`. `GridModel` and `SelectionBox` build the grid and the highlight |
 | `PlacedAssets`, `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (an `AssetView` each over the view's `ViewAssets`, whose `ProjectAssets` from `AssetLoading` hold the one `core` `AssetStorage`) and per-entity instances (`PlacedEntities`); `SceneModels` and `SceneTerrains` extend `PlacedAssets` and `SceneSkybox` has the same `abandon` |
-| `skybox` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights (`sunLight` is the light clouds dim). `SkyClock`: the view's sky time, which clouds drift by. `CloudViewState` (the toolbar's Clouds choice and the automatic fallbacks) and `CloudFrameBudget` (2 s over 33 ms per frame while volumetric clouds draw) are pure and per view; nothing is written. The cloud techniques and `SunOcclusion` are in `core`'s `assets.sky.clouds`. The sky loaders, the HDR environment and the sky shaders are in `core` (`net.nevinsky.abyssus.lib.gdx.assets.sky`) |
+| `skybox` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights (`sunLight` is the light clouds dim). `SkyClock`: the view's sky time, which clouds drift by. `CloudViewState` (the toolbar's Clouds choice and the automatic fallbacks) and `CloudFrameBudget` (2 s over 33 ms per frame while volumetric clouds draw) are pure and per view; nothing is written. The cloud techniques and `SunOcclusion` are in `core`'s `assets.sky.clouds`. The sky loaders, the HDR environment and the sky shaders are in `core` (`net.nevinsky.abyssus.lib.core.assets.sky`) |
 | `SceneMarkers`, `CameraFrustum` *(editor-core)* | Camera body and frustum, light markers, and their pick bounds |
 | `ScenePicker` *(editor-core)* | Ray from a pixel, nearest hit over boxes and terrain heights (used by `SnapshotSceneQueries`) |
 | Drop: `OrientedBox`, `TerrainRestHeight`, `ScenePicker.restHeight` *(editor-core)* | Highest surface under a rotated box footprint; CPU-only bilinear terrain-cell maxima |
@@ -48,7 +48,7 @@ the toolbar, Play and the view's asset storage.
 - **Asset loading lives in `core`** (`projects/lib-core/README.md`). `AssetLoader.prepare` runs on a pool thread (IO and decoding,
   no GL). `build`, and `upload` for big textures, run on the render thread one slice per frame, inside this package's
   `GdxRuntime.withContext`. A new project gets a new cache, so a pool thread never prepares from a stale project. A
-  failed asset is remembered and logged once, through the SLF4J `Logger` `AbyssusCore` gives `AssetLoading` (`Abyssus.assets`).
+  failed asset is remembered and logged once, through the SLF4J `Logger` `AbyssusCore` gives `AssetLoading` (`AbyssusCore.assets`).
 - **Changed assets reload without reopening the view.** `AssetRefresh` (UI thread, reads on the pool) compares
   snapshots of the project's effective asset revisions: each `meta.json` as the editors hold it (unsaved text is captured
   on the UI thread by `unsavedAssetMeta` and handed in as immutable text, so pool threads never touch documents) plus the
@@ -155,7 +155,7 @@ disabled during depth rendering. Coverage outside a projection remains lit.
 
 The depth shader supports the custom 32-bit mesh indices, posed bones and diffuse alpha-test cutouts. Materials
 with active alpha blending do not cast. Terrain uses its color mesh and transform as an opaque depth renderable.
-See `../../../../../../../../../lib-gdx` for the reusable atlas attribute and provider API.
+See `projects/lib-gdx/README.md` for the reusable atlas attribute and provider API.
 
 Resources belong to one canvas and are created, rendered and disposed inside `GdxRuntime.withContext` on the
 safe AWT render thread. A lost/hidden context abandons references without GL calls; recreation builds a fresh atlas

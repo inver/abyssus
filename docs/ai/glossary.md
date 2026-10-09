@@ -6,7 +6,7 @@
 | **Scene** | A `.scene` file: environment settings (ambient light, fog, skybox) plus an `ecs` block of entities. |
 | **Asset** | A folder under `assets/` described by its `meta.json` (`type`, `uuid`, `additional`). Scenes name assets by folder; assets name each other by `uuid`. |
 | **Unused asset** | An asset no scene of its project reaches (see `docs/ai/file-formats.md`). Grayed and tagged `unused` in the tree. |
-| **ECS** | Entity-component-system. In a scene file, `ecs.entities.<id>.components.<Name>Component`. In code, the Ashley-based `runtime.ecs` package used by games and the Play host; the editor decodes scene JSON directly. |
+| **ECS** | Entity-component-system. In a scene file, `ecs.entities.<id>.components.<Name>Component`. In code, the Ashley-based `core.ecs` package used by games and the Play host; the editor decodes scene JSON directly. |
 | **Entity id** | The key under `ecs.entities`. Picking, tree selection and transform writes all use it. |
 | **Component class name** | The key of a component in a scene's `components`: the fully qualified class name or the short name of a built-in or registered component class. `EcsLoader` binds the value into that class with Jackson, `EcsWriter` writes it back. Any other key is carried raw. |
 | **Placement** | What the scene view draws for an entity (`AssetPlacement`, `LightPlacement`, `CameraPlacement`, gathered in `SceneContent`; both in `editor-core`), taken directly from the `ecs` JSON. |

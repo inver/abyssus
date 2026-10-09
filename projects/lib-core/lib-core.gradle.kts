@@ -25,6 +25,10 @@ dependencies {
     api(libs.jackson.module.kotlin)
 
     testImplementation(libs.junit4)
+    // EXR decoding tests need the native library independently of the plugin's test runtime.
+    listOf("natives-macos-arm64", "natives-macos", "natives-windows", "natives-linux").forEach {
+        testRuntimeOnly(variantOf(libs.lwjgl.tinyexr) { classifier(it) })
+    }
     // GL tests use gdx-model's TestGl context; HdrFixtures (Radiance files from a pixel function) is shared with the
     // plugin's tests as this module's test fixture
     testImplementation(testFixtures(project(":lib-gdx")))

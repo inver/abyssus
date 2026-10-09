@@ -134,17 +134,6 @@ changelog {
     repositoryUrl.set(properties("pluginRepositoryUrl"))
 }
 
-// Configure Gradle Kover Plugin - read more: https://github.com/Kotlin/kotlinx-kover#configuration
-kover {
-    reports {
-        total {
-            xml {
-                onCheck = true
-            }
-        }
-    }
-}
-
 tasks {
     test {
         // GL render tests open a real window: opt in with -Dabyssus.glTests=true

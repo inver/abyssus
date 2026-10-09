@@ -55,7 +55,7 @@ Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored
 
 ## `.scene`
 
-Top level, bound to `Scene` (`../../projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/dto/SceneDto.kt`):
+Top level, bound to `SceneDto` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/dto/SceneDto.kt`):
 
 | Key | Meaning |
 |---|---|
@@ -72,11 +72,14 @@ tree shows `skyboxName` as `skybox`, but the key in the file stays `skyboxName`.
 
 ```
 ecs: { "<id>": { components: { "<Name>Component": {...}, ... } }, ... }
-  (older scenes wrap this map in an `entities` member beside optional `metadata`, which the runtime keeps and writes
-  back; they also have an `archetype` per entity and an `archetypes` table, which it neither reads nor carries)
+  (native files can also wrap the map in an `entities` member beside `metadata` and `archetypes`)
 ```
 
-The components the plugin reads:
+The editor document layer supports both shapes. The current `EcsLoader` only enumerates the wrapped `entities`
+map, and `editor-core`'s `EcsWriter` produces that shape without carrying block metadata or archetypes. See
+`docs/reviews/2026-10-09-current-source.md` for the current mismatch with required round-trip behavior.
+
+The native component fields described by the specs and fixtures:
 
 | Component | Used for |
 |---|---|
@@ -93,7 +96,7 @@ The components the plugin reads:
 empty `PositionComponent: {}` is valid. Writers add fields when they change them (`SceneTransformWriter`,
 `PositionCodec`).
 
-**Light defaults** (`../../projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/component`). A light that leaves a value out has: `intensity` 1; the
+**Light defaults** (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/component`). A light that leaves a value out has: `intensity` 1; the
 whole `color` object missing means white, but a channel missing inside a `color` object is 0 (the alpha channel never
 affects lighting); `range` 100; `coneAngle` 45 and `edgeSoftness` 0.2. The scene view, the Properties panel and edits
 all read lights through the same codecs, so they show and use these values alike. The file is never rewritten to state
@@ -136,36 +139,24 @@ format rejection. Adding or editing a component never creates a Java-class ident
 
 ### Game components
 
-A game's own components (declared with `@SceneComponent` in its code) are native extension data keyed by their short
-name, next to the built-in ones: `ecs.entities.<id>.components.<ShortName>`. They are written without a class name
-and without an identifier table; a scene that holds `ecs.componentIdentifiers` is rejected before any component is
-read. The document validator does not look inside them. A program that has not registered a game component keeps it
-raw and writes it back unchanged.
+A game's own Jackson-bindable Ashley components are native extension data keyed by a registered name, usually
+their short class name, next to built-in components: `ecs.entities.<id>.components.<Name>`. Register them with
+`core.ecs.ComponentRegistry` before `EcsLoader` loads them. No annotation-based schema API is present in the
+current source set. A scene containing `ecs.componentIdentifiers` is rejected before component loading.
 
-A field equal to its declared default is left out, so a plane at its defaults is `"PlaneComponent": {}`. Values are
-stored as JSON numbers (a whole decimal as `25`), booleans, strings (text, a choice's name, an asset folder name), an
-entity id (`-1` for none), or whole `{x, y, z}` / `{r, g, b, a}` objects. If Jackson cannot bind a component (for example, an unknown enum),
-the runtime keeps the whole component raw with a warning. Schema limits are editor validation, not runtime load-time constraints.
+The document validator treats extension payloads as opaque. `EcsLoader` carries unregistered or unbindable
+components as raw JSON with a warning; `EcsWriter` writes that carried data back. The editor's built-in component
+editing keeps custom entries unchanged. `EcsWriter` omits default properties and writes integral floats as integers.
 
-### The component schema (`abyssus/components.schema.json`)
+### Retained component schema files (`abyssus/components.schema.json`)
 
-The game exports what it registers (`SchemaExportMain`, see `projects/lib-runtime/README.md`) so Abyssus can edit those
-components without loading game classes. It is not a native document (no `format` marker); `version` must be `1`.
+Some fixtures and bundled projects retain schema JSON from the earlier schema workflow. These are supporting
+files, not native `.abss`, `.scene` or asset documents. The current `ComponentSchemas` service does not read them
+or contributions from the `componentSchemas` extension point. They do not enable editing game or physics
+components, and the source set has no `SchemaExportMain` or schema export task.
 
-```json
-{ "version": 1,
-  "components": [ { "name": "PlaneComponent", "class": "net.example.PlaneComponent", "label": "Plane",
-      "fields": [ { "name": "lineLength", "label": "Line length", "type": "decimal", "default": 18,
-                    "group": "Lines", "min": 5, "max": 30 },
-                  { "name": "kind", "label": "Kind", "type": "choice", "choices": ["TRAINER", "STUNT"], "default": "TRAINER" },
-                  { "name": "model", "label": "Model", "type": "asset", "assetType": "MODEL", "default": "" } ] } ] }
-```
-
-Field `type`: `decimal`, `whole`, `boolean`, `text`, `choice` (with `choices`), `vector`, `color`, `entity`, `asset`
-(with `assetType`). `group`, `min`, `max` and `minExclusive: true` are optional; infinite limits are not written.
-The export is stable (registration then declaration order, two-space indent, LF), so the same game gives the same
-bytes. An unknown `version` rejects the file; an unknown field type rejects only that component. Other plugins can
-contribute files in the same format (`docs/ai/architecture.md`, Extension points); the project's file wins per name.
+Required schema behavior remains in the `component-schemas` and `custom-scene-components` specs; the
+implementation gap is recorded in `docs/reviews/2026-10-09-current-source.md`.
 
 ## Asset `meta.json`
 
@@ -181,7 +172,8 @@ contribute files in the same format (`docs/ai/architecture.md`, Extension points
 | `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults); optional `clouds`: the `uuid` of a `CLOUDS` asset (see *Clouds* below) |
 | `CLOUDS` | `technique` and up to three cloud bands `low`, `mid`, `high` (see *Clouds* below) |
 | `SKYBOX_HDR` | `file`: the OpenEXR image file inside the asset folder |
-| `TEXTURE`, `PIXMAP_TEXTURE`, `MATERIAL`, `SHADER` | Recognized for icons; not drawn by the scene view |
+| `TEXTURE`, `PIXMAP_TEXTURE` | `file`; loaded as textures, including terrain splat dependencies |
+| `MATERIAL`, `SHADER` | Recognized metadata types; no standalone scene drawable |
 
 `uuid` can be missing (the fixture's `skybox_default` and `tree` have none).
 

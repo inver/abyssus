@@ -4,35 +4,41 @@
 
 | Module | What | Depends on |
 |---|---|---|
-| `projects/plugin-abyssus/` | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.10): IDE glue over `editor-core` (tree, tool windows, dialogs, the GL canvas and renderer, actions, file types, VFS) | `:lib-core-editor`, `:lib-runtime`, `:lib-core`, `:lib-gdx-model`, `:lib-raytracing`, Jackson, libGDX, LWJGL3-AWT |
-| `projects/lib-core-editor/` | Plain JVM editing engine: scene documents and the write transform, component editing, the scene read model, picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge, `HeadlessEditing` | `:lib-core`, `:lib-runtime`, `:lib-raytracing`, `:lib-gdx-model` |
-| `projects/lib-runtime/` | Plain JVM Ashley components, codecs, systems, schema export and scene loading (DTOs and filesystem parsing in `core`) | `:lib-core`, Ashley |
-| `projects/plugin-abyssus-physics/` | **Abyssus Physics**, an IntelliJ plugin depending on Abyssus: physics overlay, Play through a separate play process, generated physics schema, bundled `play-host` folder | root plugin (`localPlugin`), `:lib-physics` (without its dependencies), `:lib-runtime` and `:lib-core-editor` compile-only |
-| `projects/lib-physics/` | Plain JVM physics: the physics components and `PhysicsWorld` (Jolt through jolt-jni), run in a game or the play host, never in the IDE | `:lib-runtime`, jolt-jni |
+| `projects/plugin-abyssus/` | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.20): IDE glue over `editor-core` (tree, tool windows, dialogs, the GL canvas and renderer, actions, file types, VFS) | `:lib-core-editor`, `:lib-core`, `:lib-raytracing` (with `:lib-gdx` transitively), Jackson, libGDX, LWJGL3-AWT |
+| `projects/lib-core-editor/` | Plain JVM editing engine: scene documents and the write transform, component editing, the scene read model, picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge, `HeadlessEditing` | `:lib-core`, `:lib-raytracing`, `:lib-gdx` |
+| `projects/plugin-abyssus-physics/` | **Abyssus Physics**, an IntelliJ plugin depending on Abyssus: physics overlay, Play through a separate play process, bundled `play-host` folder; overlay geometry is currently inactive | `:plugin-abyssus` (`localPlugin`), `:lib-physics` (without its dependencies), `:lib-core-editor` compile-only |
+| `projects/lib-physics/` | Plain JVM physics: the physics components and `PhysicsWorld` (Jolt through jolt-jni), run in a game or the play host, never in the IDE | `:lib-core`, jolt-jni |
 | `projects/app-game-control-line/` | **Control Line**, a libGDX desktop game (LWJGL3): flight on Jolt lines, scoring, screens, its bundled native project and its `PlayModule` for Play in Abyssus | `:lib-physics`, libGDX LWJGL3 backend, jolt-jni natives of the build machine |
-| `projects/lib-core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline (`AssetStorage`), CPU ray snapshots (`RaySnapshotStore`), and the models, terrains and skies it builds | `:lib-gdx-model`, Jackson, libGDX |
-| `../../projects/lib-gdx` | Plain JVM library: libGDX model runtime with 32-bit mesh indices, an Assimp importer and a binary glTF writer | libGDX, LWJGL Assimp |
+| `projects/lib-core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline (`AssetStorage`), CPU ray snapshots (`RaySnapshotStore`), the models, terrains and skies it builds, native DTOs, Ashley components and scene loading | `:lib-gdx`, Jackson, libGDX |
+| `projects/lib-gdx` | Plain JVM library: libGDX model runtime with 32-bit mesh indices, an Assimp importer and a binary glTF writer | libGDX, LWJGL Assimp |
 | `projects/lib-raytracing/` | Plain JVM ray tracing: backend contracts, immutable scene snapshots and linear host frames, the scheduler and quality policy, and optional native Metal and Vulkan backends | Kotlin stdlib, LWJGL Vulkan and VMA |
 
-```
-gdx-model <- core <- runtime <- physics
-                 \       \
-                  \       +-- editor-core <- plugin (root) <- physics-plugin
-raytracing ---------------/
+```text
+lib-gdx <- lib-core <- lib-physics <- app-game-control-line
+lib-core <- lib-core-editor <- plugin-abyssus <- plugin-abyssus-physics
+lib-raytracing <- lib-core-editor
+lib-raytracing <- plugin-abyssus
+lib-physics <- plugin-abyssus-physics
 ```
 
-`gdx-model`, `core`, `runtime`, `physics` and `editor-core` must not import IntelliJ or plugin code (see their READMEs;
-`editor-core` also has no Swing or AWT). Inside every module the package graph is acyclic (`checkPackageCycles`). `core` is wired by constructors:
-its composition root `AssetLoading` takes a `JsonProcessor`, an SLF4J `Logger`, an executor and a `ShaderStorage`; in
-the IDE the light application service `AbyssusCore.assets` builds one (IDE log, IDE pool) and hands it to every scene view.
+Arrows point toward dependencies. `lib-core-editor` also directly depends on `lib-gdx` and `lib-raytracing`;
+`plugin-abyssus` directly depends on `lib-core`, `lib-core-editor` and `lib-raytracing`.
+All library modules must stay free of IntelliJ and plugin imports; `editor-core` also has no Swing or AWT.
+
+Inside every module the package graph is acyclic (`checkPackageCycles`). `core` is wired by constructors:
+`BaseCtx` is its standalone composition root, creating JSON, file/meta loaders, an asset executor and storage,
+shaders, component registration and ECS/scene loaders. The plugin uses its own `AssetLoading`, which takes a
+`JsonProcessor`, SLF4J `Logger`, executor and `ShaderStorage`; `AbyssusCore.assets` builds it and each view gets a
+project loading graph. Hosts own the standalone executor and asset-storage lifecycle.
 `AbyssusCore` creates four groups independently on first access: `documents` owns JSON, native validation and parsing;
 `assets` owns metadata, loading, property descriptions and previews; `terrain` owns generation and file staging;
 `ray` owns the backend service and conversion worker. Actions, providers and factories pass the group collaborators
 they need. Disposal closes only initialized ray resources; reading a document does not create native workers.
 The plugin's `SceneReader` and `ProjectReader` use `DocumentParsing` and `JsonProcessor` to validate and bind
 scene and project text while retaining their VFS stamps and listings. Filesystem callers use `core`'s `SceneLoader`.
-`SceneEntry(file, scene)` keeps editor sources out of the runtime DTO. Filesystem callers use `core`'s `Project` (`file()`, `sceneFiles()`) and
-`RuntimeSceneLoader.load` / `loadFromText`; every load gets its own engine, resolver and warnings. Parsing and loading
+`SceneEntry(file, scene)` keeps editor sources out of `SceneDto`. Filesystem callers use `ProjectLoader` to bind
+`ProjectDto` (`file()`, `sceneFiles()`) and `RuntimeSceneLoader(sceneLoader, ecsLoader, log)` to load scenes by file
+name or supplied text; every load gets its own engine and warnings. Parsing and loading
 run on the caller's thread without GL.
 
 **Abyssus Physics** (`projects/plugin-abyssus-physics/`) runs Play outside the IDE. On Play, `PhysicsSimulationProvider` picks what
@@ -65,7 +71,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 1. `SceneFileEditor` receives tree integration through the pane's `SceneViewHost` and reads the scene and its project's `mainCamera` through `SceneParamsSource.EDITOR_TEXT`. It uses
    the unsaved editor text when there is any. It re-reads on every document or VFS change of those files.
 2. `renderParamsOf` → `sceneContentOf` (the scene package of `editor-core`) reads the `ecs` JSON through `SceneDocument` into placements: `models`, `terrains`,
-   `lights`, `cameras`, plus the skybox name. The view reads the JSON through runtime component codecs; it does not run the Ashley engine.
+   `lights`, `cameras`, plus the skybox name. The view binds JSON through `ComponentReader` to `core.ecs.component` classes; it does not run the Ashley engine.
    A light's or camera's direction resolves its `PositionComponent.lookAtId` to an entity's `localPosition` when that
    target exists and is not at the entity itself; otherwise it uses the entity's `localRotation`. `handleIds` records
    the `HANDLE` entities that a light may be aimed at.
@@ -76,15 +82,15 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 4. An HDR sky also lights the content. `core`'s `HdrSkyLoader` decodes the `.exr` through TinyEXR on the pool thread, then
    `HdrEnvironmentBuild` builds a specular cube, an irradiance cube and six axis colors on the GPU, one step per
    frame. Once built, `SceneSkybox.environment` hands them to `SceneRenderer`, which (`SceneAmbient.of`) swaps
-   `ColorAttribute.AmbientLight` for `gdx-model`'s `EnvironmentLightAttribute` after drawing the grid: the PBR shader
+   `ColorAttribute.AmbientLight` for `lib-gdx`'s `EnvironmentLightAttribute` after drawing the grid: the PBR shader
    samples both cubes, the default shader takes the six colors as its ambient cubemap, and `TerrainShader` samples the
    irradiance cube. Without a built HDR sky the content is lit by the ambient color exactly as before.
    A procedural sky may have **clouds** (`core`'s `assets.sky.clouds`): a `CLOUDS` asset its `additional.clouds` names
    by `uuid`. `ProceduralSkyLoader` resolves the `uuid` to a folder (`AssetIndex`) and names it in `dependencies`, so the
-   one `AssetStorage` loads it first; `CloudsLoader.prepare` reads its bands and technique and makes the volumetric 3D
+   one `AssetStorage` loads it first; `CloudsLoader.prepare` uses its bound `CloudMeta` and makes the volumetric 3D
    noise (FastNoiseLite) on the pool thread, and its build uploads the noise. The sky reads the built `Clouds` from
-   `BuiltAssets` on every draw, as `TerrainMesh` reads its splat textures, and never owns it. Every `Sky.draw` takes a `SkyFrame(sun, timeSeconds, technique, clouds)`;
-   `ProceduralSky` draws the asset's atmosphere, then a plugin-owned cloud pass blended premultiplied over it through a
+   `BuiltAssets` on every draw, as `TerrainMesh` reads its splat textures, and never owns it. Every `SkyRenderer.draw` takes a `SkyFrame(sun, timeSeconds, technique, clouds)`;
+   `ProceduralSky` draws the asset's atmosphere, then a core-owned cloud pass blended premultiplied over it through a
    `CloudRenderer` strategy (`LayeredClouds`, `ShellClouds`, `VolumetricClouds`, built lazily by `CloudTechniques`, which
    steps down volumetric to shells to layered to none when one cannot be built). All techniques and `SunOcclusion` share
    one coverage field, `CloudField` in Kotlin and `clouds_common.glsl` (kept equal by `CloudFieldParityGlTest`).
@@ -145,28 +151,32 @@ fail it between any two writes. No scene or project file is written that way.
 
 ### The `ecs` package
 
-`EcsLoader` reads a scene's `ecs` block into an Ashley `SceneEngine`: each component entry is keyed by a class name and
-bound into that class with Jackson (`readValue`), with no per-component codec. Components it doesn't model are carried
-raw. `EcsWriter` writes the engine back in native format with Jackson too (`valueToTree`), without defaults.
-Systems are in `../../projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/system`. The Control Line game and the Play host load Ashley engines through `RuntimeSceneLoader`; the editor view
-decodes JSON directly. `ComponentEditor` (`editor-core`, `editor.components`) adds, updates and removes a modeled component in the scene JSON (through the codecs, with reference
-checks), and `SceneComponentEdits` runs it inside `editSceneJson` for the properties panel and the tree actions. See
-`projects/lib-core-editor/README.md`.
+`core.ecs.ComponentRegistry` maps built-in and explicitly registered names to Ashley component classes. Keys may be
+short or fully qualified; scene data never triggers arbitrary class loading. `EcsLoader` binds the wrapped
+`ecs.entities` map through `JsonProcessor.ecsReader()` and Jackson. Unregistered or unbindable component entries
+are carried as raw JSON in `EcsLoadingWarns`, with warnings. Entity ids are numeric; invalid references become
+`NO_ENTITY`. `SceneEngine` and `SceneEntityIds` live in `core.ecs`; the look-at and camera synchronization systems
+are in `projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/system`.
+
+`RuntimeSceneLoader` combines `SceneLoader` and `EcsLoader`, installs those systems and returns a `SceneContext`.
+The editor view reads JSON directly instead of updating an Ashley engine. `editor-core` owns `EcsWriter`, which
+serializes registered components with Jackson into a wrapped `entities` map, and the built-in editing codecs.
+It is a serialization API, not an IDE file writer; plugin document edits still go through `editSceneJson`.
 
 ### The scene document layer
 
-The editor keeps the parsed JSON tree as its model (unknown keys, key order, omitted defaults and number text stay the
-file's); games and Play keep the Ashley `SceneEngine`; both bind components through `runtime`'s codecs. The entity
-layout (`ecs[.entities].<id>.components`) is known only to `editor-core`'s `SceneDocument.kt`: readers go through
-`SceneDocument` / `EntityView`, writers address and insert entities through `SceneEntityTree`.
+The editor keeps the parsed JSON tree as its model (unknown keys, key order and number text stay the file's);
+games and Play keep an Ashley `SceneEngine`. Both use Jackson binding to `core`'s component classes. In the editor,
+readers use `SceneDocument` / `EntityView`; writers use `SceneEntityTree`, supporting both a flat entity map and
+`ecs.entities`. The current runtime loader only enumerates `ecs.entities`; see the current-source review for
+compatibility gaps.
 
-**Component schemas.** `ComponentEditor` is built per scene by the `ComponentSchemas` project service
-(`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/schema/ComponentSchemas.kt`): the built-in kinds plus one kind per component of
-the merged schemas, the scene project's `abyssus/components.schema.json` winning per name over the `componentSchemas`
-contributions (`SchemaMerge`, a pure function). Values of those components go through `runtime`'s `SchemaJson`, the
-same text the game's components are written as by `EcsWriter`. Snapshots are cached per project folder; a VFS event on a schema file
-or a plugin load/unload drops them and publishes `ComponentSchemasListener.TOPIC`, which makes the Properties panel
-re-read (in the background, where the parsing then happens). Problems are reported once each as a notification.
+**Component editing.** `ComponentEditor(EditorMessages)` supplies built-in kinds only. The plugin's
+`ComponentSchemas` project service (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/schema/ComponentSchemas.kt`)
+returns that editor for every scene. Project schema files and `componentSchemas` contributions currently do not
+extend it; custom game and physics components remain read-only JSON and are preserved by unrelated edits.
+`reload()` publishes `ComponentSchemasListener.TOPIC`, but there is no schema merge or export implementation in
+the current source set. See `projects/lib-core-editor/README.md`.
 
 Per frame, on the EDT, `RayViewFeed` reads the renderer's current preview-applied content, camera, lights and animation
 poses (`RayModelPoses`), freezes them into a job and offers it to a one-slot mailbox; a converter thread turns the newest
@@ -232,17 +242,14 @@ The editor retains source aliases in its `format` package. None of these checks 
 
 - **A new asset file format:** implement `ConfigFileReader` and return it from `AssetReadCache.readerFor`
   (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/dto/ConfigFileReader.kt`). Add the extension to `ProjectLayout.ASSET_EXTENSIONS`.
-- **A new built-in ECS component:** write the Ashley component with Jackson-friendly properties (a no-argument
-  constructor; a `@JsonSerialize` / `@JsonDeserialize` class for a shape that is not plain properties), add it to the
-  registered type list in `projects/lib-runtime/src/main/kotlin/net/nevinsky/abyssus/lib/runtime/ecs/EcsJson.kt` and
-  the editor kind/codec definitions in `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/components/BuiltInComponentKinds.kt`.
-- **A game component:** annotate the class (`@SceneComponent`, `@Field`), register it through a `ComponentRegistry`
-  passed to `RuntimeSceneLoader`, and export its schema; no plugin change. See `projects/lib-runtime/README.md`.
-- **`net.nevinsky.abyssus.componentSchemas` (IDE extension point, dynamic):** another plugin contributes a component
-  schema file from its jar: `<componentSchemas resource="/schemas/markers.json"/>` in
-  `<extensions defaultExtensionNs="net.nevinsky.abyssus">` (bean `ComponentSchemaBean`). Its components are edited in
-  every project like the project's own; a project schema that declares the same name wins, with one notification.
-  Unloading the plugin turns its components into read-only JSON; no scene file changes.
+- **A new built-in ECS component:** write a Jackson-bindable Ashley component, register it in
+  `projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/ComponentRegistry.kt`, and add its editor
+  kind/codec in `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/components/BuiltInComponentKinds.kt`.
+- **A game component:** provide a Jackson-bindable Ashley class, register it through `ComponentRegistry.register`
+  or `registerAll` before `EcsLoader` loads the scene. A `PlayModule.components()` map lets the play host register
+  the same classes. The editor keeps these components opaque; no schema annotation/export API currently exists.
+- **`net.nevinsky.abyssus.componentSchemas` (IDE extension point, dynamic):** the resource bean remains registered,
+  but `ComponentSchemas` currently does not consume contributed or project schema files.
 - **`net.nevinsky.abyssus.sceneOverlay` (IDE extension point, interface `SceneOverlayProvider`):** another plugin
   draws lines and markers in every Scene view. `create(project, file)` makes one `SceneOverlay` per view, disposed
   with it. `draw(view, lines)` runs on the render thread inside `GdxRuntime.withContext`, twice a frame (depth-tested,
@@ -258,7 +265,7 @@ The editor retains source aliases in its `format` package. None of these checks 
 
 ### Saved ray settings revisions
 
-Scene DTOs live in the `core` scene package: `Scene.rayTracing` binds to the typed `RayTracing` DTO. Plugin
+Scene DTOs live in `core.dto`: `SceneDto.rayTracing` binds to the typed `RayTracingDto`. Plugin
 `SceneRenderParams` re-serializes it before decoding the four preferences with `SceneRaySettingsCodec`. Properties reads
 the original JSON. These paths do not preserve the same malformed inputs; see the documentation audit for that gap.
 `RayMaterialOverrides` reads pure JSON from each Render component, and `RaySceneSnapshots` resolves unique PBR
@@ -279,9 +286,6 @@ A frame that fails its per-path query bound or meets an unsupported dielectric m
 `RayQueuedSession` then accepts new work at once. In Properties, `SceneDetailsView` edits the four settings and
 `EntityDetailsView` the per-material optics through `SceneRayEdits` (one `editSceneJson` command each); see the
 scene view README.
-
-Schema field types use explicit switches in `ComponentSchemaReader`, `SchemaJson` and the editor's field mapping.
-The checklist for adding a type is in `projects/lib-runtime/README.md`; no handler registry is installed.
 
 The properties panel reads live view state through the read-only `editor.facts.SceneFacts` interface. Its generic
 content type lets the contract stay independent of render code. `SceneRayControls` in the plugin root implements

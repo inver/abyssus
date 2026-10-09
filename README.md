@@ -199,7 +199,7 @@ shows the status, the reason it is unavailable or failed, and **Retry**. It need
 silicon with Metal on macOS, or a Vulkan 1.2 device with ray queries on Windows and Linux. Where it is unavailable the switch
 is disabled and says why; if it fails, the view returns to the normal renderer. Selecting, moving and rotating objects, the
 camera and the gizmos work as usual, and the scene file is never written by switching it on or off.
-`-Dabyssus.raytracing.backend=off` disables it for the IDE session. See [ray tracing](raytracing/README.md) for
+`-Dabyssus.raytracing.backend=off` disables it for the IDE session. See [ray tracing](projects/lib-raytracing/README.md) for
 backend requirements, rendering limits and native toolchains.
 
 **Add Light** in the toolbar creates a Directional light, Sun or Spot at the current orbit target and selects it.
@@ -223,13 +223,8 @@ entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
 **Abyssus Physics** is a separate plugin, built from `projects/plugin-abyssus-physics/`, that depends on Abyssus. With it installed:
 
-- **Add Component** offers **Rigid body**, **Collider** and **Constraint**. They are edited like other components,
-  and sizes and masses must be greater than 0. Without the plugin, these components show as read-only JSON and are
-  kept unchanged.
-- **Show Physics** in the Scene View toolbar (off when the view opens) draws each collider as a wireframe: green for
-  dynamic, blue for kinematic, grey for static. A height field is drawn as its terrain's outline. Each constraint is a
-  line between its anchors; a rope that is longer than its maximum is drawn dashed. The selected entity's physics is
-  brighter and drawn through its model.
+- Physics components currently remain read-only JSON in the Properties panel. Collider and constraint overlays
+  are unavailable while that integration is being reworked; see [current source status](docs/reviews/2026-10-09-current-source.md).
 - **Play**, **Pause**, **Step** and **Stop** run the scene's physics in a separate process. Play uses the scene as
   the editor holds it, unsaved text included. Simulated poses are shown but never written: Stop, Esc, editing the
   scene or closing the tab returns the view to the scene as the document holds it. While playing, gizmos are off,
@@ -240,7 +235,7 @@ entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
 Jolt, the physics engine, is loaded only by the play process, never by the IDE.
 
-The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `gdx-model` module, a
+The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `lib-gdx` module, a
 plain JVM library reusable in other libGDX projects; see [source provenance](docs/third-party/gdx-model-origin.md)
 for its origin and license. The GL
 render tests are opt-in: `./gradlew test -Dabyssus.glTests=true` (opens a window).
@@ -253,7 +248,7 @@ To add a project or scene file format, implement `ConfigFileReader` and wire it 
 
 See [AGENTS.md](AGENTS.md) for build, test and sandbox commands, and [the documentation map](docs/README.md)
 for architecture, native formats and module guides. The [Control Line game](projects/app-game-control-line/README.md) demonstrates
-custom components, schema export and Play through the separate physics host. Use a copy of its native project in the IDE.
+registered game components and a Play module for the separate physics host. Use a copy of its native project in the IDE.
 
 ## Installation
 
@@ -272,7 +267,7 @@ custom components, schema export and Play through the separate physics host. Use
 
 Licensed under [Apache-2.0](LICENSE) (SPDX-License-Identifier: Apache-2.0).
 
-Files under `gdx-model` derived from [libGDX](https://github.com/libgdx/libgdx) retain their original
+Files under `projects/lib-gdx` derived from [libGDX](https://github.com/libgdx/libgdx) retain their original
 Apache 2.0 headers.
 
 ---
