@@ -38,7 +38,7 @@ class HdrSkyLoader(
         (staged.build ?: HdrEnvironmentBuild(staged.image, shaders).also { staged.build = it }).step()
 
     override fun build(staged: PreparedHdrSky, assets: BuiltAssets): HdrSky {
-        val environment = checkNotNull(staged.build) { "HDR sky '${staged.name}' was never uploaded" }.finish()
+        val environment = checkNotNull(staged.build) { "HDR sky '${staged.name}' was never uploaded" }.finishHdr()
         staged.build = null
         return HdrSky(environment, shaders, curve)
     }

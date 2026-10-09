@@ -121,7 +121,7 @@ class AssetLoadingGlTest {
         val terrainMeta = File(dir, "assets/terr/meta.json")
         terrainMeta.writeText(
             terrainMeta.readText()
-                .replace("\"splatBase\":null", "\"splatBase\":\"00000000-0000-0000-0000-000000000001\"")
+                .replace(Regex("\"splatBase\"\\s*:\\s*null"), "\"splatBase\":\"00000000-0000-0000-0000-000000000001\"")
         )
         val logged = mutableListOf<String>()
         TestGl.run {
@@ -146,7 +146,7 @@ class AssetLoadingGlTest {
         File(untitled, "assets/skybox_physical").copyRecursively(File(dir, "assets/sky"))
         File(dir, "assets/weather").mkdirs()
         File(dir, "assets/weather/meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"uuid":"00000000-0000-0000-0000-0000000000c1","type":"CLOUDS","additional":{"low":{"type":"cumulus"}}}"""
+            """{"format":"abyssus","formatVersion":1,"uuid":"00000000-0000-0000-0000-0000000000c1","type":"CLOUDS","additional":{"low":{"type":"CUMULUS"}}}"""
         )
         val skyMeta = File(dir, "assets/sky/meta.json")
         skyMeta.writeText(

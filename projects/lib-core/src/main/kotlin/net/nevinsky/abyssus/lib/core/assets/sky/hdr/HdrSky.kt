@@ -17,7 +17,8 @@ import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
  * A built HDR sky: draws its equirectangular image as the background, tone mapped by [curve], and holds
  * the [environment] the scene is lit by. GL thread only.
  */
-class HdrSky(val environment: HdrEnvironment, shaders: ShaderStorage, private val curve: ToneCurve) : SkyRenderer {
+class HdrSky(private val resources: HdrSkyEnvironment, shaders: ShaderStorage, private val curve: ToneCurve) : SkyRenderer {
+    val environment: HdrEnvironment get() = resources.lighting
     private val program = shaders.program("hdrsky.vert", "hdr_common.glsl", "hdrsky.frag")
     private val mesh = createFullscreenTriangle()
     private val invViewProj = Matrix4()
@@ -26,7 +27,7 @@ class HdrSky(val environment: HdrEnvironment, shaders: ShaderStorage, private va
     override fun draw(camera: Camera, frame: SkyFrame) {
         rotationOnlyViewProj(camera, invViewProj).inv()
         program.bind()
-        environment.equirect.bind(0)
+        resources.background.bind(0)
         program.setUniformi("u_equirect", 0)
         program.setUniformMatrix("u_invViewProj", invViewProj)
         program.setUniformf("u_exposure", curve.exposure)
@@ -36,6 +37,6 @@ class HdrSky(val environment: HdrEnvironment, shaders: ShaderStorage, private va
     override fun dispose() {
         mesh.dispose()
         program.dispose()
-        environment.dispose()
+        resources.dispose()
     }
 }

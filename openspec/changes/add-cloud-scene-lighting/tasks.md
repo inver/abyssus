@@ -9,7 +9,7 @@ New test names below are planned coverage, not claims that those classes already
 
 ## 1. Linear lighting cube and environment build
 
-- [ ] 1.1 Add `atmosphere_linear.frag` and a separate linear shell-cloud output path in `lib-core`, sharing existing
+- [x] 1.1 Add `atmosphere_linear.frag` and a separate linear shell-cloud output path in `lib-core`, sharing existing
   coverage/radiance math but bypassing `cloudToneMap`, to render a 64²-per-face RGBA16F cube. Verify with planned
   `ProceduralLightingCubeGlTest`: linear values, blue clear zenith, greyer overcast, unchanged visible cloud output.
 - [ ] 1.2 Generalize `HdrEnvironmentBuild` for equirect and cube sources; separate HDR background ownership from reusable
@@ -78,3 +78,18 @@ New test names below are planned coverage, not claims that those classes already
   rendering/technique changes have not written scene or asset metadata in the runIde copies by comparing them before/after.
 - [ ] 5.2 Run `./gradlew check`, the affected module GL tests with `-Dabyssus.glTests=true`, and
   `scripts/check-docs.sh`; record any host-specific native backend checks still awaiting their supported machines.
+
+## Apply verification (2026-10-10)
+
+- Baseline `./gradlew check --console=plain` passed before implementation (GL opt-in off).
+- Task 1.1: `./gradlew :lib-core:test --tests '*ProceduralLightingCubeGlTest' --tests '*CloudTechniqueGlTest'
+  -Dabyssus.glTests=true --console=plain` passed: 7 tests, none skipped. Covers linear intensity scaling, blue clear
+  zenith, greyer overcast, wind drift and unchanged visible shells after rendering the lighting cube.
+- Full `./gradlew :lib-core:test -Dabyssus.glTests=true --console=plain` ran 234 tests: 3 failed, 1 skipped.
+  Paused before task 1.2 for guidance on existing `AssetLoadingGlTest` failures:
+  - `aSkyLoadsItsCloudAssetFirstAndDrawsFromIt`: lowercase `cumulus` in test metadata fails enum binding; the binder
+    falls back to an empty `CloudMeta`, so the expected low band is absent.
+  - `aTerrainLoadsItsSplatTexturesFirstAndDrawsFromThem`: the replacement looks for `"splatBase":null`, but the
+    current fixture has `"splatBase": null`; no texture dependency is inserted.
+  - `twoProjectsLoadIndependently`: the Animated model fixture has `uuid: "anim-1"`, which cannot bind to UUID.
+  These inputs and binding paths are unchanged by task 1.1; no repairs or exceptions were applied.
