@@ -1,11 +1,11 @@
-# Spec Delta
+# scene-sky-clouds Specification
 
 ## Purpose
 
 Lets a procedural sky show realistic clouds in low, mid and high bands that drift with the wind, described once in the
 sky asset and drawn by a choice of techniques that trade realism for speed.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Sky names a cloud asset
 

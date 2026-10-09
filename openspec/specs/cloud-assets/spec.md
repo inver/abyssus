@@ -1,11 +1,11 @@
-# Spec Delta
+# cloud-assets Specification
 
 ## Purpose
 
 Lets one weather setup (the clouds of each band and how they are drawn) be a project asset of its own, written once
 and drawn by every procedural sky that names it, loaded the way a terrain loads its textures.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Cloud asset
 
@@ -30,8 +30,8 @@ carries the native `format` / `formatVersion` markers and a `uuid`, by which ski
 A procedural sky SHALL load the cloud asset it names as a dependency of its own load, the way a terrain loads the
 texture assets its splat fields name: the `uuid` is resolved to an asset folder when the sky is read, the cloud asset is
 loaded first by the same asset storage, and the sky reads the built cloud asset each time it is drawn and never owns
-it. Several skies, and several views of one sky, SHALL share one built cloud asset per view. The cloud asset SHALL own
-the volumetric technique's 3D noise, made off the GL thread when it is read and uploaded when it is built.
+it. Several skies, and several views of one sky, SHALL share one built cloud asset per view. The cloud asset SHALL supply
+the volumetric technique's shared 3D noise while the view remains responsive during loading.
 
 #### Scenario: Shared cloud asset
 
