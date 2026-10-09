@@ -11,14 +11,16 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.core.BaseCtx
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.gdx.editor.pick.LineSink
 import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.sceneview.OverlayView
 import net.nevinsky.abyssus.plugin.sceneview.SceneOverlay
 import net.nevinsky.abyssus.plugin.sceneview.SceneOverlayProvider
@@ -29,9 +31,10 @@ val LOGGER = LoggerFactory.getLogger(PhysicsOverlay::class.java)
 
 /** Gives every Scene view a [PhysicsOverlay]. */
 class PhysicsOverlayProvider : SceneOverlayProvider {
+    override fun isAvailable(project: Project, file: VirtualFile): Boolean =
+        ProjectLayout.abssFor(file)?.let { project.service<AbyssusProjectSettings>().getSettings(it).physicsEnabled } == true
     override fun create(project: Project, file: VirtualFile): SceneOverlay {
-        val ctx = BaseCtx(project.projectFilePath!!, null, null, LOGGER)
-        return PhysicsOverlay(ctx)
+        return PhysicsOverlay(ProjectLayout.projectDirFor(file))
     }
 }
 
@@ -41,13 +44,15 @@ class PhysicsOverlayProvider : SceneOverlayProvider {
  * Others are depth-tested; the selected entity's are drawn brighter over everything, so a collider inside its model
  * stays visible. Segments are recomputed only when the shown content, the scene JSON or the selection changes.
  */
-class PhysicsOverlay(private val ctx: BaseCtx) : SceneOverlay {
+class PhysicsOverlay(initialProjectDir: File?) : SceneOverlay {
     @Volatile
     var shown = false
 
     private var projectDir: File? = null
-    private var metas = ctx.metaLoader
-    private val geometry = PhysicsOverlayGeometry(ctx) { name -> metas.terrainSize(name) }
+    private var metas: AssetMetaLoader? = null
+    private val geometry = PhysicsOverlayGeometry { name -> metas?.terrainSize(name) }
+
+    init { initialProjectDir?.let(::useProject) }
 
     private var lastContent: SceneContent? = null
     private var lastEcs: JsonNode? = null

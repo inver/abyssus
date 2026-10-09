@@ -5,6 +5,7 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
+import java.util.zip.ZipFile
 
 fun properties(key: String) = providers.gradleProperty(key)
 fun environment(key: String) = providers.environmentVariable(key)
@@ -30,6 +31,11 @@ repositories {
     }
 }
 
+val playHostLibs by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+
 dependencies {
     intellijPlatform {
         create(properties("platformType"), properties("platformVersion"))
@@ -41,6 +47,9 @@ dependencies {
         zipSigner()
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
+    implementation(project(":lib-physics")) { isTransitive = false }
+    playHostLibs(project(":lib-physics"))
+    playHostLibs(project(path = ":lib-physics", configuration = "playHost"))
     testImplementation(libs.junit4)
     // HdrFixtures: Radiance test images from a pixel function
     testImplementation(testFixtures(project(":lib-core")))
@@ -226,3 +235,61 @@ tasks.named("compileKotlin") { dependsOn(generateGltfParser, generateGltfLexer) 
 tasks.named("compileJava") { dependsOn(generateGltfParser, generateGltfLexer) }
 
 apply(from = "${project.rootDir}/gradle/plugin-verification.gradle.kts")
+
+// Jolt's natives must never load in the IDE: the plugin's own code may not name jolt-jni or physics' Jolt package.
+val checkNoJolt by tasks.registering {
+    dependsOn(generateGltfParser, generateGltfLexer)
+    val sources = fileTree("src/main") { include("**/*.kt", "**/*.java", "**/*.xml") }
+    val root = layout.projectDirectory.asFile
+    inputs.files(sources)
+    doLast {
+        val forbidden = Regex("""com\.github\.stephengold|net\.nevinsky\.abyssus\.lib\.physics\.jolt""")
+        val found = sources.files.sorted().flatMap { file ->
+            file.readLines().mapIndexedNotNull { i, line ->
+                if (forbidden.containsMatchIn(line)) "${file.relativeTo(root)}:${i + 1}: ${line.trim()}" else null
+            }
+        }
+        if (found.isNotEmpty()) {
+            throw GradleException(
+                "Abyssus must not load Jolt in the IDE; remove these references:\n" + found.joinToString(
+                    "\n"
+                )
+            )
+        }
+    }
+}
+
+tasks.named("check") { dependsOn(checkNoJolt) }
+
+
+tasks.test {
+    systemProperty("abyssus.testData", rootProject.file("projects/plugin-abyssus/src/test/testData").absolutePath)
+    val pluginDirectory = tasks.prepareSandbox.flatMap { it.pluginDirectory }
+    dependsOn(tasks.prepareSandbox)
+    jvmArgumentProviders += CommandLineArgumentProvider {
+        listOf("-Dabyssus.playHost=${pluginDirectory.get().asFile.resolve("play-host")}")
+    }
+}
+
+tasks.prepareSandbox {
+    from(playHostLibs) { into(pluginName.map { "$it/play-host" }) }
+}
+
+val checkNoJoltInZip by tasks.registering {
+    val archive = tasks.buildPlugin.flatMap { it.archiveFile }
+    dependsOn(tasks.buildPlugin)
+    inputs.file(archive)
+    doLast {
+        ZipFile(archive.get().asFile).use { zip ->
+            val names = zip.entries().asSequence().map { it.name }.toList()
+            val forbidden = names.filter { it.contains("/lib/") &&
+                (it.contains("jolt", ignoreCase = true) || it.contains("stephengold", ignoreCase = true)) }
+            check(forbidden.isEmpty()) { "Jolt must stay outside IDE-loaded lib/: $forbidden" }
+            check(names.any { it.contains("/lib/lib-physics") }) { "Missing physics library in lib/" }
+            check(names.any { it.contains("/play-host/") && it.contains("jolt", ignoreCase = true) }) {
+                "Missing native physics dependencies in play-host/"
+            }
+        }
+    }
+}
+tasks.named("check") { dependsOn(checkNoJoltInZip) }

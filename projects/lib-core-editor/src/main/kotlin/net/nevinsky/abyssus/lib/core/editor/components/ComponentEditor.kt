@@ -31,14 +31,14 @@ sealed interface EditResult {
  * component codecs, so defaults and number text match what a scene load and write do, and an update applies only the
  * keys that really differ onto the file's own component object.
  */
-class ComponentEditor(private val messages: EditorMessages) {
+class ComponentEditor(private val messages: EditorMessages, contributions: List<ComponentKind<*>> = emptyList()) {
     private val mapper = JsonProcessor(NOPLogger.NOP_LOGGER).mapper
     private val reader = ComponentReader(mapper, NOPLogger.NOP_LOGGER)
     private val writer = EcsWriter(mapper)
 
-    val kinds: List<ComponentKind<*>> = BuiltInComponentKinds(reader, writer).kinds
+    val kinds: List<ComponentKind<*>> = BuiltInComponentKinds(reader, writer).kinds + contributions
 
-    private val byName = kinds.associateBy { it.name }
+    private val byName = kinds.flatMap { listOf(it.name to it, it.codec.type.name to it) }.toMap()
 
     fun kindOf(name: String): ComponentKind<*>? = byName[name]
 
@@ -49,7 +49,7 @@ class ComponentEditor(private val messages: EditorMessages) {
     /** The modeled kinds [entityId] lacks, in the order the view lists them; empty when the entity is missing. */
     fun missingKinds(root: JsonNode, entityId: String): List<ComponentKind<*>> {
         val components = componentsOf(root, entityId) ?: return emptyList()
-        return kinds.filter { !components.has(it.name) }
+        return kinds.filter { kind -> components.fieldNames().asSequence().none { byName[it] === kind } }
     }
 
     /** The fields of the component [kindName] of [entityId] with their values, or null when it is not there. */
@@ -80,7 +80,7 @@ class ComponentEditor(private val messages: EditorMessages) {
     ): EditResult {
         val components = componentsOf(root, entityId) ?: return rejected("componentEntityMissing", entityId)
         val kind = byName[kindName] ?: return rejected("componentKindUnknown", kindName)
-        if (components.has(kindName)) return rejected("componentAlreadyPresent", entityId, kind.label)
+        if (components.fieldNames().asSequence().any { byName[it] === kind }) return rejected("componentAlreadyPresent", entityId, kind.label)
         return addTo(root, components, entityId, kind, initial, Assets(assets, assetsByType))
     }
 

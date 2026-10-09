@@ -13,6 +13,14 @@ class ProjectSettingsReaderTest {
     private val reader = ProjectSettingsReader()
 
     @Test
+    fun committedProjectsDeclareTheirPhysicsChoice() {
+        val fixtures = java.io.File("src/test/testData/project")
+        assertFalse(reader.read(java.io.File(fixtures, "Untitled/Untitled.abss").readText()).physicsEnabled)
+        assertTrue(reader.read(java.io.File(fixtures, "Physics/Physics.abss").readText()).physicsEnabled)
+        assertTrue(reader.read(java.io.File("../app-game-control-line/project/ControlLine/ControlLine.abss").readText()).physicsEnabled)
+    }
+
+    @Test
     fun untitledAbssIsOffWithNoProblems() {
         val text = """{"format":"abyssus","formatVersion":1,"name":"Untitled"}"""
         val result = reader.read(text)

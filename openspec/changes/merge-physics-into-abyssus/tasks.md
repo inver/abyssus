@@ -10,13 +10,13 @@ of `projects/plugin-abyssus/src/test/testData/project/{Untitled,Physics}` and
 
 - [x] 1.1 Add the platform-free `dto/ProjectSettingsReader` with native admission and boolean decoding. Source evidence:
   `ProjectSettingsReaderTest` covers missing key, true, non-boolean, future version and missing marker.
-- [ ] 1.2 Complete the existing `filetype/AbyssusProjectSettings` service: delegate admission/decoding to the reader,
+- [x] 1.2 Complete the existing `filetype/AbyssusProjectSettings` service: delegate admission/decoding to the reader,
   read unsaved documents, handle document/VFS changes and Undo/Redo, publish on EDT, deduplicate localized problems,
   and retain undoable `editSceneJson` writes. Extend `dto/AbyssusProjectSettingsTest` to verify unsaved edits notify
   before Save, Undo/Redo updates the cache without Save, unsupported files with `physicsEnabled: true` stay off and
   unwritable, malformed values report once without rewriting, equal-value toggles create no edit, and independent
   native projects do not share settings. Keep the service in `filetype/` to respect current package boundaries.
-- [ ] 1.3 Add `"physicsEnabled": true` only to
+- [x] 1.3 Add `"physicsEnabled": true` only to
   `projects/plugin-abyssus/src/test/testData/project/Physics/Physics.abss` and
   `projects/app-game-control-line/project/ControlLine/ControlLine.abss`. Add actual-fixture reader coverage; retain
   Untitled's missing-key test. Update `docs/ai/file-formats.md` for the optional switch and `.abss` writer. Verify
@@ -24,34 +24,34 @@ of `projects/plugin-abyssus/src/test/testData/project/{Untitled,Physics}` and
 
 ## 2. Merge the physics plugin and packaging
 
-- [ ] 2.1 Move physics sources/resources/tests into `projects/plugin-abyssus`, preserving package
+- [x] 2.1 Move physics sources/resources/tests into `projects/plugin-abyssus`, preserving package
   `net.nevinsky.abyssus.plugin.physics` and `AbyssusPhysicsBundle`. Move overlay, simulation and notification
   registrations, remove the dangling physics schema contribution and unused `schemaExport` configuration, and add
   `<incompatible-with>net.nevinsky.abyssus.physics</incompatible-with>`. Remove the old module and settings/build/CI
   references. Verify `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.physics.*'` and confirm no
   active build/config reference names the removed module.
-- [ ] 2.2 Add non-transitive `:lib-physics` to the main plugin. Transfer `playHostLibs`, sandbox copy and test host
+- [x] 2.2 Add non-transitive `:lib-physics` to the main plugin. Transfer `playHostLibs`, sandbox copy and test host
   property from `plugin-abyssus-physics.gradle.kts`; there are no schema export tasks to transfer. Move `checkNoJolt`
   with current package names and add `checkNoJoltInZip` to `check`, scanning only IDE-loaded `lib/`. Verify both
   checks, `BundledPlayHostTest`, `PlayLaunchTest` and zip contents: physics jar in `lib/`, no Jolt there, full host
   dependencies/natives in `play-host/`.
-- [ ] 2.3 Update `AGENTS.md`, `docs/ai/architecture.md`, `projects/lib-physics/README.md` and `CHANGELOG.md` for one
+- [x] 2.3 Update `AGENTS.md`, `docs/ai/architecture.md`, `projects/lib-physics/README.md` and `CHANGELOG.md` for one
   plugin, its packaging boundary and migration. Keep general third-party classloader guidance where still relevant.
   Verify `scripts/check-docs.sh` and all documented Gradle module/task names against current build scripts.
 
 ## 3. Implement editable physics with typed component kinds
 
-- [ ] 3.1 Allow constructor-injected `ComponentKind` contributions to `lib-core-editor`'s `ComponentEditor`, with
+- [x] 3.1 Allow constructor-injected `ComponentKind` contributions to `lib-core-editor`'s `ComponentEditor`, with
   unchanged built-in defaults. Implement headless physics kinds/codecs in the plugin for rigid body, collider and
   constraint fields, matching defaults, positivity and reference validation. Cover short and fully qualified keys,
   omitted defaults, unknown-field/number preservation and rejected edits in `PhysicsComponentKindsTest`; verify
   `ComponentEditorTest`, `:lib-core-editor:checkNoSingletons`, no platform classpath and package-cycle checks.
-- [ ] 3.2 Have `ComponentSchemas.editorFor(sceneFile)` choose typed physics contributions only when that scene's
+- [x] 3.2 Have `ComponentSchemas.editorFor(sceneFile)` choose typed physics contributions only when that scene's
   native project enables physics; subscribe to `filetype/ProjectSettingsListener` and refresh the panel. Verify
   `PhysicsComponentsGateTest`: off excludes all three add choices and preserves raw existing data; enabling makes
   them editable without reopening; disabling or Undo restores read-only sections; stale panel edits cannot bypass
   the gate. Do not use nonexistent schema snapshots/resources or restore general schema loading.
-- [ ] 3.3 Update `projects/lib-core-editor/README.md`, `docs/ai/architecture.md` and the properties package notes to
+- [x] 3.3 Update `projects/lib-core-editor/README.md`, `docs/ai/architecture.md` and the properties package notes to
   describe injected physics kinds and continued read-only game components. Verify `scripts/check-docs.sh` and the
   documented composition against `ComponentSchemas` and the new kind adapter.
 

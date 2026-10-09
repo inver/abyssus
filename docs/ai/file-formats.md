@@ -45,13 +45,17 @@ keys and exact number text. External model/image formats and the terrain recipe 
 
 ## `.abss` (project)
 
-The plugin reads only:
+The plugin reads:
 - `name`: the project label; the file name is used when it is missing.
 - `mainCamera`: `position`, `viewPointPosition` (the view direction), `near`, `far` and `fieldOfView`. It is the
   scene view's starting camera (`MainCamera` in `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/scene/SceneRenderParams.kt`).
 
-Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored. The plugin never writes an `.abss`
-(beyond `SceneFormatListener`'s formatting).
+- `physicsEnabled`: an optional boolean for editor physics. Missing, false or malformed means off; unsupported
+  native documents cannot enable physics. The settings service reads unsaved document text when present.
+
+Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored. Changing Physics in project
+properties writes only `physicsEnabled` through `editSceneJson` as one undoable command; off is explicit `false`.
+Reads never insert the key or repair malformed values. `SceneFormatListener` may also format a supported `.abss`.
 
 ## `.scene`
 

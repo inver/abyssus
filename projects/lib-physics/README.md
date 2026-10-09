@@ -56,7 +56,7 @@ change the velocity, so the value is an estimate. Tests hold a hanging 1 kg weig
 
 ## Play in Abyssus
 
-Abyssus Physics runs Play in a separate process, `PlayHostMain`. `PlayHost` loads the scene text it is sent, builds a
+Abyssus runs Play in a separate process, `PlayHostMain`. `PlayHost` loads the scene text it is sent, builds a
 `PhysicsWorld` and runs at 120 Hz. Each frame it runs the game's systems, then `advance`. It sends poses at most 60
 times a second, over a loopback socket that speaks the play protocol (`play/PlayProtocol.kt`, version
 `PLAY_PROTOCOL` = 1). The host exits on `bye` or when the socket closes.
@@ -75,7 +75,7 @@ tasks.register<JavaExec>("exportPlay") {
 ```
 
 The runtime classpath must hold `physics` and the jolt-jni natives for the platforms the game is played on.
-Without `<project>/abyssus/play.json`, Abyssus Physics runs its bundled play host with `PhysicsOnlyPlayModule`, which runs physics
+Without `<project>/abyssus/play.json`, Abyssus runs its bundled play host with `PhysicsOnlyPlayModule`, which runs physics
 alone and reports each rope's tension. Export again whenever the classpath changes. A launch file naming a jar that
 no longer exists stops Play with that message.
 

@@ -12,6 +12,10 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.components.service
+import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import com.intellij.openapi.util.text.StringUtil
 import net.nevinsky.abyssus.lib.physics.play.PlayFrame
 import net.nevinsky.abyssus.lib.physics.play.PlayInput
@@ -23,10 +27,12 @@ import net.nevinsky.abyssus.plugin.sceneview.SimulationListener
 import net.nevinsky.abyssus.plugin.sceneview.SimulationRequest
 
 /** This plugin's id, to find its bundled `play-host/` folder. */
-private const val PLUGIN_ID = "net.nevinsky.abyssus.lib.physics"
+private const val PLUGIN_ID = "net.nevinsky.abyssus"
 
 /** Play in the Scene view through a play process (see [PlayLaunch]); poses come back over the play protocol. */
 class PhysicsSimulationProvider : SceneSimulationProvider {
+    override fun isAvailable(project: Project, file: VirtualFile): Boolean =
+        ProjectLayout.abssFor(file)?.let { project.service<AbyssusProjectSettings>().getSettings(it).physicsEnabled } == true
     override fun start(request: SimulationRequest, listener: SimulationListener): SceneSimulation {
         val simulation = PhysicsSimulation(request.project, listener)
         val playHost = PluginManagerCore.getPlugin(PluginId.getId(PLUGIN_ID))?.pluginPath?.resolve("play-host")?.toFile()

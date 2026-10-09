@@ -6,7 +6,7 @@
 |---|---|
 | All module tests and verification tasks | `./gradlew check` (CI requires compiled shaders; see `AGENTS.md`) |
 | Core tests | `./gradlew :lib-core:test` |
-| Physics library / plugin tests | `./gradlew :lib-physics:test` / `./gradlew :plugin-abyssus-physics:test` |
+| Physics library / plugin tests | `./gradlew :lib-physics:test` / `./gradlew :plugin-abyssus:test` |
 | Ray tracing contracts / jar packaging | `./gradlew :lib-raytracing:test` / `./gradlew :lib-raytracing:verifyNativePackaging` |
 | Control Line tests | `./gradlew :app-game-control-line:test` |
 | Plugin tests | `./gradlew :plugin-abyssus:test` |
@@ -63,7 +63,7 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
   headless (Jolt's `ReleaseSp` natives for the build machine, no window). They read the bundled project
   `projects/app-game-control-line/project/ControlLine` through `bundledProject()` / `loadField()`, and fly it with `FieldFlight`;
   `ControlLinePlayTest` runs `PlayHostMain` in a child process. `CrashClipGlTest` is the one GL test there (opt-in).
-- `projects/plugin-abyssus-physics/src/test/kotlin/`: overlay geometry, game/fallback launch selection and bundled play-host packaging.
+- `projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/physics/`: overlay geometry, game/fallback launch selection and bundled play-host packaging.
 - `projects/lib-raytracing/src/test/kotlin/`: backend contracts, fake backend, snapshots, scheduling, budgets, optics, accumulation
   and native packaging. Metal and Vulkan device tests opt in separately with `-Dabyssus.metalTests=true` and
   `-Dabyssus.vulkanTests=true`; these are not enabled by `abyssus.glTests`. See `projects/lib-raytracing/README.md` for toolchains

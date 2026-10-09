@@ -13,6 +13,7 @@ import net.nevinsky.abyssus.lib.core.format.DocumentKind
 data class ProjectSettings(
     val physicsEnabled: Boolean,
     val problems: List<String>,
+    val supported: Boolean = true,
 )
 
 class ProjectSettingsReader(private val format: AbyssusDocumentFormat = AbyssusDocumentFormat()) {
@@ -27,5 +28,5 @@ class ProjectSettingsReader(private val format: AbyssusDocumentFormat = AbyssusD
             emptyList<String>()
         }
         ProjectSettings(physicsEnabled, problems)
-    }.getOrElse { ProjectSettings(false, listOf(it.message ?: it.toString())) }
+    }.getOrElse { ProjectSettings(false, listOf(it.message ?: it.toString()), supported = false) }
 }

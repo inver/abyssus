@@ -51,6 +51,7 @@ interface SceneOverlay : Disposable {
 
 /** The `net.nevinsky.abyssus.sceneOverlay` extension: makes a [SceneOverlay] for each Scene view that opens. */
 interface SceneOverlayProvider {
+    fun isAvailable(project: Project, file: VirtualFile): Boolean = true
     fun create(project: Project, file: VirtualFile): SceneOverlay
 
     companion object {
@@ -103,6 +104,7 @@ interface SceneSimulation {
  * Pause, Step and Stop. [start] must return at once; the simulation reports through the listener when it runs.
  */
 interface SceneSimulationProvider {
+    fun isAvailable(project: Project, file: VirtualFile): Boolean = true
     fun start(request: SimulationRequest, listener: SimulationListener): SceneSimulation
 
     companion object {

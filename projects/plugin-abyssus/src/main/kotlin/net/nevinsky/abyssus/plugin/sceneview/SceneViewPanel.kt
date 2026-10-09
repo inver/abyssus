@@ -5,52 +5,36 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
+import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.diagnostic.thisLogger
+import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.ui.popup.JBPopupFactory
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.pick.*
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModeSnapshot
 import net.nevinsky.abyssus.lib.gdx.editor.ray.RayViewFeed
 import net.nevinsky.abyssus.lib.gdx.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneInteraction
-import net.nevinsky.abyssus.lib.gdx.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.gdx.editor.pick.ViewSize
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModeSnapshot
-
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-
-import com.intellij.ide.DataManager
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.ui.popup.JBPopupFactory
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
-import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
-import com.intellij.openapi.diagnostic.thisLogger
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.lib.gdx.editor.pick.GizmoMode
-import org.lwjgl.opengl.GL
-import org.lwjgl.opengl.GLCapabilities
-import org.lwjgl.opengl.awt.GLData
-import com.intellij.openapi.ui.ComboBox
-import java.awt.BorderLayout
-import java.awt.FlowLayout
-import java.awt.event.KeyAdapter
-import java.awt.event.KeyEvent
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
-import java.awt.event.MouseWheelEvent
-import javax.swing.JButton
-import javax.swing.ButtonGroup
-import javax.swing.JComponent
-import javax.swing.JLabel
-import javax.swing.JPanel
-import javax.swing.JToggleButton
-import javax.swing.KeyStroke
-import javax.swing.SwingUtilities
-import javax.swing.Timer
-import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudFrameBudget
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudViewState
+import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
+import org.lwjgl.opengl.GL
+import org.lwjgl.opengl.GLCapabilities
+import org.lwjgl.opengl.awt.GLData
+import java.awt.BorderLayout
+import java.awt.FlowLayout
+import java.awt.event.*
 import java.util.concurrent.atomic.AtomicLong
+import javax.swing.*
 
 /**
  * Swing panel hosting a core-profile GL canvas that renders a scene with libGDX. Orbit/pan/zoom with the mouse; click
@@ -94,7 +78,8 @@ class SceneViewPanel internal constructor(
     private val stepButton = JButton(AbyssusBundle.message("sceneViewStep")).apply { name = "step" }
     private val stopButton = JButton(AbyssusBundle.message("sceneViewStop")).apply { name = "stop" }
     private val playStatus = JLabel()
-    private val cloudCombo = ComboBox(CloudChoice.entries.map(::CloudChoiceItem).toTypedArray()).apply { name = "clouds" }
+    private val cloudCombo =
+        ComboBox(CloudChoice.entries.map(::CloudChoiceItem).toTypedArray()).apply { name = "clouds" }
     private val cloudNote = JLabel().apply { name = "clouds-note" }
 
     /** This view's Clouds choice and fallbacks; a reopened view gets a new panel, so it starts at Asset again. */
@@ -115,10 +100,12 @@ class SceneViewPanel internal constructor(
             rayFeed?.runtime?.setRequested(enabled)
             refreshRay()
         }
+
         override fun retry() {
             rayFeed?.runtime?.retry()
             refreshRay()
         }
+
         override fun addListener(parent: com.intellij.openapi.Disposable, listener: () -> Unit) {
             rayListeners += listener
             com.intellij.openapi.util.Disposer.register(parent) { rayListeners -= listener }
@@ -301,7 +288,7 @@ class SceneViewPanel internal constructor(
             add(cameraCombo)
             add(cloudCombo)
             add(cloudNote)
-            if (play.available) addPlayControls(this)
+            addPlayControls(this)
             overlayToolbar()?.let { add(it) }
             experimentButton?.let { button ->
                 button.isFocusable = false
@@ -336,18 +323,23 @@ class SceneViewPanel internal constructor(
 
     /** Each overlay's actions (such as Show Physics), in one small action toolbar; null when there are none. */
     private fun overlayToolbar(): JComponent? {
-        val actions = overlays?.overlays?.flatMap { it.overlay.actions() }.orEmpty()
-        if (actions.isEmpty()) return null
-        val toolbar = ActionManager.getInstance().createActionToolbar("AbyssusSceneOverlays", DefaultActionGroup(actions), true)
+        if (overlays == null) return null
+        val group = object : DefaultActionGroup() {
+            override fun getChildren(e: AnActionEvent?): Array<AnAction> =
+                overlays.overlays.flatMap { it.overlay.actions() }.toTypedArray()
+        }
+        val toolbar = ActionManager.getInstance().createActionToolbar("AbyssusSceneOverlays", group, true)
         toolbar.targetComponent = this
         return toolbar.component
     }
 
     /** Choices retain a supplier so placement follows the current orbit target at the moment of creation. */
-    internal fun lightChoices(): DefaultActionGroup? = if (canAddLight()) lightActions?.invoke { orbit.target } else null
+    internal fun lightChoices(): DefaultActionGroup? =
+        if (canAddLight()) lightActions?.invoke { orbit.target } else null
 
     /** The Add Asset choices, placing at the orbit target when a choice is made; null while assets cannot be added. */
-    internal fun assetChoices(): DefaultActionGroup? = if (canAddAsset()) assetActions?.invoke { orbit.target } else null
+    internal fun assetChoices(): DefaultActionGroup? =
+        if (canAddAsset()) assetActions?.invoke { orbit.target } else null
 
     /** W/E switch the gizmo, D drops the selection, Esc cancels a drag, with focus anywhere in the view. */
     private fun bindKeys() {
@@ -430,7 +422,10 @@ class SceneViewPanel internal constructor(
      * one; [volumetric] whether it drew volumetric clouds) and falls back to shells when the view has been too slow,
      * and follows the sky gaining or losing clouds.
      */
-    internal fun cloudFrameRendered(interval: Float, volumetric: Boolean = renderer.drawnCloudTechnique == CloudTechnique.VOLUMETRIC) {
+    internal fun cloudFrameRendered(
+        interval: Float,
+        volumetric: Boolean = renderer.drawnCloudTechnique == CloudTechnique.VOLUMETRIC
+    ) {
         val measured = if (volumetric && SIMULATE_SLOW_CLOUDS) maxOf(interval, SLOW_FRAME_SECONDS) else interval
         if (cloudBudget.frame(measured, volumetric)) {
             cloudState.fallBack()
@@ -443,6 +438,7 @@ class SceneViewPanel internal constructor(
     }
 
     private fun syncPlayControls() {
+        for (c in listOf(playButton, pauseButton, stepButton, stopButton, playStatus)) c.isVisible = play.available
         if (!play.available) {
             for (c in listOf(playButton, pauseButton, stepButton, stopButton, playStatus)) c.isVisible = false
             return
@@ -485,12 +481,15 @@ class SceneViewPanel internal constructor(
         fun sync() {
             interaction.size = ViewSize(target.width, target.height, target.framebufferWidth, target.framebufferHeight)
         }
+
         val input = object : MouseAdapter() {
             private var experimentX = 0
             private var experimentY = 0
             override fun mousePressed(e: MouseEvent) {
                 requestFocusInWindow()
-                if (experimenting) { experimentX = e.x; experimentY = e.y; return }
+                if (experimenting) {
+                    experimentX = e.x; experimentY = e.y; return
+                }
                 forwardMouse(SimulationInput.Kind.BUTTON_DOWN, e)
                 sync()
                 interaction.pressed(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
@@ -524,7 +523,9 @@ class SceneViewPanel internal constructor(
             }
 
             override fun mouseWheelMoved(e: MouseWheelEvent) {
-                if (experimenting) { experiment?.orbit?.zoom(e.preciseWheelRotation.toFloat()); return }
+                if (experimenting) {
+                    experiment?.orbit?.zoom(e.preciseWheelRotation.toFloat()); return
+                }
                 interaction.wheel(e.preciseWheelRotation.toFloat())
             }
         }

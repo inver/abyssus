@@ -18,6 +18,7 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.plugin.dto.SceneReader
 import com.intellij.openapi.vfs.VfsUtilCore
@@ -59,23 +60,34 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
             SceneParamsSource.editorText(reader),
             host,
         ) { params ->
-            SceneViewPanel(
+            val play = playState(project, file)
+            val overlays = overlays(project, file)
+            val panel = SceneViewPanel(
                 params, SceneRenderer(ViewAssets(assets.loading), assets.sceneShaders),
                 lightActions = { position -> host.lightActions(file, position) },
                 canAddLight = { host.canAddLight(file) },
                 assetActions = { position -> host.assetActions(file, position) },
                 canAddAsset = { host.canAddAsset(file) },
                 ray = ray,
-                play = playState(),
+                play = play,
                 simulationRequest = { selection -> simulationRequest(project, file, selection) },
-                overlays = overlays(project, file),
+                overlays = overlays,
             )
+            project.messageBus.connect(panel).subscribe(ProjectSettingsListener.TOPIC, ProjectSettingsListener { abss, _ ->
+                if (ProjectLayout.abssFor(file) == abss || !abss.isValid) {
+                    overlays.refreshAvailability()
+                    play.refreshProviders(SceneSimulationProvider.EP_NAME.extensionList.filter { it.isAvailable(project, file) })
+                    panel.revalidate()
+                    panel.repaint()
+                }
+            })
+            panel
         }
     }
 
     /** Play for one view, from the first installed simulation provider (none: no play controls). */
-    private fun playState(): PlayState {
-        val provider = SceneSimulationProvider.EP_NAME.extensionList.firstOrNull()
+    private fun playState(project: Project, file: VirtualFile): PlayState {
+        val provider = SceneSimulationProvider.EP_NAME.extensionList.firstOrNull { it.isAvailable(project, file) }
         return PlayState(
             provider, provider?.let(::pluginName).orEmpty(),
             ui = { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
@@ -86,7 +98,8 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
     /** One overlay per installed provider; a provider that throws while creating it is left out with one error. */
     private fun overlays(project: Project, file: VirtualFile): SceneOverlayHost {
         val created = SceneOverlayProvider.EP_NAME.extensionList.mapNotNull { provider ->
-            runCatchingKeepingCancellation { NamedOverlay(pluginName(provider), provider.create(project, file)) }
+            runCatchingKeepingCancellation { NamedOverlay(pluginName(provider), provider.create(project, file),
+                provider.isAvailable(project,file)) { provider.isAvailable(project,file) } }
                 .onFailure { thisLogger().error("Scene overlay of ${pluginName(provider)} could not be created", it) }
                 .getOrNull()
         }

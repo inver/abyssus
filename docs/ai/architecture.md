@@ -4,9 +4,8 @@
 
 | Module | What | Depends on |
 |---|---|---|
-| `projects/plugin-abyssus/` | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.20): IDE glue over `editor-core` (tree, tool windows, dialogs, the GL canvas and renderer, actions, file types, VFS) | `:lib-core-editor`, `:lib-core`, `:lib-raytracing` (with `:lib-gdx` transitively), Jackson, libGDX, LWJGL3-AWT |
+| `projects/plugin-abyssus/` | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.20): IDE glue over `editor-core` (tree, tool windows, dialogs, the GL canvas and renderer, actions, file types, VFS) | `:lib-core-editor`, `:lib-core`, `:lib-physics` (non-transitive), `:lib-raytracing` (with `:lib-gdx` transitively), Jackson, libGDX, LWJGL3-AWT |
 | `projects/lib-core-editor/` | Plain JVM editing engine: scene documents and the write transform, component editing, the scene read model, picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge, `HeadlessEditing` | `:lib-core`, `:lib-raytracing`, `:lib-gdx` |
-| `projects/plugin-abyssus-physics/` | **Abyssus Physics**, an IntelliJ plugin depending on Abyssus: physics overlay, Play through a separate play process, bundled `play-host` folder; overlay geometry is currently inactive | `:plugin-abyssus` (`localPlugin`), `:lib-physics` (without its dependencies), `:lib-core-editor` compile-only |
 | `projects/lib-physics/` | Plain JVM physics: the physics components and `PhysicsWorld` (Jolt through jolt-jni), run in a game or the play host, never in the IDE | `:lib-core`, jolt-jni |
 | `projects/app-game-control-line/` | **Control Line**, a libGDX desktop game (LWJGL3): flight on Jolt lines, scoring, screens, its bundled native project and its `PlayModule` for Play in Abyssus | `:lib-physics`, libGDX LWJGL3 backend, jolt-jni natives of the build machine |
 | `projects/lib-core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline (`AssetStorage`), CPU ray snapshots (`RaySnapshotStore`), the models, terrains and skies it builds, native DTOs, Ashley components and scene loading | `:lib-gdx`, Jackson, libGDX |
@@ -15,10 +14,10 @@
 
 ```text
 lib-gdx <- lib-core <- lib-physics <- app-game-control-line
-lib-core <- lib-core-editor <- plugin-abyssus <- plugin-abyssus-physics
+lib-core <- lib-core-editor <- plugin-abyssus
 lib-raytracing <- lib-core-editor
 lib-raytracing <- plugin-abyssus
-lib-physics <- plugin-abyssus-physics
+lib-physics <- plugin-abyssus
 ```
 
 Arrows point toward dependencies. `lib-core-editor` also directly depends on `lib-gdx` and `lib-raytracing`;
@@ -41,7 +40,7 @@ scene and project text while retaining their VFS stamps and listings. Filesystem
 name or supplied text; every load gets its own engine and warnings. Parsing and loading
 run on the caller's thread without GL.
 
-**Abyssus Physics** (`projects/plugin-abyssus-physics/`) runs Play outside the IDE. On Play, `PhysicsSimulationProvider` picks what
+**Built-in physics** (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/physics/`) runs Play outside the IDE. On Play, `PhysicsSimulationProvider` picks what
 to launch (`PlayLaunch`): the game's `<project>/abyssus/play.json` classpath and module, or the bundled `play-host` jars with
 `PhysicsOnlyPlayModule`. `PlayProcessLauncher` starts `<java.home>/bin/java ... PlayHostMain --port --token` on a
 loopback port, waits 20 s for the hello, and keeps the last 200 output lines. `PlayClient` sends `load` (the editor's
@@ -171,10 +170,11 @@ readers use `SceneDocument` / `EntityView`; writers use `SceneEntityTree`, suppo
 `ecs.entities`. The current runtime loader only enumerates `ecs.entities`; see the current-source review for
 compatibility gaps.
 
-**Component editing.** `ComponentEditor(EditorMessages)` supplies built-in kinds only. The plugin's
+**Component editing.** `ComponentEditor` supplies built-in kinds plus constructor-injected contributions. The plugin's
 `ComponentSchemas` project service (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/schema/ComponentSchemas.kt`)
-returns that editor for every scene. Project schema files and `componentSchemas` contributions currently do not
-extend it; custom game and physics components remain read-only JSON and are preserved by unrelated edits.
+chooses an editor per scene: admitted `physicsEnabled: true` adds three typed physics kinds, otherwise physics stays
+read-only JSON. Project schema files and `componentSchemas` contributions do not extend it; custom game components
+remain read-only and are preserved by unrelated edits. Settings changes refresh the editor and panel.
 `reload()` publishes `ComponentSchemasListener.TOPIC`, but there is no schema merge or export implementation in
 the current source set. See `projects/lib-core-editor/README.md`.
 

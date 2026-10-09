@@ -9,7 +9,10 @@ import net.nevinsky.abyssus.lib.gdx.editor.pick.LineSink
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 
 /** An overlay of one view and the name of the plugin it comes from, for the error that switches it off. */
-class NamedOverlay(val source: String, val overlay: SceneOverlay)
+class NamedOverlay(val source: String, val overlay: SceneOverlay, var available: Boolean = true,
+                   private val availability: () -> Boolean = { true }) {
+    fun refreshAvailability() { available = availability() }
+}
 
 /**
  * The overlays of one Scene view. An overlay that throws while drawing is switched off for this view and disposed,
@@ -19,10 +22,13 @@ class SceneOverlayHost(overlays: List<NamedOverlay>, private val logError: (Stri
     private val active = overlays.toMutableList()
 
     /** The overlays still drawing. */
-    val overlays: List<NamedOverlay> get() = active.toList()
+    val overlays: List<NamedOverlay> get() = active.filter { it.available }
+
+    fun refreshAvailability() { active.forEach { it.refreshAvailability() } }
 
     fun draw(view: OverlayView, lines: LineSink) {
         for (named in active.toList()) {
+            if (!named.available) continue
             runCatchingKeepingCancellation { named.overlay.draw(view, lines) }.onFailure { error ->
                 active.remove(named)
                 logError("Scene overlay of ${named.source} failed and is switched off for this view", error)
