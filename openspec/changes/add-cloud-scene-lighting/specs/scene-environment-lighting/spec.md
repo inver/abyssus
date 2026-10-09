@@ -39,7 +39,7 @@ every other case the scene SHALL be lit by its ambient color exactly as before t
 
 #### Scenario: Overcast light
 
-- **WHEN** the same sky uses `builtin:overcast` clouds
+- **WHEN** the same sky names a cloud asset made from the overcast template
 - **THEN** the sky light on models and terrain is greyer and more even from all upper directions than with no clouds
 
 #### Scenario: Changes fade in

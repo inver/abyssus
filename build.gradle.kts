@@ -18,7 +18,7 @@ plugins {
     // Gradle Changelog Plugin
     id("org.jetbrains.changelog") version "2.5.0" apply false
     // Gradle Kover Plugin
-    id("org.jetbrains.kotlinx.kover") version "0.9.11" apply false
+    id("org.jetbrains.kotlinx.kover") version "0.9.11"
     // Shadow / uber-jar (bundles libGDX + LWJGL classes into the plugin jar)
     id("com.gradleup.shadow") version "9.6.1" apply false
 }
@@ -30,8 +30,27 @@ tasks.named<Wrapper>("wrapper") {
     gradleVersion = properties("gradleVersion").get()
 }
 
+// Merge coverage from every module, including library code exercised by another module's tests.
+dependencies {
+    subprojects.forEach { module ->
+        kover(project(module.path))
+    }
+}
 
-// Shared by every module: Kotlin on Java 21. Plugin-specific setup (changelog, Kover, the GLTF grammar, the source
+kover {
+    reports {
+        total {
+            html {
+                onCheck = true
+            }
+            xml {
+                onCheck = true
+            }
+        }
+    }
+}
+
+// Shared by every module: Kotlin on Java 21 and Kover reports. Plugin-specific setup (changelog, the GLTF grammar, the source
 // checks and plugin verification) stays in projects/plugin-abyssus.
 subprojects {
     apply(plugin = "java")
@@ -58,6 +77,9 @@ subprojects {
     configure<KoverProjectExtension> {
         reports {
             total {
+                html {
+                    onCheck = true
+                }
                 xml {
                     onCheck = true
                 }

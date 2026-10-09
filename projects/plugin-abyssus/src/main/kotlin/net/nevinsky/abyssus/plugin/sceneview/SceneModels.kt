@@ -9,9 +9,9 @@ import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
-import net.nevinsky.abyssus.lib.core.AnimationController
-import net.nevinsky.abyssus.lib.core.ModelInstance
-import net.nevinsky.abyssus.lib.core.model.Model
+import net.nevinsky.abyssus.lib.gdx.AnimationController
+import net.nevinsky.abyssus.lib.gdx.ModelInstance
+import net.nevinsky.abyssus.lib.gdx.model.Model
 import java.io.File
 
 /**

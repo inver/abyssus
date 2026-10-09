@@ -9,7 +9,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AssetMetaReaderTest {
-    private val reader = AssetMetaReader(JsonProcessor())
+    private val reader = AssetMetaReader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER))
     @Test fun rejectedMetadataCannotExposeTypeUuidOrReferences() {
         for (header in listOf("", "\"format\":\"foreign\",\"formatVersion\":1,", "\"format\":\"abyssus\",\"formatVersion\":2,")) {
             assertThrows(UnsupportedDocumentFormat::class.java) { reader.read("{$header\"type\":\"TERRAIN\",\"uuid\":\"u\",\"additional\":{\"splatR\":\"v\"}}") }

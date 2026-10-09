@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.lib.runtime.schema
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.JsonProcessor
 import org.junit.Assert.*
 import org.junit.Test
 

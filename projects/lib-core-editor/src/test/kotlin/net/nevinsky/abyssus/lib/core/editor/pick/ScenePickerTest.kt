@@ -7,7 +7,6 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3

@@ -6,7 +6,7 @@ package net.nevinsky.abyssus.lib.core.editor.ray
 
 import org.slf4j.Logger
 import net.nevinsky.abyssus.lib.raytracing.*
-import net.nevinsky.abyssus.lib.core.testing.RecordingLogger
+import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.concurrent.CancellationException

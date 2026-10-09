@@ -7,6 +7,8 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.json</depends>
 
+    <incompatible-with>net.nevinsky.abyssus.physics</incompatible-with>
+
     <resource-bundle>messages.AbyssusBundle</resource-bundle>
 
     <extensionPoints>
@@ -23,6 +25,11 @@
                         interface="net.nevinsky.abyssus.plugin.sceneview.SceneSimulationProvider"
                         dynamic="true"/>
     </extensionPoints>
+
+    <extensions defaultExtensionNs="net.nevinsky.abyssus">
+        <sceneOverlay implementation="net.nevinsky.abyssus.plugin.physics.PhysicsOverlayProvider"/>
+        <sceneSimulation implementation="net.nevinsky.abyssus.plugin.physics.PhysicsSimulationProvider"/>
+    </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
         <fileType
@@ -50,7 +57,9 @@
                     anchor="right"
                     canCloseContents="false"
                     factoryClass="net.nevinsky.abyssus.plugin.AbyssusPropertiesToolWindowFactory"/>
+        <notificationGroup id="Abyssus Physics" displayType="BALLOON" key="notification.group.Abyssus Physics"/>
         <notificationGroup id="Abyssus Component Schemas" displayType="BALLOON" key="notification.group.Abyssus Component Schemas"/>
+        <notificationGroup id="Abyssus Project Settings" displayType="BALLOON" key="notification.group.Abyssus Project Settings"/>
         <lang.parserDefinition
                 language="GLTF"
                 implementationClass="net.nevinsky.abyssus.plugin.language.GltfParserDefinition"/>
@@ -68,6 +77,10 @@
         <action id="Abyssus.ImportFlightGear"
                 class="net.nevinsky.abyssus.plugin.projectView.ImportFlightGearAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.ImportModel"
+                class="net.nevinsky.abyssus.plugin.projectView.ImportModelAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.ImportFlightGear"/>
         </action>
         <action id="Abyssus.AddLight" class="net.nevinsky.abyssus.plugin.projectView.AddLightAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>

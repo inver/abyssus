@@ -1,12 +1,12 @@
 # File formats
 
 Abyssus owns the JSON format of project `.abss`, scene `.scene` and asset `meta.json` documents.
-The plugin reads them with `SceneJson` (`editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/document/SceneJson.kt`),
+The plugin reads them with `SceneJson` (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/document/SceneJson.kt`),
 which keeps key order, `null` members and the exact text of numbers. Writes must keep those, too. The user-facing
 description of what the tree shows is in `README.md` ("Abyssus view"); this page is the format reference.
 
-Examples: `src/test/testData/project/Untitled/` (models, terrain, skybox, a camera) and
-`src/test/testData/project/Animated/` (an animated model).
+Examples: `projects/plugin-abyssus/src/test/testData/project/Untitled/` (models, terrain, skybox, a camera) and
+`projects/plugin-abyssus/src/test/testData/project/Animated/` (an animated model).
 
 ## Native document identity
 
@@ -16,7 +16,7 @@ Version 1 requires these root members in each project, scene and asset metadata 
 { "format": "abyssus", "formatVersion": 1 }
 ```
 
-`AbyssusDocumentFormat` (`core/src/main/kotlin/net/nevinsky/abyssus/core/format/AbyssusDocumentFormat.kt`)
+`AbyssusDocumentFormat` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/format/AbyssusDocumentFormat.kt`)
 validates document identity and reserved scene fields on the caller's thread, without GL or platform services.
 Only the exact string `abyssus` and integral JSON version `1` are supported. Missing/null/foreign markers, string
 or fractional versions (including `1.0`), negative versions and future versions are unsupported. Asset metadata's
@@ -29,7 +29,7 @@ keys and exact number text. External model/image formats and the terrain recipe 
 
 ## Project layout
 
-`ProjectLayout` (`src/main/kotlin/net/nevinsky/abyssus/dto/ProjectLayout.kt`) defines it:
+`ProjectLayout` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/dto/ProjectLayout.kt`) defines it:
 
 ```
 <project>/
@@ -45,17 +45,21 @@ keys and exact number text. External model/image formats and the terrain recipe 
 
 ## `.abss` (project)
 
-The plugin reads only:
+The plugin reads:
 - `name`: the project label; the file name is used when it is missing.
 - `mainCamera`: `position`, `viewPointPosition` (the view direction), `near`, `far` and `fieldOfView`. It is the
-  scene view's starting camera (`MainCamera` in `editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/scene/SceneRenderParams.kt`).
+  scene view's starting camera (`MainCamera` in `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/scene/SceneRenderParams.kt`).
 
-Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored. The plugin never writes an `.abss`
-(beyond `SceneFormatListener`'s formatting).
+- `physicsEnabled`: an optional boolean for editor physics. Missing, false or malformed means off; unsupported
+  native documents cannot enable physics. The settings service reads unsaved document text when present.
+
+Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored. Changing Physics in project
+properties writes only `physicsEnabled` through `editSceneJson` as one undoable command; off is explicit `false`.
+Reads never insert the key or repair malformed values. `SceneFormatListener` may also format a supported `.abss`.
 
 ## `.scene`
 
-Top level, bound to `Scene` (`core/src/main/kotlin/net/nevinsky/abyssus/core/scene/Scene.kt`):
+Top level, bound to `SceneDto` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/dto/SceneDto.kt`):
 
 | Key | Meaning |
 |---|---|
@@ -72,11 +76,14 @@ tree shows `skyboxName` as `skybox`, but the key in the file stays `skyboxName`.
 
 ```
 ecs: { "<id>": { components: { "<Name>Component": {...}, ... } }, ... }
-  (older scenes wrap this map in an `entities` member beside optional `metadata`, which the runtime keeps and writes
-  back; they also have an `archetype` per entity and an `archetypes` table, which it neither reads nor carries)
+  (native files can also wrap the map in an `entities` member beside `metadata` and `archetypes`)
 ```
 
-The components the plugin reads:
+The editor document layer supports both shapes. The current `EcsLoader` only enumerates the wrapped `entities`
+map, and `editor-core`'s `EcsWriter` produces that shape without carrying block metadata or archetypes. This differs
+from the required round-trip behavior in `openspec/specs/scene-ecs-components/spec.md`.
+
+The native component fields described by the specs and fixtures:
 
 | Component | Used for |
 |---|---|
@@ -93,7 +100,7 @@ The components the plugin reads:
 empty `PositionComponent: {}` is valid. Writers add fields when they change them (`SceneTransformWriter`,
 `PositionCodec`).
 
-**Light defaults** (`runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/ecs/component/LightComponent.kt`). A light that leaves a value out has: `intensity` 1; the
+**Light defaults** (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/component`). A light that leaves a value out has: `intensity` 1; the
 whole `color` object missing means white, but a channel missing inside a `color` object is 0 (the alpha channel never
 affects lighting); `range` 100; `coneAngle` 45 and `edgeSoftness` 0.2. The scene view, the Properties panel and edits
 all read lights through the same codecs, so they show and use these values alike. The file is never rewritten to state
@@ -136,36 +143,24 @@ format rejection. Adding or editing a component never creates a Java-class ident
 
 ### Game components
 
-A game's own components (declared with `@SceneComponent` in its code) are native extension data keyed by their short
-name, next to the built-in ones: `ecs.entities.<id>.components.<ShortName>`. They are written without a class name
-and without an identifier table; a scene that holds `ecs.componentIdentifiers` is rejected before any component is
-read. The document validator does not look inside them. A program that has not registered a game component keeps it
-raw and writes it back unchanged.
+A game's own Jackson-bindable Ashley components are native extension data keyed by a registered name, usually
+their short class name, next to built-in components: `ecs.entities.<id>.components.<Name>`. Register them with
+`core.ecs.ComponentRegistry` before `EcsLoader` loads them. No annotation-based schema API is present in the
+current source set. A scene containing `ecs.componentIdentifiers` is rejected before component loading.
 
-A field equal to its declared default is left out, so a plane at its defaults is `"PlaneComponent": {}`. Values are
-stored as JSON numbers (a whole decimal as `25`), booleans, strings (text, a choice's name, an asset folder name), an
-entity id (`-1` for none), or whole `{x, y, z}` / `{r, g, b, a}` objects. If Jackson cannot bind a component (for example, an unknown enum),
-the runtime keeps the whole component raw with a warning. Schema limits are editor validation, not runtime load-time constraints.
+The document validator treats extension payloads as opaque. `EcsLoader` carries unregistered or unbindable
+components as raw JSON with a warning; `EcsWriter` writes that carried data back. The editor's built-in component
+editing keeps custom entries unchanged. `EcsWriter` omits default properties and writes integral floats as integers.
 
-### The component schema (`abyssus/components.schema.json`)
+### Retained component schema files (`abyssus/components.schema.json`)
 
-The game exports what it registers (`SchemaExportMain`, see `runtime/README.md`) so Abyssus can edit those
-components without loading game classes. It is not a native document (no `format` marker); `version` must be `1`.
+Some fixtures and bundled projects retain schema JSON from the earlier schema workflow. These are supporting
+files, not native `.abss`, `.scene` or asset documents. The current `ComponentSchemas` service does not read them
+or contributions from the `componentSchemas` extension point. They do not enable editing game or physics
+components, and the source set has no `SchemaExportMain` or schema export task.
 
-```json
-{ "version": 1,
-  "components": [ { "name": "PlaneComponent", "class": "net.example.PlaneComponent", "label": "Plane",
-      "fields": [ { "name": "lineLength", "label": "Line length", "type": "decimal", "default": 18,
-                    "group": "Lines", "min": 5, "max": 30 },
-                  { "name": "kind", "label": "Kind", "type": "choice", "choices": ["TRAINER", "STUNT"], "default": "TRAINER" },
-                  { "name": "model", "label": "Model", "type": "asset", "assetType": "MODEL", "default": "" } ] } ] }
-```
-
-Field `type`: `decimal`, `whole`, `boolean`, `text`, `choice` (with `choices`), `vector`, `color`, `entity`, `asset`
-(with `assetType`). `group`, `min`, `max` and `minExclusive: true` are optional; infinite limits are not written.
-The export is stable (registration then declaration order, two-space indent, LF), so the same game gives the same
-bytes. An unknown `version` rejects the file; an unknown field type rejects only that component. Other plugins can
-contribute files in the same format (`docs/ai/architecture.md`, Extension points); the project's file wins per name.
+Required schema behavior remains in the `component-schemas` and `custom-scene-components` specs; the current
+implementation does not yet provide it.
 
 ## Asset `meta.json`
 
@@ -178,9 +173,11 @@ contribute files in the same format (`docs/ai/architecture.md`, Extension points
 | `MODEL` | `file`, `format`, `binary`, `materials` (material asset `uuid`s) |
 | `TERRAIN` | `terrainFile`, `size`, `uv`, `splatMap`, `splatBase`, `splatR`, `splatG`, `splatB`, `splatA` (texture asset `uuid`s) |
 | `SKYBOX` | `top`, `bottom`, `left`, `right`, `front`, `back` (image files in the folder) |
-| `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults) |
+| `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults); optional `clouds`: the `uuid` of a `CLOUDS` asset (see *Clouds* below) |
+| `CLOUDS` | `technique` and up to three cloud bands `low`, `mid`, `high` (see *Clouds* below) |
 | `SKYBOX_HDR` | `file`: the OpenEXR image file inside the asset folder |
-| `TEXTURE`, `PIXMAP_TEXTURE`, `MATERIAL`, `SHADER` | Recognized for icons; not drawn by the scene view |
+| `TEXTURE`, `PIXMAP_TEXTURE` | `file`; loaded as textures, including terrain splat dependencies |
+| `MATERIAL`, `SHADER` | Recognized metadata types; no standalone scene drawable |
 
 `uuid` can be missing (the fixture's `skybox_default` and `tree` have none).
 
@@ -192,7 +189,7 @@ the float count (the fixture's is 180). Generating a terrain changes none of thi
 
 New terrain metadata is one compact line with native markers first (`format`, `formatVersion`), then `version` 1, `lastModified`, `uuid`, `type` `TERRAIN`,
 `additional` with `terrainFile`, `size`, `uv` 1.0 and the six splat fields null; see `TerrainAssetWriter` in
-`editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/terrain`.
+`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/terrain`.
 
 How generated heights were made is kept in a recipe file beside the
 heights (`TERRAIN_RECIPE_FILE`; a terrain loads without it):
@@ -225,7 +222,36 @@ converted to PNG), the archive's licence files (`COPYING`, `LICENSE*`), and a `s
 ```
 
 `license` is the set file's `license` entry, `see <file>` for licence files in the archive, or `unknown`. Each glTF node
-is one named AC3D part. See `core/src/main/kotlin/net/nevinsky/abyssus/core/flightgear/FlightGearImport.kt`.
+is one named AC3D part. See `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/flightgear/FlightGearImport.kt`.
+
+### Imported models
+
+Import Model writes an ordinary `MODEL` folder: `meta.json` (`additional.file` `model.glb`, `format` `GLTF`, `binary`
+true, `materials` empty, a fresh `uuid`), `model.glb` (the converted model: metres, +Y up, standing on y = 0 and
+centred on X and Z, with its node hierarchy, skins and every animation), its textures as PNG files in `textures/`, and
+a `source.json` the loader ignores:
+
+```json
+{ "importer": "model", "source": "hero.fbx", "sourcePath": "sources/hero.fbx", "sourceSha256": "...",
+  "sourceFormat": "FBX",
+  "stated": { "unit": "cm", "upAxis": "Z" }, "chosen": { "unit": "cm", "upAxis": "Z" },
+  "size": "original",
+  "animations": ["Idle", "Run"],
+  "skipped": [{ "item": "Camera001", "reason": "camera" }, { "item": "wood.png", "reason": "missing" }],
+  "approximated": [{ "item": "Body", "reason": "specular colour dropped" }] }
+```
+
+- `sourcePath` is relative to the folder of the `.abss` file, with forward slashes, when the source is inside it, and
+  absolute otherwise; a later re-import finds the source through it.
+- `sourceFormat` is one of `OBJ`, `FBX`, `3DS`, `DAE`, `GLTF` and `GLB`.
+- `stated` is what the file states (FBX header, DAE `<asset>`) or its format defines (glTF: `m`, `Y`; 3DS: `m`,
+  `Z`); its values are `null` when neither says anything (OBJ). A DAE `X_UP` is recorded as `"X"`. `chosen` is what the
+  import applied.
+- `size` is `"original"`, `{ "largestExtent": <metres> }` or `{ "height": <metres> }`.
+- `skipped` reasons: `camera`, `light`, `points or lines`, `morph targets`, `glTF extension`, `missing`,
+  `unsupported texture format`.
+
+See `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/modelimport/ModelImport.kt`.
 
 **`SKYBOX_PROCEDURAL` is a native asset type.** The scene view
 draws it as a fullscreen triangle with the folder's own shaders (single-scattering Rayleigh + Mie, ray-marched per
@@ -235,6 +261,54 @@ pixel; the fixture is `assets/skybox_physical`). The plugin supplies these unifo
 `u_heightMie`, `u_mieG`, `u_sunIntensity`. The vertex shader takes `attribute vec2 a_position` (the three corners of
 the triangle). A missing file or a compile error skips that sky and logs it.
 
+**Clouds** are their own asset, type `CLOUDS`, which a `SKYBOX_PROCEDURAL` names by `uuid` in `additional.clouds`, the
+way a terrain names its splat textures. Several skies can share one. The view draws them over the sky asset's own
+atmosphere with plugin shaders (`projects/lib-core/src/main/resources/shader/sky/clouds_*`), so they work with any
+asset `sky.frag`. Nothing is written back.
+
+```json
+{ "format": "abyssus", "formatVersion": 1, "uuid": "...", "type": "CLOUDS", "additional": {
+  "technique": "shells",
+  "low":  { "type": "cumulus", "base": 800, "top": 2000, "coverage": 0.4, "density": 0.8, "wind": [4, 1] },
+  "high": { "type": "cirrus" }
+} }
+```
+
+- A sky without `clouds`, with a `uuid` no asset declares (logged), or naming an asset with no valid band draws as
+  without clouds. A `clouds` value that is not text is ignored.
+- `technique`: `layered`, `shells` (the default) or `volumetric`. The scene view's Clouds toolbar choice can override
+  it per view without writing it.
+- `low`, `mid`, `high`: bands. `type` is required; every other field takes the type's default when omitted.
+  `base` / `top` are altitudes in metres, `base` below `top`, both inside the level's limits; `coverage` is 0 to 1;
+  `density` is 0 or more; `wind` is two numbers, metres per second along x and z. A band that breaks a rule is
+  skipped and logged, and the other bands and the sky still draw.
+- Loading: the sky lists the cloud asset as a dependency, so the asset storage loads it first and the sky reads the
+  built asset on every draw; an edited cloud asset shows once it is loaded again. The cloud asset also owns the
+  volumetric technique's tileable 3D noise (FastNoiseLite Perlin-Worley, 64³ base and 32³ detail), made when it is
+  prepared and uploaded when it is built.
+- `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and storm examples of `CLOUDS` metas
+  (not loaded by the plugin; a creation action is a later change).
+
+| Level | Altitudes (m) | Types |
+|---|---|---|
+| `low` | 300–2500 | `cumulus`, `stratus`, `stratocumulus` |
+| `mid` | 2000–7000 | `altocumulus`, `altostratus` |
+| `high` | 6000–13000 | `cirrus`, `cirrostratus` |
+
+Type defaults (`CloudType` in `core`):
+
+| Type | `base` | `top` | `coverage` | `density` | `wind` |
+|---|---|---|---|---|---|
+| `cumulus` | 800 | 2000 | 0.4 | 0.8 | [4, 1] |
+| `stratus` | 400 | 900 | 0.85 | 0.5 | [3, 0.5] |
+| `stratocumulus` | 600 | 1600 | 0.6 | 0.7 | [5, 1.5] |
+| `altocumulus` | 3000 | 4200 | 0.45 | 0.5 | [10, 2] |
+| `altostratus` | 3500 | 5500 | 0.75 | 0.4 | [12, 3] |
+| `cirrus` | 8000 | 9500 | 0.35 | 0.15 | [25, 5] |
+| `cirrostratus` | 8500 | 10500 | 0.6 | 0.12 | [22, 4] |
+
+**`CLOUDS` is a native asset type.** The Abyssus view lists it with its own icon.
+
 **`SKYBOX_HDR` is a native asset type.** `additional.file` names a single-part OpenEXR image inside the asset
 folder. `ExrLoader` in `core` decodes it through TinyEXR off the GL thread. The image must be equirectangular
 (width = 2 × height, height at most 4096); it is reduced by block averaging to at most 4096 pixels wide for raster
@@ -242,16 +316,17 @@ loading. Scanline and tiled files, including the base level of mipmapped files, 
 ripmapped and subsampled color channels are rejected. RGB channels are found by name (including layer prefixes);
 Y or a lone channel can provide grayscale. Alpha is not used. Pixels are kept as RGB half floats: negative/NaN
 radiance becomes zero and positive values saturate at 65504. The horizontal centre faces `-Z`, the top row `+Y`.
-The fixture is `src/test/testData/project/Untitled/assets/skybox_hdr/`, whose metadata names `sky.exr`.
+The fixture is `projects/plugin-abyssus/src/test/testData/project/Untitled/assets/skybox_hdr/`, whose metadata names `sky.exr`.
 Radiance `.hdr` decoding and extension-based file discovery are not implemented by the current loader.
 
 ### Reachability ("unused")
 
-`ProjectReader` (`src/main/kotlin/net/nevinsky/abyssus/dto/ProjectReader.kt`) decides which assets are used:
+`ProjectReader` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/dto/ProjectReader.kt`) decides which assets are used:
 
 - **Roots:** a scene reaches asset folders by name through every `assetName` and `shaderKey` in its `ecs`, and its
   `skyboxName`.
-- **References:** a reached asset reaches others by `uuid` through terrain `splat*` fields and model `materials`.
+- **References:** a reached asset reaches others by `uuid` through terrain `splat*` fields, model `materials`,
+  and a reached procedural sky reaches the `CLOUDS` asset its `clouds` names.
   Files named inside `meta.json` are not followed.
 - **Unused:** an asset reached by no scene of the project is unused.
 - **Bundled shaders:** a `shaderKey` naming no folder is a bundled shader and is ignored.

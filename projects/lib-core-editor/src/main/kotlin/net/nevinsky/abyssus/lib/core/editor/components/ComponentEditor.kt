@@ -8,16 +8,13 @@ package net.nevinsky.abyssus.lib.core.editor.components
 import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.editor.components.BuiltInComponentKinds
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.NO_ENTITY
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.runtime.schema.BUILT_IN_COMPONENTS
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsWriter
-import org.slf4j.helpers.NOPLogger
-import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
-import net.nevinsky.abyssus.lib.runtime.schema.ComponentSchema
-import net.nevinsky.abyssus.lib.runtime.schema.SchemaJson
+import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 
 /** What an edit of a scene's JSON tree did. The tree is only touched for [Changed]. */
 sealed interface EditResult {
@@ -30,23 +27,26 @@ sealed interface EditResult {
 
 /**
  * Creates, updates and removes the modeled components of an entity in a scene's JSON tree (`ecs.entities.<id>`): the
- * built-in kinds and one kind per component of [schemas] (whose built-in names are ignored). Values go through the
+ * built-in kinds. Values go through the
  * component codecs, so defaults and number text match what a scene load and write do, and an update applies only the
  * keys that really differ onto the file's own component object.
  */
 class ComponentEditor(
+    private val jsonProcessor: JsonProcessor,
+    private val ecsWriter: EcsWriter,
     private val messages: EditorMessages,
-    schemas: List<ComponentSchema> = emptyList(),
-    private val json: SchemaJson = SchemaJson(),
+    contributions: List<ComponentKind<*>> = emptyList()
 ) {
-    private val mapper = JsonProcessor().mapper
-    private val reader = ComponentReader(mapper, MODEL_ASSETS, NOPLogger.NOP_LOGGER)
-    private val writer = EcsWriter(mapper)
+    constructor(messages: EditorMessages, contributions: List<ComponentKind<*>> = emptyList()) :
+        this(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), messages, contributions)
 
-    val kinds: List<ComponentKind<*>> = BuiltInComponentKinds(reader, writer).kinds +
-        schemas.filter { it.name !in BUILT_IN_COMPONENTS }.map { schemaKind(it, json) }
+    constructor(json: JsonProcessor, messages: EditorMessages, contributions: List<ComponentKind<*>> = emptyList()) :
+        this(json, EcsWriter(json), messages, contributions)
 
-    private val byName = kinds.associateBy { it.name }
+    private val reader = ComponentReader(jsonProcessor)
+    val kinds: List<ComponentKind<*>> = BuiltInComponentKinds(reader, ecsWriter).kinds + contributions
+
+    private val byName = kinds.flatMap { listOf(it.name to it, it.codec.type.name to it) }.toMap()
 
     fun kindOf(name: String): ComponentKind<*>? = byName[name]
 
@@ -57,7 +57,7 @@ class ComponentEditor(
     /** The modeled kinds [entityId] lacks, in the order the view lists them; empty when the entity is missing. */
     fun missingKinds(root: JsonNode, entityId: String): List<ComponentKind<*>> {
         val components = componentsOf(root, entityId) ?: return emptyList()
-        return kinds.filter { !components.has(it.name) }
+        return kinds.filter { kind -> components.fieldNames().asSequence().none { byName[it] === kind } }
     }
 
     /** The fields of the component [kindName] of [entityId] with their values, or null when it is not there. */
@@ -66,12 +66,28 @@ class ComponentEditor(
         val node = componentsOf(root, entityId)?.get(kindName) ?: return null
         val fields = readFields(kind, node)
         val spotlight = componentsOf(root, entityId)?.get("TypeComponent")?.get("type")?.asText() == "LIGHT_SPOT"
-        return if (kindName == "LightComponent" && !spotlight) fields.filterNot { it.field in listOf("coneAngle", "edgeSoftness") } else fields
+        return if (kindName == "LightComponent" && !spotlight) fields.filterNot {
+            it.field in listOf(
+                "coneAngle",
+                "edgeSoftness"
+            )
+        } else fields
     }
 
     private fun <C : Component> readFields(kind: ComponentKind<C>, node: JsonNode): List<FieldValue> {
         val component = kind.codec.read(node)
-        return kind.fields.map { FieldValue(it.name, it.kind, it.get(component), it.choices, it.optional, it.label, it.group, it.assetType) }
+        return kind.fields.map {
+            FieldValue(
+                it.name,
+                it.kind,
+                it.get(component),
+                it.choices,
+                it.optional,
+                it.label,
+                it.group,
+                it.assetType
+            )
+        }
     }
 
     /**
@@ -88,7 +104,11 @@ class ComponentEditor(
     ): EditResult {
         val components = componentsOf(root, entityId) ?: return rejected("componentEntityMissing", entityId)
         val kind = byName[kindName] ?: return rejected("componentKindUnknown", kindName)
-        if (components.has(kindName)) return rejected("componentAlreadyPresent", entityId, kind.label)
+        if (components.fieldNames().asSequence().any { byName[it] === kind }) return rejected(
+            "componentAlreadyPresent",
+            entityId,
+            kind.label
+        )
         return addTo(root, components, entityId, kind, initial, Assets(assets, assetsByType))
     }
 
@@ -101,11 +121,15 @@ class ComponentEditor(
     ): EditResult {
         val component = kind.create()
         for ((name, text) in initial) {
-            val field = kind.fields.firstOrNull { it.name == name } ?: return rejected("componentFieldUnknown", kind.label, name)
+            val field = kind.fields.firstOrNull { it.name == name } ?: return rejected(
+                "componentFieldUnknown",
+                kind.label,
+                name
+            )
             checkValue(root, entityId, kind, field, text, assets)?.let { return it }
             field.set(component, text)
         }
-        if (kind.name == "RenderComponent" && delegateOf(component as RenderComponent)?.asset?.assetName.isNullOrEmpty()) {
+        if (kind.name == "RenderComponent" && (component as RenderComponent).assetName.isEmpty()) {
             return rejected("componentAssetRequired")
         }
         components.set<JsonNode>(kind.name, kind.codec.write(component))
@@ -132,21 +156,29 @@ class ComponentEditor(
         root: JsonNode, components: ObjectNode, node: JsonNode, entityId: String, kind: ComponentKind<C>,
         fieldName: String, text: String, assets: Assets,
     ): EditResult {
-        val field = kind.fields.firstOrNull { it.name == fieldName } ?: return rejected("componentFieldUnknown", kind.label, fieldName)
+        val field = kind.fields.firstOrNull { it.name == fieldName } ?: return rejected(
+            "componentFieldUnknown",
+            kind.label,
+            fieldName
+        )
         val component = kind.codec.read(node)
-        if (component is RenderComponent && delegateOf(component) == null) return rejected("componentRenderNotEditable")
         checkValue(root, entityId, kind, field, text, assets)?.let { return it }
         val before = field.get(component)
         val base = kind.codec.write(component)
         field.set(component, text)
         if (field.get(component) == before) return EditResult.Unchanged
-        val target = node as? ObjectNode ?: return EditResult.Changed.also { components.set<JsonNode>(kind.name, kind.codec.write(component)) }
-        applyDiff(target, base, kind.codec.write(component))
+        val target = node as? ObjectNode ?: return EditResult.Changed.also {
+            components.set<JsonNode>(
+                kind.name,
+                kind.codec.write(component)
+            )
+        }
+        applyDiff(target, base, kind.codec.write(component), jsonProcessor.componentValues(component))
         return EditResult.Changed
     }
 
     /** Copies onto [target] what differs between [base] and [new]: changed and added keys are set, dropped ones removed. */
-    private fun applyDiff(target: ObjectNode, base: JsonNode?, new: JsonNode) {
+    private fun applyDiff(target: ObjectNode, base: JsonNode?, new: JsonNode, values: JsonNode?) {
         val keys = LinkedHashSet<String>()
         base?.fieldNames()?.forEach(keys::add)
         new.fieldNames().forEach(keys::add)
@@ -155,9 +187,38 @@ class ComponentEditor(
             val n = new.get(key)
             when {
                 b == n -> Unit
+                n == null && b is ObjectNode && target.get(key) is ObjectNode -> {
+                    val child = target.get(key) as ObjectNode
+                    if (!containsUnknown(child, b)) target.remove(key)
+                    else {
+                        removeDefaulted(child, b, values?.get(key))
+                        if (child.isEmpty) target.remove(key)
+                    }
+                }
                 n == null -> target.remove(key)
-                n is ObjectNode && target.get(key) is ObjectNode -> applyDiff(target.get(key) as ObjectNode, b, n)
+                n is ObjectNode && target.get(key) is ObjectNode -> applyDiff(target.get(key) as ObjectNode, b, n, values?.get(key))
                 else -> target.set<JsonNode>(key, n)
+            }
+        }
+    }
+
+    private fun containsUnknown(target: ObjectNode, modeled: JsonNode): Boolean = target.fields().asSequence().any { (key, value) ->
+        val known = modeled.get(key)
+        known == null || value is ObjectNode && known is ObjectNode && containsUnknown(value, known)
+    }
+
+    /** Remove only modeled values that changed to their defaults; unknown and unchanged children retain their text. */
+    private fun removeDefaulted(target: ObjectNode, base: JsonNode, values: JsonNode?) {
+        base.fields().forEach { (key, previous) ->
+            val value = values?.get(key)
+            when {
+                previous == value -> Unit
+                previous is ObjectNode && target.get(key) is ObjectNode -> {
+                    val child = target.get(key) as ObjectNode
+                    removeDefaulted(child, previous, value)
+                    if (child.isEmpty) target.remove(key)
+                }
+                else -> target.remove(key)
             }
         }
     }
@@ -180,8 +241,10 @@ class ComponentEditor(
         for ((id, c) in SceneEntityTree(root).componentsById()) {
             if (id == entityId) continue
             val refs = listOf(
-                c.get("PositionComponent")?.get("lookAtId"), c.get("ParentComponent")?.get("parentEntityId"),
-                c.get("Point2PointPositionComponent")?.get("entity1Id"), c.get("Point2PointPositionComponent")?.get("entity2Id"),
+                c.get("PositionComponent")?.get("lookAtId"),
+                c.get("ParentComponent")?.get("parentEntityId"),
+                c.get("Point2PointPositionComponent")?.get("entity1Id"),
+                c.get("Point2PointPositionComponent")?.get("entity2Id"),
             )
             if (refs.any { it?.asInt(NO_ENTITY) == wanted }) return id
         }
@@ -189,7 +252,12 @@ class ComponentEditor(
     }
 
     private fun checkValue(
-        root: JsonNode, entityId: String, kind: ComponentKind<*>, field: ComponentField<*>, text: String, assets: Assets,
+        root: JsonNode,
+        entityId: String,
+        kind: ComponentKind<*>,
+        field: ComponentField<*>,
+        text: String,
+        assets: Assets,
     ): EditResult.Rejected? {
         val label = "${kind.label} ${field.name}"
         val value = text.trim()
@@ -198,21 +266,37 @@ class ComponentEditor(
                 value.toFloatOrNull()?.isFinite() != true -> reject("componentNotANumber", label, text)
                 kind.name == "LightComponent" && field.name == "range" && value.toFloat() <= 0f ->
                     reject("componentNotPositive", label, text)
+
                 kind.name == "LightComponent" && field.name == "coneAngle" && (value.toFloat() <= 0f || value.toFloat() >= 180f) ->
                     reject("componentConeAngleInvalid", label, text)
+
                 kind.name == "LightComponent" && field.name == "edgeSoftness" && value.toFloat() !in 0f..100f ->
                     reject("componentSoftnessInvalid", label, text)
+
                 else -> checkLimits(field, label, value.toFloat().toDouble(), value)
             }
+
             FieldKind.INT -> {
                 val number = value.toIntOrNull()
-                if (number == null) reject("componentNotAnInteger", label, text) else checkLimits(field, label, number.toDouble(), value)
+                if (number == null) reject("componentNotAnInteger", label, text) else checkLimits(
+                    field,
+                    label,
+                    number.toDouble(),
+                    value
+                )
             }
-            FieldKind.BOOLEAN -> if (value == "true" || value == "false") null else reject("componentNotABoolean", label, text)
+
+            FieldKind.BOOLEAN -> if (value == "true" || value == "false") null else reject(
+                "componentNotABoolean",
+                label,
+                text
+            )
+
             FieldKind.TEXT -> null
             FieldKind.CHOICE ->
                 if (value in field.choices || (field.optional && value.isEmpty())) null
                 else reject("componentNotAChoice", label, text, field.choices.joinToString(", "))
+
             FieldKind.ASSET_NAME -> {
                 val type = field.assetType
                 // a schema's asset reference may be cleared, and names a folder of its declared type
@@ -224,16 +308,28 @@ class ComponentEditor(
                     else -> null
                 }
             }
+
             FieldKind.ENTITY_REF -> checkReference(root, entityId, kind, field, label, value)
         }
     }
 
     /** Refuses a number outside the [field]'s declared limits, naming the limit. */
-    private fun checkLimits(field: ComponentField<*>, label: String, number: Double, text: String): EditResult.Rejected? {
+    private fun checkLimits(
+        field: ComponentField<*>,
+        label: String,
+        number: Double,
+        text: String
+    ): EditResult.Rejected? {
         val min = field.min
         val max = field.max
         return when {
-            min != null && field.minExclusive && number <= min -> reject("componentNotAboveMinimum", label, text, limitText(min))
+            min != null && field.minExclusive && number <= min -> reject(
+                "componentNotAboveMinimum",
+                label,
+                text,
+                limitText(min)
+            )
+
             min != null && number < min -> reject("componentBelowMinimum", label, text, limitText(min))
             max != null && number > max -> reject("componentAboveMaximum", label, text, limitText(max))
             else -> null
@@ -243,7 +339,12 @@ class ComponentEditor(
     private fun limitText(limit: Double) = java.math.BigDecimal(limit.toString()).stripTrailingZeros().toPlainString()
 
     private fun checkReference(
-        root: JsonNode, entityId: String, kind: ComponentKind<*>, field: ComponentField<*>, label: String, value: String,
+        root: JsonNode,
+        entityId: String,
+        kind: ComponentKind<*>,
+        field: ComponentField<*>,
+        label: String,
+        value: String,
     ): EditResult.Rejected? {
         val target = value.toIntOrNull() ?: return reject("componentNotAnInteger", label, value)
         if (target == NO_ENTITY) return null
@@ -254,7 +355,9 @@ class ComponentEditor(
             var current: Int = target
             val seen = HashSet<Int>()
             while (current != NO_ENTITY && seen.add(current)) {
-                val next = SceneEntityTree(root).components(current.toString())?.get("ParentComponent")?.get("parentEntityId")?.asInt(NO_ENTITY) ?: NO_ENTITY
+                val next =
+                    SceneEntityTree(root).components(current.toString())?.get("ParentComponent")?.get("parentEntityId")
+                        ?.asInt(NO_ENTITY) ?: NO_ENTITY
                 if (next.toString() == entityId) return reject("componentParentCycle", label, target, entityId)
                 current = next
             }

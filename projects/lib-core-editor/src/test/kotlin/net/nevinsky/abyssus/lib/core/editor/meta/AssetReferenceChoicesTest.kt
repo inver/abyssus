@@ -23,7 +23,7 @@ class AssetReferenceChoicesTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    private val choices = AssetReferenceChoices(JsonProcessor())
+    private val choices = AssetReferenceChoices(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER))
 
     private fun asset(name: String, type: String, uuid: String?, file: String? = "tex.png", write: Boolean = true): File {
         val dir = File(tmp.root, "assets/$name").apply { mkdirs() }

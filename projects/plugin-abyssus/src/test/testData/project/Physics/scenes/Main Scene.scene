@@ -51,16 +51,7 @@
               "z": -3.2570944
             }
           },
-          "RenderComponent": {
-            "renderable": {
-              "kind": "asset",
-              "shaderKey": "defaultShader",
-              "asset": {
-                "type": "MODEL",
-                "assetName": "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"
-              }
-            }
-          },
+          "RenderComponent": {"shaderKey": "defaultShader", "type": "MODEL", "assetName": "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"},
           "TypeComponent": {
             "type": "OBJECT"
           }
@@ -90,16 +81,7 @@
               "z": -32.7754
             }
           },
-          "RenderComponent": {
-            "renderable": {
-              "kind": "asset",
-              "shaderKey": "terrain",
-              "asset": {
-                "type": "TERRAIN",
-                "assetName": "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
-              }
-            }
-          },
+          "RenderComponent": {"shaderKey": "terrain", "type": "TERRAIN", "assetName": "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"},
           "TypeComponent": {
             "type": "TERRAIN"
           }
@@ -139,16 +121,7 @@
               "z": 6.35708
             }
           },
-          "RenderComponent": {
-            "renderable": {
-              "kind": "asset",
-              "shaderKey": "defaultShader",
-              "asset": {
-                "type": "MODEL",
-                "assetName": "model_fc33e1f1-015b-4524-9b10-aa417acd273c"
-              }
-            }
-          },
+          "RenderComponent": {"shaderKey": "defaultShader", "type": "MODEL", "assetName": "model_fc33e1f1-015b-4524-9b10-aa417acd273c"},
           "TypeComponent": {
             "type": "OBJECT"
           }
@@ -285,16 +258,7 @@
               "w": -0.87103707
             }
           },
-          "RenderComponent": {
-            "renderable": {
-              "kind": "asset",
-              "shaderKey": "pbr",
-              "asset": {
-                "type": "MODEL",
-                "assetName": "model_900f6f61-6384-434a-be81-56ce303fbb56"
-              }
-            }
-          },
+          "RenderComponent": {"shaderKey": "pbr", "type": "MODEL", "assetName": "model_900f6f61-6384-434a-be81-56ce303fbb56"},
           "TypeComponent": {
             "type": "OBJECT"
           }

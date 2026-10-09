@@ -88,13 +88,13 @@ class SceneEntityParityTest {
     }
 
     @Test
-    fun aTextualHandleTargetIsReadTheSameWay() {
+    fun aNumericStringHandleTargetIsReadTheSameWay() {
         val root = scene()
         val entities = root.get("ecs") as ObjectNode
-        entities.set<JsonNode>("h", SceneJson().parse("""{"archetype":1,"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}}"""))
-        ((entities.get("7").get("components") as ObjectNode).get("PositionComponent") as ObjectNode).put("lookAtId", "h")
+        entities.set<JsonNode>("9", SceneJson().parse("""{"archetype":1,"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}}"""))
+        ((entities.get("7").get("components") as ObjectNode).get("PositionComponent") as ObjectNode).put("lookAtId", "9")
         val content = sceneContentOf(parseScene(root.toString()))
-        assertEquals("h", content.lights.single { it.entityId == "7" }.lookAtId)
-        assertEquals("h", content.aimHandleOf(content.lights.single { it.entityId == "7" }))
+        assertEquals("9", content.lights.single { it.entityId == "7" }.lookAtId)
+        assertEquals("9", content.aimHandleOf(content.lights.single { it.entityId == "7" }))
     }
 }

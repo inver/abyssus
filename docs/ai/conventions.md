@@ -3,30 +3,29 @@
 ## Languages and generated code
 
 - **Kotlin for application code.** GLTF grammar inputs live in
-  `src/main/java/net/nevinsky/abyssus/language/psi/` (`Gltf.bnf`, `Gltf.flex`). The vendored FastNoiseLite implementation
-  is Java in `core/src/main/java/`; Metal/Vulkan native code and shaders live in `raytracing/src/main`.
-- **Generated code:** the lexer and parser are generated into `src/main/gen` by the `generateGltfParser` / `generateGltfLexer` Gradle tasks (run before compiling), and the directory is git-ignored. Never edit it;
+  `projects/plugin-abyssus/src/main/java/net/nevinsky/abyssus/language/psi/` (`Gltf.bnf`, `Gltf.flex`). The vendored FastNoiseLite implementation
+  is Java in `projects/lib-core/src/main/java/`; Metal/Vulkan native code and shaders live in `projects/lib-raytracing/src/main`.
+- **Generated code:** the lexer and parser are generated into `projects/plugin-abyssus/src/main/gen` by the `generateGltfParser` / `generateGltfLexer` Gradle tasks (run before compiling), and the directory is git-ignored. Never edit it;
   change the grammar instead.
 - **Package-private libGDX code:** `com.badlogic.gdx.backends.lwjgl3.GdxGlBridge` lives in libGDX's package on
   purpose, to reach backend code that is package-private.
 - **License header:** start new source files with the Apache 2.0 header (copy it from
-  `src/main/kotlin/net/nevinsky/abyssus/AbyssusBundle.kt`). Most files have it; a few newer ones, mostly in `ecs/`,
-  don't yet. libGDX-derived files in `gdx-model` keep their original headers.
+  `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/AbyssusBundle.kt`). Most files have it; a few newer ones, mostly in `ecs/`,
+  don't yet. libGDX-derived files in `lib-gdx` keep their original headers.
 
 ## Module boundary
 
-`gdx-model` depends only on libGDX, LWJGL Assimp and the slf4j API (`gdx-model/build.gradle.kts`). Nothing in it may import
-`com.intellij.*` or `net.nevinsky.abyssus` plugin packages. The plugin depends on it with
-`implementation(project(":gdx-model"))`.
+`lib-gdx` depends only on libGDX, LWJGL Assimp and the slf4j API (`projects/lib-gdx`). Nothing in it may import
+`com.intellij.*` or `net.nevinsky.abyssus` plugin packages. `core` exposes it with `api(project(":lib-gdx"))`; the plugin receives it through `core` and `editor-core`.
 
 ## Logging
 
-- **SLF4J is the one logging interface.** `gdx-model`, `core`, `raytracing`, `runtime` and `physics` (plain JVM) log through
-  `org.slf4j.Logger` and never import `com.intellij.*`. `core`, `raytracing`, `runtime` and `physics` take a `Logger` through
-  constructors (`RuntimeSceneLoader`, `PhysicsWorld`, `PlayHost`, `AssetLoading`,
-  `MetalRayBackendFactory`, `VulkanRayBackendFactory`, `RayRenderScheduler`); `gdx-model`'s static loaders read
+- **SLF4J is the one logging interface.** `lib-gdx`, `core`, `raytracing` and `physics` (plain JVM) log through
+  `org.slf4j.Logger` and never import `com.intellij.*`. `core`, `raytracing` and `physics` take a `Logger` through
+  constructors (`JsonProcessor`, `RuntimeSceneLoader`, `PhysicsWorld`, `PlayHost`, `AssetLoading`,
+  `MetalRayBackendFactory`, `VulkanRayBackendFactory`, `RayRenderScheduler`); `lib-gdx`'s static loaders read
   `ModelLogging.logger`. Debug messages are lazy: `log.atDebug().log { "..." }`.
-- **The binding to the IDE logger is `IntellijLogger`** (`src/main/kotlin/net/nevinsky/abyssus/log/IntellijLogger.kt`), an
+- **The binding to the IDE logger is `IntellijLogger`** (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/log/IntellijLogger.kt`), an
   SLF4J `Logger` over `com.intellij.openapi.diagnostic.Logger`, created by `IntellijLoggerFactory` and held by
   `AbyssusCore.loggers`. The composition root passes `getLogger("assets")`, `("scenes")`, `("ray")` and `("model")` (the last installed
   into `ModelLogging`), so everything lands in `idea.log` under `Abyssus.<category>` and obeys Debug Log Settings. It is
@@ -34,25 +33,25 @@
   which cannot be changed from a plugin; the plugin zip excludes `org.slf4j` and uses the platform's API classes.
   SLF4J `error` is logged as an IDE *warn*, because `Logger.error` raises the IDE-error dialog.
 - **Outside the IDE** (the play host, the Control Line game) `physics`'s runtime dependency `slf4j-simple` binds SLF4J to
-  stderr; Abyssus Physics bundles `physics` without its dependencies, so it never reaches the IDE.
+  stderr; Abyssus bundles `physics` without its dependencies, so it never reaches the IDE.
 - **Tests** use `RecordingLogger`, `warningsTo(list)` or `failOnWarnings()` (`core` test fixtures) or `NOPLogger.NOP_LOGGER`; `raytracing` has its own small recorder.
 
 ## JSON
 
-- **Always use `SceneJson`** (`editor-core/src/main/kotlin/net/nevinsky/abyssus/editor/document/SceneJson.kt`), never a fresh
+- **Always use `SceneJson`** (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/document/SceneJson.kt`), never a fresh
   `ObjectMapper`. It keeps key order and `null` members, and keeps float text exactly (`RawNumberNode`). Reading and
   writing a file therefore never changes numbers you didn't touch.
-- **Binding:** bind files to DTOs with `SceneJson().bind` / `SceneReader.parse` (`SceneJson` is stateless; every
-  instance shares one mapper). Unknown fields are ignored, and
-  property declaration order is the order the tree shows.
+- **Binding:** read-only DTO readers use `JsonProcessor.bind` / `SceneReader.parse`; edit transforms use the
+  original `SceneJson` tree. `JsonProcessor(log)` owns its Jackson mapper; `SceneJson` shares its formatting mapper.
+  Unknown fields are ignored during DTO binding, and property declaration order is the order the tree shows.
 - **Non-row fields:** mark them `@get:JsonIgnore` (for example `SceneEntry.file`, `AssetInfo.unused`) so the tree
   doesn't list them.
-- **Optional values:** read them from a `JsonNode` with the helpers in `runtime/src/main/kotlin/net/nevinsky/abyssus/runtime/JsonNodes.kt`
+- **Optional values:** read them from a `JsonNode` with the helpers in `projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/util/JsonNodeExt.kt`
   (`opt`, `text`, `float`, `obj`), which treat absent and JSON `null` alike.
 - **Wiring:** pass collaborators in through constructors. A `service<...>()` lookup belongs only in an action, a
   provider, a tool window factory, the Abyssus pane, or a deferred service accessor. Constructors must not look up other services;
   injected collaborators or lazy access keep unrelated service groups uninitialized.
-- **Writing a file:** use `editSceneJson` (`src/main/kotlin/net/nevinsky/abyssus/filetype/SceneDocumentWriter.kt`); its text transform is
+- **Writing a file:** use `editSceneJson` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`); its text transform is
   `editor-core`'s `DocumentTextEditor`, re-serialized with `SceneJson().inStyleOf`, so a pretty file stays pretty and a
   compact one stays compact. Address entities through `SceneDocument` / `SceneEntityTree`, never by `"ecs"` / `"components"` keys.
 
@@ -90,9 +89,9 @@ command name in the message bundle.
 ## Errors and cancellation
 
 - **Catching:** use `runCatchingKeepingCancellation`
-  (`core/src/main/kotlin/net/nevinsky/abyssus/core/assets/Cancellation.kt`), not `runCatching`. It rethrows
+  (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/assets/Cancellation.kt`), not `runCatching`. It rethrows
   `CancellationException`, which includes `ProcessCanceledException`, which the platform requires.
-  `./gradlew checkNoRunCatching` (part of `check`) fails on a `runCatching {` in the plugin, `core`, `runtime`, `physics`, `raytracing`, `physics-plugin` or Control Line.
+  `./gradlew checkNoRunCatching` (part of `check`) fails on a `runCatching {` in the plugin, `core`, `editor-core`, `physics`, `raytracing` or Control Line.
   Source rules share `gradle/checks.gradle.kts`; module singleton exclusions remain explicit in each build file.
 - **Failure text:** show `Throwable.displayMessage()` (the message, or the class name when it has none).
 - **Unreadable files:** an unreadable file or asset becomes a visible failure (an error row, a status message, a
@@ -100,9 +99,9 @@ command name in the message bundle.
 
 ## UI text
 
-User-visible strings go in `src/main/resources/messages/AbyssusBundle.properties` and are read with
+User-visible strings go in `projects/plugin-abyssus/src/main/resources/messages/AbyssusBundle.properties` and are read with
 `AbyssusBundle.message(key, args)`. Text that `editor-core` produces (rejections, entity names, ray fallback reasons)
-goes in `editor-core/src/main/resources/messages/AbyssusEditorBundle.properties`; that code takes an `EditorMessages`
+goes in `projects/lib-core-editor/src/main/resources/messages/AbyssusEditorBundle.properties`; that code takes an `EditorMessages`
 by constructor or parameter, the plugin passes `EditorBundle`, a caller without the IDE `ResourceEditorMessages`.
 Escape non-ASCII characters as `\uXXXX` in both files.
 
@@ -114,7 +113,7 @@ Escape non-ASCII characters as `\uXXXX` in both files.
   that needs no IDE type belongs in `editor-core` (`ScenePicker`, `GizmoDrag`, `SceneMarkers`, `EntitySections`,
   `toolbarState`), and the plugin's Swing or GL class only forwards to it. A pure part that still needs a Swing or
   IntelliJ type (`SkyboxPickerModel`, `PanelState`) stays in the plugin as its own file.
-- **Names:** `*Dto` for bound file models, `*Reader` for file readers, `*Codec` for ECS component mappers, `*Test`
+- **Names:** `*Dto` for bound file models, `*Reader` for file readers, `*Codec` for editor component mappers, `*Test`
   for test classes.
 
 ## Specs and docs
@@ -137,7 +136,7 @@ Prefer public IntelliJ APIs. Keep unavoidable project tree implementation APIs i
 explain each use, and compare verifier reports before expanding the dependency. An allowlist must identify exact
 known usages; it must not suppress a whole class of compatibility findings.
 
-Root `./gradlew :verifyPlugin` finishes with `checkPluginInternalApis`. Known internal usages are recorded as exact
+`./gradlew :plugin-abyssus:verifyPlugin` finishes with `checkPluginInternalApis`. Known internal usages are recorded as exact
 verifier descriptions in `gradle/plugin-internal-api-allowlist.txt`; a different API or caller fails the check.
 Compatibility and override-only findings still fail verification. Additions to the allowlist require an explanation
 of why a public API cannot serve the same behavior; do not replace the list with a category-wide suppression.

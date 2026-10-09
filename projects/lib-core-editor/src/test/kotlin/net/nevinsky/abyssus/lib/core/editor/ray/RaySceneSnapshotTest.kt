@@ -4,15 +4,6 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ray
 
-import net.nevinsky.abyssus.lib.core.editor.ray.RayAssetLease
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssetState
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssets
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneChange
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneConversion
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneFrame
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneSnapshots
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySnapshotLimits
-import net.nevinsky.abyssus.lib.core.editor.ray.raySceneDiff
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
@@ -21,10 +12,8 @@ import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneFallback
 
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba

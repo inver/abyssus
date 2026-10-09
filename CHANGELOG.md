@@ -5,11 +5,16 @@
 ## [Unreleased]
 
 ### Changed
+- `lib-core-editor` packages now use `net.nevinsky.abyssus.lib.core.editor`; consumers and extension providers using editor types must update imports and rebuild.
+- Physics ships in Abyssus and is enabled per native project with `physicsEnabled: true` in its `.abss`. Existing projects must enable Physics in project properties once.
 - Abyssus is now an independent libGDX scene editor using native format version 1. Projects, scenes and asset metadata
   require `format: "abyssus"` and integral `formatVersion: 1`; renderables use stable native kinds and components use short names.
 - Older unmarked files and files from other editors are unsupported. Plugin loading, editing and automatic formatting refuse them without
   rewriting them. No importer or automatic migration is included. External model, image, terrain binary and recipe encodings remain unchanged.
 ### Added
+- Clouds on procedural skies: a new `CLOUDS` asset (low, mid and high bands with cloud types, coverage, density and wind, and a technique) that a procedural sky names by `uuid` and loads like a terrain loads its textures; drawn layered, as shells or volumetric (a per-view **Clouds** toolbar choice overrides the asset's technique, and slow volumetric clouds fall back to shells), dimming the sun light when they cover it; the skybox chooser reads `procedural sky · clouds`
+- **Import Model...** on a project's Assets node: an OBJ, FBX, 3DS, DAE, glTF or GLB file becomes a native model asset (`model.glb`, PNG textures and a `source.json`), checked first in a dialog with a live preview, unit, up axis and size settings and the animation to play; skeletons and animations are kept, the model stands on y = 0, centred, and **Add to scene** places it in the selected scene view in the same undoable step. Blender files are refused with a hint to export glTF
+- `gdx-model`'s `GltfWriter` writes any `ModelData` as binary glTF (nodes, skins, animations, metallic-roughness materials); the FlightGear import now writes through it
 - Logging in every module through SLF4J, bound to the IDE logger: `gdx-model`, `core` and `raytracing` now write progress, backend probe results, the chosen GPU, session limits, fallbacks and failures to `idea.log` under `Abyssus.assets`, `Abyssus.model` and `Abyssus.ray` (debug lines follow Debug Log Settings).
 - Saved **Ray Tracing** settings for a selected scene in Abyssus Properties: target samples per pixel, maximum rays per frame, and maximum reflection and refraction bounces, stored in the scene's `rayTracing` block (defaults omitted) with Undo/Redo; the switch itself is still not saved
 - Ray traced glass: **Transmission** and **IOR** for a model entity's PBR materials, saved as that entity's `RenderComponent.rayTracingMaterials` overrides, with Snell refraction, Fresnel and total internal reflection through closed solids; unsupported glass (open meshes, overlapping solids, masked or blended materials) falls back to raster with the reason
@@ -28,6 +33,7 @@
 - The model runtime and Assimp importer live in their own `gdx-model` library module (no IntelliJ or gdx-gltf dependency)
 
 ### Removed
+- The separate Abyssus Physics plugin. Uninstall it when upgrading; Abyssus declares its former ID incompatible.
 - Template sample tool window, frame listener and project service
 
 ### Fixed

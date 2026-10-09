@@ -41,6 +41,28 @@ class SceneOverlayHostTest {
     }
 
     @Test
+    fun unavailableOverlaysHaveNoDrawsOrActionsAndCanReturn() {
+        var enabled = false
+        val physics = MarkerOverlay()
+        val other = MarkerOverlay()
+        val host = SceneOverlayHost(listOf(NamedOverlay("Physics", physics, false) { enabled },
+            NamedOverlay("Other", other))) { m, e -> throw AssertionError(m, e) }
+        host.draw(view(), Recorder())
+        assertEquals(listOf("Other"), host.overlays.map { it.source })
+        assertEquals(0, physics.seen.size)
+        enabled = true
+        host.refreshAvailability()
+        host.draw(view(), Recorder())
+        assertEquals(listOf("Physics", "Other"), host.overlays.map { it.source })
+        assertEquals(1, physics.seen.size)
+        enabled = false
+        host.refreshAvailability()
+        host.draw(view(), Recorder())
+        assertEquals(1, physics.seen.size)
+        assertEquals(3, other.seen.size)
+    }
+
+    @Test
     fun anOverlaySeesTheEntityPositionsOfMainScene() {
         val overlay = MarkerOverlay()
         val sink = Recorder()

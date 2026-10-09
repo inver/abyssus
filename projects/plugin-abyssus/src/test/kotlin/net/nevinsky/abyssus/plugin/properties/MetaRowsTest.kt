@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.meta.ADDITIONAL
 import net.nevinsky.abyssus.lib.core.editor.meta.RowKind
 import net.nevinsky.abyssus.lib.core.editor.meta.metaRowsOf
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages

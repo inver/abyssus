@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
 
 /**
@@ -32,4 +33,7 @@ class SceneViewState {
 
     /** Whether gizmos are offered: off while a simulation plays. */
     var gizmosEnabled: Boolean = true
+
+    /** The cloud technique this view draws in place of the sky asset's own, or null for the asset's. */
+    var cloudTechnique: CloudTechnique? = null
 }

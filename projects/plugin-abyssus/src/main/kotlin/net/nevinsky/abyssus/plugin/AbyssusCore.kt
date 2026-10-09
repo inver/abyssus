@@ -8,8 +8,10 @@ package net.nevinsky.abyssus.plugin
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.ModelLogging
-import net.nevinsky.abyssus.lib.core.flightgear.FlightGearImport
+import net.nevinsky.abyssus.lib.gdx.ModelLogging
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImport
+import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelImport
+import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSourceOpener
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat as CoreDocumentFormat
 import net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat
 import net.nevinsky.abyssus.plugin.log.IntellijLoggerFactory
@@ -19,7 +21,7 @@ import net.nevinsky.abyssus.plugin.log.IntellijLoggerFactory
 class AbyssusCore : Disposable {
     val loggers = IntellijLoggerFactory("Abyssus")
     init { ModelLogging.logger = loggers.getLogger("model") }
-    val json by lazy { JsonProcessor() }
+    val json by lazy { JsonProcessor(loggers.getLogger("json")) }
     val format by lazy { AbyssusDocumentFormat() }
     val documents by lazy { DocumentServices(json, format, loggers.getLogger("scenes")) }
     val assets by lazy { AssetServices(json, format, loggers.getLogger("assets")) }
@@ -40,6 +42,8 @@ class AbyssusCore : Disposable {
     val terrainRecipes get() = terrain.recipes
     val newTerrains get() = terrain.newTerrains
     val flightGearImport by lazy { FlightGearImport(json, CoreDocumentFormat()) }
+    val modelSources by lazy { ModelSourceOpener() }
+    val modelImport by lazy { ModelImport(json, CoreDocumentFormat()) }
     internal val rayService get() = ray.service
     internal val rayConverter get() = ray.converter
 

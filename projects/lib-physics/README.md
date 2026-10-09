@@ -2,14 +2,15 @@
 
 Plain JVM physics for native scenes, through [Jolt](https://github.com/jrouwe/JoltPhysics) and its JVM binding
 jolt-jni 6.1.1 (`com.github.stephengold`, MIT). No IntelliJ or plugin imports. It is constructor-wired, with no
-`object` or `companion object`, and `checkNoSingletons` runs as part of `check`. Depends on `runtime` and jolt-jni.
+`object` or `companion object`, and `checkNoSingletons` runs as part of `check`. Depends on `core` and jolt-jni.
 
 Jolt's natives load only in a game or the play host, never in the IDE. Only `jolt/` imports Jolt. Component classes
 and the play protocol do not.
 
 ## Components
 
-Declared with `@SceneComponent` / `@Field` (see `runtime/README.md`) and registered by `PhysicsComponents`.
+Plain Ashley component classes. Register the `PHYSICS_COMPONENTS` map with `core.ecs.ComponentRegistry.registerAll`
+before loading. The IDE currently keeps these components read-only; schema annotations and export are absent.
 
 | Component | Fields (default) |
 |---|---|
@@ -19,11 +20,11 @@ Declared with `@SceneComponent` / `@Field` (see `runtime/README.md`) and registe
 
 A distance constraint with minimum `0` is a rope. A convex hull is built from the vertex positions of the entity's
 model, and a height field from its terrain's `terrain.data`. Both are read by `PhysicsAssets` through `core` and
-`gdx-model`, with no GL.
+`lib-gdx`, with no GL.
 
 ## The world
 
-`PhysicsWorld(engine, PhysicsAssets(projectDir, json), log, JoltNatives())`:
+`PhysicsWorld(engine, PhysicsAssets(projectDir, log), log, JoltNatives())`:
 
 - **Build:** one body per entity with a collider: dynamic, kinematic or static as its rigid body says, static without
   one. A rigid body without a collider is left out with one warning. Each entity's pose comes from its
@@ -55,28 +56,27 @@ change the velocity, so the value is an estimate. Tests hold a hanging 1 kg weig
 
 ## Play in Abyssus
 
-Abyssus Physics runs Play in a separate process, `PlayHostMain`. `PlayHost` loads the scene text it is sent, builds a
+Abyssus runs Play in a separate process, `PlayHostMain`. `PlayHost` loads the scene text it is sent, builds a
 `PhysicsWorld` and runs at 120 Hz. Each frame it runs the game's systems, then `advance`. It sends poses at most 60
 times a second, over a loopback socket that speaks the play protocol (`play/PlayProtocol.kt`, version
 `PLAY_PROTOCOL` = 1). The host exits on `bye` or when the socket closes.
 
 A game names what Play runs with a `PlayModule`. The module provides its components (without the physics ones), the
 systems to run before each advance, input handling, telemetry and extra debug lines. `PlayExportMain` writes
-`<project>/abyssus/play.json` (`{protocol, module, classpath}`, stable bytes) next to the component schema, with the
-classpath it runs on made absolute. A game wires both exports as Gradle tasks:
+`<project>/abyssus/play.json` (`{protocol, module, classpath}`, stable bytes), with the classpath it runs on made
+absolute. A game can add this Gradle task (Control Line currently has no export task):
 
 ```kotlin
 tasks.register<JavaExec>("exportPlay") {
     classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("net.nevinsky.abyssus.physics.play.PlayExportMain")
+    mainClass.set("net.nevinsky.abyssus.lib.physics.play.PlayExportMain")
     args("com.example.game.GamePlayModule", rootProject.file("assets-project").absolutePath)
 }
-tasks.register("exportAbyssus") { dependsOn("exportComponentSchema", "exportPlay") }
 ```
 
 The runtime classpath must hold `physics` and the jolt-jni natives for the platforms the game is played on.
-Without `play.json`, Abyssus Physics runs its bundled play host with `PhysicsOnlyPlayModule`, which runs physics
-alone and reports each rope's tension. Export again whenever the classpath changes. A `play.json` naming a jar that
+Without `<project>/abyssus/play.json`, Abyssus runs its bundled play host with `PhysicsOnlyPlayModule`, which runs physics
+alone and reports each rope's tension. Export again whenever the classpath changes. A launch file naming a jar that
 no longer exists stops Play with that message.
 
 ## Natives
@@ -86,5 +86,5 @@ no longer exists stops Play with that message.
 once per process. Tests use the build machine's `DebugSp` jar. The `playHost` configuration resolves the four
 `ReleaseSp` jars (Linux64, Windows64, MacOSX64, MacOSX_ARM64) that the play host ships.
 
-Tests run with `./gradlew :physics:test`. They use the `Physics` fixture (`src/test/testData/project/Physics`).
+Tests run with `./gradlew :lib-physics:test`. They use the `Physics` fixture (`projects/plugin-abyssus/src/test/testData/project/Physics`).
 Required behavior is in the `physics-simulation` and `physics-components` specs.

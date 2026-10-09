@@ -30,7 +30,7 @@ import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 
 /**
  * Adds, changes and removes components of a scene's entities as undoable commands on the scene file. The rules are
- * [ComponentEditor]'s; nothing is written unless an edit comes back [EditResult.Changed].
+ * [net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor]'s; nothing is written unless an edit comes back [EditResult.Changed].
  */
 object SceneComponentEdits {
     private fun readMeta(folder: VirtualFile, metaFiles: MetaFiles) =

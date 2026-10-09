@@ -1,0 +1,30 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "type": "CLOUDS",
+  "additional": {
+    "technique": "shells",
+    "low": {
+      "type": "stratocumulus",
+      "base": 500.0,
+      "top": 2200.0,
+      "coverage": 0.92,
+      "density": 1.6,
+      "wind": [
+        16.0,
+        7.0
+      ]
+    },
+    "mid": {
+      "type": "altostratus",
+      "base": 3000.0,
+      "top": 6000.0,
+      "coverage": 0.85,
+      "density": 0.9,
+      "wind": [
+        24.0,
+        9.0
+      ]
+    }
+  }
+}

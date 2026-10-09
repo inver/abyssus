@@ -9,8 +9,8 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.Renderable
-import net.nevinsky.abyssus.lib.core.mesh.Mesh
+import net.nevinsky.abyssus.lib.gdx.Renderable
+import net.nevinsky.abyssus.lib.gdx.mesh.Mesh
 import net.nevinsky.abyssus.plugin.sceneview.GlHarness
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import org.junit.Assert.*

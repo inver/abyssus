@@ -14,9 +14,9 @@ import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.scene.Scene
-import net.nevinsky.abyssus.lib.runtime.float
-import net.nevinsky.abyssus.lib.runtime.obj
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.util.float
+import net.nevinsky.abyssus.lib.core.util.obj
 import java.io.File
 import kotlin.math.exp
 import kotlin.math.pow
@@ -68,7 +68,7 @@ data class SceneRenderParams(
 }
 
 /** The view parameters of [scene], seen through [camera]; [projectDir] holds its assets. */
-fun renderParamsOf(scene: Scene, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
+fun renderParamsOf(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
     val fog = fogOf(scene)
     return SceneRenderParams(
         fog?.color ?: SceneRenderParams.DEFAULT_CLEAR,
@@ -84,7 +84,7 @@ fun renderParamsOf(scene: Scene, camera: CameraParams, projectDir: File? = null)
     )
 }
 
-private fun ambientOf(scene: Scene): Rgba? {
+private fun ambientOf(scene: SceneDto): Rgba? {
     if (scene.ambientLightEnabled != true) return null
     val light = scene.ambientLight ?: return null
     val c = light.color ?: return null
@@ -92,7 +92,7 @@ private fun ambientOf(scene: Scene): Rgba? {
     return Rgba(c.r * k, c.g * k, c.b * k, 1f)
 }
 
-private fun fogOf(scene: Scene): FogParams? {
+private fun fogOf(scene: SceneDto): FogParams? {
     if (scene.fogEnabled != true) return null
     val fog = scene.fog ?: return null
     val c = fog.color ?: return null

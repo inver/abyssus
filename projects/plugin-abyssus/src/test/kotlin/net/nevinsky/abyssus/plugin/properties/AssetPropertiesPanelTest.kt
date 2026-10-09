@@ -106,12 +106,48 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         copyProject()
         val p = panel()
         p.show(abss())
-        assertEquals("Nothing to show: Untitled.abss is the project file.", (p.state as PanelState.Empty).message)
+        assertFalse((p.state as PanelState.Project).settings.physicsEnabled)
         val scene = children(children(abss()).single { label(it) == "scenes" }).single()
         // a scene row shows the scene's view settings (its Ray Tracing switch) instead of an empty state
         p.show(scene)
         val details = p.state as PanelState.UISceneState
         assertEquals("Main Scene.scene", details.file.name)
+    }
+
+    fun testProjectPhysicsCheckboxFollowsUnsavedEditsAndUndo() {
+        copyProject()
+        val node = abss() as AbyssusAssetNode
+        val file = node.virtualFile
+        val document = FileDocumentManager.getInstance().getDocument(file)!!
+        val original = document.text
+        val p = panel()
+        p.show(node)
+        fun checkbox() = find(p, "physics-enabled") as javax.swing.JCheckBox
+        assertFalse(checkbox().isSelected)
+        checkbox().doClick()
+        val enabled = document.text
+        assertTrue((p.state as PanelState.Project).settings.physicsEnabled)
+        assertEquals(SceneJson().parse(original).deepCopy<com.fasterxml.jackson.databind.node.ObjectNode>().put("physicsEnabled", true), SceneJson().parse(enabled))
+        val editor = providedEditor(p)!!
+        val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
+        undo.undo(editor)
+        assertEquals(original, document.text)
+        assertFalse(checkbox().isSelected)
+        undo.redo(editor)
+        assertEquals(enabled, document.text)
+        assertTrue(checkbox().isSelected)
+        checkbox().doClick()
+        assertEquals(enabled.replace("\"physicsEnabled\":true", "\"physicsEnabled\":false"), document.text)
+        WriteCommandAction.runWriteCommandAction(project) { document.setText(enabled) }
+        assertTrue(checkbox().isSelected)
+        assertTrue(FileDocumentManager.getInstance().isDocumentUnsaved(document))
+        WriteCommandAction.runWriteCommandAction(project) { document.setText(enabled.replace("\"formatVersion\":1", "\"formatVersion\":2")) }
+        assertFalse(checkbox().isEnabled)
+        assertFalse(checkbox().isSelected)
+        val unsupported = document.text
+        checkbox().doClick()
+        assertEquals(unsupported, document.text)
+        assertTrue((find(p, "project-settings-problem") as JBLabel).text.isNotBlank())
     }
 
     // 3.1a header
