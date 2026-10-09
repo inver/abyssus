@@ -2,66 +2,118 @@
 
 ## Context
 
-See `proposal.md` and the delta spec.
-- **From `add-sky-clouds`:** `CloudMetaReader`, `WeatherPresetReader`, `BuiltinPresets`, band-by-band merging and
-  `MetaType.WEATHER_PRESET`, all in `core`.
-- **From `add-asset-editing-and-terrain-generation`:**
-  - `AssetFileCommand`, which creates asset folders with staged bytes, one named undoable command, expected-state
-    checks, rollback, and Undo that removes the folder only when it is unchanged and unreferenced;
-  - pure folder-name validation;
-  - the New terrain action pattern on the Assets node.
+See `proposal.md` for the motivation and the two delta specs for behavior.
 
-This change composes them. It adds no new write mechanism.
+Current sources provide:
+- `ProceduralSkyMeta.cloudsReference`: a nonblank text UUID pointing to a project `CLOUDS` asset.
+- `CloudMeta`, `CloudBand`, `CloudType` defaults and `CloudTechnique` in `lib-core`; `AssetMetaBinder` binds cloud
+  metadata. A sky loads its referenced cloud asset as a dependency and reads its built settings.
+- `AssetMetaReader` in `lib-core-editor`, which admits native metadata before binding, and `SceneJson`, which
+  preserves raw number text and key order.
+- `checkFolderName` and `uniqueAssetUuid` in `lib-core-editor/terrain`. The validator already rejects colons,
+  separators, reserved names, escaping paths and case-insensitive collisions.
+- `AssetTransaction`, `FileChange`, `FileSnapshot`, `AssetReferenceGuard` and `AssetFileCommand.execute` in
+  the plugin's `assetfiles` package; `NewTerrainFactory` demonstrates staging a new asset.
+- `selectAssetInAbyssusView`, which refreshes the tree, selects the row and shows its properties.
+
+There is a source/spec gap to address before writing a snapshot: specs and bundled cloud templates use lowercase
+technique/type keys and a `wind` array. `CloudSettingsReaderTest` currently exercises uppercase enum names,
+explicit `level` and `windX`/`windZ`, and rejects malformed bands as a whole. Do not treat the templates as proof
+that the current runtime can bind a newly generated canonical asset.
 
 ## Goals / Non-Goals
 
-**Goals:** create a preset from a sky's resolved clouds in one undoable step; reuse the existing creation command and
-validation.
+**Goals:** compose existing readers and asset transactions; produce a cloud snapshot that the runtime actually
+loads; keep the draft headless and testable without Swing, platform services, noise generation or GL.
 
-**Non-Goals:** editing bands in the UI, or rewriting the sky to use the preset.
+**Non-Goals:** a new asset type or loading graph, a preset resolver/merge system, or capturing transient view state.
 
 ## Decisions
 
-### 1. `WeatherPresetDraft` resolves and serializes, in `core`, pure
-`WeatherPresetDraft.from(skyAdditional, presets, builtins)` returns the resolved bands, using the exact merge
-`add-sky-clouds` uses for drawing. It also reports when a named preset couldn't be read (the dialog notice).
+### 1. Resolve source documents by UUID and admit them before use
 
-`toMetaJson(uuid, lastModified)` writes, in this key order:
-`format: "abyssus"`, `formatVersion: 1`, `version: 1`, `lastModified`, `type: "WEATHER_PRESET"`, `uuid`, `additional: { low, mid, high }`. The source sky's metadata must itself be a supported native document, or creation is refused.
-- Only present bands are written.
-- Each band is written with every field resolved (type defaults filled in), so a preset is self-describing and
-  doesn't depend on future default changes.
-- Numbers are written with the plugin's float formatting through `SceneJson`.
+The plugin reads the owning project, sky and project asset metadata with unsaved document text (`textOf`) taking
+precedence. Validate the `.abss` as a project document. Parse source metadata through `SceneJson` and admit it with
+`AssetMetaReader`; verify the sky is `SKYBOX_PROCEDURAL` and the resolved source is `CLOUDS`.
 
-`WeatherPresetDraftTest` covers it without IntelliJ.
+Resolve the sky's textual `additional.clouds` against supported project asset metadata UUIDs, using the same
+project scope as the existing listing. Supply admitted source trees to the headless draft rather than passing IDE
+services into it. A missing, unreadable or wrong-type source, or a source with no valid band, produces a localized
+reason and no transaction. There are no sky-local bands to copy as a fallback.
 
-*Alternative:* copy the sky's raw `clouds` JSON. Rejected: built-ins and folder presets wouldn't be resolved, and the
-copy would depend on the original preset staying around.
+The action is visible for a supported procedural sky row with a nonblank textual reference. Source errors are
+reported when invoked; a missing/nontextual reference or another row hides the action. Re-read and validate the
+source when the user confirms Create so stale tree data cannot determine the snapshot.
 
-### 2. The action and dialog reuse asset creation
-`NewWeatherPresetAction` is registered in the Abyssus tree popup and enabled for a `SKYBOX_PROCEDURAL` asset node
-whose `meta.json` has `clouds`. It runs on the EDT:
-1. The dialog validates the name with the shared folder-name validator, plus a rule rejecting `:`.
-2. The action stages the bytes from `WeatherPresetDraft` with a fresh `UUID`.
-3. It calls `AssetFileCommand.create` with the command name "New Weather Preset".
-4. On success it selects the new asset through `AbyssusSelection`.
+*Alternative:* read the live built sky. Rejected: that requires rendering state, may lag unsaved text, and would
+couple creation to GL and noise generation.
 
-Reading the sky and preset happens in a read action with unsaved document text (`textOf`). Undo and Redo behavior is
-`AssetFileCommand`'s, including Redo reusing the same UUID.
+### 2. Share canonical cloud decoding and keep editing serialization in lib-core-editor
 
-### 3. Threading
-- **EDT:** dialog, validation, command.
-- **Read action:** reading `meta.json` texts.
-- No pool or GL work: drafts are tiny.
+First prove the spec/template representation binds through `AssetMetaBinder` and its default `JsonProcessor`.
+If it does not, correct the cloud reader in `lib-core` for lowercase keys, band level inferred from its container,
+`wind: [x, z]`, type defaults and the existing per-band validity rules. Runtime loading and the draft must use the
+same decoded `CloudMeta`; do not introduce an editor-only decoder that produces a different cloud setup.
+Reader corrections must not rewrite any input file and must retain unknown native extension trees in the editor.
+
+Place constructor-wired `WeatherPresetDraft` and its writer in
+`net.nevinsky.abyssus.lib.core.editor.weather`. They receive document/JSON collaborators and source trees;
+UUID generation and the clock remain injected at the staging boundary. They return either resolved settings and
+new metadata text or a reason key, without file writes or platform dependencies. Use injected `EditorMessages`
+for text produced in editor-core and `AbyssusBundle` for the plugin's dialog and command strings.
+
+The writer creates root fields in this order:
+`format`, `formatVersion`, `version`, `lastModified`, `uuid`, `type`, `additional`.
+The type is `CLOUDS`. `additional` contains the stored technique (`shells` when omitted) and only valid, present
+bands in low/mid/high order. Each copied band explicitly records `type`, `base`, `top`, `coverage`, `density` and
+`wind`, using canonical lowercase keys and all resolved defaults. Serialize through `SceneJson`; retain source
+number literals for unchanged supplied fields, and format newly materialized defaults deterministically.
+
+Retain unknown native extension members from the source cloud tree in their existing relative order, replacing
+only the new asset's identity/timestamp and intended known snapshot values. Default materialization applies only
+to the new document. Do not copy the source UUID, a view override, renderer fields, explicit runtime `level`, or
+3D noise resources into canonical band output. Known alternate runtime field spellings are decoded settings,
+not opaque extension members; test their handling alongside canonical input without migrating source files.
+
+*Alternative:* copy the metadata bytes. Rejected: it would reuse the UUID and preserve dependence on future defaults.
+
+### 3. Stage immutable bytes and reuse the existing creation transaction
+
+Follow the New Terrain pattern with a metadata-only staged asset:
+1. Trim and validate the requested folder name with `checkFolderName`, including at staging time.
+2. Choose a fresh UUID through `uniqueAssetUuid`; stage the draft with an injected creation timestamp.
+3. Construct an `AssetTransaction` named with the localized New Weather Preset command. Its single `FileChange`
+   is `assets/<name>/meta.json`, from `FileSnapshot.Absent` to immutable metadata bytes. Include the asset folder
+   in `createdDirs`, and `assets` only if it must be created.
+4. Set the undo guard to `AssetReferenceGuard(projectDir).blocker(name, uuid)`, covering saved and unsaved
+   references. Execute through `AssetFileCommand(project, LocalAssetFileStore(projectDir)).execute`.
+5. After successful VFS refresh, schedule `selectAssetInAbyssusView(project, abss, name)` as New Terrain does.
+   Map collision, conflict, blocked, cancellation and failure results to localized messages.
+
+This deliberately reuses the existing write path for creating a previously absent folder. `editSceneJson` remains
+required for edits to existing scene/project/metadata documents; this operation edits none of them.
+Undo removes only an unchanged, unreferenced created folder and refuses extra files or newer edits. Redo uses the
+same transaction, bytes, UUID and timestamp, and refuses a new collision. No automatic sky assignment is staged.
+
+*Alternative:* create directly through VFS. Rejected: it would duplicate rollback, expected-state and undo rules.
+
+### 4. Threading and UI
+
+Use EDT action updates, dialog presentation, validation and command execution, matching New Terrain. Capture VFS
+and unsaved document text in a read action on the EDT. Draft resolution and serialization are synchronous CPU
+operations over small metadata snapshots. Do not call `CloudsLoader.prepare`, generate noise, or touch libGDX/GL.
+The dialog suggests `weather_<sky>` and enables Create only for a valid name and a copyable source.
 
 ## Risks / Trade-offs
 
-- `add-asset-editing-and-terrain-generation` changes its creation API before landing → this change is applied after
-  it, and task 1.1 re-reads its current API.
-- Default values written at creation drift from later type defaults → intended; presets are snapshots.
-- Unsaved edits in the sky's `meta.json` editor → the draft reads the document text, so what the user sees is what
-  gets copied.
+- Canonical metadata is not covered by current binding tests → add runtime round-trip coverage and the targeted
+  reader correction before the draft/action; follow the existing spec rather than changing it to match the gap.
+- The source changes while the dialog is open → re-read it on Create and refuse if it is no longer copyable.
+- Defaults change later → intentional explicit snapshot values preserve the chosen weather.
+- New references or edits appear after creation → use the existing transaction verification and reference guard
+  for Undo/Redo, including unsaved editor references.
 
 ## Migration Plan
 
-No migration. Rollback removes the action; presets created by it stay as ordinary `WEATHER_PRESET` assets.
+No document migration or format-version change. Deployment registers the action once generated metadata passes
+the runtime round-trip gate. Removing the action leaves created assets as ordinary native `CLOUDS` assets.
