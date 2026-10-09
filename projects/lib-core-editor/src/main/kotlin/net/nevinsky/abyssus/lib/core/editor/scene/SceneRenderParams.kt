@@ -15,8 +15,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
-import net.nevinsky.abyssus.lib.gdx.util.float
-import net.nevinsky.abyssus.lib.gdx.util.obj
+import net.nevinsky.abyssus.lib.core.util.float
+import net.nevinsky.abyssus.lib.core.util.obj
 import java.io.File
 import kotlin.math.exp
 import kotlin.math.pow

@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.terrain
-
-import com.fasterxml.jackson.annotation.JsonAlias
+package net.nevinsky.abyssus.lib.core.assets.terrain
 
 /** The splat map: per-pixel weights of the four channel layers. */
 const val SPLAT_MAP = "splatMap"

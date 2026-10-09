@@ -2,10 +2,9 @@ package net.nevinsky.abyssus.plugin
 
 import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.assets.model.ModelMeta
+import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
 import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.Assert.*
 import org.junit.Test

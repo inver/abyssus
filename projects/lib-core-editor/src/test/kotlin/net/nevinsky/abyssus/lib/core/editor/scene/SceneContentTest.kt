@@ -17,10 +17,10 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.LIGHT_RANGE
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_NEAR
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_FAR
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_FOV
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.LIGHT_RANGE
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_NEAR
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FAR
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FOV
 
 class SceneContentTest {
     private fun content(json: String) = sceneContentOf(parseScene(json))
@@ -39,6 +39,17 @@ class SceneContentTest {
         assertEquals(listOf("terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), c.terrains.map { it.assetName })
         assertEquals(listOf("7", "8"), c.lights.map { it.entityId })
         assertEquals("skybox_physical", c.skybox)
+    }
+
+    @Test
+    fun aFlatRenderComponentPlacesItsModelAndItsTerrain() {
+        val c = content(
+            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
+              "1":{"components":{"RenderComponent":{"shaderKey":"defaultShader","type":"MODEL","assetName":"model_pilot"}}},
+              "2":{"components":{"RenderComponent":{"shaderKey":"terrain","type":"TERRAIN","assetName":"terrain_site"}}}}}}""",
+        )
+        assertEquals(listOf("model_pilot"), c.models.map { it.assetName })
+        assertEquals(listOf("terrain_site"), c.terrains.map { it.assetName })
     }
 
     @Test

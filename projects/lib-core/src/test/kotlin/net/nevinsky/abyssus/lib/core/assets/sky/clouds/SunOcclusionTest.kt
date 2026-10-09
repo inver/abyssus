@@ -6,7 +6,13 @@
 package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.AtmosphereParams
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SUN_OCCLUSION_FLOOR
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SunOcclusion
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.bandDistance
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.testing.failOnWarnings
 import org.junit.Assert.assertEquals

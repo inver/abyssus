@@ -13,10 +13,10 @@ import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.gdx.scene.RuntimeSceneLoader
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.gdx.scene.SceneEngine
-import net.nevinsky.abyssus.lib.gdx.assets.loading.AssetStorage
+import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.gdx.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.gdx.ecs.EcsLoader
 import net.nevinsky.abyssus.lib.gdx.scene.SceneLoader

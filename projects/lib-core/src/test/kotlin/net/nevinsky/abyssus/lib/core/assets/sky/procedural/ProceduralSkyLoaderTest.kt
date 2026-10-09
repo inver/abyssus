@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.gdx.assets.sky.procedural
 
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
 import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.gdx.assets.testProject

@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.gdx.editor.terrain
 
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.MAX_TERRAIN_RESOLUTION
+import net.nevinsky.abyssus.lib.core.assets.terrain.MAX_TERRAIN_RESOLUTION
 
 /** The smallest terrain resolution: two heights per side. */
 const val MIN_TERRAIN_RESOLUTION = 2
@@ -53,7 +53,7 @@ data class TerrainGenerationSettings(
 /**
  * Makes terrain heights from [TerrainGenerationSettings]: fractal noise sampled at world positions, so the same
  * settings, size and noise generator give the same heights at any resolution, then mapped onto the height range.
- * Heights are laid out row after row (z-major) as [net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainData] expects. Pure
+ * Heights are laid out row after row (z-major) as [net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData] expects. Pure
  * CPU work, safe on any thread.
  */
 class TerrainGenerator(private val noise: NoiseSamplerFactory) {

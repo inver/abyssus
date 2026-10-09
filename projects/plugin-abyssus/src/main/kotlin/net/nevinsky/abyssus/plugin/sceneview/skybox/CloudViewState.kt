@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.skybox
 
-import net.nevinsky.abyssus.lib.gdx.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 
 /** The scene view's Clouds choice: the sky asset's own technique, or one that overrides it in this view. */
 enum class CloudChoice(val technique: CloudTechnique?) {

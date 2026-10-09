@@ -4,6 +4,7 @@
  */
 
 package net.nevinsky.abyssus.lib.gdx
+
 object CoreConst {
     const val BYTES_IN_VERTEX_COORD: Int = 4
 }

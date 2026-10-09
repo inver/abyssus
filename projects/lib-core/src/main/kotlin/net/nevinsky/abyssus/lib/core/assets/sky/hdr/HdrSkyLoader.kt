@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.hdr
+package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.gdx.assets.loading.AssetLoader
-import net.nevinsky.abyssus.lib.gdx.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.gdx.assets.loading.Prepared
-import net.nevinsky.abyssus.lib.gdx.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 
 /**
  * `SKYBOX_HDR` assets: the `.exr` is decoded off the GL thread, then the environment is built on the GPU

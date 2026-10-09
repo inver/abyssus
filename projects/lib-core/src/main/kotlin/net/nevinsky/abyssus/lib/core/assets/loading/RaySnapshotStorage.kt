@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.assets.loading
+package net.nevinsky.abyssus.lib.core.assets.loading
 
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader

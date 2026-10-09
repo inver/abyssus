@@ -2,9 +2,9 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.gdx.assets.sky
+package net.nevinsky.abyssus.lib.core.assets.sky
 
-import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshot
+import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshot
 
 /** The widest equirectangular sky handed to a ray backend; the height is half of it. */
 const val RAY_SKY_MAX_WIDTH = 1024

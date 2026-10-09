@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.assets.model
+package net.nevinsky.abyssus.lib.core.assets.model
 
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Color
@@ -6,7 +6,7 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial

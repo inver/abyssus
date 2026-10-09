@@ -9,7 +9,7 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector3
 import com.github.stephengold.joltjni.*
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils
+import net.nevinsky.abyssus.lib.core.util.EcsUtils
 import net.nevinsky.abyssus.lib.physics.ColliderComponent
 import net.nevinsky.abyssus.lib.physics.ColliderShape
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets

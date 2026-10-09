@@ -4,15 +4,6 @@
  */
 package net.nevinsky.abyssus.lib.gdx.editor.ray
 
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayAssetLease
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssetState
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssets
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneChange
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneConversion
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneFrame
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneSnapshots
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySnapshotLimits
-import net.nevinsky.abyssus.lib.gdx.editor.ray.raySceneDiff
 import net.nevinsky.abyssus.lib.gdx.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.gdx.editor.scene.lightSetOf
@@ -21,10 +12,8 @@ import net.nevinsky.abyssus.lib.gdx.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.gdx.editor.scene.renderParamsOf
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneRaySettingsCodec
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneFallback
 
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
@@ -35,7 +24,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.content.LightKind
 import net.nevinsky.abyssus.lib.gdx.editor.content.LightPlacement
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
 import net.nevinsky.abyssus.lib.raytracing.RayColor
 import net.nevinsky.abyssus.lib.raytracing.RayEnvironment
 import net.nevinsky.abyssus.lib.gdx.editor.pick.DragResult

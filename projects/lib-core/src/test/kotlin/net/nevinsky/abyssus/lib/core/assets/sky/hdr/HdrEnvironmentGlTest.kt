@@ -5,6 +5,13 @@ import com.badlogic.gdx.backends.lwjgl3.TestGl
 import net.nevinsky.abyssus.lib.gdx.assets.skyShaders
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.utils.BufferUtils
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.GpuTexture
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HDR_BUILD_STEPS
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironmentBuild
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrImage
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.IRRADIANCE_SIZE
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.SPECULAR_SIZE
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -117,7 +124,8 @@ class HdrEnvironmentGlTest {
         inGl {
             val gl30 = Gdx.gl30
             Gdx.gl30 = null
-            val build = HdrEnvironmentBuild(shaders = shaders, image = image(16, 8) { _, _ -> floatArrayOf(1f, 1f, 1f) })
+            val build =
+                HdrEnvironmentBuild(shaders = shaders, image = image(16, 8) { _, _ -> floatArrayOf(1f, 1f, 1f) })
             try {
                 error = runCatching { build.step() }.exceptionOrNull()
             } finally {

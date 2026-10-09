@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.hdr
+package net.nevinsky.abyssus.lib.core.assets.sky.hdr
+
+import java.lang.Float
 
 /** An equirectangular image as RGB half floats, row by row from the top, the layout an `RGB16F` texture takes. */
 class HdrImage(val width: Int, val height: Int, val rgb: ShortArray) {
@@ -11,9 +13,9 @@ class HdrImage(val width: Int, val height: Int, val rgb: ShortArray) {
     fun pixel(x: Int, y: Int): FloatArray {
         val i = (y * width + x) * 3
         return floatArrayOf(
-            java.lang.Float.float16ToFloat(rgb[i]),
-            java.lang.Float.float16ToFloat(rgb[i + 1]),
-            java.lang.Float.float16ToFloat(rgb[i + 2])
+            Float.float16ToFloat(rgb[i]),
+            Float.float16ToFloat(rgb[i + 1]),
+            Float.float16ToFloat(rgb[i + 2])
         )
     }
 }

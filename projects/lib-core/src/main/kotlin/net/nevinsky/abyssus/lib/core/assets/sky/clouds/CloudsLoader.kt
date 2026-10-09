@@ -3,17 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.GL30
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.gdx.assets.loading.AssetLoader
-import net.nevinsky.abyssus.lib.gdx.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.gdx.assets.loading.Prepared
+import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 
 private const val GL_R8 = 0x8229
 private const val GL_RED = 0x1903
@@ -73,7 +74,7 @@ class Clouds(val name: String, val settings: CloudMeta, noise: CloudNoise?) : Di
         }
     }
 
-    private fun volume(gl30: com.badlogic.gdx.graphics.GL30, size: Int, texels: ByteArray): Int {
+    private fun volume(gl30: GL30, size: Int, texels: ByteArray): Int {
         val gl = Gdx.gl
         val texture = gl.glGenTexture()
         gl.glBindTexture(GL_TEXTURE_3D, texture)

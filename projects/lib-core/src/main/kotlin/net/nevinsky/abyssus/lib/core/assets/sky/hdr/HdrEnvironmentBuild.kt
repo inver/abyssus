@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.hdr
+package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
@@ -13,8 +13,8 @@ import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.gdx.util.GeometryUtils.Companion.createFullscreenTriangle
-import net.nevinsky.abyssus.lib.gdx.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 

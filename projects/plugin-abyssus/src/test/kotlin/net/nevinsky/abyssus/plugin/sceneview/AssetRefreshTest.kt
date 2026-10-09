@@ -7,10 +7,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.gdx.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.lib.gdx.editor.scene.PendingAssetRevision
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainMeta
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

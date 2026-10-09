@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 data class CloudMeta(
     val technique: CloudTechnique = CloudTechnique.SHELLS,

@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.gdx.editor.scene
 
+import net.nevinsky.abyssus.lib.gdx.editor.document.renderAssetOf
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
 import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
@@ -24,8 +25,7 @@ import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.gdx.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.gdx.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.gdx.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.gdx.util.opt
-import net.nevinsky.abyssus.lib.gdx.util.text
+import net.nevinsky.abyssus.lib.core.util.opt
 
 /** What a scene shows besides its environment. */
 data class SceneContent(
@@ -61,9 +61,7 @@ fun sceneContentOf(scene: SceneDto): SceneContent {
 private fun decode(entity: EntityView): DecodedEntity {
     val components = entity.components!!
     val position = components.opt("PositionComponent")
-    val asset = components.opt("RenderComponent")?.opt("renderable")?.opt("asset")
-    val assetType = asset?.text("type")
-    val assetName = asset?.text("assetName")
+    val asset = renderAssetOf(components.opt("RenderComponent"))
     return DecodedEntity(
         entity.id,
         entity.name,
@@ -72,7 +70,7 @@ private fun decode(entity: EntityView): DecodedEntity {
         components.opt("TypeComponent")?.let { read<TypeComponent>(it)?.type },
         components.opt("CameraComponent")?.let { read<CameraComponent>(it) },
         components.opt("LightComponent")?.let { read<LightComponent>(it) },
-        if (assetType != null && assetName != null) DecodedAsset(assetType, assetName) else null,
+        asset?.let { DecodedAsset(it.type, it.name) },
     )
 }
 

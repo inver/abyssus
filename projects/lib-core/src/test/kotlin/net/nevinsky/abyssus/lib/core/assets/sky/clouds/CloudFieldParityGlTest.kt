@@ -10,8 +10,11 @@ import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.utils.BufferUtils
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CLOUD_NOISE_PERIOD
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
 import net.nevinsky.abyssus.lib.gdx.assets.skyShaders
-import net.nevinsky.abyssus.lib.gdx.util.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -22,7 +25,7 @@ private const val GRID = 32
 private const val GL_RGBA32F = 0x8814
 
 /**
- * `clouds_common.glsl` against [CloudField]: the shader evaluates a grid of points into a float target and every value
+ * `clouds_common.glsl` against [net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField]: the shader evaluates a grid of points into a float target and every value
  * must match the Kotlin one within 1e-3. Opt-in: `-Dabyssus.glTests=true`.
  */
 class CloudFieldParityGlTest {

@@ -12,9 +12,9 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import net.nevinsky.abyssus.lib.gdx.dto.CameraDto
 import net.nevinsky.abyssus.lib.gdx.dto.CameraWrapper
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_FAR
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_FOV
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_NEAR
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FAR
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FOV
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_NEAR
 
 /** [camera]'s `direction` is the file's `viewPointPosition`. Bound by [CameraComponentDeserializer]. */
 @JsonDeserialize(using = CameraComponentDeserializer::class)

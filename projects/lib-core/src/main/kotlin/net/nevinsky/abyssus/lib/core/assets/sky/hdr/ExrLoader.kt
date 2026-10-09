@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.hdr
+package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
 import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import org.lwjgl.PointerBuffer
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.tinyexr.EXRHeader
@@ -13,7 +14,20 @@ import org.lwjgl.util.tinyexr.EXRImage
 import org.lwjgl.util.tinyexr.EXRVersion
 import org.lwjgl.util.tinyexr.TinyEXR
 import java.io.File
+import java.lang.Float
 import java.nio.FloatBuffer
+import kotlin.FloatArray
+import kotlin.IllegalStateException
+import kotlin.Int
+import kotlin.IntArray
+import kotlin.Pair
+import kotlin.ShortArray
+import kotlin.String
+import kotlin.check
+import kotlin.intArrayOf
+import kotlin.takeIf
+import kotlin.to
+import kotlin.use
 
 /** The largest finite half float. */
 private const val MAX_HALF = 65504f
@@ -66,7 +80,7 @@ class ExrLoader(private val fileLoader: FileLoader) {
         width.toInt() to height.toInt()
     }
 
-    private fun <T> withHeader(file: File, read: (EXRHeader, MemoryStack, org.lwjgl.PointerBuffer) -> T): T {
+    private fun <T> withHeader(file: File, read: (EXRHeader, MemoryStack, PointerBuffer) -> T): T {
         val path = file.absolutePath
         MemoryStack.stackPush().use { stack ->
             val version = EXRVersion.malloc(stack)
@@ -128,7 +142,7 @@ class ExrLoader(private val fileLoader: FileLoader) {
             throw IllegalStateException("$width x $height is not a 2:1 equirectangular image")
         }
         if (height > MAX_HDR_HEIGHT) {
-            throw IllegalStateException("image too large: $width x $height, at most ${MAX_HDR_HEIGHT * 2} x $MAX_HDR_HEIGHT")
+            throw IllegalStateException("image too large: $width x $height, at most ${MAX_HDR_HEIGHT * 2} x ${MAX_HDR_HEIGHT}")
         }
         var factor = 1
         while (width / factor > maxWidth && height / factor > 1) factor *= 2
@@ -186,11 +200,11 @@ class ExrLoader(private val fileLoader: FileLoader) {
         }
 
         val weight = 1f / (factor * factor)
-        val out = ShortArray(sum.size) { java.lang.Float.floatToFloat16(minOf(sum[it] * weight, MAX_HALF)) }
+        val out = ShortArray(sum.size) { Float.floatToFloat16(minOf(sum[it] * weight, MAX_HALF)) }
         return HdrImage(outW, outH, out)
     }
 
-    private fun message(error: org.lwjgl.PointerBuffer): String {
+    private fun message(error: PointerBuffer): String {
         val ptr = error.get(0)
         if (ptr == 0L) return "unknown error"
         return try {

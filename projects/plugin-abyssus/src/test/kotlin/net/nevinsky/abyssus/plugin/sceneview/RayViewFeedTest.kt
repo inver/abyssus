@@ -25,7 +25,8 @@ import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.plugin.AssetLoading
-import net.nevinsky.abyssus.lib.gdx.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
 import net.nevinsky.abyssus.lib.raytracing.RayUnavailableReason
 import org.junit.After
@@ -198,7 +199,7 @@ class RayViewFeedTest {
 
     @Test fun aBakedProceduralSkyReachesTheRendererAsADisplayValueTexture() {
         val feed = feed()
-        val baked = net.nevinsky.abyssus.lib.gdx.assets.sky.RaySkySnapshot(4, 2, FloatArray(4 * 2 * 4) { .25f }, hdr = false)
+        val baked = RaySkySnapshot(4, 2, FloatArray(4 * 2 * 4) { .25f }, hdr = false)
         val content = SceneContent(models = listOf(placement), skybox = "procedural")
         SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
         RayFakeDevice.await(what = "a scene with the baked sky") {

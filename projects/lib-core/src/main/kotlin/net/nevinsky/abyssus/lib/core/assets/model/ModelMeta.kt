@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.assets.model
+package net.nevinsky.abyssus.lib.core.assets.model
 
 data class ModelMeta(
     val file: String? = null,

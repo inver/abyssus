@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.gdx.editor.meta
 
+import net.nevinsky.abyssus.lib.gdx.editor.document.renderAssetOf
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.editor.components.ComponentEditor
@@ -105,9 +106,9 @@ fun readEntitySections(
  * from [materials] (null when the model cannot be found; it may throw). Null for a Render component of anything else.
  */
 fun readRenderOptics(render: JsonNode, materials: (String) -> List<RayMaterialIdentity>?, messages: EditorMessages): RenderOptics? {
-    val asset = render.path("renderable").path("asset")
-    if (asset.path("type").asText() != "MODEL") return null
-    val assetName = asset.path("assetName").asText().ifEmpty { return null }
+    val asset = renderAssetOf(render) ?: return null
+    if (asset.type != "MODEL") return null
+    val assetName = asset.name
     val codec = RayMaterialOverrides()
     val stored = codec.read(render)
     val identities = runCatchingKeepingCancellation { materials(assetName) }.getOrElse {

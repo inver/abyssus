@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
 
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.procedural
+package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.*

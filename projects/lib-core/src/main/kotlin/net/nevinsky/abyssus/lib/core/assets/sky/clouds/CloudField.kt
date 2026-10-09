@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 import kotlin.math.floor
 

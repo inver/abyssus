@@ -9,7 +9,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.pick.LineSink
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
 
-import net.nevinsky.abyssus.lib.gdx.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20

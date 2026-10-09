@@ -12,11 +12,11 @@ import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.gdx.assets.sky.SkyRenderer
-import net.nevinsky.abyssus.lib.gdx.assets.sky.SkyFrame
-import net.nevinsky.abyssus.lib.gdx.assets.sky.clouds.CloudTechnique
-import net.nevinsky.abyssus.lib.gdx.assets.sky.hdr.HdrEnvironment
-import net.nevinsky.abyssus.lib.gdx.assets.sky.hdr.HdrSky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSky
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SunDirection
 import java.io.File
 

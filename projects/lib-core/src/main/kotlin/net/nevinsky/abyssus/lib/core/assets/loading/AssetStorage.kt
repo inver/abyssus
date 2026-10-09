@@ -3,18 +3,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.loading
+package net.nevinsky.abyssus.lib.core.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
+import net.nevinsky.abyssus.lib.core.assets.loading.exception.AmbiguousLoaderException
+import net.nevinsky.abyssus.lib.core.assets.loading.exception.AssetAbsentException
+import net.nevinsky.abyssus.lib.core.assets.loading.exception.AssetPipelineException
+import net.nevinsky.abyssus.lib.core.assets.loading.exception.CyclicDependencyException
+import net.nevinsky.abyssus.lib.core.assets.loading.exception.DependencyFailedException
+import net.nevinsky.abyssus.lib.core.assets.loading.exception.MissingDependencyException
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.assets.loading.exception.*
 import org.slf4j.Logger
+import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.collections.iterator
 import kotlin.concurrent.withLock
 
 /**
@@ -71,7 +78,7 @@ private fun createOffGlExecutor(
         return OffGlExecutor(platformPreparePool(parallelism), virtualThreads = false)
     } catch (e: UnsupportedOperationException) {
         return OffGlExecutor(platformPreparePool(parallelism), virtualThreads = false)
-    } catch (e: java.lang.reflect.InvocationTargetException) {
+    } catch (e: InvocationTargetException) {
         val cause = e.cause
         if (cause is UnsupportedOperationException || cause is NoSuchMethodError) {
             return OffGlExecutor(platformPreparePool(parallelism), virtualThreads = false)

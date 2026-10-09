@@ -3,7 +3,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 import net.nevinsky.abyssus.plugin.AssetLoading
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import org.slf4j.Logger
-import net.nevinsky.abyssus.lib.gdx.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
 import java.util.concurrent.Executor
 

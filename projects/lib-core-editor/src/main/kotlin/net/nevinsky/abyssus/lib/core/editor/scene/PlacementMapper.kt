@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.gdx.editor.scene
 
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
 import net.nevinsky.abyssus.lib.gdx.editor.content.Quat

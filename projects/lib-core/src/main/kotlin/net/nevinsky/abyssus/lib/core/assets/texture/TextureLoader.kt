@@ -7,9 +7,9 @@ import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.assets.loading.AssetLoader
-import net.nevinsky.abyssus.lib.gdx.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.gdx.assets.loading.Prepared
+import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import net.nevinsky.abyssus.lib.gdx.loader.Pixmaps
 
 /**

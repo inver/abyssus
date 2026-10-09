@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.util
+package net.nevinsky.abyssus.lib.core.util
 
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType

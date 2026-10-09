@@ -2,10 +2,10 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.gdx.assets.model
+package net.nevinsky.abyssus.lib.core.assets.model
 
 import com.badlogic.gdx.graphics.Pixmap
-import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshot
+import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshot
 import java.util.*
 
 internal fun <T> immutableModelList(values: Collection<T>): List<T> = Collections.unmodifiableList(values.toList())

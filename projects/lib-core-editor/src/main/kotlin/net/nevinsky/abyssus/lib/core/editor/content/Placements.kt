@@ -1,11 +1,11 @@
 package net.nevinsky.abyssus.lib.gdx.editor.content
 
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.LIGHT_RANGE
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.LIGHT_CONE_ANGLE
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.LIGHT_EDGE_SOFTNESS
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_NEAR
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_FAR
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.CAMERA_FOV
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.LIGHT_RANGE
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.LIGHT_CONE_ANGLE
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.LIGHT_EDGE_SOFTNESS
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_NEAR
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FAR
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FOV
 
 data class Vec3(val x: Float, val y: Float, val z: Float)
 

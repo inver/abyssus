@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.lib.gdx.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.gdx.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils
+import net.nevinsky.abyssus.lib.core.util.EcsUtils
 import net.nevinsky.abyssus.lib.gdx.scene.SceneContext
 
 /** The field scene's file in the project. */

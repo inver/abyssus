@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.assets.sky.cube
+package net.nevinsky.abyssus.lib.core.assets.sky.cube
 
 class SkyboxMeta(
     val top: String?,

@@ -13,10 +13,10 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.gdx.assets.sky.RAY_SKY_MAX_WIDTH
-import net.nevinsky.abyssus.lib.gdx.assets.sky.RaySkySnapshot
-import net.nevinsky.abyssus.lib.gdx.assets.sky.SkyRenderer
-import net.nevinsky.abyssus.lib.gdx.assets.sky.SkyFrame
+import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
+import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos

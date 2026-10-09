@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
 
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import org.junit.Assert.assertEquals

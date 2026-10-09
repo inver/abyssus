@@ -8,7 +8,7 @@ import net.nevinsky.abyssus.lib.gdx.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.editor.meta.NEW_TERRAIN_UV_DEFAULT
 import net.nevinsky.abyssus.lib.gdx.editor.meta.TERRAIN_META_FILE_NAME_DEFAULT
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.SPLAT_FIELDS
+import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.util.*

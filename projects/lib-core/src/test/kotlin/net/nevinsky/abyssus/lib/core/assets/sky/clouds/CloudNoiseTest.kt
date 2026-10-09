@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
 
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CLOUD_BASE_NOISE_SIZE
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CLOUD_DETAIL_NOISE_SIZE
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudNoiseGenerator
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

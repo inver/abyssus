@@ -18,8 +18,8 @@ import net.nevinsky.abyssus.lib.gdx.io.EcsReadWarnings
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.scene.EcsLoadingWarns
 import net.nevinsky.abyssus.lib.gdx.scene.SceneEngine
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.NO_ENTITY
-import net.nevinsky.abyssus.lib.gdx.util.obj
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.util.obj
 
 /**
  * Loads the `ecs` block of a scene file into a [SceneEngine] with Jackson: each entry of an entity's `components` is

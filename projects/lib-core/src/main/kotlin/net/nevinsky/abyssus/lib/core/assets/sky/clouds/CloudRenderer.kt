@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
@@ -13,9 +13,9 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.AtmosphereParams
-import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.SKY_CAMERA_HEIGHT
-import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.SkyAmbient
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.SKY_CAMERA_HEIGHT
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.SkyAmbient
 
 
 /**

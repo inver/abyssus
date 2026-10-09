@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.procedural
+package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
 import net.nevinsky.abyssus.lib.gdx.assets.AssetIndex
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.gdx.assets.loading.AssetLoader
-import net.nevinsky.abyssus.lib.gdx.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.gdx.assets.loading.Prepared
-import net.nevinsky.abyssus.lib.gdx.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger

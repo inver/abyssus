@@ -1,11 +1,11 @@
 package net.nevinsky.abyssus.lib.gdx.assets
 
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.assets.model.ModelMeta
-import net.nevinsky.abyssus.lib.gdx.assets.sky.cube.SkyboxMeta
-import net.nevinsky.abyssus.lib.gdx.assets.sky.hdr.HdrSkyMeta
-import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.ProceduralSkyMeta
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainMeta
+import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureMeta
 import org.junit.Assert.*
 import org.junit.Test

@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.gdx.editor.pick
 
-import net.nevinsky.abyssus.lib.gdx.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.gdx.editor.content.Pose
 
 /**

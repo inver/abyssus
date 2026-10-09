@@ -14,7 +14,7 @@ import com.github.stephengold.joltjni.*
 import com.github.stephengold.joltjni.enumerate.EActivation
 import com.github.stephengold.joltjni.enumerate.EMotionType
 import com.github.stephengold.joltjni.enumerate.EOverrideMassProperties
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.lib.gdx.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.gdx.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent

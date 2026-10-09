@@ -1,9 +1,9 @@
-package net.nevinsky.abyssus.lib.gdx.assets.sky.hdr
+package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
+import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshotLoader
-import net.nevinsky.abyssus.lib.gdx.assets.sky.RAY_SKY_MAX_WIDTH
-import net.nevinsky.abyssus.lib.gdx.assets.sky.RaySkySnapshot
+import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
+import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 
 class HdrSkyRaySnapshotLoader(
     private val hdrSkyLoader: HdrSkyLoader

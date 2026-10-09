@@ -1,12 +1,14 @@
 package net.nevinsky.abyssus.lib.gdx.assets.sky.procedural
 
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.SkyAmbientEstimate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.sqrt
 
-/** [SkyAmbientEstimate], the CPU twin of the fixture sky's scattering (formerly the test-side `AtmosphereModel`). */
+/** [net.nevinsky.abyssus.lib.core.assets.sky.procedural.SkyAmbientEstimate], the CPU twin of the fixture sky's scattering (formerly the test-side `AtmosphereModel`). */
 class AtmosphereModelTest {
     private val earth = AtmosphereParams()
     private val model = SkyAmbientEstimate(earth)

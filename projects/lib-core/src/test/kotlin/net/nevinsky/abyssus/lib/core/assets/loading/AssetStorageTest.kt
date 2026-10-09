@@ -6,15 +6,19 @@
 package net.nevinsky.abyssus.lib.gdx.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
+import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.AssetState
+import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
+import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import org.slf4j.Logger
-import net.nevinsky.abyssus.lib.gdx.assets.loading.exception.DependencyFailedException
+import net.nevinsky.abyssus.lib.core.assets.loading.exception.DependencyFailedException
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.assets.loading.exception.AssetAbsentException
+import net.nevinsky.abyssus.lib.core.assets.loading.exception.AssetAbsentException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -719,7 +723,8 @@ class AssetStorageTest {
     }
 
     /** A loader that prepares from the meta the storage read, tagging the result with [kind]. */
-    private inner class KindLoader(val kind: String, val needs: Set<String> = emptySet()) : AssetLoader<Unit, String, Res> {
+    private inner class KindLoader(val kind: String, val needs: Set<String> = emptySet()) :
+        AssetLoader<Unit, String, Res> {
         override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, String> = Prepared("$kind:${meta.name}")
         override fun prepare(name: String): Prepared<Unit, String>? = error("a typed storage prepares from the meta")
         override fun dependencies(staged: String): Set<String> = needs
@@ -730,7 +735,15 @@ class AssetStorageTest {
     @Test
     fun theMetaTypePicksTheLoaderAndWhatNothingCanLoadFailsAsAbsent() {
         val types = mapOf("m" to MetaType.MODEL, "t" to MetaType.TERRAIN, "tex" to MetaType.TEXTURE, "sky" to MetaType.SKYBOX)
-        val c = AssetStorage(log, executor) { name -> types[name]?.let { AssetMeta<Any>(name = name, type = it, additional = Unit) } }
+        val c = AssetStorage(log, executor) { name ->
+            types[name]?.let {
+                AssetMeta<Any>(
+                    name = name,
+                    type = it,
+                    additional = Unit
+                )
+            }
+        }
         c.register(KindLoader("model"), MetaType.MODEL)
         c.register(KindLoader("terrain", setOf("tex")), MetaType.TERRAIN)
         c.register(KindLoader("texture"), MetaType.TEXTURE, MetaType.PIXMAP_TEXTURE)

@@ -25,12 +25,13 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.ArrayMap
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayModelSkinning
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.lib.gdx.assets.model.ModelRaySnapshotLoader
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayModelSource
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelSkinning
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.lib.core.assets.model.ModelRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelSource
 import net.nevinsky.abyssus.lib.gdx.AnimationController
 import net.nevinsky.abyssus.lib.gdx.ModelInstance
+import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.mesh.MeshPart
 import net.nevinsky.abyssus.lib.gdx.model.Model
@@ -163,6 +164,6 @@ class RayAnimationSnapshotTest {
                 bones = ArrayMap<String, Matrix4>().apply { put("joint", Matrix4()) }
             })
         })
-        return ModelRaySnapshotLoader(net.nevinsky.abyssus.lib.gdx.io.FileLoader(java.io.File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
+        return ModelRaySnapshotLoader(FileLoader(File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
     }
 }

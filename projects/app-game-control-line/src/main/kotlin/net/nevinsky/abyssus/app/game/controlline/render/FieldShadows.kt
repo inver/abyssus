@@ -21,7 +21,7 @@ import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.Pool
 import net.nevinsky.abyssus.lib.gdx.ModelInstance
 import net.nevinsky.abyssus.lib.gdx.Renderable
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainMesh
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.gdx.shader.ModelDepthShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasView

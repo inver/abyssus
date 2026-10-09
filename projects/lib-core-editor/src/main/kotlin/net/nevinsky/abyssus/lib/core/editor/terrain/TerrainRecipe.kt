@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.assets.displayMessage
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.MAX_TERRAIN_RESOLUTION
+import net.nevinsky.abyssus.lib.core.assets.terrain.MAX_TERRAIN_RESOLUTION
 
 /** The Abyssus-only file beside `terrain.data` that keeps how the applied heights were made. */
 const val TERRAIN_RECIPE_FILE = "abyssus-terrain.recipe.json"

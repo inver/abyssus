@@ -10,10 +10,10 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.assets.model.ModelLoader
+import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
 import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainLoader
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader

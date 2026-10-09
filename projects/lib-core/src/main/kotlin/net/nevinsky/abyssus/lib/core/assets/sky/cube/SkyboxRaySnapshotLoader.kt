@@ -1,10 +1,10 @@
-package net.nevinsky.abyssus.lib.gdx.assets.sky.cube
+package net.nevinsky.abyssus.lib.core.assets.sky.cube
 
 import com.badlogic.gdx.graphics.Pixmap
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshotLoader
-import net.nevinsky.abyssus.lib.gdx.assets.sky.RAY_SKY_MAX_WIDTH
-import net.nevinsky.abyssus.lib.gdx.assets.sky.RaySkySnapshot
+import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
+import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos

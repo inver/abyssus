@@ -14,17 +14,29 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.gdx.assets.sky.SkyFrame
-import net.nevinsky.abyssus.lib.gdx.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.AtmosphereParams
-import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.PreparedProceduralSky
-import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.ProceduralSky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
+import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.PreparedProceduralSky
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
 import net.nevinsky.abyssus.lib.gdx.assets.skyShaders
 import net.nevinsky.abyssus.lib.gdx.assets.testProject
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.VertexAttributes.Usage
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudNoise
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudNoiseGenerator
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudRenderer
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.LayeredClouds
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.ShellClouds
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.VolumetricClouds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -256,7 +268,10 @@ class CloudTechniqueGlTest {
                 resetsAfterTurn = renderer.historyResets - before - resetsAfterNudge
 
                 // a resized view with no clouds left in its sky must show none of the previous history
-                val empty = sky(clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 0f)), factory = { VolumetricClouds(skyShaders(), CloudField()).also { volumetricRenderer[0] = it } })
+                val empty = sky(clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 0f)), factory = { VolumetricClouds(
+                    skyShaders(),
+                    CloudField()
+                ).also { volumetricRenderer[0] = it } })
                 try {
                     repeat(3) { capture { empty.draw(camera(60f), frame) } }
                     leaked = capture(SIZE * 2) { empty.draw(camera(60f, size = SIZE * 2), frame) }

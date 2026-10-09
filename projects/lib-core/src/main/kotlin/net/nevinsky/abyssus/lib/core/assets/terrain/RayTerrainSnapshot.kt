@@ -2,12 +2,12 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.gdx.assets.terrain
+package net.nevinsky.abyssus.lib.core.assets.terrain
 
-import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshot
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayModelImage
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayTextureColorSpace
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayTextureSampler
+import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshot
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelImage
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureColorSpace
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureSampler
 import java.util.*
 
 data class RayTerrainTexture(

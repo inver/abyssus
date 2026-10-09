@@ -25,10 +25,17 @@ import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import com.badlogic.gdx.math.Matrix4
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.SPLAT_LAYERS
-import net.nevinsky.abyssus.lib.gdx.assets.model.*
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelColor
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelImage
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelMaterial
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelMesh
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelNode
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureSampler
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureWrap
+import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_LAYERS
 import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.RayTerrainSnapshot
+import net.nevinsky.abyssus.lib.core.assets.terrain.RayTerrainSnapshot
 import net.nevinsky.abyssus.lib.raytracing.*
 import net.nevinsky.abyssus.lib.gdx.editor.pick.DragResult
 

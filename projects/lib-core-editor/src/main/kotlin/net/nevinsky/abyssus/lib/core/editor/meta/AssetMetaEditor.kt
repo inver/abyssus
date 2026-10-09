@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.gdx.editor.meta
 
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.SPLAT_FIELDS
+import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.FloatNode
@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.assets.sky.procedural.AtmosphereParams
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
 import java.math.BigDecimal
 import java.util.UUID
 import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation

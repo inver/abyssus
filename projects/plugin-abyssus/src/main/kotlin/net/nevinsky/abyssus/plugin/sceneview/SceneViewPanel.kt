@@ -46,7 +46,7 @@ import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import javax.swing.Timer
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
-import net.nevinsky.abyssus.lib.gdx.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudFrameBudget
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudViewState

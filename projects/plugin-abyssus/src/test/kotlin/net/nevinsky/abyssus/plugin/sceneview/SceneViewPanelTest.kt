@@ -15,6 +15,7 @@ import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 import com.intellij.openapi.actionSystem.Separator
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.plugin.projectView.AddAssetGroup
 import net.nevinsky.abyssus.plugin.projectView.AddLightGroup
 import net.nevinsky.abyssus.plugin.projectView.canAddAsset
@@ -136,7 +137,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
                 assertNull(renderers.getValue(panel).state.cloudTechnique)
             }
             choose(first, net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.LAYERED)
-            assertEquals(net.nevinsky.abyssus.lib.gdx.assets.sky.clouds.CloudTechnique.LAYERED, firstRenderer.state.cloudTechnique)
+            assertEquals(CloudTechnique.LAYERED, firstRenderer.state.cloudTechnique)
             assertNull("the other view keeps its own choice", secondRenderer.state.cloudTechnique)
             assertEquals(net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.ASSET, second.cloudState.choice)
         } finally {
@@ -188,7 +189,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             assertTrue(note.isVisible)
             assertEquals(AbyssusBundle.message("sceneViewCloudsFallback"), note.text)
             assertEquals(net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.SHELLS, (clouds(panel).selectedItem as CloudChoiceItem).choice)
-            assertEquals(net.nevinsky.abyssus.lib.gdx.assets.sky.clouds.CloudTechnique.SHELLS, renderer.state.cloudTechnique)
+            assertEquals(CloudTechnique.SHELLS, renderer.state.cloudTechnique)
 
             choose(panel, net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.VOLUMETRIC)
             assertFalse("choosing again clears the note", note.isVisible)

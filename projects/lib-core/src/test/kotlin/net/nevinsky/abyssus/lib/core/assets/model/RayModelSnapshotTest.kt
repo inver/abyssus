@@ -15,9 +15,16 @@ import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.GdxNativesLoader
 import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshotLease
-import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshotLoader
-import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshotStore
+import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLease
+import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotStore
+import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
+import net.nevinsky.abyssus.lib.core.assets.model.ModelRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelSource
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureColorSpace
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureFilter
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureWrap
 import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.*
@@ -56,7 +63,12 @@ class RayModelSnapshotTest {
     private fun store(queue: ArrayDeque<Runnable>, loader: RaySnapshotLoader<RayModelSnapshot, RayModelSource>, maxBytes: Long = 256L * 1024 * 1024) =
         RaySnapshotStore(Executor { queue.add(it) }, metas, loader, "model", maxBytes)
 
-    private fun capture(data: ModelData, images: Map<String, Pixmap> = emptyMap()) = capturer.capture(RayModelSource(data, images))
+    private fun capture(data: ModelData, images: Map<String, Pixmap> = emptyMap()) = capturer.capture(
+        RayModelSource(
+            data,
+            images
+        )
+    )
 
     @Test fun keepsThirtyTwoBitIndicesAndCopiesGeometryAndNodeMaterials() {
         val data = data(70002)

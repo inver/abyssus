@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.lib.gdx.assets.terrain
 
+import net.nevinsky.abyssus.lib.core.assets.terrain.TERRAIN_FLOATS_PER_VERTEX
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.gdx.assets.testProject

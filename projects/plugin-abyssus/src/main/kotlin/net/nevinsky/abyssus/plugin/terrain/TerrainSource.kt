@@ -11,10 +11,10 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.gdx.util.obj
-import net.nevinsky.abyssus.lib.gdx.util.text
+import net.nevinsky.abyssus.lib.core.util.obj
+import net.nevinsky.abyssus.lib.core.util.text
 import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.MAX_TERRAIN_RESOLUTION
+import net.nevinsky.abyssus.lib.core.assets.terrain.MAX_TERRAIN_RESOLUTION
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.MIN_TERRAIN_RESOLUTION
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.RecipeStatus
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.SourceSnapshot

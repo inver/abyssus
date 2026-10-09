@@ -8,7 +8,7 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.gdx.BaseCtx
+import net.nevinsky.abyssus.lib.core.BaseCtx
 import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent

@@ -13,6 +13,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
+import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 import net.nevinsky.abyssus.lib.raytracing.RayFrame
 import java.io.File
 import java.util.Collections
@@ -25,7 +26,7 @@ class RayFrameContext(
     /** The built HDR sky's six axis irradiance colours (+X, -X, +Y, -Y, +Z, -Z), the same ones raster models use as ambient. */
     val hdrAmbient: FloatArray? = null,
     /** Bakes the scene's procedural sky (arbitrary asset GLSL) on the render thread; null for any other sky. Only asked in ray mode. */
-    val bakedSky: (() -> net.nevinsky.abyssus.lib.gdx.assets.sky.RaySkySnapshot?)? = null,
+    val bakedSky: (() -> RaySkySnapshot?)? = null,
 )
 
 data class RayDisplayCamera(

@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
 
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CLOUD_NOISE_PERIOD
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,7 +29,9 @@ class CloudFieldTest {
     )
 
     private fun sampleFbm(): FloatArray = listOf(0.1f to 0.2f, 3.7f to -12.25f, 63.9f to 0.05f, -100.3f to 7.77f, 1000.5f to 1000.5f)
-        .flatMap { (u, v) -> listOf(field.fbm(u, v, 0, 4), field.fbm(u, v, 5, 5), field.noise(u, v, 3, CLOUD_NOISE_PERIOD)) }
+        .flatMap { (u, v) -> listOf(field.fbm(u, v, 0, 4), field.fbm(u, v, 5, 5), field.noise(u, v, 3,
+            CLOUD_NOISE_PERIOD
+        )) }
         .toFloatArray()
 
     private fun sample(): FloatArray = times.flatMap { t ->

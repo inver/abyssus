@@ -5,7 +5,7 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.annotation.JsonIgnore
-import net.nevinsky.abyssus.lib.gdx.util.EcsUtils.Companion.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
 
 /**
  * Bound from the scene JSON by Jackson: `localPosition`, `localRotation` and `localScale` merge into the component's

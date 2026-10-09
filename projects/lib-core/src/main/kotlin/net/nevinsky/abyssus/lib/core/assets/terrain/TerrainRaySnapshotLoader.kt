@@ -1,12 +1,12 @@
-package net.nevinsky.abyssus.lib.gdx.assets.terrain
+package net.nevinsky.abyssus.lib.core.assets.terrain
 
 import com.badlogic.gdx.graphics.Pixmap
+import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureFilter
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureSampler
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureWrap
+import net.nevinsky.abyssus.lib.core.assets.model.copyRayImage
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshotLoader
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayTextureFilter
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayTextureSampler
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayTextureWrap
-import net.nevinsky.abyssus.lib.gdx.assets.model.copyRayImage
 import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureLoader
 
@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureLoader
  * The CPU-only companion of a terrain: its heights and splat images are read afresh (no GL, nothing uploaded, no GPU
  * asset touched), because the raster side keeps no pixels once its splat textures are on the GPU. This is a
  * companion read, not an asset load, so it takes [terrainLoader] (for the parsed terrain) and [textureLoader] (for the
- * decoded images) directly, without the caching [net.nevinsky.abyssus.lib.gdx.assets.loading.AssetStorage] gives GPU assets.
+ * decoded images) directly, without the caching [net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage] gives GPU assets.
  */
 class TerrainRaySnapshotLoader(
     private val terrainLoader: TerrainLoader,
@@ -27,7 +27,8 @@ class TerrainRaySnapshotLoader(
         try {
             for ((field, folder) in prepared.splats) {
                 // an unreadable texture is left out, as the raster terrain leaves its layer out
-                runCatchingKeepingCancellation { textureLoader.prepare(folder)?.staged?.release() }.getOrNull()?.let { images[field] = it }
+                runCatchingKeepingCancellation { textureLoader.prepare(folder)?.staged?.release() }.getOrNull()
+                    ?.let { images[field] = it }
             }
             return snapshot(prepared.data, images)
         } finally {

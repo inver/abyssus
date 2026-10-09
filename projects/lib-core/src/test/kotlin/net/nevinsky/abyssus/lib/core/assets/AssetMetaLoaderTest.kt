@@ -2,8 +2,8 @@ package net.nevinsky.abyssus.lib.gdx.assets
 
 import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.assets.sky.cube.SkyboxMeta
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.TerrainMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureMeta
 import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.Assert.*

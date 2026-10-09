@@ -14,11 +14,16 @@ import com.badlogic.gdx.utils.GdxNativesLoader
 import net.nevinsky.abyssus.lib.gdx.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshotLoader
-import net.nevinsky.abyssus.lib.gdx.assets.loading.RaySnapshotStore
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayTextureColorSpace
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayTextureFilter
-import net.nevinsky.abyssus.lib.gdx.assets.model.RayTextureWrap
+import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotStore
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureColorSpace
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureFilter
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureWrap
+import net.nevinsky.abyssus.lib.core.assets.terrain.RayTerrainSnapshot
+import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_MAP
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainRaySnapshotLoader
 import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureLoader
 import org.junit.After
@@ -79,7 +84,8 @@ class RayTerrainSnapshotTest {
 
     @Test fun capturesSequentialSplatBlendInputsAndDistinctSamplerConventions() {
         GdxNativesLoader.load()
-        val images = linkedMapOf(SPLAT_MAP to pixel(0x80800000.toInt()), "splatBase" to pixel(0x000000ff),
+        val images = linkedMapOf(
+            SPLAT_MAP to pixel(0x80800000.toInt()), "splatBase" to pixel(0x000000ff),
             "splatR" to pixel(0xff0000ff.toInt()), "splatG" to pixel(0x00ff00ff))
         val snapshot = try { graph().snapshotLoader().capture(data(), images) } finally { images.values.forEach(Pixmap::dispose) }
         val splat = snapshot.splatMap!!
