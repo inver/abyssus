@@ -4,18 +4,18 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssetState
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneConversion
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneFrame
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneSnapshots
-import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssetState
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneConversion
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneFrame
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneSnapshots
+import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.plugin.AssetLoading
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.gdx.editor.parseScene
 import net.nevinsky.abyssus.lib.raytracing.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
@@ -34,7 +34,7 @@ class RayRealSceneTest {
 
     private fun snapshot(): RaySceneFrame {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
-        val loading = AssetLoading(JsonProcessor(), printingLog, Executor(Runnable::run), ShaderSource("/shader/sky", AssetLoading::class.java))
+        val loading = AssetLoading(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), printingLog, Executor(Runnable::run), ShaderStorage())
         val content = sceneContentOf(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
         val assets = raySceneAssetsOf(ViewAssets(loading))
         assets.update(project, content)

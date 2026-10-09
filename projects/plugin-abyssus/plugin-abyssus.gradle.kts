@@ -68,17 +68,6 @@ dependencies {
     implementation(libs.gdx.backend.lwjgl3) { isTransitive = false }
     runtimeOnly(variantOf(libs.gdx.platform) { classifier("natives-desktop") })
 
-    // Entity-component engine behind the scene model (net.nevinsky.abyssus.ecs)
-    implementation(project(":lib-runtime")) {
-        exclude(group = "org.jetbrains.kotlin")
-        exclude(group = "org.slf4j")
-    }
-
-    // Model runtime + Assimp importer (brings lwjgl-assimp and its natives); the IDE provides Kotlin and the SLF4J API
-    implementation(project(":lib-gdx-model")) {
-        exclude(group = "org.jetbrains.kotlin")
-        exclude(group = "org.slf4j")
-    }
     // Asset reading and loading (plain JVM, see core/README.md); the IDE provides Kotlin and SLF4J here too
     implementation(project(":lib-core")) {
         exclude(group = "org.jetbrains.kotlin")
@@ -143,17 +132,6 @@ changelog {
     path.set(rootProject.file("CHANGELOG.md").absolutePath)
     groups.empty()
     repositoryUrl.set(properties("pluginRepositoryUrl"))
-}
-
-// Configure Gradle Kover Plugin - read more: https://github.com/Kotlin/kotlinx-kover#configuration
-kover {
-    reports {
-        total {
-            xml {
-                onCheck = true
-            }
-        }
-    }
 }
 
 tasks {

@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.pick
+package net.nevinsky.abyssus.lib.gdx.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.scene.cameraFrustumOf
-import net.nevinsky.abyssus.lib.core.editor.scene.cameraSideAxes
-import net.nevinsky.abyssus.lib.core.editor.scene.toVec3
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
-import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.editor.scene.cameraFrustumOf
+import net.nevinsky.abyssus.lib.gdx.editor.scene.cameraSideAxes
+import net.nevinsky.abyssus.lib.gdx.editor.scene.toVec3
+import net.nevinsky.abyssus.lib.gdx.editor.scene.toVector3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightKind
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.content.CameraPlacement
 
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.document
+package net.nevinsky.abyssus.lib.gdx.editor.document
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation

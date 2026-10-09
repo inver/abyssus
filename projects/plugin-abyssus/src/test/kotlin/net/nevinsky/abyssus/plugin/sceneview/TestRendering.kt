@@ -1,9 +1,9 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.plugin.AssetLoading
-import net.nevinsky.abyssus.lib.core.testing.RecordingLogger
+import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import org.slf4j.Logger
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.util.concurrent.Executor
 
@@ -15,6 +15,6 @@ val printingLog: Logger = RecordingLogger(echo = true)
  * on [executor] (the calling thread by default) and problems to [log].
  */
 fun testRenderer(executor: Executor = Executor(Runnable::run), log: Logger = printingLog): SceneRenderer = SceneRenderer(
-    ViewAssets(AssetLoading(JsonProcessor(), log, executor, ShaderSource("/shader/sky", AssetLoading::class.java))),
-    ShaderSource("/shader/scene", SceneRenderer::class.java),
+    ViewAssets(AssetLoading(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), log, executor, ShaderStorage())),
+    ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java),
 )

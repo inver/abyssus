@@ -4,17 +4,14 @@
  */
 package net.nevinsky.abyssus.lib.physics
 
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.runtime.SceneContext
-import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
+import net.nevinsky.abyssus.lib.core.scene.SceneContext
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.testing.warningsTo
-import net.nevinsky.abyssus.lib.core.testing.failOnWarnings
+import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
+import net.nevinsky.abyssus.lib.gdx.testing.failOnWarnings
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -73,10 +70,10 @@ class PhysicsWorldTest {
         try {
             writeFlatModel(File(project, "assets/flat"))
             val messages = mutableListOf<String>()
-            val scene = requireNotNull(RuntimeSceneLoader(JsonProcessor(), FileLoader(project), warningsTo(messages), PhysicsComponents()).loadFromText(
+            val scene = requireNotNull(physicsLoader(project, warningsTo(messages)).loadFromText(
                 """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
                   "0":{"components":{"NameComponent":{"name":"Flat"},"ColliderComponent":{"shape":"CONVEX_HULL"},
-                    "RenderComponent":{"renderable":{"kind":"asset","shaderKey":"defaultShader","asset":{"type":"MODEL","assetName":"flat"}}}}},
+                    "RenderComponent":{"shaderKey":"defaultShader","type":"MODEL","assetName":"flat"}}},
                   "1":{"components":{"NameComponent":{"name":"Ball"},"PositionComponent":{"localPosition":{"y":5}},
                     "RigidBodyComponent":{},"ColliderComponent":{"shape":"SPHERE"}}}}}}""",
             ))
@@ -203,7 +200,7 @@ class PhysicsWorldTest {
 
     /** A scene of [entities] (`"<id>": {components}` pairs) in a project with no assets. */
     private fun sceneOf(entities: String): SceneContext = requireNotNull(
-        RuntimeSceneLoader(JsonProcessor(), FileLoader(testProject("Physics")), failOnWarnings(), PhysicsComponents())
+        physicsLoader(testProject("Physics"), failOnWarnings())
             .loadFromText("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{$entities}}}"""),
     )
 
@@ -334,7 +331,7 @@ class PhysicsWorldTest {
                          {"bufferView":1,"componentType":5123,"count":6,"type":"SCALAR"}]}""",
         )
         File(dir, "meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"flat","type":"MODEL","additional":{"file":"model.gltf","format":"GLTF","binary":false,"materials":[]}}""",
+            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"6f1c1b0e-5d7a-4e2b-9a43-0c2d8e1f7a10","type":"MODEL","additional":{"file":"model.gltf","format":"GLTF","binary":false,"materials":[]}}""",
         )
         assertNotNull(File(dir, "model.gltf"))
     }

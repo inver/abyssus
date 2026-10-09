@@ -5,14 +5,14 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.shadows
 
-import net.nevinsky.abyssus.lib.core.editor.scene.DirectionalSource
-import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
-import net.nevinsky.abyssus.lib.core.editor.scene.PointSource
-import net.nevinsky.abyssus.lib.core.editor.scene.SpotCone
-import net.nevinsky.abyssus.lib.core.editor.scene.SpotSource
-import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import net.nevinsky.abyssus.lib.gdx.editor.scene.DirectionalSource
+import net.nevinsky.abyssus.lib.gdx.editor.scene.LightSet
+import net.nevinsky.abyssus.lib.gdx.editor.scene.PointSource
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SpotCone
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SpotSource
+import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
 
 import net.nevinsky.abyssus.plugin.sceneview.*
 import org.junit.Assert.*

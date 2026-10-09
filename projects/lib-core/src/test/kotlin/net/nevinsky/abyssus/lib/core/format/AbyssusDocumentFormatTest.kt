@@ -2,14 +2,18 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.core.format
+package net.nevinsky.abyssus.lib.gdx.format
 
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.FormatProblem
+import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.*
 import org.junit.Test
 
 class AbyssusDocumentFormatTest {
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val format = AbyssusDocumentFormat()
 
     @Test fun nativeHeadersSupportEachDocumentKindWithoutChangingThePayload() {

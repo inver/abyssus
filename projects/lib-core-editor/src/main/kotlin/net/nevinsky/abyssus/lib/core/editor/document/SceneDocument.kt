@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.document
+package net.nevinsky.abyssus.lib.gdx.editor.document
 
 import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
@@ -12,9 +12,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.gdx.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 
 /*
  * The only code that knows how a scene file addresses its entities. Readers use [SceneDocument]; writers mutate the
@@ -97,12 +97,19 @@ class EntityView(val id: String, private val node: JsonNode, private val decoder
         val reader = checkNotNull(decoder) { "Typed component access requires a scene component decoder" }
         runCatchingKeepingCancellation { reader.read(type, value) }.getOrNull()
     }
-    fun renderAsset(): RenderAsset? {
-        val asset = componentNode("RenderComponent")?.get("renderable")?.get("asset") ?: return null
-        val type = asset.get("type")?.takeIf { it.isTextual }?.textValue() ?: return null
-        val name = asset.get("assetName")?.takeIf { it.isTextual }?.textValue() ?: return null
-        return RenderAsset(type, name)
-    }
+    fun renderAsset(): RenderAsset? = renderAssetOf(componentNode("RenderComponent"))
+}
+
+/**
+ * The asset a `RenderComponent` entry names: its `type` and `assetName`. A scene saved before the render component
+ * was flat nested them as `renderable.asset`, which is read too.
+ */
+fun renderAssetOf(render: JsonNode?): RenderAsset? {
+    if (render == null) return null
+    val asset = if (render.has("assetName")) render else render.get("renderable")?.get("asset") ?: return null
+    val type = asset.get("type")?.takeIf { it.isTextual }?.textValue() ?: return null
+    val name = asset.get("assetName")?.takeIf { it.isTextual }?.textValue()?.takeIf { it.isNotEmpty() } ?: return null
+    return RenderAsset(type, name)
 }
 
 /**

@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.meta
+package net.nevinsky.abyssus.lib.gdx.editor.meta
 
-import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
 
 /** Why an asset property edit was refused, as the user reads it. */
 fun EditError.message(messages: EditorMessages): String = messages.message("assetEditError.$name")

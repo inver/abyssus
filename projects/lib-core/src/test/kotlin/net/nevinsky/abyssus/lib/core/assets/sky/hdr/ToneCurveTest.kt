@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

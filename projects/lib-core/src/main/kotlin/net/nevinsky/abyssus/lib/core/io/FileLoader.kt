@@ -18,6 +18,9 @@ class FileLoader(val projectDir: File) {
             ?: throw IllegalStateException("Failed to load file '$fileName' in asset '$assetName'")
     }
 
+    /** The file [fileName] of the asset folder [assetName]; null when the asset or the file is missing. */
+    fun findAssetFile(assetName: String, fileName: String?): File? = folder(assetName)?.let { file(it, fileName) }
+
     fun loadAssetFileContent(assetName: String, fileName: String?): String {
         val content = loadAssetFile(assetName, fileName).readText()
         if (content.isBlank()) {

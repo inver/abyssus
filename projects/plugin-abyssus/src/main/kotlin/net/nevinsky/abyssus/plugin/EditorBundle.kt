@@ -6,8 +6,8 @@
 package net.nevinsky.abyssus.plugin
 
 import com.intellij.DynamicBundle
-import net.nevinsky.abyssus.lib.core.editor.EDITOR_BUNDLE
-import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.gdx.editor.EDITOR_BUNDLE
+import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
 import org.jetbrains.annotations.PropertyKey
 
 /** The editing library's messages as the IDE shows them; the text lives in `messages/AbyssusEditorBundle.properties`. */

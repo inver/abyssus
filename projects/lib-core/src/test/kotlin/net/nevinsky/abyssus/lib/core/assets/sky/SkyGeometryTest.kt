@@ -10,14 +10,16 @@ import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.GdxNativesLoader
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
 
 class SkyGeometryTest {
-    private val sky = object : Sky {
-        override fun draw(camera: Camera, sun: Vector3) = Unit
+    private val sky = object : SkyRenderer {
+        override fun draw(camera: Camera, frame: SkyFrame) = Unit
         override fun dispose() = Unit
     }
 

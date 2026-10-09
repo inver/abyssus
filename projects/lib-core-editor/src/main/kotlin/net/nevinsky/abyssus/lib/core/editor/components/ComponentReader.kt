@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.components
+package net.nevinsky.abyssus.lib.gdx.editor.components
 
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.graphics.Color
@@ -15,8 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import net.nevinsky.abyssus.lib.runtime.ecs.render.AssetResolver
-import net.nevinsky.abyssus.lib.runtime.ecs.scene.SceneEcsWarnings
+import net.nevinsky.abyssus.lib.core.io.EcsReadWarnings
 import org.slf4j.Logger
 
 @JsonAutoDetect(
@@ -33,7 +32,7 @@ private interface PublicFieldsOnly
  * vectors and colors by their public fields, an object that names only some fields merged over the component's own
  * defaults, and decimal text kept. Unlike a scene load it leaves entity references as the file has them.
  */
-class ComponentReader(mapper: ObjectMapper, resolver: AssetResolver, log: Logger) : net.nevinsky.abyssus.lib.core.editor.document.SceneComponentDecoder {
+class ComponentReader(mapper: ObjectMapper, log: Logger) : net.nevinsky.abyssus.lib.gdx.editor.document.SceneComponentDecoder {
     private val reader: ObjectReader = mapper.copy()
         .addMixIn(Vector3::class.java, PublicFieldsOnly::class.java)
         .addMixIn(Quaternion::class.java, PublicFieldsOnly::class.java)
@@ -42,8 +41,7 @@ class ComponentReader(mapper: ObjectMapper, resolver: AssetResolver, log: Logger
         .setDefaultMergeable(true)
         .reader(
             InjectableValues.Std()
-                .addValue(AssetResolver::class.java.name, resolver)
-                .addValue(SceneEcsWarnings::class.java.name, SceneEcsWarnings(log)),
+                .addValue(EcsReadWarnings::class.java.name, EcsReadWarnings(log)),
         )
 
     /** The [type] component [node] holds; throws when it cannot be bound. */

@@ -38,11 +38,11 @@ import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.assets.displayMessage
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearArchive
-import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImportRequest
-import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearInspection
+import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearArchive
+import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearImportRequest
+import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearInspection
 import net.nevinsky.abyssus.plugin.terrain.message
-import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.uniqueAssetUuid
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.io.File
@@ -122,7 +122,7 @@ fun importFlightGear(
     }
     val staged = runCatchingKeepingCancellation {
         if (ApplicationManager.getApplication().isDispatchThread && !ApplicationManager.getApplication().isUnitTestMode) {
-            ProgressManager.getInstance().runProcessWithProgressSynchronously<net.nevinsky.abyssus.lib.core.editor.flightgear.StagedImport, Exception>(
+            ProgressManager.getInstance().runProcessWithProgressSynchronously<net.nevinsky.abyssus.lib.gdx.editor.flightgear.StagedImport, Exception>(
                 stage, AbyssusBundle.message("importFlightGearConverting"), true, project)
         } else stage()
     }.getOrElse { report(AbyssusBundle.message("importFlightGearFailed", it.displayMessage())); return null }

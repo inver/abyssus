@@ -9,10 +9,9 @@
 | Physics library / plugin tests | `./gradlew :lib-physics:test` / `./gradlew :plugin-abyssus-physics:test` |
 | Ray tracing contracts / jar packaging | `./gradlew :lib-raytracing:test` / `./gradlew :lib-raytracing:verifyNativePackaging` |
 | Control Line tests | `./gradlew :app-game-control-line:test` |
-| Runtime tests | `./gradlew :lib-runtime:test` |
 | Plugin tests | `./gradlew :plugin-abyssus:test` |
-| `editor-core` tests | `./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.ScenePickerTest'`) |
-| `gdx-model` tests | `./gradlew :lib-gdx-model:test` |
+| `editor-core` tests | `./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.gdx.editor.pick.ScenePickerTest'`) |
+| `lib-gdx` tests | `./gradlew :lib-gdx:test` |
 | One class | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.projectView.SkyboxPickerModelTest'` |
 | One method | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.AbyssusViewTest.testNodeTree'` |
 | GL tests too | add `-Dabyssus.glTests=true` (opens a window; needs a display) |
@@ -25,6 +24,21 @@ classes of the old packages otherwise fail tests with `NoSuchMethodError` / `NoC
 Results are in each module's `build/test-results/test/*.xml` and `build/reports/tests/test/`; a later run overwrites them.
 CI also runs Plugin Verifier and Qodana separately from `check`.
 
+## Coverage
+
+Kover generates HTML and XML coverage reports for every module and a combined report at the root during
+`./gradlew check`. The combined report includes library code exercised by tests in other modules.
+
+| What | Command |
+|---|---|
+| Combined HTML and XML reports | `./gradlew :koverHtmlReport :koverXmlReport` |
+| One module's HTML and XML reports | `./gradlew :lib-core:koverHtmlReport :lib-core:koverXmlReport` |
+
+Report tasks run the required tests automatically. Combined reports are in `build/reports/kover/html/index.html`
+and `build/reports/kover/report.xml`; module reports use the same paths under `projects/<module>/build/`.
+GL and native backend tests retain their usual opt-in flags. Control Line's asset generator source sets
+(`tools` and `importers`) are excluded from coverage.
+
 ## Layout
 
 - `projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/`: plugin tests, mirroring the main packages (`projectView/`, `sceneview/`,
@@ -32,16 +46,16 @@ CI also runs Plugin Verifier and Qodana separately from `check`.
   `HeadlessSceneEditingTest`, which compares `editor-core`'s headless edits with the plugin's own write path.
 - `projects/lib-core-editor/src/test/kotlin/`: the editing engine's tests by package (`document`, `components`, `scene`, `pick`,
   `terrain`, `meta`, `ray`, `headless`), plain JUnit with no IntelliJ class on the classpath (`NoPlatformClasspathTest`).
-  They run from the repository root, so they read fixtures under `projects/plugin-abyssus/src/test/testData/project/` by the same paths as the
-  plugin's tests.
-- `projects/lib-gdx-model/src/test/kotlin/`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`).
+  Their working directory is `projects/plugin-abyssus/`, so `src/test/testData/project/` resolves to the same
+  fixtures as the plugin tests.
+- `projects/lib-gdx`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`).
 - `projects/lib-core/src/test/kotlin/`: asset reading and loading tests, plain JUnit with no IntelliJ classes. They read the shared
   fixtures through `testProject(name)` (Gradle passes the folder as `abyssus.testData`) and get a project's
   `FileLoader` and `AssetMetaLoader` from `testFileLoader(dir)` / `testMetaLoader(dir)` (`TestData.kt`); loaders and
   stores are wired by hand in each test. `exrFixture()` extracts the bundled EXR sky to a real file. `AssetStorageTest`
   covers the loading pipeline with a fake loader; `AssetLoadingGlTest` covers the `asset-loading` spec on real GL.
-- `projects/lib-runtime/src/test/kotlin/`: scene loading, schemas, ECS codecs, components, loader, writer and
-  systems. Plain JUnit, no IntelliJ or GL; `testProject(name)` uses the same `abyssus.testData` fixture root.
+- Scene loading, Ashley component registration, `EcsLoader` and systems are tested in `projects/lib-core/src/test/kotlin/`.
+  Component editing and `EcsWriter` are tested in `projects/lib-core-editor/src/test/kotlin/`; there is no separate runtime module.
 - `projects/lib-physics/src/test/kotlin/`: physics components, `PhysicsWorld`, rope tension and the Jolt natives. Plain JUnit, no
   IntelliJ or GL. They load the build machine's `DebugSp` Jolt natives, and use `testProject(name)` and
   `loadPhysicsScene()`.
@@ -54,7 +68,7 @@ CI also runs Plugin Verifier and Qodana separately from `check`.
   and native packaging. Metal and Vulkan device tests opt in separately with `-Dabyssus.metalTests=true` and
   `-Dabyssus.vulkanTests=true`; these are not enabled by `abyssus.glTests`. See `projects/lib-raytracing/README.md` for toolchains
   and dedicated timing gates. Plugin ray integration tests live under `projects/plugin-abyssus/src/test/kotlin/`.
-- Shared test helpers live in `testFixtures` source sets: `gdx-model`'s `TestGl` (a GL 3.2 core context for one
+- Shared test helpers live in `testFixtures` source sets: `lib-gdx`'s `TestGl` (a GL 3.2 core context for one
   block), `core`'s `HdrFixtures` (Radiance files from a pixel function) and `editor-core`'s `parseScene`,
   `testProject`, `testAsset`, `terrainData` and `rayTestModel` (used by the plugin's tests too). Plugin GL tests build their renderer with
   `testRenderer()` (`sceneview/TestRendering.kt`), wired the way `AbyssusCore` wires it in the IDE.
@@ -81,8 +95,8 @@ Two kinds of tests:
 - **`Animated/`:** `scenes/Main.scene` with two entities sharing one animated model (`assets/model_anim`). It has no `.abss`.
 - **`Custom/`:** game components. `scenes/Field.scene` has entity `0` (a plane, `"PlaneComponent": {"lineLength": 22,
   "kind": "STUNT"}`) and entity `1` (a pilot, no plane); `assets/tree` is copied from `Untitled`;
-  `abyssus/components.schema.json` is the export of the test-only `PlaneComponent` in `runtime`'s tests (one field of
-  each type), checked byte for byte by `SchemaFileTest`. Change the class and the file together.
+  `abyssus/components.schema.json` is retained schema fixture data. The current editor does not consume it;
+  tests verify that custom components remain read-only and survive built-in edits.
 - **`Physics/`:** a copy of `Untitled` whose `Main Scene` gives `Model 0` (at Y `3.086434`) a dynamic box, `Terrain`
   a height field (all heights `0`) and `Model 2` a static sphere and a 3 m rope to `Model 0`. See its `README.md`.
 
@@ -101,7 +115,7 @@ using the eye, Rename Scene, the skybox chooser or gizmo drags changes the files
 `AbyssusViewTest` and runtime scene regressions use the stable `Tree` snapshot. Other tests that pin Untitled's
 coordinates or asset counts still break when that project is edited; use a disposable copy for interactive work.
 
-HDR preview platform tests require real filesystem-backed EXR files and TinyEXR's native binaries. The root build
+HDR preview platform tests require real filesystem-backed EXR files and TinyEXR's native binaries. The plugin build
 adds those classifiers with `testRuntimeOnly`; this test setup does not add them to plugin packaging. Undo tests
 clear only fixture-creation history before the first panel edit, then retain exact Undo/Redo assertions.
 

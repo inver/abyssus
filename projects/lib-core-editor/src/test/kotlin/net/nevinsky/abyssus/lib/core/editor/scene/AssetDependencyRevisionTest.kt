@@ -3,10 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.scene
+package net.nevinsky.abyssus.lib.gdx.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionTracker
-import net.nevinsky.abyssus.lib.core.editor.scene.ProjectRevisions
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -19,7 +17,7 @@ class AssetDependencyRevisionTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    private val tracker = AssetRevisionTracker(JsonProcessor())
+    private val tracker = AssetRevisionTracker(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER))
     private val assets get() = File(tmp.root, "assets")
 
     private fun write(path: String, text: String, modified: Long? = null): File =

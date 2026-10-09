@@ -5,24 +5,24 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
-import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
-import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
-import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.lib.core.editor.pick.REST_EPS
-import net.nevinsky.abyssus.lib.core.editor.pick.SceneInteraction
-import net.nevinsky.abyssus.lib.core.editor.pick.ScenePreview
-import net.nevinsky.abyssus.lib.core.editor.pick.SceneQueries
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.core.editor.pick.ViewSize
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.pick.DragResult
+import net.nevinsky.abyssus.lib.gdx.editor.scene.CameraParams
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.gdx.editor.pick.REST_EPS
+import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneInteraction
+import net.nevinsky.abyssus.lib.gdx.editor.pick.ScenePreview
+import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneQueries
+import net.nevinsky.abyssus.lib.gdx.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.gdx.editor.pick.ViewSize
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.parseScene
-import net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis
-import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
+import net.nevinsky.abyssus.lib.gdx.editor.parseScene
+import net.nevinsky.abyssus.lib.gdx.editor.pick.GizmoAxis
+import net.nevinsky.abyssus.lib.gdx.editor.pick.GizmoMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -147,7 +147,7 @@ class SceneInteractionTest {
     @Test fun aSynchronousDocumentRefreshKeepsTheDroppedPreview() {
         val s = droppingCamera(0f)
         s.interaction.onTransform = { id, edit ->
-            val result = net.nevinsky.abyssus.lib.core.editor.pick.DragResult(
+            val result = net.nevinsky.abyssus.lib.gdx.editor.pick.DragResult(
                 ScenePreview().selected(s.renderer.content, id)!!.transform.copy(position = edit.position!!), null)
             val fresh = mainParams.copy(content = ScenePreview().apply(mainParams.content, id, result))
             s.renderer.params = fresh; s.interaction.paramsChanged(fresh); true
@@ -238,7 +238,7 @@ class SceneInteractionTest {
     fun theSelectorListsFreeCameraAndTheSceneCamerasByName() {
         assertEquals(listOf("Free camera", "Camera 4"), cameraChoices(mainParams.content, "Free camera").map { it.label })
         assertEquals(listOf(null, "4"), cameraChoices(mainParams.content, "Free camera").map { it.id })
-        val unnamed = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"8":{"components":{"CameraComponent":{}}}}}}"""))
+        val unnamed = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"8":{"components":{"CameraComponent":{"camera":{}}}}}}}"""))
         assertEquals("8", cameraChoices(unnamed, "Free camera")[1].label)
     }
 

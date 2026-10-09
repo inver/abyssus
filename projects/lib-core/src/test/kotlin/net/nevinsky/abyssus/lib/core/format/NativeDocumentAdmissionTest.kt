@@ -1,11 +1,11 @@
-package net.nevinsky.abyssus.lib.core.format
+package net.nevinsky.abyssus.lib.gdx.format
 
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.project.ProjectLoader
 import net.nevinsky.abyssus.lib.core.scene.SceneLoader
-import net.nevinsky.abyssus.lib.core.testing.warningsTo
+import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
@@ -16,7 +16,7 @@ class NativeDocumentAdmissionTest {
         val dir = Files.createTempDirectory("native-scene").toFile()
         try {
             val file = File(dir, "scenes/Main.scene").also { it.parentFile.mkdirs() }
-            val loader = SceneLoader(JsonProcessor(), FileLoader(dir))
+            val loader = SceneLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir))
             for (text in listOf("{}", """{"format":"abyssus","formatVersion":1.0}""", """{"format":"abyssus","formatVersion":2}""")) {
                 file.writeText(text)
                 assertThrows(IllegalArgumentException::class.java) { loader.parse(text) }
@@ -32,11 +32,11 @@ class NativeDocumentAdmissionTest {
             val file = File(dir, "Example.abss")
             val text = """{"name":"Example","scenes":[]}"""
             file.writeText(text)
-            assertThrows(IllegalArgumentException::class.java) { ProjectLoader(JsonProcessor(), FileLoader(dir)).load(file.name) }
+            assertThrows(IllegalArgumentException::class.java) { ProjectLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir)).load(file.name) }
             assertEquals(text, file.readText())
             val native = """{"format":"abyssus","formatVersion":1,"name":"Example","extra":1.00}"""
             file.writeText(native)
-            assertEquals("Example", ProjectLoader(JsonProcessor(), FileLoader(dir)).load(file.name).name)
+            assertEquals("Example", ProjectLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir)).load(file.name).name)
             assertEquals(native, file.readText())
         } finally { dir.deleteRecursively() }
     }
@@ -48,13 +48,13 @@ class NativeDocumentAdmissionTest {
             val invalid = """{"type":"MODEL"}"""
             file.writeText(invalid)
             val messages = mutableListOf<String>()
-            val loader = AssetMetaLoader(JsonProcessor(), FileLoader(dir), warningsTo(messages))
+            val loader = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir), warningsTo(messages))
             assertNull(loader.loadBaseMeta("model"))
             assertNull(loader.loadBaseMeta("model"))
             assertEquals(1, messages.size)
             assertTrue(messages.single().contains("format"))
             assertEquals(invalid, file.readText())
-            val repaired = """{"format":"abyssus","formatVersion":1,"type":"MODEL","extra":1.00}"""
+            val repaired = """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{},"extra":1.00}"""
             file.writeText(repaired)
             assertEquals("model", loader.loadBaseMeta("model")!!.name)
             assertEquals(repaired, file.readText())

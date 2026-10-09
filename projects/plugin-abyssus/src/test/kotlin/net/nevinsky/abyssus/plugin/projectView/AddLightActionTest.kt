@@ -11,7 +11,7 @@ import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ReadAction
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.concurrency.AppExecutorUtil
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import java.util.concurrent.TimeUnit
 
 class AddLightActionTest : BasePlatformTestCase() {

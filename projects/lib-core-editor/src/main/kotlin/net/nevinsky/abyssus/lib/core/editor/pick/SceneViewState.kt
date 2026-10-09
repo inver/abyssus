@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.pick
+package net.nevinsky.abyssus.lib.gdx.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.content.Pose
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.gdx.editor.content.Pose
 
 /**
  * What the user has done in the scene view, apart from the scene itself: the selection, the gizmo and what it is
@@ -32,4 +33,7 @@ class SceneViewState {
 
     /** Whether gizmos are offered: off while a simulation plays. */
     var gizmosEnabled: Boolean = true
+
+    /** The cloud technique this view draws in place of the sky asset's own, or null for the asset's. */
+    var cloudTechnique: CloudTechnique? = null
 }

@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.PlacedEntity
-import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.scene.PlacedEntity
+import net.nevinsky.abyssus.lib.gdx.editor.content.toMatrix
+import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
 
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3

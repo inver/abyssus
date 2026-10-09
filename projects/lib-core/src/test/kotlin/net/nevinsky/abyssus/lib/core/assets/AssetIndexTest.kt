@@ -17,7 +17,7 @@ class AssetIndexTest {
     fun cleanUp() = dirs.forEach(File::deleteRecursively)
 
     private val dir: File = Files.createTempDirectory("index").toFile().also(dirs::add)
-    private val files = net.nevinsky.abyssus.lib.core.io.FileLoader(dir)
+    private val files = FileLoader(dir)
     private val index = AssetIndex(files, testMetaLoader(dir, fileLoader = files))
 
     private fun asset(folder: String, uuid: String?, type: String = "TEXTURE") {

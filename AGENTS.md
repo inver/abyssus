@@ -12,19 +12,17 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 |---|---|
 | All module checks and tests | `./gradlew check` (CI adds `-Pabyssus.requireShaders=true`; verifier and Qodana run separately) |
 | Plugin tests only | `./gradlew :plugin-abyssus:test` |
-| `gdx-model` tests only | `./gradlew :lib-gdx-model:test` |
+| `lib-gdx` tests only | `./gradlew :lib-gdx:test` |
 | Ray tracing tests / native jar packaging | `./gradlew :lib-raytracing:test` / `./gradlew :lib-raytracing:verifyNativePackaging` |
-| `runtime` tests only | `./gradlew :lib-runtime:test` |
 | `physics` tests only | `./gradlew :lib-physics:test` |
 | `core` tests only | `./gradlew :lib-core:test` (one class: `./gradlew :lib-core:test --tests 'net.nevinsky.abyssus.lib.core.assets.loading.AssetStorageTest'`) |
-| `editor-core` tests only | `./gradlew :lib-core-editor:test` (one class: `./gradlew :lib-core-editor:test --tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`) |
+| `editor-core` tests only | `./gradlew :lib-core-editor:test` (one class: `./gradlew :lib-core-editor:test --tests 'net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCameraTest'`) |
 | One plugin test class | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneViewPanelTest'` |
 | Also run GL tests (open a window) | add `-Dabyssus.glTests=true` |
 | Sandbox IDE | `./gradlew :plugin-abyssus:runIde` (open a project with `-PideProject=/path/to/project`) |
 | Sandbox IDE with Abyssus Physics | `./gradlew :plugin-abyssus-physics:runIde` |
 | Abyssus Physics tests | `./gradlew :plugin-abyssus-physics:test` |
 | Control Line game: play / tests | `./gradlew :app-game-control-line:run` / `./gradlew :app-game-control-line:test` |
-| Control Line component schema and play launch file | `./gradlew :app-game-control-line:exportAbyssus` |
 | Plugin zip | `./gradlew :plugin-abyssus:buildPlugin` (to `projects/plugin-abyssus/build/distributions/`) |
 | Docs path check | `scripts/check-docs.sh` |
 
@@ -40,43 +38,45 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   - `properties/`: the Abyssus Properties tool window (Swing views over `editor-core`'s panel model).
   - `sceneview/`: the scene view: GL canvas, renderer, shadows, fog, sky and gizmo drawing, the toolbar, Play, and the
     view's asset storage (`ViewAssets`). Picking, cameras, gizmo math and transform write-back are in `editor-core`.
-  - `schema/`: component schemas for game components: the `componentSchemas` extension point and the
-    `ComponentSchemas` project service that builds each scene's `ComponentEditor`.
+  - `schema/`: the retained `componentSchemas` extension-point bean and `ComponentSchemas` project service.
+    The current service supplies a built-in-only `ComponentEditor`; game and physics components stay read-only.
   - `terrain/`: the New Terrain dialog and the regeneration controls; generation itself is in `editor-core`.
   - `filetype/`, `language/`: file types, icons, the GLTF PSI.
-- `projects/lib-core-editor/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.core.editor`: scene documents (`SceneJson`,
+- `projects/lib-core-editor/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.gdx.editor`: scene documents (`SceneJson`,
   `SceneDocument`, `DocumentTextEditor`), component editing (`ComponentEditor`, `LightEntities`), the scene read model
   (`SceneContent`), picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge, and the
   headless editing API (`HeadlessEditing`), and the FlightGear and model imports that stage new MODEL asset folders
-  (`flightgear`, `modelimport`). Ashley components, codecs and systems stay in `runtime`. See
+  (`flightgear`, `modelimport`). Ashley components, registry, loader and systems live in `core`;
+  `EcsWriter` and the editing codecs live in `editor-core`. See
   `projects/lib-core-editor/README.md`.
-- `projects/lib-gdx-model/`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import, a binary glTF writer), with inherited sources documented in `docs/third-party/gdx-model-origin.md`.
-  See `projects/lib-gdx-model/README.md`.
+- `projects/lib-gdx`: a plain JVM library (libGDX model runtime with 32-bit indices, Assimp import, a binary glTF writer), with inherited sources documented in `docs/third-party/gdx-model-origin.md`.
+  See `projects/lib-gdx`.
 - `projects/lib-core/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.core`: project layout and file access
   (`core.io.AbyssusProjectLayout`, `core.io.FileLoader`, `core.io.JsonProcessor`), asset metas (`AssetMeta`, `AssetMetaLoader`), the loading
-  pipeline (`AssetLoader`, `CompositeAssetLoader`, `AssetStorage`), the optional CPU snapshots for ray tracing (`RaySnapshotStore`), the
+  pipeline (`AssetLoader`, `AssetStorage`), the optional CPU snapshots for ray tracing (`RaySnapshotStore`), the
   loaders with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).
-  The plugin wires it in `AssetLoading` (root package). See `projects/lib-core/README.md`.
+  It also holds DTOs, `ComponentRegistry`, Ashley components and systems, `EcsLoader`, `SceneEngine`,
+  `RuntimeSceneLoader` and the standalone composition root `BaseCtx`. The plugin wires its own loading graph
+  in `AssetLoading`. See `projects/lib-core/README.md`.
 - `projects/lib-raytracing/`: plain JVM GPU ray tracing contracts, snapshots, scheduling, and optional Metal/Vulkan backends.
   The plugin owns view integration; native probing starts only when enabled. See `projects/lib-raytracing/README.md`.
-- `projects/lib-runtime/`: plain JVM scene loading and Ashley components, codecs, systems, loader
-  and writer. Game components (`@SceneComponent`, `ComponentRegistry`) and their schema export live in its `schema` package. `RuntimeSceneLoader` wires it by constructors. See `projects/lib-runtime/README.md`.
-- `projects/lib-physics/`: a plain JVM library on `runtime`, root package `net.nevinsky.abyssus.lib.physics`: the physics components
-  (`PhysicsComponents`) and `PhysicsWorld`, which runs Jolt through jolt-jni (only its `jolt` package imports Jolt). See
+- `projects/lib-physics/`: a plain JVM library on `core`, root package `net.nevinsky.abyssus.lib.physics`: the physics components
+  (`PHYSICS_COMPONENTS`) and `PhysicsWorld`, which runs Jolt through jolt-jni (only its `jolt` package imports Jolt). See
   `projects/lib-physics/README.md`.
 - `projects/plugin-abyssus-physics/`: **Abyssus Physics**, a second IntelliJ plugin that depends on Abyssus
-  (`localPlugin(project(":"))`). It holds the physics overlay (`sceneOverlay`), Play through a play process
-  (`sceneSimulation`), the physics schema generated at build time, and the bundled `play-host` folder.
-- `projects/app-game-control-line/`: **Control Line**, a libGDX desktop game (LWJGL3) on `runtime` and `physics` that proves the
+  (`localPlugin(project(":plugin-abyssus"))`). It holds the physics overlay (`sceneOverlay`), Play through a play process
+  (`sceneSimulation`) and the bundled `play-host` folder. Overlay geometry is currently inactive; see the
+  current-source review in `docs/reviews/2026-10-09-current-source.md`.
+- `projects/app-game-control-line/`: **Control Line**, a libGDX desktop game (LWJGL3) on `core` and `physics` that proves the
   editor-for-games chain: its native project `projects/app-game-control-line/project/ControlLine` is authored in Abyssus, its
   `PlaneComponent` / `PilotComponent` are game components, and its `PlayModule` flies a plane in Play. Open a copy of
   that project in the IDE, never the committed folder (its tests assert on the scene). See `projects/app-game-control-line/README.md`.
 - `projects/plugin-abyssus/src/main/java/`: only the grammar sources `Gltf.bnf` / `Gltf.flex`; `projects/plugin-abyssus/src/main/gen` is generated from them.
-- `projects/plugin-abyssus/src/test/kotlin/`, `projects/lib-core-editor/src/test/kotlin/`, `projects/lib-gdx-model/src/test/kotlin/`, `projects/lib-core/src/test/kotlin/`,
-  `projects/lib-runtime/src/test/kotlin/`, `projects/lib-physics/src/test/kotlin/`, `projects/plugin-abyssus-physics/src/test/kotlin/`,
+- `projects/plugin-abyssus/src/test/kotlin/`, `projects/lib-core-editor/src/test/kotlin/`, `projects/lib-gdx`, `projects/lib-core/src/test/kotlin/`,
+  `projects/lib-physics/src/test/kotlin/`, `projects/plugin-abyssus-physics/src/test/kotlin/`,
   `projects/lib-raytracing/src/test/kotlin/`, `projects/app-game-control-line/src/test/kotlin/`: tests. Fixtures in `projects/plugin-abyssus/src/test/testData/project/`
   (shared with `core`'s and `editor-core`'s tests). Test helpers shared across modules live in `testFixtures` source
-  sets (`gdx-model`: `TestGl`; `core`: `HdrFixtures`; `editor-core`: `parseScene`, `testProject`, `rayTestModel`).
+  sets (`lib-gdx`: `TestGl`; `core`: `HdrFixtures`; `editor-core`: `parseScene`, `testProject`, `rayTestModel`).
 - `openspec/`: specs and changes (see Workflow). `docs/superpowers/`: one historic design and plan.
 
 ## Hard rules
@@ -86,23 +86,21 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   Reject legacy `ecs.componentIdentifiers` and renderable `class`; a component entry is keyed by the class name of a built-in or registered component (fully qualified, or its short name), assets use `kind: "asset"`.
   Keep unknown native extension data, unrelated numbers/key order and default omission. No importer or implicit migration.
 
-- **`physics` stays a plain JVM library wired by constructors**, like `runtime` (`./gradlew :lib-physics:checkNoSingletons`
+- **`physics` stays a plain JVM library wired by constructors**, like `core` (`./gradlew :lib-physics:checkNoSingletons`
   is part of `check`). **Jolt never loads in the IDE process:** only a game or the play host calls `JoltNatives`.
-- **Extension plugins bundle only their own code.** `physics-plugin` ships its jar and `physics.jar`; libGDX,
-  `runtime`, `editor-core`, `core` and `gdx-model` come from Abyssus's classloader (`Gdx.*` is process-global). Its main sources may
-  not name `com.github.stephengold` or `net.nevinsky.abyssus.physics.jolt` (`./gradlew :plugin-abyssus-physics:checkNoJolt`,
+- **Extension plugins bundle only their own code.** `plugin-abyssus-physics` ships its jar and the physics library jar; libGDX,
+  `editor-core`, `core` and `lib-gdx` come from Abyssus's classloader (`Gdx.*` is process-global). Its main sources may
+  not name `com.github.stephengold` or `net.nevinsky.abyssus.lib.physics.jolt` (`./gradlew :plugin-abyssus-physics:checkNoJolt`,
   part of `check`).
 - **Don't edit `projects/plugin-abyssus/src/main/gen`.** It is git-ignored and regenerated from `Gltf.bnf` / `Gltf.flex`.
-- **`gdx-model` stays a plain JVM library**: no IntelliJ or plugin imports, so other libGDX projects can use it.
+- **`lib-gdx` stays a plain JVM library**: no IntelliJ or plugin imports, so other libGDX projects can use it.
 - **`core` stays a plain JVM library wired by constructors**: no IntelliJ or plugin imports, and no `object` or
   `companion object` in `projects/lib-core/src/main` (a `data object` case of a sealed type is fine). Pass collaborators in;
   `./gradlew :lib-core:checkNoSingletons` (part of `check`) fails otherwise.
-- **`runtime` stays a plain JVM library wired by constructors**: no IntelliJ or plugin imports, and no `object` or
-  `companion object` in `projects/lib-runtime/src/main`. `./gradlew :lib-runtime:checkNoSingletons` is part of `check`.
 - **`editor-core` stays a plain JVM library wired by constructors**: no IntelliJ, Swing or AWT imports (its classpath
   has no platform artifact; `NoPlatformClasspathTest` checks), and no `object` or `companion object` with behavior in
   `projects/lib-core-editor/src/main` (`./gradlew :lib-core-editor:checkNoSingletons`, part of `check`; pure constant holders are listed
-  in its `abyssusSingletonExcludes`). Neither `core` nor `runtime` depends on it.
+  in its `abyssusSingletonExcludes`). `core` does not depend on it.
 - **No package cycles:** `./gradlew checkPackageCycles` (part of `check`) fails on a cycle between the packages of a
   module; its allowlist `gradle/package-cycles.allowlist` stays empty.
 - **Write scene files only through `editSceneJson`** (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`).
@@ -130,7 +128,7 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
 Non-trivial changes go through OpenSpec: propose (`openspec/changes/<name>/` with proposal, specs, design, tasks),
 apply, then archive, which merges the change's specs into `openspec/specs/`. `openspec/specs/` is the source of
 truth for required behavior; read the relevant capability before changing a feature. The workflow commands live in
-`.agents/commands/` and `.claude/skills/`.
+`.agents/skills/` and `.claude/skills/`.
 
 When a change makes a doc wrong, update the doc in the same change and run `scripts/check-docs.sh`.
 

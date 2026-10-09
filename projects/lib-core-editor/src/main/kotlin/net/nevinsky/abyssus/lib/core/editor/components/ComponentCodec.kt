@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.components
+package net.nevinsky.abyssus.lib.gdx.editor.components
 
 import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsWriter
+import net.nevinsky.abyssus.lib.gdx.editor.ecs.EcsWriter
+import net.nevinsky.abyssus.lib.gdx.editor.ecs.floatNode
 
 enum class FieldKind { FLOAT, INT, BOOLEAN, TEXT, CHOICE, ENTITY_REF, ASSET_NAME }
 
@@ -40,6 +41,9 @@ interface ComponentCodec<C : Component> {
 
     fun write(component: C): JsonNode
 }
+
+/** A component decimal as the scene file spells it (`22`, not `22.0`). */
+internal fun decimalText(v: Float) = floatNode(v).asText()
 
 /** A built-in component bound by the runtime's own loader and writer, so defaults and number text match a scene load. */
 internal class RuntimeCodec<C : Component>(

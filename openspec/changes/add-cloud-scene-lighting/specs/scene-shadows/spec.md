@@ -37,7 +37,7 @@ SHALL replace the uniform sun dimming of `scene-entity-lights`; beyond it, that 
 
 #### Scenario: Moving cloud shadows
 
-- **WHEN** a copy of `Main Scene` uses `skybox_physical` with `builtin:fair` clouds and the view stays open for ten
+- **WHEN** a copy of `Main Scene` uses `skybox_physical` naming a cloud asset made from the fair template and the view stays open for ten
   seconds
 - **THEN** dark patches move across the terrain along the low band's wind direction
 

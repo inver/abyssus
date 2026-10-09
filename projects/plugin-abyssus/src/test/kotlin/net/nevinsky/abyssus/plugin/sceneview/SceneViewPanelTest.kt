@@ -4,17 +4,18 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.scene.CameraParams
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 import com.intellij.openapi.actionSystem.Separator
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.plugin.projectView.AddAssetGroup
 import net.nevinsky.abyssus.plugin.projectView.AddLightGroup
 import net.nevinsky.abyssus.plugin.projectView.canAddAsset
@@ -23,6 +24,7 @@ import net.nevinsky.abyssus.plugin.projectView.hasRenderAssets
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JButton
+import net.nevinsky.abyssus.plugin.AbyssusBundle
 
 class SceneViewPanelTest : BasePlatformTestCase() {
     private fun named(c: Component, name: String): Component? =
@@ -43,7 +45,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             choices[1].actionPerformed(TestActionEvent.createTestEvent(choices[1]))
             assertEquals("0", selected)
             val document = FileDocumentManager.getInstance().getDocument(file)!!
-            val light = sceneContentOf(net.nevinsky.abyssus.lib.core.editor.parseScene(document.text)).lights.single()
+            val light = sceneContentOf(net.nevinsky.abyssus.lib.gdx.editor.parseScene(document.text)).lights.single()
             assertEquals(Vec3(10f, 0f, -4f), light.position)
             WriteCommandAction.runWriteCommandAction(project) { document.setText("not json") }
             panel.setParams(params)
@@ -91,5 +93,116 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         try {
             assertNull(named(panel, "add-asset"))
         } finally { panel.dispose() }
+    }
+
+    /** A copy of the fixture's skies on disk, with `skybox_cloudy`: `skybox_physical` naming the cloud asset `clouds_fair`. */
+    private fun skies(): java.io.File {
+        val dir = java.nio.file.Files.createTempDirectory("clouds").toFile()
+        val assets = java.io.File("src/test/testData/project/Untitled/assets")
+        for (name in listOf("skybox_default", "skybox_physical")) assets.resolve(name).copyRecursively(dir.resolve("assets/$name"))
+        assets.resolve("skybox_physical").copyRecursively(dir.resolve("assets/skybox_cloudy"))
+        val meta = dir.resolve("assets/skybox_cloudy/meta.json")
+        meta.writeText(meta.readText().replace("\"sunIntensity\": 20.0", "\"sunIntensity\": 20.0,\n    \"clouds\": \"3f2a9c1e-7b4d-4e8a-9c6f-1d2e3b4a5c6d\""))
+        dir.resolve("assets/clouds_fair").mkdirs()
+        dir.resolve("assets/clouds_fair/meta.json").writeText(
+            """{"format":"abyssus","formatVersion":1,"uuid":"3f2a9c1e-7b4d-4e8a-9c6f-1d2e3b4a5c6d","type":"CLOUDS","additional":{"low":{"type":"cumulus"}}}"""
+        )
+        return dir
+    }
+
+    private fun skyParams(dir: java.io.File, sky: String?) =
+        SceneRenderParams.DEFAULT.copy(content = SceneRenderParams.DEFAULT.content.copy(skybox = sky), projectDir = dir)
+
+    private fun clouds(panel: SceneViewPanel) = named(panel, "clouds") as javax.swing.JComboBox<*>
+
+    private fun choose(panel: SceneViewPanel, choice: net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice) {
+        val combo = clouds(panel)
+        combo.selectedItem = (0 until combo.itemCount).map(combo::getItemAt).first { (it as CloudChoiceItem).choice == choice }
+    }
+
+    private fun snapshot(dir: java.io.File) = dir.walkTopDown().filter { it.isFile }.associate { it.path to it.readBytes().toList() }
+
+    fun testCloudsChoiceDefaultsToAssetAndIsPerView() {
+        val dir = skies()
+        val before = snapshot(dir)
+        val firstRenderer = testRenderer()
+        val secondRenderer = testRenderer()
+        val first = SceneViewPanel(skyParams(dir, "skybox_cloudy"), firstRenderer)
+        val second = SceneViewPanel(skyParams(dir, "skybox_cloudy"), secondRenderer)
+        val renderers = mapOf(first to firstRenderer, second to secondRenderer)
+        try {
+            for (panel in listOf(first, second)) {
+                assertTrue(clouds(panel).isEnabled)
+                assertEquals(net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.ASSET, (clouds(panel).selectedItem as CloudChoiceItem).choice)
+                assertNull(renderers.getValue(panel).state.cloudTechnique)
+            }
+            choose(first, net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.LAYERED)
+            assertEquals(CloudTechnique.LAYERED, firstRenderer.state.cloudTechnique)
+            assertNull("the other view keeps its own choice", secondRenderer.state.cloudTechnique)
+            assertEquals(net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.ASSET, second.cloudState.choice)
+        } finally {
+            first.dispose()
+            second.dispose()
+        }
+        val reopened = SceneViewPanel(skyParams(dir, "skybox_cloudy"), testRenderer())
+        try {
+            assertEquals("a reopened view starts at Asset", net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.ASSET, reopened.cloudState.choice)
+        } finally {
+            reopened.dispose()
+        }
+        assertEquals("no file changes", before, snapshot(dir))
+        dir.deleteRecursively()
+    }
+
+    fun testCloudsChoiceIsDisabledWithoutEnabledClouds() {
+        val dir = skies()
+        for (sky in listOf("skybox_default", "skybox_physical", null)) {
+            val panel = SceneViewPanel(skyParams(dir, sky), testRenderer())
+            try {
+                assertFalse("$sky", clouds(panel).isEnabled)
+            } finally {
+                panel.dispose()
+            }
+        }
+        val panel = SceneViewPanel(skyParams(dir, "skybox_default"), testRenderer())
+        try {
+            panel.setParams(skyParams(dir, "skybox_cloudy"))
+            assertTrue("switching to a cloudy sky enables the choice", clouds(panel).isEnabled)
+            panel.setParams(skyParams(dir, "skybox_physical"))
+            assertFalse(clouds(panel).isEnabled)
+        } finally {
+            panel.dispose()
+        }
+        dir.deleteRecursively()
+    }
+
+    fun testSlowVolumetricCloudsFallBackToShells() {
+        val dir = skies()
+        val before = snapshot(dir)
+        val renderer = testRenderer()
+        val panel = SceneViewPanel(skyParams(dir, "skybox_cloudy"), renderer)
+        try {
+            val note = named(panel, "clouds-note") as javax.swing.JLabel
+            assertFalse(note.isVisible)
+            choose(panel, net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.VOLUMETRIC)
+            repeat(41) { panel.cloudFrameRendered(0.05f, volumetric = true) } // 20 frames per second for two seconds
+            assertTrue(note.isVisible)
+            assertEquals(AbyssusBundle.message("sceneViewCloudsFallback"), note.text)
+            assertEquals(net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.SHELLS, (clouds(panel).selectedItem as CloudChoiceItem).choice)
+            assertEquals(CloudTechnique.SHELLS, renderer.state.cloudTechnique)
+
+            choose(panel, net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.VOLUMETRIC)
+            assertFalse("choosing again clears the note", note.isVisible)
+            repeat(41) { panel.cloudFrameRendered(0.05f, volumetric = true) }
+            assertTrue(panel.cloudState.sticky)
+            choose(panel, net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.VOLUMETRIC)
+            assertEquals("volumetric is refused after the second fallback",
+                net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.SHELLS, (clouds(panel).selectedItem as CloudChoiceItem).choice)
+            assertEquals(AbyssusBundle.message("sceneViewCloudsStickyTooltip"), clouds(panel).toolTipText)
+        } finally {
+            panel.dispose()
+        }
+        assertEquals("no file changes", before, snapshot(dir))
+        dir.deleteRecursively()
     }
 }

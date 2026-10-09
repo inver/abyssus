@@ -2,6 +2,7 @@ package net.nevinsky.abyssus.lib.core.assets
 
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
@@ -11,11 +12,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AssetMetaBinderTest {
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
 
     @Test fun everyKindBindsItsSettingsAndUnregisteredKindsKeepAMap() {
         val classes = mapOf(
             MetaType.MODEL to ModelMeta::class.java,
+            MetaType.CLOUDS to CloudMeta::class.java,
             MetaType.TERRAIN to TerrainMeta::class.java,
             MetaType.SKYBOX to SkyboxMeta::class.java,
             MetaType.SKYBOX_PROCEDURAL to ProceduralSkyMeta::class.java,
@@ -41,9 +43,13 @@ class AssetMetaBinderTest {
 
     @Test fun oneInjectedRegistrationBindsTypedSettings() {
         val binder = AssetMetaBinder(json, mapOf(MetaType.MATERIAL to CustomSettings::class.java))
-        val meta = binder.bind("custom", json.readObject("""{"format":"abyssus","formatVersion":1,"type":"MATERIAL","uuid":"nope","additional":{"value":42}}"""))
+        val meta = binder.bind("custom", json.readObject("""{"format":"abyssus","formatVersion":1,"type":"MATERIAL","additional":{"value":42}}"""))
         assertEquals(CustomSettings(42), meta.additional)
         assertNull(meta.uuid)
+        val malformed = json.readObject("""{"format":"abyssus","formatVersion":1,"type":"MATERIAL","uuid":"nope","additional":{"value":42}}""")
+        val before = malformed.toString()
+        assertThrows(com.fasterxml.jackson.databind.exc.InvalidFormatException::class.java) { binder.bind("custom", malformed) }
+        assertEquals(before, malformed.toString())
         assertEquals(1, meta.version)
         assertEquals(0L, meta.lastModified)
     }

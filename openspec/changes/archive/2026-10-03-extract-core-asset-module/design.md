@@ -16,7 +16,7 @@ See proposal.md - Why. The loading code today:
   `Shaders`; `companion object` in `JsonProcessor` (`of`), `RadianceHeader` (`of`, `read`, `MAX_HEIGHT`),
   `HdrEnvironmentBuild` (sizes, GL constants), `TerrainData`, `TerrainMesh` (`SPLAT_UNIT`), `ProceduralSkyMeta`.
 - `gdx-model` is the precedent for a plain JVM module (`java-library`, Kotlin with its own stdlib, libGDX as `api`).
-  It already owns the package root `net.nevinsky.abyssus.lib.core`.
+  It already owns the package root `net.nevinsky.abyssus.lib.gdx`.
 
 ## Goals / Non-Goals
 
@@ -58,7 +58,7 @@ Root package `net.nevinsky.abyssus.assets`:
 `PlacedEntities` and `PlacementTransform.toMatrix` (also in `SceneAssets.kt`) are scene placement, not loading; they
 stay in the plugin, split into their own file.
 
-**Alternative rejected:** package `net.nevinsky.abyssus.lib.core` to match the module name. It would split one package
+**Alternative rejected:** package `net.nevinsky.abyssus.lib.gdx` to match the module name. It would split one package
 root across two jars with `gdx-model`.
 
 ### 2. Constructor injection and one composition root

@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.terrain
+package net.nevinsky.abyssus.lib.gdx.editor.terrain
 
-import net.nevinsky.abyssus.lib.core.editor.meta.TERRAIN_DATA_FILE
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.gdx.editor.meta.TERRAIN_DATA_FILE
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.editor.testProject
+import net.nevinsky.abyssus.lib.gdx.editor.testProject
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -23,7 +24,7 @@ class TerrainAssetEncodingTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val encoder = TerrainHeightEncoder()
     private val writer = TerrainAssetWriter(json, encoder)
     private val fixture = File(testProject("Untitled"), "assets/terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")
@@ -40,7 +41,7 @@ class TerrainAssetEncodingTest {
     fun `the 180 resolution fixture round trips byte for byte`() {
         val original = File(fixture, "terrain.data").readBytes()
         val data = java.nio.ByteBuffer.wrap(original).asFloatBuffer().let { buffer -> FloatArray(buffer.remaining()).also(buffer::get) }
-            .let { heights -> net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData(Math.round(Math.sqrt(heights.size.toDouble())).toInt(), heights, 1600, 60f) }
+            .let { heights -> TerrainData(Math.round(Math.sqrt(heights.size.toDouble())).toInt(), heights, 1600, 60f) }
         assertEquals(180, data.resolution)
         assertArrayEquals(original, encoder.encode(data.heights))
     }
@@ -72,7 +73,7 @@ class TerrainAssetEncodingTest {
         File(dir, TERRAIN_DATA_FILE).writeBytes(files.heightBytes)
 
         val fileLoader = FileLoader(tmp.root)
-        val read = checkNotNull(TerrainLoader(fileLoader, AssetMetaLoader(json, fileLoader)).prepare("hills")).data
+        val read = checkNotNull(TerrainLoader(fileLoader, AssetMetaLoader(json, fileLoader)).prepare("hills")).staged.data
         assertEquals(800, read.size)
         assertEquals(1f, read.uv)
         assertEquals(33, read.resolution)

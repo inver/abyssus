@@ -48,7 +48,8 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   file, with the `type` and `uuid` from the folder's `meta.json`. An asset no scene reaches is grayed and
   marked `unused`. A scene reaches an asset by folder name through `assetName` and `shaderKey` values in its
   `ecs` and through `skyboxName`; a reached asset in turn reaches the assets its `meta.json` references by
-  `uuid` (terrain `splatMap`/`splatBase`/`splatR`/`splatG`/`splatB`/`splatA`, model `materials`).
+  `uuid` (terrain `splatMap`/`splatBase`/`splatR`/`splatG`/`splatB`/`splatA`, model `materials`), and a reached
+  procedural sky reaches the cloud asset (`CLOUDS`) its `clouds` names. Cloud assets have their own icon.
   A `shaderKey` with no matching folder is a bundled editor shader and is ignored. Files named inside a
   `meta.json` (textures of a material, shader sources) are not followed.
 - A project's `scenes` and `assets` rows are labelled `Scenes` and `Assets` with their count. In a scene, `ecs` shows its
@@ -171,7 +172,10 @@ project's `assets` folder beside the `.abss`:
 - the scene's **models** (`RenderComponent` entities of type `MODEL`), textured, at each entity's position,
   rotation and scale; a model that has animations plays its first one on a loop;
 - the scene's **terrain** (height data and splat textures of a `TERRAIN` asset);
-- the **skybox** named by `skyboxName` when `skyboxEnabled`;
+- the **skybox** named by `skyboxName` when `skyboxEnabled`; a procedural sky's **clouds** (the `CLOUDS` asset its `meta.json`
+  `additional.clouds` names by `uuid`: low, mid and high bands and a technique, shared by every sky naming it) drift with their wind and dim the sun light when they cover it. The toolbar's
+  **Clouds** choice (*Asset*, *Layered*, *Shells*, *Volumetric*) overrides the sky's technique in that view only and
+  writes nothing; volumetric clouds that keep the view slower than 30 frames per second switch to shells with a note;
 - the **light entities** (directional, point and spot, with cone and edge softness) on top of the scene's
   ambient light and fog, each with a small marker (and a direction line for directional and spot lights);
 - the **camera entities**, each as a small body with its view frustum (near, far, field of view), pointing at its
@@ -195,7 +199,7 @@ shows the status, the reason it is unavailable or failed, and **Retry**. It need
 silicon with Metal on macOS, or a Vulkan 1.2 device with ray queries on Windows and Linux. Where it is unavailable the switch
 is disabled and says why; if it fails, the view returns to the normal renderer. Selecting, moving and rotating objects, the
 camera and the gizmos work as usual, and the scene file is never written by switching it on or off.
-`-Dabyssus.raytracing.backend=off` disables it for the IDE session. See [ray tracing](raytracing/README.md) for
+`-Dabyssus.raytracing.backend=off` disables it for the IDE session. See [ray tracing](projects/lib-raytracing/README.md) for
 backend requirements, rendering limits and native toolchains.
 
 **Add Light** in the toolbar creates a Directional light, Sun or Spot at the current orbit target and selects it.
@@ -219,13 +223,8 @@ entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
 **Abyssus Physics** is a separate plugin, built from `projects/plugin-abyssus-physics/`, that depends on Abyssus. With it installed:
 
-- **Add Component** offers **Rigid body**, **Collider** and **Constraint**. They are edited like other components,
-  and sizes and masses must be greater than 0. Without the plugin, these components show as read-only JSON and are
-  kept unchanged.
-- **Show Physics** in the Scene View toolbar (off when the view opens) draws each collider as a wireframe: green for
-  dynamic, blue for kinematic, grey for static. A height field is drawn as its terrain's outline. Each constraint is a
-  line between its anchors; a rope that is longer than its maximum is drawn dashed. The selected entity's physics is
-  brighter and drawn through its model.
+- Physics components currently remain read-only JSON in the Properties panel. Collider and constraint overlays
+  are unavailable while that integration is being reworked; see [current source status](docs/reviews/2026-10-09-current-source.md).
 - **Play**, **Pause**, **Step** and **Stop** run the scene's physics in a separate process. Play uses the scene as
   the editor holds it, unsaved text included. Simulated poses are shown but never written: Stop, Esc, editing the
   scene or closing the tab returns the view to the scene as the document holds it. While playing, gizmos are off,
@@ -236,7 +235,7 @@ entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
 Jolt, the physics engine, is loaded only by the play process, never by the IDE.
 
-The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `gdx-model` module, a
+The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `lib-gdx` module, a
 plain JVM library reusable in other libGDX projects; see [source provenance](docs/third-party/gdx-model-origin.md)
 for its origin and license. The GL
 render tests are opt-in: `./gradlew test -Dabyssus.glTests=true` (opens a window).
@@ -249,7 +248,7 @@ To add a project or scene file format, implement `ConfigFileReader` and wire it 
 
 See [AGENTS.md](AGENTS.md) for build, test and sandbox commands, and [the documentation map](docs/README.md)
 for architecture, native formats and module guides. The [Control Line game](projects/app-game-control-line/README.md) demonstrates
-custom components, schema export and Play through the separate physics host. Use a copy of its native project in the IDE.
+registered game components and a Play module for the separate physics host. Use a copy of its native project in the IDE.
 
 ## Installation
 
@@ -268,7 +267,7 @@ custom components, schema export and Play through the separate physics host. Use
 
 Licensed under [Apache-2.0](LICENSE) (SPDX-License-Identifier: Apache-2.0).
 
-Files under `gdx-model` derived from [libGDX](https://github.com/libgdx/libgdx) retain their original
+Files under `projects/lib-gdx` derived from [libGDX](https://github.com/libgdx/libgdx) retain their original
 Apache 2.0 headers.
 
 ---

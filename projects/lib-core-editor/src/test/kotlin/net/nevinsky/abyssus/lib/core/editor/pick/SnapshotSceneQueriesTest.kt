@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.pick
+package net.nevinsky.abyssus.lib.gdx.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
+import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4

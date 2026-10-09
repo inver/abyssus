@@ -13,8 +13,8 @@ import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.core.io.GeometryUtils.Companion.createFullscreenTriangle
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -70,7 +70,7 @@ class HdrEnvironment(
  * `GdxRuntime.withContext`. Each step renders into its own framebuffer and restores the framebuffer, viewport and
  * state it found. Throws when the GPU lacks OpenGL 3 or a renderable 16-bit float framebuffer.
  */
-class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: ShaderSource) : Disposable {
+class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: ShaderStorage) : Disposable {
 
     private var done = 0
     private var equirect: GpuTexture? = null

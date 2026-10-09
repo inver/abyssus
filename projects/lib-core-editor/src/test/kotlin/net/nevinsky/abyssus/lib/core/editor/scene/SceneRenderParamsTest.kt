@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.scene
+package net.nevinsky.abyssus.lib.gdx.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
+import net.nevinsky.abyssus.lib.gdx.editor.content.LightKind
 
-import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.gdx.editor.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -20,19 +20,18 @@ class SceneRenderParamsTest {
     private fun scene(json: String) = parseScene(json)
 
     @Test
-    fun spotlightBeamValuesReachRenderContentInBothRepresentations() {
+    fun spotlightBeamValuesReachRenderContentFromTheLightWrapper() {
         for (fields in listOf("", "\"coneAngle\":60,\"edgeSoftness\":0.25,")) {
-            for (nested in listOf(true, false)) {
-                val values = """{$fields"future":1.23400}"""
-                val light = if (nested) """{"light":$values}""" else values
-                val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"4":{"components":{"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":$light}}}}}"""
-                val p = renderParamsOf(scene(text), CameraParams.DEFAULT).content.lights.single()
-                assertEquals(LightKind.SPOT, p.kind)
-                assertEquals(if (fields.isEmpty()) 45f else 60f, p.coneAngle, 0f)
-                assertEquals(if (fields.isEmpty()) 0.2f else 0.25f, p.edgeSoftness, 0f)
-            }
+            val values = """{$fields"future":1.23400}"""
+            val light = """{"light":$values}"""
+            val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"4":{"components":{"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":$light}}}}}"""
+            val p = renderParamsOf(scene(text), CameraParams.DEFAULT).content.lights.single()
+            assertEquals(LightKind.SPOT, p.kind)
+            assertEquals(if (fields.isEmpty()) 45f else 60f, p.coneAngle, 0f)
+            assertEquals(if (fields.isEmpty()) 0.2f else 0.25f, p.edgeSoftness, 0f)
         }
     }
+
 
     private val full = """{"format":"abyssus","formatVersion":1,"ambientLightEnabled":true,"ambientLight":{"color":{"r":1.0,"g":0.5,"b":0.0,"a":1.0},"intensity":0.5},
         "fogEnabled":true,"fog":{"color":{"r":0.2,"g":0.3,"b":0.4,"a":1.0},"density":0.01,"gradient":1.5}}"""

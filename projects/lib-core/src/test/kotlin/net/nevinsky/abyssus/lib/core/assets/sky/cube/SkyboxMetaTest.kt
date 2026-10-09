@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.cube
 
+import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
+import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.skyShaders
@@ -31,7 +33,7 @@ class SkyboxMetaTest {
     @Test
     fun loaderDecodesAllSixFaces() {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
-        val prepared = SkyboxLoader(FileLoader(projectDir), metaLoader, skyShaders()).prepare("skybox_default")
+        val prepared = SkyboxLoader(FileLoader(projectDir), metaLoader, skyShaders()).prepare("skybox_default")?.staged
         assertNotNull("skybox_default must prepare", prepared)
         try {
             assertEquals(6, prepared!!.faces.size)

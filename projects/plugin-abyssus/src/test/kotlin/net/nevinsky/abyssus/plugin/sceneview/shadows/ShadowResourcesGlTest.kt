@@ -11,7 +11,7 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.utils.BufferUtils
 import net.nevinsky.abyssus.plugin.sceneview.GlHarness
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Before

@@ -35,7 +35,7 @@ val playHost by configurations.creating {
 
 dependencies {
     implementation(kotlin("stdlib"))
-    api(project(":lib-runtime"))
+    api(project(":lib-core"))
     // the play host's and games' SLF4J binding: messages go to stderr. Abyssus Physics bundles physics.jar without its
     // dependencies, so this never reaches the IDE
     runtimeOnly(libs.slf4j.simple)

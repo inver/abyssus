@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.PlacedEntities
-import net.nevinsky.abyssus.lib.core.editor.scene.PlacedEntity
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.gdx.editor.scene.PlacedEntities
+import net.nevinsky.abyssus.lib.gdx.editor.scene.PlacedEntity
+import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
 
 import com.badlogic.gdx.utils.Disposable
 import java.io.File

@@ -9,8 +9,8 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.core.editor.ray.RayModeSnapshot
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModeSnapshot
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
 import net.nevinsky.abyssus.plugin.facts.SceneFacts
 import net.nevinsky.abyssus.plugin.sceneview.RayControl
 import net.nevinsky.abyssus.plugin.sceneview.openSceneView
@@ -27,12 +27,12 @@ class SceneRayControls @JvmOverloads constructor(
     private val open: (Project, VirtualFile) -> Unit = { p, f -> openSceneView(p, f) },
 ) : SceneFacts<SceneContent> {
     private val sceneFacts =
-        LinkedHashMap<VirtualFile, LinkedHashMap<Disposable, Pair<net.nevinsky.abyssus.lib.core.editor.scene.SceneContent, String?>>>()
+        LinkedHashMap<VirtualFile, LinkedHashMap<Disposable, Pair<net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent, String?>>>()
 
     internal fun recordFacts(
         file: VirtualFile,
         parent: Disposable,
-        content: net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
+        content: net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
     ) {
         val owners = sceneFacts.getOrPut(file) { LinkedHashMap() }
         if (parent !in owners) Disposer.register(parent) {

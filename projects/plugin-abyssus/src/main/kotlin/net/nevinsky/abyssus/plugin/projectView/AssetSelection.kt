@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import com.intellij.ide.projectView.ProjectView
@@ -28,9 +28,9 @@ fun assetsNodeProjectFile(node: Any?): VirtualFile? {
     if (entry.name != "assets" || entry.value !is List<*>) return null
     return entry.source?.takeIf { it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
         net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation {
-            net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat().validate(
-                net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(textOf(it)),
-                net.nevinsky.abyssus.lib.core.editor.document.DocumentKind.PROJECT,
+            net.nevinsky.abyssus.lib.gdx.editor.document.AbyssusDocumentFormat().validate(
+                net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(textOf(it)),
+                net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind.PROJECT,
             ) == null
         }.getOrDefault(false) }
 }

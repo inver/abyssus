@@ -3,33 +3,26 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.components
+package net.nevinsky.abyssus.lib.gdx.editor.components
 
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsWriter
-import net.nevinsky.abyssus.lib.runtime.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.ParentComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.Point2PointPositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.render.AssetReference
-import net.nevinsky.abyssus.lib.runtime.ecs.render.AssetResolver
-import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderableObjectDelegate
+import net.nevinsky.abyssus.lib.gdx.editor.ecs.EcsWriter
+import net.nevinsky.abyssus.lib.core.dto.LightDto
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 
 private fun <C : Component> floatField(name: String, get: (C) -> Float, set: (C, Float) -> Unit) =
     ComponentField<C>(name, FieldKind.FLOAT, { decimalText(get(it)) }, { c, t -> set(c, t.trim().toFloat()) })
 
 private fun <C : Component> refField(name: String, get: (C) -> Int, set: (C, Int) -> Unit) =
     ComponentField<C>(name, FieldKind.ENTITY_REF, { get(it).toString() }, { c, t -> set(c, t.trim().toInt()) })
-
-/** Model assets are named as the file has them; the editor never resolves them. */
-internal val MODEL_ASSETS = AssetResolver { type, name -> AssetReference(name, type) }
-
-internal fun delegateOf(c: RenderComponent) = c.renderable as? RenderableObjectDelegate
 
 /** The built-in kinds the editor models, in the order the view lists them, bound through [reader] and [writer]. */
 internal class BuiltInComponentKinds(private val reader: ComponentReader, private val writer: EcsWriter) {
@@ -58,7 +51,7 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
         kind<PositionComponent>(
             "PositionComponent",
             listOf(
-                refField("lookAtId", { it.lookAtId }, { c, v -> c.lookAtId = v; c.lookAtRef = v.takeIf { it >= 0 }?.toString() }),
+                refField("lookAtId", { it.lookAtId }, { c, v -> c.lookAtId = v }),
                 floatField("localPosition.x", { it.localPosition.x }, { c, v -> c.localPosition.x = v }),
                 floatField("localPosition.y", { it.localPosition.y }, { c, v -> c.localPosition.y = v }),
                 floatField("localPosition.z", { it.localPosition.z }, { c, v -> c.localPosition.z = v }),
@@ -88,16 +81,16 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
         kind<LightComponent>(
             "LightComponent",
             listOf(
-                floatField("color.r", { it.light.color.r }, { c, v -> c.light.color = c.light.color.copy(r = v) }),
-                floatField("color.g", { it.light.color.g }, { c, v -> c.light.color = c.light.color.copy(g = v) }),
-                floatField("color.b", { it.light.color.b }, { c, v -> c.light.color = c.light.color.copy(b = v) }),
-                floatField("color.a", { it.light.color.a }, { c, v -> c.light.color = c.light.color.copy(a = v) }),
+                floatField("color.r", { it.light.color.r }, { c, v -> c.light.color.r = v }),
+                floatField("color.g", { it.light.color.g }, { c, v -> c.light.color.g = v }),
+                floatField("color.b", { it.light.color.b }, { c, v -> c.light.color.b = v }),
+                floatField("color.a", { it.light.color.a }, { c, v -> c.light.color.a = v }),
                 floatField("intensity", { it.light.intensity }, { c, v -> c.light.intensity = v }),
                 floatField("range", { it.light.range }, { c, v -> c.light.range = v }),
                 floatField("coneAngle", { it.light.coneAngle }, { c, v -> c.light.coneAngle = v }),
                 floatField("edgeSoftness", { it.light.edgeSoftness * 100f }, { c, v -> c.light.edgeSoftness = v / 100f }),
             ),
-        ) { LightComponent() },
+        ) { LightComponent(LightDto()) },
         kind<Point2PointPositionComponent>(
             "Point2PointPositionComponent",
             listOf(
@@ -109,19 +102,19 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
             "RenderComponent",
             listOf(
                 ComponentField(
-                    "assetType", FieldKind.CHOICE, { delegateOf(it)?.asset?.type?.name.orEmpty() },
-                    { c, t -> delegateOf(c)?.let { d -> d.asset = AssetReference(d.asset.assetName, MetaType.valueOf(t)) } },
+                    "assetType", FieldKind.CHOICE, { it.type?.name.orEmpty() },
+                    { c, t -> c.type = MetaType.valueOf(t) },
                     choices = listOf(MetaType.MODEL, MetaType.TERRAIN).map { it.name },
                 ),
                 ComponentField(
-                    "assetName", FieldKind.ASSET_NAME, { delegateOf(it)?.asset?.assetName.orEmpty() },
-                    { c, t -> delegateOf(c)?.let { d -> d.asset = AssetReference(t, d.asset.type) } },
+                    "assetName", FieldKind.ASSET_NAME, { it.assetName },
+                    { c, t -> c.assetName = t },
                 ),
                 ComponentField(
-                    "shaderKey", FieldKind.TEXT, { delegateOf(it)?.shaderKey.orEmpty() },
-                    { c, t -> delegateOf(c)?.shaderKey = t.ifEmpty { null } }, optional = true,
+                    "shaderKey", FieldKind.TEXT, { it.shaderKey.orEmpty() },
+                    { c, t -> c.shaderKey = t.ifEmpty { null } }, optional = true,
                 ),
             ),
-        ) { RenderComponent(RenderableObjectDelegate(AssetReference("", MetaType.MODEL), null)) },
+        ) { RenderComponent(type = MetaType.MODEL) },
     )
 }

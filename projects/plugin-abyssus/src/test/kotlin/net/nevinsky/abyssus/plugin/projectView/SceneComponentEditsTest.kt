@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -13,8 +13,8 @@ import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.gdx.editor.components.EditResult
+import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 import java.io.File
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.testMetaFiles
@@ -26,7 +26,7 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
 
     private fun textOf(f: VirtualFile) = FileDocumentManager.getInstance().getDocument(f)!!.text
 
-    private fun components(f: VirtualFile, id: String) = net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree(SceneJson().parse(textOf(f))).components(id)!!
+    private fun components(f: VirtualFile, id: String) = net.nevinsky.abyssus.lib.gdx.editor.document.SceneEntityTree(SceneJson().parse(textOf(f))).components(id)!!
 
     private fun open(path: String, text: String = original): Pair<VirtualFile, TextEditor> {
         val f = myFixture.addFileToProject(path, text).virtualFile
@@ -37,7 +37,7 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
     fun testAddLightIsOneUndoStep() {
         val (f, editor) = open("c/Lights.scene", File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
         val start = textOf(f)
-        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.lib.core.editor.components.LightPreset.SUN, net.nevinsky.abyssus.lib.core.editor.content.Vec3(10f, 0f, -4f), reader)
+        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.lib.gdx.editor.components.LightPreset.SUN, net.nevinsky.abyssus.lib.gdx.editor.content.Vec3(10f, 0f, -4f), reader)
         assertEquals(EditResult.Changed, result.result)
         assertEquals("7", result.entityId)
         assertEquals("Sun 7", components(f, "7")["NameComponent"]["name"].asText())
@@ -66,7 +66,7 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
     fun testMalformedSceneFieldsRejectLightWithoutWrite() {
         val text = """{"format":"abyssus","formatVersion":1,"name":[],"ecs":{"entities":{}}}"""
         val f = myFixture.addFileToProject("c/bad-name.scene", text).virtualFile
-        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.lib.core.editor.components.LightPreset.SUN, net.nevinsky.abyssus.lib.core.editor.content.Vec3(0f, 0f, 0f), reader)
+        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.lib.gdx.editor.components.LightPreset.SUN, net.nevinsky.abyssus.lib.gdx.editor.content.Vec3(0f, 0f, 0f), reader)
         assertTrue(result.result is EditResult.Rejected)
         assertFalse(canAddLight(f, reader))
         assertEquals(text, textOf(f))
@@ -74,7 +74,7 @@ class SceneComponentEditsTest : BasePlatformTestCase() {
 
     fun testUnreadableSceneRejectsLightWithoutWrite() {
         val f = myFixture.addFileToProject("c/bad-light.scene", "not json").virtualFile
-        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.lib.core.editor.components.LightPreset.SPOT, net.nevinsky.abyssus.lib.core.editor.content.Vec3(0f, 0f, 0f), reader)
+        val result = SceneComponentEdits.addLight(project, f, net.nevinsky.abyssus.lib.gdx.editor.components.LightPreset.SPOT, net.nevinsky.abyssus.lib.gdx.editor.content.Vec3(0f, 0f, 0f), reader)
         assertTrue(result.result is EditResult.Rejected)
         assertNull(result.entityId)
         assertEquals("not json", textOf(f))

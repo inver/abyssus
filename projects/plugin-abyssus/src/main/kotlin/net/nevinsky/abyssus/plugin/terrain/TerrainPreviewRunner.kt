@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
-import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerationDraft
-import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerator
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainGenerationDraft
+import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainGenerator
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import kotlin.coroutines.cancellation.CancellationException
 

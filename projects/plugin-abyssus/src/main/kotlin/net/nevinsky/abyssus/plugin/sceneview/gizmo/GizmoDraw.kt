@@ -5,14 +5,14 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.gizmo
 
-import net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis
-import net.nevinsky.abyssus.lib.core.editor.pick.GizmoHandles
-import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
+import net.nevinsky.abyssus.lib.gdx.editor.pick.GizmoAxis
+import net.nevinsky.abyssus.lib.gdx.editor.pick.GizmoHandles
+import net.nevinsky.abyssus.lib.gdx.editor.pick.GizmoMode
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.scene.toVec3
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
+import net.nevinsky.abyssus.lib.gdx.editor.pick.LineSink
+import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
+import net.nevinsky.abyssus.lib.gdx.editor.scene.toVec3
+import net.nevinsky.abyssus.lib.gdx.editor.scene.toVector3
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin

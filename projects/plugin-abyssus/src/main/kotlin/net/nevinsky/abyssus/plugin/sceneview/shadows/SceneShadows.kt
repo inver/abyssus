@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.shadows
 
-import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
-import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
+import net.nevinsky.abyssus.lib.gdx.editor.scene.LightSet
+import net.nevinsky.abyssus.lib.gdx.editor.scene.ModelEntity
+import net.nevinsky.abyssus.lib.gdx.editor.scene.toVector3
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g3d.Environment
@@ -26,14 +26,14 @@ import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Pool
 import com.badlogic.gdx.utils.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import net.nevinsky.abyssus.lib.core.Renderable
-import net.nevinsky.abyssus.lib.core.shader.ModelDepthShaderProvider
-import net.nevinsky.abyssus.lib.core.shader.ShadowDepthPass
-import net.nevinsky.abyssus.lib.core.shader.ShadowAtlasAttribute
-import net.nevinsky.abyssus.lib.core.shader.ShadowAtlasView
-import net.nevinsky.abyssus.lib.core.shader.ShadowLightRecord
+import net.nevinsky.abyssus.lib.gdx.Renderable
+import net.nevinsky.abyssus.lib.gdx.shader.ModelDepthShaderProvider
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowDepthPass
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasView
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightRecord
 import net.nevinsky.abyssus.plugin.sceneview.TerrainEntity
-import net.nevinsky.abyssus.lib.core.shader.ShadowLightKind as AtlasLightKind
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightKind as AtlasLightKind
 import net.nevinsky.abyssus.plugin.sceneview.*
 import kotlin.math.max
 import kotlin.math.min
