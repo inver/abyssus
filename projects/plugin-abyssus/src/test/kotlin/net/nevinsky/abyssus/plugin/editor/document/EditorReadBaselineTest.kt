@@ -31,7 +31,7 @@ class EditorReadBaselineTest : BasePlatformTestCase() {
         assertEquals(Vec3(-3.035308f, .9123962f, -3.2570944f), content.models.first().transform.position)
         val params = renderParamsOf(scene, CameraParams.DEFAULT)
         assertEquals(content, params.content)
-        assertEquals(JsonProcessor().readObject(text).get("ecs"), params.ecs)
+        assertEquals(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(text).get("ecs"), params.ecs)
         assertEquals(CameraParams.DEFAULT, params.camera)
         assertNotNull(params.rayTracing.settings)
     }

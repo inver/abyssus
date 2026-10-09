@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.assets
+package net.nevinsky.abyssus.lib.core.assets
 
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import java.util.UUID

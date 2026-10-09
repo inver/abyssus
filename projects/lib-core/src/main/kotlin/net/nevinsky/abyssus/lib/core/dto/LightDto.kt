@@ -5,10 +5,11 @@
 package net.nevinsky.abyssus.lib.core.dto
 
 import com.badlogic.gdx.graphics.g3d.environment.BaseLight
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.LIGHT_CONE_ANGLE
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.LIGHT_EDGE_SOFTNESS
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.LIGHT_INTENSITY
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.LIGHT_RANGE
+
+const val LIGHT_INTENSITY = 1f
+const val LIGHT_RANGE = 100f
+const val LIGHT_CONE_ANGLE = 45f
+const val LIGHT_EDGE_SOFTNESS = 0.2f
 
 data class LightDto(
     var intensity: Float = LIGHT_INTENSITY,

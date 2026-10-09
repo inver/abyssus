@@ -18,7 +18,7 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.plugin.dto.SceneReader
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.ide.plugins.PluginManager

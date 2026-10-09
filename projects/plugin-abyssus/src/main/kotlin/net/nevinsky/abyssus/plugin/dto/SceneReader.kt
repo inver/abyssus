@@ -5,8 +5,8 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.AbyssusCore
-import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 
 @Service(Service.Level.APP)
 class SceneReader(private val supplied: DocumentParsing? = null) : ConfigFileReader<SceneDto> {

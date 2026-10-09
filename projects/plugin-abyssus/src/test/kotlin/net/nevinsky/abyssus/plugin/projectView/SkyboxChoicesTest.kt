@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.plugin.projectView
 import net.nevinsky.abyssus.plugin.ui.thumbnail
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.editor.testAsset
 import net.nevinsky.abyssus.plugin.dto.ProjectDto
 import net.nevinsky.abyssus.plugin.dto.SceneEntry

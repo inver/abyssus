@@ -5,40 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayFrameContext
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneDisplay
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySkyBaker
-import net.nevinsky.abyssus.lib.gdx.editor.scene.AssetRevisionBatch
-import net.nevinsky.abyssus.lib.gdx.editor.scene.MAX_POINT
-import net.nevinsky.abyssus.lib.gdx.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.gdx.editor.scene.LightSet
-import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.gdx.editor.scene.PendingAssetRevision
-import net.nevinsky.abyssus.lib.gdx.editor.scene.lightSetOf
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.scene.cameraDirectionOf
-import net.nevinsky.abyssus.lib.gdx.editor.content.toMatrix
-import net.nevinsky.abyssus.lib.gdx.editor.pick.FrameSnapshot
-import net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneMarkers
-import net.nevinsky.abyssus.lib.gdx.editor.pick.ScenePreview
-import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneQueries
-import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneViewState
-import net.nevinsky.abyssus.lib.gdx.editor.pick.SnapshotSceneQueries
-import net.nevinsky.abyssus.lib.gdx.editor.pick.TerrainTarget
-import net.nevinsky.abyssus.lib.gdx.editor.pick.aspectOf
-import net.nevinsky.abyssus.lib.gdx.editor.pick.copyOfCamera
-import net.nevinsky.abyssus.lib.gdx.editor.pick.gizmoHandlesFor
-import net.nevinsky.abyssus.lib.gdx.editor.pick.snapshotBoxOf
-import net.nevinsky.abyssus.lib.gdx.editor.pick.snapshotTerrainOf
-import net.nevinsky.abyssus.lib.gdx.editor.content.Pose
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
-import net.nevinsky.abyssus.lib.gdx.editor.content.LightPlacement
-
-import java.io.File
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
@@ -50,27 +16,44 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.intellij.openapi.Disposable
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
-import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
-import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
-import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
-import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
-import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw
-import net.nevinsky.abyssus.plugin.sceneview.skybox.SkyClock
-import net.nevinsky.abyssus.plugin.sceneview.skybox.SunDirection
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SunOcclusion
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.SKY_CAMERA_HEIGHT
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
-import net.nevinsky.abyssus.plugin.sceneview.terrain.TerrainShader
-import net.nevinsky.abyssus.plugin.sceneview.shadows.SceneShadows
+import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
+import net.nevinsky.abyssus.lib.gdx.editor.content.*
+import net.nevinsky.abyssus.lib.gdx.editor.pick.*
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RayFrameContext
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneDisplay
+import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySkyBaker
+import net.nevinsky.abyssus.lib.gdx.editor.scene.AssetRevisionBatch
+import net.nevinsky.abyssus.lib.gdx.editor.scene.LightSet
+import net.nevinsky.abyssus.lib.gdx.editor.scene.MAX_POINT
+import net.nevinsky.abyssus.lib.gdx.editor.scene.ModelEntity
+import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.lib.gdx.editor.scene.PendingAssetRevision
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.editor.scene.cameraDirectionOf
+import net.nevinsky.abyssus.lib.gdx.editor.scene.lightSetOf
+import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
+import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
+import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
+import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw
+import net.nevinsky.abyssus.plugin.sceneview.shadows.SceneShadows
+import net.nevinsky.abyssus.plugin.sceneview.skybox.SkyClock
+import net.nevinsky.abyssus.plugin.sceneview.skybox.SunDirection
+import net.nevinsky.abyssus.plugin.sceneview.terrain.TerrainShader
+import java.io.File
 import net.nevinsky.abyssus.lib.gdx.ModelBatch as ContentBatch
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FOV
 
 /**
  * Draws a scene's environment, a ground grid and the content the scene places (skybox, terrains, models), and picks
@@ -118,6 +101,7 @@ class SceneRenderer(
     private var batch: ModelBatch? = null
     private var contentBatch: ContentBatch? = null
     private var contentShaders: DefaultShaderProvider? = null
+
     /** Asset changes waiting for a frame that can safely replace GL resources; merged until [render] takes them. */
     private val pendingRevision = PendingAssetRevision()
 
@@ -158,16 +142,19 @@ class SceneRenderer(
     internal fun cloudsEnabled(p: SceneRenderParams = params): Boolean {
         val name = p.content.skybox ?: return false
         val dir = p.projectDir ?: return false
-        val meta = assets.project(dir).metas.loadBaseMeta(name)?.takeIf { it.type == MetaType.SKYBOX_PROCEDURAL } ?: return false
+        val meta = assets.project(dir).metas.loadBaseMeta(name)?.takeIf { it.type == MetaType.SKYBOX_PROCEDURAL }
+            ?: return false
         if (meta.typedAdditional<ProceduralSkyMeta>().cloudsReference == null) return false
         return (skybox?.sky(name) as? ProceduralSky)?.hasClouds ?: true
     }
+
     private var lineBatch: LineBatch? = null
     private var gridModel: Model? = null
     private var grid: ModelInstance? = null
     private val camera = PerspectiveCamera()
     private val rayCamera = PerspectiveCamera()
     private var rayPresenter: RayFramePresenter? = null
+
     /** Invoked after current preview/camera/animation updates, in the safe canvas context. */
     internal var rayFrameProvider: ((RayFrameContext) -> RaySceneDisplay?)? = null
     internal var presentedRayFrame = false
@@ -221,11 +208,14 @@ class SceneRenderer(
     private var drawnAssets: List<Pair<String, Int>> = emptyList()
 
     private fun updateDrawnVersion() {
-        val fresh = models.drawn.mapTo(HashSet()) { it.placement.entityId } to terrains.drawn.mapTo(HashSet()) { it.placement.entityId }
+        val fresh =
+            models.drawn.mapTo(HashSet()) { it.placement.entityId } to terrains.drawn.mapTo(HashSet()) { it.placement.entityId }
         // a replaced asset (new heights under the same entity) changes what the entities are standing on
         val assets = models.drawn.map { it.placement.entityId to System.identityHashCode(it.model) } +
-            terrains.drawn.map { it.placement.entityId to System.identityHashCode(it.terrain) }
-        if (fresh != drawnIds || assets != drawnAssets) { drawnIds = fresh; drawnAssets = assets; drawnVersion++ }
+                terrains.drawn.map { it.placement.entityId to System.identityHashCode(it.terrain) }
+        if (fresh != drawnIds || assets != drawnAssets) {
+            drawnIds = fresh; drawnAssets = assets; drawnVersion++
+        }
     }
 
     /** The camera as of the last frame (for tests). */
@@ -296,11 +286,26 @@ class SceneRenderer(
         terrains.update(c.terrains, p.projectDir)
         updateDrawnVersion()
         skybox?.update(c.skybox, p.projectDir)
-        val hdrAmbient = (SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) } as? SceneAmbient.Sky)?.environment?.ambient
-        val rayDisplay = rayFrameProvider?.invoke(RayFrameContext(p, c, camera, lights, models.drawn, width, height, state.viewCamera, hdrAmbient) { bakedProceduralSky(c, p) })
+        val hdrAmbient = (SceneAmbient.of(
+            c.skybox,
+            p.ambient
+        ) { skybox?.environment(it) } as? SceneAmbient.Sky)?.environment?.ambient
+        val rayDisplay = rayFrameProvider?.invoke(
+            RayFrameContext(
+                p,
+                c,
+                camera,
+                lights,
+                models.drawn,
+                width,
+                height,
+                state.viewCamera,
+                hdrAmbient
+            ) { bakedProceduralSky(c, p) })
             ?.takeIf { compatibleRayDisplay(it, c, width, height) }
         presentedRayFrame = rayDisplay != null
-        val atlas = if (rayDisplay == null) shadows?.render(camera, lights, environment, models.drawn, terrains.drawn) else null
+        val atlas =
+            if (rayDisplay == null) shadows?.render(camera, lights, environment, models.drawn, terrains.drawn) else null
         shadowedLightIds = atlas?.records?.mapTo(HashSet()) { it.lightId } ?: emptySet()
         Gdx.gl.glViewport(0, 0, width, height)
         Gdx.gl.glClearColor(p.clear.r, p.clear.g, p.clear.b, p.clear.a)
@@ -308,7 +313,14 @@ class SceneRenderer(
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
 
         if (rayDisplay == null) {
-            skybox?.draw(camera, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights), skyClock.seconds, state.cloudTechnique)
+            skybox?.draw(
+                camera,
+                p.content.skybox,
+                p.projectDir,
+                SunDirection.of(p.content.lights),
+                skyClock.seconds,
+                state.cloudTechnique
+            )
             drawnCloudTechnique = (skybox?.sky(p.content.skybox) as? ProceduralSky)?.drawnTechnique
             batch.begin(camera)
             batch.render(grid, environment)
@@ -377,7 +389,12 @@ class SceneRenderer(
      * Camera markers, light markers and the overlays' depth-tested pass in the scene, then the selection's highlight,
      * its gizmo and the overlays' second pass on top of everything.
      */
-    private fun drawOverlays(width: Int, height: Int, c: SceneContent = content, displayCamera: PerspectiveCamera = camera) {
+    private fun drawOverlays(
+        width: Int,
+        height: Int,
+        c: SceneContent = content,
+        displayCamera: PerspectiveCamera = camera
+    ) {
         val lines = lineBatch ?: return
         drewGizmo = false
         drawnCameraMarkers = c.cameras.count { it.entityId != state.viewCamera }
@@ -398,18 +415,29 @@ class SceneRenderer(
         lines.end()
     }
 
-    internal fun overlayView(c: SceneContent, displayCamera: PerspectiveCamera, height: Int, onTop: Boolean) = OverlayView(
-        c, params.ecs, params.projectDir, state.selectedId, displayCamera, height, state.poses.isNotEmpty() || !state.gizmosEnabled, onTop,
-    )
+    internal fun overlayView(c: SceneContent, displayCamera: PerspectiveCamera, height: Int, onTop: Boolean) =
+        OverlayView(
+            c,
+            params.ecs,
+            params.projectDir,
+            state.selectedId,
+            displayCamera,
+            height,
+            state.poses.isNotEmpty() || !state.gizmosEnabled,
+            onTop,
+        )
 
     /** The world bounds of the entity [id] as the last frame drew it. */
     internal fun boundsOf(c: SceneContent, id: String): BoundingBox? {
         models.drawn.firstOrNull { it.placement.entityId == id }?.let {
-            val transform = c.models.firstOrNull { model -> model.entityId == id }?.transform?.toMatrix() ?: it.instance.transform
+            val transform =
+                c.models.firstOrNull { model -> model.entityId == id }?.transform?.toMatrix() ?: it.instance.transform
             return BoundingBox(it.localBounds).mul(transform)
         }
         terrains.drawn.firstOrNull { it.placement.entityId == id }?.let {
-            return BoundingBox(it.localBounds).mul(c.terrains.firstOrNull { terrain -> terrain.entityId == id }?.transform?.toMatrix() ?: it.world)
+            return BoundingBox(it.localBounds).mul(
+                c.terrains.firstOrNull { terrain -> terrain.entityId == id }?.transform?.toMatrix() ?: it.world
+            )
         }
         return SceneMarkers().boundsOf(c, id)
     }
@@ -426,7 +454,11 @@ class SceneRenderer(
         if (atlas != null) environment.set(atlas)
         terrainShader?.draw(camera, terrains.drawn, p.ambient, p.fog, frameLights, sky?.irradiance, atlas)
         contentBatch.begin(camera)
-        for (entity in models.drawn) contentBatch.render(entity.instance, environment, ShaderProvider.DEFAULT_SHADER_KEY)
+        for (entity in models.drawn) contentBatch.render(
+            entity.instance,
+            environment,
+            ShaderProvider.DEFAULT_SHADER_KEY
+        )
         contentBatch.end()
     }
 
@@ -526,6 +558,7 @@ class SceneRenderer(
     }
 
     private class BakedSky(val key: Triple<String, File?, Vec3>, val snapshot: RaySkySnapshot?)
+
     private var bakedSky: BakedSky? = null
     private val skyBaker = RaySkyBaker()
 
@@ -536,16 +569,25 @@ class SceneRenderer(
         val sun = SunDirection.of(c.lights)
         val key = Triple(name, p.projectDir, sun)
         bakedSky?.takeIf { it.key == key }?.let { return it.snapshot }
-        val snapshot = try { skyBaker.bake(sky, sun) } catch (failure: Exception) { null }
+        val snapshot = try {
+            skyBaker.bake(sky, sun)
+        } catch (failure: Exception) {
+            null
+        }
         bakedSky = BakedSky(key, snapshot)
         return snapshot
     }
 
-    private fun compatibleRayDisplay(display: RaySceneDisplay, current: SceneContent, width: Int, height: Int): Boolean {
+    private fun compatibleRayDisplay(
+        display: RaySceneDisplay,
+        current: SceneContent,
+        width: Int,
+        height: Int
+    ): Boolean {
         val metadata = display.metadata
         fun keys(placements: List<AssetPlacement>) = placements.map { it.entityId to it.assetName }.toSet()
         return metadata.width == width && metadata.height == height && metadata.viewCamera == state.viewCamera &&
-            metadata.projectDir == params.projectDir && keys(metadata.content.models) == keys(current.models) &&
-            keys(metadata.content.terrains) == keys(current.terrains)
+                metadata.projectDir == params.projectDir && keys(metadata.content.models) == keys(current.models) &&
+                keys(metadata.content.terrains) == keys(current.terrains)
     }
 }

@@ -17,10 +17,10 @@ import net.nevinsky.abyssus.plugin.dto.ProjectDto
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.sceneReferences
 import net.nevinsky.abyssus.lib.core.util.obj
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.util.text
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.editor.meta.SKYBOX_FACES
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrPreview

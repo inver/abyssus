@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -16,7 +16,7 @@ import com.intellij.openapi.wm.ToolWindowId
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
-import net.nevinsky.abyssus.lib.gdx.assets.Asset
+import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
 
@@ -27,7 +27,7 @@ fun assetsNodeProjectFile(node: Any?): VirtualFile? {
     val entry = (node as? DtoEntryNode)?.value ?: return null
     if (entry.name != "assets" || entry.value !is List<*>) return null
     return entry.source?.takeIf { it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
-        net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation {
+        net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation {
             net.nevinsky.abyssus.lib.gdx.editor.document.AbyssusDocumentFormat().validate(
                 net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(textOf(it)),
                 net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind.PROJECT,

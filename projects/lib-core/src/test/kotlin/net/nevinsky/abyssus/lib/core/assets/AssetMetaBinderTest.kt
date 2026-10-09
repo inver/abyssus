@@ -1,21 +1,23 @@
-package net.nevinsky.abyssus.lib.gdx.assets
+package net.nevinsky.abyssus.lib.core.assets
 
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
-import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureMeta
+import net.nevinsky.abyssus.lib.core.assets.texture.TextureMeta
 import org.junit.Assert.*
 import org.junit.Test
 
 class AssetMetaBinderTest {
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
 
     @Test fun everyKindBindsItsSettingsAndUnregisteredKindsKeepAMap() {
         val classes = mapOf(
             MetaType.MODEL to ModelMeta::class.java,
+            MetaType.CLOUDS to CloudMeta::class.java,
             MetaType.TERRAIN to TerrainMeta::class.java,
             MetaType.SKYBOX to SkyboxMeta::class.java,
             MetaType.SKYBOX_PROCEDURAL to ProceduralSkyMeta::class.java,

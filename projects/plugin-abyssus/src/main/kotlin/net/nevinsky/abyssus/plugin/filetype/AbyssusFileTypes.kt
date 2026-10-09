@@ -9,7 +9,7 @@ import com.intellij.json.JsonLanguage
 import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.util.IconLoader
 import javax.swing.Icon
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 
 object SceneIcons {
     @JvmField

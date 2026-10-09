@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.lib.gdx.editor.components.LightEntities
 import net.nevinsky.abyssus.lib.gdx.editor.components.LightPreset
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
@@ -34,7 +34,7 @@ import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
  */
 object SceneComponentEdits {
     private fun readMeta(folder: VirtualFile, metaFiles: MetaFiles) =
-        net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation { metaFiles.inEditor(folder) }.getOrNull()
+        net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation { metaFiles.inEditor(folder) }.getOrNull()
 
     /** The models and terrains of the project [sceneFile] belongs to; empty for a scene outside a project. */
     fun renderAssets(sceneFile: VirtualFile, metaFiles: MetaFiles): List<RenderAsset> {

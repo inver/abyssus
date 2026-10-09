@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.gdx.editor.components
 
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.editor.ecs.EcsWriter
 import net.nevinsky.abyssus.lib.core.dto.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent

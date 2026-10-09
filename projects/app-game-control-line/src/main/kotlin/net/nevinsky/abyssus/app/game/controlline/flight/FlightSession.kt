@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.core.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import org.slf4j.Logger
 
 /** A frame never runs more than this much simulation (s), so a stall does not jump the plane. */

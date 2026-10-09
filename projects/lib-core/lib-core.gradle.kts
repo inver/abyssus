@@ -40,6 +40,5 @@ tasks.test {
 
 extra["abyssusSingletonExcludes"] = listOf(
     "net/nevinsky/abyssus/lib/core/io/AbyssusProjectLayout.kt",
-    "net/nevinsky/abyssus/lib/core/util/GeometryUtils.kt",
-    "net/nevinsky/abyssus/lib/core/util/EcsUtils.kt"
+    "net/nevinsky/abyssus/lib/core/util/GeometryUtils.kt"
 )

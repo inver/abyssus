@@ -16,8 +16,8 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.core.scene.EcsLoadingWarns
-import net.nevinsky.abyssus.lib.core.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.ecs.EcsLoadingWarns
+import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import java.math.BigDecimal
 import kotlin.math.abs
 

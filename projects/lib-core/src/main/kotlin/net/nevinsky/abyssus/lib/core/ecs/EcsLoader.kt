@@ -16,9 +16,9 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.EcsReadWarnings
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.scene.EcsLoadingWarns
-import net.nevinsky.abyssus.lib.core.scene.SceneEngine
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.ecs.EcsLoadingWarns
+import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
+import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.util.obj
 
 /**

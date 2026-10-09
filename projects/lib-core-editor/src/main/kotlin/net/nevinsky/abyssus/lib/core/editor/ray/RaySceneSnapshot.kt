@@ -34,7 +34,7 @@ import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
 import net.nevinsky.abyssus.lib.core.assets.model.RayTextureSampler
 import net.nevinsky.abyssus.lib.core.assets.model.RayTextureWrap
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_LAYERS
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.terrain.RayTerrainSnapshot
 import net.nevinsky.abyssus.lib.raytracing.*
 import net.nevinsky.abyssus.lib.gdx.editor.pick.DragResult

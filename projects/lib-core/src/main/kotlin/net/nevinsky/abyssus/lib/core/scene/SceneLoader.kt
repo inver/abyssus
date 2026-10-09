@@ -1,6 +1,6 @@
 package net.nevinsky.abyssus.lib.core.scene
 
-import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.FileLoader

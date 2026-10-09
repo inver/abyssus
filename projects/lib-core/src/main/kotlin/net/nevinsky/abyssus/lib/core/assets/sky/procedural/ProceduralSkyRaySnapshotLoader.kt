@@ -1,6 +1,6 @@
 package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 

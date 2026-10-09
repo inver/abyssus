@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.gdx.editor.document
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 
 /** What [DocumentTextEditor.edit] made of a document's text. */
 sealed interface TextEditOutcome {

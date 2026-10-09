@@ -7,8 +7,8 @@ package net.nevinsky.abyssus.plugin.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.gdx.assets.Asset
-import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 
 /** A `.abss` project as the view shows it. [scenes] holds [SceneEntry]s, and a [SceneError] for each that failed to read. */
 data class ProjectDto(

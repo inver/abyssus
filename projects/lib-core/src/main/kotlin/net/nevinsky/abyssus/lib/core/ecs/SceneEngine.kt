@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.scene
+package net.nevinsky.abyssus.lib.core.ecs
 
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Engine

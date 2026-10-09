@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.gdx.editor.meta
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import java.io.File
 
 /**

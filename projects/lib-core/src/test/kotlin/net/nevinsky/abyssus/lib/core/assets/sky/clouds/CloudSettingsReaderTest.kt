@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMetaReader
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
@@ -16,7 +18,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CloudMetaReaderTest {
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val log = RecordingLogger()
     private val reader = CloudMetaReader(log)
 
@@ -24,7 +26,7 @@ class CloudMetaReaderTest {
 
     @Test
     fun cumulusDefaults() {
-        val band = read("""{"low": {"type": "cumulus"}}""").bands.getValue(CloudLevel.LOW)
+        val band = read("""{"low": {"type": "cumulus"}}""").low!!
         assertEquals(CloudType.CUMULUS, band.type)
         assertEquals(800f, band.base)
         assertEquals(2000f, band.top)
@@ -36,7 +38,7 @@ class CloudMetaReaderTest {
     @Test
     fun givenFieldsReplaceTheDefaults() {
         val band = read("""{"low": {"type": "cumulus", "coverage": 0.5, "base": 1000, "wind": [-2, 3.5]}}""")
-            .bands.getValue(CloudLevel.LOW)
+            .low!!
         assertEquals(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, base = 1000f, coverage = 0.5f, windX = -2f, windZ = 3.5f), band)
     }
 
@@ -70,13 +72,13 @@ class CloudMetaReaderTest {
         val settings = read(
             """{"low": {"type": "cumulus"}, "mid": {"type": "altocumulus"}, "high": {"type": "cirrus"}}"""
         )
-        assertEquals(listOf(CloudType.CIRRUS, CloudType.ALTOCUMULUS, CloudType.CUMULUS), settings.bandsFarToNear.map { it.type })
+        assertEquals(listOf(CloudType.CIRRUS, CloudType.ALTOCUMULUS, CloudType.CUMULUS), settings.bandsFarToNear().map { it.type })
     }
 
     private fun assertOnlyLowSkipped(low: String) {
         log.entries.clear()
         val settings = read("""{"low": $low, "mid": {"type": "altostratus"}}""")
-        assertEquals("only the bad band is skipped for $low", setOf(CloudLevel.MID), settings.bands.keys)
+        assertEquals("only the bad band is skipped for $low", setOf(CloudLevel.MID), settings.bandsFarToNear().map { it.level }.toSet())
         assertEquals("logged once for $low: ${log.warnings}", 1, log.warnings.size)
         assertTrue(log.warnings.single().contains("'low'"))
     }

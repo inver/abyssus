@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.lib.core.assets.model.RayModelSkinning
 import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.raytracing.*
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean

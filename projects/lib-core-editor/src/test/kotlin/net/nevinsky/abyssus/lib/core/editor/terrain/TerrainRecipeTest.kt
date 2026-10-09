@@ -11,7 +11,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TerrainRecipeTest {
-    private val codec = TerrainRecipeCodec(JsonProcessor())
+    private val codec = TerrainRecipeCodec(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER))
     private val bytes = byteArrayOf(1, 2, 3, 4)
     private val recipe = TerrainRecipe(
         settings = TerrainGenerationSettings(seed = -7, featureSize = 150.5f, minHeight = -10f, maxHeight = 90f, octaves = 4, persistence = 0.25f, lacunarity = 3f),

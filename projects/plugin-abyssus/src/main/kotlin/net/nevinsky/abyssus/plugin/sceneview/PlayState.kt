@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.gdx.editor.content.Pose
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 
 /**
  * Play in one Scene view, without Swing or GL: `IDLE -> STARTING -> PLAYING <-> PAUSED -> IDLE`, and `FAILED` when the

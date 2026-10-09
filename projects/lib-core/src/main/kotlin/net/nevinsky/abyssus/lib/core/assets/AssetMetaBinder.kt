@@ -1,13 +1,14 @@
-package net.nevinsky.abyssus.lib.gdx.assets
+package net.nevinsky.abyssus.lib.core.assets
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMetaReader
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
-import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureMeta
+import net.nevinsky.abyssus.lib.core.assets.texture.TextureMeta
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 /** Binds an admitted metadata tree; callers validate native identity before invoking [bind]. No IO or GL. */
@@ -29,7 +30,7 @@ class AssetMetaBinder(
     fun bind(name: String, tree: JsonNode): AssetMeta<Any> {
         val baseMeta = json.bind(tree, AssetMeta::class.java)
         val block = tree["additional"]?.takeIf { it.isObject } ?: json.readObject("{}")
-        val additional: Any = settings[baseMeta.type]?.let {
+        val additional: Any = if (baseMeta.type == MetaType.CLOUDS) CloudMetaReader(json.log).read(name, block) else settings[baseMeta.type]?.let {
             json.bind(block, it)
         } ?: json.bind(block, Map::class.java)
         return AssetMeta(

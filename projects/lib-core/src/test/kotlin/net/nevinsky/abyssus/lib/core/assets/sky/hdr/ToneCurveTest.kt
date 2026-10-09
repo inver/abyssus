@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.assets.sky.hdr
+package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
 import org.junit.Assert.assertEquals

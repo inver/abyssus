@@ -2,7 +2,7 @@ package net.nevinsky.abyssus.lib.gdx
 
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 
-import net.nevinsky.abyssus.lib.gdx.assets.testProject
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows

@@ -8,8 +8,8 @@ import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -18,11 +18,18 @@ import java.io.File
 
 class PhysicsOverlayGeometryTest {
     private val project = File(checkNotNull(System.getProperty("abyssus.testData")), "project/Physics")
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val scene = json.parse(File(project, "scenes/Main Scene.scene").readText(), SceneDto::class.java)
     private val content = sceneContentOf(scene)
     private val metas = AssetMetaLoader(json, FileLoader(project))
-    private val geometry = PhysicsOverlayGeometry { name -> metas.terrainSize(name) }
+    private val ctx = net.nevinsky.abyssus.lib.core.BaseCtx(project.path, null, null, org.slf4j.helpers.NOPLogger.NOP_LOGGER)
+    private val geometry = PhysicsOverlayGeometry(ctx) { name -> metas.terrainSize(name) }
+
+    @org.junit.After
+    fun closeContext() {
+        ctx.executor.shutdownNow()
+        ctx.assetStorage.dispose()
+    }
 
     private fun extent(segments: List<OverlaySegment>, axis: (Vec3) -> Float): Float {
         val values = segments.flatMap { listOf(axis(it.from), axis(it.to)) }

@@ -21,7 +21,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.ui.SimpleTextAttributes
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.lib.gdx.assets.Asset
+import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectIcons
 import net.nevinsky.abyssus.plugin.filetype.AssetIcons

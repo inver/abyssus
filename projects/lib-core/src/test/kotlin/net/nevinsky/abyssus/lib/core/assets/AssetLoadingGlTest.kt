@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.assets
+package net.nevinsky.abyssus.lib.core.assets
 
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.files.FileHandle
@@ -21,7 +21,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
-import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureLoader
+import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.Model

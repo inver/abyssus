@@ -1,12 +1,12 @@
 package net.nevinsky.abyssus.lib.gdx.editor
 
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
-import net.nevinsky.abyssus.lib.gdx.assets.Asset
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import org.slf4j.helpers.NOPLogger

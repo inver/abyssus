@@ -34,7 +34,7 @@ private interface PublicFieldsOnly
  * Binds native JSON (`.abss`, `.scene`, asset `meta.json`) to Kotlin classes: unknown properties are skipped, unknown
  * enum values take their default, and properties keep declaration order. Create one and pass it to what needs it.
  */
-class JsonProcessor(private val log: Logger) {
+class JsonProcessor(internal val log: Logger) {
     private val prettyPrinter: DefaultPrettyPrinter = DefaultPrettyPrinter(
         Separators.createDefaultInstance()
             .withObjectFieldValueSpacing(Separators.Spacing.AFTER)

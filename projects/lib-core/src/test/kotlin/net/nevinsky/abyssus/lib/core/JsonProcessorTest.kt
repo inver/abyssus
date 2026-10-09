@@ -3,13 +3,13 @@ package net.nevinsky.abyssus.lib.gdx
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class JsonProcessorTest {
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
 
     enum class Kind { @JsonEnumDefaultValue UNKNOWN, MODEL, TERRAIN }
 
@@ -43,6 +43,6 @@ class JsonProcessorTest {
     @Test
     fun instancesShareNothing() {
         // two processors are independent objects; nothing is looked up globally
-        assertEquals(json.parse("""{"format":"abyssus","formatVersion":1,"version":3,"type":"MODEL"}""", Meta::class.java), JsonProcessor().parse("""{"format":"abyssus","formatVersion":1,"version":3,"type":"MODEL"}""", Meta::class.java))
+        assertEquals(json.parse("""{"format":"abyssus","formatVersion":1,"version":3,"type":"MODEL"}""", Meta::class.java), JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).parse("""{"format":"abyssus","formatVersion":1,"version":3,"type":"MODEL"}""", Meta::class.java))
     }
 }

@@ -13,7 +13,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AbyssusDocumentFormatTest {
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val format = AbyssusDocumentFormat()
 
     @Test fun nativeHeadersSupportEachDocumentKindWithoutChangingThePayload() {

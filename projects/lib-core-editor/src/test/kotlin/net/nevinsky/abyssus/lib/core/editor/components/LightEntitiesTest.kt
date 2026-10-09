@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.parseScene
 import net.nevinsky.abyssus.lib.gdx.editor.content.LightKind
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
@@ -67,7 +67,7 @@ class LightEntitiesTest {
             assertEquals(100f, light.range, 0f)
             if (preset == LightPreset.SUN) { assertTrue(light.intensity > 1f); assertTrue(light.color.b < light.color.r) }
             val engine = SceneEngine()
-            val document = EcsLoader(JsonProcessor().mapper, log = NOPLogger.NOP_LOGGER).loadToEngine(root["ecs"], engine)
+            val document = EcsLoader(JsonProcessor(NOPLogger.NOP_LOGGER), net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry()).loadToEngine(root["ecs"], engine)
             assertTrue(document.warnings.toString(), document.warnings.isEmpty())
             val entity = engine.ids[0]!!
             assertNotNull(entity.getComponent(NameComponent::class.java))

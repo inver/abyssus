@@ -23,7 +23,7 @@ import java.nio.file.Files
 import java.util.UUID
 
 class ModelImportTest {
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val format = AbyssusDocumentFormat()
     private val import = ModelImport(json, format)
     private val fixtures = importFixtures()

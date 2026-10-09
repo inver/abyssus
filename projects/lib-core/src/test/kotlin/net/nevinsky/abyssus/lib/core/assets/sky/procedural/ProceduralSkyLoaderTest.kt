@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.procedural
+package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader
-import net.nevinsky.abyssus.lib.gdx.assets.testProject
+import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

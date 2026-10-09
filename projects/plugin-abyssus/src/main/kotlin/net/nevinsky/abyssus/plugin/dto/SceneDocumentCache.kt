@@ -17,9 +17,9 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import java.util.concurrent.ConcurrentHashMap
 
 /**

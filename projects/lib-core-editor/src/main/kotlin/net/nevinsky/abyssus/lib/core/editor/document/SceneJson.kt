@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.node.*
 import java.math.BigDecimal
 import java.math.BigInteger
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 
 /**
  * A floating-point literal that remembers its source text, so `2.50`, `-0.0` and `1.0E-4` are written back exactly

@@ -13,8 +13,8 @@ import net.nevinsky.abyssus.lib.gdx.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.gdx.editor.content.CameraPlacement
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.gdx.editor.document.EntityView
 import net.nevinsky.abyssus.lib.gdx.editor.document.sceneDocumentFromEcs
 import com.badlogic.ashley.core.Component

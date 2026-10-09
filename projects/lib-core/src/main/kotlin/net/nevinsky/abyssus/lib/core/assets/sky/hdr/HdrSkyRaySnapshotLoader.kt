@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
 import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 

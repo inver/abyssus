@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.plugin.projectView
 
 import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind
 import net.nevinsky.abyssus.plugin.AbyssusCore
 import net.nevinsky.abyssus.plugin.dto.textOf

@@ -12,9 +12,10 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import net.nevinsky.abyssus.lib.core.dto.CameraDto
 import net.nevinsky.abyssus.lib.core.dto.CameraWrapper
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FAR
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FOV
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_NEAR
+
+const val CAMERA_NEAR = 1f
+const val CAMERA_FAR = 100f
+const val CAMERA_FOV = 67f
 
 /** [camera]'s `direction` is the file's `viewPointPosition`. Bound by [CameraComponentDeserializer]. */
 @JsonDeserialize(using = CameraComponentDeserializer::class)

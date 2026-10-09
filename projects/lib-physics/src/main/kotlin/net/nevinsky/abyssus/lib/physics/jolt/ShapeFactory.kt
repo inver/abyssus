@@ -8,8 +8,8 @@ package net.nevinsky.abyssus.lib.physics.jolt
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector3
 import com.github.stephengold.joltjni.*
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
-import net.nevinsky.abyssus.lib.core.util.EcsUtils
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.ecs.component.assetName
 import net.nevinsky.abyssus.lib.physics.ColliderComponent
 import net.nevinsky.abyssus.lib.physics.ColliderShape
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
@@ -64,7 +64,7 @@ internal class ShapeFactory(
             }
 
             ColliderShape.CONVEX_HULL -> {
-                val name = EcsUtils.assetName(entity, MetaType.MODEL)
+                val name = assetName(entity, MetaType.MODEL)
                     ?: return Built.Refused("has a convex hull collider but no model")
                 val points = try {
                     assets.modelPoints(name)
@@ -77,7 +77,7 @@ internal class ShapeFactory(
             }
 
             ColliderShape.HEIGHT_FIELD -> {
-                val name = EcsUtils.assetName(entity, MetaType.TERRAIN)
+                val name = assetName(entity, MetaType.TERRAIN)
                     ?: return Built.Refused("has a height field collider but no terrain")
                 val terrain = try {
                     assets.terrain(name)

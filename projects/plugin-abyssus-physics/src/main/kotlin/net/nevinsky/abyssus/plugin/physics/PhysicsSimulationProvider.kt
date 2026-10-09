@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
-import net.nevinsky.abyssus.lib.gdx.assets.displayMessage
+import net.nevinsky.abyssus.lib.core.assets.displayMessage
 
 import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.notification.NotificationGroupManager

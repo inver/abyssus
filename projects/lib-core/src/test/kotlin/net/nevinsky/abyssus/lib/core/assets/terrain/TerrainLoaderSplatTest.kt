@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.assets.terrain
+package net.nevinsky.abyssus.lib.core.assets.terrain
 
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
@@ -6,7 +6,7 @@ import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.utils.GdxNativesLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test

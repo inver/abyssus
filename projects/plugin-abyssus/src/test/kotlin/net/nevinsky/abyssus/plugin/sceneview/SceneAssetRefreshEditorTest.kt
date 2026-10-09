@@ -76,7 +76,7 @@ class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
         settle()
         assertEquals(setOf("hills"), view.revisions.single().names)
         val text = view.revisions.single().unsaved[File(meta.path).absoluteFile]!!
-        assertEquals(250, JsonProcessor().readObject(text).get("additional").get("size").asInt())
+        assertEquals(250, JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(text).get("additional").get("size").asInt())
         FileDocumentManager.getInstance().saveDocument(document)
         settle()
         assertEquals("saving the shown text is not a new revision", 1, view.revisions.size)

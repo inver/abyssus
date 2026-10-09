@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMetaReader
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
@@ -24,7 +26,7 @@ class SunOcclusionTest {
     private val sun = Vector3(0.3f, 0.8f, 0.2f).nor()
     private val occlusion = SunOcclusion()
 
-    private fun clouds(vararg bands: CloudBand) = CloudMeta(bands = bands.associateBy { it.level })
+    private fun clouds(vararg bands: CloudBand) = CloudMeta(low = bands.firstOrNull { it.level == CloudLevel.LOW }, mid = bands.firstOrNull { it.level == CloudLevel.MID }, high = bands.firstOrNull { it.level == CloudLevel.HIGH })
 
     private fun step(clouds: CloudMeta?, delta: Float, time: Double = 0.0) =
         occlusion.update(clouds, sun, 0f, 0f, radius, 100f, time, delta)
@@ -51,10 +53,10 @@ class SunOcclusionTest {
 
     @Test
     fun stormFloorIsTenPercent() {
-        val json = JsonProcessor()
+        val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
         val template = javaClass.getResourceAsStream("/clouds/templates/storm.json")!!.use { String(it.readAllBytes()) }
         val asIs = CloudMetaReader(failOnWarnings()).read("storm", json.readObject(template)["additional"])
-        val covered = asIs.copy(bands = asIs.bands.mapValues { it.value.copy(coverage = 1f) })
+        val covered = asIs.copy(low = asIs.low?.copy(coverage = 1f), mid = asIs.mid?.copy(coverage = 1f), high = asIs.high?.copy(coverage = 1f))
         assertEquals(SUN_OCCLUSION_FLOOR, step(covered, 0f), 1e-6f)
         for (t in 0 until 200) {
             val value = occlusion.instant(asIs, sun, t * 97f, t * -61f, radius, 100f, t * 3.0)

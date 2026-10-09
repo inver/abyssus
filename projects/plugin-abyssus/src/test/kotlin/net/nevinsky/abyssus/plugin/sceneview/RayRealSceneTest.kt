@@ -34,7 +34,7 @@ class RayRealSceneTest {
 
     private fun snapshot(): RaySceneFrame {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
-        val loading = AssetLoading(JsonProcessor(), printingLog, Executor(Runnable::run), ShaderStorage())
+        val loading = AssetLoading(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), printingLog, Executor(Runnable::run), ShaderStorage())
         val content = sceneContentOf(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
         val assets = raySceneAssetsOf(ViewAssets(loading))
         assets.update(project, content)

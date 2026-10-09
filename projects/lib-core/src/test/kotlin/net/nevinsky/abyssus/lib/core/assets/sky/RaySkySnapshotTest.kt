@@ -2,15 +2,15 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.gdx.assets.sky
+package net.nevinsky.abyssus.lib.core.assets.sky
 
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.assets.exrFixture
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.exrFixture
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotStore
 import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
@@ -23,9 +23,9 @@ import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyRaySnapshotLoader
-import net.nevinsky.abyssus.lib.gdx.assets.skyShaders
-import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader
-import net.nevinsky.abyssus.lib.gdx.assets.testProject
+import net.nevinsky.abyssus.lib.core.assets.skyShaders
+import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test

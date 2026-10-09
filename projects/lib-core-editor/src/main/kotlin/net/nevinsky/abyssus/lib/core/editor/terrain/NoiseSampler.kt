@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.gdx.editor.terrain
 
-import net.nevinsky.abyssus.lib.gdx.assets.terrain.noise.fastnoise.FastNoiseLite
+import net.nevinsky.abyssus.lib.core.assets.terrain.noise.fastnoise.FastNoiseLite
 
 /** The upstream commit of the vendored FastNoiseLite (see `core/third-party/fastnoiselite/README.md`). */
 const val FAST_NOISE_LITE_REVISION = "7ccfbc16eb1c932568f177d63a9ba51d89bbe516"

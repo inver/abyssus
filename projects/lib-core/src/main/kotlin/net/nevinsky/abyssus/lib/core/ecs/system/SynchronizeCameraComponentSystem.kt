@@ -6,7 +6,7 @@ import com.badlogic.ashley.core.Family
 import com.badlogic.ashley.systems.IteratingSystem
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.scene.SceneEntityIds
+import net.nevinsky.abyssus.lib.core.ecs.SceneEntityIds
 
 class SynchronizeCameraComponentSystem(private val ids: SceneEntityIds, priority: Int = 0) :
     IteratingSystem(Family.all(PositionComponent::class.java, CameraComponent::class.java).get(), priority) {

@@ -6,9 +6,9 @@ package net.nevinsky.abyssus.lib.gdx.editor.ray
 
 import net.nevinsky.abyssus.lib.gdx.editor.pick.Selected
 
-import net.nevinsky.abyssus.lib.gdx.assets.displayMessage as failureMessage
+import net.nevinsky.abyssus.lib.core.assets.displayMessage as failureMessage
 
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.lib.raytracing.*

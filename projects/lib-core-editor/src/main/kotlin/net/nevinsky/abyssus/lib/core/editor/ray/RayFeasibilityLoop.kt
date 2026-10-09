@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.gdx.editor.ray
 
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.raytracing.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit

@@ -7,8 +7,8 @@ package net.nevinsky.abyssus.lib.gdx.project
 import net.nevinsky.abyssus.lib.core.project.ProjectLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.assets.testProject
-import net.nevinsky.abyssus.lib.gdx.dto.ProjectDto
+import net.nevinsky.abyssus.lib.core.assets.testProject
+import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -67,10 +67,10 @@ class ProjectTest {
     @Test
     fun aLoadedProjectKnowsItsFolderAndTheFolderIsNotPartOfTheFile() {
         val dir = testProject("Untitled")
-        val loaded = ProjectLoader(JsonProcessor(), FileLoader(dir)).load("Untitled.abss")
+        val loaded = ProjectLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir)).load("Untitled.abss")
         assertEquals("Untitled", loaded.name)
         assertEquals(dir.toPath(), loaded.dir)
         assertEquals(listOf("Main Scene.scene"), loaded.sceneFiles().map { it.fileName.toString() })
-        assertTrue("the folder is never written to the file", !JsonProcessor().toString(loaded).contains("\"dir\""))
+        assertTrue("the folder is never written to the file", !JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).toString(loaded).contains("\"dir\""))
     }
 }

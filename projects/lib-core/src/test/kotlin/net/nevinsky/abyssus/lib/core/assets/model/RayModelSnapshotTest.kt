@@ -2,7 +2,7 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.gdx.assets.model
+package net.nevinsky.abyssus.lib.core.assets.model
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
@@ -14,7 +14,7 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.GdxNativesLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLease
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotStore
@@ -25,7 +25,7 @@ import net.nevinsky.abyssus.lib.core.assets.model.RayModelSource
 import net.nevinsky.abyssus.lib.core.assets.model.RayTextureColorSpace
 import net.nevinsky.abyssus.lib.core.assets.model.RayTextureFilter
 import net.nevinsky.abyssus.lib.core.assets.model.RayTextureWrap
-import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.*
 import org.junit.After

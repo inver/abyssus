@@ -15,6 +15,6 @@ val printingLog: Logger = RecordingLogger(echo = true)
  * on [executor] (the calling thread by default) and problems to [log].
  */
 fun testRenderer(executor: Executor = Executor(Runnable::run), log: Logger = printingLog): SceneRenderer = SceneRenderer(
-    ViewAssets(AssetLoading(JsonProcessor(), log, executor, ShaderStorage())),
+    ViewAssets(AssetLoading(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), log, executor, ShaderStorage())),
     ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java),
 )

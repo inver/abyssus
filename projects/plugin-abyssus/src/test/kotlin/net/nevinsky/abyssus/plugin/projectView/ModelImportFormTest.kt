@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.gdx.editor.modelimport.LengthUnit
 import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ModelImportException

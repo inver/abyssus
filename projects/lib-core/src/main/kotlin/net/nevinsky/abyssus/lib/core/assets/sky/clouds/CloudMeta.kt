@@ -2,9 +2,9 @@ package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 data class CloudMeta(
     val technique: CloudTechnique = CloudTechnique.SHELLS,
-    val low: CloudBand?,
-    val mid: CloudBand?,
-    val high: CloudBand?,
+    val low: CloudBand? = null,
+    val mid: CloudBand? = null,
+    val high: CloudBand? = null,
 ) {
     /** True when there is anything to draw: at least one band. */
     val visible: Boolean get() = low != null || mid != null || high != null

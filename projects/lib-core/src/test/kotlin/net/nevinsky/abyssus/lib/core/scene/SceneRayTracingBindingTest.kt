@@ -14,7 +14,7 @@ import org.junit.Test
 import java.io.File
 
 class SceneRayTracingBindingTest {
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val loader = SceneLoader(json, FileLoader(File(".")))
 
     @Test fun omittedLimitsKeepTheirEffectiveDefaults() {

@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -94,7 +94,7 @@ private fun createInteractively(project: Project, abss: VirtualFile) {
 fun createTerrain(project: Project, abss: VirtualFile, request: NewTerrainRequest, report: (String) -> Unit = { Messages.showErrorDialog(project, it, AbyssusBundle.message("newTerrainTitle")) }): AssetCommandResult? {
     val core = service<AbyssusCore>()
     val terrain = core.terrain
-    val accepted = net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation {
+    val accepted = net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation {
         core.documents.format.requireSupported(core.documents.json.readObject(textOf(abss)), net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind.PROJECT)
     }
     accepted.exceptionOrNull()?.let { report(it.documentDisplayMessage()); return null }

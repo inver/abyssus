@@ -24,7 +24,7 @@ import net.nevinsky.abyssus.plugin.projectView.childrenOf
 import net.nevinsky.abyssus.plugin.projectView.elementLabel
 import net.nevinsky.abyssus.plugin.dto.ProjectReader
 import net.nevinsky.abyssus.plugin.dto.SceneReader
-import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 import net.nevinsky.abyssus.plugin.projectView.foldToggles
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectFileType

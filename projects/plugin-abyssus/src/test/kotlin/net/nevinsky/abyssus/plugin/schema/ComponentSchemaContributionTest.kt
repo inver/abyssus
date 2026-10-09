@@ -19,7 +19,7 @@ class ComponentSchemaContributionTest : BasePlatformTestCase() {
         COMPONENT_SCHEMAS_EP.point.registerExtension(bean, parent)
     }
 
-    fun testAContributedComponentIsOfferedAndDropsWhenUnloaded() {
+    fun testContributionsDoNotExtendTheBuiltInEditor() {
         val scene = myFixture.copyFileToProject("Untitled/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
         myFixture.copyFileToProject("Untitled/Untitled.abss", "Untitled/Untitled.abss")
         val schemas = ComponentSchemas.of(project)
@@ -29,20 +29,19 @@ class ComponentSchemaContributionTest : BasePlatformTestCase() {
         val plugin = Disposer.newDisposable()
         try {
             contribute(plugin)
-            assertTrue("MarkerComponent" in schemas.editorFor(scene).missingKinds(root, "0").map { it.name })
-            assertEquals("Marker", schemas.editorFor(scene).kindOf("MarkerComponent")!!.label)
+            assertFalse("MarkerComponent" in schemas.editorFor(scene).missingKinds(root, "0").map { it.name })
+            assertNull(schemas.editorFor(scene).kindOf("MarkerComponent"))
         } finally {
             Disposer.dispose(plugin)
         }
         assertNull(schemas.editorFor(scene).kindOf("MarkerComponent"))
     }
 
-    fun testTheProjectSchemaWinsOverAContribution() {
+    fun testProjectSchemaDoesNotExtendTheBuiltInEditor() {
         val scene = myFixture.copyFileToProject("Custom/scenes/Field.scene", "Custom/scenes/Field.scene")
         myFixture.copyFileToProject("Custom/Custom.abss", "Custom/Custom.abss")
         myFixture.copyFileToProject("Custom/abyssus/components.schema.json", "Custom/abyssus/components.schema.json")
         val schemas = ComponentSchemas.of(project)
-        assertEquals("Plane", schemas.editorFor(scene).kindOf("PlaneComponent")!!.label)
-        assertEquals(emptyList<String>(), schemas.snapshotFor(scene).problems)
+        assertNull(schemas.editorFor(scene).kindOf("PlaneComponent"))
     }
 }

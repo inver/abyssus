@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.gdx.editor.document
 
-import net.nevinsky.abyssus.lib.gdx.assets.displayMessage
+import net.nevinsky.abyssus.lib.core.assets.displayMessage
 import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
 

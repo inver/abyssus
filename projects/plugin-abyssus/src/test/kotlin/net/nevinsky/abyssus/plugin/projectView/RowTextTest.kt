@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.gdx.assets.Asset
+import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 
 class RowTextTest : BasePlatformTestCase() {

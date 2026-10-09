@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import org.junit.After
@@ -25,8 +25,8 @@ import java.nio.file.Files
 class CloudsLoaderTest {
     private val dir: File = Files.createTempDirectory("clouds").toFile()
     private val log = RecordingLogger()
-    private val metas = testMetaLoader(dir)
-    private val loader = CloudsLoader(metas, JsonProcessor(), log)
+    private val metas = testMetaLoader(dir, log)
+    private val loader = CloudsLoader(metas)
 
     @After
     fun cleanUp() {
@@ -44,8 +44,8 @@ class CloudsLoaderTest {
         assertEquals(MetaType.CLOUDS, metas.loadBaseMeta("clouds_storm")!!.type)
         val prepared = loader.prepare("clouds_storm")!!.staged
         assertEquals(CloudTechnique.VOLUMETRIC, prepared.meta.technique)
-        assertEquals(listOf(CloudType.ALTOSTRATUS, CloudType.STRATOCUMULUS), prepared.meta.bandsFarToNear.map { it.type })
-        assertEquals(0.9f, prepared.meta.bands.getValue(CloudLevel.MID).coverage)
+        assertEquals(listOf(CloudType.ALTOSTRATUS, CloudType.STRATOCUMULUS), prepared.meta.bandsFarToNear().map { it.type })
+        assertEquals(0.9f, prepared.meta.mid!!.coverage)
         assertNotNull(prepared.noise)
         assertTrue(log.warnings.isEmpty())
     }
@@ -54,7 +54,7 @@ class CloudsLoaderTest {
     fun aBadBandIsSkippedAndLoggedOnce() {
         asset("clouds_bad", """{"low": {"type": "cirrus"}, "high": {"type": "cirrus"}}""")
         val prepared = loader.prepare("clouds_bad")!!.staged
-        assertEquals(setOf(CloudLevel.HIGH), prepared.meta.bands.keys)
+        assertEquals(setOf(CloudLevel.HIGH), prepared.meta.bandsFarToNear().map { it.level }.toSet())
         assertEquals(1, log.warnings.size)
     }
 
@@ -62,7 +62,7 @@ class CloudsLoaderTest {
     fun withoutBandsThereIsNoNoise() {
         asset("clouds_empty", "{}")
         val prepared = loader.prepare("clouds_empty")!!.staged
-        assertTrue(prepared.meta.bands.isEmpty())
+        assertTrue(prepared.meta.bandsFarToNear().isEmpty())
         assertNull(prepared.noise)
     }
 

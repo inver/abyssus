@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.gdx.editor.meta
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.editor.testProject
 import org.junit.Assert.assertEquals
@@ -17,7 +17,7 @@ import java.io.File
 class AssetMetaEditorTest {
     private val descriptions = AssetFieldDescriptions()
     private val editor = AssetMetaEditor(descriptions)
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val untitled = testProject("Untitled")
 
     private fun tree(folder: String): JsonNode = json.readObject(File(untitled, "assets/$folder/meta.json").readText())
@@ -31,7 +31,7 @@ class AssetMetaEditorTest {
     private fun rejected(outcome: EditOutcome): EditError = (outcome as EditOutcome.Rejected).error
 
     @Test fun legacyMetadataIsRefusedWithoutMutation() {
-        val root = JsonProcessor().readObject("""{"type":"TERRAIN","additional":{"size":100}}""")
+        val root = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject("""{"type":"TERRAIN","additional":{"size":100}}""")
         val before = root.toString()
         val outcome = AssetMetaEditor(AssetFieldDescriptions()).edit(root, "size", FieldValue.Int(100), FieldValue.Int(200))
         org.junit.Assert.assertTrue(outcome is EditOutcome.Rejected)

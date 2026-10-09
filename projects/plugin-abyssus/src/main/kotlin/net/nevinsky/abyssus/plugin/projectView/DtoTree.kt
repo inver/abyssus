@@ -14,10 +14,10 @@ import net.nevinsky.abyssus.lib.gdx.editor.document.sceneEcsRows
 import net.nevinsky.abyssus.lib.gdx.editor.document.sceneEntityView
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.lib.gdx.assets.Asset
+import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.plugin.dto.SceneError
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 
 /**

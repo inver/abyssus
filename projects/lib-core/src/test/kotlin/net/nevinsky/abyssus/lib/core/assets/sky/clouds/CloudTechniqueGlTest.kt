@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
@@ -19,13 +19,14 @@ import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.PreparedProceduralSky
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
-import net.nevinsky.abyssus.lib.gdx.assets.skyShaders
-import net.nevinsky.abyssus.lib.gdx.assets.testProject
+import net.nevinsky.abyssus.lib.core.assets.skyShaders
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudNoise
@@ -61,7 +62,7 @@ class CloudTechniqueGlTest {
     private val noise by lazy { CloudNoiseGenerator().generate() }
 
     private fun clouds(vararg bands: CloudBand, technique: CloudTechnique = CloudTechnique.LAYERED) =
-        CloudMeta(technique, bands.associateBy { it.level })
+        CloudMeta(technique, low = bands.firstOrNull { it.level == CloudLevel.LOW }, mid = bands.firstOrNull { it.level == CloudLevel.MID }, high = bands.firstOrNull { it.level == CloudLevel.HIGH })
 
     /** Scattered cumulus: clear sky between clouds, so the techniques' cloud masks can be compared. */
     private val scattered = clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 0.45f))
@@ -222,7 +223,7 @@ class CloudTechniqueGlTest {
             }
         }
         val centre = image!!.at(SIZE / 2, SIZE / 2)
-        assertEquals("the model is drawn over the clouds", 0xFF0000, image!!.rgb[centre])
+        assertEquals("the model is drawn over the clouds", 0xFF0000, image.rgb[centre])
     }
 
     @Test

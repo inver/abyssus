@@ -12,8 +12,8 @@ import net.nevinsky.abyssus.lib.core.assets.loading.exception.AssetPipelineExcep
 import net.nevinsky.abyssus.lib.core.assets.loading.exception.CyclicDependencyException
 import net.nevinsky.abyssus.lib.core.assets.loading.exception.DependencyFailedException
 import net.nevinsky.abyssus.lib.core.assets.loading.exception.MissingDependencyException
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import org.slf4j.Logger
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.*

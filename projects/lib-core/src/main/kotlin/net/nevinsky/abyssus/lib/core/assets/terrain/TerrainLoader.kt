@@ -6,14 +6,14 @@
 package net.nevinsky.abyssus.lib.core.assets.terrain
 
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.assets.AssetIndex
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.AssetIndex
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import java.nio.ByteBuffer
-import net.nevinsky.abyssus.lib.gdx.assets.parseUuidOrNull
+import net.nevinsky.abyssus.lib.core.assets.parseUuidOrNull
 import java.util.*
 import kotlin.math.roundToInt
 import kotlin.math.sqrt

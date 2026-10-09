@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.gdx.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
-import net.nevinsky.abyssus.lib.core.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
@@ -73,7 +73,7 @@ class AssetEntitiesTest {
     fun anEmptySceneStartsAtZeroAndTheRuntimeLoadsIt() {
         val root = empty()
         assertEquals("0", AssetEntities(ResourceEditorMessages()).add(root, tree, Vec3(1f, 2f, 3f)).entityId)
-        val document = EcsLoader(JsonProcessor().mapper, log = NOPLogger.NOP_LOGGER)
+        val document = EcsLoader(JsonProcessor(NOPLogger.NOP_LOGGER), net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry())
             .loadToEngine(root["ecs"], SceneEngine())
         // loaded without a project, the only complaint is the missing folder: the render component itself is understood
         assertEquals(listOf("render asset MODEL tree has no folder in the project assets"), document.warnings.map { it.toString() })

@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.graphics.GL20
@@ -13,7 +14,7 @@ import com.badlogic.gdx.utils.BufferUtils
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CLOUD_NOISE_PERIOD
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
-import net.nevinsky.abyssus.lib.gdx.assets.skyShaders
+import net.nevinsky.abyssus.lib.core.assets.skyShaders
 import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue

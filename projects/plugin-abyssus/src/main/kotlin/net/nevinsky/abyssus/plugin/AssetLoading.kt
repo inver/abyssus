@@ -12,12 +12,12 @@ import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaBinder
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotStore
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
@@ -41,8 +41,8 @@ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyRaySnaps
 import net.nevinsky.abyssus.lib.core.assets.terrain.RayTerrainSnapshot
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainRaySnapshotLoader
-import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureLoader
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 import org.slf4j.Logger

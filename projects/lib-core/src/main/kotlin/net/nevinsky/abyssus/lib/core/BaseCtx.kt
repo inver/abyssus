@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.lib.core
 
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
-import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureLoader
+import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader

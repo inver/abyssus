@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.meta.RowKind
 import net.nevinsky.abyssus.lib.gdx.editor.meta.metaRowsOf
 import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 import java.io.File
 import java.time.ZoneOffset

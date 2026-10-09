@@ -6,9 +6,9 @@ import net.nevinsky.abyssus.lib.core.assets.model.RayTextureFilter
 import net.nevinsky.abyssus.lib.core.assets.model.RayTextureSampler
 import net.nevinsky.abyssus.lib.core.assets.model.RayTextureWrap
 import net.nevinsky.abyssus.lib.core.assets.model.copyRayImage
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureLoader
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
 
 /**
  * The CPU-only companion of a terrain: its heights and splat images are read afresh (no GL, nothing uploaded, no GPU

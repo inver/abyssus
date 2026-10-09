@@ -2,8 +2,8 @@ package net.nevinsky.abyssus.plugin
 
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
 import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.Assert.*
@@ -15,7 +15,7 @@ class AssetLoadingTest {
     @Test fun savedAndUnsavedMetadataBindTheFixtureAndMalformedValuesTheSameWay() {
         val dir = Files.createTempDirectory("meta-parity").toFile()
         try {
-            val json = JsonProcessor()
+            val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
             val files = FileLoader(dir)
             val name = "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"
             val fixture = File("src/test/testData/project/Untitled/assets/$name/meta.json").readText()
@@ -49,7 +49,7 @@ class AssetLoadingTest {
     @Test fun unsavedUnsupportedMetadataCannotFallBackToSavedOrReachAssetPreparation() {
         val dir = Files.createTempDirectory("unsaved-meta").toFile()
         try {
-            val json = JsonProcessor()
+            val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
             val files = FileLoader(dir)
             val file = File(dir, "assets/model/meta.json").absoluteFile.also { it.parentFile.mkdirs() }
             val saved = """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{}}"""

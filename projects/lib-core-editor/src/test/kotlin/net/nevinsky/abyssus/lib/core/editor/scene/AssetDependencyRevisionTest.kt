@@ -17,7 +17,7 @@ class AssetDependencyRevisionTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    private val tracker = AssetRevisionTracker(JsonProcessor())
+    private val tracker = AssetRevisionTracker(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER))
     private val assets get() = File(tmp.root, "assets")
 
     private fun write(path: String, text: String, modified: Long? = null): File =

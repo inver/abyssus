@@ -13,7 +13,7 @@ import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.BaseCtx
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.gdx.editor.pick.LineSink
 import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent

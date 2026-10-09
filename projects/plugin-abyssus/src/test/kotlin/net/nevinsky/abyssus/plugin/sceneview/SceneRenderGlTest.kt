@@ -25,7 +25,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.gdx.editor.parseScene
-import net.nevinsky.abyssus.lib.gdx.assets.sky.hdr.HdrFixtures
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrFixtures
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

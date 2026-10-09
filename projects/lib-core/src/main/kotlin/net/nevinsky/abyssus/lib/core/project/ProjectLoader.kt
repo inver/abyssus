@@ -1,6 +1,6 @@
 package net.nevinsky.abyssus.lib.core.project
 
-import net.nevinsky.abyssus.lib.gdx.dto.ProjectDto
+import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind

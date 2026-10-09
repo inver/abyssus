@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.gdx.editor.meta
 
 import net.nevinsky.abyssus.lib.gdx.editor.document.renderAssetOf
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.editor.components.ComponentEditor
 import net.nevinsky.abyssus.lib.gdx.editor.components.FieldKind
 import net.nevinsky.abyssus.lib.gdx.editor.components.FieldValue

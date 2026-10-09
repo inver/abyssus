@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.terrain
+package net.nevinsky.abyssus.lib.core.assets.terrain
 
 import net.nevinsky.abyssus.lib.core.assets.terrain.TERRAIN_FLOATS_PER_VERTEX
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader
-import net.nevinsky.abyssus.lib.gdx.assets.testProject
+import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

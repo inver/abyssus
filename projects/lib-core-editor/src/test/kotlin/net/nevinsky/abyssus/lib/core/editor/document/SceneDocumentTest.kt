@@ -12,7 +12,7 @@ import org.slf4j.helpers.NOPLogger
 import java.io.File
 
 class SceneDocumentTest {
-    private val decoder = ComponentReader(JsonProcessor().mapper, { _, _ -> null }, NOPLogger.NOP_LOGGER)
+    private val decoder = ComponentReader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).mapper, NOPLogger.NOP_LOGGER)
     private val text get() = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
 
     @Test fun fixtureReadViewAgreesWithPinnedContentWithoutChangingText() {

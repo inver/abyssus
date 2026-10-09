@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.editor.ecs.EcsWriter
 import org.slf4j.helpers.NOPLogger

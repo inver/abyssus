@@ -17,7 +17,7 @@ import net.nevinsky.abyssus.app.game.controlline.flight.Ground
 import net.nevinsky.abyssus.app.game.controlline.flight.LineRig
 import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.core.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.physics.ColliderComponent
 import net.nevinsky.abyssus.lib.physics.ColliderShape
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld

@@ -10,9 +10,6 @@ import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.io.File
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsConfigurator
-import net.nevinsky.abyssus.lib.runtime.ecs.render.FolderAssetResolver
-import net.nevinsky.abyssus.lib.runtime.schema.SchemaFile
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -283,16 +280,16 @@ class ComponentEditorTest {
         editor.add(root, "0", "LightComponent")
         editor.update(root, "4", "CameraComponent", "camera.near", "0.25")
         editor.update(root, "0", "PositionComponent", "localPosition.y", "2.5")
-        val configurator = EcsConfigurator(
-            JsonProcessor().mapper,
-            FolderAssetResolver(File("src/test/testData/project/Untitled/assets").list().orEmpty().toList()),
-            org.slf4j.helpers.NOPLogger.NOP_LOGGER,
-            net.nevinsky.abyssus.lib.runtime.schema.GameComponents(),
+        val loader = net.nevinsky.abyssus.lib.core.ecs.EcsLoader(
+            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER),
+            net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry(),
         )
-        val before = configurator.load(original["ecs"])
-        val after = configurator.load(root["ecs"])
-        assertEquals(before.loadingWarnings.warnings, after.loadingWarnings.warnings)
-        assertEquals(before.engine.entities.size(), after.engine.entities.size())
+        val before = net.nevinsky.abyssus.lib.core.ecs.SceneEngine()
+        val after = net.nevinsky.abyssus.lib.core.ecs.SceneEngine()
+        val beforeWarnings = loader.loadToEngine(original["ecs"], before)
+        val afterWarnings = loader.loadToEngine(root["ecs"], after)
+        assertEquals(beforeWarnings.warnings, afterWarnings.warnings)
+        assertEquals(before.entities.size(), after.entities.size())
     }
 
     @Test
@@ -305,107 +302,17 @@ class ComponentEditorTest {
         }
     }
 
-    // ---- schema-declared components, against the Custom fixture and its exported schema ----
-
-    private val customDir = "src/test/testData/project/Custom"
-    private val planeEditor = ComponentEditor(ResourceEditorMessages(), SchemaFile().parse(File("$customDir/abyssus/components.schema.json").readText()).components)
-    private fun customScene() = SceneJson().parse(File("$customDir/scenes/Field.scene").readText())
-
     @Test
-    fun addAPlaneWritesAnEmptyObjectAndNoIdentifierTable() {
-        val root = customScene()
-        val original = root.deepCopy<JsonNode>()
-        assertEquals(EditResult.Changed, planeEditor.add(root, "1", "PlaneComponent"))
-        assertEquals("{}", components(root, 1)["PlaneComponent"].toString())
-        (root["ecs"]["entities"]["1"]["components"] as com.fasterxml.jackson.databind.node.ObjectNode).remove("PlaneComponent")
-        assertEquals(original.toString(), root.toString())
-        assertFalse(root.toString().contains("componentIdentifiers"))
-        assertRejected(planeEditor.add(root, "0", "PlaneComponent"))
-    }
-
-    @Test
-    fun aPlaneFieldIsWrittenAndALimitIsRefusedNamingTheMinimum() {
-        val root = customScene()
-        assertEquals(EditResult.Changed, planeEditor.update(root, "0", "PlaneComponent", "lineLength", "25"))
-        assertEquals("""{"lineLength":25,"kind":"STUNT"}""", components(root, 0)["PlaneComponent"].toString())
+    fun customComponentsStayReadOnlyAndSurviveBuiltInEdits() {
+        val root = SceneJson().parse(File("src/test/testData/project/Custom/scenes/Field.scene").readText())
+        val plane = components(root, 0)["PlaneComponent"].toString()
         val before = root.toString()
-        val result = planeEditor.update(root, "0", "PlaneComponent", "lineLength", "2")
-        assertRejected(result)
-        assertTrue((result as EditResult.Rejected).reason, result.reason.contains("lineLength") && result.reason.contains("minimum 5"))
-        assertRejected(planeEditor.update(root, "0", "PlaneComponent", "lineLength", "31"))
-        assertRejected(planeEditor.update(root, "0", "PlaneComponent", "kind", "JET"))
-        assertRejected(planeEditor.update(root, "0", "PlaneComponent", "fuelSeconds", "1.5"))
-        assertRejected(planeEditor.update(root, "0", "PlaneComponent", "hasTipWeight", "yes"))
-        assertEquals(before, root.toString())
-        assertEquals(EditResult.Changed, planeEditor.update(root, "0", "PlaneComponent", "lineLength", "18"))
-        assertEquals("""{"kind":"STUNT"}""", components(root, 0)["PlaneComponent"].toString())
-    }
-
-    @Test
-    fun aVectorAxisBelowAnExclusiveMinimumIsRefused() {
-        val box = net.nevinsky.abyssus.lib.runtime.schema.ComponentSchema(
-            "BoxComponent", "", "Box",
-            listOf(net.nevinsky.abyssus.lib.runtime.schema.SchemaField(
-                "halfExtents", "Half extents", net.nevinsky.abyssus.lib.runtime.schema.FieldType.VECTOR,
-                net.nevinsky.abyssus.lib.runtime.schema.SchemaVector(0.5f, 0.5f, 0.5f), min = 0.0, minExclusive = true,
-            )),
-        )
-        val boxEditor = ComponentEditor(ResourceEditorMessages(), listOf(box))
-        val root = scene(entity(0, """"BoxComponent":{}"""))
-        val result = boxEditor.update(root, "0", "BoxComponent", "halfExtents.y", "0")
-        assertRejected(result)
-        assertTrue((result as EditResult.Rejected).reason, result.reason.contains("halfExtents.y") && result.reason.contains("greater than 0"))
-        assertEquals("{}", components(root, 0)["BoxComponent"].toString())
-        assertEquals(EditResult.Changed, boxEditor.update(root, "0", "BoxComponent", "halfExtents.x", "1"))
-        assertEquals("""{"halfExtents":{"x":1,"y":0.5,"z":0.5}}""", components(root, 0)["BoxComponent"].toString())
-    }
-
-    @Test
-    fun aPlaneEntityReferenceMustNameAnEntityOfTheScene() {
-        val root = customScene()
-        val before = root.toString()
-        assertRejected(planeEditor.update(root, "0", "PlaneComponent", "pilot", "99"))
-        assertEquals(before, root.toString())
-        assertEquals(EditResult.Changed, planeEditor.update(root, "0", "PlaneComponent", "pilot", "1"))
-        assertEquals(1, components(root, 0)["PlaneComponent"]["pilot"].asInt())
-    }
-
-    @Test
-    fun everyPlaneFieldKindEdits() {
-        val root = customScene()
-        assertEquals(EditResult.Changed, planeEditor.update(root, "0", "PlaneComponent", "hasTipWeight", "false"))
-        assertEquals(EditResult.Changed, planeEditor.update(root, "0", "PlaneComponent", "fuelSeconds", "90"))
-        assertEquals(EditResult.Changed, planeEditor.update(root, "0", "PlaneComponent", "leadout.y", "0.5"))
-        assertEquals(EditResult.Changed, planeEditor.update(root, "0", "PlaneComponent", "paint.g", "0"))
-        assertEquals(EditResult.Changed, planeEditor.update(root, "0", "PlaneComponent", "name", "Ace"))
-        assertRejected(planeEditor.update(root, "0", "PlaneComponent", "model", "rock", assetsByType = mapOf("MODEL" to setOf("tree"))))
-        assertEquals(EditResult.Changed, planeEditor.update(root, "0", "PlaneComponent", "model", "tree", assetsByType = mapOf("MODEL" to setOf("tree"))))
-        assertEquals(
-            """{"lineLength":22,"kind":"STUNT","hasTipWeight":false,"fuelSeconds":90,"leadout":{"x":0,"y":0.5,"z":-0.3},"paint":{"r":1,"g":0,"b":1,"a":1},"name":"Ace","model":"tree"}""",
-            components(root, 0)["PlaneComponent"].toString(),
-        )
-        val values = planeEditor.read(root, "0", "PlaneComponent")!!.associateBy { it.field }
-        assertEquals(FieldKind.BOOLEAN, values["hasTipWeight"]!!.kind)
-        assertEquals("Line length", values["lineLength"]!!.label)
-        assertEquals("Lines", values["leadout.x"]!!.group)
-        assertEquals("0.5", values["leadout.y"]!!.value)
-    }
-
-    @Test
-    fun theAddListOffersThePlaneButNeverUnmodeledKinds() {
-        val root = customScene()
-        val missing = planeEditor.missingKinds(root, "1").map { it.name }
-        assertTrue(missing.toString(), "PlaneComponent" in missing)
-        assertFalse("PickableComponent" in missing)
-        assertFalse("PlaneComponent" in planeEditor.missingKinds(root, "0").map { it.name })
-        assertEquals("Plane", planeEditor.kindOf("PlaneComponent")!!.label)
         assertEquals(null, editor.kindOf("PlaneComponent"))
-    }
-
-    @Test
-    fun removeAPlaneKeepsTheRestInOrder() {
-        val root = customScene()
-        assertEquals(EditResult.Changed, planeEditor.remove(root, "0", "PlaneComponent"))
-        assertEquals(listOf("NameComponent", "TypeComponent", "PositionComponent", "RenderComponent"), components(root, 0).fieldNames().asSequence().toList())
+        assertRejected(editor.add(root, "1", "PlaneComponent"))
+        assertRejected(editor.update(root, "0", "PlaneComponent", "lineLength", "25"))
+        assertRejected(editor.remove(root, "0", "PlaneComponent"))
+        assertEquals(before, root.toString())
+        assertEquals(EditResult.Changed, editor.update(root, "0", "NameComponent", "name", "Renamed"))
+        assertEquals(plane, components(root, 0)["PlaneComponent"].toString())
     }
 }

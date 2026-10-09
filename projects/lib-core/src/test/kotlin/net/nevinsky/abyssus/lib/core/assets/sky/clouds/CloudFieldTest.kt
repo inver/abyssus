@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.assets.sky.clouds
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CLOUD_NOISE_PERIOD
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
 import org.junit.Assert.assertArrayEquals

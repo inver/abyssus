@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.gdx.editor.terrain
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.gdx.editor.meta.TERRAIN_DATA_FILE
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.editor.testProject
@@ -24,7 +24,7 @@ class TerrainAssetEncodingTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val encoder = TerrainHeightEncoder()
     private val writer = TerrainAssetWriter(json, encoder)
     private val fixture = File(testProject("Untitled"), "assets/terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")

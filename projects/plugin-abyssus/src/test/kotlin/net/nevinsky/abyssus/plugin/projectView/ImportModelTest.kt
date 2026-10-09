@@ -13,7 +13,7 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.gdx.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.gdx.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
@@ -104,12 +104,12 @@ class ImportModelTest : BasePlatformTestCase() {
         importModel(project, abss, source("crate.obj"), crate, null) { fail(it) }
         val folder = File(projectDir, "assets/model_crate")
         val made = tree(folder)
-        val uuid = JsonProcessor().readObject(File(folder, "meta.json").readText())["uuid"].asText()
+        val uuid = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(File(folder, "meta.json").readText())["uuid"].asText()
         UndoManager.getInstance(project).undo(null)
         assertFalse(folder.exists())
         UndoManager.getInstance(project).redo(null)
         assertEquals(made, tree(folder))
-        assertEquals(uuid, JsonProcessor().readObject(File(folder, "meta.json").readText())["uuid"].asText())
+        assertEquals(uuid, JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(File(folder, "meta.json").readText())["uuid"].asText())
     }
 
     fun testUndoIsRefusedOnceASceneNamesTheAsset() {

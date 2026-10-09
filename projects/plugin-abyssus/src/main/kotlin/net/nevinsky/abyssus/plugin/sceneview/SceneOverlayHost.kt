@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.gdx.editor.pick.LineSink
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 
 /** An overlay of one view and the name of the plugin it comes from, for the error that switches it off. */
 class NamedOverlay(val source: String, val overlay: SceneOverlay)

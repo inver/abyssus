@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.SceneReader
-import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.plugin.dto.textOf
 
 /** Reads what the scene view shows for a `.scene` file; throws when the scene cannot be read. */

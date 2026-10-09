@@ -150,7 +150,7 @@ class RayViewFeedTest {
 
     @Test fun theScenesHdrSkyAndItsAmbientColoursReachTheRenderer() {
         val loading = AssetLoading(
-            JsonProcessor(), printingLog, Executor(Runnable::run),
+            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), printingLog, Executor(Runnable::run),
             ShaderStorage()
         )
         val project = File("src/test/testData/project/Untitled").absoluteFile
@@ -181,7 +181,7 @@ class RayViewFeedTest {
     @Test fun aSkyThatCannotBeTransferredShowsTheBackgroundInsteadOfFailingTheView() {
         val project = File("src/test/testData/project/Untitled").absoluteFile
         val loading = AssetLoading(
-            JsonProcessor(), printingLog, Executor(Runnable::run),
+            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), printingLog, Executor(Runnable::run),
             ShaderStorage()
         )
         val assets = RaySceneAssets({ _, _ -> RayAssetLease({ model }, { null }, {}) }, { _, _ -> error("none") },

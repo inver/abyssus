@@ -62,7 +62,7 @@ class NodeIconsTest : BasePlatformTestCase() {
 
     fun testCloudAssetsHaveTheirOwnIcon() {
         val preset = AssetIcons.forType("CLOUDS")
-        assertSame(preset, AssetIcons.forType(net.nevinsky.abyssus.lib.gdx.assets.MetaType.CLOUDS))
+        assertSame(preset, AssetIcons.forType(net.nevinsky.abyssus.lib.core.assets.MetaType.CLOUDS))
         assertNotSame(AssetIcons.UNKNOWN, preset)
         assertNotSame(AssetIcons.forType("SKYBOX_PROCEDURAL"), preset)
 

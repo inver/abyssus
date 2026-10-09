@@ -210,7 +210,7 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         val project = project.service<ProjectReader>().read(abss).obj!!
         val hills = project.assets.single { it.name == "hills" }
         assertTrue("no scene references it", hills.unused)
-        assertEquals(net.nevinsky.abyssus.lib.gdx.assets.MetaType.TERRAIN, hills.type)
+        assertEquals(net.nevinsky.abyssus.lib.core.assets.MetaType.TERRAIN, hills.type)
         assertEquals(2, project.assets.size)
         assertFalse(File(projectDir, "scenes/Main.scene").readText().contains("hills"))
     }

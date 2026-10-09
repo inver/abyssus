@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 
 /** The built assets of a storage, for a loader to read the ones its asset needs. GL thread only. */
 fun interface BuiltAssets {

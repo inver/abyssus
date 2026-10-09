@@ -1,8 +1,8 @@
 # core
 
 Asset reading and loading for native Abyssus projects, as a plain JVM library: the Abyssus plugin uses it, and so can any
-libGDX tool or test that has a project folder and a GL context. Root package `net.nevinsky.abyssus.lib.gdx`; the asset
-code is in `net.nevinsky.abyssus.lib.gdx.assets`.
+libGDX tool or test that has a project folder and a GL context. Root package `net.nevinsky.abyssus.lib.core`; the asset
+code is in `net.nevinsky.abyssus.lib.core.assets`.
 
 ## Rules
 
@@ -20,7 +20,9 @@ code is in `net.nevinsky.abyssus.lib.gdx.assets`.
 
 | Package | What |
 |---|---|
-| `core` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `GeometryUtils` |
+| `core.io`, `core.util` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `GeometryUtils` |
+| `core.defaults` | Top-level camera, light and entity-reference defaults shared by DTOs and components |
+| `core.ecs` | Component registration and loading, `SceneEngine`, `SceneEntityIds` and render-asset lookup |
 | `core.assets` | `AssetMeta` and `MetaType` (the `meta.json` model; `uuid` is null when a meta declares none), `AssetMetaBinder` (one injectable settings-class registration map and metadata binding rule), `AssetMetaLoader` (validates and reads saved `meta.json`, binds through the binder, caches by timestamp and size), `AssetIndex` (the asset folder of a `uuid`), `Asset`, `runCatchingKeepingCancellation`, `Throwables` |
 | `core.assets.loading` | `AssetLoader` (prepare / dependencies / upload / build / discard), `AssetStorage` (the cache and owner of built assets: load once, fail once, slice GPU work per frame, load dependencies first) with `BuiltAssets`, `RaySnapshotStore` with `RaySnapshotLoader`, `RaySnapshot` and the leases (see below), `TextureUploadQueue`, `ShaderStorage` (GLSL from a resource folder) |
 | `core.assets.model` | `ModelLoader` (glTF and other formats through `gdx-model`'s Assimp loader), `ModelMeta`, the ray model snapshot types and `ModelRaySnapshotLoader` |
