@@ -4,7 +4,7 @@
 
 ### Requirement: Main menu
 
-The game SHALL open on a main menu offering Start, Scores and Quit, usable with the arrow keys and Enter, with a
+The game SHALL open on a main menu offering Start, Scores, Settings and Quit, usable with the arrow keys and Enter, with a
 connected flight stick's hat and trigger, or with the mouse. Start SHALL be disabled, with a message, when the bundled field scene has no plane.
 
 #### Scenario: Start
@@ -21,6 +21,11 @@ connected flight stick's hat and trigger, or with the mouse. Start SHALL be disa
 
 - **WHEN** a flight stick is connected, the main menu is shown and the player pushes the hat down and presses the trigger
 - **THEN** the second item, Scores, is chosen and the score table opens
+
+#### Scenario: Settings
+
+- **WHEN** the player chooses Settings on the main menu
+- **THEN** the joystick settings screen opens, and Escape returns to the main menu
 
 ### Requirement: Plane select from the field scene
 
@@ -51,7 +56,7 @@ The flight screen SHALL show the scene from the pilot's eyes, turning to follow 
 laps, score, combo multiplier and fuel left. W or Up SHALL tilt the handle up and S or Down down, reaching full tilt in
 0.15 s and returning to neutral when released; moving the mouse vertically SHALL set the tilt by its distance from the
 window's centre; a connected flight stick's pitch axis SHALL set the tilt by its deflection, pulling back tilting up, with a dead zone around
-centre. Whichever of keys, mouse and stick was used last SHALL control the handle. Escape or the stick's back button SHALL pause, offering Resume and Main
+centre, using the axis, direction and dead zone saved in the joystick settings. Whichever of keys, mouse and stick was used last SHALL control the handle. Escape or the stick's back button SHALL pause, offering Resume and Main
 menu.
 
 #### Scenario: Pause
@@ -63,6 +68,11 @@ menu.
 
 - **WHEN** a flight stick is connected, a flight is under way and the player pulls the stick half way back
 - **THEN** the handle tilts half way up, and returns to neutral when the stick is released to its centre
+
+#### Scenario: Saved settings apply
+
+- **WHEN** the joystick settings name another axis as the pitch axis and invert it, and the player starts a flight and deflects that axis forward
+- **THEN** the handle tilts up, and the stick's former pitch axis no longer tilts it
 
 #### Scenario: Stick at rest does not take control
 
