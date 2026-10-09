@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.flight
 
-import net.nevinsky.abyssus.lib.runtime.SceneContext
+import net.nevinsky.abyssus.lib.core.scene.SceneContext
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3

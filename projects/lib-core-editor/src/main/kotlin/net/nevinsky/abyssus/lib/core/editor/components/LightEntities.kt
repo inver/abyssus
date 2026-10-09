@@ -13,11 +13,10 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.LightData
+import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.dto.ColorDto
 import net.nevinsky.abyssus.lib.core.dto.LightDto
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
@@ -57,7 +56,7 @@ data class AddedLight(val result: EditResult, val entityId: String? = null)
 /** Edits only the JSON tree; callers write it through editSceneJson as a single undoable command. */
 class LightEntities(private val messages: EditorMessages) {
     private val nodes = JsonNodeFactory.instance
-    private val writer = EcsWriter(JsonProcessor().mapper)
+    private val writer = EcsWriter(JsonProcessor(NOPLogger.NOP_LOGGER).mapper)
 
     fun canAdd(root: JsonNode): Boolean = SceneEntityTree(root).canAdd()
 
@@ -81,7 +80,9 @@ class LightEntities(private val messages: EditorMessages) {
                 set<JsonNode>("PositionComponent", writer.writeComponent(transform))
                 set<JsonNode>(
                     "LightComponent",
-                    writer.writeComponent(LightComponent(LightDto(preset.color, preset.intensity)))
+                    writer.writeComponent(
+                        LightComponent(LightDto(intensity = preset.intensity).also { it.color.set(preset.color) }),
+                    )
                 )
             }
         } ?: return rejected()

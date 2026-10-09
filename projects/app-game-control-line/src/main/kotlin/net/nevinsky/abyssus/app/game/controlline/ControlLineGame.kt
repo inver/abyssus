@@ -23,7 +23,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
-import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
+import net.nevinsky.abyssus.lib.core.scene.RuntimeSceneLoader
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.util.concurrent.ExecutorService

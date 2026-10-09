@@ -13,8 +13,8 @@ import org.slf4j.Logger
 import java.util.concurrent.Executor
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.runtime.SceneContext
-import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
+import net.nevinsky.abyssus.lib.core.scene.SceneContext
+import net.nevinsky.abyssus.lib.core.scene.RuntimeSceneLoader
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.core.testing.warningsTo
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent

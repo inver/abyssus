@@ -21,7 +21,7 @@ import net.nevinsky.abyssus.plugin.log.IntellijLoggerFactory
 class AbyssusCore : Disposable {
     val loggers = IntellijLoggerFactory("Abyssus")
     init { ModelLogging.logger = loggers.getLogger("model") }
-    val json by lazy { JsonProcessor() }
+    val json by lazy { JsonProcessor(loggers.getLogger("json")) }
     val format by lazy { AbyssusDocumentFormat() }
     val documents by lazy { DocumentServices(json, format, loggers.getLogger("scenes")) }
     val assets by lazy { AssetServices(json, format, loggers.getLogger("assets")) }

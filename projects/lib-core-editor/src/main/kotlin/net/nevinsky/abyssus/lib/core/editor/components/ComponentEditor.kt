@@ -12,12 +12,9 @@ import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.runtime.schema.BUILT_IN_COMPONENTS
 import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import org.slf4j.helpers.NOPLogger
-import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
-import net.nevinsky.abyssus.lib.runtime.schema.ComponentSchema
-import net.nevinsky.abyssus.lib.runtime.schema.SchemaJson
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 
 /** What an edit of a scene's JSON tree did. The tree is only touched for [Changed]. */
 sealed interface EditResult {
@@ -30,21 +27,16 @@ sealed interface EditResult {
 
 /**
  * Creates, updates and removes the modeled components of an entity in a scene's JSON tree (`ecs.entities.<id>`): the
- * built-in kinds and one kind per component of [schemas] (whose built-in names are ignored). Values go through the
+ * built-in kinds. Values go through the
  * component codecs, so defaults and number text match what a scene load and write do, and an update applies only the
  * keys that really differ onto the file's own component object.
  */
-class ComponentEditor(
-    private val messages: EditorMessages,
-    schemas: List<ComponentSchema> = emptyList(),
-    private val json: SchemaJson = SchemaJson(),
-) {
-    private val mapper = JsonProcessor().mapper
-    private val reader = ComponentReader(mapper, MODEL_ASSETS, NOPLogger.NOP_LOGGER)
+class ComponentEditor(private val messages: EditorMessages) {
+    private val mapper = JsonProcessor(NOPLogger.NOP_LOGGER).mapper
+    private val reader = ComponentReader(mapper, NOPLogger.NOP_LOGGER)
     private val writer = EcsWriter(mapper)
 
-    val kinds: List<ComponentKind<*>> = BuiltInComponentKinds(reader, writer).kinds +
-        schemas.filter { it.name !in BUILT_IN_COMPONENTS }.map { schemaKind(it, json) }
+    val kinds: List<ComponentKind<*>> = BuiltInComponentKinds(reader, writer).kinds
 
     private val byName = kinds.associateBy { it.name }
 
@@ -105,7 +97,7 @@ class ComponentEditor(
             checkValue(root, entityId, kind, field, text, assets)?.let { return it }
             field.set(component, text)
         }
-        if (kind.name == "RenderComponent" && delegateOf(component as RenderComponent)?.asset?.assetName.isNullOrEmpty()) {
+        if (kind.name == "RenderComponent" && (component as RenderComponent).assetName.isEmpty()) {
             return rejected("componentAssetRequired")
         }
         components.set<JsonNode>(kind.name, kind.codec.write(component))
@@ -134,7 +126,6 @@ class ComponentEditor(
     ): EditResult {
         val field = kind.fields.firstOrNull { it.name == fieldName } ?: return rejected("componentFieldUnknown", kind.label, fieldName)
         val component = kind.codec.read(node)
-        if (component is RenderComponent && delegateOf(component) == null) return rejected("componentRenderNotEditable")
         checkValue(root, entityId, kind, field, text, assets)?.let { return it }
         val before = field.get(component)
         val base = kind.codec.write(component)

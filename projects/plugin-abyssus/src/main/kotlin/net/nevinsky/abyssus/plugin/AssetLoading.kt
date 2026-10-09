@@ -145,7 +145,7 @@ class ProjectAssets internal constructor(
                 MetaType.PIXMAP_TEXTURE to textureLoader,
                 MetaType.SKYBOX to skyboxLoader,
                 MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas, skyShaders, log),
-                MetaType.CLOUDS to CloudsLoader(metas, json, log),
+                MetaType.CLOUDS to CloudsLoader(metas),
                 MetaType.SKYBOX_HDR to hdrSkyLoader,
             ),
         )

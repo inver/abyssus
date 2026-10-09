@@ -48,8 +48,6 @@ dependencies {
     // jolt-jni, runtime or libGDX: those are the play host's or come from Abyssus)
     implementation(project(":lib-physics")) { isTransitive = false }
     // runtime, core, gdx-model, libGDX, Ashley and Jackson load from Abyssus's classloader at run time
-    compileOnly(project(":lib-runtime"))
-    testImplementation(project(":lib-runtime"))
     // the overlay and play types (editor.content placements) come from Abyssus's editor-core, never bundled here
     compileOnly(project(":lib-core-editor"))
     testImplementation(project(":lib-core-editor"))

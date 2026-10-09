@@ -13,7 +13,6 @@ plugins {
 dependencies {
     implementation(kotlin("stdlib"))
     api(project(":lib-core"))
-    api(project(":lib-runtime"))
     api(project(":lib-raytracing"))
     api(project(":lib-gdx-model"))
     testImplementation(libs.junit4)

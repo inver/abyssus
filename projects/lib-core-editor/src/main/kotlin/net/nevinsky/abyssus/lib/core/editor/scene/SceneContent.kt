@@ -77,7 +77,7 @@ private fun decode(entity: EntityView): DecodedEntity {
 }
 
 /** Binds components the way a scene load does, so the view and the Properties panel show the same values. */
-private val components = ComponentReader(JsonProcessor().mapper, { _, _ -> null }, NOPLogger.NOP_LOGGER)
+private val components = ComponentReader(JsonProcessor(NOPLogger.NOP_LOGGER).mapper, NOPLogger.NOP_LOGGER)
 
 /** A component that cannot be bound is left out, so one bad value does not hide the entity. */
 private inline fun <reified C : Component> read(node: JsonNode): C? =

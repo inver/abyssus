@@ -1,8 +1,6 @@
-package net.nevinsky.abyssus.lib.runtime
+package net.nevinsky.abyssus.lib.core.scene
 
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.scene.EcsLoadingWarns
-import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 
 /** One loaded scene: its [engine] with the entities, the [scene] settings, and what the loader kept of the `ecs` block. */
 data class SceneContext(
