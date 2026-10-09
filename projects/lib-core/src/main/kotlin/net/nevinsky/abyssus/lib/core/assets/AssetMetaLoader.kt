@@ -1,10 +1,10 @@
 package net.nevinsky.abyssus.lib.gdx.assets
 
-import net.nevinsky.abyssus.lib.gdx.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.gdx.format.DocumentKind
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import java.io.File

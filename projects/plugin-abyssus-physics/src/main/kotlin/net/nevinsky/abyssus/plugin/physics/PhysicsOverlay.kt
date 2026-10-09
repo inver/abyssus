@@ -17,8 +17,8 @@ import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.gdx.editor.pick.LineSink
 import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.sceneview.OverlayView
 import net.nevinsky.abyssus.plugin.sceneview.SceneOverlay
 import net.nevinsky.abyssus.plugin.sceneview.SceneOverlayProvider

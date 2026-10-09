@@ -17,10 +17,10 @@ import net.nevinsky.abyssus.plugin.assetfiles.AssetReferenceGuard
 import net.nevinsky.abyssus.plugin.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.plugin.assetfiles.FileChange
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.editor.meta.TERRAIN_DATA_FILE
-import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.ASSETS_DIR
-import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.TERRAIN_RECIPE_FILE
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainPreview
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainRecipe

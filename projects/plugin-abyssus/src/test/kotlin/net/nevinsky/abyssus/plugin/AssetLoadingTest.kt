@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.plugin
 
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta

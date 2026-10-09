@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.plugin.assetfiles.PlacedEntity
 import net.nevinsky.abyssus.plugin.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.plugin.assetfiles.FileChange
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
-import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearImportRequest
 import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearInspection
 import net.nevinsky.abyssus.lib.gdx.editor.flightgear.ImportSize

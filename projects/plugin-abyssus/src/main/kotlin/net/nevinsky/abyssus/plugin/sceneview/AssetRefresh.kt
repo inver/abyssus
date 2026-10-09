@@ -9,8 +9,8 @@ import net.nevinsky.abyssus.lib.gdx.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.lib.gdx.editor.scene.AssetRevisionTracker
 import net.nevinsky.abyssus.lib.gdx.editor.scene.MetaTextSource
 import net.nevinsky.abyssus.lib.gdx.editor.scene.ProjectRevisions
-import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.ASSETS_DIR
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
 import java.io.File
 

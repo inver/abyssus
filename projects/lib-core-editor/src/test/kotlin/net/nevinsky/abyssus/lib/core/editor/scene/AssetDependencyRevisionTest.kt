@@ -5,9 +5,7 @@
 
 package net.nevinsky.abyssus.lib.gdx.editor.scene
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.AssetRevisionTracker
-import net.nevinsky.abyssus.lib.gdx.editor.scene.ProjectRevisions
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule

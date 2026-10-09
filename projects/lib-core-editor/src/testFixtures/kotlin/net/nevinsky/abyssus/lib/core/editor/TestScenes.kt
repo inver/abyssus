@@ -1,11 +1,11 @@
 package net.nevinsky.abyssus.lib.gdx.editor
 
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
 import net.nevinsky.abyssus.lib.gdx.assets.Asset
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
@@ -14,7 +14,7 @@ import java.io.File
 import java.util.UUID
 
 /** Parses scene JSON without the platform: the reader is an application service, [JsonProcessor] is plain. */
-fun parseScene(text: String): SceneDto = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).parse(text, SceneDto::class.java)
+fun parseScene(text: String): SceneDto = JsonProcessor(NOPLogger.NOP_LOGGER).parse(text, SceneDto::class.java)
 
 /** An asset as the project reader lists it, for tests that need no folder on disk. [uuid] is any text, folded into a UUID. */
 fun testAsset(

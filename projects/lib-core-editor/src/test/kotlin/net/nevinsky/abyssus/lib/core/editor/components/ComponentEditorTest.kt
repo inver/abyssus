@@ -8,6 +8,7 @@ package net.nevinsky.abyssus.lib.gdx.editor.components
 import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
 
 import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.io.File
 import net.nevinsky.abyssus.lib.runtime.ecs.EcsConfigurator
 import net.nevinsky.abyssus.lib.runtime.ecs.render.FolderAssetResolver
@@ -283,7 +284,7 @@ class ComponentEditorTest {
         editor.update(root, "4", "CameraComponent", "camera.near", "0.25")
         editor.update(root, "0", "PositionComponent", "localPosition.y", "2.5")
         val configurator = EcsConfigurator(
-            net.nevinsky.abyssus.lib.gdx.io.JsonProcessor().mapper,
+            JsonProcessor().mapper,
             FolderAssetResolver(File("src/test/testData/project/Untitled/assets").list().orEmpty().toList()),
             org.slf4j.helpers.NOPLogger.NOP_LOGGER,
             net.nevinsky.abyssus.lib.runtime.schema.GameComponents(),

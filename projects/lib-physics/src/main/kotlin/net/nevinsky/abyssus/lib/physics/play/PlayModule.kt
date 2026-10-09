@@ -8,7 +8,7 @@ import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.EntitySystem
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.gdx.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 
 /**
  * What a game adds to Play in Abyssus: its own components, the systems that act on the simulation and what it does

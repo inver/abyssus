@@ -13,13 +13,13 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
 import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
 import net.nevinsky.abyssus.lib.gdx.gltf.PhongToPbr
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
 import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
 import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
-import net.nevinsky.abyssus.lib.gdx.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.gdx.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import java.util.UUID
 import kotlin.math.cos
 import kotlin.math.sin

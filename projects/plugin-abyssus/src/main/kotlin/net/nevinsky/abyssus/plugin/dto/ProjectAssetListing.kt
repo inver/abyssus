@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
 import net.nevinsky.abyssus.lib.gdx.assets.Asset
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.util.obj
 import net.nevinsky.abyssus.lib.core.util.opt
 import net.nevinsky.abyssus.lib.core.util.text

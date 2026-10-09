@@ -4,8 +4,9 @@
  */
 package net.nevinsky.abyssus.lib.gdx.project
 
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.project.ProjectLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.assets.testProject
 import net.nevinsky.abyssus.lib.gdx.dto.ProjectDto
 import org.junit.Assert.assertEquals

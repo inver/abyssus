@@ -18,13 +18,13 @@ import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
 import net.nevinsky.abyssus.lib.gdx.editor.document.EntityView
 import net.nevinsky.abyssus.lib.gdx.editor.document.sceneDocumentFromEcs
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.editor.components.ComponentReader
 import org.slf4j.helpers.NOPLogger
-import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.util.opt
 
 /** What a scene shows besides its environment. */

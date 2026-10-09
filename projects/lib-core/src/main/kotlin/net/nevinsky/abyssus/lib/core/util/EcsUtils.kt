@@ -2,7 +2,7 @@ package net.nevinsky.abyssus.lib.core.util
 
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 
 class EcsUtils {
     companion object {

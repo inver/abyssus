@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import net.nevinsky.abyssus.lib.gdx.io.EcsReadWarnings
+import net.nevinsky.abyssus.lib.core.io.EcsReadWarnings
 import org.slf4j.Logger
 
 @JsonAutoDetect(

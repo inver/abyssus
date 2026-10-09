@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 package net.nevinsky.abyssus.lib.gdx.editor.document
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
 import org.junit.Assert.*
 import org.junit.Test

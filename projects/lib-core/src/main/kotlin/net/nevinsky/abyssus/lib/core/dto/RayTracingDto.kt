@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.dto
+package net.nevinsky.abyssus.lib.core.dto
 
 data class RayTracingDto(
     // Explicit null is malformed saved data, retained for the editor's limit validator; omitted fields default.

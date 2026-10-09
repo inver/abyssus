@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.scene
+package net.nevinsky.abyssus.lib.core.scene
 
 import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
 

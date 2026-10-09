@@ -4,20 +4,20 @@
  */
 package net.nevinsky.abyssus.app.game.controlline
 
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.scene.SceneContext
-import net.nevinsky.abyssus.lib.gdx.scene.RuntimeSceneLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.scene.SceneContext
+import net.nevinsky.abyssus.lib.core.scene.RuntimeSceneLoader
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import net.nevinsky.abyssus.app.game.controlline.components.CONTROL_LINE_COMPONENTS
-import net.nevinsky.abyssus.lib.gdx.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.gdx.ecs.EcsLoader
-import net.nevinsky.abyssus.lib.gdx.scene.SceneLoader
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.scene.SceneLoader
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.gdx.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import java.nio.file.Path
 
 /** The bundled `ControlLine` project, supplied by Gradle so tests do not depend on their working directory. */

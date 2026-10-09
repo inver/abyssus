@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SUN_OCCLUSION_FLOOR
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SunOcclusion
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.bandDistance
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.testing.failOnWarnings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

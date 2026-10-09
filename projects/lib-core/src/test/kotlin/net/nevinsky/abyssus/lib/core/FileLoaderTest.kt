@@ -1,6 +1,6 @@
 package net.nevinsky.abyssus.lib.gdx
 
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 
 import net.nevinsky.abyssus.lib.gdx.assets.testProject
 import org.junit.Assert.assertEquals

@@ -23,6 +23,7 @@ import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
@@ -31,11 +32,11 @@ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.gdx.assets.texture.TextureLoader
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.Model
-import net.nevinsky.abyssus.lib.gdx.scene.SceneEnvironment
+import net.nevinsky.abyssus.lib.core.scene.SceneEnvironment
 import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
 import org.slf4j.Logger
@@ -64,6 +65,7 @@ fun fieldAssets(
                 MetaType.PIXMAP_TEXTURE to TextureLoader(files, metas),
                 MetaType.SKYBOX to SkyboxLoader(files, metas, skyShaders),
                 MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas),
+            MetaType.CLOUDS to CloudsLoader(metas),
                 MetaType.SKYBOX_HDR to HdrSkyLoader(metas, ExrLoader(files), skyShaders, ToneCurve()),
             ),
         )

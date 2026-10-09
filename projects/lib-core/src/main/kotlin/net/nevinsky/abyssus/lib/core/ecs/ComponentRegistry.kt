@@ -1,8 +1,14 @@
-package net.nevinsky.abyssus.lib.gdx.ecs
+package net.nevinsky.abyssus.lib.core.ecs
 
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.lib.gdx.ecs.component.*
-import net.nevinsky.abyssus.lib.gdx.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 
 class ComponentRegistry {
 

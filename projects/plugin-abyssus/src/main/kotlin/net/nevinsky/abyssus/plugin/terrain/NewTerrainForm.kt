@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainGenerator
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainPreview
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.checkFolderName
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.checkGeometry
-import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField

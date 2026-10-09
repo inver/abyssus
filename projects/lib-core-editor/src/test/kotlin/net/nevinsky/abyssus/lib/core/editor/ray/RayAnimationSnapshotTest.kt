@@ -31,7 +31,7 @@ import net.nevinsky.abyssus.lib.core.assets.model.ModelRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.model.RayModelSource
 import net.nevinsky.abyssus.lib.gdx.AnimationController
 import net.nevinsky.abyssus.lib.gdx.ModelInstance
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.mesh.MeshPart
 import net.nevinsky.abyssus.lib.gdx.model.Model

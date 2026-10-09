@@ -32,7 +32,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import net.nevinsky.abyssus.lib.gdx.editor.components.EditResult
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.uniqueAssetUuid
-import net.nevinsky.abyssus.lib.gdx.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ImportSettings
 import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ModelSource
 import net.nevinsky.abyssus.lib.gdx.editor.modelimport.SourceFormat

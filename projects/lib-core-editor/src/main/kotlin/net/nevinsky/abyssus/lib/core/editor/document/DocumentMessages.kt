@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.gdx.editor.document
 
 import net.nevinsky.abyssus.lib.gdx.assets.displayMessage
-import net.nevinsky.abyssus.lib.gdx.format.UnsupportedDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
 
 /** Why a document could not be used, as shown to the user: a native-format refusal names its problem and path. */

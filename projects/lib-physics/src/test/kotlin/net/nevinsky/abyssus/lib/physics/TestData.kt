@@ -5,17 +5,17 @@
 package net.nevinsky.abyssus.lib.physics
 
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.lib.gdx.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.gdx.ecs.EcsLoader
-import net.nevinsky.abyssus.lib.gdx.scene.SceneLoader
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.scene.SceneLoader
 import org.slf4j.Logger
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.scene.SceneContext
-import net.nevinsky.abyssus.lib.gdx.scene.RuntimeSceneLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.scene.SceneContext
+import net.nevinsky.abyssus.lib.core.scene.RuntimeSceneLoader
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
-import net.nevinsky.abyssus.lib.gdx.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import java.io.File
 
 /** Shared native test fixtures, supplied by Gradle so tests do not depend on their working directory. */

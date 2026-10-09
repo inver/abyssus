@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.meta.AssetMetaEditor
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainGenerator
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainHeightEncoder
 import net.nevinsky.abyssus.lib.gdx.editor.terrain.TerrainRecipeCodec
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.SceneRayControls
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.facts.SceneFacts

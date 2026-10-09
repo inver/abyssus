@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import org.lwjgl.PointerBuffer
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil

@@ -11,7 +11,7 @@ import com.badlogic.gdx.graphics.Texture
 import net.nevinsky.abyssus.lib.core.assets.loading.*
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.loader.PreloadedTextureProvider
 import net.nevinsky.abyssus.lib.gdx.model.Model

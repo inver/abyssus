@@ -8,8 +8,8 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.gdx.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import net.nevinsky.abyssus.lib.core.util.EcsUtils
 import net.nevinsky.abyssus.lib.physics.ColliderComponent
 import net.nevinsky.abyssus.lib.physics.ColliderShape

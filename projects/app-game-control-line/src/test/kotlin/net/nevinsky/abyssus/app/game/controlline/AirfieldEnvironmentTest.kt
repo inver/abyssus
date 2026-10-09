@@ -11,9 +11,9 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.gdx.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
@@ -23,6 +23,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.slf4j.helpers.NOPLogger
 import java.io.File
 import kotlin.math.hypot
 
@@ -49,7 +50,7 @@ class AirfieldEnvironmentTest {
 
     @Test
     fun everyAirfieldAssetIsNativeAndRecordsItsSource() {
-        val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
+        val json = JsonProcessor(NOPLogger.NOP_LOGGER)
         val format = AbyssusDocumentFormat()
         for (folder in assets.listFiles()!!.filter { it.name.contains("_airfield_") }) {
             assertNull(folder.name, format.validate(json.readObject(File(folder, "meta.json").readText()), DocumentKind.ASSET))

@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.io
+package net.nevinsky.abyssus.lib.core.io
 
 class AbyssusProjectLayout {
     companion object {

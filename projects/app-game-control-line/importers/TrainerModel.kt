@@ -7,14 +7,14 @@
 package net.nevinsky.abyssus.app.game.controlline.tools
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearArchive
 import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearImport
 import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearImportRequest
 import net.nevinsky.abyssus.lib.gdx.editor.flightgear.IMPORTED_MODEL_FILE
 import net.nevinsky.abyssus.lib.gdx.editor.flightgear.ImportOrigin
 import net.nevinsky.abyssus.lib.gdx.editor.flightgear.ImportSize
-import net.nevinsky.abyssus.lib.gdx.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import java.io.File
 import java.net.URI
 import java.security.MessageDigest

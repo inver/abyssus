@@ -7,8 +7,8 @@ package net.nevinsky.abyssus.lib.gdx.editor.headless
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.gdx.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.gdx.format.FormatRejection
-import net.nevinsky.abyssus.lib.gdx.format.UnsupportedDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.FormatRejection
+import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
 import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.gdx.editor.components.ComponentEditor

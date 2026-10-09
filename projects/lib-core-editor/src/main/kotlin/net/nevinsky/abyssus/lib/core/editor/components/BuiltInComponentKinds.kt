@@ -8,15 +8,15 @@ package net.nevinsky.abyssus.lib.gdx.editor.components
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.editor.ecs.EcsWriter
-import net.nevinsky.abyssus.lib.gdx.dto.LightDto
-import net.nevinsky.abyssus.lib.gdx.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.ParentComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.Point2PointPositionComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.dto.LightDto
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 
 private fun <C : Component> floatField(name: String, get: (C) -> Float, set: (C, Float) -> Unit) =
     ComponentField<C>(name, FieldKind.FLOAT, { decimalText(get(it)) }, { c, t -> set(c, t.trim().toFloat()) })

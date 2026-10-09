@@ -6,6 +6,9 @@
 package net.nevinsky.abyssus.lib.gdx.dto
 
 import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.dto.BaseLightDto
+import net.nevinsky.abyssus.lib.core.dto.FogDto
+import net.nevinsky.abyssus.lib.core.dto.RayTracingDto
 import java.util.*
 
 data class SceneDto(

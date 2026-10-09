@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.ray.rayBackendSelectorFromStartup
 import net.nevinsky.abyssus.lib.gdx.editor.meta.AssetFieldDescriptions
 import net.nevinsky.abyssus.lib.gdx.editor.meta.AssetMetaEditor
 import com.intellij.util.concurrency.AppExecutorUtil
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.gdx.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.lib.gdx.editor.document.DocumentParsing

@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.lib.gdx.assets
 
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

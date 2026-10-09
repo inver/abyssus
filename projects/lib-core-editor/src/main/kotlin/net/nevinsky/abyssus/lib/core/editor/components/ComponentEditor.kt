@@ -11,10 +11,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.editor.ecs.EcsWriter
 import org.slf4j.helpers.NOPLogger
-import net.nevinsky.abyssus.lib.gdx.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 
 /** What an edit of a scene's JSON tree did. The tree is only touched for [Changed]. */
 sealed interface EditResult {

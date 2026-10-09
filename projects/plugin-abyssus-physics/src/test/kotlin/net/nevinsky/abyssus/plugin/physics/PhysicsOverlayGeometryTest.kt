@@ -6,8 +6,8 @@ package net.nevinsky.abyssus.plugin.physics
 
 import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3

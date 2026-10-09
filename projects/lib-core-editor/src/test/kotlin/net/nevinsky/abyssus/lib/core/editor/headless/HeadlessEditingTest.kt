@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.gdx.editor.headless
 
-import net.nevinsky.abyssus.lib.gdx.format.FormatProblem
+import net.nevinsky.abyssus.lib.core.format.FormatProblem
 import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind

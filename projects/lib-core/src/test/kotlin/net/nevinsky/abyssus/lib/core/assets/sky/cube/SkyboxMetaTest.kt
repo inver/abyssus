@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.gdx.assets.sky.cube
 
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.assets.skyShaders
 import net.nevinsky.abyssus.lib.gdx.assets.testMetaLoader

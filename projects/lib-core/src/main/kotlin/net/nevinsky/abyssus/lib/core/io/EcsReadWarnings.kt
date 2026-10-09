@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.io
+package net.nevinsky.abyssus.lib.core.io
 
 import org.slf4j.Logger
 

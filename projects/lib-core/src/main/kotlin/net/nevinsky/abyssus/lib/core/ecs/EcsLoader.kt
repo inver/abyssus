@@ -3,21 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.ecs
+package net.nevinsky.abyssus.lib.core.ecs
 
 import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
-import net.nevinsky.abyssus.lib.gdx.ecs.component.IdComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.ParentComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.Point2PointPositionComponent
-import net.nevinsky.abyssus.lib.gdx.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.gdx.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.gdx.io.EcsReadWarnings
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.scene.EcsLoadingWarns
-import net.nevinsky.abyssus.lib.gdx.scene.SceneEngine
+import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.io.EcsReadWarnings
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.scene.EcsLoadingWarns
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.util.obj
 

@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import com.intellij.openapi.command.undo.UndoManager
-import com.intellij.openapi.command.undo.UnexpectedUndoException
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.util.io.FileUtil
@@ -20,7 +19,7 @@ import net.nevinsky.abyssus.lib.gdx.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ImportSettings
 import net.nevinsky.abyssus.lib.gdx.editor.modelimport.LengthUnit
 import net.nevinsky.abyssus.lib.gdx.editor.modelimport.ModelSource

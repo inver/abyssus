@@ -1,10 +1,10 @@
-package net.nevinsky.abyssus.lib.gdx.scene
+package net.nevinsky.abyssus.lib.core.scene
 
 import net.nevinsky.abyssus.lib.gdx.dto.SceneDto
-import net.nevinsky.abyssus.lib.gdx.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.gdx.format.DocumentKind
-import net.nevinsky.abyssus.lib.gdx.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 class SceneLoader(
     private val jsonProcessor: JsonProcessor,

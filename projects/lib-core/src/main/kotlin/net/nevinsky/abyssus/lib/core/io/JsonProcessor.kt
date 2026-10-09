@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.io
+package net.nevinsky.abyssus.lib.core.io
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Quaternion

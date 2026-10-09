@@ -1,13 +1,12 @@
 package net.nevinsky.abyssus.lib.gdx
 
-import net.nevinsky.abyssus.lib.gdx.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import net.nevinsky.abyssus.lib.gdx.assets.AssetMeta
 import net.nevinsky.abyssus.lib.gdx.assets.MetaType
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.slf4j.Logger
 
 class JsonProcessorTest {
     private val json = JsonProcessor()

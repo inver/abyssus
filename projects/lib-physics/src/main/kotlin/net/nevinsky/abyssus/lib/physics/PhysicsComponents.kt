@@ -51,7 +51,7 @@ class ConstraintComponent : Component {
     var hingeAxis = Vector3(0f, 1f, 0f)
 }
 
-/** The physics components by the name a scene file gives them, for [net.nevinsky.abyssus.lib.gdx.ecs.ComponentRegistry.registerAll]. */
+/** The physics components by the name a scene file gives them, for [net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry.registerAll]. */
 val PHYSICS_COMPONENTS: Map<String, Class<out Component>> = mapOf(
     "RigidBodyComponent" to RigidBodyComponent::class.java,
     "ColliderComponent" to ColliderComponent::class.java,
