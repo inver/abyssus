@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
+import net.nevinsky.abyssus.app.game.controlline.components.GAME_COMPONENTS
 import net.nevinsky.abyssus.app.game.controlline.flight.CONTROL_TENSION
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
@@ -17,11 +18,12 @@ import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
 import net.nevinsky.abyssus.app.game.controlline.render.*
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.app.game.controlline.screens.GameUi
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.BaseCtx
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
+import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.util.concurrent.ExecutorService
@@ -42,7 +44,6 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
         Executors.newFixedThreadPool(2) { r -> Thread(r, "asset-prepare").apply { isDaemon = true } }
     private val natives = JoltNatives()
     private val input = HandleInput()
-    private val loader = FieldLoader(project, log)
 
     private lateinit var flow: GameFlow
     private lateinit var renderer: FieldRenderer
@@ -55,13 +56,17 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
     private var sessionScene: FieldScene? = null
     private var flying: Screen.Flying? = null
 
+    private val ctx = BaseCtx(project.toString(), "/shader", ControlLineGame::class.java, log)
+        .also { it.componentRegistry.registerAll(PHYSICS_COMPONENTS + GAME_COMPONENTS) }
+
+    private val sceneLoader = RuntimeSceneLoader(ctx.sceneLoader, ctx.ecsLoader, log)
+
     override fun create() {
         // TerrainMesh sets every layer's uniforms; the game's shader may not use them all
         ShaderProgram.pedantic = false
-        parked = loader.load()
+        parked = loadScene()
         flow = GameFlow(parked.planes, ScoreTable(scoresFile))
-        val assets = fieldAssets(project.toFile(), JsonProcessor(), log, executor)
-        renderer = FieldRenderer(assets, ShaderSource("/shader", ControlLineGame::class.java))
+        renderer = FieldRenderer(ctx)
         skin = Skin(Gdx.files.classpath("uiskin/uiskin.json"))
         ui = GameUi(flow, skin) { Gdx.app.exit() }
         cameras = Cameras(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat())
@@ -135,7 +140,7 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
 
     private fun startFlight(screen: Screen.Flying) {
         endFlight()
-        val scene = loader.load()
+        val scene = loadScene()
         val plane = scene.entity(screen.plane.entityId) ?: return
         val pilot = scene.pilot ?: return
         val assets = PhysicsAssets(project.toFile())
@@ -143,6 +148,12 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
         sessionScene = scene
         flying = screen
         input.reset()
+    }
+
+    private fun loadScene(): FieldScene {
+        val loaded = sceneLoader.load(project.resolve(FIELD_SCENE).fileName.toString())
+            ?: throw IllegalStateException("The field scene ${project.resolve(FIELD_SCENE)} could not be read; see the log")
+        return FieldScene(loaded)
     }
 
     private fun endFlight() {

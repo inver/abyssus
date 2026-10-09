@@ -7,7 +7,6 @@ package net.nevinsky.abyssus.app.game.controlline.render
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.app.game.controlline.components.ControlLineComponents
 import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
 import net.nevinsky.abyssus.app.game.controlline.flow.PlaneChoice
 import net.nevinsky.abyssus.app.game.controlline.flow.planeChoices
@@ -15,30 +14,15 @@ import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.render.RenderComponent
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
+import net.nevinsky.abyssus.lib.core.util.EcsUtils
 import net.nevinsky.abyssus.lib.runtime.SceneContext
-import org.slf4j.Logger
-import java.nio.file.Path
 
 /** The field scene's file in the project. */
 const val FIELD_SCENE = "scenes/Field.scene"
 
-/** Reads the field scene of [project] with the game's components; a scene that cannot be read throws (the cause goes to [log]). */
-class FieldLoader(val project: Path, private val log: Logger) {
-    fun load(): FieldScene {
-        val loader = RuntimeSceneLoader(JsonProcessor(), FileLoader(project.toFile()), log, ControlLineComponents())
-        val loaded = loader.load(project.resolve(FIELD_SCENE).fileName.toString())
-            ?: throw IllegalStateException("The field scene ${project.resolve(FIELD_SCENE)} could not be read; see the log")
-        return FieldScene(loaded)
-    }
-}
-
 /**
  * One load of the field scene, as the game draws it (no GL): its entities, the sky, the sun, ambient light and fog, and
- * the planes for plane select. A flight gets its own load, so the parked planes are parked again afterwards.
+ * the planes for plane select. A flight gets its own load, so the parked planes are parked again afterward.
  */
 class FieldScene(val loaded: SceneContext) {
     val engine = loaded.engine
@@ -51,13 +35,13 @@ class FieldScene(val loaded: SceneContext) {
 
     /** Entities drawn with a model: (entity, model asset folder). */
     val models: List<Pair<Entity, String>> =
-        entities.values.mapNotNull { e -> asset(e, MetaType.MODEL)?.let { e to it } }
+        entities.values.mapNotNull { e -> EcsUtils.assetName(e, MetaType.MODEL)?.let { e to it } }
 
     /** Entities drawn as terrain: (entity, terrain asset folder). */
     val terrains: List<Pair<Entity, String>> =
-        entities.values.mapNotNull { e -> asset(e, MetaType.TERRAIN)?.let { e to it } }
+        entities.values.mapNotNull { e -> EcsUtils.assetName(e, MetaType.TERRAIN)?.let { e to it } }
 
-    val skyName: String? = loaded.scene.skyboxName.takeIf { loaded.scene.skyboxEnabled != false }
+    val skyName: String? = loaded.scene.skyboxName.takeIf { loaded.scene.skyboxEnabled }
 
     /** The unit vector toward the sun: against the first directional light's direction, 45° up without one. */
     val sunDirection: Vector3 =
@@ -74,7 +58,7 @@ class FieldScene(val loaded: SceneContext) {
         )
 
     val ambient: Color = loaded.scene.ambientLight?.takeIf { loaded.scene.ambientLightEnabled }
-        ?.let { color(it.color ?: net.nevinsky.abyssus.lib.core.dto.ColorDto(1f, 1f, 1f, 1f), it.intensity ?: 0.3f) }
+        ?.let { color(it.color ?: Color(1f, 1f, 1f, 1f), it.intensity ?: 0.3f) }
         ?: Color(0.3f, 0.3f, 0.3f, 1f)
 
     val fogColor: Color? = loaded.scene.fog?.takeIf { loaded.scene.fogEnabled }
@@ -93,12 +77,5 @@ class FieldScene(val loaded: SceneContext) {
         return (toward ?: p.localRotation.transform(Vector3(0f, 0f, -1f))).nor()
     }
 
-    private fun asset(e: Entity, type: MetaType): String? {
-        val meta = e.getComponent(RenderComponent::class.java)?.renderable
-            ?.meta ?: return null
-        return meta.name.takeIf { meta.type == type }
-    }
-
-    private fun color(c: net.nevinsky.abyssus.lib.core.dto.ColorDto, intensity: Float) =
-        Color(c.r * intensity, c.g * intensity, c.b * intensity, 1f)
+    private fun color(c: Color, intensity: Float) = Color(c.r * intensity, c.g * intensity, c.b * intensity, 1f)
 }

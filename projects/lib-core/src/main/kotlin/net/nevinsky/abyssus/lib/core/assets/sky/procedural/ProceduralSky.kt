@@ -10,7 +10,7 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.*
@@ -37,7 +37,7 @@ private const val CLOUD_LIGHT_ALTITUDE = 1500f
 class ProceduralSky(
     prepared: PreparedProceduralSky,
     private val assets: BuiltAssets = BuiltAssets { null },
-    shaders: ShaderSource = ShaderSource("/shader/sky"),
+    shaders: ShaderStorage = ShaderStorage(),
     log: Logger = NOPLogger.NOP_LOGGER,
     cloudFactory: ((CloudTechnique) -> CloudRenderer)? = null,
 ) : SkyRenderer {

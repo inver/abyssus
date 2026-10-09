@@ -8,7 +8,7 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.EntitySystem
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.app.game.controlline.components.GameComponents
+import net.nevinsky.abyssus.app.game.controlline.components.GAME_COMPONENTS
 import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.app.game.controlline.flight.CONTROL_TENSION
@@ -16,16 +16,15 @@ import net.nevinsky.abyssus.app.game.controlline.flight.Flight
 import net.nevinsky.abyssus.app.game.controlline.flight.Ground
 import net.nevinsky.abyssus.app.game.controlline.flight.LineRig
 import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import net.nevinsky.abyssus.lib.physics.ColliderComponent
 import net.nevinsky.abyssus.lib.physics.ColliderShape
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.physics.play.DebugLine
 import net.nevinsky.abyssus.lib.physics.play.PlayInput
 import net.nevinsky.abyssus.lib.physics.play.PlayModule
-import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.core.scene.SceneEngine
-import net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistry
-import java.util.Locale
+import java.util.*
 
 /** After a crash or a landing, Play starts the next flight this many seconds later. */
 const val RESTART_DELAY = 1f
@@ -48,7 +47,7 @@ class ControlLinePlay : PlayModule {
     private var flights = 0
     private var lastEnd: String = "-"
 
-    override fun components(): ComponentRegistry = GameComponents()
+    override fun components() = GAME_COMPONENTS
 
     override fun systems(world: PhysicsWorld, engine: SceneEngine, selection: Entity?): List<EntitySystem> {
         val entities = engine.ids.ids.sorted().mapNotNull { engine.ids[it] }
@@ -56,7 +55,8 @@ class ControlLinePlay : PlayModule {
             ?: entities.filter { it.getComponent(PlaneComponent::class.java) != null }.minByOrNull { name(it) }
             ?: return emptyList()
         val pilot = entities.firstOrNull { it.getComponent(PilotComponent::class.java) != null } ?: return emptyList()
-        val field = entities.firstOrNull { it.getComponent(ColliderComponent::class.java)?.shape == ColliderShape.HEIGHT_FIELD }
+        val field =
+            entities.firstOrNull { it.getComponent(ColliderComponent::class.java)?.shape == ColliderShape.HEIGHT_FIELD }
         val ground = Ground(field, null)
         val next = Flight(world, LineRig(world, pilot, plane, ground), ground)
         flight = next

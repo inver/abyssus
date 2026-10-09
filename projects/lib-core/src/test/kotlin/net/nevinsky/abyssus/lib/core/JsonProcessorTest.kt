@@ -7,6 +7,7 @@ import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.slf4j.Logger
 
 class JsonProcessorTest {
     private val json = JsonProcessor()

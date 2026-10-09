@@ -67,7 +67,7 @@ class LightEntitiesTest {
             assertEquals(100f, light.range, 0f)
             if (preset == LightPreset.SUN) { assertTrue(light.intensity > 1f); assertTrue(light.color.b < light.color.r) }
             val engine = SceneEngine()
-            val document = EcsLoader(JsonProcessor().mapper, log = NOPLogger.NOP_LOGGER).load(root["ecs"], engine)
+            val document = EcsLoader(JsonProcessor().mapper, log = NOPLogger.NOP_LOGGER).loadToEngine(root["ecs"], engine)
             assertTrue(document.warnings.toString(), document.warnings.isEmpty())
             val entity = engine.ids[0]!!
             assertNotNull(entity.getComponent(NameComponent::class.java))

@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.terrain
 
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
@@ -25,7 +25,7 @@ import net.nevinsky.abyssus.lib.core.shader.ShadowAtlasBindings
  * Draws terrains: splat-blended textures with the scene's ambient, directional and point lights and fog. A small
  * program of its own, since the terrain material is not something the model shaders know.
  */
-class TerrainShader(shaders: ShaderSource) : Disposable {
+class TerrainShader(shaders: ShaderStorage) : Disposable {
     private val program = shaders.program("terrain")
     private val normalMatrix = Matrix3()
     private val atlasBindings = ShadowAtlasBindings()

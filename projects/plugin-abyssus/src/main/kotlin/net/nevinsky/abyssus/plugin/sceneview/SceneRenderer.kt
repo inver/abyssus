@@ -38,7 +38,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 
 import java.io.File
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
@@ -76,7 +76,7 @@ import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FOV
  */
 class SceneRenderer(
     val assets: ViewAssets,
-    private val shaders: ShaderSource,
+    private val shaders: ShaderStorage,
     /** What the user selected, previews and looks through; the view panel changes it, this draws from it. */
     val state: SceneViewState = SceneViewState(),
 ) : Disposable {

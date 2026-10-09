@@ -45,7 +45,7 @@ the toolbar, Play and the view's asset storage.
   stable for 250 ms. On macOS a zero-sized surface aborts the JVM. A canvas disposed while hidden drops its context
   without making it current, so its GL objects can't be released. macOS also stops sizing that canvas's native
   surface with the component, so `SceneViewPanel` replaces such an "abandoned" canvas when the view is shown again.
-- **Asset loading lives in `core`** (`projects/lib-core/README.md`). `AssetStorage.prepare` runs on a pool thread (IO and decoding,
+- **Asset loading lives in `core`** (`projects/lib-core/README.md`). `AssetLoader.prepare` runs on a pool thread (IO and decoding,
   no GL). `build`, and `upload` for big textures, run on the render thread one slice per frame, inside this package's
   `GdxRuntime.withContext`. A new project gets a new cache, so a pool thread never prepares from a stale project. A
   failed asset is remembered and logged once, through the SLF4J `Logger` `AbyssusCore` gives `AssetLoading` (`Abyssus.assets`).

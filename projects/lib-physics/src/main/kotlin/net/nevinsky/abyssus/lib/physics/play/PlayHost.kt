@@ -9,14 +9,17 @@ import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
-import net.nevinsky.abyssus.lib.physics.PhysicsComponents
+import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
 import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.scene.SceneEngine
-import net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.scene.SceneLoader
 import org.slf4j.Logger
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -53,7 +56,12 @@ class PlayHost(
     private val queue = LinkedBlockingQueue<Any>()
     private val closed = Any()
 
-    private class Session(val engine: SceneEngine, val world: PhysicsWorld, val systems: List<EntitySystem>)
+    private class Session(
+        val engine: SceneEngine,
+        val world: PhysicsWorld,
+        val systems: List<EntitySystem>,
+        val assets: AssetStorage,
+    )
 
     private var session: Session? = null
     private var playing = false
@@ -146,30 +154,39 @@ class PlayHost(
     }
 
     private fun load(command: PlayFrame.Load): Session {
-        val registry = ComponentRegistry { PhysicsComponents().components() + module.components().components() }
         val projectDir = Path.of(command.projectDir)
-        val loaded = RuntimeSceneLoader(
-            JsonProcessor(),
-            FileLoader(projectDir.toFile()),
-            log,
-            registry
-        ).loadFromText(command.sceneText)
-            ?: throw IllegalArgumentException("the scene text is not a supported Abyssus scene")
-        val world = PhysicsWorld(
-            loaded.engine,
-            PhysicsAssets(projectDir.toFile(), log = log),
-            log,
-            natives
-        )
+        val json = JsonProcessor(log)
+        val files = FileLoader(projectDir.toFile())
+        val registry = ComponentRegistry().also {
+            it.registerAll(PHYSICS_COMPONENTS)
+            it.registerAll(module.components())
+        }
+        // the scene loader only needs the storage to exist: nothing is drawn here, so no asset loader is registered
+        val storage = AssetStorage(log)
+        val loaded = try {
+            RuntimeSceneLoader(SceneLoader(json, files), EcsLoader(json, storage, registry), log)
+                .loadFromText(command.sceneText)
+                ?: throw IllegalArgumentException("the scene text is not a supported Abyssus scene")
+        } catch (e: Exception) {
+            storage.dispose()
+            throw e
+        }
+        val world = try {
+            PhysicsWorld(loaded.engine, PhysicsAssets(projectDir.toFile(), log), log, natives)
+        } catch (e: Exception) {
+            storage.dispose()
+            throw e
+        }
         return try {
             val selection = if (command.selection == NO_ENTITY) null else loaded.engine.ids[command.selection]
             val systems = module.systems(world, loaded.engine, selection)
             for (system in systems) loaded.engine.addSystem(system)
             frame = 0
             simTime = 0.0
-            Session(loaded.engine, world, systems)
+            Session(loaded.engine, world, systems, storage)
         } catch (e: Exception) {
             world.close()
+            storage.dispose()
             throw e
         }
     }
@@ -179,6 +196,7 @@ class PlayHost(
         session?.let { s ->
             for (system in s.systems) s.engine.removeSystem(system)
             s.world.close()
+            s.assets.dispose()
         }
         session = null
     }

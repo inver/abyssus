@@ -38,7 +38,7 @@ class CloudsLoaderTest {
     fun readsTheBandsAndTechniqueAndMakesTheNoise() {
         asset("clouds_storm", """{"technique": "volumetric", "low": {"type": "stratocumulus"}, "mid": {"type": "altostratus", "coverage": 0.9}}""")
         assertEquals(MetaType.CLOUDS, metas.loadBaseMeta("clouds_storm")!!.type)
-        val prepared = loader.prepare("clouds_storm")!!
+        val prepared = loader.prepare("clouds_storm")!!.staged
         assertEquals(CloudTechnique.VOLUMETRIC, prepared.meta.technique)
         assertEquals(listOf(CloudType.ALTOSTRATUS, CloudType.STRATOCUMULUS), prepared.meta.bandsFarToNear.map { it.type })
         assertEquals(0.9f, prepared.meta.bands.getValue(CloudLevel.MID).coverage)
@@ -49,7 +49,7 @@ class CloudsLoaderTest {
     @Test
     fun aBadBandIsSkippedAndLoggedOnce() {
         asset("clouds_bad", """{"low": {"type": "cirrus"}, "high": {"type": "cirrus"}}""")
-        val prepared = loader.prepare("clouds_bad")!!
+        val prepared = loader.prepare("clouds_bad")!!.staged
         assertEquals(setOf(CloudLevel.HIGH), prepared.meta.bands.keys)
         assertEquals(1, log.warnings.size)
     }
@@ -57,7 +57,7 @@ class CloudsLoaderTest {
     @Test
     fun withoutBandsThereIsNoNoise() {
         asset("clouds_empty", "{}")
-        val prepared = loader.prepare("clouds_empty")!!
+        val prepared = loader.prepare("clouds_empty")!!.staged
         assertTrue(prepared.meta.bands.isEmpty())
         assertNull(prepared.noise)
     }

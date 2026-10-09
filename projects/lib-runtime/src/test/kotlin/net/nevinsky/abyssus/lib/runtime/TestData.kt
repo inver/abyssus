@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.runtime
 
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.io.File
 
 /** Shared native test fixtures, supplied by Gradle so tests do not depend on their working directory. */
@@ -44,9 +45,9 @@ fun testConfigurator(
     game: net.nevinsky.abyssus.lib.runtime.schema.GameComponents = net.nevinsky.abyssus.lib.runtime.schema.GameComponents(),
 ) = net.nevinsky.abyssus.lib.runtime.ecs.EcsConfigurator(net.nevinsky.abyssus.lib.core.io.JsonProcessor().mapper, resolver, log, game)
 
-/** [component] as the scene file holds it, written by [net.nevinsky.abyssus.lib.runtime.ecs.EcsWriter]. */
+/** [component] as the scene file holds it, written by [net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter]. */
 fun writeComponent(
     component: com.badlogic.ashley.core.Component,
     game: net.nevinsky.abyssus.lib.runtime.schema.GameComponents = net.nevinsky.abyssus.lib.runtime.schema.GameComponents(),
 ): com.fasterxml.jackson.databind.JsonNode =
-    net.nevinsky.abyssus.lib.runtime.ecs.EcsWriter(net.nevinsky.abyssus.lib.core.io.JsonProcessor().mapper, game).writeComponent(component)
+    net.nevinsky.abyssus.lib.runtime.ecs.EcsWriter(JsonProcessor().mapper, game).writeComponent(component)

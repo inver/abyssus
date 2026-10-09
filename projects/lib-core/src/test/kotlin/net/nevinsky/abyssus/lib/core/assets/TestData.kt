@@ -2,7 +2,7 @@ package net.nevinsky.abyssus.lib.core.assets
 
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import java.io.File
@@ -12,7 +12,7 @@ fun testProject(name: String): File =
     File(checkNotNull(System.getProperty("abyssus.testData")) { "run through Gradle: abyssus.testData is not set" }, "project/$name")
 
 /** The sky shaders of this module, as the plugin passes them. */
-fun skyShaders(): ShaderSource = ShaderSource("/shader/sky", ShaderSource::class.java)
+fun skyShaders(): ShaderStorage = ShaderStorage()
 
 /** The file access of the project folder [projectDir]. */
 fun testFileLoader(projectDir: File): FileLoader = FileLoader(projectDir)
@@ -22,10 +22,10 @@ fun testMetaLoader(
     projectDir: File,
     log: Logger = NOPLogger.NOP_LOGGER,
     fileLoader: FileLoader = testFileLoader(projectDir),
-): AssetMetaLoader = AssetMetaLoader(JsonProcessor(), fileLoader, log)
+): AssetMetaLoader = AssetMetaLoader(JsonProcessor(log), fileLoader, log)
 
 private val exrCopy: File by lazy {
-    val stream = checkNotNull(ShaderSource::class.java.getResourceAsStream("/hdr/grass_1k.exr")) { "fixture missing" }
+    val stream = checkNotNull(ShaderStorage::class.java.getResourceAsStream("/hdr/grass_1k.exr")) { "fixture missing" }
     java.nio.file.Files.createTempFile("grass_1k", ".exr").toFile().also { file ->
         file.deleteOnExit()
         stream.use { file.writeBytes(it.readAllBytes()) }

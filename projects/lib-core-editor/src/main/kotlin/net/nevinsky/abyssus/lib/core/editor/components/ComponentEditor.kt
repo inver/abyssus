@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.runtime.schema.BUILT_IN_COMPONENTS
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsWriter
+import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentSchema

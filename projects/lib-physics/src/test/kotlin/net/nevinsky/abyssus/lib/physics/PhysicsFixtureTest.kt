@@ -21,7 +21,7 @@ class PhysicsFixtureTest {
         val scene = loadPhysicsScene(messages)
         // the physics components add no warning to those Untitled's own markers and unmodeled components give
         val untitled = mutableListOf<String>()
-        RuntimeSceneLoader(JsonProcessor(), FileLoader(testProject("Untitled")), warningsTo(untitled)).load("Main Scene.scene")
+        physicsLoader(testProject("Untitled"), warningsTo(untitled), physics = false).load("Main Scene.scene")
         assertEquals(untitled.map { it.substringAfter(": ") }, messages.map { it.substringAfter(": ") })
         assertTrue(messages.none { "RigidBody" in it || "Collider" in it || "Constraint" in it })
 

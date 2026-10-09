@@ -1,5 +1,8 @@
-
 package net.nevinsky.abyssus.lib.core.util
+
+import com.badlogic.ashley.core.Entity
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 
 class EcsUtils {
     companion object {
@@ -28,5 +31,11 @@ class EcsUtils {
 
         @JvmStatic
         val CAMERA_FOV = 67f
+
+        @JvmStatic
+        fun assetName(entity: Entity, type: MetaType): String? {
+            val renderable = entity.getComponent(RenderComponent::class.java) ?: return null
+            return renderable.assetName.takeIf { renderable.type == type }
+        }
     }
 }

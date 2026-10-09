@@ -9,7 +9,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.render.AssetResolver
 import net.nevinsky.abyssus.lib.core.io.EcsReadWarnings
-import net.nevinsky.abyssus.lib.core.scene.SceneEcsDocument
+import net.nevinsky.abyssus.lib.core.scene.EcsLoadingWarns
 import net.nevinsky.abyssus.lib.core.scene.SceneEngine
 import org.junit.Assert.*
 import org.junit.Test
@@ -32,7 +32,7 @@ class NativeEcsAdmissionTest {
             engine.ids.register(99, existing)
             val node = json.readObject(text)
             val before = node.toString()
-            assertThrows(UnsupportedDocumentFormat::class.java) { loader.load(node, engine) }
+            assertThrows(UnsupportedDocumentFormat::class.java) { loader.loadToEngine(node, engine) }
             assertEquals(1, engine.entities.size())
             assertSame(existing, engine.entities.first())
             assertEquals(setOf(99), engine.ids.ids)
@@ -41,7 +41,7 @@ class NativeEcsAdmissionTest {
     }
 
     @Test fun writerRejectsReservedExtrasAndDirectLegacyRenderPayloads() {
-        val document = SceneEcsDocument(mapOf("componentIdentifiers" to json.readObject("{}")), emptyList(), wrapped = true)
+        val document = EcsLoadingWarns(mapOf("componentIdentifiers" to json.readObject("{}")), emptyList(), wrapped = true)
         assertThrows(UnsupportedDocumentFormat::class.java) { writer.write(SceneEngine(), document) }
         val raw = json.readObject("""{"class":null,"kind":"asset"}""")
         assertThrows(IllegalArgumentException::class.java) { writer.writeComponent(RenderComponent(raw = raw)) }
@@ -59,7 +59,7 @@ class NativeEcsAdmissionTest {
     @Test fun unknownComponentsAndMarkerPayloadsKeepTheirOpaqueFields() {
         val node = json.readObject("""{"entities":{"0":{"components":{"example.RenderComponent":{"renderable":{"class":"opaque"}},"WindComponent":{"componentIdentifiers":{},"class":"opaque"},"RenderComponent":{"renderable":{"kind":"marker","payload":{"class":"opaque"}}}}}},"metadata":{"class":"opaque"}}""")
         val engine = SceneEngine()
-        val document = loader.load(node, engine)
+        val document = loader.loadToEngine(node, engine)
         assertEquals(node, writer.write(engine, document))
     }
 
@@ -68,7 +68,7 @@ class NativeEcsAdmissionTest {
             val engine = SceneEngine()
             engine.addEntity(Entity().add(IdComponent(0)))
             val carried = json.readObject("""{"renderable":{"class":null}}""")
-            val document = SceneEcsDocument(emptyMap(), emptyList(), mapOf(0L to mapOf(name to carried)))
+            val document = EcsLoadingWarns(emptyMap(), emptyList(), mapOf(0L to mapOf(name to carried)))
             assertThrows(UnsupportedDocumentFormat::class.java) { writer.write(engine, document) }
             assertTrue(carried["renderable"].has("class"))
         }

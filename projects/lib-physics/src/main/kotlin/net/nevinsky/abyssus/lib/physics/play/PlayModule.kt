@@ -4,19 +4,22 @@
  */
 package net.nevinsky.abyssus.lib.physics.play
 
+import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.EntitySystem
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.core.scene.SceneEngine
-import net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistry
 
 /**
  * What a game adds to Play in Abyssus: its own components, the systems that act on the simulation and what it does
  * with input. Named by class in `abyssus/play.json` (it needs a no-argument constructor); [PlayHostMain] loads it.
  */
 interface PlayModule {
-    /** The game's components, without the physics ones (the host registers those itself). */
-    fun components(): ComponentRegistry = ComponentRegistry { emptyList() }
+    /**
+     * The game's components by the name a scene file gives them, without the physics ones (the host registers those
+     * itself).
+     */
+    fun components(): Map<String, Class<out Component>> = emptyMap()
 
     /**
      * The systems to run before each physics advance, given the world, the engine and the entity selected when Play

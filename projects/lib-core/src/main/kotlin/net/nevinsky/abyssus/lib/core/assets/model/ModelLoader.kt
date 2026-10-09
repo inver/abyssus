@@ -12,6 +12,7 @@ import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotStore
 import net.nevinsky.abyssus.lib.core.assets.loading.TextureUploadQueue
 import net.nevinsky.abyssus.lib.core.io.FileLoader
@@ -33,8 +34,10 @@ class ModelLoader(
     private val fileLoader: FileLoader,
     private val raySnapshots: RaySnapshotStore<RayModelSnapshot, RayModelSource>? = null,
     private val decodeTextures: Boolean = true,
-) : AssetLoader<PreparedModel, Model> {
-    override fun loadPrepared(meta: AssetMeta<Any>): PreparedModel {
+) : AssetLoader<Unit, PreparedModel, Model> {
+    override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedModel> = Prepared(read(meta))
+
+    private fun read(meta: AssetMeta<Any>): PreparedModel {
         val capture = raySnapshots?.preparation(meta.name)
         val handle = FileHandle(fileLoader.loadAssetFile(meta.name, meta.typedAdditional<ModelMeta>().file))
         val data = assimp.loadData(handle)
@@ -49,17 +52,17 @@ class ModelLoader(
         }
     }
 
-    override fun prepare(name: String): PreparedModel? {
-        val meta = metaLoader.loadBaseMeta(name) ?: return null
-        return loadPrepared(meta)
-    }
+    override fun prepare(name: String): Prepared<Unit, PreparedModel>? =
+        metaLoader.loadBaseMeta(name)?.let(::loadPrepared)
 
-    override fun upload(prepared: PreparedModel) = prepared.uploadNext()
+    override fun upload(staged: PreparedModel) = staged.uploadNext()
 
-    override fun build(prepared: PreparedModel, assets: BuiltAssets): Model =
-        assimp.build(prepared.data, prepared.file, prepared.textures).also { prepared.dispose() }
+    override fun build(staged: PreparedModel, assets: BuiltAssets): Model =
+        assimp.build(staged.data, staged.file, staged.textures).also { staged.dispose() }
 
-    override fun discard(prepared: PreparedModel) = prepared.dispose()
+    override fun discard(model: Unit) = Unit
+
+    override fun discardStaged(staged: PreparedModel) = staged.dispose()
 }
 
 /** A parsed model waiting for its GL resources; [file] is where its textures are resolved from. */

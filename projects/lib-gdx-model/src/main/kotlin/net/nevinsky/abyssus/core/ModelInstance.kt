@@ -40,7 +40,7 @@ class ModelInstance : RenderableProvider {
     /**
      * root nodes of the model
      */
-    val nodes: MutableList<Node> = ArrayList<Node>()
+    val nodes: MutableList<Node> = ArrayList()
 
     /**
      * animations of the model, modifying node transformations

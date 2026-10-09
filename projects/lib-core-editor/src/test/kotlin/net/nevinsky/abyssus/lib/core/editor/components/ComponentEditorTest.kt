@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 import com.fasterxml.jackson.databind.JsonNode
 import java.io.File
@@ -291,7 +290,7 @@ class ComponentEditorTest {
         )
         val before = configurator.load(original["ecs"])
         val after = configurator.load(root["ecs"])
-        assertEquals(before.document.warnings, after.document.warnings)
+        assertEquals(before.loadingWarnings.warnings, after.loadingWarnings.warnings)
         assertEquals(before.engine.entities.size(), after.engine.entities.size())
     }
 

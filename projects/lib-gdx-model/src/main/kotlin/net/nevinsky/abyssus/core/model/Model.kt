@@ -5,9 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.model
 
-import org.slf4j.Logger
-import net.nevinsky.abyssus.lib.core.ModelLogging
-
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.VertexAttributes
@@ -27,6 +24,7 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.utils.*
 import com.badlogic.gdx.utils.Array
+import net.nevinsky.abyssus.lib.core.ModelLogging
 import net.nevinsky.abyssus.lib.core.mesh.Mesh
 import net.nevinsky.abyssus.lib.core.mesh.MeshPart
 import net.nevinsky.abyssus.lib.core.model.PbrModelMaterial.AlphaMode
@@ -34,6 +32,7 @@ import net.nevinsky.abyssus.lib.core.node.Animation
 import net.nevinsky.abyssus.lib.core.node.Node
 import net.nevinsky.abyssus.lib.core.node.NodeAnimation
 import net.nevinsky.abyssus.lib.core.node.NodePart
+import org.slf4j.Logger
 import java.util.function.Consumer
 import kotlin.math.max
 
@@ -77,7 +76,7 @@ class Model() : Disposable {
     /**
      * Array of disposable resources like textures or meshes the Model is responsible for disposing
      */
-    protected val disposables: MutableSet<Disposable> = HashSet<Disposable>()
+    protected val disposables: MutableSet<Disposable> = HashSet()
 
     protected fun load(modelData: ModelData, textureProvider: TextureProvider) {
         val meshParts = loadMeshes(modelData.meshes)
@@ -185,7 +184,8 @@ class Model() : Disposable {
         }
         for (e in nodePartBones.entries()) {
             if (e.key!!.invBoneBindTransforms == null) {
-                e.key!!.invBoneBindTransforms = ArrayMap<Node, Matrix4>({ arrayOfNulls<Node>(it) }, { arrayOfNulls<Matrix4>(it) })
+                e.key!!.invBoneBindTransforms =
+                    ArrayMap<Node, Matrix4>({ arrayOfNulls<Node>(it) }, { arrayOfNulls<Matrix4>(it) })
             }
             e.key!!.invBoneBindTransforms!!.clear()
             for (b in e.value!!.entries()) {

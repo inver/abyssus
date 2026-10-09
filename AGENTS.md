@@ -54,7 +54,7 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   See `projects/lib-gdx-model/README.md`.
 - `projects/lib-core/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.core`: project layout and file access
   (`core.io.AbyssusProjectLayout`, `core.io.FileLoader`, `core.io.JsonProcessor`), asset metas (`AssetMeta`, `AssetMetaLoader`), the loading
-  pipeline (`AssetLoader`, `CompositeAssetLoader`, `AssetStorage`), the optional CPU snapshots for ray tracing (`RaySnapshotStore`), the
+  pipeline (`AssetLoader`, `AssetStorage`), the optional CPU snapshots for ray tracing (`RaySnapshotStore`), the
   loaders with the drawables they build (models, terrains, the cube, procedural and HDR skies, and the sky shaders).
   The plugin wires it in `AssetLoading` (root package). See `projects/lib-core/README.md`.
 - `projects/lib-raytracing/`: plain JVM GPU ray tracing contracts, snapshots, scheduling, and optional Metal/Vulkan backends.

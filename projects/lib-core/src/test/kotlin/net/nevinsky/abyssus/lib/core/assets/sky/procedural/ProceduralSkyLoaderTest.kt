@@ -30,7 +30,7 @@ class ProceduralSkyLoaderTest {
 
     @Test
     fun prepareReadsMetaAndBothShaders() {
-        val prepared = loader(fixture).prepare("skybox_physical")!!
+        val prepared = loader(fixture).prepare("skybox_physical")!!.staged
         assertEquals(AtmosphereParams(), prepared.params)
         assertTrue(prepared.vertex.contains("a_position"))
         assertTrue(prepared.fragment.contains("raySphere"))
@@ -50,7 +50,7 @@ class ProceduralSkyLoaderTest {
 
     @Test
     fun theFixtureSkyHasNoClouds() {
-        assertNull(loader(fixture).prepare("skybox_physical")!!.clouds)
+        assertNull(loader(fixture).prepare("skybox_physical")!!.staged.clouds)
     }
 
     private val cloudsUuid = "3f2a9c1e-7b4d-4e8a-9c6f-1d2e3b4a5c6d"
@@ -77,7 +77,7 @@ class ProceduralSkyLoaderTest {
     @Test
     fun theCloudAssetIsADependencyFoundByUuid() = withClouds("\"$cloudsUuid\"") { dir ->
         val sky = loader(dir)
-        val prepared = sky.prepare("skybox_physical")!!
+        val prepared = sky.prepare("skybox_physical")!!.staged
         assertEquals("clouds_fair", prepared.clouds)
         assertEquals(setOf("clouds_fair"), sky.dependencies(prepared))
     }
@@ -86,7 +86,7 @@ class ProceduralSkyLoaderTest {
     fun anUnknownCloudUuidIsLoggedAndTheSkyHasNoClouds() = withClouds("\"0b1c2d3e-0000-4000-8000-000000000000\"") { dir ->
         val log = RecordingLogger()
         val sky = loader(dir, log)
-        val prepared = sky.prepare("skybox_physical")!!
+        val prepared = sky.prepare("skybox_physical")!!.staged
         assertNull(prepared.clouds)
         assertEquals(emptySet<String>(), sky.dependencies(prepared))
         assertEquals(1, log.warnings.size)
@@ -94,7 +94,7 @@ class ProceduralSkyLoaderTest {
 
     @Test
     fun aCloudsValueOfTheWrongKindStillLoadsTheSky() = withClouds("""{"enabled": true, "low": {"type": "cumulus"}}""") { dir ->
-        val prepared = loader(dir).prepare("skybox_physical")!!
+        val prepared = loader(dir).prepare("skybox_physical")!!.staged
         assertEquals(AtmosphereParams(), prepared.params)
         assertNull(prepared.clouds)
     }

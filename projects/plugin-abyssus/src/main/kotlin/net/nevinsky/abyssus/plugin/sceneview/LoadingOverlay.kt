@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
@@ -16,7 +16,7 @@ import kotlin.math.PI
  * Grays out the whole view and draws a round progress indicator in its center, in GL: a Swing component cannot be
  * laid over the heavyweight GL canvas. Call only with the GL context current, after everything else is drawn.
  */
-class LoadingOverlay(shaders: ShaderSource) : Disposable {
+class LoadingOverlay(shaders: ShaderStorage) : Disposable {
     private val program = shaders.program("overlay")
 
     private val triangle = createFullscreenTriangle()

@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.lib.core.ecs
 
 import com.badlogic.ashley.core.Entity
-import com.badlogic.gdx.utils.Disposable
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
@@ -15,7 +14,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.render.RenderComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.EcsReadWarnings
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -50,7 +49,7 @@ import net.nevinsky.abyssus.lib.core.util.obj
  */
 class EcsLoader(
     private val json: JsonProcessor,
-    private val assetStorage: AssetStorage<Any, Disposable>,
+    private val assetStorage: AssetStorage,
     private val componentRegistry: ComponentRegistry,
     private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
 ) {

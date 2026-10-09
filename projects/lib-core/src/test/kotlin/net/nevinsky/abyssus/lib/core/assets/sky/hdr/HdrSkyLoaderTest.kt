@@ -41,7 +41,7 @@ class HdrSkyLoaderTest {
 
     @Test
     fun preparesTheNamedExr() {
-        val prepared = loader(project()).prepare("sky")!!
+        val prepared = loader(project()).prepare("sky")!!.staged
         assertEquals("sky.exr", prepared.file)
         assertEquals("sky", prepared.name)
         assertEquals(1024, prepared.image.width)

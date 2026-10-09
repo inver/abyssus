@@ -5,8 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.dto
 
+import com.badlogic.gdx.graphics.Color
+
 data class FogDto(
-    val color: ColorDto? = null,
+    val color: Color? = null,
     val density: Float? = null,
     val gradient: Float? = null
 )

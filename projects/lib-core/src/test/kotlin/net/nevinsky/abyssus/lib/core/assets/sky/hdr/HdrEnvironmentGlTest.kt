@@ -1,6 +1,5 @@
 package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
-import net.nevinsky.abyssus.lib.core.assets.testProject
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import net.nevinsky.abyssus.lib.core.assets.skyShaders

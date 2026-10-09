@@ -9,7 +9,7 @@ class HdrSkyRaySnapshotLoader(
     private val hdrSkyLoader: HdrSkyLoader
 ) : RaySnapshotLoader<RaySkySnapshot, Nothing> {
     override fun load(meta: AssetMeta<Any>): RaySkySnapshot {
-        val prepared = hdrSkyLoader.loadPrepared(meta)
+        val prepared = checkNotNull(hdrSkyLoader.loadPrepared(meta)).staged
         return downsample(prepared.image)
     }
 

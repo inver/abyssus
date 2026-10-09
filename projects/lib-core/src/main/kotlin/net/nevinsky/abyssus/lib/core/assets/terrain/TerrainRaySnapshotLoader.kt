@@ -22,12 +22,12 @@ class TerrainRaySnapshotLoader(
     private val maxBytes: Long = 128L * 1024 * 1024,
 ) : RaySnapshotLoader<RayTerrainSnapshot, Nothing> {
     override fun load(meta: AssetMeta<Any>): RayTerrainSnapshot {
-        val prepared = terrainLoader.loadPrepared(meta)
+        val prepared = checkNotNull(terrainLoader.loadPrepared(meta)).staged
         val images = LinkedHashMap<String, Pixmap>()
         try {
             for ((field, folder) in prepared.splats) {
                 // an unreadable texture is left out, as the raster terrain leaves its layer out
-                runCatchingKeepingCancellation { textureLoader.prepare(folder)?.release() }.getOrNull()?.let { images[field] = it }
+                runCatchingKeepingCancellation { textureLoader.prepare(folder)?.staged?.release() }.getOrNull()?.let { images[field] = it }
             }
             return snapshot(prepared.data, images)
         } finally {

@@ -14,7 +14,7 @@ import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import kotlin.math.abs
 
@@ -35,7 +35,7 @@ private const val HISTORY_RESET_DEGREES = 10f
  * or a float render target cannot be made, so the sky falls back to shells. Holds per-view GL objects: one instance per
  * sky, and skies are per view.
  */
-class VolumetricClouds(shaders: ShaderSource, private val field: CloudField) : CloudRenderer() {
+class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : CloudRenderer() {
     init {
         checkNotNull(Gdx.gl30) { "volumetric clouds need OpenGL 3" }
     }

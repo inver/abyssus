@@ -22,7 +22,7 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 |---|---|
 | `core` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `GeometryUtils` |
 | `core.assets` | `AssetMeta` and `MetaType` (the `meta.json` model; `uuid` is null when a meta declares none), `AssetMetaBinder` (one injectable settings-class registration map and metadata binding rule), `AssetMetaLoader` (validates and reads saved `meta.json`, binds through the binder, caches by timestamp and size), `AssetIndex` (the asset folder of a `uuid`), `Asset`, `runCatchingKeepingCancellation`, `Throwables` |
-| `core.assets.loading` | `AssetLoader` (prepare / dependencies / upload / build / discard), `CompositeAssetLoader` (one loader for every asset kind, by `MetaType`), `AssetStorage` (the cache and owner of built assets: load once, fail once, slice GPU work per frame, load dependencies first) with `BuiltAssets`, `RaySnapshotStore` with `RaySnapshotLoader`, `RaySnapshot` and the leases (see below), `TextureUploadQueue`, `ShaderSource` (GLSL from a resource folder) |
+| `core.assets.loading` | `AssetLoader` (prepare / dependencies / upload / build / discard), `AssetStorage` (the cache and owner of built assets: load once, fail once, slice GPU work per frame, load dependencies first) with `BuiltAssets`, `RaySnapshotStore` with `RaySnapshotLoader`, `RaySnapshot` and the leases (see below), `TextureUploadQueue`, `ShaderStorage` (GLSL from a resource folder) |
 | `core.assets.model` | `ModelLoader` (glTF and other formats through `gdx-model`'s Assimp loader), `ModelMeta`, the ray model snapshot types and `ModelRaySnapshotLoader` |
 | `core.assets.terrain` | `TerrainLoader`, `TerrainData`, `TerrainMesh`, `TerrainMeta`, `RayTerrainSnapshot` and `TerrainRaySnapshotLoader` |
 | `core.assets.texture` | `TextureLoader` (`TEXTURE` and `PIXMAP_TEXTURE` assets: image decoded off the GL thread, uploaded as a mipmapped repeating texture), `PreparedTexture` (the decoded image; `release()` hands the `Pixmap` to a caller that uploads it itself) and `TextureMeta` |
@@ -43,7 +43,9 @@ Unsupported project/scene documents throw; unsupported metadata returns null and
 Admission checks do not modify document text or write files.
 The vendored Java noise implementation is under `src/main/java/`; generator and recipe orchestration live in the plugin.
 
-Sky shaders are in `src/main/resources/shader/sky/`. `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and
+Sky shaders are in `src/main/resources/shader/sky/`: the defaults of `ShaderStorage`, which finds a shader file in the
+asset's own folder first (`withAssets`), then in classpath folders the host adds (`withResources(path, anchor)`), then in those defaults,
+and compiles programs from it. `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and
 storm examples of `CLOUDS` metas; nothing loads them yet.
 
 Terrain generation, noise, the `meta.json` field editor and the composition root (`AssetLoading`) are not here: they
@@ -66,24 +68,26 @@ The splat map is set to linear filtering and clamped edges the first time a text
 
 ## Loading and caching
 
-An `AssetLoader<P, T>` turns one asset into a GPU object in steps: `prepare(name)` (or `loadPrepared(meta)`) reads and
-decodes with no GL, `dependencies(prepared)` names the other assets it needs, `upload` does one slice of GPU work,
-`build(prepared, assets)` creates the object, and `discard` releases a prepared value that was never built.
+An `AssetLoader<P, U, T>` turns one asset into a GPU object in steps: `prepare(name)` (or `loadPrepared(meta)`) reads and
+decodes with no GL and returns a `Prepared(model, staged)`, `dependencies(staged)` names the other assets it needs,
+`upload` does one slice of GPU work, `build(staged, assets)` creates the object, `discard(model)` frees the model after
+the `onPrepared` hooks have seen it (loaders with nothing to hand them use `Unit` and `Prepared(staged)`), and
+`discardStaged` frees the staged value: after a successful build, or when it is dropped unbuilt.
 
-`CompositeAssetLoader(metaLoader, loaders)` is the loader of a whole project: it reads an asset's `meta.json` and hands
-the asset to the loader registered for its `MetaType`. One `AssetStorage<PreparedAsset, Disposable>(executor, composite,
-log)` over it owns the built assets of every kind, keyed by asset folder name, which is what lets assets depend on each
-other. `AssetStorage` itself works over any single `AssetLoader`.
+One `AssetStorage(log, executor, metas)` loads every kind of asset of a project. It reads an asset's base `meta.json`
+through `metas` and hands the asset to the loader registered for its `MetaType` (`register(loader, MetaType.X)` or
+`registerAll(map)`); a name with no meta or no loader for its type fails as absent. The storage owns the built assets of
+every kind, keyed by asset folder name, which is what lets assets depend on each other. `register(loader, handles)`
+chooses a loader by name instead, and `AssetStorage(executor, loader, log)` registers one loader for every name.
 
 - `request(name)` starts a load on the executor; every name loads once and is shared, and a failure is logged once and
   remembered, so it is not retried every frame.
-- `pump(maxSteps)` (GL thread) advances `upload` and `build`, one asset at a time, and returns true when something
+- `update(maxSteps)` (GL thread) advances `upload` and `build`, one asset at a time, and returns true when something
   changed. `get(name)` / `getAs<T>(name)` is null until the asset is built.
 - Once an asset is prepared, the storage requests its `dependencies` and holds its upload and build until each is built
-  or has failed (a failed dependency is simply absent from `BuiltAssets`). Assets that depend on each other in a cycle
-  (including an asset that needs itself) cannot be built before one another, so every member fails with a
-  `dependency cycle: a -> b -> a` error as soon as the last of them is prepared; whatever merely needs a member is
-  not part of the cycle and carries on without it.
+  or has failed. An asset whose dependency failed fails with a `DependencyFailedException`. Assets that depend on each
+  other in a cycle (including an asset that needs itself) cannot be built before one another, so every member fails
+  with a `CyclicDependencyException` as soon as the last of them is prepared, and whatever needs a member fails too.
 - `isLoading()` / `isLoading(name)` say whether anything, or one asset, is still loading.
 - `invalidate(names)` marks names as changed on disk: a loaded asset stays in use until its replacement is built, then
   the two swap in one step; a superseded load is discarded. `version(name)` changes when `get` returns another asset.
@@ -93,14 +97,14 @@ other. `AssetStorage` itself works over any single `AssetLoader`.
 `AssetIndex` stays a pure lookup (asset folder of a `uuid`); the storage, not the index, owns the built assets.
 
 ```kotlin
-val composite = CompositeAssetLoader(metaLoader, mapOf(
+val assets = AssetStorage(log, executor, metaLoader::loadBaseMeta)
+assets.registerAll(mapOf(
     MetaType.MODEL to ModelLoader(metaLoader, assimp, fileLoader),
     MetaType.TERRAIN to TerrainLoader(fileLoader, metaLoader),
     MetaType.TEXTURE to TextureLoader(fileLoader, metaLoader),
 ))
-val assets = AssetStorage(executor, composite, log)
 assets.request("terrain_x")                     // its splat textures load first
-assets.pump()                                   // once per frame, GL current
+assets.update()                                 // once per frame, GL current
 val terrain = assets.getAs<TerrainMesh>("terrain_x")   // null until built
 ```
 

@@ -39,5 +39,5 @@ fun testProject(name: String): File =
 /** The heights of the terrain asset [name] of the project in [projectDir], read as a scene view loads them. */
 fun terrainData(projectDir: File, name: String): TerrainData {
     val files = FileLoader(projectDir)
-    return checkNotNull(TerrainLoader(files, AssetMetaLoader(JsonProcessor(), files)).prepare(name)) { "no terrain $name" }.data
+    return checkNotNull(TerrainLoader(files, AssetMetaLoader(JsonProcessor(), files)).prepare(name)) { "no terrain $name" }.staged.data
 }

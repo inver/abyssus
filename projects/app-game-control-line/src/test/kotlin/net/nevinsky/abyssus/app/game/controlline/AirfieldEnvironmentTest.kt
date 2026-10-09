@@ -49,7 +49,7 @@ class AirfieldEnvironmentTest {
 
     @Test
     fun everyAirfieldAssetIsNativeAndRecordsItsSource() {
-        val json = JsonProcessor()
+        val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
         val format = AbyssusDocumentFormat()
         for (folder in assets.listFiles()!!.filter { it.name.contains("_airfield_") }) {
             assertNull(folder.name, format.validate(json.readObject(File(folder, "meta.json").readText()), DocumentKind.ASSET))

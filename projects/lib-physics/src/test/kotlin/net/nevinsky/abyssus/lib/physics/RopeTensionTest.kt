@@ -19,7 +19,7 @@ import org.junit.Test
 class RopeTensionTest {
     /** A 1 kg sphere at (0, 8, 0), and [rope] as its constraint (none when empty). */
     private fun weight(rope: String = ""): SceneContext = requireNotNull(
-        RuntimeSceneLoader(JsonProcessor(), FileLoader(testProject("Physics")), failOnWarnings(), PhysicsComponents()).loadFromText(
+        physicsLoader(testProject("Physics"), failOnWarnings()).loadFromText(
             """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"NameComponent":{"name":"Weight"},
             "PositionComponent":{"localPosition":{"y":8}},"RigidBodyComponent":{},"ColliderComponent":{"shape":"SPHERE","radius":0.2}
             ${if (rope.isEmpty()) "" else ",\"ConstraintComponent\":$rope"}}}}}}""",

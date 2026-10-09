@@ -73,7 +73,7 @@ class PhysicsWorldTest {
         try {
             writeFlatModel(File(project, "assets/flat"))
             val messages = mutableListOf<String>()
-            val scene = requireNotNull(RuntimeSceneLoader(JsonProcessor(), FileLoader(project), warningsTo(messages), PhysicsComponents()).loadFromText(
+            val scene = requireNotNull(physicsLoader(project, warningsTo(messages)).loadFromText(
                 """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
                   "0":{"components":{"NameComponent":{"name":"Flat"},"ColliderComponent":{"shape":"CONVEX_HULL"},
                     "RenderComponent":{"renderable":{"kind":"asset","shaderKey":"defaultShader","asset":{"type":"MODEL","assetName":"flat"}}}}},
@@ -203,7 +203,7 @@ class PhysicsWorldTest {
 
     /** A scene of [entities] (`"<id>": {components}` pairs) in a project with no assets. */
     private fun sceneOf(entities: String): SceneContext = requireNotNull(
-        RuntimeSceneLoader(JsonProcessor(), FileLoader(testProject("Physics")), failOnWarnings(), PhysicsComponents())
+        physicsLoader(testProject("Physics"), failOnWarnings())
             .loadFromText("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{$entities}}}"""),
     )
 
@@ -334,7 +334,7 @@ class PhysicsWorldTest {
                          {"bufferView":1,"componentType":5123,"count":6,"type":"SCALAR"}]}""",
         )
         File(dir, "meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"flat","type":"MODEL","additional":{"file":"model.gltf","format":"GLTF","binary":false,"materials":[]}}""",
+            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"6f1c1b0e-5d7a-4e2b-9a43-0c2d8e1f7a10","type":"MODEL","additional":{"file":"model.gltf","format":"GLTF","binary":false,"materials":[]}}""",
         )
         assertNotNull(File(dir, "model.gltf"))
     }

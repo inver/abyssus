@@ -11,6 +11,7 @@ import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import java.nio.ByteBuffer
 import net.nevinsky.abyssus.lib.core.assets.parseUuidOrNull
 import java.util.*
@@ -27,9 +28,11 @@ class TerrainLoader(
     private val fileLoader: FileLoader,
     private val metaLoader: AssetMetaLoader,
     private val index: AssetIndex = AssetIndex(fileLoader, metaLoader),
-) : AssetLoader<PreparedTerrain, TerrainMesh> {
+) : AssetLoader<Unit, PreparedTerrain, TerrainMesh> {
 
-    override fun loadPrepared(meta: AssetMeta<Any>): PreparedTerrain {
+    override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedTerrain> = Prepared(read(meta))
+
+    private fun read(meta: AssetMeta<Any>): PreparedTerrain {
         val additional = meta.typedAdditional<TerrainMeta>()
         val data = read(meta.name, additional)
         val folders = SPLAT_FIELDS.mapNotNull { additional.splat(it) }.takeIf { it.isNotEmpty() }
@@ -44,10 +47,8 @@ class TerrainLoader(
         return PreparedTerrain(data, splats)
     }
 
-    override fun prepare(name: String): PreparedTerrain? {
-        val meta = metaLoader.loadBaseMeta(name) ?: return null
-        return loadPrepared(meta)
-    }
+    override fun prepare(name: String): Prepared<Unit, PreparedTerrain>? =
+        metaLoader.loadBaseMeta(name)?.let(::loadPrepared)
 
     private fun read(assetName: String, meta: TerrainMeta): TerrainData {
         val bytes = fileLoader.loadAssetFile(assetName, meta.terrainFile).readBytes()
@@ -58,11 +59,11 @@ class TerrainLoader(
         return TerrainData(resolution, heights, meta.size, meta.uv)
     }
 
-    override fun dependencies(prepared: PreparedTerrain): Set<String> = prepared.splats.values.toSet()
+    override fun dependencies(staged: PreparedTerrain): Set<String> = staged.splats.values.toSet()
 
-    override fun build(prepared: PreparedTerrain, assets: BuiltAssets) = TerrainMesh(prepared, assets)
+    override fun build(staged: PreparedTerrain, assets: BuiltAssets) = TerrainMesh(staged, assets)
 
-    override fun discard(prepared: PreparedTerrain) = Unit
+    override fun discard(model: Unit) = Unit
 }
 
 /** A parsed terrain waiting for its GL resources: [splats] maps each splat field to its texture asset's folder. */

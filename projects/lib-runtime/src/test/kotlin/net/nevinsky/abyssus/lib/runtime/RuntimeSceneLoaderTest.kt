@@ -5,19 +5,20 @@
 package net.nevinsky.abyssus.lib.runtime
 
 import com.badlogic.ashley.core.Component
+import net.nevinsky.abyssus.lib.core.dto.ProjectDto
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
+import net.nevinsky.abyssus.lib.core.testing.warningsTo
 import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderableObjectDelegate
-import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistrationException
 import net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistry
 import net.nevinsky.abyssus.lib.runtime.schema.PlaneComponent
 import net.nevinsky.abyssus.lib.runtime.schema.PlaneRegistry
 import net.nevinsky.abyssus.lib.runtime.schema.SceneComponent
-import net.nevinsky.abyssus.lib.core.testing.warningsTo
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
@@ -60,7 +61,7 @@ class RuntimeSceneLoaderTest {
         val loaded = requireNotNull(loader(messages = messages).load(main))
         assertEquals(1, messages.count { "PickableComponent" in it })
         assertTrue(messages.toString(), messages.all { it.startsWith("$main: ") })
-        assertEquals(loaded.document.warnings.map { "$main: $it" }, messages)
+        assertEquals(loaded.loadingWarnings.warnings.map { "$main: $it" }, messages)
     }
 
     @Test
@@ -68,7 +69,10 @@ class RuntimeSceneLoaderTest {
         val messages = mutableListOf<String>()
         val without = requireNotNull(loader(testProject("Custom"), messages).load("Field.scene"))
         assertEquals(setOf(0, 1), without.engine.ids.ids)
-        assertEquals("""{"lineLength":22,"kind":"STUNT"}""", without.document.carried[0L]!!["PlaneComponent"].toString())
+        assertEquals(
+            """{"lineLength":22,"kind":"STUNT"}""",
+            without.loadingWarnings.carried[0L]!!["PlaneComponent"].toString()
+        )
         assertEquals(1, messages.count { "PlaneComponent" in it })
         assertEquals(1, messages.size)
 
@@ -76,7 +80,7 @@ class RuntimeSceneLoaderTest {
         val plane = with.engine.ids[0]!!.getComponent(PlaneComponent::class.java)
         assertEquals(22f, plane.lineLength, 0f)
         assertEquals(PlaneComponent.Kind.STUNT, plane.kind)
-        assertEquals(emptyMap<Long, Any>(), with.document.carried)
+        assertEquals(emptyMap<Long, Any>(), with.loadingWarnings.carried)
     }
 
     @Test
@@ -133,8 +137,9 @@ class RuntimeSceneLoaderTest {
             val logs = listOf(mutableListOf<String>(), mutableListOf<String>())
             val loaders = listOf(loader(testProject("Tree"), logs[0]), loader(testProject("Animated"), logs[1]))
             val names = listOf(main, "Main.scene")
-            val loaded = pool.invokeAll(names.mapIndexed { i, name -> Callable { requireNotNull(loaders[i].load(name)) } })
-                .map { it.get() }
+            val loaded =
+                pool.invokeAll(names.mapIndexed { i, name -> Callable { requireNotNull(loaders[i].load(name)) } })
+                    .map { it.get() }
             assertEquals((0..8).toSet(), loaded[0].engine.ids.ids)
             assertEquals(setOf(1, 2), loaded[1].engine.ids.ids)
             assertNotSame(loaded[0].engine, loaded[1].engine)

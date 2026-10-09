@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.io
 
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
+import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.core.util.DefaultIndenter
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
 import com.fasterxml.jackson.core.util.Separators
@@ -12,6 +16,19 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.slf4j.Logger
+
+/**
+ * Mixed into libGDX's `Vector3`, `Quaternion` and `Color`, whose many overloaded `set...` methods Jackson would otherwise
+ * read as conflicting setters: only their public `x`, `y`, `z`, `w` / `r`, `g`, `b`, `a` fields bind.
+ */
+@JsonAutoDetect(
+    fieldVisibility = JsonAutoDetect.Visibility.PUBLIC_ONLY,
+    getterVisibility = JsonAutoDetect.Visibility.NONE,
+    isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE,
+    creatorVisibility = JsonAutoDetect.Visibility.NONE,
+)
+private interface PublicFieldsOnly
 
 /**
  * Binds native JSON (`.abss`, `.scene`, asset `meta.json`) to Kotlin classes: unknown properties are skipped, unknown
@@ -35,6 +52,9 @@ class JsonProcessor(private val log: Logger) {
         .disable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
         .addModule(KotlinModule.Builder().build())
         .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
+        .addMixIn(Vector3::class.java, PublicFieldsOnly::class.java)
+        .addMixIn(Quaternion::class.java, PublicFieldsOnly::class.java)
+        .addMixIn(Color::class.java, PublicFieldsOnly::class.java)
         .build()
 
     /** [text] as a JSON tree; throws when it is not a JSON object. */

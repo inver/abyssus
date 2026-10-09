@@ -180,8 +180,8 @@ class RayModelSnapshotTest {
         val store = RaySnapshotStore(Executor { queue.add(it) }, metas, counting, "model")
         val lease = store.acquire("model")
         val loader = ModelLoader(metas, assimp, files, store)
-        val prepared = checkNotNull(loader.prepare("model"))
-        loader.discard(prepared)
+        val prepared = checkNotNull(loader.prepare("model")).staged
+        loader.discardStaged(prepared)
         assertNotNull(lease.snapshot)
         queue.removeFirst().run()
         assertEquals(0, reads)

@@ -2,11 +2,14 @@ package net.nevinsky.abyssus.lib.core.ecs
 
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.ecs.component.*
-import net.nevinsky.abyssus.lib.core.ecs.component.render.RenderComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 
 class ComponentRegistry {
 
     private val componentMap = HashMap<String, Class<out Component>>()
+
+    /** Every registered class by its short name, which the scene files use for the built-in components. */
+    private val shortNames = HashMap<String, Class<out Component>>()
 
     init {
         componentMap[CameraComponent::class.qualifiedName!!] = CameraComponent::class.java
@@ -17,10 +20,12 @@ class ComponentRegistry {
         componentMap[Point2PointPositionComponent::class.qualifiedName!!] = Point2PointPositionComponent::class.java
         componentMap[PositionComponent::class.qualifiedName!!] = PositionComponent::class.java
         componentMap[TypeComponent::class.qualifiedName!!] = TypeComponent::class.java
+        componentMap.values.forEach { shortNames.putIfAbsent(it.simpleName, it) }
     }
 
+    /** The class [name] names, fully qualified or by its short class name; null for a name nobody registered. */
     fun get(name: String): Class<out Component>? {
-        return componentMap[name]
+        return componentMap[name] ?: shortNames[name]
     }
 
     fun register(name: String, clazz: Class<out Component>) {
@@ -31,6 +36,7 @@ class ComponentRegistry {
             )
         }
         componentMap[name] = clazz
+        shortNames.putIfAbsent(clazz.simpleName, clazz)
     }
 
     fun registerAll(map: Map<String, Class<out Component>>) {

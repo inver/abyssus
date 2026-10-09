@@ -23,7 +23,7 @@ raytracing ---------------/
 
 `gdx-model`, `core`, `runtime`, `physics` and `editor-core` must not import IntelliJ or plugin code (see their READMEs;
 `editor-core` also has no Swing or AWT). Inside every module the package graph is acyclic (`checkPackageCycles`). `core` is wired by constructors:
-its composition root `AssetLoading` takes a `JsonProcessor`, an SLF4J `Logger`, an executor and the sky `ShaderSource`; in
+its composition root `AssetLoading` takes a `JsonProcessor`, an SLF4J `Logger`, an executor and a `ShaderStorage`; in
 the IDE the light application service `AbyssusCore.assets` builds one (IDE log, IDE pool) and hands it to every scene view.
 `AbyssusCore` creates four groups independently on first access: `documents` owns JSON, native validation and parsing;
 `assets` owns metadata, loading, property descriptions and previews; `terrain` owns generation and file staging;
@@ -206,8 +206,8 @@ The editor retains source aliases in its `format` package. None of these checks 
 - **`Gdx.*`:** these statics are process-global. `GdxRuntime.withContext` installs a per-canvas shim
   (`Gdx.app`, `Gdx.graphics`, `Gdx.gl*`, `Gdx.files`) under a lock, then restores the previous values. All libGDX
   calls happen inside it.
-- **Asset loading:** `AssetStorage.prepare` runs on a pool thread and does file IO and decoding, no GL. Building GPU
-  objects happens on the render thread in `pump`, sliced per frame for big textures and for an HDR sky's
+- **Asset loading:** `AssetLoader.prepare` runs on a pool thread of the `AssetStorage` and does file IO and decoding, no GL. Building GPU
+  objects happens on the render thread in `AssetStorage.update`, sliced per frame for big textures and for an HDR sky's
   environment passes (`HdrEnvironmentBuild`, which restores the framebuffer, viewport and state it changes).
   Cloud assets (bands and noise) are read and made in `prepare`; cloud shaders, 3D noise textures and the volumetric
   half-resolution targets are created on the render thread. `CloudViewState`, `CloudFrameBudget`, `SunOcclusion` and

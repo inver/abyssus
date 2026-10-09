@@ -1,48 +1,92 @@
 package net.nevinsky.abyssus.lib.core.editor.ecs
 
-import com.badlogic.ashley.core.Engine
+import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
-import com.badlogic.ashley.core.EntitySystem
-import com.badlogic.ashley.utils.ImmutableArray
-import com.badlogic.gdx.utils.Json
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.scene.EcsLoadingWarns
+import net.nevinsky.abyssus.lib.core.scene.SceneEngine
+import net.nevinsky.abyssus.lib.runtime.schema.GameComponents
+import kotlin.collections.all
+import kotlin.collections.iterator
+import kotlin.io.resolve
+import kotlin.sequences.all
+import kotlin.text.all
 
 
-class EcsWriter<T : Engine>(private val jsonProcessor: JsonProcessor) {
-    fun write(json: Json, engine: T) {
-        prepareEntitySerializer(json, engine)
-        json.writeObjectStart()
-        writeEntities(json, engine.entities)
-        writeSystems(json, engine.getSystems())
-        json.writeObjectEnd()
-    }
+/**
+ * Writes a [net.nevinsky.abyssus.lib.core.scene.SceneEngine] as an `ecs` block in the native format, the counterpart of [net.nevinsky.abyssus.lib.core.ecs.EcsLoader]: every component is
+ * turned into JSON by Jackson ([com.fasterxml.jackson.databind.ObjectMapper.valueToTree]), with no per-component codec.
+ *
+ * - Entities are written in ascending order of their [net.nevinsky.abyssus.lib.core.ecs.component.IdComponent]'s id; an entity without one follows, numbered after
+ *   the largest id.
+ * - A component is written without the properties that equal a new instance's (its defaults), and a decimal the way
+ *   the scene files spell it (`22`, not `22.0`), under its short name, built-in components first, then the game's.
+ * - What the loader could not bind (kept in [net.nevinsky.abyssus.lib.core.scene.EcsLoadingWarns.carried]) is added after the components, under the key the
+ *   file gave it, unchanged.
+ * - The block is the entity map itself; a scene loaded from an older block that wrapped it in an `entities` member
+ *   ([net.nevinsky.abyssus.lib.core.scene.EcsLoadingWarns.wrapped]) keeps that shape, with the document's extra members after the entities.
+ * - Derived state (combined transform, light instance, point-to-point positions) is not written.
+ * - A component carrying the file's own node (a light, a render component, a look-at reference) writes that node, so
+ *   unknown members and number spelling survive an unchanged component.
+ */
+class EcsWriter(
+    mapper: ObjectMapper,
+    game: GameComponents = GameComponents(),
+    private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
+) {
+    private val mapper: ObjectMapper = mapper.forEcsWriting()
+    private val types = ComponentTypes(game)
+    private val nodes = JsonNodeFactory.instance
 
-
-    private fun writeEntities(json: Json, entities: ImmutableArray<Entity?>) {
-        json.writeArrayStart("entities")
-        for (entity in entities) {
-            if (shouldWrite(entity)) {
-                json.writeValue(entity)
-            }
+    fun write(engine: SceneEngine, document: EcsLoadingWarns): ObjectNode {
+        val entities = nodes.objectNode()
+        for ((id, entity) in byId(engine)) entities.set<JsonNode>(id.toString(), writeEntity(id, entity, document))
+        if (!document.wrapped) {
+            format.requireEcs(entities)
+            return entities
         }
-        json.writeArrayEnd()
+        val out = nodes.objectNode()
+        out.set<JsonNode>("entities", entities)
+        document.extras.forEach { (key, node) -> out.set<JsonNode>(key, node) }
+        format.requireEcs(out)
+        return out
     }
 
-    private fun writeSystems(json: Json, systems: ImmutableArray<EntitySystem>) {
-        json.writeObjectStart("systems")
-        for (system in systems) {
-            if (!transientChecker.isTransient(system.javaClass)) {
-                writeSystem(json, system)
-            }
+    /** [component] as the scene file holds it: the value of its entry in an entity's `components`. */
+    fun writeComponent(component: Component): JsonNode = mapper.valueToTree(component)
+
+    /**
+     * The entities of [engine] with the id they are written under, ascending by their [net.nevinsky.abyssus.lib.core.ecs.component.IdComponent]'s id, so the order
+     * of the result never depends on the order entities were added in. An entity without an [net.nevinsky.abyssus.lib.core.ecs.component.IdComponent] follows, in
+     * engine order, numbered after the largest id.
+     */
+    private fun byId(engine: SceneEngine): List<Pair<Long, Entity>> {
+        val withId = engine.entities.mapNotNull { e -> e.getComponent(IdComponent::class.java)?.let { it.id to e } }
+            .sortedBy { it.first }
+        var nextId = (withId.lastOrNull()?.first ?: -1L) + 1
+        val withoutId =
+            engine.entities.filter { it.getComponent(IdComponent::class.java) == null }.map { nextId++ to it }
+        return withId + withoutId
+    }
+
+    private fun writeEntity(id: Long, entity: Entity, document: EcsLoadingWarns): ObjectNode {
+        val components = nodes.objectNode()
+        for (type in types.all) {
+            entity.getComponent(type)?.let { components.set<JsonNode>(types.shortName(type), writeComponent(it)) }
         }
-        json.writeObjectEnd()
-    }
-
-    private fun writeSystem(json: Json, system: EntitySystem) {
-        val systemType: Class<*> = system.javaClass
-        val tag: String? = TagResolver.getTag(json, systemType)
-        json.writeObjectStart(tag)
-        json.writeValue(system)
-        json.writeObjectEnd()
+        // what the loader could not bind, after the components: unless the entity has a component of that class now
+        document.carried[id]?.forEach { (key, node) ->
+            val type = types.resolve(key)
+            if ((type == null || entity.getComponent(type) == null) && !components.has(key)) components.set<JsonNode>(
+                key,
+                node
+            )
+        }
+        return nodes.objectNode().set<ObjectNode>("components", components)
     }
 }

@@ -72,7 +72,7 @@ class TerrainAssetEncodingTest {
         File(dir, TERRAIN_DATA_FILE).writeBytes(files.heightBytes)
 
         val fileLoader = FileLoader(tmp.root)
-        val read = checkNotNull(TerrainLoader(fileLoader, AssetMetaLoader(json, fileLoader)).prepare("hills")).data
+        val read = checkNotNull(TerrainLoader(fileLoader, AssetMetaLoader(json, fileLoader)).prepare("hills")).staged.data
         assertEquals(800, read.size)
         assertEquals(1f, read.uv)
         assertEquals(33, read.resolution)

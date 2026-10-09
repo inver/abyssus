@@ -2,16 +2,15 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-
 package net.nevinsky.abyssus.lib.core.loader
 
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
-import net.nevinsky.abyssus.lib.core.model.Model
-import net.nevinsky.abyssus.lib.core.model.ModelData
 import net.nevinsky.abyssus.lib.core.assimp.AssimpFlags
 import net.nevinsky.abyssus.lib.core.assimp.AssimpModelDataLoader
+import net.nevinsky.abyssus.lib.core.model.Model
+import net.nevinsky.abyssus.lib.core.model.ModelData
 
 /**
  * Loads a model file through Assimp. Trimmed copy of Mundus' `AssimpModelLoader` (no exporter, no import preview).
@@ -28,7 +27,8 @@ class AssimpModelLoader {
         return dataLoader.load(file.name(), file, AssimpFlags.DEFAULT, file.parent().child("embedded"))
     }
 
-    fun build(data: ModelData, file: FileHandle): Model = Model(data, ParentBasedTextureProvider(file))
+    fun build(data: ModelData, file: FileHandle): Model =
+        Model(data, ParentBasedTextureProvider(file))
 
     /**
      * Decodes the images the model's materials use. Needs no OpenGL context and may run on any thread; an image that

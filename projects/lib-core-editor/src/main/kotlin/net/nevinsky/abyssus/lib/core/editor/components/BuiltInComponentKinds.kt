@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsWriter
+import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent

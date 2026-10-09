@@ -74,7 +74,7 @@ class AssetEntitiesTest {
         val root = empty()
         assertEquals("0", AssetEntities(ResourceEditorMessages()).add(root, tree, Vec3(1f, 2f, 3f)).entityId)
         val document = EcsLoader(JsonProcessor().mapper, log = NOPLogger.NOP_LOGGER)
-            .load(root["ecs"], SceneEngine())
+            .loadToEngine(root["ecs"], SceneEngine())
         // loaded without a project, the only complaint is the missing folder: the render component itself is understood
         assertEquals(listOf("render asset MODEL tree has no folder in the project assets"), document.warnings.map { it.toString() })
     }

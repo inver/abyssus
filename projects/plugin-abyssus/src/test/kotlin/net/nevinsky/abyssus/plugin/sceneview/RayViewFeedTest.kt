@@ -25,7 +25,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.plugin.AssetLoading
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.raytracing.RayUnavailableReason
 import org.junit.After
@@ -150,7 +150,7 @@ class RayViewFeedTest {
     @Test fun theScenesHdrSkyAndItsAmbientColoursReachTheRenderer() {
         val loading = AssetLoading(
             JsonProcessor(), printingLog, Executor(Runnable::run),
-            ShaderSource("/shader/sky", AssetLoading::class.java)
+            ShaderStorage()
         )
         val project = File("src/test/testData/project/Untitled").absoluteFile
         val assets = RaySceneAssets(
@@ -181,7 +181,7 @@ class RayViewFeedTest {
         val project = File("src/test/testData/project/Untitled").absoluteFile
         val loading = AssetLoading(
             JsonProcessor(), printingLog, Executor(Runnable::run),
-            ShaderSource("/shader/sky", AssetLoading::class.java)
+            ShaderStorage()
         )
         val assets = RaySceneAssets({ _, _ -> RayAssetLease({ model }, { null }, {}) }, { _, _ -> error("none") },
             acquireSky = { dir, name -> ViewAssets(loading).project(dir).raySkies.acquire(name).let { lease -> RayAssetLease({ lease.snapshot }, { lease.failure }, lease::close) } })

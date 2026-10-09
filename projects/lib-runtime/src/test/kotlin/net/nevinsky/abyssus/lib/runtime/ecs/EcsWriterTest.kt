@@ -53,7 +53,7 @@ class EcsWriterTest {
     fun mainSceneWritesBackEqual() {
         val original = mainSceneEcs()
         val scene = testConfigurator(untitledAssets()).load(original)
-        val written = writer().write(scene.engine, scene.document)
+        val written = writer().write(scene.engine, scene.loadingWarnings)
         assertSameJson("ecs", withoutArchetypes(original), written)
         assertEquals("the block is the entity map, in ascending id order", (0..8).map { it.toString() }, written.fieldNames().asSequence().toList())
     }
@@ -62,9 +62,9 @@ class EcsWriterTest {
     fun mainSceneRoundTrips() {
         val configurator = testConfigurator(untitledAssets())
         val first = configurator.load(mainSceneEcs())
-        val written = writer().write(first.engine, first.document)
+        val written = writer().write(first.engine, first.loadingWarnings)
         val second = configurator.load(written)
-        assertSameJson("ecs", written, writer().write(second.engine, second.document))
+        assertSameJson("ecs", written, writer().write(second.engine, second.loadingWarnings))
         assertEquals(first.engine.entities.size(), second.engine.entities.size())
     }
 
@@ -75,7 +75,7 @@ class EcsWriterTest {
         val game = GameComponents(PlaneRegistry())
         val scene = testConfigurator(game = game).load(customEcs())
         scene.engine.ids[1]!!.add(PlaneComponent())
-        val written = writer(game).write(scene.engine, scene.document)
+        val written = writer(game).write(scene.engine, scene.loadingWarnings)
         assertEquals("{}", written["entities"]["1"]["components"]["PlaneComponent"].toString())
         assertEquals("""{"lineLength":22,"kind":"STUNT"}""", written["entities"]["0"]["components"]["PlaneComponent"].toString())
         assertEquals(listOf("entities"), written.fieldNames().asSequence().toList())
@@ -87,14 +87,14 @@ class EcsWriterTest {
     fun unregisteredGameComponentIsWrittenBackAsItWas() {
         val ecs = customEcs()
         val scene = testConfigurator().load(ecs)
-        val written = writer().write(scene.engine, scene.document)
+        val written = writer().write(scene.engine, scene.loadingWarnings)
         assertEquals(ecs["entities"]["0"]["components"]["PlaneComponent"], written["entities"]["0"]["components"]["PlaneComponent"])
     }
 
     @Test
     fun noDerivedStateIsWritten() {
         val scene = testConfigurator(untitledAssets()).load(mainSceneEcs())
-        val text = writer().write(scene.engine, scene.document).toString()
+        val text = writer().write(scene.engine, scene.loadingWarnings).toString()
         assertFalse(text.contains("combined"))
         assertFalse(text.contains("lightInstance"))
         assertFalse(text.contains("point1"))
@@ -106,7 +106,7 @@ class EcsWriterTest {
 
     private fun roundTrip(ecs: String, game: GameComponents = GameComponents()): JsonNode {
         val scene = testConfigurator(untitledAssets(), game = game).load(testJson(ecs))
-        return writer(game).write(scene.engine, scene.document)
+        return writer(game).write(scene.engine, scene.loadingWarnings)
     }
 
     @Test
@@ -137,7 +137,7 @@ class EcsWriterTest {
             it.add(IdComponent(5L))
             scene.engine.addEntity(it)
         }
-        val written = writer().write(scene.engine, scene.document)
+        val written = writer().write(scene.engine, scene.loadingWarnings)
         assertEquals(listOf("1", "2", "5", "10", "11"), written.fieldNames().asSequence().toList())
         assertEquals("""{"name":"late"}""", written["11"]["components"]["NameComponent"].toString())
         assertEquals(extra, scene.engine.entities.last { it.getComponent(IdComponent::class.java) == null })
@@ -158,7 +158,7 @@ class EcsWriterTest {
         val entity = scene.engine.ids[0]!!
         entity.remove(TypeComponent::class.java)
         entity.add(ParentComponent(0))
-        val written = writer().write(scene.engine, scene.document)["entities"]["0"]["components"]
+        val written = writer().write(scene.engine, scene.loadingWarnings)["entities"]["0"]["components"]
         assertEquals(listOf("NameComponent", "ParentComponent"), written.fieldNames().asSequence().toList())
         assertEquals("""{"parentEntityId":0}""", written["ParentComponent"].toString())
     }

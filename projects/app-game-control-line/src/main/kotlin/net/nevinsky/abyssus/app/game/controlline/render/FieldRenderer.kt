@@ -13,14 +13,13 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.AnimationController
+import net.nevinsky.abyssus.lib.core.BaseCtx
 import net.nevinsky.abyssus.lib.core.ModelBatch
 import net.nevinsky.abyssus.lib.core.ModelInstance
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
-import net.nevinsky.abyssus.lib.core.assets.loading.CompositeAssetLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.PreparedAsset
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
@@ -52,23 +51,23 @@ fun fieldAssets(
     json: JsonProcessor,
     log: Logger,
     executor: Executor
-): AssetStorage<PreparedAsset, Disposable> {
+): AssetStorage {
     val files = FileLoader(projectDir)
     val metas = AssetMetaLoader(json, files, log)
-    val skyShaders = ShaderSource("/shader/sky", ShaderSource::class.java)
-    val composite = CompositeAssetLoader(
-        metas,
-        mapOf(
-            MetaType.MODEL to ModelLoader(metas, AssimpModelLoader(), files),
-            MetaType.TERRAIN to TerrainLoader(files, metas),
-            MetaType.TEXTURE to TextureLoader(files, metas),
-            MetaType.PIXMAP_TEXTURE to TextureLoader(files, metas),
-            MetaType.SKYBOX to SkyboxLoader(files, metas, skyShaders),
-            MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas),
-            MetaType.SKYBOX_HDR to HdrSkyLoader(metas, ExrLoader(files), skyShaders, ToneCurve()),
-        ),
-    )
-    return AssetStorage(executor, composite, log)
+    val skyShaders = ShaderStorage().withAssets(files)
+    return AssetStorage(log, executor, metas::loadBaseMeta).also {
+        it.registerAll(
+            mapOf(
+                MetaType.MODEL to ModelLoader(metas, AssimpModelLoader(), files),
+                MetaType.TERRAIN to TerrainLoader(files, metas),
+                MetaType.TEXTURE to TextureLoader(files, metas),
+                MetaType.PIXMAP_TEXTURE to TextureLoader(files, metas),
+                MetaType.SKYBOX to SkyboxLoader(files, metas, skyShaders),
+                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas),
+                MetaType.SKYBOX_HDR to HdrSkyLoader(metas, ExrLoader(files), skyShaders, ToneCurve()),
+            ),
+        )
+    }
 }
 
 /** A segment to draw: a control line from [from] to [to], in [color]. */
@@ -83,10 +82,10 @@ private const val SHADOW_UNIT = 6
  * terrain onto both ([FieldShadows]), aimed at the pilot. Assets load through `core`'s [AssetStorage] ([fieldAssets]):
  * prepared off the GL thread, built here. GL thread only.
  */
-class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>, shaders: ShaderSource) : Disposable {
+class FieldRenderer(private val ctx: BaseCtx) : Disposable {
     private val modelShaders = DefaultShaderProvider()
     private val batch = ModelBatch(modelShaders)
-    private val terrainShader = shaders.program("terrain")
+    private val terrainShader = ctx.shaderStorage.program("terrain")
     private val blank = Texture(Pixmap(1, 1, Pixmap.Format.RGBA8888).apply { setColor(Color.WHITE); fill() }, false)
     private val shapes = ShapeRenderer()
     private val instances = HashMap<Entity, Pair<Model, ModelInstance>>()
@@ -101,7 +100,8 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
 
     /** Whether the scene's assets are all built. */
     fun loaded(field: FieldScene): Boolean =
-        field.models.all { assets.getAs<Model>(it.second) != null } && field.terrains.all { assets.getAs<TerrainMesh>(it.second) != null }
+        field.models.all { ctx.assetStorage.getAs<Model>(it.second) != null }
+                && field.terrains.all { ctx.assetStorage.getAs<TerrainMesh>(it.second) != null }
 
     /**
      * Draws [field] seen from [camera] with [lines]; [hidden] (the pilot whose eyes the camera is) is left out. Each
@@ -128,14 +128,14 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
             field.terrains.mapTo(this) { it.second }
             addAll(setOfNotNull(field.skyName))
         }
-        wanted.forEach(assets::request)
-        assets.pump()
+        wanted.forEach(ctx.assetStorage::request)
+        ctx.assetStorage.update()
 
         val fog = field.fogColor ?: Color(0.6f, 0.7f, 0.85f, 1f)
         Gdx.gl.glClearColor(fog.r, fog.g, fog.b, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
 
-        field.skyName?.let { assets.getAs<SkyRenderer>(it) }?.let { sky ->
+        field.skyName?.let { ctx.assetStorage.getAs<SkyRenderer>(it) }?.let { sky ->
             Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
             Gdx.gl.glDepthMask(false)
             Gdx.gl.glDisable(GL20.GL_CULL_FACE)
@@ -146,7 +146,7 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
         val drawn = drawnModels(field)
         animate(drawn, clips, seconds)
         val terrains = field.terrains.mapNotNull { (entity, name) ->
-            assets.getAs<TerrainMesh>(name)?.let { it to field.position(entity).getTransform() }
+            ctx.assetStorage.getAs<TerrainMesh>(name)?.let { it to field.position(entity).getTransform() }
         }
         shadows.aim(sun, field.sunDirection, field.pilot?.let { field.position(it).localPosition } ?: Vector3.Zero)
         shadows.render(drawn.map { it.second }, terrains)
@@ -199,7 +199,7 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
     /** The scene's models that are built, each with its instance placed at the entity's transform. */
     private fun drawnModels(field: FieldScene): List<Pair<Entity, ModelInstance>> =
         field.models.mapNotNull { (entity, name) ->
-            val model = assets.getAs<Model>(name) ?: return@mapNotNull null
+            val model = ctx.assetStorage.getAs<Model>(name) ?: return@mapNotNull null
             val instance = instances[entity]?.takeIf { it.first === model }?.second
                 ?: ModelInstance(model).also {
                     instances[entity] = model to it
@@ -220,7 +220,7 @@ class FieldRenderer(private val assets: AssetStorage<PreparedAsset, Disposable>,
     }
 
     override fun dispose() {
-        assets.dispose()
+        ctx.assetStorage.dispose()
         shadows.dispose()
         modelShaders.dispose()
         terrainShader.dispose()

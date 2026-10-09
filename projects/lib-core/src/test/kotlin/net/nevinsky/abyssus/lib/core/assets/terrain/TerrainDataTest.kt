@@ -36,7 +36,7 @@ class TerrainDataTest {
         )
         val files = FileLoader(dir)
         val metas = testMetaLoader(dir, fileLoader = files)
-        return TerrainLoader(files, metas).prepare("t")!!.data
+        return TerrainLoader(files, metas).prepare("t")!!.staged.data
     }
 
     private fun bigEndian(vararg heights: Float): ByteArray =

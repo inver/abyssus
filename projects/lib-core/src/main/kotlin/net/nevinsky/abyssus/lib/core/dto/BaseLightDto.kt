@@ -5,7 +5,9 @@
 
 package net.nevinsky.abyssus.lib.core.dto
 
+import com.badlogic.gdx.graphics.Color
+
 data class BaseLightDto(
-    val color: ColorDto? = null,
+    val color: Color? = null,
     val intensity: Float? = null
 )

@@ -6,7 +6,7 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.graphics.Texture
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
-import net.nevinsky.abyssus.lib.core.assets.loading.CompositeAssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
@@ -58,12 +58,11 @@ class AssetLoadingGlTest {
     )
     private val mainSceneTerrain = "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
 
-    /** The loaders of one project folder, wired by hand as the plugin does: one composite over every kind of asset. */
+    /** The loaders of one project folder, wired by hand as the plugin does: one storage over every kind of asset. */
     private inner class Project(val dir: File, val log: Logger = NOPLogger.NOP_LOGGER) {
         val files = FileLoader(dir)
         val metas = testMetaLoader(dir, log, files)
-        private val composite = CompositeAssetLoader(
-            metas,
+        private val loaders: Map<MetaType, AssetLoader<*, *, *>> =
             mapOf(
                 MetaType.MODEL to ModelLoader(metas, AssimpModelLoader(), files),
                 MetaType.TERRAIN to TerrainLoader(files, metas),
@@ -73,18 +72,17 @@ class AssetLoadingGlTest {
                 MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas, skyShaders(), log),
                 MetaType.CLOUDS to CloudsLoader(metas),
                 MetaType.SKYBOX_HDR to HdrSkyLoader(metas, ExrLoader(files), skyShaders(), ToneCurve()),
-            ),
-        )
+            )
 
         /** The one storage of this project: it builds and owns every kind of asset. */
-        fun assets() = AssetStorage(Executor(Runnable::run), composite, log)
+        fun assets() = AssetStorage(log, Executor(Runnable::run), metas::loadBaseMeta).also { it.registerAll(loaders) }
     }
 
     /** Requests [names] and pumps frame after frame, as the scene view does, until nothing is loading. */
-    private fun loadAll(assets: AssetStorage<*, *>, names: Set<String>, frames: Int = 400) {
+    private fun loadAll(assets: AssetStorage, names: Set<String>, frames: Int = 400) {
         repeat(frames) {
             names.forEach(assets::request)
-            assets.pump()
+            assets.update()
             if (!assets.isLoading()) return
         }
         error("still loading after $frames frames")
@@ -210,7 +208,7 @@ class AssetLoadingGlTest {
             val models = Project(untitled, warningsTo(logged)).assets()
             try {
                 loadAll(models, setOf("model_missing", mainSceneModels[0]))
-                repeat(20) { models.request("model_missing"); models.request(mainSceneModels[0]); models.pump() }
+                repeat(20) { models.request("model_missing"); models.request(mainSceneModels[0]); models.update() }
                 assertNull(models.get("model_missing"))
                 assertNotNull(models.get(mainSceneModels[0]))
             } finally {
@@ -232,7 +230,7 @@ class AssetLoadingGlTest {
             val models = Project(dir, warningsTo(logged)).assets()
             try {
                 loadAll(models, setOf(model))
-                repeat(50) { models.request(model); models.pump() }
+                repeat(50) { models.request(model); models.update() }
                 assertNull(models.get(model))
             } finally {
                 models.dispose()

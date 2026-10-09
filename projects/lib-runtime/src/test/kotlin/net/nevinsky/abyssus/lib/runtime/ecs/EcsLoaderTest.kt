@@ -16,6 +16,8 @@ import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.render.RenderableObjectDelegate
 import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FAR
 import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.util.EcsUtils.Companion.CAMERA_NEAR
@@ -24,7 +26,6 @@ import net.nevinsky.abyssus.lib.runtime.ecs.render.ASSET_RENDERABLE_KIND
 import net.nevinsky.abyssus.lib.runtime.ecs.render.AssetReference
 import net.nevinsky.abyssus.lib.runtime.ecs.render.AssetResolver
 import net.nevinsky.abyssus.lib.runtime.ecs.render.FolderAssetResolver
-import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent
 import net.nevinsky.abyssus.lib.runtime.ecs.render.RenderableObjectDelegate
 import net.nevinsky.abyssus.lib.runtime.schema.GameComponents
 import net.nevinsky.abyssus.lib.runtime.schema.PlaneComponent
@@ -115,7 +116,7 @@ class EcsLoaderTest {
         assertNull(scene.get(0, UnregisteredComponent::class.java))
         assertEquals(
             listOf(UnregisteredComponent::class.java.name, "java.lang.String", "no.such.Component"),
-            scene.document.carried[0L]!!.keys.toList(),
+            scene.loadingWarnings.carried[0L]!!.keys.toList(),
         )
         assertEquals("A", scene.get(0, NameComponent::class.java)!!.name)
         assertEquals(3, messages.count { "is not modeled and is kept unchanged" in it })
@@ -127,7 +128,7 @@ class EcsLoaderTest {
             """{"entities":{"0":{"components":{"TypeComponent":{"type":"WIDGET"},"NameComponent":{"name":"A"}}}}}""",
         )
         assertNull(scene.get(0, TypeComponent::class.java))
-        assertEquals("""{"type":"WIDGET"}""", scene.document.carried[0L]!!["TypeComponent"].toString())
+        assertEquals("""{"type":"WIDGET"}""", scene.loadingWarnings.carried[0L]!!["TypeComponent"].toString())
         assertEquals("A", scene.get(0, NameComponent::class.java)!!.name)
         assertEquals(1, messages.count { it.startsWith("entity 0: component TypeComponent could not be read") })
     }
@@ -137,7 +138,7 @@ class EcsLoaderTest {
         val scene = testConfigurator(untitledAssets(), warningsTo(messages)).load(mainSceneEcs())
         assertEquals(9, scene.engine.entities.size())
         assertEquals(1, messages.count { "PickableComponent" in it && "kept unchanged" in it })
-        assertEquals(scene.document.warnings, messages)
+        assertEquals(scene.loadingWarnings.warnings, messages)
     }
 
     // --- game components ---
@@ -166,7 +167,7 @@ class EcsLoaderTest {
             messages.clear()
             val scene = load("""{"entities":{"0":{"components":{"PlaneComponent":$bad}}}}""", game = game)
             assertNull(bad, scene.get(0, PlaneComponent::class.java))
-            assertEquals(bad, scene.document.carried[0L]!!["PlaneComponent"].toString())
+            assertEquals(bad, scene.loadingWarnings.carried[0L]!!["PlaneComponent"].toString())
             assertEquals(messages.toString(), 1, messages.size)
             assertTrue(messages.single(), messages.single().startsWith("entity 0: component PlaneComponent could not be read"))
         }
@@ -190,7 +191,7 @@ class EcsLoaderTest {
     fun anUnregisteredGameComponentIsCarriedRaw() {
         val scene = load("""{"entities":{"0":{"components":{"PlaneComponent":{"lineLength":22}}}}}""")
         assertNull(scene.get(0, PlaneComponent::class.java))
-        assertEquals("""{"lineLength":22}""", scene.document.carried[0L]!!["PlaneComponent"].toString())
+        assertEquals("""{"lineLength":22}""", scene.loadingWarnings.carried[0L]!!["PlaneComponent"].toString())
     }
 
     // --- built-in components ---
@@ -201,8 +202,8 @@ class EcsLoaderTest {
             """{"entities":{"0":{"archetype":1,"components":{"NameComponent":{"name":"A"}}}},"archetypes":{"1":["NameComponent"]},"metadata":{"v":1}}""",
         )
         assertEquals("A", scene.get(0, NameComponent::class.java)!!.name)
-        assertEquals(emptyMap<Long, Any>(), scene.document.carried)
-        assertEquals(listOf("metadata"), scene.document.extras.keys.toList())
+        assertEquals(emptyMap<Long, Any>(), scene.loadingWarnings.carried)
+        assertEquals(listOf("metadata"), scene.loadingWarnings.extras.keys.toList())
         assertEquals(emptyList<String>(), messages)
     }
 
@@ -216,13 +217,13 @@ class EcsLoaderTest {
               "metadata":{"version":1}}""",
         )
         assertEquals("A", scene.get(0, NameComponent::class.java)!!.name)
-        assertEquals(setOf("PickableComponent"), scene.document.carried[0L]!!.keys)
-        assertEquals(setOf("PickableComponent"), scene.document.carried[1L]!!.keys)
+        assertEquals(setOf("PickableComponent"), scene.loadingWarnings.carried[0L]!!.keys)
+        assertEquals(setOf("PickableComponent"), scene.loadingWarnings.carried[1L]!!.keys)
         assertNull(scene.get(0, RenderComponent::class.java)!!.renderable)
         assertNotNull(scene.get(0, RenderComponent::class.java)!!.raw)
         assertEquals(2, scene.engine.entities.size())
-        assertEquals("""{"version":1}""", scene.document.metadata.toString())
-        assertEquals(1, scene.document.warnings.count { it.contains("PickableComponent") })
+        assertEquals("""{"version":1}""", scene.loadingWarnings.metadata.toString())
+        assertEquals(1, scene.loadingWarnings.warnings.count { it.contains("PickableComponent") })
     }
 
     @Test
@@ -233,7 +234,7 @@ class EcsLoaderTest {
         )
         assertEquals(-1, scene.get(0, PositionComponent::class.java)!!.lookAtId)
         assertEquals(1, scene.get(0, ParentComponent::class.java)!!.parentEntityId)
-        assertEquals(1, scene.document.warnings.count { it.contains("entity 9") })
+        assertEquals(1, scene.loadingWarnings.warnings.count { it.contains("entity 9") })
     }
 
     @Test
@@ -325,7 +326,7 @@ class EcsLoaderTest {
         assertNull(scene.get(0, RenderComponent::class.java)!!.renderable)
         assertNotNull(scene.get(0, RenderComponent::class.java)!!.raw)
         assertEquals("B", scene.get(1, NameComponent::class.java)!!.name)
-        assertEquals(1, scene.document.warnings.count { it.contains("missing") })
+        assertEquals(1, scene.loadingWarnings.warnings.count { it.contains("missing") })
     }
 
     @Test
@@ -335,7 +336,7 @@ class EcsLoaderTest {
                   "asset":{"type":"WIDGET","assetName":"m"}}}}}}}""",
         )
         assertNull(scene.get(0, RenderComponent::class.java)!!.renderable)
-        assertEquals(1, scene.document.warnings.count { it.contains("names no MODEL or TERRAIN asset") })
+        assertEquals(1, scene.loadingWarnings.warnings.count { it.contains("names no MODEL or TERRAIN asset") })
     }
 
     @Test

@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.plugin.AssetLoading
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.raytracing.*
@@ -34,7 +34,7 @@ class RayRealSceneTest {
 
     private fun snapshot(): RaySceneFrame {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
-        val loading = AssetLoading(JsonProcessor(), printingLog, Executor(Runnable::run), ShaderSource("/shader/sky", AssetLoading::class.java))
+        val loading = AssetLoading(JsonProcessor(), printingLog, Executor(Runnable::run), ShaderStorage())
         val content = sceneContentOf(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
         val assets = raySceneAssetsOf(ViewAssets(loading))
         assets.update(project, content)
