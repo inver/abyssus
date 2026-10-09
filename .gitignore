@@ -10,3 +10,6 @@ projects/plugin-abyssus/src/main/gen
 
 .kilo/worktrees
 .kilo/jetbrains.json
+
+.DS_Store
+__pycache__
