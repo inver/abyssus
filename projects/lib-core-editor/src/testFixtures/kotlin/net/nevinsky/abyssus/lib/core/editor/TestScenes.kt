@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.editor
+package net.nevinsky.abyssus.lib.core.editor
 
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.dto.SceneDto

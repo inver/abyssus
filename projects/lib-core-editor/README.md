@@ -16,7 +16,10 @@ the tree, tool windows, dialogs, the GL canvas and renderer, actions, file types
   the same text.
 - **Documents:** validation stays in `core.format`; this module only adds the editor-facing aliases.
 
-## Packages (`net.nevinsky.abyssus.lib.gdx.editor`)
+## Packages (`net.nevinsky.abyssus.lib.core.editor`)
+
+All source and test packages use this namespace. Consumers of the former `net.nevinsky.abyssus.lib.gdx.editor`
+namespace, including extension providers that use editor value types, must update their imports and rebuild.
 
 | Package | Holds |
 |---|---|
@@ -93,6 +96,6 @@ asset-property edits, returning the edited text or a `Refusal` with the reason t
 
 ## Tests
 
-`./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCameraTest'`). Tests use
+`./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`). Tests use
 `projects/plugin-abyssus` as their working directory, so `src/test/testData/project/` resolves to the shared fixtures.
 The test fixtures (`parseScene`, `testProject`, `testAsset`, `terrainData`, `rayTestModel`) are shared with the plugin's tests.

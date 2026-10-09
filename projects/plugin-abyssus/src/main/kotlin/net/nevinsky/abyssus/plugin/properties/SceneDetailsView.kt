@@ -13,10 +13,10 @@ import com.intellij.ui.components.panels.VerticalLayout
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayDataEdit
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneRayField
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModePhase
+import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.SceneRayField
+import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.SceneRayControls

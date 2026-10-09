@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.pick
+package net.nevinsky.abyssus.lib.core.editor.pick
 
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Quat
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.FloatNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 
 /**
  * What a drag changes about an entity: any of its [position], its [rotation] and, for a camera, its view [direction].

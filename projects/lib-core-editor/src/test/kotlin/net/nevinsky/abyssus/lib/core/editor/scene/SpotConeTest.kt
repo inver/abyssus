@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.scene
+package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SpotCone
-import net.nevinsky.abyssus.lib.gdx.editor.scene.forwardOf
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
+import net.nevinsky.abyssus.lib.core.editor.scene.SpotCone
+import net.nevinsky.abyssus.lib.core.editor.scene.forwardOf
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Quat
 
 import org.junit.Assert.*
 import org.junit.Test

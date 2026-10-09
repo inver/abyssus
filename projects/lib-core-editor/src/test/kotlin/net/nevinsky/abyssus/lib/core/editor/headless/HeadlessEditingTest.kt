@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.headless
+package net.nevinsky.abyssus.lib.core.editor.headless
 
 import net.nevinsky.abyssus.lib.core.format.FormatProblem
-import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.gdx.editor.meta.FieldValue
-import net.nevinsky.abyssus.lib.gdx.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.gdx.editor.testProject
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentKind
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

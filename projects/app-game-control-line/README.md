@@ -28,7 +28,7 @@ combo multiplier (up to x5 for maneuvers within 10 s of each other). A landing w
 
 ## The project in Abyssus
 
-Open a **copy** of `project/ControlLine` in Abyssus (`./gradlew :plugin-abyssus-physics:runIde`), never the committed folder:
+Open a **copy** of `project/ControlLine` in Abyssus (`./gradlew :plugin-abyssus:runIde`), never the committed folder:
 the tests assert on its scene. `PlaneComponent` and `PilotComponent` are registered game components and currently
 remain read-only JSON in the editor. The committed `abyssus/components.schema.json` is retained data; it does not
 enable Properties editing. A plane duplicated in the field scene appears on plane select at the next game start.

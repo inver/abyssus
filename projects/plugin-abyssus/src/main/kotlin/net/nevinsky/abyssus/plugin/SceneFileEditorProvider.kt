@@ -8,6 +8,11 @@ package net.nevinsky.abyssus.plugin
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.vfs.newvfs.BulkFileListener
+import com.intellij.openapi.vfs.newvfs.events.*
 import java.io.File
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -73,14 +78,12 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
                 simulationRequest = { selection -> simulationRequest(project, file, selection) },
                 overlays = overlays,
             )
-            project.messageBus.connect(panel).subscribe(ProjectSettingsListener.TOPIC, ProjectSettingsListener { abss, _ ->
-                if (ProjectLayout.abssFor(file) == abss || !abss.isValid) {
-                    overlays.refreshAvailability()
-                    play.refreshProviders(SceneSimulationProvider.EP_NAME.extensionList.filter { it.isAvailable(project, file) })
-                    panel.revalidate()
-                    panel.repaint()
-                }
-            })
+            listenSceneAvailability(project, panel) {
+                overlays.refreshAvailability()
+                play.refreshProviders(SceneSimulationProvider.EP_NAME.extensionList.filter { it.isAvailable(project, file) })
+                panel.revalidate()
+                panel.repaint()
+            }
             panel
         }
     }
@@ -125,3 +128,18 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
     }
 }
 
+
+/** Ownership can change while the previous .abss stays valid, or a loose scene can acquire a new native project. */
+internal fun listenSceneAvailability(project: Project, parent: Disposable, refresh: () -> Unit) {
+    val connection = project.messageBus.connect(parent)
+    connection.subscribe(ProjectSettingsListener.TOPIC, ProjectSettingsListener { _, _ -> refresh() })
+    connection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
+        override fun after(events: List<VFileEvent>) {
+            if (events.none { it is VFileCreateEvent || it is VFileDeleteEvent || it is VFileMoveEvent ||
+                it is VFileCopyEvent || it is VFilePropertyChangeEvent && it.propertyName == VirtualFile.PROP_NAME }) return
+            ApplicationManager.getApplication().invokeLater({
+                if (!project.isDisposed && !Disposer.isDisposed(parent)) refresh()
+            }, ModalityState.any())
+        }
+    })
+}

@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.gdx.editor.meta.AssetChoice
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetChoice
 
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
@@ -24,7 +24,7 @@ import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
 import java.awt.Component
 import java.awt.Container
 import java.io.File
-import net.nevinsky.abyssus.lib.gdx.editor.meta.SKYBOX_FACES
+import net.nevinsky.abyssus.lib.core.editor.meta.SKYBOX_FACES
 import net.nevinsky.abyssus.plugin.testPanelServices
 
 class AssetPropertiesPanelTest : BasePlatformTestCase() {
@@ -106,12 +106,48 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         copyProject()
         val p = panel()
         p.show(abss())
-        assertEquals("Nothing to show: Untitled.abss is the project file.", (p.state as PanelState.Empty).message)
+        assertFalse((p.state as PanelState.Project).settings.physicsEnabled)
         val scene = children(children(abss()).single { label(it) == "scenes" }).single()
         // a scene row shows the scene's view settings (its Ray Tracing switch) instead of an empty state
         p.show(scene)
         val details = p.state as PanelState.UISceneState
         assertEquals("Main Scene.scene", details.file.name)
+    }
+
+    fun testProjectPhysicsCheckboxFollowsUnsavedEditsAndUndo() {
+        copyProject()
+        val node = abss() as AbyssusAssetNode
+        val file = node.virtualFile
+        val document = FileDocumentManager.getInstance().getDocument(file)!!
+        val original = document.text
+        val p = panel()
+        p.show(node)
+        fun checkbox() = find(p, "physics-enabled") as javax.swing.JCheckBox
+        assertFalse(checkbox().isSelected)
+        checkbox().doClick()
+        val enabled = document.text
+        assertTrue((p.state as PanelState.Project).settings.physicsEnabled)
+        assertEquals(SceneJson().parse(original).deepCopy<com.fasterxml.jackson.databind.node.ObjectNode>().put("physicsEnabled", true), SceneJson().parse(enabled))
+        val editor = providedEditor(p)!!
+        val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
+        undo.undo(editor)
+        assertEquals(original, document.text)
+        assertFalse(checkbox().isSelected)
+        undo.redo(editor)
+        assertEquals(enabled, document.text)
+        assertTrue(checkbox().isSelected)
+        checkbox().doClick()
+        assertEquals(enabled.replace("\"physicsEnabled\":true", "\"physicsEnabled\":false"), document.text)
+        WriteCommandAction.runWriteCommandAction(project) { document.setText(enabled) }
+        assertTrue(checkbox().isSelected)
+        assertTrue(FileDocumentManager.getInstance().isDocumentUnsaved(document))
+        WriteCommandAction.runWriteCommandAction(project) { document.setText(enabled.replace("\"formatVersion\":1", "\"formatVersion\":2")) }
+        assertFalse(checkbox().isEnabled)
+        assertFalse(checkbox().isSelected)
+        val unsupported = document.text
+        checkbox().doClick()
+        assertEquals(unsupported, document.text)
+        assertTrue((find(p, "project-settings-problem") as JBLabel).text.isNotBlank())
     }
 
     // 3.1a header
@@ -313,7 +349,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         p.show(asset("skybox_default"))
         for (face in SKYBOX_FACES) {
             val combo = field(p, face) as com.intellij.openapi.ui.ComboBox<*>
-            assertEquals("skybox_default.png", (combo.selectedItem as net.nevinsky.abyssus.lib.gdx.editor.meta.AssetChoice).value)
+            assertEquals("skybox_default.png", (combo.selectedItem as net.nevinsky.abyssus.lib.core.editor.meta.AssetChoice).value)
         }
     }
 
@@ -426,7 +462,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.showFolder(folder)
         @Suppress("UNCHECKED_CAST")
-        val combo = field(p, "left") as com.intellij.openapi.ui.ComboBox<net.nevinsky.abyssus.lib.gdx.editor.meta.AssetChoice>
+        val combo = field(p, "left") as com.intellij.openapi.ui.ComboBox<net.nevinsky.abyssus.lib.core.editor.meta.AssetChoice>
         val other = (0 until combo.itemCount).map { combo.getItemAt(it) }.single { it.value == "other.png" }
         combo.selectedItem = other
         val after = FileDocumentManager.getInstance().getDocument(meta)!!.text
@@ -489,7 +525,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         assertEquals("Main Scene.scene", editor.file.name)
         type(find(p, "ray-setting-targetSamplesPerPixel") as JBTextField, "512")
         val edited = metaText(path)
-        assertEquals(512, net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(edited)["rayTracing"]["targetSamplesPerPixel"].intValue())
+        assertEquals(512, net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(edited)["rayTracing"]["targetSamplesPerPixel"].intValue())
         assertEquals("the panel refreshes from the document", "512", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
         val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
         undo.undo(editor)

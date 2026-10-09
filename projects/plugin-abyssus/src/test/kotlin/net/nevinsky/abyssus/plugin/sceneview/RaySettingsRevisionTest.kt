@@ -4,23 +4,23 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.ray.rayTestModel
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayAssetLease
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayBackendService
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayFrameContext
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssets
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayViewFeed
-import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneRaySettingsCodec
+import net.nevinsky.abyssus.lib.core.editor.ray.rayTestModel
+import net.nevinsky.abyssus.lib.core.editor.ray.RayAssetLease
+import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendService
+import net.nevinsky.abyssus.lib.core.editor.ray.RayFrameContext
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssets
+import net.nevinsky.abyssus.lib.core.editor.ray.RayViewFeed
+import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
 
-import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File

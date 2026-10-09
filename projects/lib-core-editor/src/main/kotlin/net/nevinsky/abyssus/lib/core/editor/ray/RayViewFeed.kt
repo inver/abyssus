@@ -2,12 +2,12 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.gdx.editor.ray
+package net.nevinsky.abyssus.lib.core.editor.ray
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.LightSet
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneRaySettingsState
-import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsState
+import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.lib.core.assets.model.RayModelSkinning
@@ -17,7 +17,7 @@ import net.nevinsky.abyssus.lib.raytracing.*
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import net.nevinsky.abyssus.lib.gdx.editor.document.documentDisplayMessage
+import net.nevinsky.abyssus.lib.core.editor.document.documentDisplayMessage
 
 /**
  * Connects one scene view's renderer to its [RayViewRuntime]. [frame] runs on the render thread once per frame: it
@@ -76,7 +76,7 @@ class RayViewFeed(
     /** Render thread. The ray frame to present for [context], or null while raster should be shown. */
     fun frame(context: RayFrameContext): RaySceneDisplay? {
         if (closed.get()) return null
-        val overrides = net.nevinsky.abyssus.lib.gdx.editor.document.sceneDocumentFromEcs(context.params.ecs).entities().mapNotNull { entity ->
+        val overrides = net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs(context.params.ecs).entities().mapNotNull { entity ->
             entity.componentNode("RenderComponent")?.get("rayTracingMaterials")?.let { entity.id to it }
         }.toMap()
         val signature = context.params.rayTracing to overrides

@@ -24,11 +24,7 @@ import net.nevinsky.abyssus.lib.gdx.node.NodeAnimation
  * @author Xoppa
  */
 open class BaseAnimationController
-/**
- * Construct a new BaseAnimationController.
- *
- * @param target The [ModelInstance] on which the animations are being performed.
- */(
+    (
     /**
      * The [ModelInstance] on which the animations are being performed.
      */

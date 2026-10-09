@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
@@ -46,8 +46,8 @@ class PhysicsOverlayGeometryTest {
                 "net.nevinsky.abyssus.lib.physics.ColliderComponent":{"shape":"$shape","offset":{"x":1}},
                 "net.nevinsky.abyssus.lib.physics.RigidBodyComponent":{"motionType":"KINEMATIC"},
                 "PositionComponent":{"localScale":{"x":2,"y":2,"z":2}}}}}}""")
-            val shown = net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent(entityPositions = mapOf("0" to
-                net.nevinsky.abyssus.lib.gdx.editor.content.Vec3(10f,20f,30f)))
+            val shown = net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(entityPositions = mapOf("0" to
+                net.nevinsky.abyssus.lib.core.editor.content.Vec3(10f,20f,30f)))
             val lines = geometry.segments(shown, ecs, "0")
             assertEquals(shape,count,lines.size)
             assertTrue(lines.all { it.selected && it.color == PhysicsColors.brighter(PhysicsColors.KINEMATIC) })
@@ -61,12 +61,12 @@ class PhysicsOverlayGeometryTest {
 
     @Test fun constraintAnchorsUseLocalAndWorldFrames() {
         val ecs = json.readObject("""{"entities":{"0":{"components":{"ConstraintComponent":{"anchor":{"x":1},"otherAnchor":{"y":4}}}}}}""")
-        val shown = net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent(entityPositions = mapOf("0" to
-            net.nevinsky.abyssus.lib.gdx.editor.content.Vec3(2f,0f,0f)))
+        val shown = net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(entityPositions = mapOf("0" to
+            net.nevinsky.abyssus.lib.core.editor.content.Vec3(2f,0f,0f)))
         val lines = geometry.segments(shown,ecs,null)
-        assertTrue(lines.any { it.from == net.nevinsky.abyssus.lib.gdx.editor.content.Vec3(3f,0f,0f) })
-        assertTrue(lines.any { it.from == net.nevinsky.abyssus.lib.gdx.editor.content.Vec3(-0.15f,4f,0f) &&
-            it.to == net.nevinsky.abyssus.lib.gdx.editor.content.Vec3(0.15f,4f,0f) })
+        assertTrue(lines.any { it.from == net.nevinsky.abyssus.lib.core.editor.content.Vec3(3f,0f,0f) })
+        assertTrue(lines.any { it.from == net.nevinsky.abyssus.lib.core.editor.content.Vec3(-0.15f,4f,0f) &&
+            it.to == net.nevinsky.abyssus.lib.core.editor.content.Vec3(0.15f,4f,0f) })
     }
 
     @Test fun absentAndEmptyEntityMapsProduceNoOverlay() {

@@ -8,12 +8,12 @@ package net.nevinsky.abyssus.app.game.controlline.tools
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearArchive
-import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearImport
-import net.nevinsky.abyssus.lib.gdx.editor.flightgear.FlightGearImportRequest
-import net.nevinsky.abyssus.lib.gdx.editor.flightgear.IMPORTED_MODEL_FILE
-import net.nevinsky.abyssus.lib.gdx.editor.flightgear.ImportOrigin
-import net.nevinsky.abyssus.lib.gdx.editor.flightgear.ImportSize
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearArchive
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImport
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImportRequest
+import net.nevinsky.abyssus.lib.core.editor.flightgear.IMPORTED_MODEL_FILE
+import net.nevinsky.abyssus.lib.core.editor.flightgear.ImportOrigin
+import net.nevinsky.abyssus.lib.core.editor.flightgear.ImportSize
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import java.io.File
 import java.net.URI

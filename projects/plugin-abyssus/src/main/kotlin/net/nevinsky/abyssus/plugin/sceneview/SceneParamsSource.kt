@@ -5,11 +5,11 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.CameraParams
-import net.nevinsky.abyssus.lib.gdx.editor.scene.MainCamera
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.scene.renderParamsOf
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
+import net.nevinsky.abyssus.lib.core.editor.scene.MainCamera
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
@@ -32,7 +32,7 @@ fun interface SceneParamsSource {
         fun editorText(reader: SceneReader) = SceneParamsSource { file ->
             val camera = ProjectLayout.abssFor(file)?.let { abss ->
                 val text = textOf(abss)
-                net.nevinsky.abyssus.lib.gdx.editor.document.AbyssusDocumentFormat().requireSupported(net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson().parse(text), net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind.PROJECT)
+                net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat().requireSupported(net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(text), net.nevinsky.abyssus.lib.core.editor.document.DocumentKind.PROJECT)
                 MainCamera().parse(text)
             } ?: CameraParams.DEFAULT
             renderParamsOf(reader.parse(textOf(file)), camera, ProjectLayout.projectDirFor(file))

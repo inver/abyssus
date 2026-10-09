@@ -3,29 +3,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.headless
+package net.nevinsky.abyssus.lib.core.editor.headless
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.format.FormatRejection
 import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
-import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
-import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.gdx.editor.components.ComponentEditor
-import net.nevinsky.abyssus.lib.gdx.editor.components.EditResult
-import net.nevinsky.abyssus.lib.gdx.editor.document.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.gdx.editor.document.DocumentKind
-import net.nevinsky.abyssus.lib.gdx.editor.document.DocumentTextEditor
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.gdx.editor.document.TextEditOutcome
-import net.nevinsky.abyssus.lib.gdx.editor.document.documentDisplayMessage
-import net.nevinsky.abyssus.lib.gdx.editor.meta.AssetFieldDescriptions
-import net.nevinsky.abyssus.lib.gdx.editor.meta.AssetMetaEditor
-import net.nevinsky.abyssus.lib.gdx.editor.meta.EditOutcome
-import net.nevinsky.abyssus.lib.gdx.editor.meta.FieldValue
-import net.nevinsky.abyssus.lib.gdx.editor.meta.message
-import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneTransformWriter
-import net.nevinsky.abyssus.lib.gdx.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
+import net.nevinsky.abyssus.lib.core.editor.components.EditResult
+import net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentKind
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.editor.document.documentDisplayMessage
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldDescriptions
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
+import net.nevinsky.abyssus.lib.core.editor.meta.EditOutcome
+import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
+import net.nevinsky.abyssus.lib.core.editor.meta.message
+import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 
 /** Why a document or an edit was refused: [message] is the text the plugin shows, [rejection] the format problem if any. */
 data class Refusal(val message: String, val rejection: FormatRejection? = null)

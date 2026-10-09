@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
+import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 
 /** What lights the scene's content besides its light entities: the ambient color, or a built HDR sky that replaces it. */
 sealed interface SceneAmbient<out E> {

@@ -4,9 +4,9 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySkyBaker
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySkyBaker
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20

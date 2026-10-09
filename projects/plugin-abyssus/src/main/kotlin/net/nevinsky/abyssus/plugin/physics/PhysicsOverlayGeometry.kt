@@ -10,13 +10,13 @@ import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.physics.*
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.editor.components.ComponentReader
+import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import org.slf4j.helpers.NOPLogger
 import kotlin.math.abs
-import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
@@ -49,7 +49,7 @@ private const val DASH = 0.25f
  */
 class PhysicsOverlayGeometry(private val terrainSize: (String) -> Float? = { null }) {
 
-    private val reader = ComponentReader(JsonProcessor(NOPLogger.NOP_LOGGER).mapper, NOPLogger.NOP_LOGGER)
+    private val reader = ComponentReader(JsonProcessor(NOPLogger.NOP_LOGGER))
     private fun component(components: JsonNode?, name: String): JsonNode? =
         components?.get(name) ?: components?.get("net.nevinsky.abyssus.lib.physics.$name")
     private fun <C : com.badlogic.ashley.core.Component> decode(type: Class<C>, node: JsonNode): C? =

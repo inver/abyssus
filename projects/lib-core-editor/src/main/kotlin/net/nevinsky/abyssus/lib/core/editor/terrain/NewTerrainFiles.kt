@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.editor.terrain
+package net.nevinsky.abyssus.lib.core.editor.terrain
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.NullNode
@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.META_VERSION_DEFAULT
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.editor.meta.NEW_TERRAIN_UV_DEFAULT
-import net.nevinsky.abyssus.lib.gdx.editor.meta.TERRAIN_META_FILE_NAME_DEFAULT
+import net.nevinsky.abyssus.lib.core.editor.meta.NEW_TERRAIN_UV_DEFAULT
+import net.nevinsky.abyssus.lib.core.editor.meta.TERRAIN_META_FILE_NAME_DEFAULT
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
 import java.nio.ByteBuffer
 import java.security.MessageDigest

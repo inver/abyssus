@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.scene
+package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import com.badlogic.gdx.math.collision.BoundingBox
 import net.nevinsky.abyssus.lib.gdx.AnimationController
 import net.nevinsky.abyssus.lib.gdx.ModelInstance

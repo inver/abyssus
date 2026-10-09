@@ -2,9 +2,9 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.gdx.editor.ray
+package net.nevinsky.abyssus.lib.core.editor.ray
 
-import net.nevinsky.abyssus.lib.gdx.editor.pick.Selected
+import net.nevinsky.abyssus.lib.core.editor.pick.Selected
 
 import net.nevinsky.abyssus.lib.core.assets.displayMessage as failureMessage
 
@@ -17,8 +17,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
-import net.nevinsky.abyssus.lib.gdx.editor.document.documentDisplayMessage
+import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.document.documentDisplayMessage
 
 /**
  * Application owner of providers, devices and one serial native worker. Each view gets an independent session and

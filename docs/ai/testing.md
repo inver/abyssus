@@ -10,7 +10,7 @@
 | Ray tracing contracts / jar packaging | `./gradlew :lib-raytracing:test` / `./gradlew :lib-raytracing:verifyNativePackaging` |
 | Control Line tests | `./gradlew :app-game-control-line:test` |
 | Plugin tests | `./gradlew :plugin-abyssus:test` |
-| `editor-core` tests | `./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.gdx.editor.pick.ScenePickerTest'`) |
+| `editor-core` tests | `./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.ScenePickerTest'`) |
 | `lib-gdx` tests | `./gradlew :lib-gdx:test` |
 | One class | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.projectView.SkyboxPickerModelTest'` |
 | One method | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.AbyssusViewTest.testNodeTree'` |

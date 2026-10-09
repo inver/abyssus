@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin
 
-import net.nevinsky.abyssus.lib.gdx.editor.document.RayMaterialIdentity
+import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
 
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
@@ -18,7 +18,7 @@ internal fun testMetaFiles() = testCore.metaFiles
 
 internal fun testPanelServices(
     project: Project,
-    rayMaterials: (java.io.File, String) -> List<net.nevinsky.abyssus.lib.gdx.editor.document.RayMaterialIdentity>? = { _, _ -> null },
+    rayMaterials: (java.io.File, String) -> List<net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity>? = { _, _ -> null },
 ) = testCore.let {
     PanelServices(
         it.metaFiles, it.hdrPreviews, it.json, it.assetFields, it.assetEditor,

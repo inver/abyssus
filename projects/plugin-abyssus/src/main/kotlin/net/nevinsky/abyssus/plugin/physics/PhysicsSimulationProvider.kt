@@ -19,7 +19,7 @@ import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import com.intellij.openapi.util.text.StringUtil
 import net.nevinsky.abyssus.lib.physics.play.PlayFrame
 import net.nevinsky.abyssus.lib.physics.play.PlayInput
-import net.nevinsky.abyssus.lib.gdx.editor.content.Pose
+import net.nevinsky.abyssus.lib.core.editor.content.Pose
 import net.nevinsky.abyssus.plugin.sceneview.SceneSimulation
 import net.nevinsky.abyssus.plugin.sceneview.SceneSimulationProvider
 import net.nevinsky.abyssus.plugin.sceneview.SimulationInput
@@ -48,6 +48,8 @@ class PhysicsSimulationProvider : SceneSimulationProvider {
  * shows one notification with the process's last lines and tells the view; [stop] ends the process.
  */
 internal class PhysicsSimulation(private val project: Project, private val listener: SimulationListener) : SceneSimulation {
+    private val lifecycle = Any()
+
     @Volatile
     private var client: PlayClient? = null
 
@@ -66,14 +68,11 @@ internal class PhysicsSimulation(private val project: Project, private val liste
         } catch (e: Exception) {
             return failToStart(e.displayMessage(), "")
         }
-        if (stopped) {
-            started.stop()
-            return
-        }
-        client = started
         started.onReady = {
-            started.send(PlayFrame.Play)
-            listener.started()
+            if (!stopped) {
+                started.send(PlayFrame.Play)
+                listener.started()
+            }
         }
         started.onFailed = { message ->
             if (!stopped) {
@@ -81,8 +80,18 @@ internal class PhysicsSimulation(private val project: Project, private val liste
                 listener.failed(message)
             }
         }
-        started.start()
-        started.send(PlayFrame.Load(request.sceneText, request.projectDir.absolutePath, request.selection?.toIntOrNull() ?: -1))
+        val installed = synchronized(lifecycle) {
+            if (stopped) false else { client = started; true }
+        }
+        if (!installed) { started.stop(); return }
+        try {
+            if (!stopped) {
+                started.start()
+                started.send(PlayFrame.Load(request.sceneText, request.projectDir.absolutePath, request.selection?.toIntOrNull() ?: -1))
+            }
+        } catch (e: Exception) {
+            if (!stopped) started.onFailed(e.displayMessage())
+        }
     }
 
     private fun failToStart(message: String, output: String) {
@@ -114,13 +123,15 @@ internal class PhysicsSimulation(private val project: Project, private val liste
     override fun step() = send(PlayFrame.Step)
 
     override fun stop() {
-        stopped = true
-        val c = client ?: return
+        val c = synchronized(lifecycle) {
+            stopped = true
+            client.also { client = null }
+        } ?: return
         ApplicationManager.getApplication().executeOnPooledThread { c.stop() }
     }
 
     override fun input(event: SimulationInput) =
         send(PlayFrame.Input(PlayInput(PlayInput.Kind.valueOf(event.kind.name), event.key, event.button, event.x, event.y)))
 
-    override fun poses(): Map<String, Pose>? = client?.poses()
+    override fun poses(): Map<String, Pose>? = if (stopped) null else client?.poses()
 }

@@ -3,23 +3,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.scene
+package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.gdx.editor.document.renderAssetOf
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
-import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
-import net.nevinsky.abyssus.lib.gdx.editor.content.LightPlacement
-import net.nevinsky.abyssus.lib.gdx.editor.content.CameraPlacement
+import net.nevinsky.abyssus.lib.core.editor.document.renderAssetOf
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.gdx.editor.document.EntityView
-import net.nevinsky.abyssus.lib.gdx.editor.document.sceneDocumentFromEcs
+import net.nevinsky.abyssus.lib.core.editor.document.EntityView
+import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.editor.components.ComponentReader
+import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
@@ -75,7 +75,7 @@ private fun decode(entity: EntityView): DecodedEntity {
 }
 
 /** Binds components the way a scene load does, so the view and the Properties panel show the same values. */
-private val components = ComponentReader(JsonProcessor(NOPLogger.NOP_LOGGER).mapper, NOPLogger.NOP_LOGGER)
+private val components = ComponentReader(JsonProcessor(NOPLogger.NOP_LOGGER))
 
 /** A component that cannot be bound is left out, so one bad value does not hide the entity. */
 private inline fun <reified C : Component> read(node: JsonNode): C? =

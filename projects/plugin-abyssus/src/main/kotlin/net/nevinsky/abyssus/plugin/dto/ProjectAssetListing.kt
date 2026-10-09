@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.dto
 
-import net.nevinsky.abyssus.lib.gdx.editor.document.AssetMetaReader
+import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS

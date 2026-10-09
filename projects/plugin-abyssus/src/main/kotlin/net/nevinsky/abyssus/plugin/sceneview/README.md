@@ -69,15 +69,15 @@ the toolbar, Play and the view's asset storage.
 - **Drags preview, then write once.** During a drag `ScenePreview` overrides the dragged entity's placement. On release
   one `editSceneJson` command ("Move Entity" / "Rotate Entity") writes it. The document change re-reads params, and
   the override stays until they arrive so the object doesn't jump back.
-- **Play shows poses, never writes them.** With a `sceneSimulation` provider installed (Abyssus Physics), the toolbar
+- **Play shows poses, never writes them.** With an available `sceneSimulation` provider, the toolbar
   has Play, Pause, Step and Stop. `PlayState` starts the provider's simulation from the scene's document text, the
   project folder and the selection. Each frame the panel copies the simulation's latest poses into
   `SceneViewState.poses`. The renderer's `posedContent` applies them over the authored placements, keeping each
   placement's scale, so drawing, picking, markers and overlays all see them. A drag preview applies on top. While a
   simulation is active, gizmos are off (`SceneViewState.gizmosEnabled`), Move/Rotate/Drop are disabled, and every key
   but Escape goes to the simulation and is consumed. Mouse buttons and moves go to it too, and the camera still
-  orbits. Escape stops. `SceneFileEditor` stops play in `beforeDocumentChange` of the scene or its project file, so
-  any edit (text, panel, tree) applies to the authored scene. Closing the tab stops it too. A simulation that ends on
+  orbits. Escape stops. `SceneFileEditor` stops play before scene edits or changes to project render inputs. A change only
+  to `physicsEnabled` uses provider availability and leaves unrelated available simulations running. Closing the tab stops it too. A simulation that ends on
   its own (`FAILED`) returns the view to the authored poses; its provider shows the notification. A provider that
   throws is switched off for the view with one logged error.
 - **Overlays draw twice a frame.** Each `sceneOverlay` provider gets one `SceneOverlay` per view. `drawOverlays` calls
@@ -85,7 +85,12 @@ the toolbar, Play and the view's asset storage.
   after the selection and gizmo without it. They see the content as drawn (poses and previews applied) and the
   scene's raw `ecs` (`SceneRenderParams.ecs`). They draw only through `LineSink` and own no GL. An overlay that throws
   is disposed and switched off for that view with one error naming its plugin. Its `actions()` (such as Show Physics)
-  join the toolbar.
+  join the toolbar only while the provider is available. Both provider interfaces have default-true
+  `isAvailable(project, file)`, preserving old compiled extensions. Settings and structural VFS events refresh availability and Play
+  selection on the EDT; draw uses cached availability. Built-in physics requires an admitted project with
+  `physicsEnabled: true` and draws typed collider/constraint geometry without Jolt or schemas. Asset outlines use
+  the scene's native project. Disabling physics stops its active session, rejects late callbacks and restores
+  authored poses, while other available providers continue working.
 - **Objects without rotation.** A camera whose `lookAtId` resolves, a point light, and a light aimed at anything
   other than a direction handle get Move handles only. A directional or spot light aimed at a `HANDLE` entity keeps
   its rings, but a rotate drag on it turns the direction and moves the handle (`ScenePreview.aimedTarget`), writing

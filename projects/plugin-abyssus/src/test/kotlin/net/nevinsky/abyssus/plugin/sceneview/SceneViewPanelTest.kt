@@ -4,16 +4,16 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.CameraParams
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.scene.sceneContentOf
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import com.intellij.openapi.actionSystem.Separator
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.plugin.projectView.AddAssetGroup
@@ -45,7 +45,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             choices[1].actionPerformed(TestActionEvent.createTestEvent(choices[1]))
             assertEquals("0", selected)
             val document = FileDocumentManager.getInstance().getDocument(file)!!
-            val light = sceneContentOf(net.nevinsky.abyssus.lib.gdx.editor.parseScene(document.text)).lights.single()
+            val light = sceneContentOf(net.nevinsky.abyssus.lib.core.editor.parseScene(document.text)).lights.single()
             assertEquals(Vec3(10f, 0f, -4f), light.position)
             WriteCommandAction.runWriteCommandAction(project) { document.setText("not json") }
             panel.setParams(params)

@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.gdx.editor.content
+package net.nevinsky.abyssus.lib.core.editor.content
 
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_CONE_ANGLE
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_EDGE_SOFTNESS

@@ -10,11 +10,19 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.gdx.editor.document.*
-import net.nevinsky.abyssus.lib.gdx.editor.meta.*
+import net.nevinsky.abyssus.lib.core.editor.meta.ComponentSection
+import net.nevinsky.abyssus.lib.core.editor.meta.EntityAssetChoices
+import net.nevinsky.abyssus.lib.core.editor.meta.EntitySections
+import net.nevinsky.abyssus.lib.core.editor.meta.RenderOptics
+import net.nevinsky.abyssus.lib.core.editor.meta.readEntitySections
+import net.nevinsky.abyssus.lib.core.editor.meta.readRenderOptics
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.meta.*
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
+import net.nevinsky.abyssus.plugin.dto.ProjectSettings
+import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.projectView.*
@@ -29,6 +37,8 @@ import java.io.File
 sealed interface PanelState {
     /** No asset to describe: [message], and under it [hint] when there is one. */
     data class Empty(val message: String, val hint: String?) : PanelState
+
+    data class Project(val file: VirtualFile, val name: String, val settings: ProjectSettings) : PanelState
 
     data class UISceneState(
         val file: VirtualFile,
@@ -125,7 +135,8 @@ fun readEntityState(target: ComponentTarget, services: PanelServices): PanelStat
         SceneComponentEdits.renderAssets(target.file, services.metaFiles).map { it.name },
         SceneComponentEdits.assetsByType(target.file, services.metaFiles).orEmpty(),
     )
-    return when (val read = readEntitySections(root, target.entityId, target.kind, services.schemas.editorFor(target.file), assets,
+    return when (val read = readEntitySections(
+        root, target.entityId, target.kind, services.schemas.editorFor(target.file), assets,
         EditorBundle
     )) {
         is EntitySections.Gone -> PanelState.Empty(read.message, null)
@@ -173,3 +184,7 @@ fun readSceneState(file: VirtualFile, name: String): PanelState = runCatchingKee
     AbyssusDocumentFormat().requireSupported(root, DocumentKind.SCENE)
     PanelState.UISceneState(file, name, root)
 }.getOrElse { PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.documentDisplayMessage()), null) }
+
+/** Project settings use the same admitted, stamp-aware document cache as scene availability. */
+fun readProjectState(file: VirtualFile, name: String, settings: AbyssusProjectSettings): PanelState.Project =
+    PanelState.Project(file, name, settings.getSettings(file))

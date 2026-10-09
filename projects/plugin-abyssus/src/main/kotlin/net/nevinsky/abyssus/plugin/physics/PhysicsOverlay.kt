@@ -16,8 +16,8 @@ import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
-import net.nevinsky.abyssus.lib.gdx.editor.pick.LineSink
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout

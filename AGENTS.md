@@ -16,7 +16,7 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | Ray tracing tests / native jar packaging | `./gradlew :lib-raytracing:test` / `./gradlew :lib-raytracing:verifyNativePackaging` |
 | `physics` tests only | `./gradlew :lib-physics:test` |
 | `core` tests only | `./gradlew :lib-core:test` (one class: `./gradlew :lib-core:test --tests 'net.nevinsky.abyssus.lib.core.assets.loading.AssetStorageTest'`) |
-| `editor-core` tests only | `./gradlew :lib-core-editor:test` (one class: `./gradlew :lib-core-editor:test --tests 'net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCameraTest'`) |
+| `editor-core` tests only | `./gradlew :lib-core-editor:test` (one class: `./gradlew :lib-core-editor:test --tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`) |
 | One plugin test class | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneViewPanelTest'` |
 | Also run GL tests (open a window) | add `-Dabyssus.glTests=true` |
 | Sandbox IDE | `./gradlew :plugin-abyssus:runIde` (open a project with `-PideProject=/path/to/project`) |
@@ -40,7 +40,7 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
     The service supplies built-in kinds plus typed physics kinds when the native project enables physics; game components stay read-only.
   - `terrain/`: the New Terrain dialog and the regeneration controls; generation itself is in `editor-core`.
   - `filetype/`, `language/`: file types, icons, the GLTF PSI.
-- `projects/lib-core-editor/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.gdx.editor`: scene documents (`SceneJson`,
+- `projects/lib-core-editor/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.core.editor`: scene documents (`SceneJson`,
   `SceneDocument`, `DocumentTextEditor`), component editing (`ComponentEditor`, `LightEntities`), the scene read model
   (`SceneContent`), picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge, and the
   headless editing API (`HeadlessEditing`), and the FlightGear and model imports that stage new MODEL asset folders

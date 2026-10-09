@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 private val LOG = Logger.getInstance("net.nevinsky.abyssus.projectView.EntitySelection")
 
 /** Where an entity sits under its scene's node: `ecs` / `<id>` (the `entities` level is not shown). */
-private fun entityPath(entityId: String) = net.nevinsky.abyssus.lib.gdx.editor.document.sceneEntityTreePath(entityId)
+private fun entityPath(entityId: String) = net.nevinsky.abyssus.lib.core.editor.document.sceneEntityTreePath(entityId)
 
 /**
  * What a tree visitor should do with the node at the end of [chain] (the user objects from the view root down) when

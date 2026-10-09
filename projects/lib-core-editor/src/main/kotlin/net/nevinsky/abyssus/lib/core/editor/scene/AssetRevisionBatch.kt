@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.scene
+package net.nevinsky.abyssus.lib.core.editor.scene
 
 import java.io.File
 

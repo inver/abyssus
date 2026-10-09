@@ -27,8 +27,8 @@ import com.intellij.util.ui.JBUI
 import net.nevinsky.abyssus.lib.gdx.AnimationController
 import net.nevinsky.abyssus.lib.gdx.ModelInstance
 import net.nevinsky.abyssus.lib.core.assets.model.PreparedModel
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.Model
 import net.nevinsky.abyssus.lib.gdx.model.ModelData

@@ -57,31 +57,31 @@ of `projects/plugin-abyssus/src/test/testData/project/{Untitled,Physics}` and
 
 ## 4. Restore overlay drawing and gate provider availability
 
-- [ ] 4.1 Restore collider and constraint segments with typed/default-aware JSON decoding and no schema/Jolt access.
+- [x] 4.1 Restore collider and constraint segments with typed/default-aware JSON decoding and no schema/Jolt access.
   Replace `PhysicsOverlayGeometryTest`'s current empty-output assertions with checks for box/sphere/capsule,
   height-field outline, hull marker, scaled offset, motion colors, selected passes, constraint anchors and
   preview/simulated transforms. Resolve assets from the scene's native project and remove the overlay's
   `BaseCtx(project.projectFilePath!!, ...)` wiring. Verify headless geometry tests, unchanged input JSON and
   `:plugin-abyssus:checkNoJolt`.
-- [ ] 4.2 Add default-true `isAvailable(project, file)` to both providers in `sceneview/SceneExtensions.kt`, implement
+- [x] 4.2 Add default-true `isAvailable(project, file)` to both providers in `sceneview/SceneExtensions.kt`, implement
   physics gating and update overlay hosting and Play selection. React to settings changes without reopening;
   unavailable providers contribute no actions/draws and available third-party providers remain usable. Verify
   `SceneExtensionsAvailabilityTest` for off/on transitions, two native projects, outside-project scenes, source
   providers using defaults and already compiled providers implementing only the old interface methods.
-- [ ] 4.3 Stop active physics Play through the existing stop path on disable, including STARTING and PAUSED; reject
+- [x] 4.3 Stop active physics Play through the existing stop path on disable, including STARTING and PAUSED; reject
   late callbacks/poses and restore authored content. Verify `PlayStateTest` with off/on transitions and exactly one
   process stop. Verify that disabling built-in physics does not stop an unrelated available third-party simulation.
-- [ ] 4.4 Update the extension/Play/overlay sections of `docs/ai/architecture.md` and sceneview README for availability
+- [x] 4.4 Update the extension/Play/overlay sections of `docs/ai/architecture.md` and sceneview README for availability
   and restored geometry. Verify `scripts/check-docs.sh`; inspect draw wiring for safe AWT `GdxRuntime.withContext`
   use and ensure the settings read path does not parse or perform file IO per frame.
 
 ## 5. Project properties and manual behavior
 
-- [ ] 5.1 Add `PanelState.Project` and `ProjectDetailsView` alongside the existing `UISceneState`/scene ray properties.
+- [x] 5.1 Add `PanelState.Project` and `ProjectDetailsView` alongside the existing `UISceneState`/scene ray properties.
   Bind the checkbox and problems to settings updates, make unsupported documents read-only, and localize plugin
   text. Verify `PanelStateTest` and panel tests: Untitled off, Physics on, unsupported project cannot be toggled,
   unsaved edits and Undo refresh the checkbox, and selecting a scene still shows existing scene properties.
-- [ ] 5.2 Update the README plugin description and projectView/properties package notes for built-in per-project
+- [x] 5.2 Update the README plugin description and projectView/properties package notes for built-in per-project
   physics. Verify `./gradlew :plugin-abyssus:patchPluginXml` and `scripts/check-docs.sh`.
 - [ ] 5.3 Manual check with `:plugin-abyssus:runIde -PideProject=<copy of Untitled>`: select `.abss`, tick Physics,
   observe one-key edit and new overlay/Play actions, Undo and Redo, then change the unsaved project text. Confirm
@@ -94,6 +94,13 @@ of `projects/plugin-abyssus/src/test/testData/project/{Untitled,Physics}` and
 
 ## 6. Integration
 
-- [ ] 6.1 Run `./gradlew check`, `./gradlew :plugin-abyssus:buildPlugin`, `scripts/check-docs.sh` and
+- [x] 6.1 Run `./gradlew check`, `./gradlew :plugin-abyssus:buildPlugin`, `scripts/check-docs.sh` and
   `openspec validate merge-physics-into-abyssus --strict`; all pass. Review the final zip's IDE/host dependency
   separation and confirm no stale old-module commands remain in active docs or CI configuration.
+
+Latest verification (2026-10-09): the authorized package refactor is complete: all editor declarations and consumers
+use `net.nevinsky.abyssus.lib.core.editor`. A clean editor/plugin rebuild followed by full `check` and `buildPlugin`
+passes, including Control Line's clearance regression after the 2 m outward move of Model 633. Docs paths and strict
+OpenSpec validation pass. The final zip keeps physics in IDE `lib` and Jolt dependencies only in `play-host`.
+The editor jar has no classes in the former namespace; consumers of that namespace must update imports and rebuild.
+Tasks 5.3/5.4 remain unverified manual checks.

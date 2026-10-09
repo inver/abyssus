@@ -4,9 +4,9 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayBackendSelector
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayBackendService
-import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendSelector
+import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendService
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.raytracing.*
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch

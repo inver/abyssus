@@ -5,19 +5,19 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.CameraParams
-import net.nevinsky.abyssus.lib.gdx.editor.scene.cameraDirectionOf
-import net.nevinsky.abyssus.lib.gdx.editor.scene.renderParamsOf
-import net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
-import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
+import net.nevinsky.abyssus.lib.core.editor.scene.cameraDirectionOf
+import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.gdx.editor.parseScene
-import net.nevinsky.abyssus.lib.gdx.editor.pick.DragResult
-import net.nevinsky.abyssus.lib.gdx.editor.pick.GizmoAxis
-import net.nevinsky.abyssus.lib.gdx.editor.pick.GizmoMode
+import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
+import net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis
+import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

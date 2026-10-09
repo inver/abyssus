@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.components
+package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.editor.ecs.EcsWriter
+import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import net.nevinsky.abyssus.lib.core.dto.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
@@ -17,6 +17,12 @@ import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.editor.components.ComponentField
+import net.nevinsky.abyssus.lib.core.editor.components.ComponentKind
+import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
+import net.nevinsky.abyssus.lib.core.editor.components.FieldKind
+import net.nevinsky.abyssus.lib.core.editor.components.RuntimeCodec
+import net.nevinsky.abyssus.lib.core.editor.components.decimalText
 
 private fun <C : Component> floatField(name: String, get: (C) -> Float, set: (C, Float) -> Unit) =
     ComponentField<C>(name, FieldKind.FLOAT, { decimalText(get(it)) }, { c, t -> set(c, t.trim().toFloat()) })
@@ -30,12 +36,21 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
         codecName: String,
         fields: List<ComponentField<C>>,
         noinline create: () -> C,
-    ): ComponentKind<C> = ComponentKind(codecName, RuntimeCodec(codecName, C::class.java, reader, writer), fields, create)
+    ): ComponentKind<C> =
+        ComponentKind(codecName, RuntimeCodec(codecName, C::class.java, reader, writer), fields, create)
 
     val kinds: List<ComponentKind<*>> = listOf(
         kind<NameComponent>(
             "NameComponent",
-            listOf(ComponentField("name", FieldKind.TEXT, { it.name.orEmpty() }, { c, t -> c.name = t.ifEmpty { null } }, optional = true)),
+            listOf(
+                ComponentField(
+                    "name",
+                    FieldKind.TEXT,
+                    { it.name.orEmpty() },
+                    { c, t -> c.name = t.ifEmpty { null } },
+                    optional = true
+                )
+            ),
         ) { NameComponent() },
         kind<TypeComponent>(
             "TypeComponent",

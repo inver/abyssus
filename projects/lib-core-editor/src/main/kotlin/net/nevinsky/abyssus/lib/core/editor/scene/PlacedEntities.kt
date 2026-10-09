@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.scene
+package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 
-import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
 
 /** An entity drawn from a loaded asset. */

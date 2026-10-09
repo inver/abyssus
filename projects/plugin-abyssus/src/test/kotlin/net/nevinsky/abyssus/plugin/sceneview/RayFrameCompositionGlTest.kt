@@ -4,13 +4,13 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneDisplay
-import net.nevinsky.abyssus.lib.gdx.editor.ray.captureRayDisplay
-import net.nevinsky.abyssus.lib.gdx.editor.scene.FogParams
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
-import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneDisplay
+import net.nevinsky.abyssus.lib.core.editor.ray.captureRayDisplay
+import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20

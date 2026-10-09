@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayAssetLease
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssets
+import net.nevinsky.abyssus.lib.core.editor.ray.RayAssetLease
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssets
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.plugin.AssetLoading
 import net.nevinsky.abyssus.plugin.ProjectAssets

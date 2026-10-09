@@ -2,23 +2,24 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.gdx.editor.components
+package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.editor.ecs.EcsWriter
+import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.dto.LightDto
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.components.EditResult
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
 /** Sun is a directional light with different initial values, never a separate file type. */
 enum class LightPreset(
@@ -56,7 +57,7 @@ data class AddedLight(val result: EditResult, val entityId: String? = null)
 /** Edits only the JSON tree; callers write it through editSceneJson as a single undoable command. */
 class LightEntities(private val messages: EditorMessages) {
     private val nodes = JsonNodeFactory.instance
-    private val writer = EcsWriter(JsonProcessor(NOPLogger.NOP_LOGGER).mapper)
+    private val writer = EcsWriter(JsonProcessor(NOPLogger.NOP_LOGGER))
 
     fun canAdd(root: JsonNode): Boolean = SceneEntityTree(root).canAdd()
 

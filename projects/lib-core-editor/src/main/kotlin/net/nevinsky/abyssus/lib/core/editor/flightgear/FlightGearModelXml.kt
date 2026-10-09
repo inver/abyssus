@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.flightgear
+package net.nevinsky.abyssus.lib.core.editor.flightgear
 
 import org.w3c.dom.Element
 import org.xml.sax.SAXException

@@ -1,9 +1,9 @@
 package net.nevinsky.abyssus.plugin.physics
 
-import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.gdx.editor.components.ComponentEditor
-import net.nevinsky.abyssus.lib.gdx.editor.components.EditResult
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
+import net.nevinsky.abyssus.lib.core.editor.components.EditResult
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -20,6 +20,14 @@ class PhysicsComponentKindsTest {
         val preserved = scene(""""RigidBodyComponent":{"mass":1.000,"extension":{"n":0.123450}}""")
         assertEquals(EditResult.Changed, editor.update(preserved, "0", "RigidBodyComponent", "mass", "2"))
         assertEquals("""{"mass":2,"extension":{"n":0.123450}}""", preserved.at("/ecs/entities/0/components/RigidBodyComponent").toString())
+    }
+
+    @Test fun returningNestedFieldsToDefaultsPreservesUnknownChildren() {
+        val root = scene(""""ColliderComponent":{"offset":{"x":1,"extension":{"n":0.123450}},"halfExtents":{"x":1,"y":0.5000,"extension":42}}""")
+        assertEquals(EditResult.Changed, editor.update(root,"0","ColliderComponent","offset.x","0"))
+        assertEquals("""{"extension":{"n":0.123450}}""",root.at("/ecs/entities/0/components/ColliderComponent/offset").toString())
+        assertEquals(EditResult.Changed, editor.update(root,"0","ColliderComponent","halfExtents.x","0.5"))
+        assertEquals("""{"y":0.5000,"extension":42}""",root.at("/ecs/entities/0/components/ColliderComponent/halfExtents").toString())
     }
 
     @Test fun fullClassNameIsEditableAndDoesNotOfferDuplicate() {

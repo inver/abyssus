@@ -5,18 +5,18 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.gdx.editor.document.isSceneComponentEntry
-import net.nevinsky.abyssus.lib.gdx.editor.document.isSceneEcsEntry
-import net.nevinsky.abyssus.lib.gdx.editor.document.isSceneEntityEntry
-import net.nevinsky.abyssus.lib.gdx.editor.document.sceneComponentRows
-import net.nevinsky.abyssus.lib.gdx.editor.document.sceneDocumentFromEcs
-import net.nevinsky.abyssus.lib.gdx.editor.document.sceneEcsRows
-import net.nevinsky.abyssus.lib.gdx.editor.document.sceneEntityView
+import net.nevinsky.abyssus.lib.core.editor.document.isSceneComponentEntry
+import net.nevinsky.abyssus.lib.core.editor.document.isSceneEcsEntry
+import net.nevinsky.abyssus.lib.core.editor.document.isSceneEntityEntry
+import net.nevinsky.abyssus.lib.core.editor.document.sceneComponentRows
+import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
+import net.nevinsky.abyssus.lib.core.editor.document.sceneEcsRows
+import net.nevinsky.abyssus.lib.core.editor.document.sceneEntityView
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.plugin.dto.SceneError
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 

@@ -5,26 +5,26 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.gdx.editor.scene.CameraParams
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.scene.renderParamsOf
-import net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.lib.gdx.editor.pick.OrientedBox
-import net.nevinsky.abyssus.lib.gdx.editor.pick.SceneInteraction
-import net.nevinsky.abyssus.lib.gdx.editor.pick.ScenePicker
-import net.nevinsky.abyssus.lib.gdx.editor.pick.ScenePreview
-import net.nevinsky.abyssus.lib.gdx.editor.pick.TerrainTarget
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
-import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.gdx.editor.content.LightKind
-import net.nevinsky.abyssus.lib.gdx.editor.content.LightPlacement
+import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
+import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
+import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.core.editor.pick.OrientedBox
+import net.nevinsky.abyssus.lib.core.editor.pick.SceneInteraction
+import net.nevinsky.abyssus.lib.core.editor.pick.ScenePicker
+import net.nevinsky.abyssus.lib.core.editor.pick.ScenePreview
+import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.content.LightKind
+import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.gdx.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrFixtures
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
@@ -132,7 +132,7 @@ class SceneRenderGlTest {
                 renderer.state.selectedId = "0"
                 it.onTransform = { id, edit ->
                     val selected = ScenePreview().selected(renderer.content, id)!!
-                    val moved = net.nevinsky.abyssus.lib.gdx.editor.pick.DragResult(selected.transform.copy(position = edit.position!!), selected.direction)
+                    val moved = net.nevinsky.abyssus.lib.core.editor.pick.DragResult(selected.transform.copy(position = edit.position!!), selected.direction)
                     renderer.params = p.copy(content = ScenePreview().apply(p.content, id, moved))
                     it.paramsChanged(renderer.params)
                     written++
@@ -641,7 +641,7 @@ class SceneRenderGlTest {
     @Test
     fun aSelectedModelRendersItsGizmoWithoutErrors() {
         val p = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
-        for (mode in net.nevinsky.abyssus.lib.gdx.editor.pick.GizmoMode.entries) {
+        for (mode in net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode.entries) {
             var gizmo = false
             val r = GlHarness.render(p, 120) { renderer, _ ->
                 renderer.state.selectedId = "0"

@@ -8,9 +8,9 @@ import net.nevinsky.abyssus.lib.core.assets.displayMessage
 
 import net.nevinsky.abyssus.lib.physics.play.PlayFrame
 import net.nevinsky.abyssus.lib.physics.play.PlayProtocol
-import net.nevinsky.abyssus.lib.gdx.editor.content.Pose
-import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Pose
+import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.net.Socket

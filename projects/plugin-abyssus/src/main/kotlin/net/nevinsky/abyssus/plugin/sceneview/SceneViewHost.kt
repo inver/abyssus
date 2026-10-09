@@ -3,7 +3,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
 /** Tree integration supplied by the project pane, without exposing tree nodes to the scene editor. */
 interface SceneViewHost {

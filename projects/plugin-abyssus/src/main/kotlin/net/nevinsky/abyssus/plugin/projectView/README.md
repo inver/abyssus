@@ -27,6 +27,10 @@ the row actions that call `editSceneJson` (`projects/plugin-abyssus/src/main/kot
 | `UnusedFilter`, `AbyssusFooter` | "Show Only Unused Assets" (per project) and the counts footer |
 | `OpenAbyssusViewActivity` | Switches to this pane on startup only under `-Dabyssus.openView=true` (set by `runIde`) |
 
+Selecting a `.abss` root shows project settings in Abyssus Properties, including the built-in **Physics** checkbox.
+It writes only `physicsEnabled` through `editSceneJson`; missing means off. Scene roots retain their ray properties.
+Physics component add/edit choices follow the selected scene's native project settings, including unsaved edits.
+
 ## Things that are not obvious
 
 - **Import Model with Add to scene is one undo step.** `importModel` runs one outer command:

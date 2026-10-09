@@ -2,31 +2,31 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.gdx.editor.ray
+package net.nevinsky.abyssus.lib.core.editor.ray
 
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModelPose
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssetState
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneChange
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneConversion
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneFrame
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneSnapshots
-import net.nevinsky.abyssus.lib.gdx.editor.ray.raySceneDiff
-import net.nevinsky.abyssus.lib.gdx.editor.scene.LightSet
-import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.gdx.editor.scene.FogParams
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.content.Rgba
-import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
-import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.ray.RayModelPose
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssetState
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneChange
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneConversion
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneFrame
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneSnapshots
+import net.nevinsky.abyssus.lib.core.editor.ray.raySceneDiff
+import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
+import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.lib.raytracing.RayColor
 import net.nevinsky.abyssus.lib.raytracing.RayEnvironment
 import net.nevinsky.abyssus.lib.raytracing.RayFog
-import net.nevinsky.abyssus.lib.gdx.editor.pick.DragResult
+import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File

@@ -254,12 +254,17 @@ The editor retains source aliases in its `format` package. None of these checks 
   draws lines and markers in every Scene view. `create(project, file)` makes one `SceneOverlay` per view, disposed
   with it. `draw(view, lines)` runs on the render thread inside `GdxRuntime.withContext`, twice a frame (depth-tested,
   then on top), and sees the shown poses and the scene's `ecs`. An overlay that throws is switched off for that view
-  with one logged error.
+  with one logged error. `isAvailable(project, file)` defaults to true, including for already compiled providers.
+  Unavailable overlays supply no toolbar actions or draws. Built-in physics uses the scene's admitted native project
+  switch and decodes colliders/constraints with typed defaults; its asset lookup uses that project's directory.
 - **`net.nevinsky.abyssus.sceneSimulation` (IDE extension point, interface `SceneSimulationProvider`):** Play in the
-  Scene view. With one installed, the toolbar shows Play, Pause, Step and Stop. `start(request, listener)` gets the
+  Scene view. With an available provider, the toolbar shows Play, Pause, Step and Stop. `start(request, listener)` gets the
   scene text, project folder and selection, and returns a `SceneSimulation`. Its `poses()` replace the authored
   placements as transient overrides (`ScenePreview.withPoses`); nothing is written. Any edit of the scene stops play
-  first. See `PlayState` and `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md`.
+  first. Physics-only project edits avoid a render reload so they do not stop unrelated providers. `isAvailable(project, file)` defaults to true. Project settings and structural VFS events refresh provider selection and overlays
+  on the EDT without reopening; settings are cached, with no parsing or IO in the draw path. Disabling physics stops
+  its STARTING, PLAYING or PAUSED session once, drops late callbacks/poses, and restores authored content. Other
+  available providers remain usable. See `PlayState` and `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md`.
 - **A new asset kind drawn in the scene view:** an `AssetLoader` in `core` (built in `AssetLoading`), and a placement in
   `SceneContent`.
 

@@ -12,7 +12,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.gdx.Renderable
 import net.nevinsky.abyssus.lib.gdx.mesh.Mesh
 import net.nevinsky.abyssus.plugin.sceneview.GlHarness
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test

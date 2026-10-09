@@ -4,24 +4,24 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.ray.rayTestModel
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayAssetLease
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayFrameContext
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneAssets
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneDisplay
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySceneSnapshots
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RaySnapshotLimits
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayViewFeed
-import net.nevinsky.abyssus.lib.gdx.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.gdx.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModePhase
+import net.nevinsky.abyssus.lib.core.editor.ray.rayTestModel
+import net.nevinsky.abyssus.lib.core.editor.ray.RayAssetLease
+import net.nevinsky.abyssus.lib.core.editor.ray.RayFrameContext
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssets
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneDisplay
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneSnapshots
+import net.nevinsky.abyssus.lib.core.editor.ray.RaySnapshotLimits
+import net.nevinsky.abyssus.lib.core.editor.ray.RayViewFeed
+import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
 
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
-import net.nevinsky.abyssus.lib.gdx.editor.content.Quat
-import net.nevinsky.abyssus.lib.gdx.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.gdx.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.plugin.AssetLoading

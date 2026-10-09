@@ -9,11 +9,11 @@ import net.nevinsky.abyssus.plugin.ui.thumbnail
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.editor.testAsset
+import net.nevinsky.abyssus.lib.core.editor.testAsset
 import net.nevinsky.abyssus.plugin.dto.ProjectDto
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
-import net.nevinsky.abyssus.lib.gdx.editor.parseScene
-import net.nevinsky.abyssus.lib.gdx.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.plugin.testMetaFiles
 import net.nevinsky.abyssus.plugin.testCore
 

@@ -8,17 +8,17 @@ import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.editor.EditorMessages
-import net.nevinsky.abyssus.lib.gdx.editor.components.*
-import net.nevinsky.abyssus.lib.gdx.editor.ecs.EcsWriter
+import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.components.*
+import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import net.nevinsky.abyssus.lib.physics.*
 import org.slf4j.helpers.NOPLogger
 
 /** Fixed physics fields supplied by plugin composition, with no platform, GL or native dependencies. */
 class PhysicsComponentKinds(private val messages: EditorMessages) {
-    private val mapper = JsonProcessor(NOPLogger.NOP_LOGGER).mapper
-    private val reader = ComponentReader(mapper, NOPLogger.NOP_LOGGER)
-    private val writer = EcsWriter(mapper)
+    private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
+    private val reader = ComponentReader(json)
+    private val writer = EcsWriter(json)
 
     private fun <C : Component> kind(type: Class<C>, fields: List<ComponentField<C>>, create: () -> C) =
         ComponentKind(type.simpleName, object : ComponentCodec<C> {

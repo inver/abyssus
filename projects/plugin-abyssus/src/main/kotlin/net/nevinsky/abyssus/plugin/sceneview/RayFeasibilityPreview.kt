@@ -4,9 +4,9 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayFeasibilityLoop
-import net.nevinsky.abyssus.lib.gdx.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.lib.gdx.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.ray.RayFeasibilityLoop
+import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
 import net.nevinsky.abyssus.lib.raytracing.*
 import org.lwjgl.opengl.GL32C.*

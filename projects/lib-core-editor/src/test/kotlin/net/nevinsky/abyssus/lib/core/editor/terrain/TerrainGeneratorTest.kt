@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.terrain
+package net.nevinsky.abyssus.lib.core.editor.terrain
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals

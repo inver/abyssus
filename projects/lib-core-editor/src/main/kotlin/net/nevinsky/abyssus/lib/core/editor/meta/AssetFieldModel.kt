@@ -3,10 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.gdx.editor.meta
+package net.nevinsky.abyssus.lib.core.editor.meta
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.editor.meta.PropertyRow
+import net.nevinsky.abyssus.lib.core.editor.meta.RowKind
 import java.io.File
 
 /**
@@ -55,7 +57,7 @@ fun assetFieldStates(
     }
 }
 
-/** A row of an asset's details: a [PropertyRow] as `meta.json` lists it, or the editor of an [AssetFieldState]. */
+/** A row of an asset's details: a [net.nevinsky.abyssus.lib.core.editor.meta.PropertyRow] as `meta.json` lists it, or the editor of an [AssetFieldState]. */
 sealed interface DetailRow {
     data class Plain(val row: PropertyRow) : DetailRow
     data class Field(val state: AssetFieldState) : DetailRow

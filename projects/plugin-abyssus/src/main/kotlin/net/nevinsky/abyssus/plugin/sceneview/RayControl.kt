@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.ray.RayModeSnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.RayModeSnapshot
 
 import com.intellij.openapi.Disposable
 

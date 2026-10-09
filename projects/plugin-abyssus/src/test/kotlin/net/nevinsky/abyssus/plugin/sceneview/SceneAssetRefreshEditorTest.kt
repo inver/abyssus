@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.gdx.editor.scene.AssetRevisionBatch
-import net.nevinsky.abyssus.lib.gdx.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.gdx.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 import com.intellij.openapi.command.WriteCommandAction
