@@ -80,7 +80,7 @@ class PhysicsOverlay(initialProjectDir: File?) : SceneOverlay {
         }
     }
 
-    override fun actions(): List<AnAction> = listOf(object : ToggleAction(
+    private val toolbarActions: List<AnAction> = listOf(object : ToggleAction(
         AbyssusPhysicsBundle.message("showPhysics"),
         AbyssusPhysicsBundle.message("showPhysicsTooltip"),
         AllIcons.Actions.Show,
@@ -92,6 +92,8 @@ class PhysicsOverlay(initialProjectDir: File?) : SceneOverlay {
 
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
     })
+
+    override fun actions(): List<AnAction> = toolbarActions
 
     /** For tests: the project folder terrain sizes are read from. */
     internal fun useProject(dir: File) {

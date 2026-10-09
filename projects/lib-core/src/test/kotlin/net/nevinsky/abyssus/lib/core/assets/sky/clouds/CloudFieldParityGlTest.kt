@@ -5,15 +5,12 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CLOUD_NOISE_PERIOD
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
 import net.nevinsky.abyssus.lib.core.assets.skyShaders
 import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import org.junit.Assert.assertTrue
@@ -74,7 +71,7 @@ class CloudFieldParityGlTest {
 
     @Test
     fun shaderMatchesTheKotlinField() {
-        val bands = CloudType.entries.map { CloudBand(it.level, it, coverage = 0.55f, windX = 7f, windZ = -3f) }
+        val bands = CloudType.entries.map { CloudBand(it, it.level, coverage = 0.55f, windX = 7f, windZ = -3f) }
         val results = HashMap<CloudType, FloatArray>()
         TestGl.run {
             val gl = Gdx.gl

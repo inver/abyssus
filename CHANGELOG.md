@@ -12,6 +12,9 @@
 - Older unmarked files and files from other editors are unsupported. Plugin loading, editing and automatic formatting refuse them without
   rewriting them. No importer or automatic migration is included. External model, image, terrain binary and recipe encodings remain unchanged.
 ### Added
+- **New Weather Preset from Sky...** on procedural sky asset rows: snapshot the referenced clouds as a new native
+  `CLOUDS` asset with resolved defaults and the stored technique, using unsaved metadata, guarded Undo and stable
+  Redo. The source files remain unchanged and the snapshot starts unused.
 - Clouds on procedural skies: a new `CLOUDS` asset (low, mid and high bands with cloud types, coverage, density and wind, and a technique) that a procedural sky names by `uuid` and loads like a terrain loads its textures; drawn layered, as shells or volumetric (a per-view **Clouds** toolbar choice overrides the asset's technique, and slow volumetric clouds fall back to shells), dimming the sun light when they cover it; the skybox chooser reads `procedural sky · clouds`
 - **Import Model...** on a project's Assets node: an OBJ, FBX, 3DS, DAE, glTF or GLB file becomes a native model asset (`model.glb`, PNG textures and a `source.json`), checked first in a dialog with a live preview, unit, up axis and size settings and the animation to play; skeletons and animations are kept, the model stands on y = 0, centred, and **Add to scene** places it in the selected scene view in the same undoable step. Blender files are refused with a hint to export glTF
 - `gdx-model`'s `GltfWriter` writes any `ModelData` as binary glTF (nodes, skins, animations, metallic-roughness materials); the FlightGear import now writes through it

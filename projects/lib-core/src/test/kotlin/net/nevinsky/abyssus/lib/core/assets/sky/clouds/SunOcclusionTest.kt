@@ -7,12 +7,6 @@ package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SUN_OCCLUSION_FLOOR
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SunOcclusion
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.bandDistance
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -23,13 +17,16 @@ class SunOcclusionTest {
     private val sun = Vector3(0.3f, 0.8f, 0.2f).nor()
     private val occlusion = SunOcclusion()
 
-    private fun clouds(vararg bands: CloudBand) = CloudMeta(low = bands.firstOrNull { it.level == CloudLevel.LOW }, mid = bands.firstOrNull { it.level == CloudLevel.MID }, high = bands.firstOrNull { it.level == CloudLevel.HIGH })
+    private fun clouds(vararg bands: CloudBand) = CloudMeta(
+        low = bands.firstOrNull { it.level == CloudLevel.LOW },
+        mid = bands.firstOrNull { it.level == CloudLevel.MID },
+        high = bands.firstOrNull { it.level == CloudLevel.HIGH })
 
     private fun step(clouds: CloudMeta?, delta: Float, time: Double = 0.0) =
         occlusion.update(clouds, sun, 0f, 0f, radius, 100f, time, delta)
 
-    private val overcast = clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 1f))
-    private val clear = clouds(CloudBand(CloudLevel.LOW, CloudType.CUMULUS, coverage = 0f))
+    private val overcast = clouds(CloudBand(CloudType.CUMULUS, CloudLevel.LOW, coverage = 1f))
+    private val clear = clouds(CloudBand(CloudType.CUMULUS, CloudLevel.LOW, coverage = 0f))
 
     @Test
     fun aCloudOnTheSunRayDimsIt() {
@@ -51,10 +48,32 @@ class SunOcclusionTest {
     @Test
     fun stormFloorIsTenPercent() {
         val asIs = clouds(
-            CloudBand(CloudLevel.LOW, CloudType.STRATOCUMULUS, base = 500f, top = 2200f, coverage = 0.92f, density = 1.6f, windX = 16f, windZ = 7f),
-            CloudBand(CloudLevel.MID, CloudType.ALTOSTRATUS, base = 3000f, top = 6000f, coverage = 0.85f, density = 0.9f, windX = 24f, windZ = 9f),
+            CloudBand(
+                CloudType.STRATOCUMULUS,
+                CloudLevel.LOW,
+                base = 500f,
+                top = 2200f,
+                coverage = 0.92f,
+                density = 1.6f,
+                windX = 16f,
+                windZ = 7f
+            ),
+            CloudBand(
+                CloudType.ALTOSTRATUS,
+                CloudLevel.MID,
+                base = 3000f,
+                top = 6000f,
+                coverage = 0.85f,
+                density = 0.9f,
+                windX = 24f,
+                windZ = 9f
+            ),
         )
-        val covered = asIs.copy(low = asIs.low?.copy(coverage = 1f), mid = asIs.mid?.copy(coverage = 1f), high = asIs.high?.copy(coverage = 1f))
+        val covered = asIs.copy(
+            low = asIs.low?.copy(coverage = 1f),
+            mid = asIs.mid?.copy(coverage = 1f),
+            high = asIs.high?.copy(coverage = 1f)
+        )
         assertEquals(SUN_OCCLUSION_FLOOR, step(covered, 0f), 1e-6f)
         for (t in 0 until 200) {
             val value = occlusion.instant(asIs, sun, t * 97f, t * -61f, radius, 100f, t * 3.0)
