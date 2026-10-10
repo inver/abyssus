@@ -4,14 +4,23 @@
 
 ### Requirement: Foliage component is built in
 
-`FoliageComponent` SHALL be a built-in component holding an `assetName`. It SHALL load into the engine and write back with
-its unknown members and number text unchanged. A missing `assetName` SHALL load as none. A name that is not one of the
-project's asset folders SHALL load with one warning, and the component SHALL be kept.
+A native foliage component SHALL load as a built-in component with an optional asset name. Loading and writing it
+SHALL preserve unknown members, key order, numeric spelling and omitted defaults. Unresolved asset names SHALL be
+retained and reported once during reference validation without rewriting the document. Malformed modeled values
+SHALL remain raw with a warning rather than discarding extension data.
 
 #### Scenario: Round trip
-- **WHEN** a scene whose terrain entity `1` holds `"FoliageComponent": {"assetName": "foliage_meadow", "note": "x"}` is loaded and written back
-- **THEN** entity `1` has a foliage component naming `foliage_meadow`, and the written block holds the same object, `note` included
+- **WHEN** entity `1` holds `"FoliageComponent": {"assetName": "foliage_meadow", "note": "x", "extra": {"weight": 2.50, "epsilon": 1.0E-4}}` and the supported scene is loaded and written
+- **THEN** the bound asset is `foliage_meadow` and the component's unknown values, key order and number text are unchanged
 
 #### Scenario: Unknown folder
-- **WHEN** `assetName` names a folder the project does not have
-- **THEN** the scene loads, one warning names the entity and folder, and the component is written back unchanged
+- **WHEN** an asset name has no supported project foliage asset
+- **THEN** validation warns once, other scene content remains available, and the original name round-trips unchanged
+
+#### Scenario: Missing asset name
+- **WHEN** a foliage component omits its asset name
+- **THEN** it binds as none, produces no foliage entry and does not gain a default member on write
+
+#### Scenario: Malformed asset name
+- **WHEN** the component's asset name is a number
+- **THEN** the unbound component remains raw with one warning and preserves that number on write
