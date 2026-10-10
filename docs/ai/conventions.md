@@ -16,12 +16,12 @@
 ## Module boundary
 
 `lib-gdx` depends only on libGDX, LWJGL Assimp and the slf4j API (`projects/lib-gdx`). Nothing in it may import
-`com.intellij.*` or `net.nevinsky.abyssus` plugin packages. `core` exposes it with `api(project(":lib-gdx"))`; the plugin receives it through `core` and `editor-core`.
+`com.intellij.*` or `net.nevinsky.abyssus` plugin packages. `lib-core` exposes it with `api(project(":lib-gdx"))`; the plugin receives it through `lib-core` and `lib-core-editor`.
 
 ## Logging
 
-- **SLF4J is the one logging interface.** `lib-gdx`, `core`, `raytracing` and `physics` (plain JVM) log through
-  `org.slf4j.Logger` and never import `com.intellij.*`. `core`, `raytracing` and `physics` take a `Logger` through
+- **SLF4J is the one logging interface.** `lib-gdx`, `lib-core`, `lib-raytracing` and `lib-physics` (plain JVM) log through
+  `org.slf4j.Logger` and never import `com.intellij.*`. `lib-core`, `lib-raytracing` and `lib-physics` take a `Logger` through
   constructors (`JsonProcessor`, `RuntimeSceneLoader`, `PhysicsWorld`, `PlayHost`, `AssetLoading`,
   `MetalRayBackendFactory`, `VulkanRayBackendFactory`, `RayRenderScheduler`); `lib-gdx`'s static loaders read
   `ModelLogging.logger`. Debug messages are lazy: `log.atDebug().log { "..." }`.
@@ -32,9 +32,9 @@
   passed explicitly because the platform already binds SLF4J to `java.util.logging` for the whole IDE (the IDE's `util-8` library),
   which cannot be changed from a plugin; the plugin zip excludes `org.slf4j` and uses the platform's API classes.
   SLF4J `error` is logged as an IDE *warn*, because `Logger.error` raises the IDE-error dialog.
-- **Outside the IDE** (the play host, the Control Line game) `physics`'s runtime dependency `slf4j-simple` binds SLF4J to
-  stderr; Abyssus bundles `physics` without its dependencies, so it never reaches the IDE.
-- **Tests** use `RecordingLogger`, `warningsTo(list)` or `failOnWarnings()` (`core` test fixtures) or `NOPLogger.NOP_LOGGER`; `raytracing` has its own small recorder.
+- **Outside the IDE** (the play host, the Control Line game) `lib-physics`'s runtime dependency `slf4j-simple` binds SLF4J to
+  stderr; Abyssus bundles `lib-physics` without its dependencies, so it never reaches the IDE.
+- **Tests** use `RecordingLogger`, `warningsTo(list)` or `failOnWarnings()` (`lib-core` test fixtures) or `NOPLogger.NOP_LOGGER`; `lib-raytracing` has its own small recorder.
 
 ## JSON
 
@@ -52,22 +52,24 @@
   provider, a tool window factory, the Abyssus pane, or a deferred service accessor. Constructors must not look up other services;
   injected collaborators or lazy access keep unrelated service groups uninitialized.
 - **Writing a file:** use `editSceneJson` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`); its text transform is
-  `editor-core`'s `DocumentTextEditor`, re-serialized with `SceneJson().inStyleOf`, so a pretty file stays pretty and a
+  `lib-core-editor`'s `DocumentTextEditor`, re-serialized with `SceneJson().inStyleOf`, so a pretty file stays pretty and a
   compact one stays compact. Address entities through `SceneDocument` / `SceneEntityTree`, never by `"ecs"` / `"components"` keys.
 
 ## Writing files
 
 Readers never write (`ConfigFileReader` implementations never write and never throw). Only these edit files, all through
 `editSceneJson` as named undoable commands:
+
 - the eye toggle,
 - Rename Scene,
 - the skybox chooser,
 - scene view gizmo drags and Drop (the same Move Entity command),
 - component add, edit and remove, and Add Light (`SceneComponentEdits`),
+- Add Foliage on a terrain entity,
 - saved ray settings and per-instance optical overrides (`SceneRayEdits`),
 - asset property edits in the properties panel (`AssetMetaEdits` in `properties/AssetMetaEdits.kt`): one `additional` key
   of an asset's `meta.json` per command, named Edit Asset Property. The rules (which keys, validation, defaults, stale
-  values) are `editor-core`'s `AssetMetaEditor`'s, which works on any JSON tree and never touches `version`, `uuid`, `type`,
+  values) are `lib-core-editor`'s `AssetMetaEditor`'s, which works on any JSON tree and never touches `version`, `uuid`, `type`,
   `lastModified` or unknown keys.
 
 **Asset creation and terrain files use asset transactions.** A scene or project file edit never takes it. Regenerating a terrain
@@ -82,6 +84,20 @@ with the reason, rather than overwrite a later change; Undo of a creation also r
 or another asset uses the new asset (`AssetReferenceGuard`), and removes a folder only when it holds exactly what was
 written. Cancellation is honoured only before the first write.
 
+**Foliage Apply combines document and binary edits.** `FoliageMetaEdits` computes a text-preserving metadata
+change. `applyFoliageFiles` checks the current document text, applies the binary `AssetFileCommand` transaction
+with its undo action handed back, then writes metadata through `editSceneJson` and registers the binary action
+in the same platform command. If the document edit fails, it reverts the binary transaction. VFS refresh happens
+after the command. The existing metadata is never a disk snapshot: it retains the platform's document Undo,
+with save actions that persist the restored document after Undo and Redo. Re-bake and strokes use binary
+transactions without changing metadata; a stroke joins both the scene and foliage metadata's undo contexts.
+
+Foliage bake undo retains hashes and deterministic rebuilds rather than full bake arrays. A stale or corrupt
+previous bake, which cannot be rebuilt from current inputs, is preserved in `FoliageUndoCache` on disk and verified
+before restoration. The cache releases failed-command backups immediately, unreachable-action backups during
+cleanup, and all remaining backups on project disposal. Strokes retain only the mask's changed rectangle, with
+whole-file hash checks so Undo refuses an externally replaced mask.
+
 `SceneFormatListener` is the one other writer: it pretty-prints a `.scene` / `.abss` document when it opens in the
 text editor. A new writer goes through `editSceneJson` (it publishes `AbyssusSceneEdited.TOPIC` when done) and gets a
 command name in the message bundle.
@@ -91,7 +107,7 @@ command name in the message bundle.
 - **Catching:** use `runCatchingKeepingCancellation`
   (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/assets/Cancellation.kt`), not `runCatching`. It rethrows
   `CancellationException`, which includes `ProcessCanceledException`, which the platform requires.
-  `./gradlew checkNoRunCatching` (part of `check`) fails on a `runCatching {` in the plugin, `core`, `editor-core`, `physics`, `raytracing` or Control Line.
+  `./gradlew checkNoRunCatching` (part of `check`) fails on a `runCatching {` in the plugin, `lib-core`, `lib-core-editor`, `lib-physics`, `lib-raytracing` or Control Line.
   Source rules share `gradle/checks.gradle.kts`; module singleton exclusions remain explicit in each build file.
 - **Failure text:** show `Throwable.displayMessage()` (the message, or the class name when it has none).
 - **Unreadable files:** an unreadable file or asset becomes a visible failure (an error row, a status message, a
@@ -100,7 +116,7 @@ command name in the message bundle.
 ## UI text
 
 User-visible strings go in `projects/plugin-abyssus/src/main/resources/messages/AbyssusBundle.properties` and are read with
-`AbyssusBundle.message(key, args)`. Text that `editor-core` produces (rejections, entity names, ray fallback reasons)
+`AbyssusBundle.message(key, args)`. Text that `lib-core-editor` produces (rejections, entity names, ray fallback reasons)
 goes in `projects/lib-core-editor/src/main/resources/messages/AbyssusEditorBundle.properties`; that code takes an `EditorMessages`
 by constructor or parameter, the plugin passes `EditorBundle`, a caller without the IDE `ResourceEditorMessages`.
 Escape non-ASCII characters as `\uXXXX` in both files.
@@ -110,7 +126,7 @@ Escape non-ASCII characters as `\uXXXX` in both files.
 - **KDoc:** explains *why* and the contract (thread, null meaning, what is never written), not what the next line
   does. Match the comment density of the file you edit.
 - **Keep logic testable:** keep math and decisions in plain classes without Swing or GL so they get unit tests; logic
-  that needs no IDE type belongs in `editor-core` (`ScenePicker`, `GizmoDrag`, `SceneMarkers`, `EntitySections`,
+  that needs no IDE type belongs in `lib-core-editor` (`ScenePicker`, `GizmoDrag`, `SceneMarkers`, `EntitySections`,
   `toolbarState`), and the plugin's Swing or GL class only forwards to it. A pure part that still needs a Swing or
   IntelliJ type (`SkyboxPickerModel`, `PanelState`) stays in the plugin as its own file.
 - **Names:** `*Dto` for bound file models, `*Reader` for file readers, `*Codec` for editor component mappers, `*Test`

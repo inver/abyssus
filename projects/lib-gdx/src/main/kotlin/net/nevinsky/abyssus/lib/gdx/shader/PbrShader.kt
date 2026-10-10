@@ -17,7 +17,8 @@ import net.nevinsky.abyssus.lib.gdx.model.PBRTextureAttribute
  * [DefaultShader] (a PBR material keeps both) and adds the metallic and roughness factors and the combined
  * metallic-roughness and occlusion textures.
  */
-class PbrShader(config: ShaderConfig, renderable: Renderable?) : DefaultShader(withDefaults(config), renderable!!) {
+class PbrShader(config: ShaderConfig, renderable: Renderable?, instanced: Boolean = false) :
+    DefaultShader(withDefaults(config), renderable!!, instanced) {
     protected var u_metallicFactor: Int
     protected var u_roughnessFactor: Int
     protected var u_metallicRoughnessTexture: Int

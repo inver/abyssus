@@ -63,6 +63,12 @@ class SceneRayControls @JvmOverloads constructor(
     override fun rayMode(scenePath: String) =
         controls.entries.lastOrNull { it.key.path == scenePath }?.value?.lastOrNull()?.mode
 
+    /**
+     * The note of the most recently opened view of [file], which says its ray-traced image has no foliage, or null
+     * when no view with ray tracing is open or the scene it shows has none.
+     */
+    fun foliageNote(file: VirtualFile): String? = controls[file]?.lastOrNull()?.foliageNote
+
     private val controls = LinkedHashMap<VirtualFile, MutableList<RayControl>>()
     private val pending = LinkedHashSet<VirtualFile>()
     private val listeners = mutableListOf<Pair<VirtualFile, () -> Unit>>()

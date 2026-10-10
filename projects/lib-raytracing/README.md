@@ -12,7 +12,7 @@ its geometry, instance structures and readback buffers. All backend/session meth
 run on the same owner worker. Closing a view does not dispose another view's session.
 The module is a plugin dependency. The Scene view renders project models, terrain, materials, lights, sky and fog
 through immutable CPU snapshots. Ray Tracing is enabled from scene Properties, per view and off by default.
-See [scene view integration](../src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md) for conversion, lifecycle,
+See [scene view integration](../plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md) for conversion, lifecycle,
 GL presentation, saved settings and raster fallback. A separate synthetic feasibility preview remains available
 under the developer experiment flag.
 
@@ -123,7 +123,7 @@ or `RayMaterialTest`.
   (`skyMissesShowTheEnvironmentWithExposureAndOrientation`, `disabledOrMissingSkyShowsTheBackground`,
   `RayMaterialTest`). An HDR sky (`RayEnvironment.hdr`) is tone mapped (ACES fit, gamma 1/2.2) when a camera ray sees it,
   like the raster sky, while reflections of it stay linear radiance (`hdrSkyIsToneMappedWhenSeenDirectlyAndLinearWhenReflected`).
-  The plugin produces the texture: `core`'s `RaySkySnapshot` for HDR and cube skies, and a GL bake of a procedural sky.
+  The plugin produces the texture: `lib-core`'s `RaySkySnapshot` for HDR and cube skies, and a GL bake of a procedural sky.
   HDR diffuse lighting arrives as `RayEnvironment.ambientCube` (the sky's six axis colours, blended by the squared normal
   exactly like the raster model shaders, `hdrAmbientCubeLightsSurfacesByNormalLikeTheRasterModelShader`); without it the
   flat `ambient` colour applies.

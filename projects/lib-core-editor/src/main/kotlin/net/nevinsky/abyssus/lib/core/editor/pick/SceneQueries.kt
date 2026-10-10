@@ -12,6 +12,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
 
@@ -35,6 +36,15 @@ interface SceneQueries {
 
     /** The ray through the pixel of a [width] x [height] view, or null for an empty view. */
     fun rayAt(screenX: Int, screenY: Int, width: Int, height: Int): Ray?
+
+    /** The drawn terrain of [entityId]: its data and world matrix, or null when it is not drawn. */
+    fun terrainOf(entityId: String): TerrainTarget?
+
+    /**
+     * The nearest terrain hit along [ray], when it belongs to [entityId]; null when another terrain covers it.
+     * Model boxes do not block the brush, and the camera's far plane limits the ray.
+     */
+    fun terrainHit(entityId: String, ray: Ray): Vector3?
 
     /** The height of the highest surface under [entityId], or null when it cannot drop (terrain, the camera looked through, nothing below). */
     fun groundBelow(entityId: String): Float?
@@ -120,6 +130,25 @@ class SnapshotSceneQueries(
         return if (width <= 0 || height <= 0) null else ScenePicker().pickRay(frame.camera, screenX, screenY, width, height)
     }
 
+    override fun terrainOf(entityId: String): TerrainTarget? =
+        snapshot()?.terrains?.firstOrNull { it.entityId == entityId }
+
+    override fun terrainHit(entityId: String, ray: Ray): Vector3? {
+        val frame = snapshot() ?: return null
+        val picker = ScenePicker()
+        var nearest: TerrainTarget? = null
+        var nearestDistance = Float.POSITIVE_INFINITY
+        for (terrain in frame.terrains) {
+            val distance = picker.terrainDistance(ray, terrain, frame.camera.far) ?: continue
+            if (distance < nearestDistance) {
+                nearest = terrain
+                nearestDistance = distance
+            }
+        }
+        if (nearest?.entityId != entityId) return null
+        return Vector3(ray.origin).mulAdd(ray.direction, nearestDistance)
+    }
+
     override fun groundBelow(entityId: String): Float? {
         if (entityId == state.viewCamera || content.terrains.any { it.entityId == entityId }) return null
         val targets = targets() ?: return null
@@ -151,6 +180,8 @@ class SnapshotSceneQueries(
 /** The gizmo of the selected entity of [c], seen by [eyeCamera] in a view [height] pixels tall; shared with the renderer's drawing. */
 fun gizmoHandlesFor(c: SceneContent, eyeCamera: PerspectiveCamera, state: SceneViewState, height: Int): GizmoHandles? {
     if (!state.gizmosEnabled) return null
+    // Paint Foliage mode hides the move and rotate gizmos of the painted terrain.
+    if (state.paint != null) return null
     val id = state.selectedId ?: return null
     if (state.gizmoMode == GizmoMode.ROTATE && !canRotate(c, id)) return null
     val selected = ScenePreview().selected(c, id) ?: return null

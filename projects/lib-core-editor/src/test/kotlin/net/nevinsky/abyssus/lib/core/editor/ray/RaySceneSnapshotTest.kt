@@ -10,6 +10,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
 import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
 
@@ -61,6 +62,17 @@ class RaySceneSnapshotTest {
         assertArrayEquals(before.scene.instances.first { it.id.startsWith("other/") }.transform(),
             after.scene.instances.first { it.id.startsWith("other/") }.transform(), 0f)
         assertEquals(setOf(RaySceneChange.TRANSFORM), raySceneDiff(before, after).changes)
+    }
+
+    @Test fun `a scene with foliage gives the same ray snapshot as without`() {
+        val plain = ready(params(SceneContent(models = listOf(placement))))
+        val foliage = FoliagePlacement("entity", "foliage_meadow", "terrain", PlacementTransform.IDENTITY)
+        val shown = ready(params(SceneContent(models = listOf(placement), foliages = listOf(foliage))))
+        // foliage reaches neither the geometry, the instances nor the assets of the snapshot, so no frame differs
+        assertEquals(emptySet<RaySceneChange>(), raySceneDiff(plain, shown).changes)
+        assertEquals(plain.scene.meshes.map { it.id }, shown.scene.meshes.map { it.id })
+        assertEquals(plain.scene.instances.map { it.id }, shown.scene.instances.map { it.id })
+        assertEquals(plain.scene.materials, shown.scene.materials)
     }
 
     @Test fun `mesh parts retain materials channels and unsigned 32 bit indices`() {

@@ -26,6 +26,7 @@ import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.plugin.dto.SceneReader
+import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.ide.plugins.PluginManager
 import net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane
@@ -68,7 +69,7 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
             val play = playState(project, file)
             val overlays = overlays(project, file)
             val panel = SceneViewPanel(
-                params, SceneRenderer(ViewAssets(assets.loading), assets.sceneShaders),
+                params, SceneRenderer(ViewAssets(assets.loading), assets.sceneShaders, project.service<FoliageDrafts>()),
                 lightActions = { position -> host.lightActions(file, position) },
                 canAddLight = { host.canAddLight(file) },
                 assetActions = { position -> host.assetActions(file, position) },
@@ -77,6 +78,12 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
                 play = play,
                 simulationRequest = { selection -> simulationRequest(project, file, selection) },
                 overlays = overlays,
+                foliageActions = { entity -> net.nevinsky.abyssus.plugin.projectView.foliageGroup(project, file, entity) },
+                paintSession = { entity, mode, ready ->
+                    project.service<net.nevinsky.abyssus.plugin.foliage.FoliageEditing>().open(file, entity, mode,
+                        report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("paintFoliageTitle")) },
+                        ready = ready)
+                },
             )
             listenSceneAvailability(project, panel) {
                 overlays.refreshAvailability()

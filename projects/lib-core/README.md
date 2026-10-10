@@ -1,4 +1,4 @@
-# core
+# lib-core
 
 Native project DTOs, scene/ECS loading and asset loading, as a plain JVM library: the Abyssus plugin uses it, and so can any
 libGDX tool or test that has a project folder and a GL context. Root package `net.nevinsky.abyssus.lib.core`; the asset
@@ -23,12 +23,13 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 | `core.io`, `core.util` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `GeometryUtils` |
 | `core.defaults` | Top-level `NO_ENTITY` reference sentinel |
 | `core.dto` | `ProjectDto`, `SceneDto`, camera, light, fog and ray preference DTOs |
-| `project`, `scene` (under `core`) | `ProjectLoader`, `SceneLoader`, `RuntimeSceneLoader`, `SceneContext` and `SceneEnvironment` |
+| `project`, `scene` (under `lib-core`) | `ProjectLoader`, `SceneLoader`, `RuntimeSceneLoader`, `SceneContext` and `SceneEnvironment` |
 | `core.ecs` | Component registration and loading, `SceneEngine`, `SceneEntityIds`; `component/` holds Ashley classes and render-asset lookup, `system/` holds look-at and camera synchronization |
 | `core.assets` | `AssetMeta` and `MetaType` (the `meta.json` model; `uuid` is null when a meta declares none), `AssetMetaBinder` (one injectable settings-class registration map and metadata binding rule), `AssetMetaLoader` (validates and reads saved `meta.json`, binds through the binder, caches by timestamp and size), `AssetIndex` (the asset folder of a `uuid`), `Asset`, `runCatchingKeepingCancellation`, `Throwables` |
 | `core.assets.loading` | `AssetLoader` (prepare / dependencies / upload / build / discard), `AssetStorage` (the cache and owner of built assets: load once, fail once, slice GPU work per frame, load dependencies first) with `BuiltAssets`, `RaySnapshotStore` with `RaySnapshotLoader`, `RaySnapshot` and the leases (see below), `TextureUploadQueue`, `ShaderStorage` (GLSL from a resource folder) |
 | `core.assets.model` | `ModelLoader` (glTF and other formats through `lib-gdx`'s Assimp loader), `ModelMeta`, the ray model snapshot types and `ModelRaySnapshotLoader` |
 | `core.assets.terrain` | `TerrainLoader`, `TerrainData`, `TerrainMesh`, `TerrainMeta`, `RayTerrainSnapshot` and `TerrainRaySnapshotLoader` |
+| `core.assets.foliage` | `FoliageLoader` (`FOLIAGE` assets: reads the meta, the masks and the bake off the GL thread and declares the terrain and layer models as dependencies), `FoliageMeta` and the layer model types, `FoliageMaskFile` (`layer-<id>.mask`: `maskResolution²` bytes z-major, a missing file is a full mask), `FoliageDataFile` (the `ABFO` bake: `FoliageBake`, `FoliageLayerBake`, `FoliageCopy`, read as stale when it does not fit), `FoliageFingerprint` (SHA-256 of the generation inputs) and `FoliageDrawable` (the instanced GL side, reused by the runtime) |
 | `core.assets.texture` | `TextureLoader` (`TEXTURE` and `PIXMAP_TEXTURE` assets: image decoded off the GL thread, uploaded as a mipmapped repeating texture), `PreparedTexture` (the decoded image; `release()` hands the `Pixmap` to a caller that uploads it itself) and `TextureMeta` |
 | `core.assets.sky` | `SkyRenderer` (a drawable background) and `RaySkySnapshot`; `cube/` six-face skyboxes, `procedural/` skies drawn by the asset's own GLSL, `hdr/` OpenEXR skies and their lighting environment. Each has a `*Loader` and a `*RaySnapshotLoader` |
 | `core.assets.sky.clouds` | The clouds of a procedural sky: `CloudMeta`, nested `CloudMeta.CloudBand`, `CloudType` (level and defaults), `CloudLevel` with its `CloudBandLimits`, `CloudTechnique`; settings decode through `AssetMetaBinder` / `CloudSettingsReader`; `CloudsLoader` and `Clouds` (the `CLOUDS` asset: bands, technique and the volumetric 3D noise from `CloudNoiseGenerator`, built on FastNoiseLite), which a procedural sky names by `uuid` and loads as a dependency; `CloudField`, the cloud techniques and `SunOcclusion` |
@@ -46,14 +47,14 @@ must rebuild against this core version.
 These and `AssetMetaLoader` validate native identity with `core.format.AbyssusDocumentFormat` before binding.
 Unsupported project/scene documents throw; unsupported metadata returns null and reports the reason once per file revision.
 Admission checks do not modify document text or write files.
-The vendored Java noise implementation is under `src/main/java/`; terrain generation and recipe orchestration live in `editor-core`.
+The vendored Java noise implementation is under `src/main/java/`; terrain generation and recipe orchestration live in `lib-core-editor`.
 
 Sky shaders are in `src/main/resources/shader/sky/`: the defaults of `ShaderStorage`, which finds a shader file in the
 asset's own folder first (`withAssets`), then in classpath folders the host adds (`withResources(path, anchor)`), then in those defaults,
 and compiles programs from it. `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and
 storm examples of `CLOUDS` metas. The IDE does not create cloud assets from these templates.
 
-Terrain generation and `AssetMetaEditor` live in `editor-core`; their dialogs and document commands live in the
+Terrain generation and `AssetMetaEditor` live in `lib-core-editor`; their dialogs and document commands live in the
 plugin. `BaseCtx` is the standalone composition root; the IDE builds its own graph through `AssetLoading`.
 
 ## Scene loading and registration
@@ -70,7 +71,7 @@ scene admission, an independent engine per load, and look-at/camera systems. `lo
 `BaseCtx(projectDir, shadersPath, shadersAnchor, logger)` supplies file/meta loaders, shaders, an asset storage and
 executor, registry and scene/ECS loaders. A headless caller may pass null shader path/anchor and never request
 GL assets. The host must shut down `executor` and dispose built assets in a valid GL context (or abandon them
-when that context has been lost). `EcsWriter` lives in `editor-core`; neither core nor physics depends on it.
+when that context has been lost). `EcsWriter` lives in `lib-core-editor`; neither core nor physics depends on it.
 
 The native fixtures and required cloud format do not yet match every Jackson binding path. The
 [cloud asset spec](../../openspec/specs/cloud-assets/spec.md) describes the required behavior.

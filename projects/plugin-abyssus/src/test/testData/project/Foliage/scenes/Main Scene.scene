@@ -1,0 +1,102 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "id": 0,
+  "name": "Main Scene",
+  "ambientLightEnabled": true,
+  "ambientLight": {
+    "color": {
+      "r": 1.0,
+      "g": 1.0,
+      "b": 1.0,
+      "a": 1.0
+    },
+    "intensity": 0.3
+  },
+  "fogEnabled": false,
+  "fog": {
+    "color": {
+      "r": 1.0,
+      "g": 1.0,
+      "b": 1.0,
+      "a": 1.0
+    },
+    "density": 0.001,
+    "gradient": 1.5
+  },
+  "skyboxEnabled": false,
+  "ecs": {
+    "1": {
+      "archetype": 1,
+      "components": {
+        "NameComponent": {
+          "name": "Terrain"
+        },
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 1
+          }
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -38.25267,
+            "y": 0.0,
+            "z": -32.7754
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "terrain",
+            "asset": {
+              "type": "TERRAIN",
+              "assetName": "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
+            }
+          }
+        },
+        "TypeComponent": {
+          "type": "TERRAIN"
+        }
+      }
+    },
+    "2": {
+      "archetype": 1,
+      "components": {
+        "NameComponent": {
+          "name": "Model 2"
+        },
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 2
+          }
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "RenderComponent": {
+          "renderable": {
+            "kind": "asset",
+            "shaderKey": "defaultShader",
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"
+            }
+          }
+        },
+        "TypeComponent": {
+          "type": "OBJECT"
+        }
+      }
+    }
+  }
+}

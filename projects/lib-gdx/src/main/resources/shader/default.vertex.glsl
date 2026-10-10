@@ -22,7 +22,16 @@
 
 attribute vec3 a_position;
 uniform mat4 u_projViewTrans;
+#ifdef instancedFlag
+// each instance carries its own world matrix in four columns; there is no u_worldTrans uniform to set
+attribute vec4 a_instance0;
+attribute vec4 a_instance1;
+attribute vec4 a_instance2;
+attribute vec4 a_instance3;
+#define u_worldTrans mat4(a_instance0, a_instance1, a_instance2, a_instance3)
+#else
 uniform mat4 u_worldTrans;
+#endif // instancedFlag
 
 #if defined(colorFlag)
 varying vec4 v_color;
@@ -31,7 +40,12 @@ attribute vec4 a_color;
 
 #ifdef normalFlag
 attribute vec3 a_normal;
+#ifdef instancedFlag
+// the normal matrix belongs to each instance, so the vertex shader derives it from the instance matrix
+#define u_normalMatrix transpose(inverse(mat3(u_worldTrans)))
+#else
 uniform mat3 u_normalMatrix;
+#endif // instancedFlag
 varying vec3 v_normal;
 
 #if defined(lightingFlag) || defined(normalTextureFlag)

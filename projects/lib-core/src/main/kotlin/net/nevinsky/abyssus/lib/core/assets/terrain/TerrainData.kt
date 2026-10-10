@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.assets.terrain
 
+import com.badlogic.gdx.math.Vector3
 import kotlin.math.sqrt
 
 
@@ -88,5 +89,27 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
         val h01 = heights[(gz + 1) * resolution + gx]
         val h11 = heights[(gz + 1) * resolution + gx + 1]
         return (h00 * (1 - fx) + h10 * fx) * (1 - fz) + (h01 * (1 - fx) + h11 * fx) * fz
+    }
+
+    /**
+     * The unit surface normal at terrain-local [x],[z] in [out], from the exact gradient of the bilinear patch:
+     * `normalize(-dh/dx, 1, -dh/dz)`; null outside the terrain. The mesh's own normals come from central differences
+     * over the grid, so the two agree to within a cell's gradient, which is the same bound the scatter's slope rules
+     * work to.
+     */
+    fun normalAt(x: Float, z: Float, out: Vector3): Vector3? {
+        if (x < 0f || z < 0f || x > size || z > size) return null
+        val cell = size.toFloat() / (resolution - 1)
+        val gx = minOf((x / cell).toInt(), resolution - 2)
+        val gz = minOf((z / cell).toInt(), resolution - 2)
+        val fx = x / cell - gx
+        val fz = z / cell - gz
+        val h00 = heights[gz * resolution + gx]
+        val h10 = heights[gz * resolution + gx + 1]
+        val h01 = heights[(gz + 1) * resolution + gx]
+        val h11 = heights[(gz + 1) * resolution + gx + 1]
+        val slopeX = ((h10 - h00) * (1 - fz) + (h11 - h01) * fz) / cell
+        val slopeZ = ((h01 - h00) * (1 - fx) + (h11 - h10) * fx) / cell
+        return out.set(-slopeX, 1f, -slopeZ).nor()
     }
 }

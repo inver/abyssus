@@ -30,7 +30,12 @@ import java.util.function.Function
 import java.util.function.Supplier
 
 private val log: Logger get() = ModelLogging.logger
-open class DefaultShader(requestedConfig: ShaderConfig, renderable: Renderable) : BaseShader() {
+open class DefaultShader(
+    requestedConfig: ShaderConfig,
+    renderable: Renderable,
+    /** `true` for the `instancedFlag` variant: the world matrix comes from the instance attributes, not from `u_worldTrans`. */
+    val instanced: Boolean = false,
+) : BaseShader() {
     protected var vertexShader: String
     protected var fragmentShader: String
     private var initialized = false
@@ -496,6 +501,10 @@ open class DefaultShader(requestedConfig: ShaderConfig, renderable: Renderable) 
         if (renderable.bones != null && renderable.bones!!.size > config.numBones) {
             return false
         }
+        // one variant reads the world matrix from u_worldTrans, the other from the mesh's instance attributes
+        if (instanced != renderable.meshPart.mesh!!.isInstanced) {
+            return false
+        }
 
         val renderableMask = combineAttributeMasks(renderable)
         return (attributesMask == (renderableMask or optionalAttributes))
@@ -711,6 +720,9 @@ open class DefaultShader(requestedConfig: ShaderConfig, renderable: Renderable) 
         processColorAttributes(attributesMask, sb)
         if (renderable.bones != null && config.numBones > 0) {
             sb.append("#define numBones ").append(config.numBones).append("\n")
+        }
+        if (instanced) {
+            sb.append("#define instancedFlag\n")
         }
 
         log.atDebug().log { "Shader prefix: \n$sb" }

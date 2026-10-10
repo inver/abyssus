@@ -1,6 +1,7 @@
 package net.nevinsky.abyssus.lib.core.assets
 
 import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
@@ -23,6 +24,7 @@ class AssetMetaBinder(
         MetaType.TEXTURE to TextureMeta::class.java,
         MetaType.PIXMAP_TEXTURE to TextureMeta::class.java,
         MetaType.CLOUDS to CloudMeta::class.java,
+        MetaType.FOLIAGE to FoliageMeta::class.java,
     ),
 ) {
     private val settings = settings.toMap()
