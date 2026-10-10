@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.plugin
 
 import javax.swing.SwingUtilities
 import net.nevinsky.abyssus.lib.core.editor.ray.rayBackendSelectorFromStartup
+import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageAssetWriter
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldDescriptions
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
 import com.intellij.util.concurrency.AppExecutorUtil
@@ -48,6 +49,11 @@ class TerrainServices(json: JsonProcessor) {
     val writer = TerrainAssetWriter(json, heightEncoder)
     val recipes = TerrainRecipeCodec(json)
     val newTerrains = NewTerrainFactory(json, writer, heightEncoder, recipes)
+}
+
+/** Foliage services: the writer that plans a new foliage asset's files before any command writes them. */
+class FoliageServices(json: JsonProcessor) {
+    val newFoliages = FoliageAssetWriter(json)
 }
 
 /** Native resources keep their dedicated worker ownership and are closed only if initialized. */

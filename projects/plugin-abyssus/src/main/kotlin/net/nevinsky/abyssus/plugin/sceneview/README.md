@@ -3,9 +3,9 @@
 The **Scene View** editor tab of a `.scene`: a libGDX render on an LWJGL3-AWT GL canvas inside a Swing panel, with
 picking, camera markers, look-through, move/rotate gizmos and Drop. Required behavior: `openspec/specs/scene-*`.
 
-The logic without IDE, Swing or GL lives in `editor-core` (see `projects/lib-core-editor/README.md`): the scene read model in its
+The logic without IDE, Swing or GL lives in `lib-core-editor` (see `projects/lib-core-editor/README.md`): the scene read model in its
 scene package, picking, gizmo math, interaction and transform write-back in its pick package, and the ray tracing
-bridge in its ray package. Rows below marked *(editor-core)* are there; this package keeps the canvas, the renderer,
+bridge in its ray package. Rows below marked *(lib-core-editor)* are there; this package keeps the canvas, the renderer,
 the toolbar, Play and the view's asset storage.
 
 ## Pieces
@@ -14,25 +14,26 @@ the toolbar, Play and the view's asset storage.
 |---|---|
 | `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo. The provider in the root package is where the tab's collaborators are looked up and passed in; `SceneViewHost` carries tree selection and Add actions |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
-| `SceneContent`, `PlacementMapper` *(editor-core)* | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. The components are decoded by the same codecs the Properties panel uses (`DecodedEntity`), so both show the same values and defaults; `PlacementMapper` (pure) maps them. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
-| `LightSet`, `SpotCone` *(editor-core)* | Deterministic light selection and CPU cone/range attenuation math |
-| `shadows` | Per-context atlas, stable tile allocation, fitted light cameras and shared model/terrain depth pass |
+| `SceneContent`, `PlacementMapper` *(lib-core-editor)* | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. The components are decoded by the same codecs the Properties panel uses (`DecodedEntity`), so both show the same values and defaults; `PlacementMapper` (pure) maps them. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
+| `LightSet`, `SpotCone` *(lib-core-editor)* | Deterministic light selection and CPU cone/range attenuation math |
+| `shadows` | Per-context atlas, stable tile allocation, fitted light cameras and shared model/terrain/foliage depth pass |
+| `SceneFoliage`, `FoliageAssets` | The foliage of the scene's terrain entities, beside `SceneTerrains`: it asks the view's assets for the `FoliageComponent`s' folders, prefers the project's `FoliageDrafts` draft, generates a stale or draft-touched bake off the GL thread and culls the drawn copies against the camera (see **Terrain foliage**) |
 | `SceneView` | Interface of the view, so tests can pass a fake (`viewFactory`) |
 | `SceneViewPanel` | Swing panel: GL canvas, Swing `Timer` frame loop, toolbar, keys (W / E / D / Esc) |
-| `SceneViewState` *(editor-core)* | What the user chose: selection, gizmo mode and hovered handle, the camera looked through, the drag/drop preview. The panel changes it; the renderer and the queries read it |
-| `SceneInteraction` *(editor-core)* | Mouse and key logic without Swing or GL, over a `SceneViewState` and `SceneQueries`: click → pick/select, drag → gizmo or orbit/pan (one `Gesture`: Idle, Dragging or Cancelled), Drop → a Y-only move |
-| `FrameSnapshot`, `SceneQueries`, `SnapshotSceneQueries` *(editor-core)* | What the last frame drew (camera copy, model boxes, terrain targets, `drawnVersion`), and the CPU-only questions asked of it: pick, ray, ground below, lowest point, gizmo handles and hits, drag start. Tested with hand-built snapshots |
+| `SceneViewState` *(lib-core-editor)* | What the user chose: selection, gizmo mode and hovered handle, the camera looked through, the drag/drop preview. The panel changes it; the renderer and the queries read it |
+| `SceneInteraction` *(lib-core-editor)* | Mouse and key logic without Swing or GL, over a `SceneViewState` and `SceneQueries`: click → pick/select, drag → gizmo or orbit/pan (one `Gesture`: Idle, Dragging or Cancelled), Drop → a Y-only move |
+| `FrameSnapshot`, `SceneQueries`, `SnapshotSceneQueries` *(lib-core-editor)* | What the last frame drew (camera copy, model boxes, terrain targets, `drawnVersion`), and the CPU-only questions asked of it: pick, ray, ground below, lowest point, gizmo handles and hits, drag start. Tested with hand-built snapshots |
 | `SceneRenderer` | One frame: environment, skybox, grid, terrains, models, markers, highlight, gizmo. GL only: it publishes a `FrameSnapshot` after each frame and exposes `queries`. `GridModel` and `SelectionBox` build the grid and the highlight |
-| `PlacedAssets`, `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (an `AssetView` each over the view's `ViewAssets`, whose `ProjectAssets` from `AssetLoading` hold the one `core` `AssetStorage`) and per-entity instances (`PlacedEntities`); `SceneModels` and `SceneTerrains` extend `PlacedAssets` and `SceneSkybox` has the same `abandon` |
-| `skybox` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights (`sunLight` is the light clouds dim). `SkyClock`: the view's sky time, which clouds drift by. `CloudViewState` (the toolbar's Clouds choice and the automatic fallbacks) and `CloudFrameBudget` (2 s over 33 ms per frame while volumetric clouds draw) are pure and per view; nothing is written. The cloud techniques and `SunOcclusion` are in `core`'s `assets.sky.clouds`. The sky loaders, the HDR environment and the sky shaders are in `core` (`net.nevinsky.abyssus.lib.core.assets.sky`) |
-| `SceneMarkers`, `CameraFrustum` *(editor-core)* | Camera body and frustum, light markers, and their pick bounds |
-| `ScenePicker` *(editor-core)* | Ray from a pixel, nearest hit over boxes and terrain heights (used by `SnapshotSceneQueries`) |
-| Drop: `OrientedBox`, `TerrainRestHeight`, `ScenePicker.restHeight` *(editor-core)* | Highest surface under a rotated box footprint; CPU-only bilinear terrain-cell maxima |
-| `ScenePreview` *(editor-core)* | Applies a drag or drop preview over the placements, and simulated poses (`withPoses`) while playing |
+| `PlacedAssets`, `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (an `AssetView` each over the view's `ViewAssets`, whose `ProjectAssets` from `AssetLoading` hold the one `lib-core` `AssetStorage`) and per-entity instances (`PlacedEntities`); `SceneModels` and `SceneTerrains` extend `PlacedAssets` and `SceneSkybox` has the same `abandon` |
+| `skybox` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights (`sunLight` is the light clouds dim). `SkyClock`: the view's sky time, which clouds drift by. `CloudViewState` (the toolbar's Clouds choice and the automatic fallbacks) and `CloudFrameBudget` (2 s over 33 ms per frame while volumetric clouds draw) are pure and per view; nothing is written. The cloud techniques and `SunOcclusion` are in `lib-core`'s `assets.sky.clouds`. The sky loaders, the HDR environment and the sky shaders are in `lib-core` (`net.nevinsky.abyssus.lib.core.assets.sky`) |
+| `SceneMarkers`, `CameraFrustum` *(lib-core-editor)* | Camera body and frustum, light markers, and their pick bounds |
+| `ScenePicker` *(lib-core-editor)* | Ray from a pixel, nearest hit over boxes and terrain heights (used by `SnapshotSceneQueries`) |
+| Drop: `OrientedBox`, `TerrainRestHeight`, `ScenePicker.restHeight` *(lib-core-editor)* | Highest surface under a rotated box footprint; CPU-only bilinear terrain-cell maxima |
+| `ScenePreview` *(lib-core-editor)* | Applies a drag or drop preview over the placements, and simulated poses (`withPoses`) while playing |
 | `SceneExtensions.kt`, `SceneOverlayHost` | The `sceneOverlay` and `sceneSimulation` extension points and the per-view overlay list that switches off a failing overlay |
 | `PlayState` | Play in one view without Swing or GL: `IDLE -> STARTING -> PLAYING <-> PAUSED -> IDLE`, plus `FAILED` |
-| `gizmo` | Drawing (`GizmoDraw`) over the handle geometry (`GizmoHandles`), hit tests (`GizmoHit`) and drag math (`GizmoDrag`) of `editor-core` |
-| `SceneTransformWriter` *(editor-core)* | A finished transform → `PositionComponent` (and camera) fields in the scene JSON |
+| `gizmo` | Drawing (`GizmoDraw`) over the handle geometry (`GizmoHandles`), hit tests (`GizmoHit`) and drag math (`GizmoDrag`) of `lib-core-editor` |
+| `SceneTransformWriter` *(lib-core-editor)* | A finished transform → `PositionComponent` (and camera) fields in the scene JSON |
 | `GdxRuntime`, `GuardedGLCanvas` | The `Gdx.*` shim, and the canvas that refuses unsafe GL |
 
 ## Things that are not obvious
@@ -50,7 +51,7 @@ the toolbar, Play and the view's asset storage.
   that snapshot beneath the notification until overlap ends, then live rendering resumes through the surface safety
   gate. Rendering pauses during overlap; no continuous readback is performed. Removing or disposing the view stops
   overlay monitoring and releases the snapshot.
-- **Asset loading lives in `core`** (`projects/lib-core/README.md`). `AssetLoader.prepare` runs on a pool thread (IO and decoding,
+- **Asset loading lives in `lib-core`** (`projects/lib-core/README.md`). `AssetLoader.prepare` runs on a pool thread (IO and decoding,
   no GL). `build`, and `upload` for big textures, run on the render thread one slice per frame, inside this package's
   `GdxRuntime.withContext`. A new project gets a new cache, so a pool thread never prepares from a stale project. A
   failed asset is remembered and logged once, through the SLF4J `Logger` `AbyssusCore` gives `AssetLoading` (`AbyssusCore.assets`).
@@ -143,7 +144,8 @@ limits are documented in `docs/ai/file-formats.md`.
 ## Scene shadows
 
 After applying drag previews, each frame updates model poses and terrain transforms once. `SceneShadows` captures
-their renderables, renders the depth atlas, and restores the caller's framebuffer, viewport and depth/blend/scissor
+their renderables plus the drawn foliage's OBJECT layers (`SceneFoliage` as a `FoliageCastSource`; DETAIL layers are
+left out), renders the depth atlas, and restores the caller's framebuffer, viewport and depth/blend/scissor
 state before the sky, grid and color passes. Color uses those same poses and transforms. Models and terrain both
 cast and receive; markers, grid, sky, selection outlines and gizmos do not cast. Each light's visibility multiplies
 only its direct contribution, leaving other lights, ambient, HDR environment lighting and emissive output intact.
@@ -174,10 +176,52 @@ units disables shadows while keeping lighting. A failed depth pass disables shad
 reserves unit 6 for the atlas, between its six layer textures and irradiance on unit 7; model shaders use their
 texture binder. Atlas allocation and tile passes restore GL state even on failure.
 
+## Terrain foliage
+
+A `FOLIAGE` asset stands on one terrain. A terrain entity with a `FoliageComponent` names it, and `PlacementMapper`
+*(lib-core-editor)* turns that into a `FoliagePlacement` (entity id, foliage folder, terrain folder, transform) in
+`SceneContent.foliages`, which is the only place the scene reads it. `AssetLoading` registers `FoliageLoader` for
+`MetaType.FOLIAGE`, so foliage loads like any other asset: `prepare` on the asset pool thread reads the meta, the
+`layer-<id>.mask` masks and the `foliage.data` bake and declares the terrain and every layer model as dependencies
+(the storage loads them first), and the build runs on the render thread and makes `FoliageDrawable` — one instance
+buffer set per (model folder, layer kind), copies in their model's bind pose, frustum and distance culling, and
+`objectBounds`, the world box of the copies an OBJECT layer draws.
+
+Each frame, inside `GdxRuntime.withContext`, `SceneRenderer` calls `foliage.update(content.foliages, projectDir,
+camera)` for the frame's content, and `foliage.draw` hands the renderables to the content batch after the models.
+`update` asks `FoliageAssets` for the folders the placements name, leaves out a placement bound to another terrain or
+one whose terrain cannot be read (the reason is logged once, and the terrain and models around it still draw),
+schedules the generation the drawable needs, and culls each drawn foliage against the camera.
+
+Generation (`FoliageScatter`, *lib-core-editor*) never runs on the render thread: `SceneFoliage` posts it to the IDE's
+background executor and hands the result to its drawable at the next `update`. One generation runs at a time per
+foliage, so a change that lands during one is picked up by the next; a stale or missing bake is generated whole, a
+draft only over the chunks it touched (`mergeFoliageChunks`), and a result whose asset was rebuilt meanwhile is
+dropped. Refusals (copy or candidate limit), failures and unreadable inputs are written once per drawable revision
+instead of every frame, and one unusable foliage never hides the rest of the scene.
+
+`FoliageDrafts` (a project service in `plugin/foliage`) holds each project's uncommitted drafts, one per foliage
+folder: `SceneFileEditorProvider` passes it to the `SceneRenderer`, which passes it to `SceneFoliage`, and a draft's
+settings and masks are preferred over the stored asset until it is discarded. The draft's own state, dirty chunks and
+stroke merge are pure and live in `lib-core-editor`'s `foliage/FoliageDraft.kt`.
+
+Foliage is drawn, and it is deliberately left out of everything else the view answers:
+
+- **Picking and Drop** never see a copy: `publishSnapshot` copies model boxes and terrain targets only, `SceneMarkers`
+  adds cameras and lights, and a copy rides its terrain entity, so a click through the trees picks the terrain.
+- **Shadows:** `SceneFoliage` implements `FoliageCastSource` (in `shadows/ShadowCasters.kt`), and `SceneShadows.render`
+  collects its OBJECT layers' instanced parts through `getRenderablesOf(OBJECT)`, fitted by the union of
+  `objectBounds`. A DETAIL layer's copies never reach the depth pass; they only receive.
+- **Ray tracing** never converts a copy: `RaySceneSnapshots` builds its snapshot from the models and terrains the
+  content places, and `RaySceneAssets` leases no foliage, so the ray-traced image shows the scene without it. The
+  view's `RayControl.foliageNote` says so — `propertiesSceneRayFoliage`, "Foliage is not ray traced." — through
+  `SceneRayControls` into the `ray-tracing-foliage` label of the Properties panel's Ray Tracing section, while the
+  shown scene has any.
+
 ## Ray tracing scene conversion
 
 The ray classes named here (`RaySceneSnapshots`, `RayViewFeed`, `RayViewRuntime`, `RayBackendService`, `RayModeState`) are in
-`editor-core`'s ray package; `RayIntegration`, `RayFramePresenter` and `SceneRayControls` stay in the plugin.
+`lib-core-editor`'s ray package; `RayIntegration`, `RayFramePresenter` and `SceneRayControls` stay in the plugin.
 
 `RaySceneSnapshots` converts the same preview-applied `SceneContent`, `LightSet`, camera and environment that raster
 draws into an immutable `RaySceneSnapshot`, from CPU asset companions only (never GL handles). `RaySceneDiff` classifies

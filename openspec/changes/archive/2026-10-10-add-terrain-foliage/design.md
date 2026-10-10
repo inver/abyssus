@@ -211,15 +211,23 @@ gesture and the ray come through the existing `SceneQueries`, so the paint flow 
 The cursor circle is drawn through `LineBatch` as a polyline of 64 points projected onto `TerrainData` heights. It is
 drawn on the AWT thread inside the frame.
 
-### 9. Undo never stores the bake
+### 9. Undo regenerates valid bakes; unreconstructible old bytes stay on disk
 
 `foliage.data` can be about 18 MB, and the IDE keeps many undo steps, so snapshots of it would not scale. The bake is
-rebuilt instead:
+rebuilt instead when the inputs that produced it are available:
 
 - **`AssetTransaction` gains derived files**: `DerivedFile(path, beforeSha256, afterSha256, rebuild: (forward) -> ByteArray)`.
   - Verify compares the file's SHA-256 with the expected side.
   - Apply calls `rebuild` and checks that the result hashes to the target.
   - Rollback rebuilds the other side.
+
+  A stale or corrupt previous bake cannot be reconstructed from current inputs. For that side only, preserve the
+  exact previous bytes in a project-owned temporary disk cache before committing, verified against the expected
+  SHA-256. The undo closure retains a cache handle, never the bake byte array. Restore verifies the cached bytes
+  before writing. Missing or altered backups refuse restoration without overwriting project files. Clean each
+  backup when its undo action becomes unreachable, and clean all remaining backups on project disposal. A failed
+  or cancelled command releases its backup immediately. Valid bakes continue to use deterministic regeneration;
+  missing previous files continue to use the absent-file state. This fallback also applies to stroke commits.
 
   This works because generation is deterministic (decision 2).
 - **Stroke undo keeps only the changed part of the mask.** A stroke's `FileChange` for `layer-<id>.mask` holds just the
@@ -237,15 +245,22 @@ rebuilt instead:
 - *Global undo actions*: they would be unreachable from the Scene view's undo context.
 - *Storing full masks*: about 8 MB per stroke at 2048².
 
-### 10. Meta writes through the transaction, with text preserved
+### 10. Metadata and binary writes share one document-aware command
 
 The foliage panel's Apply must write `meta.json` and the bake together; writing the meta alone would leave the bake
 stale until a Re-bake.
 
-So, instead of a separate `editSceneJson`-style document command, the new meta text is computed by
-`DocumentTextEditor` and staged in the same `AssetTransaction`. Number text, key order and unknown members are kept
-exactly as in other meta edits. The open document is saved first, which is the same precondition terrain Apply uses.
-`FoliageMetaEdits` (`lib-core-editor`) produces the edits from a settings diff.
+`FoliageMetaEdits` computes the new metadata with `DocumentTextEditor`, preserving number text, key order and unknown
+members. Apply runs a composite platform command: first it verifies the current metadata and applies the binary
+transaction with its undo action handed back, then it edits and saves metadata through `editSceneJson`, and finally
+registers the binary undo action in that same command. If the metadata edit cannot be made, the binary transaction is
+rolled back before registering Undo. The VFS is refreshed after the composite command. Metadata is never replaced
+through a disk transaction: IntelliJ otherwise records a separate Reload From Disk undo step for its open document.
+Re-bake, which changes no metadata, continues to use the binary transaction directly.
+
+The binary transaction does not pin metadata to the old text for Redo: the platform redoes the metadata edit before
+redoing the binary action. The composite command checks the metadata's starting text before the initial write;
+document undo and the binary hash checks protect subsequent Undo/Redo independently.
 
 Add Foliage edits the scene only, so it goes through `editSceneJson` like Add Asset.
 
@@ -265,15 +280,20 @@ the draft revision, a stale result is dropped.
 
 | Module | New |
 |---|---|
-| `lib-core` | `MetaType.FOLIAGE`, `assets/foliage/` (`FoliageMeta`, `FoliageDataFile`, `FoliageMaskFile`, `FoliageLoader`, `FoliageDrawable`) |
+| `lib-core` | `MetaType.FOLIAGE`, `assets/foliage/` (`FoliageMeta`, `FoliageDataFile`, `FoliageMaskFile`, `FoliageFingerprint`, `FoliageLoader`, `FoliageDrawable`) |
 | `lib-gdx-model` | `instancedFlag` variants in `DefaultShader`, `PbrShader`, `ModelDepthShader` |
-| `lib-core-editor` | `foliage/` (`FoliageSettings` + validation, `FoliageScatter`, `FoliageFingerprint`, `FoliageBrush`, `FoliageDraft`, `FoliageMetaEdits`, `NewFoliageFiles`), `FoliagePlacement` in `scene/` |
+| `lib-core-editor` | `foliage/` (`FoliageSettings` + validation, `FoliageScatter`, `FoliageBrush`, `FoliageDraft`, `FoliageMetaEdits`, `NewFoliageFiles`), `FoliagePlacement` in `scene/` |
 | `plugin-abyssus` | `foliage/` (`FoliageDrafts`, panel section, Add Foliage), `projectView/NewFoliageAction`, `sceneview/SceneFoliage`, paint strip and cursor, `assetfiles` derived files and mask patches, icon, bundle text |
 
 The rules for every library stay as they are:
 - `lib-core` and `lib-core-editor` stay wired by constructors, with no singletons.
 - `lib-core-editor` has no Swing, AWT or platform imports. Its messages go through `EditorMessages`.
 - `runCatchingKeepingCancellation` wraps everything that can be cancelled.
+
+**Change during implementation:** `FoliageFingerprint` moved from `lib-core-editor` `foliage/` to `lib-core`
+`assets/foliage/`. `FoliageLoader.prepare` records the fingerprint of the inputs it just read, and `lib-core` may not
+depend on `lib-core-editor`; both readers and the generator (`FoliageScatter` takes the fingerprint by constructor)
+share one implementation in `lib-core`.
 
 ## Risks / Trade-offs
 

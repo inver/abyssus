@@ -41,12 +41,14 @@ class DefaultShaderProvider @JvmOverloads constructor(config: ShaderConfig? = nu
         if (ShaderProvider.Companion.DEFAULT_SHADER_KEY != holder.key) {
             return null
         }
-        if (PbrShader.Companion.isPbr(renderable!!)) {
+        // an instanced mesh is drawn by the instancedFlag variant, which reads the world matrix from its instance data
+        val instanced = renderable!!.meshPart.mesh!!.isInstanced
+        if (PbrShader.Companion.isPbr(renderable)) {
             // the configured fragment shader is meant for the default shader: PBR uses its own
             val pbrConfig = config.copy()
             pbrConfig.fragmentShader = null
-            return PbrShader(pbrConfig, renderable)
+            return PbrShader(pbrConfig, renderable, instanced)
         }
-        return DefaultShader(config, renderable)
+        return DefaultShader(config, renderable, instanced)
     }
 }

@@ -17,8 +17,8 @@ the row actions that call `editSceneJson` (`projects/plugin-abyssus/src/main/kot
 | `ComponentActions.kt`, `ComponentTarget.kt` | The **Add Component...** / **Remove Component** tree actions and the entity or component a row stands for; `AddComponentOnEcsAction` is Add Component... on a scene's `ecs` row, creating a new `Entity <id>` with the chosen component (`SceneComponentEdits.addAsNewEntity`, inserted by `SceneEntities`) |
 | `EnabledToggle.kt` | The writes built on `editSceneJson`: `toggleEnabled`, `renameScene`, `setSkybox` |
 | `RenameSceneAction` | Right-click **Rename Scene...** |
-| `ImportFlightGearAction.kt`, `FlightGearImportSettings.kt` | Right-click **Import FlightGear Aircraft...** on the Assets node: the dialog over a Swing-free settings model, `importFlightGear` (stage off the EDT through `editor-core`'s `flightgear`, then one undoable `AssetFileCommand`), `importTransaction` and the shared `assetFolderTransaction` |
-| `ImportModelAction.kt`, `ModelImportForm.kt`, `ImportModelDialog.kt` | Right-click **Import Model...** on the Assets node: the source is read once off the EDT (`editor-core`'s `modelimport`), the dialog binds the Swing-free `ModelImportForm` (settings, values read from the file, placement option, Create state), and `importModel` stages and writes the folder, with Add to scene also the entity, in one command |
+| `ImportFlightGearAction.kt`, `FlightGearImportSettings.kt` | Right-click **Import FlightGear Aircraft...** on the Assets node: the dialog over a Swing-free settings model, `importFlightGear` (stage off the EDT through `lib-core-editor`'s `flightgear`, then one undoable `AssetFileCommand`), `importTransaction` and the shared `assetFolderTransaction` |
+| `ImportModelAction.kt`, `ModelImportForm.kt`, `ImportModelDialog.kt` | Right-click **Import Model...** on the Assets node: the source is read once off the EDT (`lib-core-editor`'s `modelimport`), the dialog binds the Swing-free `ModelImportForm` (settings, values read from the file, placement option, Create state), and `importModel` stages and writes the folder, with Add to scene also the entity, in one command |
 | `ImportRefusals.kt` | `projectRefusal`: both import actions refuse a project whose `.abss` is not a supported native document |
 | `preview/ModelPreviewCanvas.kt`, `preview/PreviewFraming.kt` | The dialog's live preview: a `GuardedGLCanvas` with its own `GdxRuntime` context (grid, 1 m post, orbit camera, looping animation) and its Swing-free framing math |
 | `SkyboxChoices.kt`, `SkyboxPickerModel`, `SkyboxChooserDialog` | The skybox list, its filter and selection logic, and the dialog |
@@ -33,6 +33,9 @@ Physics component add/edit choices follow the selected scene's native project se
 
 ## Things that are not obvious
 
+- **Foliage contributes transitive asset usage.** `FoliageComponent.assetName` makes its foliage folder used.
+  A used foliage reaches its `additional.terrain` and every `additional.layers[].models[].asset` by folder name,
+  then their texture and material references by UUID. An unused foliage does not make its models used.
 - **Import Model with Add to scene is one undo step.** `importModel` runs one outer command:
   `AssetFileCommand.execute` hands back its undo action, then `SceneComponentEdits.addAsset` adds the entity, and
   the action is registered only once both succeeded (otherwise the folder is reverted and nothing is recorded). The
@@ -44,7 +47,7 @@ Physics component add/edit choices follow the selected scene's native project se
   current; a canvas that never became `glSafe` made nothing.
   `ModelPreviewCanvasGlTest` (opt-in GL) covers drawing, framing, the animation loop, rebuilds, a failed frame and
   release while showing; `PreviewFramingTest` the framing math.
-- **Row identity is the entry path.** A `DtoEntry` is identified by its path inside the asset (the file path, then one segment per row, such as `/fog`).
+- **Row identity is the entry path.** A `DtoEntry` is identified by its path inside the asset (the file path, then one segment per row, such as the root `fog` member).
   Its `equals` also compares the toggle state, scalar values and the unused flag, because the tree keeps an existing
   node when the refreshed one is equal. Leaving any of those out leaves a row stale after an edit.
 - **After an edit the row is selected again.** An edit changes the row's identity, so the refresh drops the selection
@@ -72,7 +75,7 @@ selects the new entity through `selectEntityInAbyssusView`. Invalid scene text d
 
 `AddAssetAction` (scene rows) and the Scene view toolbar share `AddAssetGroup`: the project's models and terrains
 from `SceneComponentEdits.renderAssets`, under Models / Terrains, labelled with the folder name as it is (no mnemonic).
-`SceneComponentEdits.addAsset` reads a terrain's `additional.size`, and `AssetEntities` (`ecs/scene`) builds the entity
+`SceneComponentEdits.addAsset` reads a terrain's `additional.size`, and `AssetEntities` (`components/AssetEntities.kt` in `lib-core-editor`) builds the entity
 on the JSON tree. It is written as one undoable Add Asset command and selected with `selectCreatedEntity`, which
 Add Light uses too. Disabled for unreadable scene text, a scene outside a project, or a project without models and
 terrains.

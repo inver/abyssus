@@ -1,6 +1,7 @@
 package net.nevinsky.abyssus.lib.core.assets
 
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
@@ -24,6 +25,7 @@ class AssetMetaBinderTest {
             MetaType.SKYBOX_HDR to HdrSkyMeta::class.java,
             MetaType.TEXTURE to TextureMeta::class.java,
             MetaType.PIXMAP_TEXTURE to TextureMeta::class.java,
+            MetaType.FOLIAGE to FoliageMeta::class.java,
         )
         val binder = AssetMetaBinder(json)
         for (type in MetaType.entries) {

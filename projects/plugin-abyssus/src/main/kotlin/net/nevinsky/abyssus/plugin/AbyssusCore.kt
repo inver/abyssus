@@ -26,6 +26,7 @@ class AbyssusCore : Disposable {
     val documents by lazy { DocumentServices(json, format, loggers.getLogger("scenes")) }
     val assets by lazy { AssetServices(json, format, loggers.getLogger("assets")) }
     val terrain by lazy { TerrainServices(json) }
+    val foliage by lazy { FoliageServices(json) }
     private val rayHolder = lazy { RayServices(loggers.getLogger("ray")) { assets.loading.toneCurve.exposure } }
     internal val ray get() = rayHolder.value
 
@@ -41,6 +42,7 @@ class AbyssusCore : Disposable {
     val terrainWriter get() = terrain.writer
     val terrainRecipes get() = terrain.recipes
     val newTerrains get() = terrain.newTerrains
+    val newFoliages get() = foliage.newFoliages
     val flightGearImport by lazy { FlightGearImport(json, CoreDocumentFormat()) }
     val modelSources by lazy { ModelSourceOpener() }
     val modelImport by lazy { ModelImport(json, CoreDocumentFormat()) }

@@ -22,6 +22,8 @@ remain readable in the text editor; plugin editing and loading are refused. No i
   aircraft from a FlightGear `.zip` into a model asset.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
+- **Terrain foliage**: **New Foliage...** creates layered scatter settings for trees, rocks and grass;
+  **Add Foliage...** attaches them to a terrain entity, and **Paint Foliage** paints or erases their density, with Undo.
 - **Built-in Physics**: select a project’s `.abss` file and enable **Physics** in Properties for editable physics
   components, collider/constraint overlays and Play in a separate process.
 - **Ray Tracing settings**: a selected scene's Properties switch turns Ray Tracing on for its open views (not saved), and
@@ -51,7 +53,7 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   marked `unused`. A scene reaches an asset by folder name through `assetName` and `shaderKey` values in its
   `ecs` and through `skyboxName`; a reached asset in turn reaches the assets its `meta.json` references by
   `uuid` (terrain `splatMap`/`splatBase`/`splatR`/`splatG`/`splatB`/`splatA`, model `materials`), and a reached
-  procedural sky reaches the cloud asset (`CLOUDS`) its `clouds` names. Cloud assets have their own icon.
+  procedural sky reaches the cloud asset (`CLOUDS`) its `clouds` names. A reached foliage asset reaches its terrain and its layers' models by folder name. Cloud and foliage assets have their own icons.
   A `shaderKey` with no matching folder is a bundled editor shader and is ignored. Files named inside a
   `meta.json` (textures of a material, shader sources) are not followed.
 - A project's `scenes` and `assets` rows are labelled `Scenes` and `Assets` with their count. In a scene, `ecs` shows its
@@ -134,6 +136,24 @@ refreshes and the new asset is selected. Nothing is placed in a scene and no sce
 is marked unused until you add it to a scene. Undo removes the asset again, and Redo brings back the same files and
 `uuid`; Undo refuses while a scene or another asset uses it, or something was added to its folder.
 
+### New Foliage
+
+Right-click a project's **Assets** node and choose **New Foliage...**. The project needs a readable terrain asset.
+Choose the terrain, a new folder name (suggested: `foliage_<terrain folder>`) and a mask resolution from 16 to 2048
+(default 512). **Create** makes an empty foliage asset and selects it; add layers in its Properties panel.
+
+Each layer scatters one or more model assets, chosen with positive weights. Use **OBJECT** for trees and rocks that
+cast shadows, or **DETAIL** for grass and flowers that receive shadows and disappear beyond their draw distance.
+Set density (copies per square unit), scale range, alignment to the terrain normal, seed, and optional height and
+slope limits. Add, remove or reorder layers; the panel shows each layer's copy count and the total.
+
+Valid settings preview in every open Scene view using the foliage. **Apply** saves the settings and matching bake
+as one undoable operation; **Cancel**, selecting another asset or closing the panel discards the preview. The total
+limit is 1,000,000 copies: Apply, Re-bake and painting refuse results above it. After terrain regeneration or another
+change makes the bake out of date, the view regenerates the copies and the panel offers **Re-bake** to save them.
+Copies stand on the current terrain surface. Creation adds no scene entity; Undo removes the new asset unless it
+is used or its files changed, and Redo restores the same files.
+
 ### Import Model
 
 Right-click an **Assets** node and choose **Import Model...**, then pick an `.obj`, `.fbx`, `.3ds`, `.dae`, `.gltf` or
@@ -185,6 +205,8 @@ project's `assets` folder beside the `.abss`:
 - the scene's **models** (`RenderComponent` entities of type `MODEL`), textured, at each entity's position,
   rotation and scale; a model that has animations plays its first one on a loop;
 - the scene's **terrain** (height data and splat textures of a `TERRAIN` asset);
+- **foliage** attached to a terrain entity: scattered model copies that follow its position, rotation and scale;
+  animated models stay in their rest pose, and a click passes through a copy to the terrain behind it;
 - the **skybox** named by `skyboxName` when `skyboxEnabled`; a procedural sky's **clouds** (the `CLOUDS` asset its `meta.json`
   `additional.clouds` names by `uuid`: low, mid and high bands and a technique, shared by every sky naming it) drift with their wind and dim the sun light when they cover it. The toolbar's
   **Clouds** choice (*Asset*, *Layered*, *Shells*, *Volumetric*) overrides the sky's technique in that view only and
@@ -214,6 +236,19 @@ is disabled and says why; if it fails, the view returns to the normal renderer. 
 camera and the gizmos work as usual, and the scene file is never written by switching it on or off.
 `-Dabyssus.raytracing.backend=off` disables it for the IDE session. See [ray tracing](projects/lib-raytracing/README.md) for
 backend requirements, rendering limits and native toolchains.
+
+Select a terrain entity and choose **Add Foliage...** in its tree context menu or the Scene view toolbar. Choose
+one of the foliage assets made for that terrain; this adds or replaces its foliage as one undoable scene edit.
+If none is available, create one from the project's **Assets** node first.
+
+With a terrain entity that has readable foliage and at least one layer selected, turn on **Paint Foliage** in the
+Scene view toolbar. Choose the layer, radius in world units, strength from 0 to 1, and **Paint** or **Erase** in
+the brush strip. Drag the left button inside the circle on that terrain to change its density mask; hold Shift to
+erase while Paint is chosen. Layers without a saved mask start at full density, so erase to clear space first.
+Copies update during the stroke in all views. Right-drag and the wheel still navigate; gizmos return when you leave
+paint mode or select another entity. Esc before release cancels the stroke. Release saves the mask and matching bake
+as one undoable operation; Ctrl+Z in the Scene view or Undo in the foliage panel restores it. A stroke above the copy
+limit is discarded with a reason. Foliage is omitted from the ray-traced preview, and Properties shows a note.
 
 **Add Light** in the toolbar creates a Directional light, Sun or Spot at the current orbit target and selects it.
 The same menu on a scene row places it at the origin; Spot sits 5 units above that point. A Sun starts warm and
@@ -256,7 +291,7 @@ Jolt, the physics engine, is loaded only by the play process, never by the IDE.
 The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `lib-gdx` module, a
 plain JVM library reusable in other libGDX projects; see [source provenance](docs/third-party/gdx-model-origin.md)
 for its origin and license. The GL
-render tests are opt-in: `./gradlew test -Dabyssus.glTests=true` (opens a window).
+render tests are opt-in: `./gradlew check -Dabyssus.glTests=true` (opens a window).
 
 To add a project or scene file format, implement `ConfigFileReader` and wire it into `AssetReadCache` and
 `ProjectLayout.ASSET_EXTENSIONS`. Asset loading uses `core`'s `AssetLoader` implementations; see

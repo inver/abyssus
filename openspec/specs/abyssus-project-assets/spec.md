@@ -37,7 +37,8 @@ The view SHALL mark an asset as unused when no scene of the project reaches it. 
 references an asset directly when its ECS data names the asset's folder in an `assetName` or
 `shaderKey` field, or when its `skyboxName` equals the folder name. A used asset in turn uses the assets whose
 `uuid` appears in its own `meta.json` as a terrain splat texture (`splatMap`, `splatBase`,
-`splatR`, `splatG`, `splatB`, `splatA`) or as a model material (`materials`), transitively. The
+`splatR`, `splatG`, `splatB`, `splatA`) or as a model material (`materials`), and a used foliage asset uses the
+terrain named by its `additional.terrain` and the models named by its layers, transitively. The
 marker SHALL be visible in the asset's row without expanding it.
 
 #### Scenario: Referenced asset is not marked
@@ -87,6 +88,21 @@ marker SHALL be visible in the asset's row without expanding it.
 
 - **WHEN** a scene uses a model asset whose `materials` list holds the `uuid` of a material asset
 - **THEN** the material asset is not marked as unused
+
+#### Scenario: Foliage used through a terrain entity
+
+- **WHEN** entity `1` of `Main Scene` has `FoliageComponent` with `assetName` `foliage_meadow`
+- **THEN** the `foliage_meadow` asset is not marked as unused
+
+#### Scenario: Model used only through foliage
+
+- **WHEN** no scene names `tree`, and a used foliage asset has a layer whose models include `tree`
+- **THEN** `tree` is not marked as unused
+
+#### Scenario: Foliage nothing shows
+
+- **WHEN** no scene's `FoliageComponent` names a foliage asset whose layers use `tree`, and nothing else uses `tree`
+- **THEN** both the foliage asset and `tree` are marked as unused
 
 #### Scenario: Referenced only by an unused asset
 

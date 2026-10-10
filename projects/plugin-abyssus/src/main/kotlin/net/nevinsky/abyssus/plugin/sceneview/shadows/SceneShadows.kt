@@ -52,27 +52,15 @@ class SceneShadows : Disposable {
     private val casterBounds = ShadowCasterBounds()
     private val log = Logger.getInstance(SceneShadows::class.java)
     private var failed = false
-    private data class Caster(val renderable: Renderable, val bounds: BoundingBox)
 
     init { if (!resources.available) log.warn("Shadow atlas unavailable; scene lights will render without shadows") }
 
     fun render(camera: PerspectiveCamera, lights: LightSet, environment: Environment,
-               models: Collection<ModelEntity>, terrains: Collection<TerrainEntity>): ShadowAtlasAttribute? {
+               models: Collection<ModelEntity>, terrains: Collection<TerrainEntity>,
+               foliage: FoliageCastSource?): ShadowAtlasAttribute? {
         if (failed || !resources.available) return null
         pool.freeAll(renderables); renderables.clear()
-        val casters = mutableListOf<Caster>()
-        models.forEach { entity ->
-            val first = renderables.size
-            entity.instance.getRenderables(renderables, pool)
-            for (i in first until renderables.size) casters += Caster(renderables[i], casterBounds.world(renderables[i]))
-        }
-        casterBounds.retain(renderables.mapNotNull { it.meshPart.mesh }.toSet())
-        terrains.forEach { entity ->
-            val out = pool.obtain().also { it.cleanup() }
-            entity.terrain.depthRenderable(entity.world, out); renderables.add(out)
-            val data = entity.terrain.data
-            casters += Caster(out, BoundingBox(Vector3(0f,data.heights.min(),0f),Vector3(data.size.toFloat(),data.heights.max(),data.size.toFloat())).mul(entity.world))
-        }
+        val casters = shadowCasters(models, terrains, foliage, renderables, pool, casterBounds)
         val receiver = receiverBounds(camera, casters.map { it.bounds })
         val dirs = (environment.get(DirectionalLightsAttribute.Type) as? DirectionalLightsAttribute)?.lights
         val points = (environment.get(PointLightsAttribute.Type) as? PointLightsAttribute)?.lights
@@ -91,7 +79,7 @@ class SceneShadows : Disposable {
                     val source = lights.directional[index]
                     light = dirs?.get(index) ?: continue
                     sourcePosition = source.position.toVector3(); range = 1f
-                    views = receiver?.let { projection.directional(source.direction.toVector3(), it, casters.map(Caster::bounds)) }?.let(::listOf) ?: continue
+                    views = receiver?.let { projection.directional(source.direction.toVector3(), it, casters.map(ShadowCaster::bounds)) }?.let(::listOf) ?: continue
                 }
                 ShadowLightKind.POINT -> {
                     val index = lights.point.indexOfFirst { it.entityId == allocation.entityId }

@@ -1,8 +1,8 @@
-# physics
+# lib-physics
 
 Plain JVM physics for native scenes, through [Jolt](https://github.com/jrouwe/JoltPhysics) and its JVM binding
 jolt-jni 6.1.1 (`com.github.stephengold`, MIT). No IntelliJ or plugin imports. It is constructor-wired, with no
-`object` or `companion object`, and `checkNoSingletons` runs as part of `check`. Depends on `core` and jolt-jni.
+`object` or `companion object`, and `checkNoSingletons` runs as part of `check`. Depends on `lib-core` and jolt-jni.
 
 Jolt's natives load only in a game or the play host, never in the IDE. Only `jolt/` imports Jolt. Component classes
 and the play protocol do not.
@@ -19,7 +19,7 @@ before loading. The IDE currently keeps these components read-only; schema annot
 | `ConstraintComponent` | `kind` (`DISTANCE`; `HINGE`, `FIXED`), `other` (entity, `-1` = a fixed point in the world), `anchor` / `otherAnchor` (local points; `otherAnchor` is a world point without another entity), `minDistance` (`0`), `maxDistance` (`1`), `hingeAxis` (`0, 1, 0`) |
 
 A distance constraint with minimum `0` is a rope. A convex hull is built from the vertex positions of the entity's
-model, and a height field from its terrain's `terrain.data`. Both are read by `PhysicsAssets` through `core` and
+model, and a height field from its terrain's `terrain.data`. Both are read by `PhysicsAssets` through `lib-core` and
 `lib-gdx`, with no GL.
 
 ## The world
@@ -74,7 +74,7 @@ tasks.register<JavaExec>("exportPlay") {
 }
 ```
 
-The runtime classpath must hold `physics` and the jolt-jni natives for the platforms the game is played on.
+The runtime classpath must hold `lib-physics` and the jolt-jni natives for the platforms the game is played on.
 Without `<project>/abyssus/play.json`, Abyssus runs its bundled play host with `PhysicsOnlyPlayModule`, which runs physics
 alone and reports each rope's tension. Export again whenever the classpath changes. A launch file naming a jar that
 no longer exists stops Play with that message.

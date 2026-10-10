@@ -9,6 +9,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.renderAssetOf
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 
@@ -27,10 +28,23 @@ import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.util.opt
 
+/**
+ * A terrain entity's foliage: [foliageName] is the foliage asset folder its `FoliageComponent.assetName` holds as a
+ * string, [terrainName] the terrain asset folder the entity shows, and [transform] the entity's own transform.
+ */
+data class FoliagePlacement(
+    val entityId: String,
+    val foliageName: String,
+    val terrainName: String,
+    val transform: PlacementTransform,
+)
+
 /** What a scene shows besides its environment. */
 data class SceneContent(
     val models: List<AssetPlacement> = emptyList(),
     val terrains: List<AssetPlacement> = emptyList(),
+    /** The foliage of terrain entities whose `FoliageComponent.assetName` is a string. */
+    val foliages: List<FoliagePlacement> = emptyList(),
     val lights: List<LightPlacement> = emptyList(),
     /** The skybox asset folder to draw, or null when the scene has no enabled, named skybox. */
     val skybox: String? = null,
@@ -71,8 +85,13 @@ private fun decode(entity: EntityView): DecodedEntity {
         components.opt("CameraComponent")?.let { read<CameraComponent>(it) },
         components.opt("LightComponent")?.let { read<LightComponent>(it) },
         asset?.let { DecodedAsset(it.type, it.name) },
+        foliageAssetName(components),
     )
 }
+
+/** The raw `FoliageComponent.assetName` of [components] when it is a string, else null (the component is not coded yet). */
+private fun foliageAssetName(components: JsonNode): String? =
+    components.opt("FoliageComponent")?.get("assetName")?.takeIf { it.isTextual }?.asText()
 
 /** Binds components the way a scene load does, so the view and the Properties panel show the same values. */
 private val components = ComponentReader(JsonProcessor(NOPLogger.NOP_LOGGER))

@@ -1,6 +1,6 @@
-# editor-core
+# lib-core-editor
 
-The editing engine of Abyssus without the IDE: a plain JVM library on `core`, `raytracing` and `lib-gdx`.
+The editing engine of Abyssus without the IDE: a plain JVM library on `lib-core`, `lib-raytracing` and `lib-gdx`.
 The plugin bundles it (in its `lib` folder) and keeps only IDE glue: `editSceneJson`'s undoable command,
 the tree, tool windows, dialogs, the GL canvas and renderer, actions, file types and VFS wiring. Physics editing kinds are supplied by plugin composition; this library has no physics dependency.
 
@@ -28,9 +28,10 @@ namespace, including extension providers that use editor value types, must updat
 | `components` | `ComponentEditor` (add, update, remove a modeled component), `ComponentCodec`, `BuiltInComponentKinds`, `ComponentReader`, `LightEntities`, `AssetEntities` |
 | `ecs` | `EcsWriter` (Jackson serialization of components and engines) |
 | `content` | Leaf value types: `Vec3`, `Quat`, `Pose`, the placements, `RenderAsset`, `PlacementTransform.toMatrix` |
-| `scene` | The read model: `SceneContent` / `sceneContentOf`, `SceneRenderParams` / `renderParamsOf`, `PlacementMapper`, `CameraFrustum`, `LightSet`, `ModelEntity`, `AssetRevisions` |
-| `pick` | `ScenePicker`, `SnapshotSceneQueries`, `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction`, `ScenePreview`, `SceneTransformWriter`, `SceneMarkers` / `LineSink` |
+| `scene` | The read model: `SceneContent` / `sceneContentOf`, `FoliagePlacement`, `SceneRenderParams` / `renderParamsOf`, `PlacementMapper`, `CameraFrustum`, `LightSet`, `ModelEntity`, `AssetRevisions` |
+| `pick` | `ScenePicker`, `SnapshotSceneQueries` (incl. `terrainOf` / `terrainHit` for painting), `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction` (incl. the `Gesture.Painting` stroke and `FoliagePaint`), `FoliagePaintMode` in `SceneViewState`, `ScenePreview`, `SceneTransformWriter`, `SceneMarkers` / `LineSink` |
 | `terrain` | Terrain generation, noise, recipe, new-terrain files and checks |
+| `foliage` | Terrain foliage authoring: `FoliageSettingsReader` / `FoliageRead` (typed settings from an `additional` node with validation), the field keys and defaults, `FoliageScatter` (deterministic copy generation), `FoliageBrush` / `MaskRect` (the density-mask brush and its dirty rectangles), `FoliageDraft` (uncommitted settings, masks and dirty chunks), `FoliageMetaEdits` (settings diffs as `DocumentTextEditor` edits) and `NewFoliageFiles` / `FoliageAssetWriter` (planning a new `FOLIAGE` asset) |
 | `meta` | `AssetMetaEditor` and field descriptions, `MetaRows`, `AssetReferenceChoices`, the panel's entity sections and asset field states |
 | `ray` | The ray tracing bridge: `RayBackendService`, `RayBackendSelector`, `RayViewRuntime`, `RayViewFeed`, `RaySceneSnapshots`, `RaySkyBaker`, `RayModeState`, diagnostics |
 | `headless` | `HeadlessEditing` (spec `headless-scene-editing`) |
@@ -38,7 +39,8 @@ namespace, including extension providers that use editor value types, must updat
 | `modelimport` | The model import: `ModelSource`, `ImportSettings`, `ImportTransform`, `TextureGather`, `ModelImport` |
 
 The package graph has no cycle (`./gradlew checkPackageCycles`): `content` is a leaf, `document` and `components`
-build on it, `scene` reads the document through the component codecs, and `pick` and `ray` build on `scene`.
+build on it, `scene` reads the document through the component codecs, `foliage` builds on `terrain` and `document`,
+and `pick` and `ray` build on `scene`.
 
 ## Imports
 
@@ -102,7 +104,7 @@ The test fixtures (`parseScene`, `testProject`, `testAsset`, `terrainData`, `ray
 
 ## Weather snapshots
 
-`weather/WeatherPresetDraft` validates native sky and cloud metadata and snapshots the cloud UUID the sky names.
+`weather/WeatherPresetDraft.kt` validates native sky and cloud metadata and snapshots the cloud UUID the sky names.
 It uses core's cloud settings binder, writes canonical `CLOUDS` metadata with every known band default explicit,
 and retains unknown extension members and unchanged numeric literals. Source documents retain omitted defaults
 and are never edited. The caller supplies the new UUID and timestamp; this class performs no file IO or GL work.
