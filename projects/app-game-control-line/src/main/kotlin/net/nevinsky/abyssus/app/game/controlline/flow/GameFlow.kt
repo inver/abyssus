@@ -28,14 +28,15 @@ const val NO_PLANE_MESSAGE = "No plane was found in the field scene"
 /** What the main menu says when the field scene has planes but none of class `STUNT`. */
 const val NO_STUNT_MESSAGE = "The F2B pattern needs a stunt plane"
 
-/** The assist levels the game offers; Noob comes with its own change. */
-val OFFERED_LEVELS = listOf(AssistLevel.PRO, AssistLevel.MID)
+/** The assist levels the game offers. */
+val OFFERED_LEVELS = listOf(AssistLevel.PRO, AssistLevel.MID, AssistLevel.NOOB)
 
 /** The tabs of the score table screen: Free flight, then one per offered assist level. */
 enum class ScoreTab(val label: String, val level: AssistLevel?) {
     FREE("Free flight", null),
     PRO("Pro", AssistLevel.PRO),
     MID("Mid", AssistLevel.MID),
+    NOOB("Noob", AssistLevel.NOOB),
 }
 
 /** The score table tab of the flights of [mode]. */

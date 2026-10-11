@@ -66,11 +66,11 @@ the control lines.
 
 | Tag | Colour | Width |
 |---|---|---|
-| `GUIDE_AHEAD` | bright cyan | 3 px |
-| `GUIDE_DONE` | cyan at 30% alpha | 2 px |
-| `GATE` | yellow | 4 px |
-| `RING_BASE` | white at 25% alpha | 1 px |
-| `RING_45` | white at 12% alpha | 1 px |
+| `GUIDE_AHEAD` | bright cyan | 6 px |
+| `GUIDE_DONE` | cyan at 30% alpha | 4 px |
+| `GATE` | yellow | 8 px |
+| `RING_BASE` | white at 25% alpha | 2 px |
+| `RING_45` | white at 12% alpha | 2 px |
 
 `FieldRenderer` enables blending for segments with alpha below 1. The lines stay depth-tested, so the ground hides
 lines below it, as it does the control lines.

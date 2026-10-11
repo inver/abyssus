@@ -6,7 +6,7 @@ single tests with `./gradlew :app-game-control-line:test --tests '<class>'`. Man
 
 ## 1. Guide planner
 
-- [ ] 1.1 Add `GuidePlanner`, with these parts:
+- [x] 1.1 Add `GuidePlanner`, with these parts:
   - **Placement:** build with `IdealTracks` at azimuth 0, then rotate so the first point lands on the gate. The gate
     is the plane's azimuth when the pause is done, plus `GUIDE_LEAD` (90°).
   - **Special guides:** take-off at the release point; the landing after the clover once the engine is off; nothing
@@ -22,7 +22,7 @@ single tests with `./gradlew :app-game-control-line:test --tests '<class>'`. Man
   - Engine out: the landing spiral appears only after the clover is scored and the engine stops;
   - Rings from the start;
   - every manoeuvre's guide has its first point within 0.1 m of its gate.
-- [ ] 1.2 Add progress dimming: once the judge reports the manoeuvre started, a windowed nearest-point search that is
+- [x] 1.2 Add progress dimming: once the judge reports the manoeuvre started, a windowed nearest-point search that is
   monotone, with tags `GUIDE_DONE` and `GUIDE_AHEAD`. Add `segments()` with world-space segments and tags, including
   `GATE`, `RING_BASE` and `RING_45`. Verify with `GuidePlannerTest`:
   - Halfway through the loops: at the top of loop 2 of a synthetic flight, the first loop and the climb of the second
@@ -32,7 +32,7 @@ single tests with `./gradlew :app-game-control-line:test --tests '<class>'`. Man
 
 ## 2. Flow and drawing
 
-- [ ] 2.1 Offer `NOOB` on `AssistSelect` after Pro and Mid, and add the Noob tab after Pro and Mid on the score table.
+- [x] 2.1 Offer `NOOB` on `AssistSelect` after Pro and Mid, and add the Noob tab after Pro and Mid on the score table.
   Verify with `GameFlowTest`:
   - Choosing Noob: F2B → Noob → `Stunter` flies a Noob flight;
   - A Noob flight on the board: it enters only the Noob board, its tab highlights it, and its row opens the debrief;
@@ -48,19 +48,19 @@ single tests with `./gradlew :app-game-control-line:test --tests '<class>'`. Man
   - M6: the Noob tab and its debrief work.
 
   If the gate is hard to see in M2, set `GUIDE_LEAD` to ⅛ lap and note it in the README.
-- [ ] 2.3 Update `projects/app-game-control-line/README.md`: the three assist levels, what Noob draws and its colours,
+- [x] 2.3 Update `projects/app-game-control-line/README.md`: the three assist levels, what Noob draws and its colours,
   and that Noob is judged the same way. Verify with `scripts/check-docs.sh`.
 
 ## 3. Spec consistency and integration
 
-- [ ] 3.1 If `add-f2b-pattern-mode` or `add-f2b-pro-debrief` is not archived yet, amend their deltas:
+- [x] 3.1 If `add-f2b-pattern-mode` or `add-f2b-pro-debrief` is not archived yet, amend their deltas:
   - "Assist level" offers Pro, Mid and Noob;
   - "Score table screen" lists the Noob tab;
   - "Debrief from GAME OVER" says every F2B level.
 
   If they are archived, make the same wording edits in `openspec/specs/control-line-game-flow/spec.md` as part of
   archiving this change. Verify with `openspec validate --strict` on each touched change.
-- [ ] 3.2 Run `./gradlew check` and `scripts/check-docs.sh`. Verify that both pass.
+- [x] 3.2 Run `./gradlew check` and `scripts/check-docs.sh`. Verify that both pass.
 
 ## Workflow follow-up
 

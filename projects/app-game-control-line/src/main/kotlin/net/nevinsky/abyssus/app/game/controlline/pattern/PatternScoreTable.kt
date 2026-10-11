@@ -14,11 +14,17 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
-/** How much help an F2B flight gets: Pro none, Mid the next manoeuvre and a toast per mark, Noob (a later change) the ideal track. */
+/** How much help an F2B flight gets: Pro none, Mid the next manoeuvre and a toast per mark, Noob that and the ideal track drawn ahead. */
 enum class AssistLevel(val label: String, val key: String) {
     PRO("Pro", "pro"),
     MID("Mid", "mid"),
-    NOOB("Noob", "noob"),
+    NOOB("Noob", "noob");
+
+    /** Whether the HUD names the next manoeuvre and the pause, and toasts each mark. */
+    val prompted: Boolean get() = this != PRO
+
+    /** Whether the ideal track of the next manoeuvre is drawn in the flight. */
+    val guided: Boolean get() = this == NOOB
 }
 
 /** The version of `f2b-scores.json` this game reads and writes. */

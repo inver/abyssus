@@ -18,9 +18,15 @@ class SyntheticSchedule(private val radius: Float = 18f, private val pauseLaps: 
     private val sphere = HemisphereGeometry(radius)
     private var fed = 0
 
+    /** Called after the judge has taken each sample, for a test that follows the flight sample by sample. */
+    var afterSample: () -> Unit = {}
+
     /** Hands the samples flown since the last call to the judge. */
     fun feed() {
-        while (fed < flight.samples.size) judge.sample(flight.samples[fed++])
+        while (fed < flight.samples.size) {
+            judge.sample(flight.samples[fed++])
+            afterSample()
+        }
     }
 
     fun end(end: FlightEnd) {

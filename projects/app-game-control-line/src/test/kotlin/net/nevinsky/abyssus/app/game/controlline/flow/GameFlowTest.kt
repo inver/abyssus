@@ -116,11 +116,50 @@ class GameFlowTest {
     }
 
     @Test
-    fun noobIsNotOffered() {
+    fun noobIsOfferedAfterProAndMid() {
+        assertEquals(listOf(AssistLevel.PRO, AssistLevel.MID, AssistLevel.NOOB), OFFERED_LEVELS)
         val flow = flow()
         flow.f2bPattern()
         flow.chooseAssist(AssistLevel.NOOB)
-        assertEquals(Screen.AssistSelect, flow.screen)
+        assertEquals(Screen.PlaneSelect(0, Mode.Pattern(AssistLevel.NOOB)), flow.screen)
+        flow.nextPlane()
+        flow.choosePlane()
+        assertEquals(Screen.Flying(planes[1], 1, Mode.Pattern(AssistLevel.NOOB)), flow.screen)
+    }
+
+    @Test
+    fun onlyNoobGuidesAndMidAndNoobPrompt() {
+        assertEquals(listOf(false, false, true), AssistLevel.entries.map { it.guided })
+        assertEquals(listOf(false, true, true), AssistLevel.entries.map { it.prompted })
+    }
+
+    @Test
+    fun aNoobFlightIsSavedToTheNoobBoardOnlyAndItsRowOpensItsDebrief() {
+        val flow = flow()
+        flow.flyAndSave(AssistLevel.NOOB, 85)
+        assertEquals(1, flow.patternTable.board(AssistLevel.NOOB).size)
+        assertTrue(flow.patternTable.board(AssistLevel.PRO).isEmpty() && flow.patternTable.board(AssistLevel.MID).isEmpty())
+        flow.scores()
+        val scores = flow.screen as Screen.Scores
+        assertEquals(ScoreTab.NOOB, scores.tab)
+        assertEquals(ScoreTab.NOOB, scores.highlightTab)
+        assertEquals(1, scores.highlight)
+        flow.openRow()
+        assertTrue((flow.screen as Screen.Debrief).model.title.contains("Noob"))
+        flow.back()
+        flow.back()
+        flow.debrief()
+        assertTrue((flow.screen as Screen.Debrief).model.title.contains("Noob"))
+    }
+
+    @Test
+    fun retryKeepsNoob() {
+        val flow = flow()
+        val flying = flow.flyPattern(AssistLevel.NOOB)
+        flow.flightEnded(patternReport(AssistLevel.NOOB, 85))
+        flow.nameEntered("Ann")
+        flow.retry()
+        assertEquals(Screen.Flying(flying.plane, 2, Mode.Pattern(AssistLevel.NOOB)), flow.screen)
     }
 
     @Test
@@ -303,9 +342,11 @@ class GameFlowTest {
         assertEquals(ScoreTab.PRO, (flow.screen as Screen.Scores).tab)
         flow.nextTab()
         flow.nextTab()
+        assertEquals(ScoreTab.NOOB, (flow.screen as Screen.Scores).tab)
+        flow.nextTab()
         assertEquals(ScoreTab.FREE, (flow.screen as Screen.Scores).tab)
         flow.previousTab()
-        assertEquals(ScoreTab.MID, (flow.screen as Screen.Scores).tab)
+        assertEquals(ScoreTab.NOOB, (flow.screen as Screen.Scores).tab)
     }
 
     @Test
@@ -425,6 +466,7 @@ class GameFlowTest {
         assertTrue((flow.screen as Screen.Debrief).model.title.contains("Mid"))
         flow.back()
         assertEquals(1, (flow.screen as Screen.Scores).selected)
+        flow.nextTab()
         flow.nextTab()
         assertEquals(0, (flow.screen as Screen.Scores).selected)
         // the Free flight tab has no rows to open

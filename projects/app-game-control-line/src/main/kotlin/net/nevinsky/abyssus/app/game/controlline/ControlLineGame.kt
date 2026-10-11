@@ -21,6 +21,7 @@ import net.nevinsky.abyssus.app.game.controlline.render.*
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefModel
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefFrame
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefView
+import net.nevinsky.abyssus.app.game.controlline.pattern.GuidePlanner
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
@@ -64,6 +65,9 @@ class ControlLineGame(
 
     private var session: FlightSession? = null
     private var judge: PatternJudge? = null
+
+    /** The Noob guide of the flight, or null at the other levels. */
+    private var guide: GuidePlanner? = null
     private var sessionScene: FieldScene? = null
     private var flying: Screen.Flying? = null
 
@@ -109,6 +113,7 @@ class ControlLineGame(
         val s = session
         if (s != null && screen is Screen.Flying) {
             s.advance(seconds, input)
+            judge?.let { guide?.update(it) }
             flying?.let { f -> reportOf(s, f.mode, judge, f.plane.name)?.let(flow::flightEnded) }
         } else if (s != null && screen !is Screen.Debrief && (screen is Screen.GameOver || screen is Screen.NameEntry)) {
             // the plane comes to rest; the flight itself is over
@@ -138,6 +143,7 @@ class ControlLineGame(
                 cameras.flying(pilot, scene.position(s.plane).localPosition)
                 val color = if (s.flight.tension >= CONTROL_TENSION) TAUT_LINE else SLACK_LINE
                 lines = s.lines().map { (a, b) -> LineSegment(a, b, color) }
+                if (screen is Screen.Flying || screen is Screen.Paused) guide?.let { lines = lines + it.segments().toLines(pilot) }
             } else {
                 cameras.menu(
                     scene.pilot?.getComponent(PositionComponent::class.java)?.localPosition ?: Vector3(),
@@ -222,7 +228,9 @@ class ControlLineGame(
         val pilot = scene.pilot ?: return
         val assets = PhysicsAssets(project.toFile())
         // an F2B pattern is judged over a hemisphere of the plane's line length
-        judge = (screen.mode as? Mode.Pattern)?.let { PatternJudge(screen.plane.lineLength) }
+        val pattern = screen.mode as? Mode.Pattern
+        judge = pattern?.let { PatternJudge(screen.plane.lineLength) }
+        guide = pattern?.takeIf { it.level.guided }?.let { GuidePlanner(screen.plane.lineLength) }
         session = FlightSession(scene.engine, pilot, plane, assets, log, natives, judge)
         sessionScene = scene
         flying = screen
@@ -239,6 +247,7 @@ class ControlLineGame(
         session?.close()
         session = null
         judge = null
+        guide = null
         sessionScene = null
         flying = null
     }

@@ -24,7 +24,7 @@ Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json` a
 |---|---|
 | Menus | Up / Down and Enter, or the mouse; Escape goes back |
 | Plane select | Left / Right change the plane, Enter flies it, Escape returns to the screen before it (the main menu, or the assist level for an F2B pattern) |
-| Scores | Left / Right change the tab (Free flight, Pro, Mid), Escape or Back returns. On Pro and Mid, Up / Down select a flight and Enter or a click opens its debrief |
+| Scores | Left / Right change the tab (Free flight, Pro, Mid, Noob), Escape or Back returns. On the F2B tabs, Up / Down select a flight and Enter or a click opens its debrief |
 | Debrief | Up / Down: manoeuvre; Space: pause or resume; R: restart; 1 / 2 / 3: speed ½× / 1× / 2×; V: pilot view or outside view; Escape returns |
 | Flying | W or Up: handle up; S or Down: handle down (full tilt in 0.15 s, back to neutral on release). Moving the mouse up or down sets the tilt by its distance from the window's centre; whichever was used last wins. Escape pauses |
 
@@ -42,9 +42,28 @@ an **assist level**, then offers only planes of class `STUNT` (the bundled `Stun
 |---|---|
 | Pro | line tension, fuel left and the clock `m:ss / 7:00`; nothing about the manoeuvres |
 | Mid | also the next manoeuvre with its K, the pause count out of 1½ laps, a warning while the plane flies level between manoeuvres outside 1 to 3 m, and a toast with each mark as soon as the manoeuvre ends (`Take-off 8.5 × 2 = 17.0`) |
+| Noob | all of Mid's, and the ideal track of the next manoeuvre drawn in the sky (below) |
 
-Noob (the ideal track drawn ahead of the plane) comes in a later change; Noob's board is reserved in
-`f2b-scores.json` but not offered.
+All three levels are judged the same way, from where the pilot actually flew; Noob flights go on their own Noob board.
+Required behaviour of the guide: `control-line-f2b-guide` (OpenSpec change `add-f2b-noob-guide`).
+
+### The Noob guide
+
+During a Noob flight the game draws, in the 3D view:
+
+- the **ideal track of the next manoeuvre** (bright cyan). When the 1½-lap pause after the last manoeuvre is done, the
+  track appears with its first point at a **start gate** (a yellow bar from the ground to 1 m above the base) a
+  quarter lap ahead of the plane, turned about the vertical so that it starts there. It stays where it is until the
+  manoeuvre is scored, so a pilot who is not ready passes the gate and starts on the next lap. The eights and the clover
+  are drawn with their way in and out;
+- **progress**: once the judge sees the manoeuvre start, the part up to the point nearest the plane is dimmed (faint
+  cyan); the search looks only a tenth of the track ahead of the last point, so it never jumps back or onto a later repeat;
+- the **take-off** climb and its two laps at the base from the release point, and, once the clover is scored and the
+  engine has stopped, the one-lap **landing** glide a quarter lap ahead;
+- a faint ring at the base and a fainter one at the 45° parallel, all flight long.
+
+The guide never steers: no autopilot, smoothing or slowed time. `GUIDE_LEAD` (a quarter lap) is the one constant to
+reduce if the gate is hard to see. The planner is `pattern.GuidePlanner`, free of GL; `ControlLineGame` draws its segments.
 
 ### The schedule
 
@@ -132,8 +151,8 @@ readers that do not know the field, are unaffected.
 
 ### Debrief
 
-After every F2B flight (Pro and Mid), GAME OVER offers **Debrief**, whether or not the flight entered a board. On the score
-table's Pro and Mid tabs, Enter on a row opens that flight's debrief. Required behaviour: `control-line-f2b-debrief`
+After every F2B flight (Pro, Mid and Noob), GAME OVER offers **Debrief**, whether or not the flight entered a board. On the score
+table's F2B tabs, Enter on a row opens that flight's debrief. Required behaviour: `control-line-f2b-debrief`
 (OpenSpec change `add-f2b-pro-debrief`). The screen shows the 15-row score sheet with one manoeuvre selected, the field
 facing that manoeuvre, its **ideal track** (green) and **flown track** (orange) with the base and the 45° parallel as
 faint guides, the plane flying the manoeuvre along its recorded path, and the manoeuvre's deductions, largest first, each
@@ -193,7 +212,7 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 | `flight` | `Aero`, `LineRig`, `Ground`, `Flight` / `FlightSystem`, `FlightOutcome`, `FlightSession`, `FlightJudge` | no |
 | `track` | `SphereTrack`, `Maneuvers`, `Laps` | no |
 | `score` | `ScoreKeeper`, `FlightScoring`, `ScoreTable` | no |
-| `pattern` | the F2B pattern: `Schedule` (`Figure`), `HemisphereGeometry`, `PathTokens`, `TrackBuilder`, `IdealTracks`, `IdealSampler`, `Matchers`, `Grader` / `MarkWeights`, `PatternJudge`, `ScoreSheet`, `PatternScoreTable`, and the debrief's `FlightRecording`, `RecordingStore`, `DebriefModel` | no |
+| `pattern` | the F2B pattern: `Schedule` (`Figure`), `HemisphereGeometry`, `PathTokens`, `TrackBuilder`, `IdealTracks`, `IdealSampler`, `Matchers`, `Grader` / `MarkWeights`, `PatternJudge`, `ScoreSheet`, `PatternScoreTable`, and the debrief's `FlightRecording`, `RecordingStore`, `DebriefModel`, and the Noob guide `GuidePlanner` | no |
 | `flow` | `GameFlow` (the screen state machine, with the mode and assist level), `FlightReport` | no |
 | `input` | `HandleInput` (keyboard and mouse tilt) | no |
 | `render`, `screens` | `FieldScene`, `FieldRenderer` (with `shader/terrain.*`), `FieldShadows` (the sun's shadow map), `Cameras`, `GameUi` | yes |

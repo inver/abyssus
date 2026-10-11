@@ -107,7 +107,7 @@ with the score, laps, combo, clock and score sheet reset.
 
 ### Requirement: Score table screen
 
-The score table screen SHALL have a tab for Free flight and one for each offered F2B assist level, Pro and Mid. Free
+The score table screen SHALL have a tab for Free flight and one for each offered F2B assist level, Pro, Mid and Noob. Free
 flight SHALL list its 10 best flights with rank, name, plane, score, laps, best combo, flight time and date. An F2B tab
 SHALL list its level's 10 best flights with rank, name, plane, score with two decimals, flight time and date. Left and
 right SHALL change the tab. The screen SHALL open on the tab of the flight just saved, highlight it, and return with
@@ -127,7 +127,7 @@ Escape or Back to the screen it was opened from.
 
 ### Requirement: Assist level
 
-After F2B pattern, the game SHALL offer the assist levels Pro and Mid, each with a one-line description, usable with
+After F2B pattern, the game SHALL offer the assist levels Pro, Mid and Noob, each with a one-line description, usable with
 the arrow keys and Enter or with the mouse. Choosing one SHALL open plane select for the F2B pattern, and Escape SHALL
 return to the main menu.
 

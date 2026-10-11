@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightEnd
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightJudge
 import net.nevinsky.abyssus.app.game.controlline.track.TrackSample
@@ -70,6 +71,16 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
     var heightWarning: HeightWarning? = null
         private set
 
+    /** Whether the expected manoeuvre has started: the take-off has left the ground, or flying other than level has begun since the last manoeuvre ended. */
+    var started = false
+        private set
+
+    /** What the Noob guide reads: where the plane is and where the schedule has got to. */
+    fun guideInput(): GuideInput {
+        val last = path.points.lastOrNull()
+        return GuideInput(expected, pauseLaps, started, last?.u?.let { Vector3(it) }, last?.engineRunning ?: true)
+    }
+
     private var lastEnd = -1 // point index
     private var lastEndAzimuth = 0f
     private var lastEndTime = 0f
@@ -97,10 +108,21 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
             }
         } else null
         when (expected) {
-            null, Figure.LANDING -> return
+            null, Figure.LANDING -> Unit
             Figure.TAKEOFF -> takeoff()
             else -> sequence(open)
         }
+        started = startedNow(path.peekOpen())
+    }
+
+    private fun startedNow(open: Token?): Boolean = when (val figure = expected) {
+        null, Figure.LANDING -> false
+        Figure.TAKEOFF -> liftoff >= 0
+        else -> burst().isNotEmpty() || (open != null && open.from > lastEnd && when (open) {
+            // level flight is the pause, except the inverted laps themselves
+            is Level -> open.latitude >= PAUSE_LATITUDE || (!open.upright && figure == Figure.INVERTED_LAPS)
+            else -> true
+        })
     }
 
     // take-off: from the start of the ground roll to 3 laps after it
@@ -187,6 +209,7 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
         lastEnd = pointIndex
         lastEndAzimuth = point.azimuth
         lastEndTime = point.time
+        pauseLaps = 0f
     }
 
     private fun decide(figure: Figure, graded: Graded, time: Float, start: Float = time) =

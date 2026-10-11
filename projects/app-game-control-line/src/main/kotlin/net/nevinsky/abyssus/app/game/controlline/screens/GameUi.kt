@@ -195,7 +195,7 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
     private fun describe(level: AssistLevel) = when (level) {
         AssistLevel.PRO -> "no help: tension, fuel and the clock"
         AssistLevel.MID -> "the next manoeuvre, the pause count, a height warning and each mark as you fly"
-        AssistLevel.NOOB -> "the ideal track ahead of the plane"
+        AssistLevel.NOOB -> "all of Mid's, and the ideal track drawn ahead of the plane"
     }
 
     private fun planeSelect(root: Table, screen: Screen.PlaneSelect) {
@@ -231,7 +231,7 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
             is Mode.Pattern -> {
                 panel.add(Label("Fuel", skin)); panel.add(fuel).colspan(2).row()
                 panel.add(Label("Time", skin)); panel.add(clock).colspan(2).row()
-                if (mode.level == AssistLevel.MID) {
+                if (mode.level.prompted) {
                     panel.add(Label("Next", skin)); panel.add(next).colspan(2).row()
                     panel.add(Label("Pause", skin)); panel.add(pauseLaps).colspan(2).row()
                     panel.add(warning).colspan(3).row()
@@ -256,7 +256,7 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
         val mode = modeOf(shown)
         if (mode is Mode.Pattern && judge != null) {
             clock.setText("${time(flight.time)} / ${time(FLIGHT_TIME)}")
-            if (mode.level == AssistLevel.MID) midGuidance(judge)
+            if (mode.level.prompted) midGuidance(judge)
         } else {
             laps.setText(keeper.laps.toString())
             score.setText(keeper.score.toString())
@@ -272,7 +272,7 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
         toast.isVisible = toastTime > 0f
     }
 
-    /** The Mid assist level's guidance: the next manoeuvre, the pause count, the height warning and a toast per mark. */
+    /** The Mid and Noob assist levels' guidance: the next manoeuvre, the pause count, the height warning and a toast per mark. */
     private fun midGuidance(judge: PatternJudge) {
         next.setText(judge.expected?.let { "${it.label} (K ${it.k})" } ?: "Land")
         pauseLaps.setText(judge.pauseLaps?.let { String.format(Locale.ROOT, "%.1f / %.1f laps", it.coerceAtMost(PAUSE_LAPS), PAUSE_LAPS) } ?: "-")

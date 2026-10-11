@@ -4,7 +4,7 @@
 
 ### Requirement: Debrief from GAME OVER
 
-After an F2B flight, at Pro and at Mid, GAME OVER SHALL offer Debrief next to Retry, Scores and Main menu, after any
+After an F2B flight, at every assist level, GAME OVER SHALL offer Debrief next to Retry, Scores and Main menu, after any
 name entry. Debrief SHALL open the debrief of the flight just flown, whether or not it entered a board, and Escape
 there SHALL return to GAME OVER. Free flight SHALL NOT offer Debrief.
 
