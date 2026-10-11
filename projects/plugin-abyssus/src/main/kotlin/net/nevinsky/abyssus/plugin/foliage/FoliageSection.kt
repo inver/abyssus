@@ -13,6 +13,8 @@ import com.intellij.ui.components.panels.VerticalLayout
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageCollider
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderShape
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerKind
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta
@@ -76,6 +78,7 @@ internal class FoliageSection(
         box.add(button("foliage-add-layer", "foliageAddLayer", true) { controller.addLayer() })
         box.add(counts())
         controller.message?.let { box.add(help("<html>$it</html>").apply { name = "foliage-message" }) }
+        if (controller.colliderOnly) box.add(help(AbyssusBundle.message("foliageColliderBakeKept")).apply { name = "foliage-collider-note" })
         box.add(actions())
         add(box, BorderLayout.NORTH)
     }
@@ -88,6 +91,7 @@ internal class FoliageSection(
         for ((index, model) in layer.models.withIndex()) box.add(modelRow(layer.id, index, model, modelsError))
         box.add(addModelRow(layer, modelsError))
         for (spec in FOLIAGE_FIELDS) if (spec.appliesTo(layer)) box.add(fieldRow(layer, spec))
+        if (layer.layerKind() == FoliageLayerKind.OBJECT) box.add(colliderBlock(layer))
         box.add(
             JBLabel(AbyssusBundle.message("foliageLayerCount", controller.countOf(layer.id)?.toString() ?: "?")).apply {
                 name = "foliage-count-${layer.id}"
@@ -211,6 +215,63 @@ internal class FoliageSection(
         return row(JBLabel(AbyssusBundle.message(spec.label)), editor, error)
     }
 
+    /** The collider controls of an OBJECT layer: None/Box/Sphere/Capsule, then the sizes of the chosen shape and the offset. */
+    private fun colliderBlock(layer: FoliageLayerMeta): JComponent {
+        val box = JPanel(VerticalLayout(JBUI.scale(2))).apply { name = "foliage-collider-block-${layer.id}" }
+        val error = JBLabel("").apply { foreground = JBColor.RED; name = "foliage-error-${layer.id}-collider" }
+        controller.colliderProblemOf(layer.id)?.let { error.text = it.reason }
+        val current = controller.colliderOf(layer.id)
+        val choices = listOf<FoliageColliderShape?>(null) + FoliageColliderShape.entries
+        val shapes = ComboBox(choices.map { AbyssusBundle.message(if (it == null) "foliageColliderNone" else "foliageCollider${it.name}") }.toTypedArray()).apply {
+            name = "foliage-collider-${layer.id}"
+            // an unusable stored collider shows no choice, so picking None (or a shape) is a change that replaces it
+            selectedIndex = if (controller.colliderProblemOf(layer.id) != null && current == null) -1 else choices.indexOf(current?.shape)
+            addActionListener {
+                if (selectedIndex < 0) return@addActionListener
+                val chosen = choices[selectedIndex]
+                val reason = controller.editCollider(layer.id) { old -> chosen?.let { (old ?: FoliageCollider()).copy(shape = it) } }
+                if (reason != null) error.text = reason
+            }
+        }
+        box.add(row(JBLabel(AbyssusBundle.message("foliageCollider")), shapes, error))
+        if (current != null) {
+            val specs = when (current.shape) {
+                FoliageColliderShape.BOX -> listOf(HALF_X, HALF_Y, HALF_Z)
+                FoliageColliderShape.SPHERE -> listOf(RADIUS)
+                FoliageColliderShape.CAPSULE -> listOf(RADIUS, HALF_HEIGHT)
+            } + listOf(OFFSET_X, OFFSET_Y, OFFSET_Z)
+            for (spec in specs) box.add(colliderField(layer.id, current, spec, error))
+        }
+        return box
+    }
+
+    private fun colliderField(layerId: Int, current: FoliageCollider, spec: ColliderField, error: JBLabel): JComponent {
+        val editor = JBTextField(spec.read(current).editText()).apply {
+            name = "foliage-collider-$layerId-${spec.key}"
+            font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size)
+            val save = {
+                val parsed = text.trim().toFloatOrNull()?.takeIf { it.isFinite() }
+                if (parsed == null) {
+                    error.text = AbyssusBundle.message("foliageNotANumber")
+                    text = spec.read(current).editText()
+                } else if (parsed != spec.read(current)) {
+                    val reason = controller.editCollider(layerId) { old -> old?.let { spec.write(it, parsed) } }
+                    if (reason != null) {
+                        error.text = reason
+                        text = spec.read(current).editText()
+                    }
+                }
+            }
+            addActionListener { save() }
+            addFocusListener(object : FocusAdapter() {
+                override fun focusLost(e: FocusEvent) {
+                    save()
+                }
+            })
+        }
+        return row(JBLabel(AbyssusBundle.message(spec.label)), editor, JBLabel(""))
+    }
+
     private fun counts(): JComponent {
         val box = JPanel(VerticalLayout(JBUI.scale(2)))
         box.add(JBLabel(AbyssusBundle.message("foliageTotal", controller.totalShown.toString())).apply {
@@ -230,7 +291,7 @@ internal class FoliageSection(
         val bar = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply { isOpaque = false }
         bar.add(button("foliage-apply", "foliageApply", controller.canApply) { controller.apply() })
         bar.add(button("foliage-cancel", "foliageCancel", true) { controller.cancel() })
-        if (controller.stale) bar.add(button("foliage-rebake", "foliageRebake", controller.canApply) { controller.apply() })
+        if (controller.stale) bar.add(button("foliage-rebake", "foliageRebake", controller.canRebake) { controller.rebake() })
         return JPanel(VerticalLayout(JBUI.scale(4))).apply {
             add(bar)
             undoRow?.let { add(it) }
@@ -276,6 +337,23 @@ internal class FoliageSection(
         const val ROW_WIDTH = 240
     }
 }
+
+/** One editable collider number: its key, label and how it reads and writes the [FoliageCollider]. */
+private class ColliderField(
+    val key: String,
+    val label: String,
+    val read: (FoliageCollider) -> Float,
+    val write: (FoliageCollider, Float) -> FoliageCollider,
+)
+
+private val HALF_X = ColliderField("halfX", "foliageColliderHalfX", { it.halfX }, { c, v -> c.copy(halfX = v) })
+private val HALF_Y = ColliderField("halfY", "foliageColliderHalfY", { it.halfY }, { c, v -> c.copy(halfY = v) })
+private val HALF_Z = ColliderField("halfZ", "foliageColliderHalfZ", { it.halfZ }, { c, v -> c.copy(halfZ = v) })
+private val RADIUS = ColliderField("radius", "foliageColliderRadius", { it.radius }, { c, v -> c.copy(radius = v) })
+private val HALF_HEIGHT = ColliderField("halfHeight", "foliageColliderHalfHeight", { it.halfHeight }, { c, v -> c.copy(halfHeight = v) })
+private val OFFSET_X = ColliderField("offsetX", "foliageColliderOffsetX", { it.offsetX }, { c, v -> c.copy(offsetX = v) })
+private val OFFSET_Y = ColliderField("offsetY", "foliageColliderOffsetY", { it.offsetY }, { c, v -> c.copy(offsetY = v) })
+private val OFFSET_Z = ColliderField("offsetZ", "foliageColliderOffsetZ", { it.offsetZ }, { c, v -> c.copy(offsetZ = v) })
 
 /** One editable layer setting: its key, label and file member, and how the editor turns text into a value. */
 private class FoliageField(

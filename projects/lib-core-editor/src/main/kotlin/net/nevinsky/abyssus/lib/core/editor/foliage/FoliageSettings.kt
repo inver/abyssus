@@ -6,15 +6,33 @@
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
 import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderProblem
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderRead
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderReader
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerKind
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageScale
+import net.nevinsky.abyssus.lib.core.assets.foliage.layerKind
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 
 /** Why a foliage value is refused; the panel shows the localized reason beside the field. */
-enum class FoliageError { DENSITY, SCALE_RANGE, ALIGNMENT, SLOPE, HEIGHT_RANGE, WEIGHT, DUPLICATE_ID, NOT_A_MODEL }
+enum class FoliageError {
+    DENSITY, SCALE_RANGE, ALIGNMENT, SLOPE, HEIGHT_RANGE, WEIGHT, DUPLICATE_ID, NOT_A_MODEL,
+
+    /** A layer's collider is not an object, has a member of the wrong type or an unknown shape. */
+    COLLIDER_MALFORMED,
+
+    /** An active collider size is not finite and positive. */
+    COLLIDER_SIZE,
+
+    /** A collider offset is not finite. */
+    COLLIDER_OFFSET,
+
+    /** A layer changed to DETAIL while it still has a collider. */
+    COLLIDER_KIND,
+}
 
 /** A refused foliage value: the [layerId] it belongs to (null for the whole asset), the [field] key and why. */
 class FoliageProblem(
@@ -40,7 +58,10 @@ class FoliageRead(val settings: FoliageMeta, val problems: List<FoliageProblem>)
  * Members that are not of the shape the format documents take their defaults; the validation then reports what must
  * be refused with a reason. [modelAssets] are the project's MODEL asset folders, the only ones a layer may name.
  */
-class FoliageSettingsReader(private val messages: EditorMessages) {
+class FoliageSettingsReader(
+    private val messages: EditorMessages,
+    private val colliders: FoliageColliderReader = FoliageColliderReader(),
+) {
 
     fun read(node: JsonNode?, modelAssets: Set<String>): FoliageRead {
         val settings = parse(node ?: return FoliageRead(FoliageMeta(), emptyList()))
@@ -78,6 +99,7 @@ class FoliageSettingsReader(private val messages: EditorMessages) {
             maxSlope = node.float(FOLIAGE_MAX_SLOPE),
             drawDistance = node.float(FOLIAGE_DRAW_DISTANCE) ?: FOLIAGE_DRAW_DISTANCE_DEFAULT,
             seed = node.int(FOLIAGE_SEED) ?: 0,
+            collider = node.get(FOLIAGE_COLLIDER)?.takeUnless { it.isNull },
         )
     }
 
@@ -94,11 +116,32 @@ class FoliageSettingsReader(private val messages: EditorMessages) {
             val min = layer.minHeight
             val max = layer.maxHeight
             if (min != null && max != null && min > max) problem(layer.id, FOLIAGE_HEIGHT, FoliageError.HEIGHT_RANGE)
+            if (layer.layerKind() == FoliageLayerKind.OBJECT) {
+                val read = colliders.read(layer.collider)
+                if (read is FoliageColliderRead.Invalid) problem(layer.id, FOLIAGE_COLLIDER, colliderError(read.problem))
+            }
             for (model in layer.models) {
                 if (!(model.weight > 0f)) problem(layer.id, "$FOLIAGE_MODELS[${model.asset}].$FOLIAGE_WEIGHT", FoliageError.WEIGHT)
                 if (model.asset !in modelAssets) problem(layer.id, FOLIAGE_MODELS, FoliageError.NOT_A_MODEL)
             }
         }
+    }
+
+    private fun colliderError(problem: FoliageColliderProblem): FoliageError = when (problem) {
+        FoliageColliderProblem.MALFORMED, FoliageColliderProblem.UNKNOWN_SHAPE -> FoliageError.COLLIDER_MALFORMED
+        FoliageColliderProblem.SIZE -> FoliageError.COLLIDER_SIZE
+        FoliageColliderProblem.OFFSET -> FoliageError.COLLIDER_OFFSET
+    }
+
+    /**
+     * The problems an edit from [before] to [after] adds on top of [read]'s: a layer that was OBJECT and is now DETAIL
+     * must give up its collider explicitly. A DETAIL layer that already had one (imported data) is left alone.
+     */
+    fun transitions(before: FoliageMeta, after: FoliageMeta): List<FoliageProblem> {
+        val kinds = before.layers.associate { it.id to it.layerKind() }
+        return after.layers
+            .filter { it.collider != null && it.layerKind() == FoliageLayerKind.DETAIL && kinds[it.id] == FoliageLayerKind.OBJECT }
+            .map { FoliageProblem(it.id, FOLIAGE_COLLIDER, FoliageError.COLLIDER_KIND, reason(FoliageError.COLLIDER_KIND)) }
     }
 
     private fun JsonNode.obj(name: String): JsonNode? = get(name)?.takeIf { it.isObject }
@@ -131,6 +174,7 @@ const val FOLIAGE_HEIGHT = "height"
 const val FOLIAGE_MAX_SLOPE = "maxSlope"
 const val FOLIAGE_DRAW_DISTANCE = "drawDistance"
 const val FOLIAGE_SEED = "seed"
+const val FOLIAGE_COLLIDER = "collider"
 
 const val FOLIAGE_MASK_RESOLUTION_DEFAULT = 256
 /** The mask resolution New Foliage... starts with; the accepted range is [FOLIAGE_MASK_RESOLUTION_MIN] through [FOLIAGE_MASK_RESOLUTION_MAX]. */

@@ -68,6 +68,10 @@ class FoliageMetaEdits(private val editor: DocumentTextEditor = DocumentTextEdit
         node.change(FOLIAGE_MAX_SLOPE, before.maxSlope, after.maxSlope)
         node.change(FOLIAGE_DRAW_DISTANCE, before.drawDistance, after.drawDistance)
         node.change(FOLIAGE_SEED, before.seed, after.seed)
+        if (before.collider != after.collider) {
+            // the collider is written as the settings hold it (see FoliageColliderEdits), so nested unknown members survive
+            after.collider?.let { node.set<JsonNode>(FOLIAGE_COLLIDER, it.deepCopy()) } ?: node.remove(FOLIAGE_COLLIDER)
+        }
     }
 
     private fun changeModels(node: ObjectNode, before: List<FoliageModelMeta>, after: List<FoliageModelMeta>) {

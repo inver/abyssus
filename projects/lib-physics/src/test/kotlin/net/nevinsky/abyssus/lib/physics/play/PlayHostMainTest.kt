@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.physics.play
 
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageCopy
+import net.nevinsky.abyssus.lib.physics.FoliageProject
 import net.nevinsky.abyssus.lib.physics.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -66,6 +68,29 @@ class PlayHostMainTest {
         protocol.write(output, PlayFrame.Bye)
         assertTrue("the play process did not exit", process.waitFor(10, TimeUnit.SECONDS))
         assertEquals(0, process.exitValue())
+    }
+
+    @Test
+    fun aBoxSettlesOnAFoliageColliderInTheExternalHost() = FoliageProject().use { project ->
+        project.foliage("[${FoliageProject.layerJson(FoliageProject.CAPSULE)}]")
+        project.bake(listOf(FoliageProject.layer(listOf(FoliageCopy(0, 50f, 50f, 0f, 1f)))))
+        playing { process, _, input, output ->
+            protocol.write(output, PlayFrame.Load(FoliageProject.scene(extra = FoliageProject.box(50f, 5f, 50f)), project.dir.path, -1))
+            assertEquals(PlayFrame.Ready, protocol.read(input))
+            protocol.write(output, PlayFrame.Play)
+            var settled: PlayFrame.Poses? = null
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
+            while (settled == null && System.nanoTime() < deadline) {
+                val frame = protocol.read(input)
+                if (frame is PlayFrame.Poses && frame.simTime >= 5.0) settled = frame
+            }
+            assertNotNull("no frame reached 5 s of simulated time", settled)
+            // the capsule trunk's top is 1.5 m up, so the 1 m box rests at 2.0 m (the floor would give -18.5 m)
+            assertEquals(2.0f, settled!!.poses.single { it.id == 2 }.y, 0.05f)
+            protocol.write(output, PlayFrame.Stop)
+            protocol.write(output, PlayFrame.Bye)
+            assertTrue("the play process did not exit", process.waitFor(10, TimeUnit.SECONDS))
+        }
     }
 
     @Test

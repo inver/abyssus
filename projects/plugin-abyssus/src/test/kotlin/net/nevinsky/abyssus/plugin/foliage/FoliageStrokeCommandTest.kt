@@ -53,7 +53,7 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
     }
     private fun source(): FoliageSource.Ready {
         val text = File(folder.path, "meta.json").readText()
-        return readFoliageSource(folder.name, disk, json, text, json.readObject(text)["additional"]) as FoliageSource.Ready
+        return readFoliageSource(folder.name, disk, json, text, net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(text)["additional"]) as FoliageSource.Ready
     }
     private fun command(background: (Runnable) -> Unit = { it.run() }, ui: (Runnable) -> Unit = { it.run() }) = FoliageStrokeCommand(
         project, scene, folder, source(), drafts, { mode }, background, ui, reports::add,

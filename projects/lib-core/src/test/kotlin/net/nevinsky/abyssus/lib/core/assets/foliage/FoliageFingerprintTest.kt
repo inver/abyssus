@@ -67,4 +67,19 @@ class FoliageFingerprintTest {
         val drawOnly = layer.copy(alignToNormal = 0.9f, drawDistance = 120f)
         assertArrayEquals(base, of(meta.copy(layers = listOf(drawOnly))))
     }
+
+    @Test
+    fun noColliderFieldChangesIt() {
+        val json = com.fasterxml.jackson.databind.json.JsonMapper()
+        val colliders = listOf(
+            """{"shape":"CAPSULE","radius":0.4,"halfHeight":3,"offset":{"x":1,"y":2,"z":3}}""",
+            """{"shape":"BOX","halfExtents":{"x":9,"y":9,"z":9}}""",
+            """{"shape":"NOPE","extra":{"a":1}}""",
+            """7""",
+        )
+        for (text in colliders) {
+            val withCollider = layer.copy(collider = json.readTree(text))
+            assertArrayEquals(text, base, of(meta.copy(layers = listOf(withCollider))))
+        }
+    }
 }

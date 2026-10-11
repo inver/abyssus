@@ -239,8 +239,24 @@ mask per layer (`layer-<id>.mask`), and the bake named by `additional.dataFile` 
   the generator id, the terrain's size and heights, `maskResolution`, each layer's generation fields and each mask's
   bytes; a bake of another magic or version, a truncated one, or one whose fingerprint no longer matches is treated
   as stale and regenerated, never as an error.
+- An `OBJECT` layer may carry an optional `collider` for physics worlds: `shape` (`BOX`, `SPHERE` or `CAPSULE`, default
+  `BOX`), `halfExtents` `{x, y, z}` (default 0.5 each), `radius` (0.5), `halfHeight` (0.5, along the copy's up axis)
+  and `offset` `{x, y, z}` (0), in model units from each copy's origin. The defaults match the physics
+  `ColliderComponent`. Only the active shape's sizes are used: they must be finite and positive, and the offset
+  finite. An omitted (or null) `collider` means no collision; an unknown shape, a malformed payload or an invalid
+  active size disables only that layer's collision and never its drawn copies, and nested members this program does
+  not model are kept when it edits the layer. `DETAIL` layers never collide, so a collider on one is ignored with a
+  warning. No collider member enters the bake's fingerprint.
+- Games and physics worlds read a bake as written and never regenerate it. A matching bake gives the editor's copies.
+  A stale one keeps its saved terrain-local x/z, yaw, scale and model indices, with height and tilt taken from the
+  current terrain and `alignToNormal`, and each saved model index mapped onto the layer's current model list: ABFO v1
+  holds no model folder names, so it cannot recover the models it was made from or the editor's regenerated
+  distribution. Copies of a removed layer, of an index the layer no longer has or of a missing model are dropped, a
+  mask that cannot be read leaves the bake used but unverified, and each problem is reported once per read.
 - A scene shows a foliage asset on a terrain entity through
-  `"FoliageComponent": { "assetName": "<foliage folder>" }`.
+  `"FoliageComponent": { "assetName": "<foliage folder>" }`. The component keeps its other members, their order and
+  number text when a scene is written back; a missing or null name shows nothing, and a name that is not a string
+  leaves the component unchanged in the file with one warning.
 
 ### Imported FlightGear models
 

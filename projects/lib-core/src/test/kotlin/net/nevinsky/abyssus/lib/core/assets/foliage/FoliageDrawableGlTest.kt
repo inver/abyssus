@@ -184,9 +184,13 @@ class FoliageDrawableGlTest {
                 "the step must be too small to change which chunks are seen",
                 visibleSet(foliage, drawable, camera), visibleSet(foliage, drawable, step),
             )
+            // a drift under the refill distance keeps the buffers: a refill walks every copy
             drawable.update(step, entity)
-            assertEquals("a DETAIL layer is distance culled, so a moved camera refills", 2, drawable.rebuilds)
-            assertEquals(expected(foliage, drawable, step), drawable.drawnCopies)
+            assertEquals("a tiny drift refills nothing", 1, drawable.rebuilds)
+            val far = camera().apply { position.x += 5f; update() }
+            drawable.update(far, entity)
+            assertEquals("a DETAIL layer is distance culled, so a camera that moved on refills", 2, drawable.rebuilds)
+            assertEquals(expected(foliage, drawable, far), drawable.drawnCopies)
 
             // an object-only foliage draws to the far plane: the same step refills nothing
             val objects = objectOnly(foliage)

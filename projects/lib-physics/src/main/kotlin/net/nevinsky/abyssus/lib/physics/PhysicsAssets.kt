@@ -12,6 +12,8 @@ import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageRuntimeLoad
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageRuntimeRead
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
@@ -30,6 +32,7 @@ class PhysicsAssets private constructor(
     private val metas: AssetMetaLoader,
     private val models: ModelLoader,
     private val terrains: TerrainLoader,
+    private val foliages: FoliageRuntimeLoad,
 ) {
     /** Assets of the project in [projectDir], with its own file access and meta reading. */
     constructor(projectDir: File, log: Logger = NOPLogger.NOP_LOGGER) :
@@ -39,10 +42,16 @@ class PhysicsAssets private constructor(
         metas,
         ModelLoader(metas, AssimpModelLoader(), files, decodeTextures = false),
         TerrainLoader(files, metas),
+        files,
     )
+
+    private constructor(
+        metas: AssetMetaLoader, models: ModelLoader, terrains: TerrainLoader, files: FileLoader,
+    ) : this(metas, models, terrains, FoliageRuntimeLoad(files, metas, terrains))
 
     private val points = HashMap<String, List<Vector3>?>()
     private val heights = HashMap<String, TerrainData?>()
+    private val foliage = HashMap<Pair<String, String?>, FoliageRuntimeRead>()
 
     /** Every vertex position of the model in [assetName], in model space (node transforms applied); null without one. */
     fun modelPoints(assetName: String): List<Vector3>? = points.getOrPut(assetName) {
@@ -66,6 +75,14 @@ class PhysicsAssets private constructor(
             terrains.loadPrepared(meta).staged.data
         }.getOrNull()
     }
+
+    /**
+     * The foliage asset [assetName] as a physics world uses it (see [FoliageRuntimeLoad]): its bake as written, read
+     * once per instance for the entity terrain [terrain]. Never generates copies, never writes, needs no GL. The
+     * result carries the warnings of the read, which the first caller reports.
+     */
+    fun foliage(assetName: String, terrain: String?): FoliageRuntimeRead =
+        foliage.getOrPut(assetName to terrain) { foliages.read(assetName, terrain) }
 
     private fun positions(data: ModelData): List<Vector3> {
         val out = ArrayList<Vector3>()

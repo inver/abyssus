@@ -1,0 +1,15 @@
+{
+  "generator": "tools/FieldFoliage.kt",
+  "generatorId": "field-foliage-v1",
+  "seed": 20261011,
+  "license": "CC0-1.0",
+  "manifest": "environment/foliage-manifest.json",
+  "note": "Generated from the recorded placements of the field's trees and bushes; edit the layers in Abyssus and Re-bake.",
+  "terrainEntity": 300,
+  "fitted": {
+    "model_airfield_tree_broadleaf": 26,
+    "model_airfield_tree_young": 21,
+    "model_airfield_tree_acacia": 14
+  },
+  "vegetationSha256": "09c525b8891c764d10904725a639c6247833085c68ac043e7278e22137394838"
+}

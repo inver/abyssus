@@ -59,6 +59,27 @@ internal fun applyFoliageFiles(
     return result
 }
 
+/**
+ * Replaces the whole `meta.json` document by [after] as one undoable command, with the same document-save actions
+ * around it as [applyFoliageFiles], so Undo and Redo leave the file saved. False when the document is not [before]
+ * any more or the edit could not be made; then nothing was written.
+ */
+internal fun applyFoliageMetadata(project: Project, meta: VirtualFile, name: String, before: String, after: String): Boolean {
+    val target = SceneJson().parse(after) as ObjectNode
+    var done = false
+    CommandProcessor.getInstance().executeCommand(project, {
+        if (textOf(meta) != before) return@executeCommand
+        val manager = UndoManager.getInstance(project)
+        manager.undoableActionPerformed(MetadataSaveAction(meta, onUndo = true))
+        done = editSceneJson(project, meta, name) { root ->
+            (root as ObjectNode).removeAll().setAll<ObjectNode>(target)
+            true
+        }
+        if (done) manager.undoableActionPerformed(MetadataSaveAction(meta, onUndo = false))
+    }, name, null, UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION)
+    return done
+}
+
 private class MetadataSaveAction(private val file: VirtualFile, private val onUndo: Boolean) : UndoableAction {
     private val reference = DocumentReferenceManager.getInstance().create(
         FileDocumentManager.getInstance().getDocument(file)!!,
