@@ -104,7 +104,8 @@ fun raySceneDiff(previous: RaySceneFrame?, next: RaySceneFrame): RaySceneDiff {
     if (previous.poses != next.poses) changes += RaySceneChange.POSE
     if (previous.camera != next.camera) changes += RaySceneChange.CAMERA
     if (previous.scene.lights != next.scene.lights) changes += RaySceneChange.LIGHT
-    if (previous.scene.environment != next.scene.environment || previous.scene.fog != next.scene.fog || previous.environmentRevision != next.environmentRevision)
+    if (previous.scene.environment != next.scene.environment || previous.scene.fog != next.scene.fog ||
+        previous.environmentRevision != next.environmentRevision || previous.scene.sunVisibility != next.scene.sunVisibility)
         changes += RaySceneChange.ENVIRONMENT
     return RaySceneDiff(changes)
 }
@@ -122,6 +123,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         poses: Map<String, RayModelPose> = emptyMap(),
         deform: ((RayModelMesh, List<FloatArray>) -> FloatArray)? = null,
         environmentRevision: Long = 0,
+        sunVisibility: RaySunVisibility? = null,
     ): RaySceneConversion {
         val settings = params.rayTracing.settings ?: return RaySceneConversion.Fallback(
             RaySceneFallback.UNSUPPORTED_GEOMETRY,
@@ -160,7 +162,8 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                     ambient = params.ambient?.ray() ?: RayColor(0f, 0f, 0f),
                     background = params.clear.ray()
                 ),
-                params.fog?.let { RayFog(it.color.ray(), it.density, it.gradient) })
+                params.fog?.let { RayFog(it.color.ray(), it.density, it.gradient) },
+                sunVisibility)
             val cameraSnapshot = RayCameraSnapshot(
                 camera.position.toVec3().ray(),
                 camera.direction.toVec3().ray(),

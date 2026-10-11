@@ -17,4 +17,5 @@ val printingLog: Logger = RecordingLogger(echo = true)
 fun testRenderer(executor: Executor = Executor(Runnable::run), log: Logger = printingLog): SceneRenderer = SceneRenderer(
     ViewAssets(AssetLoading(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), log, executor, ShaderStorage())),
     ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java),
+    log = log,
 )

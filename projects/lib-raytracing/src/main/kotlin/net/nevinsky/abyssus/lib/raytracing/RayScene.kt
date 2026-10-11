@@ -124,6 +124,40 @@ data class RayEnvironment(val ambient: RayColor=RayColor(.1f,.1f,.1f), val backg
     val texture: Int?=null, val hdr: Boolean=false, val intensity: Float=1f, val rotation: Float=0f, val ambientCube: List<RayColor>?=null) {
     init { require(texture==null || texture>=0); require(intensity.isFinite() && intensity>=0 && rotation.isFinite()); require(ambientCube==null || ambientCube.size==6) }
 }
+/**
+ * How much of one directional light, the sun, passes the clouds at each world position: an immutable CPU copy of the
+ * cloud shadow map the raster view uses. [visibility] holds `size*size` values from 0 to 1 in the map's red channel,
+ * row-major, texel (u, v) at `v*size+u`, bilinearly filtered with clamped edges like the raster sampler. [worldToMap]
+ * is eight floats, two rows of a 4-component dot product with `(x, y, z, 1)` giving the map coordinates `(u, v)`
+ * (0 to 1 covers the map). Over the outer [edgeFade] share of the map, and beyond it, the factor fades to [outside],
+ * the uniform dimming of the clouds elsewhere. It multiplies the direct contribution of the light with id [lightId]
+ * only, on top of that light's own shadow ray. [revision] identifies the content: a new map has a new revision.
+ */
+class RaySunVisibility(val lightId: String, val size: Int, visibility: FloatArray, worldToMap: FloatArray,
+    val edgeFade: Float, val outside: Float, val revision: Long=0) {
+    private val texels=visibility.copyOf()
+    private val matrix=worldToMap.copyOf()
+    init {
+        require(size in 1..RAY_MAX_SUN_VISIBILITY_SIZE && texels.size==size*size && texels.all { it.isFinite() && it in 0f..1f }) { "Invalid cloud visibility map" }
+        require(matrix.size==8 && matrix.all { it.isFinite() })
+        require(edgeFade>0f && edgeFade<=0.5f && outside in 0f..1f)
+    }
+    fun visibility():FloatArray=texels.copyOf()
+    fun worldToMap():FloatArray=matrix.copyOf()
+    /** The map as the single-channel RGBA texture the shading payload carries (red holds the visibility). */
+    internal fun texture():RayTexture=RayTexture("sunVisibility",size,size,FloatArray(size*size*4) { if(it%4==0) texels[it/4] else if(it%4==3) 1f else 0f },
+        RayWrap.CLAMP_TO_EDGE,RayWrap.CLAMP_TO_EDGE,RayFilter.LINEAR)
+    override fun equals(other:Any?)=other is RaySunVisibility && lightId==other.lightId && size==other.size && revision==other.revision &&
+        edgeFade==other.edgeFade && outside==other.outside && matrix.contentEquals(other.matrix)
+    override fun hashCode()=(lightId.hashCode()*31+size)*31+revision.hashCode()
+    companion object {
+        /** A light dimmed by [scale] everywhere: a one-texel map placed far from the scene, so only the outside factor applies. */
+        fun uniform(lightId:String,scale:Float,revision:Long=0)=
+            RaySunVisibility(lightId,1,floatArrayOf(1f),floatArrayOf(0f,0f,0f,-8f,0f,0f,0f,-8f),0.1f,scale,revision)
+    }
+}
+/** The widest cloud visibility map a scene may carry, per side. */
+const val RAY_MAX_SUN_VISIBILITY_SIZE = 1024
 data class RayFog(val color: RayColor,val density: Float,val gradient: Float) {
     init { require(density.isFinite() && density>=0 && gradient.isFinite() && gradient>=0) }
 }
@@ -138,12 +172,12 @@ const val RAY_MAX_TEXTURES = 128
 const val RAY_MAX_LIGHTS = 12
 
 class RaySceneSnapshot(meshes: List<RayMesh>, instances: List<RayInstance>, materials: List<RayMaterial>, textures: List<RayTexture>, lights: List<RayLight>,
-    val environment: RayEnvironment=RayEnvironment(), val fog: RayFog?=null) {
+    val environment: RayEnvironment=RayEnvironment(), val fog: RayFog?=null, val sunVisibility: RaySunVisibility?=null) {
     val meshes=rayList(meshes); val instances=rayList(instances); val materials=rayList(materials); val textures=rayList(textures); val lights=rayList(lights)
     /** Why every backend rejects this scene (the view then falls back to raster), or null when it is representable. */
     fun unsupportedReason():String? = when {
         materials.size>RAY_MAX_MATERIALS -> "Scene has more than $RAY_MAX_MATERIALS materials"
-        textures.size>RAY_MAX_TEXTURES -> "Scene has more than $RAY_MAX_TEXTURES textures"
+        textures.size+(if(sunVisibility!=null) 1 else 0)>RAY_MAX_TEXTURES -> "Scene has more than $RAY_MAX_TEXTURES textures"
         lights.size>RAY_MAX_LIGHTS -> "Scene has more than $RAY_MAX_LIGHTS lights"
         geometryBytes>RAY_MAX_GEOMETRY_BYTES -> "Scene geometry exceeds the $RAY_MAX_GEOMETRY_BYTES byte budget"
         blendedInstances>RAY_MAX_BLENDED_INSTANCES -> "Ray transparency exceeds the supported layer limit"

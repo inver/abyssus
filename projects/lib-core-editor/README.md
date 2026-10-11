@@ -32,7 +32,7 @@ namespace, including extension providers that use editor value types, must updat
 | `pick` | `ScenePicker`, `SnapshotSceneQueries`, `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction`, `ScenePreview`, `SceneTransformWriter`, `SceneMarkers` / `LineSink` |
 | `terrain` | Terrain generation, noise, recipe, new-terrain files and checks |
 | `meta` | `AssetMetaEditor` and field descriptions, `MetaRows`, `AssetReferenceChoices`, the panel's entity sections and asset field states |
-| `ray` | The ray tracing bridge: `RayBackendService`, `RayBackendSelector`, `RayViewRuntime`, `RayViewFeed`, `RaySceneSnapshots`, `RaySkyBaker`, `RayModeState`, diagnostics |
+| `ray` | The ray tracing bridge: `RayBackendService`, `RayBackendSelector`, `RayViewRuntime`, `RayViewFeed`, `RaySceneSnapshots`, `RaySkyBaker` (a display-value sky bake with clouds at a given sky time and a revision per bake), `RayModeState`, diagnostics. A `RayFrameContext` carries the sky light (six axis colours), the baked sky and the cloud shade on the sun (`sunVisibility`, a `RaySunVisibility` from `raytracing`); a changed light, bake revision or visibility is an `ENVIRONMENT` change that restarts accumulation |
 | `headless` | `HeadlessEditing` (spec `headless-scene-editing`) |
 | `flightgear` | The FlightGear aircraft import: archive, model XML, AC3D and SGI readers, `FlightGearImport` |
 | `modelimport` | The model import: `ModelSource`, `ImportSettings`, `ImportTransform`, `TextureGather`, `ModelImport` |

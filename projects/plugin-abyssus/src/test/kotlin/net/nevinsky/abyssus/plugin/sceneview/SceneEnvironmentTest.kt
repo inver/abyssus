@@ -47,4 +47,26 @@ class SceneEnvironmentTest {
         assertEquals(SceneAmbient.Sky("environment"), ambient("sky_hdr", null))
         assertEquals(SceneAmbient.Color(null), ambient(null, null))
     }
+
+    // A procedural sky with additional.lightsScene true reports its completed lighting through the same lookup as an
+    // HDR sky; SceneSkybox.environment returns null for one that has not opted in, is disabled or is still building.
+
+    @Test
+    fun aBuiltLightingProceduralSkyReplacesTheAmbient() {
+        assertEquals(SceneAmbient.Sky("lighting"), ambient("skybox_lit", grey, mapOf("skybox_lit" to "lighting")))
+        assertEquals(SceneAmbient.Sky("lighting"), ambient("skybox_lit", null, mapOf("skybox_lit" to "lighting")))
+    }
+
+    @Test
+    fun aProceduralSkyWithoutOptInOrWithoutALightingKeepsTheAmbient() {
+        val built = mapOf("skybox_lit" to "lighting")
+        assertEquals(SceneAmbient.Color(grey), ambient("skybox_physical", grey, built))
+        assertEquals(SceneAmbient.Color(grey), ambient("skybox_lit", grey, emptyMap()))
+        assertEquals(SceneAmbient.Color(null), ambient("skybox_lit", null, emptyMap()))
+    }
+
+    @Test
+    fun aDisabledSkyboxDoesNotLightWhateverIsBuilt() {
+        assertEquals(SceneAmbient.Color(grey), ambient(null, grey, mapOf("skybox_lit" to "lighting")))
+    }
 }

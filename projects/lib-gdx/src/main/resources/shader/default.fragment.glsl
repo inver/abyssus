@@ -251,6 +251,20 @@ float pointShadowVisibility(int lightIndex, vec3 worldPos, float ndotl) {
 }
 #endif
 
+#ifdef directionalVisibilityFlag
+uniform sampler2D u_dirVisMap;
+uniform mat4 u_dirVisWorldToMap;
+uniform vec2 u_dirVisParams; // x: width of the edge fade, in map coordinates; y: visibility outside the map
+uniform int u_dirVisIndex;
+// The map's visibility at a world position; fades to the outside value over the map's edge, whatever the texture clamps to.
+float directionalVisibility(vec3 worldPos) {
+    vec2 uv = (u_dirVisWorldToMap * vec4(worldPos, 1.0)).xy;
+    vec2 edge = min(uv, 1.0 - uv);
+    float inside = clamp(min(edge.x, edge.y) / max(u_dirVisParams.x, 1e-4), 0.0, 1.0);
+    return mix(u_dirVisParams.y, texture2D(u_dirVisMap, clamp(uv, 0.0, 1.0)).r, inside);
+}
+#endif // directionalVisibilityFlag
+
 #endif //lightingFlag
 
 #ifdef fogFlag
@@ -365,6 +379,9 @@ void main() {
 				vec3 value = u_dirLights[i].color * NdotL;
 				#ifdef shadowAtlasFlag
 					value *= shadowTileVisibility(u_dirShadowTile[i], v_worldPos, -1.0, NdotL);
+				#endif
+				#ifdef directionalVisibilityFlag
+					if (i == u_dirVisIndex) value *= directionalVisibility(v_worldPos);
 				#endif
 				lightDiffuse += value;
 				#ifdef specularFlag

@@ -14,12 +14,16 @@ internal class RaySceneData(val floats:FloatArray,val bytes:ByteArray)
  */
 internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
     fun encode():RaySceneData {
-        require(scene.materials.size<=128 && scene.textures.size<=128 && scene.lights.size<=12) { "Scene shading resource limit exceeded" }
+        // a cloud visibility map rides in the texture table after the scene's own textures; header slot 30 points at its parameters
+        val sun=scene.sunVisibility?.takeIf { v -> scene.lights.any { it.id==v.lightId } }
+        val textures=scene.textures+listOfNotNull(sun?.texture())
+        require(scene.materials.size<=128 && textures.size<=128 && scene.lights.size<=12) { "Scene shading resource limit exceeded" }
         val attributes=scene.meshes.sumOf { it.vertexCount.toLong()*12 }
         val cubeFloats=if(scene.environment.ambientCube!=null) 18L else 0L
-        val total=cubeFloats+32L+scene.materials.size*128L+scene.lights.size*16L+attributes+scene.textures.size*8L+scene.instances.size*2L+
-            scene.textures.filter { !it.isBytes }.sumOf { it.width.toLong()*it.height*4 }
-        val byteTexels=scene.textures.filter { it.isBytes }.sumOf { it.width.toLong()*it.height }
+        val sunFloats=if(sun!=null) 12L else 0L
+        val total=cubeFloats+sunFloats+32L+scene.materials.size*128L+scene.lights.size*16L+attributes+textures.size*8L+scene.instances.size*2L+
+            textures.filter { !it.isBytes }.sumOf { it.width.toLong()*it.height*4 }
+        val byteTexels=textures.filter { it.isBytes }.sumOf { it.width.toLong()*it.height }
         // offsets are stored as floats, which are exact only up to 2^24
         require(total<=MAX_SCENE_FLOATS) { "Scene shading payload exceeds ${MAX_SCENE_FLOATS*4/(1024*1024)} MiB" }
         require(byteTexels<=MAX_TEXTURE_TEXELS) { "Scene textures exceed $MAX_TEXTURE_TEXELS texels" }
@@ -60,13 +64,13 @@ internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
                 out[at+9]=if(normals!=null)1f else 0f;out[at+10]=if(tangent!=null)1f else 0f;at+=12
             }
         }
-        out[4]=at.toFloat();val textureTable=at;at+=scene.textures.size*8
+        out[4]=at.toFloat();val textureTable=at;at+=textures.size*8
         out[5]=at.toFloat()
         scene.instances.forEach { out[at++]=it.material.toFloat() }
         out[6]=at.toFloat()
         val solids=scene.instances.map { it.id.substringBefore('/') }.distinct().withIndex().associate { it.value to it.index }
         scene.instances.forEach { out[at++]=solids.getValue(it.id.substringBefore('/')).toFloat() }
-        scene.textures.forEachIndexed { i,t ->
+        textures.forEachIndexed { i,t ->
             val p=textureTable+i*8;out[p+1]=t.width.toFloat();out[p+2]=t.height.toFloat();out[p+3]=t.wrapU.ordinal.toFloat();out[p+4]=t.wrapV.ordinal.toFloat();out[p+5]=t.filter.ordinal.toFloat()
             val packed=t.rgba8()
             if(packed!=null) {
@@ -80,12 +84,18 @@ internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
         color(8,scene.environment.ambient);color(12,scene.environment.background)
         scene.fog?.let { color(16,it.color);out[20]=it.density;out[21]=it.gradient;out[22]=1f }
         out[24]=scene.environment.texture?.toFloat() ?: -1f;out[25]=scene.environment.intensity;out[26]=scene.environment.rotation;out[27]=if(scene.environment.hdr)1f else 0f
-        out[28]=-1f
+        out[28]=-1f;out[30]=-1f
         out[29]=total.toFloat() // the byte section starts right after the float section
         scene.environment.ambientCube?.let { cube ->
             out[28]=at.toFloat()
             cube.forEachIndexed { i,c -> out[at+i*3]=c.r;out[at+i*3+1]=c.g;out[at+i*3+2]=c.b }
             at+=18
+        }
+        if(sun!=null) {
+            // (light index, texture index, edge fade, outside factor, u row, v row)
+            out[30]=at.toFloat()
+            out[at]=scene.lights.indexOfFirst { it.id==sun.lightId }.toFloat();out[at+1]=(textures.size-1).toFloat();out[at+2]=sun.edgeFade;out[at+3]=sun.outside
+            sun.worldToMap().copyInto(out,at+4);at+=12
         }
         return RaySceneData(out,bytes)
     }

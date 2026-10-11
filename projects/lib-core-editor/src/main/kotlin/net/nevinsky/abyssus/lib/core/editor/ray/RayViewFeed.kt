@@ -52,6 +52,7 @@ class RayViewFeed(
         val metadata: RayDisplayMetadata,
         val hdrAmbient: FloatArray?,
         val sky: RaySkySnapshot?,
+        val sunVisibility: RaySunVisibility?,
     )
 
     private val pendingJob = AtomicReference<Job?>()
@@ -139,7 +140,8 @@ class RayViewFeed(
             context.height,
             captureRayDisplay(context),
             context.hdrAmbient?.copyOf(),
-            state.sky ?: context.bakedSky?.invoke()
+            state.sky ?: context.bakedSky?.invoke(),
+            context.sunVisibility?.invoke()
         )
         pendingJob.set(job)
         if (running.compareAndSet(false, true)) executor.execute(::drain)
@@ -183,7 +185,8 @@ class RayViewFeed(
             snapshots.capture(
                 job.params, job.camera, job.lights, job.state, emptyMap(), job.activeCamera, environment,
                 listOfNotNull(texture), job.poses, { mesh, palette -> skinning.deform(mesh, palette) },
-                environmentRevision = sky?.let { System.identityHashCode(it).toLong() } ?: 0L)
+                environmentRevision = sky?.let { (it.revision shl 32) xor System.identityHashCode(it).toLong() } ?: 0L,
+                sunVisibility = job.sunVisibility)
         when (conversion) {
             is RaySceneConversion.Preparing -> return
             is RaySceneConversion.Fallback -> {

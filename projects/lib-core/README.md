@@ -201,6 +201,32 @@ the asset's own GLSL and has no CPU form, so it reads as unavailable and the cal
 Leases share one read per asset, drop the bytes with the last reference (default bound 128 MiB in the plugin's wiring),
 and never touch the GPU caches or GL.
 
+## Procedural sky light and the cloudy environment
+
+A `SKYBOX_PROCEDURAL` asset with the boolean `additional.lightsScene: true` (anything else does not opt in) gives the
+scene the light of its sky. `ProceduralSky` then owns a per-view `ProceduralSkyLighting`: an Abyssus-owned linear
+atmosphere plus shell clouds (`atmosphere_linear.frag`) is rendered into a 64²-per-face `RGBA16F` cube by
+`ProceduralLightingCube`, and `HdrEnvironmentBuild` turns that `CubeSource` into an `HdrEnvironment` (specular and
+irradiance cubes and six axis colors), one step per frame. The pure `LightingRefreshPolicy` decides when to rebuild
+(sun moved 1° or more, every 2 s of cloud time while a band has wind, cloud asset reload or visibility change), coalesces
+newer requests, retries failures with bounded backoff, pauses while hidden, and fades the new environment in over 1 s.
+
+Other features that reflect or sample the sky (water reflection fallbacks, ray tracing misses) use the same cube
+without opting the scene's ambient light in:
+
+```kotlin
+sky.acquireEnvironment().use { lease ->      // GL thread; starts building it, nothing is built without a lease
+    val environment = lease.environment      // borrowed HdrEnvironment, or null while the first build is under way
+    val revision = lease.revision            // changes when a new environment replaced the old one
+}
+```
+
+The sky owns every environment and disposes it; a consumer borrows it for the frame and must not dispose it or keep it
+across a changed `revision`. `ProceduralSky.updateLighting` (called once per frame by the owner) drives the builds, only
+while a lease is open or the asset opts in; the last `close()` releases the lighting of a sky that does not opt in.
+Closing a lease twice is harmless, and after the sky is disposed a lease hands out nothing. A custom `sky.frag` that departs
+from the asset's atmosphere parameters can look different from this light; that is a documented limitation.
+
 ## Tests
 
 `./gradlew :lib-core:test`; GL tests opt in with `-Dabyssus.glTests=true`. Tests read the repository's

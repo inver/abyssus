@@ -60,6 +60,25 @@ class SceneLightingTest {
     }
 
     @Test
+    fun theSunsDirectionalIndexFollowsTheBudgetedSet() {
+        val lights = listOf(
+            light(LightKind.DIRECTIONAL, intensity = 1f, position = Vec3(5f, 0f, 0f), id = "far"),
+            light(LightKind.DIRECTIONAL, intensity = 3f, position = Vec3(1f, 0f, 0f), id = "near"),
+            light(LightKind.DIRECTIONAL, intensity = 9f, position = Vec3(9f, 0f, 0f), id = "bright but beyond the budget"),
+            light(LightKind.POINT, intensity = 2f, id = "point"),
+        )
+        val set = lightSetOf(lights, origin)
+        assertEquals(listOf("near", "far"), set.directional.map { it.entityId })
+        assertEquals(0, set.directionalIndexOf("near"))
+        assertEquals(1, set.directionalIndexOf("far"))
+        assertNull("beyond the directional budget", set.directionalIndexOf("bright but beyond the budget"))
+        assertNull("a point light is not directional", set.directionalIndexOf("point"))
+        assertNull(set.directionalIndexOf("missing"))
+        assertNull(set.directionalIndexOf(null))
+        assertNull(NO_LIGHTS.directionalIndexOf("near"))
+    }
+
+    @Test
     fun colorIsScaledByIntensity() {
         val set = lightSetOf(listOf(light(LightKind.DIRECTIONAL, intensity = 0.5f)), origin)
         assertEquals(Rgba(0.5f, 0.25f, 0f, 1f), set.directional.single().color)

@@ -53,6 +53,13 @@ class LightSet(
     val spot: List<SpotSource> = emptyList()
 ) {
     /**
+     * The index among [directional] (the order the shaders see them in) of the light of entity [entityId]; null when
+     * there is no such entity or it did not make the [MAX_DIRECTIONAL] budget.
+     */
+    fun directionalIndexOf(entityId: String?): Int? =
+        entityId?.let { id -> directional.indexOfFirst { it.entityId == id }.takeIf { it >= 0 } }
+
+    /**
      * This set with the color of the directional light of entity [entityId] (the sun) times [scale], as clouds over
      * the sun dim it; every other light is the same. This set itself when [scale] is 1 or the sun is not in it.
      */

@@ -119,6 +119,12 @@ uniform float u_envMaxLod;
 #else
 #define textureCubeLodCompat textureCubeLod
 #endif
+#ifdef environmentFadeFlag
+uniform samplerCube u_envIrradianceTo;
+uniform samplerCube u_envSpecularTo;
+uniform float u_envMaxLodTo;
+uniform float u_envFade;
+#endif // environmentFadeFlag
 #endif // environmentLightFlag
 
 #if numDirectionalLights > 0
@@ -253,6 +259,20 @@ float pointShadowVisibility(int lightIndex, vec3 worldPos, float ndotl) {
     return shadowTileVisibility(tile, worldPos, length(worldPos - u_shadowPositions[ti]) / max(u_shadowFars[ti], 1e-4), ndotl);
 }
 #endif
+
+#ifdef directionalVisibilityFlag
+uniform sampler2D u_dirVisMap;
+uniform mat4 u_dirVisWorldToMap;
+uniform vec2 u_dirVisParams; // x: width of the edge fade, in map coordinates; y: visibility outside the map
+uniform int u_dirVisIndex;
+// The map's visibility at a world position; fades to the outside value over the map's edge, whatever the texture clamps to.
+float directionalVisibility(vec3 worldPos) {
+    vec2 uv = (u_dirVisWorldToMap * vec4(worldPos, 1.0)).xy;
+    vec2 edge = min(uv, 1.0 - uv);
+    float inside = clamp(min(edge.x, edge.y) / max(u_dirVisParams.x, 1e-4), 0.0, 1.0);
+    return mix(u_dirVisParams.y, texture2D(u_dirVisMap, clamp(uv, 0.0, 1.0)).r, inside);
+}
+#endif // directionalVisibilityFlag
 
 // GGX normal distribution
 float distributionGGX(float NdotH, float alpha)
@@ -407,6 +427,9 @@ void main() {
 				#ifdef shadowAtlasFlag
 					visibility = shadowTileVisibility(u_dirShadowTile[i], v_worldPos, -1.0, max(dot(normal, -u_dirLights[i].direction), 0.0));
 				#endif
+				#ifdef directionalVisibilityFlag
+					if (i == u_dirVisIndex) visibility *= directionalVisibility(v_worldPos);
+				#endif
 				direct += visibility * shadeLight(u_dirLights[i].color, -u_dirLights[i].direction, normal, V, NdotV, diffuseColor, f0, alpha);
 			}
 		#endif // numDirectionalLights
@@ -465,6 +488,10 @@ void main() {
 			// the sky replaces the ambient: diffuse by normal, specular by reflection at the roughness's mip
 			ambient = textureCube(u_envIrradiance, normal).rgb;
 			vec3 prefiltered = textureCubeLodCompat(u_envSpecular, reflect(-V, normal), roughness * u_envMaxLod).rgb;
+			#ifdef environmentFadeFlag
+				ambient = mix(ambient, textureCube(u_envIrradianceTo, normal).rgb, u_envFade);
+				prefiltered = mix(prefiltered, textureCubeLodCompat(u_envSpecularTo, reflect(-V, normal), roughness * u_envMaxLodTo).rgb, u_envFade);
+			#endif // environmentFadeFlag
 			vec3 ambientSpecular = prefiltered * (f0 * envBrdf.x + envBrdf.y);
 		#else
 			vec3 ambientSpecular = ambient * (f0 * envBrdf.x + envBrdf.y);

@@ -234,6 +234,19 @@ static float3 reflectionDirection(float3 normal,float3 view,float roughness,uint
     return dot(r,normal)>0?r:mirror;
 }
 // Direct light, ambient and emission. [environment] replaces the ambient colour in the PBR specular term when set.
+// How much of light number lightIndex the clouds let through at position (1 when no cloud visibility map covers that
+// light). Header slot 30 points at (light index, texture index, edge fade, outside factor, u row, v row); the map is the
+// last entry of the texture table. Fades to the outside factor over the map's outer edge, as the raster shaders do.
+static float sunVisibility(device const float *d,uint lightIndex,float3 position) {
+    if(d[30]<0) return 1.0f;
+    uint b=uint(d[30]);
+    if(uint(d[b])!=lightIndex) return 1.0f;
+    float4 p=float4(position,1.0f);
+    float2 uv=float2(dot(s4(d,b+4),p),dot(s4(d,b+8),p));
+    float2 edge=min(uv,1.0f-uv);
+    float inside=clamp(min(edge.x,edge.y)/max(d[b+2],1e-4f),0.0f,1.0f);
+    return mix(d[b+3],sampleTexture(d,uint(d[b+1]),clamp(uv,0.0f,1.0f)).x,inside);
+}
 static float3 shade(Surface s,float3 view,bool hasEnvironment,float3 environment,CTX) {
     uint m=s.material;float4 base=sceneBase(s,d);
     float3 emission=s3(d,m+4)*binding(d,m,1,s.uv,float4(1)).xyz;
@@ -276,7 +289,7 @@ static float3 shade(Surface s,float3 view,bool hasEnvironment,float3 environment
             float gv=nl*sqrt(nv*nv*(1-a2)+a2),gl=nv*sqrt(nl*nl*(1-a2)+a2);
             contribution=(1-F)*diffuse+F*(distribution*.5f/max(gv+gl,1e-5f)*M_PI_F);
         }
-        result+=contribution*s3(d,l)*(nl*attenuation);
+        result+=contribution*s3(d,l)*(nl*attenuation*sunVisibility(d,i,s.position));
     }
     return result;
 }

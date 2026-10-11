@@ -127,6 +127,19 @@ or `RayMaterialTest`.
   HDR diffuse lighting arrives as `RayEnvironment.ambientCube` (the sky's six axis colours, blended by the squared normal
   exactly like the raster model shaders, `hdrAmbientCubeLightsSurfacesByNormalLikeTheRasterModelShader`); without it the
   flat `ambient` colour applies.
+- **Cloud shade on the sun.** `RaySceneSnapshot.sunVisibility` (a `RaySunVisibility`) carries an immutable CPU copy of the
+  raster view's cloud shadow map: `size`² visibility values (0 to 1, row-major, bilinear with clamped edges), two rows
+  turning a world position into map coordinates, the id of the light it shades, an edge fade and the factor that applies
+  beyond the map (the uniform cloud dimming; `RaySunVisibility.uniform` is that factor alone). Over the outer edge
+  fade the value blends to that factor. It multiplies the direct contribution of the light with that id only, once, on top
+  of that light's shadow ray; other lights, ambient and emission are untouched, and a map for a light the scene lacks is
+  ignored. The map travels in the shading payload as the last texture of the table, with its parameters at the offset in
+  header slot 30 (-1 without one); it counts against the texture limit, and a changed map re-uploads the payload
+  (`shadingUnchanged`) and, with its revision, restarts accumulation (`cloudVisibilityAttenuatesOnlyTheSunPerPosition`,
+  `movingTheCloudMapMovesTheShadowsAndUnmappedGroundUsesTheOutsideFactor`, `cloudVisibilityFadesToTheOutsideFactorOverTheMapEdge`,
+  `aUniformFactorDimsTheSunEverywhereAndAMissingSunLeavesTheSceneUnchanged`,
+  `cloudVisibilityReachesTheSunOnlyOnceAndSurvivesTheSunsOwnShadow`, `RaySunVisibilityTest`). Scenes without a map render
+  exactly as before. The Metal and Vulkan kernels share the maths with `RaySceneReferenceRenderer` (the fake backend).
 - **Fog.** Primary hits use the raster quadratic ramp `min(d^2 * (1 - 1/e) * density^2, 1)` on the world-space hit
   distance; the sky is not fogged, and reflected hits are not fogged (`fogFollowsHitDistanceAndLeavesTheSkyUnfogged`).
   Fog `gradient` shapes nothing, as in raster.
