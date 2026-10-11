@@ -171,7 +171,7 @@ monotonic marks. The initial weights live in one table, `MarkWeights`, to be tun
 | Track deviation | RMS distance to the ideal (m) | 0.5 m | 1 / m | 4 |
 | 45° parallel | \|top − 45° parallel\| (m) | 0.5 m | 1 / m | 2 |
 | Line angle | verticals and 30° legs (°) | 3° | 0.1 / ° | 2 |
-| Corner radius | per corner (m) | 1.5 m | 1 / m | 3 |
+| Corner radius | mean corner radius (m) | 3 m (the spike: `Stunter` turns no tighter than 2.7 m) | 1 / m | 3 |
 | Segment length | ⅛ lap, ½ lap, 1 lap (laps) | 0.02 | 10 / lap | 2 |
 | Superimposition | worst distance between repeats (m) | 0.5 m | 1 / m | 2 |
 | Symmetry and crossing point | drift of the axis or crossing (m) | 0.5 m | 1 / m | 2 |
@@ -249,6 +249,11 @@ hand like earlier edits to the bundled project's numbers. Key order and other nu
 shows corners of more than about 2 m radius at full handle, `Stunter`'s `elevatorEffect` and `pitchDamping` are tuned
 in the same file. `GameFlowTest`'s fuel assertion moves to 360.
 
+The spike (task 1) found that the corner floor is the stall, not the elevator: with the old values a full-tilt corner
+was about 9 m in radius, and no `elevatorEffect` or `pitchDamping` gets under about 4.4 m. `Stunter`'s `elevatorEffect`
+went from 0.7 to 3 and its `liftSlope` from 4.8 to 8, which gives 2.7 m. Neutral level flight now settles higher (about 8°
+of elevation), and `PatternFlyabilityTest` holds corners to 3 m.
+
 ## Risks / Trade-offs
 
 - [The plane cannot fly tight corners or a clean square] → The spike comes first (task 1). Tune `Stunter`'s
@@ -279,3 +284,25 @@ Nothing migrates:
 
 - The final deduction weights, tuned by play-testing, or against Annex 4B if it becomes available. These change
   numbers in `MarkWeights` only, not the specs or the structure.
+
+## Implementation notes
+
+Where the code differs from the decisions above, or fills a gap in them:
+
+- **Tokens.** `PathTokens` measures a turn as the smaller of the heading change about the place and the change relative to
+  the circle, so level flight along a parallel (a bend of 18 m radius at 45°) and a straight great circle both read as not
+  turning. A wobble of under 30° does not split level flight. `Arc` versus `Corner`: 200° or more, or nowhere tighter than
+  5.5 m, is an arc.
+- **Pauses.** A pause is any level flight of 150° of azimuth or more below 70° of latitude (not only on the base), so a
+  square given up along the 45° parallel ends its burst. The wingover's inverted half lap is not a pause (300° are needed
+  while a wingover is pending).
+- **Inverted laps** are matched on an inverted level stretch of 720° and judged on its first 720°; `Level` splits where the
+  plane turns over.
+- **Ideal tracks** are built from the F2B wording as this game reads it (see the README): the four-leaf clover is four ¾
+  loops joined through the zenith rather than with 45° lines, and the hourglass has a base edge, two crossing legs and a top
+  edge near the zenith. Corners of the ideal are rounded to 1 m. The grader aligns each flown point with the nearest ideal
+  point ahead of the one before it, so a figure that crosses itself or repeats cannot match another pass.
+- **Package cycles.** `FlightReport` and `Mode` live in `flow`, and `FlightSession` takes a `FlightJudge` instead of
+  building a `PatternJudge`, because `pattern` imports `flight` (`FlightEnd`, `FlightJudge`).
+- **Not verified here.** Tests fly the judge with synthetic tracks and `PatternFlyabilityTest` with a scripted pilot; the
+  manual checks (M1 to M6) need a person at the keyboard.

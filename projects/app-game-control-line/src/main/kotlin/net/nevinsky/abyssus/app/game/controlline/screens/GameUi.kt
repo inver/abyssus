@@ -19,10 +19,23 @@ import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
-import net.nevinsky.abyssus.app.game.controlline.flight.FlightReport
+import net.nevinsky.abyssus.app.game.controlline.flow.FlightReport
+import net.nevinsky.abyssus.app.game.controlline.flow.FlightResult
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
+import net.nevinsky.abyssus.app.game.controlline.flow.Mode
 import net.nevinsky.abyssus.app.game.controlline.flow.NAME_LENGTH
+import net.nevinsky.abyssus.app.game.controlline.flow.OFFERED_LEVELS
 import net.nevinsky.abyssus.app.game.controlline.flow.Screen
+import net.nevinsky.abyssus.app.game.controlline.flow.ScoreTab
+import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
+import net.nevinsky.abyssus.app.game.controlline.pattern.FLIGHT_TIME
+import net.nevinsky.abyssus.app.game.controlline.pattern.HeightWarning
+import net.nevinsky.abyssus.app.game.controlline.pattern.PAUSE_HEIGHT_MAX
+import net.nevinsky.abyssus.app.game.controlline.pattern.PAUSE_HEIGHT_MIN
+import net.nevinsky.abyssus.app.game.controlline.pattern.PAUSE_LAPS
+import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
+import net.nevinsky.abyssus.app.game.controlline.pattern.SCHEDULE
+import net.nevinsky.abyssus.app.game.controlline.pattern.SheetEntry
 import java.util.Locale
 
 /** The HUD's tension bar reads up to this (N). */
@@ -50,17 +63,23 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
     private val score = Label("", skin)
     private val combo = Label("", skin)
     private val fuel = Label("", skin)
+    private val clock = Label("", skin)
+    private val next = Label("", skin)
+    private val pauseLaps = Label("", skin)
+    private val warning = Label("", skin).apply { color = Color.SALMON }
     private val toast = Label("", skin).apply { setFontScale(1.6f); color = HIGHLIGHT }
     private var toastShown: Any? = null
+    private var toastDecided = 0
+    private var toastJudge: PatternJudge? = null
     private var toastTime = 0f
 
-    /** Follows the flow to its current screen and the HUD to [session]. */
-    fun update(session: FlightSession?, seconds: Float) {
+    /** Follows the flow to its current screen and the HUD to [session] (and the F2B [judge] of a pattern flight). */
+    fun update(session: FlightSession?, judge: PatternJudge?, seconds: Float) {
         if (flow.screen != shown) {
             shown = flow.screen
             rebuild(flow.screen)
         }
-        if (session != null && (shown is Screen.Flying || shown is Screen.Paused)) hud(session, seconds)
+        if (session != null && (shown is Screen.Flying || shown is Screen.Paused)) hud(session, judge, seconds)
         stage.act(seconds)
     }
 
@@ -68,12 +87,20 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
 
     fun resize(width: Int, height: Int) = stage.viewport.update(width, height, true)
 
-    /** A key on a menu screen: arrows and Enter move through the menu, Left / Right change the plane, Escape goes back. */
+    /** A key on a menu screen: arrows and Enter move through the menu, Left / Right change the plane or the score tab, Escape goes back. */
     fun keyDown(keycode: Int): Boolean {
         when (keycode) {
             Input.Keys.ESCAPE -> flow.back()
-            Input.Keys.LEFT -> if (shown is Screen.PlaneSelect) flow.previousPlane() else return false
-            Input.Keys.RIGHT -> if (shown is Screen.PlaneSelect) flow.nextPlane() else return false
+            Input.Keys.LEFT -> when (shown) {
+                is Screen.PlaneSelect -> flow.previousPlane()
+                is Screen.Scores -> flow.previousTab()
+                else -> return false
+            }
+            Input.Keys.RIGHT -> when (shown) {
+                is Screen.PlaneSelect -> flow.nextPlane()
+                is Screen.Scores -> flow.nextTab()
+                else -> return false
+            }
             Input.Keys.UP -> menu?.move(-1) ?: return false
             Input.Keys.DOWN -> menu?.move(1) ?: return false
             Input.Keys.ENTER, Input.Keys.NUMPAD_ENTER -> when {
@@ -86,6 +113,12 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
         return true
     }
 
+    private fun modeOf(screen: Screen?): Mode? = when (screen) {
+        is Screen.Flying -> screen.mode
+        is Screen.Paused -> screen.flying.mode
+        else -> null
+    }
+
     private fun rebuild(screen: Screen) {
         stage.clear()
         menu = null
@@ -94,10 +127,11 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
         stage.addActor(root)
         when (screen) {
             Screen.MainMenu -> mainMenu(root)
+            Screen.AssistSelect -> assistSelect(root)
             is Screen.PlaneSelect -> planeSelect(root, screen)
-            is Screen.Flying -> hudLayout(root)
+            is Screen.Flying -> hudLayout(root, screen.mode)
             is Screen.Paused -> {
-                hudLayout(root)
+                hudLayout(root, screen.flying.mode)
                 val window = Table(skin).apply { setFillParent(true) }
                 stage.addActor(window)
                 window.add(title("Paused")).padBottom(20f).row()
@@ -111,15 +145,32 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
 
     private fun mainMenu(root: Table) {
         root.add(title("Control Line")).padBottom(40f).row()
-        val start = button("Start", flow::start).apply { isDisabled = !flow.startEnabled }
-        menu(root, listOf(start, button("Scores", flow::scores), button("Quit") { flow.quitGame(); quit() }))
+        val free = button("Free flight", flow::freeFlight).apply { isDisabled = !flow.freeEnabled }
+        val pattern = button("F2B pattern", flow::f2bPattern).apply { isDisabled = !flow.patternEnabled }
+        menu(root, listOf(free, pattern, button("Scores", flow::scores), button("Quit") { flow.quitGame(); quit() }))
         flow.message?.let { root.add(Label(it, skin).apply { color = HIGHLIGHT }).padTop(20f).row() }
     }
 
+    private fun assistSelect(root: Table) {
+        root.add(title("F2B pattern")).padBottom(10f).row()
+        root.add(Label("The 15 manoeuvres of the FAI schedule in 7 minutes. Choose the assist level.", skin)).padBottom(24f).row()
+        val buttons = OFFERED_LEVELS.map { level -> button(level.label) { flow.chooseAssist(level) } }
+        menu(root, buttons + button("Back", flow::back))
+        for (level in OFFERED_LEVELS) root.add(Label("${level.label}: ${describe(level)}", skin).apply { color = Color.LIGHT_GRAY }).padTop(4f).row()
+    }
+
+    private fun describe(level: AssistLevel) = when (level) {
+        AssistLevel.PRO -> "no help: tension, fuel and the clock"
+        AssistLevel.MID -> "the next manoeuvre, the pause count, a height warning and each mark as you fly"
+        AssistLevel.NOOB -> "the ideal track ahead of the plane"
+    }
+
     private fun planeSelect(root: Table, screen: Screen.PlaneSelect) {
-        val plane = flow.planes[screen.index]
+        val choices = flow.choices(screen.mode)
+        val plane = choices[screen.index]
         root.bottom().padBottom(40f)
-        root.add(Label("Choose a plane  (${screen.index + 1} of ${flow.planes.size})", skin)).colspan(3).row()
+        (screen.mode as? Mode.Pattern)?.let { root.add(Label("F2B pattern - ${it.level.label}", skin).apply { color = HIGHLIGHT }).colspan(3).row() }
+        root.add(Label("Choose a plane  (${screen.index + 1} of ${choices.size})", skin)).colspan(3).row()
         root.add(button("<", flow::previousPlane)).width(50f)
         root.add(title(plane.name)).width(420f).center()
         root.add(button(">", flow::nextPlane)).width(50f).row()
@@ -132,15 +183,28 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
         root.add(buttons).colspan(3).padTop(16f).row()
     }
 
-    private fun hudLayout(root: Table) {
+    private fun hudLayout(root: Table, mode: Mode) {
         root.top().left().pad(16f)
         val panel = Table(skin).apply { background = skin.getDrawable("default-pane"); pad(10f) }
         panel.defaults().left().pad(2f, 6f, 2f, 6f)
         panel.add(Label("Tension", skin)); panel.add(tensionBar).width(140f); panel.add(tension).width(70f).row()
-        panel.add(Label("Laps", skin)); panel.add(laps).colspan(2).row()
-        panel.add(Label("Score", skin)); panel.add(score).colspan(2).row()
-        panel.add(Label("Combo", skin)); panel.add(combo).colspan(2).row()
-        panel.add(Label("Fuel", skin)); panel.add(fuel).colspan(2).row()
+        when (mode) {
+            Mode.Free -> {
+                panel.add(Label("Laps", skin)); panel.add(laps).colspan(2).row()
+                panel.add(Label("Score", skin)); panel.add(score).colspan(2).row()
+                panel.add(Label("Combo", skin)); panel.add(combo).colspan(2).row()
+                panel.add(Label("Fuel", skin)); panel.add(fuel).colspan(2).row()
+            }
+            is Mode.Pattern -> {
+                panel.add(Label("Fuel", skin)); panel.add(fuel).colspan(2).row()
+                panel.add(Label("Time", skin)); panel.add(clock).colspan(2).row()
+                if (mode.level == AssistLevel.MID) {
+                    panel.add(Label("Next", skin)); panel.add(next).colspan(2).row()
+                    panel.add(Label("Pause", skin)); panel.add(pauseLaps).colspan(2).row()
+                    panel.add(warning).colspan(3).row()
+                }
+            }
+        }
         root.add(panel).top().left()
         val toasts = Table(skin).apply { setFillParent(true); top().padTop(60f) }
         toasts.add(toast)
@@ -150,38 +214,94 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
             .expand().bottom().left()
     }
 
-    private fun hud(session: FlightSession, seconds: Float) {
+    private fun hud(session: FlightSession, judge: PatternJudge?, seconds: Float) {
         val flight = session.flight
         val keeper = flight.scoring.keeper
         tension.setText(String.format(Locale.ROOT, "%.1f N", flight.tension))
         tensionBar.value = flight.tension.coerceAtMost(TENSION_SCALE)
-        laps.setText(keeper.laps.toString())
-        score.setText(keeper.score.toString())
-        combo.setText("x${keeper.multiplier}")
         fuel.setText(String.format(Locale.ROOT, "%.0f s", flight.fuelLeft))
-        val last = keeper.lastManeuver
-        if (last != null && last !== toastShown) {
-            toastShown = last
-            toast.setText(last.maneuver.label + if (keeper.multiplier > 1) "  x${keeper.multiplier}" else "")
-            toastTime = TOAST_TIME
+        val mode = modeOf(shown)
+        if (mode is Mode.Pattern && judge != null) {
+            clock.setText("${time(flight.time)} / ${time(FLIGHT_TIME)}")
+            if (mode.level == AssistLevel.MID) midGuidance(judge)
+        } else {
+            laps.setText(keeper.laps.toString())
+            score.setText(keeper.score.toString())
+            combo.setText("x${keeper.multiplier}")
+            val last = keeper.lastManeuver
+            if (last != null && last !== toastShown) {
+                toastShown = last
+                toast.setText(last.maneuver.label + if (keeper.multiplier > 1) "  x${keeper.multiplier}" else "")
+                toastTime = TOAST_TIME
+            }
         }
         toastTime -= seconds
         toast.isVisible = toastTime > 0f
     }
 
+    /** The Mid assist level's guidance: the next manoeuvre, the pause count, the height warning and a toast per mark. */
+    private fun midGuidance(judge: PatternJudge) {
+        next.setText(judge.expected?.let { "${it.label} (K ${it.k})" } ?: "Land")
+        pauseLaps.setText(judge.pauseLaps?.let { String.format(Locale.ROOT, "%.1f / %.1f laps", it.coerceAtMost(PAUSE_LAPS), PAUSE_LAPS) } ?: "-")
+        warning.setText(when (judge.heightWarning) {
+            HeightWarning.BELOW -> "Below ${PAUSE_HEIGHT_MIN.toInt()} m"
+            HeightWarning.ABOVE -> "Above ${PAUSE_HEIGHT_MAX.toInt()} m"
+            null -> ""
+        })
+        if (judge !== toastJudge) {
+            toastJudge = judge
+            toastDecided = 0
+        }
+        if (judge.decided != toastDecided) {
+            toastDecided = judge.decided
+            judge.lastScored?.let {
+                toast.setText(entryText(it))
+                toastTime = TOAST_TIME
+            }
+        }
+    }
+
+    /** `Take-off 8.5 x 2 = 17.0`, or `Take-off 0 (too soon)`. */
+    private fun entryText(entry: SheetEntry): String = if (entry.reason == null) {
+        String.format(Locale.ROOT, "%s %.1f × %d = %.1f", entry.figure.label, entry.mark, entry.figure.k, entry.points / 10f)
+    } else "${entry.figure.label} 0 (${entry.reason.label})"
+
     private fun summary(table: Table, report: FlightReport) {
         table.add(title("GAME OVER")).padBottom(10f).row()
-        table.add(Label(report.end.label, skin).apply { setFontScale(1.5f); color = HIGHLIGHT }).padBottom(16f).row()
-        val facts = Table(skin)
-        facts.defaults().left().pad(2f, 10f, 2f, 10f)
-        for ((name, value) in listOf(
-            "Plane" to report.plane, "Score" to report.score.toString(), "Laps" to report.laps.toString(),
-            "Best combo" to "x${report.bestCombo}", "Flight time" to time(report.flightTime),
-        )) {
-            facts.add(Label(name, skin))
-            facts.add(Label(value, skin)).row()
+        table.add(Label(report.end.label, skin).apply { setFontScale(1.5f); color = HIGHLIGHT }).padBottom(10f).row()
+        when (val result = report.result) {
+            is FlightResult.Free -> {
+                val facts = Table(skin)
+                facts.defaults().left().pad(2f, 10f, 2f, 10f)
+                for ((name, value) in listOf(
+                    "Plane" to report.plane, "Score" to result.score.toString(), "Laps" to result.laps.toString(),
+                    "Best combo" to "x${result.bestCombo}", "Flight time" to time(report.flightTime),
+                )) {
+                    facts.add(Label(name, skin))
+                    facts.add(Label(value, skin)).row()
+                }
+                table.add(facts).padBottom(20f).row()
+            }
+            is FlightResult.Pattern -> {
+                table.add(Label("F2B pattern - ${result.level.label} - ${report.plane}", skin).apply { color = Color.LIGHT_GRAY }).padBottom(8f).row()
+                val sheet = Table(skin).apply { background = skin.getDrawable("default-pane"); pad(8f) }
+                sheet.defaults().pad(1f, 8f, 1f, 8f).left()
+                for ((i, figure) in SCHEDULE.withIndex()) {
+                    val entry = result.sheet[figure]
+                    sheet.add(Label("${i + 1}. ${figure.label}", skin))
+                    sheet.add(Label("K ${figure.k}", skin).apply { color = Color.LIGHT_GRAY })
+                    val text = when {
+                        entry == null -> "-"
+                        entry.reason != null -> "0 (${entry.reason.label})"
+                        else -> String.format(Locale.ROOT, "%.1f × %d = %.1f", entry.mark, figure.k, entry.points / 10f)
+                    }
+                    sheet.add(Label(text, skin).apply { if (entry?.reason != null) color = Color.SALMON })
+                    sheet.row()
+                }
+                table.add(sheet).padBottom(8f).row()
+                table.add(Label("Score ${result.sheet.score}    Flight time ${time(report.flightTime)}", skin).apply { setFontScale(1.2f) }).padBottom(12f).row()
+            }
         }
-        table.add(facts).padBottom(20f).row()
     }
 
     private fun nameEntry(root: Table, screen: Screen.NameEntry) {
@@ -207,23 +327,56 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
     }
 
     private fun scores(root: Table, screen: Screen.Scores) {
-        root.add(title("Best flights")).padBottom(16f).row()
-        if (flow.table.damaged) {
+        root.add(title("Best flights")).padBottom(10f).row()
+        val tabs = Table(skin)
+        for (tab in ScoreTab.entries) {
+            tabs.add(TextButton(tab.label, skin, "toggle").apply {
+                isChecked = tab == screen.tab
+                addListener(object : ClickListener() {
+                    override fun clicked(event: InputEvent, x: Float, y: Float) {
+                        while (flow.screen.let { it is Screen.Scores && it.tab != tab }) flow.nextTab()
+                    }
+                })
+            }).width(130f).pad(4f)
+        }
+        root.add(tabs).padBottom(8f).row()
+        root.add(Label("Left / Right: change the tab", skin).apply { color = Color.LIGHT_GRAY }).padBottom(10f).row()
+        val level = screen.tab.level
+        if (level == null && flow.table.damaged) {
             root.add(Label("The old scores could not be read; they were kept as scores.json.bad.", skin).apply { color = HIGHLIGHT })
+                .padBottom(10f).row()
+        }
+        if (level != null && flow.patternTable.damaged) {
+            root.add(Label("The old F2B scores could not be read; they were kept as f2b-scores.json.bad.", skin).apply { color = HIGHLIGHT })
                 .padBottom(10f).row()
         }
         val table = Table(skin).apply { background = skin.getDrawable("default-pane"); pad(12f) }
         table.defaults().pad(3f, 10f, 3f, 10f).left()
-        for (h in listOf("#", "Name", "Plane", "Score", "Laps", "Combo", "Time", "Date")) table.add(Label(h, skin).apply { color = Color.LIGHT_GRAY })
-        table.row()
-        val entries = flow.table.entries
-        if (entries.isEmpty()) table.add(Label("No flights yet", skin)).colspan(8).row()
-        entries.forEachIndexed { i, e ->
-            val color = if (screen.highlight == i + 1) HIGHLIGHT else Color.WHITE
-            for (cell in listOf((i + 1).toString(), e.name, e.plane, e.score.toString(), e.laps.toString(), "x${e.bestCombo}", time(e.flightTime), e.date.take(10))) {
-                table.add(Label(cell, skin).apply { this.color = color })
-            }
+        val highlight = screen.highlight.takeIf { screen.highlightTab == screen.tab }
+        if (level == null) {
+            for (h in listOf("#", "Name", "Plane", "Score", "Laps", "Combo", "Time", "Date")) table.add(Label(h, skin).apply { color = Color.LIGHT_GRAY })
             table.row()
+            val entries = flow.table.entries
+            if (entries.isEmpty()) table.add(Label("No flights yet", skin)).colspan(8).row()
+            entries.forEachIndexed { i, e ->
+                val color = if (highlight == i + 1) HIGHLIGHT else Color.WHITE
+                for (cell in listOf((i + 1).toString(), e.name, e.plane, e.score.toString(), e.laps.toString(), "x${e.bestCombo}", time(e.flightTime), e.date.take(10))) {
+                    table.add(Label(cell, skin).apply { this.color = color })
+                }
+                table.row()
+            }
+        } else {
+            for (h in listOf("#", "Name", "Plane", "Score", "Time", "Date")) table.add(Label(h, skin).apply { color = Color.LIGHT_GRAY })
+            table.row()
+            val entries = flow.patternTable.board(level)
+            if (entries.isEmpty()) table.add(Label("No flights yet", skin)).colspan(6).row()
+            entries.forEachIndexed { i, e ->
+                val color = if (highlight == i + 1) HIGHLIGHT else Color.WHITE
+                for (cell in listOf((i + 1).toString(), e.name, e.plane, String.format(Locale.ROOT, "%.2f", e.score), time(e.flightTime), e.date.take(10))) {
+                    table.add(Label(cell, skin).apply { this.color = color })
+                }
+                table.row()
+            }
         }
         root.add(table).padBottom(20f).row()
         menu(root, listOf(button("Back", flow::back)))

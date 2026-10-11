@@ -225,10 +225,10 @@
               "z": -0.04
             },
             "thrust": 5,
-            "fuelTime": 180,
+            "fuelTime": 360,
             "wingArea": 0.325,
-            "liftSlope": 4.8,
-            "elevatorEffect": 0.7
+            "liftSlope": 8,
+            "elevatorEffect": 3
           }
         }
       },

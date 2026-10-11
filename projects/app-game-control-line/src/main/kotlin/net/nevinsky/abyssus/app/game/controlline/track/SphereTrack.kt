@@ -19,6 +19,12 @@ import kotlin.math.sin
  * - [climb], the velocity's angle within the sphere's tangent plane: 0 along the circle in the flying direction,
  *   90 straight up, ±180 along the circle the other way, in (-180, 180];
  * - [inverted]: the plane's up points away from the sphere's local up.
+ *
+ * What the F2B judge reads (it works in world axes, with no singular point at the zenith):
+ * - [offset]: the plane's position minus the pilot's ground point (m);
+ * - [height]: the plane's height above the ground (m);
+ * - [planeUp]: the plane's up vector (unit, world);
+ * - [engineRunning]: the engine still gives thrust.
  */
 data class TrackSample(
     val time: Float,
@@ -27,6 +33,10 @@ data class TrackSample(
     val climb: Float,
     val inverted: Boolean,
     val airborne: Boolean,
+    val offset: Vector3 = Vector3(),
+    val height: Float = 0f,
+    val planeUp: Vector3 = Vector3(0f, 1f, 0f),
+    val engineRunning: Boolean = true,
 )
 
 /** [degrees] wrapped into (-180, 180]. */
@@ -48,7 +58,14 @@ class SphereTrack {
     private val up = Vector3()
     private val planeUp = Vector3()
 
-    fun sample(time: Float, handle: Vector3, position: Vector3, velocity: Vector3, rotation: Quaternion, airborne: Boolean): TrackSample {
+    /**
+     * The sample at [time] for a plane at [position] with [velocity] and [rotation], relative to the [handle], which is
+     * [handleHeight] above the pilot's ground point; [height] is the plane's height above the ground.
+     */
+    fun sample(
+        time: Float, handle: Vector3, position: Vector3, velocity: Vector3, rotation: Quaternion, airborne: Boolean,
+        height: Float = position.y, engineRunning: Boolean = true, handleHeight: Float = handle.y,
+    ): TrackSample {
         relative.set(position).sub(handle)
         val radius = relative.len()
         val azimuth = atan2(-relative.z, relative.x)
@@ -65,6 +82,10 @@ class SphereTrack {
             wrapDegrees(climb * MathUtils.radiansToDegrees),
             planeUp.dot(up) < 0f,
             airborne,
+            Vector3(relative).add(0f, handleHeight, 0f),
+            height,
+            Vector3(planeUp),
+            engineRunning,
         )
     }
 }

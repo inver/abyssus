@@ -4,12 +4,15 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.flow
 
-import net.nevinsky.abyssus.app.game.controlline.flight.FlightReport
-
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneClass
 import net.nevinsky.abyssus.app.game.controlline.flight.FieldFlight
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightEnd
 import net.nevinsky.abyssus.app.game.controlline.loadField
+import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
+import net.nevinsky.abyssus.app.game.controlline.pattern.Figure
+import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
+import net.nevinsky.abyssus.app.game.controlline.pattern.ScoreSheet
+import net.nevinsky.abyssus.app.game.controlline.pattern.SheetEntry
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import org.junit.Assert.assertEquals
@@ -29,35 +32,103 @@ class GameFlowTest {
 
     private fun table() = ScoreTable(temp.root.toPath().resolve("scores.json"))
 
-    private fun flow(table: ScoreTable = table()) = GameFlow(planes, table) { Instant.parse("2026-10-04T12:00:00Z") }
+    private fun patternTable() = PatternScoreTable(temp.root.toPath().resolve("f2b-scores.json"))
+
+    private fun flow(table: ScoreTable = table(), patternTable: PatternScoreTable = patternTable(), planes: List<PlaneChoice> = this.planes) =
+        GameFlow(planes, table, patternTable) { Instant.parse("2026-10-04T12:00:00Z") }
 
     private fun GameFlow.flyStunter(): Screen.Flying {
-        start()
+        freeFlight()
         nextPlane()
         choosePlane()
         return screen as Screen.Flying
     }
 
-    private fun report(score: Int) = FlightReport("Stunter", FlightEnd.CRASHED, score, laps = 4, bestCombo = 2, flightTime = 42f)
+    private fun GameFlow.flyPattern(level: AssistLevel): Screen.Flying {
+        f2bPattern()
+        chooseAssist(level)
+        choosePlane()
+        return screen as Screen.Flying
+    }
+
+    private fun report(score: Int) = FlightReport("Stunter", FlightEnd.CRASHED, 42f, FlightResult.Free(score, laps = 4, bestCombo = 2))
+
+    /** An F2B report whose sheet has Take-off marked [tenths] and every other manoeuvre 0. */
+    private fun patternReport(level: AssistLevel, tenths: Int): FlightReport {
+        val sheet = ScoreSheet()
+        for (figure in Figure.entries) sheet[figure] = if (figure == Figure.TAKEOFF) SheetEntry(figure, tenths, null, null, 30f)
+        else SheetEntry(figure, 0, net.nevinsky.abyssus.app.game.controlline.pattern.ZeroReason.OMITTED, null, 30f)
+        return FlightReport("Stunter", FlightEnd.LANDED, 61f, FlightResult.Pattern(level, sheet))
+    }
 
     @Test
     fun theGameOpensOnTheMainMenu() = assertEquals(Screen.MainMenu, flow().screen)
 
     @Test
-    fun startOpensPlaneSelect() {
+    fun freeFlightOpensPlaneSelectWithEveryPlane() {
         val flow = flow()
-        assertTrue(flow.startEnabled)
+        assertTrue(flow.freeEnabled)
+        assertTrue(flow.patternEnabled)
         assertNull(flow.message)
-        flow.start()
-        assertEquals(Screen.PlaneSelect(0), flow.screen)
+        flow.freeFlight()
+        assertEquals(Screen.PlaneSelect(0, Mode.Free), flow.screen)
+        assertEquals(planes, flow.choices(Mode.Free))
     }
 
     @Test
-    fun noPlanesDisablesStartWithAMessage() {
-        val flow = GameFlow(emptyList(), table())
-        assertFalse(flow.startEnabled)
+    fun noPlanesDisablesBothWithAMessage() {
+        val flow = flow(planes = emptyList())
+        assertFalse(flow.freeEnabled)
+        assertFalse(flow.patternEnabled)
         assertEquals("No plane was found in the field scene", flow.message)
-        flow.start()
+        flow.freeFlight()
+        flow.f2bPattern()
+        assertEquals(Screen.MainMenu, flow.screen)
+    }
+
+    @Test
+    fun noStuntPlaneDisablesTheF2bPatternWithAMessage() {
+        val flow = flow(planes = planes.filter { it.planeClass != PlaneClass.STUNT })
+        assertTrue(flow.freeEnabled)
+        assertFalse(flow.patternEnabled)
+        assertEquals("The F2B pattern needs a stunt plane", flow.message)
+        flow.f2bPattern()
+        assertEquals(Screen.MainMenu, flow.screen)
+        flow.freeFlight()
+        assertEquals(Screen.PlaneSelect(0, Mode.Free), flow.screen)
+    }
+
+    @Test
+    fun theF2bPatternAsksForAnAssistLevelThenOffersOnlyStuntPlanes() {
+        val flow = flow()
+        flow.f2bPattern()
+        assertEquals(Screen.AssistSelect, flow.screen)
+        flow.chooseAssist(AssistLevel.MID)
+        assertEquals(Screen.PlaneSelect(0, Mode.Pattern(AssistLevel.MID)), flow.screen)
+        assertEquals(listOf("Stunter"), flow.choices(Mode.Pattern(AssistLevel.MID)).map { it.name })
+        assertEquals(360f, flow.choices(Mode.Pattern(AssistLevel.MID)).single().fuelTime, 0f)
+        flow.nextPlane()
+        assertEquals(Screen.PlaneSelect(0, Mode.Pattern(AssistLevel.MID)), flow.screen)
+        flow.choosePlane()
+        assertEquals(Screen.Flying(planes[1], 1, Mode.Pattern(AssistLevel.MID)), flow.screen)
+    }
+
+    @Test
+    fun noobIsNotOffered() {
+        val flow = flow()
+        flow.f2bPattern()
+        flow.chooseAssist(AssistLevel.NOOB)
+        assertEquals(Screen.AssistSelect, flow.screen)
+    }
+
+    @Test
+    fun escapeGoesBackThroughTheAssistLevelScreen() {
+        val flow = flow()
+        flow.f2bPattern()
+        flow.chooseAssist(AssistLevel.PRO)
+        flow.back()
+        assertEquals(Screen.AssistSelect, flow.screen)
+        flow.back()
         assertEquals(Screen.MainMenu, flow.screen)
     }
 
@@ -68,18 +139,18 @@ class GameFlowTest {
         assertEquals(PlaneClass.STUNT, stunter.planeClass)
         assertEquals(18f, stunter.lineLength, 0f)
         assertEquals(1.1f, stunter.mass, 1e-6f)
-        assertEquals(180f, stunter.fuelTime, 0f)
+        assertEquals(360f, stunter.fuelTime, 0f)
     }
 
     @Test
     fun leftAndRightChangeThePlaneAndEscapeReturns() {
         val flow = flow()
-        flow.start()
+        flow.freeFlight()
         flow.nextPlane()
-        assertEquals(Screen.PlaneSelect(1), flow.screen)
+        assertEquals(Screen.PlaneSelect(1, Mode.Free), flow.screen)
         flow.previousPlane()
         flow.previousPlane()
-        assertEquals(Screen.PlaneSelect(2), flow.screen)
+        assertEquals(Screen.PlaneSelect(2, Mode.Free), flow.screen)
         flow.back()
         assertEquals(Screen.MainMenu, flow.screen)
     }
@@ -119,6 +190,8 @@ class GameFlowTest {
         assertEquals("Crashed", over.report.end.label)
         assertEquals(1, over.rank)
         assertEquals(listOf(ScoreEntry("Amelia Earha", "Stunter", 320, 4, 2, 42f, "2026-10-04T12:00:00Z")), table.entries)
+        assertTrue(flow.patternTable.board(AssistLevel.PRO).isEmpty() && flow.patternTable.board(AssistLevel.MID).isEmpty())
+        assertFalse(java.nio.file.Files.exists(temp.root.toPath().resolve("f2b-scores.json")))
 
         // the next name entry offers the last name
         flow.retry()
@@ -133,7 +206,7 @@ class GameFlowTest {
         val flow = flow(table)
         flow.flyStunter()
         flow.flightEnded(report(20))
-        assertEquals(Screen.GameOver(Screen.Flying(planes[1]), report(20), null), flow.screen)
+        assertEquals(Screen.GameOver(Screen.Flying(planes[1], 1, Mode.Free), report(20), null), flow.screen)
     }
 
     @Test
@@ -167,7 +240,7 @@ class GameFlowTest {
         flow.nameEntered("Ann")
         val over = flow.screen as Screen.GameOver
         flow.scores()
-        assertEquals(Screen.Scores(over, highlight = 2), flow.screen)
+        assertEquals(Screen.Scores(over, highlight = 2, tab = ScoreTab.FREE), flow.screen)
         assertEquals("Ann", table.entries[1].name)
         flow.back()
         assertEquals(over, flow.screen)
@@ -177,7 +250,7 @@ class GameFlowTest {
     fun scoresFromTheMainMenuGoBackToIt() {
         val flow = flow()
         flow.scores()
-        assertEquals(Screen.Scores(Screen.MainMenu, null), flow.screen)
+        assertEquals(Screen.Scores(Screen.MainMenu, null, ScoreTab.FREE), flow.screen)
         flow.back()
         assertEquals(Screen.MainMenu, flow.screen)
     }
@@ -187,5 +260,72 @@ class GameFlowTest {
         val flow = flow()
         flow.quitGame()
         assertTrue(flow.quit)
+    }
+
+    @Test
+    fun retryKeepsTheModeAndLevel() {
+        val flow = flow()
+        val flying = flow.flyPattern(AssistLevel.PRO)
+        flow.flightEnded(patternReport(AssistLevel.PRO, 85))
+        flow.nameEntered("Ann")
+        flow.retry()
+        assertEquals(Screen.Flying(flying.plane, 2, Mode.Pattern(AssistLevel.PRO)), flow.screen)
+    }
+
+    @Test
+    fun aProFlightThatRanksFirstOpensScoresOnTheProTabHighlighted() {
+        val flow = flow()
+        flow.flyPattern(AssistLevel.PRO)
+        flow.flightEnded(patternReport(AssistLevel.PRO, 85))
+        flow.nameEntered("Ann")
+        val over = flow.screen as Screen.GameOver
+        assertEquals(1, over.rank)
+        flow.scores()
+        val scores = flow.screen as Screen.Scores
+        assertEquals(ScoreTab.PRO, scores.tab)
+        assertEquals(ScoreTab.PRO, scores.highlightTab)
+        assertEquals(1, scores.highlight)
+        assertEquals(1, flow.patternTable.board(AssistLevel.PRO).size)
+        assertEquals(17.0, flow.patternTable.board(AssistLevel.PRO).single().score, 1e-9)
+        assertTrue(flow.patternTable.board(AssistLevel.MID).isEmpty())
+        flow.back()
+        assertEquals(over, flow.screen)
+    }
+
+    @Test
+    fun theScoreTabsChangeWithLeftAndRight() {
+        val flow = flow()
+        flow.scores()
+        assertEquals(ScoreTab.FREE, (flow.screen as Screen.Scores).tab)
+        flow.nextTab()
+        assertEquals(ScoreTab.PRO, (flow.screen as Screen.Scores).tab)
+        flow.nextTab()
+        flow.nextTab()
+        assertEquals(ScoreTab.FREE, (flow.screen as Screen.Scores).tab)
+        flow.previousTab()
+        assertEquals(ScoreTab.MID, (flow.screen as Screen.Scores).tab)
+    }
+
+    @Test
+    fun aFreeFlightIsSavedToScoresJsonOnly() {
+        val table = table()
+        val flow = flow(table)
+        flow.flyStunter()
+        flow.flightEnded(report(320))
+        flow.nameEntered("Ann")
+        assertEquals(1, table.entries.size)
+        assertTrue(flow.patternTable.board(AssistLevel.PRO).isEmpty() && flow.patternTable.board(AssistLevel.MID).isEmpty())
+        assertFalse(java.nio.file.Files.exists(temp.root.toPath().resolve("f2b-scores.json")))
+    }
+
+    @Test
+    fun aMidFlightIsSavedToTheMidBoardOnly() {
+        val flow = flow()
+        flow.flyPattern(AssistLevel.MID)
+        flow.flightEnded(patternReport(AssistLevel.MID, 100))
+        flow.nameEntered("Ann")
+        assertEquals(1, flow.patternTable.board(AssistLevel.MID).size)
+        assertTrue(flow.patternTable.board(AssistLevel.PRO).isEmpty())
+        assertTrue(flow.table.entries.isEmpty())
     }
 }

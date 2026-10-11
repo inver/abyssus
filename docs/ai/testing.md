@@ -70,10 +70,10 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
   edits, and that the committed assets are what the tool makes of the original. The tool compiles through its own
   `fieldFoliageTools` source set (`compileFieldFoliageToolsKotlin`); the older `tools` source set is compiled separately and
   has stale imports of its own (`FieldAssets.kt`), which this change leaves alone.
-- `projects/app-game-control-line/src/test/kotlin/`: the Control Line game's flight, track, scoring, screen flow and Play module,
+- `projects/app-game-control-line/src/test/kotlin/`: the Control Line game's flight, track, scoring, F2B pattern judging (`pattern`: synthetic flights built from the ideal tracks by `SyntheticFlight` / `SyntheticSchedule`, plus a scripted pilot), screen flow and Play module,
   headless (Jolt's `ReleaseSp` natives for the build machine, no window). They read the bundled project
   `projects/app-game-control-line/project/ControlLine` through `bundledProject()` / `loadField()`, and fly it with `FieldFlight`;
-  `ControlLinePlayTest` runs `PlayHostMain` in a child process. `CrashClipGlTest` is the one GL test there (opt-in).
+  `ControlLinePlayTest` runs `PlayHostMain` in a child process. `CrashClipGlTest` and `GameUiGlTest` (every screen builds and draws) are the GL tests there (opt-in).
 - `projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/physics/`: overlay geometry, game/fallback launch selection and bundled play-host packaging.
 - `projects/lib-raytracing/src/test/kotlin/`: backend contracts, fake backend, snapshots, scheduling, budgets, optics, accumulation
   and native packaging. Metal and Vulkan device tests opt in separately with `-Dabyssus.metalTests=true` and
@@ -138,7 +138,7 @@ clear only fixture-creation history before the first panel edit, then retain exa
 
 ## GL tests
 
-- **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `ModelPreviewCanvasGlTest`, `LargeMeshGlTest`, `lib-core`'s `*GlTest`, Control Line's `CrashClipGlTest`) run only with
+- **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `ModelPreviewCanvasGlTest`, `LargeMeshGlTest`, `lib-core`'s `*GlTest`, Control Line's `CrashClipGlTest` and `GameUiGlTest`) run only with
   `-Dabyssus.glTests=true` on a machine with a display. Otherwise `GlHarness.enabled` is false and they are skipped
   (counted as skipped, not failed).
 - **Harness:** `GlHarness` (`projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/sceneview/GlHarness.kt`) renders a few frames on

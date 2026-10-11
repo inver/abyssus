@@ -14,7 +14,6 @@ import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import org.slf4j.Logger
 
@@ -26,11 +25,14 @@ private const val MAX_FRAME = 0.1f
  * loop. Each step reads the handle from the input, updates the [flight] and steps the world. After the flight ends
  * the world goes on, so a crashed plane comes to rest. Lives on the game's main thread; [close] releases the world.
  */
-class FlightSession(engine: SceneEngine, pilot: Entity, val plane: Entity, assets: PhysicsAssets, log: Logger, natives: JoltNatives) : AutoCloseable {
+class FlightSession(
+    engine: SceneEngine, pilot: Entity, val plane: Entity, assets: PhysicsAssets, log: Logger, natives: JoltNatives,
+    judge: FlightJudge? = null,
+) : AutoCloseable {
     private val world = PhysicsWorld(engine, assets, log, natives)
     private val ground = groundOf(engine, assets)
     val rig = LineRig(world, pilot, plane, ground)
-    val flight = Flight(world, rig, ground).also { it.takeoff() }
+    val flight = Flight(world, rig, ground).also { it.takeoff(0f, judge) }
     private var carried = 0f
 
     // The plane is drawn between its last two simulated poses: a frame holds a whole number of 1/120 s steps plus a
@@ -90,13 +92,6 @@ class FlightSession(engine: SceneEngine, pilot: Entity, val plane: Entity, asset
         val b = Vector3()
         line.anchors(a, b)
         a to b.add(offset)
-    }
-
-    /** How the flight went, for GAME OVER; null while it goes on. */
-    fun report(): FlightReport? {
-        val end = flight.result ?: return null
-        val keeper = flight.scoring.keeper
-        return FlightReport(plane.getComponent(NameComponent::class.java)?.name.orEmpty(), end, keeper.score, keeper.laps, keeper.bestCombo, flight.time)
     }
 
     override fun close() = world.close()

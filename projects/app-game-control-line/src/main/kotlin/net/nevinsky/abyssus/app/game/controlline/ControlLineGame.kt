@@ -13,9 +13,13 @@ import net.nevinsky.abyssus.app.game.controlline.components.GAME_COMPONENTS
 import net.nevinsky.abyssus.app.game.controlline.flight.CONTROL_TENSION
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
+import net.nevinsky.abyssus.app.game.controlline.flow.Mode
+import net.nevinsky.abyssus.app.game.controlline.flow.reportOf
 import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
 import net.nevinsky.abyssus.app.game.controlline.render.*
+import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
+import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.app.game.controlline.screens.GameUi
 import net.nevinsky.abyssus.lib.core.BaseCtx
@@ -37,7 +41,10 @@ private val SLACK_LINE = Color(0.5f, 0.5f, 0.5f, 1f)
  * [GameUi], and a [FlightSession] while flying. Everything runs on the LWJGL3 main thread (design decision 11); only
  * asset preparation runs on [executor]. Scores are kept in [scoresFile].
  */
-class ControlLineGame(private val project: Path, private val scoresFile: Path) : ApplicationAdapter() {
+class ControlLineGame(
+    private val project: Path, private val scoresFile: Path,
+    private val patternScoresFile: Path = scoresFile.resolveSibling("f2b-scores.json"),
+) : ApplicationAdapter() {
     /** Problems go to stderr through `physics`'s slf4j-simple binding. */
     private val log = LoggerFactory.getLogger("control-line")
     private val executor: ExecutorService =
@@ -53,6 +60,7 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
     private lateinit var parked: FieldScene
 
     private var session: FlightSession? = null
+    private var judge: PatternJudge? = null
     private var sessionScene: FieldScene? = null
     private var flying: Screen.Flying? = null
 
@@ -70,7 +78,7 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
         ShaderProgram.prependFragmentCode = "#version 150\n#define varying in\n#define texture2D texture\n" +
             "#define textureCube texture\n#define gl_FragColor fragColor\nout vec4 fragColor;\n"
         parked = loadScene()
-        flow = GameFlow(parked.planes, ScoreTable(scoresFile))
+        flow = GameFlow(parked.planes, ScoreTable(scoresFile), PatternScoreTable(patternScoresFile))
         renderer = FieldRenderer(ctx)
         skin = Skin(Gdx.files.classpath("uiskin/uiskin.json"))
         ui = GameUi(flow, skin) { Gdx.app.exit() }
@@ -91,7 +99,7 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
         val s = session
         if (s != null && screen is Screen.Flying) {
             s.advance(seconds, input)
-            s.report()?.let(flow::flightEnded)
+            flying?.let { f -> reportOf(s, f.mode, judge, f.plane.name)?.let(flow::flightEnded) }
         } else if (s != null && (screen is Screen.GameOver || screen is Screen.NameEntry)) {
             // the plane comes to rest; the flight itself is over
             s.advance(seconds, HandleInput())
@@ -100,7 +108,7 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
         val scene = sessionScene ?: parked
         var lines = emptyList<LineSegment>()
         when (screen) {
-            is Screen.PlaneSelect -> parked.entity(flow.planes[screen.index].entityId)?.let { plane ->
+            is Screen.PlaneSelect -> parked.entity(flow.choices(screen.mode)[screen.index].entityId)?.let { plane ->
                 val p = parked.position(plane)
                 cameras.planeSelect(
                     p.localPosition,
@@ -129,7 +137,7 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
             clips = s?.flight?.crash?.let { mapOf(s.plane to it.clip) }.orEmpty(),
             seconds = seconds,
         )
-        ui.update(s, seconds)
+        ui.update(s, judge, seconds)
         ui.draw()
     }
 
@@ -149,7 +157,9 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
         val plane = scene.entity(screen.plane.entityId) ?: return
         val pilot = scene.pilot ?: return
         val assets = PhysicsAssets(project.toFile())
-        session = FlightSession(scene.engine, pilot, plane, assets, log, natives)
+        // an F2B pattern is judged over a hemisphere of the plane's line length
+        judge = (screen.mode as? Mode.Pattern)?.let { PatternJudge(screen.plane.lineLength) }
+        session = FlightSession(scene.engine, pilot, plane, assets, log, natives, judge)
         sessionScene = scene
         flying = screen
         input.reset()
@@ -164,6 +174,7 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
     private fun endFlight() {
         session?.close()
         session = null
+        judge = null
         sessionScene = null
         flying = null
     }

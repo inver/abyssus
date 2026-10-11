@@ -12,19 +12,121 @@ behaviour: `control-line-flight`, `control-line-scoring` and `control-line-game-
 ./gradlew :app-game-control-line:run
 ```
 
-The `run` task points the game at the bundled project (system property `controlLine.project`). Scores are kept in
-`<user-home>/.abyssus-control-line/scores.json`; a file that cannot be read is renamed to `scores.json.bad`.
+The `run` task points the game at the bundled project (system property `controlLine.project`). The main menu offers
+**Free flight** (the arcade game below) and **F2B pattern** (practice for the real schedule, see [F2B pattern](#f2b-pattern)).
+Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json` and F2B scores in
+`<user-home>/.abyssus-control-line/f2b-scores.json`; a file that cannot be read is renamed to `scores.json.bad` or
+`f2b-scores.json.bad`.
 
 ## Controls
 
 | Where | Keys and mouse |
 |---|---|
 | Menus | Up / Down and Enter, or the mouse; Escape goes back |
-| Plane select | Left / Right change the plane, Enter flies it, Escape returns to the main menu |
+| Plane select | Left / Right change the plane, Enter flies it, Escape returns to the screen before it (the main menu, or the assist level for an F2B pattern) |
+| Scores | Left / Right change the tab (Free flight, Pro, Mid), Escape or Back returns |
 | Flying | W or Up: handle up; S or Down: handle down (full tilt in 0.15 s, back to neutral on release). Moving the mouse up or down sets the tilt by its distance from the window's centre; whichever was used last wins. Escape pauses |
 
-Laps score 10. Inside and outside loops score 50, an inverted lap 80, a wingover 100 and a figure 8 150, times the
+In Free flight, laps score 10. Inside and outside loops score 50, an inverted lap 80, a wingover 100 and a figure 8 150, times the
 combo multiplier (up to x5 for maneuvers within 10 s of each other). A landing with the engine stopped adds 200.
+
+## F2B pattern
+
+F2B pattern flies the schedule of FAI class F2B (Sporting Code Section 4, Volume F2, 2027 edition, rule 4.2) in 7 minutes,
+with a judge that marks each manoeuvre from the flown track, as a human judge does. Required behaviour:
+`control-line-f2b-pattern` and `control-line-f2b-judging` (OpenSpec change `add-f2b-pattern-mode`). The menu asks for
+an **assist level**, then offers only planes of class `STUNT` (the bundled `Stunter`):
+
+| Level | HUD |
+|---|---|
+| Pro | line tension, fuel left and the clock `m:ss / 7:00`; nothing about the manoeuvres |
+| Mid | also the next manoeuvre with its K, the pause count out of 1½ laps, a warning while the plane flies level between manoeuvres outside 1 to 3 m, and a toast with each mark as soon as the manoeuvre ends (`Take-off 8.5 × 2 = 17.0`) |
+
+Noob (the ideal track drawn ahead of the plane) and the replay debrief come in later changes; Noob's board is reserved in
+`f2b-scores.json` but not offered.
+
+### The schedule
+
+Fifteen manoeuvres in this order, each marked 1 to 10 in steps of 0.1 and multiplied by its K (rule 4.2.12); the flight
+score is the sum, shown with two decimals. K sums to 130, so the best score is 1300.00.
+
+| # | Manoeuvre | K | # | Manoeuvre | K |
+|---|---|---|---|---|---|
+| 1 | Take-off | 2 | 9 | Two horizontal eights | 7 |
+| 2 | Reverse wingover | 8 | 10 | Two square horizontal eights | 18 |
+| 3 | Three inside loops | 6 | 11 | Two vertical eights | 10 |
+| 4 | Two laps of inverted flight | 2 | 12 | Hourglass | 10 |
+| 5 | Three outside loops | 6 | 13 | Two overhead eights | 10 |
+| 6 | Two inside square loops | 12 | 14 | Four-leaf clover | 8 |
+| 7 | Two outside square loops | 12 | 15 | Landing | 5 |
+| 8 | Two inside triangular loops | 14 | | | |
+
+The flight time is counted from the start of the take-off ground roll. The bundled `Stunter` has fuel for 360 s, so its
+engine stops before 7:00 and the landing is flown with the engine stopped.
+
+### Rules that score 0
+
+A manoeuvre scores 0, with its reason on the score sheet, when it is:
+
+- **omitted**: a later manoeuvre was flown, so the ones skipped score 0 (a manoeuvre already passed is not scored again);
+- **not completed**: started and given up before its end;
+- **wrong number of repeats**: three square loops where two are asked for;
+- **too soon**: it starts less than 1½ laps (540° of azimuth) after the previous one ended;
+- **after 7:00**: it ends after 7:00 (the flight goes on until it lands or crashes);
+- **crashed**: a crash, or lines that go slack, scores 0 from the manoeuvre in progress on; the ones before keep their marks.
+
+A landing scores 0 when it ends after 7:00 or as a crash. Flying between the clover and the landing is not judged.
+
+### How a manoeuvre is marked
+
+The code is in the `pattern` package and works on a *flight hemisphere* centred 1.5 m above the pilot's ground point (the
+base), of the line length's radius; a place is a unit vector from the centre, so nothing is singular over the pilot.
+
+1. `PathTokens` reads the flown path (resampled every 0.5 m) as straights, level stretches, corners, arcs, ground roll
+   and touchdown. A turn is inside when the plane's up points to the inside of its bend, outside otherwise.
+2. `PatternJudge` waits for a *pause* (level flight for 150° of azimuth or more), takes the burst of flying before it
+   and asks `Matchers` which manoeuvre it is, from the shape alone: loops are steady arcs, squares and triangles are sharp
+   corners joined by straights, eights alternate inside and outside arcs, the overhead eights and the clover pass the
+   zenith. It counts the repeats; how well the figure was flown never changes what it is.
+3. `IdealTracks` builds the ideal track the F2B description defines, anchored where the pilot flew it (the first
+   vertical of loops, the centre of eights, the first climb of squares, the take-off's release point and so on).
+4. `Grader` matches the flown points to the ideal track by progress and marks `clamp(10 − Σ deductions, 1, 10)`. Each
+   criterion deducts `min(cap, perUnit × max(0, measured − tolerance))`, which never falls as the error grows. The
+   weights are this game's own, in `MarkWeights` (Annex 4B, the Judges' Guide, is not part of the 2027 volume):
+
+| Criterion | Measured | Tolerance | Per unit | Cap |
+|---|---|---|---|---|
+| Base height | worst \|height − 1.5 m\| on base segments and loop bottoms | 0.30 m | 2 / m | 3 |
+| Track deviation | RMS distance to the ideal track (m) | 0.5 m | 1 / m | 4 |
+| 45° parallel | top of a figure away from the 45° parallel (m) | 0.5 m | 1 / m | 2 |
+| Line angle | verticals (0°) and the triangles' 30° legs (°) | 3° | 0.1 / ° | 2 |
+| Corner radius | mean corner radius (m) | 3 m | 1 / m | 3 |
+| Segment length | the squares' ⅛ lap and the triangles' base; the glide's 1 lap (laps) | 0.02 | 10 / lap | 2 |
+| Superimposition | worst distance between repeats that should lie on each other (m) | 0.5 m | 1 / m | 2 |
+| Symmetry and crossing | drift of the crossing point between passes (m) | 0.5 m | 1 / m | 2 |
+| Take-off roll | outside 4.5 m to ¼ lap (m) | 0 | 0.2 / m | 2 |
+| Landing touchdown | vertical speed (m/s) | 1 m/s | 1 / (m/s) | 2 |
+
+The `Stunter` cannot turn tighter than about 2.7 m at full handle tilt (the stall, not the elevator, sets the floor), so
+the corner tolerance is 3 m rather than the 1.5 m a sharper plane would justify; the ideal corners are 1 m.
+
+The ideal tracks are this game's reading of the F2B descriptions: loops are circles of 22.5° radius between the base and
+the 45° parallel; squares are ⅛ lap wide with vertical sides; triangles have legs 30° off vertical and the apex on the 45°
+parallel; the horizontal eight is two tangent loops side by side, the vertical eight two stacked from the base to the
+zenith, the overhead eight two loops meeting over the pilot; the clover is four ¾ loops joined through the zenith; the
+hourglass is a base edge, two crossing legs and a top edge near the zenith; the take-off is a ground roll, a climb over
+one lap to the base and two laps at the base; the landing is one lap of glide. The judge keeps each deduction and the
+ideal and flown tracks of every manoeuvre for the debrief change.
+
+Game simplifications: a flight ends at touchdown, so the landing roll is not judged and "stopped" means touchdown; there
+is no Starting (K 0) or preparation time; one judge, no attempts, rounds or classification; no noise or pull tests.
+
+### Scores
+
+`f2b-scores.json` is `{version: 1, boards: {pro: [...], mid: [...], noob: [...]}}`: the 10 best flights of each level,
+best first, earlier flights first among equal scores. Each entry has `name`, `plane`, `score` (two decimals),
+`flightTime`, `date` and the 15 `marks`. A missing board reads as empty. The score table screen has a tab per board next
+to Free flight.
 
 ## The project in Abyssus
 
@@ -63,10 +165,11 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 | Package (`net.nevinsky.abyssus.app.game.controlline.`) | Holds | GL |
 |---|---|---|
 | `components` | `PilotComponent`, `PlaneComponent`, `GameComponents`, `ControlLineComponents` (with the physics components) | no |
-| `flight` | `Aero`, `LineRig`, `Ground`, `Flight` / `FlightSystem`, `FlightOutcome`, `FlightSession` | no |
+| `flight` | `Aero`, `LineRig`, `Ground`, `Flight` / `FlightSystem`, `FlightOutcome`, `FlightSession`, `FlightJudge` | no |
 | `track` | `SphereTrack`, `Maneuvers`, `Laps` | no |
 | `score` | `ScoreKeeper`, `FlightScoring`, `ScoreTable` | no |
-| `flow` | `GameFlow` (the screen state machine) | no |
+| `pattern` | the F2B pattern: `Schedule` (`Figure`), `HemisphereGeometry`, `PathTokens`, `TrackBuilder`, `IdealTracks`, `IdealSampler`, `Matchers`, `Grader` / `MarkWeights`, `PatternJudge`, `ScoreSheet`, `PatternScoreTable` | no |
+| `flow` | `GameFlow` (the screen state machine, with the mode and assist level), `FlightReport` | no |
 | `input` | `HandleInput` (keyboard and mouse tilt) | no |
 | `render`, `screens` | `FieldScene`, `FieldRenderer` (with `shader/terrain.*`), `FieldShadows` (the sun's shadow map), `Cameras`, `GameUi` | yes |
 | `play` | `ControlLinePlay : PlayModule` | no |
@@ -169,7 +272,7 @@ rudder and engine offset 2°):
 | Plane | Class | Mass | Lines | Thrust | Fuel | Wing area | Other |
 |---|---|---|---|---|---|---|---|
 | `Racer` | SPEED | 0.5 kg | 21 m | 6 N | 60 s | 0.09 m² | lift slope 4.2, zero-lift drag 0.02, elevator effect 0.3, pitch damping 10 |
-| `Stunter` | STUNT | 1.1 kg | 18 m | 5 N | 180 s | 0.325 m² | lift slope 4.8, elevator effect 0.7 |
+| `Stunter` | STUNT | 1.1 kg | 18 m | 5 N | 360 s | 0.325 m² | lift slope 8, elevator effect 3 |
 | `Trainer` | TRAINER | 0.8 kg | 15 m | 5.5 N | 120 s | 0.2 m² | zero-lift drag 0.06 |
 
 All three have no linear damping and friction 0.05 (they roll on their wheels). With the handle neutral they settle at:
@@ -177,7 +280,7 @@ All three have no linear damping and friction 0.05 (they roll on their wheels). 
 | Plane | Above 1 m after | Speed | Lap | Tension | Elevation |
 |---|---|---|---|---|---|
 | `Racer` | 2.8 s | 39 m/s | 3.4 s | 34 N | 9° |
-| `Stunter` | 5.9 s | 24 m/s | 4.7 s | 33 N | 4.5° |
+| `Stunter` | 4.8 s | 24 m/s | 4.9 s | 29 N | 8° |
 | `Trainer` | 4.2 s | 24 m/s | 4.0 s | 28 N | 3° |
 
-Full up loops the `Stunter` in under 2 s, over the top at about 45° of elevation.
+Full up loops the `Stunter` in about 0.5 s, over the top at 45° of elevation or more, and its corners at full tilt are about 2.7 m in radius (`PatternFlyabilityTest`). Its fuel and its lift slope and elevator effect were raised for the F2B pattern (the old values turned no tighter than about 9 m).
