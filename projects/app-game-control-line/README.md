@@ -75,6 +75,8 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 
 The game window is an OpenGL 3.2 core context (`Main.kt` asks for it, and `ControlLineGame.create` gives the legacy GLSL of
 the terrain and model shaders their version line and defines), because foliage is drawn with instanced rendering.
+The sky is drawn with layered clouds (`FieldRenderer`, `GAME_CLOUDS`): the asset's shell clouds, eight noise layers per band at
+the full window size, left the game GPU-bound at about 35 frames a second in that context.
 
 A terrain entity's `FoliageComponent` is drawn by `FieldRenderer` from the committed bake, with no scatter or write.
 `FieldScene.foliages` lists the foliage of the loaded scene (`SceneFoliageListing`; a component on an entity that draws

@@ -117,6 +117,9 @@ class FoliageDrawable(
     /** True once [updateCasters] was called: only then are caster buffers kept. */
     private var casting = false
     private var casterDirty = true
+
+    /** True until [rebuildMeshes] has fitted the meshes to the current bake. */
+    private var meshesStale = true
     private val lastCasterEntity = FloatArray(16)
     private var hasLastCasterEntity = false
 
@@ -147,16 +150,17 @@ class FoliageDrawable(
         }
         val entityMoved = !hasLastEntity || !same(lastEntity, entity.`val`)
         // OBJECT copies are drawn to the far plane, so only a DETAIL layer cares where the camera stands
-        val cameraMoved = detail && (!hasLastCamera || lastCamera != camera.position)
+        // a metre and a half of drift moves the draw-distance edge too little to see, and a refill walks every copy
+        val cameraMoved = detail && (!hasLastCamera || lastCamera.dst2(camera.position) > CAMERA_REFILL_DISTANCE2)
         if (dirty || changed || entityMoved || cameraMoved) {
             rebuildMeshes()
             fill(camera, entity)
             dirty = false
+            lastCamera.set(camera.position)
+            hasLastCamera = true
         }
         entity.`val`.copyInto(lastEntity)
         hasLastEntity = true
-        lastCamera.set(camera.position)
-        hasLastCamera = true
     }
 
     /** Hands over a freshly generated bake: the next [update] draws its copies. */
@@ -188,6 +192,7 @@ class FoliageDrawable(
         if (!casting) {
             casting = true
             casterDirty = true
+            meshesStale = true
         }
         if (terrain == null || bake == null) {
             clearCasters()
@@ -229,6 +234,7 @@ class FoliageDrawable(
     }
 
     private fun refreshLayers() {
+        meshesStale = true
         for (layer in layers) layer.refresh()
     }
 
@@ -325,6 +331,9 @@ class FoliageDrawable(
 
     /** Fits the meshes to the current bake: an unreferenced model is dropped, a grown capacity is rebuilt. */
     private fun rebuildMeshes() {
+        // the capacities only change with the bake, the terrain or the caster buffers: walking every copy per frame is waste
+        if (!meshesStale) return
+        meshesStale = false
         val capacities = capacities()
         val iterator = meshes.iterator()
         while (iterator.hasNext()) {
@@ -642,3 +651,6 @@ class FoliageDrawable(
         }
     }
 }
+
+/** The squared distance the camera must drift before a DETAIL layer refills its buffers. */
+private const val CAMERA_REFILL_DISTANCE2 = 2.25f

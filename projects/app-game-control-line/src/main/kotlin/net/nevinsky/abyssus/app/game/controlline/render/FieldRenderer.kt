@@ -23,6 +23,7 @@ import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
@@ -79,6 +80,12 @@ fun fieldAssets(
 
 /** A segment to draw: a control line from [from] to [to], in [color]. */
 class LineSegment(val from: Vector3, val to: Vector3, val color: Color)
+
+/**
+ * The cloud technique the game draws its sky with. The asset's own (shells: eight noise layers per band at the full
+ * window resolution, every frame) keeps a 3.2 core context under 40 frames a second; layered clouds cost almost nothing.
+ */
+private val GAME_CLOUDS = CloudTechnique.LAYERED
 
 /** The texture unit of the terrain's shadow map: the splat layers and the splat map take the units before it. */
 private const val SHADOW_UNIT = 6
@@ -156,7 +163,7 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
             Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
             Gdx.gl.glDepthMask(false)
             Gdx.gl.glDisable(GL20.GL_CULL_FACE)
-            sky.draw(camera, SkyFrame(field.sunDirection, skyTime))
+            sky.draw(camera, SkyFrame(field.sunDirection, skyTime, technique = GAME_CLOUDS))
             Gdx.gl.glDepthMask(true)
         }
 
