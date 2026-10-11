@@ -193,7 +193,7 @@ including raster preparations that began before a request was closed and reacqui
 ## Optional CPU sky companions
 
 The sky store hands out leases of an immutable `RaySkySnapshot`: the scene's sky as an equirectangular RGBA float image
-(centre column faces -Z, top row is +Y), at most `RAY_SKY_MAX_WIDTH` (1024) wide. `HdrSkyRaySnapshotLoader` decodes an
+(centre column faces -Z, top row is +Y), at most `RAY_SKY_MAX_WIDTH` (1024) wide (a procedural sky baked by the view is 2048 wide, bilinear, as 8-bit `rgba8()` data). `HdrSkyRaySnapshotLoader` decodes an
 HDR sky again on the CPU and box-filters it down, keeping linear radiance far above 1; `SkyboxRaySnapshotLoader`
 resamples a cube skybox with the GL cube lookup the raster sky uses (faces are back, front, left, right, bottom, top =
 +X, -X, +Y, -Y, +Z, -Z) and keeps its display values. `ProceduralSkyRaySnapshotLoader` returns null: a procedural sky is

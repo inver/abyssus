@@ -242,15 +242,10 @@ class RayViewFeed(
 
     private fun textureOf(sky: RaySkySnapshot): RayTexture {
         skyTexture?.takeIf { it.first === sky }?.let { return it.second }
-        return RayTexture(
-            "sky",
-            sky.width,
-            sky.height,
-            sky.rgba(),
-            RayWrap.REPEAT,
-            RayWrap.CLAMP_TO_EDGE,
-            RayFilter.LINEAR
-        ).also { skyTexture = sky to it }
+        val bytes = sky.rgba8()
+        return (if (bytes != null) RayTexture("sky", sky.width, sky.height, bytes, RayWrap.REPEAT, RayWrap.CLAMP_TO_EDGE, RayFilter.LINEAR)
+        else RayTexture("sky", sky.width, sky.height, sky.rgba(), RayWrap.REPEAT, RayWrap.CLAMP_TO_EDGE, RayFilter.LINEAR))
+            .also { skyTexture = sky to it }
     }
 
     /** Frozen copy for the converter: a worker must never read the renderer's mutable camera. */

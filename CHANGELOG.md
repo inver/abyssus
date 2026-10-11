@@ -12,6 +12,7 @@
 - Older unmarked files and files from other editors are unsupported. Plugin loading, editing and automatic formatting refuse them without
   rewriting them. No importer or automatic migration is included. External model, image, terrain binary and recipe encodings remain unchanged.
 ### Added
+- Ray Tracing clouds are sharp and smooth: the baked procedural sky is rendered from 512 px faces, resampled bilinearly into a 2048x1024 image (it was 256 px faces, nearest, 1024x512, which showed blocky, striped clouds) and carried as 8-bit data
 - Ray Tracing no longer flickers in scenes with drifting clouds, terrain or animated models: terrain materials no longer count as changed every frame, a re-baked sky keeps the previous ray image on screen until the new one is ready, and an animated model with a still camera keeps an up to 500 ms old ray frame instead of flashing raster
 - Ray Tracing no longer stops with "Scene textures exceed 16777216 texels": the largest textures are reduced (halved) until they fit the ray tracing texture budget
 - **Maximum model parts and terrains** in the saved Ray Tracing settings of a scene (`rayTracing.maxInstances`, 1–4096, default 4096); the ray tracing instance capacity itself is raised from 1024 to 4096, so larger game scenes no longer fall back to raster

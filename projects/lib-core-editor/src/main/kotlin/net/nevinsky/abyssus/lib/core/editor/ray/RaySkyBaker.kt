@@ -13,7 +13,6 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
 import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
@@ -30,7 +29,7 @@ import kotlin.math.sin
  * the view shows it, with its clouds at [bake]'s `timeSeconds` when asked, never the linear lighting radiance. Every bake
  * gets the next [RaySkySnapshot.revision].
  */
-class RaySkyBaker(private val faceSize: Int = 256) {
+class RaySkyBaker(private val faceSize: Int = 512) {
     private var bakes = 0L
 
     private class Face(val direction: Vector3, val up: Vector3) {
@@ -78,16 +77,15 @@ class RaySkyBaker(private val faceSize: Int = 256) {
         return equirect(images, ++bakes)
     }
 
-    // Which face and texel every output pixel reads depends only on the face size, so it is worked out once, not per bake.
-    private val faceOfPixel by lazy(LazyThreadSafetyMode.NONE) { ByteArray(RAY_SKY_MAX_WIDTH * (RAY_SKY_MAX_WIDTH / 2)) }
-    private val texelOfPixel by lazy(LazyThreadSafetyMode.NONE) {
-        val width = RAY_SKY_MAX_WIDTH
-        val height = width / 2
-        val texels = IntArray(width * height)
-        for (y in 0 until height) {
-            val phi = (y + .5f) / height * PI.toFloat()
-            for (x in 0 until width) {
-                val theta = ((x + .5f) / width - .5f) * 2f * PI.toFloat()
+    // Which face and where on it every output pixel reads depends only on the face size, so it is worked out once, not per bake.
+    private val faceOfPixel by lazy(LazyThreadSafetyMode.NONE) { ByteArray(WIDTH * HEIGHT) }
+    private val sourceX by lazy(LazyThreadSafetyMode.NONE) { FloatArray(WIDTH * HEIGHT) }
+    private val sourceY by lazy(LazyThreadSafetyMode.NONE) { FloatArray(WIDTH * HEIGHT) }
+    private val mapped by lazy(LazyThreadSafetyMode.NONE) {
+        java.util.stream.IntStream.range(0, HEIGHT).parallel().forEach { y ->
+            val phi = (y + .5f) / HEIGHT * PI.toFloat()
+            for (x in 0 until WIDTH) {
+                val theta = ((x + .5f) / WIDTH - .5f) * 2f * PI.toFloat()
                 val dx = sin(phi) * sin(theta);
                 val dy = cos(phi);
                 val dz = -sin(phi) * cos(theta)
@@ -100,31 +98,51 @@ class RaySkyBaker(private val faceSize: Int = 256) {
                 val forward = dx * face.direction.x + dy * face.direction.y + dz * face.direction.z
                 val u = (dx * face.right.x + dy * face.right.y + dz * face.right.z) / forward
                 val v = (dx * face.vertical.x + dy * face.vertical.y + dz * face.vertical.z) / forward
-                val px = ((u + 1f) / 2f * faceSize).toInt().coerceIn(0, faceSize - 1)
-                val py = ((v + 1f) / 2f * faceSize).toInt()
-                    .coerceIn(0, faceSize - 1) // row 0 is the bottom, as glReadPixels returns
-                faceOfPixel[y * width + x] = index.toByte()
-                texels[y * width + x] = (py * faceSize + px) * 4
+                // texel centres sit at +.5, so a position between two centres blends them; row 0 is the bottom, as glReadPixels returns
+                faceOfPixel[y * WIDTH + x] = index.toByte()
+                sourceX[y * WIDTH + x] = ((u + 1f) / 2f * faceSize - .5f).coerceIn(0f, faceSize - 1f)
+                sourceY[y * WIDTH + x] = ((v + 1f) / 2f * faceSize - .5f).coerceIn(0f, faceSize - 1f)
             }
         }
-        texels
+        true
     }
 
-    /** Equirectangular resampling: centre column faces -Z and the top row is +Y, as the raster sky does. */
+    /**
+     * Equirectangular resampling, bilinear within each face: centre column faces -Z and the top row is +Y, as the raster
+     * sky does. 8-bit RGBA, because the bake is a display sample and a float image this size would cost 33 MB a bake.
+     */
     private fun equirect(images: List<ByteArray>, revision: Long): RaySkySnapshot {
-        val width = RAY_SKY_MAX_WIDTH
-        val height = width / 2
-        val texels = texelOfPixel
-        val out = FloatArray(width * height * 4)
-        for (pixel in 0 until width * height) {
-            val image = images[faceOfPixel[pixel].toInt()]
-            val source = texels[pixel]
-            val i = pixel * 4
-            out[i] = (image[source].toInt() and 255) / 255f
-            out[i + 1] = (image[source + 1].toInt() and 255) / 255f
-            out[i + 2] = (image[source + 2].toInt() and 255) / 255f
-            out[i + 3] = 1f
+        check(mapped)
+        val out = ByteArray(WIDTH * HEIGHT * 4)
+        java.util.stream.IntStream.range(0, HEIGHT).parallel().forEach { y ->
+            for (x in 0 until WIDTH) {
+                val pixel = y * WIDTH + x
+                val image = images[faceOfPixel[pixel].toInt()]
+                val fx = sourceX[pixel]
+                val fy = sourceY[pixel]
+                val x0 = fx.toInt()
+                val y0 = fy.toInt()
+                val x1 = minOf(x0 + 1, faceSize - 1)
+                val y1 = minOf(y0 + 1, faceSize - 1)
+                val wx = fx - x0
+                val wy = fy - y0
+                val a = (y0 * faceSize + x0) * 4
+                val b = (y0 * faceSize + x1) * 4
+                val c = (y1 * faceSize + x0) * 4
+                val d = (y1 * faceSize + x1) * 4
+                val i = pixel * 4
+                for (channel in 0 until 3) {
+                    val top = (image[a + channel].toInt() and 255) * (1f - wx) + (image[b + channel].toInt() and 255) * wx
+                    val bottom = (image[c + channel].toInt() and 255) * (1f - wx) + (image[d + channel].toInt() and 255) * wx
+                    out[i + channel] = (top * (1f - wy) + bottom * wy + .5f).toInt().toByte()
+                }
+                out[i + 3] = 255.toByte()
+            }
         }
-        return RaySkySnapshot(width, height, out, hdr = false, revision = revision)
+        return RaySkySnapshot(WIDTH, HEIGHT, out, hdr = false, revision = revision)
     }
 }
+
+// Twice the old 1024x512, so a cloud's edge spans several texels at the editor's field of view.
+private const val WIDTH = 2048
+private const val HEIGHT = WIDTH / 2
