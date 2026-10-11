@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
@@ -445,6 +448,7 @@ class SceneRenderer(
         val aspect = aspectOf(width, height) ?: return
         lines.begin(displayCamera, depthTest = true)
         SceneMarkers().draw(lines, c, aspect, state.viewCamera)
+        drawPaths(lines, c)
         if (state.paint != null) brushCursor?.draw(lines)
         overlays?.draw(overlayView(c, displayCamera, height, onTop = false), lines)
         lines.end()
@@ -458,6 +462,52 @@ class SceneRenderer(
         }
         overlays?.draw(overlayView(c, displayCamera, height, onTop = true), lines)
         lines.end()
+    }
+
+    /** The ground under the last drawn frame, for the preview of path arrangements; the line's own height without terrain. */
+    internal fun groundHeights(): GroundHeight? {
+        val frame = snapshot ?: return null
+        return ground(frame)
+    }
+
+    private var groundKey: List<Any>? = null
+    private var groundMemo: MemoizedGround? = null
+
+    /** [GroundHeights] over the frame's terrains, with answers kept until a terrain's data or transform changes. */
+    private fun ground(frame: FrameSnapshot): GroundHeight {
+        val key = frame.terrains.map { Triple(System.identityHashCode(it.data), it.entityId, it.world.values.contentHashCode()) }
+        groundMemo?.takeIf { key == groundKey }?.let { return it }
+        return MemoizedGround(GroundHeights(frame.terrains)).also {
+            groundKey = key
+            groundMemo = it
+        }
+    }
+
+    private class MemoizedGround(private val inner: GroundHeights) : GroundHeight {
+        private val answers = HashMap<Long, Float>()
+
+        override fun heightAt(x: Float, z: Float, fallbackY: Float): Float {
+            val key = (x.toRawBits().toLong() shl 32) or (z.toRawBits().toLong() and 0xFFFFFFFFL)
+            val terrain = answers.getOrPut(key) { inner.terrainHeight(x, z) ?: Float.NaN }
+            return if (terrain.isNaN()) fallbackY else terrain
+        }
+    }
+
+    /**
+     * The path being drawn with a handle on each point, and the arrangements of the scene: the selected one with handles
+     * (at the points being dragged, when a drag is on), the others as a bare line a click can select.
+     */
+    private fun drawPaths(lines: LineBatch, c: SceneContent) {
+        val frame = snapshot
+        val ground = if (frame != null) ground(frame) else LineHeights()
+        val markers = SceneMarkers()
+        state.drawing?.let { markers.drawPath(lines, arrangementAlong(it.points), ground, handles = true) }
+        for (placement in c.arrangements) {
+            val selected = placement.entityId == state.selectedId
+            val edited = state.pathEdit?.takeIf { it.entityId == placement.entityId }
+            val path = if (edited != null) arrangementAlong(edited.points, placement.arrangement) else placement.arrangement
+            markers.drawPath(lines, path, ground, handles = selected, slots = selected)
+        }
     }
 
     internal fun overlayView(c: SceneContent, displayCamera: PerspectiveCamera, height: Int, onTop: Boolean) =

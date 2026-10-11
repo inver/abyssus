@@ -9,6 +9,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.arrange.pointsOf
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
@@ -45,6 +46,21 @@ interface SceneQueries {
      * Model boxes do not block the brush, and the camera's far plane limits the ray.
      */
     fun terrainHit(entityId: String, ray: Ray): Vector3?
+
+    /** The nearest point where [ray] meets any drawn terrain, or null when it meets none (a click in the sky). */
+    fun groundHit(ray: Ray): Vector3?
+
+    /** The points of the arrangement [entityId] as shown now: the ones being dragged, else the file's; null when it is none. */
+    fun pathPoints(entityId: String): List<Vec3>?
+
+    /** The handle of the selected arrangement's line under the pixel, or null. */
+    fun pathHandleAt(screenX: Int, screenY: Int, width: Int, height: Int): PathHit?
+
+    /** The arrangement whose line passes within a few pixels of the pixel, or null. */
+    fun pathLineAt(screenX: Int, screenY: Int, width: Int, height: Int): String?
+
+    /** How many pixels the pixel ([screenX], [screenY]) is from where the world point [at] is drawn; null when it is off screen. */
+    fun screenDistance(at: Vec3, screenX: Int, screenY: Int, width: Int, height: Int): Float?
 
     /** The height of the highest surface under [entityId], or null when it cannot drop (terrain, the camera looked through, nothing below). */
     fun groundBelow(entityId: String): Float?
@@ -147,6 +163,52 @@ class SnapshotSceneQueries(
         }
         if (nearest?.entityId != entityId) return null
         return Vector3(ray.origin).mulAdd(ray.direction, nearestDistance)
+    }
+
+    override fun groundHit(ray: Ray): Vector3? {
+        val frame = snapshot() ?: return null
+        val picker = ScenePicker()
+        val nearest = frame.terrains.mapNotNull { picker.terrainDistance(ray, it, frame.camera.far) }.minOrNull() ?: return null
+        return Vector3(ray.origin).mulAdd(ray.direction, nearest)
+    }
+
+    override fun pathPoints(entityId: String): List<Vec3>? {
+        state.pathEdit?.takeIf { it.entityId == entityId }?.let { return it.points }
+        return content.arrangements.firstOrNull { it.entityId == entityId }?.arrangement?.let(::pointsOf)
+    }
+
+    override fun pathHandleAt(screenX: Int, screenY: Int, width: Int, height: Int): PathHit? {
+        val frame = snapshot() ?: return null
+        val id = state.selectedId ?: return null
+        val arrangement = content.arrangements.firstOrNull { it.entityId == id } ?: return null
+        val points = pathPoints(id) ?: return null
+        if (width <= 0 || height <= 0) return null
+        return PathHandles(points, arrangement.arrangement.closed)
+            .hit(ScreenProjection(frame.camera, width, height), screenX.toFloat(), screenY.toFloat())
+    }
+
+    override fun pathLineAt(screenX: Int, screenY: Int, width: Int, height: Int): String? {
+        val frame = snapshot() ?: return null
+        if (width <= 0 || height <= 0) return null
+        val projection = ScreenProjection(frame.camera, width, height)
+        var best: String? = null
+        var bestDistance = PATH_LINE_PX
+        for (placement in content.arrangements) {
+            val points = pathPoints(placement.entityId) ?: continue
+            val d = PathHandles(points, placement.arrangement.closed).lineDistance(projection, screenX.toFloat(), screenY.toFloat()) ?: continue
+            if (d <= bestDistance) {
+                bestDistance = d
+                best = placement.entityId
+            }
+        }
+        return best
+    }
+
+    override fun screenDistance(at: Vec3, screenX: Int, screenY: Int, width: Int, height: Int): Float? {
+        val frame = snapshot() ?: return null
+        if (width <= 0 || height <= 0) return null
+        val s = ScreenProjection(frame.camera, width, height).at(at) ?: return null
+        return kotlin.math.hypot(s.x - screenX, s.y - screenY)
     }
 
     override fun groundBelow(entityId: String): Float? {

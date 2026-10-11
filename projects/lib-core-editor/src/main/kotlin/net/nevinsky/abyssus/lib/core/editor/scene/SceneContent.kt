@@ -8,6 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.scene
 import net.nevinsky.abyssus.lib.core.editor.document.renderAssetOf
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
@@ -26,6 +27,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.util.opt
 
 /**
@@ -53,6 +55,8 @@ data class SceneContent(
     val entityPositions: Map<String, Vec3> = emptyMap(),
     /** The ids of entities whose `TypeComponent.type` is `HANDLE` (the direction handles of look-at lights). */
     val handleIds: Set<String> = emptySet(),
+    /** The path arrangements: the lines the view shows handles on when one is selected. */
+    val arrangements: List<ArrangementPlacement> = emptyList(),
 ) {
     /** The id of the direction handle (a `HANDLE` entity) [light] looks at, or null when it looks at none. */
     fun aimHandleOf(light: LightPlacement): String? = light.lookAtId?.takeIf { it in handleIds }
@@ -86,6 +90,7 @@ private fun decode(entity: EntityView): DecodedEntity {
         components.opt("LightComponent")?.let { read<LightComponent>(it) },
         asset?.let { DecodedAsset(it.type, it.name) },
         foliageAssetName(components),
+        components.opt("PathArrangementComponent")?.let { read<PathArrangementComponent>(it) },
     )
 }
 

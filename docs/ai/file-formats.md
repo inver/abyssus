@@ -257,6 +257,12 @@ mask per layer (`layer-<id>.mask`), and the bake named by `additional.dataFile` 
   `"FoliageComponent": { "assetName": "<foliage folder>" }`. The component keeps its other members, their order and
   number text when a scene is written back; a missing or null name shows nothing, and a name that is not a string
   leaves the component unchanged in the file with one warning.
+- A path arrangement is an entity of type `GROUP` with a `PathArrangementComponent`: `points` (`x`, `y`, `z`, world
+  coordinates), `closed`, `asset` (`type` `MODEL`, `assetName`), `spacing` (default 10), `offset` (default 0), `sides`
+  (`CENTER` default, `LEFT`, `RIGHT`, `BOTH`), `alignToPath` (default true), `yawOffset` (degrees, default 0) and
+  `slots`, the entity id of the copy in each place along the line (`-1` for none). Defaults are omitted. The copies
+  are ordinary `OBJECT` entities in world coordinates with a `ParentComponent` pointing at the arrangement; the
+  runtime reads the component as data and runs no system for it. Moving the arrangement entity does not move them.
 
 ### Imported FlightGear models
 

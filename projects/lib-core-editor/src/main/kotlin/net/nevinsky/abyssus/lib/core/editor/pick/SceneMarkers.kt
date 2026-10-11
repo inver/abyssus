@@ -15,6 +15,10 @@ import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.arrange.PathLayout
+import net.nevinsky.abyssus.lib.core.editor.arrange.pointsOf
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
@@ -25,6 +29,14 @@ private const val LIGHT_RADIUS = 0.3f
 private const val DIRECTION_LINE_LENGTH = 2f
 
 private val BODY_COLOR = Rgba(0.85f, 0.85f, 0.9f, 1f)
+private const val SLOT_MARKER_HALF = 0.4f
+private const val SLOT_MARKER_HEIGHT = 1.2f
+private const val HANDLE_HALF = 0.5f
+
+private val PATH_COLOR = Rgba(1f, 0.8f, 0.2f, 1f)
+private val SLOT_COLOR = Rgba(0.4f, 0.9f, 0.4f, 1f)
+private val POINT_HANDLE_COLOR = Rgba(1f, 1f, 1f, 1f)
+private val MIDDLE_HANDLE_COLOR = Rgba(0.6f, 0.8f, 1f, 1f)
 private val FRUSTUM_COLOR = Rgba(0.55f, 0.7f, 0.95f, 1f)
 
 /**
@@ -106,5 +118,39 @@ class SceneMarkers {
             val end = Vector3(p.x, p.y, p.z).mulAdd(light.direction.toVector3(), DIRECTION_LINE_LENGTH).toVec3()
             out.line(p, end, color)
         }
+    }
+
+    /**
+     * Draws a path arrangement's line through its points (and back to the first when it is closed), a cross with a short
+     * post for each copy at its height on [ground], and, when [handles] is set, a diamond on each point and a small
+     * cross in the middle of each segment. The copies are laid out by [PathLayout], so they are where regeneration would
+     * put them (the crosses are left out when [slots] is false). No model is drawn.
+     */
+    fun drawPath(out: LineSink, path: PathArrangementComponent, ground: GroundHeight, handles: Boolean, slots: Boolean = true) {
+        val points = pointsOf(path)
+        val count = if (path.closed && points.size > 2) points.size else points.size - 1
+        for (i in 0 until count) out.line(points[i], points[(i + 1) % points.size], PATH_COLOR)
+        if (slots) for (slot in PathLayout().slots(path).orEmpty()) {
+            val y = ground.heightAt(slot.x, slot.z, slot.fallbackY)
+            val r = SLOT_MARKER_HALF
+            out.line(Vec3(slot.x - r, y, slot.z), Vec3(slot.x + r, y, slot.z), SLOT_COLOR)
+            out.line(Vec3(slot.x, y, slot.z - r), Vec3(slot.x, y, slot.z + r), SLOT_COLOR)
+            out.line(Vec3(slot.x, y, slot.z), Vec3(slot.x, y + SLOT_MARKER_HEIGHT, slot.z), SLOT_COLOR)
+        }
+        if (!handles) return
+        for (p in points) drawDiamond(out, p, HANDLE_HALF, POINT_HANDLE_COLOR)
+        for (i in 0 until count) {
+            val a = points[i]
+            val b = points[(i + 1) % points.size]
+            drawDiamond(out, Vec3((a.x + b.x) / 2f, (a.y + b.y) / 2f, (a.z + b.z) / 2f), HANDLE_HALF / 2f, MIDDLE_HANDLE_COLOR)
+        }
+    }
+
+    private fun drawDiamond(out: LineSink, p: Vec3, r: Float, color: Rgba) {
+        val tips = listOf(
+            Vec3(p.x + r, p.y, p.z), Vec3(p.x - r, p.y, p.z), Vec3(p.x, p.y + r, p.z),
+            Vec3(p.x, p.y - r, p.z), Vec3(p.x, p.y, p.z + r), Vec3(p.x, p.y, p.z - r),
+        )
+        for (i in tips.indices) for (j in i + 1 until tips.size) if (i / 2 != j / 2) out.line(tips[i], tips[j], color)
     }
 }

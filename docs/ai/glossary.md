@@ -31,3 +31,6 @@
 | **Density mask** | One byte (0–255) per cell in a layer's `layer-<id>.mask`, scaling its density from empty to full; a missing mask means full density. Paint Foliage edits it with a circular brush. |
 | **Foliage bake / fingerprint** | `foliage.data` stores deterministic copies grouped by chunk and a fingerprint of the scatter inputs. A mismatch, missing or corrupt bake is stale: the view regenerates copies and Re-bake saves the cache. |
 | **Foliage draft** | Uncommitted settings and masks shared by the Properties panel, the brush and every open Scene view through `FoliageDrafts`. Apply or stroke release commits it; Cancel discards it. |
+| **Path arrangement** | A `GROUP` entity with a `PathArrangementComponent`: a polyline drawn on the terrain and the settings (model, spacing, offset, sides, alignment) that place copies of one model along it. The copies are ordinary entities in the scene file, in world coordinates. |
+| **Slot** | One place for a copy along an arrangement's line. `slots` in the component lists the copy entity of each slot, or `-1` when the slot is empty (deleted, detached or never filled). |
+| **Detach** | Making a copy a normal entity: its `ParentComponent` is removed and its slot becomes `-1`. Moving, turning or dropping a copy, or editing its `PositionComponent`, detaches it; regeneration then leaves it alone. |

@@ -13,6 +13,8 @@ import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
 import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
@@ -131,5 +133,31 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
                 ),
             ),
         ) { RenderComponent(type = MetaType.MODEL) },
+        // `points` and `slots` change only through the Scene view and regeneration, so they have no field
+        kind<PathArrangementComponent>(
+            "PathArrangementComponent",
+            listOf(
+                ComponentField(
+                    "asset.assetName", FieldKind.ASSET_NAME, { it.asset.assetName }, { c, t -> c.asset.assetName = t.trim() },
+                    label = "asset",
+                ),
+                ComponentField(
+                    "spacing", FieldKind.FLOAT, { decimalText(it.spacing) }, { c, t -> c.spacing = t.trim().toFloat() },
+                    min = 0.0, minExclusive = true,
+                ),
+                ComponentField(
+                    "offset", FieldKind.FLOAT, { decimalText(it.offset) }, { c, t -> c.offset = t.trim().toFloat() },
+                    min = 0.0,
+                ),
+                ComponentField(
+                    "sides", FieldKind.CHOICE, { it.sides.name },
+                    { c, t -> c.sides = PathSides.valueOf(t.trim()) }, choices = PathSides.entries.map { it.name },
+                ),
+                ComponentField(
+                    "alignToPath", FieldKind.BOOLEAN, { it.alignToPath.toString() }, { c, t -> c.alignToPath = t.trim().toBoolean() },
+                ),
+                floatField("yawOffset", { it.yawOffset }, { c, v -> c.yawOffset = v }),
+            ),
+        ) { PathArrangementComponent() },
     )
 }
