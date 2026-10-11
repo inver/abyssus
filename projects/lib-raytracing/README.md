@@ -12,7 +12,7 @@ its geometry, instance structures and readback buffers. All backend/session meth
 run on the same owner worker. Closing a view does not dispose another view's session.
 The module is a plugin dependency. The Scene view renders project models, terrain, materials, lights, sky and fog
 through immutable CPU snapshots. Ray Tracing is enabled from scene Properties, per view and off by default.
-See [scene view integration](../src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md) for conversion, lifecycle,
+See [scene view integration](../plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md) for conversion, lifecycle,
 GL presentation, saved settings and raster fallback. A separate synthetic feasibility preview remains available
 under the developer experiment flag.
 
@@ -123,7 +123,19 @@ or `RayMaterialTest`.
   (`skyMissesShowTheEnvironmentWithExposureAndOrientation`, `disabledOrMissingSkyShowsTheBackground`,
   `RayMaterialTest`). An HDR sky (`RayEnvironment.hdr`) is tone mapped (ACES fit, gamma 1/2.2) when a camera ray sees it,
   like the raster sky, while reflections of it stay linear radiance (`hdrSkyIsToneMappedWhenSeenDirectlyAndLinearWhenReflected`).
-  The plugin produces the texture: `core`'s `RaySkySnapshot` for HDR and cube skies, and a GL bake of a procedural sky.
+  The plugin produces the texture: `lib-core`'s `RaySkySnapshot` for HDR and cube skies, and a GL bake of a procedural sky.
+  The bake of a procedural sky shows its clouds and is refreshed as they drift (display values, not linear lighting
+  radiance; the procedural diffuse light of `lightsScene` arrives as `ambientCube`, mixed while it fades).
+- **Cloud shadows.** `RaySceneSnapshot.cloudVisibility` (`RayCloudVisibility`) multiplies one directional light, the sun
+  (an index into the lights, found by entity identity), by the red channel of an ordinary scene texture sampled at the
+  world position through two rows of a world-to-map transform, fading into the `outside` visibility (the uniform sun
+  dimming) at the map's edge; no other light is touched, and nothing changes without it. The shader reads it from header
+  slot 30 of the payload (`RaySceneEncoding`: texture, light, transform rows, edge fade, outside). The plugin captures the
+  raster view's cloud shadow map as an immutable 8-bit texture on a bounded schedule and numbers it with `revision`, so a
+  new map is an environment change that restarts accumulation (`aCloudShadowMapDarkensOnlyTheSunWhereItIsDark`,
+  `beyondTheMapTheOutsideVisibilityApplies`, `theMapFadesIntoTheOutsideVisibilityAtItsEdge`, `movingTheMapMovesTheShadow`,
+  `aSceneWithoutAMapIsUnchanged`). Verified on the fake and Metal backends; the Vulkan shader builds with
+  `glslangValidator`, and its runtime cases await a Windows or Linux host with a Vulkan device.
   HDR diffuse lighting arrives as `RayEnvironment.ambientCube` (the sky's six axis colours, blended by the squared normal
   exactly like the raster model shaders, `hdrAmbientCubeLightsSurfacesByNormalLikeTheRasterModelShader`); without it the
   flat `ambient` colour applies.

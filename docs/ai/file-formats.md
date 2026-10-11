@@ -80,7 +80,7 @@ ecs: { "<id>": { components: { "<Name>Component": {...}, ... } }, ... }
 ```
 
 The editor document layer supports both shapes. The current `EcsLoader` only enumerates the wrapped `entities`
-map, and `editor-core`'s `EcsWriter` produces that shape without carrying block metadata or archetypes. This differs
+map, and `lib-core-editor`'s `EcsWriter` produces that shape without carrying block metadata or archetypes. This differs
 from the required round-trip behavior in `openspec/specs/scene-ecs-components/spec.md`.
 
 The native component fields described by the specs and fixtures:
@@ -176,6 +176,7 @@ implementation does not yet provide it.
 | `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults); optional `clouds`: the `uuid` of a `CLOUDS` asset (see *Clouds* below); optional `lightsScene`: the boolean `true` to light the scene from the sky (see *Sky lighting* below) |
 | `CLOUDS` | `technique` and up to three cloud bands `low`, `mid`, `high` (see *Clouds* below) |
 | `SKYBOX_HDR` | `file`: the OpenEXR image file inside the asset folder |
+| `FOLIAGE` | `terrain`, `dataFile`, `maskResolution`, `layers` (see *Foliage* below) |
 | `TEXTURE`, `PIXMAP_TEXTURE` | `file`; loaded as textures, including terrain splat dependencies |
 | `MATERIAL`, `SHADER` | Recognized metadata types; no standalone scene drawable |
 
@@ -207,6 +208,40 @@ or the schema or generator identifier is unknown, or the file is malformed, the 
 why, and a draft starts from the defaults above. An identifier is never reinterpreted: new noise gets a new
 identifier. Heights come from world-local OpenSimplex2 fractal noise (`x / (resolution - 1) * size`), mapped onto
 `minHeight..maxHeight`, so a height means the same at any resolution.
+
+### Foliage
+
+A foliage folder covers one terrain asset with many copies of model assets. It holds `meta.json`, an optional density
+mask per layer (`layer-<id>.mask`), and the bake named by `additional.dataFile` (`foliage.data` by default).
+
+```json
+{ "format": "abyssus", "formatVersion": 1, "version": 1, "lastModified": 0, "uuid": "...", "type": "FOLIAGE",
+  "additional": { "terrain": "<terrain asset folder>", "dataFile": "foliage.data", "maskResolution": 512, "layers": [
+    { "id": 1, "kind": "OBJECT", "models": [{ "asset": "tree", "weight": 1.0 }],
+      "density": 0.05, "scale": { "min": 0.8, "max": 1.2 }, "alignToNormal": 0.5,
+      "minHeight": null, "maxHeight": null, "maxSlope": null, "drawDistance": 80.0, "seed": 0 } ] } }
+```
+
+- `terrain` names a TERRAIN asset folder; `maskResolution` is the mask's square side, 16 through 2048 (default in the
+  dialog 512; an omitted member reads as 256).
+- A layer has a unique integer `id`, a `kind` (`OBJECT`: few copies, cast shadows; `DETAIL`: many copies, drawn near
+  the camera), one or more MODEL asset folders with positive `weight`s, a `density` in copies per square unit at full
+  mask, a `scale` range, an `alignToNormal` fraction from 0 through 1, optional `minHeight`, `maxHeight` and
+  `maxSlope` (degrees) rules, a `drawDistance` for `DETAIL` and a `seed`. Omitted members read as the defaults above:
+  `density` 0.05, `scale` 0.8 to 1.2, `alignToNormal` 0.5, `drawDistance` 80, `seed` 0, no height or slope limits.
+- `layer-<id>.mask` is `maskResolution²` bytes from 0 through 255, row after row (z-major) over the terrain's square,
+  like `terrain.data`. A missing mask means full density; a file of any other length is an error naming the file.
+- `foliage.data` is a binary cache of the generated copies, not a native JSON document: the native `formatVersion`
+  does not change with it. Big-endian, `"ABFO"`, `u16` version 1, 32 fingerprint bytes, `f32` chunk size, `u16` layer
+  count; per layer `i32` id, `u16` model count, `u16` chunks X, `u16` chunks Z; per chunk (z-major) `i32` count, then
+  that many copies of `u16` model, `f32` x, `f32` z, `f32` yaw, `f32` scale (terrain-local; height and tilt are taken
+  from the terrain when drawn). The chunk size is `max(32, size / 64)` world units. The fingerprint is SHA-256 over
+  the generator id, the terrain's size and heights, `maskResolution`, each layer's generation fields and each mask's
+  bytes; a bake of another magic or version, a truncated one, or one whose fingerprint no longer matches is treated
+  as stale and regenerated, never as an error.
+- A scene shows a foliage asset on a terrain entity through
+  `"FoliageComponent": { "assetName": "<foliage folder>" }`.
+
 ### Imported FlightGear models
 
 Import FlightGear Aircraft writes an ordinary `MODEL` folder: `meta.json` (`additional.file` `model.glb`, `format`
@@ -309,6 +344,37 @@ asset `sky.frag`. Nothing is written back.
 - `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and storm examples of `CLOUDS` metas
   (not loaded as built-in references; the creation action snapshots a sky's existing cloud asset).
 
+**Sky lighting.** `additional.lightsScene: true` on a `SKYBOX_PROCEDURAL` asset lights the scene from that sky, as an HDR
+sky does: while the scene's sky is enabled and its lighting is built, it replaces the scene's ambient color for every model
+and terrain (whether or not the ambient light is enabled), PBR models reflect it, default-shader models take its six axis
+colors and terrain its irradiance. Only the literal boolean `true` opts in; absent, `false`, text, numbers and other kinds
+of value keep the ambient color, and `skybox_physical` has none. Nothing is written back; there is no UI to toggle it.
+
+- The light comes from Abyssus's own linear single-scattering atmosphere (`atmosphere_linear.frag`, the model of the fixture
+  `sky.frag` and of `SkyAmbientEstimate`) driven by the asset's atmosphere parameters, with the shell clouds of its `CLOUDS`
+  asset over it, rendered to a 64²-per-face `RGBA16F` cube without tone mapping or a sun disc. It is **not** read back from
+  the asset's own shader: a custom `sky.frag` that departs from the physical parameters (another model, tint or
+  exposure) is drawn as written but lights the scene as the parameters say.
+- The lighting follows the sun and the clouds. It is rebuilt when the sun moves more than 1 degree, every 2 seconds of
+  cloud time while a band has wind, and whenever the cloud asset is reloaded, replaced or removed or its visibility changes
+  (stationary clouds are not rebuilt for time). A rebuild takes one build step per frame and the new lighting fades in
+  over about a second. Until the first build completes, or if it fails, the scene keeps its ambient color; a later failed
+  rebuild keeps the last lighting.
+
+**Cloud shadows.** While a procedural sky draws its clouds, they shade terrain and models from the sun, the brightest usable
+directional light: dark patches that drift with each band's wind and sit where the sky shows clouds. Nothing is stored for
+them and no field turns them off (disable the clouds instead).
+
+- The shadow map covers a square of 4000 world units around the orbit target, 512 texels across (about 8 units a texel).
+  **The scene's units are taken as metres**, like the cloud altitudes; a scene in other units gets shadows of a different
+  apparent size. Beyond the square (the outer 10% of it fades), the uniform sun dimming of the clouds over the target applies.
+- Inside the square the clouds dim the sun through the map only; the uniform dimming is not applied as well. Only the sun is
+  shaded; spot and point lights and other directional lights are not. The sun's own scene shadow still applies and the two
+  multiply, so a surface in both loses the sun once.
+- If the sun is not among the rendered directional lights (it has no usable direction, or brighter lights took the budget),
+  no light is shaded by clouds. If the map cannot be built the view falls back to the uniform dimming everywhere and logs the
+  reason once.
+
 | Level | Altitudes (m) | Types |
 |---|---|---|
 | `low` | 300–2500 | `cumulus`, `stratus`, `stratocumulus` |
@@ -322,7 +388,7 @@ A newly created weather snapshot is an ordinary `CLOUDS` asset with a fresh UUID
 known band default explicit. Unknown native extension members and unchanged numeric text are retained in it;
 reading or copying a source does not materialize its omitted defaults in the source document.
 
-Type defaults (`CloudType` in `core`):
+Type defaults (`CloudType` in `lib-core`):
 
 | Type | `base` | `top` | `coverage` | `density` | `wind` |
 |---|---|---|---|---|---|
@@ -337,7 +403,7 @@ Type defaults (`CloudType` in `core`):
 **`CLOUDS` is a native asset type.** The Abyssus view lists it with its own icon.
 
 **`SKYBOX_HDR` is a native asset type.** `additional.file` names a single-part OpenEXR image inside the asset
-folder. `ExrLoader` in `core` decodes it through TinyEXR off the GL thread. The image must be equirectangular
+folder. `ExrLoader` in `lib-core` decodes it through TinyEXR off the GL thread. The image must be equirectangular
 (width = 2 × height, height at most 4096); it is reduced by block averaging to at most 4096 pixels wide for raster
 loading. Scanline and tiled files, including the base level of mipmapped files, are supported; multipart,
 ripmapped and subsampled color channels are rejected. RGB channels are found by name (including layer prefixes);
@@ -354,6 +420,8 @@ Radiance `.hdr` decoding and extension-based file discovery are not implemented 
   `skyboxName`.
 - **References:** a reached asset reaches others by `uuid` through terrain `splat*` fields, model `materials`,
   and a reached procedural sky reaches the `CLOUDS` asset its `clouds` names.
+  A reached foliage asset reaches its terrain through `additional.terrain` and its models through
+  `additional.layers[].models[].asset`, both by folder name; their own references are followed transitively.
   Files named inside `meta.json` are not followed.
 - **Unused:** an asset reached by no scene of the project is unused.
 - **Bundled shaders:** a `shaderKey` naming no folder is a bundled shader and is ignored.

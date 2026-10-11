@@ -18,6 +18,7 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.intellij.openapi.Disposable
 import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDrawable
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
@@ -50,6 +51,7 @@ import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
+import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
 import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw
 import net.nevinsky.abyssus.plugin.sceneview.shadows.CloudShadowMap
 import net.nevinsky.abyssus.plugin.sceneview.shadows.SceneShadows
@@ -75,6 +77,8 @@ import net.nevinsky.abyssus.lib.gdx.ModelBatch as ContentBatch
 class SceneRenderer(
     val assets: ViewAssets,
     private val shaders: ShaderStorage,
+    /** The project's uncommitted foliage drafts, shared with the properties panel and the brush (decision 7). */
+    private val foliageDrafts: FoliageDrafts,
     /** What the user selected, previews and looks through; the view panel changes it, this draws from it. */
     val state: SceneViewState = SceneViewState(),
     /** Where problems that leave the view working (for example, no cloud shadow map) are logged, once each. */
@@ -121,6 +125,7 @@ class SceneRenderer(
 
     private val models = SceneModels(AssetView(assets, net.nevinsky.abyssus.lib.gdx.model.Model::class.java))
     private val terrains = SceneTerrains(AssetView(assets, TerrainMesh::class.java))
+    private val foliage = SceneFoliage(ViewFoliageAssets(AssetView(assets, FoliageDrawable::class.java)), foliageDrafts)
     private var terrainShader: TerrainShader? = null
     private var shadows: SceneShadows? = null
     internal var shadowedLightIds: Set<String> = emptySet()
@@ -180,6 +185,7 @@ class SceneRenderer(
     }
 
     private var lineBatch: LineBatch? = null
+    internal var brushCursor: FoliageBrushCursor? = null
     private var gridModel: Model? = null
     private var grid: ModelInstance? = null
     private val camera = PerspectiveCamera()
@@ -263,6 +269,7 @@ class SceneRenderer(
         shadows = SceneShadows()
         models.abandon()
         terrains.abandon()
+        foliage.abandon()
         snapshot = null
         // the previous context's GL objects went with it: forget them without GL calls, as for models and terrains
         skybox?.abandon()
@@ -315,6 +322,7 @@ class SceneRenderer(
         applySunScale(c, orbit)
         models.update(c.models, p.projectDir, deltaSeconds)
         terrains.update(c.terrains, p.projectDir)
+        foliage.update(c.foliages, p.projectDir, camera)
         updateDrawnVersion()
         skybox?.update(c.skybox, p.projectDir)
         skybox?.updateLighting(c.skybox, SunDirection.of(c.lights), skyClock.seconds, true, skyClock.lastStep.toDouble())
@@ -341,7 +349,7 @@ class SceneRenderer(
             ?.takeIf { compatibleRayDisplay(it, c, width, height) }
         presentedRayFrame = rayDisplay != null
         val atlas =
-            if (rayDisplay == null) shadows?.render(camera, lights, environment, models.drawn, terrains.drawn) else null
+            if (rayDisplay == null) shadows?.render(camera, lights, environment, models.drawn, terrains.drawn, foliage) else null
         shadowedLightIds = atlas?.records?.mapTo(HashSet()) { it.lightId } ?: emptySet()
         Gdx.gl.glViewport(0, 0, width, height)
         Gdx.gl.glClearColor(p.clear.r, p.clear.g, p.clear.b, p.clear.a)
@@ -437,6 +445,7 @@ class SceneRenderer(
         val aspect = aspectOf(width, height) ?: return
         lines.begin(displayCamera, depthTest = true)
         SceneMarkers().draw(lines, c, aspect, state.viewCamera)
+        if (state.paint != null) brushCursor?.draw(lines)
         overlays?.draw(overlayView(c, displayCamera, height, onTop = false), lines)
         lines.end()
         lines.begin(displayCamera, depthTest = false)
@@ -501,6 +510,7 @@ class SceneRenderer(
             environment,
             ShaderProvider.DEFAULT_SHADER_KEY
         )
+        foliage.draw(contentBatch, environment)
         contentBatch.end()
     }
 
@@ -654,6 +664,7 @@ class SceneRenderer(
         sunVisibility = null
         models.dispose()
         terrains.dispose()
+        foliage.dispose()
         updateDrawnVersion()
         terrainShader?.dispose()
         terrainShader = null

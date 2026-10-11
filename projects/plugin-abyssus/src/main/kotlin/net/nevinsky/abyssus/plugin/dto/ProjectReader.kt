@@ -9,6 +9,7 @@ import net.nevinsky.abyssus.plugin.AbyssusCore
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 
@@ -55,7 +56,7 @@ class ProjectReader(
         return assetListing.list(abss)
     }.getOrElse { emptyList() }
 
-    /** Folder names of the assets reachable from [roots] (folder names) through `uuid` references, transitively. */
+    /** Folder names reachable from scene roots through UUID links and foliage's folder-name links, transitively. */
     fun usedAssets(assets: List<Asset<Any>>, roots: Set<String>): Set<String> {
         val byName = assets.associateBy { it.name }
         val byUuid = assets.filter { it.meta.uuid != null }.associateBy { it.meta.uuid.toString() }
@@ -68,7 +69,20 @@ class ProjectReader(
         }
         roots.forEach { visit(byName[it]) }
         while (pending.isNotEmpty()) {
-            pending.removeFirst().references.forEach { visit(byUuid[it]) }
+            val asset = pending.removeFirst()
+            asset.references.forEach { visit(byUuid[it]) }
+            if (asset.meta.type == MetaType.FOLIAGE) {
+                val additional = asset.meta.additional as? Map<*, *> ?: continue
+                (additional["terrain"] as? String)?.let { visit(byName[it]) }
+                val layers = additional["layers"] as? List<*> ?: continue
+                for (layer in layers) {
+                    val models = (layer as? Map<*, *>)?.get("models") as? List<*> ?: continue
+                    for (model in models) {
+                        val name = (model as? Map<*, *>)?.get("asset") as? String ?: continue
+                        visit(byName[name])
+                    }
+                }
+            }
         }
         return used
     }

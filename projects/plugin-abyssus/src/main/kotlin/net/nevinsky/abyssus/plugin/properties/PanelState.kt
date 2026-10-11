@@ -25,6 +25,8 @@ import net.nevinsky.abyssus.plugin.dto.ProjectSettings
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.foliage.FoliageSource
+import net.nevinsky.abyssus.plugin.foliage.readFoliageSource
 import net.nevinsky.abyssus.plugin.projectView.*
 import net.nevinsky.abyssus.plugin.terrain.TerrainSource
 import net.nevinsky.abyssus.plugin.terrain.readTerrainSource
@@ -56,6 +58,8 @@ sealed interface PanelState {
         val fields: List<AssetFieldState> = emptyList(),
         /** For a terrain: what regeneration works from, or why it cannot. */
         val terrain: TerrainSource? = null,
+        /** For a foliage asset: what its settings, masks and bake read as, or why it cannot be edited. */
+        val foliage: FoliageSource? = null,
     ) : PanelState
 
     /**
@@ -99,6 +103,7 @@ fun readAssetState(folder: VirtualFile, services: PanelServices): PanelState {
             if (meta.type == MetaType.SKYBOX_HDR) hdrCell(folder, meta, services.hdr) else null,
             readFieldStates(folder, meta.type, meta.json, services),
             if (meta.type == MetaType.TERRAIN) readTerrainNow(folder, meta, services) else null,
+            if (meta.type == MetaType.FOLIAGE) readFoliageNow(folder, meta, services) else null,
         )
     }
 }
@@ -176,6 +181,30 @@ fun readTerrainSourceNow(folder: VirtualFile, services: PanelServices): TerrainS
     val meta = loadAssetMeta(folder, services.metaFiles) as? AssetMeta.Loaded
         ?: return TerrainSource.Unusable("meta.json")
     return readTerrainNow(folder, meta, services)
+}
+
+/**
+ * Reads the foliage asset in [folder] for display: its settings and problems, the terrain it stands on, the layer
+ * masks and the state of the bake. Safe off the EDT, like the rest of the state it is read for.
+ */
+private fun readFoliageNow(folder: VirtualFile, meta: AssetMeta.Loaded, services: PanelServices): FoliageSource {
+    val text = folder.findChild(META_FILE)?.let { runReadAction { textOf(it) } } ?: ""
+    return readFoliageSource(
+        folder.name,
+        File(folder.path).parentFile.parentFile,
+        services.json,
+        text,
+        meta.json.get("additional"),
+    )
+}
+
+/** The foliage asset in [folder] as it is now, for the checks Apply makes just before it writes. UI thread. */
+fun readFoliageSourceNow(folder: VirtualFile, services: PanelServices): FoliageSource {
+    val meta = loadAssetMeta(folder, services.metaFiles)
+    if (meta !is AssetMeta.Loaded) {
+        return FoliageSource.Unusable((meta as? AssetMeta.Failed)?.message ?: AbyssusBundle.message("assetFieldUnreadable"))
+    }
+    return readFoliageNow(folder, meta, services)
 }
 
 /** Current native scene preferences, read off the EDT independently of renderer availability. */

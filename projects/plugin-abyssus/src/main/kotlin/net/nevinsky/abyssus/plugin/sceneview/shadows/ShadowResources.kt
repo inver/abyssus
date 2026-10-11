@@ -75,7 +75,7 @@ class ShadowResources(private val size: Int = ShadowLayout.ATLAS_SIZE) : Disposa
 }
 
 /** Snapshot of state a depth pass can change, including a non-default caller framebuffer. */
-private class ShadowGlState {
+internal class ShadowGlState {
     private val gl = Gdx.gl
     private fun ints(name: Int, count: Int = 1): IntArray {
         val buffer = BufferUtils.newIntBuffer(count); gl.glGetIntegerv(name, buffer)

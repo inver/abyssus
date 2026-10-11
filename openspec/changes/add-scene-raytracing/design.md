@@ -174,3 +174,13 @@ appear on more devices. The pipeline path remains a later option behind the same
 ## Migration Plan
 
 No scene/project/asset migration. Add the packaged optional backends with the mode off by default. Verify ordinary plugin startup and raster use without loading ray libraries. Ship only after the three-platform gate and manual matrix pass. Rolling back removes the mode and native resources without changing project data.
+
+## Cloudy skies (coordinated with `add-cloud-scene-lighting`)
+
+A procedural sky is baked by `RaySkyBaker` today without clouds and keyed by sky name, project and sun. With clouds, ray misses
+must show the clouds and the sun's visibility must include the cloud shadows. The cloud-aware snapshot is captured on the render
+thread from the sky's cloudy environment and cloud shadow map, converted to immutable CPU data carrying the sky and cloud
+revision, time, map transform, sun identity and outside-area fallback, and published only when complete and on a bounded
+schedule. Display-ready samples stay distinct from linear lighting radiance. Ray accumulation resets when a published
+environment or visibility snapshot changes. `lib-raytracing` contracts and the fake, Metal and Vulkan backends take the new
+data through the existing conformance kit; there is no cloud-shadow GL texture contract to reuse.

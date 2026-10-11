@@ -45,6 +45,9 @@ class SceneInteraction(
     /** Called when the selection, the mode or the looked-through camera changed by the user or by new scene params. */
     var onStateChanged: (() -> Unit)? = null
 
+    /** What paints while the Paint Foliage mode in [state] strokes the terrain, or null when nothing implements it. */
+    var foliagePaint: FoliagePaint? = null
+
     var selectedId: String?
         get() = state.selectedId
         private set(value) {
@@ -77,6 +80,9 @@ class SceneInteraction(
 
         /** Set by Esc (or by the dragged entity leaving the scene): the rest of the gesture, up to the release, does nothing. */
         data object Cancelled : Gesture
+
+        /** The Paint Foliage stroke on the terrain of [entityId]; the caller's [FoliagePaint] does the painting. */
+        class Painting(val entityId: String) : Gesture
     }
 
     private val click = ClickGesture()
@@ -143,10 +149,26 @@ class SceneInteraction(
         val id = selectedId
         if (!left || id == null || size.isEmpty) return
         val at = size.toFramebuffer(x, y)
+        val paint = state.paint
+        if (paint != null) {
+            startStroke(paint, at)
+            return
+        }
         val axis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
         val started = queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
         gesture = Gesture.Dragging(started, id)
         state.hoveredAxis = axis
+        stateChanged()
+    }
+
+    /** The left press of Paint Foliage mode: a stroke starts only where the ray hits the painted terrain. */
+    private fun startStroke(paint: FoliagePaintMode, at: FramebufferPoint) {
+        if (paint.entityId != selectedId) return
+        val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
+        val terrain = queries.terrainOf(paint.entityId) ?: return
+        val hit = queries.terrainHit(paint.entityId, ray) ?: return
+        if (foliagePaint?.pressed(terrain, hit) != true) return
+        gesture = Gesture.Painting(paint.entityId)
         stateChanged()
     }
 
@@ -166,9 +188,19 @@ class SceneInteraction(
                 g.result = result
                 state.preview = mapOf(g.entityId to result)
             }
+            is Gesture.Painting -> {
+                val mode = state.paint?.takeIf { it.entityId == g.entityId } ?: return
+                val at = size.toFramebuffer(x, y)
+                val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
+                val hit = queries.terrainHit(g.entityId, ray) ?: return
+                foliagePaint?.dragged(hit, mode.erase)
+            }
             Gesture.Idle -> {
                 if (state.viewCamera != null) return
-                if (left) orbit.orbit(dx, dy) else orbit.pan(dx, dy)
+                // The left button paints in Paint Foliage mode; only the other buttons and the wheel navigate.
+                if (left) {
+                    if (state.paint == null) orbit.orbit(dx, dy)
+                } else orbit.pan(dx, dy)
             }
         }
     }
@@ -180,6 +212,10 @@ class SceneInteraction(
         state.hoveredAxis = null
         when (ended) {
             Gesture.Cancelled -> stateChanged()
+            is Gesture.Painting -> {
+                foliagePaint?.released()
+                stateChanged()
+            }
             is Gesture.Dragging -> {
                 val result = ended.result
                 if (result != null && result.transform != ended.drag.start) {
@@ -215,8 +251,14 @@ class SceneInteraction(
         if (state.viewCamera == null) orbit.zoom(clicks)
     }
 
-    /** Esc: puts the dragged object back and ends the drag without writing anything. */
+    /** Esc: puts the dragged object back, or discards the paint stroke; neither writes anything. */
     fun escape() {
+        if (gesture is Gesture.Painting) {
+            gesture = Gesture.Cancelled
+            foliagePaint?.cancelled()
+            stateChanged()
+            return
+        }
         if (!isDragging) return
         gesture = Gesture.Cancelled
         state.preview = emptyMap()
@@ -228,8 +270,15 @@ class SceneInteraction(
         if (size.isEmpty) return
         val at = size.toFramebuffer(x, y)
         val hit = queries.pick(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
-        val changed = hit != selectedId
+        var changed = hit != selectedId
         selectedId = hit
+        // Selecting another entity (or nothing) ends the Paint Foliage mode.
+        state.paint?.let { mode ->
+            if (hit != mode.entityId) {
+                state.paint = null
+                changed = true
+            }
+        }
         if (hit != null) onPick?.invoke(hit)
         if (changed) stateChanged()
     }
@@ -243,6 +292,16 @@ class SceneInteraction(
         state.viewCamera?.let { id -> if (params.content.cameras.none { it.entityId == id }) { state.viewCamera = null; changed = true } }
         val dragging = gesture as? Gesture.Dragging
         if (dragging != null && !ScenePreview().contains(params.content, dragging.entityId)) gesture = Gesture.Cancelled
+        state.paint?.let { mode ->
+            if (!ScenePreview().contains(params.content, mode.entityId)) {
+                state.paint = null
+                changed = true
+                if (gesture is Gesture.Painting) {
+                    gesture = Gesture.Cancelled
+                    foliagePaint?.cancelled()
+                }
+            }
+        }
         if (changed || canDrop != lastCanDrop) stateChanged()
     }
 }

@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.assetfiles
 
+import net.nevinsky.abyssus.lib.core.editor.foliage.MaskRect
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -228,5 +229,152 @@ class AssetTransactionEngineTest {
     @Test(expected = IllegalArgumentException::class)
     fun `a change that changes nothing is refused`() {
         FileChange("a", bytes(1), bytes(1))
+    }
+
+    // mask patches: a stroke stages the rectangle it changed, on both sides, instead of the whole mask
+
+    private val mask = ByteArray(64) { it.toByte() }
+
+    private val rect = MaskRect(2, 2, 4, 3)
+
+    /** The mask with the stroke's rectangle painted over it. */
+    private val painted = mask.copyOf().also { base ->
+        var at = 0
+        for (z in rect.minZ..rect.maxZ) for (x in rect.minX..rect.maxX) base[z * 8 + x] = (100 + at++).toByte()
+    }
+
+    /** The bytes of [rect] of this mask, in the order a [MaskPatch] writes them. */
+    private fun ByteArray.region(rect: MaskRect): ByteArray {
+        val out = ByteArray(rect.width * rect.height)
+        var at = 0
+        for (z in rect.minZ..rect.maxZ) for (x in rect.minX..rect.maxX) out[at++] = this[z * 8 + x]
+        return out
+    }
+
+    private fun patch(values: ByteArray, over: ByteArray) =
+        FileSnapshot.Patch(MaskPatch(8, rect, values.region(rect), sha256Hex(over)))
+
+    private fun maskStore(files: Map<String, ByteArray> = linkedMapOf("assets/f/layer-0.mask" to mask)) =
+        MemoryStore(files = files.toMutableMap(), dirs = linkedSetOf("", "assets", "assets/f"))
+
+    private fun stroke() = AssetTransaction(
+        "Stroke",
+        changes = listOf(FileChange("assets/f/layer-0.mask", patch(mask, mask), patch(painted, painted))),
+    )
+
+    @Test
+    fun `a mask patch writes only its rectangle and the stroke reverses exactly`() {
+        val store = maskStore()
+        val start = store.state()
+        val engine = AssetTransactionEngine(store)
+        assertEquals(AssetCommandResult.Done, engine.apply(stroke(), true))
+        assertEquals(painted.toList(), store.files.getValue("assets/f/layer-0.mask").toList())
+        assertEquals(AssetCommandResult.Done, engine.apply(stroke(), false))
+        assertEquals(start, store.state())
+        assertEquals(AssetCommandResult.Done, engine.apply(stroke(), true))
+        assertEquals(painted.toList(), store.files.getValue("assets/f/layer-0.mask").toList())
+    }
+
+    @Test
+    fun `a mask changed outside the patch is a conflict and nothing is written`() {
+        val store = maskStore()
+        val engine = AssetTransactionEngine(store)
+        engine.apply(stroke(), true)
+        store.files["assets/f/layer-0.mask"] = painted.clone().also { it[60] = 7 }
+        val changed = store.state()
+        assertEquals(AssetCommandResult.Conflict("assets/f/layer-0.mask"), engine.apply(stroke(), false))
+        assertEquals(changed, store.state())
+
+        store.files["assets/f/layer-0.mask"] = mask.clone().also { it[0] = 9 }
+        val stale = store.state()
+        assertEquals(AssetCommandResult.Conflict("assets/f/layer-0.mask"), engine.apply(stroke(), true))
+        assertEquals(stale, store.state())
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `a patch outside the mask is refused`() {
+        MaskPatch(8, MaskRect(6, 6, 9, 9), ByteArray(16), sha256Hex(mask))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `a patch that does not hold a value per texel is refused`() {
+        MaskPatch(8, rect, ByteArray(5), sha256Hex(mask))
+    }
+
+    // derived files: the bake is rebuilt instead of staged, and the digests name both of its versions
+
+    private val oldBake = byteArrayOf(1, 1, 2, 3, 5)
+
+    private val newBake = byteArrayOf(8, 13, 21, 34, 55)
+
+    private fun bakeStore(bake: ByteArray = oldBake) = MemoryStore(
+        files = linkedMapOf("assets/f/meta.json" to byteArrayOf(1), "assets/f/foliage.data" to bake),
+        dirs = linkedSetOf("", "assets", "assets/f"),
+    )
+
+    private fun bakeTxn(
+        rebuild: (forward: Boolean) -> ByteArray = { forward -> if (forward) newBake else oldBake },
+        beforeSha256: String? = sha256Hex(oldBake),
+    ) = AssetTransaction(
+        "Apply",
+        changes = listOf(FileChange("assets/f/meta.json", bytes(1), bytes(2))),
+        derived = listOf(DerivedFile("assets/f/foliage.data", beforeSha256, sha256Hex(newBake), rebuild)),
+    )
+
+    @Test
+    fun `a derived file is rebuilt forward and back to the expected hashes`() {
+        val store = bakeStore()
+        val engine = AssetTransactionEngine(store)
+        assertEquals(AssetCommandResult.Done, engine.apply(bakeTxn(), true))
+        assertEquals(newBake.toList(), store.files.getValue("assets/f/foliage.data").toList())
+        assertEquals(listOf<Byte>(2), store.files.getValue("assets/f/meta.json").toList())
+        assertEquals(AssetCommandResult.Done, engine.apply(bakeTxn(), false))
+        assertEquals(oldBake.toList(), store.files.getValue("assets/f/foliage.data").toList())
+        assertEquals(listOf<Byte>(1), store.files.getValue("assets/f/meta.json").toList())
+        assertEquals(AssetCommandResult.Done, engine.apply(bakeTxn(), true))
+        assertEquals(newBake.toList(), store.files.getValue("assets/f/foliage.data").toList())
+    }
+
+    @Test
+    fun `undoing a derived file that did not exist removes it`() {
+        val store = bakeStore()
+        store.files.remove("assets/f/foliage.data")
+        val engine = AssetTransactionEngine(store)
+        assertEquals(AssetCommandResult.Done, engine.apply(bakeTxn(beforeSha256 = null), true))
+        assertEquals(newBake.toList(), store.files.getValue("assets/f/foliage.data").toList())
+        assertEquals(AssetCommandResult.Done, engine.apply(bakeTxn(beforeSha256 = null), false))
+        assertFalse(store.files.containsKey("assets/f/foliage.data"))
+    }
+
+    @Test
+    fun `a derived file that changed is a conflict and nothing is written`() {
+        val stale = bakeStore(byteArrayOf(9, 9, 9))
+        val start = stale.state()
+        assertEquals(AssetCommandResult.Conflict("assets/f/foliage.data"), AssetTransactionEngine(stale).apply(bakeTxn(), true))
+        assertEquals(start, stale.state())
+
+        val store = bakeStore()
+        val engine = AssetTransactionEngine(store)
+        assertEquals(AssetCommandResult.Done, engine.apply(bakeTxn(), true))
+        store.files["assets/f/foliage.data"] = newBake.clone().also { it[0] = 0 }
+        val changed = store.state()
+        assertEquals(AssetCommandResult.Conflict("assets/f/foliage.data"), engine.apply(bakeTxn(), false))
+        assertEquals(changed, store.state())
+    }
+
+    @Test
+    fun `a failing rebuild rolls back the files already written`() {
+        // the new bake cannot be built (or builds wrong); the old one still can, so the undo of the write can run
+        for (rebuild in listOf(
+            { forward: Boolean -> if (forward) throw java.io.IOException("generation failed") else oldBake },
+            { forward: Boolean -> if (forward) byteArrayOf(7) else oldBake },
+        )) {
+            val store = bakeStore()
+            val start = store.state()
+            val result = AssetTransactionEngine(store).apply(bakeTxn(rebuild = rebuild), true)
+            assertTrue("$result", result is AssetCommandResult.Failed)
+            assertTrue("$result", (result as AssetCommandResult.Failed).rolledBack)
+            assertEquals(start, store.state())
+        }
     }
 }

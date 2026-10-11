@@ -10,7 +10,7 @@
 | Ray tracing contracts / jar packaging | `./gradlew :lib-raytracing:test` / `./gradlew :lib-raytracing:verifyNativePackaging` |
 | Control Line tests | `./gradlew :app-game-control-line:test` |
 | Plugin tests | `./gradlew :plugin-abyssus:test` |
-| `editor-core` tests | `./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.ScenePickerTest'`) |
+| `lib-core-editor` tests | `./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.ScenePickerTest'`) |
 | `lib-gdx` tests | `./gradlew :lib-gdx:test` |
 | One class | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.projectView.SkyboxPickerModelTest'` |
 | One method | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.AbyssusViewTest.testNodeTree'` |
@@ -43,7 +43,7 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
 
 - `projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/`: plugin tests, mirroring the main packages (`projectView/`, `sceneview/`,
   `properties/`, `dto/`, `filetype/`, `terrain/`), plus `editor/`: `EditorMessagesParityTest` and
-  `HeadlessSceneEditingTest`, which compares `editor-core`'s headless edits with the plugin's own write path.
+  `HeadlessSceneEditingTest`, which compares `lib-core-editor`'s headless edits with the plugin's own write path.
 - `projects/lib-core-editor/src/test/kotlin/`: the editing engine's tests by package (`document`, `components`, `scene`, `pick`,
   `terrain`, `meta`, `ray`, `headless`), plain JUnit with no IntelliJ class on the classpath (`NoPlatformClasspathTest`).
   Their working directory is `projects/plugin-abyssus/`, so `src/test/testData/project/` resolves to the same
@@ -69,7 +69,7 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
   `-Dabyssus.vulkanTests=true`; these are not enabled by `abyssus.glTests`. See `projects/lib-raytracing/README.md` for toolchains
   and dedicated timing gates. Plugin ray integration tests live under `projects/plugin-abyssus/src/test/kotlin/`.
 - Shared test helpers live in `testFixtures` source sets: `lib-gdx`'s `TestGl` (a GL 3.2 core context for one
-  block), `core`'s `HdrFixtures` (Radiance files from a pixel function) and `editor-core`'s `parseScene`,
+  block), `lib-core`'s `HdrFixtures` (Radiance files from a pixel function) and `lib-core-editor`'s `parseScene`,
   `testProject`, `testAsset`, `terrainData` and `rayTestModel` (used by the plugin's tests too). Plugin GL tests build their renderer with
   `testRenderer()` (`sceneview/TestRendering.kt`), wired the way `AbyssusCore` wires it in the IDE.
 - Plugin tests use JUnit 4 (`junit:junit:4.13.2`) and the IntelliJ test framework.
@@ -78,9 +78,9 @@ Two kinds of tests:
 
 - **Platform tests:** these extend `BasePlatformTestCase` and need the VFS, documents, PSI or project services. Use
   `myFixture.addFileToProject` for inline files and `myFixture.copyFileToProject` for fixtures. They run on the EDT.
-- **Plain JUnit tests:** plain classes for logic with no platform (`editor-core`'s tests, and in the plugin
+- **Plain JUnit tests:** plain classes for logic with no platform (`lib-core-editor`'s tests, and in the plugin
   `SceneInteractionTest`, `StableGateTest`, `SceneToolbarStateTest`). Prefer this kind: keep new logic in
-  `editor-core`, in a class that doesn't need Swing, GL or the platform.
+  `lib-core-editor`, in a class that doesn't need Swing, GL or the platform.
 
 ## Fixtures
 
@@ -93,6 +93,12 @@ Two kinds of tests:
   a terrain, `skybox_default`, `skybox_physical` (a procedural sky) and `skybox_hdr` (an OpenEXR sky named by its
   metadata). `HdrFixtures` remains a helper for writing Radiance bytes; it does not describe the current EXR loader.
 - **`Animated/`:** `scenes/Main.scene` with two entities sharing one animated model (`assets/model_anim`). It has no `.abss`.
+- **`Foliage/`:** the foliage chain: the `Untitled` heights as a terrain, `tree`, one model, and `foliage_meadow` with an
+  `OBJECT` layer of `tree`, a `DETAIL` layer of the model, a painted `layer-1.mask` and a committed `foliage.data`
+  generated from those inputs. `Main Scene` has the terrain as entity `1` and the model as entity `2`, neither naming
+  the foliage asset, so tests can Add Foliage and undo. `FoliageFixtureTest` (`lib-core`) fails when the bake goes stale:
+  regenerate it after changing the meta, the mask or the terrain (see the fixture's README at
+  `projects/plugin-abyssus/src/test/testData/project/Foliage/README.md`).
 - **`Custom/`:** game components. `scenes/Field.scene` has entity `0` (a plane, `"PlaneComponent": {"lineLength": 22,
   "kind": "STUNT"}`) and entity `1` (a pilot, no plane); `assets/tree` is copied from `Untitled`;
   `abyssus/components.schema.json` is retained schema fixture data. The current editor does not consume it;
@@ -121,7 +127,7 @@ clear only fixture-creation history before the first panel edit, then retain exa
 
 ## GL tests
 
-- **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `ModelPreviewCanvasGlTest`, `LargeMeshGlTest`, `core`'s `*GlTest`, Control Line's `CrashClipGlTest`) run only with
+- **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `ModelPreviewCanvasGlTest`, `LargeMeshGlTest`, `lib-core`'s `*GlTest`, Control Line's `CrashClipGlTest`) run only with
   `-Dabyssus.glTests=true` on a machine with a display. Otherwise `GlHarness.enabled` is false and they are skipped
   (counted as skipped, not failed).
 - **Harness:** `GlHarness` (`projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/sceneview/GlHarness.kt`) renders a few frames on
@@ -138,15 +144,15 @@ clear only fixture-creation history before the first panel edit, then retain exa
   `SceneRenderGlTest` covers loaded bounds, fixture resting heights and drawn-list versions on real GL. Toolbar/key
   focus and the complete drop interaction still need the sandbox IDE check in the OpenSpec change.
 - **Picking and gizmos:** `SceneRenderer.pick` and the gizmo hit tests use CPU data only. `ScenePicker`,
-  `SceneMarkers`, `ScenePreview` and the gizmo math are plain `editor-core` code (its pick package).
+  `SceneMarkers`, `ScenePreview` and the gizmo math are plain `lib-core-editor` code (its pick package).
 - **Dialogs:** `SkyboxChooserDialog` can be built in a platform test and driven through its internal test hooks;
   `SkyboxPickerModel` holds its logic.
 - **Properties panel:** `PanelState`, `readAssetState` and `readEntityState` hold its logic without Swing; the parts
-  without IDE types (`readEntitySections`, `readRenderOptics`, `assetFieldStates`, `detailRows`) are in `editor-core`. Entity editors are
+  without IDE types (`readEntitySections`, `readRenderOptics`, `assetFieldStates`, `detailRows`) are in `lib-core-editor`. Entity editors are
   found by component name in `EntityPropertiesPanelTest` (`field-<Kind>-<field>`, `remove-<Kind>`, `add-component`).
 - **Design screenshots:** `DesignScreenshotTest` paints the tree, the properties panel states, the skybox chooser rows and
   an icon sheet to `build/screenshots/*.png`, and writes what differs from the design canvas ("Abyssus Panel Design": icon
   colours, chooser row height) to `build/screenshots/<name>-diff.txt`. The design is HTML, so pixels are not compared. The test
   fails on a difference only with `-Dabyssus.designStrict=true`.
-- **Component edits:** `ComponentEditorTest` (`editor-core`) runs on JSON trees; `SceneComponentEditsTest` checks the undoable writes;
+- **Component edits:** `ComponentEditorTest` (`lib-core-editor`) runs on JSON trees; `SceneComponentEditsTest` checks the undoable writes;
   `ComponentActionsTest` subclasses the tree actions to supply the selected node.

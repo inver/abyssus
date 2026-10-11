@@ -8,7 +8,7 @@ A model drawn with the PBR shader SHALL take its ambient diffuse light from the 
 its surface normal, and its ambient specular light from the specular cube in the direction of the view reflected
 about the normal, at the mip level for its roughness, combined with the shader's existing environment BRDF
 approximation and occlusion. A model drawn with the PBR shader while no HDR sky lights the scene SHALL use a shader
-compiled without the sky path, identical to today's. While Ray Tracing mode is active, PBR specular reflections SHALL instead include scene geometry and use the existing sky environment for rays that miss geometry, respecting metallic and roughness; diffuse HDR illumination SHALL retain the existing behavior. Disabling Ray Tracing SHALL restore the raster specular path.
+compiled without the sky path, identical to today's. While Ray Tracing mode is active, PBR specular reflections SHALL instead include scene geometry and use the existing sky environment (with the clouds of a procedural sky) for rays that miss geometry, respecting metallic and roughness; diffuse HDR illumination SHALL retain the existing behavior. Disabling Ray Tracing SHALL restore the raster specular path.
 
 #### Scenario: Diffuse follows the sky
 

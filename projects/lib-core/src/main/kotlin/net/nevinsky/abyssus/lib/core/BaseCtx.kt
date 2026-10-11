@@ -2,6 +2,7 @@ package net.nevinsky.abyssus.lib.core
 
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
@@ -52,11 +53,13 @@ class BaseCtx(val projectDir: String, shadersPath: String?, shadersAnchor: Class
         } else {
             ShaderStorage()
         }
+        val terrainLoader = TerrainLoader(fileLoader, metaLoader)
         assetStorage = AssetStorage(log, executor, metaLoader::loadBaseMeta).also {
             it.registerAll(
                 mapOf(
                     MetaType.MODEL to ModelLoader(metaLoader, AssimpModelLoader(), fileLoader),
-                    MetaType.TERRAIN to TerrainLoader(fileLoader, metaLoader),
+                    MetaType.TERRAIN to terrainLoader,
+                    MetaType.FOLIAGE to FoliageLoader(fileLoader, metaLoader, terrainLoader),
                     MetaType.TEXTURE to TextureLoader(fileLoader, metaLoader),
                     MetaType.PIXMAP_TEXTURE to TextureLoader(fileLoader, metaLoader),
                     MetaType.SKYBOX to SkyboxLoader(fileLoader, metaLoader, shaderStorage),

@@ -74,6 +74,10 @@
                 class="net.nevinsky.abyssus.plugin.projectView.NewTerrainAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
+        <action id="Abyssus.NewFoliage"
+                class="net.nevinsky.abyssus.plugin.projectView.NewFoliageAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.NewTerrain"/>
+        </action>
         <action id="Abyssus.NewWeatherPreset"
                 class="net.nevinsky.abyssus.plugin.projectView.NewWeatherPresetAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
@@ -91,6 +95,9 @@
         </action>
         <action id="Abyssus.AddAsset" class="net.nevinsky.abyssus.plugin.projectView.AddAssetAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddLight"/>
+        </action>
+        <action id="Abyssus.AddFoliage" class="net.nevinsky.abyssus.plugin.projectView.AddFoliageAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddAsset"/>
         </action>
         <action id="Abyssus.AddComponent"
                 class="net.nevinsky.abyssus.plugin.projectView.AddComponentAction">

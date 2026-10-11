@@ -305,6 +305,22 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertNotSame(SceneIcons.FILE, fog.presentation.getIcon(false))
     }
 
+    fun testFoliageAssetHasItsOwnIconInTheProjectTree() {
+        add("foliage/P.abss", """{"format":"abyssus","formatVersion":1,"name":"Foliage"}""")
+        for ((folder, type) in listOf("foliage_meadow" to "FOLIAGE", "terrain" to "TERRAIN", "tree" to "MODEL")) {
+            add("foliage/assets/$folder/meta.json", """{"format":"abyssus","formatVersion":1,"type":"$type","additional":{}}""")
+        }
+        val assets = children(asset("P.abss")).single { text(it).startsWith("Assets") }
+        val icons = children(assets).associate { text(it).substringBefore("  ") to it.presentation.getIcon(false) }
+        val foliage = icons.getValue("foliage_meadow")!!
+        assertSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType("FOLIAGE"), foliage)
+        assertNotSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.UNKNOWN, foliage)
+        assertNotSame(icons.getValue("terrain"), foliage)
+        assertNotSame(icons.getValue("tree"), foliage)
+        assertEquals(16, foliage.iconWidth)
+        assertEquals(16, foliage.iconHeight)
+    }
+
     fun testWellKnownPropertiesHaveOwnIcons() {
         fixture()
         val scene = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()

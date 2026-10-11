@@ -5,11 +5,14 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_RANGE
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FAR
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_NEAR
 import net.nevinsky.abyssus.lib.core.editor.content.*
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import org.junit.Assert.*
 import org.junit.Test
@@ -303,5 +306,35 @@ class SceneContentTest {
         assertEquals(1, c.cameras.size)
         assertTrue(c.lights.isEmpty())
         assertTrue(c.models.isEmpty())
+    }
+
+    /** The Untitled `Main Scene` with `FoliageComponent` [component] added to its [entity]. */
+    private fun mainSceneWith(entity: String, component: String): SceneContent {
+        val root = SceneJson().parseObject(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
+        (root["ecs"][entity]["components"] as ObjectNode).set<JsonNode>("FoliageComponent", SceneJson().parse(component))
+        return sceneContentOf(parseScene(root.toString()))
+    }
+
+    @Test
+    fun aTerrainWithAFoliageComponentPlacesItsFoliage() {
+        val c = mainSceneWith("1", """{"assetName":"foliage_meadow"}""")
+        val f = c.foliages.single()
+        assertEquals("1", f.entityId)
+        assertEquals("foliage_meadow", f.foliageName)
+        assertEquals("terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b", f.terrainName)
+        assertEquals(c.terrains.single().transform, f.transform)
+        assertEquals(Vec3(-38.25267f, 0f, -32.7754f), f.transform.position)
+    }
+
+    @Test
+    fun aModelWithAFoliageComponentPlacesNoFoliage() {
+        assertTrue(mainSceneWith("0", """{"assetName":"foliage_meadow"}""").foliages.isEmpty())
+    }
+
+    @Test
+    fun aNonStringFoliageAssetNamePlacesNoFoliage() {
+        val c = mainSceneWith("1", """{"assetName":7}""")
+        assertTrue(c.foliages.isEmpty())
+        assertEquals(1, c.terrains.size)
     }
 }

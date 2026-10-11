@@ -37,6 +37,8 @@ class DecodedEntity(
     val camera: CameraComponent?,
     val light: LightComponent?,
     val asset: DecodedAsset?,
+    /** The string `FoliageComponent.assetName` the entity carries, or null when it carries none. */
+    val foliage: String? = null,
 )
 
 /**
@@ -47,6 +49,7 @@ class PlacementMapper {
     fun map(entities: List<DecodedEntity>, skybox: String?): SceneContent {
         val models = mutableListOf<AssetPlacement>()
         val terrains = mutableListOf<AssetPlacement>()
+        val foliages = mutableListOf<FoliagePlacement>()
         val lights = mutableListOf<LightPlacement>()
         val cameras = mutableListOf<CameraPlacement>()
         val positions = linkedMapOf<String, Vec3>()
@@ -58,7 +61,10 @@ class PlacementMapper {
             val asset = entity.asset
             when {
                 asset != null && asset.type == "MODEL" -> models += AssetPlacement(entity.id, asset.name, transform)
-                asset != null && asset.type == "TERRAIN" -> terrains += AssetPlacement(entity.id, asset.name, transform)
+                asset != null && asset.type == "TERRAIN" -> {
+                    terrains += AssetPlacement(entity.id, asset.name, transform)
+                    entity.foliage?.let { foliages += FoliagePlacement(entity.id, it, asset.name, transform) }
+                }
                 entity.camera != null -> cameras += cameraOf(entity, entity.camera, transform)
                 else -> lightOf(entity, transform)?.let { lights += it }
             }
@@ -69,7 +75,16 @@ class PlacementMapper {
             val direction = if (target != null) aimDirection(light.position, target) ?: forwardOf(light.rotation) else forwardOf(light.rotation)
             light.copy(direction = direction)
         }
-        return SceneContent(models, terrains, resolved, skybox, cameras, positions, handleIds)
+        return SceneContent(
+            models = models,
+            terrains = terrains,
+            foliages = foliages,
+            lights = resolved,
+            skybox = skybox,
+            cameras = cameras,
+            entityPositions = positions,
+            handleIds = handleIds,
+        )
     }
 
     private fun transformOf(position: PositionComponent) = PlacementTransform(

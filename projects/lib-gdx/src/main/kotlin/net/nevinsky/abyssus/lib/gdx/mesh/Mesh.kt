@@ -489,7 +489,8 @@ class Mesh : Disposable {
     fun bind(shader: ShaderProgram?, locations: IntArray? = null) {
         vertices.bind(shader, locations)
         if (instances != null && instances!!.getNumInstances() > 0) {
-            instances!!.bind(shader, locations)
+            // [locations] covers this mesh's own attributes only, so the instance attributes are found by name
+            instances!!.bind(shader)
         }
         if (indices.numIndices > 0) {
             indices.bind()
@@ -511,10 +512,11 @@ class Mesh : Disposable {
      */
     @JvmOverloads
     fun unbind(shader: ShaderProgram?, locations: IntArray? = null) {
-        vertices.unbind(shader, locations)
+        // the instance attributes live in the VAO of the vertex buffer, so they go first
         if (instances != null && instances!!.getNumInstances() > 0) {
-            instances!!.unbind(shader, locations)
+            instances!!.unbind(shader)
         }
+        vertices.unbind(shader, locations)
         if (indices.numIndices > 0) {
             indices.unbind()
         }

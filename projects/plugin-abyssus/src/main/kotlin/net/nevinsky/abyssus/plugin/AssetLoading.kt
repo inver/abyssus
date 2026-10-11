@@ -16,6 +16,7 @@ import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
@@ -117,6 +118,7 @@ class ProjectAssets internal constructor(
         RaySnapshotStore(executor, metas, ModelRaySnapshotLoader(files, assimp), "model")
 
     private val terrainLoader = TerrainLoader(files, metas)
+    private val foliageLoader = FoliageLoader(files, metas, terrainLoader)
     private val textureLoader = TextureLoader(files, metas)
     val rayTerrains: RaySnapshotStore<RayTerrainSnapshot, Nothing> =
         RaySnapshotStore(executor, metas, TerrainRaySnapshotLoader(terrainLoader, textureLoader), "terrain")
@@ -141,6 +143,7 @@ class ProjectAssets internal constructor(
             mapOf(
                 MetaType.MODEL to ModelLoader(metas, assimp, files, rayModels),
                 MetaType.TERRAIN to terrainLoader,
+                MetaType.FOLIAGE to foliageLoader,
                 MetaType.TEXTURE to textureLoader,
                 MetaType.PIXMAP_TEXTURE to textureLoader,
                 MetaType.SKYBOX to skyboxLoader,

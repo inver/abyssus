@@ -19,6 +19,7 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.gdx.Renderable
+import net.nevinsky.abyssus.lib.gdx.mesh.InstanceAttributes
 
 /** Parameters shared by the depth shader for a single tile/pass. */
 class ShadowDepthPass {
@@ -31,6 +32,7 @@ class ShadowDepthPass {
 /** Depth shader for the library's custom mesh/index implementation, including posed vertices and alpha cutouts. */
 class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable) : net.nevinsky.abyssus.lib.gdx.shader.Shader {
     private val meshAttributes = renderable.meshPart.mesh!!.vertexAttributes
+    private val instanced = renderable.meshPart.mesh!!.isInstanced
     private val boneSlots = (0..7).filter { slot -> (0 until meshAttributes.size()).any { meshAttributes.get(it).alias == "a_boneWeight$slot" } }
     private val boneCount = (renderable.bones?.size ?: 12).coerceAtLeast(1)
     private val boneMatrices = FloatArray(boneCount * 16)
@@ -46,7 +48,8 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
         program.bind()
     }
     override fun canRender(instance: Renderable?): Boolean = instance?.meshPart?.mesh?.vertexAttributes?.getMaskWithSizePacked() == meshAttributes.getMaskWithSizePacked() &&
-        (instance.bones?.size ?: 12).coerceAtLeast(1) == boneCount
+        (instance.bones?.size ?: 12).coerceAtLeast(1) == boneCount &&
+        instance.meshPart.mesh!!.isInstanced == instanced
     override fun render(renderable: Renderable) {
         if (!castsShadow(renderable) || renderable.worldTransform.det3x3() == 0f) return
         val mesh = renderable.meshPart.mesh ?: return
@@ -56,7 +59,8 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
         context!!.setBlending(false, GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
         program.bind()
         program.setUniformMatrix("u_projViewTrans", pass.viewProjection)
-        program.setUniformMatrix("u_worldTrans", renderable.worldTransform)
+        // An instanced mesh takes its world transform from the a_instance* attributes, so u_worldTrans is not declared.
+        if (!instanced) program.setUniformMatrix("u_worldTrans", renderable.worldTransform)
         program.setUniformi("u_radialDepth", if (pass.radialDepth) 1 else 0)
         program.setUniformf("u_lightPosition", pass.lightPosition)
         program.setUniformf("u_far", pass.far)
@@ -87,7 +91,14 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
     private fun vertexSource(): String = buildString {
         val hasUv = (0 until meshAttributes.size()).any { meshAttributes.get(it).alias == "a_texCoord0" }
         val color = meshAttributes.findByUsage(VertexAttributes.Usage.ColorUnpacked) ?: meshAttributes.findByUsage(VertexAttributes.Usage.ColorPacked)
-        append("attribute vec3 a_position; uniform mat4 u_projViewTrans; uniform mat4 u_worldTrans; varying vec3 v_worldPos; varying vec2 v_uv; varying float v_alpha;\n")
+        append("attribute vec3 a_position; uniform mat4 u_projViewTrans; varying vec3 v_worldPos; varying vec2 v_uv; varying float v_alpha;\n")
+        if (instanced) {
+            // four vec4 columns, each bound to its own attribute location by name
+            InstanceAttributes.ALIASES.forEach { append("attribute vec4 $it;\n") }
+            append("#define u_worldTrans mat4(${InstanceAttributes.ALIASES.joinToString(", ")})\n")
+        } else {
+            append("uniform mat4 u_worldTrans;\n")
+        }
         if (color != null) append("attribute vec4 ${color.alias};\n")
         if (hasUv) append("attribute vec2 a_texCoord0; uniform vec4 u_uvTransform;\n")
         boneSlots.forEach { append("attribute vec2 a_boneWeight$it;\n") }
