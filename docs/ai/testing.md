@@ -58,7 +58,18 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
   Component editing and `EcsWriter` are tested in `projects/lib-core-editor/src/test/kotlin/`; there is no separate runtime module.
 - `projects/lib-physics/src/test/kotlin/`: physics components, `PhysicsWorld`, rope tension and the Jolt natives. Plain JUnit, no
   IntelliJ or GL. They load the build machine's `DebugSp` Jolt natives, and use `testProject(name)` and
-  `loadPhysicsScene()`.
+  `loadPhysicsScene()`. Foliage collision tests write a temporary project with `FoliageProject` (a flat 100 m terrain, two
+  models and a foliage asset with a matching or stale bake) instead of copying a committed fixture:
+  `PhysicsFoliageTest` (settling box, imported DETAIL collider, invalid collider, moving owner, stale/missing bake),
+  `PhysicsFoliageLifecycleTest` (owner removal, injected layer failure, 100 worlds, the copy cap), `ShapeFactoryTest`
+  (compound sub-shape poses and sizes) and `PlayHostMainTest` (a box settling for 5 s of simulated time on a foliage
+  collider in the child play process). The pure parts are `FoliageColliderTransformsTest` and `FoliageAdmissionTest`.
+- `projects/app-game-control-line/toolsTest/`: the field foliage migration (`./gradlew :app-game-control-line:testFieldFoliageTools`,
+  part of `check`). It starts from `projects/app-game-control-line/toolsTest/fixtures/Field.original.scene`, the scene from before the migration, because
+  the committed one has no vegetation left; it checks reruns from the original and the migrated project, refused conflicting
+  edits, and that the committed assets are what the tool makes of the original. The tool compiles through its own
+  `fieldFoliageTools` source set (`compileFieldFoliageToolsKotlin`); the older `tools` source set is compiled separately and
+  has stale imports of its own (`FieldAssets.kt`), which this change leaves alone.
 - `projects/app-game-control-line/src/test/kotlin/`: the Control Line game's flight, track, scoring, screen flow and Play module,
   headless (Jolt's `ReleaseSp` natives for the build machine, no window). They read the bundled project
   `projects/app-game-control-line/project/ControlLine` through `bundledProject()` / `loadField()`, and fly it with `FieldFlight`;

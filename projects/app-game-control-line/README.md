@@ -71,6 +71,37 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 | `render`, `screens` | `FieldScene`, `FieldRenderer` (with `shader/terrain.*`), `FieldShadows` (the sun's shadow map), `Cameras`, `GameUi` | yes |
 | `play` | `ControlLinePlay : PlayModule` | no |
 
+### Foliage
+
+The game window is an OpenGL 3.2 core context (`Main.kt` asks for it, and `ControlLineGame.create` gives the legacy GLSL of
+the terrain and model shaders their version line and defines), because foliage is drawn with instanced rendering.
+
+A terrain entity's `FoliageComponent` is drawn by `FieldRenderer` from the committed bake, with no scatter or write.
+`FieldScene.foliages` lists the foliage of the loaded scene (`SceneFoliageListing`; a component on an entity that draws
+no terrain is reported once). Assets load through `lib-core`'s `RuntimeFoliageLoader` (in `BaseCtx` and `fieldAssets`),
+prepared off the GL thread with the shared `FoliageRuntimeLoad` read policy, so a stale bake keeps its saved copies, a
+missing model drops only its copies, and a missing, unsupported or unreadable asset fails and is skipped with one
+warning: `FieldRenderer.loaded` counts a failed foliage as settled, so it never holds the loading state.
+
+Ownership: the asset storage owns each built foliage asset and the shared model data. The renderer makes one
+`FoliageDrawable` per terrain entity from that asset (its prepared copies and the shared models), so two terrains using
+one asset keep their own transforms, instance buffers and culling, whatever the draw order. A placement is rebuilt when
+its asset is, dropped when the asset is bound to another terrain than the entity draws, and disposed before the shared
+assets on scene replacement and on `dispose`.
+
+Passes: the sun's depth pass calls `updateCasters` with the shadow camera's frustum and draws the OBJECT copies it
+keeps, so a tree outside the viewer's frustum still shades visible ground; DETAIL copies (grass) never enter the depth
+pass but receive the shadow through the same shadow attribute and shaders as models. The caster buffers are separate
+from the viewer's, filled by `update(camera, …)` after the light pass, so the light pass never changes what the viewer
+draws. Ray traced views leave foliage out (the game has none). `render/FieldRendererGlTest` and `render/FieldShadowsGlTest`
+check this on a GL context (with `-Dabyssus.glTests=true`); `FieldFoliageTest` checks the listing and the terminal
+failure without a window.
+
+The field's trees and bushes are foliage on the two terrain entities (`foliage_airfield_site`, `foliage_airfield_outer`) with
+grass on the site, made by `tools/FieldFoliage.kt` from the recorded manifest (see `project/environment/README.md`). The
+tool has its own source set (`fieldFoliageTools`, with the editing library on its tool classpath only); the game's
+runtime classpath does not contain it.
+
 Everything runs on the LWJGL3 main thread; only asset preparation uses a worker pool. `./gradlew
 :app-game-control-line:test` runs every rule headless (Jolt natives only, no window). The pilot's entity is the handle's
 kinematic body; the plane is put at takeoff with `PhysicsBody.setPose`.

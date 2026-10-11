@@ -31,6 +31,21 @@ model, and a height field from its terrain's `terrain.data`. Both are read by `P
   `PositionComponent`. Boxes, hulls and height fields scale non-uniformly; spheres and capsules take the largest axis
   of the scale, with one warning. Parents are ignored, with one warning per entity that has one. Then one constraint
   per `ConstraintComponent`.
+- **Foliage:** a terrain entity's `FoliageComponent` adds static collision for the OBJECT layers of its foliage asset that
+  declare a `collider` (`FoliageCollider` in `lib-core`): one compound body per nonempty chunk of the committed bake, one
+  BOX, SPHERE or CAPSULE sub-shape per copy. The bake is read as written through `PhysicsAssets.foliage` (the shared
+  `FoliageRuntimeLoad` policy a renderer uses, so both see the same copies; nothing is generated or written, and a stale
+  bake keeps its saved copies). Each copy's pose is `FoliageMatrices` (entity transform, terrain height, lean, yaw, scale)
+  with the collider offset carried by the full matrix; `FoliageColliderTransforms` refuses a sheared, reflected or
+  singular copy before any native call, and a sphere or capsule on a non-uniform scale takes the largest axis, with a
+  warning. A layer is admitted whole in entity id then layer order: at most 200,000 colliding copies in all and only the
+  bodies the world's 10,240 leave after the ordinary ones (the world capacities are unchanged); a layer over either
+  limit, a layer Jolt refuses (rolled back, the next one still built), a DETAIL layer with a collider, an invalid
+  collider and an owner that is not static each get one warning and no collision. Contacts with a chunk are reported
+  against the terrain entity, even when it has no ordinary body. Removing the owner, a failed layer and `close()` release
+  the bodies and the compound shapes exactly once; removing a layer wakes dynamic bodies, since Jolt does not wake a
+  sleeping body whose support went away. Foliage is built when the world is, so a later change to the owner's pose or to
+  the bake is not seen.
 - **Bad input** is refused before it reaches Jolt, with one warning naming the entity and the field, and the rest of
   the scene is simulated. This covers a value that is not finite, a size not greater than `0`, a hull from fewer than
   4 points not in one plane, a terrain without heights, and a maximum distance below the minimum.

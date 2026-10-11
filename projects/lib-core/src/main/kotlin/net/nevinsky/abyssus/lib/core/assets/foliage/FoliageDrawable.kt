@@ -40,6 +40,11 @@ import kotlin.math.abs
  * [getRenderablesOf] hands over one kind's set, so the shadow depth pass can take the OBJECT layers' copies and
  * leave the DETAIL layers' to the lit pass.
  *
+ * A light pass has its own culling: [updateCasters] keeps the OBJECT layers' copies a light camera's frustum meets, in
+ * instance buffers of their own that [getCasterRenderables] hands over, so an OBJECT copy outside the viewer's frustum
+ * still casts its shadow and the viewer's buffers, filled by [update], are never touched by it. DETAIL copies never
+ * cast. A drawable nobody calls [updateCasters] on holds no caster buffers.
+ *
  * The instance buffer of a model holds as many copies as the bake gives it, so a later, smaller bake reuses the
  * meshes; only a bake that grows past the capacity rebuilds them.
  */
@@ -109,6 +114,16 @@ class FoliageDrawable(
     private var hasLastCamera = false
     private var dirty = true
 
+    /** True once [updateCasters] was called: only then are caster buffers kept. */
+    private var casting = false
+    private var casterDirty = true
+    private val lastCasterEntity = FloatArray(16)
+    private var hasLastCasterEntity = false
+
+    /** How many OBJECT copies the last [updateCasters] kept for the light. */
+    var casterCopies: Int = 0
+        private set
+
     init {
         chunkPad = computeChunkPad()
         refreshLayers()
@@ -148,6 +163,7 @@ class FoliageDrawable(
     fun setBake(value: FoliageBake?) {
         bake = value
         dirty = true
+        casterDirty = true
         refreshLayers()
     }
 
@@ -155,11 +171,43 @@ class FoliageDrawable(
     fun setTerrain(value: TerrainData?) {
         terrain = value
         dirty = true
+        casterDirty = true
         refreshLayers()
     }
 
     override fun getRenderables(renderables: Array<Renderable>, pool: Pool<Renderable>) {
-        for (mesh in meshes.values) mesh.renderables(renderables, pool)
+        for ((key, mesh) in meshes) if (!key.caster) mesh.renderables(renderables, pool)
+    }
+
+    /**
+     * Culls the OBJECT layers' chunks against [light] (a camera whose frustum is the light's volume) and refills the
+     * caster buffers when what they hold has changed. Call it once per frame on the GL thread, before
+     * [getCasterRenderables]; it never changes what [update] filled.
+     */
+    fun updateCasters(light: Camera, entity: Matrix4) {
+        if (!casting) {
+            casting = true
+            casterDirty = true
+        }
+        if (terrain == null || bake == null) {
+            clearCasters()
+            return
+        }
+        var changed = false
+        for (layer in layers) if (layer.castCull(light, entity)) changed = true
+        val moved = !hasLastCasterEntity || !same(lastCasterEntity, entity.`val`)
+        if (casterDirty || changed || moved) {
+            rebuildMeshes()
+            fillCasters(entity)
+            casterDirty = false
+        }
+        entity.`val`.copyInto(lastCasterEntity)
+        hasLastCasterEntity = true
+    }
+
+    /** The instanced parts of the copies [updateCasters] kept: OBJECT layers only. */
+    fun getCasterRenderables(renderables: Array<Renderable>, pool: Pool<Renderable>) {
+        for ((key, mesh) in meshes) if (key.caster) mesh.renderables(renderables, pool)
     }
 
     /**
@@ -168,7 +216,7 @@ class FoliageDrawable(
      */
     fun getRenderablesOf(kind: FoliageLayerKind, renderables: Array<Renderable>, pool: Pool<Renderable>) {
         for ((key, mesh) in meshes) {
-            if (key.kind == kind) mesh.renderables(renderables, pool)
+            if (!key.caster && key.kind == kind) mesh.renderables(renderables, pool)
         }
     }
 
@@ -176,6 +224,7 @@ class FoliageDrawable(
         for (mesh in meshes.values) mesh.dispose()
         meshes.clear()
         drawnCopies = 0
+        casterCopies = 0
         objectBounds = null
     }
 
@@ -187,17 +236,53 @@ class FoliageDrawable(
     private fun clear() {
         objectBounds = null
         if (drawnCopies == 0) return
-        for (mesh in meshes.values) {
+        for ((key, mesh) in meshes) {
+            if (key.caster) continue
             mesh.reset()
             mesh.upload()
         }
         drawnCopies = 0
     }
 
+    /** Empties the caster buffers: what a terrain or bake handed over as null leaves to cast. */
+    private fun clearCasters() {
+        if (casterCopies == 0) return
+        for ((key, mesh) in meshes) {
+            if (!key.caster) continue
+            mesh.reset()
+            mesh.upload()
+        }
+        casterCopies = 0
+    }
+
+    /** Writes one instance matrix per copy the light sees into the caster buffers and uploads them. */
+    private fun fillCasters(entity: Matrix4) {
+        val ground = checkNotNull(terrain) { "a terrain to stand the copies on" }
+        for ((key, mesh) in meshes) if (key.caster) mesh.reset()
+        var kept = 0
+        for (layer in layers) {
+            if (layer.kind != FoliageLayerKind.OBJECT) continue
+            val layerBake = layer.bakeLayer ?: continue
+            if (layer.grid == null) continue
+            for (index in layerBake.chunks.indices) {
+                if (!layer.casterVisible[index]) continue
+                for (copy in layerBake.chunks[index]) {
+                    val key = layer.casterKeyAt(copy.model) ?: continue
+                    val mesh = meshes[key] ?: continue
+                    if (mesh.isEmpty) continue
+                    val matrix = matrices.copy(ground, layer.align, entity, copy, instance) ?: continue
+                    if (mesh.append(matrix)) kept++
+                }
+            }
+        }
+        for ((key, mesh) in meshes) if (key.caster) mesh.upload()
+        casterCopies = kept
+    }
+
     /** Writes one instance matrix per visible copy into the buffers and uploads them all. */
     private fun fill(camera: Camera, entity: Matrix4) {
         val ground = checkNotNull(terrain) { "a terrain to stand the copies on" }
-        for (mesh in meshes.values) mesh.reset()
+        for ((key, mesh) in meshes) if (!key.caster) mesh.reset()
         var drawn = 0
         var objects: BoundingBox? = null
         for (layer in layers) {
@@ -232,7 +317,7 @@ class FoliageDrawable(
                 }
             }
         }
-        for (mesh in meshes.values) mesh.upload()
+        for ((key, mesh) in meshes) if (!key.caster) mesh.upload()
         drawnCopies = drawn
         objectBounds = objects
         rebuilds++
@@ -268,6 +353,10 @@ class FoliageDrawable(
                 for (copy in chunk) {
                     val key = layer.keyAt(copy.model) ?: continue
                     counts[key] = (counts[key] ?: 0) + 1
+                    if (casting && layer.kind == FoliageLayerKind.OBJECT) {
+                        val caster = layer.casterKeyAt(copy.model) ?: continue
+                        counts[caster] = (counts[caster] ?: 0) + 1
+                    }
                 }
             }
         }
@@ -405,6 +494,17 @@ class FoliageDrawable(
 
         private var lastVisible: BooleanArray = BooleanArray(0)
 
+        /** Which chunks the last light cull kept (OBJECT layers only), in the bake's chunk order. */
+        var casterVisible: BooleanArray = BooleanArray(0)
+            private set
+
+        private var lastCasterVisible: BooleanArray = BooleanArray(0)
+
+        private val casterKeys: List<MeshKey> = meta.models.map { MeshKey(it.asset, kind, caster = true) }
+
+        /** The caster mesh set of the layer's [index]-th model; null when the bake names one the meta no longer holds. */
+        fun casterKeyAt(index: Int): MeshKey? = casterKeys.getOrNull(index)
+
         /** The mesh set each model index draws into: one per folder and kind, so either kind can be drawn alone. */
         private val meshKeys: List<MeshKey> = meta.models.map { MeshKey(it.asset, kind) }
 
@@ -425,6 +525,22 @@ class FoliageDrawable(
             val chunks = grid?.boxes?.size ?: 0
             visible = BooleanArray(chunks)
             lastVisible = BooleanArray(chunks)
+            casterVisible = BooleanArray(chunks)
+            lastCasterVisible = BooleanArray(chunks)
+        }
+
+        /** Culls the chunks against the light [camera] and reports whether the kept set differs from the last one. */
+        fun castCull(camera: Camera, entity: Matrix4): Boolean {
+            if (kind != FoliageLayerKind.OBJECT) return false
+            val boxes = grid
+            if (boxes == null) {
+                casterVisible.fill(false)
+            } else {
+                visibleFoliageChunks(boxes, entity, FoliageLayerKind.OBJECT, drawDistance, camera, casterVisible)
+            }
+            if (casterVisible.contentEquals(lastCasterVisible)) return false
+            lastCasterVisible = casterVisible.copyOf()
+            return true
         }
 
         /** Culls the chunks against [camera] and reports whether the kept set differs from the last one. */
@@ -442,7 +558,7 @@ class FoliageDrawable(
     }
 
     /** One instance buffer set: the copies of one model folder drawn for one layer kind. */
-    private data class MeshKey(val folder: String, val kind: FoliageLayerKind)
+    private data class MeshKey(val folder: String, val kind: FoliageLayerKind, val caster: Boolean = false)
 
     /** One model's instanced meshes for one layer kind: every node part of it, all drawing the same copies. */
     private class ModelMeshes(val capacity: Int, val parts: List<PartMesh>) {

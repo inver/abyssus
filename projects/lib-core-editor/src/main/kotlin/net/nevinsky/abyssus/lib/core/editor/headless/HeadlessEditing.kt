@@ -18,6 +18,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageComponentEdits
 import net.nevinsky.abyssus.lib.core.editor.document.documentDisplayMessage
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldDescriptions
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
@@ -54,6 +55,7 @@ class HeadlessEditing(
     private val documents = DocumentTextEditor(format)
     private val components = ComponentEditor(messages)
     private val assetMeta = AssetMetaEditor(AssetFieldDescriptions(), format)
+    private val foliageEdits = FoliageComponentEdits()
 
     /** Null when [text] is a supported native document of [kind], else why it is refused. */
     fun validate(text: String, kind: DocumentKind): Refusal? {
@@ -87,6 +89,24 @@ class HeadlessEditing(
             }
         }
         return rejected?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome
+    }
+
+    /** Gives the terrain entity [entityId] of [sceneText] a foliage component naming [foliage], as Add Foliage does. */
+    fun setFoliage(sceneText: String, entityId: String, foliage: String): HeadlessEdit =
+        edit(sceneText, DocumentKind.SCENE) { root -> foliageEdits.attach(root, entityId, foliage) }
+
+    /**
+     * Removes the entities [ids] from [sceneText]. Refused, with the reference named, when a remaining entity still
+     * refers to one of them; ids the scene does not have are ignored.
+     */
+    fun removeEntities(sceneText: String, ids: Set<String>): HeadlessEdit {
+        var blocked: String? = null
+        val outcome = edit(sceneText, DocumentKind.SCENE) { root ->
+            val removal = foliageEdits.remove(root, ids)
+            blocked = removal.blockedBy
+            removal.changed
+        }
+        return blocked?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome
     }
 
     /**

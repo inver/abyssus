@@ -97,15 +97,17 @@ class JsonProcessor(internal val log: Logger) {
             .addSerializer(java.lang.Float.TYPE, ComponentFloatSerializer()))
 
     /** Default-aware component binding without exposing the processor's mapper. */
-    fun <C : Component> bindComponent(node: JsonNode, type: Class<C>): C = componentReader.forType(type).readValue(node)
+    fun <C : Component> bindComponent(node: JsonNode, type: Class<C>): C =
+        componentReader.forType(type).readValue<C>(node).also { if (it is SourceBackedComponent) it.adoptSource(node) }
 
     /** All modeled component values, including defaults, for comparing nested edits. */
     fun componentValues(component: Component): JsonNode = componentValues.valueToTree(component)
 
     /** Native component data with defaults omitted and decimal text matching scene writing. */
-    fun componentTree(component: Component): JsonNode = componentWriter.valueToTree(component)
+    fun componentTree(component: Component): JsonNode =
+        if (component is SourceBackedComponent) component.sourceTree() else componentWriter.valueToTree(component)
 
-    /** [text] as a JSON tree; throws when it is not a JSON object. */
+    /** [text] as a JSON tree; throws when it is not a JSON object. Numbers lose their spelling: use [NativeJsonTree] to keep it. */
     fun readObject(text: String): JsonNode =
         mapper.readTree(text)?.takeIf { it.isObject } ?: throw IllegalArgumentException("expected a JSON object")
 

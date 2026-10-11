@@ -14,7 +14,13 @@ import com.github.stephengold.joltjni.*
 import com.github.stephengold.joltjni.enumerate.EActivation
 import com.github.stephengold.joltjni.enumerate.EMotionType
 import com.github.stephengold.joltjni.enumerate.EOverrideMassProperties
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderRead
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderReader
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerKind
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMatrices
+import net.nevinsky.abyssus.lib.core.assets.foliage.layerKind
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.ecs.SceneFoliageListing
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
@@ -24,13 +30,23 @@ import org.slf4j.Logger
 import kotlin.math.abs
 import kotlin.math.max
 
+/** Test seam: the reason chunk number [chunk] (counting from 1) of foliage layer [layerId] fails to build, or null. */
+internal fun interface FoliageFailure {
+    fun at(layerId: Int, chunk: Int): String?
+}
+
 private const val LAYER_STATIC = 0
 private const val LAYER_MOVING = 1
+
+/** The most bodies the world holds; foliage chunks get what the ordinary bodies leave. */
+private const val MAX_BODIES = 10_240
 
 /**
  * A Jolt world built from the physics components of [engine]'s entities: one body per entity with a
  * [ColliderComponent] (static without a [RigidBodyComponent]) and one constraint per [ConstraintComponent]. Bad input
- * is refused with one warning to [log] per entity, and the rest of the scene is simulated.
+ * is refused with one warning to [log] per entity, and the rest of the scene is simulated. A terrain entity's foliage
+ * adds static compound bodies for the OBJECT layers with a collider (see `buildFoliage`); a contact with one is
+ * reported against the terrain entity.
  *
  * [advance] runs fixed steps of [PHYSICS_STEP] and writes dynamic and kinematic poses to each entity's
  * [PositionComponent] (`localPosition` / `localRotation`; parents are ignored). One world is used by one thread at a
@@ -39,12 +55,18 @@ private const val LAYER_MOVING = 1
  *
  * Needs Jolt's natives ([net.nevinsky.abyssus.lib.physics.jolt.JoltNatives]); never use it in the IDE process.
  */
-class PhysicsWorld(
+class PhysicsWorld internal constructor(
     private val engine: SceneEngine,
     private val assets: PhysicsAssets,
     private val log: Logger,
     natives: JoltNatives,
+    private val injected: FoliageFailure?,
 ) : AutoCloseable {
+    constructor(engine: SceneEngine, assets: PhysicsAssets, log: Logger, natives: JoltNatives) :
+        this(engine, assets, log, natives, null)
+
+    // [injected] is a seam for tests: it may make a foliage chunk fail to build, as Jolt could.
+
     private val owned = ArrayList<JoltPhysicsObject>()
     private val system: PhysicsSystem
     private val bodies: BodyInterface
@@ -54,6 +76,9 @@ class PhysicsWorld(
 
     private val records = LinkedHashMap<Entity, BodyRecord>()
     private val byBodyId = HashMap<Int, BodyRecord>()
+    private val foliage = ArrayList<FoliageGroup>()
+    private val foliageByBodyId = HashMap<Int, FoliageGroup>()
+    private val compounds = FoliageCompounds()
     private val constraintList = ArrayList<ConstraintRecord>()
     private val stepContacts = LinkedHashMap<Pair<Int, Int>, Contact>()
     private val ropeTension = RopeTension(this)
@@ -79,7 +104,7 @@ class PhysicsWorld(
         }
         val filter = own(ObjectVsBroadPhaseLayerFilterTable(broadPhase, 2, pairs, 2))
         system = own(PhysicsSystem())
-        system.init(10_240, 0, 65_536, 10_240, broadPhase, filter, pairs)
+        system.init(MAX_BODIES, 0, 65_536, MAX_BODIES, broadPhase, filter, pairs)
         system.setGravity(0f, -GRAVITY, 0f)
         allocator = own(TempAllocatorImpl(16 * 1024 * 1024))
         jobs = own(JobSystemSingleThreaded(Jolt.cMaxPhysicsJobs))
@@ -89,6 +114,9 @@ class PhysicsWorld(
         build()
         engine.addEntityListener(removal)
     }
+
+    /** How many foliage chunk bodies the world holds, over all layers. */
+    internal val foliageBodies: Int get() = open { foliage.sumOf { it.ids.size } }
 
     /** Entities that have a body. */
     val entities: Set<Entity> get() = open { records.keys.toSet() }
@@ -146,6 +174,7 @@ class PhysicsWorld(
     /** Takes [entity]'s body and every constraint that uses it out of the simulation. Removing it from the engine does too. */
     fun removeEntity(entity: Entity) = open {
         for (c in constraintList.filter { it.entity == entity || it.other == entity }) remove(c)
+        for (group in foliage.filter { it.owner == entity }) releaseFoliage(group)
         val record = records.remove(entity) ?: return@open
         byBodyId.remove(record.id)
         bodies.removeBody(record.id)
@@ -160,6 +189,7 @@ class PhysicsWorld(
             c.ref.close()
         }
         constraintList.clear()
+        for (group in foliage.asReversed().toList()) releaseFoliage(group)
         for (r in records.values.reversed()) {
             bodies.removeBody(r.id)
             bodies.destroyBody(r.id)
@@ -198,6 +228,164 @@ class PhysicsWorld(
             val problem = problem(spec)
             if (problem != null) warn(entity, "$problem; the constraint is left out") else create(spec)
         }
+        buildFoliage()
+    }
+
+    // ---- foliage ----
+
+    /** The static compound bodies of one foliage layer of [owner]: one per chunk, released together. */
+    private inner class FoliageGroup(val owner: Entity, val layerId: Int) {
+        val ids = ArrayList<Int>()
+        val shapes = ArrayList<FoliageCompounds.Built.Shape>()
+    }
+
+    /**
+     * Builds the colliders of every terrain entity's foliage: for each OBJECT layer with a valid collider, one static
+     * compound body per nonempty chunk of the committed bake, placed with the same copy matrices the renderer uses.
+     * Everything is checked before Jolt is asked for anything; a layer that does not fit the copy cap or the bodies
+     * left after the ordinary ones is refused whole, in entity id then layer order, and a layer Jolt refuses is rolled
+     * back before the next one. A failure of one layer never stops the others or the ordinary bodies.
+     */
+    private fun buildFoliage() {
+        val entries = SceneFoliageListing { log.warn("Physics: $it") }.list(engine)
+        if (entries.isEmpty()) return
+        val admission = FoliageAdmission(bodyCapacity = MAX_BODIES - records.size)
+        val matrices = FoliageMatrices()
+        val transforms = FoliageColliderTransforms()
+        val colliders = FoliageColliderReader()
+        val scratch = Matrix4()
+        val reported = HashSet<String>()
+        for (entry in entries) {
+            val owner = entry.entity
+            val read = assets.foliage(entry.foliage, entry.terrain)
+            if (reported.add(entry.foliage)) read.warnings.forEach { log.warn("Physics: $it") }
+            val runtime = read.foliage ?: continue
+            val motion = owner.getComponent(RigidBodyComponent::class.java)?.motionType ?: MotionType.STATIC
+            val ownerMatrix = transformOf(owner)
+            for (layer in runtime.meta.layers) {
+                val kind = layer.layerKind()
+                val declared = colliders.read(layer.collider)
+                if (declared is FoliageColliderRead.Absent) continue
+                if (kind == FoliageLayerKind.DETAIL) {
+                    warn(owner, "foliage '${entry.foliage}' layer ${layer.id} is a detail layer, which never collides; its collider is ignored")
+                    continue
+                }
+                if (declared is FoliageColliderRead.Invalid) {
+                    warn(owner, "foliage '${entry.foliage}' layer ${layer.id} has an unusable collider (${declared.reason}); it does not collide")
+                    continue
+                }
+                val collider = (declared as FoliageColliderRead.Valid).collider
+                if (motion != MotionType.STATIC) {
+                    warn(owner, "foliage '${entry.foliage}' layer ${layer.id} does not collide: its owner is $motion, and foliage bodies do not move")
+                    continue
+                }
+                val baked = runtime.bake.layers.firstOrNull { it.id == layer.id } ?: continue
+                var skipped = 0
+                var firstReason: String? = null
+                var approximated = false
+                val chunks = ArrayList<List<ColliderPlacement>>()
+                for (chunk in baked.chunks) {
+                    if (chunk.isEmpty()) continue
+                    val placed = ArrayList<ColliderPlacement>(chunk.size)
+                    for (copy in chunk) {
+                        val matrix = matrices.copy(runtime.terrain, layer.alignToNormal, ownerMatrix, copy, scratch)
+                        if (matrix == null) {
+                            skipped++
+                            firstReason = firstReason ?: "a copy stands outside its terrain"
+                            continue
+                        }
+                        when (val result = transforms.place(collider, matrix)) {
+                            is ColliderPlacementResult.Placed -> {
+                                placed += result.placement
+                                approximated = approximated || result.placement.approximated
+                            }
+                            is ColliderPlacementResult.Refused -> {
+                                skipped++
+                                firstReason = firstReason ?: result.reason
+                            }
+                        }
+                    }
+                    if (placed.isNotEmpty()) chunks += placed
+                }
+                if (skipped > 0) {
+                    warn(owner, "foliage '${entry.foliage}' layer ${layer.id}: $skipped copies get no collider ($firstReason)")
+                }
+                if (approximated) {
+                    warn(owner, "foliage '${entry.foliage}' layer ${layer.id} has a non-uniform scale; its ${collider.shape.name.lowercase()} colliders take the largest axis")
+                }
+                val copies = chunks.sumOf { it.size.toLong() }
+                if (copies == 0L) continue
+                when (admission.admit(copies, chunks.size)) {
+                    FoliageRefusal.COPY_CAP -> {
+                        warn(owner, "foliage '${entry.foliage}' layer ${layer.id} has $copies colliding copies, over the limit of $FOLIAGE_COLLIDER_COPY_CAP in all; it does not collide")
+                        continue
+                    }
+                    FoliageRefusal.BODY_CAPACITY -> {
+                        warn(owner, "foliage '${entry.foliage}' layer ${layer.id} needs ${chunks.size} bodies, more than the world has left; it does not collide")
+                        continue
+                    }
+                    null -> Unit
+                }
+                createFoliage(owner, layer.id, entry.foliage, chunks)
+            }
+        }
+    }
+
+    /** Creates the compound bodies of one admitted layer; on any failure it destroys what it made and warns. */
+    private fun createFoliage(owner: Entity, layerId: Int, name: String, chunks: List<List<ColliderPlacement>>) {
+        val group = FoliageGroup(owner, layerId)
+        try {
+            for (placements in chunks) {
+                val forced = injected?.at(layerId, group.ids.size + 1)
+                when (val built = if (forced != null) FoliageCompounds.Built.Failed(forced) else compounds.build(placements)) {
+                    is FoliageCompounds.Built.Failed -> {
+                        warn(owner, "foliage '$name' layer $layerId does not collide: ${built.reason}")
+                        releaseFoliageContents(group)
+                        return
+                    }
+                    is FoliageCompounds.Built.Shape -> {
+                        group.shapes += built
+                        val settings = BodyCreationSettings(
+                            built.ref, RVec3(0.0, 0.0, 0.0), Quat(0f, 0f, 0f, 1f), EMotionType.Static, LAYER_STATIC,
+                        )
+                        try {
+                            settings.setUserData(entityId(owner).toLong())
+                            val body = bodies.createBody(settings)
+                            val id = body.getId()
+                            group.ids += id
+                            bodies.addBody(id, EActivation.DontActivate)
+                        } finally {
+                            settings.close()
+                        }
+                    }
+                }
+            }
+        } catch (e: RuntimeException) {
+            warn(owner, "foliage '$name' layer $layerId does not collide: ${e.message}")
+            releaseFoliageContents(group)
+            return
+        }
+        foliage += group
+        for (id in group.ids) foliageByBodyId[id] = group
+    }
+
+    private fun releaseFoliage(group: FoliageGroup) {
+        foliage.remove(group)
+        releaseFoliageContents(group)
+        // Jolt does not wake a sleeping body whose support was removed, so a resting body would hover
+        for (r in records.values) if (r.motionType == MotionType.DYNAMIC) bodies.activateBody(r.id)
+    }
+
+    /** Removes and destroys the group's bodies, then releases its shapes; safe to call on a half-built group. */
+    private fun releaseFoliageContents(group: FoliageGroup) {
+        for (id in group.ids) {
+            foliageByBodyId.remove(id)
+            bodies.removeBody(id)
+            bodies.destroyBody(id)
+        }
+        group.ids.clear()
+        for (shape in group.shapes) shape.release()
+        group.shapes.clear()
     }
 
     /** Creates [entity]'s body; returns why it cannot instead. */
@@ -405,6 +593,10 @@ class PhysicsWorld(
         return block()
     }
 
+    /** The entity a body reports contacts as, with the body's id: an ordinary body's entity, or a foliage chunk's terrain owner. */
+    private fun sideOf(id: Int): Pair<Entity, Int>? =
+        byBodyId[id]?.let { it.entity to it.id } ?: foliageByBodyId[id]?.let { it.owner to id }
+
     /** Collects contacts during a step, on the stepping thread (the job system is single-threaded). */
     private inner class ContactCollector : CustomContactListener() {
         override fun onContactAdded(body1Va: Long, body2Va: Long, manifoldVa: Long, settingsVa: Long) = collect(body1Va, body2Va, true)
@@ -413,15 +605,15 @@ class PhysicsWorld(
         private fun collect(body1Va: Long, body2Va: Long, first: Boolean) {
             val b1 = Body(body1Va)
             val b2 = Body(body2Va)
-            val r1 = byBodyId[b1.getId()] ?: return
-            val r2 = byBodyId[b2.getId()] ?: return
+            val r1 = sideOf(b1.getId()) ?: return
+            val r2 = sideOf(b2.getId()) ?: return
             val v1 = b1.getLinearVelocity()
             val v2 = b2.getLinearVelocity()
             val speed = Vector3(v1.getX() - v2.getX(), v1.getY() - v2.getY(), v1.getZ() - v2.getZ()).len()
-            val (a, b) = if (entityId(r1.entity) <= entityId(r2.entity)) r1 to r2 else r2 to r1
-            val key = a.id to b.id
+            val (a, b) = if (entityId(r1.first) <= entityId(r2.first)) r1 to r2 else r2 to r1
+            val key = a.second to b.second
             val previous = stepContacts[key]
-            stepContacts[key] = Contact(a.entity, b.entity, max(speed, previous?.relativeSpeed ?: 0f), first || previous?.first == true)
+            stepContacts[key] = Contact(a.first, b.first, max(speed, previous?.relativeSpeed ?: 0f), first || previous?.first == true)
         }
     }
 

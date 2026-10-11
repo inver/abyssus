@@ -29,6 +29,9 @@ import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDrawable
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageRuntimeLoad
+import net.nevinsky.abyssus.lib.core.assets.foliage.RuntimeFoliageLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
@@ -56,11 +59,13 @@ fun fieldAssets(
     val files = FileLoader(projectDir)
     val metas = AssetMetaLoader(json, files, log)
     val skyShaders = ShaderStorage().withAssets(files)
+    val terrains = TerrainLoader(files, metas)
     return AssetStorage(log, executor, metas::loadBaseMeta).also {
         it.registerAll(
             mapOf(
                 MetaType.MODEL to ModelLoader(metas, AssimpModelLoader(), files),
-                MetaType.TERRAIN to TerrainLoader(files, metas),
+                MetaType.TERRAIN to terrains,
+                MetaType.FOLIAGE to RuntimeFoliageLoader(metas, FoliageRuntimeLoad(files, metas, terrains)) { log.warn(it) },
                 MetaType.TEXTURE to TextureLoader(files, metas),
                 MetaType.PIXMAP_TEXTURE to TextureLoader(files, metas),
                 MetaType.SKYBOX to SkyboxLoader(files, metas, skyShaders),
@@ -94,16 +99,24 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
     private val playing = HashMap<Entity, Pair<String, AnimationController>>()
     private var scene: FieldScene? = null
 
+    /** One drawable per terrain placement, made from the shared asset it was copied from and released before it. */
+    private val placements = HashMap<Entity, Placement>()
+    private val reported = HashSet<String>()
+
     /** Seconds of play drawn so far: the sky's clouds drift by it. */
     private var skyTime = 0.0
     private val environment = SceneEnvironment()
     private val sun = DirectionalLight()
     private val shadows = FieldShadows()
 
-    /** Whether the scene's assets are all built. */
+    /**
+     * Whether the scene's assets are settled: its models and terrains are built, and its foliage is either built or
+     * failed. Foliage is optional, so a missing or unsupported one must not keep the game on its loading screen.
+     */
     fun loaded(field: FieldScene): Boolean =
         field.models.all { ctx.assetStorage.getAs<Model>(it.second) != null }
                 && field.terrains.all { ctx.assetStorage.getAs<TerrainMesh>(it.second) != null }
+                && field.foliages.all { !ctx.assetStorage.isLoading(it.foliage) }
 
     /**
      * Draws [field] seen from [camera] with [lines]; [hidden] (the pilot whose eyes the camera is) is left out. Each
@@ -116,6 +129,7 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
     ) {
         skyTime += seconds
         if (scene !== field) {
+            releasePlacements()
             instances.clear()
             playing.clear()
             scene = field
@@ -128,6 +142,7 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
         val wanted = buildSet {
             addAll(field.models.map { it.second }.toSet())
             field.terrains.mapTo(this) { it.second }
+            field.foliages.mapTo(this) { it.foliage }
             addAll(setOfNotNull(field.skyName))
         }
         wanted.forEach(ctx.assetStorage::request)
@@ -150,8 +165,13 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
         val terrains = field.terrains.mapNotNull { (entity, name) ->
             ctx.assetStorage.getAs<TerrainMesh>(name)?.let { it to field.position(entity).getTransform() }
         }
+        val foliage = foliageOf(field)
         shadows.aim(sun, field.sunDirection, field.pilot?.let { field.position(it).localPosition } ?: Vector3.Zero)
-        shadows.render(drawn.map { it.second }, terrains)
+        val light = shadows.casterCamera()
+        for ((entity, placement) in foliage) placement.drawable.updateCasters(light, field.position(entity).getTransform())
+        shadows.render(drawn.map { it.second }, terrains) { out, pool ->
+            for (placement in foliage.values) placement.drawable.getCasterRenderables(out, pool)
+        }
         shadows.attribute()?.let(environment::set)
 
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
@@ -177,11 +197,14 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
             mesh.draw(terrainShader, blank)
         }
 
+        // the viewer's own culling and buffers, after the light pass: casters never touch them
+        for ((entity, placement) in foliage) placement.drawable.update(camera, field.position(entity).getTransform())
         batch.begin(camera)
         for ((entity, instance) in drawn) {
             if (entity === hidden) continue
             batch.render(instance, environment, ShaderProvider.DEFAULT_SHADER_KEY)
         }
+        for (placement in foliage.values) batch.render(placement.drawable, environment, ShaderProvider.DEFAULT_SHADER_KEY)
         batch.end()
 
         if (lines.isNotEmpty()) {
@@ -197,6 +220,49 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
         Gdx.gl.glDisable(GL20.GL_CULL_FACE)
     }
+
+    /**
+     * The drawables of the scene's foliage that can be shown, one per terrain entity: made from the shared asset the
+     * storage built (its prepared copies and the shared models), so two terrains using one asset never share instance
+     * buffers or culling. A placement is rebuilt when its asset is, and left out, with one log line, when its asset is
+     * bound to another terrain than the entity draws.
+     */
+    private fun foliageOf(field: FieldScene): Map<Entity, Placement> {
+        val shown = LinkedHashMap<Entity, Placement>()
+        for (entry in field.foliages) {
+            val shared = ctx.assetStorage.getAs<FoliageDrawable>(entry.foliage) ?: continue
+            val bound = shared.foliage.meta.terrain
+            if (bound != entry.terrain) {
+                if (reported.add("${entry.entityId}:${entry.foliage}")) {
+                    ctx.log.warn("Foliage '${entry.foliage}' is bound to terrain '$bound', but entity ${entry.entityId} draws '${entry.terrain}': nothing drawn for it")
+                }
+                placements.remove(entry.entity)?.drawable?.dispose()
+                continue
+            }
+            val current = placements[entry.entity]
+            val placement = if (current != null && current.shared === shared) current else {
+                current?.drawable?.dispose()
+                Placement(shared, FoliageDrawable(shared.foliage, ctx.assetStorage)).also { placements[entry.entity] = it }
+            }
+            shown[entry.entity] = placement
+        }
+        return shown
+    }
+
+    /** The placement drawables of the last [draw], by entity: for tests. */
+    internal fun placementDrawables(): Map<Entity, FoliageDrawable> = placements.mapValues { it.value.drawable }
+
+    /** The sun's shadow map: for tests. */
+    internal val sunShadows: FieldShadows get() = shadows
+
+    /** Releases every placement drawable; the shared assets stay with the storage and are released after them. */
+    private fun releasePlacements() {
+        for (placement in placements.values) placement.drawable.dispose()
+        placements.clear()
+        reported.clear()
+    }
+
+    private class Placement(val shared: FoliageDrawable, val drawable: FoliageDrawable)
 
     /** The scene's models that are built, each with its instance placed at the entity's transform. */
     private fun drawnModels(field: FieldScene): List<Pair<Entity, ModelInstance>> =
@@ -222,6 +288,7 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
     }
 
     override fun dispose() {
+        releasePlacements()
         ctx.assetStorage.dispose()
         shadows.dispose()
         modelShaders.dispose()

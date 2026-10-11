@@ -19,6 +19,9 @@ import kotlin.math.acos
  *
  * The matrix stands in for `Renderable.worldTransform`, which the drawable keeps at the identity: the `instancedFlag`
  * shaders read the world matrix from the instance attributes, so the copy's transform travels there.
+ *
+ * One instance belongs to one thread at a time: it keeps scratch vectors between calls, so give the drawable, the
+ * physics world builder and any other caller each their own. It holds no terrain and nothing to release.
  */
 class FoliageMatrices {
     private val normal = Vector3()

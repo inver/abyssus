@@ -212,7 +212,10 @@ cache. See `docs/ai/conventions.md` for conflicts, mask patches and cache cleanu
 short or fully qualified; scene data never triggers arbitrary class loading. `EcsLoader` binds the wrapped
 `ecs.entities` map through `JsonProcessor.ecsReader()` and Jackson. Unregistered or unbindable component entries
 are carried as raw JSON in `EcsLoadingWarns`, with warnings. Entity ids are numeric; invalid references become
-`NO_ENTITY`. `SceneEngine` and `SceneEntityIds` live in `core.ecs`; the look-at and camera synchronization systems
+`NO_ENTITY`. `FoliageComponent` is built in and carries its source object (`SourceBackedComponent`), so a write keeps
+unknown members and number text. `SceneFoliageListing` lists a loaded engine's terrain-bound foliage without files or GL.
+`NativeJsonTree` in `core.io` is the one lossless JSON reader, used by `SceneJson` and by `SceneLoader`.
+`SceneEngine` and `SceneEntityIds` live in `core.ecs`; the look-at and camera synchronization systems
 are in `projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/system`.
 
 `RuntimeSceneLoader` combines `SceneLoader` and `EcsLoader`, installs those systems and returns a `SceneContext`.
@@ -227,6 +230,14 @@ games and Play keep an Ashley `SceneEngine`. Both use Jackson binding to `lib-co
 readers use `SceneDocument` / `EntityView`; writers use `SceneEntityTree`, supporting both a flat entity map and
 `ecs.entities`. The current runtime loader only enumerates `ecs.entities`; see the current-source review for
 compatibility gaps.
+
+**Foliage in games.** `lib-core`'s `FoliageComponent` and `SceneFoliageListing` name a loaded scene's foliage without
+files or GL; `FoliageRuntimeLoad` reads each asset as written (shared by games and `lib-physics`, so both see one
+copy set); `RuntimeFoliageLoader` (in `BaseCtx`) prepares it for the asset storage. A game makes one `FoliageDrawable`
+per terrain entity from the stored asset and draws the OBJECT copies a light camera sees into its shadow pass through
+`FoliageDrawable.updateCasters`, separately from the viewer's own culling (`update`); DETAIL copies receive shadows and
+never cast them. The editor view has its own generating path (`SceneFoliage`). See
+`projects/app-game-control-line/README.md`.
 
 **Component editing.** `ComponentEditor` supplies built-in kinds plus constructor-injected contributions. The plugin's
 `ComponentSchemas` project service (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/schema/ComponentSchemas.kt`)

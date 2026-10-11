@@ -168,7 +168,15 @@ Valid settings preview in every open Scene view using the foliage. **Apply** sav
 as one undoable operation; **Cancel**, selecting another asset or closing the panel discards the preview. The total
 limit is 1,000,000 copies: Apply, Re-bake and painting refuse results above it. After terrain regeneration or another
 change makes the bake out of date, the view regenerates the copies and the panel offers **Re-bake** to save them.
-Copies stand on the current terrain surface. Creation adds no scene entity; Undo removes the new asset unless it
+Copies stand on the current terrain surface.
+
+An **OBJECT** layer can also have a **Collider** for physics worlds: None (the default), Box, Sphere or Capsule, with
+the sizes of the chosen shape and an offset in model units. Sizes must be above zero and finite. A collider change
+alone is applied as one undoable edit of `meta.json`: **Apply** needs no preview, rewrites neither the bake nor the
+masks, and also works while the bake is out of date or missing (it stays so). Undo and Redo restore exactly the
+previous and the new metadata. **Detail** layers have no collider controls; one that came with imported data is
+kept, ignored by physics, and must be removed before an Object layer that has one can become a Detail layer.
+Creation adds no scene entity; Undo removes the new asset unless it
 is used or its files changed, and Redo restores the same files.
 
 ### Import Model

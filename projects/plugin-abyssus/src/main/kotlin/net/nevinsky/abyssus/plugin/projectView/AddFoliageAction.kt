@@ -10,7 +10,6 @@ import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.ui.popup.JBPopupFactory
-import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.plugin.dto.*
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusCore
@@ -18,7 +17,7 @@ import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.document.SceneDocument
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageComponentEdits
 
 internal fun foliageChoices(project: Project, file: VirtualFile, entityId: String, metas: MetaFiles): List<String> {
     val root = SceneDocumentCache.of(project).read(file)?.root ?: return emptyList()
@@ -37,13 +36,7 @@ internal fun foliageChoices(project: Project, file: VirtualFile, entityId: Strin
 internal fun setFoliage(project: Project, file: VirtualFile, entityId: String, name: String, metas: MetaFiles): Boolean {
     if (name !in foliageChoices(project, file, entityId, metas)) return false
     return editSceneJson(project, file, AbyssusBundle.message("commandAddFoliage")) { root ->
-        val tree = SceneEntityTree(root)
-        val components = tree.components(entityId) ?: return@editSceneJson false
-        val component = components["FoliageComponent"] as? ObjectNode
-            ?: components.putObject("FoliageComponent")
-        if (component["assetName"]?.textValue() == name) return@editSceneJson false
-        component.put("assetName", name)
-        true
+        FoliageComponentEdits().attach(root, entityId, name)
     }
 }
 

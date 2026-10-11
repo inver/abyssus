@@ -33,6 +33,9 @@ import kotlin.math.abs
 /** Side of the square shadow map, in texels. */
 const val SHADOW_MAP_SIZE = 2048
 
+/** The RGBA8888 value of the map's clear colour. */
+private const val WHITE = -1
+
 /** Side of the square the sun's shadow covers around the pilot, in metres: the field, the facilities, street and railway. */
 const val SHADOW_EXTENT = 160f
 
@@ -116,15 +119,49 @@ class FieldShadows : Disposable {
         }
     }
 
+    /**
+     * How many texels of the last [render] hold something that was drawn (the map is cleared to white, the far depth).
+     * Reads the map back, so only tests call it.
+     */
+    internal fun castTexels(): Int {
+        framebuffer.begin()
+        try {
+            val pixmap = Pixmap.createFromFrameBuffer(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE)
+            try {
+                var count = 0
+                for (y in 0 until SHADOW_MAP_SIZE) for (x in 0 until SHADOW_MAP_SIZE) if (pixmap.getPixel(x, y) != WHITE) count++
+                return count
+            } finally {
+                pixmap.dispose()
+            }
+        } finally {
+            framebuffer.end()
+        }
+    }
+
     /** The attribute that makes the model shaders read this map; set it on the models' environment. */
     fun attribute(): ShadowAtlasAttribute? = attribute
 
-    /** Draws the depth of [models] and [terrains] (mesh to world transform) into the map. */
-    fun render(models: List<ModelInstance>, terrains: List<Pair<TerrainMesh, Matrix4>>) {
+    /**
+     * The map's camera with its frustum current: the volume a foliage drawable culls its casters against, so a tree
+     * outside the viewer's frustum that shades the map is still kept. Valid after [aim].
+     */
+    fun casterCamera(): OrthographicCamera = camera.also { it.update(true) }
+
+    /**
+     * Draws the depth of [models], [terrains] (mesh to world transform) and the extra casters [extra] adds (foliage
+     * OBJECT copies) into the map.
+     */
+    fun render(
+        models: List<ModelInstance>,
+        terrains: List<Pair<TerrainMesh, Matrix4>>,
+        extra: (Array<Renderable>, Pool<Renderable>) -> Unit = { _, _ -> },
+    ) {
         pool.freeAll(renderables)
         renderables.clear()
         for (instance in models) instance.getRenderables(renderables, pool)
         for ((mesh, world) in terrains) renderables.add(mesh.depthRenderable(world, pool.obtain()))
+        extra(renderables, pool)
 
         val gl = Gdx.gl
         framebuffer.begin()

@@ -21,6 +21,8 @@ fun main() {
         useVsync(true)
         setForegroundFPS(120)
         setBackBufferConfig(8, 8, 8, 8, 24, 0, 4)
+        // foliage is drawn instanced, which needs OpenGL 3: a 3.2 core context (forward compatible on macOS)
+        setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL30, 3, 2)
     }
     Lwjgl3Application(ControlLineGame(project, defaultScoresFile()), config)
 }

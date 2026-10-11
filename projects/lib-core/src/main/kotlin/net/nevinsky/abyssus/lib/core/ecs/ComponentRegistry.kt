@@ -2,6 +2,7 @@ package net.nevinsky.abyssus.lib.core.ecs
 
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
@@ -29,6 +30,7 @@ class ComponentRegistry {
         componentMap[Point2PointPositionComponent::class.qualifiedName!!] = Point2PointPositionComponent::class.java
         componentMap[PositionComponent::class.qualifiedName!!] = PositionComponent::class.java
         componentMap[TypeComponent::class.qualifiedName!!] = TypeComponent::class.java
+        componentMap[FoliageComponent::class.qualifiedName!!] = FoliageComponent::class.java
         componentMap.values.forEach {
             shortNames.putIfAbsent(it.simpleName, it)
             writtenNames[it] = it.simpleName

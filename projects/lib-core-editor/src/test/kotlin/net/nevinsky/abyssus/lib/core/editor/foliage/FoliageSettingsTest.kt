@@ -140,4 +140,49 @@ class FoliageSettingsTest {
             """{"id":99,"kind":"DETAIL","models":[{"asset":"tree","weight":3.0}],""" +
             """"density":0.25,"scale":{"min":0.5,"max":1.5},"alignToNormal":1.0,"minHeight":5.0,"maxHeight":40.0,"maxSlope":20.0,""" +
             """"drawDistance":120.0,"seed":-956189611}]}"""
+
+    private fun layerWith(kind: String, collider: String) =
+        read("""{"terrain":"terr","layers":[{"id":1,"kind":"$kind","models":[{"asset":"tree","weight":1.0}],"collider":$collider}]}""")
+
+    @Test
+    fun aValidColliderKeepsTheLayerValidAndIsKeptRaw() {
+        val read = layerWith("OBJECT", """{"shape":"CAPSULE","radius":0.4,"halfHeight":3,"vendor":{"k":1}}""")
+        assertTrue(read.problems.toString(), read.valid)
+        assertEquals(1, read.settings.layers.single().collider!!["vendor"]["k"].asInt())
+    }
+
+    @Test
+    fun anAbsentOrNullColliderIsNone() {
+        assertNull(layerWith("OBJECT", "null").settings.layers.single().collider)
+        assertNull(read("""{"terrain":"terr","layers":[{"id":1}]}""").settings.layers.single().collider)
+    }
+
+    @Test
+    fun colliderSizesMustBeFiniteAndPositiveAndOffsetsFinite() {
+        only(layerWith("OBJECT", """{"shape":"SPHERE","radius":0}"""), FoliageError.COLLIDER_SIZE)
+        only(layerWith("OBJECT", """{"shape":"BOX","halfExtents":{"x":1,"y":1,"z":1e50}}"""), FoliageError.COLLIDER_SIZE)
+        only(layerWith("OBJECT", """{"shape":"CAPSULE","radius":0.4,"halfHeight":-1}"""), FoliageError.COLLIDER_SIZE)
+        only(layerWith("OBJECT", """{"offset":{"x":1e50}}"""), FoliageError.COLLIDER_OFFSET)
+        only(layerWith("OBJECT", """{"shape":"HULL"}"""), FoliageError.COLLIDER_MALFORMED)
+        only(layerWith("OBJECT", """"box""""), FoliageError.COLLIDER_MALFORMED)
+        val problem = read("""{"terrain":"terr","layers":[{"id":1,"models":[{"asset":"tree"}],"collider":{"shape":"SPHERE","radius":0}}]}""").problems.single()
+        assertEquals(FOLIAGE_COLLIDER, problem.field)
+        assertEquals(messages.message("foliageError.COLLIDER_SIZE"), problem.reason)
+    }
+
+    @Test
+    fun aDetailLayersImportedColliderIsNotValidatedOrBlocking() {
+        assertTrue(layerWith("DETAIL", """{"shape":"SPHERE","radius":0}""").valid)
+    }
+
+    @Test
+    fun objectToDetailWithAColliderNeedsExplicitRemoval() {
+        val before = layerWith("OBJECT", """{"shape":"SPHERE","radius":1}""").settings
+        val detail = before.copy(layers = before.layers.map { it.copy(kind = "DETAIL") })
+        assertEquals(FoliageError.COLLIDER_KIND, reader.transitions(before, detail).single().error)
+        val cleared = detail.copy(layers = detail.layers.map { it.copy(collider = null) })
+        assertTrue(reader.transitions(before, cleared).isEmpty())
+        // a layer that was already DETAIL with imported data is not blocked
+        assertTrue(reader.transitions(detail, detail).isEmpty())
+    }
 }

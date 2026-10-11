@@ -20,16 +20,16 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 
 | Package | What |
 |---|---|
-| `core.io`, `core.util` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `GeometryUtils` |
+| `core.io`, `core.util` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `NativeJsonTree` (the lossless reader: key order, nulls and number text such as `2.50` and `1.0E-4` kept; `SceneJson` and `SceneLoader` both read through it), `SourceBackedComponent` (a component written back from the object it was read from), `GeometryUtils` |
 | `core.defaults` | Top-level `NO_ENTITY` reference sentinel |
 | `core.dto` | `ProjectDto`, `SceneDto`, camera, light, fog and ray preference DTOs |
 | `project`, `scene` (under `lib-core`) | `ProjectLoader`, `SceneLoader`, `RuntimeSceneLoader`, `SceneContext` and `SceneEnvironment` |
-| `core.ecs` | Component registration and loading, `SceneEngine`, `SceneEntityIds`; `component/` holds Ashley classes and render-asset lookup, `system/` holds look-at and camera synchronization |
+| `core.ecs` | Component registration and loading, `SceneEngine`, `SceneEntityIds`, `SceneFoliageListing` (the terrain-bound foliage of a loaded engine: components only, no files or GL); `component/` holds Ashley classes and render-asset lookup, `system/` holds look-at and camera synchronization |
 | `core.assets` | `AssetMeta` and `MetaType` (the `meta.json` model; `uuid` is null when a meta declares none), `AssetMetaBinder` (one injectable settings-class registration map and metadata binding rule), `AssetMetaLoader` (validates and reads saved `meta.json`, binds through the binder, caches by timestamp and size), `AssetIndex` (the asset folder of a `uuid`), `Asset`, `runCatchingKeepingCancellation`, `Throwables` |
 | `core.assets.loading` | `AssetLoader` (prepare / dependencies / upload / build / discard), `AssetStorage` (the cache and owner of built assets: load once, fail once, slice GPU work per frame, load dependencies first) with `BuiltAssets`, `RaySnapshotStore` with `RaySnapshotLoader`, `RaySnapshot` and the leases (see below), `TextureUploadQueue`, `ShaderStorage` (GLSL from a resource folder) |
 | `core.assets.model` | `ModelLoader` (glTF and other formats through `lib-gdx`'s Assimp loader), `ModelMeta`, the ray model snapshot types and `ModelRaySnapshotLoader` |
 | `core.assets.terrain` | `TerrainLoader`, `TerrainData`, `TerrainMesh`, `TerrainMeta`, `RayTerrainSnapshot` and `TerrainRaySnapshotLoader` |
-| `core.assets.foliage` | `FoliageLoader` (`FOLIAGE` assets: reads the meta, the masks and the bake off the GL thread and declares the terrain and layer models as dependencies), `FoliageMeta` and the layer model types, `FoliageMaskFile` (`layer-<id>.mask`: `maskResolution²` bytes z-major, a missing file is a full mask), `FoliageDataFile` (the `ABFO` bake: `FoliageBake`, `FoliageLayerBake`, `FoliageCopy`, read as stale when it does not fit), `FoliageFingerprint` (SHA-256 of the generation inputs) and `FoliageDrawable` (the instanced GL side, reused by the runtime) |
+| `core.assets.foliage` | `FoliageLoader` (`FOLIAGE` assets: reads the meta, the masks and the bake off the GL thread and declares the terrain and layer models as dependencies), `FoliageMeta` and the layer model types, `FoliageMaskFile` (`layer-<id>.mask`: `maskResolution²` bytes z-major, a missing file is a full mask), `FoliageDataFile` (the `ABFO` bake: `FoliageBake`, `FoliageLayerBake`, `FoliageCopy`, read as stale when it does not fit), `FoliageFingerprint` (SHA-256 of the generation inputs), `FoliageRuntimeLoad` (the read policy of games and physics: metadata, terrain, bake and masks as written, never generated or written; a stale or unverifiable bake keeps its saved copies, copies that cannot be placed are dropped, and problems are returned as bounded warnings), `FoliageCollider` / `FoliageColliderReader` (a layer's optional neutral BOX/SPHERE/CAPSULE `collider`, with the `ColliderComponent` defaults; absent is told apart from invalid) and `FoliageDrawable` (the instanced GL side, reused by the runtime) |
 | `core.assets.texture` | `TextureLoader` (`TEXTURE` and `PIXMAP_TEXTURE` assets: image decoded off the GL thread, uploaded as a mipmapped repeating texture), `PreparedTexture` (the decoded image; `release()` hands the `Pixmap` to a caller that uploads it itself) and `TextureMeta` |
 | `core.assets.sky` | `SkyRenderer` (a drawable background) and `RaySkySnapshot`; `cube/` six-face skyboxes, `procedural/` skies drawn by the asset's own GLSL, `hdr/` OpenEXR skies and their lighting environment. Each has a `*Loader` and a `*RaySnapshotLoader` |
 | `core.assets.sky.clouds` | The clouds of a procedural sky: `CloudMeta`, nested `CloudMeta.CloudBand`, `CloudType` (level and defaults), `CloudLevel` with its `CloudBandLimits`, `CloudTechnique`; settings decode through `AssetMetaBinder` / `CloudSettingsReader`; `CloudsLoader` and `Clouds` (the `CLOUDS` asset: bands, technique and the volumetric 3D noise from `CloudNoiseGenerator`, built on FastNoiseLite), which a procedural sky names by `uuid` and loads as a dependency; `CloudField`, the cloud techniques and `SunOcclusion` |
@@ -78,6 +78,12 @@ plugin. `BaseCtx` is the standalone composition root; the IDE builds its own gra
 `JsonProcessor(log)` owns Jackson configuration. `ComponentRegistry()` starts with the built-in Ashley components;
 register additional classes with `register(name, clazz)` or `registerAll(map)` before loading. Classes must be
 Jackson-bindable; there is no annotation-based schema export API in this source set.
+
+`FoliageComponent(assetName)` is built in. It keeps the object it was read from, so unknown members, key order and number
+text survive a write and only a changed `assetName` is patched; a name that is not a string leaves the component raw with
+one warning. `SceneLoader` keeps the scene's `ecs` block as `NativeJsonTree` read it, so that spelling reaches the binding.
+`SceneFoliageListing(warn).list(engine)` lists terrain entities with a nonempty foliage name; a foliage component on an
+entity that renders no terrain is reported once.
 
 `EcsLoader(json, registry).loadToEngine(ecs, SceneEngine())` reads `ecs.entities` and returns `EcsLoadingWarns`,
 including raw components that could not bind. `RuntimeSceneLoader(sceneLoader, ecsLoader, log)` combines native
