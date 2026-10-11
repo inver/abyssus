@@ -140,6 +140,10 @@ or `RayMaterialTest`.
   `aUniformFactorDimsTheSunEverywhereAndAMissingSunLeavesTheSceneUnchanged`,
   `cloudVisibilityReachesTheSunOnlyOnceAndSurvivesTheSunsOwnShadow`, `RaySunVisibilityTest`). Scenes without a map render
   exactly as before. The Metal and Vulkan kernels share the maths with `RaySceneReferenceRenderer` (the fake backend).
+- **Texture budget.** The shading payload carries at most `RAY_MAX_TEXTURE_TEXELS` (16M) 8-bit texels. The scene conversion
+  halves the largest textures (2x2 box average, `fitTextureTexels`) until they fit, so a scene with many large textures
+  renders with softer textures instead of failing at upload; a snapshot that still exceeds the budget is an explicit
+  raster fallback (`RaySceneSnapshot.unsupportedReason`), never an exception (`RayTextureBudgetTest`).
 - **Fog.** Primary hits use the raster quadratic ramp `min(d^2 * (1 - 1/e) * density^2, 1)` on the world-space hit
   distance; the sky is not fogged, and reflected hits are not fogged (`fogFollowsHitDistanceAndLeavesTheSkyUnfogged`).
   Fog `gradient` shapes nothing, as in raster.

@@ -116,6 +116,11 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
     // Converted static meshes and textures per retained asset object, so unchanged assets keep their identity from one
     // capture to the next and the backend reuses its acceleration structures. Weak: a replaced asset drops its entry.
     private val shared = java.util.WeakHashMap<Any, MutableMap<String, Any>>()
+
+    // Halved copies of oversized textures, per source object, so a scene over the texel budget reduces them once, not every frame.
+    private val halved = java.util.WeakHashMap<RayTexture, RayTexture>()
+    private fun halvedTexture(texture: RayTexture): RayTexture? =
+        halved[texture] ?: texture.halved()?.also { halved[texture] = it }
     fun capture(
         params: SceneRenderParams, camera: PerspectiveCamera, lightSet: LightSet,
         assets: RaySceneAssetState, preview: Map<String, DragResult> = emptyMap(), activeCameraId: String? = null,
@@ -156,7 +161,8 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 builder.meshes,
                 builder.instances,
                 builder.materials,
-                builder.textures,
+                fitTextureTexels(builder.textures, halve = ::halvedTexture)
+                    ?: throw RaySceneLimitException("The scene textures cannot be reduced to $RAY_MAX_TEXTURE_TEXELS texels"),
                 lights(lightSet),
                 environment ?: RayEnvironment(
                     ambient = params.ambient?.ray() ?: RayColor(0f, 0f, 0f),

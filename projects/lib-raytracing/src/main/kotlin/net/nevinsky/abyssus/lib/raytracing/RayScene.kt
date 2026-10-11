@@ -51,6 +51,24 @@ class RayTexture private constructor(val id: String, val width: Int, val height:
     /** Identity, or equal id, size, sampler and pixels: a recaptured but unchanged texture needs no re-upload. */
     fun sameContentAs(o:RayTexture)=this===o || (id==o.id && width==o.width && height==o.height && wrapU==o.wrapU && wrapV==o.wrapV && filter==o.filter &&
         floats.contentEquals(o.floats) && bytes.contentEquals(o.bytes))
+    /** Texels of a byte texture; float textures live in the float section and are bounded there. */
+    val byteTexels get()=if(bytes!=null) width.toLong()*height else 0L
+    /** A byte texture at half the width and height (2x2 box average), or null for a float texture or a single texel. */
+    fun halved(): RayTexture? {
+        val src=bytes ?: return null
+        if(width==1 && height==1) return null
+        val w=maxOf(1,width/2);val h=maxOf(1,height/2)
+        val out=ByteArray(w*h*4)
+        for(y in 0 until h) for(x in 0 until w) for(c in 0 until 4) {
+            var sum=0;var n=0
+            for(dy in 0..1) for(dx in 0..1) {
+                val sx=minOf(x*2+dx,width-1);val sy=minOf(y*2+dy,height-1)
+                sum+=src[(sy*width+sx)*4+c].toInt() and 255;n++
+            }
+            out[(y*w+x)*4+c]=((sum+n/2)/n).toByte()
+        }
+        return RayTexture(id,w,h,out,wrapU,wrapV,filter)
+    }
     internal fun pixel(x: Int,y: Int): RayColor {
         val p=(y*width+x)*4
         bytes?.let { return RayColor((it[p].toInt() and 255)/255f,(it[p+1].toInt() and 255)/255f,(it[p+2].toInt() and 255)/255f,(it[p+3].toInt() and 255)/255f) }
@@ -171,6 +189,23 @@ const val RAY_MAX_MATERIALS = 128
 const val RAY_MAX_TEXTURES = 128
 const val RAY_MAX_LIGHTS = 12
 
+/** The most 8-bit texels a scene's textures may hold together; the native shading payload carries 4 bytes for each. */
+const val RAY_MAX_TEXTURE_TEXELS = 16L*1024*1024
+/**
+ * [textures] with the largest 8-bit ones halved ([halve], 2x2 box average by default) until their texels fit [budget],
+ * keeping every index, id and sampler; the same list when it already fits, null when even single texels cannot fit.
+ * Float textures are left alone.
+ */
+fun fitTextureTexels(textures:List<RayTexture>,budget:Long=RAY_MAX_TEXTURE_TEXELS,halve:(RayTexture)->RayTexture?={ it.halved() }):List<RayTexture>? {
+    if(textures.sumOf { it.byteTexels }<=budget) return textures
+    val fitted=textures.toMutableList()
+    while(fitted.sumOf { it.byteTexels }>budget) {
+        val largest=fitted.indices.filter { fitted[it].byteTexels>1 }.maxByOrNull { fitted[it].byteTexels } ?: return null
+        fitted[largest]=halve(fitted[largest]) ?: return null
+    }
+    return fitted
+}
+
 class RaySceneSnapshot(meshes: List<RayMesh>, instances: List<RayInstance>, materials: List<RayMaterial>, textures: List<RayTexture>, lights: List<RayLight>,
     val environment: RayEnvironment=RayEnvironment(), val fog: RayFog?=null, val sunVisibility: RaySunVisibility?=null) {
     val meshes=rayList(meshes); val instances=rayList(instances); val materials=rayList(materials); val textures=rayList(textures); val lights=rayList(lights)
@@ -179,6 +214,7 @@ class RaySceneSnapshot(meshes: List<RayMesh>, instances: List<RayInstance>, mate
         materials.size>RAY_MAX_MATERIALS -> "Scene has more than $RAY_MAX_MATERIALS materials"
         textures.size+(if(sunVisibility!=null) 1 else 0)>RAY_MAX_TEXTURES -> "Scene has more than $RAY_MAX_TEXTURES textures"
         lights.size>RAY_MAX_LIGHTS -> "Scene has more than $RAY_MAX_LIGHTS lights"
+        textures.sumOf { it.byteTexels }>RAY_MAX_TEXTURE_TEXELS -> "Scene textures exceed $RAY_MAX_TEXTURE_TEXELS texels"
         geometryBytes>RAY_MAX_GEOMETRY_BYTES -> "Scene geometry exceeds the $RAY_MAX_GEOMETRY_BYTES byte budget"
         blendedInstances>RAY_MAX_BLENDED_INSTANCES -> "Ray transparency exceeds the supported layer limit"
         else -> RayOpticalEligibility().unsupportedReason(this)

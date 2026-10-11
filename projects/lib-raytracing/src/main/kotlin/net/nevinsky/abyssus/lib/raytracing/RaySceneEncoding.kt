@@ -102,4 +102,4 @@ internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
 }
 
 private const val MAX_SCENE_FLOATS = 16L*1024*1024
-private const val MAX_TEXTURE_TEXELS = 16L*1024*1024
+private const val MAX_TEXTURE_TEXELS = RAY_MAX_TEXTURE_TEXELS
