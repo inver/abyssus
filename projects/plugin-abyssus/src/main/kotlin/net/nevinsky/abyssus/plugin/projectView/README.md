@@ -100,3 +100,10 @@ metadata file through `AssetTransaction`; `AssetFileCommand.execute` owns rollba
 `AssetReferenceGuard` refuses deletion once saved or unsaved documents reference the snapshot.
 `selectAssetInAbyssusView` selects the created cloud asset after refresh. Its UUID, timestamp and bytes remain
 stable on Redo. Source cloud metadata, the sky, scenes and project are never edited by creation.
+
+## Arrangement copies in the tree
+
+`ecsRows` (`DtoTree.kt`) leaves out the linked copies of a path arrangement (`arrangementCopyIds` in `lib-core-editor`: the
+entities an arrangement lists in `slots` that point back to it with a `ParentComponent`), and the arrangement's row reads
+`N components, M copies`. A detached copy is listed as an ordinary entity. Only the tree changes: a hidden copy has no row,
+so picking it in the Scene view selects nothing in the tree (`selectEntityInAbyssusView` does nothing for a missing row).

@@ -46,7 +46,7 @@ generator and the materials it used.
   sunk under the site. The site terrain keeps the field's height-field collider.
 - Generated models (`build_environment.py`, with ambientCG textures): `model_airfield_pad` (a decal 1 cm above the level
   terrain), `_utility`, `_dk_plamya`, `_warehouse`, `_long_building`, `_apartment_block`, `_house_a`, `_house_b`,
-  `_railway` (a 50 m segment), `_street_lamp`, `_model_stand`.
+  `_railway` (a 50 m segment, placed as one `Railway` path arrangement of 12 linked copies by `layout.py`, as the editor's Add Path Arrangement writes it), `_street_lamp`, `_model_stand`.
 - Poly Haven models, reduced in Blender: `model_airfield_tree_broadleaf` (Island Tree 01), `_tree_acacia` (Jacaranda
   Tree), `_tree_young` (Tree Small 02), `_bush_tall` (Island Tree 02), `_bush_low` (Island Tree 03), `_table_picnic`
   (Wooden Picnic Table), `_table_work` (Painted Wooden Table). For the trees, a share of the leaf clusters is kept and
