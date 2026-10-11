@@ -18,6 +18,23 @@ Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json` a
 `<user-home>/.abyssus-control-line/f2b-scores.json`; a file that cannot be read is renamed to `scores.json.bad` or
 `f2b-scores.json.bad`.
 
+## UI demo
+
+A separate, standalone host proves that menus and HUDs authored as Abyssus `UI` assets run in a game the same way as in
+the editor's preview. It does not start Control Line and does not touch its screens or its `project/ControlLine`:
+
+```
+./gradlew :app-game-control-line:runUiDemo
+```
+
+It opens the `menus` asset of its own fixture project `uiDemo/UiDemo` (open a *copy* of that folder in the IDE to edit
+it): a main menu with a name field, volume slider, mute checkbox and Start / Settings / Quit, a settings screen, a
+non-modal HUD overlay (health bar, score, Pause) and a modal pause overlay. `UiDemoHost` supplies changing values
+(health drains and the score climbs after Start), snaps the volume to 0.05 steps, rejects the names `admin` and blank,
+and handles the actions `startGame`, `toMenu` and `quit`. Tab / Shift-Tab, Enter / Space and Escape work as in the
+editor preview. Tests: `./gradlew :app-game-control-line:test --tests '*UiDemoHostTest'`, plus `UiDemoGlTest` with
+`-Dabyssus.glTests=true`.
+
 ## Controls
 
 | Where | Keys and mouse |

@@ -39,5 +39,6 @@ enum class MetaType {
     MODEL,
     TERRAIN,
     CLOUDS,
-    FOLIAGE
+    FOLIAGE,
+    UI
 }

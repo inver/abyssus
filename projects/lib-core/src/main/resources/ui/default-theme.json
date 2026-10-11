@@ -1,0 +1,90 @@
+{
+  "panel": {
+    "background": "#00000000"
+  },
+  "row": {},
+  "column": {},
+  "label": {
+    "color": "#ffffffff",
+    "fontSize": 16
+  },
+  "image": {
+    "tint": "#ffffffff"
+  },
+  "button": {
+    "color": "#ffffffff",
+    "fontSize": 16,
+    "background": "#3a4a5cff",
+    "padding": 8,
+    "states": {
+      "hover": {
+        "background": "#4a5e75ff"
+      },
+      "pressed": {
+        "background": "#2a3644ff"
+      },
+      "focused": {
+        "borderColor": "#ffcc33ff",
+        "borderWidth": 2
+      },
+      "disabled": {
+        "color": "#8c8c8cff",
+        "background": "#2a2a2a80"
+      }
+    }
+  },
+  "progressBar": {
+    "background": "#222831ff",
+    "fill": "#4caf50ff",
+    "padding": 0
+  },
+  "slider": {
+    "background": "#222831ff",
+    "fill": "#4a90d9ff",
+    "knob": "#ffffffff",
+    "states": {
+      "focused": {
+        "borderColor": "#ffcc33ff",
+        "borderWidth": 2
+      },
+      "disabled": {
+        "fill": "#55606cff",
+        "knob": "#999999ff"
+      }
+    }
+  },
+  "checkbox": {
+    "color": "#ffffffff",
+    "fontSize": 16,
+    "background": "#222831ff",
+    "fill": "#4a90d9ff",
+    "states": {
+      "hover": {
+        "background": "#323b47ff"
+      },
+      "focused": {
+        "borderColor": "#ffcc33ff",
+        "borderWidth": 2
+      },
+      "disabled": {
+        "color": "#8c8c8cff"
+      }
+    }
+  },
+  "textField": {
+    "color": "#ffffffff",
+    "fontSize": 16,
+    "background": "#1b2027ff",
+    "padding": 6,
+    "states": {
+      "focused": {
+        "borderColor": "#ffcc33ff",
+        "borderWidth": 2
+      },
+      "disabled": {
+        "color": "#8c8c8cff",
+        "background": "#1b202780"
+      }
+    }
+  }
+}

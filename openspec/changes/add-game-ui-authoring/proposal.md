@@ -13,7 +13,7 @@ Game menus and HUDs currently require handwritten layouts, as Control Line's Sce
 - Add interactive preview with selectable resolution, scene backdrop for overlays, editable sample values and an action log. Preview never invokes game code or writes real settings.
 - Store `type: "UI"` and `additional.ui` in asset `meta.json`; UI fields include `schemaVersion`, `entryScreen`, `screens`, `bindings`, `resources` and `styles`. Add optional project `.abss` `uiAssetNames` as the explicit UI asset registry and usage roots. No scene fields change.
 - Validate native markers through `AbyssusDocumentFormat` before binding/editing/previewing; validate UI schema version 1 separately. Preserve unknown fields, unrelated number text, key order and omitted defaults. Native `formatVersion` stays 1; no migration is introduced.
-- Out of scope: arbitrary scripts or expressions, animation timelines, full theme editor, gamepad navigation, custom widget plugins, automatic conversion of Kotlin menus, full game execution in preview, and replacing Control Line's existing menus in this change.
+- Out of scope: arbitrary scripts or expressions, animation timelines, full theme editor, gamepad navigation, custom widget plugins, automatic conversion of Kotlin menus, full game execution in preview, and replacing Control Line's existing menus in this change. The standalone demo uses its own fixture project, not Control Line's committed `project/ControlLine`.
 
 ## Capabilities
 

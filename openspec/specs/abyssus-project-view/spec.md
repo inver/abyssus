@@ -207,6 +207,13 @@ expanding, refreshing, and reopening the view do not lose or duplicate nodes.
 - **WHEN** a project's `assets` list holds a FOLIAGE asset next to a TERRAIN and a MODEL asset
 - **THEN** the foliage entry uses the foliage icon, which differs from the terrain and model icons
 
+#### Scenario: Entity icons follow their type
+
+- **WHEN** an entity under `ecs` has a `TypeComponent` using its short or fully qualified class name
+- **THEN** its row uses a distinct SVG icon for each of GROUP, LIGHT_DIRECTIONAL, LIGHT_POINT, LIGHT_SPOT, OBJECT,
+  TERRAIN, CAMERA and HANDLE, and a type change updates the icon on refresh even when its label and component count stay the same
+- **AND** an absent, null or unknown type uses the generic ECS icon
+
 ### Requirement: Asset file recognition
 
 The plugin SHALL register `.scene` and `.abss` files as recognized file types so they are

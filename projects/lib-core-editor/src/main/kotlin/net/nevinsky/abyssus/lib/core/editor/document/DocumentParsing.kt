@@ -29,6 +29,16 @@ class DocumentParsing(
     fun projectName(source: String, readText: () -> String): String? =
         reportedOrThrow("project $source") { projectName(readText()) }
 
+    /** The `uiAssetNames` of the project [text]: its textual entries in order; an absent or malformed list is empty. */
+    fun uiAssetNames(text: String): List<String> {
+        val root = json.readObject(text)
+        format.requireSupported(root, DocumentKind.PROJECT)
+        return root.get("uiAssetNames")?.takeIf { it.isArray }?.mapNotNull { it.takeIf { n -> n.isTextual }?.textValue() }.orEmpty()
+    }
+
+    fun uiAssetNames(source: String, readText: () -> String): List<String> =
+        reportedOrThrow("project $source") { uiAssetNames(readText()) }
+
     fun parse(text: String): SceneDto {
         val root = json.readObject(text)
         format.requireSupported(root, DocumentKind.SCENE)

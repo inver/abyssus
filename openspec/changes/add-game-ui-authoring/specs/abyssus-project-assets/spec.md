@@ -4,13 +4,16 @@
 
 ### Requirement: Unused asset marking
 
-The view SHALL mark an asset as unused when neither a scene nor a registered UI asset of the project reaches it. Native project uiAssetNames entries naming supported UI assets SHALL be additional usage roots. Navigation targets in a reached UI asset SHALL reach their target UI assets transitively; local styling resource files are owned by their UI asset rather than separate assets. Missing, unsupported and cyclic UI references SHALL be diagnosed without blocking other usage results. A scene
+The view SHALL mark an asset as unused when no root of the project reaches it. A scene is a root and
 references an asset directly when its ECS data names the asset's folder in an `assetName` or
-`shaderKey` field, or when its `skyboxName` equals the folder name. A used asset in turn uses the assets whose
+`shaderKey` field, or when its `skyboxName` equals the folder name. A native project `uiAssetNames` entry naming a
+supported UI asset is an additional root. A used asset in turn uses the assets whose
 `uuid` appears in its own `meta.json` as a terrain splat texture (`splatMap`, `splatBase`,
 `splatR`, `splatG`, `splatB`, `splatA`) or as a model material (`materials`), and a used foliage asset uses the
-terrain named by its `additional.terrain` and the models named by its layers, transitively. The
-marker SHALL be visible in the asset's row without expanding it.
+terrain named by its `additional.terrain` and the models named by its layers, transitively. A used UI asset uses the
+UI assets named by its navigation targets, transitively; its local styling resource files are owned by it and are not
+separate assets. Missing, unsupported and cyclic UI references SHALL be diagnosed without blocking other usage results.
+The marker SHALL be visible in the asset's row without expanding it.
 
 #### Scenario: Referenced asset is not marked
 
@@ -102,3 +105,7 @@ marker SHALL be visible in the asset's row without expanding it.
 - **WHEN** an unregistered UI asset is not reached by any scene or registered UI asset
 - **THEN** it is marked unused
 
+#### Scenario: Malformed registered menu asset
+
+- **WHEN** a registered UI asset has an unsupported schema version
+- **THEN** it is diagnosed, its navigation targets are not followed, and usage of other assets is unaffected

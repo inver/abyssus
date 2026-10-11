@@ -15,6 +15,8 @@ data class ProjectDto(
     val name: String?,
     val scenes: List<Any>,
     val assets: List<Asset<Any>>,
+    /** Problems of the registered UI assets and their navigation links; not a tree row. */
+    @get:JsonIgnore val uiUsageIssues: List<UiUsageIssue> = emptyList(),
 )
 
 /** A scene file that could not be read; shown as an `error` row under the scene's file name. */

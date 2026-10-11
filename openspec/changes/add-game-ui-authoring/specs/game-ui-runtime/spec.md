@@ -55,3 +55,20 @@ Buttons SHALL support opening screens, going back, showing and closing overlays,
 - **WHEN** the player activates a button bound to startGame
 - **THEN** the game receives one startGame action and decides how gameplay starts
 
+### Requirement: Escape and commit timing
+Escape SHALL close the topmost overlay, otherwise go back, and do nothing at the root; a host may handle Escape first. Sliders SHALL commit on release or keyboard step, checkboxes on toggle, and text fields on Enter or focus loss.
+
+#### Scenario: Escape closes overlay
+- **WHEN** a pause overlay is open over a screen and Escape is pressed
+- **THEN** the overlay closes and the screen keeps its focus
+
+#### Scenario: Slider drag
+- **WHEN** a slider is dragged across several values and released
+- **THEN** exactly one write is submitted, with the released value
+
+### Requirement: Unknown widgets
+Unknown widget kinds SHALL render as inert placeholders with a diagnostic and SHALL NOT receive focus.
+
+#### Scenario: Unknown widget in a screen
+- **WHEN** a screen contains an unknown widget kind beside a button
+- **THEN** the button remains usable and the unknown widget is a placeholder

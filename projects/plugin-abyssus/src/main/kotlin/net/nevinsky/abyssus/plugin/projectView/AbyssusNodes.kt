@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.editor.document.scalarOf
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.plugin.EditorBundle
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -26,6 +27,7 @@ import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectIcons
 import net.nevinsky.abyssus.plugin.filetype.AssetIcons
 import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
+import net.nevinsky.abyssus.plugin.filetype.EntityIcons
 import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneIcons
 import net.nevinsky.abyssus.plugin.filetype.ScenesIcons
@@ -112,12 +114,21 @@ class DtoEntry(
     val parentKeys: List<String>,
 ) {
     // The tree keeps an existing node when a refreshed one is equal, so anything that changes how the
-    // row looks (the toggle state, a scalar's value) must take part, or the row stays stale after a toggle.
+    // row looks (the toggle state, a scalar's value, the entity type) must take part to avoid stale rows.
     override fun equals(other: Any?) =
         other is DtoEntry && other.path == path && other.enabled == enabled && rowText(other) == rowText(this) &&
             (if (isScalar(value)) scalarOf(value) == scalarOf(other.value) else !isScalar(other.value)) &&
-            (value as? Asset<*>)?.unused == (other.value as? Asset<*>)?.unused
+            (value as? Asset<*>)?.unused == (other.value as? Asset<*>)?.unused && entityType() == other.entityType()
     override fun hashCode() = path.hashCode()
+}
+
+/** Reads only the admitted row's JSON, without loading runtime components or assets. */
+private fun DtoEntry.entityType(): TypeComponent.Type? {
+    if (!isEntityEntry(this)) return null
+    val components = (value as? JsonNode)?.get("components") ?: return null
+    val component = components.get(TypeComponent::class.java.name) ?: components.get("TypeComponent")
+    val name = component?.get("type")?.takeIf { it.isTextual }?.textValue() ?: return null
+    return TypeComponent.Type.entries.firstOrNull { it.name == name }
 }
 
 private fun entryIcon(entry: DtoEntry): Icon {
@@ -126,7 +137,7 @@ private fun entryIcon(entry: DtoEntry): Icon {
         dto is List<*> && entry.name == "scenes" -> ScenesIcons.LIST
         dto is List<*> && entry.name == "assets" -> AllIcons.Nodes.Folder
         dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
-        isEntityEntry(entry) -> PropertyIcons.ECS
+        isEntityEntry(entry) -> EntityIcons.forType(entry.entityType())
         isComponentEntry(entry) -> ComponentIcons.forComponent(entry.name)
         dto is SceneEntry && dto.file.extension == ProjectLayout.SCENE_EXTENSION -> SceneIcons.FILE
         PropertyIcons.forProperty(entry.name) != null -> PropertyIcons.forProperty(entry.name)!!

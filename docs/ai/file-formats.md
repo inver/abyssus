@@ -53,6 +53,9 @@ The plugin reads:
 - `physicsEnabled`: an optional boolean for editor physics. Missing, false or malformed means off; unsupported
   native documents cannot enable physics. The settings service reads unsaved document text when present.
 
+- `uiAssetNames`: an optional ordered list of UI asset folder names, the explicit registry of the project's UI assets
+  (see *UI assets* below). Missing means none and is never inserted on read; entries that are not strings are skipped.
+
 Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored. Changing Physics in project
 properties writes only `physicsEnabled` through `editSceneJson` as one undoable command; off is explicit `false`.
 Reads never insert the key or repair malformed values. `SceneFormatListener` may also format a supported `.abss`.
@@ -179,6 +182,7 @@ implementation does not yet provide it.
 | `FOLIAGE` | `terrain`, `dataFile`, `maskResolution`, `layers` (see *Foliage* below) |
 | `TEXTURE`, `PIXMAP_TEXTURE` | `file`; loaded as textures, including terrain splat dependencies |
 | `MATERIAL`, `SHADER` | Recognized metadata types; no standalone scene drawable |
+| `UI` | `ui`: a collection of screens and overlays (see *UI assets* below) |
 
 `uuid` can be missing (the fixture's `skybox_default` and `tree` have none).
 
@@ -434,6 +438,71 @@ radiance becomes zero and positive values saturate at 65504. The horizontal cent
 The fixture is `projects/plugin-abyssus/src/test/testData/project/Untitled/assets/skybox_hdr/`, whose metadata names `sky.exr`.
 Radiance `.hdr` decoding and extension-based file discovery are not implemented by the current loader.
 
+### UI assets
+
+A `UI` asset holds named, standalone screens and overlays under `additional.ui`. It is decoded by
+`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ui/validation/UiCollectionDecoder.kt`, which first requires the
+native markers (`AbyssusDocumentFormat`) and then an integral `additional.ui.schemaVersion` of `1`. The UI schema
+version is separate from `formatVersion`; additive UI fields do not bump either.
+
+| Field | Meaning |
+|---|---|
+| `entryScreen` | optional id of the screen a host opens first; the first screen when missing, an error when it names no screen |
+| `screens[]` | `id`, `name`, `kind` (`screen` or `overlay`, default `screen`), `referenceSize` (`width`, `height`, default 1280 x 720), `modal` (default `false`) and `root`, a widget |
+| widget | `id`, `type`, `layout`, `style`, `properties`, `bindings`, `actions` and, for containers only, `children` |
+| widget `type` | `panel`, `row`, `column` (containers), `label`, `image`, `button`, `progressBar`, `slider`, `checkbox`, `textField`; any other name is kept and shown as an inert placeholder |
+| `layout` | `anchor`, `pivot` (`topLeft`, `top`, `topRight`, `left`, `center`, `right`, `bottomLeft`, `bottom`, `bottomRight`), `x`, `y`, `width`, `height`, `grow`, `padding`, `spacing`, `align` (`start`, `center`, `end`, `stretch`); sizes, `grow`, `padding` and `spacing` are not negative |
+| widget `bindings` | property name (`text`, `value`, `maximum`, `checked`, `visible`, `enabled`) to a binding name |
+| widget `actions` | event (`click`) to `{ "type": ..., "screenId", "assetName", "name" }`; `type` is `openScreen`, `back`, `showOverlay`, `closeOverlay` or `emitAction`; `assetName` is omitted for a screen of the same asset |
+| `bindings[]` | `name`, `type` (`number`, `boolean`, `string`), `access` (`readOnly` default, or `write`), `sample` of that type, optional `min`, `max`, `step` (positive) or `maxLength` |
+| `resources[]` | `id`, `kind` (`image`, `bitmapFont`) and a `path` inside the asset folder |
+| `styles[]` | `name` and the style values the renderer reads |
+
+Limits, checked before anything is built: depth 64, 10,000 widgets for the whole collection, 8192 pixels per image
+side. Ids of screens, widgets, bindings and resources are unique. Errors (version, duplicate id, bad geometry, a
+binding of the wrong type, a limit) refuse the whole collection; an unknown widget, a widget binding no `bindings[]`
+entry declares and a local screen target that does not exist are warnings. Unknown members stay in the tree and edits
+keep key order and number text.
+
+<!-- ui-minimal-example -->
+```json
+{
+  "format": "abyssus", "formatVersion": 1, "type": "UI", "uuid": "6f1c6f0e-3a54-4c53-9a42-0d7d3f5b7a10",
+  "additional": { "ui": {
+    "schemaVersion": 1,
+    "entryScreen": "main",
+    "bindings": [
+      { "name": "volume", "type": "number", "access": "write", "sample": 0.5, "min": 0, "max": 1, "step": 0.05 },
+      { "name": "health", "type": "number", "sample": 75 },
+      { "name": "maxHealth", "type": "number", "sample": 100 }
+    ],
+    "resources": [ { "id": "logo", "kind": "image", "path": "logo.png" } ],
+    "styles": [ { "name": "title", "fontSize": 32 } ],
+    "screens": [
+      { "id": "main", "name": "Main menu", "root": {
+          "id": "root", "type": "column", "layout": { "anchor": "center", "spacing": 12, "align": "center" },
+          "children": [
+            { "id": "title", "type": "label", "style": "title", "properties": { "text": "Control Line" } },
+            { "id": "volume", "type": "slider", "bindings": { "value": "volume" } },
+            { "id": "start", "type": "button", "properties": { "text": "Start" }, "actions": { "click": { "type": "emitAction", "name": "startGame" } } },
+            { "id": "settings", "type": "button", "properties": { "text": "Settings" }, "actions": { "click": { "type": "showOverlay", "screenId": "hud" } } }
+          ] } },
+      { "id": "hud", "name": "HUD", "kind": "overlay", "referenceSize": { "width": 1280, "height": 720 }, "root": {
+          "id": "hud-root", "type": "panel", "children": [
+            { "id": "health-bar", "type": "progressBar", "layout": { "anchor": "topRight", "x": -16, "y": 16, "width": 200, "height": 16 },
+              "bindings": { "value": "health", "maximum": "maxHealth" } }
+          ] } }
+    ]
+  } }
+}
+```
+
+**Registry and reachability.** Creating a UI asset adds its folder name to `uiAssetNames`. The registered names are
+roots for *Reachability* below, so a menu no scene mentions is still used. Games open a registered collection by name;
+UI is not a renderable entity and no scene field changes. `UiProjectRegistry`
+(`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/project/UiProjectRegistry.kt`) reports a duplicate, missing,
+unreadable or wrong-type entry as a problem and returns the admission of the others.
+
 ### Reachability ("unused")
 
 `ProjectReader` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/dto/ProjectReader.kt`) decides which assets are used:
@@ -445,7 +514,11 @@ Radiance `.hdr` decoding and extension-based file discovery are not implemented 
   A reached foliage asset reaches its terrain through `additional.terrain` and its models through
   `additional.layers[].models[].asset`, both by folder name; their own references are followed transitively.
   Files named inside `meta.json` are not followed.
-- **Unused:** an asset reached by no scene of the project is unused.
+- **UI roots and links:** a `uiAssetNames` entry naming a supported `UI` asset is also a root. A reached UI asset reaches
+  the UI assets its `openScreen` / `showOverlay` actions name through `assetName`, transitively. Its resource files are
+  owned by it and are not assets. A missing, wrong-type, unsupported (refused) or cyclic UI reference is a
+  diagnostic (`uiUsageIssues`) and never blocks the other results; an unsupported UI asset is reached but not followed.
+- **Unused:** an asset reached by no root of the project is unused.
 - **Bundled shaders:** a `shaderKey` naming no folder is a bundled shader and is ignored.
 
 ## Plugin-created light entities

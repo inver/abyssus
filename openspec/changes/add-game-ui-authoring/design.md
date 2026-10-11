@@ -30,7 +30,7 @@ Alternative: embed UI into .scene ECS data. Rejected because screen reuse, overl
 - lib-core/ui/layout holds pure layout resolution and measured-size contracts. ui/state holds pure navigation, binding descriptors and write-result handling. ui/render builds Scene2D actors from those definitions, delegates geometry to the shared layout engine, and owns host-provided resources.
 - lib-core-editor/ui holds UiDocumentEdits, UiSelection, UiHitTest, UiLayoutEdits and UiPreviewState. These classes operate on data, rectangles and SceneJson only: no Swing, AWT, GL or platform classes.
 - plugin-abyssus/ui owns IDE actions, editor provider for UI meta.json, widget tree, properties adapters, document watches and guarded canvas integration. Reuse the existing scene rendering composition for the backdrop, not a second runtime implementation.
-- Hosts inject UI resource access, value snapshots, write callbacks and action sinks. Standalone hosts depend on lib-core only. A test/demo entry point in the game module supplies actual changing values and accepted/rejected writes without modifying its normal launch flow.
+- Hosts inject UI resource access, value snapshots, write callbacks and action sinks. Standalone hosts depend on lib-core only. A test/demo entry point in the game module supplies actual changing values and accepted/rejected writes without modifying its normal launch flow. It uses its own fixture project under the module's demo/test resources, never `project/ControlLine`, whose scene tests assert on.
 
 Maintain acyclic packages and constructor wiring. Keep user-facing editor text in injected EditorMessages or AbyssusBundle as appropriate. Diagnostics carry codes and data; hosts choose presentation.
 
@@ -50,7 +50,7 @@ Binding declarations map names to number, boolean or string types, access (readO
 
 The host publishes an immutable value snapshot once per update. Missing/wrong-type values show a diagnostic and use the sample fallback; controls with invalid writable targets are disabled. Sliders commit once on release or keyboard step, checkboxes on toggle, text fields on Enter or focus loss. A write carries binding name, typed value and origin widget. The synchronous host result is Accepted(authoritativeValue) or Rejected(reason); long-running host work must be scheduled by the host, not block UI rendering. Host-published changes update controls with listeners suppressed. Accepted normalized values update all consumers; rejected values restore the last authoritative value. The host must still validate authorization and game constraints.
 
-Navigation supports openScreen, back, showOverlay, closeOverlay and emitAction. A bounded navigation history restores focus; popping at its root is a no-op. Topmost modal overlays block all lower input; nonmodal overlays consume only handled interactive-widget events. UI never pauses gameplay itself. Tab/Shift-Tab follows visible enabled tree order; Enter/Space activates focused buttons. Escape closes the top overlay or goes back in UI preview, without invoking physics Play.
+Navigation supports openScreen, back, showOverlay, closeOverlay and emitAction. A bounded navigation history restores focus; popping at its root is a no-op. Topmost modal overlays block all lower input; nonmodal overlays consume only handled interactive-widget events. UI never pauses gameplay itself. Tab/Shift-Tab follows visible enabled tree order; Enter/Space activates focused buttons. Escape closes the topmost overlay, otherwise goes back, and does nothing at the root; this applies to both runtime and preview, a runtime host may handle Escape first, and it never invokes physics Play.
 
 ### Authoring, writes and preview
 
@@ -72,7 +72,7 @@ One editor owns its UI session, backdrop and resources. Closing/rebuilding relea
 - Overlay backdrop may duplicate scene GPU allocations -> one owned backdrop per editor, lazy loading, explicit disposal and no simulation.
 - Reference-size fit introduces letterboxing -> predictable first-version behavior; viewport dimensions are visible in preview.
 - Bitmap fonts require prebuilt resources -> bundled font works immediately, supported import formats are documented.
-- Malformed user-authored trees or expensive resources can stall UI -> enforce depth/node/image limits with diagnostics before allocation; defaults proposed as depth 64, 10,000 widgets and 8192 pixels per image dimension.
+- Malformed user-authored trees or expensive resources can stall UI -> enforce depth/node/image limits with diagnostics before allocation; limits are depth 64, 10,000 widgets and 8192 pixels per image dimension (normative, in game-ui-authoring).
 - Project registration and file creation span multiple documents -> transaction tests cover failure, undo/redo and concurrent edits before UI integration.
 - Other changes touch Control Line screens -> leave those screens intact; the separate demo avoids competing ownership.
 

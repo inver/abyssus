@@ -54,3 +54,31 @@ A bundled default theme SHALL be usable without custom resources. Authors SHALL 
 - **WHEN** a referenced image file is missing
 - **THEN** its widget shows a placeholder and a diagnostic naming the resource while other widgets remain usable
 
+### Requirement: Resource confinement and limits
+Style resource files SHALL resolve, after normalization and symlink resolution, inside the owning UI asset; network resources SHALL NOT be loaded. A UI collection SHALL be refused when a screen exceeds depth 64, the collection exceeds 10,000 widgets, or an image exceeds 8192 pixels on a side, and the check SHALL occur before allocating widgets or textures.
+
+#### Scenario: Path escape
+- **WHEN** a style image path resolves outside the asset folder
+- **THEN** the resource is rejected with a diagnostic naming it and the fallback is used
+
+#### Scenario: Too many widgets
+- **WHEN** a collection holds 10,001 widgets
+- **THEN** it is refused with a limit diagnostic and nothing is built
+
+### Requirement: Asset registration
+Creating a UI asset SHALL be one undoable command covering its files and its uiAssetNames entry. Undo SHALL remove both and redo SHALL restore them. Existing assets SHALL be registered or unregistered explicitly. Creation SHALL NOT overwrite an existing file and SHALL roll back on partial failure.
+
+#### Scenario: Undo creation
+- **WHEN** a user creates menus and undoes the creation
+- **THEN** assets/menus and its uiAssetNames entry are removed and redo restores both
+
+#### Scenario: Name collision
+- **WHEN** a user creates a UI asset whose folder already exists
+- **THEN** creation is refused and no file or registration changes
+
+### Requirement: Stale edit refusal
+A gesture or property commit SHALL be refused when the document changed after the gesture began.
+
+#### Scenario: Concurrent text edit
+- **WHEN** the metadata text changes during a drag and the drag is released
+- **THEN** the commit is refused with a notice and the text keeps the concurrent change

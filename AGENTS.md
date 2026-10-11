@@ -38,6 +38,7 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
     view's asset storage (`ViewAssets`). Picking, cameras, gizmo math and transform write-back are in `lib-core-editor`.
   - `schema/`: the retained `componentSchemas` extension-point bean and `ComponentSchemas` project service.
     The service supplies built-in kinds plus typed physics kinds when the native project enables physics; game components stay read-only.
+  - `gameui/`: the Game UI editor tab (screens, widget tree, canvas, properties, declarations), UI asset creation and resource import. See `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/gameui/README.md`.
   - `terrain/`: the New Terrain dialog and the regeneration controls; generation itself is in `lib-core-editor`.
   - `foliage/`: the foliage properties section, shared drafts, document-aware Apply and the bake undo cache.
   - `filetype/`, `language/`: file types, icons, the GLTF PSI.

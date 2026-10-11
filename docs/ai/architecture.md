@@ -207,6 +207,27 @@ they go through `AssetFileCommand` (`assetfiles/AssetFileCommand.kt`), described
 `AssetTransactionEngine` holding the file logic (checks, ordered writes, rollback) apart from the platform so a test can
 fail it between any two writes. No scene or project file is written that way.
 
+UI assets follow the same split (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/gameui/UiAssetCommands.kt`).
+Editing an existing UI `meta.json` (`editUiMeta`) and registering or unregistering a name in `uiAssetNames` are
+`editSceneJson` edits: the pure edit is `lib-core-editor`'s `UiDocumentEdits` run through `UiTextEditor.transform`
+(`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/ui/UiTextEditor.kt`), so the document must be admitted UI before and after, a
+gesture that began on older text is refused as stale, and one edit is one undo. Creating a UI asset cannot be a
+document edit (a new folder and file), so `NewUiAssetFactory` stages one `AssetTransaction` holding the new `meta.json`
+and the project file with the name registered; `AssetFileCommand` checks both against what was staged (a concurrent edit
+is a conflict, a colliding folder a collision, a project file with unsaved changes or one that is read-only is refused),
+rolls back a failure part-way, and makes Undo and Redo restore both files together. Undo is refused while another UI
+asset navigates to the new one.
+
+The UI editor's **preview** never writes (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/ui/UiPreviewState.kt`): it is an immutable
+decoded definition plus session-local samples and a bounded action log, built from the editor's current text, so an
+interaction can only change a sample or add a log line. Entering preview creates the state, a definition change drops it
+(a fresh one starts from the authored samples), and invalid text drops it until the text is valid again. The canvas lays the UI
+out for the chosen preview size by drawing into an offscreen buffer of exactly that size (never the panel's) and fits that into the
+panel; an optional scene backdrop is the Scene view's `SceneRenderer` on the scene's editor text, drawn first, with no
+simulation. The size and backdrop are viewer preferences (`PropertiesComponent`-style, not documents). All GL work stays
+inside `GdxRuntime.withContext` on the AWT thread behind `GuardedGLCanvas.glSafe()`, and closing the tab releases the
+presenter, the offscreen buffer, the backdrop and the GL kit while the context is current.
+
 Foliage creation, Re-bake and stroke commits also use asset transactions for their new files, bake and masks.
 Apply combines its binary transaction with an `editSceneJson` metadata edit in one platform command
 (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/foliage/FoliageApplyCommand.kt`): the binary undo action is registered after the document edit, with document-save
