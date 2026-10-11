@@ -11,6 +11,8 @@ import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
 import net.nevinsky.abyssus.app.game.controlline.flow.PlaneChoice
 import net.nevinsky.abyssus.app.game.controlline.flow.planeChoices
 import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.ecs.SceneFoliage
+import net.nevinsky.abyssus.lib.core.ecs.SceneFoliageListing
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
@@ -40,6 +42,14 @@ class FieldScene(val loaded: SceneContext) {
     /** Entities drawn as terrain: (entity, terrain asset folder). */
     val terrains: List<Pair<Entity, String>> =
         entities.values.mapNotNull { e -> assetName(e, MetaType.TERRAIN)?.let { e to it } }
+
+    /** What [foliages] left out and why (a foliage component on an entity that draws no terrain), for the log. */
+    val foliageWarnings: List<String> get() = foliageProblems
+
+    private val foliageProblems = ArrayList<String>()
+
+    /** The terrain entities' foliage, in entity id order: the foliage asset folder and the terrain it stands on. */
+    val foliages: List<SceneFoliage> = SceneFoliageListing { foliageProblems += it }.list(engine)
 
     val skyName: String? = loaded.scene.skyboxName.takeIf { loaded.scene.skyboxEnabled }
 

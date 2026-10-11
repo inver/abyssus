@@ -112,7 +112,7 @@ class FoliageStrokeCommand(
                     FileSnapshot.Bytes(File(terrainFolder, terrainFile).readBytes())
                 val fresh = readCurrent?.invoke() ?: run {
                     val json = service<AbyssusCore>().json
-                    readFoliageSource(folder.name, projectDir, json, currentText, json.readObject(currentText)["additional"])
+                    readFoliageSource(folder.name, projectDir, json, currentText, SceneJson().parseObject(currentText)["additional"])
                 }
                 require(fresh is FoliageSource.Ready && fresh.sameAs(stroke.source)) {
                     AbyssusBundle.message("foliageSourceChanged")

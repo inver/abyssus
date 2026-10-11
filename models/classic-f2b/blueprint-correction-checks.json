@@ -1,0 +1,338 @@
+[
+  {
+    "check": "Wing inboard | 740 mm span",
+    "measured": 740.0,
+    "blueprint": 740,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing inboard | 740 mm root chord",
+    "measured": 340.0,
+    "blueprint": 340,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing inboard | 740 mm root thickness",
+    "measured": 61.99848,
+    "blueprint": 62,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing inboard | 740 mm outer chord",
+    "measured": 275.0,
+    "blueprint": 275,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing inboard | 740 mm outer thickness",
+    "measured": 51.99872,
+    "blueprint": 52,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing outboard | 710 mm span",
+    "measured": 710.0,
+    "blueprint": 710,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing outboard | 710 mm root chord",
+    "measured": 340.0,
+    "blueprint": 340,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing outboard | 710 mm root thickness",
+    "measured": 61.99848,
+    "blueprint": 62,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing outboard | 710 mm outer chord",
+    "measured": 275.0,
+    "blueprint": 275,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing outboard | 710 mm outer thickness",
+    "measured": 51.99872,
+    "blueprint": 52,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Flap hinge seam span",
+    "measured": 600.0,
+    "blueprint": 600,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Flap hinge seam sweep",
+    "measured": 0.0,
+    "blueprint": 0,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Flap hinge seam x",
+    "measured": 514.0,
+    "blueprint": 514,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Flap hinge seam.001 span",
+    "measured": 570.0,
+    "blueprint": 570,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Flap hinge seam.001 sweep",
+    "measured": 0.0,
+    "blueprint": 0,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Flap hinge seam.001 x",
+    "measured": 514.0,
+    "blueprint": 514,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Elevator hinge seam sweep",
+    "measured": 0.0,
+    "blueprint": 0,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Elevator hinge seam x",
+    "measured": 971.0,
+    "blueprint": 971,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Elevator hinge seam.001 sweep",
+    "measured": 0.0,
+    "blueprint": 0,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Elevator hinge seam.001 x",
+    "measured": 971.0,
+    "blueprint": 971,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer left span",
+    "measured": 345.0,
+    "blueprint": 345,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer left root chord",
+    "measured": 161.0,
+    "blueprint": 161,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer left outer chord",
+    "measured": 115.0,
+    "blueprint": 115,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer left outer fixed chord",
+    "measured": 50.0,
+    "blueprint": 50,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer left outer elevator chord",
+    "measured": 65.0,
+    "blueprint": 65,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer right span",
+    "measured": 345.0,
+    "blueprint": 345,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer right root chord",
+    "measured": 161.0,
+    "blueprint": 161,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer right outer chord",
+    "measured": 115.0,
+    "blueprint": 115,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer right outer fixed chord",
+    "measured": 50.0,
+    "blueprint": 50,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer right outer elevator chord",
+    "measured": 65.0,
+    "blueprint": 65,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Aft fuselage depth at 895",
+    "measured": 95.0,
+    "blueprint": 95,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Aft fuselage depth at 1000",
+    "measured": 95.0,
+    "blueprint": 95,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Canopy length",
+    "measured": 240.00002,
+    "blueprint": 240,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Canopy rise",
+    "measured": 65.00002,
+    "blueprint": 65,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Engine yaw magnitude",
+    "measured": 3.00001,
+    "blueprint": 3,
+    "tolerance": 0.01,
+    "passed": true
+  },
+  {
+    "check": "Gear track",
+    "measured": 370.0,
+    "blueprint": 370,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Gear leg root |y|",
+    "measured": 165.00001,
+    "blueprint": 165,
+    "tolerance": 25,
+    "passed": true
+  },
+  {
+    "check": "Tyre x (axle) -1",
+    "measured": 286.00001,
+    "blueprint": 286,
+    "tolerance": 1,
+    "passed": true
+  },
+  {
+    "check": "Gear leg root |y|",
+    "measured": 165.00001,
+    "blueprint": 165,
+    "tolerance": 25,
+    "passed": true
+  },
+  {
+    "check": "Tyre x (axle) 1",
+    "measured": 286.00001,
+    "blueprint": 286,
+    "tolerance": 1,
+    "passed": true
+  },
+  {
+    "check": "Tail wheel x",
+    "measured": 919.00003,
+    "blueprint": 919,
+    "tolerance": 1,
+    "passed": true
+  },
+  {
+    "check": "Fuselage | moulded outer envelope nonmanifold edges",
+    "measured": 0,
+    "blueprint": 0,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Wing inboard | 740 mm nonmanifold edges",
+    "measured": 0,
+    "blueprint": 0,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Wing outboard | 710 mm nonmanifold edges",
+    "measured": 0,
+    "blueprint": 0,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer left nonmanifold edges",
+    "measured": 0,
+    "blueprint": 0,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer right nonmanifold edges",
+    "measured": 0,
+    "blueprint": 0,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Vertical fin and rudder nonmanifold edges",
+    "measured": 0,
+    "blueprint": 0,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed primary photo",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  }
+]

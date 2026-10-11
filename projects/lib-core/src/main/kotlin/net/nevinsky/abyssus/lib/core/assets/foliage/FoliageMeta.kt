@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.assets.foliage
 
+import com.fasterxml.jackson.databind.JsonNode
+
 /** The file a foliage asset bakes its copies into, when `additional.dataFile` omits it. */
 const val FOLIAGE_DATA_FILE = "foliage.data"
 
@@ -47,7 +49,12 @@ data class FoliageLayerMeta(
     val maxSlope: Float? = null,
     /** How far from the camera DETAIL copies are drawn, in world units. */
     val drawDistance: Float = 80f,
-    val seed: Int = 0
+    val seed: Int = 0,
+    /**
+     * The layer's raw `collider` member, or null when it has none. It is kept as read so a member this program does not
+     * model survives editing; [FoliageColliderReader] says what it means. It does not enter the bake's fingerprint.
+     */
+    val collider: JsonNode? = null,
 )
 
 /** A model asset a layer scatters, with its [weight] among the layer's models. */

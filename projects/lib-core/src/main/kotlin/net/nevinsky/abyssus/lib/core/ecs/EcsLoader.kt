@@ -16,6 +16,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.EcsReadWarnings
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.io.SourceBackedComponent
 import net.nevinsky.abyssus.lib.core.ecs.EcsLoadingWarns
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
@@ -102,6 +103,7 @@ class EcsLoader(
                 )
                 return@forEach
             }
+            if (component is SourceBackedComponent) component.adoptSource(value)
             entity.add(component)
         }
         return entity

@@ -64,6 +64,11 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
     override fun create() {
         // TerrainMesh sets every layer's uniforms; the game's shader may not use them all
         ShaderProgram.pedantic = false
+        // the window is a 3.2 core context (foliage is drawn instanced): the shaders keep their legacy GLSL, which gets
+        // its version line and the defines that make `attribute`, `varying`, `texture2D` and `gl_FragColor` valid
+        ShaderProgram.prependVertexCode = "#version 150\n#define attribute in\n#define varying out\n"
+        ShaderProgram.prependFragmentCode = "#version 150\n#define varying in\n#define texture2D texture\n" +
+            "#define textureCube texture\n#define gl_FragColor fragColor\nout vec4 fragColor;\n"
         parked = loadScene()
         flow = GameFlow(parked.planes, ScoreTable(scoresFile))
         renderer = FieldRenderer(ctx)
@@ -153,7 +158,7 @@ class ControlLineGame(private val project: Path, private val scoresFile: Path) :
     private fun loadScene(): FieldScene {
         val loaded = sceneLoader.load(project.resolve(FIELD_SCENE).fileName.toString())
             ?: throw IllegalStateException("The field scene ${project.resolve(FIELD_SCENE)} could not be read; see the log")
-        return FieldScene(loaded)
+        return FieldScene(loaded).also { scene -> scene.foliageWarnings.forEach(log::warn) }
     }
 
     private fun endFlight() {
