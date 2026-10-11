@@ -71,6 +71,7 @@ class RayViewFeed(
     private var cameraRevision = 0L
     private var poseRevision = 0L
     private var contentRevision = 0L
+    private var environmentRevision = 0L
     private var skyTexture: Pair<RaySkySnapshot, RayTexture>? = null
     private var lastAssets: RaySceneAssetState.Ready? = null
 
@@ -209,7 +210,9 @@ class RayViewFeed(
         if (diff.rebuild) sceneGeneration++
         if (RaySceneChange.CAMERA in diff.changes) cameraRevision++
         if (RaySceneChange.POSE in diff.changes) poseRevision++
-        if (diff.changes.any { it != RaySceneChange.CAMERA && it != RaySceneChange.POSE }) contentRevision++
+        // A sky-only change (drifting clouds re-bake the sky and sun shade) restarts sampling but keeps the older frame shown.
+        val content = diff.changes.filter { it != RaySceneChange.CAMERA && it != RaySceneChange.POSE }
+        if (content == listOf(RaySceneChange.ENVIRONMENT)) environmentRevision++ else if (content.isNotEmpty()) contentRevision++
         if (job.epoch != epoch) return
         val key = RayFrameKey(sceneGeneration, contextGeneration, cameraRevision, poseRevision)
         val settings = frame.settings
@@ -227,7 +230,8 @@ class RayViewFeed(
             rays,
             job.metadata,
             RayRenderSettings(settings.targetSamplesPerPixel, settings.maxRaysPerFrame.toLong()),
-            job.settingsRevision
+            job.settingsRevision,
+            environmentRevision
         )
         runtime.offer(input, job.metadata)
     }

@@ -199,8 +199,9 @@ drains already selected work and performs eventual backend/session disposal.
 Inputs carry structural scene/context generations, output framebuffer size, active
 camera identity, camera/pose revisions and a content revision for transforms, lights,
 materials, environment and geometry. Structural changes invalidate completed frames
-immediately. Modestly older motion frames may display for at most 100 ms from offer,
-using their own batch camera/geometry metadata; unchanged still frames do not expire.
+immediately. Modestly older motion frames may display for at most 100 ms from offer
+(500 ms while the camera is still and only animation or pose moves, so a slow batch
+does not flash raster), using their own batch camera/geometry metadata; unchanged still frames do not expire.
 The caller must advance revisions whenever those inputs change. There is no GL/Swing
 or project file access in this scheduler.
 

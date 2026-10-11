@@ -84,6 +84,9 @@ enum class RayAlphaMode { OPAQUE, MASK, BLEND }
 class RayTerrainMaterial(val splat: RayTextureBinding?, layers: List<RayTextureBinding?>, val size: Float) {
     val layers=rayList(layers)
     init { require(layers.size==5 && size.isFinite() && size>0) }
+    // by value: a recaptured but unchanged terrain material must not read as a material change (it would restart ray accumulation every frame)
+    override fun equals(other:Any?)=other is RayTerrainMaterial && splat==other.splat && layers==other.layers && size==other.size
+    override fun hashCode()=(splat.hashCode()*31+layers.hashCode())*31+size.hashCode()
 }
 data class RayMaterial(
     val kind: RayMaterialKind=RayMaterialKind.DEFAULT,
