@@ -19,7 +19,8 @@ fun main() {
         setTitle("Control Line")
         setWindowedMode(1280, 720)
         useVsync(true)
-        setForegroundFPS(120)
+        // a steady 60 frames a second: on a 120 Hz screen an uncapped, vsynced loop alternates 8, 17 and 25 ms frames
+        setForegroundFPS(60)
         setBackBufferConfig(8, 8, 8, 8, 24, 0, 4)
         // foliage is drawn instanced, which needs OpenGL 3: a 3.2 core context (forward compatible on macOS)
         setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL30, 3, 2)

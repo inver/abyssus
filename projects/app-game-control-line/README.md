@@ -104,6 +104,10 @@ grass on the site, made by `tools/FieldFoliage.kt` from the recorded manifest (s
 tool has its own source set (`fieldFoliageTools`, with the editing library on its tool classpath only); the game's
 runtime classpath does not contain it.
 
+Frames are capped at 60 a second (`Main.kt`): left to vsync alone, a 120 Hz screen gets frames of 8, 17 and 25 ms in turn
+and the motion judders. The simulation runs 120 fixed steps a second, so `FlightSession` draws the plane (and moves the
+lines' plane ends and the camera target with it) between its last two simulated poses instead of at the latest one.
+
 Everything runs on the LWJGL3 main thread; only asset preparation uses a worker pool. `./gradlew
 :app-game-control-line:test` runs every rule headless (Jolt natives only, no window). The pilot's entity is the handle's
 kinematic body; the plane is put at takeoff with `PhysicsBody.setPose`.
