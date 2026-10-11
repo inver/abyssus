@@ -5,6 +5,7 @@
 package net.nevinsky.abyssus.app.game.controlline.render
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Input
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
@@ -31,6 +32,8 @@ import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
@@ -81,11 +84,35 @@ class GameUiGlTest {
                 schedule.everythingBeforeTheLanding()
                 schedule.landing()
                 schedule.end(FlightEnd.LANDED)
-                flow.flightEnded(FlightReport("Stunter", FlightEnd.LANDED, 300f, FlightResult.Pattern(AssistLevel.MID, schedule.judge.sheet)))
+                flow.flightEnded(FlightReport("Stunter", FlightEnd.LANDED, 300f, FlightResult.Pattern(AssistLevel.MID, schedule.judge.sheet, schedule.judge.recording("Stunter", AssistLevel.MID))))
                 show(session, schedule.judge)
                 flow.nameEntered("Ann")
                 show()
+                // the debrief of the flight just flown: every key it answers, then back to GAME OVER
+                flow.debrief()
+                show()
+                assertTrue(ui.keyDown(Input.Keys.DOWN))
+                show()
+                for (key in listOf(Input.Keys.SPACE, Input.Keys.NUM_1, Input.Keys.NUM_3, Input.Keys.R, Input.Keys.V, Input.Keys.UP)) {
+                    assertTrue(ui.keyDown(key))
+                    show()
+                }
+                assertTrue(ui.keyDown(Input.Keys.ESCAPE))
+                show()
+                assertTrue(flow.screen is Screen.GameOver)
                 flow.scores()
+                show()
+                // the saved flight's replay from the score table, and the sheet alone when its recording is gone
+                assertTrue(ui.keyDown(Input.Keys.ENTER))
+                show()
+                assertTrue(flow.screen is Screen.Debrief)
+                ui.keyDown(Input.Keys.ESCAPE)
+                show()
+                temp.root.toPath().resolve("f2b-flights").toFile().listFiles()?.forEach { it.delete() }
+                flow.openRow(0)
+                show()
+                assertNull((flow.screen as Screen.Debrief).model.recording)
+                ui.keyDown(Input.Keys.ESCAPE)
                 show()
                 repeat(3) {
                     flow.nextTab()

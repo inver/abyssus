@@ -40,6 +40,8 @@ private const val TAKEOFF_AZIMUTH = 1080f
  * 0 as omitted. A whole manoeuvre scores its mark; otherwise it scores 0 with its reason.
  */
 class PatternJudge(private val radius: Float, private val grader: Grader = Grader(radius)) : FlightJudge {
+    private val recorder = RecordingBuilder(radius)
+
     private val path = PathTokens(radius)
     private val matchers = Matchers(radius)
 
@@ -74,8 +76,12 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
     private var liftoff = -1
     private var finished = false
 
+    /** The recording of the flight so far, for [plane] flown at [level]. */
+    fun recording(plane: String, level: AssistLevel): FlightRecording = recorder.build(plane, level, sheet, grader.weights)
+
     override fun sample(sample: TrackSample) {
         if (finished) return
+        recorder.add(sample)
         clock = sample.time
         path.feed(sample)
         val points = path.points
@@ -108,8 +114,9 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
         }
         val end = points.indexOfFirst { it.azimuth - points[0].azimuth >= TAKEOFF_AZIMUTH }
         if (end < 0) return
-        if (points[end].time > FLIGHT_TIME) zero(Figure.TAKEOFF, ZeroReason.AFTER_TIME, points[end].time)
-        else decide(Figure.TAKEOFF, grader.gradeTakeoff(points, liftoff, end), points[end].time)
+        val start = points[0].time
+        if (points[end].time > FLIGHT_TIME) zero(Figure.TAKEOFF, ZeroReason.AFTER_TIME, points[end].time, start)
+        else decide(Figure.TAKEOFF, grader.gradeTakeoff(points, liftoff, end), points[end].time, start)
         ended(end)
         expected = Figure.REVERSE_WINGOVER
     }
@@ -161,13 +168,14 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
         val points = path.points
         val figure = recognition.figure
         val time = points[recognition.to].time
+        val start = points[recognition.from].time
         val soon = recognition.from.let { lastEnd >= 0 && (points[it].azimuth - lastEndAzimuth) / 360f < PAUSE_LAPS }
         when {
-            recognition.verdict == Verdict.WRONG_REPEATS -> zero(figure, ZeroReason.WRONG_REPEATS, time)
-            recognition.verdict == Verdict.NOT_COMPLETED -> zero(figure, ZeroReason.NOT_COMPLETED, time)
-            soon -> zero(figure, ZeroReason.TOO_SOON, time)
-            time > FLIGHT_TIME -> zero(figure, ZeroReason.AFTER_TIME, time)
-            else -> decide(figure, grader.grade(recognition, points, tokens), time)
+            recognition.verdict == Verdict.WRONG_REPEATS -> zero(figure, ZeroReason.WRONG_REPEATS, time, start)
+            recognition.verdict == Verdict.NOT_COMPLETED -> zero(figure, ZeroReason.NOT_COMPLETED, time, start)
+            soon -> zero(figure, ZeroReason.TOO_SOON, time, start)
+            time > FLIGHT_TIME -> zero(figure, ZeroReason.AFTER_TIME, time, start)
+            else -> decide(figure, grader.grade(recognition, points, tokens), time, start)
         }
         ended(recognition.to)
         expected = SCHEDULE.getOrNull(index + 1)
@@ -181,9 +189,11 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
         lastEndTime = point.time
     }
 
-    private fun decide(figure: Figure, graded: Graded, time: Float) = record(SheetEntry(figure, graded.tenths, null, graded, time))
+    private fun decide(figure: Figure, graded: Graded, time: Float, start: Float = time) =
+        record(SheetEntry(figure, graded.tenths, null, graded, time, start))
 
-    private fun zero(figure: Figure, reason: ZeroReason, time: Float) = record(SheetEntry(figure, 0, reason, null, time))
+    private fun zero(figure: Figure, reason: ZeroReason, time: Float, start: Float = time) =
+        record(SheetEntry(figure, 0, reason, null, time, start))
 
     private fun record(entry: SheetEntry) {
         sheet[entry.figure] = entry
@@ -247,11 +257,11 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
         from = max(from, stopped).coerceAtMost(touchdown - 1)
         val time = points[touchdown].time
         if (time > FLIGHT_TIME) {
-            zero(Figure.LANDING, ZeroReason.AFTER_TIME, time)
+            zero(Figure.LANDING, ZeroReason.AFTER_TIME, time, points[from].time)
         } else {
             val back = (touchdown downTo 0).firstOrNull { points[touchdown].time - points[it].time >= SINK_WINDOW } ?: 0
             val sink = max(0f, (points[back].height - points[touchdown].height) / max(points[touchdown].time - points[back].time, 1e-3f))
-            decide(Figure.LANDING, grader.gradeLanding(points, from, touchdown, sink), time)
+            decide(Figure.LANDING, grader.gradeLanding(points, from, touchdown, sink), time, points[from].time)
         }
         expected = null
     }

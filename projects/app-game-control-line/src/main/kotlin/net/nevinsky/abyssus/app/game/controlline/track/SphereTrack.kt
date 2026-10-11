@@ -24,7 +24,8 @@ import kotlin.math.sin
  * - [offset]: the plane's position minus the pilot's ground point (m);
  * - [height]: the plane's height above the ground (m);
  * - [planeUp]: the plane's up vector (unit, world);
- * - [engineRunning]: the engine still gives thrust.
+ * - [engineRunning]: the engine still gives thrust;
+ * - [rotation]: the plane's attitude (world), kept for the flight recording.
  */
 data class TrackSample(
     val time: Float,
@@ -37,6 +38,7 @@ data class TrackSample(
     val height: Float = 0f,
     val planeUp: Vector3 = Vector3(0f, 1f, 0f),
     val engineRunning: Boolean = true,
+    val rotation: Quaternion = Quaternion(),
 )
 
 /** [degrees] wrapped into (-180, 180]. */
@@ -86,6 +88,7 @@ class SphereTrack {
             height,
             Vector3(planeUp),
             engineRunning,
+            Quaternion(rotation),
         )
     }
 }

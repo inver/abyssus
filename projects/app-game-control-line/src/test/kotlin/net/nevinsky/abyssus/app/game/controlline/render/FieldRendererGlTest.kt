@@ -8,7 +8,9 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.PerspectiveCamera
+import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import net.nevinsky.abyssus.app.game.controlline.ControlLineGame
 import net.nevinsky.abyssus.app.game.controlline.FieldFoliageProject
@@ -74,6 +76,19 @@ class FieldRendererGlTest {
                 val rebuilds = drawn.map { it.rebuilds }
                 renderer.draw(field, camera, seconds = 0.016f)
                 assertEquals("a light pass changed the viewer's buffers", rebuilds, drawn.map { it.rebuilds })
+                assertEquals(GL20.GL_NO_ERROR, Gdx.gl.glGetError())
+
+                // lines of different widths and a faint one, as the debrief draws its tracks and guides
+                val tracks = listOf(
+                    LineSegment(Vector3(250f, 5f, 0f), Vector3(260f, 9f, 40f), Color.WHITE),
+                    LineSegment(Vector3(250f, 5f, 0f), Vector3(240f, 9f, 40f), IDEAL_COLOR, 3f),
+                    LineSegment(Vector3(250f, 6f, 0f), Vector3(255f, 9f, 40f), GUIDE_COLOR, 1f),
+                )
+                renderer.draw(field, camera, tracks, seconds = 0.016f)
+                // a driver may refuse a width over 1; that leaves the width alone and is no error of ours
+                val error = Gdx.gl.glGetError()
+                assertTrue("GL error $error", error == GL20.GL_NO_ERROR || error == GL20.GL_INVALID_VALUE)
+                renderer.draw(field, camera, seconds = 0.016f)
                 assertEquals(GL20.GL_NO_ERROR, Gdx.gl.glGetError())
 
                 // look away from one terrain: only the other still shows its copies

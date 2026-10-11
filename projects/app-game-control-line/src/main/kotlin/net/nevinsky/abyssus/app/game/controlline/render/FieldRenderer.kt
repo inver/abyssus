@@ -78,8 +78,8 @@ fun fieldAssets(
     }
 }
 
-/** A segment to draw: a control line from [from] to [to], in [color]. */
-class LineSegment(val from: Vector3, val to: Vector3, val color: Color)
+/** A segment to draw: a control line or a debrief track from [from] to [to], in [color], [width] pixels wide (drivers may cap it at 1). */
+class LineSegment(val from: Vector3, val to: Vector3, val color: Color, val width: Float = 1f)
 
 /**
  * The cloud technique the game draws its sky with. The asset's own (shells: eight noise layers per band at the full
@@ -216,13 +216,21 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
 
         if (lines.isNotEmpty()) {
             Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
+            Gdx.gl.glEnable(GL20.GL_BLEND)
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
             shapes.projectionMatrix = camera.combined
-            shapes.begin(ShapeRenderer.ShapeType.Line)
-            for (line in lines) {
-                shapes.color = line.color
-                shapes.line(line.from, line.to)
+            // one batch per width: the width is a GL state, set outside begin / end
+            for ((width, group) in lines.groupBy { it.width }) {
+                Gdx.gl.glLineWidth(width)
+                shapes.begin(ShapeRenderer.ShapeType.Line)
+                for (line in group) {
+                    shapes.color = line.color
+                    shapes.line(line.from, line.to)
+                }
+                shapes.end()
             }
-            shapes.end()
+            Gdx.gl.glLineWidth(1f)
+            Gdx.gl.glDisable(GL20.GL_BLEND)
         }
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
         Gdx.gl.glDisable(GL20.GL_CULL_FACE)

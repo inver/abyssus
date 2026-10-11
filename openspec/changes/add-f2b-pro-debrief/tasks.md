@@ -7,19 +7,19 @@ Apply after `add-f2b-pattern-mode`. All code is in `projects/app-game-control-li
 
 ## 1. Recordings
 
-- [ ] 1.1 Add `FlightRecording`: 30 Hz samples (time, offset, rotation), per-manoeuvre judgements (span, mark or
+- [x] 1.1 Add `FlightRecording`: 30 Hz samples (time, offset, rotation), per-manoeuvre judgements (span, mark or
   reason, deductions, ideal track in world offsets thinned to 0.25 m), plane name, line length and level. Fill it from
   `PatternJudge` during the flight. Verify with `FlightRecordingTest`:
   - a 10 s synthetic flight gives 300 samples ±1;
   - every judged manoeuvre has its span inside the samples;
   - an omitted manoeuvre has a reason and no ideal track.
-- [ ] 1.2 Add the recording's JSON codec (`version: 1`, gzip) and `RecordingStore`: save through a temporary file and
+- [x] 1.2 Add the recording's JSON codec (`version: 1`, gzip) and `RecordingStore`: save through a temporary file and
   an atomic move, load, delete, prune unnamed files and leftover temporary files, and rename an unreadable file to
   `.bad`. Verify with `RecordingStoreTest`:
   - a round trip keeps samples to 3 decimals and the judgements exactly;
   - prune keeps only the named ids;
   - text that is not gzip becomes `.bad` and loads as not available.
-- [ ] 1.3 Add the optional `flight` field to `PatternScoreTable` entries. Save the recording before the entry, keeping
+- [x] 1.3 Add the optional `flight` field to `PatternScoreTable` entries. Save the recording before the entry, keeping
   the entry if the save fails. Delete the recording of an entry that leaves its board, and prune at start. Check that
   the reader from `add-f2b-pattern-mode` ignores unknown fields and accepts a missing `flight`; if not, make it so.
   Verify with `PatternScoreTableTest`:
@@ -30,7 +30,7 @@ Apply after `add-f2b-pattern-mode`. All code is in `projects/app-game-control-li
 
 ## 2. Debrief model and cameras
 
-- [ ] 2.1 Add `DebriefModel`:
+- [x] 2.1 Add `DebriefModel`:
   - selection, starting on the first manoeuvre;
   - the playback clock with ½, 1 and 2 speed, pause, restart, and holding the last pose at the end;
   - `segments()` with `IDEAL`, `FLOWN` and `GUIDE` tags, and guides over the figure's azimuth span ±10°;
@@ -46,14 +46,15 @@ Apply after `add-f2b-pattern-mode`. All code is in `projects/app-game-control-li
   - Low bottoms: one line `Base height 0.60 m off (±0.30): −0.6`;
   - Too soon;
   - A deleted recording: the sheet only, with "replay not available".
-- [ ] 2.2 Add `Cameras.debrief(view, pilot, frame)` for the pilot view (with field of view up to 90°) and the outside
+- [x] 2.2 Add `Cameras.debrief(view, pilot, frame)` for the pilot view (with field of view up to 100°) and the outside
   view (1.6 × line length, 6 m up). Verify with `DebriefCameraTest`:
-  - every frame point is inside the frustum for loops, vertical eights and overhead eights, in both views;
+  - every frame point is inside the frustum for loops and overhead eights in both views, and for vertical eights in the
+    outside view;
   - the outside eye sits on the figure's azimuth.
 
 ## 3. Flow and screens
 
-- [ ] 3.1 Extend `GameFlow`:
+- [x] 3.1 Extend `GameFlow`:
   - `Screen.Debrief(from, model)`;
   - `debrief()` on F2B GAME OVER only;
   - row selection with Up and Down on F2B score tabs, and `openRow`, which loads through `RecordingStore`;
@@ -77,7 +78,7 @@ Apply after `add-f2b-pattern-mode`. All code is in `projects/app-game-control-li
   - M6: after a Pro flight enters the board, Scores → Pro → Enter opens its replay, and Escape returns to the same
     row;
   - M7: deleting the recording file shows "replay not available" with the marks.
-- [ ] 3.4 Update `projects/app-game-control-line/README.md`: the debrief and its keys, `f2b-flights/` and pruning,
+- [x] 3.4 Update `projects/app-game-control-line/README.md`: the debrief and its keys, `f2b-flights/` and pruning,
   and that replays show the marks judged at the time. Verify with `scripts/check-docs.sh`.
 
 ## 4. Integration

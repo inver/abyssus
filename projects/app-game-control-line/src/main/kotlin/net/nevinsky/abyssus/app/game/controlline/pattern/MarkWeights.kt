@@ -39,3 +39,17 @@ data class MarkWeights(
     /** The vertical speed at touchdown (m/s). */
     val touchdown: Weight = Weight(1f, 1f, 2f),
 )
+
+/** The weight of [criterion]. */
+fun MarkWeights.of(criterion: Criterion): Weight = when (criterion) {
+    Criterion.BASE_HEIGHT -> baseHeight
+    Criterion.TRACK_DEVIATION -> trackDeviation
+    Criterion.PARALLEL_45 -> parallel45
+    Criterion.LINE_ANGLE -> lineAngle
+    Criterion.CORNER_RADIUS -> cornerRadius
+    Criterion.SEGMENT_LENGTH -> segmentLength
+    Criterion.SUPERIMPOSITION -> superimposition
+    Criterion.SYMMETRY -> symmetry
+    Criterion.TAKEOFF_ROLL -> takeoffRoll
+    Criterion.TOUCHDOWN -> touchdown
+}

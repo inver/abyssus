@@ -108,7 +108,10 @@ Colours are picked in `GameUi` and `ControlLineGame` from the tags: ideal green,
 `Cameras.debrief(view, pilot, frame)` is pure math on `Vector3` and is unit-tested.
 
 - **Pilot view:** the eye is at the pilot's eye height, looking at the centre of the figure's bounding points. The
-  field of view is widened up to 90° when needed so all bounding points fit; overhead figures look up.
+  field of view is widened up to 100° when needed so all bounding points fit (90° left the overhead eights on the edge);
+  overhead figures look up. If the figure is still too wide, the camera aims at the middle of the cone that holds its
+  points. The vertical eights reach from the horizon at 90° either side to the zenith, so they do not fit: the pilot's
+  view shows what fits, and the outside view shows them whole.
 - **Outside view:** the eye is outside the circle at 1.6 × the line length from the pilot, on the figure's azimuth, at
   6 m, looking back at the figure's centre.
 

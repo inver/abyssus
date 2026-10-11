@@ -8,6 +8,9 @@ import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneClass
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
+import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefModel
+import net.nevinsky.abyssus.app.game.controlline.pattern.debriefOf
+import net.nevinsky.abyssus.app.game.controlline.pattern.sheetOnlyDebrief
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreEntry
@@ -85,10 +88,13 @@ sealed interface Screen {
      * The score table on [tab], opened from [from], with the row at [highlight] (from 1) marked on the tab of the flight
      * that was just saved.
      */
-    data class Scores(val from: Screen, val highlight: Int?, val tab: ScoreTab = ScoreTab.FREE) : Screen {
+    data class Scores(val from: Screen, val highlight: Int?, val tab: ScoreTab = ScoreTab.FREE, val selected: Int = 0) : Screen {
         /** The tab the [highlight] belongs to: that of the flight shown on GAME OVER. */
         val highlightTab: ScoreTab? get() = (from as? GameOver)?.let { tabOf(it.flying.mode) }
     }
+
+    /** The debrief of an F2B flight, opened from [from] (GAME OVER or the score table); [model] holds what it shows. */
+    data class Debrief(val from: Screen, val model: DebriefModel) : Screen
 }
 
 /**
@@ -158,7 +164,34 @@ class GameFlow(
     private fun turnTab(by: Int) {
         val s = screen as? Screen.Scores ?: return
         val tabs = ScoreTab.entries
-        screen = s.copy(tab = tabs[Math.floorMod(s.tab.ordinal + by, tabs.size)])
+        screen = s.copy(tab = tabs[Math.floorMod(s.tab.ordinal + by, tabs.size)], selected = 0)
+    }
+
+    /** Up and Down on an F2B tab of the score table: the row [by] further, within the board. */
+    fun selectRow(by: Int) {
+        val s = screen as? Screen.Scores ?: return
+        val level = s.tab.level ?: return
+        val last = patternTable.board(level).size - 1
+        if (last >= 0) screen = s.copy(selected = (s.selected + by).coerceIn(0, last))
+    }
+
+    /** Enter or a click on a row of an F2B tab (default the selected one): the flight's debrief, from its recording when it has one. */
+    fun openRow(index: Int? = null) {
+        val s = screen as? Screen.Scores ?: return
+        val level = s.tab.level ?: return
+        val row = index ?: s.selected
+        val entry = patternTable.board(level).getOrNull(row) ?: return
+        val recording = entry.flight?.let(patternTable.recordings::load)
+        screen = Screen.Debrief(s.copy(selected = row), recording?.let(::debriefOf) ?: sheetOnlyDebrief(entry, level))
+    }
+
+    /** Debrief on GAME OVER of an F2B flight: the flight just flown, whether or not it entered a board. */
+    fun debrief() {
+        val s = screen as? Screen.GameOver ?: return
+        val result = s.report.result as? FlightResult.Pattern ?: return
+        val model = result.recording?.let(::debriefOf)
+            ?: sheetOnlyDebrief(result.sheet, s.report.plane, result.level)
+        screen = Screen.Debrief(s, model)
     }
 
     // assist level
@@ -219,6 +252,7 @@ class GameFlow(
             is FlightResult.Pattern -> patternTable.add(
                 result.level,
                 PatternScoreEntry(clean, r.plane, result.sheet.tenths / 10.0, r.flightTime, now().toString(), result.sheet.marks.map { it.toDouble() }),
+                result.recording,
             )
         }
         screen = Screen.GameOver(s.flying, r, rank)
@@ -243,6 +277,7 @@ class GameFlow(
             is Screen.Flying -> pause()
             is Screen.Paused -> resume()
             is Screen.Scores -> screen = s.from
+            is Screen.Debrief -> screen = s.from
             else -> Unit
         }
     }

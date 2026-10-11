@@ -18,6 +18,9 @@ import net.nevinsky.abyssus.app.game.controlline.flow.reportOf
 import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
 import net.nevinsky.abyssus.app.game.controlline.render.*
+import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefModel
+import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefFrame
+import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefView
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
@@ -64,6 +67,13 @@ class ControlLineGame(
     private var sessionScene: FieldScene? = null
     private var flying: Screen.Flying? = null
 
+    // the debrief: its own load of the field, and what to draw for the selected manoeuvre
+    private var debriefScene: FieldScene? = null
+    private var debriefOf: DebriefModel? = null
+    private var debriefRevision = -1
+    private var debriefLines = emptyList<LineSegment>()
+    private var debriefFrame: DebriefFrame? = null
+
     private val ctx = BaseCtx(project.toString(), "/shader", ControlLineGame::class.java, log)
         .also { it.componentRegistry.registerAll(PHYSICS_COMPONENTS + GAME_COMPONENTS) }
 
@@ -100,14 +110,20 @@ class ControlLineGame(
         if (s != null && screen is Screen.Flying) {
             s.advance(seconds, input)
             flying?.let { f -> reportOf(s, f.mode, judge, f.plane.name)?.let(flow::flightEnded) }
-        } else if (s != null && (screen is Screen.GameOver || screen is Screen.NameEntry)) {
+        } else if (s != null && screen !is Screen.Debrief && (screen is Screen.GameOver || screen is Screen.NameEntry)) {
             // the plane comes to rest; the flight itself is over
             s.advance(seconds, HandleInput())
         }
 
-        val scene = sessionScene ?: parked
+        val scene = (screen as? Screen.Debrief)?.let { debriefSceneOf(it.model) } ?: sessionScene ?: parked
         var lines = emptyList<LineSegment>()
+        var hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null
         when (screen) {
+            is Screen.Debrief -> {
+                lines = drawDebrief(scene, screen.model, seconds)
+                hidden = scene.pilot.takeIf { screen.model.view == DebriefView.PILOT }
+            }
+
             is Screen.PlaneSelect -> parked.entity(flow.choices(screen.mode)[screen.index].entityId)?.let { plane ->
                 val p = parked.position(plane)
                 cameras.planeSelect(
@@ -133,21 +149,69 @@ class ControlLineGame(
             scene,
             cameras.camera,
             lines,
-            hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null,
-            clips = s?.flight?.crash?.let { mapOf(s.plane to it.clip) }.orEmpty(),
+            hidden = hidden,
+            clips = if (screen is Screen.Debrief) emptyMap() else s?.flight?.crash?.let { mapOf(s.plane to it.clip) }.orEmpty(),
             seconds = seconds,
         )
         ui.update(s, judge, seconds)
         ui.draw()
     }
 
+    /** The debrief's own load of the field for [model], made when it opens and dropped when the screen is left. */
+    private fun debriefSceneOf(model: DebriefModel): FieldScene {
+        if (debriefOf !== model) {
+            debriefOf = model
+            debriefScene = loadScene()
+            debriefRevision = -1
+        }
+        return checkNotNull(debriefScene)
+    }
+
+    /**
+     * Poses the recorded plane in the debrief's [scene], points the camera at the figure and returns the tracks to draw.
+     * The tracks are rebuilt only when another manoeuvre is selected.
+     */
+    private fun drawDebrief(scene: FieldScene, model: DebriefModel, seconds: Float): List<LineSegment> {
+        model.advance(seconds)
+        val ground = scene.pilot?.let { Vector3(scene.position(it).localPosition) } ?: Vector3()
+        if (debriefRevision != model.revision) {
+            debriefRevision = model.revision
+            debriefFrame = model.frame()
+            debriefLines = model.segments().flatMap { track ->
+                track.points.zipWithNext { a, b ->
+                    LineSegment(Vector3(ground).add(a), Vector3(ground).add(b), track.kind.color(), track.kind.lineWidth())
+                }
+            }
+        }
+        debriefFrame?.let { cameras.debrief(model.view, ground, it) }
+        val pose = model.planePose() ?: return debriefLines
+        val name = model.recording?.plane
+        val plane = scene.planes.firstOrNull { it.name == name }?.let { scene.entity(it.entityId) }
+        val at = Vector3(ground).add(pose.position)
+        if (plane != null) {
+            val body = scene.position(plane)
+            body.localPosition.set(at)
+            body.localRotation.set(pose.rotation)
+            return debriefLines
+        }
+        // no plane of that name in the field: a small cross marks where it was
+        return debriefLines + listOf(Vector3.X, Vector3.Y, Vector3.Z).map { axis ->
+            LineSegment(Vector3(at).mulAdd(axis, -0.6f), Vector3(at).mulAdd(axis, 0.6f), FLOWN_COLOR, 3f)
+        }
+    }
+
     /** Starts a flight when the flow flies a plane (again), and ends it when the flow leaves the flight's screens. */
     private fun followFlow() {
         when (val screen = flow.screen) {
             is Screen.Flying -> if (screen != flying) startFlight(screen)
-            is Screen.Paused, is Screen.NameEntry, is Screen.GameOver -> Unit
+            is Screen.Paused, is Screen.NameEntry, is Screen.GameOver, is Screen.Debrief -> Unit
             is Screen.Scores -> if (screen.from !is Screen.GameOver) endFlight()
             else -> endFlight()
+        }
+        // the debrief's field goes with the debrief
+        if (flow.screen !is Screen.Debrief && debriefScene != null) {
+            debriefScene = null
+            debriefOf = null
         }
     }
 

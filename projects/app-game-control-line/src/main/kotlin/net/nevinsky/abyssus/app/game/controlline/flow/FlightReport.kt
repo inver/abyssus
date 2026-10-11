@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.app.game.controlline.flow
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightEnd
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
+import net.nevinsky.abyssus.app.game.controlline.pattern.FlightRecording
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.app.game.controlline.pattern.ScoreSheet
 
@@ -15,8 +16,8 @@ sealed interface FlightResult {
     /** Free flight: points for laps, maneuvers and the landing, with the combo. */
     data class Free(val score: Int, val laps: Int, val bestCombo: Int) : FlightResult
 
-    /** An F2B flight at [level]: the score sheet. */
-    data class Pattern(val level: AssistLevel, val sheet: ScoreSheet) : FlightResult
+    /** An F2B flight at [level]: the score sheet, and the [recording] the debrief replays. */
+    data class Pattern(val level: AssistLevel, val sheet: ScoreSheet, val recording: FlightRecording? = null) : FlightResult
 }
 
 /** How a flight went, as GAME OVER shows it: the [plane], how it ended, the [flightTime] in seconds and its [result]. */
@@ -34,7 +35,8 @@ fun reportOf(session: FlightSession, mode: Mode, judge: PatternJudge?, plane: St
     val end = session.flight.result ?: return null
     val result = when (mode) {
         Mode.Free -> session.flight.scoring.keeper.let { FlightResult.Free(it.score, it.laps, it.bestCombo) }
-        is Mode.Pattern -> FlightResult.Pattern(mode.level, requireNotNull(judge) { "an F2B flight needs its judge" }.sheet)
+        is Mode.Pattern -> requireNotNull(judge) { "an F2B flight needs its judge" }
+            .let { FlightResult.Pattern(mode.level, it.sheet, it.recording(plane, mode.level)) }
     }
     return FlightReport(plane, end, session.flight.time, result)
 }

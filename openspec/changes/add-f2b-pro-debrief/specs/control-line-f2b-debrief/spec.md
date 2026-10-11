@@ -50,8 +50,8 @@ its end, at 1× speed when selected. Space SHALL pause and resume it, R SHALL re
 
 ### Requirement: Two views
 
-The debrief SHALL offer the pilot's view and a view from outside the circle facing the selected manoeuvre, both framing
-the whole figure. V SHALL switch between them. The view SHALL be kept when another manoeuvre is selected.
+The debrief SHALL offer the pilot's view and a view from outside the circle facing the selected manoeuvre. The outside view SHALL frame the whole figure. The pilot's view SHALL frame as much of it
+as fits within a 100° field of view, and the whole of it when it fits (the vertical eights do not). V SHALL switch between them. The view SHALL be kept when another manoeuvre is selected.
 
 #### Scenario: Outside view
 

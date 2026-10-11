@@ -16,9 +16,13 @@ enum class ZeroReason(val label: String) {
 
 /**
  * One line of the score sheet: [figure] marked [tenths] tenths of a mark (10 to 100; 0 when it scored nothing, then with a
- * [reason]) at [time] seconds. A marked one keeps how it was [graded].
+ * [reason]) at [time] seconds, from [start]. A marked one keeps how it was [graded].
  */
-class SheetEntry(val figure: Figure, val tenths: Int, val reason: ZeroReason?, val graded: Graded?, val time: Float) {
+class SheetEntry(
+    val figure: Figure, val tenths: Int, val reason: ZeroReason?, val graded: Graded?, val time: Float,
+    /** When the manoeuvre began (s); [time] for one with no span of its own. */
+    val start: Float = time,
+) {
     /** The mark, 1 to 10 in steps of 0.1, or 0. */
     val mark: Float get() = tenths / 10f
 

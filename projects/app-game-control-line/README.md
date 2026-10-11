@@ -24,7 +24,8 @@ Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json` a
 |---|---|
 | Menus | Up / Down and Enter, or the mouse; Escape goes back |
 | Plane select | Left / Right change the plane, Enter flies it, Escape returns to the screen before it (the main menu, or the assist level for an F2B pattern) |
-| Scores | Left / Right change the tab (Free flight, Pro, Mid), Escape or Back returns |
+| Scores | Left / Right change the tab (Free flight, Pro, Mid), Escape or Back returns. On Pro and Mid, Up / Down select a flight and Enter or a click opens its debrief |
+| Debrief | Up / Down: manoeuvre; Space: pause or resume; R: restart; 1 / 2 / 3: speed ½× / 1× / 2×; V: pilot view or outside view; Escape returns |
 | Flying | W or Up: handle up; S or Down: handle down (full tilt in 0.15 s, back to neutral on release). Moving the mouse up or down sets the tilt by its distance from the window's centre; whichever was used last wins. Escape pauses |
 
 In Free flight, laps score 10. Inside and outside loops score 50, an inverted lap 80, a wingover 100 and a figure 8 150, times the
@@ -42,7 +43,7 @@ an **assist level**, then offers only planes of class `STUNT` (the bundled `Stun
 | Pro | line tension, fuel left and the clock `m:ss / 7:00`; nothing about the manoeuvres |
 | Mid | also the next manoeuvre with its K, the pause count out of 1½ laps, a warning while the plane flies level between manoeuvres outside 1 to 3 m, and a toast with each mark as soon as the manoeuvre ends (`Take-off 8.5 × 2 = 17.0`) |
 
-Noob (the ideal track drawn ahead of the plane) and the replay debrief come in later changes; Noob's board is reserved in
+Noob (the ideal track drawn ahead of the plane) comes in a later change; Noob's board is reserved in
 `f2b-scores.json` but not offered.
 
 ### The schedule
@@ -116,7 +117,7 @@ parallel; the horizontal eight is two tangent loops side by side, the vertical e
 zenith, the overhead eight two loops meeting over the pilot; the clover is four ¾ loops joined through the zenith; the
 hourglass is a base edge, two crossing legs and a top edge near the zenith; the take-off is a ground roll, a climb over
 one lap to the base and two laps at the base; the landing is one lap of glide. The judge keeps each deduction and the
-ideal and flown tracks of every manoeuvre for the debrief change.
+ideal and flown tracks of every manoeuvre for the [debrief](#debrief).
 
 Game simplifications: a flight ends at touchdown, so the landing roll is not judged and "stopped" means touchdown; there
 is no Starting (K 0) or preparation time; one judge, no attempts, rounds or classification; no noise or pull tests.
@@ -126,7 +127,31 @@ is no Starting (K 0) or preparation time; one judge, no attempts, rounds or clas
 `f2b-scores.json` is `{version: 1, boards: {pro: [...], mid: [...], noob: [...]}}`: the 10 best flights of each level,
 best first, earlier flights first among equal scores. Each entry has `name`, `plane`, `score` (two decimals),
 `flightTime`, `date` and the 15 `marks`. A missing board reads as empty. The score table screen has a tab per board next
-to Free flight.
+to Free flight. An entry may also have a `flight`: the id of its recording (see below). Entries saved without one, and
+readers that do not know the field, are unaffected.
+
+### Debrief
+
+After every F2B flight (Pro and Mid), GAME OVER offers **Debrief**, whether or not the flight entered a board. On the score
+table's Pro and Mid tabs, Enter on a row opens that flight's debrief. Required behaviour: `control-line-f2b-debrief`
+(OpenSpec change `add-f2b-pro-debrief`). The screen shows the 15-row score sheet with one manoeuvre selected, the field
+facing that manoeuvre, its **ideal track** (green) and **flown track** (orange) with the base and the 45° parallel as
+faint guides, the plane flying the manoeuvre along its recorded path, and the manoeuvre's deductions, largest first, each
+with what was measured, its tolerance and the points it cost (`Base height 0.62 m off (±0.30): −0.6`); a manoeuvre
+scored 0 shows its reason. V switches between the pilot's view and a view from outside the circle. The pilot's view
+widens its field of view up to 100° to fit a figure, which is not enough for the vertical eights; use the outside view
+for those. Lines of more than one pixel need a driver that supports them; some draw them one pixel wide, and the
+colours still tell the tracks apart.
+
+A replay shows the marks and ideal tracks as they were judged at the time: a later change to the judge does not change a
+saved flight.
+
+When an F2B flight enters a board, its recording is saved in `<user-home>/.abyssus-control-line/f2b-flights/<id>.json.gz`
+(version 1; the flown path at 30 samples a second with the plane's attitude, and per manoeuvre its time span, ideal track,
+mark and deductions or zero reason) and the entry's `flight` names it. A flight that enters no board is not saved. The
+recording is deleted when its flight leaves the board, and at start recordings no entry names (and leftover `.tmp` files)
+are deleted. A recording that is missing, or that cannot be read (it is renamed with `.bad` added), leaves the entry and
+its marks in place: its debrief shows the sheet with "Replay not available". Each recording is about 0.3 MB.
 
 ## The project in Abyssus
 
@@ -168,7 +193,7 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 | `flight` | `Aero`, `LineRig`, `Ground`, `Flight` / `FlightSystem`, `FlightOutcome`, `FlightSession`, `FlightJudge` | no |
 | `track` | `SphereTrack`, `Maneuvers`, `Laps` | no |
 | `score` | `ScoreKeeper`, `FlightScoring`, `ScoreTable` | no |
-| `pattern` | the F2B pattern: `Schedule` (`Figure`), `HemisphereGeometry`, `PathTokens`, `TrackBuilder`, `IdealTracks`, `IdealSampler`, `Matchers`, `Grader` / `MarkWeights`, `PatternJudge`, `ScoreSheet`, `PatternScoreTable` | no |
+| `pattern` | the F2B pattern: `Schedule` (`Figure`), `HemisphereGeometry`, `PathTokens`, `TrackBuilder`, `IdealTracks`, `IdealSampler`, `Matchers`, `Grader` / `MarkWeights`, `PatternJudge`, `ScoreSheet`, `PatternScoreTable`, and the debrief's `FlightRecording`, `RecordingStore`, `DebriefModel` | no |
 | `flow` | `GameFlow` (the screen state machine, with the mode and assist level), `FlightReport` | no |
 | `input` | `HandleInput` (keyboard and mouse tilt) | no |
 | `render`, `screens` | `FieldScene`, `FieldRenderer` (with `shader/terrain.*`), `FieldShadows` (the sun's shadow map), `Cameras`, `GameUi` | yes |

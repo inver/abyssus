@@ -12,6 +12,8 @@ import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
 import net.nevinsky.abyssus.app.game.controlline.pattern.Figure
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
 import net.nevinsky.abyssus.app.game.controlline.pattern.ScoreSheet
+import net.nevinsky.abyssus.app.game.controlline.pattern.ZeroReason
+import net.nevinsky.abyssus.app.game.controlline.pattern.recordedFlight
 import net.nevinsky.abyssus.app.game.controlline.pattern.SheetEntry
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
@@ -327,5 +329,122 @@ class GameFlowTest {
         assertEquals(1, flow.patternTable.board(AssistLevel.MID).size)
         assertTrue(flow.patternTable.board(AssistLevel.PRO).isEmpty())
         assertTrue(flow.table.entries.isEmpty())
+    }
+
+    /** A Pro or Mid report that carries a recording, like the one the judge hands over. */
+    private fun recordedReport(level: AssistLevel, tenths: Int): FlightReport {
+        val report = patternReport(level, tenths)
+        val result = report.result as FlightResult.Pattern
+        return report.copy(result = result.copy(recording = recordedFlight(level)))
+    }
+
+    private fun GameFlow.flyAndSave(level: AssistLevel, tenths: Int) {
+        flyPattern(level)
+        flightEnded(recordedReport(level, tenths))
+        nameEntered("Ann")
+    }
+
+    @Test
+    fun debriefAfterACrashOpensOnTakeoffAndEscapeReturnsToGameOver() {
+        val flow = flow()
+        flow.flyPattern(AssistLevel.PRO)
+        flow.flightEnded(recordedReport(AssistLevel.PRO, 85))
+        flow.nameEntered("Ann")
+        val over = flow.screen as Screen.GameOver
+        flow.debrief()
+        val debrief = flow.screen as Screen.Debrief
+        assertEquals(over, debrief.from)
+        assertEquals(Figure.TAKEOFF, debrief.model.row.figure)
+        assertEquals(0, debrief.model.selected)
+        assertEquals(ZeroReason.CRASHED, debrief.model.rows[Figure.INSIDE_SQUARES.ordinal].reason)
+        assertTrue(debrief.model.recording != null)
+        flow.back()
+        assertEquals(over, flow.screen)
+    }
+
+    @Test
+    fun aFlightThatEntersNoBoardCanBeDebriefedToo() {
+        val flow = flow()
+        flow.flyPattern(AssistLevel.MID)
+        flow.flightEnded(recordedReport(AssistLevel.MID, 85))
+        flow.nameEntered("Ann")
+        flow.retry()
+        flow.flightEnded(recordedReport(AssistLevel.MID, 0).let { it.copy(result = (it.result as FlightResult.Pattern).copy(sheet = ScoreSheet())) })
+        // a zero score still qualifies on a board with room, so the name is asked first
+        flow.nameEntered("Ann")
+        flow.debrief()
+        assertTrue(flow.screen is Screen.Debrief)
+    }
+
+    @Test
+    fun freeFlightHasNoDebrief() {
+        val flow = flow()
+        flow.flyStunter()
+        flow.flightEnded(report(320))
+        flow.nameEntered("Ann")
+        val over = flow.screen
+        flow.debrief()
+        assertEquals(over, flow.screen)
+    }
+
+    @Test
+    fun replayingTheBestProFlightEscapeReturnsToTheProTabWithTheFirstRowSelected() {
+        val flow = flow()
+        flow.flyAndSave(AssistLevel.PRO, 85)
+        flow.scores() // from GAME OVER: on the tab of the flight
+        val scores = flow.screen as Screen.Scores
+        assertEquals(ScoreTab.PRO, scores.tab)
+        assertEquals(0, scores.selected)
+        flow.openRow()
+        val debrief = flow.screen as Screen.Debrief
+        assertTrue(debrief.model.recording != null)
+        assertEquals(null, debrief.model.notice)
+        flow.back()
+        val back = flow.screen as Screen.Scores
+        assertEquals(ScoreTab.PRO, back.tab)
+        assertEquals(0, back.selected)
+        // and from there on to GAME OVER, which a flight's score table came from
+        flow.back()
+        assertTrue(flow.screen is Screen.GameOver)
+    }
+
+    @Test
+    fun upAndDownSelectARowWithinTheBoardAndEnterOpensIt() {
+        val flow = flow()
+        flow.flyAndSave(AssistLevel.MID, 85)
+        flow.retry()
+        flow.flightEnded(recordedReport(AssistLevel.MID, 60))
+        flow.nameEntered("Bob")
+        flow.scores()
+        flow.selectRow(-1)
+        assertEquals(0, (flow.screen as Screen.Scores).selected)
+        flow.selectRow(1)
+        flow.selectRow(1)
+        assertEquals(1, (flow.screen as Screen.Scores).selected)
+        flow.openRow()
+        assertTrue((flow.screen as Screen.Debrief).model.title.contains("Mid"))
+        flow.back()
+        assertEquals(1, (flow.screen as Screen.Scores).selected)
+        flow.nextTab()
+        assertEquals(0, (flow.screen as Screen.Scores).selected)
+        // the Free flight tab has no rows to open
+        assertEquals(ScoreTab.FREE, (flow.screen as Screen.Scores).tab)
+        flow.openRow()
+        assertTrue(flow.screen is Screen.Scores)
+    }
+
+    @Test
+    fun aMissingRecordingOpensTheSheetOnly() {
+        val flow = flow()
+        flow.flyAndSave(AssistLevel.PRO, 85)
+        val id = checkNotNull(flow.patternTable.board(AssistLevel.PRO).single().flight)
+        java.nio.file.Files.delete(temp.root.toPath().resolve("f2b-flights/$id.json.gz"))
+        flow.scores()
+        flow.openRow()
+        val model = (flow.screen as Screen.Debrief).model
+        assertEquals(null, model.recording)
+        assertEquals(15, model.rows.size)
+        assertEquals(net.nevinsky.abyssus.app.game.controlline.pattern.NO_REPLAY_MESSAGE, model.notice)
+        assertEquals(1, flow.patternTable.board(AssistLevel.PRO).size)
     }
 }

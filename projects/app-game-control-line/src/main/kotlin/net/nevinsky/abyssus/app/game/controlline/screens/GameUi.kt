@@ -28,6 +28,11 @@ import net.nevinsky.abyssus.app.game.controlline.flow.OFFERED_LEVELS
 import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.flow.ScoreTab
 import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
+import net.nevinsky.abyssus.app.game.controlline.pattern.DEBRIEF_SPEEDS
+import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefModel
+import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefView
+import net.nevinsky.abyssus.app.game.controlline.render.FLOWN_COLOR
+import net.nevinsky.abyssus.app.game.controlline.render.IDEAL_COLOR
 import net.nevinsky.abyssus.app.game.controlline.pattern.FLIGHT_TIME
 import net.nevinsky.abyssus.app.game.controlline.pattern.HeightWarning
 import net.nevinsky.abyssus.app.game.controlline.pattern.PAUSE_HEIGHT_MAX
@@ -55,6 +60,8 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
     private var shown: Screen? = null
     private var menu: KeyMenu? = null
     private var nameField: TextField? = null
+    private var shownRevision = 0
+    private val debriefStatus = Label("", skin)
 
     // the HUD
     private val tension = Label("", skin)
@@ -75,10 +82,12 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
 
     /** Follows the flow to its current screen and the HUD to [session] (and the F2B [judge] of a pattern flight). */
     fun update(session: FlightSession?, judge: PatternJudge?, seconds: Float) {
-        if (flow.screen != shown) {
-            shown = flow.screen
-            rebuild(flow.screen)
+        val screen = flow.screen
+        if (screen != shown || (screen is Screen.Debrief && screen.model.revision != shownRevision)) {
+            shown = screen
+            rebuild(screen)
         }
+        if (screen is Screen.Debrief) debriefStatus.setText(debriefStatusText(screen.model))
         if (session != null && (shown is Screen.Flying || shown is Screen.Paused)) hud(session, judge, seconds)
         stage.act(seconds)
     }
@@ -89,6 +98,7 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
 
     /** A key on a menu screen: arrows and Enter move through the menu, Left / Right change the plane or the score tab, Escape goes back. */
     fun keyDown(keycode: Int): Boolean {
+        (shown as? Screen.Debrief)?.let { return debriefKey(it.model, keycode) }
         when (keycode) {
             Input.Keys.ESCAPE -> flow.back()
             Input.Keys.LEFT -> when (shown) {
@@ -101,13 +111,34 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
                 is Screen.Scores -> flow.nextTab()
                 else -> return false
             }
-            Input.Keys.UP -> menu?.move(-1) ?: return false
-            Input.Keys.DOWN -> menu?.move(1) ?: return false
+            Input.Keys.UP -> if (onBoard()) flow.selectRow(-1) else menu?.move(-1) ?: return false
+            Input.Keys.DOWN -> if (onBoard()) flow.selectRow(1) else menu?.move(1) ?: return false
             Input.Keys.ENTER, Input.Keys.NUMPAD_ENTER -> when {
                 shown is Screen.NameEntry -> nameField?.let { flow.nameEntered(it.text) }
                 shown is Screen.PlaneSelect -> flow.choosePlane()
+                onBoard() -> flow.openRow()
                 else -> menu?.press() ?: return false
             }
+            else -> return false
+        }
+        return true
+    }
+
+    /** Whether the score table is on an F2B tab, where Up, Down and Enter work on its rows. */
+    private fun onBoard(): Boolean = (shown as? Screen.Scores)?.tab?.level != null
+
+    /** The debrief's keys: Up and Down select the manoeuvre, Space pauses, R restarts, 1 / 2 / 3 set the speed, V the view. */
+    private fun debriefKey(model: DebriefModel, keycode: Int): Boolean {
+        when (keycode) {
+            Input.Keys.ESCAPE -> flow.back()
+            Input.Keys.UP -> model.select(-1)
+            Input.Keys.DOWN -> model.select(1)
+            Input.Keys.SPACE -> model.togglePause()
+            Input.Keys.R -> model.restart()
+            Input.Keys.NUM_1, Input.Keys.NUMPAD_1 -> model.setSpeed(0)
+            Input.Keys.NUM_2, Input.Keys.NUMPAD_2 -> model.setSpeed(1)
+            Input.Keys.NUM_3, Input.Keys.NUMPAD_3 -> model.setSpeed(2)
+            Input.Keys.V -> model.toggleView()
             else -> return false
         }
         return true
@@ -123,6 +154,7 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
         stage.clear()
         menu = null
         nameField = null
+        (screen as? Screen.Debrief)?.let { shownRevision = it.model.revision }
         val root = Table(skin).apply { setFillParent(true) }
         stage.addActor(root)
         when (screen) {
@@ -140,6 +172,7 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
             is Screen.NameEntry -> nameEntry(root, screen)
             is Screen.GameOver -> gameOver(root, screen)
             is Screen.Scores -> scores(root, screen)
+            is Screen.Debrief -> debrief(root, screen.model)
         }
     }
 
@@ -323,7 +356,64 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
     private fun gameOver(root: Table, screen: Screen.GameOver) {
         summary(root, screen.report)
         screen.rank?.let { root.add(Label("Saved in place $it", skin)).padBottom(16f).row() }
-        menu(root, listOf(button("Retry", flow::retry), button("Scores", flow::scores), button("Main menu", flow::mainMenu)))
+        val buttons = mutableListOf(button("Retry", flow::retry))
+        if (screen.report.result is FlightResult.Pattern) buttons += button("Debrief", flow::debrief)
+        menu(root, buttons + listOf(button("Scores", flow::scores), button("Main menu", flow::mainMenu)))
+    }
+
+    private fun debriefStatusText(model: DebriefModel): String {
+        if (model.recording == null) return ""
+        val view = if (model.view == DebriefView.PILOT) "Pilot view" else "Outside view"
+        val speed = when (model.speed) { 0.5f -> "½×"; 2f -> "2×"; else -> "1×" }
+        val state = if (model.playing) "playing" else "paused"
+        return String.format(Locale.ROOT, "%s    %s    %s    %s / %s", view, speed, state, clockText(model.clock), clockText(model.duration))
+    }
+
+    private fun clockText(seconds: Float) = String.format(Locale.ROOT, "%.1f s", seconds)
+
+    private fun debrief(root: Table, model: DebriefModel) {
+        root.top().left().pad(16f)
+        val sheet = Table(skin).apply { background = skin.getDrawable("default-pane"); pad(10f) }
+        sheet.defaults().left().pad(1f, 6f, 1f, 6f)
+        sheet.add(Label(model.title, skin).apply { color = HIGHLIGHT }).colspan(3).padBottom(4f).row()
+        for ((i, row) in model.rows.withIndex()) {
+            val picked = i == model.selected
+            val text = when {
+                !row.decided -> "-"
+                row.reason != null -> "0 (${row.reason.label})"
+                else -> String.format(Locale.ROOT, "%.1f × %d = %.1f", row.tenths / 10f, row.figure.k, row.tenths * row.figure.k / 10f)
+            }
+            val color = when {
+                picked -> HIGHLIGHT
+                row.reason != null -> Color.SALMON
+                else -> Color.WHITE
+            }
+            sheet.add(Label((if (picked) "> " else "  ") + "${i + 1}. ${row.figure.label}", skin).apply { this.color = color })
+            sheet.add(Label("K ${row.figure.k}", skin).apply { this.color = if (picked) HIGHLIGHT else Color.LIGHT_GRAY })
+            sheet.add(Label(text, skin).apply { this.color = color }).row()
+        }
+        if (model.recording != null) {
+            val legend = Table(skin)
+            legend.add(Label("Ideal track", skin).apply { color = IDEAL_COLOR }).padRight(16f)
+            legend.add(Label("Flown track", skin).apply { color = FLOWN_COLOR }).padRight(16f)
+            legend.add(Label("Base and 45° parallel", skin).apply { color = Color.LIGHT_GRAY })
+            sheet.add(legend).colspan(3).padTop(6f).row()
+        }
+        root.add(sheet).top().left().row()
+
+        val details = Table(skin).apply { background = skin.getDrawable("default-pane"); pad(10f) }
+        details.defaults().left().pad(1f, 6f, 1f, 6f)
+        details.add(Label("${model.row.figure.label}: deductions", skin).apply { color = HIGHLIGHT }).row()
+        val lines = model.deductionLines()
+        for (line in lines) details.add(Label(line, skin).apply { if (line.startsWith("Scored 0")) color = Color.SALMON }).row()
+        model.notice?.let { details.add(Label("$it: only the marks were kept.", skin).apply { color = HIGHLIGHT }).padTop(4f).row() }
+        root.add(details).top().left().padTop(10f).row()
+
+        root.add(debriefStatus).left().padTop(10f).row()
+        val keys = if (model.recording != null) {
+            "Up / Down: manoeuvre    Space: pause    R: restart    1 / 2 / 3: speed ½× 1× 2×    V: view    Esc: back"
+        } else "Up / Down: manoeuvre    Esc: back"
+        root.add(Label(keys, skin).apply { color = Color.LIGHT_GRAY }).expand().bottom().left()
     }
 
     private fun scores(root: Table, screen: Screen.Scores) {
@@ -340,7 +430,8 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
             }).width(130f).pad(4f)
         }
         root.add(tabs).padBottom(8f).row()
-        root.add(Label("Left / Right: change the tab", skin).apply { color = Color.LIGHT_GRAY }).padBottom(10f).row()
+        val hint = if (screen.tab.level != null) "Left / Right: change the tab    Up / Down, Enter or a click: replay a flight" else "Left / Right: change the tab"
+        root.add(Label(hint, skin).apply { color = Color.LIGHT_GRAY }).padBottom(10f).row()
         val level = screen.tab.level
         if (level == null && flow.table.damaged) {
             root.add(Label("The old scores could not be read; they were kept as scores.json.bad.", skin).apply { color = HIGHLIGHT })
@@ -372,8 +463,15 @@ class GameUi(private val flow: GameFlow, private val skin: Skin, private val qui
             if (entries.isEmpty()) table.add(Label("No flights yet", skin)).colspan(6).row()
             entries.forEachIndexed { i, e ->
                 val color = if (highlight == i + 1) HIGHLIGHT else Color.WHITE
-                for (cell in listOf((i + 1).toString(), e.name, e.plane, String.format(Locale.ROOT, "%.2f", e.score), time(e.flightTime), e.date.take(10))) {
-                    table.add(Label(cell, skin).apply { this.color = color })
+                val picked = i == screen.selected
+                val cells = listOf((i + 1).toString(), e.name, e.plane, String.format(Locale.ROOT, "%.2f", e.score), time(e.flightTime), e.date.take(10))
+                for ((c, cell) in cells.withIndex()) {
+                    table.add(Label((if (picked && c == 0) "> " else "") + cell, skin).apply {
+                        this.color = if (picked) Color.CYAN else color
+                        addListener(object : ClickListener() {
+                            override fun clicked(event: InputEvent, x: Float, y: Float) = flow.openRow(i)
+                        })
+                    })
                 }
                 table.row()
             }

@@ -13,7 +13,18 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /** What a deduction is for. */
-enum class Criterion { BASE_HEIGHT, TRACK_DEVIATION, PARALLEL_45, LINE_ANGLE, CORNER_RADIUS, SEGMENT_LENGTH, SUPERIMPOSITION, SYMMETRY, TAKEOFF_ROLL, TOUCHDOWN }
+enum class Criterion(val label: String, val unit: String) {
+    BASE_HEIGHT("Base height", "m"),
+    TRACK_DEVIATION("Track deviation", "m"),
+    PARALLEL_45("45° parallel", "m"),
+    LINE_ANGLE("Line angle", "°"),
+    CORNER_RADIUS("Corner radius", "m"),
+    SEGMENT_LENGTH("Segment length", "laps"),
+    SUPERIMPOSITION("Superimposition", "m"),
+    SYMMETRY("Symmetry", "m"),
+    TAKEOFF_ROLL("Take-off roll", "m"),
+    TOUCHDOWN("Touchdown speed", "m/s"),
+}
 
 /** One deduction from a mark: the [measured] error (in the criterion's unit) cost [amount] marks. */
 data class Deduction(val criterion: Criterion, val measured: Float, val amount: Float)
@@ -38,7 +49,7 @@ private const val BASE = BASE_HEIGHT
  * Every criterion is `min(cap, perUnit × max(0, measured − tolerance))`, non-decreasing in the error; the mark is
  * `clamp(10 − Σ deductions, 1, 10)` in tenths.
  */
-class Grader(private val radius: Float, private val weights: MarkWeights = MarkWeights()) {
+class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()) {
     private val tracks = IdealTracks(radius)
     private val geometry = HemisphereGeometry(radius)
     private val sampler = IdealSampler(radius)
