@@ -238,7 +238,7 @@ class SceneInteractionTest {
     fun theSelectorListsFreeCameraAndTheSceneCamerasByName() {
         assertEquals(listOf("Free camera", "Camera 4"), cameraChoices(mainParams.content, "Free camera").map { it.label })
         assertEquals(listOf(null, "4"), cameraChoices(mainParams.content, "Free camera").map { it.id })
-        val unnamed = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"8":{"components":{"CameraComponent":{}}}}}}"""))
+        val unnamed = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"8":{"components":{"CameraComponent":{"camera":{}}}}}}}"""))
         assertEquals("8", cameraChoices(unnamed, "Free camera")[1].label)
     }
 

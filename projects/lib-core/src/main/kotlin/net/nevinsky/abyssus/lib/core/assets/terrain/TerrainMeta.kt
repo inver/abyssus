@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.assets.terrain
 
-import com.fasterxml.jackson.annotation.JsonAlias
-
 /** The splat map: per-pixel weights of the four channel layers. */
 const val SPLAT_MAP = "splatMap"
 

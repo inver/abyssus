@@ -19,15 +19,15 @@ import com.badlogic.gdx.math.Vector4
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.Pool
-import net.nevinsky.abyssus.lib.core.ModelInstance
-import net.nevinsky.abyssus.lib.core.Renderable
+import net.nevinsky.abyssus.lib.gdx.ModelInstance
+import net.nevinsky.abyssus.lib.gdx.Renderable
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
-import net.nevinsky.abyssus.lib.core.shader.ModelDepthShaderProvider
-import net.nevinsky.abyssus.lib.core.shader.ShadowAtlasAttribute
-import net.nevinsky.abyssus.lib.core.shader.ShadowAtlasView
-import net.nevinsky.abyssus.lib.core.shader.ShadowDepthPass
-import net.nevinsky.abyssus.lib.core.shader.ShadowLightKind
-import net.nevinsky.abyssus.lib.core.shader.ShadowLightRecord
+import net.nevinsky.abyssus.lib.gdx.shader.ModelDepthShaderProvider
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasView
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowDepthPass
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightKind
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightRecord
 import kotlin.math.abs
 
 /** Side of the square shadow map, in texels. */

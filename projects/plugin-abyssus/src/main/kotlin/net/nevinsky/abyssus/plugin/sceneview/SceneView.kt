@@ -8,6 +8,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import com.intellij.openapi.Disposable
 import javax.swing.JComponent
 
@@ -37,4 +38,10 @@ interface SceneView : Disposable {
 
     /** The scene's document is about to change: a running simulation stops first. */
     fun stopPlay() {}
+
+    /** Where a new object is placed (the point the camera orbits around); null when the view places nothing. */
+    fun placementPoint(): Vec3? = null
+
+    /** Whether the view is in Play, when nothing may be added to its scene. */
+    val playing: Boolean get() = false
 }

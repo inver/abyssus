@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader

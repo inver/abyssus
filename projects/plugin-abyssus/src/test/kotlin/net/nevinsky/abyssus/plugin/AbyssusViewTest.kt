@@ -7,7 +7,6 @@ package net.nevinsky.abyssus.plugin
 
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.testAsset
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ViewSettings
@@ -25,7 +24,7 @@ import net.nevinsky.abyssus.plugin.projectView.childrenOf
 import net.nevinsky.abyssus.plugin.projectView.elementLabel
 import net.nevinsky.abyssus.plugin.dto.ProjectReader
 import net.nevinsky.abyssus.plugin.dto.SceneReader
-import net.nevinsky.abyssus.lib.core.scene.Scene
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 import net.nevinsky.abyssus.plugin.projectView.foldToggles
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectFileType
@@ -102,7 +101,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals(0.001f, scene.fog!!.density!!, 0f)
         assertEquals(0.3f, scene.ambientLight!!.intensity!!, 0f)
         assertEquals("skybox_physical", scene.skyboxName)
-        assertEquals(listOf("id", "name", "ambientLightEnabled", "ambientLight", "fogEnabled", "fog", "skyboxEnabled", "skyboxName", "rayTracingEnabled", "rayTracing", "ecs"),
+        assertEquals(listOf("id", "name", "ambientLightEnabled", "ambientLight", "fogEnabled", "fog", "skyboxEnabled", "skyboxName", "rayTracing", "rayTracingEnabled", "ecs"),
             childrenOf(scene).map { it.name })
         assertEquals(before.toList(), file.contentsToByteArray().toList())
     }
@@ -140,7 +139,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertTrue(!service<SceneReader>().read(add("bad.scene", "{oops")).success)
         val scene = parseScene("""{"format":"abyssus","formatVersion":1}""")
         assertEquals(scene.id, java.util.UUID.fromString(scene.id).toString())
-        assertEquals(Scene(id = scene.id), scene)
+        assertEquals(SceneDto(id = scene.id), scene)
         assertEquals(11, childrenOf(scene).size)
         assertTrue(childrenOf(scene).filter { it.name.endsWith("Enabled") }.all { it.value == false })
         assertTrue(childrenOf(scene).filter { it.name != "id" && !it.name.endsWith("Enabled") }.all { it.value == null })
@@ -304,6 +303,22 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val fog = children(scene).first { text(it) == "fog" }
         fog.update()
         assertNotSame(SceneIcons.FILE, fog.presentation.getIcon(false))
+    }
+
+    fun testFoliageAssetHasItsOwnIconInTheProjectTree() {
+        add("foliage/P.abss", """{"format":"abyssus","formatVersion":1,"name":"Foliage"}""")
+        for ((folder, type) in listOf("foliage_meadow" to "FOLIAGE", "terrain" to "TERRAIN", "tree" to "MODEL")) {
+            add("foliage/assets/$folder/meta.json", """{"format":"abyssus","formatVersion":1,"type":"$type","additional":{}}""")
+        }
+        val assets = children(asset("P.abss")).single { text(it).startsWith("Assets") }
+        val icons = children(assets).associate { text(it).substringBefore("  ") to it.presentation.getIcon(false) }
+        val foliage = icons.getValue("foliage_meadow")!!
+        assertSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType("FOLIAGE"), foliage)
+        assertNotSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.UNKNOWN, foliage)
+        assertNotSame(icons.getValue("terrain"), foliage)
+        assertNotSame(icons.getValue("tree"), foliage)
+        assertEquals(16, foliage.iconWidth)
+        assertEquals(16, foliage.iconHeight)
     }
 
     fun testWellKnownPropertiesHaveOwnIcons() {

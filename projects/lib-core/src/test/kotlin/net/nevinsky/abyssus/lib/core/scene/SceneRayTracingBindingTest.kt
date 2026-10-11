@@ -2,8 +2,10 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.lib.core.scene
+package net.nevinsky.abyssus.lib.gdx.scene
 
+import net.nevinsky.abyssus.lib.core.scene.SceneLoader
+import net.nevinsky.abyssus.lib.core.dto.RayTracingDto
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
@@ -12,12 +14,12 @@ import org.junit.Test
 import java.io.File
 
 class SceneRayTracingBindingTest {
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val loader = SceneLoader(json, FileLoader(File(".")))
 
     @Test fun omittedLimitsKeepTheirEffectiveDefaults() {
         val scene = loader.parse("""{"format":"abyssus","formatVersion":1,"rayTracing":{}}""")
-        assertEquals(RayTracing(), scene.rayTracing)
+        assertEquals(RayTracingDto(), scene.rayTracing)
     }
 
     @Test fun eachExplicitNullLimitSurvivesBindingForLaterValidation() {

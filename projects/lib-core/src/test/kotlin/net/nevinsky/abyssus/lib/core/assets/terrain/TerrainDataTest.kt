@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.lib.core.assets.terrain
 
+import net.nevinsky.abyssus.lib.core.assets.terrain.TERRAIN_FLOATS_PER_VERTEX
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.testProject
@@ -36,7 +39,7 @@ class TerrainDataTest {
         )
         val files = FileLoader(dir)
         val metas = testMetaLoader(dir, fileLoader = files)
-        return TerrainLoader(files, metas).prepare("t")!!.data
+        return TerrainLoader(files, metas).prepare("t")!!.staged.data
     }
 
     private fun bigEndian(vararg heights: Float): ByteArray =

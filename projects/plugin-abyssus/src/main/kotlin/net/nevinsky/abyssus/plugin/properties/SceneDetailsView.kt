@@ -39,7 +39,9 @@ import javax.swing.JPanel
  * opens one; it writes nothing. The four saved limits below it are scene data: each accepted edit is one undoable
  * [SceneRayEdits] command, checked against the value this view was built from, and they stay editable with no view open
  * or no ray tracing hardware. Controls are named `ray-tracing-switch`, `ray-tracing-status`, `ray-tracing-detail`,
- * `ray-tracing-retry`, `ray-settings-error` and `ray-setting-<key>` (with `-error`), which is how tests reach them.
+ * `ray-tracing-foliage`, `ray-tracing-retry`, `ray-settings-error` and `ray-setting-<key>` (with `-error`), which is how
+ * tests reach them. `ray-tracing-foliage` carries the foliage note the open Scene view's Ray Control reports, which says
+ * its ray-traced image leaves foliage out, while that view shows a scene with any.
  */
 internal class SceneDetailsView(
     private val controls: SceneRayControls, private val state: PanelState.UISceneState, parent: Disposable,
@@ -52,6 +54,7 @@ internal class SceneDetailsView(
     private val switch = JBCheckBox(AbyssusBundle.message("propertiesSceneRayTracing")).apply { name = "ray-tracing-switch" }
     private val status = JBLabel().apply { name = "ray-tracing-status"; foreground = secondary() }
     private val detail = JBLabel().apply { name = "ray-tracing-detail"; foreground = secondary(); isVisible = false }
+    private val foliage = JBLabel().apply { name = "ray-tracing-foliage"; foreground = secondary(); isVisible = false }
     private val retry = JButton(AbyssusBundle.message("sceneViewRayRetry")).apply { name = "ray-tracing-retry"; isVisible = false; isFocusable = false }
     private var updating = false
 
@@ -88,6 +91,7 @@ internal class SceneDetailsView(
             add(row)
             add(status)
             add(detail)
+            add(foliage)
             add(JBLabel("<html>${AbyssusBundle.message("propertiesSceneRayHint")} ${AbyssusBundle.message("propertiesSceneRayNote")}</html>").apply {
                 foreground = secondary(); font = JBFont.small(); name = "ray-tracing-hint"
             })
@@ -161,6 +165,9 @@ internal class SceneDetailsView(
             }
             detail.text = reason?.let { "<html>$it</html>" } ?: ""
             detail.isVisible = !reason.isNullOrBlank()
+            val note = controls.foliageNote(file)
+            foliage.text = note ?: ""
+            foliage.isVisible = !note.isNullOrBlank()
             retry.isVisible = mode?.phase == RayModePhase.Failed
         } finally {
             updating = false

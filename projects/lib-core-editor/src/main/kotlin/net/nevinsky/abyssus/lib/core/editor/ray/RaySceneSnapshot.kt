@@ -25,8 +25,15 @@ import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import com.badlogic.gdx.math.Matrix4
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelColor
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelImage
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelMaterial
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelMesh
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelNode
+import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureSampler
+import net.nevinsky.abyssus.lib.core.assets.model.RayTextureWrap
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_LAYERS
-import net.nevinsky.abyssus.lib.core.assets.model.*
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.terrain.RayTerrainSnapshot
 import net.nevinsky.abyssus.lib.raytracing.*
@@ -56,7 +63,7 @@ class RayModelPose(
 }
 
 data class RaySnapshotLimits(
-    val maxInstances: Int = 1024,
+    val maxInstances: Int = 4096,
     val maxTriangles: Int = 2_000_000,
     val maxBytes: Long = 512L * 1024 * 1024
 ) {
@@ -97,7 +104,8 @@ fun raySceneDiff(previous: RaySceneFrame?, next: RaySceneFrame): RaySceneDiff {
     if (previous.poses != next.poses) changes += RaySceneChange.POSE
     if (previous.camera != next.camera) changes += RaySceneChange.CAMERA
     if (previous.scene.lights != next.scene.lights) changes += RaySceneChange.LIGHT
-    if (previous.scene.environment != next.scene.environment || previous.scene.fog != next.scene.fog || previous.environmentRevision != next.environmentRevision)
+    if (previous.scene.environment != next.scene.environment || previous.scene.fog != next.scene.fog ||
+        previous.environmentRevision != next.environmentRevision || previous.scene.sunVisibility != next.scene.sunVisibility)
         changes += RaySceneChange.ENVIRONMENT
     return RaySceneDiff(changes)
 }
@@ -108,6 +116,11 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
     // Converted static meshes and textures per retained asset object, so unchanged assets keep their identity from one
     // capture to the next and the backend reuses its acceleration structures. Weak: a replaced asset drops its entry.
     private val shared = java.util.WeakHashMap<Any, MutableMap<String, Any>>()
+
+    // Halved copies of oversized textures, per source object, so a scene over the texel budget reduces them once, not every frame.
+    private val halved = java.util.WeakHashMap<RayTexture, RayTexture>()
+    private fun halvedTexture(texture: RayTexture): RayTexture? =
+        halved[texture] ?: texture.halved()?.also { halved[texture] = it }
     fun capture(
         params: SceneRenderParams, camera: PerspectiveCamera, lightSet: LightSet,
         assets: RaySceneAssetState, preview: Map<String, DragResult> = emptyMap(), activeCameraId: String? = null,
@@ -115,6 +128,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         poses: Map<String, RayModelPose> = emptyMap(),
         deform: ((RayModelMesh, List<FloatArray>) -> FloatArray)? = null,
         environmentRevision: Long = 0,
+        sunVisibility: RaySunVisibility? = null,
     ): RaySceneConversion {
         val settings = params.rayTracing.settings ?: return RaySceneConversion.Fallback(
             RaySceneFallback.UNSUPPORTED_GEOMETRY,
@@ -132,7 +146,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                     content.terrains.mapNotNull { if (it.assetName !in assets.terrains) "terrain:${it.assetName}" else null }
         if (missing.isNotEmpty()) return RaySceneConversion.Preparing(missing.distinct())
         val result = runCatchingKeepingCancellation {
-            val builder = Builder(limits, environmentTextures, deform) { shared.getOrPut(it) { HashMap() } }
+            val builder = Builder(limits.copy(maxInstances = minOf(limits.maxInstances, settings.maxInstances)), environmentTextures, deform) { shared.getOrPut(it) { HashMap() } }
             val document = net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs(params.ecs)
             for (placement in content.models) {
                 val render = document.entity(placement.entityId)?.componentNode("RenderComponent")
@@ -147,13 +161,15 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 builder.meshes,
                 builder.instances,
                 builder.materials,
-                builder.textures,
+                fitTextureTexels(builder.textures, halve = ::halvedTexture)
+                    ?: throw RaySceneLimitException("The scene textures cannot be reduced to $RAY_MAX_TEXTURE_TEXELS texels"),
                 lights(lightSet),
                 environment ?: RayEnvironment(
                     ambient = params.ambient?.ray() ?: RayColor(0f, 0f, 0f),
                     background = params.clear.ray()
                 ),
-                params.fog?.let { RayFog(it.color.ray(), it.density, it.gradient) })
+                params.fog?.let { RayFog(it.color.ray(), it.density, it.gradient) },
+                sunVisibility)
             val cameraSnapshot = RayCameraSnapshot(
                 camera.position.toVec3().ray(),
                 camera.direction.toVec3().ray(),

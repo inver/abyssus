@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
+import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
@@ -36,12 +39,19 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.editor.meta.PropertyRow
+import net.nevinsky.abyssus.lib.core.editor.meta.RowKind
 import net.nevinsky.abyssus.lib.core.editor.meta.*
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.filetype.AssetIcons
+import net.nevinsky.abyssus.plugin.foliage.FoliageController
+import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
+import net.nevinsky.abyssus.plugin.foliage.FoliageSection
+import net.nevinsky.abyssus.plugin.foliage.FoliageSource
+import net.nevinsky.abyssus.plugin.foliage.foliageUnusableNote
 import net.nevinsky.abyssus.plugin.projectView.*
 import net.nevinsky.abyssus.plugin.schema.ComponentSchemasListener
 import net.nevinsky.abyssus.plugin.terrain.TerrainGenerationController
@@ -66,6 +76,8 @@ class AssetPropertiesPanel(
     private val background: (Runnable) -> Unit = { AppExecutorUtil.getAppExecutorService().execute(it) },
     private val ui: (Runnable) -> Unit = { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
 ) : JPanel(CardLayout()), UiDataProvider {
+    private val projectSettings = project.service<AbyssusProjectSettings>()
+    private var projectFile: VirtualFile? = null
     private val cards = layout as CardLayout
     private val content = JPanel(BorderLayout())
     private val empty = JPanel(GridBagLayout())
@@ -87,6 +99,10 @@ class AssetPropertiesPanel(
     /** The regeneration controls' logic for the terrain shown; kept across refreshes of the same terrain so a draft survives them. */
     private var terrainController: TerrainGenerationController? = null
     private var terrainFolder: VirtualFile? = null
+
+    /** The foliage section's logic for the asset shown; kept across refreshes of the same asset so a draft survives them. */
+    private var foliageController: FoliageController? = null
+    private var foliageFolder: VirtualFile? = null
     private var rendering = false
 
     /** The property whose edit was rejected as stale: its next row says so, because the refresh rebuilds the row. */
@@ -111,13 +127,15 @@ class AssetPropertiesPanel(
         project.messageBus.connect(parentDisposable).subscribe(
             ComponentSchemasListener.TOPIC,
             ComponentSchemasListener { ui { if (!disposed && scene != null) refresh() } })
+        project.messageBus.connect(parentDisposable).subscribe(ProjectSettingsListener.TOPIC,
+            ProjectSettingsListener { file, _ -> if (file == projectFile) ui { if (!disposed) refresh() } })
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
                 if (touches(FileDocumentManager.getInstance().getFile(event.document))) refresh()
             }
         }, parentDisposable)
         Disposable {
-            disposed = true; useUndoEditor(null); useTerrain(null)
+            disposed = true; useUndoEditor(null); useTerrain(null); useFoliage(null)
         }.also { com.intellij.openapi.util.Disposer.register(parentDisposable, it) }
         show(AbyssusSelection.of(project).current)
     }
@@ -125,7 +143,7 @@ class AssetPropertiesPanel(
     /** True when [file] is the shown asset's folder or a file in it (its `meta.json` or a face image). */
     private fun touches(file: VirtualFile?): Boolean {
         if (file == null) return false
-        if (file == scene) return true
+        if (file == scene || file == projectFile) return true
         val shown = folder ?: return false
         return file == shown || file.parent == shown
     }
@@ -157,8 +175,10 @@ class AssetPropertiesPanel(
         val assetFolder = (node as? VirtualFile)?.takeIf { it.isDirectory } ?: assetFolderOf(node)
         folder = assetFolder
         if (assetFolder != terrainFolder) useTerrain(null) // another selection: its draft and pending preview are discarded
+        if (assetFolder != foliageFolder) useFoliage(null)
         val entity = if (assetFolder == null) componentTargetOf(node) else null
         scene = entity?.file
+        projectFile = null
         if (entity != null) {
             background {
                 val result = readEntityState(entity, services)
@@ -167,6 +187,15 @@ class AssetPropertiesPanel(
             return
         }
         if (assetFolder == null) {
+            val selectedFile = (node as? AbyssusAssetNode)?.virtualFile ?: node as? VirtualFile
+            if (selectedFile?.isValid == true && selectedFile.extension == "abss") {
+                projectFile = selectedFile
+                background {
+                    val result = readProjectState(selectedFile, selectedFile.name, projectSettings)
+                    ui { if (token == generation && !disposed) apply(result) }
+                }
+                return
+            }
             val sceneFile = viewableSceneFile(node)?.takeIf { it.isValid && ProjectLayout.isScene(it) }
             if (sceneFile != null) {
                 scene = sceneFile
@@ -219,6 +248,35 @@ class AssetPropertiesPanel(
         ).also { controller -> controller.onChange = { if (!rendering && !disposed) apply(state) } }
     }
 
+    /** Keeps the controller of the foliage asset in [details] (a new one for another asset), or drops it for none. */
+    private fun useFoliage(details: PanelState.Details?) {
+        val ready = details?.foliage as? FoliageSource.Ready
+        val folder = details?.meta?.folder
+        if (ready == null || folder == null) {
+            foliageController?.dispose()
+            foliageController = null
+            foliageFolder = null
+            return
+        }
+        val existing = foliageController
+        if (existing != null && foliageFolder == folder) {
+            existing.sourceRead(ready)
+            return
+        }
+        existing?.dispose()
+        foliageFolder = folder
+        foliageController = FoliageController(
+            project,
+            folder,
+            ready,
+            project.service<FoliageDrafts>(),
+            services.json,
+            background,
+            ui,
+            readCurrent = { readFoliageSourceNow(folder, services) },
+        ).also { controller -> controller.onChange = { if (!rendering && !disposed) apply(state) } }
+    }
+
     private fun apply(newState: PanelState) {
         state = newState
         // a scene's switch listens to the Scene views while it is shown; the listener goes with the view
@@ -234,8 +292,20 @@ class AssetPropertiesPanel(
 
     private fun render(newState: PanelState) {
         when (newState) {
+            is PanelState.Project -> {
+                useTerrain(null)
+                useFoliage(null)
+                useUndoEditor(newState.file)
+                content.removeAll()
+                content.add(JBScrollPane(ProjectDetailsView(newState, projectSettings)).apply {
+                    border = BorderFactory.createEmptyBorder()
+                }, BorderLayout.CENTER)
+                cards.show(this, DETAILS)
+            }
+
             is PanelState.UISceneState -> {
                 useTerrain(null)
+                useFoliage(null)
                 useUndoEditor(newState.file)
                 val own = com.intellij.openapi.util.Disposer.newDisposable(parentDisposable, "scene-details")
                     .also { viewDisposable = it }
@@ -251,6 +321,7 @@ class AssetPropertiesPanel(
 
             is PanelState.Empty -> {
                 useTerrain(null)
+                useFoliage(null)
                 useUndoEditor(null)
                 fillEmpty(newState)
                 cards.show(this, EMPTY)
@@ -258,6 +329,7 @@ class AssetPropertiesPanel(
 
             is PanelState.EntityDetails -> {
                 useTerrain(null)
+                useFoliage(null)
                 useUndoEditor(newState.target.file)
                 content.removeAll()
                 content.add(JBScrollPane(EntityDetailsView(project, newState, services.metaFiles)).apply {
@@ -268,7 +340,12 @@ class AssetPropertiesPanel(
 
             is PanelState.Details -> {
                 useTerrain(newState)
-                useUndoEditor(if (newState.fields.isEmpty()) null else newState.meta.folder.findChild(META_FILE))
+                useFoliage(newState)
+                // a foliage asset has no editable fields, but its section edits the same `meta.json`
+                useUndoEditor(
+                    if (newState.fields.isEmpty() && newState.foliage == null) null
+                    else newState.meta.folder.findChild(META_FILE)
+                )
                 content.removeAll()
                 content.add(
                     JBScrollPane(details(newState)).apply { border = BorderFactory.createEmptyBorder() },
@@ -315,17 +392,23 @@ class AssetPropertiesPanel(
             is TerrainSource.Ready -> terrainController?.let { box.add(TerrainGenerationSection(it)) }
             null -> {}
         }
+        when (val foliage = d.foliage) {
+            is FoliageSource.Unusable -> box.add(foliageUnusableNote(foliage.reason))
+            is FoliageSource.Ready -> foliageController?.let { box.add(FoliageSection(it, undoButtons())) }
+            null -> {}
+        }
         d.faces?.let { box.add(previews(it)) }
         d.hdr?.let { box.add(hdrPreview(it)) }
         return JPanel(BorderLayout()).apply { add(box, BorderLayout.NORTH) }
     }
 
     private fun header(d: PanelState.Details): JComponent {
+        val editable = d.fields.isNotEmpty() || d.foliage != null
         val text = JPanel(VerticalLayout(JBUI.scale(2))).apply {
             add(JBLabel(d.name).apply { font = JBFont.label().asBold().biggerOn(1f) })
             val type = (d.meta.json.get("type")?.takeIf { it.isTextual }?.asText()
                 ?: AbyssusBundle.message("propertiesUnknownType")).lowercase() // as the file spells it
-            if (d.fields.isEmpty()) {
+            if (!editable) {
                 add(JBLabel(AbyssusBundle.message("propertiesSubtitle", type)).apply { foreground = secondary() })
             } else {
                 add(JBLabel(AbyssusBundle.message("propertiesSubtitleEditable", type)).apply {
@@ -343,7 +426,7 @@ class AssetPropertiesPanel(
             )
             add(JBLabel(AssetIcons.forType(d.meta.type)), BorderLayout.WEST)
             add(text, BorderLayout.CENTER)
-            if (d.fields.isNotEmpty()) add(undoButtons(), BorderLayout.EAST)
+            if (editable) add(undoButtons(), BorderLayout.EAST)
         }
     }
 

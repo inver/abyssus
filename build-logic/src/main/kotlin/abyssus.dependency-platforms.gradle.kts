@@ -30,18 +30,20 @@ pluginManager.withPlugin("java-test-fixtures") {
     }
 }
 
-// libGDX publishes no BOM: give unversioned libGDX modules the catalog version, and align the versioned ones
+// libGDX publishes no BOM: give unversioned libGDX modules the catalog version, and align the versioned ones.
+// jnigen shares the group but has its own release cycle (e.g. gdx 1.14.2 uses gdx-jnigen-loader 2.5.2).
+// Including it in the platform makes Gradle probe nonexistent gdx 2.5.2 artifacts across every repository.
 val gdxVersion = libs.findVersion("gdx").get().requiredVersion
 configurations.configureEach {
     resolutionStrategy.eachDependency {
-        if (requested.group == "com.badlogicgames.gdx" && requested.version.isNullOrEmpty()) {
+        if (requested.group == "com.badlogicgames.gdx" && !requested.name.startsWith("gdx-jnigen") && requested.version.isNullOrEmpty()) {
             useVersion(gdxVersion)
             because("gdx version from gradle/libs.versions.toml")
         }
     }
 }
 dependencies.components.all {
-    if (id.group == "com.badlogicgames.gdx") {
+    if (id.group == "com.badlogicgames.gdx" && !id.name.startsWith("gdx-jnigen")) {
         belongsTo("com.badlogicgames.gdx:gdx-virtual-platform:${id.version}")
     }
 }

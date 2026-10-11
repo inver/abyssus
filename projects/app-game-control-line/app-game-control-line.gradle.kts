@@ -36,7 +36,7 @@ dependencies {
     runtimeOnly("com.github.stephengold:jolt-jni-$joltJniBuildPlatform:${libs.versions.jolt.get()}:ReleaseSp")
     testImplementation(libs.junit4)
     testImplementation(testFixtures(project(":lib-core")))
-    testImplementation(testFixtures(project(":lib-gdx-model")))
+    testImplementation(testFixtures(project(":lib-gdx")))
 }
 
 val gameProject = layout.projectDirectory.dir("project/ControlLine")
@@ -58,20 +58,6 @@ tasks.test {
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
 }
-
-// The component schema and play.json Abyssus reads (see physics/README.md and runtime/README.md). play.json holds
-// absolute paths, so it is git-ignored.
-val exportComponentSchema by tasks.registering(JavaExec::class) {
-    classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("net.nevinsky.abyssus.lib.runtime.schema.SchemaExportMain")
-    args("net.nevinsky.abyssus.app.game.controlline.components.ControlLineComponents", gameProject.asFile.absolutePath)
-}
-val exportPlay by tasks.registering(JavaExec::class) {
-    classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("net.nevinsky.abyssus.lib.physics.play.PlayExportMain")
-    args("net.nevinsky.abyssus.app.game.controlline.play.ControlLinePlay", gameProject.asFile.absolutePath)
-}
-tasks.register("exportAbyssus") { dependsOn(exportComponentSchema, exportPlay) }
 
 // Generators of the bundled project's assets (tools/): their output is committed, so the game needs none of them.
 val tools by sourceSets.creating {
@@ -97,6 +83,8 @@ val importers by sourceSets.creating {
 }
 dependencies {
     "importersImplementation"(kotlin("stdlib"))
+    // the FlightGear import lives in the editing library
+    "importersImplementation"(project(":lib-core-editor"))
 }
 tasks.register<JavaExec>("importTrainer") {
     group = "control line"

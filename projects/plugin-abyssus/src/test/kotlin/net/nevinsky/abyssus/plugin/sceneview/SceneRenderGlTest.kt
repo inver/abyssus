@@ -664,4 +664,71 @@ class SceneRenderGlTest {
         assertNull(r.error)
         assertEquals(0, markers)
     }
+
+    /**
+     * Renders `Main Scene` (no fog, its grey ambient) from a temp copy of `Untitled` whose `skybox_physical` gets
+     * [lightsScene] (JSON text; null: none), once per [variants] patch; [keep] lists the entity ids to keep (all when null).
+     */
+    private fun renderWithProceduralSky(
+        lightsScene: String?, keep: Set<String>?, vararg variants: (ObjectNode) -> Unit,
+    ): List<java.awt.image.BufferedImage> {
+        val dir = java.nio.file.Files.createTempDirectory("proclit").toFile()
+        try {
+            val source = File("src/test/testData/project/Untitled")
+            File(source, "assets").copyRecursively(File(dir, "assets"))
+            if (lightsScene != null) {
+                val meta = File(dir, "assets/skybox_physical/meta.json")
+                meta.writeText(meta.readText().replace("\"sunIntensity\": 20.0", "\"sunIntensity\": 20.0,\n    \"lightsScene\": $lightsScene"))
+            }
+            val text = File(source, "scenes/Main Scene.scene").readText()
+            return variants.map { variant ->
+                val patched = edit(text) { root ->
+                    noFog(root)
+                    val entities = root.get("ecs") as ObjectNode
+                    if (keep != null) entities.fieldNames().asSequence().toList().filter { it !in keep }.forEach(entities::remove)
+                    variant(root)
+                }
+                val r = GlHarness.render(renderParamsOf(parseScene(patched), CameraParams.DEFAULT, dir), 300)
+                assertNull(r.error)
+                r.image
+            }
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    private val noProceduralEntities: (ObjectNode) -> Unit = { it.putNull("skyboxName"); (it.get("ecs") as ObjectNode).removeAll() }
+
+    private val litByPhysicalSky: (ObjectNode) -> Unit = { it.put("skyboxEnabled", true); it.put("skyboxName", "skybox_physical") }
+
+    private fun blueShare(img: java.awt.image.BufferedImage, pixels: List<Pair<Int, Int>>): Double {
+        var red = 0L
+        var blue = 0L
+        for ((x, y) in pixels) channels(img.getRGB(x, y)).let { (r, _, b) -> red += r; blue += b }
+        return blue.toDouble() / maxOf(red, 1L)
+    }
+
+    @Test
+    fun aProceduralSkyWithLightsSceneTintsTheTerrainBlue() {
+        // the terrain faces up, so under a clear noon sky it takes the sky's blue instead of the scene's grey ambient
+        val (lit, plain, grid) = renderWithProceduralSky("true", setOf("1"), litByPhysicalSky, noSkyAtAll, noProceduralEntities)
+        val terrain = contentPixels(plain, grid)
+        assertTrue("terrain drew almost nothing: ${terrain.size}", terrain.size > 1000)
+        val litBlue = blueShare(lit, terrain)
+        val plainBlue = blueShare(plain, terrain)
+        assertTrue("lit $litBlue vs ambient $plainBlue", litBlue > plainBlue * 1.15)
+    }
+
+    @Test
+    fun aProceduralSkyWithoutLightsSceneKeepsTheAmbient() {
+        for (field in listOf(null, "false", "\"true\"", "1")) {
+            val (sky, none) = renderWithProceduralSky(field, setOf("0", "1", "2"), litByPhysicalSky, noSkyAtAll)
+            val grid = renderWithProceduralSky(field, setOf("0", "1", "2"), noProceduralEntities)[0]
+            val content = contentPixels(none, grid)
+            assertTrue("content drew almost nothing: ${content.size}", content.size > 1000)
+            // the sky is drawn behind the content: compare the content pixels only
+            val differing = content.count { (x, y) -> sky.getRGB(x, y) != none.getRGB(x, y) }
+            assertEquals("lightsScene=$field changed $differing of ${content.size} content pixels", 0, differing)
+        }
+    }
 }

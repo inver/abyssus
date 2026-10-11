@@ -43,14 +43,22 @@ interface SceneOverlay : Disposable {
     /** Called twice a frame: once depth-tested ([OverlayView.onTop] false), then over everything. */
     fun draw(view: OverlayView, lines: LineSink)
 
-    /** Actions for this view's toolbar, such as a toggle that shows or hides the overlay. EDT only. */
+    /**
+     * Actions for this view's toolbar, such as a toggle that shows or hides the overlay. EDT only.
+     * Called on each toolbar update; retain the same action instances across calls.
+     */
     fun actions(): List<AnAction> = emptyList()
 
     override fun dispose() {}
 }
 
+/** Shared JVM default, including for old binaries that implement both provider interfaces. */
+interface SceneProviderAvailability {
+    fun isAvailable(project: Project, file: VirtualFile): Boolean = true
+}
+
 /** The `net.nevinsky.abyssus.sceneOverlay` extension: makes a [SceneOverlay] for each Scene view that opens. */
-interface SceneOverlayProvider {
+interface SceneOverlayProvider : SceneProviderAvailability {
     fun create(project: Project, file: VirtualFile): SceneOverlay
 
     companion object {
@@ -102,7 +110,7 @@ interface SceneSimulation {
  * The `net.nevinsky.abyssus.sceneSimulation` extension: Play in the Scene view. With one installed, the view shows Play,
  * Pause, Step and Stop. [start] must return at once; the simulation reports through the listener when it runs.
  */
-interface SceneSimulationProvider {
+interface SceneSimulationProvider : SceneProviderAvailability {
     fun start(request: SimulationRequest, listener: SimulationListener): SceneSimulation
 
     companion object {

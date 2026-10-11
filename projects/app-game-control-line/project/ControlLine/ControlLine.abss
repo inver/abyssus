@@ -11,4 +11,4 @@
     "far": 500.0,
     "fieldOfView": 67.0
   }
-}
+,"physicsEnabled":true}

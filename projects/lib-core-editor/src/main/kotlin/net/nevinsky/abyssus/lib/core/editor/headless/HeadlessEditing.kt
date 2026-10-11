@@ -26,7 +26,6 @@ import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
 import net.nevinsky.abyssus.lib.core.editor.meta.message
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.runtime.schema.ComponentSchema
 
 /** Why a document or an edit was refused: [message] is the text the plugin shows, [rejection] the format problem if any. */
 data class Refusal(val message: String, val rejection: FormatRejection? = null)
@@ -46,15 +45,14 @@ sealed interface HeadlessEdit {
 /**
  * Validating and editing native `.scene`, `.abss` and asset `meta.json` documents as text, with no IDE: the same
  * admission, mutations and printing the plugin's writes use, so the same input gives byte-identical output and the
- * same refusal. Scene components are edited under [schemas]; reasons are read from [messages].
+ * same refusal. Scene components are edited by the built-in kinds; reasons are read from [messages].
  */
 class HeadlessEditing(
     private val messages: EditorMessages = ResourceEditorMessages(),
-    schemas: List<ComponentSchema> = emptyList(),
     private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
 ) {
     private val documents = DocumentTextEditor(format)
-    private val components = ComponentEditor(messages, schemas)
+    private val components = ComponentEditor(messages)
     private val assetMeta = AssetMetaEditor(AssetFieldDescriptions(), format)
 
     /** Null when [text] is a supported native document of [kind], else why it is refused. */

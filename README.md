@@ -17,10 +17,19 @@ remain readable in the text editor; plugin editing and loading are refused. No i
   Toggle scene options, rename scenes and choose a scene's skybox from the tree.
 - **Abyssus Properties**: the `meta.json` of the selected asset, with skybox face previews; terrain size, texture
   repetition and textures, cube skybox faces and procedural sky parameters can be edited, terrain heights can be generated
-  from seeded noise, **New Terrain** on the Assets node creates a terrain asset, and **Import FlightGear Aircraft**
-  turns an aircraft from a FlightGear `.zip` into a model asset.
+  from seeded noise, **New Terrain** on the Assets node creates a terrain asset, **Import Model** turns an OBJ, FBX,
+  3DS, DAE, glTF or GLB file into a model asset with a live preview, and **Import FlightGear Aircraft** turns an
+  aircraft from a FlightGear `.zip` into a model asset.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
+- **Terrain foliage**: **New Foliage...** creates layered scatter settings for trees, rocks and grass;
+  **Add Foliage...** attaches them to a terrain entity, and **Paint Foliage** paints or erases their density, with Undo.
+- **Sky light and cloud shadows**: a procedural sky with `"lightsScene": true` lights models and terrain with its own colour
+  (blue from a clear noon sky, grey under overcast, warm at sunset), changing smoothly with the sun and the clouds, and
+  clouds cast drifting shadows on the sun's light. Both follow the sky's atmosphere parameters, not a custom `sky.frag`
+  that departs from them; Ray Tracing sees the same clouds and cloud shade.
+- **Built-in Physics**: select a project’s `.abss` file and enable **Physics** in Properties for editable physics
+  components, collider/constraint overlays and Play in a separate process.
 - **Ray Tracing settings**: a selected scene's Properties switch turns Ray Tracing on for its open views (not saved), and
   its target samples, ray budget and reflection and refraction depths are saved in the scene and undoable. A model
   entity's PBR materials can be given Transmission and IOR to render as glass; these overrides apply to that entity only.
@@ -47,7 +56,8 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   file, with the `type` and `uuid` from the folder's `meta.json`. An asset no scene reaches is grayed and
   marked `unused`. A scene reaches an asset by folder name through `assetName` and `shaderKey` values in its
   `ecs` and through `skyboxName`; a reached asset in turn reaches the assets its `meta.json` references by
-  `uuid` (terrain `splatMap`/`splatBase`/`splatR`/`splatG`/`splatB`/`splatA`, model `materials`).
+  `uuid` (terrain `splatMap`/`splatBase`/`splatR`/`splatG`/`splatB`/`splatA`, model `materials`), and a reached
+  procedural sky reaches the cloud asset (`CLOUDS`) its `clouds` names. A reached foliage asset reaches its terrain and its layers' models by folder name. Cloud and foliage assets have their own icons.
   A `shaderKey` with no matching folder is a bundled editor shader and is ignored. Files named inside a
   `meta.json` (textures of a material, shader sources) are not followed.
 - A project's `scenes` and `assets` rows are labelled `Scenes` and `Assets` with their count. In a scene, `ecs` shows its
@@ -110,6 +120,30 @@ without it. The panel restores the settings from a recipe that still matches the
 (missing, malformed, an unknown version, or heights, size or resolution that changed) and offers the defaults instead.
 Heights that are not a square grid of 2 to 255 per side cannot be regenerated.
 
+### Light the scene from a procedural sky
+
+Add `"lightsScene": true` to a procedural sky's `additional` block (by hand, there is no toggle) and the sky lights the scene
+as an HDR sky does: models and terrain take its colour instead of the scene's ambient colour, PBR models reflect it, and the
+light follows the sun and the clouds. A clear noon gives cool blue light from above, an overcast sky flat grey light, a
+sunset warm light, and changes fade in over about a second. Only the boolean `true` turns it on; without it, or with
+`false`, the scene keeps its ambient colour. The light comes from Abyssus's own atmosphere model with the sky's parameters
+and clouds, so a custom `sky.frag` that departs from them looks different from the light it gives.
+
+Clouds also cast moving shadows from the sun onto terrain and models while the sky draws them: dark patches drift with the
+wind within about 4 km of the view's target (scene units are taken as metres), and beyond that the sun is dimmed evenly by the
+clouds over the target. Only the sun is shaded; nothing is written to your files.
+
+### Keep weather from a sky
+
+Right-click a procedural sky asset that references clouds and choose **New Weather Preset from Sky...**.
+Choose a new folder name (suggested: `weather_<sky>`). Abyssus creates a reusable `CLOUDS` asset with a fresh UUID,
+its stored drawing technique and its cloud bands with all defaults resolved. Unsaved metadata edits are copied;
+the view's Clouds override is not. The new asset is selected and starts unused. Assign its UUID to another sky's
+`additional.clouds` to use it.
+
+Creation leaves the source clouds, sky, scenes and project unchanged. Undo removes an unchanged, unreferenced
+new folder; Redo restores the same snapshot. Missing or unreadable clouds and invalid folder names are refused.
+
 ### New Terrain
 
 Right-click an **Assets** node and choose **New Terrain...**: pick a folder name (it must be new and stay inside
@@ -118,6 +152,47 @@ terrain is written as a native Abyssus terrain asset (`meta.json` with a fresh `
 refreshes and the new asset is selected. Nothing is placed in a scene and no scene or project file is changed, so the asset
 is marked unused until you add it to a scene. Undo removes the asset again, and Redo brings back the same files and
 `uuid`; Undo refuses while a scene or another asset uses it, or something was added to its folder.
+
+### New Foliage
+
+Right-click a project's **Assets** node and choose **New Foliage...**. The project needs a readable terrain asset.
+Choose the terrain, a new folder name (suggested: `foliage_<terrain folder>`) and a mask resolution from 16 to 2048
+(default 512). **Create** makes an empty foliage asset and selects it; add layers in its Properties panel.
+
+Each layer scatters one or more model assets, chosen with positive weights. Use **OBJECT** for trees and rocks that
+cast shadows, or **DETAIL** for grass and flowers that receive shadows and disappear beyond their draw distance.
+Set density (copies per square unit), scale range, alignment to the terrain normal, seed, and optional height and
+slope limits. Add, remove or reorder layers; the panel shows each layer's copy count and the total.
+
+Valid settings preview in every open Scene view using the foliage. **Apply** saves the settings and matching bake
+as one undoable operation; **Cancel**, selecting another asset or closing the panel discards the preview. The total
+limit is 1,000,000 copies: Apply, Re-bake and painting refuse results above it. After terrain regeneration or another
+change makes the bake out of date, the view regenerates the copies and the panel offers **Re-bake** to save them.
+Copies stand on the current terrain surface. Creation adds no scene entity; Undo removes the new asset unless it
+is used or its files changed, and Redo restores the same files.
+
+### Import Model
+
+Right-click an **Assets** node and choose **Import Model...**, then pick an `.obj`, `.fbx`, `.3ds`, `.dae`, `.gltf` or
+`.glb` file. Blender files are not read: export the model from Blender as glTF (File > Export > glTF 2.0) and import the
+`.glb`. The dialog shows a live preview of the model as it will be written, over a ground grid with a 1 m post (drag to
+orbit, wheel to zoom), and plays the animation chosen in its list. Choose:
+
+- the folder name (`model_` plus the file name by default);
+- the source unit (m, cm, mm, in, ft) and up axis (Y or Z), pre-filled from the file where it says (an FBX header, a
+  DAE `<asset>`; glTF is metres and Y up, 3DS is Z up) and marked as read from the file;
+- the size: the unit only, or scaled so the largest extent or the height is a number of metres;
+- **Add to scene**, on when a scene view is selected: Create also places the model at the point that view orbits
+  around and selects it. It is off, with the reason, when no scene view is open, the scene is playing, or its file
+  cannot be edited.
+
+The model always stands on y = 0 and is centred on X and Z. Create writes one model asset: `model.glb` with the node
+hierarchy, materials and, for animated files, the skeleton and every animation; textures as PNG files in `textures/`;
+and a `source.json` with the source path, checksum, frame and settings. Phong materials are approximated as
+metallic-roughness (the specular colour is lost), and cameras, lights, points and lines, missing textures, morph targets
+and unsupported glTF extensions are left out; the dialog lists each before Create. Nothing is written next to the
+source. Undo removes the folder, and the placed entity with it; Redo brings both back with the same files and `uuid`.
+Undo refuses once a scene uses the asset through another edit.
 
 ### Import FlightGear Aircraft
 
@@ -147,7 +222,12 @@ project's `assets` folder beside the `.abss`:
 - the scene's **models** (`RenderComponent` entities of type `MODEL`), textured, at each entity's position,
   rotation and scale; a model that has animations plays its first one on a loop;
 - the scene's **terrain** (height data and splat textures of a `TERRAIN` asset);
-- the **skybox** named by `skyboxName` when `skyboxEnabled`;
+- **foliage** attached to a terrain entity: scattered model copies that follow its position, rotation and scale;
+  animated models stay in their rest pose, and a click passes through a copy to the terrain behind it;
+- the **skybox** named by `skyboxName` when `skyboxEnabled`; a procedural sky's **clouds** (the `CLOUDS` asset its `meta.json`
+  `additional.clouds` names by `uuid`: low, mid and high bands and a technique, shared by every sky naming it) drift with their wind and dim the sun light when they cover it. The toolbar's
+  **Clouds** choice (*Asset*, *Layered*, *Shells*, *Volumetric*) overrides the sky's technique in that view only and
+  writes nothing; volumetric clouds that keep the view slower than 30 frames per second switch to shells with a note;
 - the **light entities** (directional, point and spot, with cone and edge softness) on top of the scene's
   ambient light and fog, each with a small marker (and a direction line for directional and spot lights);
 - the **camera entities**, each as a small body with its view frustum (near, far, field of view), pointing at its
@@ -171,8 +251,21 @@ shows the status, the reason it is unavailable or failed, and **Retry**. It need
 silicon with Metal on macOS, or a Vulkan 1.2 device with ray queries on Windows and Linux. Where it is unavailable the switch
 is disabled and says why; if it fails, the view returns to the normal renderer. Selecting, moving and rotating objects, the
 camera and the gizmos work as usual, and the scene file is never written by switching it on or off.
-`-Dabyssus.raytracing.backend=off` disables it for the IDE session. See [ray tracing](raytracing/README.md) for
+`-Dabyssus.raytracing.backend=off` disables it for the IDE session. See [ray tracing](projects/lib-raytracing/README.md) for
 backend requirements, rendering limits and native toolchains.
+
+Select a terrain entity and choose **Add Foliage...** in its tree context menu or the Scene view toolbar. Choose
+one of the foliage assets made for that terrain; this adds or replaces its foliage as one undoable scene edit.
+If none is available, create one from the project's **Assets** node first.
+
+With a terrain entity that has readable foliage and at least one layer selected, turn on **Paint Foliage** in the
+Scene view toolbar. Choose the layer, radius in world units, strength from 0 to 1, and **Paint** or **Erase** in
+the brush strip. Drag the left button inside the circle on that terrain to change its density mask; hold Shift to
+erase while Paint is chosen. Layers without a saved mask start at full density, so erase to clear space first.
+Copies update during the stroke in all views. Right-drag and the wheel still navigate; gizmos return when you leave
+paint mode or select another entity. Esc before release cancels the stroke. Release saves the mask and matching bake
+as one undoable operation; Ctrl+Z in the Scene view or Undo in the foliage panel restores it. A stroke above the copy
+limit is discarded with a reason. Foliage is omitted from the ray-traced preview, and Properties shows a note.
 
 **Add Light** in the toolbar creates a Directional light, Sun or Spot at the current orbit target and selects it.
 The same menu on a scene row places it at the origin; Spot sits 5 units above that point. A Sun starts warm and
@@ -191,31 +284,31 @@ be undone; resetting a default omits its saved field. These beam fields are part
 The toolbar's camera selector (**Free camera** and the scene's cameras by name) renders the view through a camera
 entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
-### Physics (Abyssus Physics plugin)
+### Physics
 
-**Abyssus Physics** is a separate plugin, built from `physics-plugin/`, that depends on Abyssus. With it installed:
+Physics is built into Abyssus. Select the project's `.abss` file in the Abyssus tree and tick **Physics** in
+**Abyssus Properties**. This saves the optional `physicsEnabled` boolean as one undoable edit; missing means off.
+The checkbox and scene controls follow unsaved text edits and Undo/Redo. Unsupported project documents stay read-only.
+The separate Abyssus Physics plugin must be uninstalled; the IDE marks it incompatible with this build.
 
-- **Add Component** offers **Rigid body**, **Collider** and **Constraint**. They are edited like other components,
-  and sizes and masses must be greater than 0. Without the plugin, these components show as read-only JSON and are
-  kept unchanged.
-- **Show Physics** in the Scene View toolbar (off when the view opens) draws each collider as a wireframe: green for
-  dynamic, blue for kinematic, grey for static. A height field is drawn as its terrain's outline. Each constraint is a
-  line between its anchors; a rope that is longer than its maximum is drawn dashed. The selected entity's physics is
-  brighter and drawn through its model.
+- Enabling Physics makes rigid bodies, colliders and constraints editable and offers them in **Add Component**.
+  **Show Physics** draws collider wireframes and constraint anchors, including selected and simulated objects.
+  Disabling Physics restores read-only raw physics data and removes built-in physics overlay/Play actions.
 - **Play**, **Pause**, **Step** and **Stop** run the scene's physics in a separate process. Play uses the scene as
   the editor holds it, unsaved text included. Simulated poses are shown but never written: Stop, Esc, editing the
   scene or closing the tab returns the view to the scene as the document holds it. While playing, gizmos are off,
   and keys and mouse buttons go to the game. If the process dies, one notification shows its last output and the IDE
   keeps running.
-- A game makes Play run its own code by exporting `<project>/abyssus/play.json` (see `physics/README.md`). Without that file,
+- A game makes Play run its own code by exporting `<project>/abyssus/play.json` (see `projects/lib-physics/README.md`). Without that file,
   Play runs physics alone.
 
+Disabling Physics during Play stops that session and restores authored poses without changing scene files or Undo history.
 Jolt, the physics engine, is loaded only by the play process, never by the IDE.
 
-The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `gdx-model` module, a
+The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `lib-gdx` module, a
 plain JVM library reusable in other libGDX projects; see [source provenance](docs/third-party/gdx-model-origin.md)
 for its origin and license. The GL
-render tests are opt-in: `./gradlew test -Dabyssus.glTests=true` (opens a window).
+render tests are opt-in: `./gradlew check -Dabyssus.glTests=true` (opens a window).
 
 To add a project or scene file format, implement `ConfigFileReader` and wire it into `AssetReadCache` and
 `ProjectLayout.ASSET_EXTENSIONS`. Asset loading uses `core`'s `AssetLoader` implementations; see
@@ -224,8 +317,8 @@ To add a project or scene file format, implement `ConfigFileReader` and wire it 
 ## Development
 
 See [AGENTS.md](AGENTS.md) for build, test and sandbox commands, and [the documentation map](docs/README.md)
-for architecture, native formats and module guides. The [Control Line game](games/control-line/README.md) demonstrates
-custom components, schema export and Play through the separate physics host. Use a copy of its native project in the IDE.
+for architecture, native formats and module guides. The [Control Line game](projects/app-game-control-line/README.md) demonstrates
+registered game components and a Play module for the separate physics host. Use a copy of its native project in the IDE.
 
 ## Installation
 
@@ -244,7 +337,7 @@ custom components, schema export and Play through the separate physics host. Use
 
 Licensed under [Apache-2.0](LICENSE) (SPDX-License-Identifier: Apache-2.0).
 
-Files under `gdx-model` derived from [libGDX](https://github.com/libgdx/libgdx) retain their original
+Files under `projects/lib-gdx` derived from [libGDX](https://github.com/libgdx/libgdx) retain their original
 Apache 2.0 headers.
 
 ---

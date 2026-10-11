@@ -6,13 +6,18 @@
 package net.nevinsky.abyssus.plugin.assetfiles
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import java.io.File
+
+/** An entity [entityId] of the scene file [scene]. */
+data class PlacedEntity(val scene: File, val entityId: String)
 
 /**
  * Finds what depends on an asset, so Undo of its creation does not delete something in use: the project's scenes that
@@ -20,8 +25,12 @@ import java.io.File
  * read (unsaved text wins). UI thread, since it reads documents.
  */
 class AssetReferenceGuard(private val projectDir: File) {
-    /** A sentence naming the first dependent of the asset in folder [name] with [uuid], or null when nothing uses it. */
-    fun blocker(name: String, uuid: String): String? {
+    /**
+     * A sentence naming the first dependent of the asset in folder [name] with [uuid], or null when nothing uses it.
+     * [ignoring] is an entity the same command placed (Import Model with Add to scene): the platform undoes the folder
+     * before that scene edit, so its reference is not a dependent.
+     */
+    fun blocker(name: String, uuid: String, ignoring: PlacedEntity? = null): String? {
         val unsaved = unsavedTexts()
         fun text(file: File): String? = unsaved[file.absoluteFile] ?: runCatchingKeepingCancellation { file.readText() }.getOrNull()
 
@@ -30,6 +39,7 @@ class AssetReferenceGuard(private val projectDir: File) {
             .distinct().sortedBy { it.name }
         for (scene in sceneFiles) {
             val root = text(scene)?.let { runCatchingKeepingCancellation { SceneJson().parse(it).also { root -> net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat().requireSupported(root, net.nevinsky.abyssus.lib.core.editor.document.DocumentKind.SCENE) } }.getOrNull() } ?: continue
+            if (ignoring != null && ignoring.scene.absoluteFile == scene) (SceneEntityTree(root).entities() as? ObjectNode)?.remove(ignoring.entityId)
             if (names(root).contains(name)) return "${scene.name} uses $name"
         }
         val assets = File(projectDir, ASSETS_DIR)

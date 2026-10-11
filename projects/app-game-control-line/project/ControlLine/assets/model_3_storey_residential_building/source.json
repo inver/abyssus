@@ -1,0 +1,24 @@
+{
+  "importer": "model",
+  "source": "3_storey_residential_building.glb",
+  "sourcePath": "/Users/inv3r/Downloads/3_storey_residential_building.glb",
+  "sourceSha256": "a5d0f613ac24c409843cb49ca01d385010e01ca8530af12a24479a974fbae24d",
+  "sourceFormat": "GLB",
+  "stated": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "chosen": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "size": "original",
+  "animations": [],
+  "skipped": [
+    {
+      "item": "KHR_materials_specular",
+      "reason": "glTF extension"
+    }
+  ],
+  "approximated": []
+}

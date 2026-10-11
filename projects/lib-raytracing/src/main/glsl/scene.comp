@@ -63,6 +63,20 @@ vec4 binding(uint m, uint slot, vec2 uv, vec4 fallback) {
     return d[b] < 0.0 ? fallback : sampleTexture(uint(d[b]), uv * vec2(d[b + 3u], d[b + 4u]) + vec2(d[b + 1u], d[b + 2u]));
 }
 
+// How much of light number `lightIndex` the clouds let through at `position` (1 when no cloud visibility map covers that
+// light). Header slot 30 points at (light index, texture index, edge fade, outside factor, u row, v row); the map is the
+// last entry of the texture table. Fades to the outside factor over the map's outer edge, as the raster shaders do.
+float sunVisibility(uint lightIndex, vec3 position) {
+    if (d[30] < 0.0) return 1.0;
+    uint b = uint(d[30]);
+    if (uint(d[b]) != lightIndex) return 1.0;
+    vec4 p = vec4(position, 1.0);
+    vec2 uv = vec2(dot(s4(b + 4u), p), dot(s4(b + 8u), p));
+    vec2 edge = min(uv, 1.0 - uv);
+    float inside = clamp(min(edge.x, edge.y) / max(d[b + 2u], 1e-4), 0.0, 1.0);
+    return mix(d[b + 3u], sampleTexture(uint(d[b + 1u]), clamp(uv, 0.0, 1.0)).x, inside);
+}
+
 uint queries = 0u; int frameError = 0;
 bool queryAllowed() { queries++; if (queries > uint(camera.work.x)) { frameError = -1; return false; } return true; }
 
@@ -254,7 +268,7 @@ vec3 shade(Surface s, vec3 view, bool hasEnvironment, vec3 environment) {
             float gv = nl * sqrt(nv * nv * (1.0 - a2) + a2), gl = nv * sqrt(nl * nl * (1.0 - a2) + a2);
             contribution = (1.0 - F) * diffuse + F * (distribution * 0.5 / max(gv + gl, 1e-5) * PI);
         }
-        result += contribution * s3(l) * (nl * attenuation);
+        result += contribution * s3(l) * (nl * attenuation * sunVisibility(i, s.position));
     }
     return result;
 }

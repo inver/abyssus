@@ -5,11 +5,26 @@
 ## [Unreleased]
 
 ### Changed
+- `lib-core-editor` packages now use `net.nevinsky.abyssus.lib.core.editor`; consumers and extension providers using editor types must update imports and rebuild.
+- Physics ships in Abyssus and is enabled per native project with `physicsEnabled: true` in its `.abss`. Existing projects must enable Physics in project properties once.
 - Abyssus is now an independent libGDX scene editor using native format version 1. Projects, scenes and asset metadata
   require `format: "abyssus"` and integral `formatVersion: 1`; renderables use stable native kinds and components use short names.
 - Older unmarked files and files from other editors are unsupported. Plugin loading, editing and automatic formatting refuse them without
   rewriting them. No importer or automatic migration is included. External model, image, terrain binary and recipe encodings remain unchanged.
 ### Added
+- **Cloud shadows and sky lighting for procedural skies.** While a procedural sky draws clouds, they cast moving shadows from the sun onto terrain and models (only the sun, combined with its own scene shadow, replacing the uniform sun dimming within about 4 km of the view target); `additional.lightsScene: true` makes a procedural sky light the scene like an HDR sky, following the sun and clouds with a one-second fade; ray traced views show the clouds in reflections and the cloud shadows on the sun (Metal and the CPU reference verified, Vulkan pending a device). Known limits: lighting follows the sky's physical parameters, not a custom `sky.frag`; shadow size assumes scene units are metres.
+- More realistic Ray Tracing clouds: a baked volumetric sky now marches its clouds at full resolution and averages three jittered samples per cube face. Before, the half-resolution single sample made the cloud shader think each pixel spanned a third of a degree, so it thinned and blurred the cloud detail away. Drifting skies are baked every 5 s instead of 2 s
+- Ray Tracing clouds are sharp and smooth: the baked procedural sky is rendered from 512 px faces, resampled bilinearly into a 2048x1024 image (it was 256 px faces, nearest, 1024x512, which showed blocky, striped clouds) and carried as 8-bit data
+- Ray Tracing no longer flickers in scenes with drifting clouds, terrain or animated models: terrain materials no longer count as changed every frame, a re-baked sky keeps the previous ray image on screen until the new one is ready, and an animated model with a still camera keeps an up to 500 ms old ray frame instead of flashing raster
+- Ray Tracing no longer stops with "Scene textures exceed 16777216 texels": the largest textures are reduced (halved) until they fit the ray tracing texture budget
+- **Maximum model parts and terrains** in the saved Ray Tracing settings of a scene (`rayTracing.maxInstances`, 1–4096, default 4096); the ray tracing instance capacity itself is raised from 1024 to 4096, so larger game scenes no longer fall back to raster
+- Procedural scene light and cloud shadows: a `SKYBOX_PROCEDURAL` asset with `"lightsScene": true` lights models and terrain from its own atmosphere and clouds (fading in over about a second as the sun or clouds change; the ambient colour is used until it is built or if it fails), and a sky that draws clouds now casts moving shadows from the sun onto terrain and models (a 4 km map around the orbit target, replacing the uniform sun dimming inside it). Ray Tracing reflects the same clouds, uses the sky light as diffuse light and applies the cloud shade to the sun. Limitations: lighting and shadows follow the asset's atmosphere parameters, not a custom `sky.frag`; cloud shadows assume the scene's units are metres and shade only the sun; the Vulkan backend's cloud shade has been compiled and validated but not run on a GPU yet
+- **New Weather Preset from Sky...** on procedural sky asset rows: snapshot the referenced clouds as a new native
+  `CLOUDS` asset with resolved defaults and the stored technique, using unsaved metadata, guarded Undo and stable
+  Redo. The source files remain unchanged and the snapshot starts unused.
+- Clouds on procedural skies: a new `CLOUDS` asset (low, mid and high bands with cloud types, coverage, density and wind, and a technique) that a procedural sky names by `uuid` and loads like a terrain loads its textures; drawn layered, as shells or volumetric (a per-view **Clouds** toolbar choice overrides the asset's technique, and slow volumetric clouds fall back to shells), dimming the sun light when they cover it; the skybox chooser reads `procedural sky · clouds`
+- **Import Model...** on a project's Assets node: an OBJ, FBX, 3DS, DAE, glTF or GLB file becomes a native model asset (`model.glb`, PNG textures and a `source.json`), checked first in a dialog with a live preview, unit, up axis and size settings and the animation to play; skeletons and animations are kept, the model stands on y = 0, centred, and **Add to scene** places it in the selected scene view in the same undoable step. Blender files are refused with a hint to export glTF
+- `gdx-model`'s `GltfWriter` writes any `ModelData` as binary glTF (nodes, skins, animations, metallic-roughness materials); the FlightGear import now writes through it
 - Logging in every module through SLF4J, bound to the IDE logger: `gdx-model`, `core` and `raytracing` now write progress, backend probe results, the chosen GPU, session limits, fallbacks and failures to `idea.log` under `Abyssus.assets`, `Abyssus.model` and `Abyssus.ray` (debug lines follow Debug Log Settings).
 - Saved **Ray Tracing** settings for a selected scene in Abyssus Properties: target samples per pixel, maximum rays per frame, and maximum reflection and refraction bounces, stored in the scene's `rayTracing` block (defaults omitted) with Undo/Redo; the switch itself is still not saved
 - Ray traced glass: **Transmission** and **IOR** for a model entity's PBR materials, saved as that entity's `RenderComponent.rayTracingMaterials` overrides, with Snell refraction, Fresnel and total internal reflection through closed solids; unsupported glass (open meshes, overlapping solids, masked or blended materials) falls back to raster with the reason
@@ -28,6 +43,7 @@
 - The model runtime and Assimp importer live in their own `gdx-model` library module (no IntelliJ or gdx-gltf dependency)
 
 ### Removed
+- The separate Abyssus Physics plugin. Uninstall it when upgrading; Abyssus declares its former ID incompatible.
 - Template sample tool window, frame listener and project service
 
 ### Fixed

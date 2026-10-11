@@ -52,6 +52,7 @@ class RayViewFeed(
         val metadata: RayDisplayMetadata,
         val hdrAmbient: FloatArray?,
         val sky: RaySkySnapshot?,
+        val sunVisibility: RaySunVisibility?,
     )
 
     private val pendingJob = AtomicReference<Job?>()
@@ -70,6 +71,7 @@ class RayViewFeed(
     private var cameraRevision = 0L
     private var poseRevision = 0L
     private var contentRevision = 0L
+    private var environmentRevision = 0L
     private var skyTexture: Pair<RaySkySnapshot, RayTexture>? = null
     private var lastAssets: RaySceneAssetState.Ready? = null
 
@@ -139,7 +141,8 @@ class RayViewFeed(
             context.height,
             captureRayDisplay(context),
             context.hdrAmbient?.copyOf(),
-            state.sky ?: context.bakedSky?.invoke()
+            state.sky ?: context.bakedSky?.invoke(),
+            context.sunVisibility?.invoke()
         )
         pendingJob.set(job)
         if (running.compareAndSet(false, true)) executor.execute(::drain)
@@ -183,7 +186,8 @@ class RayViewFeed(
             snapshots.capture(
                 job.params, job.camera, job.lights, job.state, emptyMap(), job.activeCamera, environment,
                 listOfNotNull(texture), job.poses, { mesh, palette -> skinning.deform(mesh, palette) },
-                environmentRevision = sky?.let { System.identityHashCode(it).toLong() } ?: 0L)
+                environmentRevision = sky?.let { (it.revision shl 32) xor System.identityHashCode(it).toLong() } ?: 0L,
+                sunVisibility = job.sunVisibility)
         when (conversion) {
             is RaySceneConversion.Preparing -> return
             is RaySceneConversion.Fallback -> {
@@ -206,7 +210,9 @@ class RayViewFeed(
         if (diff.rebuild) sceneGeneration++
         if (RaySceneChange.CAMERA in diff.changes) cameraRevision++
         if (RaySceneChange.POSE in diff.changes) poseRevision++
-        if (diff.changes.any { it != RaySceneChange.CAMERA && it != RaySceneChange.POSE }) contentRevision++
+        // A sky-only change (drifting clouds re-bake the sky and sun shade) restarts sampling but keeps the older frame shown.
+        val content = diff.changes.filter { it != RaySceneChange.CAMERA && it != RaySceneChange.POSE }
+        if (content == listOf(RaySceneChange.ENVIRONMENT)) environmentRevision++ else if (content.isNotEmpty()) contentRevision++
         if (job.epoch != epoch) return
         val key = RayFrameKey(sceneGeneration, contextGeneration, cameraRevision, poseRevision)
         val settings = frame.settings
@@ -224,7 +230,8 @@ class RayViewFeed(
             rays,
             job.metadata,
             RayRenderSettings(settings.targetSamplesPerPixel, settings.maxRaysPerFrame.toLong()),
-            job.settingsRevision
+            job.settingsRevision,
+            environmentRevision
         )
         runtime.offer(input, job.metadata)
     }
@@ -235,15 +242,10 @@ class RayViewFeed(
 
     private fun textureOf(sky: RaySkySnapshot): RayTexture {
         skyTexture?.takeIf { it.first === sky }?.let { return it.second }
-        return RayTexture(
-            "sky",
-            sky.width,
-            sky.height,
-            sky.rgba(),
-            RayWrap.REPEAT,
-            RayWrap.CLAMP_TO_EDGE,
-            RayFilter.LINEAR
-        ).also { skyTexture = sky to it }
+        val bytes = sky.rgba8()
+        return (if (bytes != null) RayTexture("sky", sky.width, sky.height, bytes, RayWrap.REPEAT, RayWrap.CLAMP_TO_EDGE, RayFilter.LINEAR)
+        else RayTexture("sky", sky.width, sky.height, sky.rgba(), RayWrap.REPEAT, RayWrap.CLAMP_TO_EDGE, RayFilter.LINEAR))
+            .also { skyTexture = sky to it }
     }
 
     /** Frozen copy for the converter: a worker must never read the renderer's mutable camera. */

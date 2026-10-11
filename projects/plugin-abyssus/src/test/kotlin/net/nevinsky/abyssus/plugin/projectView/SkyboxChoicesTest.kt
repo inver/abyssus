@@ -54,6 +54,18 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
         assertEquals("procedural sky", choice.detail)
     }
 
+    fun testProceduralDetailLineWithClouds() {
+        val dto = ProjectDto("P", emptyList(), listOf(testAsset("skybox_physical", "1", "SKYBOX_PROCEDURAL")))
+        fun detail(clouds: String?): String {
+            val meta = """{"format":"abyssus","formatVersion":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"sky.vert"${clouds?.let { ",\"clouds\":$it" } ?: ""}}}"""
+            return skyboxChoices(dto, mapOf("skybox_physical" to SceneJson().parse(meta))).single().detail
+        }
+        assertEquals("procedural sky \u00b7 clouds", detail("\"3f2a9c1e-7b4d-4e8a-9c6f-1d2e3b4a5c6d\""))
+        assertEquals("procedural sky", detail("\"\""))
+        assertEquals("procedural sky", detail("""{"enabled":true}"""))
+        assertEquals("procedural sky", detail(null))
+    }
+
     fun testFixtureProjectOffersAllThreeSkies() {
         val abss = myFixture.copyFileToProject("Tree/Untitled.abss", "Untitled/Untitled.abss")
         myFixture.copyFileToProject("Tree/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
