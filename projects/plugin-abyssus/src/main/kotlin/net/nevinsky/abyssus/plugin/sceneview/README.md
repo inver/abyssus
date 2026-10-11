@@ -173,30 +173,8 @@ Resources belong to one canvas and are created, rendered and disposed inside `Gd
 safe AWT render thread. A lost/hidden context abandons references without GL calls; recreation builds a fresh atlas
 and depth shaders. Missing framebuffer support, insufficient texture size or fewer than twelve fragment texture
 units disables shadows while keeping lighting. A failed depth pass disables shadows until recreation. Terrain
-reserves unit 6 for the atlas, between its six layer textures and irradiance on unit 7 (the incoming irradiance of a
-sky fade takes unit 8); model shaders use their texture binder. Atlas allocation and tile passes restore GL state even on failure.
-
-## Sky lighting and its fade
-
-A built HDR sky, or a procedural sky with `additional.lightsScene: true`, lights the content. `SceneSkybox.environment`
-returns a `SkyLightingState` (current lighting, the next one while a rebuild fades in, and the weight between them);
-`SceneRenderer.renderContent` turns it into an `EnvironmentLightAttribute` and hands the same attribute to `TerrainShader`.
-`SceneSkybox.updateLighting` advances a procedural sky's rebuilds once per frame (see `docs/ai/architecture.md`). During a
-fade the PBR shader mixes both environments' irradiance and specular cubes, the default shader mixes the six axis colors
-on the CPU, and `terrain.frag` mixes both irradiance cubes. The second environment is always bound (the current one again
-when nothing fades) and the mix is guarded by a uniform weight, so a fade neither recompiles a shader nor costs a cube
-fetch outside it. Until the first lighting is built the scene keeps its ambient color.
-
-## Cloud shadows
-
-`SceneCloudShadows` (in `shadows/`) draws a `CloudShadowMap` every frame while the sky has drawable clouds and the sun is among
-the rendered directional lights: a 512² `R16F` map of a 4000-unit square (the scene's units are taken as metres) around
-the orbit target, evaluated with the same model as `SunOcclusion` so it matches the sky. `SceneRenderer.applySunScale` then
-leaves the sun's colour whole in `litLights` (no double dimming) and passes the map to the content shaders and to
-`TerrainShader` (texture unit 9) as a `DirectionalVisibilityAttribute` for the sun's index in the rendered lights; beyond the
-square, over its outer 10%, the shaders use the smoothed uniform scale. Without clouds, a rendered sun or a buildable map the
-uniform dimming applies as before (`cloudShadowsActive` tells which). The map is created and drawn on the GL thread while the
-canvas is on screen, restores the framebuffer and state, and is disposed or abandoned with the renderer.
+reserves unit 6 for the atlas, between its six layer textures and irradiance on unit 7 (unit 8 holds the cube a sky light fades to, bound only while fading); model shaders use their
+texture binder. Atlas allocation and tile passes restore GL state even on failure.
 
 ## Terrain foliage
 
@@ -282,11 +260,18 @@ camera, project and drawn entities; otherwise the renderer draws raster as usual
 `RayFramePresenter`, then the grid and overlays are drawn with the frame's own camera against its depth. Hiding the view
 stops submissions and releases the session; showing it resumes without stale images. The scene's sky is transferred as a
 CPU `RaySkySnapshot` (HDR and cube skies) or, for a procedural sky (arbitrary asset GLSL), rendered by `RaySkyBaker` into
-six faces on the render thread and resampled, with its clouds, and baked again by `RaySkyBakeCache` when the sun moves over a degree, the
-cloud asset changes or, while the clouds drift, every two seconds (each bake is a new snapshot, which restarts accumulation). When the raster view shades the sun with
-the cloud shadow map, `SceneCloudShadows.capture` reads it back on the same bounded schedule and the feed carries it as the sun's `RayCloudVisibility`;
-the procedural diffuse light (`lightsScene`) reaches rays as the mixed six axis colours. A sky that is still loading or cannot be
-transferred shows the background colour; it never fails the view. The mode reads renderer state
+six faces on the render thread and resampled. That bake is a display-value sample of the sky as the view shows it, clouds
+included (`raySkyBakeKey`): it is taken again when the sky, project, sun or cloud asset change and, for clouds with wind,
+every 5 s of sky time (full-resolution, three-sample volumetric clouds), so a reflection or a ray miss shows the same clouds as the background, never a cloudless sky. It
+is not the linear light of the sky: that reaches the rays as the six axis colours of the current sky light (blended while
+it fades), when the sky has `lightsScene`. The clouds' shade on the sun reaches them as a `RaySunVisibility`: a 256²
+read-back of the cloud shadow map, with its world-to-map transform, the sun's entity id and the uniform factor for
+beyond the map (or just that factor when no map was made). It is copied again when the sun, cloud asset, uniform factor,
+500 m target cell or (with wind) 2 s time bucket change (`raySunVisibilityKey`), and it multiplies only the sun's direct
+contribution, once, on top of the sun's own shadow ray. A sky that is still loading or cannot be transferred shows the
+background colour; it never fails the view. Limits: a custom `sky.frag` that departs from the asset's atmosphere
+parameters shows its own look in the background and the bake but the physical atmosphere in the sky light; rays see
+no cloud shade on other lights; and baked clouds are not volumetric self-shadowed. The mode reads renderer state
 and never writes a scene file, so every edit, move, rotate, drop and undo reaches it through the view's existing state.
 
 ### Switching it from Abyssus Properties
@@ -323,3 +308,32 @@ before view construction, and unsupported asset metadata never reaches GPU build
 
 The editor provider obtains loading and scene shaders from `AbyssusCore.assets`, JSON from `documents`, and native
 ray collaborators from `ray`. These groups initialize independently; the ray group closes only resources it created.
+
+## Procedural sky light and its cross-fade
+
+A `SKYBOX_PROCEDURAL` asset with `additional.lightsScene: true` lights models and terrain like an HDR sky. Each frame
+`SceneRenderer` calls `SceneSkybox.updateLighting`, which advances the sky's `ProceduralSkyLighting` (see
+`docs/ai/architecture.md`); `SceneSkybox.environment` returns the completed light, so `SceneAmbient.of` replaces the ambient
+color with it, and until the first build is done the ambient color is used. When the sun or clouds change, a new
+environment is built in the background and fades in over about one second: `SceneSkybox.fadingTo` gives the next
+environment and the weight (0 to 1). `renderContent` passes them on in two ways:
+- models get an `EnvironmentLightAttribute` whose `fadeTo` / `weight` carry the second environment. `PbrShader` compiles a
+  program with `environmentFadeFlag` (one more irradiance and specular fetch) only while an environment fades, and
+  `DefaultShader` blends the six axis colors on the CPU;
+- `TerrainShader` binds the next irradiance cube on unit 8 and `terrain.frag` mixes the two by `u_skyFade`. Without a
+  fade, or without a sky, the shader is bound exactly as before.
+
+The light follows the asset's atmosphere parameters, not a custom `sky.frag` that departs from them.
+
+## Cloud shadows
+
+While the scene's procedural sky draws clouds some technique can still draw, the sun (the brightest usable directional
+light) is shaded by a `CloudShadowMap`: a 512² `R16F` texture covering a 4000-unit square (metres) centered on the orbit
+target, redrawn every frame at the sky's own time and cloud asset, so patches drift with each band's wind and follow a
+cloud asset reload. `planSunShading` picks the map or the uniform `SunOcclusion` dimming, never both: with the map
+the sun keeps its full color in `litLights` and `DirectionalVisibilityAttribute` carries the map, the sun's directional
+index, the sun-ray world-to-map transform (so a tall model is looked up at its ground footprint), a 10% edge fade, and
+the uniform factor for beyond the square. `DefaultShader`, `PbrShader` and `terrain.frag` (unit 9) multiply only that
+light, on top of its atlas shadow. No usable sun, a sun outside the rendered light budget, no clouds, exhausted cloud
+techniques or a map that could not be made (logged once to the `sceneview` logger) leave the uniform dimming as before.
+

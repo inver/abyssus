@@ -101,38 +101,41 @@ class ProceduralSkyLoaderTest {
         assertNull(prepared.clouds)
     }
 
-    @Test
-    fun anUnknownAssetPreparesNothing() {
-        assertNull(loader(fixture).prepare("nope"))
-    }
-
-    /** The `lightsScene` the loader stages from a copy of the fixture sky whose `additional` gets [field] (JSON members). */
-    private fun lightsScene(field: String?): Boolean {
+    /** A copy of the project whose sky's `additional` also has [field] (JSON `"lightsScene": ...`), or nothing for null. */
+    private fun withLightsScene(field: String?, test: (File) -> Unit) {
         val dir = copyOfProject()
         try {
             val meta = File(dir, "assets/skybox_physical/meta.json")
             if (field != null) {
-                meta.writeText(meta.readText().replace("\"sunIntensity\": 20.0", "\"sunIntensity\": 20.0,\n    $field"))
+                meta.writeText(meta.readText().replace("\"sunIntensity\": 20.0", "\"sunIntensity\": 20.0,\n    \"lightsScene\": $field"))
             }
-            return loader(dir).prepare("skybox_physical")!!.staged.lightsScene
+            test(dir)
         } finally {
             dir.deleteRecursively()
         }
     }
 
     @Test
-    fun onlyTheBooleanTrueOptsInToSceneLighting() {
-        assertTrue(lightsScene("\"lightsScene\": true"))
-        assertEquals(false, lightsScene(null))
-        assertEquals(false, lightsScene("\"lightsScene\": false"))
-        assertEquals(false, lightsScene("\"lightsScene\": \"true\""))
-        assertEquals(false, lightsScene("\"lightsScene\": 1"))
-        assertEquals(false, lightsScene("\"lightsScene\": null"))
-        assertEquals(false, lightsScene("\"lightsScene\": [true]"))
+    fun onlyTheBooleanTrueOptsIntoLightingTheScene() {
+        for ((value, expected) in listOf(
+            null to false, "false" to false, "true" to true,
+            "\"true\"" to false, "1" to false, "null" to false, "{\"enabled\": true}" to false, "[true]" to false,
+        )) {
+            withLightsScene(value) { dir ->
+                val prepared = loader(dir).prepare("skybox_physical")!!.staged
+                assertEquals("lightsScene=$value", expected, prepared.lightsScene)
+                assertEquals(AtmosphereParams(), prepared.params)
+            }
+        }
     }
 
     @Test
-    fun theFixtureSkyDoesNotLightItsScene() {
+    fun theFixtureSkyDoesNotLightTheScene() {
         assertEquals(false, loader(fixture).prepare("skybox_physical")!!.staged.lightsScene)
+    }
+
+    @Test
+    fun anUnknownAssetPreparesNothing() {
+        assertNull(loader(fixture).prepare("nope"))
     }
 }

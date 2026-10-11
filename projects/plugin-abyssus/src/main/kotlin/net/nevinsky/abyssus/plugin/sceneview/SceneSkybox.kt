@@ -15,8 +15,8 @@ import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSky
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.SkyLightingState
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SunDirection
 import java.io.File
@@ -57,22 +57,29 @@ class SceneSkybox(private val assets: AssetView<SkyRenderer>) : Disposable {
     fun update(name: String?, projectDir: File?) = assets.update(projectDir, setOfNotNull(name))
 
     /**
-     * The lighting of the sky [name] once it is built: an HDR sky's environment, or a procedural sky's when its
-     * `lightsScene` is true and its first lighting is done. Null for any other sky, while it builds, or if it failed.
+     * The lighting environment of the HDR sky [name], or of a procedural sky with `lightsScene`, once it is built; null
+     * for any other sky or while it builds.
      */
-    fun environment(name: String?): SkyLightingState? = when (val sky = name?.let(assets::get)) {
-        is HdrSky -> sky.environment.state
-        is ProceduralSky -> sky.lightingState
+    fun environment(name: String?): HdrEnvironment? = when (val sky = name?.let(assets::get)) {
+        is HdrSky -> sky.environment
+        is ProceduralSky -> sky.lightingEnvironment
         else -> null
     }
 
+    /** The environment a procedural sky's light is fading to and how far it has got; null unless it is fading. */
+    fun fadingTo(name: String?): FadingEnvironment? {
+        val lighting = (name?.let(assets::get) as? ProceduralSky)?.lighting ?: return null
+        val next = lighting.next ?: return null
+        return FadingEnvironment(next, lighting.fade)
+    }
+
     /**
-     * Keeps the scene lighting of the procedural sky [name] current for the sun toward [sun] at [timeSeconds] (one
-     * build step per frame); nothing for other skies. Call once per frame, whether or not the sky is drawn.
+     * Moves the sky light of the procedural sky [name] one frame (nothing for any other sky): the sun toward [sun] and
+     * the clouds at [timeSeconds] decide when it rebuilds, [deltaSeconds] fades a new result in.
      */
-    fun updateLighting(name: String?, sun: Vec3, timeSeconds: Double) {
+    fun updateLighting(name: String?, sun: Vec3, timeSeconds: Double, visible: Boolean, deltaSeconds: Double) {
         val sky = name?.let(assets::get) as? ProceduralSky ?: return
-        sky.updateLighting(sunDirection.set(sun.x, sun.y, sun.z), timeSeconds)
+        sky.updateLighting(sunDirection.set(sun.x, sun.y, sun.z), timeSeconds, visible, deltaSeconds)
     }
 
     /** Forgets every sky without GL calls: the context they were built in is gone (see [ViewAssets.abandon]). */
@@ -82,3 +89,6 @@ class SceneSkybox(private val assets: AssetView<SkyRenderer>) : Disposable {
         assets.dispose()
     }
 }
+
+/** The environment a sky light is fading to, and how far ([weight], 0 to 1) it has replaced the current one. */
+class FadingEnvironment(val environment: HdrEnvironment, val weight: Float)

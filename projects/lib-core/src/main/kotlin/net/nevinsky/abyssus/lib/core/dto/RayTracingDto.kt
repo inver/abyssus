@@ -6,4 +6,5 @@ data class RayTracingDto(
     var maxRaysPerFrame: Int? = 2097152,
     var maxReflectionBounces: Int? = 1,
     var maxRefractionBounces: Int? = 0,
+    var maxInstances: Int? = 4096,
 )

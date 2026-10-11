@@ -63,7 +63,7 @@ class RayModelPose(
 }
 
 data class RaySnapshotLimits(
-    val maxInstances: Int = 1024,
+    val maxInstances: Int = 4096,
     val maxTriangles: Int = 2_000_000,
     val maxBytes: Long = 512L * 1024 * 1024
 ) {
@@ -105,7 +105,7 @@ fun raySceneDiff(previous: RaySceneFrame?, next: RaySceneFrame): RaySceneDiff {
     if (previous.camera != next.camera) changes += RaySceneChange.CAMERA
     if (previous.scene.lights != next.scene.lights) changes += RaySceneChange.LIGHT
     if (previous.scene.environment != next.scene.environment || previous.scene.fog != next.scene.fog ||
-        previous.scene.cloudVisibility != next.scene.cloudVisibility || previous.environmentRevision != next.environmentRevision)
+        previous.environmentRevision != next.environmentRevision || previous.scene.sunVisibility != next.scene.sunVisibility)
         changes += RaySceneChange.ENVIRONMENT
     return RaySceneDiff(changes)
 }
@@ -116,6 +116,11 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
     // Converted static meshes and textures per retained asset object, so unchanged assets keep their identity from one
     // capture to the next and the backend reuses its acceleration structures. Weak: a replaced asset drops its entry.
     private val shared = java.util.WeakHashMap<Any, MutableMap<String, Any>>()
+
+    // Halved copies of oversized textures, per source object, so a scene over the texel budget reduces them once, not every frame.
+    private val halved = java.util.WeakHashMap<RayTexture, RayTexture>()
+    private fun halvedTexture(texture: RayTexture): RayTexture? =
+        halved[texture] ?: texture.halved()?.also { halved[texture] = it }
     fun capture(
         params: SceneRenderParams, camera: PerspectiveCamera, lightSet: LightSet,
         assets: RaySceneAssetState, preview: Map<String, DragResult> = emptyMap(), activeCameraId: String? = null,
@@ -123,7 +128,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         poses: Map<String, RayModelPose> = emptyMap(),
         deform: ((RayModelMesh, List<FloatArray>) -> FloatArray)? = null,
         environmentRevision: Long = 0,
-        cloudShadow: RayCloudShadowInput? = null,
+        sunVisibility: RaySunVisibility? = null,
     ): RaySceneConversion {
         val settings = params.rayTracing.settings ?: return RaySceneConversion.Fallback(
             RaySceneFallback.UNSUPPORTED_GEOMETRY,
@@ -141,7 +146,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                     content.terrains.mapNotNull { if (it.assetName !in assets.terrains) "terrain:${it.assetName}" else null }
         if (missing.isNotEmpty()) return RaySceneConversion.Preparing(missing.distinct())
         val result = runCatchingKeepingCancellation {
-            val builder = Builder(limits, environmentTextures, deform) { shared.getOrPut(it) { HashMap() } }
+            val builder = Builder(limits.copy(maxInstances = minOf(limits.maxInstances, settings.maxInstances)), environmentTextures, deform) { shared.getOrPut(it) { HashMap() } }
             val document = net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs(params.ecs)
             for (placement in content.models) {
                 val render = document.entity(placement.entityId)?.componentNode("RenderComponent")
@@ -152,19 +157,19 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 assets.terrains.getValue(placement.assetName)
             )
             builder.checkBounds()
-            val rayLights = lights(lightSet)
-            val cloudVisibility = cloudShadow?.let { builder.cloudVisibility(it, rayLights) }
             val scene = RaySceneSnapshot(
                 builder.meshes,
                 builder.instances,
                 builder.materials,
-                builder.textures,
-                rayLights,
+                fitTextureTexels(builder.textures, halve = ::halvedTexture)
+                    ?: throw RaySceneLimitException("The scene textures cannot be reduced to $RAY_MAX_TEXTURE_TEXELS texels"),
+                lights(lightSet),
                 environment ?: RayEnvironment(
                     ambient = params.ambient?.ray() ?: RayColor(0f, 0f, 0f),
                     background = params.clear.ray()
                 ),
-                params.fog?.let { RayFog(it.color.ray(), it.density, it.gradient) }, cloudVisibility)
+                params.fog?.let { RayFog(it.color.ray(), it.density, it.gradient) },
+                sunVisibility)
             val cameraSnapshot = RayCameraSnapshot(
                 camera.position.toVec3().ray(),
                 camera.direction.toVec3().ray(),
@@ -345,23 +350,6 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         private fun instance(id: String, mesh: Int, material: Int, matrix: Matrix4) {
             instances.add(RayInstance(id, mesh, material, matrix.`val`)); transforms[id] =
                 matrix.`val`.toList(); checkBounds()
-        }
-
-        /**
-         * The cloud shadow map of [input] as an 8-bit scene texture and the visibility record naming the sun among [lights];
-         * null when the sun is not a traced directional light, or the scene has no room for another texture.
-         */
-        fun cloudVisibility(input: RayCloudShadowInput, lights: List<RayLight>): RayCloudVisibility? {
-            val light = lights.indexOfFirst { it.kind == RayLightKind.DIRECTIONAL && it.id == input.sunEntityId }
-            if (light < 0 || textures.size >= RAY_MAX_TEXTURES) return null
-            val red = input.pixels()
-            val rgba = ByteArray(red.size * 4)
-            for (i in red.indices) {
-                rgba[i * 4] = red[i]; rgba[i * 4 + 3] = 255.toByte()
-            }
-            bytes += rgba.size.toLong()
-            textures.add(RayTexture("cloud-shadow", input.size, input.size, rgba, RayWrap.CLAMP_TO_EDGE, RayWrap.CLAMP_TO_EDGE, RayFilter.LINEAR))
-            return RayCloudVisibility(light, textures.lastIndex, input.worldToMap, input.edgeFade, input.outside, input.revision)
         }
 
         /** Says which bound was exceeded and by how much, so the toolbar can tell the user what to reduce. */

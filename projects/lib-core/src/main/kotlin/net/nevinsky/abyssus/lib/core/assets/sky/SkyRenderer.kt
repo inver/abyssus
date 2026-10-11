@@ -30,11 +30,13 @@ interface SkyRenderer : Disposable {
 /**
  * What a sky is drawn with in one frame: the [sun] (a unit vector toward it), the view's time in [timeSeconds] (clouds
  * drift by it), and the cloud [technique] to use in place of the asset's own (null: the asset's). [clouds] false draws
- * the sky without its clouds (a baked ray tracing sky).
+ * the sky without its clouds. [bake] says the frame is one face of a baked ray tracing sky, drawn once into a target of
+ * its own: techniques that can spend more on one still image (volumetric clouds) do.
  */
 data class SkyFrame(
     val sun: Vector3,
     val timeSeconds: Double = 0.0,
     val technique: CloudTechnique? = null,
     val clouds: Boolean = true,
+    val bake: Boolean = false,
 )

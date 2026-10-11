@@ -36,6 +36,11 @@ data class RayRenderInput(
     /** Caller-owned immutable presentation metadata, never inspected by native work or modified by this mailbox. */
     val metadata: Any? = null,
     val settings: RayRenderSettings? = null, val settingsRevision: Long = 0,
+    /**
+     * Changes whenever only the environment (a re-baked sky or cloud shade) changed. It restarts accumulation like a content
+     * change, but the previous frame stays presentable until the new one completes, so drifting clouds do not blank the view.
+     */
+    val environmentRevision: Long = 0,
 ) {
     init { require(raysPerSample > 0) }
 }
@@ -55,9 +60,11 @@ class RayRenderScheduler(
     private val policy: RayQualityPolicy,
     private val clock: () -> Long,
     private val maxMotionAgeNanos: Long = 100_000_000,
+    /** The age bound while the camera is still and only animation or pose moves: an older frame beats a flash of raster. */
+    private val maxAnimationAgeNanos: Long = 500_000_000,
     private val log: Logger = NOPLogger.NOP_LOGGER,
 ) {
-    private data class History(val key: RayFrameKey, val display: RayDisplayKey, val content: Long, val raysPerSample: Int, val settings: RayRenderSettings?, val settingsRevision: Long)
+    private data class History(val key: RayFrameKey, val display: RayDisplayKey, val content: Long, val raysPerSample: Int, val settings: RayRenderSettings?, val settingsRevision: Long, val environment: Long)
     private data class Offered(val input: RayRenderInput, val nanos: Long)
     private data class Flight(val batch: RayRenderBatch, val offeredNanos: Long, val submittedNanos: Long, val lifetime: Long)
     private val lock = Any()
@@ -152,11 +159,12 @@ class RayRenderScheduler(
         try { submit(next.batch) } catch (failure: Throwable) { inFlight = null; throw failure }
     }
 
-    private fun history(input: RayRenderInput) = History(input.request.key, input.display, input.contentRevision, input.raysPerSample, input.settings, input.settingsRevision)
+    private fun history(input: RayRenderInput) = History(input.request.key, input.display, input.contentRevision, input.raysPerSample, input.settings, input.settingsRevision, input.environmentRevision)
     private fun compatible(rendered: RayRenderInput, desired: RayRenderInput) = rendered.display == desired.display &&
         rendered.request.key.sceneGeneration == desired.request.key.sceneGeneration &&
         rendered.request.key.contextGeneration == desired.request.key.contextGeneration &&
         rendered.settingsRevision == desired.settingsRevision && rendered.settings == desired.settings
     private fun timely(completed: RayRenderCompleted, desired: RayRenderInput) =
-        history(completed.batch.input) == history(desired) || clock() - completed.offeredNanos <= maxMotionAgeNanos
+        history(completed.batch.input).copy(environment = 0) == history(desired).copy(environment = 0) ||
+            clock() - completed.offeredNanos <= if (completed.batch.input.request.key.cameraRevision == desired.request.key.cameraRevision) maxAnimationAgeNanos else maxMotionAgeNanos
 }

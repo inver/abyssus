@@ -19,4 +19,5 @@ fun testRenderer(executor: Executor = Executor(Runnable::run), log: Logger = pri
     ViewAssets(AssetLoading(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), log, executor, ShaderStorage())),
     ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java),
     FoliageDrafts(),
+    log = log,
 )

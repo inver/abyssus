@@ -8,19 +8,22 @@ package net.nevinsky.abyssus.lib.raytracing
 internal class RaySceneData(val floats:FloatArray,val bytes:ByteArray)
 
 /**
- * Version 3 ABI (slot 30, when not negative, is the cloud shadow block): offsets in the float section count floats, never bytes; texture table entries are
+ * Version 3 ABI: offsets in the float section count floats, never bytes; texture table entries are
  * (offset, width, height, wrapU, wrapV, filter, isBytes), where a byte texture's offset counts RGBA8 texels from the start of
  * the byte section. All payloads are bounded before JNI.
  */
 internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
     fun encode():RaySceneData {
-        require(scene.materials.size<=128 && scene.textures.size<=128 && scene.lights.size<=12) { "Scene shading resource limit exceeded" }
+        // a cloud visibility map rides in the texture table after the scene's own textures; header slot 30 points at its parameters
+        val sun=scene.sunVisibility?.takeIf { v -> scene.lights.any { it.id==v.lightId } }
+        val textures=scene.textures+listOfNotNull(sun?.texture())
+        require(scene.materials.size<=128 && textures.size<=128 && scene.lights.size<=12) { "Scene shading resource limit exceeded" }
         val attributes=scene.meshes.sumOf { it.vertexCount.toLong()*12 }
         val cubeFloats=if(scene.environment.ambientCube!=null) 18L else 0L
-        val cloudFloats=if(scene.cloudVisibility!=null) 12L else 0L
-        val total=cubeFloats+cloudFloats+32L+scene.materials.size*128L+scene.lights.size*16L+attributes+scene.textures.size*8L+scene.instances.size*2L+
-            scene.textures.filter { !it.isBytes }.sumOf { it.width.toLong()*it.height*4 }
-        val byteTexels=scene.textures.filter { it.isBytes }.sumOf { it.width.toLong()*it.height }
+        val sunFloats=if(sun!=null) 12L else 0L
+        val total=cubeFloats+sunFloats+32L+scene.materials.size*128L+scene.lights.size*16L+attributes+textures.size*8L+scene.instances.size*2L+
+            textures.filter { !it.isBytes }.sumOf { it.width.toLong()*it.height*4 }
+        val byteTexels=textures.filter { it.isBytes }.sumOf { it.width.toLong()*it.height }
         // offsets are stored as floats, which are exact only up to 2^24
         require(total<=MAX_SCENE_FLOATS) { "Scene shading payload exceeds ${MAX_SCENE_FLOATS*4/(1024*1024)} MiB" }
         require(byteTexels<=MAX_TEXTURE_TEXELS) { "Scene textures exceed $MAX_TEXTURE_TEXELS texels" }
@@ -61,13 +64,13 @@ internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
                 out[at+9]=if(normals!=null)1f else 0f;out[at+10]=if(tangent!=null)1f else 0f;at+=12
             }
         }
-        out[4]=at.toFloat();val textureTable=at;at+=scene.textures.size*8
+        out[4]=at.toFloat();val textureTable=at;at+=textures.size*8
         out[5]=at.toFloat()
         scene.instances.forEach { out[at++]=it.material.toFloat() }
         out[6]=at.toFloat()
         val solids=scene.instances.map { it.id.substringBefore('/') }.distinct().withIndex().associate { it.value to it.index }
         scene.instances.forEach { out[at++]=solids.getValue(it.id.substringBefore('/')).toFloat() }
-        scene.textures.forEachIndexed { i,t ->
+        textures.forEachIndexed { i,t ->
             val p=textureTable+i*8;out[p+1]=t.width.toFloat();out[p+2]=t.height.toFloat();out[p+3]=t.wrapU.ordinal.toFloat();out[p+4]=t.wrapV.ordinal.toFloat();out[p+5]=t.filter.ordinal.toFloat()
             val packed=t.rgba8()
             if(packed!=null) {
@@ -88,17 +91,15 @@ internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
             cube.forEachIndexed { i,c -> out[at+i*3]=c.r;out[at+i*3+1]=c.g;out[at+i*3+2]=c.b }
             at+=18
         }
-        scene.cloudVisibility?.let { cloud ->
-            // slot 30: texture, light index, the x and y rows of the world-to-map transform, edge fade, outside visibility
+        if(sun!=null) {
+            // (light index, texture index, edge fade, outside factor, u row, v row)
             out[30]=at.toFloat()
-            out[at]=cloud.texture.toFloat();out[at+1]=cloud.light.toFloat()
-            cloud.worldToMap.forEachIndexed { i,v -> out[at+2+i]=v }
-            out[at+10]=cloud.edgeFade;out[at+11]=cloud.outside
-            at+=12
+            out[at]=scene.lights.indexOfFirst { it.id==sun.lightId }.toFloat();out[at+1]=(textures.size-1).toFloat();out[at+2]=sun.edgeFade;out[at+3]=sun.outside
+            sun.worldToMap().copyInto(out,at+4);at+=12
         }
         return RaySceneData(out,bytes)
     }
 }
 
 private const val MAX_SCENE_FLOATS = 16L*1024*1024
-private const val MAX_TEXTURE_TEXELS = 16L*1024*1024
+private const val MAX_TEXTURE_TEXELS = RAY_MAX_TEXTURE_TEXELS

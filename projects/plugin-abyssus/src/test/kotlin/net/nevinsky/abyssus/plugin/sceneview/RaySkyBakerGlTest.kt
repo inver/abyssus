@@ -80,48 +80,54 @@ class RaySkyBakerGlTest {
         assertTrue("the bake ran inside the GL context", checked)
     }
 
-    @Test fun bakedCloudsAppearDriftAndAreAbsentWhenNotAsked() {
+    private val skyDir = java.io.File("src/test/testData/project/Untitled/assets/skybox_physical")
+
+    private fun proceduralSky(clouds: net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds?) =
+        net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky(
+            net.nevinsky.abyssus.lib.core.assets.sky.procedural.PreparedProceduralSky(
+                net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams(),
+                java.io.File(skyDir, "sky.vert").readText(), java.io.File(skyDir, "sky.frag").readText(), "skybox_physical",
+                clouds?.name,
+            ),
+            net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets { name -> clouds?.takeIf { it.name == name } },
+            net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage(),
+        )
+
+    @Test fun cloudyBakesShowCloudsFollowTheirTimeAndCarryARevision() {
         assumeTrue(GlHarness.enabled)
         var checked = false
         val rendered = GlHarness.render(SceneRenderParams.DEFAULT, 2) { _, index ->
             if (index != 0) return@render
-            val dir = java.io.File("src/test/testData/project/Untitled/assets/skybox_physical")
-            val scattered = net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds(
-                "clouds",
+            val fair = net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds(
+                "weather",
                 net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta(
                     low = net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand(
                         net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType.CUMULUS,
-                        net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel.LOW, coverage = .5f,
                     ),
                 ),
                 null,
             )
-            val sky = net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky(
-                net.nevinsky.abyssus.lib.core.assets.sky.procedural.PreparedProceduralSky(
-                    net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams(), java.io.File(dir, "sky.vert").readText(),
-                    java.io.File(dir, "sky.frag").readText(), "skybox_physical", "clouds",
-                ),
-                net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets { scattered },
-                net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage(),
-            )
+            val sky = proceduralSky(fair)
+            val baker = RaySkyBaker(faceSize = 64)
             try {
-                val baker = RaySkyBaker(faceSize = 64)
-                val noon = Vec3(0f, 1f, 0f)
-                val clear = baker.bake(sky, noon).rgba()
-                val clearLater = baker.bake(sky, noon, 900.0).rgba()
-                val cloudy = baker.bake(sky, noon, 0.0, clouds = true).rgba()
-                val cloudyLater = baker.bake(sky, noon, 900.0, clouds = true).rgba()
-                assertArrayEquals("without clouds the picture does not depend on time", clear, clearLater, 0f)
-                fun difference(a: FloatArray, b: FloatArray) = a.indices.count { Math.abs(a[it] - b[it]) > .02f }
-                assertTrue("clouds are in the picture", difference(clear, cloudy) > clear.size / 50)
-                assertTrue("drifting clouds change the picture with time", difference(cloudy, cloudyLater) > 0)
-                assertEquals("baking leaves the GL state clean", GL_NO_ERROR, glGetError())
+                val sun = Vec3(0f, 1f, 0f)
+                val bare = baker.bake(sky, sun)
+                val cloudy = baker.bake(sky, sun, 0.0, clouds = true)
+                val later = baker.bake(sky, sun, 600.0, clouds = true)
+                assertFalse("the clouds change the sky", bare.rgba().contentEquals(cloudy.rgba()))
+                assertFalse("wind moves them", cloudy.rgba().contentEquals(later.rgba()))
+                assertTrue("still a display sample, not HDR", !cloudy.hdr && !later.hdr)
+                assertEquals(listOf(1L, 2L, 3L), listOf(bare.revision, cloudy.revision, later.revision))
+                assertTrue("every sample is a finite display value", cloudy.rgba().all { it.isFinite() && it in 0f..1f })
+                assertArrayEquals("baking without clouds is the bare sky again", bare.rgba(), baker.bake(sky, sun, 600.0).rgba(), 0f)
+                assertEquals(GL_NO_ERROR, glGetError())
                 checked = true
             } finally {
-                sky.dispose(); scattered.dispose()
+                sky.dispose(); fair.dispose()
             }
         }
-        rendered.error?.let { throw it }
-        assertTrue("the bake ran inside the GL context", checked)
+        assertNull(rendered.error)
+        assertTrue(checked)
     }
 }
+

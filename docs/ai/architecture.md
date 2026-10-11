@@ -93,6 +93,24 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    `CloudRenderer` strategy (`LayeredClouds`, `ShellClouds`, `VolumetricClouds`, built lazily by `CloudTechniques`, which
    steps down volumetric to shells to layered to none when one cannot be built). All techniques and `SunOcclusion` share
    one coverage field, `CloudField` in Kotlin and `clouds_common.glsl` (kept equal by `CloudFieldParityGlTest`).
+   A procedural sky whose asset has `additional.lightsScene: true` (parsed as a strict boolean by
+   `ProceduralSkyMeta`, staged in `PreparedProceduralSky`) also lights the content. `ProceduralSky` then owns a
+   per-view `ProceduralSkyLighting`: the pure `LightingRefreshPolicy` (1° sun threshold, 2 s drifting-cloud period, 1 s
+   fade, hidden-view pause, coalesced requests, bounded retries) decides when to rebuild; each rebuild renders a linear
+   `ProceduralLightingCube` (`atmosphere_linear.frag` plus a linear shell-cloud pass) and feeds it to
+   `HdrEnvironmentBuild` as a `CubeSource`, one step per frame. It keeps the current and next `HdrEnvironment`
+   and one build, disposing superseded results once, and abandons them without GL calls on context loss. `SceneRenderer`
+   calls `SceneSkybox.updateLighting` each frame and `SceneSkybox.environment` returns the completed lighting, so
+   `SceneAmbient.of` selects it exactly as for an HDR sky; without a completed build the ambient color is used.
+   While a sky draws clouds, `SceneRenderer` also owns a per-view `CloudShadowMap` (`sceneview/shadows/`, GL thread): each frame
+   it redraws a 512² `R16F` texture, centered on the orbit target, from the shared cloud field (`cloud_shadow.frag` in
+   `lib-core`, the GLSL twin of `SunOcclusion.instant`). `planSunShading` decides between it and the uniform dimming:
+   with a usable map and the sun among the budgeted directional lights, the lit set keeps the sun undimmed and a
+   `lib-gdx` `DirectionalVisibilityAttribute` (map, the sun's directional index from `LightSet.directionalIndexOf`,
+   world-to-map, edge fade, and the uniform factor to use beyond the map) is set on the content environment and passed
+   to `TerrainShader`; `DefaultShader`, `PbrShader` and `terrain.frag` multiply that one light by the map, on top of its
+   atlas visibility. A map that fails to build is logged once and the view keeps the uniform dimming. The map is created
+   with the first clouds that cast shadows, dropped without GL calls on context loss and disposed with the renderer.
    `SceneRenderer` advances the view's `SkyClock`, passes `SceneViewState.cloudTechnique` (the toolbar's per-view
    override, `CloudViewState`), and scales the sun light (`SunDirection.sunLight`) by `SunOcclusion` each frame for the
    environment and `TerrainShader`; shadows, other lights and ray tracing use the unscaled set.

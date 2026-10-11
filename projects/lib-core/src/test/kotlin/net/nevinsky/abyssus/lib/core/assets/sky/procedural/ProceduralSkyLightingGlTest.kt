@@ -7,243 +7,136 @@ package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
+import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HDR_BUILD_STEPS
-import net.nevinsky.abyssus.lib.core.assets.skyShaders
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNotSame
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.sin
+import java.lang.reflect.Proxy
 
-/** The scene lighting of a procedural sky, frame by frame. Opt-in: `-Dabyssus.glTests=true`. */
 class ProceduralSkyLightingGlTest {
     @Before
-    fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
+    fun requireGl() = assumeTrue(TestGl.enabled)
 
-    private fun sun(degrees: Double) =
-        Vector3(sin(Math.toRadians(degrees)).toFloat(), cos(Math.toRadians(degrees)).toFloat(), 0f)
+    private val noon = Vector3(0f, 1f, 0f)
+    private val frame = 1.0 / 60
 
-    private fun clouds(wind: Boolean) = Clouds(
-        "clouds",
-        CloudMeta(
-            CloudTechnique.SHELLS,
-            low = CloudBand(CloudType.CUMULUS, CloudLevel.LOW, windX = if (wind) 4f else 0f, windZ = 0f),
-        ),
-        null,
-    )
-
-    private class Frames(val lighting: ProceduralSkyLighting) {
-        var time = 0.0
-        var sun = Vector3(0f, 1f, 0f)
-
-        /** Runs [count] frames of 0.1 s; returns how many it took until [until] held (or [count]). */
-        fun run(count: Int, until: () -> Boolean = { false }): Int {
-            for (i in 1..count) {
-                lighting.update(sun, time)
-                time += 0.1
-                if (until()) return i
-            }
-            return count
+    /** Updates until [done] holds, at most [limit] frames; returns the frames used. */
+    private fun ProceduralSkyLighting.until(
+        limit: Int = 40, sun: Vector3 = noon, clouds: Clouds? = null, time: Double = 0.0, done: () -> Boolean,
+    ): Int {
+        for (i in 1..limit) {
+            update(sun, clouds, time, true, frame)
+            if (done()) return i
         }
-    }
-
-    private fun inGl(block: () -> Unit) = TestGl.run(block)
-
-    private fun lighting(log: RecordingLogger = RecordingLogger(), clouds: () -> Clouds? = { null }) =
-        ProceduralSkyLighting(AtmosphereParams(), skyShaders(), clouds, log)
-
-    @Test
-    fun theSceneKeepsItsAmbientUntilTheFirstBuildCompletes() {
-        inGl {
-            val lighting = lighting()
-            val frames = Frames(lighting)
-            try {
-                frames.run(1)
-                assertNull("nothing yet", lighting.state)
-                val taken = frames.run(HDR_BUILD_STEPS + 5) { lighting.state != null }
-                assertNotNull("lit after $taken frames", lighting.state)
-                assertTrue("one step per frame: $taken", taken in HDR_BUILD_STEPS - 1..HDR_BUILD_STEPS + 2)
-                assertNull(lighting.state!!.next)
-                assertEquals(0f, lighting.state!!.weight, 0f)
-            } finally {
-                lighting.dispose()
-            }
-        }
+        fail("not done after $limit frames")
+        return limit
     }
 
     @Test
-    fun aMovedSunFadesInANewLightingAndReleasesTheOldOne() {
-        inGl {
-            val lighting = lighting()
-            val frames = Frames(lighting)
-            try {
-                frames.run(20) { lighting.state != null }
-                val first = lighting.state!!.current
-                val firstHandle = first.irradiance.textureObjectHandle
-                frames.sun = sun(30.0)
-                frames.run(30) { lighting.state?.next != null }
-                val fading = lighting.state!!
-                assertNotNull("a next lighting", fading.next)
-                assertSame(first, fading.current)
-                frames.run(5)
-                val mid = lighting.state!!.weight
-                assertTrue("fading, weight $mid", mid > 0f && mid < 1f)
-                val state = lighting.state!!
-                val blended = state.blendedAmbient()
-                for (i in 0 until 18) {
-                    val expected = state.current.ambient[i] + (state.next!!.ambient[i] - state.current.ambient[i]) * state.weight
-                    assertEquals("axis colour $i is the current one mixed toward the next by the weight", expected, blended[i], 1e-5f)
-                }
-                assertTrue("the diffuse light really changed with the sun", (0 until 18).any { abs(state.next!!.ambient[it] - state.current.ambient[it]) > 1e-3f })
-                frames.run(20) { lighting.state?.next == null }
-                assertNull(lighting.state!!.next)
-                assertNotSame(first, lighting.state!!.current)
-                assertFalse("the superseded lighting is released", Gdx.gl.glIsTexture(firstHandle))
-            } finally {
-                lighting.dispose()
-            }
-        }
-    }
-
-    @Test
-    fun aSunWithinADegreeDoesNotRebuild() {
-        inGl {
-            val lighting = lighting()
-            val frames = Frames(lighting)
-            try {
-                frames.run(20) { lighting.state != null }
-                val first = lighting.state!!.current
-                frames.sun = sun(0.5)
-                frames.run(40)
-                assertSame(first, lighting.state!!.current)
-                assertNull(lighting.state!!.next)
-                assertFalse(lighting.isBuilding)
-            } finally {
-                lighting.dispose()
-            }
-        }
-    }
-
-    @Test
-    fun aReloadedStationaryCloudAssetRefreshesTheLighting() {
-        inGl {
-            var asset: Clouds? = null
-            val lighting = lighting { asset }
-            val frames = Frames(lighting)
-            val made = mutableListOf<Clouds>()
-            try {
-                frames.run(20) { lighting.state != null }
-                val first = lighting.state!!.current
-                frames.run(60)
-                assertSame("stationary clear sky: nothing to refresh", first, lighting.state!!.current)
-                asset = clouds(wind = false).also(made::add)
-                frames.run(60) { lighting.state?.next != null }
-                assertNotNull("the new weather is built", lighting.state!!.next)
-                frames.run(30) { lighting.state?.next == null }
-                val second = lighting.state!!.current
-                assertNotSame(first, second)
-                asset = clouds(wind = false).also(made::add) // reloaded: a different object, same weather
-                frames.run(60) { lighting.state?.next != null }
-                assertNotNull("a reload refreshes even without wind", lighting.state!!.next)
-            } finally {
-                lighting.dispose()
-                made.forEach { it.dispose() }
-            }
-        }
-    }
-
-    @Test
-    fun driftingCloudsRefreshWithTime() {
-        inGl {
-            val asset = clouds(wind = true)
-            val lighting = lighting { asset }
-            val frames = Frames(lighting)
-            try {
-                frames.run(20) { lighting.state != null }
-                val taken = frames.run(60) { lighting.state?.next != null }
-                assertNotNull("rebuilt within about two seconds of cloud time (took $taken frames)", lighting.state!!.next)
-            } finally {
-                lighting.dispose()
-                asset.dispose()
-            }
-        }
-    }
-
-    @Test
-    fun aFirstBuildFailureKeepsTheAmbientAndLogsOnce() {
-        inGl {
-            val log = RecordingLogger()
-            val lighting = lighting(log)
-            val frames = Frames(lighting)
-            val gl30 = Gdx.gl30
-            try {
-                Gdx.gl30 = null
-                frames.run(10)
-                assertNull(lighting.state)
-                assertFalse(lighting.isBuilding)
-                assertEquals(1, log.warnings.size)
-            } finally {
-                Gdx.gl30 = gl30
-                lighting.dispose()
-            }
-        }
-    }
-
-    @Test
-    fun aLaterFailureKeepsTheLastLighting() {
-        inGl {
-            val log = RecordingLogger()
-            val lighting = lighting(log)
-            val frames = Frames(lighting)
-            val gl30 = Gdx.gl30
-            try {
-                frames.run(20) { lighting.state != null }
-                val first = lighting.state!!.current
-                frames.sun = sun(30.0)
-                Gdx.gl30 = null
-                frames.run(10)
-                Gdx.gl30 = gl30
-                assertSame(first, lighting.state!!.current)
-                assertNull(lighting.state!!.next)
-                assertEquals(1, log.warnings.size)
-                assertTrue("lighting is still alive", Gdx.gl.glIsTexture(first.irradiance.textureObjectHandle))
-            } finally {
-                Gdx.gl30 = gl30
-                lighting.dispose()
-            }
-        }
-    }
-
-    @Test
-    fun disposeReleasesEverything() {
-        inGl {
-            val lighting = lighting()
-            val frames = Frames(lighting)
-            frames.run(20) { lighting.state != null }
-            frames.sun = sun(30.0)
-            frames.run(15) { lighting.state?.next != null }
-            val handles = lighting.state!!.let { s ->
-                listOfNotNull(s.current, s.next).flatMap { listOf(it.specular, it.irradiance) }.map { it.textureObjectHandle }
-            }
+    fun theFirstBuildTakesFramesAndKeepsTheAmbientMeanwhile() = TestGl.run {
+        val lighting = ProceduralSkyLighting(AtmosphereParams(), ShaderStorage(), "sky")
+        try {
+            lighting.update(noon, null, 0.0, true, frame)
+            assertNull("one frame renders only the cube", lighting.current)
+            val frames = lighting.until { lighting.current != null }
+            assertTrue("one build step per frame, got $frames", frames in 5..12)
+            assertNull(lighting.next)
+            assertEquals(GL20.GL_NO_ERROR, Gdx.gl.glGetError())
+            val ambient = lighting.current!!.ambient
+            assertTrue("blue sky light from above: ${ambient.toList()}", ambient[8] > ambient[6])
+        } finally {
             lighting.dispose()
-            assertNull(lighting.state)
-            handles.forEach { assertFalse("texture $it released", Gdx.gl.glIsTexture(it)) }
+        }
+    }
+
+    @Test
+    fun aMovedSunFadesANewEnvironmentInOverOneSecond() = TestGl.run {
+        val lighting = ProceduralSkyLighting(AtmosphereParams(), ShaderStorage(), "sky")
+        try {
+            lighting.until { lighting.current != null }
+            val first = lighting.current
+            val sunset = Vector3(1f, 0.05f, 0f).nor()
+            lighting.until(sun = sunset) { lighting.next != null }
+            assertSame(first, lighting.current)
+            assertEquals(0f, lighting.fade, 1f / 30)
+            lighting.until(limit = 100, sun = sunset) { lighting.next == null }
+            assertNotSame(first, lighting.current)
+            assertEquals(0f, lighting.fade, 0f)
+            val ambient = lighting.current!!.ambient
+            assertNotEquals(first!!.ambient.toList(), ambient.toList())
+        } finally {
+            lighting.dispose()
+        }
+    }
+
+    @Test
+    fun aCloudReloadWithoutWindRebuildsButTimeAloneDoesNot() = TestGl.run {
+        val lighting = ProceduralSkyLighting(AtmosphereParams(), ShaderStorage(), "sky")
+        val overcast = CloudMeta(low = CloudMeta.CloudBand(CloudType.STRATUS, coverage = 1f, windX = 0f, windZ = 0f))
+        val first = Clouds("weather", overcast, null)
+        val reloaded = Clouds("weather", overcast.copy(low = overcast.low!!.copy(coverage = 0.2f)), null)
+        try {
+            lighting.until(clouds = first) { lighting.current != null }
+            val built = lighting.current
+            repeat(30) { lighting.update(noon, first, 100.0 + it, true, frame) }
+            assertSame("stationary clouds do not rebuild", built, lighting.current)
+            assertNull(lighting.next)
+            lighting.until(clouds = reloaded, time = 100.0) { lighting.next != null }
+            lighting.until(limit = 100, clouds = reloaded, time = 100.0) { lighting.next == null }
+            assertNotSame(built, lighting.current)
+            assertNotEquals(built!!.ambient.toList(), lighting.current!!.ambient.toList())
+        } finally {
+            lighting.dispose(); first.dispose(); reloaded.dispose()
+        }
+    }
+
+    @Test
+    fun aFailedRefreshKeepsTheLastEnvironmentAndLogsIt() = TestGl.run {
+        val log = RecordingLogger()
+        val original = Gdx.gl
+        var failing = false
+        val lighting = ProceduralSkyLighting(AtmosphereParams(), ShaderStorage(), "sky", log)
+        try {
+            lighting.until { lighting.current != null }
+            val first = lighting.current
+            Gdx.gl = Proxy.newProxyInstance(GL20::class.java.classLoader, arrayOf(GL20::class.java)) { _, method, args ->
+                if (failing && method.name == "glCheckFramebufferStatus") 0 else method.invoke(original, *(args ?: emptyArray()))
+            } as GL20
+            failing = true
+            val sunset = Vector3(1f, 0.05f, 0f).nor()
+            repeat(10) { lighting.update(sunset, null, 0.0, true, frame) }
+            assertSame(first, lighting.current)
+            assertNull(lighting.next)
+            assertTrue("failure logged", log.warnings.isNotEmpty())
+            Gdx.gl = original
+            failing = false
+        } finally {
+            Gdx.gl = original
+            lighting.dispose()
+        }
+    }
+
+    @Test
+    fun hiddenViewsDoNotBuildAndAbandonForgetsEverything() = TestGl.run {
+        val lighting = ProceduralSkyLighting(AtmosphereParams(), ShaderStorage(), "sky")
+        try {
+            repeat(30) { lighting.update(noon, null, 0.0, false, frame) }
+            assertNull(lighting.current)
+            lighting.until { lighting.current != null }
+            lighting.abandon()
+            assertNull(lighting.current)
+            assertNull(lighting.next)
+            lighting.until { lighting.current != null }
+            Unit
+        } finally {
+            lighting.dispose()
         }
     }
 }

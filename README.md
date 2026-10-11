@@ -24,6 +24,10 @@ remain readable in the text editor; plugin editing and loading are refused. No i
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
 - **Terrain foliage**: **New Foliage...** creates layered scatter settings for trees, rocks and grass;
   **Add Foliage...** attaches them to a terrain entity, and **Paint Foliage** paints or erases their density, with Undo.
+- **Sky light and cloud shadows**: a procedural sky with `"lightsScene": true` lights models and terrain with its own colour
+  (blue from a clear noon sky, grey under overcast, warm at sunset), changing smoothly with the sun and the clouds, and
+  clouds cast drifting shadows on the sun's light. Both follow the sky's atmosphere parameters, not a custom `sky.frag`
+  that departs from them; Ray Tracing sees the same clouds and cloud shade.
 - **Built-in Physics**: select a project’s `.abss` file and enable **Physics** in Properties for editable physics
   components, collider/constraint overlays and Play in a separate process.
 - **Ray Tracing settings**: a selected scene's Properties switch turns Ray Tracing on for its open views (not saved), and

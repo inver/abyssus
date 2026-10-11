@@ -5,188 +5,156 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
-import com.badlogic.gdx.math.Vector3
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 import kotlin.math.cos
 import kotlin.math.sin
 
 class LightingRefreshPolicyTest {
-    private val policy = LightingRefreshPolicy()
+    private fun request(angle: Double = 0.0, time: Double = 0.0, drift: Boolean = false) =
+        LightingRefreshRequest(
+            LightingSunDirection(sin(Math.toRadians(angle)), cos(Math.toRadians(angle)), 0.0),
+            LightingRevision("sky", 1, "cloud", 1, true), time, drift)
 
-    private fun sun(degrees: Double) = Vector3(sin(Math.toRadians(degrees)).toFloat(), cos(Math.toRadians(degrees)).toFloat(), 0f)
-
-    private fun frame(
-        time: Double = 0.0, sun: Vector3 = sun(0.0), revision: Long = 1, clouds: Boolean = true, drifting: Boolean = true,
-        visible: Boolean = true,
-    ) = LightingFrame(sun, time, revision, clouds, drifting, visible)
-
-    /** Runs the first build to completion at time 0 and returns the policy idle with a current environment. */
-    private fun built(): LightingRefreshPolicy {
-        val ticket = policy.update(frame()).build
-        assertNotNull(ticket)
-        assertEquals(Completion.PUBLISH, policy.completed(ticket!!))
-        return policy
+    private fun first(policy: LightingRefreshPolicy, request: LightingRefreshRequest = request()): LightingBuildRequest {
+        val build = policy.update(request, true, 0.0).build!!
+        assertTrue(policy.completed(build))
+        assertEquals(build, policy.state.current)
+        assertNull(policy.state.next)
+        return build
     }
 
-    @Test
-    fun theFirstFrameStartsABuildAndItsResultIsUsedAtOnce() {
-        val step = policy.update(frame())
-        assertNotNull(step.build)
-        assertTrue(policy.isBuilding)
-        assertEquals(Completion.PUBLISH, policy.completed(step.build!!))
-        assertFalse(policy.isFading)
-        assertNull(policy.update(frame(time = 0.1)).build)
+    @Test fun firstBuildPublishesImmediatelyAndOneDegreeStartsRefresh() {
+        val policy = LightingRefreshPolicy()
+        first(policy)
+        assertNull(policy.update(request(angle = 0.99), true, 0.0).build)
+        val build = policy.update(request(angle = 1.0), true, 0.0).build!!
+        assertTrue(policy.completed(build))
+        assertEquals(build, policy.state.next)
+        assertEquals(0.0, policy.state.fadeWeight, 0.0)
+        assertEquals(0.5, policy.update(build.request, true, 0.5).fadeWeight, 1e-9)
+        assertEquals(build, policy.update(build.request, true, 0.5).current)
+        assertNull(policy.state.next)
     }
 
-    @Test
-    fun theSunMustMoveMoreThanADegree() {
-        built()
-        assertNull(policy.update(frame(time = 0.1, sun = sun(0.9))).build)
-        assertNotNull(policy.update(frame(time = 0.2, sun = sun(1.2))).build)
+    @Test fun onlyVisibleDriftingCloudsRefreshEveryTwoCloudSeconds() {
+        val policy = LightingRefreshPolicy()
+        first(policy, request(drift = true))
+        assertNull(policy.update(request(time = 1.999, drift = true), true, 0.0).build)
+        assertNotNull(policy.update(request(time = 2.0, drift = true), true, 0.0).build)
+        val stationary = LightingRefreshPolicy()
+        first(stationary)
+        assertNull(stationary.update(request(time = 100.0), true, 0.0).build)
+        val invisible = request(drift = true).let { it.copy(revision = it.revision.copy(cloudsVisible = false)) }
+        val hiddenClouds = LightingRefreshPolicy()
+        first(hiddenClouds, invisible)
+        assertNull(hiddenClouds.update(invisible.copy(cloudTimeSeconds = 100.0), true, 0.0).build)
     }
 
-    @Test
-    fun driftingCloudsRefreshEveryTwoSecondsOfCloudTime() {
-        built()
-        assertNull(policy.update(frame(time = 1.9)).build)
-        assertNotNull(policy.update(frame(time = 2.0)).build)
+    @Test fun stationaryCloudReloadIdentityAndVisibilityInvalidate() {
+        for (revision in listOf(
+            request().revision.copy(cloudRevision = 2),
+            request().revision.copy(cloudIdentity = "other"),
+            request().revision.copy(cloudsVisible = false),
+            request().revision.copy(skyRevision = 2),
+            request().revision.copy(skyIdentity = "other"))) {
+            val policy = LightingRefreshPolicy()
+            first(policy)
+            assertEquals(revision, policy.update(request().copy(revision = revision), true, 0.0).build!!.request.revision)
+        }
     }
 
-    @Test
-    fun stationaryCloudsAreNeverRefreshedForTime() {
-        built()
-        assertNull(policy.update(frame(time = 60.0, drifting = false)).build)
-        assertNull(policy.update(frame(time = 600.0, drifting = false)).build)
+    @Test fun hiddenViewPausesBuildAndFadeAndCoalescesWithoutWork() {
+        val policy = LightingRefreshPolicy()
+        assertNull(policy.update(request(), false, 50.0).build)
+        first(policy)
+        val build = policy.update(request(angle = 2.0), true, 0.0).build!!
+        assertFalse(policy.update(build.request, false, 50.0).canStepBuild)
+        assertEquals(build, policy.state.build)
+        policy.update(build.request, true, 0.0)
+        policy.completed(build)
+        assertEquals(0.25, policy.update(build.request, true, 0.25).fadeWeight, 0.0)
+        assertEquals(0.25, policy.update(request(angle = 8.0), false, 50.0).fadeWeight, 0.0)
+        assertNull(policy.state.build)
+        val resumed = policy.update(request(angle = 8.0), true, 0.75)
+        assertEquals(build, resumed.current)
+        assertEquals(request(angle = 8.0), resumed.build!!.request)
     }
 
-    @Test
-    fun noCloudsMeansNoTimeRefresh() {
-        val ticket = policy.update(frame(clouds = false)).build!!
-        policy.completed(ticket)
-        assertNull(policy.update(frame(time = 30.0, clouds = false)).build)
+    @Test fun newerRequestsCoalesceDuringBuildAndFade() {
+        val policy = LightingRefreshPolicy()
+        first(policy)
+        val build = policy.update(request(angle = 2.0), true, 0.0).build!!
+        repeat(100) { assertEquals(build, policy.update(request(angle = 3.0 + it), true, 0.0).build) }
+        assertTrue(policy.completed(build))
+        assertNull(policy.update(request(angle = 120.0), true, 0.5).build)
+        val state = policy.update(request(angle = 140.0), true, 0.5)
+        assertEquals(build, state.current)
+        assertNull(state.next)
+        assertEquals(request(angle = 140.0), state.build!!.request)
     }
 
-    @Test
-    fun aCloudReloadRefreshesEvenWithoutWindOrMovement() {
-        built()
-        assertNull(policy.update(frame(time = 5.0, drifting = false)).build)
-        assertNotNull(policy.update(frame(time = 5.1, drifting = false, revision = 2)).build)
+    @Test fun obsoleteRevisionAndContextCompletionsCannotPublish() {
+        val policy = LightingRefreshPolicy()
+        val old = first(policy)
+        val build = policy.update(request(angle = 2.0), true, 0.0).build!!
+        val revised = request().copy(revision = request().revision.copy(cloudRevision = 2))
+        val replacement = policy.update(revised, true, 0.0).build!!
+        assertFalse(policy.completed(build))
+        assertFalse(policy.failed(build))
+        assertEquals(old, policy.state.current)
+        assertTrue(policy.completed(replacement))
+        policy.resetContext()
+        assertNull(policy.state.current)
+        assertNull(policy.state.next)
+        assertNull(policy.state.build)
+        val restored = policy.update(revised, true, 0.0).build!!
+        assertNotEquals(replacement.id, restored.id)
+        assertFalse(policy.completed(replacement))
+        assertTrue(policy.completed(restored))
+        assertEquals(restored, policy.state.current)
     }
 
-    @Test
-    fun cloudVisibilityChangesRefresh() {
-        built()
-        assertNotNull(policy.update(frame(time = 0.1, clouds = false)).build)
+    @Test fun revisionChangeDropsObsoleteFadeButRetainsCurrent() {
+        val policy = LightingRefreshPolicy()
+        val current = first(policy)
+        val next = policy.update(request(angle = 2.0), true, 0.0).build!!
+        policy.completed(next)
+        val revised = request().copy(revision = request().revision.copy(cloudRevision = 2))
+        val state = policy.update(revised, true, 0.5)
+        assertEquals(current, state.current)
+        assertNull(state.next)
+        assertEquals(revised, state.build!!.request)
     }
 
-    @Test
-    fun aFinishedBuildFadesInOverOneSecond() {
-        built()
-        val ticket = policy.update(frame(time = 2.0)).build!!
-        assertEquals(Completion.FADE, policy.completed(ticket))
-        assertTrue(policy.isFading)
-        assertEquals(0f, policy.update(frame(time = 2.0)).weight, 1e-6f)
-        assertEquals(0.5f, policy.update(frame(time = 2.5)).weight, 1e-6f)
-        val end = policy.update(frame(time = 3.0))
-        assertTrue(end.promoted)
-        assertEquals(0f, end.weight, 0f)
-        assertFalse(policy.isFading)
+    @Test fun errorsKeepCurrentAndRetryWithBoundedVisibleTimeBackoff() {
+        val policy = LightingRefreshPolicy(maxRetries = 2, retryDelaySeconds = 2.0)
+        val current = first(policy)
+        val target = request(angle = 2.0)
+        var build = policy.update(target, true, 0.0).build!!
+        repeat(2) {
+            assertTrue(policy.failed(build))
+            assertEquals(current, policy.state.current)
+            assertNull(policy.update(target, false, 100.0).build)
+            assertNull(policy.update(target, true, 1.999).build)
+            build = policy.update(target, true, 0.001).build!!
+        }
+        policy.failed(build)
+        assertNull(policy.update(target, true, 100.0).build)
+        val revised = target.copy(revision = target.revision.copy(cloudRevision = 2))
+        val recovery = policy.update(revised, true, 0.0).build!!
+        assertTrue(policy.completed(recovery))
+        assertEquals(current, policy.state.current)
+        assertEquals(recovery, policy.state.next)
     }
 
-    @Test
-    fun nothingStartsWhileBuildingOrFadingAndRequestsCoalesce() {
-        built()
-        val ticket = policy.update(frame(time = 2.0)).build!!
-        // the sun runs away meanwhile: no second build is started, and none is queued
-        assertNull(policy.update(frame(time = 2.1, sun = sun(10.0))).build)
-        assertNull(policy.update(frame(time = 2.2, sun = sun(20.0))).build)
-        assertEquals(Completion.FADE, policy.completed(ticket))
-        assertNull(policy.update(frame(time = 2.5, sun = sun(30.0))).build)
-        // once the fade ends, one build answers the latest sun, not the intermediate ones
-        val after = policy.update(frame(time = 3.3, sun = sun(40.0)))
-        assertTrue(after.promoted)
-        assertNotNull(after.build)
-        assertTrue(policy.isBuilding)
-    }
-
-    @Test
-    fun anObsoleteBuildIsAbandonedAndRestarted() {
-        built()
-        val old = policy.update(frame(time = 2.0)).build!!
-        val step = policy.update(frame(time = 2.1, revision = 2))
-        assertTrue(step.abandon)
-        assertNotNull(step.build)
-        assertEquals(Completion.DISCARD, policy.completed(old))
-        assertEquals(Completion.FADE, policy.completed(step.build!!))
-    }
-
-    @Test
-    fun aResultForAnOutdatedRevisionIsRejectedEvenIfNoFrameCameBetween() {
-        built()
-        val ticket = policy.update(frame(time = 2.0)).build!!
-        policy.update(frame(time = 2.0, revision = 3))
-        assertEquals(Completion.DISCARD, policy.completed(ticket))
-    }
-
-    @Test
-    fun aHiddenViewStartsNothingAndDoesNotFade() {
-        built()
-        val ticket = policy.update(frame(time = 2.0)).build!!
-        policy.completed(ticket)
-        assertEquals(0.2f, policy.update(frame(time = 2.2)).weight, 1e-6f)
-        assertEquals(0.2f, policy.update(frame(time = 50.0, visible = false)).weight, 1e-6f)
-        assertNull(policy.update(frame(time = 60.0, visible = false, revision = 9)).build)
-        // visible again: the fade continues from where it paused, with one frame's time
-        assertEquals(0.3f, policy.update(frame(time = 60.1)).weight, 1e-6f)
-    }
-
-    @Test
-    fun aFailedBuildIsNotRetriedUntilSomethingChanges() {
-        val ticket = policy.update(frame()).build!!
-        policy.failed(ticket)
-        assertFalse(policy.isBuilding)
-        assertNull(policy.update(frame(time = 1.0)).build)
-        assertNotNull(policy.update(frame(time = 2.0)).build)
-    }
-
-    @Test
-    fun aFailureAfterALaterBuildKeepsTheLastLighting() {
-        built()
-        val ticket = policy.update(frame(time = 2.0)).build!!
-        policy.failed(ticket)
-        assertFalse(policy.isFading)
-        assertEquals(Completion.DISCARD, policy.completed(ticket))
-        assertNull(policy.update(frame(time = 3.0)).build)
-    }
-
-    @Test
-    fun resetForgetsEverythingAndTheNextFrameBuildsAgain() {
-        built()
-        policy.reset()
-        val ticket = policy.update(frame(time = 0.5)).build
-        assertNotNull(ticket)
-        assertEquals(Completion.PUBLISH, policy.completed(ticket!!))
-    }
-
-    @Test
-    fun anUnknownTicketIsDiscarded() {
-        built()
-        assertEquals(Completion.DISCARD, policy.completed(99))
-    }
-
-    @Test
-    fun withoutAFadeAFinishedBuildIsUsedAtOnceEvenWhileTimeStandsStill() {
-        val still = LightingRefreshPolicy(fadeSeconds = 0.0)
-        val first = still.update(frame()).build!!
-        assertEquals(Completion.PUBLISH, still.completed(first))
-        val second = still.update(frame(sun = sun(10.0))).build!!
-        assertEquals(Completion.PUBLISH, still.completed(second))
-        assertFalse(still.isFading)
-        assertNotNull(still.update(frame(sun = sun(30.0))).build)
+    @Test fun firstFailureKeepsAmbientUntilRetrySucceeds() {
+        val policy = LightingRefreshPolicy()
+        val build = policy.update(request(), true, 0.0).build!!
+        policy.failed(build)
+        assertNull(policy.state.current)
+        val retry = policy.update(request(), true, 2.0).build!!
+        policy.completed(retry)
+        assertEquals(retry, policy.state.current)
     }
 }

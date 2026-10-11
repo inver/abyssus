@@ -134,16 +134,6 @@ vec3 cloudToneMap(vec3 radiance) {
     return pow(1.0 - exp(-radiance), vec3(1.0 / 2.2));
 }
 
-// What a cloud point contributes to the target: the tone mapped color for display, or the radiance itself when
-// clouds_linear.glsl comes first (the linear lighting cube).
-vec3 cloudOutput(vec3 radiance) {
-#ifdef CLOUD_LINEAR
-    return radiance;
-#else
-    return cloudToneMap(radiance);
-#endif
-}
-
 // The slant path through a slab of the given thickness along d where the planet's up is `up`.
 float cloudSlant(vec3 d, vec3 up, float thickness) {
     return thickness / max(abs(dot(d, up)), 0.05);

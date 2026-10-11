@@ -13,66 +13,61 @@ import com.badlogic.gdx.graphics.g3d.Attribute
  * with [levels] mips (level n prefiltered for GGX roughness n / (levels - 1)), and the irradiance in the six axis
  * directions as [ambient] (+X, -X, +Y, -Y, +Z, -Z, three floats each).
  *
- * While one environment is replaced by another, [next] holds the incoming one (with the same [levels]) and [blend] how far
- * (0 to 1) the light is from this one to it; the shaders mix the two. Without [next], or at blend 0, nothing is mixed.
- *
  * Set it in place of [com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute.AmbientLight]: [DefaultShader] then takes
  * its ambient cubemap from [ambient], and [PbrShader] compiles with `environmentLightFlag` and samples both cubes. An
  * environment without it renders exactly as before.
+ *
+ * An optional second environment, [fadeTo], cross-fades in: the shaders light with the mix of this environment and
+ * [fadeTo] by [weight] (0 is this one, 1 is [fadeTo]). [PbrShader] compiles a second cube fetch only for an attribute
+ * with [fadeTo], and [DefaultShader] blends the six axis colors on the CPU, so an attribute without it costs nothing.
  */
 class EnvironmentLightAttribute(
     val specular: GLTexture,
     val irradiance: GLTexture,
     val levels: Int,
     val ambient: FloatArray,
-    val next: Next? = null,
-    blend: Float = 0f,
+    val fadeTo: EnvironmentLightAttribute? = null,
+    weight: Float = 0f,
 ) : Attribute(Type) {
-    /** The environment being faded in: its cubes and six axis colors. */
-    class Next(val specular: GLTexture, val irradiance: GLTexture, val ambient: FloatArray) {
-        init {
-            require(ambient.size == 18) { "ambient needs 6 RGB colors" }
-        }
-    }
-
-    /** How far the light is from this environment (0) to [next] (1); 0 without a next one. */
-    val blend: Float = if (next == null) 0f else blend.coerceIn(0f, 1f)
+    /** How far [fadeTo] has replaced this environment, 0 to 1; 0 without [fadeTo]. */
+    val weight: Float = if (fadeTo == null) 0f else weight.coerceIn(0f, 1f)
 
     init {
         require(ambient.size == 18) { "ambient needs 6 RGB colors" }
+        require(fadeTo == null || fadeTo.fadeTo == null) { "only one environment can be faded to" }
     }
 
-    /** The six axis colors of the light now: [ambient] mixed toward the next environment's by [blend]. */
-    val blendedAmbient: FloatArray by lazy(LazyThreadSafetyMode.NONE) {
-        val to = next?.ambient
-        if (to == null || blend <= 0f) ambient else FloatArray(18) { ambient[it] + (to[it] - ambient[it]) * blend }
+    /** Writes the six axis colors this attribute lights with, [fadeTo] mixed in by [weight], to [out]. */
+    fun blendAmbientInto(out: FloatArray): FloatArray {
+        val to = fadeTo?.ambient
+        for (i in 0 until 18) out[i] = if (to == null) ambient[i] else ambient[i] + (to[i] - ambient[i]) * weight
+        return out
     }
 
-    override fun copy(): Attribute = EnvironmentLightAttribute(
-        specular, irradiance, levels, ambient.copyOf(), next?.let { Next(it.specular, it.irradiance, it.ambient.copyOf()) }, blend
-    )
+    override fun copy(): Attribute =
+        EnvironmentLightAttribute(specular, irradiance, levels, ambient.copyOf(), fadeTo?.copy() as EnvironmentLightAttribute?, weight)
 
     override fun hashCode(): Int {
         var result = 31 * super.hashCode() + specular.textureObjectHandle
         result = 31 * result + irradiance.textureObjectHandle
         result = 31 * result + levels
         result = 31 * result + ambient.contentHashCode()
-        result = 31 * result + (next?.irradiance?.textureObjectHandle ?: 0)
-        return 31 * result + blend.hashCode()
+        result = 31 * result + (fadeTo?.hashCode() ?: 0)
+        return 31 * result + weight.hashCode()
     }
 
     override fun equals(other: Any?): Boolean =
         other is EnvironmentLightAttribute && other.specular === specular && other.irradiance === irradiance &&
-            other.levels == levels && other.ambient.contentEquals(ambient) && other.blend == blend &&
-            other.next?.specular === next?.specular && other.next?.irradiance === next?.irradiance &&
-            (other.next?.ambient ?: EMPTY).contentEquals(next?.ambient ?: EMPTY)
+            other.levels == levels && other.ambient.contentEquals(ambient) && other.fadeTo == fadeTo &&
+            other.weight == weight
 
     override fun compareTo(other: Attribute): Int {
         if (type != other.type) return type.compareTo(other.type)
         val o = other as EnvironmentLightAttribute
         return compareValuesBy(
             this, o, { it.specular.textureObjectHandle }, { it.irradiance.textureObjectHandle }, { it.levels },
-            { it.next?.irradiance?.textureObjectHandle ?: 0 }, { it.blend }
+            { it.fadeTo?.specular?.textureObjectHandle ?: 0 }, { it.fadeTo?.irradiance?.textureObjectHandle ?: 0 },
+            { it.weight },
         )
     }
 
@@ -82,8 +77,10 @@ class EnvironmentLightAttribute(
         @JvmField
         val Type: Long = register(Alias)
 
-        private val EMPTY = FloatArray(0)
-
         fun has(attributes: com.badlogic.gdx.graphics.g3d.Attributes?): Boolean = attributes?.has(Type) == true
+
+        /** True when [attributes] has an environment light that fades to a second environment. */
+        fun isFading(attributes: com.badlogic.gdx.graphics.g3d.Attributes?): Boolean =
+            (attributes?.get(Type) as EnvironmentLightAttribute?)?.fadeTo != null
     }
 }

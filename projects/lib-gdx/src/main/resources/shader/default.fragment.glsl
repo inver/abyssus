@@ -175,23 +175,6 @@ float getShadow()
 }
 #endif //shadowMapFlag
 
-#ifdef directionalVisibilityFlag
-uniform sampler2D u_dirVisMap;
-uniform int u_dirVisIndex;
-uniform mat4 u_dirVisMatrix;
-uniform float u_dirVisEdge;
-uniform float u_dirVisOutside;
-// How much of directional light i reaches worldPos: the map for the one light it describes (fading into the outside value at
-// its edge), 1 for every other light.
-float directionalVisibility(int i, vec3 worldPos) {
-    if (i != u_dirVisIndex) return 1.0;
-    vec2 uv = (u_dirVisMatrix * vec4(worldPos, 1.0)).xy;
-    vec2 toEdge = min(uv, 1.0 - uv);
-    float inside = smoothstep(0.0, u_dirVisEdge, min(toEdge.x, toEdge.y));
-    return mix(u_dirVisOutside, texture2D(u_dirVisMap, clamp(uv, 0.0, 1.0)).r, inside);
-}
-#endif // directionalVisibilityFlag
-
 #ifdef shadowAtlasFlag
 uniform sampler2D u_shadowAtlas;
 uniform float u_shadowEnabled;
@@ -267,6 +250,20 @@ float pointShadowVisibility(int lightIndex, vec3 worldPos, float ndotl) {
     return shadowTileVisibility(tile, worldPos, length(worldPos - u_shadowPositions[ti]) / max(u_shadowFars[ti], 1e-4), ndotl);
 }
 #endif
+
+#ifdef directionalVisibilityFlag
+uniform sampler2D u_dirVisMap;
+uniform mat4 u_dirVisWorldToMap;
+uniform vec2 u_dirVisParams; // x: width of the edge fade, in map coordinates; y: visibility outside the map
+uniform int u_dirVisIndex;
+// The map's visibility at a world position; fades to the outside value over the map's edge, whatever the texture clamps to.
+float directionalVisibility(vec3 worldPos) {
+    vec2 uv = (u_dirVisWorldToMap * vec4(worldPos, 1.0)).xy;
+    vec2 edge = min(uv, 1.0 - uv);
+    float inside = clamp(min(edge.x, edge.y) / max(u_dirVisParams.x, 1e-4), 0.0, 1.0);
+    return mix(u_dirVisParams.y, texture2D(u_dirVisMap, clamp(uv, 0.0, 1.0)).r, inside);
+}
+#endif // directionalVisibilityFlag
 
 #endif //lightingFlag
 
@@ -384,7 +381,7 @@ void main() {
 					value *= shadowTileVisibility(u_dirShadowTile[i], v_worldPos, -1.0, NdotL);
 				#endif
 				#ifdef directionalVisibilityFlag
-					value *= directionalVisibility(i, v_worldPos);
+					if (i == u_dirVisIndex) value *= directionalVisibility(v_worldPos);
 				#endif
 				lightDiffuse += value;
 				#ifdef specularFlag

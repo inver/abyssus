@@ -7,126 +7,139 @@ package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.GL30
+import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.PerspectiveCamera
+import com.badlogic.gdx.graphics.glutils.ShaderProgram
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudScene
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.LinearShellClouds
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.CubeSource
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.CubeTargets
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.GpuTexture
 import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 
-/** Face size of the lighting cube. */
-const val LIGHTING_CUBE_SIZE = 64
-
-/** Mip levels of the lighting cube (64 down to 1), which the environment build samples to prefilter. */
-const val LIGHTING_CUBE_LEVELS = 7
-
-/** Forward, up and (as a check) right of each cube face, matching `cubeDir` in `hdr_common.glsl`. */
-private val FACE_AXES = arrayOf(
-    floatArrayOf(1f, 0f, 0f, 0f, -1f, 0f),
-    floatArrayOf(-1f, 0f, 0f, 0f, -1f, 0f),
-    floatArrayOf(0f, 1f, 0f, 0f, 0f, 1f),
-    floatArrayOf(0f, -1f, 0f, 0f, 0f, -1f),
-    floatArrayOf(0f, 0f, 1f, 0f, -1f, 0f),
-    floatArrayOf(0f, 0f, -1f, 0f, -1f, 0f),
-)
+const val PROCEDURAL_LIGHTING_SIZE = 64
+const val PROCEDURAL_LIGHTING_LEVELS = 7
 
 /**
- * The linear lighting of a procedural sky: its clear atmosphere (`atmosphere_linear.frag`, the same single scattering as
- * the fixture shader and [SkyAmbientEstimate]) with the shell clouds of a `CLOUDS` asset over it, as RGBA16F linear
- * radiance in a [LIGHTING_CUBE_SIZE]² cube, with no tone mapping and no sun disc. Shells draw it whatever technique the
- * view uses: they agree with the others on coverage, and six faces of volumetric clouds would cost too much.
- *
- * The lighting does not come from the asset's own `sky.frag`, whose output is display-ready, so a shader that departs
- * from the atmosphere parameters looks different from the light it gives. GL thread only, inside
- * `GdxRuntime.withContext`. [texture] is owned by this object; an environment build only borrows it ([source]).
+ * Owned linear RGBA16F atmosphere-and-shell cube. Built and rendered on the current GL thread only; borrowed clouds
+ * are never disposed. The caller disposes this source after the environment build has finished sampling it.
  */
 class ProceduralLightingCube(
     private val params: AtmosphereParams,
-    private val shaders: ShaderStorage,
-    private val field: CloudField = CloudField(),
+    private val shaders: ShaderStorage = ShaderStorage(),
 ) : Disposable {
-    private val targets = CubeTargets()
-    private val estimate = SkyAmbientEstimate(params)
-    private val camera = PerspectiveCamera(90f, LIGHTING_CUBE_SIZE.toFloat(), LIGHTING_CUBE_SIZE.toFloat())
-    private val forward = Vector3()
-    private val up = Vector3()
-    private var shellClouds: LinearShellClouds? = null
+    val texture = GpuTexture(GL20.GL_TEXTURE_CUBE_MAP, PROCEDURAL_LIGHTING_SIZE, PROCEDURAL_LIGHTING_SIZE)
+    private var fbo = 0
+    private var program: ShaderProgram? = null
+    private var mesh: Mesh? = null
+    private var shells: LinearShellClouds? = null
+    private var allocated = false
+    private var disposed = false
+    private val ambient = SkyAmbientEstimate(params)
+    private val camera = PerspectiveCamera(90f, PROCEDURAL_LIGHTING_SIZE.toFloat(), PROCEDURAL_LIGHTING_SIZE.toFloat())
+    private val inverse = Matrix4()
 
-    /** The cube; its mip levels are filled after every [render]. */
-    val texture: GpuTexture = targets.cube(LIGHTING_CUBE_SIZE, LIGHTING_CUBE_LEVELS, alpha = true)
-
-    private val atmosphere = try {
-        shaders.program("hdr_cube.vert", "hdr_common.glsl", "atmosphere_linear.frag")
-    } catch (e: Exception) {
-        texture.dispose()
-        targets.dispose()
-        throw e
-    }
-    private val mesh = createFullscreenTriangle()
-
-    /** [texture] as the source of an environment build; the cube stays owned by this object. */
-    fun source() = CubeSource(texture, LIGHTING_CUBE_SIZE, LIGHTING_CUBE_LEVELS)
-
-    /**
-     * Redraws the cube for the sun toward [sun] (a unit vector) and the weather [clouds] has at [timeSeconds] (null or
-     * not visible: the clear sky). Throws when the cloud shaders cannot be built or the GPU cannot render to the cube; the
-     * cube then holds an unspecified image, and the caller does not publish it.
-     */
-    fun render(sun: Vector3, timeSeconds: Double, clouds: Clouds?) {
-        val drawClouds = clouds?.takeIf { it.settings.visible }
-        val shells = drawClouds?.let { shellClouds ?: LinearShellClouds(shaders, field).also { s -> shellClouds = s } }
-        targets.withFramebuffer {
-            Gdx.gl.glViewport(0, 0, LIGHTING_CUBE_SIZE, LIGHTING_CUBE_SIZE)
-            atmosphere.bind()
-            atmosphere.setUniformf("u_sunDir", sun.x, sun.y, sun.z)
-            atmosphere.setUniformf("u_cameraHeight", SKY_CAMERA_HEIGHT)
-            atmosphere.setUniformf("u_planetRadius", params.planetRadius)
-            atmosphere.setUniformf("u_atmosphereRadius", params.atmosphereRadius)
-            atmosphere.setUniformf("u_betaRayleigh", params.betaRayleigh[0], params.betaRayleigh[1], params.betaRayleigh[2])
-            atmosphere.setUniformf("u_betaMie", params.betaMie)
-            atmosphere.setUniformf("u_heightRayleigh", params.heightRayleigh)
-            atmosphere.setUniformf("u_heightMie", params.heightMie)
-            atmosphere.setUniformf("u_mieG", params.mieG)
-            atmosphere.setUniformf("u_sunIntensity", params.sunIntensity)
-            for (face in 0 until 6) {
-                targets.attach(texture, face, 0)
-                atmosphere.setUniformi("u_face", face)
-                mesh.render(atmosphere, GL20.GL_TRIANGLES)
-            }
-            if (shells != null && drawClouds != null) {
-                val ambient = estimate.ambient(sun, CLOUD_LIGHT_ALTITUDE)
-                for (face in 0 until 6) {
-                    targets.attach(texture, face, 0)
-                    faceCamera(face)
-                    shells.draw(CloudScene(camera, camera.invProjectionView, sun, timeSeconds, drawClouds, params, ambient))
+    fun render(sun: Vector3, clouds: Clouds?, timeSeconds: Double) {
+        check(!disposed)
+        checkNotNull(Gdx.gl30) { "Procedural sky lighting needs OpenGL 3" }
+        if (!allocated) allocate()
+        val gl = Gdx.gl
+        val ints = BufferUtils.newIntBuffer(16)
+        gl.glGetIntegerv(0x8CA6, ints)
+        val previous = ints.get(0)
+        gl.glGetIntegerv(GL20.GL_VIEWPORT, ints)
+        val viewport = IntArray(4) { ints.get(it) }
+        val caps = listOf(GL20.GL_BLEND, GL20.GL_DEPTH_TEST, GL20.GL_CULL_FACE, GL20.GL_SCISSOR_TEST)
+        val enabled = caps.map(gl::glIsEnabled)
+        try {
+            caps.forEach(gl::glDisable)
+            gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, fbo)
+            gl.glViewport(0, 0, PROCEDURAL_LIGHTING_SIZE, PROCEDURAL_LIGHTING_SIZE)
+            val atmosphere = program ?: shaders.program("clouds.vert", "atmosphere_linear.frag").also { program = it }
+            val triangle = mesh ?: createFullscreenTriangle().also { mesh = it }
+            for (face in 0..5) {
+                gl.glFramebufferTexture2D(GL20.GL_FRAMEBUFFER, GL20.GL_COLOR_ATTACHMENT0,
+                    GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, texture.textureObjectHandle, 0)
+                check(gl.glCheckFramebufferStatus(GL20.GL_FRAMEBUFFER) == GL20.GL_FRAMEBUFFER_COMPLETE) {
+                    "Procedural lighting RGBA16F framebuffer is incomplete"
+                }
+                orient(face)
+                inverse.set(camera.combined).inv()
+                atmosphere.bind()
+                atmosphere.setUniformMatrix("u_invViewProj", inverse)
+                atmosphere.setUniformf("u_sunDir", sun)
+                atmosphere.setUniformf("u_cameraHeight", SKY_CAMERA_HEIGHT)
+                atmosphere.setUniformf("u_planetRadius", params.planetRadius)
+                atmosphere.setUniformf("u_atmosphereRadius", params.atmosphereRadius)
+                atmosphere.setUniformf("u_betaRayleigh", params.betaRayleigh[0], params.betaRayleigh[1], params.betaRayleigh[2])
+                atmosphere.setUniformf("u_betaMie", params.betaMie)
+                atmosphere.setUniformf("u_heightRayleigh", params.heightRayleigh)
+                atmosphere.setUniformf("u_heightMie", params.heightMie)
+                atmosphere.setUniformf("u_mieG", params.mieG)
+                atmosphere.setUniformf("u_sunIntensity", params.sunIntensity)
+                triangle.render(atmosphere, GL20.GL_TRIANGLES)
+                if (clouds?.settings?.visible == true) {
+                    val renderer = shells ?: LinearShellClouds(shaders, CloudField()).also { shells = it }
+                    renderer.draw(CloudScene(camera, inverse, sun, timeSeconds, clouds, params, ambient.ambient(sun, 1500f)))
                 }
             }
+            texture.bind(0)
+            gl.glGenerateMipmap(GL20.GL_TEXTURE_CUBE_MAP)
+        } finally {
+            gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, previous)
+            gl.glViewport(viewport[0], viewport[1], viewport[2], viewport[3])
+            caps.zip(enabled).forEach { (cap, on) -> if (on) gl.glEnable(cap) else gl.glDisable(cap) }
+            gl.glActiveTexture(GL20.GL_TEXTURE0)
+            gl.glBindTexture(GL20.GL_TEXTURE_CUBE_MAP, 0)
         }
-        targets.generateMipmaps(texture)
     }
 
-    private fun faceCamera(face: Int) {
-        val axes = FACE_AXES[face]
-        forward.set(axes[0], axes[1], axes[2])
-        up.set(axes[3], axes[4], axes[5])
+    private fun allocate() {
+        val gl = Gdx.gl
+        texture.bind(0)
+        for (level in 0 until PROCEDURAL_LIGHTING_LEVELS) for (face in 0..5) {
+            val size = PROCEDURAL_LIGHTING_SIZE shr level
+            gl.glTexImage2D(GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level, 0x881A,
+                size, size, 0, GL20.GL_RGBA, 0x140B, null)
+        }
+        gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL30.GL_TEXTURE_MAX_LEVEL, PROCEDURAL_LIGHTING_LEVELS - 1)
+        gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR_MIPMAP_LINEAR)
+        gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_LINEAR)
+        gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, 0x8072, GL20.GL_CLAMP_TO_EDGE)
+        gl.glBindTexture(GL20.GL_TEXTURE_CUBE_MAP, 0)
+        fbo = gl.glGenFramebuffer()
+        allocated = true
+    }
+
+    private fun orient(face: Int) {
         camera.position.setZero()
-        camera.direction.set(forward)
-        camera.up.set(up)
+        when (face) {
+            0 -> { camera.direction.set(1f, 0f, 0f); camera.up.set(0f, -1f, 0f) }
+            1 -> { camera.direction.set(-1f, 0f, 0f); camera.up.set(0f, -1f, 0f) }
+            2 -> { camera.direction.set(0f, 1f, 0f); camera.up.set(0f, 0f, 1f) }
+            3 -> { camera.direction.set(0f, -1f, 0f); camera.up.set(0f, 0f, -1f) }
+            4 -> { camera.direction.set(0f, 0f, 1f); camera.up.set(0f, -1f, 0f) }
+            5 -> { camera.direction.set(0f, 0f, -1f); camera.up.set(0f, -1f, 0f) }
+        }
         camera.update()
     }
 
     override fun dispose() {
-        shellClouds?.dispose()
-        shellClouds = null
-        mesh.dispose()
-        atmosphere.dispose()
+        if (disposed) return
+        disposed = true
+        shells?.dispose()
+        program?.dispose()
+        mesh?.dispose()
         texture.dispose()
-        targets.dispose()
+        if (fbo != 0) Gdx.gl.glDeleteFramebuffer(fbo)
+        fbo = 0
     }
 }

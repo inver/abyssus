@@ -5,109 +5,140 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
-import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
 import net.nevinsky.abyssus.lib.core.assets.skyShaders
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
-import kotlin.math.cos
-import kotlin.math.sin
 
-/** The cloudy-sky environment a [ProceduralSky] gives other features. Opt-in: `-Dabyssus.glTests=true`. */
+/** The cloudy-sky environment a procedural sky hands to other features. Opt-in: `-Dabyssus.glTests=true`. */
 class ProceduralSkyTest {
     @Before
     fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
 
     private val skyDir = File(testProject("Untitled"), "assets/skybox_physical")
+    private val noon = Vector3(0f, 1f, 0f)
+    private val frame = 1.0 / 60
 
-    private fun sun(degrees: Double) = Vector3(sin(Math.toRadians(degrees)).toFloat(), cos(Math.toRadians(degrees)).toFloat(), 0f)
-
-    private fun clouds(wind: Boolean) = Clouds(
-        "clouds",
-        CloudMeta(low = CloudBand(CloudType.CUMULUS, CloudLevel.LOW, windX = if (wind) 4f else 0f, windZ = 0f)),
-        null,
-    )
-
-    /** The fixture sky reading its cloud asset from [asset] on every draw, with scene lighting off. */
-    private fun sky(asset: () -> Clouds?) = ProceduralSky(
+    /** The fixture sky, naming the cloud asset held in [cloud] (reloaded by replacing it), with `lightsScene` as given. */
+    private fun sky(cloud: Array<Clouds?>, lightsScene: Boolean = false) = ProceduralSky(
         PreparedProceduralSky(
             AtmosphereParams(), File(skyDir, "sky.vert").readText(), File(skyDir, "sky.frag").readText(),
-            "skybox_physical", "clouds",
+            "skybox_physical", "weather", lightsScene,
         ),
-        BuiltAssets { asset() }, skyShaders(),
+        BuiltAssets { name -> cloud[0]?.takeIf { it.name == name } }, skyShaders(),
     )
 
+    private fun ProceduralSky.frames(count: Int, time: Double = 0.0) = repeat(count) { updateLighting(noon, time, true, frame) }
+
+    private val still = CloudMeta(low = CloudBand(CloudType.STRATUS, coverage = 1f, windX = 0f, windZ = 0f))
+
     @Test
-    fun nothingIsBuiltWithoutAConsumerAndTheAmbientIsNotReplaced() = TestGl.run {
-        val sky = sky { null }
+    fun nothingIsBuiltWithoutAConsumerOrOptIn() = TestGl.run {
+        val cloud = arrayOf<Clouds?>(Clouds("weather", still, null))
+        val sky = sky(cloud)
         try {
-            assertNull(sky.environmentCube)
-            assertNull(sky.lightingState)
-            assertNotNull(sky.updateEnvironment(sun(0.0), 0.0))
-            assertNotNull(sky.environmentCube)
-            assertFalse(sky.lightsScene)
-            assertNull("the environment does not light the scene", sky.lightingState)
+            assertNull(sky.lighting)
+            sky.frames(40)
+            assertNull("no consumer, nothing built", sky.lighting)
+            assertNull(sky.lightingEnvironment)
         } finally {
-            sky.dispose()
+            sky.dispose(); cloud[0]?.dispose()
         }
     }
 
     @Test
-    fun theRevisionGrowsWhenTheSunTheWindOrTheCloudAssetChange() = TestGl.run {
-        var asset: Clouds? = null
-        val made = mutableListOf<Clouds>()
-        val sky = sky { asset }
+    fun aLeaseBuildsTheEnvironmentWithoutReplacingTheAmbientAndReleasesIt() = TestGl.run {
+        val cloud = arrayOf<Clouds?>(Clouds("weather", still, null))
+        val sky = sky(cloud)
         try {
-            val first = sky.updateEnvironment(sun(0.0), 0.0)!!
-            assertEquals(1L, first.revision)
-            assertEquals("same sun, same sky", 1L, sky.updateEnvironment(sun(0.5), 0.1)!!.revision)
-            assertEquals("a sun move beyond a degree", 2L, sky.updateEnvironment(sun(2.0), 0.2)!!.revision)
-
-            asset = clouds(wind = true).also(made::add)
-            assertEquals("a cloud asset appears", 3L, sky.updateEnvironment(sun(2.0), 0.3)!!.revision)
-            assertEquals(3L, sky.updateEnvironment(sun(2.0), 1.0)!!.revision)
-            assertEquals("two seconds of drifting clouds", 4L, sky.updateEnvironment(sun(2.0), 2.4)!!.revision)
-
-            asset = clouds(wind = false).also(made::add)
-            assertEquals("a reload, now stationary", 5L, sky.updateEnvironment(sun(2.0), 2.5)!!.revision)
-            assertEquals("stationary clouds are not rebuilt for time", 5L, sky.updateEnvironment(sun(2.0), 60.0)!!.revision)
-
-            asset = null
-            assertEquals("the clouds are removed", 6L, sky.updateEnvironment(sun(2.0), 61.0)!!.revision)
+            val lease = sky.acquireEnvironment()
+            assertNull(lease.environment)
+            assertEquals(0L, lease.revision)
+            sky.frames(30)
+            assertNotNull("the consumer gets the cloudy cube", lease.environment)
+            assertEquals(1L, lease.revision)
+            assertNull("the scene's ambient is not replaced without lightsScene", sky.lightingEnvironment)
+            val second = sky.acquireEnvironment()
+            assertSame("consumers share one environment", lease.environment, second.environment)
+            lease.close()
+            lease.close()
+            assertNotNull("one lease still holds it", second.environment)
+            second.close()
+            assertNull("released with the last consumer", sky.lighting)
+            assertNull(second.environment)
+            sky.frames(10)
+            assertNull("and not rebuilt for nobody", sky.lighting)
+            assertEquals(0L, lease.revision)
         } finally {
-            sky.dispose()
-            made.forEach { it.dispose() }
+            sky.dispose(); cloud[0]?.dispose()
         }
     }
 
     @Test
-    fun releaseAndDisposeFreeTheCube() = TestGl.run {
-        val sky = sky { null }
-        val handle = sky.updateEnvironment(sun(0.0), 0.0)!!.cube.textureObjectHandle
-        assertTrue(Gdx.gl.glIsTexture(handle))
-        sky.releaseEnvironment()
-        assertNull(sky.environmentCube)
-        assertFalse("released", Gdx.gl.glIsTexture(handle))
+    fun theEnvironmentFollowsCloudReloadAndWindAndEveryChangeBumpsTheRevision() = TestGl.run {
+        val cloud = arrayOf<Clouds?>(Clouds("weather", still, null))
+        val sky = sky(cloud)
+        try {
+            sky.acquireEnvironment().use { lease ->
+                sky.frames(30)
+                val first = lease.environment!!
+                val firstAmbient = first.ambient.copyOf()
+                assertEquals(1L, lease.revision)
+                sky.frames(30, time = 500.0)
+                assertSame("stationary clouds do not change it", first, lease.environment)
+                assertEquals(1L, lease.revision)
+                val old = cloud[0]
+                cloud[0] = Clouds("weather", still.copy(low = still.low!!.copy(coverage = 0.1f)), null)
+                sky.frames(100, time = 500.0)
+                old?.dispose()
+                assertNotSame("a reload rebuilds it", first, lease.environment)
+                assertEquals(2L, lease.revision)
+                assertNotEquals(firstAmbient.toList(), lease.environment!!.ambient.toList())
+            }
+        } finally {
+            sky.dispose(); cloud[0]?.dispose()
+        }
+    }
 
-        val again = sky.updateEnvironment(sun(0.0), 0.0)!!
-        assertEquals("built afresh", 1L, again.revision)
-        val second = again.cube.textureObjectHandle
-        sky.dispose()
-        assertFalse("disposed with the sky", Gdx.gl.glIsTexture(second))
+    @Test
+    fun anOptedInSkyKeepsItsLightingWhateverTheLeasesDoAndSharesIt() = TestGl.run {
+        val cloud = arrayOf<Clouds?>(Clouds("weather", still, null))
+        val sky = sky(cloud, lightsScene = true)
+        try {
+            assertNotNull(sky.lighting)
+            sky.frames(30)
+            val lit = sky.lightingEnvironment
+            assertNotNull(lit)
+            sky.acquireEnvironment().use { assertSame("the lease shares the scene lighting", lit, it.environment) }
+            assertNotNull("closing the last lease keeps an opted-in sky's lighting", sky.lighting)
+            assertSame(lit, sky.lightingEnvironment)
+        } finally {
+            sky.dispose(); cloud[0]?.dispose()
+        }
+    }
+
+    @Test
+    fun disposingTheSkyReleasesWhatALeaseStillHolds() = TestGl.run {
+        val cloud = arrayOf<Clouds?>(Clouds("weather", still, null))
+        val sky = sky(cloud)
+        val lease = sky.acquireEnvironment()
+        try {
+            sky.frames(30)
+            assertNotNull(lease.environment)
+        } finally {
+            sky.dispose(); cloud[0]?.dispose()
+        }
+        assertNull("a disposed sky hands out nothing", lease.environment)
+        lease.close()
     }
 }

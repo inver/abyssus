@@ -139,6 +139,23 @@ or `RayMaterialTest`.
   HDR diffuse lighting arrives as `RayEnvironment.ambientCube` (the sky's six axis colours, blended by the squared normal
   exactly like the raster model shaders, `hdrAmbientCubeLightsSurfacesByNormalLikeTheRasterModelShader`); without it the
   flat `ambient` colour applies.
+- **Cloud shade on the sun.** `RaySceneSnapshot.sunVisibility` (a `RaySunVisibility`) carries an immutable CPU copy of the
+  raster view's cloud shadow map: `size`² visibility values (0 to 1, row-major, bilinear with clamped edges), two rows
+  turning a world position into map coordinates, the id of the light it shades, an edge fade and the factor that applies
+  beyond the map (the uniform cloud dimming; `RaySunVisibility.uniform` is that factor alone). Over the outer edge
+  fade the value blends to that factor. It multiplies the direct contribution of the light with that id only, once, on top
+  of that light's shadow ray; other lights, ambient and emission are untouched, and a map for a light the scene lacks is
+  ignored. The map travels in the shading payload as the last texture of the table, with its parameters at the offset in
+  header slot 30 (-1 without one); it counts against the texture limit, and a changed map re-uploads the payload
+  (`shadingUnchanged`) and, with its revision, restarts accumulation (`cloudVisibilityAttenuatesOnlyTheSunPerPosition`,
+  `movingTheCloudMapMovesTheShadowsAndUnmappedGroundUsesTheOutsideFactor`, `cloudVisibilityFadesToTheOutsideFactorOverTheMapEdge`,
+  `aUniformFactorDimsTheSunEverywhereAndAMissingSunLeavesTheSceneUnchanged`,
+  `cloudVisibilityReachesTheSunOnlyOnceAndSurvivesTheSunsOwnShadow`, `RaySunVisibilityTest`). Scenes without a map render
+  exactly as before. The Metal and Vulkan kernels share the maths with `RaySceneReferenceRenderer` (the fake backend).
+- **Texture budget.** The shading payload carries at most `RAY_MAX_TEXTURE_TEXELS` (16M) 8-bit texels. The scene conversion
+  halves the largest textures (2x2 box average, `fitTextureTexels`) until they fit, so a scene with many large textures
+  renders with softer textures instead of failing at upload; a snapshot that still exceeds the budget is an explicit
+  raster fallback (`RaySceneSnapshot.unsupportedReason`), never an exception (`RayTextureBudgetTest`).
 - **Fog.** Primary hits use the raster quadratic ramp `min(d^2 * (1 - 1/e) * density^2, 1)` on the world-space hit
   distance; the sky is not fogged, and reflected hits are not fogged (`fogFollowsHitDistanceAndLeavesTheSkyUnfogged`).
   Fog `gradient` shapes nothing, as in raster.
@@ -174,12 +191,12 @@ re-encoded only when it, or the geometry, changed (`shadingUnchanged`). The plug
 Bounds, all explicit fallbacks through `RaySceneSnapshot.unsupportedReason()` rather than silent omission:
 32 MiB of triangle input per session (`RAY_MAX_GEOMETRY_BYTES`, positions plus 32-bit indices;
 `geometryOverTheMemoryBudgetIsRejectedAndTheSessionStaysUsable`), 128 materials, 128 textures, 12 lights and 32 blended
-instances, and the backend's own instance and mesh capacity (`RayCapabilities.maxInstances`: 1024 on Metal and on
+instances, and the backend's own instance and mesh capacity (`RayCapabilities.maxInstances`: 4096 on Metal and on
 Vulkan; `scenesPastTheOldInstanceCapRenderWithTheBackendsOwnCapacity`, `manyDistinctMeshesPastTheOldCapAreBuiltAndHit`). Native builds are also bounded by the smaller of 512 MiB and a quarter of the Metal device's recommended
 working set. A scene's shading payload is up to 16M floats (64 MiB: materials, normals, UVs, float textures such as an HDR
 sky) followed by up to 16M RGBA8 texels (64 MiB). Ordinary image textures are `RayTexture`s built from bytes and stay
 8-bit from the plugin to the shader, a quarter of the size of float texels (`byteTexturesRenderLikeTheSameFloatTextures`,
-`aLargeByteTextureIsAcceptedWithoutExpandingToFloats`). The plugin additionally bounds instances (1024), triangles (2M)
+`aLargeByteTextureIsAcceptedWithoutExpandingToFloats`). The plugin additionally bounds instances (4096), triangles (2M)
 and bytes (512 MB) in `RaySnapshotLimits`, and its fallback message says which bound a scene exceeded and by how much. Removed instances simply disappear from the next top-level structure. These bounds
 are per session, so one view's scene never consumes another view's budget.
 
@@ -194,8 +211,9 @@ drains already selected work and performs eventual backend/session disposal.
 Inputs carry structural scene/context generations, output framebuffer size, active
 camera identity, camera/pose revisions and a content revision for transforms, lights,
 materials, environment and geometry. Structural changes invalidate completed frames
-immediately. Modestly older motion frames may display for at most 100 ms from offer,
-using their own batch camera/geometry metadata; unchanged still frames do not expire.
+immediately. Modestly older motion frames may display for at most 100 ms from offer
+(500 ms while the camera is still and only animation or pose moves, so a slow batch
+does not flash raster), using their own batch camera/geometry metadata; unchanged still frames do not expire.
 The caller must advance revisions whenever those inputs change. There is no GL/Swing
 or project file access in this scheduler.
 

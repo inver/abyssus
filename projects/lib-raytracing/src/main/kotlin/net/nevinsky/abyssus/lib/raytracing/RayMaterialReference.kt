@@ -83,20 +83,6 @@ class RayMaterialReference {
         fun map(c:Float):Float { val x=max(c,0f); return ((x*(2.51f*x+.03f))/(x*(2.43f*x+.59f)+.14f)).coerceIn(0f,1f).pow(1f/2.2f) }
         return RayColor(map(linear.r),map(linear.g),map(linear.b),1f)
     }
-    /**
-     * How much of directional light [index] reaches [position] through the cloud shadow map [visibility]: the map's red
-     * channel, fading into the outside value at the map's edge; 1 for every other light and without a map.
-     */
-    fun cloudVisibility(visibility:RayCloudVisibility?,textures:List<RayTexture>,index:Int,position:RayVec3):Float {
-        if(visibility==null || visibility.light!=index) return 1f
-        val m=visibility.worldToMap
-        val u=m[0]*position.x+m[1]*position.y+m[2]*position.z+m[3]
-        val v=m[4]*position.x+m[5]*position.y+m[6]*position.z+m[7]
-        val toEdge=min(min(u,1f-u),min(v,1f-v))
-        val inside=smooth(0f,visibility.edgeFade,toEdge)
-        val map=sample(textures[visibility.texture],u.coerceIn(0f,1f),v.coerceIn(0f,1f)).r
-        return visibility.outside+(map-visibility.outside)*inside
-    }
     /** Diffuse ambient for a surface normal: the flat colour or the six-colour ambient cube, as the raster shaders blend it. */
     fun ambientAt(environment:RayEnvironment,normal:RayVec3):RayColor {
         val cube=environment.ambientCube ?: return environment.ambient

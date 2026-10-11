@@ -1,45 +1,35 @@
 // Copyright 2023-2026 Alexey Nevinsky
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
-// The cloud shadow map: for each texel (a ground point of a square of u_extent metres around u_center) the share of the
-// sun's light the clouds let through, as SunOcclusion.instant computes it on the CPU: the transmittance along the sun
-// ray through every band (the extinction of the band's column where the ray crosses it mid-band, times its density and the
-// ray's path through it), never below u_floor. Needs clouds_common.glsl before it. The per-band shift (the sun's horizontal
-// travel to the band), coefficient (extinction * density * path) and wind offset are computed on the CPU.
-const int MAX_BANDS = 3;
-uniform int u_bandCount;
-uniform vec2 u_bandScale[MAX_BANDS];   // (scale * stretch, scale), metres per noise cell
-uniform vec2 u_bandOffset[MAX_BANDS];  // wrapped wind drift, noise cells
-uniform vec2 u_bandShift[MAX_BANDS];   // metres the sun ray travels horizontally from the ground to the band
-uniform int u_bandSeed[MAX_BANDS];
-uniform int u_bandOctaves[MAX_BANDS];
-uniform int u_bandProfile[MAX_BANDS];
-uniform float u_bandCoverage[MAX_BANDS];
-uniform float u_bandCoeff[MAX_BANDS];
-uniform vec2 u_center;                 // world x and z of the map's middle
-uniform float u_extent;                // metres across
-uniform float u_floor;
-varying vec2 v_uv;
+// The cloud shadow map: for every texel, the share of the sun's light the clouds let through to the ground point
+// above it. The GLSL twin of SunOcclusion.instant in core: the same coverage and column math (clouds_common.glsl),
+// the same band path and extinction, the same floor. The CPU works out the parts that need doubles or a ray against
+// the band spheres (the sun ray's horizontal shift to each band, its path through the band) and passes them in.
+// Joined after clouds_common.glsl.
+#ifdef GL_ES
+precision highp float;
+#endif
+uniform vec2 u_origin;      // world x / z of the map's corner, metres
+uniform float u_extent;     // metres across the map
+uniform float u_mapSize;    // texels across the map
+uniform float u_floor;      // the least share that passes the thickest clouds
+// per band: (scale x, scale z, wind offset u, wind offset v)
+uniform vec4 u_bandA[3];
+// per band: (type seed, octaves, profile, coverage)
+uniform vec4 u_bandB[3];
+// per band: (density, path through the band in metres, sun ray shift x, shift z); a density of 0 is no band
+uniform vec4 u_bandC[3];
 
 void main() {
-    vec2 ground = u_center + (v_uv - 0.5) * u_extent;
+    vec2 xz = u_origin + gl_FragCoord.xy / u_mapSize * u_extent;
     float depth = 0.0;
-    for (int i = 0; i < MAX_BANDS; i++) {
-        if (i >= u_bandCount) break;
-        float coverage = cloudCoverage(ground + u_bandShift[i], u_bandScale[i], u_bandOffset[i], u_bandSeed[i],
-            u_bandOctaves[i], u_bandCoverage[i]);
-        depth += u_bandCoeff[i] * cloudColumn(u_bandProfile[i], coverage);
+    for (int i = 0; i < 3; i++) {
+        vec4 a = u_bandA[i];
+        vec4 b = u_bandB[i];
+        vec4 c = u_bandC[i];
+        if (c.x <= 0.0) continue;
+        float coverage = cloudCoverage(xz + c.zw, a.xy, a.zw, int(b.x + 0.5), int(b.y + 0.5), b.w);
+        depth += CLOUD_EXTINCTION * c.x * cloudColumn(int(b.z + 0.5), coverage) * c.y;
     }
     gl_FragColor = vec4(max(exp(-depth), u_floor), 0.0, 0.0, 1.0);
 }

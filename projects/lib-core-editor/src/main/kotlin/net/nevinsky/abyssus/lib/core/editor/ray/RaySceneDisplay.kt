@@ -15,27 +15,9 @@ import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 import net.nevinsky.abyssus.lib.raytracing.RayFrame
+import net.nevinsky.abyssus.lib.raytracing.RaySunVisibility
 import java.io.File
 import java.util.Collections
-
-/**
- * The cloud shadow map of the sun, captured on the render thread for a ray frame: [size]² visibility bytes (0 dark to 255
- * lit, one per texel, row 0 first as the map is drawn), the transform from world positions to map coordinates ([worldToMap]:
- * two rows of four numbers), the [edgeFade] share of the map's width and the [outside] visibility beyond it, for the light of
- * entity [sunEntityId]. [revision] grows with every new capture. Immutable once published.
- */
-class RayCloudShadowInput(
-    val sunEntityId: String, val size: Int, pixels: ByteArray, val worldToMap: List<Float>, val edgeFade: Float, val outside: Float,
-    val revision: Long,
-) {
-    private val data = pixels.copyOf()
-
-    init {
-        require(size > 0 && data.size == size * size && worldToMap.size == 8)
-    }
-
-    fun pixels(): ByteArray = data.copyOf()
-}
 
 /** Borrowed frame data; consumed on the render thread before publishing immutable worker inputs. */
 class RayFrameContext(
@@ -44,10 +26,13 @@ class RayFrameContext(
     val viewCamera: String?,
     /** The built HDR sky's six axis irradiance colours (+X, -X, +Y, -Y, +Z, -Z), the same ones raster models use as ambient. */
     val hdrAmbient: FloatArray? = null,
-    /** Captures the sun's cloud shadow map when the raster view shades the sun with one (null: no cloud shadows). Only asked in ray mode. */
-    val cloudShadow: (() -> RayCloudShadowInput?)? = null,
-    /** Bakes the scene's procedural sky (arbitrary asset GLSL) on the render thread; null for any other sky. Only asked in ray mode. Last, so callers can pass it as a trailing lambda. */
+    /** Bakes the scene's procedural sky (arbitrary asset GLSL) on the render thread; null for any other sky. Only asked in ray mode. */
     val bakedSky: (() -> RaySkySnapshot?)? = null,
+    /**
+     * The clouds' shade on the sun (the cloud shadow map, or the uniform dimming where there is none) as an immutable CPU
+     * copy; null when no clouds shade it. Like [bakedSky] it is only asked in ray mode, on the render thread.
+     */
+    val sunVisibility: (() -> RaySunVisibility?)? = null,
 )
 
 data class RayDisplayCamera(

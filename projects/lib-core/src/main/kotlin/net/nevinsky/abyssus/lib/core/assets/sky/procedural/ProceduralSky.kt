@@ -22,8 +22,8 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.LayeredClouds
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.ShellClouds
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.VolumetricClouds
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.SkyLightingState
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
 import org.slf4j.Logger
@@ -33,7 +33,7 @@ import org.slf4j.helpers.NOPLogger
 const val SKY_CAMERA_HEIGHT = 100f
 
 /** The altitude, in metres, whose sunlight and sky light every cloud band is lit with. */
-internal const val CLOUD_LIGHT_ALTITUDE = 1500f
+private const val CLOUD_LIGHT_ALTITUDE = 1500f
 
 /**
  * A sky computed per pixel by the asset's own GLSL: one fullscreen triangle, no cube. Built on the GL thread; throws
@@ -49,7 +49,7 @@ class ProceduralSky(
     prepared: PreparedProceduralSky,
     private val assets: BuiltAssets = BuiltAssets { null },
     shaders: ShaderStorage = ShaderStorage(),
-    private val log: Logger = NOPLogger.NOP_LOGGER,
+    log: Logger = NOPLogger.NOP_LOGGER,
     cloudFactory: ((CloudTechnique) -> CloudRenderer)? = null,
 ) : SkyRenderer {
     /** The atmosphere the asset's shader is given; clouds sit on its planet. */
@@ -73,47 +73,6 @@ class ProceduralSky(
     private val mesh = createFullscreenTriangle()
     private val invViewProj = Matrix4()
     private val field = CloudField()
-
-    /** True when this sky lights its scene (`lightsScene`): its [lightingState] replaces the ambient color once built. */
-    val lightsScene: Boolean = prepared.lightsScene
-
-    private val shadersForLighting = shaders
-
-    private val lighting: ProceduralSkyLighting? = if (!prepared.lightsScene) null else
-        ProceduralSkyLighting(prepared.params, shaders, { cloudAsset }, log, field)
-
-    /** The lighting this sky gives its scene now; null without `lightsScene`, while the first build runs or if it failed. */
-    val lightingState: SkyLightingState? get() = lighting?.state
-
-    private var environment: ProceduralSkyEnvironment? = null
-
-    /** The cube of the sky and its clouds a consumer last asked for with [updateEnvironment]; null until then. */
-    val environmentCube: SkyEnvironment? get() = environment?.current
-
-    /**
-     * The cloudy-sky environment for the sun toward [sun] at sky time [timeSeconds], built the first time anything asks and
-     * kept current by later calls (once per frame while a consumer needs it); never built without a consumer, whether or
-     * not the sky has `lightsScene`, and it does not replace the scene's ambient color. Owned by this sky: disposed with it.
-     * GL thread with the context current.
-     */
-    fun updateEnvironment(sun: Vector3, timeSeconds: Double, visible: Boolean = true): SkyEnvironment? {
-        val source = environment ?: ProceduralSkyEnvironment(params, shadersForLighting, { cloudAsset }, log, field)
-            .also { environment = it }
-        return source.update(sun, timeSeconds, visible)
-    }
-
-    /** Releases the environment a consumer no longer needs; a later [updateEnvironment] builds it afresh. */
-    fun releaseEnvironment() {
-        environment?.dispose()
-        environment = null
-    }
-
-    /**
-     * Keeps the scene lighting up to date for the sun toward [sun] at sky time [timeSeconds]: call once per frame, on the
-     * GL thread with the context current, whether or not the sky itself is drawn. Nothing without `lightsScene`.
-     */
-    fun updateLighting(sun: Vector3, timeSeconds: Double, visible: Boolean = true) =
-        lighting?.update(sun, timeSeconds, visible)
     private val ambient = SkyAmbientEstimate(params)
     private val techniques = CloudTechniques(prepared.name, log, cloudFactory ?: { technique ->
         when (technique) {
@@ -122,6 +81,66 @@ class ProceduralSky(
             CloudTechnique.VOLUMETRIC -> VolumetricClouds(shaders, field)
         }
     })
+
+    private val lightsScene = prepared.lightsScene
+    private val lightingName = prepared.name
+    private val lightingShaders = shaders
+    private val lightingLog = log
+    private var leases = 0
+
+    /**
+     * The sky light of this sky: built and refreshed while the asset opts in with `lightsScene` or a consumer holds an
+     * [EnvironmentLease]; null otherwise, so nothing is built for nobody. Owned by this sky and released with it.
+     */
+    var lighting: ProceduralSkyLighting? =
+        if (lightsScene) ProceduralSkyLighting(params, shaders, prepared.name, log) else null
+        private set
+
+    /** The completed lighting environment to light the scene with; null without opt-in or until the first build is done. */
+    val lightingEnvironment: HdrEnvironment? get() = if (lightsScene) lighting?.current else null
+
+    /**
+     * A consumer's claim on this sky's cloudy environment, the cube lighting the sky gives, independent of `lightsScene`
+     * and without replacing the scene's ambient light. While any lease is open the sky builds it and keeps it up to date
+     * with the sun, the clouds and their wind; when the last closes (and the asset does not opt in) it is released.
+     * [environment] and [revision] are read on the GL thread: the environment is borrowed from the sky, valid until the
+     * next frame's update, and a changed [revision] says a new one replaced it (so a consumer can drop what it derived
+     * from the old one). Close the lease before the sky is disposed; the sky never hands out a disposed environment.
+     */
+    inner class EnvironmentLease internal constructor() : AutoCloseable {
+        private var closed = false
+
+        /** The completed environment, or null while the first build is under way, after close or after the sky is released. */
+        val environment: HdrEnvironment? get() = if (closed) null else lighting?.current
+
+        /** Counts the replacements of [environment]; 0 until the first one is complete. */
+        val revision: Long get() = if (closed) 0L else lighting?.revision ?: 0L
+
+        override fun close() {
+            if (closed) return
+            closed = true
+            leases--
+            if (leases == 0 && !lightsScene) {
+                lighting?.dispose()
+                lighting = null
+            }
+        }
+    }
+
+    /** Starts building the cloudy environment for a consumer (see [EnvironmentLease]); GL thread. */
+    fun acquireEnvironment(): EnvironmentLease {
+        leases++
+        if (lighting == null) lighting = ProceduralSkyLighting(params, lightingShaders, lightingName, lightingLog)
+        return EnvironmentLease()
+    }
+
+    /**
+     * Advances the sky light one frame (a no-op while nobody needs it): rebuilds it when the sun or clouds changed, one
+     * build step per call, while [visible]. GL thread only.
+     */
+    fun updateLighting(sun: Vector3, timeSeconds: Double, visible: Boolean, deltaSeconds: Double) {
+        lighting?.update(sun, cloudAsset, timeSeconds, visible, deltaSeconds)
+    }
 
     /** The cloud technique the last [draw] used; null when it drew no clouds. */
     var drawnTechnique: CloudTechnique? = null
@@ -159,7 +178,7 @@ class ProceduralSky(
         val (technique, renderer) = techniques.renderer(frame.technique ?: clouds.settings.technique) ?: return
         val scene = CloudScene(
             camera, invViewProj, frame.sun, frame.timeSeconds, clouds, params,
-            ambient.ambient(frame.sun, CLOUD_LIGHT_ALTITUDE),
+            ambient.ambient(frame.sun, CLOUD_LIGHT_ALTITUDE), frame.bake,
         )
         try {
             renderer.draw(scene)
@@ -170,8 +189,8 @@ class ProceduralSky(
     }
 
     override fun dispose() {
-        environment?.dispose()
         lighting?.dispose()
+        lighting = null
         techniques.dispose()
         mesh.dispose()
         program.dispose()

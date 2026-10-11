@@ -155,7 +155,7 @@ Java_net_nevinsky_abyssus_lib_raytracing_MetalBridge_setGeometry(JNIEnv *env, jo
         auto vertexCounts = integers(env,vertexCountArray);
         auto indexCounts = integers(env,indexCountArray);
         if (env->ExceptionCheck()) return;
-        if (session->inFlight || vertexCounts.empty() || vertexCounts.size() != indexCounts.size() || vertexCounts.size() > 1024) {
+        if (session->inFlight || vertexCounts.empty() || vertexCounts.size() != indexCounts.size() || vertexCounts.size() > 4096) {
             fail(env,@"Invalid Metal geometry update"); return;
         }
         id<MTLDevice> device = session->device;
@@ -283,7 +283,7 @@ Java_net_nevinsky_abyssus_lib_raytracing_MetalBridge_submit(JNIEnv *env, jobject
         auto values = floats(env,instanceArray);
         auto meshes = integers(env,meshArray);
         if (env->ExceptionCheck()) return;
-        if (session->inFlight || !session->geometry || (camera.size() != 20 && camera.size() != 28) || meshes.empty() || meshes.size() > 1024 ||
+        if (session->inFlight || !session->geometry || (camera.size() != 20 && camera.size() != 28) || meshes.empty() || meshes.size() > 4096 ||
             values.size() != meshes.size()*21 || width <= 0 || height <= 0 || width > 4096 || height > 4096 ||
             static_cast<uint64_t>(width)*height > 4194304) {
             fail(env,@"Invalid Metal render request"); return;

@@ -10,12 +10,13 @@ import com.badlogic.gdx.graphics.g3d.Attribute
 import com.badlogic.gdx.math.Matrix4
 
 /**
- * A map of how much of one directional light reaches each place, for [DefaultShader] and [PbrShader]: the red channel of
- * [texture] (0 dark to 1 lit) sampled at the fragment's world position transformed by [worldToMap] (x and y give the
- * texture coordinates; a position outside 0 to 1 is outside the map). Only the directional light number [lightIndex] of
- * the environment (in the order its lights are added) is multiplied by it, together with that light's own shadow;
- * every other light is untouched. Within [edgeFade] (a share of the map's width) of its edge the map fades into
- * [outside], the visibility used beyond it. It names no source (clouds, say), so the library stays reusable.
+ * A map of how much of one directional light reaches each world position, sampled by [DefaultShader] and [PbrShader]
+ * for that light only. [texture] holds the visibility (0 to 1) in its red channel; [worldToMap] takes a world position
+ * to map coordinates (x and y in 0 to 1 cover the map); [lightIndex] is the light's index among the shader's
+ * directional lights (the order [com.badlogic.gdx.graphics.g3d.Environment] lists them in). Positions beyond the map,
+ * and its outer [edgeFade] (a share of the map's width), fade to [outside], so a caller can carry a coarser factor
+ * there. The visibility multiplies the light's atlas shadow, if any, and never touches another light or the ambient.
+ * It names no source; clouds, foliage or anything else can fill the texture.
  */
 class DirectionalVisibilityAttribute(
     val texture: GLTexture,
@@ -27,8 +28,9 @@ class DirectionalVisibilityAttribute(
     val worldToMap: Matrix4 = Matrix4(worldToMap)
 
     init {
-        require(lightIndex >= 0) { "lightIndex must not be negative" }
-        require(edgeFade > 0f && edgeFade <= 0.5f) { "edgeFade must be in (0, 0.5]" }
+        require(lightIndex >= 0) { "A directional light index is not negative" }
+        require(edgeFade > 0f && edgeFade <= 0.5f) { "The edge fade is a share of the map, above 0 and at most 0.5" }
+        require(outside in 0f..1f) { "The visibility outside the map is 0 to 1" }
     }
 
     override fun copy(): Attribute = DirectionalVisibilityAttribute(texture, lightIndex, worldToMap, edgeFade, outside)
@@ -48,7 +50,7 @@ class DirectionalVisibilityAttribute(
     override fun compareTo(other: Attribute): Int {
         if (type != other.type) return type.compareTo(other.type)
         val o = other as DirectionalVisibilityAttribute
-        return compareValuesBy(this, o, { it.texture.textureObjectHandle }, { it.lightIndex }, { it.outside }, { it.edgeFade })
+        return compareValuesBy(this, o, { it.texture.textureObjectHandle }, { it.lightIndex }, { it.edgeFade }, { it.outside })
     }
 
     companion object {

@@ -23,7 +23,7 @@ private const val WAIT_TIMEOUT_NS = 10_000_000_000L
 private const val INSTANCE_BYTES = 96
 private const val TLAS_INSTANCE_BYTES = 64
 /** The most instances (and meshes) one Vulkan session holds; more fall back to raster. */
-internal const val VULKAN_MAX_INSTANCES = 1024
+internal const val VULKAN_MAX_INSTANCES = 4096
 
 /**
  * Optional provider, injected once at the application composition root. Nothing Vulkan-related loads before `probe`;

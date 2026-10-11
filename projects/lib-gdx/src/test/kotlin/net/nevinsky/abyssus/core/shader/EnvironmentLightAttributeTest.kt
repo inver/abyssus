@@ -76,45 +76,56 @@ class EnvironmentLightAttributeTest {
         assertEquals(0, a.compareTo(a.copy()))
     }
 
-    private fun fading(blend: Float) = EnvironmentLightAttribute(
-        FakeCube(7), FakeCube(8), 6, FloatArray(18) { 1f },
-        EnvironmentLightAttribute.Next(FakeCube(9), FakeCube(10), FloatArray(18) { 3f }), blend,
-    )
+    private fun fading(weight: Float) =
+        EnvironmentLightAttribute(FakeCube(7), FakeCube(8), 6, axisColors, EnvironmentLightAttribute(FakeCube(9), FakeCube(10), 5, FloatArray(18) { 1f }), weight)
 
     @Test
-    fun theBlendIsClampedAndZeroWithoutANextEnvironment() {
-        assertEquals(0f, sky().blend, 0f)
-        assertEquals(0f, EnvironmentLightAttribute(FakeCube(7), FakeCube(8), 6, axisColors, null, 0.7f).blend, 0f)
-        assertEquals(1f, fading(4f).blend, 0f)
-        assertEquals(0f, fading(-1f).blend, 0f)
-    }
-
-    @Test
-    fun theAmbientColorsMixTowardTheNextEnvironment() {
-        assertArrayEquals(FloatArray(18) { 1f }, fading(0f).blendedAmbient, 1e-6f)
-        assertArrayEquals(FloatArray(18) { 2f }, fading(0.5f).blendedAmbient, 1e-6f)
-        assertArrayEquals(FloatArray(18) { 3f }, fading(1f).blendedAmbient, 1e-6f)
-        val cubemap = AmbientCubemap()
-        DefaultShader.ACubemapSetter.setAmbientBase(cubemap, Environment().apply { set(fading(0.5f)) })
-        assertArrayEquals(FloatArray(18) { 2f }, cubemap.data, 1e-6f)
-    }
-
-    @Test
-    fun aFadingAttributeCopiesAndComparesByContent() {
+    fun aFadingAttributeCopiesAndComparesWithItsSecondEnvironment() {
         val a = fading(0.25f)
         assertEquals(a, a.copy())
+        assertEquals(a.hashCode(), a.copy().hashCode())
         assertEquals(0, a.compareTo(a.copy()))
         assertFalse(a == fading(0.5f))
-        assertTrue(a.compareTo(fading(0.5f)) != 0)
         assertFalse(a == sky())
+        assertTrue(a.compareTo(fading(0.5f)) != 0)
     }
 
     @Test
-    fun fadingDoesNotChangeTheShaderVariant() {
-        // the second environment is always bound and guarded by a uniform, so a fade neither recompiles nor re-keys a shader
+    fun theWeightIsClampedAndMeaninglessWithoutASecondEnvironment() {
+        assertEquals(1f, fading(3f).weight, 0f)
+        assertEquals(0f, fading(-1f).weight, 0f)
+        assertEquals(0f, EnvironmentLightAttribute(FakeCube(7), FakeCube(8), 6, axisColors, null, 0.7f).weight, 0f)
+        assertEquals(0f, sky().weight, 0f)
+    }
+
+    @Test
+    fun onlyOneEnvironmentCanBeFadedTo() {
+        val chained = runCatching { EnvironmentLightAttribute(FakeCube(1), FakeCube(2), 1, axisColors, fading(0.5f), 0.5f) }
+        assertTrue(chained.exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test
+    fun theDefaultShaderBlendsTheAxisColorsOnTheCpu() {
+        for ((weight, expected) in listOf(0f to 0.1f, 0.5f to 0.55f, 1f to 1f)) {
+            val cubemap = AmbientCubemap()
+            val env = Environment().apply {
+                set(EnvironmentLightAttribute(FakeCube(7), FakeCube(8), 6, FloatArray(18) { 0.1f },
+                    EnvironmentLightAttribute(FakeCube(9), FakeCube(10), 6, FloatArray(18) { 1f }), weight))
+            }
+            DefaultShader.ACubemapSetter.setAmbientBase(cubemap, env)
+            assertArrayEquals("weight $weight", FloatArray(18) { expected }, cubemap.data, 1e-6f)
+        }
+    }
+
+    @Test
+    fun onlyAFadingEnvironmentAddsTheFadeFlag() {
         val plain = Environment().apply { set(sky()) }
         val fade = Environment().apply { set(fading(0.5f)) }
+        assertFalse(PbrShader.pbrDefines(PBRFloatAttribute.Metallic, plain).contains("environmentFadeFlag"))
+        assertTrue(PbrShader.pbrDefines(PBRFloatAttribute.Metallic, fade).contains("#define environmentFadeFlag\n"))
+        assertTrue(EnvironmentLightAttribute.isFading(fade))
+        assertFalse(EnvironmentLightAttribute.isFading(plain))
+        // same attribute type, so the shader cache needs PbrShader.canRender to tell the two programs apart
         assertEquals(plain.getMask(), fade.getMask())
-        assertEquals(PbrShader.pbrDefines(PBRFloatAttribute.Metallic, plain), PbrShader.pbrDefines(PBRFloatAttribute.Metallic, fade))
     }
 }

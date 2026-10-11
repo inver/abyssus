@@ -8,137 +8,141 @@ package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.CubeSource
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironmentBuild
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.SkyLighting
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.SkyLightingState
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 
 /**
- * The lighting a procedural sky with `lightsScene` gives its scene: a linear cube of the sky and its clouds
- * ([ProceduralLightingCube]) turned into specular and irradiance cubes by an [HdrEnvironmentBuild], one step per frame,
- * and rebuilt as the sun and the clouds change ([LightingRefreshPolicy]). A new version fades in over the old.
- *
- * Owns at most the current and the next lighting, the cube, and one build in progress. [clouds] is read on every
- * [update]; a different object than the last time is a reloaded (or replaced, or removed) cloud asset, which makes the
- * lighting stale. [state] is null until the first build completes (the scene keeps its ambient color meanwhile), and a
- * later failed build leaves the last lighting in place. GL thread only, inside `GdxRuntime.withContext`; a lost
- * context ends it without GL calls (the view abandons the whole sky).
+ * The light a procedural sky with `lightsScene` gives the scene, one per view. A [LightingRefreshPolicy] decides when to
+ * rebuild (the sun moved, drifting clouds, a cloud reload or visibility change); each rebuild renders a
+ * [ProceduralLightingCube] and turns it into an [HdrEnvironment], one step per [update]. It holds the [current]
+ * environment, the [next] one while it fades in ([fade] 0 to 1) and at most one build. A failed build keeps [current]
+ * (none yet: the scene stays on its ambient color) and is retried by the policy. GL thread only, with the context
+ * current; it never owns the clouds it samples.
  */
 class ProceduralSkyLighting(
     private val params: AtmosphereParams,
     private val shaders: ShaderStorage,
-    private val clouds: () -> Clouds?,
+    private val skyName: String,
     private val log: Logger = NOPLogger.NOP_LOGGER,
-    private val field: CloudField = CloudField(),
     private val policy: LightingRefreshPolicy = LightingRefreshPolicy(),
 ) : Disposable {
-    private var cube: ProceduralLightingCube? = null
-    private var build: HdrEnvironmentBuild? = null
-    private var ticket = 0
-    private var current: SkyLighting? = null
-    private var next: SkyLighting? = null
-    private var weight = 0f
-    private val cloudRevision = CloudRevision()
-    private var failureLogged = false
+    private class Build(val request: LightingBuildRequest, val cube: ProceduralLightingCube) : Disposable {
+        var environment: HdrEnvironmentBuild? = null
 
-    /** What to light with now; null while the first lighting builds or when it failed. */
-    var state: SkyLightingState? = null
+        override fun dispose() {
+            environment?.dispose()
+            cube.dispose()
+        }
+    }
+
+    private val results = HashMap<Long, HdrEnvironment>()
+    private var active: Build? = null
+    private var lastClouds: Clouds? = null
+    private var cloudRevision = 0L
+    private val sun = Vector3()
+
+    /** The completed environment lighting the scene; null until the first build is done. */
+    var current: HdrEnvironment? = null
         private set
 
-    /** True while a build is in progress (for tests and diagnostics). */
-    val isBuilding: Boolean get() = build != null
+    /** The environment fading in over [current]; null when none is. */
+    var next: HdrEnvironment? = null
+        private set
 
-    /** Moves the lighting on one frame for the sun toward [sun] at sky time [timeSeconds]. Never throws. */
-    fun update(sun: Vector3, timeSeconds: Double, visible: Boolean = true) {
-        val weather = clouds()
-        val revision = cloudRevision.of(weather)
-        val shown = weather?.settings?.takeIf { it.visible }
-        val step = policy.update(
-            LightingFrame(sun, timeSeconds, revision, shown != null, shown?.drifts == true, visible)
+    /** How far [next] has replaced [current], 0 to 1. */
+    var fade = 0f
+        private set
+
+    /** Counts the changes of [current]: 0 until the first environment is complete, then one more for every replacement. */
+    var revision = 0L
+        private set
+
+    /**
+     * Moves the light one frame: asks the policy what is needed for [sunDirection], [clouds] at [timeSeconds], does one
+     * build step if a build is active and the view is [visible], and fades [next] in by [deltaSeconds].
+     */
+    fun update(sunDirection: Vector3, clouds: Clouds?, timeSeconds: Double, visible: Boolean, deltaSeconds: Double) {
+        if (clouds !== lastClouds) {
+            lastClouds = clouds
+            cloudRevision++
+        }
+        val settings = clouds?.settings
+        val bands = settings?.bandsFarToNear().orEmpty()
+        val request = LightingRefreshRequest(
+            LightingSunDirection(sunDirection.x.toDouble(), sunDirection.y.toDouble(), sunDirection.z.toDouble()),
+            LightingRevision(skyName, 0, clouds?.name, cloudRevision, settings?.visible == true),
+            timeSeconds,
+            bands.any { it.windX != 0f || it.windZ != 0f },
         )
-        if (step.abandon) releaseBuild()
-        if (step.promoted) promote()
-        step.build?.let { start(it, sun, timeSeconds, weather) } ?: advance()
-        weight = step.weight
+        val state = policy.update(request, visible, deltaSeconds)
+        val build = state.build
+        if (active != null && active?.request?.id != build?.id) release()
+        if (build != null && state.canStepBuild) step(build, clouds, request)
         publish()
     }
 
-    private fun start(newTicket: Int, sun: Vector3, timeSeconds: Double, weather: Clouds?) {
-        ticket = newTicket
+    private fun step(request: LightingBuildRequest, clouds: Clouds?, frame: LightingRefreshRequest) {
+        var build = active
         try {
-            val target = cube ?: ProceduralLightingCube(params, shaders, field).also { cube = it }
-            target.render(sun, timeSeconds, weather)
-            build = HdrEnvironmentBuild(target.source(), shaders)
-        } catch (e: Exception) {
-            fail(newTicket, e)
-        }
-    }
-
-    private fun advance() {
-        val running = build ?: return
-        try {
-            if (!running.step()) return
-            val lighting = running.finishLighting()
-            build = null
-            when (policy.completed(ticket)) {
-                Completion.DISCARD -> lighting.dispose()
-                Completion.PUBLISH -> {
-                    current?.dispose()
-                    current = lighting
-                }
-
-                Completion.FADE -> {
-                    next?.dispose()
-                    next = lighting
-                }
+            if (build == null) {
+                build = Build(request, ProceduralLightingCube(params, shaders)).also { active = it }
+                val direction = request.request.sun
+                sun.set(direction.x.toFloat(), direction.y.toFloat(), direction.z.toFloat())
+                build.cube.render(sun, clouds, frame.cloudTimeSeconds)
+                build.environment = HdrEnvironmentBuild(
+                    CubeSource(build.cube.texture, PROCEDURAL_LIGHTING_LEVELS), shaders
+                )
+                return
             }
-        } catch (e: Exception) {
-            fail(ticket, e)
+            if (!checkNotNull(build.environment).step()) return
+            val environment = build.environment!!.finish()
+            release()
+            if (policy.completed(request)) results[request.id] = environment else environment.dispose()
+        } catch (failure: Exception) {
+            release()
+            policy.failed(request)
+            log.warn("Sky '$skyName': lighting build failed; ${if (current == null) "keeping the ambient light" else "keeping the last lighting"}", failure)
         }
     }
 
-    private fun fail(failedTicket: Int, e: Exception) {
-        releaseBuild()
-        policy.failed(failedTicket)
-        if (!failureLogged) {
-            failureLogged = true
-            log.warn("Procedural sky lighting failed; keeping ${if (current == null) "the ambient color" else "the last lighting"}", e)
-        }
+    private fun release() {
+        active?.dispose()
+        active = null
     }
 
-    private fun promote() {
-        val faded = next ?: return
-        current?.dispose()
-        current = faded
-        next = null
-    }
-
-    private fun releaseBuild() {
-        build?.dispose()
-        build = null
-    }
-
+    /** Mirrors the policy into [current] / [next] and disposes every result the policy no longer holds. */
     private fun publish() {
-        val now = current
-        state = when {
-            now == null -> null
-            state?.current === now && state?.next === next && state?.weight == weight -> state
-            else -> SkyLightingState(now, next, if (next == null) 0f else weight)
-        }
+        val state = policy.state
+        val keep = setOfNotNull(state.current?.id, state.next?.id)
+        results.keys.filter { it !in keep }.forEach { results.remove(it)?.dispose() }
+        val published = state.current?.let { results[it.id] }
+        if (published !== current && published != null) revision++
+        current = published
+        next = state.next?.let { results[it.id] }
+        fade = if (next != null) state.fadeWeight.toFloat() else 0f
+    }
+
+    /** Forgets everything without GL calls: the context the resources were made in is gone. */
+    fun abandon() {
+        policy.resetContext()
+        results.clear()
+        active = null
+        if (current != null) revision++
+        current = null
+        next = null
+        fade = 0f
+        lastClouds = null
     }
 
     override fun dispose() {
-        releaseBuild()
-        next?.dispose()
-        current?.dispose()
-        cube?.dispose()
-        next = null
+        release()
+        results.values.forEach(Disposable::dispose)
+        results.clear()
         current = null
-        cube = null
-        state = null
-        policy.reset()
+        next = null
     }
 }

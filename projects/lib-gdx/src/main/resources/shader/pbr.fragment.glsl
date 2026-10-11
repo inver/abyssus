@@ -113,15 +113,18 @@ uniform vec3 u_ambientCubemap[6];
 #ifdef environmentLightFlag
 uniform samplerCube u_envIrradiance;
 uniform samplerCube u_envSpecular;
-uniform samplerCube u_envIrradianceNext; // the environment being faded in (the current one again when none)
-uniform samplerCube u_envSpecularNext;
-uniform float u_envBlend;                // 0 to 1 from the current environment to the next; 0 when nothing fades
 uniform float u_envMaxLod;
 #if __VERSION__ >= 130
 #define textureCubeLodCompat textureLod
 #else
 #define textureCubeLodCompat textureCubeLod
 #endif
+#ifdef environmentFadeFlag
+uniform samplerCube u_envIrradianceTo;
+uniform samplerCube u_envSpecularTo;
+uniform float u_envMaxLodTo;
+uniform float u_envFade;
+#endif // environmentFadeFlag
 #endif // environmentLightFlag
 
 #if numDirectionalLights > 0
@@ -180,23 +183,6 @@ float getShadow()
 			getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset))) * 0.25;
 }
 #endif //shadowMapFlag
-
-#ifdef directionalVisibilityFlag
-uniform sampler2D u_dirVisMap;
-uniform int u_dirVisIndex;
-uniform mat4 u_dirVisMatrix;
-uniform float u_dirVisEdge;
-uniform float u_dirVisOutside;
-// How much of directional light i reaches worldPos: the map for the one light it describes (fading into the outside value at
-// its edge), 1 for every other light.
-float directionalVisibility(int i, vec3 worldPos) {
-    if (i != u_dirVisIndex) return 1.0;
-    vec2 uv = (u_dirVisMatrix * vec4(worldPos, 1.0)).xy;
-    vec2 toEdge = min(uv, 1.0 - uv);
-    float inside = smoothstep(0.0, u_dirVisEdge, min(toEdge.x, toEdge.y));
-    return mix(u_dirVisOutside, texture2D(u_dirVisMap, clamp(uv, 0.0, 1.0)).r, inside);
-}
-#endif // directionalVisibilityFlag
 
 #ifdef shadowAtlasFlag
 uniform sampler2D u_shadowAtlas;
@@ -273,6 +259,20 @@ float pointShadowVisibility(int lightIndex, vec3 worldPos, float ndotl) {
     return shadowTileVisibility(tile, worldPos, length(worldPos - u_shadowPositions[ti]) / max(u_shadowFars[ti], 1e-4), ndotl);
 }
 #endif
+
+#ifdef directionalVisibilityFlag
+uniform sampler2D u_dirVisMap;
+uniform mat4 u_dirVisWorldToMap;
+uniform vec2 u_dirVisParams; // x: width of the edge fade, in map coordinates; y: visibility outside the map
+uniform int u_dirVisIndex;
+// The map's visibility at a world position; fades to the outside value over the map's edge, whatever the texture clamps to.
+float directionalVisibility(vec3 worldPos) {
+    vec2 uv = (u_dirVisWorldToMap * vec4(worldPos, 1.0)).xy;
+    vec2 edge = min(uv, 1.0 - uv);
+    float inside = clamp(min(edge.x, edge.y) / max(u_dirVisParams.x, 1e-4), 0.0, 1.0);
+    return mix(u_dirVisParams.y, texture2D(u_dirVisMap, clamp(uv, 0.0, 1.0)).r, inside);
+}
+#endif // directionalVisibilityFlag
 
 // GGX normal distribution
 float distributionGGX(float NdotH, float alpha)
@@ -428,7 +428,7 @@ void main() {
 					visibility = shadowTileVisibility(u_dirShadowTile[i], v_worldPos, -1.0, max(dot(normal, -u_dirLights[i].direction), 0.0));
 				#endif
 				#ifdef directionalVisibilityFlag
-					visibility *= directionalVisibility(i, v_worldPos);
+					if (i == u_dirVisIndex) visibility *= directionalVisibility(v_worldPos);
 				#endif
 				direct += visibility * shadeLight(u_dirLights[i].color, -u_dirLights[i].direction, normal, V, NdotV, diffuseColor, f0, alpha);
 			}
@@ -488,10 +488,10 @@ void main() {
 			// the sky replaces the ambient: diffuse by normal, specular by reflection at the roughness's mip
 			ambient = textureCube(u_envIrradiance, normal).rgb;
 			vec3 prefiltered = textureCubeLodCompat(u_envSpecular, reflect(-V, normal), roughness * u_envMaxLod).rgb;
-			if (u_envBlend > 0.0) {
-				ambient = mix(ambient, textureCube(u_envIrradianceNext, normal).rgb, u_envBlend);
-				prefiltered = mix(prefiltered, textureCubeLodCompat(u_envSpecularNext, reflect(-V, normal), roughness * u_envMaxLod).rgb, u_envBlend);
-			}
+			#ifdef environmentFadeFlag
+				ambient = mix(ambient, textureCube(u_envIrradianceTo, normal).rgb, u_envFade);
+				prefiltered = mix(prefiltered, textureCubeLodCompat(u_envSpecularTo, reflect(-V, normal), roughness * u_envMaxLodTo).rgb, u_envFade);
+			#endif // environmentFadeFlag
 			vec3 ambientSpecular = prefiltered * (f0 * envBrdf.x + envBrdf.y);
 		#else
 			vec3 ambientSpecular = ambient * (f0 * envBrdf.x + envBrdf.y);

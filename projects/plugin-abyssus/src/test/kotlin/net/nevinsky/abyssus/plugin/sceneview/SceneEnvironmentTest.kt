@@ -48,22 +48,25 @@ class SceneEnvironmentTest {
         assertEquals(SceneAmbient.Color(null), ambient(null, null))
     }
 
-    // A procedural sky with lightsScene is selected through the same path once SceneSkybox.environment returns its
-    // lighting (null while the first build runs or after it failed, and for a sky without the opt-in).
+    // A procedural sky with additional.lightsScene true reports its completed lighting through the same lookup as an
+    // HDR sky; SceneSkybox.environment returns null for one that has not opted in, is disabled or is still building.
+
     @Test
-    fun aLightingProceduralSkyReplacesTheAmbientOnceBuilt() {
-        assertEquals(SceneAmbient.Sky("lighting"), ambient("skybox_physical", grey, built = mapOf("skybox_physical" to "lighting")))
-        assertEquals(SceneAmbient.Sky("lighting"), ambient("skybox_physical", null, built = mapOf("skybox_physical" to "lighting")))
+    fun aBuiltLightingProceduralSkyReplacesTheAmbient() {
+        assertEquals(SceneAmbient.Sky("lighting"), ambient("skybox_lit", grey, mapOf("skybox_lit" to "lighting")))
+        assertEquals(SceneAmbient.Sky("lighting"), ambient("skybox_lit", null, mapOf("skybox_lit" to "lighting")))
     }
 
     @Test
-    fun aProceduralSkyBuildingItsFirstLightingKeepsTheAmbient() {
-        assertEquals(SceneAmbient.Color(grey), ambient("skybox_physical", grey, built = emptyMap()))
+    fun aProceduralSkyWithoutOptInOrWithoutALightingKeepsTheAmbient() {
+        val built = mapOf("skybox_lit" to "lighting")
+        assertEquals(SceneAmbient.Color(grey), ambient("skybox_physical", grey, built))
+        assertEquals(SceneAmbient.Color(grey), ambient("skybox_lit", grey, emptyMap()))
+        assertEquals(SceneAmbient.Color(null), ambient("skybox_lit", null, emptyMap()))
     }
 
     @Test
-    fun aDisabledProceduralSkyDoesNotLightEvenWhenBuilt() {
-        // SceneContent gives no skybox name when skyboxEnabled is false
-        assertEquals(SceneAmbient.Color(grey), ambient(null, grey, built = mapOf("skybox_physical" to "lighting")))
+    fun aDisabledSkyboxDoesNotLightWhateverIsBuilt() {
+        assertEquals(SceneAmbient.Color(grey), ambient(null, grey, mapOf("skybox_lit" to "lighting")))
     }
 }

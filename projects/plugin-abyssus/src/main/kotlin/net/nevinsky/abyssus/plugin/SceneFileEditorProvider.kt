@@ -69,7 +69,10 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
             val play = playState(project, file)
             val overlays = overlays(project, file)
             val panel = SceneViewPanel(
-                params, SceneRenderer(ViewAssets(assets.loading), assets.sceneShaders, project.service<FoliageDrafts>()),
+                params, SceneRenderer(
+                    ViewAssets(assets.loading), assets.sceneShaders, project.service<FoliageDrafts>(),
+                    log = core.loggers.getLogger("sceneview"),
+                ),
                 lightActions = { position -> host.lightActions(file, position) },
                 canAddLight = { host.canAddLight(file) },
                 assetActions = { position -> host.assetActions(file, position) },
