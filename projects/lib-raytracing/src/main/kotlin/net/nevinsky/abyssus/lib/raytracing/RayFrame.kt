@@ -16,13 +16,17 @@ data class RayFrameKey(
  * Completed host-memory frame: tightly packed linear RGBA floats and GL window depth in [0,1], with misses at 1.
  * Pixels are row-major from the bottom-left. Copies isolate native producer memory and GL upload consumers.
  */
-class RayFrame(
+class RayFrame internal constructor(
     val key: RayFrameKey,
     val width: Int,
     val height: Int,
     color: FloatArray,
     depth: FloatArray,
+    adopt: Boolean,
 ) {
+    constructor(key: RayFrameKey, width: Int, height: Int, color: FloatArray, depth: FloatArray) :
+        this(key, width, height, color, depth, false)
+
     private val color: FloatArray
     private val depth: FloatArray
 
@@ -34,10 +38,19 @@ class RayFrame(
         }
         require(color.all { it.isFinite() }) { "Color must contain finite linear values" }
         require(depth.all { it.isFinite() && it in 0f..1f }) { "Depth must use GL window depth" }
-        this.color = color.copyOf()
-        this.depth = depth.copyOf()
+        // adopted arrays are owned by this frame from now on (the caller never touches them again), which saves a copy per frame
+        this.color = if (adopt) color else color.copyOf()
+        this.depth = if (adopt) depth else depth.copyOf()
     }
 
     fun colorValues(): FloatArray = color.copyOf()
     fun depthValues(): FloatArray = depth.copyOf()
+
+    /** Writes the color values at the buffer's position without an intermediate copy. */
+    fun copyColorTo(target: java.nio.FloatBuffer) { target.put(color) }
+    fun copyDepthTo(target: java.nio.FloatBuffer) { target.put(depth) }
+
+    /** Read-only views for in-module consumers that never mutate or retain them beyond this frame's life. */
+    internal fun colorView(): FloatArray = color
+    internal fun depthView(): FloatArray = depth
 }

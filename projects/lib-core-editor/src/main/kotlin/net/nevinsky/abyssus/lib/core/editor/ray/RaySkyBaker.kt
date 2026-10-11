@@ -78,11 +78,12 @@ class RaySkyBaker(private val faceSize: Int = 256) {
         return equirect(images, ++bakes)
     }
 
-    /** Equirectangular resampling: centre column faces -Z and the top row is +Y, as the raster sky does. */
-    private fun equirect(images: List<ByteArray>, revision: Long): RaySkySnapshot {
+    // Which face and texel every output pixel reads depends only on the face size, so it is worked out once, not per bake.
+    private val faceOfPixel by lazy(LazyThreadSafetyMode.NONE) { ByteArray(RAY_SKY_MAX_WIDTH * (RAY_SKY_MAX_WIDTH / 2)) }
+    private val texelOfPixel by lazy(LazyThreadSafetyMode.NONE) {
         val width = RAY_SKY_MAX_WIDTH
         val height = width / 2
-        val out = FloatArray(width * height * 4)
+        val texels = IntArray(width * height)
         for (y in 0 until height) {
             val phi = (y + .5f) / height * PI.toFloat()
             for (x in 0 until width) {
@@ -102,13 +103,27 @@ class RaySkyBaker(private val faceSize: Int = 256) {
                 val px = ((u + 1f) / 2f * faceSize).toInt().coerceIn(0, faceSize - 1)
                 val py = ((v + 1f) / 2f * faceSize).toInt()
                     .coerceIn(0, faceSize - 1) // row 0 is the bottom, as glReadPixels returns
-                val source = (py * faceSize + px) * 4
-                val i = (y * width + x) * 4
-                out[i] = (images[index][source].toInt() and 255) / 255f
-                out[i + 1] = (images[index][source + 1].toInt() and 255) / 255f
-                out[i + 2] = (images[index][source + 2].toInt() and 255) / 255f
-                out[i + 3] = 1f
+                faceOfPixel[y * width + x] = index.toByte()
+                texels[y * width + x] = (py * faceSize + px) * 4
             }
+        }
+        texels
+    }
+
+    /** Equirectangular resampling: centre column faces -Z and the top row is +Y, as the raster sky does. */
+    private fun equirect(images: List<ByteArray>, revision: Long): RaySkySnapshot {
+        val width = RAY_SKY_MAX_WIDTH
+        val height = width / 2
+        val texels = texelOfPixel
+        val out = FloatArray(width * height * 4)
+        for (pixel in 0 until width * height) {
+            val image = images[faceOfPixel[pixel].toInt()]
+            val source = texels[pixel]
+            val i = pixel * 4
+            out[i] = (image[source].toInt() and 255) / 255f
+            out[i + 1] = (image[source + 1].toInt() and 255) / 255f
+            out[i + 2] = (image[source + 2].toInt() and 255) / 255f
+            out[i + 3] = 1f
         }
         return RaySkySnapshot(width, height, out, hdr = false, revision = revision)
     }
