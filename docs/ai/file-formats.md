@@ -383,6 +383,7 @@ Native version 1 scenes may contain a root `rayTracing` object. Omitted fields u
 | `maxRaysPerFrame` | 2097152 | 1–67108864 |
 | `maxReflectionBounces` | 1 | 0–16 |
 | `maxRefractionBounces` | 0 | 0–16 |
+| `maxInstances` | 4096 | 1–4096 |
 
 A present null, fraction, string or out-of-range value is malformed. Ordinary scene editing remains available;
 the raw Properties reader reports the error. Explicit null limits survive typed DTO binding and are rejected by

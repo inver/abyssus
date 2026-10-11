@@ -38,7 +38,7 @@ internal class MetalLibrary(
 }
 
 /** The native bridge builds at most this many bottom-level structures and instances per session. */
-internal const val METAL_MAX_INSTANCES = 1024
+internal const val METAL_MAX_INSTANCES = 4096
 
 /** Optional provider, injected once at the application composition root. All methods run on its serial worker. */
 class MetalRayBackendFactory(

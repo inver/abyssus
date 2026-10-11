@@ -116,6 +116,18 @@ class RaySceneSnapshotTest {
         assertEquals(RaySceneFallback.RESOURCE_LIMIT, (byteResult as RaySceneConversion.Fallback).reason)
     }
 
+    @Test fun `the saved instance limit falls back with its number and never exceeds the default`() {
+        fun saved(value: Int) = params().copy(rayTracing = SceneRaySettingsCodec().read(
+            net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse("""{"rayTracing":{"maxInstances":$value}}""")))
+        val limited = RaySceneSnapshots().capture(saved(1), camera, NO_LIGHTS, assets)
+        val fallback = limited as RaySceneConversion.Fallback
+        assertEquals(RaySceneFallback.RESOURCE_LIMIT, fallback.reason)
+        assertTrue(fallback.detail!!.contains("the limit is 1"))
+        assertTrue("room for the scene", RaySceneSnapshots().capture(saved(4096), camera, NO_LIGHTS, assets) is RaySceneConversion.Ready)
+        val tight = RaySceneSnapshots(RaySnapshotLimits(maxInstances = 1)).capture(saved(4096), camera, NO_LIGHTS, assets)
+        assertTrue("the stricter limit wins", tight is RaySceneConversion.Fallback)
+    }
+
     @Test fun `pending and failed displayed assets stay explicit`() {
         val snapshots = RaySceneSnapshots()
         assertTrue(snapshots.capture(params(), camera, NO_LIGHTS, RaySceneAssetState.Ready(emptyMap(), emptyMap())) is RaySceneConversion.Preparing)

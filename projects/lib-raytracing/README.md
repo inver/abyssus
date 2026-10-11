@@ -175,12 +175,12 @@ re-encoded only when it, or the geometry, changed (`shadingUnchanged`). The plug
 Bounds, all explicit fallbacks through `RaySceneSnapshot.unsupportedReason()` rather than silent omission:
 32 MiB of triangle input per session (`RAY_MAX_GEOMETRY_BYTES`, positions plus 32-bit indices;
 `geometryOverTheMemoryBudgetIsRejectedAndTheSessionStaysUsable`), 128 materials, 128 textures, 12 lights and 32 blended
-instances, and the backend's own instance and mesh capacity (`RayCapabilities.maxInstances`: 1024 on Metal and on
+instances, and the backend's own instance and mesh capacity (`RayCapabilities.maxInstances`: 4096 on Metal and on
 Vulkan; `scenesPastTheOldInstanceCapRenderWithTheBackendsOwnCapacity`, `manyDistinctMeshesPastTheOldCapAreBuiltAndHit`). Native builds are also bounded by the smaller of 512 MiB and a quarter of the Metal device's recommended
 working set. A scene's shading payload is up to 16M floats (64 MiB: materials, normals, UVs, float textures such as an HDR
 sky) followed by up to 16M RGBA8 texels (64 MiB). Ordinary image textures are `RayTexture`s built from bytes and stay
 8-bit from the plugin to the shader, a quarter of the size of float texels (`byteTexturesRenderLikeTheSameFloatTextures`,
-`aLargeByteTextureIsAcceptedWithoutExpandingToFloats`). The plugin additionally bounds instances (1024), triangles (2M)
+`aLargeByteTextureIsAcceptedWithoutExpandingToFloats`). The plugin additionally bounds instances (4096), triangles (2M)
 and bytes (512 MB) in `RaySnapshotLimits`, and its fallback message says which bound a scene exceeded and by how much. Removed instances simply disappear from the next top-level structure. These bounds
 are per session, so one view's scene never consumes another view's budget.
 
