@@ -86,6 +86,10 @@ Above-water viewing SHALL show animated waves and wave-distorted reflections of 
 - **WHEN** the camera moves from looking down to looking along the water
 - **THEN** reflection becomes stronger and wave motion distorts it continuously
 
+#### Scenario: Reflected clouds
+- **WHEN** the scene's procedural sky draws clouds and the camera looks at a Lake
+- **THEN** the sky in its reflection includes those clouds at the same time and weather as the displayed sky
+
 ### Requirement: Visible shallow water
 
 Shallow water SHALL reveal submerged opaque or alpha-tested scene geometry with wave-distorted refraction. Increasing water depth SHALL attenuate that geometry toward the water tint; increasing clarity SHALL make it visible through greater depth. Above-water objects SHALL not appear smeared into submerged areas by refraction.
@@ -117,6 +121,10 @@ Water rendering SHALL use a bounded number of reflection views, keep every valid
 #### Scenario: Reflection budget exceeded
 - **WHEN** more distinct visible water levels exist than full reflection capacity
 - **THEN** a deterministic subset reflects scene geometry and remaining surfaces use the fallback without flickering allocation
+
+#### Scenario: Fallback under clouds
+- **WHEN** a water level beyond the reflection budget falls back to the sky and the procedural sky draws clouds
+- **THEN** its fallback reflection shows the cloudy sky, not a cloudless one
 
 #### Scenario: Invalid surface
 - **WHEN** one saved surface has invalid size or settings

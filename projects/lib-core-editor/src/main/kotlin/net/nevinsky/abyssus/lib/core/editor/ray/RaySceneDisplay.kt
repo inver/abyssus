@@ -15,6 +15,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 import net.nevinsky.abyssus.lib.raytracing.RayFrame
+import net.nevinsky.abyssus.lib.raytracing.RaySunVisibility
 import java.io.File
 import java.util.Collections
 
@@ -27,6 +28,11 @@ class RayFrameContext(
     val hdrAmbient: FloatArray? = null,
     /** Bakes the scene's procedural sky (arbitrary asset GLSL) on the render thread; null for any other sky. Only asked in ray mode. */
     val bakedSky: (() -> RaySkySnapshot?)? = null,
+    /**
+     * The clouds' shade on the sun (the cloud shadow map, or the uniform dimming where there is none) as an immutable CPU
+     * copy; null when no clouds shade it. Like [bakedSky] it is only asked in ray mode, on the render thread.
+     */
+    val sunVisibility: (() -> RaySunVisibility?)? = null,
 )
 
 data class RayDisplayCamera(

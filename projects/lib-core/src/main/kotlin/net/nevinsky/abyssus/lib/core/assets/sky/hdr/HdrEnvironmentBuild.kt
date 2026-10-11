@@ -46,31 +46,60 @@ class GpuTexture(target: Int, private val width: Int, private val height: Int) :
     override fun reload() = Unit
 }
 
-/**
- * The environment an HDR sky lights the scene with: the equirectangular image the background samples, the specular cube
- * ([levels] mips, level n prefiltered for GGX roughness n / (levels - 1)), the irradiance cube, and the irradiance in
- * the six axis directions as [ambient] (+X, -X, +Y, -Y, +Z, -Z, three floats each).
- */
+/** Linear lighting only; owns its specular and irradiance cubes, never a background or source texture. */
 class HdrEnvironment(
-    val equirect: GpuTexture,
     val specular: GpuTexture,
     val irradiance: GpuTexture,
     val levels: Int,
     val ambient: FloatArray,
 ) : Disposable {
+    private var disposed = false
+
     override fun dispose() {
-        equirect.dispose()
+        if (disposed) return
+        disposed = true
         specular.dispose()
         irradiance.dispose()
     }
 }
 
+/** HDR background and lighting have separate ownership; the sky owns both after a successful transfer. */
+class HdrSkyEnvironment(val background: GpuTexture, val lighting: HdrEnvironment) : Disposable {
+    private var disposed = false
+
+    override fun dispose() {
+        if (disposed) return
+        disposed = true
+        background.dispose()
+        lighting.dispose()
+    }
+}
+
+sealed interface EnvironmentSource
+
+class EquirectSource(val image: HdrImage) : EnvironmentSource
+
+/** A completed linear cube and its allocated mip count. Borrowed until the build completes or is disposed. */
+class CubeSource(val texture: GpuTexture, val levels: Int) : EnvironmentSource {
+    init {
+        require(texture.glTarget == GL20.GL_TEXTURE_CUBE_MAP && texture.width == texture.height)
+        require(texture.width > 0 && levels in 1..(32 - Integer.numberOfLeadingZeros(texture.width)))
+    }
+}
+
 /**
- * Builds an [HdrEnvironment] from a decoded image in [HDR_BUILD_STEPS] steps, one per [step] call, on the GL thread inside
+ * Builds linear lighting from an equirectangular image or a borrowed cube in [HDR_BUILD_STEPS] steps, one per [step]
+ * call, on the GL thread inside
  * `GdxRuntime.withContext`. Each step renders into its own framebuffer and restores the framebuffer, viewport and
  * state it found. Throws when the GPU lacks OpenGL 3 or a renderable 16-bit float framebuffer.
  */
-class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: ShaderStorage) : Disposable {
+class HdrEnvironmentBuild(private val input: EnvironmentSource, private val shaders: ShaderStorage) : Disposable {
+    constructor(image: HdrImage, shaders: ShaderStorage) : this(EquirectSource(image), shaders)
+
+    private val sourceSize = (input as? CubeSource)?.texture?.width ?: SPECULAR_SIZE
+    private val sourceLevels = (input as? CubeSource)?.levels ?: SOURCE_LEVELS
+    private var ownsSource = false
+    private var disposed = false
 
     private var done = 0
     private var equirect: GpuTexture? = null
@@ -86,12 +115,19 @@ class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: Shad
 
     /** Does the next step; true when the environment is complete. */
     fun step(): Boolean {
-        when (done) {
-            0 -> uploadImage()
-            1 -> projectToCube()
-            in 2..6 -> prefilterLevel(done - 1)
-            7 -> convolveIrradiance()
-            8 -> readAmbient()
+        check(!disposed) { "Environment build was released" }
+        if (done >= HDR_BUILD_STEPS) return true
+        try {
+            when (done) {
+                0 -> prepareSource()
+                1 -> projectToCube()
+                in 2..6 -> prefilterLevel(done - 1)
+                7 -> convolveIrradiance()
+                8 -> readAmbient()
+            }
+        } catch (failure: Throwable) {
+            dispose()
+            throw failure
         }
         done++
         return done >= HDR_BUILD_STEPS
@@ -99,17 +135,31 @@ class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: Shad
 
     /** Hands over the finished textures and releases everything else. */
     fun finish(): HdrEnvironment {
-        check(done >= HDR_BUILD_STEPS) { "HDR environment is not built yet" }
-        val result = HdrEnvironment(equirect!!, specular!!, irradiance!!, SPECULAR_LEVELS, ambient.copyOf())
-        equirect = null
+        check(!disposed && done >= HDR_BUILD_STEPS) { "HDR environment is not built yet or was released" }
+        val result = HdrEnvironment(specular!!, irradiance!!, SPECULAR_LEVELS, ambient.copyOf())
         specular = null
         irradiance = null
         dispose()
         return result
     }
 
-    private fun uploadImage() {
+    /** Transfers an equirectangular background separately, preserving the HDR draw/exposure path. */
+    fun finishHdr(): HdrSkyEnvironment {
+        check(!disposed && done >= HDR_BUILD_STEPS) { "HDR environment is not built yet or was released" }
+        val background = checkNotNull(equirect) { "A cube-source build has no HDR background" }
+        equirect = null
+        return HdrSkyEnvironment(background, finish())
+    }
+
+    private fun prepareSource() {
         checkNotNull(Gdx.gl30) { "HDR skies need OpenGL 3" }
+        when (val src = input) {
+            is EquirectSource -> uploadImage(src.image)
+            is CubeSource -> source = src.texture
+        }
+    }
+
+    private fun uploadImage(image: HdrImage) {
         val gl = Gdx.gl
         gl.glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS)
         val texture = GpuTexture(GL20.GL_TEXTURE_2D, image.width, image.height).also { equirect = it }
@@ -135,19 +185,23 @@ class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: Shad
     }
 
     private fun projectToCube() {
-        val src = cube(SPECULAR_SIZE, SOURCE_LEVELS).also { source = it }
+        val src = if (input is EquirectSource) {
+            cube(SPECULAR_SIZE, SOURCE_LEVELS).also { source = it; ownsSource = true }
+        } else checkNotNull(source)
         specular = cube(SPECULAR_SIZE, SPECULAR_LEVELS)
         irradiance = cube(IRRADIANCE_SIZE, 1)
         fbo = Gdx.gl.glGenFramebuffer()
-        val program = program("hdr_project").also { project = it }
-        render(src, 0, SPECULAR_SIZE, program) {
-            equirect!!.bind(0)
-            program.setUniformi("u_equirect", 0)
-            program.setUniformf("u_texel", 2f / SPECULAR_SIZE)
+        if (input is EquirectSource) {
+            val program = program("hdr_project").also { project = it }
+            render(src, 0, SPECULAR_SIZE, program) {
+                equirect!!.bind(0)
+                program.setUniformi("u_equirect", 0)
+                program.setUniformf("u_texel", 2f / SPECULAR_SIZE)
+            }
+            src.bind()
+            Gdx.gl.glGenerateMipmap(GL20.GL_TEXTURE_CUBE_MAP)
+            Gdx.gl.glBindTexture(GL20.GL_TEXTURE_CUBE_MAP, 0)
         }
-        src.bind()
-        Gdx.gl.glGenerateMipmap(GL20.GL_TEXTURE_CUBE_MAP)
-        Gdx.gl.glBindTexture(GL20.GL_TEXTURE_CUBE_MAP, 0)
         // level 0 of the specular cube is the projection itself (roughness 0)
         prefilterLevel(0)
     }
@@ -158,8 +212,8 @@ class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: Shad
             source!!.bind(0)
             program.setUniformi("u_source", 0)
             program.setUniformf("u_roughness", level / (SPECULAR_LEVELS - 1f))
-            program.setUniformf("u_sourceSize", SPECULAR_SIZE.toFloat())
-            program.setUniformf("u_maxLod", SOURCE_LEVELS - 1f)
+            program.setUniformf("u_sourceSize", sourceSize.toFloat())
+            program.setUniformf("u_maxLod", sourceLevels - 1f)
         }
     }
 
@@ -168,11 +222,10 @@ class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: Shad
         render(irradiance!!, 0, IRRADIANCE_SIZE, program) {
             source!!.bind(0)
             program.setUniformi("u_source", 0)
-            program.setUniformf("u_sourceSize", SPECULAR_SIZE.toFloat())
-            program.setUniformf("u_maxLod", SOURCE_LEVELS - 1f)
+            program.setUniformf("u_sourceSize", sourceSize.toFloat())
+            program.setUniformf("u_maxLod", sourceLevels - 1f)
         }
-        source?.dispose()
-        source = null
+        releaseSource()
     }
 
     private fun readAmbient() {
@@ -282,10 +335,18 @@ class HdrEnvironmentBuild(private val image: HdrImage, private val shaders: Shad
         }
     }
 
+    private fun releaseSource() {
+        if (ownsSource) source?.dispose()
+        source = null
+        ownsSource = false
+    }
+
     override fun dispose() {
+        if (disposed) return
+        disposed = true
+        releaseSource()
         listOfNotNull(
             equirect,
-            source,
             specular,
             irradiance,
             project,

@@ -19,6 +19,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.PreparedProceduralSky
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralLightingCube
 import net.nevinsky.abyssus.lib.core.assets.skyShaders
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
@@ -226,6 +227,23 @@ class CloudTechniqueGlTest {
         }
         val centre = image!!.at(SIZE / 2, SIZE / 2)
         assertEquals("the model is drawn over the clouds", 0xFF0000, image.rgb[centre])
+    }
+
+    @Test
+    fun lightingCubeLeavesVisibleShellsUnchanged() = TestGl.run {
+        val sky = sky(scattered)
+        val cube = ProceduralLightingCube(AtmosphereParams())
+        try {
+            val view = camera(80f)
+            val frame = SkyFrame(noon, 30.0, CloudTechnique.SHELLS)
+            val before = capture { sky.draw(view, frame) }
+            val after = capture {
+                cube.render(noon, sky.cloudAsset, 30.0)
+                sky.draw(view, frame)
+            }
+            assertArrayEquals(before.rgb, after.rgb)
+            assertEquals(CloudTechnique.SHELLS, sky.drawnTechnique)
+        } finally { cube.dispose(); sky.dispose() }
     }
 
     @Test

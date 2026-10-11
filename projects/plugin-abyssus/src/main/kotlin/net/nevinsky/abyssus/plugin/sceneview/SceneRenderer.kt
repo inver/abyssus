@@ -13,6 +13,7 @@ import com.badlogic.gdx.graphics.g3d.Model
 import com.badlogic.gdx.graphics.g3d.ModelBatch
 import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.intellij.openapi.Disposable
@@ -30,6 +31,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.editor.content.*
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.lib.core.editor.ray.RayFrameContext
+import net.nevinsky.abyssus.lib.raytracing.RaySunVisibility
 import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneDisplay
 import net.nevinsky.abyssus.lib.core.editor.ray.RaySkyBaker
 import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
@@ -45,12 +47,22 @@ import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
 import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
+import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
 import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw
+import net.nevinsky.abyssus.plugin.sceneview.shadows.CloudShadowMap
 import net.nevinsky.abyssus.plugin.sceneview.shadows.SceneShadows
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SkyClock
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SunDirection
+import net.nevinsky.abyssus.plugin.sceneview.skybox.RaySkyBakeKey
+import net.nevinsky.abyssus.plugin.sceneview.skybox.RaySunVisibilityKey
+import net.nevinsky.abyssus.plugin.sceneview.skybox.raySunVisibilityKey
+import net.nevinsky.abyssus.plugin.sceneview.skybox.blendAxisColors
+import net.nevinsky.abyssus.plugin.sceneview.skybox.planSunShading
+import net.nevinsky.abyssus.plugin.sceneview.skybox.raySkyBakeKey
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.plugin.sceneview.terrain.TerrainShader
 import java.io.File
 import net.nevinsky.abyssus.lib.gdx.ModelBatch as ContentBatch
@@ -65,6 +77,8 @@ class SceneRenderer(
     private val shaders: ShaderStorage,
     /** What the user selected, previews and looks through; the view panel changes it, this draws from it. */
     val state: SceneViewState = SceneViewState(),
+    /** Where problems that leave the view working (for example, no cloud shadow map) are logged, once each. */
+    private val log: Logger = NOPLogger.NOP_LOGGER,
 ) : Disposable {
     @Volatile
     var params: SceneRenderParams = SceneRenderParams.DEFAULT
@@ -118,8 +132,25 @@ class SceneRenderer(
 
     /** [lights] with the sun dimmed by the clouds over it: what the environment and the terrain shader light with. */
     private var frameLights = NO_LIGHTS
-    private var frameLightsKey: Triple<LightSet, String?, Float>? = null
+    private var frameLightsKey: Triple<LightSet, String?, Pair<Float, Int?>>? = null
     private val sunOcclusion = SunOcclusion()
+
+    /** The cloud shadow map of this view; created with the first clouds that cast shadows, null when it could not be. */
+    private var cloudShadowMap: CloudShadowMap? = null
+
+    /** The sun's visibility map for this frame's content, or null when the uniform sun dimming applies. */
+    private var sunVisibility: DirectionalVisibilityAttribute? = null
+    private val sunMapMatrix = Matrix4()
+
+    // what the last applySunScale decided, for the ray tracing copy of the clouds' shade on the sun
+    private var frameSky: ProceduralSky? = null
+    private var frameSunId: String? = null
+    private var frameSunDirection = SunDirection.DEFAULT
+    private var frameTargetX = 0f
+    private var frameTargetZ = 0f
+
+    /** True when the last frame shaded the sun with the cloud shadow map instead of the uniform dimming. */
+    internal val cloudShadowsActive: Boolean get() = sunVisibility != null
 
     /** The time this view's sky is drawn at; clouds drift by it. */
     internal val skyClock = SkyClock()
@@ -286,10 +317,12 @@ class SceneRenderer(
         terrains.update(c.terrains, p.projectDir)
         updateDrawnVersion()
         skybox?.update(c.skybox, p.projectDir)
-        val hdrAmbient = (SceneAmbient.of(
-            c.skybox,
-            p.ambient
-        ) { skybox?.environment(it) } as? SceneAmbient.Sky)?.environment?.ambient
+        skybox?.updateLighting(c.skybox, SunDirection.of(c.lights), skyClock.seconds, true, skyClock.lastStep.toDouble())
+        val skyLight = (SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) } as? SceneAmbient.Sky)?.environment
+        val hdrAmbient = skyLight?.let { current ->
+            val fading = skybox?.fadingTo(c.skybox)
+            blendAxisColors(current.ambient, fading?.environment?.ambient, fading?.weight ?: 0f)
+        }
         val rayDisplay = rayFrameProvider?.invoke(
             RayFrameContext(
                 p,
@@ -300,8 +333,11 @@ class SceneRenderer(
                 width,
                 height,
                 state.viewCamera,
-                hdrAmbient
-            ) { bakedProceduralSky(c, p) })
+                hdrAmbient,
+                bakedSky = { bakedProceduralSky(c, p) },
+                sunVisibility = { raySunVisibility() },
+            )
+        )
             ?.takeIf { compatibleRayDisplay(it, c, width, height) }
         presentedRayFrame = rayDisplay != null
         val atlas =
@@ -447,12 +483,18 @@ class SceneRenderer(
         // after the grid: a built HDR sky replaces the ambient color for the content only (applyEnvironment undoes it)
         val ambient = SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) }
         val sky = (ambient as? SceneAmbient.Sky)?.environment
+        val to = if (sky != null) skybox?.fadingTo(c.skybox) else null
         if (sky != null) {
             environment.remove(ColorAttribute.AmbientLight)
-            environment.set(EnvironmentLightAttribute(sky.specular, sky.irradiance, sky.levels, sky.ambient))
+            val target = to?.environment?.let { EnvironmentLightAttribute(it.specular, it.irradiance, it.levels, it.ambient) }
+            environment.set(EnvironmentLightAttribute(sky.specular, sky.irradiance, sky.levels, sky.ambient, target, to?.weight ?: 0f))
         }
         if (atlas != null) environment.set(atlas)
-        terrainShader?.draw(camera, terrains.drawn, p.ambient, p.fog, frameLights, sky?.irradiance, atlas)
+        sunVisibility?.let { environment.set(it) }
+        terrainShader?.draw(
+            camera, terrains.drawn, p.ambient, p.fog, frameLights, sky?.irradiance, atlas,
+            to?.environment?.irradiance, to?.weight ?: 0f, sunVisibility,
+        )
         contentBatch.begin(camera)
         for (entity in models.drawn) contentBatch.render(
             entity.instance,
@@ -478,21 +520,91 @@ class SceneRenderer(
     private fun applySunScale(c: SceneContent, orbit: OrbitCamera) {
         val sky = skybox?.sky(c.skybox) as? ProceduralSky
         val sun = SunDirection.of(c.lights)
+        val sunVector = Vector3(sun.x, sun.y, sun.z)
         val scale = sunOcclusion.update(
-            sky?.clouds, Vector3(sun.x, sun.y, sun.z), orbit.target.x, orbit.target.z,
+            sky?.clouds, sunVector, orbit.target.x, orbit.target.z,
             sky?.params?.planetRadius ?: 0f, SKY_CAMERA_HEIGHT, skyClock.seconds, skyClock.lastStep,
         )
         val sunId = SunDirection.sunLight(c.lights)?.entityId
-        val key = Triple(lights, sunId, scale)
+        frameSky = sky
+        frameSunId = sunId
+        frameSunDirection = sun
+        frameTargetX = orbit.target.x
+        frameTargetZ = orbit.target.z
+        val map = cloudShadowMapFor(sky, sunId)?.takeIf {
+            it.update(
+                sky!!.clouds!!, sunVector, orbit.target.x, orbit.target.z, sky.params.planetRadius, SKY_CAMERA_HEIGHT,
+                skyClock.seconds,
+            )
+        }
+        val shading = planSunShading(lights, sunId, sky?.hasClouds == true, map != null, scale)
+        sunVisibility = map?.texture?.let { texture ->
+            shading.mapLightIndex?.let { index ->
+                DirectionalVisibilityAttribute(
+                    texture, index, map.worldToMap(sunVector, sunMapMatrix), CLOUD_SHADOW_EDGE_FADE, shading.outside,
+                )
+            }
+        }
+        val key = Triple(lights, sunId, scale to shading.mapLightIndex)
         if (key == frameLightsKey) return
         frameLightsKey = key
-        frameLights = lights.withSunScale(sunId, scale)
+        frameLights = shading.lights
         frameLights.applyTo(environment)
+    }
+
+    private class PublishedSunVisibility(val key: RaySunVisibilityKey, val value: RaySunVisibility?)
+
+    private var publishedSunVisibility: PublishedSunVisibility? = null
+    private var sunVisibilityRevision = 0L
+
+    /**
+     * The clouds' shade on the sun as an immutable copy for ray tracing, or null when no clouds shade it: a read-back of
+     * the cloud shadow map when it shaded the sun this frame (with the uniform factor beyond it), else the uniform
+     * dimming as one factor. Taken again only when [raySunVisibilityKey] changes. Render thread, in ray mode only.
+     */
+    private fun raySunVisibility(): RaySunVisibility? {
+        val sky = frameSky ?: return null
+        val sunId = frameSunId ?: return null
+        if (!sky.hasClouds || lights.directionalIndexOf(sunId) == null) return null
+        val attribute = sunVisibility
+        val scale = sunOcclusion.transmittance
+        val clouds = sky.cloudAsset
+        val drifting = clouds?.settings?.bandsFarToNear()?.any { it.windX != 0f || it.windZ != 0f } == true
+        val key = raySunVisibilityKey(
+            sunId, frameSunDirection, clouds, drifting, attribute != null, scale, frameTargetX, frameTargetZ, skyClock.seconds,
+        )
+        publishedSunVisibility?.takeIf { it.key == key }?.let { return it.value }
+        val revision = ++sunVisibilityRevision
+        val mapped = attribute?.let { shade ->
+            cloudShadowMap?.readback(RAY_SUN_VISIBILITY_SIZE)?.let { texels ->
+                val m = shade.worldToMap.`val`
+                RaySunVisibility(
+                    sunId, RAY_SUN_VISIBILITY_SIZE, texels,
+                    floatArrayOf(m[Matrix4.M00], m[Matrix4.M01], m[Matrix4.M02], m[Matrix4.M03],
+                        m[Matrix4.M10], m[Matrix4.M11], m[Matrix4.M12], m[Matrix4.M13]),
+                    shade.edgeFade, shade.outside, revision,
+                )
+            }
+        }
+        val value = mapped ?: if (scale < 1f) RaySunVisibility.uniform(sunId, scale, revision) else null
+        publishedSunVisibility = PublishedSunVisibility(key, value)
+        return value
+    }
+
+    /**
+     * The map to shade the sun with this frame: the view's, made on first need, when the sky draws clouds some technique
+     * can still draw and the sun is among the rendered directional lights; null otherwise or when the map failed.
+     */
+    private fun cloudShadowMapFor(sky: ProceduralSky?, sunId: String?): CloudShadowMap? {
+        if (sky == null || !sky.hasClouds || lights.directionalIndexOf(sunId) == null) return null
+        val map = cloudShadowMap ?: CloudShadowMap(shaders, log).also { cloudShadowMap = it }
+        return map.takeUnless { it.failed }
     }
 
     /** Fog color comes from the environment; density through [net.nevinsky.abyssus.plugin.sceneview.fog.FogShader] (see [FogParams] for what cannot be matched). */
     private fun applyEnvironment(p: SceneRenderParams) {
         environment.remove(ShadowAtlasAttribute.Type)
+        environment.remove(DirectionalVisibilityAttribute.Type)
         environment.remove(EnvironmentLightAttribute.Type)
         val ambient = p.ambient
         if (ambient != null) {
@@ -519,6 +631,10 @@ class SceneRenderer(
         shadows = null
         shadowedLightIds = emptySet()
         environment.remove(ShadowAtlasAttribute.Type)
+        environment.remove(DirectionalVisibilityAttribute.Type)
+        cloudShadowMap?.abandon()
+        cloudShadowMap = null
+        sunVisibility = null
     }
 
     override fun dispose() {
@@ -532,6 +648,10 @@ class SceneRenderer(
         shadows = null
         shadowedLightIds = emptySet()
         environment.remove(ShadowAtlasAttribute.Type)
+        environment.remove(DirectionalVisibilityAttribute.Type)
+        cloudShadowMap?.dispose()
+        cloudShadowMap = null
+        sunVisibility = null
         models.dispose()
         terrains.dispose()
         updateDrawnVersion()
@@ -555,22 +675,35 @@ class SceneRenderer(
 
     private companion object {
         const val MIN_NEAR = 0.01f
+
+        /** The outer share of the cloud shadow square over which its shade fades into the uniform sun dimming. */
+        const val CLOUD_SHADOW_EDGE_FADE = 0.1f
+
+        /** Texels across the ray tracing copy of the cloud shadow map (512 on the GPU, halved to keep the payload small). */
+        const val RAY_SUN_VISIBILITY_SIZE = 256
     }
 
-    private class BakedSky(val key: Triple<String, File?, Vec3>, val snapshot: RaySkySnapshot?)
+    private class BakedSky(val key: RaySkyBakeKey, val snapshot: RaySkySnapshot?)
 
     private var bakedSky: BakedSky? = null
     private val skyBaker = RaySkyBaker()
 
-    /** The procedural sky rendered into a ray texture once per sky and sun direction; null while it loads or fails to bake. */
+    /**
+     * The procedural sky rendered into a ray texture, with its clouds when it draws any; null while it loads or fails to
+     * bake. Baked again when the sky, project, sun or cloud asset change and, for drifting clouds, every
+     * [net.nevinsky.abyssus.plugin.sceneview.skybox.RAY_SKY_BAKE_REFRESH_SECONDS] of sky time. It is a display
+     * sample; the linear diffuse sky light reaches the rays through the ambient cube.
+     */
     private fun bakedProceduralSky(c: SceneContent, p: SceneRenderParams): RaySkySnapshot? {
         val name = c.skybox ?: return null
         val sky = skybox?.sky(name) as? ProceduralSky ?: return null
         val sun = SunDirection.of(c.lights)
-        val key = Triple(name, p.projectDir, sun)
+        val clouds = sky.cloudAsset?.takeIf { sky.hasClouds }
+        val drifting = clouds?.settings?.bandsFarToNear()?.any { it.windX != 0f || it.windZ != 0f } == true
+        val key = raySkyBakeKey(name, p.projectDir, sun, clouds, drifting, skyClock.seconds)
         bakedSky?.takeIf { it.key == key }?.let { return it.snapshot }
         val snapshot = try {
-            skyBaker.bake(sky, sun)
+            skyBaker.bake(sky, sun, skyClock.seconds, clouds != null)
         } catch (failure: Exception) {
             null
         }

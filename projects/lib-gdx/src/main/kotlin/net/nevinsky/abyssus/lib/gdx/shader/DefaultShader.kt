@@ -585,6 +585,7 @@ open class DefaultShader(requestedConfig: ShaderConfig, renderable: Renderable) 
             set(u_shadowPCFOffset, 1f / (2f * lights.shadowMap.getDepthMap().texture.getWidth()))
         }
         bindShadowAtlas(attributes, dirs, points, spots)
+        bindDirectionalVisibility(attributes)
 
         lightsSet = true
     }
@@ -596,6 +597,17 @@ open class DefaultShader(requestedConfig: ShaderConfig, renderable: Renderable) 
         val unit = context!!.textureBinder.bind(atlas.atlas)
         atlasBindings.bind(program!!, atlas, dirs?.map(atlas::recordFor) ?: emptyList(),
             points?.map(atlas::recordFor) ?: emptyList(), spots?.map(atlas::recordFor) ?: emptyList(), unit)
+    }
+
+    private fun bindDirectionalVisibility(attributes: Attributes) {
+        val visibility = attributes.get(DirectionalVisibilityAttribute.Type) as? DirectionalVisibilityAttribute ?: return
+        val program = program!!
+        val unit = context!!.textureBinder.bind(visibility.texture)
+        fun location(name: String) = program.fetchUniformLocation(name, false)
+        location("u_dirVisMap").takeIf { it >= 0 }?.let { program.setUniformi(it, unit) }
+        location("u_dirVisWorldToMap").takeIf { it >= 0 }?.let { program.setUniformMatrix(it, visibility.worldToMap) }
+        location("u_dirVisParams").takeIf { it >= 0 }?.let { program.setUniformf(it, visibility.edgeFade, visibility.outside) }
+        location("u_dirVisIndex").takeIf { it >= 0 }?.let { program.setUniformi(it, visibility.lightIndex) }
     }
 
     private fun processSpotLightLocations(spots: Array<SpotLight>?) {
@@ -754,6 +766,7 @@ open class DefaultShader(requestedConfig: ShaderConfig, renderable: Renderable) 
                     prefix.append("#define shadowMapFlag\n")
                 }
                 if (attributes.has(ShadowAtlasAttribute.Type)) prefix.append("#define shadowAtlasFlag\n")
+                if (attributes.has(DirectionalVisibilityAttribute.Type)) prefix.append("#define directionalVisibilityFlag\n")
                 if (attributes.has(CubemapAttribute.EnvironmentMap)) {
                     prefix.append("#define environmentCubemapFlag\n")
                 }
@@ -889,11 +902,13 @@ open class DefaultShader(requestedConfig: ShaderConfig, renderable: Renderable) 
             fun setAmbientBase(cubemap: AmbientCubemap, attributes: Attributes) {
                 val sky = attributes.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute?
                 if (sky != null) {
-                    cubemap.set(sky.ambient)
+                    cubemap.set(sky.blendAmbientInto(blended))
                 } else if (attributes.has(ColorAttribute.AmbientLight)) {
                     cubemap.set((attributes.get(ColorAttribute.AmbientLight) as ColorAttribute).color)
                 }
             }
+
+            private val blended = FloatArray(18)
 
             private val ones: FloatArray =
                 floatArrayOf(1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f)

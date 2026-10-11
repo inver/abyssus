@@ -173,7 +173,7 @@ implementation does not yet provide it.
 | `MODEL` | `file`, `format`, `binary`, `materials` (material asset `uuid`s) |
 | `TERRAIN` | `terrainFile`, `size`, `uv`, `splatMap`, `splatBase`, `splatR`, `splatG`, `splatB`, `splatA` (texture asset `uuid`s) |
 | `SKYBOX` | `top`, `bottom`, `left`, `right`, `front`, `back` (image files in the folder) |
-| `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults); optional `clouds`: the `uuid` of a `CLOUDS` asset (see *Clouds* below) |
+| `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults); optional `clouds`: the `uuid` of a `CLOUDS` asset (see *Clouds* below); optional `lightsScene`: the boolean `true` to light the scene from the sky (see *Sky lighting* below) |
 | `CLOUDS` | `technique` and up to three cloud bands `low`, `mid`, `high` (see *Clouds* below) |
 | `SKYBOX_HDR` | `file`: the OpenEXR image file inside the asset folder |
 | `TEXTURE`, `PIXMAP_TEXTURE` | `file`; loaded as textures, including terrain splat dependencies |
@@ -286,6 +286,26 @@ asset `sky.frag`. Nothing is written back.
   built asset on every draw; an edited cloud asset shows once it is loaded again. The cloud asset also owns the
   volumetric technique's tileable 3D noise (FastNoiseLite Perlin-Worley, 64³ base and 32³ detail), made when it is
   prepared and uploaded when it is built.
+- **Sky lighting.** `additional.lightsScene` opts a `SKYBOX_PROCEDURAL` into lighting models and terrain, as an HDR sky
+  does: while the scene shows that sky it replaces the ambient color (also when the scene's ambient light is disabled),
+  and PBR models reflect it. Only the literal boolean `true` opts in; absent, `false` or any other value (including the
+  string `"true"`) keeps the ambient color, and the fixture's `skybox_physical` has none. The light is rendered from the
+  asset's atmosphere parameters and cloud asset by an Abyssus-owned linear model (the same single-scattering model
+  as the fixture's `sky.frag`) into a 64²-per-face cube; the visible background still comes from the asset's own
+  `sky.frag`, so a custom shader that departs from the physical parameters can look different from the light it gives.
+  The light is rebuilt when the sun direction changes by 1° or more, every 2 s of cloud time while a band has wind,
+  and on cloud asset reload or visibility change, then fades in over about one second. Until the first build
+  completes, or if it fails, the ambient color lights the scene; a failed refresh keeps the last light. Nothing is written back.
+- **Cloud shadows.** While a procedural sky draws clouds, they also shade the sun on terrain and models: dark patches
+  that drift with each band's wind and sit where the sky shows clouds. The view renders a 512²-texel map (`R16F`) of
+  the share of sun light the clouds let through, using the same coverage, wind, band spheres, extinction and floor
+  as `SunOcclusion`. The map covers a 4000-unit square centered on the orbit target (the scene's units are taken as
+  metres, so a scene in other units gets shadows of a different apparent size) and attenuates only the sun, the
+  brightest usable directional light, together with that light's own scene shadow. Inside the square it replaces the
+  uniform sun dimming of the clouds (a surface is never dimmed twice); over the outer 10% of the square it fades into,
+  and beyond it uses, that uniform dimming. Without clouds, with a sun outside the rendered light budget or no usable
+  directional light, or when the map cannot be made (logged once), only the uniform dimming applies. There is no
+  setting for any of this and nothing is written back.
 - `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and storm examples of `CLOUDS` metas
   (not loaded as built-in references; the creation action snapshots a sky's existing cloud asset).
 
@@ -363,6 +383,7 @@ Native version 1 scenes may contain a root `rayTracing` object. Omitted fields u
 | `maxRaysPerFrame` | 2097152 | 1–67108864 |
 | `maxReflectionBounces` | 1 | 0–16 |
 | `maxRefractionBounces` | 0 | 0–16 |
+| `maxInstances` | 4096 | 1–4096 |
 
 A present null, fraction, string or out-of-range value is malformed. Ordinary scene editing remains available;
 the raw Properties reader reports the error. Explicit null limits survive typed DTO binding and are rejected by

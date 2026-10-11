@@ -31,6 +31,8 @@ uniform int u_has_splatA;
 uniform vec3 u_ambient;
 uniform samplerCube u_irradiance; // a built HDR sky's irradiance; replaces u_ambient when u_hasSky is 1
 uniform int u_hasSky;
+uniform samplerCube u_irradianceTo; // the sky light fading in; used while u_skyFade is above 0
+uniform float u_skyFade; // 0 to 1: how far u_irradianceTo has replaced u_irradiance
 uniform vec3 u_fogColor;
 uniform int u_numDirectional;
 uniform vec3 u_dirDirection[5];
@@ -128,6 +130,18 @@ float pointShadowVisibility(int lightIndex, vec3 worldPos, float ndotl) {
 }
 #endif
 
+uniform sampler2D u_dirVisMap; // one directional light's visibility (the cloud shadow map); used when u_dirVisIndex >= 0
+uniform mat4 u_dirVisWorldToMap;
+uniform vec2 u_dirVisParams; // x: width of the edge fade, in map coordinates; y: visibility outside the map
+uniform int u_dirVisIndex; // the directional light the map shades, or -1
+// The map's visibility at a world position; fades to the outside value over the map's edge (twin of lib-gdx's default shader).
+float directionalVisibility(vec3 worldPos) {
+    vec2 uv = (u_dirVisWorldToMap * vec4(worldPos, 1.0)).xy;
+    vec2 edge = min(uv, 1.0 - uv);
+    float inside = clamp(min(edge.x, edge.y) / max(u_dirVisParams.x, 1e-4), 0.0, 1.0);
+    return mix(u_dirVisParams.y, texture2D(u_dirVisMap, clamp(uv, 0.0, 1.0)).r, inside);
+}
+
 void main() {
     vec4 color = vec4(0.8, 0.8, 0.8, 1.0);
     if (u_has_splatBase == 1) color = texture2D(u_splatBase, v_uv);
@@ -140,10 +154,13 @@ void main() {
     }
     vec3 n = normalize(v_normal);
     vec3 light = u_hasSky == 1 ? textureCube(u_irradiance, n).rgb : u_ambient;
+    if (u_hasSky == 1 && u_skyFade > 0.0) light = mix(light, textureCube(u_irradianceTo, n).rgb, u_skyFade);
     for (int i = 0; i < 2; i++) {
         if (i >= u_numDirectional) break;
         float ndotl = max(dot(n, -normalize(u_dirDirection[i])), 0.0);
-        light += u_dirColor[i] * ndotl * shadowTileVisibility(u_dirShadowTile[i], v_world, -1.0, ndotl);
+        float visibility = shadowTileVisibility(u_dirShadowTile[i], v_world, -1.0, ndotl);
+        if (i == u_dirVisIndex) visibility *= directionalVisibility(v_world);
+        light += u_dirColor[i] * ndotl * visibility;
     }
     for (int i = 0; i < 5; i++) {
         if (i >= u_numPoint) break;

@@ -18,6 +18,9 @@ import net.nevinsky.abyssus.lib.gdx.model.PBRTextureAttribute
  * metallic-roughness and occlusion textures.
  */
 class PbrShader(config: ShaderConfig, renderable: Renderable?) : DefaultShader(withDefaults(config), renderable!!) {
+    /** True when this program was made for an environment fading to a second one (with the second cube fetch). */
+    private val fading = EnvironmentLightAttribute.isFading(renderable?.environment)
+
     protected var u_metallicFactor: Int
     protected var u_roughnessFactor: Int
     protected var u_metallicRoughnessTexture: Int
@@ -68,6 +71,22 @@ class PbrShader(config: ShaderConfig, renderable: Renderable?) : DefaultShader(w
             val sky = attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
             shader.set(inputID, (sky.levels - 1).toFloat())
         }
+        // the second environment of a cross-fade; only programs compiled with environmentFadeFlag have these uniforms
+        registerUniformLocal("u_envIrradianceTo", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
+            val to = (attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute).fadeTo ?: return@registerUniformLocal
+            shader.set(inputID, shader.context!!.textureBinder.bind(to.irradiance))
+        }
+        registerUniformLocal("u_envSpecularTo", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
+            val to = (attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute).fadeTo ?: return@registerUniformLocal
+            shader.set(inputID, shader.context!!.textureBinder.bind(to.specular))
+        }
+        registerUniformLocal("u_envMaxLodTo", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
+            val to = (attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute).fadeTo ?: return@registerUniformLocal
+            shader.set(inputID, (to.levels - 1).toFloat())
+        }
+        registerUniformLocal("u_envFade", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
+            shader.set(inputID, (attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute).weight)
+        }
     }
 
     private fun registerTexture(alias: String?, attribute: Long): Int {
@@ -93,6 +112,10 @@ class PbrShader(config: ShaderConfig, renderable: Renderable?) : DefaultShader(w
             })
     }
 
+    /** Only the program compiled for the same fading state: the cross-fade changes the program, not just a uniform. */
+    override fun canRender(instance: Renderable?): Boolean =
+        super.canRender(instance) && EnvironmentLightAttribute.isFading(instance?.environment) == fading
+
     override fun preprocessShaderContents(renderable: Renderable) {
         super.preprocessShaderContents(renderable)
 
@@ -104,7 +127,7 @@ class PbrShader(config: ShaderConfig, renderable: Renderable?) : DefaultShader(w
     companion object {
         /**
          * The `#define` lines this shader adds for a material of [mask] in [environment]; `environmentLightFlag`
-         * only when the environment has an [EnvironmentLightAttribute].
+         * only when the environment has an [EnvironmentLightAttribute], and `environmentFadeFlag` when that fades to a second one.
          */
         fun pbrDefines(mask: Long, environment: Attributes?): String {
             val sb = StringBuilder()
@@ -122,6 +145,7 @@ class PbrShader(config: ShaderConfig, renderable: Renderable?) : DefaultShader(w
             }
             if (EnvironmentLightAttribute.has(environment)) {
                 sb.append("#define environmentLightFlag\n")
+                if (EnvironmentLightAttribute.isFading(environment)) sb.append("#define environmentFadeFlag\n")
             }
             return sb.toString()
         }

@@ -197,6 +197,21 @@ class RayViewFeedTest {
         assertNotEquals(RayModePhase.Failed, feed.runtime.mode.phase)
     }
 
+    @Test fun theCloudShadeOnTheSunReachesTheBackendSnapshot() {
+        val feed = feed()
+        val shade = net.nevinsky.abyssus.lib.raytracing.RaySunVisibility("sun", 2, floatArrayOf(.2f, .4f, .6f, .8f),
+            floatArrayOf(.1f, 0f, 0f, .5f, 0f, 0f, .1f, .5f), .1f, .7f, revision = 4)
+        val content = SceneContent(models = listOf(placement))
+        SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
+        RayFakeDevice.await(what = "a scene carrying the cloud shade") {
+            feed.frame(RayFrameContext(SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("project")), content, camera, NO_LIGHTS,
+                emptyList(), 8, 8, null, null, sunVisibility = { shade }))
+            device.lastScene?.sunVisibility != null
+        }
+        assertEquals(shade, device.lastScene!!.sunVisibility)
+        assertEquals(4L, device.lastScene!!.sunVisibility!!.revision)
+    }
+
     @Test fun aBakedProceduralSkyReachesTheRendererAsADisplayValueTexture() {
         val feed = feed()
         val baked = RaySkySnapshot(4, 2, FloatArray(4 * 2 * 4) { .25f }, hdr = false)
@@ -204,7 +219,7 @@ class RayViewFeedTest {
         SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
         RayFakeDevice.await(what = "a scene with the baked sky") {
             feed.frame(RayFrameContext(SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("project")), content, camera, NO_LIGHTS,
-                emptyList(), 8, 8, null, null) { baked })
+                emptyList(), 8, 8, null, null, bakedSky = { baked }))
             device.lastScene?.environment?.texture != null
         }
         val environment = device.lastScene!!.environment

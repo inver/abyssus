@@ -4,6 +4,9 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import net.nevinsky.abyssus.lib.core.assets.skyShaders
 import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.GL30
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+import java.lang.reflect.Proxy
 import com.badlogic.gdx.utils.BufferUtils
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.GpuTexture
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HDR_BUILD_STEPS
@@ -64,6 +67,91 @@ class HdrEnvironmentGlTest {
     private fun centre(texels: FloatArray, size: Int): FloatArray {
         val i = ((size / 2) * size + size / 2) * 3
         return floatArrayOf(texels[i], texels[i + 1], texels[i + 2])
+    }
+
+    @Test
+    fun cubeSourceBorrowsTextureAndTransfersLighting() = inGl {
+        val source = uniformCube(64, 2f)
+        val sourceHandle = source.textureObjectHandle
+        val build = HdrEnvironmentBuild(CubeSource(source, 7), shaders)
+        try {
+            while (!build.step()) Unit
+            val environment = build.finish()
+            val specularHandle = environment.specular.textureObjectHandle
+            val irradianceHandle = environment.irradiance.textureObjectHandle
+            build.dispose()
+            assertTrue(Gdx.gl.glIsTexture(sourceHandle))
+            assertTrue(Gdx.gl.glIsTexture(specularHandle))
+            assertTrue(Gdx.gl.glIsTexture(irradianceHandle))
+            for (value in environment.ambient) assertEquals(2f, value, 0.02f)
+            environment.dispose()
+            environment.dispose()
+            assertTrue(Gdx.gl.glIsTexture(sourceHandle))
+            assertTrue(!Gdx.gl.glIsTexture(specularHandle))
+            assertTrue(!Gdx.gl.glIsTexture(irradianceHandle))
+        } finally { build.dispose(); source.dispose() }
+    }
+
+    @Test
+    fun failedCubeBuildReleasesOwnedTexturesButKeepsBorrowedSource() = inGl {
+        val source = uniformCube(64, 2f)
+        val original = Gdx.gl
+        val created = mutableListOf<Int>()
+        val deleted = mutableListOf<Int>()
+        Gdx.gl = Proxy.newProxyInstance(GL20::class.java.classLoader, arrayOf(GL20::class.java)) { _, method, args ->
+            if (method.name == "glDeleteTexture") deleted += args!![0] as Int
+            method.invoke(original, *(args ?: emptyArray())).also {
+                if (method.name == "glGenTexture") created += it as Int
+            }
+        } as GL20
+        val broken = ShaderStorage().withResources("/shader/broken-environment", javaClass)
+        val build = HdrEnvironmentBuild(CubeSource(source, 7), broken)
+        try {
+            build.step()
+            var failure: Exception? = null
+            try { build.step() } catch (e: Exception) { failure = e }
+            assertTrue("expected prefilter shader failure: $failure", failure?.message?.contains("hdr_prefilter") == true)
+            assertTrue("owned texture allocations", created.size >= 2)
+            assertTrue("failure cleans up immediately", created.all { !original.glIsTexture(it) })
+            build.dispose()
+            assertEquals("each owned texture disposed once", created.sorted(), deleted.sorted())
+            assertTrue(original.glIsTexture(source.textureObjectHandle))
+        } finally { build.dispose(); Gdx.gl = original; source.dispose() }
+    }
+
+    @Test
+    fun hdrBackgroundOwnershipIsSeparateFromLighting() = inGl {
+        val build = HdrEnvironmentBuild(image(16, 8) { _, _ -> floatArrayOf(2f, 0f, 0f) }, shaders)
+        try {
+            while (!build.step()) Unit
+            val result = build.finishHdr()
+            val backgroundHandle = result.background.textureObjectHandle
+            val irradianceHandle = result.lighting.irradiance.textureObjectHandle
+            assertTrue(Gdx.gl.glIsTexture(backgroundHandle))
+            result.lighting.dispose()
+            assertTrue("lighting disposal leaves HDR background alive", Gdx.gl.glIsTexture(backgroundHandle))
+            assertTrue(!Gdx.gl.glIsTexture(irradianceHandle))
+            result.dispose()
+            result.dispose()
+            assertTrue(!Gdx.gl.glIsTexture(backgroundHandle))
+        } finally { build.dispose() }
+    }
+
+    private fun uniformCube(size: Int, radiance: Float): GpuTexture {
+        val texture = GpuTexture(GL20.GL_TEXTURE_CUBE_MAP, size, size)
+        texture.bind(0)
+        val pixels = BufferUtils.newFloatBuffer(size * size * 3)
+        repeat(pixels.capacity()) { pixels.put(radiance) }
+        pixels.flip()
+        for (face in 0..5) {
+            Gdx.gl.glTexImage2D(GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, 0x881B,
+                size, size, 0, GL20.GL_RGB, GL20.GL_FLOAT, pixels)
+        }
+        Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL30.GL_TEXTURE_MAX_LEVEL, 6)
+        Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR_MIPMAP_LINEAR)
+        Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_LINEAR)
+        Gdx.gl.glGenerateMipmap(GL20.GL_TEXTURE_CUBE_MAP)
+        return texture
     }
 
     @Test

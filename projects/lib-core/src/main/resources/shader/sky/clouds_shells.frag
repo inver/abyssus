@@ -42,7 +42,11 @@ void main() {
         float above = CLOUD_EXTINCTION * u_bandDensity * coverage * (1.0 - h) * thickness;
         float sunTau = above / max(dot(sun, up), 0.05);
         vec3 radiance = cloudAerial(cloudRadiance(d, sunTau, above, 1.0 - h, up), t);
+#ifdef CLOUD_LINEAR_OUTPUT
+        color += transmittance * alpha * radiance;
+#else
         color += transmittance * alpha * cloudToneMap(radiance);
+#endif
         transmittance *= 1.0 - alpha;
     }
     float alpha = 1.0 - transmittance;

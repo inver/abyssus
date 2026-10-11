@@ -72,7 +72,7 @@ the active backend and GPU, or the reason none is usable.
 
 ### Requirement: Ray-traced shadows
 
-Opaque and alpha-tested models and terrain SHALL cast and receive ray-traced shadows from selected supported directional, point and spot lights. Each shadow SHALL attenuate only its own light, preserving other lights, ambient/HDR diffuse lighting and emission. Cutout holes SHALL remain open; alpha-blended surfaces SHALL receive shadows but not cast them.
+Opaque and alpha-tested models and terrain SHALL cast and receive ray-traced shadows from selected supported directional, point and spot lights. Each shadow SHALL attenuate only its own light, preserving other lights, ambient/HDR diffuse lighting and emission. Cutout holes SHALL remain open; alpha-blended surfaces SHALL receive shadows but not cast them. While the scene's procedural sky draws clouds, the sun's ray-traced visibility SHALL also include the cloud shade defined by `scene-shadows` ("Clouds cast shadows from the sun"), once and for the sun only, and replace the uniform cloud dimming inside the cloud shadow area.
 
 #### Scenario: Geometry blocks a light
 - **WHEN** a model or terrain ridge blocks a selected light from a displayed surface
@@ -86,9 +86,13 @@ Opaque and alpha-tested models and terrain SHALL cast and receive ray-traced sha
 - **WHEN** an alpha-tested leaf or alpha-blended surface lies between a selected light and terrain
 - **THEN** the leaf casts a shadow with holes, and the blended surface does not cast a shadow
 
+#### Scenario: Cloud shade on the sun
+- **WHEN** Ray Tracing is active, the procedural sky draws clouds and a cloud shadow covers part of the terrain
+- **THEN** the sun's contribution is reduced there, once, matching the raster cloud shadows, while other lights, ambient lighting and emission are unchanged
+
 ### Requirement: Scene geometry appears in reflections
 
-PBR model surfaces SHALL reflect opaque and alpha-tested scene geometry, including terrain, according to their existing metallic and roughness values. Reflections SHALL include geometry outside the camera image. Rays that miss geometry SHALL use the existing environment. Reflection recursion SHALL be bounded by the native scene limits specified in `scene-raytracing-settings`; explicit dielectric transmission follows `scene-raytracing-materials`. Reflected alpha-blended geometry remains excluded.
+PBR model surfaces SHALL reflect opaque and alpha-tested scene geometry, including terrain, according to their existing metallic and roughness values. Reflections SHALL include geometry outside the camera image. Rays that miss geometry SHALL use the existing environment, including the clouds of a procedural sky. Reflection recursion SHALL be bounded by the native scene limits specified in `scene-raytracing-settings`; explicit dielectric transmission follows `scene-raytracing-materials`. Reflected alpha-blended geometry remains excluded.
 
 #### Scenario: Offscreen reflection
 - **WHEN** a model outside the camera image lies in a smooth PBR surface's reflected direction
@@ -101,6 +105,10 @@ PBR model surfaces SHALL reflect opaque and alpha-tested scene geometry, includi
 #### Scenario: Reflection misses geometry
 - **WHEN** a reflection ray hits no scene geometry
 - **THEN** it shows the applicable sky environment, or the existing background when no sky is enabled
+
+#### Scenario: Reflection misses geometry under clouds
+- **WHEN** a reflection ray hits no scene geometry and the procedural sky draws clouds
+- **THEN** it shows the cloudy sky as displayed for the same sun and cloud time, not a cloudless sky
 
 ### Requirement: Effects remain live while editing
 
