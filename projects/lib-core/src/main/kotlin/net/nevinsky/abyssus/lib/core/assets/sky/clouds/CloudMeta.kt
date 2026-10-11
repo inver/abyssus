@@ -9,6 +9,9 @@ data class CloudMeta(
     /** True when there is anything to draw: at least one band. */
     val visible: Boolean get() = low != null || mid != null || high != null
 
+    /** True when some band has wind, so the clouds move with time. */
+    val drifts: Boolean get() = bandsFarToNear().any { it.windX != 0f || it.windZ != 0f }
+
     /** The bands from the highest down, the order they are drawn in (lower bands hide higher ones). */
     fun bandsFarToNear(): List<CloudBand> {
         val res = ArrayList<CloudBand>().toMutableList()

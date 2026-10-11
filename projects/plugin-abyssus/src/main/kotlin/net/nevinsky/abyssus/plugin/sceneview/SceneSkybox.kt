@@ -15,8 +15,9 @@ import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSky
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.SkyLightingState
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SunDirection
 import java.io.File
 
@@ -55,8 +56,24 @@ class SceneSkybox(private val assets: AssetView<SkyRenderer>) : Disposable {
     /** Keeps the sky named [name] loading (and a replaced one released) without drawing it, e.g. while a ray frame is shown. */
     fun update(name: String?, projectDir: File?) = assets.update(projectDir, setOfNotNull(name))
 
-    /** The lighting environment of the HDR sky [name] once it is built; null for any other sky or while it builds. */
-    fun environment(name: String?): HdrEnvironment? = (name?.let(assets::get) as? HdrSky)?.environment
+    /**
+     * The lighting of the sky [name] once it is built: an HDR sky's environment, or a procedural sky's when its
+     * `lightsScene` is true and its first lighting is done. Null for any other sky, while it builds, or if it failed.
+     */
+    fun environment(name: String?): SkyLightingState? = when (val sky = name?.let(assets::get)) {
+        is HdrSky -> sky.environment.state
+        is ProceduralSky -> sky.lightingState
+        else -> null
+    }
+
+    /**
+     * Keeps the scene lighting of the procedural sky [name] current for the sun toward [sun] at [timeSeconds] (one
+     * build step per frame); nothing for other skies. Call once per frame, whether or not the sky is drawn.
+     */
+    fun updateLighting(name: String?, sun: Vec3, timeSeconds: Double) {
+        val sky = name?.let(assets::get) as? ProceduralSky ?: return
+        sky.updateLighting(sunDirection.set(sun.x, sun.y, sun.z), timeSeconds)
+    }
 
     /** Forgets every sky without GL calls: the context they were built in is gone (see [ViewAssets.abandon]). */
     fun abandon() = assets.abandon()

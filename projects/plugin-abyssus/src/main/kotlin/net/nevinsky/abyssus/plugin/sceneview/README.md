@@ -173,8 +173,30 @@ Resources belong to one canvas and are created, rendered and disposed inside `Gd
 safe AWT render thread. A lost/hidden context abandons references without GL calls; recreation builds a fresh atlas
 and depth shaders. Missing framebuffer support, insufficient texture size or fewer than twelve fragment texture
 units disables shadows while keeping lighting. A failed depth pass disables shadows until recreation. Terrain
-reserves unit 6 for the atlas, between its six layer textures and irradiance on unit 7; model shaders use their
-texture binder. Atlas allocation and tile passes restore GL state even on failure.
+reserves unit 6 for the atlas, between its six layer textures and irradiance on unit 7 (the incoming irradiance of a
+sky fade takes unit 8); model shaders use their texture binder. Atlas allocation and tile passes restore GL state even on failure.
+
+## Sky lighting and its fade
+
+A built HDR sky, or a procedural sky with `additional.lightsScene: true`, lights the content. `SceneSkybox.environment`
+returns a `SkyLightingState` (current lighting, the next one while a rebuild fades in, and the weight between them);
+`SceneRenderer.renderContent` turns it into an `EnvironmentLightAttribute` and hands the same attribute to `TerrainShader`.
+`SceneSkybox.updateLighting` advances a procedural sky's rebuilds once per frame (see `docs/ai/architecture.md`). During a
+fade the PBR shader mixes both environments' irradiance and specular cubes, the default shader mixes the six axis colors
+on the CPU, and `terrain.frag` mixes both irradiance cubes. The second environment is always bound (the current one again
+when nothing fades) and the mix is guarded by a uniform weight, so a fade neither recompiles a shader nor costs a cube
+fetch outside it. Until the first lighting is built the scene keeps its ambient color.
+
+## Cloud shadows
+
+`SceneCloudShadows` (in `shadows/`) draws a `CloudShadowMap` every frame while the sky has drawable clouds and the sun is among
+the rendered directional lights: a 512² `R16F` map of a 4000-unit square (the scene's units are taken as metres) around
+the orbit target, evaluated with the same model as `SunOcclusion` so it matches the sky. `SceneRenderer.applySunScale` then
+leaves the sun's colour whole in `litLights` (no double dimming) and passes the map to the content shaders and to
+`TerrainShader` (texture unit 9) as a `DirectionalVisibilityAttribute` for the sun's index in the rendered lights; beyond the
+square, over its outer 10%, the shaders use the smoothed uniform scale. Without clouds, a rendered sun or a buildable map the
+uniform dimming applies as before (`cloudShadowsActive` tells which). The map is created and drawn on the GL thread while the
+canvas is on screen, restores the framebuffer and state, and is disposed or abandoned with the renderer.
 
 ## Terrain foliage
 
@@ -259,8 +281,11 @@ state on the EDT, converts it off the EDT, and returns the newest completed fram
 camera, project and drawn entities; otherwise the renderer draws raster as usual. A presented ray frame goes through
 `RayFramePresenter`, then the grid and overlays are drawn with the frame's own camera against its depth. Hiding the view
 stops submissions and releases the session; showing it resumes without stale images. The scene's sky is transferred as a
-CPU `RaySkySnapshot` (HDR and cube skies) or, for a procedural sky (arbitrary asset GLSL), rendered once per sky and sun
-direction by `RaySkyBaker` into six faces on the render thread and resampled. A sky that is still loading or cannot be
+CPU `RaySkySnapshot` (HDR and cube skies) or, for a procedural sky (arbitrary asset GLSL), rendered by `RaySkyBaker` into
+six faces on the render thread and resampled, with its clouds, and baked again by `RaySkyBakeCache` when the sun moves over a degree, the
+cloud asset changes or, while the clouds drift, every two seconds (each bake is a new snapshot, which restarts accumulation). When the raster view shades the sun with
+the cloud shadow map, `SceneCloudShadows.capture` reads it back on the same bounded schedule and the feed carries it as the sun's `RayCloudVisibility`;
+the procedural diffuse light (`lightsScene`) reaches rays as the mixed six axis colours. A sky that is still loading or cannot be
 transferred shows the background colour; it never fails the view. The mode reads renderer state
 and never writes a scene file, so every edit, move, rotate, drop and undo reaches it through the view's existing state.
 

@@ -96,6 +96,28 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    `SceneRenderer` advances the view's `SkyClock`, passes `SceneViewState.cloudTechnique` (the toolbar's per-view
    override, `CloudViewState`), and scales the sun light (`SunDirection.sunLight`) by `SunOcclusion` each frame for the
    environment and `TerrainShader`; shadows, other lights and ray tracing use the unscaled set.
+   A procedural sky with `additional.lightsScene: true` also lights the content. `ProceduralSkyLoader` stages the strict
+   boolean in `PreparedProceduralSky.lightsScene`; the built `ProceduralSky` then owns a `ProceduralSkyLighting`, which
+   `SceneSkybox.updateLighting` advances once per frame (whether or not the sky is drawn). It renders a 64²-per-face linear
+   `RGBA16F` cube (`ProceduralLightingCube`: `atmosphere_linear.frag` plus `LinearShellClouds`, the shell shader compiled
+   with `clouds_linear.glsl` so it skips `cloudToneMap`), and an `HdrEnvironmentBuild` over a borrowed `CubeSource` turns it
+   into a `SkyLighting` (specular and irradiance cubes and axis colors) one step per frame. The pure
+   `LightingRefreshPolicy` decides when to rebuild (sun beyond 1 degree, 2 s of cloud time with wind, a different cloud asset
+   object or visibility) and runs one build, then a one second fade, so state is the current lighting, the next one and one
+   build. `SceneSkybox.environment` returns a `SkyLightingState` (current, next, weight) for an HDR sky and for a built
+   lighting procedural sky; `SceneAmbient.of` selects it exactly as for an HDR sky, and nothing else changes. The lighting is
+   owned by the sky (disposed with it, abandoned with the GL context) and the cube is only borrowed by builds.
+   Clouds also shade the sun spatially. `SceneCloudShadows` (plugin, `sceneview/shadows`) owns a `CloudShadowMap`: a 512²
+   `R16F` render target of a 4000-unit square around the orbit target (snapped to whole texels), drawn each frame by
+   `cloud_shadow.frag` with the model of `SunOcclusion.instant` (same coverage field, wind, band sphere intersection,
+   column density, path and floor). It applies while the sky is a procedural sky with drawable clouds, the sun entity is in the
+   rendered `LightSet.directional` (`sunLightIndex`), and the map was drawn; `SceneRenderer.applySunScale` then keeps the whole
+   sun in `frameLights` and gives the shaders a `DirectionalVisibilityAttribute` (`lib-gdx`: a generic visibility texture
+   for one directional light, with the world-to-map transform, an edge fade and the visibility outside the map, which is the
+   smoothed uniform `SunOcclusion` scale). `DefaultShader` / `PbrShader` multiply that light's contribution by it next to its
+   atlas shadow, `terrain.frag` does the same through `TerrainShader`. Otherwise (no clouds, no sun, a failed map or exhausted
+   cloud techniques) nothing is set and the sun is dimmed uniformly as before. The map is a GL resource of the canvas: disposed
+   with the renderer, abandoned without GL calls when the context is lost.
 5. `SceneShadows` captures model and terrain renderables after their single animation/transform update, then draws
    bounded depth tiles before the color passes. Its per-canvas `ShadowResources` restores framebuffer and render
    state and falls back to direct lighting if allocation or depth rendering fails. Default/PBR models and terrain

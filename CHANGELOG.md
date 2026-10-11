@@ -12,6 +12,7 @@
 - Older unmarked files and files from other editors are unsupported. Plugin loading, editing and automatic formatting refuse them without
   rewriting them. No importer or automatic migration is included. External model, image, terrain binary and recipe encodings remain unchanged.
 ### Added
+- **Cloud shadows and sky lighting for procedural skies.** While a procedural sky draws clouds, they cast moving shadows from the sun onto terrain and models (only the sun, combined with its own scene shadow, replacing the uniform sun dimming within about 4 km of the view target); `additional.lightsScene: true` makes a procedural sky light the scene like an HDR sky, following the sun and clouds with a one-second fade; ray traced views show the clouds in reflections and the cloud shadows on the sun (Metal and the CPU reference verified, Vulkan pending a device). Known limits: lighting follows the sky's physical parameters, not a custom `sky.frag`; shadow size assumes scene units are metres.
 - **New Weather Preset from Sky...** on procedural sky asset rows: snapshot the referenced clouds as a new native
   `CLOUDS` asset with resolved defaults and the stored technique, using unsaved metadata, guarded Undo and stable
   Redo. The source files remain unchanged and the snapshot starts unused.

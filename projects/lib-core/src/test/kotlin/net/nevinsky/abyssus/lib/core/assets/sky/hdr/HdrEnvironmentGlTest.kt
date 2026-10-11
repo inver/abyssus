@@ -5,7 +5,6 @@ import com.badlogic.gdx.backends.lwjgl3.TestGl
 import net.nevinsky.abyssus.lib.core.assets.skyShaders
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.GpuTexture
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HDR_BUILD_STEPS
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironmentBuild
@@ -134,5 +133,100 @@ class HdrEnvironmentGlTest {
             }
         }
         assertTrue("got $error", error is IllegalStateException && error!!.message!!.contains("OpenGL 3"))
+    }
+
+    private fun uniformCube(value: Float, size: Int, levels: Int): GpuTexture {
+        val gl = Gdx.gl
+        val texture = GpuTexture(GL20.GL_TEXTURE_CUBE_MAP, size, size)
+        texture.bind()
+        val data = BufferUtils.newFloatBuffer(size * size * 3).also { b -> repeat(size * size * 3) { b.put(value) }; b.flip() }
+        for (face in 0 until 6) {
+            gl.glTexImage2D(GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, 0x881B, size, size, 0, GL20.GL_RGB, GL20.GL_FLOAT, data)
+        }
+        gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR_MIPMAP_LINEAR)
+        gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_LINEAR)
+        gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE)
+        gl.glGenerateMipmap(GL20.GL_TEXTURE_CUBE_MAP)
+        gl.glBindTexture(GL20.GL_TEXTURE_CUBE_MAP, 0)
+        return texture
+    }
+
+    @Test
+    fun aCubeSourceGivesLightingAndStaysBorrowed() {
+        var worst = 0f
+        var borrowedAlive = false
+        var steps = 1
+        inGl {
+            val cube = uniformCube(3f, 64, 7)
+            val build = HdrEnvironmentBuild(CubeSource(cube, 64, 7), shaders)
+            try {
+                while (!build.step()) steps++
+                val lighting = build.finishLighting()
+                try {
+                    for (face in 0 until 6) {
+                        for (level in 0 until lighting.levels) {
+                            readFace(lighting.specular, face, level, SPECULAR_SIZE shr level).forEach { worst = maxOf(worst, abs(it - 3f) / 3f) }
+                        }
+                        readFace(lighting.irradiance, face, 0, IRRADIANCE_SIZE).forEach { worst = maxOf(worst, abs(it - 3f) / 3f) }
+                    }
+                    lighting.ambient.forEach { worst = maxOf(worst, abs(it - 3f) / 3f) }
+                } finally {
+                    lighting.dispose()
+                }
+                borrowedAlive = Gdx.gl.glIsTexture(cube.textureObjectHandle)
+            } finally {
+                build.dispose()
+                cube.dispose()
+            }
+        }
+        assertEquals(HDR_BUILD_STEPS, steps)
+        assertTrue("largest relative error $worst", worst <= 0.01f)
+        assertTrue("the borrowed cube survives the build", borrowedAlive)
+    }
+
+    @Test
+    fun aFailedCubeBuildReleasesItsOwnTexturesButNotTheBorrowedCube() {
+        var borrowedAlive = false
+        var error: Throwable? = null
+        inGl {
+            val cube = uniformCube(1f, 16, 5)
+            val build = HdrEnvironmentBuild(CubeSource(cube, 16, 5), shaders)
+            try {
+                build.step()
+                build.step()
+                val gl30 = Gdx.gl30
+                Gdx.gl30 = null
+                try {
+                    error = runCatching { HdrEnvironmentBuild(CubeSource(cube, 16, 5), shaders).step() }.exceptionOrNull()
+                } finally {
+                    Gdx.gl30 = gl30
+                }
+                build.dispose()
+                borrowedAlive = Gdx.gl.glIsTexture(cube.textureObjectHandle)
+            } finally {
+                build.dispose()
+                cube.dispose()
+            }
+        }
+        assertTrue("got $error", error is IllegalStateException)
+        assertTrue("the borrowed cube survives a disposed build", borrowedAlive)
+    }
+
+    @Test
+    fun anEquirectBuildFinishesAsAnHdrEnvironmentAndACubeBuildCannot() {
+        var error: Throwable? = null
+        inGl {
+            val cube = uniformCube(1f, 16, 5)
+            val build = HdrEnvironmentBuild(CubeSource(cube, 16, 5), shaders)
+            try {
+                while (!build.step()) continue
+                error = runCatching { build.finish() }.exceptionOrNull()
+            } finally {
+                build.dispose()
+                cube.dispose()
+            }
+        }
+        assertTrue("got $error", error is IllegalStateException)
     }
 }

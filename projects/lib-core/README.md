@@ -54,6 +54,22 @@ asset's own folder first (`withAssets`), then in classpath folders the host adds
 and compiles programs from it. `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and
 storm examples of `CLOUDS` metas. The IDE does not create cloud assets from these templates.
 
+**Sky lighting and the cloudy-sky environment.** A procedural sky with `additional.lightsScene: true` owns a
+`ProceduralSkyLighting` (a linear 64²-per-face cube from `atmosphere_linear.frag` and the shell clouds, turned into specular
+and irradiance cubes by `HdrEnvironmentBuild` over a borrowed `CubeSource`, rebuilt as `LightingRefreshPolicy` says and faded
+in); the host advances it with `ProceduralSky.updateLighting` every frame and lights with `ProceduralSky.lightingState`.
+Any other feature that needs to *see* the sky from a surface (water reflection fallbacks, ray tracing misses) can ask for the
+same cube without `lightsScene`:
+
+- Call `ProceduralSky.updateEnvironment(sun, timeSeconds)` once per frame while the feature needs it, on the GL thread. The
+  first call builds the cube; nothing is built for a sky nobody asks of, and the scene's ambient color is not replaced.
+- The returned `SkyEnvironment` holds the linear `RGBA16F` cube (mips filled, display tone mapping not applied: not a
+  picture of the sky) and a `revision` that grows with every rebuild. Rebuilds happen when the sun moves over a degree, every
+  two seconds of cloud time while a band has wind, and when the cloud asset is reloaded, replaced or removed. Compare
+  revisions to know when to refresh whatever was taken from it (a CPU snapshot, an accumulation).
+- The cube belongs to the sky: do not dispose it, and do not keep it past the next update or `releaseEnvironment()`. It is
+  disposed with the sky and abandoned with the GL context.
+
 Terrain generation and `AssetMetaEditor` live in `lib-core-editor`; their dialogs and document commands live in the
 plugin. `BaseCtx` is the standalone composition root; the IDE builds its own graph through `AssetLoading`.
 

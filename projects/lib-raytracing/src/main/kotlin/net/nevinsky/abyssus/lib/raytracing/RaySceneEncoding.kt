@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.raytracing
 internal class RaySceneData(val floats:FloatArray,val bytes:ByteArray)
 
 /**
- * Version 3 ABI: offsets in the float section count floats, never bytes; texture table entries are
+ * Version 3 ABI (slot 30, when not negative, is the cloud shadow block): offsets in the float section count floats, never bytes; texture table entries are
  * (offset, width, height, wrapU, wrapV, filter, isBytes), where a byte texture's offset counts RGBA8 texels from the start of
  * the byte section. All payloads are bounded before JNI.
  */
@@ -17,7 +17,8 @@ internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
         require(scene.materials.size<=128 && scene.textures.size<=128 && scene.lights.size<=12) { "Scene shading resource limit exceeded" }
         val attributes=scene.meshes.sumOf { it.vertexCount.toLong()*12 }
         val cubeFloats=if(scene.environment.ambientCube!=null) 18L else 0L
-        val total=cubeFloats+32L+scene.materials.size*128L+scene.lights.size*16L+attributes+scene.textures.size*8L+scene.instances.size*2L+
+        val cloudFloats=if(scene.cloudVisibility!=null) 12L else 0L
+        val total=cubeFloats+cloudFloats+32L+scene.materials.size*128L+scene.lights.size*16L+attributes+scene.textures.size*8L+scene.instances.size*2L+
             scene.textures.filter { !it.isBytes }.sumOf { it.width.toLong()*it.height*4 }
         val byteTexels=scene.textures.filter { it.isBytes }.sumOf { it.width.toLong()*it.height }
         // offsets are stored as floats, which are exact only up to 2^24
@@ -80,12 +81,20 @@ internal class RaySceneEncoding(private val scene:RaySceneSnapshot) {
         color(8,scene.environment.ambient);color(12,scene.environment.background)
         scene.fog?.let { color(16,it.color);out[20]=it.density;out[21]=it.gradient;out[22]=1f }
         out[24]=scene.environment.texture?.toFloat() ?: -1f;out[25]=scene.environment.intensity;out[26]=scene.environment.rotation;out[27]=if(scene.environment.hdr)1f else 0f
-        out[28]=-1f
+        out[28]=-1f;out[30]=-1f
         out[29]=total.toFloat() // the byte section starts right after the float section
         scene.environment.ambientCube?.let { cube ->
             out[28]=at.toFloat()
             cube.forEachIndexed { i,c -> out[at+i*3]=c.r;out[at+i*3+1]=c.g;out[at+i*3+2]=c.b }
             at+=18
+        }
+        scene.cloudVisibility?.let { cloud ->
+            // slot 30: texture, light index, the x and y rows of the world-to-map transform, edge fade, outside visibility
+            out[30]=at.toFloat()
+            out[at]=cloud.texture.toFloat();out[at+1]=cloud.light.toFloat()
+            cloud.worldToMap.forEachIndexed { i,v -> out[at+2+i]=v }
+            out[at+10]=cloud.edgeFade;out[at+11]=cloud.outside
+            at+=12
         }
         return RaySceneData(out,bytes)
     }

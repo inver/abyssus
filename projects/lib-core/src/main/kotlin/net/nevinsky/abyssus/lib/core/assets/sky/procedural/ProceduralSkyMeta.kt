@@ -20,7 +20,12 @@ class ProceduralSkyMeta(
     val sunIntensity: Float? = null,
     /** The `uuid` of the `CLOUDS` asset this sky draws; kept raw so a value of the wrong kind never fails the sky. */
     val clouds: JsonNode? = null,
+    /** Whether the sky lights the scene; kept raw because only the boolean `true` opts in. */
+    val lightsScene: JsonNode? = null,
 ) {
+    /** True only when `lightsScene` is the boolean `true`; absent, false or any other kind of value is false. */
+    val lightsSceneEnabled: Boolean get() = lightsScene?.let { it.isBoolean && it.booleanValue() } == true
+
     /** The cloud asset `uuid` [clouds] names, as text; null when it names none. */
     val cloudsReference: String?
         get() = clouds?.takeIf { it.isTextual }?.textValue()?.takeIf { it.isNotBlank() }

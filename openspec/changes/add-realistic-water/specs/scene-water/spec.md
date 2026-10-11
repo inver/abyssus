@@ -118,6 +118,10 @@ Water rendering SHALL use a bounded number of reflection views, keep every valid
 - **WHEN** more distinct visible water levels exist than full reflection capacity
 - **THEN** a deterministic subset reflects scene geometry and remaining surfaces use the fallback without flickering allocation
 
+#### Scenario: Cloudy sky fallback
+- **WHEN** the scene's sky is a procedural sky drawing clouds and a reflection falls back to the sky (beyond the reflection budget or after a reflection failure)
+- **THEN** the fallback shows the sky with its clouds, as the cloudy-sky environment of `add-cloud-scene-lighting` provides it, not a cloudless sky; skies without clouds keep their existing fallback
+
 #### Scenario: Invalid surface
 - **WHEN** one saved surface has invalid size or settings
 - **THEN** it is skipped with a logged reason while other surfaces and scene content remain usable and no automatic repair is written

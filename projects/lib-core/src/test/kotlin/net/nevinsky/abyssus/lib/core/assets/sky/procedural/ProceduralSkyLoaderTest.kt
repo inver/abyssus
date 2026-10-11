@@ -105,4 +105,34 @@ class ProceduralSkyLoaderTest {
     fun anUnknownAssetPreparesNothing() {
         assertNull(loader(fixture).prepare("nope"))
     }
+
+    /** The `lightsScene` the loader stages from a copy of the fixture sky whose `additional` gets [field] (JSON members). */
+    private fun lightsScene(field: String?): Boolean {
+        val dir = copyOfProject()
+        try {
+            val meta = File(dir, "assets/skybox_physical/meta.json")
+            if (field != null) {
+                meta.writeText(meta.readText().replace("\"sunIntensity\": 20.0", "\"sunIntensity\": 20.0,\n    $field"))
+            }
+            return loader(dir).prepare("skybox_physical")!!.staged.lightsScene
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun onlyTheBooleanTrueOptsInToSceneLighting() {
+        assertTrue(lightsScene("\"lightsScene\": true"))
+        assertEquals(false, lightsScene(null))
+        assertEquals(false, lightsScene("\"lightsScene\": false"))
+        assertEquals(false, lightsScene("\"lightsScene\": \"true\""))
+        assertEquals(false, lightsScene("\"lightsScene\": 1"))
+        assertEquals(false, lightsScene("\"lightsScene\": null"))
+        assertEquals(false, lightsScene("\"lightsScene\": [true]"))
+    }
+
+    @Test
+    fun theFixtureSkyDoesNotLightItsScene() {
+        assertEquals(false, loader(fixture).prepare("skybox_physical")!!.staged.lightsScene)
+    }
 }

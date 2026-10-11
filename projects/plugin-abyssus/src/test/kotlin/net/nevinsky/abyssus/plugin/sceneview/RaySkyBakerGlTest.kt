@@ -79,4 +79,49 @@ class RaySkyBakerGlTest {
         rendered.error?.let { throw it }
         assertTrue("the bake ran inside the GL context", checked)
     }
+
+    @Test fun bakedCloudsAppearDriftAndAreAbsentWhenNotAsked() {
+        assumeTrue(GlHarness.enabled)
+        var checked = false
+        val rendered = GlHarness.render(SceneRenderParams.DEFAULT, 2) { _, index ->
+            if (index != 0) return@render
+            val dir = java.io.File("src/test/testData/project/Untitled/assets/skybox_physical")
+            val scattered = net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds(
+                "clouds",
+                net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta(
+                    low = net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand(
+                        net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType.CUMULUS,
+                        net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel.LOW, coverage = .5f,
+                    ),
+                ),
+                null,
+            )
+            val sky = net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky(
+                net.nevinsky.abyssus.lib.core.assets.sky.procedural.PreparedProceduralSky(
+                    net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams(), java.io.File(dir, "sky.vert").readText(),
+                    java.io.File(dir, "sky.frag").readText(), "skybox_physical", "clouds",
+                ),
+                net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets { scattered },
+                net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage(),
+            )
+            try {
+                val baker = RaySkyBaker(faceSize = 64)
+                val noon = Vec3(0f, 1f, 0f)
+                val clear = baker.bake(sky, noon).rgba()
+                val clearLater = baker.bake(sky, noon, 900.0).rgba()
+                val cloudy = baker.bake(sky, noon, 0.0, clouds = true).rgba()
+                val cloudyLater = baker.bake(sky, noon, 900.0, clouds = true).rgba()
+                assertArrayEquals("without clouds the picture does not depend on time", clear, clearLater, 0f)
+                fun difference(a: FloatArray, b: FloatArray) = a.indices.count { Math.abs(a[it] - b[it]) > .02f }
+                assertTrue("clouds are in the picture", difference(clear, cloudy) > clear.size / 50)
+                assertTrue("drifting clouds change the picture with time", difference(cloudy, cloudyLater) > 0)
+                assertEquals("baking leaves the GL state clean", GL_NO_ERROR, glGetError())
+                checked = true
+            } finally {
+                sky.dispose(); scattered.dispose()
+            }
+        }
+        rendered.error?.let { throw it }
+        assertTrue("the bake ran inside the GL context", checked)
+    }
 }

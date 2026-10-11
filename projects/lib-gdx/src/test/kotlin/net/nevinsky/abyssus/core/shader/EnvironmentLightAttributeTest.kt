@@ -75,4 +75,46 @@ class EnvironmentLightAttributeTest {
         assertEquals(a, a.copy())
         assertEquals(0, a.compareTo(a.copy()))
     }
+
+    private fun fading(blend: Float) = EnvironmentLightAttribute(
+        FakeCube(7), FakeCube(8), 6, FloatArray(18) { 1f },
+        EnvironmentLightAttribute.Next(FakeCube(9), FakeCube(10), FloatArray(18) { 3f }), blend,
+    )
+
+    @Test
+    fun theBlendIsClampedAndZeroWithoutANextEnvironment() {
+        assertEquals(0f, sky().blend, 0f)
+        assertEquals(0f, EnvironmentLightAttribute(FakeCube(7), FakeCube(8), 6, axisColors, null, 0.7f).blend, 0f)
+        assertEquals(1f, fading(4f).blend, 0f)
+        assertEquals(0f, fading(-1f).blend, 0f)
+    }
+
+    @Test
+    fun theAmbientColorsMixTowardTheNextEnvironment() {
+        assertArrayEquals(FloatArray(18) { 1f }, fading(0f).blendedAmbient, 1e-6f)
+        assertArrayEquals(FloatArray(18) { 2f }, fading(0.5f).blendedAmbient, 1e-6f)
+        assertArrayEquals(FloatArray(18) { 3f }, fading(1f).blendedAmbient, 1e-6f)
+        val cubemap = AmbientCubemap()
+        DefaultShader.ACubemapSetter.setAmbientBase(cubemap, Environment().apply { set(fading(0.5f)) })
+        assertArrayEquals(FloatArray(18) { 2f }, cubemap.data, 1e-6f)
+    }
+
+    @Test
+    fun aFadingAttributeCopiesAndComparesByContent() {
+        val a = fading(0.25f)
+        assertEquals(a, a.copy())
+        assertEquals(0, a.compareTo(a.copy()))
+        assertFalse(a == fading(0.5f))
+        assertTrue(a.compareTo(fading(0.5f)) != 0)
+        assertFalse(a == sky())
+    }
+
+    @Test
+    fun fadingDoesNotChangeTheShaderVariant() {
+        // the second environment is always bound and guarded by a uniform, so a fade neither recompiles nor re-keys a shader
+        val plain = Environment().apply { set(sky()) }
+        val fade = Environment().apply { set(fading(0.5f)) }
+        assertEquals(plain.getMask(), fade.getMask())
+        assertEquals(PbrShader.pbrDefines(PBRFloatAttribute.Metallic, plain), PbrShader.pbrDefines(PBRFloatAttribute.Metallic, fade))
+    }
 }

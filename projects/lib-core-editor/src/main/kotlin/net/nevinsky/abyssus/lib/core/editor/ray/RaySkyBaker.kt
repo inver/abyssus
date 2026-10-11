@@ -17,6 +17,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
 import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -26,7 +27,9 @@ import kotlin.math.sin
  * Renders a built [SkyRenderer] into a [RaySkySnapshot]: six 90 degree faces drawn with the sky's own shader into an offscreen
  * framebuffer, then resampled into the equirectangular layout ray backends sample. This is the only way to get a
  * procedural sky, which is arbitrary asset GLSL, into a ray texture. GL thread only, inside `GdxRuntime.withContext`;
- * the caller's framebuffer, viewport and depth state are restored. The result holds display values (not HDR).
+ * the caller's framebuffer, viewport and depth state are restored. The result holds display values (not HDR): what the
+ * view shows, including the clouds when asked for them, which is not linear lighting radiance (the scene's procedural
+ * diffuse light travels separately as the ambient colours).
  */
 class RaySkyBaker(private val faceSize: Int = 256) {
     private class Face(val direction: Vector3, val up: Vector3) {
@@ -40,7 +43,11 @@ class RaySkyBaker(private val faceSize: Int = 256) {
         Face(Vector3(0f, 0f, 1f), Vector3(0f, 1f, 0f)), Face(Vector3(0f, 0f, -1f), Vector3(0f, 1f, 0f)),
     )
 
-    fun bake(sky: SkyRenderer, sun: Vec3): RaySkySnapshot {
+    /**
+     * Bakes [sky] for the sun toward [sun]. With [clouds] the clouds it draws at sky time [timeSeconds] are in the picture,
+     * drawn with the shell technique whatever the view uses so six faces stay cheap; without, the cloudless atmosphere.
+     */
+    fun bake(sky: SkyRenderer, sun: Vec3, timeSeconds: Double = 0.0, clouds: Boolean = false): RaySkySnapshot {
         val viewport = BufferUtils.newIntBuffer(16).also { Gdx.gl.glGetIntegerv(GL20.GL_VIEWPORT, it) }
         val bound = BufferUtils.newIntBuffer(16).also { Gdx.gl.glGetIntegerv(GL20.GL_FRAMEBUFFER_BINDING, it) }
         val buffer = FrameBuffer(Pixmap.Format.RGBA8888, faceSize, faceSize, false)
@@ -55,7 +62,7 @@ class RaySkyBaker(private val faceSize: Int = 256) {
                 Gdx.gl.glClearColor(0f, 0f, 0f, 1f)
                 Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
                 Gdx.gl.glDisable(GL20.GL_DEPTH_TEST); Gdx.gl.glDepthMask(false); Gdx.gl.glDisable(GL20.GL_CULL_FACE)
-                sky.draw(camera, SkyFrame(sunDirection, clouds = false))
+                sky.draw(camera, SkyFrame(sunDirection, timeSeconds, if (clouds) CloudTechnique.SHELLS else null, clouds))
                 Gdx.gl.glDepthMask(true); Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
                 val pixels = BufferUtils.newByteBuffer(faceSize * faceSize * 4)
                 Gdx.gl.glReadPixels(0, 0, faceSize, faceSize, GL20.GL_RGBA, GL20.GL_UNSIGNED_BYTE, pixels)

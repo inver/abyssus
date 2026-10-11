@@ -173,7 +173,7 @@ implementation does not yet provide it.
 | `MODEL` | `file`, `format`, `binary`, `materials` (material asset `uuid`s) |
 | `TERRAIN` | `terrainFile`, `size`, `uv`, `splatMap`, `splatBase`, `splatR`, `splatG`, `splatB`, `splatA` (texture asset `uuid`s) |
 | `SKYBOX` | `top`, `bottom`, `left`, `right`, `front`, `back` (image files in the folder) |
-| `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults); optional `clouds`: the `uuid` of a `CLOUDS` asset (see *Clouds* below) |
+| `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults); optional `clouds`: the `uuid` of a `CLOUDS` asset (see *Clouds* below); optional `lightsScene`: the boolean `true` makes the sky light the scene (see *Sky lighting* below) |
 | `CLOUDS` | `technique` and up to three cloud bands `low`, `mid`, `high` (see *Clouds* below) |
 | `SKYBOX_HDR` | `file`: the OpenEXR image file inside the asset folder |
 | `FOLIAGE` | `terrain`, `dataFile`, `maskResolution`, `layers` (see *Foliage* below) |
@@ -323,6 +323,37 @@ asset `sky.frag`. Nothing is written back.
   prepared and uploaded when it is built.
 - `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and storm examples of `CLOUDS` metas
   (not loaded as built-in references; the creation action snapshots a sky's existing cloud asset).
+
+**Sky lighting.** `additional.lightsScene: true` on a `SKYBOX_PROCEDURAL` asset lights the scene from that sky, as an HDR
+sky does: while the scene's sky is enabled and its lighting is built, it replaces the scene's ambient color for every model
+and terrain (whether or not the ambient light is enabled), PBR models reflect it, default-shader models take its six axis
+colors and terrain its irradiance. Only the literal boolean `true` opts in; absent, `false`, text, numbers and other kinds
+of value keep the ambient color, and `skybox_physical` has none. Nothing is written back; there is no UI to toggle it.
+
+- The light comes from Abyssus's own linear single-scattering atmosphere (`atmosphere_linear.frag`, the model of the fixture
+  `sky.frag` and of `SkyAmbientEstimate`) driven by the asset's atmosphere parameters, with the shell clouds of its `CLOUDS`
+  asset over it, rendered to a 64²-per-face `RGBA16F` cube without tone mapping or a sun disc. It is **not** read back from
+  the asset's own shader: a custom `sky.frag` that departs from the physical parameters (another model, tint or
+  exposure) is drawn as written but lights the scene as the parameters say.
+- The lighting follows the sun and the clouds. It is rebuilt when the sun moves more than 1 degree, every 2 seconds of
+  cloud time while a band has wind, and whenever the cloud asset is reloaded, replaced or removed or its visibility changes
+  (stationary clouds are not rebuilt for time). A rebuild takes one build step per frame and the new lighting fades in
+  over about a second. Until the first build completes, or if it fails, the scene keeps its ambient color; a later failed
+  rebuild keeps the last lighting.
+
+**Cloud shadows.** While a procedural sky draws its clouds, they shade terrain and models from the sun, the brightest usable
+directional light: dark patches that drift with each band's wind and sit where the sky shows clouds. Nothing is stored for
+them and no field turns them off (disable the clouds instead).
+
+- The shadow map covers a square of 4000 world units around the orbit target, 512 texels across (about 8 units a texel).
+  **The scene's units are taken as metres**, like the cloud altitudes; a scene in other units gets shadows of a different
+  apparent size. Beyond the square (the outer 10% of it fades), the uniform sun dimming of the clouds over the target applies.
+- Inside the square the clouds dim the sun through the map only; the uniform dimming is not applied as well. Only the sun is
+  shaded; spot and point lights and other directional lights are not. The sun's own scene shadow still applies and the two
+  multiply, so a surface in both loses the sun once.
+- If the sun is not among the rendered directional lights (it has no usable direction, or brighter lights took the budget),
+  no light is shaded by clouds. If the map cannot be built the view falls back to the uniform dimming everywhere and logs the
+  reason once.
 
 | Level | Altitudes (m) | Types |
 |---|---|---|

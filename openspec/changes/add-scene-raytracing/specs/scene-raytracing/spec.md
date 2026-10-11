@@ -86,6 +86,10 @@ Opaque and alpha-tested models and terrain SHALL cast and receive ray-traced sha
 - **WHEN** an alpha-tested leaf or alpha-blended surface lies between a selected light and terrain
 - **THEN** the leaf casts a shadow with holes, and the blended surface does not cast a shadow
 
+#### Scenario: Cloud shadows on the sun
+- **WHEN** the scene's procedural sky draws clouds and the sun is among the traced directional lights
+- **THEN** the sun's visibility is also attenuated by the cloud shadows the raster view shows (the same pattern, wind and time), the other lights are not, and a surface is never dimmed twice by the clouds
+
 ### Requirement: Scene geometry appears in reflections
 
 PBR model surfaces SHALL reflect opaque and alpha-tested scene geometry, including terrain, according to their existing metallic and roughness values. Reflections SHALL include geometry outside the camera image. Rays that miss geometry SHALL use the existing environment. Reflection recursion SHALL be bounded by the native scene limits specified in `scene-raytracing-settings`; explicit dielectric transmission follows `scene-raytracing-materials`. Reflected alpha-blended geometry remains excluded.
@@ -101,6 +105,10 @@ PBR model surfaces SHALL reflect opaque and alpha-tested scene geometry, includi
 #### Scenario: Reflection misses geometry
 - **WHEN** a reflection ray hits no scene geometry
 - **THEN** it shows the applicable sky environment, or the existing background when no sky is enabled
+
+#### Scenario: Reflection misses geometry under a cloudy sky
+- **WHEN** a reflection ray hits no scene geometry and the sky is a procedural sky drawing clouds
+- **THEN** it shows the sky with its clouds, as displayed at that time, and a reloaded or changed cloud asset is reflected after the next completed environment snapshot
 
 ### Requirement: Effects remain live while editing
 

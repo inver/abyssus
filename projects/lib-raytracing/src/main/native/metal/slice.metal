@@ -234,6 +234,18 @@ static float3 reflectionDirection(float3 normal,float3 view,float roughness,uint
     return dot(r,normal)>0?r:mirror;
 }
 // Direct light, ambient and emission. [environment] replaces the ambient colour in the PBR specular term when set.
+// How much of directional light i reaches [position] through the cloud shadow map (header slot 30): the map's red channel,
+// fading into the outside visibility at the map's edge; 1 for every other light and without a map. Block layout: texture,
+// light index, the x and y rows of the world-to-map transform, edge fade, outside visibility.
+static float cloudVisibility(device const float *d,uint light,float3 position) {
+    if(d[30]<0) return 1;
+    uint c=uint(d[30]);
+    if(float(light)!=d[c+1]) return 1;
+    float2 uv=float2(dot(float3(d[c+2],d[c+3],d[c+4]),position)+d[c+5],dot(float3(d[c+6],d[c+7],d[c+8]),position)+d[c+9]);
+    float2 toEdge=min(uv,1-uv);
+    float inside=smoothstep(0.0f,d[c+10],min(toEdge.x,toEdge.y));
+    return mix(d[c+11],sampleTexture(d,uint(d[c]),clamp(uv,0.0f,1.0f)).x,inside);
+}
 static float3 shade(Surface s,float3 view,bool hasEnvironment,float3 environment,CTX) {
     uint m=s.material;float4 base=sceneBase(s,d);
     float3 emission=s3(d,m+4)*binding(d,m,1,s.uv,float4(1)).xyz;
@@ -276,7 +288,7 @@ static float3 shade(Surface s,float3 view,bool hasEnvironment,float3 environment
             float gv=nl*sqrt(nv*nv*(1-a2)+a2),gl=nv*sqrt(nl*nl*(1-a2)+a2);
             contribution=(1-F)*diffuse+F*(distribution*.5f/max(gv+gl,1e-5f)*M_PI_F);
         }
-        result+=contribution*s3(d,l)*(nl*attenuation);
+        result+=contribution*s3(d,l)*(nl*attenuation*cloudVisibility(d,i,s.position));
     }
     return result;
 }

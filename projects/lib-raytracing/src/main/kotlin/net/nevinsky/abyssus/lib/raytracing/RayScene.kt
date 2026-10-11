@@ -127,6 +127,21 @@ data class RayEnvironment(val ambient: RayColor=RayColor(.1f,.1f,.1f), val backg
 data class RayFog(val color: RayColor,val density: Float,val gradient: Float) {
     init { require(density.isFinite() && density>=0 && gradient.isFinite() && gradient>=0) }
 }
+/**
+ * Cloud shadows on the sun, as the raster view draws them: directional light [light] (an index into the scene's lights, the
+ * sun by identity) is multiplied by a visibility map. The map is the red channel (0 dark, 1 lit) of scene texture [texture]
+ * (an ordinary [RayTexture], so a recaptured but unchanged map needs no upload), sampled at the world position transformed by
+ * [worldToMap]: two rows of four numbers (x then y texture coordinate, each `a*x + b*y + c*z + d`). Within [edgeFade] (a share
+ * of the map's width) of the map's edge it fades into [outside], the visibility beyond the map (the uniform sun dimming of
+ * the clouds over the target). Only [light] is affected; [revision] grows with every new map so a consumer can tell versions
+ * apart. The map is immutable CPU data captured on the render thread.
+ */
+data class RayCloudVisibility(val light: Int, val texture: Int, val worldToMap: List<Float>, val edgeFade: Float = .1f, val outside: Float = 1f, val revision: Long = 0) {
+    init {
+        require(light>=0 && texture>=0 && worldToMap.size==8 && worldToMap.all { it.isFinite() })
+        require(edgeFade.isFinite() && edgeFade>0f && edgeFade<=.5f && outside.isFinite() && outside in 0f..1f)
+    }
+}
 /** A primary ray composites at most 16 blended layers (the nearest win), so scenes with more blended instances use whole-view raster fallback. */
 const val RAY_MAX_BLENDED_INSTANCES = 32
 /** Shadow and reflection rays pass through this many alpha-test holes in a row; the next hole counts as solid. */
@@ -138,7 +153,7 @@ const val RAY_MAX_TEXTURES = 128
 const val RAY_MAX_LIGHTS = 12
 
 class RaySceneSnapshot(meshes: List<RayMesh>, instances: List<RayInstance>, materials: List<RayMaterial>, textures: List<RayTexture>, lights: List<RayLight>,
-    val environment: RayEnvironment=RayEnvironment(), val fog: RayFog?=null) {
+    val environment: RayEnvironment=RayEnvironment(), val fog: RayFog?=null, val cloudVisibility: RayCloudVisibility?=null) {
     val meshes=rayList(meshes); val instances=rayList(instances); val materials=rayList(materials); val textures=rayList(textures); val lights=rayList(lights)
     /** Why every backend rejects this scene (the view then falls back to raster), or null when it is representable. */
     fun unsupportedReason():String? = when {
@@ -155,6 +170,8 @@ class RaySceneSnapshot(meshes: List<RayMesh>, instances: List<RayInstance>, mate
         require(instances.all { it.mesh in meshes.indices && it.material in materials.indices })
         require(materials.flatMap { it.bindings() }.filterNotNull().all { it.texture in textures.indices })
         require(environment.texture==null || environment.texture in textures.indices)
+        require(cloudVisibility==null || (cloudVisibility.texture in textures.indices && cloudVisibility.light in lights.indices &&
+            lights[cloudVisibility.light].kind==RayLightKind.DIRECTIONAL)) { "Cloud visibility must name a directional light and a scene texture" }
     }
 }
 /**

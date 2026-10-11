@@ -201,4 +201,50 @@ class RaySceneSnapshotTest {
     }
 
     private fun model(count: Int = 3): RayModelSnapshot = rayTestModel(count)
+
+    // --- cloud shadows on the sun
+
+    private val sun = net.nevinsky.abyssus.lib.core.editor.scene.DirectionalSource(Vec3(0f, -1f, 0f), Rgba(1f, 1f, 1f, 1f), "sun")
+    private val fill = net.nevinsky.abyssus.lib.core.editor.scene.DirectionalSource(Vec3(0f, -1f, 0f), Rgba(0f, 1f, 0f, 1f), "fill")
+    private val rows = listOf(.0005f, 0f, 0f, .5f, 0f, 0f, .0005f, .5f)
+
+    private fun cloudInput(sunId: String = "sun", revision: Long = 1, outside: Float = .6f, value: Int = 90) =
+        RayCloudShadowInput(sunId, 4, ByteArray(16) { value.toByte() }, rows, .1f, outside, revision)
+
+    private fun withClouds(input: RayCloudShadowInput?, lights: List<net.nevinsky.abyssus.lib.core.editor.scene.DirectionalSource> = listOf(fill, sun)): RaySceneFrame =
+        (RaySceneSnapshots().capture(params(), camera, LightSet(lights, emptyList()), assets, emptyMap(), null, null, emptyList(),
+            emptyMap(), null, 0, input) as RaySceneConversion.Ready).frame
+
+    @Test fun `a cloud shadow map becomes a scene texture that names the sun by identity`() {
+        val frame = withClouds(cloudInput())
+        val cloud = frame.scene.cloudVisibility!!
+        assertEquals("the sun is the second directional light, found by id not position", 1, cloud.light)
+        assertEquals(rows, cloud.worldToMap)
+        assertEquals(.6f, cloud.outside, 0f)
+        val texture = frame.scene.textures[cloud.texture]
+        assertEquals(4, texture.width)
+        assertTrue("8-bit texture, red channel is the visibility", texture.isBytes)
+        assertEquals(90, texture.rgba8()!![0].toInt() and 255)
+    }
+
+    @Test fun `no map and no sun in the traced lights give no cloud visibility`() {
+        assertNull(withClouds(null).scene.cloudVisibility)
+        assertNull("another light must not be shaded in the sun's place", withClouds(cloudInput(sunId = "missing")).scene.cloudVisibility)
+        assertNull(withClouds(cloudInput(), lights = listOf(fill)).scene.cloudVisibility)
+    }
+
+    @Test fun `a new cloud map or a moved outside visibility is an environment change and nothing else`() {
+        val before = withClouds(cloudInput(revision = 1))
+        assertEquals(emptySet<RaySceneChange>(), raySceneDiff(before, withClouds(cloudInput(revision = 1))).changes)
+        assertEquals(setOf(RaySceneChange.ENVIRONMENT), raySceneDiff(before, withClouds(cloudInput(revision = 2))).changes)
+        assertEquals(setOf(RaySceneChange.ENVIRONMENT), raySceneDiff(before, withClouds(cloudInput(revision = 1, outside = .7f))).changes)
+        assertEquals(setOf(RaySceneChange.ENVIRONMENT), raySceneDiff(before, withClouds(null)).changes)
+    }
+
+    @Test fun `the traced sun keeps its whole colour while a map is present`() {
+        val frame = withClouds(cloudInput())
+        val lights = frame.scene.lights
+        assertEquals(1f, lights.first { it.id == "sun" }.color.r, 0f)
+        assertEquals(0f, lights.first { it.id == "fill" }.color.r, 0f)
+    }
 }

@@ -44,7 +44,9 @@ class ProceduralSkyLoader(
         if (reference != null && clouds == null) {
             log.warn("Sky '${meta.name}': no asset has the clouds uuid '$reference'; drawing it without clouds")
         }
-        return PreparedProceduralSky(additional.params, vertex, fragment, meta.name, clouds)
+        return PreparedProceduralSky(
+            additional.params, vertex, fragment, meta.name, clouds, additional.lightsSceneEnabled
+        )
     }
 
     private fun shader(asset: String, file: String?): String {
@@ -64,7 +66,7 @@ class ProceduralSkyLoader(
 
 /**
  * The parameters and GLSL source of the procedural sky [name], and the folder of the `CLOUDS` asset it draws ([clouds];
- * null without one); nothing here holds GPU or file resources.
+ * null without one) and whether it lights the scene ([lightsScene]); nothing here holds GPU or file resources.
  */
 class PreparedProceduralSky(
     val params: AtmosphereParams,
@@ -72,4 +74,5 @@ class PreparedProceduralSky(
     val fragment: String,
     val name: String = "",
     val clouds: String? = null,
+    val lightsScene: Boolean = false,
 )

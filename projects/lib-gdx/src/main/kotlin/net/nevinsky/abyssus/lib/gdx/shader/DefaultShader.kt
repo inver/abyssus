@@ -594,11 +594,23 @@ open class DefaultShader(
             set(u_shadowPCFOffset, 1f / (2f * lights.shadowMap.getDepthMap().texture.getWidth()))
         }
         bindShadowAtlas(attributes, dirs, points, spots)
+        bindDirectionalVisibility(attributes)
 
         lightsSet = true
     }
 
     private val atlasBindings = ShadowAtlasBindings()
+
+    private fun bindDirectionalVisibility(attributes: Attributes) {
+        val map = attributes.get(DirectionalVisibilityAttribute.Type) as? DirectionalVisibilityAttribute ?: return
+        val program = program!!
+        val unit = context!!.textureBinder.bind(map.texture)
+        program.setUniformi("u_dirVisMap", unit)
+        program.setUniformi("u_dirVisIndex", map.lightIndex)
+        program.setUniformMatrix("u_dirVisMatrix", map.worldToMap)
+        program.setUniformf("u_dirVisEdge", map.edgeFade)
+        program.setUniformf("u_dirVisOutside", map.outside)
+    }
 
     private fun bindShadowAtlas(attributes: Attributes, dirs: Array<DirectionalLight>?, points: Array<PointLight>?, spots: Array<SpotLight>?) {
         val atlas = attributes.get(ShadowAtlasAttribute.Type) as? ShadowAtlasAttribute ?: return
@@ -766,6 +778,7 @@ open class DefaultShader(
                     prefix.append("#define shadowMapFlag\n")
                 }
                 if (attributes.has(ShadowAtlasAttribute.Type)) prefix.append("#define shadowAtlasFlag\n")
+                if (attributes.has(DirectionalVisibilityAttribute.Type)) prefix.append("#define directionalVisibilityFlag\n")
                 if (attributes.has(CubemapAttribute.EnvironmentMap)) {
                     prefix.append("#define environmentCubemapFlag\n")
                 }
@@ -901,7 +914,7 @@ open class DefaultShader(
             fun setAmbientBase(cubemap: AmbientCubemap, attributes: Attributes) {
                 val sky = attributes.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute?
                 if (sky != null) {
-                    cubemap.set(sky.ambient)
+                    cubemap.set(sky.blendedAmbient)
                 } else if (attributes.has(ColorAttribute.AmbientLight)) {
                     cubemap.set((attributes.get(ColorAttribute.AmbientLight) as ColorAttribute).color)
                 }

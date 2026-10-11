@@ -31,6 +31,20 @@ uniform int u_has_splatA;
 uniform vec3 u_ambient;
 uniform samplerCube u_irradiance; // a built HDR sky's irradiance; replaces u_ambient when u_hasSky is 1
 uniform int u_hasSky;
+uniform samplerCube u_irradianceNext; // the irradiance being faded in (u_irradiance again when none)
+uniform float u_skyBlend;             // 0 to 1 from u_irradiance to u_irradianceNext; 0 when nothing fades
+uniform sampler2D u_cloudMap;    // how much of one directional light reaches each place (the cloud shadow map)
+uniform int u_cloudIndex;        // the directional light it describes; -1: none
+uniform mat4 u_cloudMatrix;      // world position to the map's texture coordinates
+uniform float u_cloudEdge;       // share of the map's width, at each edge, over which it fades into u_cloudOutside
+uniform float u_cloudOutside;    // the visibility beyond the map
+float cloudVisibility(int i, vec3 worldPos) {
+    if (i != u_cloudIndex) return 1.0;
+    vec2 uv = (u_cloudMatrix * vec4(worldPos, 1.0)).xy;
+    vec2 toEdge = min(uv, 1.0 - uv);
+    float inside = smoothstep(0.0, u_cloudEdge, min(toEdge.x, toEdge.y));
+    return mix(u_cloudOutside, texture2D(u_cloudMap, clamp(uv, 0.0, 1.0)).r, inside);
+}
 uniform vec3 u_fogColor;
 uniform int u_numDirectional;
 uniform vec3 u_dirDirection[5];
@@ -139,11 +153,15 @@ void main() {
         if (u_has_splatA == 1) color = mix(color, texture2D(u_splatA, v_uv), s.a);
     }
     vec3 n = normalize(v_normal);
-    vec3 light = u_hasSky == 1 ? textureCube(u_irradiance, n).rgb : u_ambient;
+    vec3 light = u_ambient;
+    if (u_hasSky == 1) {
+        light = textureCube(u_irradiance, n).rgb;
+        if (u_skyBlend > 0.0) light = mix(light, textureCube(u_irradianceNext, n).rgb, u_skyBlend);
+    }
     for (int i = 0; i < 2; i++) {
         if (i >= u_numDirectional) break;
         float ndotl = max(dot(n, -normalize(u_dirDirection[i])), 0.0);
-        light += u_dirColor[i] * ndotl * shadowTileVisibility(u_dirShadowTile[i], v_world, -1.0, ndotl);
+        light += u_dirColor[i] * ndotl * shadowTileVisibility(u_dirShadowTile[i], v_world, -1.0, ndotl) * cloudVisibility(i, v_world);
     }
     for (int i = 0; i < 5; i++) {
         if (i >= u_numPoint) break;

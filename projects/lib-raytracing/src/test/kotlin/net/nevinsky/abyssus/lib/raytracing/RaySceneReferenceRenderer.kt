@@ -81,14 +81,14 @@ internal class RaySceneReferenceRenderer(private val onIntersection: () -> Unit 
         fun shade(s:Surface,view:RayVec3,environment:RayColor?):RayColor {
             val ambient=reference.ambientAt(scene.environment,s.normal)
             var value=reference.ambient(s.evaluated,s.base,ambient,environment ?: ambient,s.normal.dot(view))*s.occlusion+s.emissive
-            for(light in scene.lights) {
+            for((index,light) in scene.lights.withIndex()) {
                 val delta=light.position-s.position
                 val L=if(light.kind==RayLightKind.DIRECTIONAL) light.direction.unit()*-1f else delta.unit()
                 val distance=if(light.kind==RayLightKind.DIRECTIONAL) 10000f else sqrt(delta.dot(delta))
                 val attenuation=reference.attenuation(light,s.position)
                 if(attenuation<=0f && light.kind!=RayLightKind.DIRECTIONAL) continue
                 val blocked=light.castsShadow && s.normal.dot(L)>0f && traceMasked(s.position+s.normal*.001f,L,.001f,maxOf(distance-.002f,.001f))!=null
-                if(!blocked) value+=reference.direct(s.evaluated,s.base,s.normal,view,L,light.color*attenuation)
+                if(!blocked) value+=reference.direct(s.evaluated,s.base,s.normal,view,L,light.color*(attenuation*reference.cloudVisibility(scene.cloudVisibility,scene.textures,index,s.position)))
             }
             return value
         }

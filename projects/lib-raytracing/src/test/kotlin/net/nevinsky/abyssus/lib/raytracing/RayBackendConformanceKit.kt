@@ -428,6 +428,71 @@ abstract class RayBackendConformanceKit {
         assertMatchesReference(frame, request, .002f)
     }
 
+    /**
+     * The 8-column floor of [shadowScene] under a red sun (light 0) and a green fill (light 1), with a two texel cloud shadow
+     * map: [dark] on the left half of its extent, fully lit on the right. The map spans world x from [centerX] - 10 to
+     * [centerX] + 10 and is always inside it along z; [edgeFade] and [outside] as in the contract.
+     */
+    private fun cloudScene(centerX: Float = 0f, dark: Float = .25f, edgeFade: Float = .1f, outside: Float = 1f, withMap: Boolean = true): RaySceneRequest {
+        val map = RayTexture("cloud", 2, 1, floatArrayOf(dark, 0f, 0f, 1f, 1f, 0f, 0f, 1f), RayWrap.CLAMP_TO_EDGE, RayWrap.CLAMP_TO_EDGE, RayFilter.NEAREST)
+        val base = shadowScene(
+            occluder = null,
+            lights = listOf(
+                RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 0f, 0f), direction = RayVec3(0f, -1f, 0f)),
+                RayLight("fill", RayLightKind.DIRECTIONAL, RayColor(0f, 1f, 0f), direction = RayVec3(0f, -1f, 0f)),
+            ),
+            textures = if (withMap) listOf(map) else emptyList(),
+        )
+        val cloud = RayCloudVisibility(0, 0, listOf(.05f, 0f, 0f, .5f - centerX / 20f, 0f, 0f, 0f, .5f), edgeFade, outside, revision = 1)
+        return RaySceneRequest(base.key, base.width, base.height, base.camera,
+            RaySceneSnapshot(base.scene.meshes, base.scene.instances, base.scene.materials, base.scene.textures, base.scene.lights, base.scene.environment, base.scene.fog,
+                if (withMap) cloud else null))
+    }
+
+    @Test fun aCloudShadowMapDarkensOnlyTheSunWhereItIsDark() = sceneCase("cloud-shadow") { session ->
+        val request = cloudScene()
+        val frame = renderScene(session, request)
+        // columns 0..3 are on the dark half (x -7 to -1), 4..7 on the lit half; the green fill is never touched
+        assertPixels(frame, mapOf(0 to .1f + .25f, 1 to .1f + .25f, 2 to .1f + .25f, 3 to .1f + .25f).mapValues { it.value }, .002f, channels = 0..0)
+        assertPixels(frame, mapOf(4 to 1.1f, 5 to 1.1f, 6 to 1.1f, 7 to 1.1f), .002f, channels = 0..0)
+        assertPixels(frame, (0..7).associateWith { 1.1f }, .002f, channels = 1..1)
+        assertMatchesReference(frame, request, .002f)
+    }
+
+    @Test fun beyondTheMapTheOutsideVisibilityApplies() = sceneCase("cloud-outside") { session ->
+        // the map is moved 100 units away: every floor point is outside it, so only the uniform fallback dims the sun
+        val request = cloudScene(centerX = 100f, outside = .5f)
+        val frame = renderScene(session, request)
+        assertPixels(frame, (0..7).associateWith { .1f + .5f }, .002f, channels = 0..0)
+        assertPixels(frame, (0..7).associateWith { 1.1f }, .002f, channels = 1..1)
+        assertMatchesReference(frame, request, .002f)
+    }
+
+    @Test fun theMapFadesIntoTheOutsideVisibilityAtItsEdge() = sceneCase("cloud-edge") { session ->
+        // an edge fade of the whole half extent makes the map fade everywhere; the reference defines the ramp
+        val request = cloudScene(edgeFade = .5f, outside = 1f)
+        val frame = renderScene(session, request)
+        val reds = (0..7).map { frame.colorValues()[it * 4] }
+        assertTrue("the ramp between dark and lit, not a step: $reds", reds.any { it > .1f + .25f + .02f && it < 1.1f - .02f })
+        assertMatchesReference(frame, request, .002f)
+    }
+
+    @Test fun movingTheMapMovesTheShadow() = sceneCase("cloud-moves") { session ->
+        val before = renderScene(session, cloudScene(centerX = 0f))
+        val after = renderScene(session, cloudScene(centerX = 6f, edgeFade = .1f))
+        // a shift of 6 units to the east puts the dark half (x from -16 to -6) left of most columns: column 1 (x = -5) is lit
+        assertEquals(.1f + .25f, before.colorValues()[1 * 4], .002f)
+        assertEquals(1.1f, after.colorValues()[1 * 4], .002f)
+        assertMatchesReference(after, cloudScene(centerX = 6f), .002f)
+    }
+
+    @Test fun aSceneWithoutAMapIsUnchanged() = sceneCase("cloud-none") { session ->
+        val request = cloudScene(withMap = false)
+        val frame = renderScene(session, request)
+        assertPixels(frame, (0..7).associateWith { 1.1f }, .002f, channels = 0..1)
+        assertMatchesReference(frame, request, .002f)
+    }
+
     @Test fun terrainReceivesModelShadowsAndRidgesShadowTerrain() = sceneCase("terrain-shadow") { session ->
         val terrain = RayMaterial(kind = RayMaterialKind.TERRAIN, terrain = RayTerrainMaterial(null, List(5) { null }, 1f))
         val model = shadowScene(floor = terrain, occluder = RayMaterial())
@@ -750,9 +815,9 @@ abstract class RayBackendConformanceKit {
         session.submit(request); return await(session)
     }
 
-    private fun assertPixels(frame: RayFrame, expected: Map<Int, Float>, tolerance: Float) {
+    private fun assertPixels(frame: RayFrame, expected: Map<Int, Float>, tolerance: Float, channels: IntRange = 0..2) {
         val colors = frame.colorValues()
-        for ((column, value) in expected) for (channel in 0..2)
+        for ((column, value) in expected) for (channel in channels)
             assertEquals("column $column channel $channel", value, colors[column * 4 + channel], tolerance)
     }
 
@@ -771,8 +836,8 @@ abstract class RayBackendConformanceKit {
     private fun sceneRequest(
         meshes: List<RayMesh>, instances: List<RayInstance>, materials: List<RayMaterial>, textures: List<RayTexture> = emptyList(),
         lights: List<RayLight> = emptyList(), environment: RayEnvironment = RayEnvironment(ambient = RayColor(.1f, .1f, .1f), background = RayColor(0f, 0f, 0f)),
-        fog: RayFog? = null, camera: RaySliceCamera, width: Int = 1, height: Int = 1,
-    ) = RaySceneRequest(RayFrameKey(1, 1, 1, 1), width, height, camera, RaySceneSnapshot(meshes, instances, materials, textures, lights, environment, fog))
+        fog: RayFog? = null, camera: RaySliceCamera, width: Int = 1, height: Int = 1, cloud: RayCloudVisibility? = null,
+    ) = RaySceneRequest(RayFrameKey(1, 1, 1, 1), width, height, camera, RaySceneSnapshot(meshes, instances, materials, textures, lights, environment, fog, cloud))
 
     private fun instance(mesh: Int, material: Int, x: Float = 0f, y: Float = 0f, z: Float = 0f) =
         RayInstance("i$mesh-$material", mesh, material, floatArrayOf(1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f, x, y, z, 1f))

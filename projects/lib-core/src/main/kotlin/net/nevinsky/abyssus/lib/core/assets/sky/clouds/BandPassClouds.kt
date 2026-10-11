@@ -13,11 +13,17 @@ import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscre
 
 /**
  * Clouds drawn one fullscreen pass per band, the band's fragment shader [fragment] (after `clouds_common.glsl` and
- * `clouds_light.glsl`) deciding what each pixel sees of it. Far bands first, so lower ones hide higher ones.
+ * `clouds_light.glsl`) deciding what each pixel sees of it. Far bands first, so lower ones hide higher ones. A [prefix] file
+ * goes before them all (`clouds_linear.glsl`).
  */
-open class BandPassClouds(shaders: ShaderStorage, fragment: String, private val field: CloudField) : CloudRenderer() {
+open class BandPassClouds(
+    shaders: ShaderStorage,
+    fragment: String,
+    private val field: CloudField,
+    prefix: String? = null,
+) : CloudRenderer() {
     private val program: ShaderProgram =
-        shaders.program("clouds.vert", "clouds_common.glsl", "clouds_light.glsl", fragment)
+        shaders.program("clouds.vert", *listOfNotNull(prefix, "clouds_common.glsl", "clouds_light.glsl", fragment).toTypedArray())
     private val mesh: Mesh = createFullscreenTriangle()
 
     override fun draw(scene: CloudScene) {
@@ -42,3 +48,10 @@ class LayeredClouds(shaders: ShaderStorage, field: CloudField) : BandPassClouds(
 
 /** Each band as eight stacked shells from base to top: thickness, parallax and darker bases. */
 class ShellClouds(shaders: ShaderStorage, field: CloudField) : BandPassClouds(shaders, "clouds_shells.frag", field)
+
+/**
+ * [ShellClouds] writing linear radiance instead of the tone mapped display color, for the lighting cube: the same
+ * coverage, extinction, wind and radiance, composed before any tone mapping.
+ */
+class LinearShellClouds(shaders: ShaderStorage, field: CloudField) :
+    BandPassClouds(shaders, "clouds_shells.frag", field, "clouds_linear.glsl")

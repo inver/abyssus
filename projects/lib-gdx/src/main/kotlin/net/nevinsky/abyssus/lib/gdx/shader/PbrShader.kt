@@ -65,6 +65,19 @@ class PbrShader(config: ShaderConfig, renderable: Renderable?, instanced: Boolea
             val sky = attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
             shader.set(inputID, shader.context!!.textureBinder.bind(sky.specular))
         }
+        // the incoming environment of a fade; the current one again when nothing fades, so the sampler is always valid
+        registerUniformLocal("u_envIrradianceNext", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
+            val sky = attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
+            shader.set(inputID, shader.context!!.textureBinder.bind(sky.next?.irradiance ?: sky.irradiance))
+        }
+        registerUniformLocal("u_envSpecularNext", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
+            val sky = attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
+            shader.set(inputID, shader.context!!.textureBinder.bind(sky.next?.specular ?: sky.specular))
+        }
+        registerUniformLocal("u_envBlend", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
+            val sky = attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
+            shader.set(inputID, sky.blend)
+        }
         registerUniformLocal("u_envMaxLod", EnvironmentLightAttribute.Type) { shader, inputID, _, attributes ->
             val sky = attributes!!.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
             shader.set(inputID, (sky.levels - 1).toFloat())

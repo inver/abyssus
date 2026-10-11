@@ -43,6 +43,20 @@ class ModelShadowGlTest {
         }
     }
 
+    @Test fun aMapAndAModelShadowTogetherLoseTheLightOnlyOnce() = TestGl.run {
+        for (pbr in listOf(false, true)) {
+            val lit = colorWithAtlas(pbr, shadow = false, fill = true)
+            val half = colorWithAtlas(pbr, shadow = false, fill = true, visibility = 0.5f)
+            val shadowed = colorWithAtlas(pbr, shadow = true, fill = true)
+            val both = colorWithAtlas(pbr, shadow = true, fill = true, visibility = 0.5f)
+            assertTrue("the map alone halves the red light ($pbr): ${lit.toList()} / ${half.toList()}", kotlin.math.abs(half[0] * 2 - lit[0]) <= lit[0] * 0.15 + 3)
+            assertTrue("the second light is untouched by the map ($pbr)", kotlin.math.abs(half[1] - lit[1]) <= 2)
+            // red is already out in the model's shadow: the map cannot take more than there is
+            assertTrue("shadow and map together are as dark as the shadow ($pbr): ${shadowed.toList()} / ${both.toList()}", kotlin.math.abs(both[0] - shadowed[0]) <= 3)
+            assertTrue("and the other light still fills in ($pbr)", kotlin.math.abs(both[1] - shadowed[1]) <= 2)
+        }
+    }
+
     @Test fun alphaCutoutsMatchDepthAndBothColorShadersWithoutBlending() = TestGl.run {
         for (pbr in listOf(false, true)) {
             assertArrayEquals(intArrayOf(0, 0, 0), colorWithAtlas(pbr, false, true, 0f))
@@ -59,7 +73,7 @@ class ModelShadowGlTest {
         }
     }
 
-    private fun colorWithAtlas(pbr: Boolean, shadow: Boolean, fill: Boolean, cutoutAlpha: Float? = null, selfDepth: Boolean = false): IntArray {
+    private fun colorWithAtlas(pbr: Boolean, shadow: Boolean, fill: Boolean, cutoutAlpha: Float? = null, selfDepth: Boolean = false, visibility: Float? = null): IntArray {
         val mesh = Mesh(true, 3, 3, VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0)).apply {
             setVertices(floatArrayOf(-0.8f,-0.8f,0f,0f,0f,1f,0.5f,0.5f, 0.8f,-0.8f,0f,0f,0f,1f,0.5f,0.5f, 0f,0.8f,0f,0f,0f,1f,0.5f,0.5f))
             setIndices(intArrayOf(0,1,2))
@@ -71,6 +85,11 @@ class ModelShadowGlTest {
         val atlas = Texture(map)
         val skyMap = Pixmap(4,4,Pixmap.Format.RGBA8888).also { it.setColor(0f,0f,0.15f,1f); it.fill() }
         val sky = Cubemap(skyMap,skyMap,skyMap,skyMap,skyMap,skyMap)
+        val visibilityPixmap = Pixmap(2,2,Pixmap.Format.RGBA8888).also { it.setColor(visibility ?: 1f,0f,0f,1f); it.fill() }
+        val visibilityMap = Texture(visibilityPixmap).also {
+            it.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
+            it.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge)
+        }
         val framebuffer = FrameBuffer(Pixmap.Format.RGBA8888,32,32,true)
         val depthBuffer = FrameBuffer(Pixmap.Format.RGBA8888,32,32,true)
         val provider = DefaultShaderProvider(ShaderConfig().apply { numPointLights = 0; numSpotLights = 0 })
@@ -84,6 +103,8 @@ class ModelShadowGlTest {
             val records = if (shadow) listOf(ShadowLightRecord("red",ShadowLightKind.DIRECTIONAL,red,
                 listOf(ShadowAtlasView((if (selfDepth) lightCamera else camera).combined.cpy(),Vector4(0f,0f,1f,1f))),Vector3(),4f, if (selfDepth) 0.000001f else 0.0008f)) else emptyList()
             set(ShadowAtlasAttribute(if (selfDepth) depthBuffer.colorBufferTexture else atlas,records))
+            // the red light is directional light 0; the map covers world x and y from -1 to 1
+            if (visibility != null) set(DirectionalVisibilityAttribute(visibilityMap, 0, Matrix4().setToTranslationAndScaling(0.5f,0.5f,0f,0.5f,0.5f,1f)))
         }
         val material = Material(ColorAttribute.createDiffuse(Color.WHITE), ColorAttribute.createEmissive(0f,0f,0.05f,1f))
         if (cutoutAlpha != null) material.set(TextureAttribute.createDiffuse(atlas), FloatAttribute.createAlphaTest(0.49f))
@@ -110,7 +131,7 @@ class ModelShadowGlTest {
             Gdx.gl.glReadPixels(16,16,1,1,GL20.GL_RGBA,GL20.GL_UNSIGNED_BYTE,pixel)
             assertEquals(GL20.GL_NO_ERROR,Gdx.gl.glGetError())
             return IntArray(3) { pixel[it].toInt() and 255 }
-        } finally { framebuffer.end(); provider.dispose(); framebuffer.dispose(); depthBuffer.dispose(); sky.dispose(); atlas.dispose(); map.dispose(); skyMap.dispose(); mesh.dispose() }
+        } finally { framebuffer.end(); provider.dispose(); framebuffer.dispose(); depthBuffer.dispose(); sky.dispose(); atlas.dispose(); map.dispose(); skyMap.dispose(); visibilityMap.dispose(); visibilityPixmap.dispose(); mesh.dispose() }
     }
 
     @Test fun depthDrawAddressesVerticesAbove65535() = TestGl.run {

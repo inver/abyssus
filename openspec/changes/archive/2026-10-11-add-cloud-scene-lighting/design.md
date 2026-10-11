@@ -160,7 +160,8 @@ change; coordinated delta edits remain implementation tasks.
 - The extra cube rebuilds cost GPU time → rebuilds every 2 s at 64² per face, spread one step per frame and skipped
   while hidden.
 - Adding cross-fade sampling to the content shaders costs one extra cube fetch → only while fading. The second
-  environment is unbound otherwise, through a shader define.
+  environment is bound to the current one otherwise and the mix is skipped by a uniform weight check, because a define
+  would need a different attribute mask and a recompile at every fade.
 - Cloud shadow aliasing at 4 km over 512² (about 8 m per texel) → clouds are soft, so bilinear sampling hides it; the
   extent and size are constants to tune in runIde.
 - Units: the 4 km extent assumes metres. Scenes in other units get cloud shadows of a different apparent size. →

@@ -116,6 +116,19 @@ without it. The panel restores the settings from a recipe that still matches the
 (missing, malformed, an unknown version, or heights, size or resolution that changed) and offers the defaults instead.
 Heights that are not a square grid of 2 to 255 per side cannot be regenerated.
 
+### Light the scene from a procedural sky
+
+Add `"lightsScene": true` to a procedural sky's `additional` block (by hand, there is no toggle) and the sky lights the scene
+as an HDR sky does: models and terrain take its colour instead of the scene's ambient colour, PBR models reflect it, and the
+light follows the sun and the clouds. A clear noon gives cool blue light from above, an overcast sky flat grey light, a
+sunset warm light, and changes fade in over about a second. Only the boolean `true` turns it on; without it, or with
+`false`, the scene keeps its ambient colour. The light comes from Abyssus's own atmosphere model with the sky's parameters
+and clouds, so a custom `sky.frag` that departs from them looks different from the light it gives.
+
+Clouds also cast moving shadows from the sun onto terrain and models while the sky draws them: dark patches drift with the
+wind within about 4 km of the view's target (scene units are taken as metres), and beyond that the sun is dimmed evenly by the
+clouds over the target. Only the sun is shaded; nothing is written to your files.
+
 ### Keep weather from a sky
 
 Right-click a procedural sky asset that references clouds and choose **New Weather Preset from Sky...**.

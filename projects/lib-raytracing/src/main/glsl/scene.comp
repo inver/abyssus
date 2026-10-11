@@ -201,6 +201,19 @@ vec3 reflectionDirection(vec3 normal, vec3 view, float roughness, uvec2 pixel) {
     return dot(r, normal) > 0.0 ? r : mirror;
 }
 
+// How much of directional light i reaches [position] through the cloud shadow map (header slot 30): the map's red channel,
+// fading into the outside visibility at the map's edge; 1 for every other light and without a map. Block layout: texture,
+// light index, the x and y rows of the world-to-map transform, edge fade, outside visibility.
+float cloudVisibility(uint light, vec3 position) {
+    if (d[30] < 0.0) return 1.0;
+    uint c = uint(d[30]);
+    if (float(light) != d[c + 1u]) return 1.0;
+    vec2 uv = vec2(dot(vec3(d[c + 2u], d[c + 3u], d[c + 4u]), position) + d[c + 5u], dot(vec3(d[c + 6u], d[c + 7u], d[c + 8u]), position) + d[c + 9u]);
+    vec2 toEdge = min(uv, 1.0 - uv);
+    float inside = smoothstep(0.0, d[c + 10u], min(toEdge.x, toEdge.y));
+    return mix(d[c + 11u], sampleTexture(uint(d[c]), clamp(uv, 0.0, 1.0)).x, inside);
+}
+
 // Direct light, ambient and emission. [environment] replaces the ambient colour in the PBR specular term when set.
 vec3 shade(Surface s, vec3 view, bool hasEnvironment, vec3 environment) {
     uint m = s.material;
@@ -254,7 +267,7 @@ vec3 shade(Surface s, vec3 view, bool hasEnvironment, vec3 environment) {
             float gv = nl * sqrt(nv * nv * (1.0 - a2) + a2), gl = nv * sqrt(nl * nl * (1.0 - a2) + a2);
             contribution = (1.0 - F) * diffuse + F * (distribution * 0.5 / max(gv + gl, 1e-5) * PI);
         }
-        result += contribution * s3(l) * (nl * attenuation);
+        result += contribution * s3(l) * (nl * attenuation * cloudVisibility(i, s.position));
     }
     return result;
 }

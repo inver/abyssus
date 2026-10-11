@@ -47,4 +47,23 @@ class SceneEnvironmentTest {
         assertEquals(SceneAmbient.Sky("environment"), ambient("sky_hdr", null))
         assertEquals(SceneAmbient.Color(null), ambient(null, null))
     }
+
+    // A procedural sky with lightsScene is selected through the same path once SceneSkybox.environment returns its
+    // lighting (null while the first build runs or after it failed, and for a sky without the opt-in).
+    @Test
+    fun aLightingProceduralSkyReplacesTheAmbientOnceBuilt() {
+        assertEquals(SceneAmbient.Sky("lighting"), ambient("skybox_physical", grey, built = mapOf("skybox_physical" to "lighting")))
+        assertEquals(SceneAmbient.Sky("lighting"), ambient("skybox_physical", null, built = mapOf("skybox_physical" to "lighting")))
+    }
+
+    @Test
+    fun aProceduralSkyBuildingItsFirstLightingKeepsTheAmbient() {
+        assertEquals(SceneAmbient.Color(grey), ambient("skybox_physical", grey, built = emptyMap()))
+    }
+
+    @Test
+    fun aDisabledProceduralSkyDoesNotLightEvenWhenBuilt() {
+        // SceneContent gives no skybox name when skyboxEnabled is false
+        assertEquals(SceneAmbient.Color(grey), ambient(null, grey, built = mapOf("skybox_physical" to "lighting")))
+    }
 }

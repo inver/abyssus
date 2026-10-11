@@ -175,6 +175,23 @@ float getShadow()
 }
 #endif //shadowMapFlag
 
+#ifdef directionalVisibilityFlag
+uniform sampler2D u_dirVisMap;
+uniform int u_dirVisIndex;
+uniform mat4 u_dirVisMatrix;
+uniform float u_dirVisEdge;
+uniform float u_dirVisOutside;
+// How much of directional light i reaches worldPos: the map for the one light it describes (fading into the outside value at
+// its edge), 1 for every other light.
+float directionalVisibility(int i, vec3 worldPos) {
+    if (i != u_dirVisIndex) return 1.0;
+    vec2 uv = (u_dirVisMatrix * vec4(worldPos, 1.0)).xy;
+    vec2 toEdge = min(uv, 1.0 - uv);
+    float inside = smoothstep(0.0, u_dirVisEdge, min(toEdge.x, toEdge.y));
+    return mix(u_dirVisOutside, texture2D(u_dirVisMap, clamp(uv, 0.0, 1.0)).r, inside);
+}
+#endif // directionalVisibilityFlag
+
 #ifdef shadowAtlasFlag
 uniform sampler2D u_shadowAtlas;
 uniform float u_shadowEnabled;
@@ -365,6 +382,9 @@ void main() {
 				vec3 value = u_dirLights[i].color * NdotL;
 				#ifdef shadowAtlasFlag
 					value *= shadowTileVisibility(u_dirShadowTile[i], v_worldPos, -1.0, NdotL);
+				#endif
+				#ifdef directionalVisibilityFlag
+					value *= directionalVisibility(i, v_worldPos);
 				#endif
 				lightDiffuse += value;
 				#ifdef specularFlag
