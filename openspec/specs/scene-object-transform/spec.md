@@ -111,7 +111,8 @@ Releasing the mouse after a drag that changed the object SHALL write the new tra
 `PositionComponent.localPosition`; a rotation SHALL write `PositionComponent.localRotation`. For a camera, a move SHALL
 also write `CameraComponent.camera.position`, and a rotation `CameraComponent.camera.viewPointPosition`. For a light that
 looks at a direction handle, a rotation SHALL instead write the handle's `PositionComponent.localPosition`, in the same
-undoable edit, and leave the light's own `localRotation` unchanged.
+undoable edit, and leave the light's own `localRotation` unchanged. When the object is a copy placed by a path arrangement, the same
+undoable edit SHALL also detach it, as the `scene-path-arrangements` capability describes.
 
 #### Scenario: Move is written
 
@@ -156,6 +157,12 @@ undoable edit, and leave the light's own `localRotation` unchanged.
 
 - **WHEN** the user presses on a handle and releases without moving the cursor
 - **THEN** nothing is written
+
+#### Scenario: Moving an arranged copy detaches it
+
+- **WHEN** the user moves copy `14`, slot `2` of path arrangement `Path 11`, along Z and releases
+- **THEN** in one undoable edit copy `14` gets its new `localPosition`, loses its `ParentComponent`, and slot `2` of
+  `Path 11` becomes `-1`; no other entity changes
 
 ### Requirement: Cancelling a drag
 
@@ -314,7 +321,8 @@ count as equal, so an object already resting on its surface SHALL NOT move and n
 
 A drop that moves an object SHALL write the new position to that entity in the scene's own `.scene` file as one
 undoable edit, keep the file's formatting, and change nothing else. It SHALL write `PositionComponent.localPosition.y`
-and, for a camera entity, `CameraComponent.camera.position`, exactly as a move along Y does.
+and, for a camera entity, `CameraComponent.camera.position`, exactly as a move along Y does. A drop of a copy placed by a path arrangement SHALL also detach it in the same
+undoable edit, exactly as a move does.
 
 #### Scenario: Only the height changes
 
@@ -332,6 +340,11 @@ and, for a camera entity, `CameraComponent.camera.position`, exactly as a move a
 
 - **WHEN** the user presses Undo in the scene view after a drop
 - **THEN** the file returns to its content before the drop and the object is drawn at its old place
+
+#### Scenario: Dropping an arranged copy detaches it
+
+- **WHEN** the user drops copy `13` of path arrangement `Path 11`
+- **THEN** copy `13`'s `localPosition.y` changes, it loses its `ParentComponent`, and its slot in `Path 11` becomes `-1`
 
 ### Requirement: Turning a light aimed at a direction handle
 

@@ -1,11 +1,11 @@
-# Spec Delta
+# scene-path-arrangements Specification
 
 ## Purpose
 
 Lets users place many copies of one project model along a line drawn on the terrain, such as streetlights along a
 road, and keep those copies following the line when its points or settings change.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Add Path Arrangement asks for a model
 
