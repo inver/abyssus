@@ -11,13 +11,13 @@ import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
 import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
-import net.nevinsky.abyssus.lib.core.gltf.GltfWriter
-import net.nevinsky.abyssus.lib.core.gltf.PhongToPbr
+import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
+import net.nevinsky.abyssus.lib.gdx.gltf.PhongToPbr
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.model.ModelData
-import net.nevinsky.abyssus.lib.core.model.ModelMesh
-import net.nevinsky.abyssus.lib.core.model.ModelMeshPart
-import net.nevinsky.abyssus.lib.core.model.PbrModelMaterial
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
+import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
+import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import java.util.UUID
@@ -194,7 +194,7 @@ class FlightGearImport(
         val licenseFiles = archive.licenseFiles(aircraft.folder)
         for (path in licenseFiles) files[path.substringAfterLast('/')] = archive.read(path)!!
 
-        val meta = json.mapper.createObjectNode()
+        val meta = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode()
         meta.put("format", "abyssus").put("formatVersion", 1).put("version", 1).put("lastModified", lastModified)
             .put("uuid", uuid.toString()).put("type", "MODEL")
         meta.putObject("additional").put("file", IMPORTED_MODEL_FILE).put("format", "GLTF").put("binary", true)

@@ -4,27 +4,17 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ray
 
-import net.nevinsky.abyssus.lib.core.editor.ray.RayAssetLease
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssetState
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssets
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneChange
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneConversion
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneFrame
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneSnapshots
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySnapshotLimits
-import net.nevinsky.abyssus.lib.core.editor.ray.raySceneDiff
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
 import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
-import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneFallback
 
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
@@ -72,6 +62,17 @@ class RaySceneSnapshotTest {
         assertArrayEquals(before.scene.instances.first { it.id.startsWith("other/") }.transform(),
             after.scene.instances.first { it.id.startsWith("other/") }.transform(), 0f)
         assertEquals(setOf(RaySceneChange.TRANSFORM), raySceneDiff(before, after).changes)
+    }
+
+    @Test fun `a scene with foliage gives the same ray snapshot as without`() {
+        val plain = ready(params(SceneContent(models = listOf(placement))))
+        val foliage = FoliagePlacement("entity", "foliage_meadow", "terrain", PlacementTransform.IDENTITY)
+        val shown = ready(params(SceneContent(models = listOf(placement), foliages = listOf(foliage))))
+        // foliage reaches neither the geometry, the instances nor the assets of the snapshot, so no frame differs
+        assertEquals(emptySet<RaySceneChange>(), raySceneDiff(plain, shown).changes)
+        assertEquals(plain.scene.meshes.map { it.id }, shown.scene.meshes.map { it.id })
+        assertEquals(plain.scene.instances.map { it.id }, shown.scene.instances.map { it.id })
+        assertEquals(plain.scene.materials, shown.scene.materials)
     }
 
     @Test fun `mesh parts retain materials channels and unsigned 32 bit indices`() {
@@ -125,6 +126,18 @@ class RaySceneSnapshotTest {
         assertEquals(RaySceneFallback.RESOURCE_LIMIT, (result as RaySceneConversion.Fallback).reason)
         val byteResult = RaySceneSnapshots(RaySnapshotLimits(maxBytes = 1)).capture(params(), camera, NO_LIGHTS, assets)
         assertEquals(RaySceneFallback.RESOURCE_LIMIT, (byteResult as RaySceneConversion.Fallback).reason)
+    }
+
+    @Test fun `the saved instance limit falls back with its number and never exceeds the default`() {
+        fun saved(value: Int) = params().copy(rayTracing = SceneRaySettingsCodec().read(
+            net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse("""{"rayTracing":{"maxInstances":$value}}""")))
+        val limited = RaySceneSnapshots().capture(saved(1), camera, NO_LIGHTS, assets)
+        val fallback = limited as RaySceneConversion.Fallback
+        assertEquals(RaySceneFallback.RESOURCE_LIMIT, fallback.reason)
+        assertTrue(fallback.detail!!.contains("the limit is 1"))
+        assertTrue("room for the scene", RaySceneSnapshots().capture(saved(4096), camera, NO_LIGHTS, assets) is RaySceneConversion.Ready)
+        val tight = RaySceneSnapshots(RaySnapshotLimits(maxInstances = 1)).capture(saved(4096), camera, NO_LIGHTS, assets)
+        assertTrue("the stricter limit wins", tight is RaySceneConversion.Fallback)
     }
 
     @Test fun `pending and failed displayed assets stay explicit`() {

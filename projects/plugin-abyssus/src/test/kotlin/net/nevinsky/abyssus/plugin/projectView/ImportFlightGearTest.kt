@@ -51,16 +51,16 @@ class ImportFlightGearTest : BasePlatformTestCase() {
         assertEquals(AssetCommandResult.Done, importFlightGear(project, abss, archive, request(), errors::add))
         assertEquals(emptyList<String>(), errors)
         val folder = File(projectDir, "assets/model_fixture")
-        val meta = JsonProcessor().readObject(File(folder, "meta.json").readText())
+        val meta = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(File(folder, "meta.json").readText())
         assertNull(AbyssusDocumentFormat().validate(meta, DocumentKind.ASSET))
         assertEquals("MODEL", meta["type"].asText())
         assertTrue(File(folder, "model.glb").isFile)
         assertTrue(File(folder, "textures/skin.png").isFile)
-        assertEquals("unknown", JsonProcessor().readObject(File(folder, "source.json").readText())["license"].asText())
+        assertEquals("unknown", JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(File(folder, "source.json").readText())["license"].asText())
         val after = tree(projectDir)
         assertEquals("only the new folder appears", before, after.filterKeys { !it.startsWith("assets/model_fixture/") })
         val uuids = File(projectDir, "assets").listFiles()!!.mapNotNull { File(it, "meta.json").takeIf(File::isFile) }
-            .mapNotNull { JsonProcessor().readObject(it.readText())["uuid"]?.asText() }
+            .mapNotNull { JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(it.readText())["uuid"]?.asText() }
         assertEquals("the uuid is fresh", uuids.size, uuids.toSet().size)
     }
 

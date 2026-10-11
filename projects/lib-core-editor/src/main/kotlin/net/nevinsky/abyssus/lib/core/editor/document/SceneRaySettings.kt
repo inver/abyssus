@@ -13,8 +13,11 @@ data class SceneRaySettings(
     val maxRaysPerFrame: Int = 2097152,
     val maxReflectionBounces: Int = 1,
     val maxRefractionBounces: Int = 0,
+    /** Most model parts and terrains one ray view may hold; the backends cap it at 4096. */
+    val maxInstances: Int = 4096,
 ) {
     init {
+        require(maxInstances in 1..4096)
         require(targetSamplesPerPixel in 1..4096 && maxRaysPerFrame in 1..67108864)
         require(maxReflectionBounces in 0..16 && maxRefractionBounces in 0..16)
     }
@@ -25,6 +28,7 @@ enum class SceneRayField(val key: String, val default: Int, val minimum: Int, va
     RAYS("maxRaysPerFrame", 2097152, 1, 67108864),
     REFLECTIONS("maxReflectionBounces", 1, 0, 16),
     REFRACTIONS("maxRefractionBounces", 0, 0, 16),
+    INSTANCES("maxInstances", 4096, 1, 4096),
 }
 
 enum class RayDataError { INTEGER, RANGE, OBJECT, NUMBER, MATERIAL_ID, NON_PBR }
@@ -54,6 +58,7 @@ class SceneRaySettingsCodec {
         val settings = if (errors.isEmpty()) SceneRaySettings(
             values.getValue(SceneRayField.SAMPLES), values.getValue(SceneRayField.RAYS),
             values.getValue(SceneRayField.REFLECTIONS), values.getValue(SceneRayField.REFRACTIONS),
+            values.getValue(SceneRayField.INSTANCES),
         ) else null
         return SceneRaySettingsState(settings, values, errors)
     }

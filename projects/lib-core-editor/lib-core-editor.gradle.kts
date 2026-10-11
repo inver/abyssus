@@ -13,12 +13,11 @@ plugins {
 dependencies {
     implementation(kotlin("stdlib"))
     api(project(":lib-core"))
-    api(project(":lib-runtime"))
     api(project(":lib-raytracing"))
-    api(project(":lib-gdx-model"))
+    api(project(":lib-gdx"))
     testImplementation(libs.junit4)
     testImplementation(testFixtures(project(":lib-core")))
-    testImplementation(testFixtures(project(":lib-gdx-model")))
+    testImplementation(testFixtures(project(":lib-gdx")))
     // scene and asset helpers for tests (parseScene, testProject, ...), shared with the plugin's tests
     testFixturesImplementation(kotlin("stdlib"))
 }

@@ -17,6 +17,13 @@ interface RayControl {
     /** The view's current mode; null when this view has no ray tracing at all. */
     val mode: RayModeSnapshot?
 
+    /**
+     * What to tell the user while the scene this view shows has foliage, which the ray-traced image leaves out: the
+     * note text, or null when the shown scene has none. The default says nothing, for controls that do not know the
+     * scene they switch.
+     */
+    val foliageNote: String? get() = null
+
     /** Switches ray tracing on or off for the view, exactly like its toolbar toggle. */
     fun setRequested(enabled: Boolean)
 

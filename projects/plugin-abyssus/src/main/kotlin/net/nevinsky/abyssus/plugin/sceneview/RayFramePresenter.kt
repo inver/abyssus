@@ -115,12 +115,12 @@ internal class RayFramePresenter : Disposable {
 
     private fun upload(frame: RayFrame) {
         val resized = width != frame.width || height != frame.height
-        fun texture(unit: Int, handle: Int, format: Int, channels: Int, values: FloatArray) {
+        fun texture(unit: Int, handle: Int, format: Int, channels: Int, size: Int, fill: (java.nio.FloatBuffer) -> Unit) {
             glActiveTexture(unit)
             glBindTexture(GL_TEXTURE_2D, handle)
-            val buffer = MemoryUtil.memAllocFloat(values.size)
+            val buffer = MemoryUtil.memAllocFloat(size)
             try {
-                buffer.put(values).flip()
+                fill(buffer); buffer.flip()
                 if (resized) {
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
@@ -132,8 +132,8 @@ internal class RayFramePresenter : Disposable {
                 }
             } finally { MemoryUtil.memFree(buffer) }
         }
-        texture(GL_TEXTURE0, color, GL_RGBA32F, GL_RGBA, frame.colorValues())
-        texture(GL_TEXTURE1, depth, GL_R32F, GL_RED, frame.depthValues())
+        texture(GL_TEXTURE0, color, GL_RGBA32F, GL_RGBA, frame.width * frame.height * 4, frame::copyColorTo)
+        texture(GL_TEXTURE1, depth, GL_R32F, GL_RED, frame.width * frame.height, frame::copyDepthTo)
         width = frame.width
         height = frame.height
     }

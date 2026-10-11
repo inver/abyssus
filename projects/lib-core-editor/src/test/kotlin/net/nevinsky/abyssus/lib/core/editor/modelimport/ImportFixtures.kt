@@ -12,7 +12,7 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelNodeKeyframe
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import java.io.File
 import java.nio.file.Files
 

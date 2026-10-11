@@ -1,6 +1,6 @@
 # Control Line
 
-A control-line flight game on Abyssus's `runtime` and `physics`. The plane flies on two lines from the handle the
+A control-line flight game on Abyssus's `lib-core` and `lib-physics`. The plane flies on two lines from the handle the
 pilot holds, and the handle moves only the elevator, through taut lines. Its field, pilot and planes, and every number
 of a plane, are scene data in the bundled native project `project/ControlLine`, authored in Abyssus. Required
 behaviour: `control-line-flight`, `control-line-scoring` and `control-line-game-flow` (OpenSpec change
@@ -13,7 +13,7 @@ behaviour: `control-line-flight`, `control-line-scoring` and `control-line-game-
 ```
 
 The `run` task points the game at the bundled project (system property `controlLine.project`). Scores are kept in
-`~/.abyssus-control-line/scores.json`; a file that cannot be read is renamed to `scores.json.bad`.
+`<user-home>/.abyssus-control-line/scores.json`; a file that cannot be read is renamed to `scores.json.bad`.
 
 ## Controls
 
@@ -28,23 +28,20 @@ combo multiplier (up to x5 for maneuvers within 10 s of each other). A landing w
 
 ## The project in Abyssus
 
-Open a **copy** of `project/ControlLine` in Abyssus (`./gradlew :plugin-abyssus-physics:runIde`), never the committed folder:
-the tests assert on its scene. `PlaneComponent` and `PilotComponent` are edited in the Properties panel once the
-project has `abyssus/components.schema.json` (committed). A plane added by duplicating one in the field scene appears
-on plane select the next time the game starts.
+Open a **copy** of `project/ControlLine` in Abyssus (`./gradlew :plugin-abyssus:runIde`), never the committed folder:
+the tests assert on its scene. `PlaneComponent` and `PilotComponent` are registered game components and currently
+remain read-only JSON in the editor. The committed `abyssus/components.schema.json` is retained data; it does not
+enable Properties editing. A plane duplicated in the field scene appears on plane select at the next game start.
 
-For Play in Abyssus, first run
+`play/ControlLinePlay.kt` provides the game's `PlayModule`: it flies the selected plane (or the first by name),
+handles W / S or Up / Down input and publishes telemetry. The current Gradle file does not define
+`exportAbyssus`, `exportComponentSchema` or `exportPlay`. To launch that module in Abyssus, provide a machine-local
+`<project>/abyssus/play.json` using `PlayExportMain` on the game's runtime classpath, as described in
+[the physics guide](../lib-physics/README.md#play-in-abyssus). Export into the disposable project copy and refresh it
+when the classpath changes. Without that launch file, Abyssus Physics selects its bundled physics-only host.
 
-```
-./gradlew :app-game-control-line:exportAbyssus
-```
-
-It writes the component schema and `abyssus/play.json`. `play.json` holds this machine's absolute classpath, so it is
-git-ignored; export again (into the copy, or copy the file) after the classpath changes. Play flies the plane
-selected in the tree, or the first plane by name, with the game's flight code (`play/ControlLinePlay.kt`); W / S or
-Up / Down tilt the handle, and a flight that ends restarts from takeoff after a second. The score, laps, tension and
-elevator are shown as telemetry. Play gives a module no project folder, so there the ground is taken as flat at
-height 0, which is where the field's flying circle is.
+Play gives a module no project folder, so the game's Play ground is flat at height 0, where the field's flying
+circle is.
 
 ## Crashes
 
@@ -74,6 +71,43 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 | `render`, `screens` | `FieldScene`, `FieldRenderer` (with `shader/terrain.*`), `FieldShadows` (the sun's shadow map), `Cameras`, `GameUi` | yes |
 | `play` | `ControlLinePlay : PlayModule` | no |
 
+### Foliage
+
+The game window is an OpenGL 3.2 core context (`Main.kt` asks for it, and `ControlLineGame.create` gives the legacy GLSL of
+the terrain and model shaders their version line and defines), because foliage is drawn with instanced rendering.
+The sky is drawn with layered clouds (`FieldRenderer`, `GAME_CLOUDS`): the asset's shell clouds, eight noise layers per band at
+the full window size, left the game GPU-bound at about 35 frames a second in that context.
+
+A terrain entity's `FoliageComponent` is drawn by `FieldRenderer` from the committed bake, with no scatter or write.
+`FieldScene.foliages` lists the foliage of the loaded scene (`SceneFoliageListing`; a component on an entity that draws
+no terrain is reported once). Assets load through `lib-core`'s `RuntimeFoliageLoader` (in `BaseCtx` and `fieldAssets`),
+prepared off the GL thread with the shared `FoliageRuntimeLoad` read policy, so a stale bake keeps its saved copies, a
+missing model drops only its copies, and a missing, unsupported or unreadable asset fails and is skipped with one
+warning: `FieldRenderer.loaded` counts a failed foliage as settled, so it never holds the loading state.
+
+Ownership: the asset storage owns each built foliage asset and the shared model data. The renderer makes one
+`FoliageDrawable` per terrain entity from that asset (its prepared copies and the shared models), so two terrains using
+one asset keep their own transforms, instance buffers and culling, whatever the draw order. A placement is rebuilt when
+its asset is, dropped when the asset is bound to another terrain than the entity draws, and disposed before the shared
+assets on scene replacement and on `dispose`.
+
+Passes: the sun's depth pass calls `updateCasters` with the shadow camera's frustum and draws the OBJECT copies it
+keeps, so a tree outside the viewer's frustum still shades visible ground; DETAIL copies (grass) never enter the depth
+pass but receive the shadow through the same shadow attribute and shaders as models. The caster buffers are separate
+from the viewer's, filled by `update(camera, …)` after the light pass, so the light pass never changes what the viewer
+draws. Ray traced views leave foliage out (the game has none). `render/FieldRendererGlTest` and `render/FieldShadowsGlTest`
+check this on a GL context (with `-Dabyssus.glTests=true`); `FieldFoliageTest` checks the listing and the terminal
+failure without a window.
+
+The field's trees and bushes are foliage on the two terrain entities (`foliage_airfield_site`, `foliage_airfield_outer`) with
+grass on the site, made by `tools/FieldFoliage.kt` from the recorded manifest (see `project/environment/README.md`). The
+tool has its own source set (`fieldFoliageTools`, with the editing library on its tool classpath only); the game's
+runtime classpath does not contain it.
+
+Frames are capped at 60 a second (`Main.kt`): left to vsync alone, a 120 Hz screen gets frames of 8, 17 and 25 ms in turn
+and the motion judders. The simulation runs 120 fixed steps a second, so `FlightSession` draws the plane (and moves the
+lines' plane ends and the camera target with it) between its last two simulated poses instead of at the latest one.
+
 Everything runs on the LWJGL3 main thread; only asset preparation uses a worker pool. `./gradlew
 :app-game-control-line:test` runs every rule headless (Jolt natives only, no window). The pilot's entity is the handle's
 kinematic body; the plane is put at takeoff with `PhysicsBody.setPose`.
@@ -85,7 +119,7 @@ kinematic body; the plane is put at takeoff with `PhysicsBody.setPose`.
 - `model_trainer`: FlightGear's Cessna 172R (`c172r`), 3D model by David Megginson, licensed GPL-2.0-or-later
   (`model_trainer/COPYING`; the archive states no licence, so FlightGear's aircraft licence is assumed). It is a
   separately licensed asset, not Apache-2.0. `importers/TrainerModel.kt` (`./gradlew :app-game-control-line:importTrainer`)
-  re-imports it through `core`'s FlightGear import: the archive is checked against its SHA-256, scaled to a 1.0 m span,
+  re-imports it through `lib-core`'s FlightGear import: the archive is checked against its SHA-256, scaled to a 1.0 m span,
   without the cabin interior or the spinning propeller disc, with its origin at the estimated centre of gravity. It
   parks level on its nose wheel (`importers/trainer.patch.json`, applied by `ScenePatchApplicationTest`).
   `importTrainer` then adds three crash clips (`importers/TrainerCrashAnimations.kt`; `animateTrainer` adds them to
@@ -95,17 +129,16 @@ kinematic body; the plane is put at takeoff with `PhysicsBody.setPose`.
   node, and no part goes below the parked wheels' ground. Each clip starts from the rest pose and ends with the wreck
   at rest. The game plays one when a flight crashes into the ground (see "Crashes").
 - `terrain_field`, `texture_grass`, `texture_mown`, `texture_field_splat`: generated by `tools/FieldAssets.kt`
-  (`./gradlew :app-game-control-line:generateField`) with `core`'s terrain generator.
+  (`./gradlew :app-game-control-line:generateField`) with `lib-core`'s terrain generator.
 - `skybox_physical`: copied from the `Untitled` test fixture.
-- The airfield (`*_airfield_*`) reconstructs the real control-line circle in Samara from `project/pics/img.png` and
-  `project/pics/about.txt`. It has a 50 m asphalt pad with rings at the 15, 18 and 21 m line radii, a 300 m
+- The airfield (`*_airfield_*`) reconstructs the real control-line circle in Samara from reference images and site notes (the original reference files are not in this checkout). It has a 50 m asphalt pad with rings at the 15, 18 and 21 m line radii, a 300 m
   splat-mapped site terrain (`terrain_airfield_site`, level within 30 m of the pilot) and a 600 m outer ground. The
   scenery includes the WC and staff building, the preparation area, the street, the DK "Plamya", the blue-roof
   warehouse, the electrified railway, houses, trees and bushes. All of it is CC0: Poly Haven models and ambientCG photo
   textures, or generated from them. Each folder has a `source.json` with its source and licence. Nothing stands within
   28 m of the pilot. Sizes and positions are estimates, not survey data. See
   [the environment notes](project/environment/README.md) to rebuild it.
-- `src/main/resources/uiskin/`: libGDX's sample `uiskin` (`tests/gdx-tests-android/assets/data`, libGDX 1.14.2,
+- `src/main/resources/uiskin/`: libGDX's sample `uiskin` (`libGDX checkout: tests/gdx-tests-android/assets/data`, libGDX 1.14.2,
   Apache-2.0).
 
 ## Tuning

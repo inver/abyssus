@@ -35,6 +35,139 @@ context: |
   - Never open src/test/testData/project/Untitled as the runIde project: edits made there change the fixtures tests
     assert on. Use a copy.
   - GL tests run only with -Dabyssus.glTests=true on a machine with a display.
+  
+  JetBrains IntelliJ Platform plugin best practices:
+    Threading and concurrency:
+      - Never block the EDT. All UI updates and document writes must happen on the EDT.
+        The IntelliJ Platform categorizes threads into two groups: the Event Dispatch Thread (EDT),
+        which handles UI events and writing data, and background threads (BGT), which handle
+        long-running operations. Operations on the EDT must be as fast as possible to avoid
+        freezing the UI.[reference:0]
+
+      - Use coroutine dispatchers for background work. Plugins targeting 2024.1+ should use
+        coroutine dispatchers instead of raw threads for switching between threads.[reference:1]
+
+      - Use Dispatchers.EDT for UI actions. The Dispatchers.EDT dispatcher executes UI actions
+        on the Swing Event Dispatch Thread within the context modality state. In the IntelliJ
+        Platform, Dispatchers.Main differs from Dispatchers.EDT: it is forbidden to initiate
+        read or write actions in Dispatchers.Main. Always prefer Dispatchers.EDT.[reference:2]
+
+      - Use Dispatchers.Default for CPU-bound work. It ensures the number of tasks running in
+        parallel does not exceed the number of CPU cores, enabling consistent CPU load.[reference:3]
+
+      - Use Dispatchers.IO for I/O operations. It must be used at the very deep moment in the
+        trace right before the actual I/O operation happens and exited as soon as the operation
+        is finished.[reference:4]
+
+      - Use read actions for background reads. Read operations from any non-EDT thread must be
+        wrapped in a read action using ApplicationManager.getApplication().runReadAction() or
+        ReadAction.run/compute. You must not access the model outside a read or write action;
+        the corresponding objects are not guaranteed to survive between several consecutive
+        read actions.[reference:5]
+
+      - Use write actions for all model modifications. Writing data is only allowed from the UI
+        thread, and write operations always need to be wrapped in a write action with
+        ApplicationManager.getApplication().runWriteAction() or WriteAction.run/compute.
+        Modifying the model is only allowed from write-safe contexts, which include user actions,
+        invokeLater calls from them, and transactions (TransactionGuard.submitTransaction).[reference:6]
+
+      - Use ApplicationManager.getApplication().invokeLater() instead of
+        SwingUtilities.invokeLater() to return to the EDT. The latter API allows specifying the
+        modality state for the call, i.e., the stack of modal dialogs under which the call is
+        allowed to execute. Passing ModalityState.NON_MODAL means the operation will be executed
+        after all modal dialogs are closed. Passing ModalityState.stateForComponent() means the
+        operation can be executed when the topmost shown dialog is the one that contains the
+        specified component. If no modality state is passed, ModalityState.defaultModalityState()
+        will be used.[reference:7]
+
+      - Use DumbService#smartInvokeLater for UI activities that need to access file-based indexes.
+        This ensures your activity runs after all indexing processes have been completed.[reference:8]
+
+      - For AnAction.getActionUpdateThread(), prefer ActionUpdateThread.BGT for PSI/VFS access
+        and ActionUpdateThread.EDT for Swing access. The preferred method is to run the update on
+        the BGT, which guarantees application-wide read access to PSI, the virtual file system
+        (VFS), or project models. Conversely, actions that specify to run their update on EDT
+        must not access PSI or project data but have access to Swing components and other UI
+        models.[reference:9][reference:10]
+
+      - Never store state in non-static fields of an AnAction instance; it lives for the entire
+        plugin lifetime and will leak.
+
+    UI and Swing:
+      - Use IntelliJ Platform UI components instead of raw Swing components. Plugins should use
+        platform components rather than vanilla Swing equivalents to maintain visual and
+        behavioral consistency with the IDE. The Plugin DevKit | Code | Undesirable class usage
+        inspection highlights cases where a platform replacement component exists for a standard
+        Swing one.[reference:11][reference:12]
+
+      - Run the Plugin DevKit | Code | Undesirable class usage inspection to catch raw Swing usage.
+        This inspection reports usages of undesirable classes (mostly Swing components) and offers
+        a quick-fix replacement with the recommended IntelliJ Platform replacement. It can be
+        found at Settings | Editor | Inspections | Plugin DevKit | Code with ID
+        UndesirableClassUsage.[reference:13]
+
+      - Respect platform layout and sizing guidelines for dialogs and popups.
+
+    API compatibility:
+      - Avoid internal and deprecated APIs. Use only stable, documented APIs from the official
+        SDK. API annotated with @ApiStatus.Internal must not be used by plugins. See Internal API
+        Migration for details and replacements. Usage of Extension Points that are deprecated or
+        annotated with @ApiStatus.Experimental or @ApiStatus.Internal is also highlighted in
+        plugin.xml files.[reference:14][reference:15]
+
+      - Keep Plugin DevKit inspections enabled. Do not ignore their results, as they flag
+        runtime-breaking issues in future IDE versions. The Usage of IntelliJ API not available
+        in older IDEs inspection reports usages of IntelliJ Platform API introduced in a version
+        newer than the one specified in <idea-version> @since-build in plugin.xml. Using such API
+        may lead to incompatibilities of the plugin with older IDE versions.[reference:16]
+
+      - Run Plugin Verifier locally before every release. The IntelliJ Platform Gradle Plugin
+        provides verification tasks including verifyPlugin, verifyPluginProjectConfiguration,
+        verifyPluginStructure, and verifyPluginSignature. The Plugin Verifier checks binary
+        compatibility between IntelliJ-based IDE builds and IntelliJ Platform plugins. Otherwise,
+        Plugin Verifier may yield false positives for unresolved classes and methods.[reference:17][reference:18]
+
+      - Stay current with Notable API Changes and Incompatible API Changes lists to adapt to
+        replacement APIs. For example, in 2024.3, the JSON plugin was extracted, and plugins
+        must add an explicit dependency on com.intellij.modules.json in plugin.xml. If the plugin
+        is built against 2024.3+, also add com.intellij.modules.json to the bundled plugins in the
+        Gradle build script.[reference:19]
+
+      - Always develop against the latest IntelliJ IDEA version (ideally EAP) and upgrade Gradle
+        and IntelliJ Platform Gradle Plugin to the latest available.
+
+    Testing:
+      - Always call super.tearDown() in test teardown inside a finally block to avoid flaky
+        tests. This avoids leaks and side effects from previously run (failed) tests. Example
+        for Kotlin: override fun tearDown() { try { // test specific tear-down calls }
+        catch (e: Throwable) { addSuppressedException(e) } finally { super.tearDown() } }[reference:20]
+
+      - Avoid OS-specific assumptions (e.g., filesystem case-sensitivity, hardcoded separator
+        instead of java.io.File.separator, default encoding, line endings).[reference:21]
+
+      - Use ordered collections or UsefulTestCase.assertUnorderedCollection() when test
+        assertions depend on collection order.[reference:22]
+
+      - Write functional tests covering format parsing, scene loading, and editor actions.
+        Check out the step-by-step tutorial on writing and running automated tests for custom
+        plugins.[reference:23]
+
+      - Use the IntelliJ Platform Test Framework for plugin tests.
+
+    Build and plugin.xml:
+      - Use the IntelliJ Platform Gradle Plugin for project setup. It introduces tasks for
+        building, verifying, testing, and publishing the plugin archive, and intelligently
+        determines which tasks are relevant based on the current state or configuration of your
+        project.[reference:24]
+
+      - Keep plugin.xml descriptor complete and correct. The verifyPluginStructure task
+        validates completeness and contents of plugin.xml descriptors as well as plugin archive
+        structure.[reference:25]
+
+      - Declare explicit dependencies for extracted modules in plugin.xml. For example,
+        com.intellij.modules.json must be declared as a dependency if the plugin uses JSON
+        functionality. All plugins should declare a dependency on com.intellij.modules.platform
+        to indicate dependence on shared functionality.[reference:26][reference:27]
 
 rules:
   proposal:

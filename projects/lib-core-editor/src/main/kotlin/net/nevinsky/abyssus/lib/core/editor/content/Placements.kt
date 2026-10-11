@@ -1,11 +1,12 @@
 package net.nevinsky.abyssus.lib.core.editor.content
 
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.LIGHT_RANGE
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.LIGHT_CONE_ANGLE
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.LIGHT_EDGE_SOFTNESS
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.CAMERA_NEAR
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.CAMERA_FAR
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
+import net.nevinsky.abyssus.lib.core.dto.LIGHT_CONE_ANGLE
+import net.nevinsky.abyssus.lib.core.dto.LIGHT_EDGE_SOFTNESS
+import net.nevinsky.abyssus.lib.core.dto.LIGHT_RANGE
+import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FAR
+import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
+import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_NEAR
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 
 data class Vec3(val x: Float, val y: Float, val z: Float)
 
@@ -30,6 +31,9 @@ data class PlacementTransform(val position: Vec3, val rotation: Quat, val scale:
 
 /** An entity showing the asset folder [assetName]. [entityId] is its key under `ecs/entities`; picking reports it back. */
 data class AssetPlacement(val entityId: String, val assetName: String, val transform: PlacementTransform)
+
+/** A path arrangement entity: its [arrangement] component as the file holds it (read, never changed, by the view). */
+class ArrangementPlacement(val entityId: String, val arrangement: PathArrangementComponent)
 
 enum class LightKind { DIRECTIONAL, POINT, SPOT }
 

@@ -8,8 +8,8 @@ package net.nevinsky.abyssus.lib.core.editor.modelimport
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.gltf.GltfWriteException
-import net.nevinsky.abyssus.lib.core.gltf.GltfWriter
+import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriteException
+import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.io.File
 import java.util.UUID
@@ -72,7 +72,7 @@ class ModelImport(
         val leftOut = (source.leftOut + gathered.leftOut).distinct()
 
         val files = LinkedHashMap<String, ByteArray>()
-        val meta = json.mapper.createObjectNode()
+        val meta = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode()
         meta.put("format", "abyssus").put("formatVersion", 1).put("version", 1).put("lastModified", lastModified)
             .put("uuid", uuid.toString()).put("type", "MODEL")
         meta.putObject("additional").put("file", MODEL_FILE).put("format", "GLTF").put("binary", true)

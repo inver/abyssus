@@ -1,0 +1,66 @@
+# lib-gdx
+
+A libGDX 3D model runtime with **32-bit mesh indices** and an **Assimp importer**. It is a plain JVM library: it has no
+IntelliJ dependency, so any libGDX project can use it.
+
+## Why it exists
+
+libGDX's own `g3d` meshes use 16-bit indices, so one mesh can address at most 65,535 vertices. This module's `Mesh`,
+`IndexData` and `Model` keep `int` indices drawn with `GL_UNSIGNED_INT`. The rest of the classes (`ModelInstance`,
+`Node`, `Renderable`, `ModelBatch`, `AnimationController`, the shaders) follow from that type change.
+`LargeMeshGlTest` and `AssimpLoadingTest.keepsMoreVerticesThanA16BitIndexCanAddress` pin this down with a
+90,000-vertex mesh.
+
+## Contents
+
+- `net.nevinsky.abyssus.lib.gdx`: `Model` / `ModelData` / `ModelInstance`, nodes and animation, `ModelBatch` with keyed
+  shaders (`ShaderProvider.DEFAULT_SHADER_KEY`), and the default and metallic-roughness (`PbrShader`) shaders. Their GLSL
+  is under `resources/shader`.
+- `net.nevinsky.abyssus.lib.gdx.model.PBR*Attribute`: the PBR material attributes. They use the same aliases as gdx-gltf,
+  without depending on it.
+- `net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute`: image based light for an `Environment` (an irradiance
+  cube, a prefiltered specular cube and six axis colors), set in place of `ColorAttribute.AmbientLight`. `PbrShader`
+  then compiles with `environmentLightFlag` and samples both cubes; `DefaultShader` uses the six colors as its ambient
+  cubemap. An environment without it compiles and renders as before. The cubes are any `GLTexture`; building them
+  (from an HDR image) is up to the caller.
+- `net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute`: one packed-depth atlas plus light-identity keyed records.
+  Each record owns copies of its projection matrices and atlas UV rectangles while retaining the light object identity
+  used to match it to environment lights. `ModelDepthShaderProvider` supplies a reusable depth shader for this module's
+  32-bit indexed meshes, posed bone weights and diffuse alpha-test cutouts. Alpha-blended materials do not cast in this
+  first pass. Callers own atlas allocation, tile rendering, render-state restoration and attachment of the attribute to
+  each environment; the legacy `Environment.shadowMap` path remains supported independently.
+  The atlas depth format uses base-255 RGBA8 digits (least significant in R) to match channel quantization. Disable
+  color dithering and sRGB output while writing it and use nearest texture filtering. The receivers interpolate PCF
+  comparisons and correct sample depths using receiver-plane gradients; the atlas's UV rectangles may vary in size.
+- `net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader`:
+  - `loadData` parses a file without a GL context.
+  - `decodeTextures` decodes the textures off the GL thread.
+  - `build` creates the GPU resources with the GL context current.
+- `net.nevinsky.abyssus.lib.gdx.assimp`: the Assimp to `ModelData` pipeline.
+  - `AssimpModelDataLoader(normalize = true)` converts the up axis a file states to Y: FBX metadata, and a DAE file's
+    `<asset>` unit and up axis, which Assimp's Collada importer applies itself. With `normalize = false` the root keeps
+    the file's own transform and the Collada importer is told to ignore `<asset>`: an import that lets the user choose
+    the unit and up axis applies them itself.
+  - `loadScene` also returns the frame the file states (`StatedFrame`: metres per unit and up axis, `null` where the
+    FBX metadata says nothing) and what the `ModelData` leaves out (`LeftOut`: cameras, lights, point and line meshes,
+    morph targets). `ColladaAsset.read` reads a DAE file's stated unit and up axis; `X_UP` is reported as stated.
+- The glTF writer (package `gltf`, beside `assimp`):
+  - `GltfWriter.write(data, images, generator)` writes a `ModelData` as one binary glTF 2.0 (GLB) with libGDX's
+    `JsonWriter`: the node hierarchy with translation, rotation and scale, mesh attributes as accessors, 16- or 32-bit
+    indices, skins with inverse bind matrices, LINEAR animations and metallic-roughness materials. Images are external
+    URIs from `images` (texture file name to URI). The bytes depend only on the input. Invalid data (indices or joints
+    out of range, weights not summing to 1) throws `GltfWriteException`. Morph targets, cameras, lights and extensions
+    are never written.
+  - `PhongToPbr` maps a Phong-style material to metallic-roughness (diffuse to base colour, metallic 0, shininess to
+    roughness, opacity below 1 to `BLEND`) and names what it drops, such as the specular colour.
+
+Procedural mesh building is not included: use libGDX's `ModelBuilder` / `MeshBuilder`.
+
+## Origin
+
+See [origin and license](../../docs/third-party/gdx-model-origin.md) for the inherited sources, original commit and changes.
+
+## Tests
+
+`./gradlew :lib-gdx:test` runs the CPU tests. Add `-Dabyssus.glTests=true` to also run the GL tests, which open a
+small window.

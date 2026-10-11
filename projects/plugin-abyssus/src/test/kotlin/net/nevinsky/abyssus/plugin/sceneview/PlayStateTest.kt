@@ -26,6 +26,36 @@ class PlayStateTest {
     private val file: VirtualFile = LightVirtualFile("Main Scene.scene", "{}")
     private fun request() = SimulationRequest(project, file, "{}", File("."), "0")
 
+    @Test fun unavailableProviderStopsStartupPauseAndPlayingAndDiscardsLateCallbacks() {
+        for (phase in listOf(Phase.STARTING,Phase.PLAYING,Phase.PAUSED)) {
+            val provider = FakeProvider()
+            val play = PlayState(provider)
+            play.play(::request)
+            if (phase != Phase.STARTING) provider.listener!!.started()
+            if (phase == Phase.PAUSED) play.pause()
+            val callback = provider.listener!!
+            play.updateProvider(null)
+            play.updateProvider(null)
+            callback.started()
+            assertEquals(Phase.IDLE,play.phase)
+            assertFalse(play.available)
+            assertNull(play.poses())
+            assertEquals(1,provider.started.single().commands.count { it == "stop" })
+            play.updateProvider(provider)
+            assertTrue(play.available)
+        }
+    }
+
+    @Test fun unchangedThirdPartyProviderKeepsPlaying() {
+        val provider = FakeProvider()
+        val play = PlayState(provider)
+        play.play(::request)
+        provider.listener!!.started()
+        play.updateProvider(provider)
+        assertEquals(Phase.PLAYING,play.phase)
+        assertTrue(provider.started.single().commands.isEmpty())
+    }
+
     private class FakeSimulation : SceneSimulation {
         val commands = mutableListOf<String>()
         var poses: Map<String, Pose>? = mapOf("0" to Pose(Vec3(0f, 1f, 0f), Quat.IDENTITY))

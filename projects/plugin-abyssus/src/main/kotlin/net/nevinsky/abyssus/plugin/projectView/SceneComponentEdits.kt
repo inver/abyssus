@@ -7,6 +7,8 @@ package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.plugin.EditorBundle
+import net.nevinsky.abyssus.plugin.sceneview.ArrangementHeights
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -30,7 +32,7 @@ import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 
 /**
  * Adds, changes and removes components of a scene's entities as undoable commands on the scene file. The rules are
- * [ComponentEditor]'s; nothing is written unless an edit comes back [EditResult.Changed].
+ * [net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor]'s; nothing is written unless an edit comes back [EditResult.Changed].
  */
 object SceneComponentEdits {
     private fun readMeta(folder: VirtualFile, metaFiles: MetaFiles) =
@@ -128,9 +130,20 @@ object SceneComponentEdits {
 
     fun update(
         project: Project, file: VirtualFile, entityId: String, kindName: String, field: String, text: String, metaFiles: MetaFiles,
+    ): EditResult {
+        // a path arrangement regenerates its copies on the ground, which is read before the command starts
+        val heights = if (kindName == "PathArrangementComponent") {
+            ArrangementHeights.of(project).forScene(file) ?: return EditResult.Unchanged
+        } else null
+        return updateWith(project, file, entityId, kindName, field, text, metaFiles, heights)
+    }
+
+    private fun updateWith(
+        project: Project, file: VirtualFile, entityId: String, kindName: String, field: String, text: String, metaFiles: MetaFiles,
+        heights: GroundHeight?,
     ): EditResult =
         run(project, file, AbyssusBundle.message("commandEditComponent")) {
-            editor(project, file).update(it, entityId, kindName, field, text, assetNames(file, metaFiles), assetsByType(file, metaFiles))
+            editor(project, file).update(it, entityId, kindName, field, text, assetNames(file, metaFiles), assetsByType(file, metaFiles), heights)
         }
 
     fun remove(project: Project, file: VirtualFile, entityId: String, kindName: String): EditResult =

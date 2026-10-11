@@ -5,38 +5,48 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import net.nevinsky.abyssus.lib.core.editor.document.renderAssetOf
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.scene.Scene
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.LIGHT_RANGE
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.CAMERA_NEAR
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.CAMERA_FAR
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.CAMERA_FOV
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.LIGHT_CONE_ANGLE
-import net.nevinsky.abyssus.lib.runtime.ecs.EcsUtils.Companion.LIGHT_EDGE_SOFTNESS
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.editor.document.EntityView
 import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
 import org.slf4j.helpers.NOPLogger
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.runtime.opt
-import net.nevinsky.abyssus.lib.runtime.text
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
+import net.nevinsky.abyssus.lib.core.util.opt
+
+/**
+ * A terrain entity's foliage: [foliageName] is the foliage asset folder its `FoliageComponent.assetName` holds as a
+ * string, [terrainName] the terrain asset folder the entity shows, and [transform] the entity's own transform.
+ */
+data class FoliagePlacement(
+    val entityId: String,
+    val foliageName: String,
+    val terrainName: String,
+    val transform: PlacementTransform,
+)
 
 /** What a scene shows besides its environment. */
 data class SceneContent(
     val models: List<AssetPlacement> = emptyList(),
     val terrains: List<AssetPlacement> = emptyList(),
+    /** The foliage of terrain entities whose `FoliageComponent.assetName` is a string. */
+    val foliages: List<FoliagePlacement> = emptyList(),
     val lights: List<LightPlacement> = emptyList(),
     /** The skybox asset folder to draw, or null when the scene has no enabled, named skybox. */
     val skybox: String? = null,
@@ -45,13 +55,15 @@ data class SceneContent(
     val entityPositions: Map<String, Vec3> = emptyMap(),
     /** The ids of entities whose `TypeComponent.type` is `HANDLE` (the direction handles of look-at lights). */
     val handleIds: Set<String> = emptySet(),
+    /** The path arrangements: the lines the view shows handles on when one is selected. */
+    val arrangements: List<ArrangementPlacement> = emptyList(),
 ) {
     /** The id of the direction handle (a `HANDLE` entity) [light] looks at, or null when it looks at none. */
     fun aimHandleOf(light: LightPlacement): String? = light.lookAtId?.takeIf { it in handleIds }
 }
 
 /** What [scene] places, read through the runtime component codecs. */
-fun sceneContentOf(scene: Scene): SceneContent {
+fun sceneContentOf(scene: SceneDto): SceneContent {
     val entities = sceneDocumentFromEcs(scene.ecs, components).entities().mapNotNull { entity ->
         if (entity.components == null) return@mapNotNull null
         runCatchingKeepingCancellation { decode(entity) }.getOrNull()
@@ -67,9 +79,7 @@ fun sceneContentOf(scene: Scene): SceneContent {
 private fun decode(entity: EntityView): DecodedEntity {
     val components = entity.components!!
     val position = components.opt("PositionComponent")
-    val asset = components.opt("RenderComponent")?.opt("renderable")?.opt("asset")
-    val assetType = asset?.text("type")
-    val assetName = asset?.text("assetName")
+    val asset = renderAssetOf(components.opt("RenderComponent"))
     return DecodedEntity(
         entity.id,
         entity.name,
@@ -78,12 +88,18 @@ private fun decode(entity: EntityView): DecodedEntity {
         components.opt("TypeComponent")?.let { read<TypeComponent>(it)?.type },
         components.opt("CameraComponent")?.let { read<CameraComponent>(it) },
         components.opt("LightComponent")?.let { read<LightComponent>(it) },
-        if (assetType != null && assetName != null) DecodedAsset(assetType, assetName) else null,
+        asset?.let { DecodedAsset(it.type, it.name) },
+        foliageAssetName(components),
+        components.opt("PathArrangementComponent")?.let { read<PathArrangementComponent>(it) },
     )
 }
 
+/** The raw `FoliageComponent.assetName` of [components] when it is a string, else null (the component is not coded yet). */
+private fun foliageAssetName(components: JsonNode): String? =
+    components.opt("FoliageComponent")?.get("assetName")?.takeIf { it.isTextual }?.asText()
+
 /** Binds components the way a scene load does, so the view and the Properties panel show the same values. */
-private val components = ComponentReader(JsonProcessor().mapper, { _, _ -> null }, NOPLogger.NOP_LOGGER)
+private val components = ComponentReader(JsonProcessor(NOPLogger.NOP_LOGGER))
 
 /** A component that cannot be bound is left out, so one bad value does not hide the entity. */
 private inline fun <reified C : Component> read(node: JsonNode): C? =

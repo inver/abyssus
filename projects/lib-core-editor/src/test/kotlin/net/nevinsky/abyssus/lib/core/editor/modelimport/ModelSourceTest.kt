@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.modelimport
 
-import net.nevinsky.abyssus.lib.core.assimp.UpAxis
+import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

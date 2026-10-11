@@ -15,7 +15,7 @@ kilograms (default `1`), friction (default `0.2`), restitution (default `0`), li
 
 #### Scenario: Default rigid body
 
-- **WHEN** a rigid body is added to `Model 0` of a copy of `Untitled` with Abyssus Physics installed
+- **WHEN** a rigid body is added to `Model 0` of a copy of `Untitled` with physics turned on for the project
 - **THEN** the entity gains `"RigidBodyComponent": {}` and the panel shows motion type `DYNAMIC` and mass `1`
 
 ### Requirement: Collider component
@@ -58,13 +58,20 @@ minimum, SHALL be simulated with that body or constraint left out and one warnin
 - **WHEN** a scene holds a distance constraint with minimum `2` and maximum `1`
 - **THEN** the simulation runs without that constraint and logs one warning naming the entity and `maxDistance`
 
-### Requirement: Physics components need Abyssus Physics only to edit
+### Requirement: Physics components are edited only with physics on
 
-With Abyssus Physics installed, Abyssus SHALL offer the three physics components in "Add component" and edit them like
-any schema-declared component. Without it, existing physics components SHALL be shown as read-only JSON and kept
-unchanged.
+With physics on for a project, Abyssus SHALL offer the three physics components in "Add component" and edit their fields like
+other modeled components. With physics off, it SHALL NOT offer them, and existing physics components SHALL be
+shown as read-only JSON and kept unchanged.
 
-#### Scenario: Plugin not installed
+#### Scenario: Physics off
 
-- **WHEN** a scene with a `RigidBodyComponent` is opened in an IDE without Abyssus Physics
-- **THEN** the component is shown as read-only JSON and the file is unchanged
+- **WHEN** a scene with a `RigidBodyComponent` is opened in a project whose `.abss` has no `physicsEnabled`
+- **THEN** the component is shown as read-only JSON, "Add component" does not offer physics components, and the file
+  is unchanged
+
+#### Scenario: Turning physics on makes them editable
+
+- **WHEN** physics is turned on for that project while its scene is open
+- **THEN** the `RigidBodyComponent` becomes editable without reopening the scene, and "Add component" offers
+  `RigidBodyComponent`, `ColliderComponent` and `ConstraintComponent`

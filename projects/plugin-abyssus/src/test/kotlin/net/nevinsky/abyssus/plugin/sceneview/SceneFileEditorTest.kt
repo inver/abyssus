@@ -75,6 +75,8 @@ class SceneFileEditorTest : BasePlatformTestCase() {
     private class FakeView(var current: SceneRenderParams) : SceneView {
         val component = javax.swing.JPanel()
         var disposed = false
+        var stops = 0
+        override fun stopPlay() { stops++ }
         var updates = 0
         var selected: String? = null
         override fun selectEntity(entityId: String) { selected = entityId }
@@ -224,6 +226,25 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         } finally {
             com.intellij.openapi.util.Disposer.dispose(editor)
         }
+    }
+
+    fun testPhysicsOnlyProjectEditsDoNotStopOrReloadUnrelatedSimulation() {
+        val abss = myFixture.addFileToProject("Gate/Gate.abss", """{"format":"abyssus","formatVersion":1}""").virtualFile
+        val scene = file("Gate/scenes/a.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""")
+        lateinit var view: FakeView
+        val editor = newSceneEditor(project, scene) { p -> FakeView(p).also { view = it } }
+        try {
+            val settings = project.getService(net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings::class.java)
+            settings.setPhysicsEnabled(abss, true)
+            settings.setPhysicsEnabled(abss, false)
+            editor.afterThePause()
+            assertEquals(0, view.stops)
+            assertEquals(0, view.updates)
+            setText(abss, """{"format":"abyssus","formatVersion":1,"name":"changed"}""")
+            editor.afterThePause()
+            assertTrue(view.stops > 0)
+            assertTrue(view.updates > 0)
+        } finally { com.intellij.openapi.util.Disposer.dispose(editor) }
     }
 
     fun testAbssEditRefreshesCamera() {

@@ -1,0 +1,6 @@
+{
+  "generator": "tools/FieldFoliage.kt",
+  "generatorId": "field-foliage-v1",
+  "license": "CC0-1.0",
+  "note": "Three crossed quads with a procedurally drawn blade texture; no outside material."
+}

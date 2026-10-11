@@ -8,7 +8,7 @@ Lets users save a scene's raytracing quality target, work budget and transport d
 
 ### Requirement: Saved scene raytracing settings
 
-The scene SHALL store optional `rayTracing` fields `targetSamplesPerPixel`, `maxRaysPerFrame`, `maxReflectionBounces`, and `maxRefractionBounces`. Their effective defaults SHALL be 256, 2097152, 1, and 0 respectively. Reopening SHALL restore saved values; selecting a scene SHALL write nothing. Resetting a field to its default SHALL remove that field without removing unknown data.
+The scene SHALL store optional `rayTracing` fields `targetSamplesPerPixel`, `maxRaysPerFrame`, `maxReflectionBounces`, `maxRefractionBounces`, and `maxInstances` (the most model parts and terrains a ray view holds; larger scenes fall back to raster with the reason). Their effective defaults SHALL be 256, 2097152, 1, 0 and 4096 respectively. Reopening SHALL restore saved values; selecting a scene SHALL write nothing. Resetting a field to its default SHALL remove that field without removing unknown data.
 
 #### Scenario: Reopen a configured scene
 - **WHEN** a copy of Untitled's Main Scene is saved with target samples 512, ray budget 1048576, reflection depth 3 and refraction depth 4 and the project reopens
@@ -24,7 +24,7 @@ The scene SHALL store optional `rayTracing` fields `targetSamplesPerPixel`, `max
 
 ### Requirement: Validate scene raytracing limits
 
-Edits SHALL accept integer target samples from 1 through 4096, ray budgets from 1 through 67108864, and each bounce limit from 0 through 16. Invalid edits SHALL retain the saved value and explain the error without writing. Malformed saved settings SHALL be reported and prevent raytracing activation until corrected, while ordinary scene editing remains available.
+Edits SHALL accept integer target samples from 1 through 4096, ray budgets from 1 through 67108864, each bounce limit from 0 through 16, and the instance limit from 1 through 4096. Invalid edits SHALL retain the saved value and explain the error without writing. Malformed saved settings SHALL be reported and prevent raytracing activation until corrected, while ordinary scene editing remains available.
 
 #### Scenario: Invalid panel edit
 - **WHEN** a user enters a fraction, nonnumeric text, or an out-of-range value in any control

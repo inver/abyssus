@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.exrFixture
 import net.nevinsky.abyssus.lib.core.assets.skyShaders
@@ -41,7 +44,7 @@ class HdrSkyLoaderTest {
 
     @Test
     fun preparesTheNamedExr() {
-        val prepared = loader(project()).prepare("sky")!!
+        val prepared = loader(project()).prepare("sky")!!.staged
         assertEquals("sky.exr", prepared.file)
         assertEquals("sky", prepared.name)
         assertEquals(1024, prepared.image.width)

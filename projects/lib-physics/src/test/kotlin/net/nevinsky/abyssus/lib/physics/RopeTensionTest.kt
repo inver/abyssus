@@ -5,13 +5,10 @@
 package net.nevinsky.abyssus.lib.physics
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.testing.failOnWarnings
+import net.nevinsky.abyssus.lib.gdx.testing.failOnWarnings
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.runtime.RuntimeSceneLoader
-import net.nevinsky.abyssus.lib.runtime.SceneContext
+import net.nevinsky.abyssus.lib.core.scene.SceneContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -19,7 +16,7 @@ import org.junit.Test
 class RopeTensionTest {
     /** A 1 kg sphere at (0, 8, 0), and [rope] as its constraint (none when empty). */
     private fun weight(rope: String = ""): SceneContext = requireNotNull(
-        RuntimeSceneLoader(JsonProcessor(), FileLoader(testProject("Physics")), failOnWarnings(), PhysicsComponents()).loadFromText(
+        physicsLoader(testProject("Physics"), failOnWarnings()).loadFromText(
             """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"NameComponent":{"name":"Weight"},
             "PositionComponent":{"localPosition":{"y":8}},"RigidBodyComponent":{},"ColliderComponent":{"shape":"SPHERE","radius":0.2}
             ${if (rope.isEmpty()) "" else ",\"ConstraintComponent\":$rope"}}}}}}""",

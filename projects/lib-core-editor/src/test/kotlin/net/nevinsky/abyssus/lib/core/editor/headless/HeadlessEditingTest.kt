@@ -5,6 +5,12 @@
 
 package net.nevinsky.abyssus.lib.core.editor.headless
 
+import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
+import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
+import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
 import net.nevinsky.abyssus.lib.core.format.FormatProblem
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
@@ -76,5 +82,20 @@ class HeadlessEditingTest {
         assertEquals(listOf("\"x\": 1,"), changedLines(sceneText, edited.text))
         val refused = editing.setComponentField(sceneText, "0", "PositionComponent", "localPosition.x", "abc") as HeadlessEdit.Refused
         assertEquals(ResourceEditorMessages().message("componentNotANumber", "Position localPosition.x", "abc"), refused.refusal.message)
+    }
+
+
+    @Test fun movingAnArrangedCopyWritesTheSameTextAsTheSceneViewDoes() {
+        val root = SceneJson().parse(sceneText)
+        val points = listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f))
+        ArrangementEdits(ResourceEditorMessages()).create(root, RenderAsset("MODEL", "tree"), points, false, LineHeights())
+        val arranged = SceneJson().pretty(root)
+        val edit = TransformEdit(position = Vec3(20f, 0f, 4f))
+        val headless = (editing.transform(arranged, "14", edit) as HeadlessEdit.Edited).text
+        val plugin = DocumentTextEditor().edit(arranged, DocumentKind.SCENE) { SceneTransformWriter().apply(it, "14", edit) }
+        assertEquals((plugin as TextEditOutcome.Edited).text, headless)
+        val after = SceneJson().parse(headless)
+        assertNull(after["ecs"]["14"]["components"]["ParentComponent"])
+        assertEquals(listOf(12, 13, -1, 15, 16), after["ecs"]["11"]["components"]["PathArrangementComponent"]["slots"].map { it.asInt() })
     }
 }

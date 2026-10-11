@@ -11,19 +11,30 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageBake
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLoader
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMatrices
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.core.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.app.game.controlline.render.FieldScene
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.slf4j.helpers.NOPLogger
 import java.io.File
+import kotlin.math.abs
 import kotlin.math.hypot
 
 /** The bundled airfield environment (`control-line-field-environment`): its assets, and the clear flying area. */
@@ -49,7 +60,7 @@ class AirfieldEnvironmentTest {
 
     @Test
     fun everyAirfieldAssetIsNativeAndRecordsItsSource() {
-        val json = JsonProcessor()
+        val json = JsonProcessor(NOPLogger.NOP_LOGGER)
         val format = AbyssusDocumentFormat()
         for (folder in assets.listFiles()!!.filter { it.name.contains("_airfield_") }) {
             assertNull(folder.name, format.validate(json.readObject(File(folder, "meta.json").readText()), DocumentKind.ASSET))
@@ -78,6 +89,82 @@ class AirfieldEnvironmentTest {
             scenery++
         }
         assertTrue("no scenery in the field", scenery > 0)
+    }
+
+    /** The foliage assets of the field's terrains with their baked copies, by terrain entity id. */
+    private class Placed(val entity: Int, val foliage: String, val terrain: TerrainData, val origin: Vector3, val bake: FoliageBake, val meta: FoliageMeta)
+
+    private fun placedFoliage(): List<Placed> {
+        val field = FieldScene(loadField())
+        val files = FileLoader(bundledProject().toFile())
+        val metas = AssetMetaLoader(JsonProcessor(NOPLogger.NOP_LOGGER), files)
+        val terrains = TerrainLoader(files, metas)
+        return field.foliages.map { entry ->
+            val prepared = checkNotNull(FoliageLoader(files, metas, terrains).prepare(entry.foliage)?.staged) { "${entry.foliage} cannot be read" }
+            assertFalse("${entry.foliage}: its bake does not match its inputs", prepared.stale)
+            Placed(
+                entry.entityId.toInt(), entry.foliage, checkNotNull(prepared.terrain), field.position(entry.entity).localPosition.cpy(),
+                checkNotNull(prepared.bake), prepared.meta,
+            )
+        }
+    }
+
+    @Test
+    fun theTreesAndBushesAreFoliageOnTheTwoTerrains() {
+        val field = FieldScene(loadField())
+        val species = listOf("tree_broadleaf", "tree_young", "tree_acacia", "bush_tall", "bush_low").map { "model_airfield_$it" }
+        assertEquals("no tree or bush entities remain", emptyList<String>(), field.models.map { it.second }.filter { it in species })
+        assertEquals(listOf(0L to "foliage_airfield_site", 300L to "foliage_airfield_outer"), field.foliages.map { it.entityId to it.foliage })
+        assertEquals(listOf("terrain_airfield_site", "terrain_airfield_outer"), field.foliages.map { it.terrain })
+        assertTrue(field.foliageWarnings.isEmpty())
+    }
+
+    @Test
+    fun everySpeciesKeepsItsRecordedCountWithinAQuarter() {
+        val manifest = JsonProcessor(NOPLogger.NOP_LOGGER).readObject(bundledProject().parent.resolve("environment/foliage-manifest.json").toFile().readText())
+        val placed = placedFoliage()
+        for (row in manifest["species"]) {
+            val model = row["model"].asText()
+            var total = 0
+            for (p in placed) {
+                val target = row["perTerrain"][p.entity.toString()].asInt()
+                val layer = p.meta.layers.firstOrNull { it.models.single().asset == model }
+                val count = layer?.let { l -> p.bake.layers.first { it.id == l.id }.copyCount } ?: 0
+                assertTrue("$model on ${p.foliage}: $count against $target", abs(count - target) <= 0.25 * target)
+                total += count
+            }
+            val recorded = row["total"].asInt()
+            assertTrue("$model: $total against $recorded", abs(total - recorded) <= 0.25 * recorded)
+        }
+    }
+
+    @Test
+    fun foliageKeepsTheClearAreasAndHasNoColliders() {
+        val placed = placedFoliage()
+        val boxes = HashMap<String, BoundingBox>()
+        val site = placed.first()
+        val matrices = FoliageMatrices()
+        for (p in placed) {
+            for (layer in p.meta.layers) {
+                assertNull("${p.foliage} layer ${layer.id} has a collider: the scenery adds none", layer.collider)
+                val model = layer.models.single().asset
+                val box = boxes.getOrPut(model) { bounds(File(assets, "$model/model.glb")) }
+                val clear = if (model == "model_airfield_grass") 25f else CLEAR_RADIUS
+                val entity = Matrix4().setToTranslation(p.origin)
+                val baked = p.bake.layers.first { it.id == layer.id }
+                for (copy in baked.chunks.flatten()) {
+                    val world = matrices.copy(p.terrain, layer.alignToNormal, entity, copy, Matrix4()) ?: continue
+                    val footprint = corners(box).map { Vector3(it).mul(world) }.map { Vector2(it.x, it.z) }
+                    val distance = distanceFromOrigin(footprint)
+                    assertTrue("$model copy at ${copy.x}, ${copy.z} on ${p.foliage} is ${"%.1f".format(distance)} m from the pilot", distance >= clear)
+                    if (p !== site) {
+                        val x = p.origin.x + copy.x
+                        val z = p.origin.z + copy.z
+                        assertTrue("an outer copy under the site at $x, $z", x < site.origin.x || x > site.origin.x + site.terrain.size || z < site.origin.z || z > site.origin.z + site.terrain.size)
+                    }
+                }
+            }
+        }
     }
 
     @Test

@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -16,7 +18,7 @@ import org.junit.Test
 
 /** The `additional` block of a procedural sky `meta.json`, bound on its own. */
 class AtmosphereParamsTest {
-    private val json = JsonProcessor()
+    private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
 
     private fun parse(additional: String) = json.parse(additional, ProceduralSkyMeta::class.java)
 

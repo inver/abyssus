@@ -5,6 +5,7 @@
 package net.nevinsky.abyssus.lib.raytracing
 
 import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.sqrt
 
 private const val MAX_CUTOUT_LAYERS = 8
@@ -78,17 +79,32 @@ internal class RaySceneReferenceRenderer(private val onIntersection: () -> Unit 
             }
             return last
         }
+        // How much of light number `lightIndex` the clouds let through at `position`: the twin of sunVisibility() in the kernels.
+        val sun=scene.sunVisibility?.takeIf { v -> scene.lights.any { it.id==v.lightId } }
+        val sunTexels=sun?.visibility()
+        val sunMatrix=sun?.worldToMap()
+        fun sunVisibility(lightIndex:Int,position:RayVec3):Float {
+            if(sun==null || sunTexels==null || sunMatrix==null || scene.lights.indexOfFirst { it.id==sun.lightId }!=lightIndex) return 1f
+            val u=sunMatrix[0]*position.x+sunMatrix[1]*position.y+sunMatrix[2]*position.z+sunMatrix[3]
+            val v=sunMatrix[4]*position.x+sunMatrix[5]*position.y+sunMatrix[6]*position.z+sunMatrix[7]
+            val inside=(minOf(minOf(u,1f-u),minOf(v,1f-v))/maxOf(sun.edgeFade,1e-4f)).coerceIn(0f,1f)
+            val px=u.coerceIn(0f,1f)*sun.size-.5f;val py=v.coerceIn(0f,1f)*sun.size-.5f
+            val x0=floor(px).toInt();val y0=floor(py).toInt();val fx=px-x0;val fy=py-y0
+            fun texel(x:Int,y:Int)=sunTexels[y.coerceIn(0,sun.size-1)*sun.size+x.coerceIn(0,sun.size-1)]
+            val map=(texel(x0,y0)*(1-fx)+texel(x0+1,y0)*fx)*(1-fy)+(texel(x0,y0+1)*(1-fx)+texel(x0+1,y0+1)*fx)*fy
+            return sun.outside+(map-sun.outside)*inside
+        }
         fun shade(s:Surface,view:RayVec3,environment:RayColor?):RayColor {
             val ambient=reference.ambientAt(scene.environment,s.normal)
             var value=reference.ambient(s.evaluated,s.base,ambient,environment ?: ambient,s.normal.dot(view))*s.occlusion+s.emissive
-            for(light in scene.lights) {
+            for((lightIndex,light) in scene.lights.withIndex()) {
                 val delta=light.position-s.position
                 val L=if(light.kind==RayLightKind.DIRECTIONAL) light.direction.unit()*-1f else delta.unit()
                 val distance=if(light.kind==RayLightKind.DIRECTIONAL) 10000f else sqrt(delta.dot(delta))
                 val attenuation=reference.attenuation(light,s.position)
                 if(attenuation<=0f && light.kind!=RayLightKind.DIRECTIONAL) continue
                 val blocked=light.castsShadow && s.normal.dot(L)>0f && traceMasked(s.position+s.normal*.001f,L,.001f,maxOf(distance-.002f,.001f))!=null
-                if(!blocked) value+=reference.direct(s.evaluated,s.base,s.normal,view,L,light.color*attenuation)
+                if(!blocked) value+=reference.direct(s.evaluated,s.base,s.normal,view,L,light.color*(attenuation*sunVisibility(lightIndex,s.position)))
             }
             return value
         }

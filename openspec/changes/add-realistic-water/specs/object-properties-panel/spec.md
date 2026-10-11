@@ -4,7 +4,7 @@
 
 ### Requirement: Panel follows the asset selection
 
-The panel SHALL show the Meta of the asset selected in the Abyssus view and SHALL update when the selection changes. For a selected entity or one of its components it SHALL show that entity's components or that component's fields instead (see "Entity and component properties"). A selected water surface SHALL show editable water properties (see "Water properties").
+The panel SHALL show the Meta of the asset selected in the Abyssus view and SHALL update when the selection changes. For a selected entity or one of its components it SHALL show that entity's components or that component's fields instead (see "Entity and component properties"). For a selected project file it SHALL show the project's properties instead (see "Project properties"). A selected water surface SHALL show editable water properties (see "Water properties").
 
 #### Scenario: Select an asset
 - **WHEN** the user selects an asset row in the Abyssus view
@@ -15,8 +15,12 @@ The panel SHALL show the Meta of the asset selected in the Abyssus view and SHAL
 - **THEN** the panel shows `Nothing selected.` and a hint to select a skybox, model or terrain under Assets to see its `meta.json`
 
 #### Scenario: Selection is not an asset
-- **WHEN** the selected node is not an asset, an entity, a component or a water surface (a scene, the project file or a setting)
+- **WHEN** the selected node is not an asset, an entity, a component, a project file or a water surface (for example, a setting)
 - **THEN** the panel shows `Nothing to show: <name> is <what it is>.` and the same hint
+
+#### Scenario: Scene selection retains its properties
+- **WHEN** the user selects a scene node in the Abyssus view
+- **THEN** the panel keeps showing the scene's existing properties, including its ray tracing preferences
 
 ## ADDED Requirements
 

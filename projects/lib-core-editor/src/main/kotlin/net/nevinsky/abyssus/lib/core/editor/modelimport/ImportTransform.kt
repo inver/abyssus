@@ -11,10 +11,10 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
-import net.nevinsky.abyssus.lib.core.assimp.UpAxis
-import net.nevinsky.abyssus.lib.core.model.ModelData
-import net.nevinsky.abyssus.lib.core.model.ModelMesh
-import net.nevinsky.abyssus.lib.core.model.ModelMeshPart
+import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
+import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
 
 /** The id of the node an import wraps the source roots in. */
 const val IMPORT_ROOT = "import_root"

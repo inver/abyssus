@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.modelimport
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.assimp.AssimpImporter
+import net.nevinsky.abyssus.lib.gdx.assimp.AssimpImporter
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.lwjgl.assimp.Assimp

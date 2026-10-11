@@ -45,4 +45,19 @@ class SunDirectionTest {
     fun unusableLightFallsBackToDefault() {
         assertEquals(SunDirection.DEFAULT, SunDirection.of(listOf(light(LightKind.DIRECTIONAL, 1f, Vec3(0f, 0f, 0f)))))
     }
+
+    @Test
+    fun sunLightIsTheLightTheSkySunFollows() {
+        val lights = listOf(
+            LightPlacement("7", LightKind.DIRECTIONAL, white, 5f, Vec3(0f, 0f, 0f), Vec3(0f, -1f, 0f)),
+            LightPlacement("3", LightKind.DIRECTIONAL, white, 1f, Vec3(0f, 0f, 0f), Vec3(1f, 0f, 0f)),
+            LightPlacement("9", LightKind.DIRECTIONAL, white, 50f, Vec3(0f, 0f, 0f), Vec3(0f, 0f, 0f)),
+            LightPlacement("8", LightKind.SPOT, white, 90f, Vec3(0f, 0f, 0f), Vec3(0f, -1f, 0f)),
+        )
+        val sun = SunDirection.sunLight(lights)!!
+        assertEquals("7", sun.entityId)
+        val d = sun.direction
+        assertEquals(SunDirection.of(lights), Vec3(0f - d.x, 0f - d.y, 0f - d.z))
+        assertEquals(null, SunDirection.sunLight(emptyList()))
+    }
 }

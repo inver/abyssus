@@ -7,9 +7,9 @@ package net.nevinsky.abyssus.lib.core.editor.scene
 
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import com.badlogic.gdx.math.collision.BoundingBox
-import net.nevinsky.abyssus.lib.core.AnimationController
-import net.nevinsky.abyssus.lib.core.ModelInstance
-import net.nevinsky.abyssus.lib.core.model.Model
+import net.nevinsky.abyssus.lib.gdx.AnimationController
+import net.nevinsky.abyssus.lib.gdx.ModelInstance
+import net.nevinsky.abyssus.lib.gdx.model.Model
 
 /** One drawn entity: its own instance, its animation (null for a static model) and what it was built from. */
 class ModelEntity(

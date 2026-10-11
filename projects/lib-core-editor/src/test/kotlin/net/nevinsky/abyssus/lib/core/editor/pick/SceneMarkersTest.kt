@@ -6,6 +6,9 @@
 package net.nevinsky.abyssus.lib.core.editor.pick
 
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 
@@ -93,5 +96,38 @@ class SceneMarkersTest {
         assertTrue(SceneMarkers().boundsOf(c, "1") != null)
         assertTrue(SceneMarkers().boundsOf(c, "2") != null)
         assertNull(SceneMarkers().boundsOf(c, "3"))
+    }
+
+    @Test
+    fun aPathDrawsItsLineAndACrossWithAPostForEachCopy() {
+        val out = Recorder()
+        val path = arrangementAlong(listOf(Vec3(0f, 1f, 0f), Vec3(20f, 1f, 0f)))
+        SceneMarkers().drawPath(out, path, GroundHeight { _, _, _ -> 5f }, handles = false)
+        // the line, then three copies (X 0, 10 and 20) of three lines each
+        assertEquals(10, out.lines.size)
+        assertEquals(Vec3(0f, 1f, 0f) to Vec3(20f, 1f, 0f), out.lines[0])
+        val posts = out.lines.filter { (a, b) -> a.x == b.x && a.z == b.z }
+        assertEquals(listOf(0f, 10f, 20f), posts.map { it.first.x })
+        assertTrue(posts.all { (a, b) -> a.y == 5f && b.y > 5f })
+    }
+
+    @Test
+    fun aClosedPathDrawsTheClosingSegment() {
+        val out = Recorder()
+        val path = arrangementAlong(listOf(Vec3(0f, 0f, 0f), Vec3(20f, 0f, 0f), Vec3(20f, 0f, 20f)), closed = true)
+        SceneMarkers().drawPath(out, path, LineHeights(), handles = false)
+        assertEquals(Vec3(20f, 0f, 20f) to Vec3(0f, 0f, 0f), out.lines[2])
+    }
+
+    @Test
+    fun handlesAddADiamondOnEachPointAndAMiddleOne() {
+        val plain = Recorder().also {
+            SceneMarkers().drawPath(it, arrangementAlong(listOf(Vec3(0f, 0f, 0f), Vec3(20f, 0f, 0f))), LineHeights(), handles = false)
+        }
+        val withHandles = Recorder().also {
+            SceneMarkers().drawPath(it, arrangementAlong(listOf(Vec3(0f, 0f, 0f), Vec3(20f, 0f, 0f))), LineHeights(), handles = true)
+        }
+        // an octahedron has twelve edges: two points and one middle
+        assertEquals(3 * 12, withHandles.lines.size - plain.lines.size)
     }
 }

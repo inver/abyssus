@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.modelimport
 
-import net.nevinsky.abyssus.lib.core.assimp.UpAxis
+import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import java.util.Locale
 import kotlin.math.abs
 

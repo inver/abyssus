@@ -6,6 +6,8 @@
 package net.nevinsky.abyssus.lib.core.editor.pick
 
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
@@ -15,6 +17,7 @@ import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
+import com.badlogic.gdx.math.collision.Ray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -46,11 +49,25 @@ class SnapshotSceneQueriesTest {
     private fun placement(id: String, x: Float, y: Float, z: Float) =
         AssetPlacement(id, "model", PlacementTransform(Vec3(x, y, z), Quat.IDENTITY, Vec3(1f, 1f, 1f)))
 
+    /** Looks down from above the origin terrain (local x 0..100, z 0..100, height 0), so the centre ray lands on it. */
+    private fun descending() = PerspectiveCamera(67f, width.toFloat(), height.toFloat()).also {
+        it.position.set(50f, 10f, 50f)
+        it.lookAt(50f, 0f, 60f)
+        it.near = 0.1f
+        it.far = 100f
+        it.update()
+    }
+
     private class Fixture(val state: SceneViewState, val queries: SnapshotSceneQueries)
 
-    private fun fixture(boxes: List<SnapshotBox>, content: SceneContent = SceneContent(), terrains: List<TerrainTarget> = emptyList()): Fixture {
+    private fun fixture(
+        boxes: List<SnapshotBox>,
+        content: SceneContent = SceneContent(),
+        terrains: List<TerrainTarget> = emptyList(),
+        at: PerspectiveCamera = camera(),
+    ): Fixture {
         val state = SceneViewState()
-        val frame = FrameSnapshot(copyOfCamera(camera()), boxes, terrains, 7L)
+        val frame = FrameSnapshot(copyOfCamera(at), boxes, terrains, 7L)
         return Fixture(state, SnapshotSceneQueries({ frame }, state) { content })
     }
 
@@ -129,5 +146,35 @@ class SnapshotSceneQueriesTest {
         f.state.selectedId = null
         assertNull(f.queries.gizmoHandles(height))
         assertTrue(f.queries.drawnVersion == 7L)
+    }
+
+    @Test
+    fun paintingRequiresTheSelectedTerrainToBeTheNearestTerrainAlongTheRay() {
+        val data = TerrainData(3, FloatArray(9), 100, 1f)
+        val f = fixture(
+            boxes = listOf(snapshotBoxOf("model", unit, at(50f, 7f, 50f))),
+            terrains = listOf(TerrainTarget("lower", data, Matrix4()), TerrainTarget("upper", data, at(0f, 5f, 0f))),
+            at = descending(),
+        )
+        val ray = Ray(Vector3(50f, 20f, 50f), Vector3(0f, -1f, 0f))
+        assertNull("another terrain covers the selected lower terrain", f.queries.terrainHit("lower", ray))
+        val hit = f.queries.terrainHit("upper", ray)
+        assertNotNull("model boxes do not block painting the visible terrain", hit)
+        assertEquals(5f, hit!!.y, 1e-5f)
+    }
+
+    @Test
+    fun aRayThroughAFoliageCopyPicksTheTerrainItGrowsOn() {
+        // The copies stand in the foliage bake of their terrain: they are drawn, but they are never pick targets.
+        val content = SceneContent(
+            terrains = listOf(AssetPlacement("1", "terrain", PlacementTransform.IDENTITY)),
+            foliages = listOf(FoliagePlacement("1", "foliage_meadow", "terrain", PlacementTransform.IDENTITY)),
+        )
+        val terrain = listOf(TerrainTarget("1", TerrainData(3, FloatArray(9), 100, 1f), Matrix4()))
+        val f = fixture(emptyList(), content, terrain, descending())
+        assertEquals("the click passes the copies and picks the terrain they grow on", "1",
+            f.queries.pick(width / 2, height / 2, width, height))
+        assertEquals("foliage adds no BoxTarget", emptyList<String>(),
+            SceneMarkers().targets(content).map { it.entityId })
     }
 }

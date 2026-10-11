@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.runtime.text
+import net.nevinsky.abyssus.lib.core.util.text
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 
 /** One parsed `meta.json`: its [type], its raw [json] tree, and the typed binding on request. */

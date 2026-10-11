@@ -1,15 +1,16 @@
-# physics
+# lib-physics
 
 Plain JVM physics for native scenes, through [Jolt](https://github.com/jrouwe/JoltPhysics) and its JVM binding
 jolt-jni 6.1.1 (`com.github.stephengold`, MIT). No IntelliJ or plugin imports. It is constructor-wired, with no
-`object` or `companion object`, and `checkNoSingletons` runs as part of `check`. Depends on `runtime` and jolt-jni.
+`object` or `companion object`, and `checkNoSingletons` runs as part of `check`. Depends on `lib-core` and jolt-jni.
 
 Jolt's natives load only in a game or the play host, never in the IDE. Only `jolt/` imports Jolt. Component classes
 and the play protocol do not.
 
 ## Components
 
-Declared with `@SceneComponent` / `@Field` (see `projects/lib-runtime/README.md`) and registered by `PhysicsComponents`.
+Plain Ashley component classes. Register the `PHYSICS_COMPONENTS` map with `core.ecs.ComponentRegistry.registerAll`
+before loading. The IDE currently keeps these components read-only; schema annotations and export are absent.
 
 | Component | Fields (default) |
 |---|---|
@@ -18,18 +19,33 @@ Declared with `@SceneComponent` / `@Field` (see `projects/lib-runtime/README.md`
 | `ConstraintComponent` | `kind` (`DISTANCE`; `HINGE`, `FIXED`), `other` (entity, `-1` = a fixed point in the world), `anchor` / `otherAnchor` (local points; `otherAnchor` is a world point without another entity), `minDistance` (`0`), `maxDistance` (`1`), `hingeAxis` (`0, 1, 0`) |
 
 A distance constraint with minimum `0` is a rope. A convex hull is built from the vertex positions of the entity's
-model, and a height field from its terrain's `terrain.data`. Both are read by `PhysicsAssets` through `core` and
-`gdx-model`, with no GL.
+model, and a height field from its terrain's `terrain.data`. Both are read by `PhysicsAssets` through `lib-core` and
+`lib-gdx`, with no GL.
 
 ## The world
 
-`PhysicsWorld(engine, PhysicsAssets(projectDir, json), log, JoltNatives())`:
+`PhysicsWorld(engine, PhysicsAssets(projectDir, log), log, JoltNatives())`:
 
 - **Build:** one body per entity with a collider: dynamic, kinematic or static as its rigid body says, static without
   one. A rigid body without a collider is left out with one warning. Each entity's pose comes from its
   `PositionComponent`. Boxes, hulls and height fields scale non-uniformly; spheres and capsules take the largest axis
   of the scale, with one warning. Parents are ignored, with one warning per entity that has one. Then one constraint
   per `ConstraintComponent`.
+- **Foliage:** a terrain entity's `FoliageComponent` adds static collision for the OBJECT layers of its foliage asset that
+  declare a `collider` (`FoliageCollider` in `lib-core`): one compound body per nonempty chunk of the committed bake, one
+  BOX, SPHERE or CAPSULE sub-shape per copy. The bake is read as written through `PhysicsAssets.foliage` (the shared
+  `FoliageRuntimeLoad` policy a renderer uses, so both see the same copies; nothing is generated or written, and a stale
+  bake keeps its saved copies). Each copy's pose is `FoliageMatrices` (entity transform, terrain height, lean, yaw, scale)
+  with the collider offset carried by the full matrix; `FoliageColliderTransforms` refuses a sheared, reflected or
+  singular copy before any native call, and a sphere or capsule on a non-uniform scale takes the largest axis, with a
+  warning. A layer is admitted whole in entity id then layer order: at most 200,000 colliding copies in all and only the
+  bodies the world's 10,240 leave after the ordinary ones (the world capacities are unchanged); a layer over either
+  limit, a layer Jolt refuses (rolled back, the next one still built), a DETAIL layer with a collider, an invalid
+  collider and an owner that is not static each get one warning and no collision. Contacts with a chunk are reported
+  against the terrain entity, even when it has no ordinary body. Removing the owner, a failed layer and `close()` release
+  the bodies and the compound shapes exactly once; removing a layer wakes dynamic bodies, since Jolt does not wake a
+  sleeping body whose support went away. Foliage is built when the world is, so a later change to the owner's pose or to
+  the bake is not seen.
 - **Bad input** is refused before it reaches Jolt, with one warning naming the entity and the field, and the rest of
   the scene is simulated. This covers a value that is not finite, a size not greater than `0`, a hull from fewer than
   4 points not in one plane, a terrain without heights, and a maximum distance below the minimum.
@@ -55,28 +71,27 @@ change the velocity, so the value is an estimate. Tests hold a hanging 1 kg weig
 
 ## Play in Abyssus
 
-Abyssus Physics runs Play in a separate process, `PlayHostMain`. `PlayHost` loads the scene text it is sent, builds a
+Abyssus runs Play in a separate process, `PlayHostMain`. `PlayHost` loads the scene text it is sent, builds a
 `PhysicsWorld` and runs at 120 Hz. Each frame it runs the game's systems, then `advance`. It sends poses at most 60
 times a second, over a loopback socket that speaks the play protocol (`play/PlayProtocol.kt`, version
 `PLAY_PROTOCOL` = 1). The host exits on `bye` or when the socket closes.
 
 A game names what Play runs with a `PlayModule`. The module provides its components (without the physics ones), the
 systems to run before each advance, input handling, telemetry and extra debug lines. `PlayExportMain` writes
-`<project>/abyssus/play.json` (`{protocol, module, classpath}`, stable bytes) next to the component schema, with the
-classpath it runs on made absolute. A game wires both exports as Gradle tasks:
+`<project>/abyssus/play.json` (`{protocol, module, classpath}`, stable bytes), with the classpath it runs on made
+absolute. A game can add this Gradle task (Control Line currently has no export task):
 
 ```kotlin
 tasks.register<JavaExec>("exportPlay") {
     classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("net.nevinsky.abyssus.physics.play.PlayExportMain")
+    mainClass.set("net.nevinsky.abyssus.lib.physics.play.PlayExportMain")
     args("com.example.game.GamePlayModule", rootProject.file("assets-project").absolutePath)
 }
-tasks.register("exportAbyssus") { dependsOn("exportComponentSchema", "exportPlay") }
 ```
 
-The runtime classpath must hold `physics` and the jolt-jni natives for the platforms the game is played on.
-Without `play.json`, Abyssus Physics runs its bundled play host with `PhysicsOnlyPlayModule`, which runs physics
-alone and reports each rope's tension. Export again whenever the classpath changes. A `play.json` naming a jar that
+The runtime classpath must hold `lib-physics` and the jolt-jni natives for the platforms the game is played on.
+Without `<project>/abyssus/play.json`, Abyssus runs its bundled play host with `PhysicsOnlyPlayModule`, which runs physics
+alone and reports each rope's tension. Export again whenever the classpath changes. A launch file naming a jar that
 no longer exists stops Play with that message.
 
 ## Natives

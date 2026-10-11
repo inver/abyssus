@@ -24,8 +24,8 @@ import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import net.nevinsky.abyssus.lib.core.assets.displayMessage
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.assimp.UpAxis
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.core.editor.modelimport.LengthUnit
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.projectView.preview.ModelPreviewCanvas

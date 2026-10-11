@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.assimp.UpAxis
+import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.core.editor.modelimport.AnimationInfo
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ApproximatedItem
 import net.nevinsky.abyssus.lib.core.editor.modelimport.FitSize

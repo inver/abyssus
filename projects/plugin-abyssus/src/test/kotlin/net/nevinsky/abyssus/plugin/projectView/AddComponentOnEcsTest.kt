@@ -89,7 +89,7 @@ class AddComponentOnEcsTest : BasePlatformTestCase() {
         val render = choices().filterIsInstance<ActionGroup>().single { it.templatePresentation.text == "Render" }
         val tree = render.getChildren(null).first { it.templatePresentation.text == "model tree" }
         tree.actionPerformed(TestActionEvent.createTestEvent(tree))
-        val asset = root()["ecs"]["9"]["components"]["RenderComponent"]["renderable"]["asset"]
+        val asset = root()["ecs"]["9"]["components"]["RenderComponent"]
         assertEquals("tree", asset["assetName"].asText())
         assertEquals("MODEL", asset["type"].asText())
     }

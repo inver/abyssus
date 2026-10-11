@@ -11,8 +11,8 @@ import net.nevinsky.abyssus.lib.physics.ColliderComponent
 import net.nevinsky.abyssus.lib.physics.ColliderShape
 import net.nevinsky.abyssus.lib.physics.MotionType
 import net.nevinsky.abyssus.lib.physics.RigidBodyComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

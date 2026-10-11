@@ -8,6 +8,8 @@ package net.nevinsky.abyssus.plugin.sceneview
 import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import com.intellij.openapi.Disposable
 import javax.swing.JComponent
@@ -27,6 +29,30 @@ interface SceneView : Disposable {
      * (key under `ecs/entities`) and the change. Returns whether it was written to the scene.
      */
     var onTransform: ((String, TransformEdit) -> Boolean)?
+
+    /**
+     * Called on the AWT thread when a drawing is finished: the model, the points on the terrain and whether the line is
+     * closed. Returns whether the arrangement was written.
+     */
+    var onArrangementCreate: ((RenderAsset, List<Vec3>, Boolean) -> Boolean)?
+        get() = null
+        set(_) {}
+
+    /** Called when a path point was dragged, inserted or removed, with the arrangement's id and its new points. Returns whether it was written. */
+    var onArrangementEdit: ((String, List<Vec3>) -> Boolean)?
+        get() = null
+        set(_) {}
+
+    /** Called when the user asks to regenerate the arrangement with this id. */
+    var onRegenerate: ((String) -> Unit)?
+        get() = null
+        set(_) {}
+
+    /** Puts the view in drawing mode for a new path arrangement of the model [asset]. */
+    fun startDrawing(asset: RenderAsset) {}
+
+    /** The ground under the scene as the view drew it, or null before the first frame or when the view has none. */
+    fun groundHeights(): GroundHeight? = null
 
     /** Selects an entity after creation or a selection in the Abyssus tree. */
     fun selectEntity(entityId: String) {}

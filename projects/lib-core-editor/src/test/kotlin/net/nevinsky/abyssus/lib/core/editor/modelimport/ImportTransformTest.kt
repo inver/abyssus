@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.modelimport
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.assimp.UpAxis
+import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue

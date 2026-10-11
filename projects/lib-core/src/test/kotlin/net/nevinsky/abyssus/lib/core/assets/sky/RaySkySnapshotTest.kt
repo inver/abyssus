@@ -13,6 +13,8 @@ import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.exrFixture
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotStore
+import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
+import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader

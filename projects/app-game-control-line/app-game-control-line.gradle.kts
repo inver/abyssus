@@ -36,7 +36,7 @@ dependencies {
     runtimeOnly("com.github.stephengold:jolt-jni-$joltJniBuildPlatform:${libs.versions.jolt.get()}:ReleaseSp")
     testImplementation(libs.junit4)
     testImplementation(testFixtures(project(":lib-core")))
-    testImplementation(testFixtures(project(":lib-gdx-model")))
+    testImplementation(testFixtures(project(":lib-gdx")))
 }
 
 val gameProject = layout.projectDirectory.dir("project/ControlLine")
@@ -59,23 +59,11 @@ tasks.test {
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
 }
 
-// The component schema and play.json Abyssus reads (see physics/README.md and runtime/README.md). play.json holds
-// absolute paths, so it is git-ignored.
-val exportComponentSchema by tasks.registering(JavaExec::class) {
-    classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("net.nevinsky.abyssus.lib.runtime.schema.SchemaExportMain")
-    args("net.nevinsky.abyssus.app.game.controlline.components.ControlLineComponents", gameProject.asFile.absolutePath)
-}
-val exportPlay by tasks.registering(JavaExec::class) {
-    classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("net.nevinsky.abyssus.lib.physics.play.PlayExportMain")
-    args("net.nevinsky.abyssus.app.game.controlline.play.ControlLinePlay", gameProject.asFile.absolutePath)
-}
-tasks.register("exportAbyssus") { dependsOn(exportComponentSchema, exportPlay) }
-
 // Generators of the bundled project's assets (tools/): their output is committed, so the game needs none of them.
 val tools by sourceSets.creating {
     kotlin.srcDir("tools")
+    // FieldFoliage.kt has its own source set (it needs the editing library): the older tools compile without it
+    kotlin.exclude("FieldFoliage.kt")
     compileClasspath += sourceSets["main"].runtimeClasspath
     runtimeClasspath += sourceSets["main"].runtimeClasspath
 }
@@ -125,12 +113,70 @@ tasks.register<JavaExec>("generateField") {
     args(gameProject.asFile.absolutePath)
 }
 
+// The field foliage migration (tools/FieldFoliage.kt): a source set of its own that compiles just that file, with the
+// editing library on its tool classpath only. The game's runtime classpath never sees lib-core-editor or the tool.
+val fieldFoliageTools by sourceSets.creating {
+    kotlin.srcDir("tools")
+    kotlin.include("FieldFoliage.kt")
+    compileClasspath += sourceSets["main"].runtimeClasspath
+    runtimeClasspath += sourceSets["main"].runtimeClasspath
+}
+dependencies {
+    "fieldFoliageToolsImplementation"(kotlin("stdlib"))
+    "fieldFoliageToolsImplementation"(project(":lib-core-editor"))
+}
+val fieldFoliageProject = providers.gradleProperty("fieldFoliageProject")
+val fieldFoliageManifest = gameProject.dir("../environment").file("foliage-manifest.json").asFile.absolutePath
+
+tasks.register<JavaExec>("generateFieldFoliage") {
+    group = "control line"
+    description = "Migrates the field's trees and bushes to foliage assets and adds grass, editing the project given as " +
+        "-PfieldFoliageProject=<folder> in place from environment/foliage-manifest.json."
+    classpath = fieldFoliageTools.runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.app.game.controlline.tools.FieldFoliage")
+    val folder = fieldFoliageProject
+    val manifest = fieldFoliageManifest
+    argumentProviders.add(CommandLineArgumentProvider {
+        listOf("generate", folder.orNull ?: throw GradleException("Pass the project folder: -PfieldFoliageProject=<folder> (a copy first)"), manifest)
+    })
+}
+tasks.register<JavaExec>("recordFieldFoliage") {
+    group = "control line"
+    description = "Records environment/foliage-manifest.json from the trees and bushes of the original scene of " +
+        "-PfieldFoliageProject=<folder>; refuses to replace a manifest that records something else."
+    classpath = fieldFoliageTools.runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.app.game.controlline.tools.FieldFoliage")
+    val folder = fieldFoliageProject
+    val manifest = fieldFoliageManifest
+    argumentProviders.add(CommandLineArgumentProvider {
+        listOf("record", folder.orNull ?: throw GradleException("Pass the project folder: -PfieldFoliageProject=<folder> (a copy first)"), manifest)
+    })
+}
+// Tests of the migration, kept out of the game's test source set so the game's classpath stays free of the editing library
+val fieldFoliageToolsTest by sourceSets.creating {
+    kotlin.srcDir("toolsTest")
+    compileClasspath += fieldFoliageTools.output + fieldFoliageTools.runtimeClasspath
+    runtimeClasspath += output + compileClasspath
+}
+dependencies {
+    "fieldFoliageToolsTestImplementation"(libs.junit4)
+    "fieldFoliageToolsTestImplementation"(testFixtures(project(":lib-gdx")))
+}
+tasks.register<Test>("testFieldFoliageTools") {
+    group = "verification"
+    description = "Runs the field foliage migration tests."
+    testClassesDirs = fieldFoliageToolsTest.output.classesDirs
+    classpath = fieldFoliageToolsTest.runtimeClasspath
+    systemProperty("controlLine.project", gameProject.asFile.absolutePath)
+}
+tasks.named("check") { dependsOn("testFieldFoliageTools") }
+
 // tools/ and importers/ are asset generators run by hand, not game code: keep them out of coverage, so `check`
 // does not compile them
 kover {
     currentProject {
         sources {
-            excludedSourceSets.addAll("tools", "importers")
+            excludedSourceSets.addAll("tools", "importers", "fieldFoliageTools", "fieldFoliageToolsTest")
         }
     }
 }
