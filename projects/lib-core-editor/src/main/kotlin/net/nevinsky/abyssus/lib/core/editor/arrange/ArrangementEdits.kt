@@ -215,7 +215,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         )
         components.set<JsonNode>("TypeComponent", writer.writeComponent(TypeComponent(TypeComponent.Type.OBJECT)))
         val position = PositionComponent(slot.x, heights.heightAt(slot.x, slot.z, slot.fallbackY), slot.z)
-        position.localRotation.set(Quaternion().setFromAxis(0f, 1f, 0f, slot.yawDegrees))
+        position.localRotation.set(yawQuaternion(slot.yawDegrees))
         components.set<JsonNode>("PositionComponent", writer.writeComponent(position))
         components.set<JsonNode>(
             "RenderComponent",
@@ -233,12 +233,18 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         }
         val y = heights.heightAt(slot.x, slot.z, slot.fallbackY)
         setFields(placement, "localPosition", listOf(Field("x", slot.x, 0f), Field("y", y, 0f), Field("z", slot.z, 0f)))
-        val q = Quaternion().setFromAxis(0f, 1f, 0f, slot.yawDegrees)
+        val q = yawQuaternion(slot.yawDegrees)
         setFields(placement, "localRotation", listOf(Field("x", q.x, 0f), Field("y", q.y, 0f), Field("z", q.z, 0f), Field("w", q.w, 1f)))
         val render = components.get("RenderComponent") as? ObjectNode ?: return
         val target = if (render.has("assetName")) render else (render.get("renderable")?.get("asset") as? ObjectNode) ?: return
         if (target.get("assetName")?.asText() != asset.assetName) target.put("assetName", asset.assetName)
         if (target.get("type")?.asText() != asset.type.name) target.put("type", asset.type.name)
+    }
+
+    /** The turn about Y by [degrees] with `w` not negative; libGDX returns the negated, equal rotation for negative angles. */
+    private fun yawQuaternion(degrees: Float): Quaternion {
+        val q = Quaternion().setFromAxis(0f, 1f, 0f, degrees)
+        return if (q.w < 0f) q.set(-q.x, -q.y, -q.z, -q.w) else q
     }
 
     private class Field(val key: String, val value: Float, val default: Float)
