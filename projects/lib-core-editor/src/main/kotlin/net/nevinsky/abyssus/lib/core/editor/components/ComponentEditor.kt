@@ -9,7 +9,15 @@ import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.editor.arrange.ARRANGEMENT_COMPONENT
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.arrange.MAX_ARRANGEMENT_SLOTS
+import net.nevinsky.abyssus.lib.core.editor.arrange.PathLayout
 import net.nevinsky.abyssus.lib.core.editor.components.BuiltInComponentKinds
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
@@ -44,6 +52,7 @@ class ComponentEditor(
         this(json, EcsWriter(json), messages, contributions)
 
     private val reader = ComponentReader(jsonProcessor)
+    private val arrangements = ArrangementEdits(messages)
     val kinds: List<ComponentKind<*>> = BuiltInComponentKinds(reader, ecsWriter).kinds + contributions
 
     private val byName = kinds.flatMap { listOf(it.name to it, it.codec.type.name to it) }.toMap()
@@ -57,7 +66,9 @@ class ComponentEditor(
     /** The modeled kinds [entityId] lacks, in the order the view lists them; empty when the entity is missing. */
     fun missingKinds(root: JsonNode, entityId: String): List<ComponentKind<*>> {
         val components = componentsOf(root, entityId) ?: return emptyList()
-        return kinds.filter { kind -> components.fieldNames().asSequence().none { byName[it] === kind } }
+        return kinds.filter { kind ->
+            kind.name != ARRANGEMENT_COMPONENT && components.fieldNames().asSequence().none { byName[it] === kind }
+        }
     }
 
     /** The fields of the component [kindName] of [entityId] with their values, or null when it is not there. */
@@ -136,7 +147,11 @@ class ComponentEditor(
         return EditResult.Changed
     }
 
-    /** Sets [field] of the component [kindName] of [entityId] to [text]; only the keys that differ are rewritten. */
+    /**
+     * Sets [field] of the component [kindName] of [entityId] to [text]; only the keys that differ are rewritten. A change
+     * to a path arrangement regenerates its copies in the same edit, standing on [heights] (the line's own height
+     * without it); a change to the `PositionComponent` of an arranged copy detaches the copy.
+     */
     fun update(
         root: JsonNode,
         entityId: String,
@@ -145,16 +160,17 @@ class ComponentEditor(
         text: String,
         assets: Set<String>? = null,
         assetsByType: Map<String, Set<String>>? = null,
+        heights: GroundHeight? = null,
     ): EditResult {
         val components = componentsOf(root, entityId) ?: return rejected("componentEntityMissing", entityId)
         val kind = byName[kindName] ?: return rejected("componentKindUnknown", kindName)
         val node = components.get(kindName) ?: return rejected("componentMissing", entityId, kind.label)
-        return updateIn(root, components, node, entityId, kind, field, text, Assets(assets, assetsByType))
+        return updateIn(root, components, node, entityId, kind, field, text, Assets(assets, assetsByType), heights ?: LineHeights())
     }
 
     private fun <C : Component> updateIn(
         root: JsonNode, components: ObjectNode, node: JsonNode, entityId: String, kind: ComponentKind<C>,
-        fieldName: String, text: String, assets: Assets,
+        fieldName: String, text: String, assets: Assets, heights: GroundHeight,
     ): EditResult {
         val field = kind.fields.firstOrNull { it.name == fieldName } ?: return rejected(
             "componentFieldUnknown",
@@ -165,15 +181,24 @@ class ComponentEditor(
         checkValue(root, entityId, kind, field, text, assets)?.let { return it }
         val before = field.get(component)
         val base = kind.codec.write(component)
+        val previous = if (kind.name == ARRANGEMENT_COMPONENT) kind.codec.read(node) else null
         field.set(component, text)
         if (field.get(component) == before) return EditResult.Unchanged
-        val target = node as? ObjectNode ?: return EditResult.Changed.also {
-            components.set<JsonNode>(
-                kind.name,
-                kind.codec.write(component)
-            )
+        if (component is PathArrangementComponent && PathLayout().slots(component) == null) {
+            return reject("arrangementTooMany", MAX_ARRANGEMENT_SLOTS.toString())
         }
-        applyDiff(target, base, kind.codec.write(component), jsonProcessor.componentValues(component))
+        val target = node as? ObjectNode
+        val backup = target?.deepCopy()
+        if (target == null) components.set<JsonNode>(kind.name, kind.codec.write(component))
+        else applyDiff(target, base, kind.codec.write(component), jsonProcessor.componentValues(component))
+        if (previous is PathArrangementComponent) {
+            val regenerated = arrangements.regenerate(root, entityId, previous, heights)
+            if (regenerated is ArrangementResult.Rejected) {
+                if (target != null && backup != null) target.removeAll().setAll<ObjectNode>(backup)
+                return EditResult.Rejected(regenerated.reason)
+            }
+        }
+        if (kind.name == "PositionComponent") arrangements.detach(root, entityId)
         return EditResult.Changed
     }
 

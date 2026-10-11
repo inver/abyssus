@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
 
@@ -212,5 +216,43 @@ class SceneTransformWriterTest {
     fun aCameraMoveWritesBothPositionsAndNothingElse() {
         val expected = original().replace(""""x":-23.56657""", """"x":-20.5""")
         assertEquals(expected, written("4", TransformEdit(position = Vec3(-20.5f, 12.318308f, -0.84287655f))))
+    }
+
+
+    /** Main Scene with a line of trees: arrangement 11 and copies 12 to 16. */
+    private fun arranged(): JsonNode {
+        val root = SceneJson().parse(text)
+        val points = listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f))
+        ArrangementEdits(ResourceEditorMessages()).create(root, RenderAsset("MODEL", "tree"), points, false, LineHeights())
+        return root
+    }
+
+    private fun slots(root: JsonNode) = components(root, "11")["PathArrangementComponent"]["slots"].map { it.asInt() }
+
+    @Test
+    fun movingAnArrangedCopyDetachesIt() {
+        val root = arranged()
+        assertTrue(SceneTransformWriter().apply(root, "14", TransformEdit(position = Vec3(20f, 0f, 4f))))
+        assertNull(components(root, "14")["ParentComponent"])
+        assertEquals(4f, components(root, "14")["PositionComponent"]["localPosition"]["z"].floatValue(), 0f)
+        assertEquals(listOf(12, 13, -1, 15, 16), slots(root))
+    }
+
+    @Test
+    fun turningAnArrangedCopyDetachesIt() {
+        val root = arranged()
+        assertTrue(SceneTransformWriter().apply(root, "13", TransformEdit(rotation = Quat(0f, 1f, 0f, 0f))))
+        assertNull(components(root, "13")["ParentComponent"])
+        assertEquals(listOf(12, -1, 14, 15, 16), slots(root))
+    }
+
+    @Test
+    fun anEditThatChangesNothingKeepsTheCopyLinked() {
+        val root = arranged()
+        val position = components(root, "14")["PositionComponent"]["localPosition"]
+        val same = Vec3(position.path("x").floatValue(), position.path("y").floatValue(), position.path("z").floatValue())
+        assertFalse(SceneTransformWriter().apply(root, "14", TransformEdit(position = same)))
+        assertEquals(11, components(root, "14")["ParentComponent"]["parentEntityId"].asInt())
+        assertEquals(listOf(12, 13, 14, 15, 16), slots(root))
     }
 }

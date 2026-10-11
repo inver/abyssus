@@ -77,6 +77,8 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
                 canAddLight = { host.canAddLight(file) },
                 assetActions = { position -> host.assetActions(file, position) },
                 canAddAsset = { host.canAddAsset(file) },
+                pathActions = { start -> host.pathActions(file, start) },
+                canAddPath = { host.canAddPath(file) },
                 ray = ray,
                 play = play,
                 simulationRequest = { selection -> simulationRequest(project, file, selection) },

@@ -85,6 +85,10 @@ one warning. `SceneLoader` keeps the scene's `ecs` block as `NativeJsonTree` rea
 `SceneFoliageListing(warn).list(engine)` lists terrain entities with a nonempty foliage name; a foliage component on an
 entity that renders no terrain is reported once.
 
+`PathArrangementComponent` (`points`, `closed`, `asset`, `spacing`, `offset`, `sides`, `alignToPath`, `yawOffset`,
+`slots`) is built in and data only: no system reads it. Its points and the copies it lists in `slots` are in world
+coordinates. Defaults are omitted when it is written.
+
 `EcsLoader(json, registry).loadToEngine(ecs, SceneEngine())` reads `ecs.entities` and returns `EcsLoadingWarns`,
 including raw components that could not bind. `RuntimeSceneLoader(sceneLoader, ecsLoader, log)` combines native
 scene admission, an independent engine per load, and look-at/camera systems. `load(sceneName)` reads a file from

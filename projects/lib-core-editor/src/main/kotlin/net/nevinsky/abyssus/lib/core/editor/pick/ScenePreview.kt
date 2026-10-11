@@ -103,5 +103,6 @@ class ScenePreview {
     fun isCamera(content: SceneContent, entityId: String): Boolean = content.cameras.any { it.entityId == entityId }
 
     /** Whether the scene still has [entityId] as something the view can select. */
-    fun contains(content: SceneContent, entityId: String): Boolean = selected(content, entityId) != null
+    fun contains(content: SceneContent, entityId: String): Boolean =
+        selected(content, entityId) != null || content.arrangements.any { it.entityId == entityId }
 }

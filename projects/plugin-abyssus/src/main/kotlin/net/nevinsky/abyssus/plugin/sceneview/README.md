@@ -127,6 +127,20 @@ The toolbar's Add Asset button (`add-asset`) works the same way through `AddAsse
 `assetActions` and `canAddAsset` (readable scene and a project with models or terrains), and the panel supplies the
 orbit target. A view built without `assetActions` has no such button.
 
+## Path arrangements
+
+The toolbar's Add Path Arrangement button (`add-path-arrangement`) lists the project's models through
+`AddPathArrangementGroup` (`SceneFileEditor` supplies `pathActions` and `canAddPath` through `SceneViewHost`). Choosing one
+calls `SceneView.startDrawing`, which puts `SceneInteraction` in drawing mode (a hint shows in the toolbar). The renderer
+draws the line with a handle on each point and a cross with a post at every copy's ground height (`SceneMarkers.drawPath`);
+no model is drawn in the preview. A selected arrangement shows the same with a handle in the middle of each segment;
+unselected ones show a bare line a click can select (a model in front of it wins over the line, the line over the terrain).
+
+Finishing writes through `SceneFileEditor.createArrangement`, a point drag, insert or Remove Point through `editArrangement`,
+and the Regenerate button (shown while an arrangement is selected) through `regenerateArrangement`. The ground comes from
+`SceneView.groundHeights()` (the last drawn frame's terrains, answers kept per terrain data) and, when the view has no
+frame yet, from `ArrangementHeights`. Remove Point is on the right-click menu of a point handle and is disabled at two points.
+
 ## Spotlight illumination
 
 `LightSet` retains each light's entity id and separates directional, point and spot sources. It selects at most two

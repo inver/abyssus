@@ -173,6 +173,15 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 - **On release:** `SceneFileEditor.applyTransform` calls `editSceneJson` with
   `SceneTransformWriter().apply`, which writes only the changed `localPosition` / `localRotation`, plus the camera's
   `position` / `viewPointPosition`. The document change triggers the re-read above.
+- **Path arrangements:** Add Path Arrangement (tree scene row and toolbar, `AddPathArrangementGroup`) puts the view in
+  drawing mode: `SceneViewState.drawing` holds the model and the points, and `SceneInteraction` adds a point where a
+  left click hits a terrain (`SceneQueries.groundHit`), closes on the first point, finishes on Enter or a double click,
+  drops the last point on Backspace and cancels on Esc. A selected arrangement shows `PathHandles`: dragging a point or
+  a middle handle is a `DraggingPathPoint` gesture whose points are shown through `SceneViewState.pathEdit` until the
+  release calls `SceneFileEditor.editArrangement`. Both write through `editSceneJson` with `ArrangementEdits`
+  (`lib-core-editor`, `editor.arrange`), one undoable command each. The copies' heights come from `GroundHeight`: the
+  open view's `GroundHeights` over its drawn terrains, else `ArrangementHeights` (plugin `sceneview`), which reads the scene's
+  terrains with `TerrainLoader` under a modal progress and keeps them until their files change.
 - **Undo:** `SceneFileEditor` is a `DocumentReferenceProvider`, so Undo in the scene view tab reaches these edits.
 - **Look-through:** the camera selector in the toolbar renders from a camera entity instead of the orbit camera.
   Orbit, pan and zoom pause while it is active.

@@ -80,6 +80,14 @@ on the JSON tree. It is written as one undoable Add Asset command and selected w
 Add Light uses too. Disabled for unreadable scene text, a scene outside a project, or a project without models and
 terrains.
 
+## Add Path Arrangement and Regenerate
+
+`AddPathArrangementAction` (scene rows) shares `AddPathArrangementGroup` with the Scene view toolbar: the project's MODEL
+assets by folder name. A choice opens the scene's Scene view in drawing mode (`startDrawingIn`). It is disabled for
+unreadable scene text, a scene outside a project, or a project without models. `RegenerateArrangementAction` appears on
+the row of an entity with a `PathArrangementComponent` and re-places its copies from the current terrain
+(`ArrangementEditing.regenerate`); it writes nothing when no copy would move.
+
 ## New Weather Preset from Sky
 
 `NewWeatherPresetAction` appears only on a supported procedural sky asset row with a nonblank textual

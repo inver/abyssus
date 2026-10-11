@@ -55,4 +55,10 @@ class SceneViewState {
      * Selecting another entity (or nothing) ends it.
      */
     var paint: FoliagePaintMode? = null
+
+    /** The path arrangement being drawn (the model and the points clicked so far), or null; the left click adds points. */
+    var drawing: PathDrawing? = null
+
+    /** The points of an arrangement while a handle is dragged or just dropped, shown over the file's; null otherwise. */
+    var pathEdit: PathEdit? = null
 }

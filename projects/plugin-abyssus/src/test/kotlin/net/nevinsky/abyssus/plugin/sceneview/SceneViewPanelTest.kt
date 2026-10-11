@@ -88,6 +88,70 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         } finally { panel.dispose() }
     }
 
+    /** A copy of the Untitled project on disk, whose Main Scene the arrangement tests write to. */
+    private fun untitled(): com.intellij.openapi.vfs.VirtualFile {
+        val dir = com.intellij.openapi.util.io.FileUtil.createTempDirectory("abyssus-panel-path", null)
+        com.intellij.openapi.util.io.FileUtil.copyDir(java.io.File("src/test/testData/project/Untitled"), dir)
+        return com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByIoFile(java.io.File(dir, "scenes/Main Scene.scene"))!!
+    }
+
+    fun testToolbarOffersTheProjectsModelsAndStartsDrawing() {
+        val file = untitled()
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer(),
+            pathActions = { start -> net.nevinsky.abyssus.plugin.projectView.AddPathArrangementGroup(project, file, start) },
+            canAddPath = { net.nevinsky.abyssus.plugin.projectView.canAddPathArrangement(file, net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)) })
+        try {
+            val button = named(panel, "add-path-arrangement") as JButton
+            assertTrue(button.isEnabled)
+            val hint = named(panel, "path-drawing-hint") as javax.swing.JLabel
+            assertFalse(hint.isVisible)
+            val tree = panel.pathChoices()!!.getChildren(null).first { it.templatePresentation.text == "tree" }
+            tree.actionPerformed(TestActionEvent.createTestEvent(tree))
+            assertTrue("drawing mode shows its hint", hint.isVisible)
+        } finally { panel.dispose() }
+    }
+
+    fun testWithoutPathActionsThereIsNoPathButton() {
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer())
+        try {
+            assertNull(named(panel, "add-path-arrangement"))
+        } finally { panel.dispose() }
+    }
+
+    fun testAFinishedDrawingWritesOneUndoableCommandAndSelectsTheArrangement() {
+        val file = untitled()
+        myFixture.openFileInEditor(file)
+        val document = FileDocumentManager.getInstance().getDocument(file)!!
+        val renderer = testRenderer()
+        lateinit var panel: SceneViewPanel
+        val editor = newSceneEditor(project, file) { params -> SceneViewPanel(params, renderer).also { panel = it } }
+        try {
+            val before = document.text
+            val points = listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f))
+            assertTrue(panel.onArrangementCreate!!(net.nevinsky.abyssus.lib.core.editor.content.RenderAsset("MODEL", "tree"), points, false))
+            val ecs = SceneJson().parse(document.text)["ecs"]
+            assertEquals("Path 11", ecs["11"]["components"]["NameComponent"]["name"].asText())
+            assertEquals(5, ecs["11"]["components"]["PathArrangementComponent"]["slots"].size())
+            assertEquals("11", renderer.state.selectedId)
+            com.intellij.openapi.command.undo.UndoManager.getInstance(project)
+                .undo(com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor))
+            assertEquals(before, document.text)
+        } finally { editor.dispose() }
+    }
+
+    fun testADraggedPointIsWrittenWithTheRegeneratedCopies() {
+        val file = untitled()
+        val renderer = testRenderer()
+        lateinit var panel: SceneViewPanel
+        val editor = newSceneEditor(project, file) { params -> SceneViewPanel(params, renderer).also { panel = it } }
+        try {
+            panel.onArrangementCreate!!(net.nevinsky.abyssus.lib.core.editor.content.RenderAsset("MODEL", "tree"), listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f)), false)
+            assertTrue(panel.onArrangementEdit!!("11", listOf(Vec3(0f, 0f, 0f), Vec3(60f, 0f, 0f))))
+            val slots = SceneJson().parse(FileDocumentManager.getInstance().getDocument(file)!!.text)["ecs"]["11"]["components"]["PathArrangementComponent"]["slots"]
+            assertEquals(7, slots.size())
+        } finally { editor.dispose() }
+    }
+
     fun testWithoutAssetActionsThereIsNoAddAssetButton() {
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer())
         try {

@@ -10,6 +10,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
@@ -18,6 +19,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.dto.LightDto
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 
@@ -39,6 +41,8 @@ class DecodedEntity(
     val asset: DecodedAsset?,
     /** The string `FoliageComponent.assetName` the entity carries, or null when it carries none. */
     val foliage: String? = null,
+    /** The entity's path arrangement, or null. */
+    val arrangement: PathArrangementComponent? = null,
 )
 
 /**
@@ -52,6 +56,7 @@ class PlacementMapper {
         val foliages = mutableListOf<FoliagePlacement>()
         val lights = mutableListOf<LightPlacement>()
         val cameras = mutableListOf<CameraPlacement>()
+        val arrangements = mutableListOf<ArrangementPlacement>()
         val positions = linkedMapOf<String, Vec3>()
         val handleIds = mutableSetOf<String>()
         for (entity in entities) {
@@ -59,6 +64,7 @@ class PlacementMapper {
             if (entity.position != null) positions[entity.id] = transform.position
             if (entity.type == TypeComponent.Type.HANDLE) handleIds += entity.id
             val asset = entity.asset
+            entity.arrangement?.let { arrangements += ArrangementPlacement(entity.id, it) }
             when {
                 asset != null && asset.type == "MODEL" -> models += AssetPlacement(entity.id, asset.name, transform)
                 asset != null && asset.type == "TERRAIN" -> {
@@ -84,6 +90,7 @@ class PlacementMapper {
             cameras = cameras,
             entityPositions = positions,
             handleIds = handleIds,
+            arrangements = arrangements,
         )
     }
 

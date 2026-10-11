@@ -96,6 +96,12 @@
         <action id="Abyssus.AddAsset" class="net.nevinsky.abyssus.plugin.projectView.AddAssetAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddLight"/>
         </action>
+        <action id="Abyssus.AddPathArrangement" class="net.nevinsky.abyssus.plugin.projectView.AddPathArrangementAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddAsset"/>
+        </action>
+        <action id="Abyssus.RegenerateArrangement" class="net.nevinsky.abyssus.plugin.projectView.RegenerateArrangementAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddPathArrangement"/>
+        </action>
         <action id="Abyssus.AddFoliage" class="net.nevinsky.abyssus.plugin.projectView.AddFoliageAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddAsset"/>
         </action>

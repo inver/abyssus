@@ -979,732 +979,6 @@
           }
         }
       },
-      "321": {
-        "components": {
-          "NameComponent": {
-            "name": "Railway 1"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -275.124,
-              "y": -1.05,
-              "z": 38.488
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_railway"
-          }
-        }
-      },
-      "322": {
-        "components": {
-          "NameComponent": {
-            "name": "Railway 2"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -225.372,
-              "y": -1.05,
-              "z": 43.463
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_railway"
-          }
-        }
-      },
-      "323": {
-        "components": {
-          "NameComponent": {
-            "name": "Railway 3"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -175.62,
-              "y": -1.05,
-              "z": 48.438
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_railway"
-          }
-        }
-      },
-      "324": {
-        "components": {
-          "NameComponent": {
-            "name": "Railway 4"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -125.868,
-              "y": -0.8,
-              "z": 53.413
-            },
-            "localRotation": {
-              "x": -0.000249,
-              "y": -0.049813,
-              "z": 0.004994,
-              "w": 0.998746
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_railway"
-          }
-        }
-      },
-      "325": {
-        "components": {
-          "NameComponent": {
-            "name": "Railway 5"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -76.117,
-              "y": -0.55,
-              "z": 58.388
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_railway"
-          }
-        }
-      },
-      "326": {
-        "components": {
-          "NameComponent": {
-            "name": "Railway 6"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -26.365,
-              "y": -0.55,
-              "z": 63.364
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_railway"
-          }
-        }
-      },
-      "327": {
-        "components": {
-          "NameComponent": {
-            "name": "Railway 7"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 23.387,
-              "y": -0.55,
-              "z": 68.339
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_railway"
-          }
-        }
-      },
-      "328": {
-        "components": {
-          "NameComponent": {
-            "name": "Railway 8"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 73.139,
-              "y": -0.55,
-              "z": 73.314
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_railway"
-          }
-        }
-      },
-      "329": {
-        "components": {
-          "NameComponent": {
-            "name": "Railway 9"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 122.891,
-              "y": -0.749,
-              "z": 78.289
-            },
-            "localRotation": {
-              "x": 0.000198,
-              "y": -0.049813,
-              "z": -0.00398,
-              "w": 0.998751
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_railway"
-          }
-        }
-      },
-      "330": {
-        "components": {
-          "NameComponent": {
-            "name": "Railway 10"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 172.643,
-              "y": -0.999,
-              "z": 83.264
-            },
-            "localRotation": {
-              "x": 5.1e-05,
-              "y": -0.049814,
-              "z": -0.001014,
-              "w": 0.998758
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_railway"
-          }
-        }
-      },
-      "331": {
-        "components": {
-          "NameComponent": {
-            "name": "Railway 11"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 222.395,
-              "y": -1.05,
-              "z": 88.239
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_railway"
-          }
-        }
-      },
-      "332": {
-        "components": {
-          "NameComponent": {
-            "name": "Railway 12"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 272.146,
-              "y": -1.05,
-              "z": 93.215
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_railway"
-          }
-        }
-      },
-      "333": {
-        "components": {
-          "NameComponent": {
-            "name": "Street lamp 1"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -148.215,
-              "y": -0.999,
-              "z": -58.643
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.014995,
-              "z": 0.0,
-              "w": 0.999888
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_street_lamp"
-          }
-        }
-      },
-      "334": {
-        "components": {
-          "NameComponent": {
-            "name": "Street lamp 2"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -114.231,
-              "y": 0.142,
-              "z": -57.624
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.014995,
-              "z": 0.0,
-              "w": 0.999888
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_street_lamp"
-          }
-        }
-      },
-      "335": {
-        "components": {
-          "NameComponent": {
-            "name": "Street lamp 3"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -80.246,
-              "y": -0.002,
-              "z": -56.604
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.014995,
-              "z": 0.0,
-              "w": 0.999888
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_street_lamp"
-          }
-        }
-      },
-      "336": {
-        "components": {
-          "NameComponent": {
-            "name": "Street lamp 4"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -47.021,
-              "y": 0.029,
-              "z": -54.323
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.062137,
-              "z": 0.0,
-              "w": 0.998068
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_street_lamp"
-          }
-        }
-      },
-      "337": {
-        "components": {
-          "NameComponent": {
-            "name": "Street lamp 5"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -13.245,
-              "y": -0.153,
-              "z": -50.139
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.059679,
-              "z": 0.0,
-              "w": 0.998218
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_street_lamp"
-          }
-        }
-      },
-      "338": {
-        "components": {
-          "NameComponent": {
-            "name": "Street lamp 6"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 20.513,
-              "y": 0.126,
-              "z": -46.088
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.059679,
-              "z": 0.0,
-              "w": 0.998218
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_street_lamp"
-          }
-        }
-      },
-      "339": {
-        "components": {
-          "NameComponent": {
-            "name": "Street lamp 7"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 54.39,
-              "y": 0.038,
-              "z": -42.333
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.053614,
-              "z": 0.0,
-              "w": 0.998562
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_street_lamp"
-          }
-        }
-      },
-      "340": {
-        "components": {
-          "NameComponent": {
-            "name": "Street lamp 8"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 88.195,
-              "y": 0.075,
-              "z": -38.692
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.053614,
-              "z": 0.0,
-              "w": 0.998562
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_street_lamp"
-          }
-        }
-      },
-      "341": {
-        "components": {
-          "NameComponent": {
-            "name": "Street lamp 9"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 121.999,
-              "y": -0.151,
-              "z": -35.052
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.053614,
-              "z": 0.0,
-              "w": 0.998562
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_street_lamp"
-          }
-        }
-      },
-      "342": {
-        "components": {
-          "NameComponent": {
-            "name": "Street lamp 10"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 155.804,
-              "y": -1.1,
-              "z": -31.411
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.053614,
-              "z": 0.0,
-              "w": 0.998562
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_street_lamp"
-          }
-        }
-      },
       "343": {
         "components": {
           "NameComponent": {
@@ -4208,6 +3482,806 @@
             "assetName": "model_3_storey_residential_building"
           }
         }
+      },
+      "634": {
+        "archetype": 1,
+        "components": {
+          "NameComponent": {
+            "name": "Railway"
+          },
+          "TypeComponent": {
+            "type": "GROUP"
+          },
+          "PathArrangementComponent": {
+            "points": [
+              {
+                "x": -275.124,
+                "y": -1.1000001,
+                "z": 38.488
+              },
+              {
+                "x": 272.146,
+                "y": -1.1000001,
+                "z": 93.215
+              }
+            ],
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_railway"
+            },
+            "slots": [
+              635,
+              636,
+              637,
+              638,
+              639,
+              640,
+              641,
+              642,
+              643,
+              644,
+              645,
+              646
+            ],
+            "spacing": 49.994
+          }
+        }
+      },
+      "635": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 634 #0"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -275.124,
+              "y": -1.1000001,
+              "z": 38.488
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.04981354,
+              "z": 0,
+              "w": 0.99875855
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_railway"
+          },
+          "ParentComponent": {
+            "parentEntityId": 634
+          }
+        }
+      },
+      "636": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 634 #1"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -225.3781,
+              "y": -1.1000001,
+              "z": 43.46259
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.04981354,
+              "z": 0,
+              "w": 0.99875855
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_railway"
+          },
+          "ParentComponent": {
+            "parentEntityId": 634
+          }
+        }
+      },
+      "637": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 634 #2"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -175.63222,
+              "y": -1.1000001,
+              "z": 48.437176
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.04981354,
+              "z": 0,
+              "w": 0.99875855
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_railway"
+          },
+          "ParentComponent": {
+            "parentEntityId": 634
+          }
+        }
+      },
+      "638": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 634 #3"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -125.88633,
+              "y": -0.69689083,
+              "z": 53.411766
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.04981354,
+              "z": 0,
+              "w": 0.99875855
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_railway"
+          },
+          "ParentComponent": {
+            "parentEntityId": 634
+          }
+        }
+      },
+      "639": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 634 #4"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -76.140434,
+              "y": -0.60000014,
+              "z": 58.386353
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.04981354,
+              "z": 0,
+              "w": 0.99875855
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_railway"
+          },
+          "ParentComponent": {
+            "parentEntityId": 634
+          }
+        }
+      },
+      "640": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 634 #5"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -26.394548,
+              "y": -0.60000014,
+              "z": 63.360943
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.04981354,
+              "z": 0,
+              "w": 0.99875855
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_railway"
+          },
+          "ParentComponent": {
+            "parentEntityId": 634
+          }
+        }
+      },
+      "641": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 634 #6"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 23.35134,
+              "y": -0.60000014,
+              "z": 68.33553
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.04981354,
+              "z": 0,
+              "w": 0.99875855
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_railway"
+          },
+          "ParentComponent": {
+            "parentEntityId": 634
+          }
+        }
+      },
+      "642": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 634 #7"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 73.09723,
+              "y": -0.60000014,
+              "z": 73.31012
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.04981354,
+              "z": 0,
+              "w": 0.99875855
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_railway"
+          },
+          "ParentComponent": {
+            "parentEntityId": 634
+          }
+        }
+      },
+      "643": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 634 #8"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 122.84312,
+              "y": -0.6540408,
+              "z": 78.284706
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.04981354,
+              "z": 0,
+              "w": 0.99875855
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_railway"
+          },
+          "ParentComponent": {
+            "parentEntityId": 634
+          }
+        }
+      },
+      "644": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 634 #9"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 172.589,
+              "y": -1.1000001,
+              "z": 83.25929
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.04981354,
+              "z": 0,
+              "w": 0.99875855
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_railway"
+          },
+          "ParentComponent": {
+            "parentEntityId": 634
+          }
+        }
+      },
+      "645": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 634 #10"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 222.3349,
+              "y": -1.1000001,
+              "z": 88.23389
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.04981354,
+              "z": 0,
+              "w": 0.99875855
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_railway"
+          },
+          "ParentComponent": {
+            "parentEntityId": 634
+          }
+        }
+      },
+      "646": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 634 #11"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 272.08078,
+              "y": -1.1000001,
+              "z": 93.20847
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.04981354,
+              "z": 0,
+              "w": 0.99875855
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_railway"
+          },
+          "ParentComponent": {
+            "parentEntityId": 634
+          }
+        }
+      },
+      "647": {
+        "archetype": 1,
+        "components": {
+          "NameComponent": {
+            "name": "Street lamps"
+          },
+          "TypeComponent": {
+            "type": "GROUP"
+          },
+          "PathArrangementComponent": {
+            "points": [
+              {
+                "x": -148.215,
+                "y": -0.9978788,
+                "z": -58.643
+              },
+              {
+                "x": -47.021,
+                "y": 0.0624187,
+                "z": -54.323
+              },
+              {
+                "x": 54.39,
+                "y": 0.047409058,
+                "z": -42.333
+              },
+              {
+                "x": 155.804,
+                "y": -1.1000001,
+                "z": -31.411
+              }
+            ],
+            "asset": {
+              "type": "MODEL",
+              "assetName": "model_airfield_street_lamp"
+            },
+            "slots": [
+              648,
+              649,
+              650,
+              651,
+              652,
+              653,
+              654,
+              655,
+              656,
+              657
+            ],
+            "spacing": 33.930
+          }
+        }
+      },
+      "648": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 647 #0"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -148.215,
+              "y": -0.9978788,
+              "z": -58.643
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.021330558,
+              "z": 0,
+              "w": 0.9997725
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_street_lamp"
+          },
+          "ParentComponent": {
+            "parentEntityId": 647
+          }
+        }
+      },
+      "649": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 647 #1"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -114.31587,
+              "y": 0.16864419,
+              "z": -57.19584
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.021330558,
+              "z": 0,
+              "w": 0.9997725
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_street_lamp"
+          },
+          "ParentComponent": {
+            "parentEntityId": 647
+          }
+        }
+      },
+      "650": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 647 #2"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -80.41675,
+              "y": 0.0011994839,
+              "z": -55.748676
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.021330558,
+              "z": 0,
+              "w": 0.9997725
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_street_lamp"
+          },
+          "ParentComponent": {
+            "parentEntityId": 647
+          }
+        }
+      },
+      "651": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 647 #3"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -46.520653,
+              "y": 0.064082146,
+              "z": -54.263844
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.05880862,
+              "z": 0,
+              "w": 0.99826926
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_street_lamp"
+          },
+          "ParentComponent": {
+            "parentEntityId": 647
+          }
+        }
+      },
+      "652": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 647 #4"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -12.825345,
+              "y": -0.15235472,
+              "z": -50.279987
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.05880862,
+              "z": 0,
+              "w": 0.99826926
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_street_lamp"
+          },
+          "ParentComponent": {
+            "parentEntityId": 647
+          }
+        }
+      },
+      "653": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 647 #5"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 20.869965,
+              "y": 0.13400722,
+              "z": -46.29613
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.05880862,
+              "z": 0,
+              "w": 0.99826926
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_street_lamp"
+          },
+          "ParentComponent": {
+            "parentEntityId": 647
+          }
+        }
+      },
+      "654": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 647 #6"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 54.565483,
+              "y": 0.043837786,
+              "z": -42.314102
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.053615987,
+              "z": 0,
+              "w": 0.9985616
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_street_lamp"
+          },
+          "ParentComponent": {
+            "parentEntityId": 647
+          }
+        }
+      },
+      "655": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 647 #7"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 88.30041,
+              "y": 0.07706356,
+              "z": -38.680946
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.053615987,
+              "z": 0,
+              "w": 0.9985616
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_street_lamp"
+          },
+          "ParentComponent": {
+            "parentEntityId": 647
+          }
+        }
+      },
+      "656": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 647 #8"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 122.03533,
+              "y": -0.11692071,
+              "z": -35.04779
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.053615987,
+              "z": 0,
+              "w": 0.9985616
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_street_lamp"
+          },
+          "ParentComponent": {
+            "parentEntityId": 647
+          }
+        }
+      },
+      "657": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 647 #9"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 155.77025,
+              "y": -1.1000001,
+              "z": -31.414633
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.053615987,
+              "z": 0,
+              "w": 0.9985616
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_street_lamp"
+          },
+          "ParentComponent": {
+            "parentEntityId": 647
+          }
+        }
       }
     },
     "archetypes": {
@@ -4216,6 +4290,18 @@
         "TypeComponent",
         "PositionComponent",
         "RenderComponent"
+      ],
+      "1": [
+        "NameComponent",
+        "TypeComponent",
+        "PathArrangementComponent"
+      ],
+      "2": [
+        "NameComponent",
+        "TypeComponent",
+        "PositionComponent",
+        "RenderComponent",
+        "ParentComponent"
       ]
     }
   }

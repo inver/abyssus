@@ -16,6 +16,8 @@ import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.lib.core.editor.ray.RayModeSnapshot
@@ -57,6 +59,9 @@ class SceneViewPanel internal constructor(
     private val overlays: SceneOverlayHost? = null,
     private val foliageActions: ((String) -> DefaultActionGroup?)? = null,
     private val paintSession: ((String, () -> FoliagePaintMode?, (net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession?) -> Unit) -> Unit)? = null,
+    /** The project's models to arrange along a path; the callback starts drawing. Null: no Add Path Arrangement button. */
+    private val pathActions: (((RenderAsset) -> Unit) -> DefaultActionGroup)? = null,
+    private val canAddPath: () -> Boolean = { pathActions != null },
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     private val frame = GdxFrame()
@@ -74,6 +79,9 @@ class SceneViewPanel internal constructor(
     private val dropButton = JButton(AbyssusBundle.message("sceneViewDrop"))
     private val addLightButton = JButton(AbyssusBundle.message("addLightTitle")).apply { name = "add-light" }
     private val addAssetButton = JButton(AbyssusBundle.message("addAssetTitle")).apply { name = "add-asset" }
+    private val addPathButton = JButton(AbyssusBundle.message("addPathArrangementTitle")).apply { name = "add-path-arrangement" }
+    private val regenerateButton = JButton(AbyssusBundle.message("regenerateArrangementTitle")).apply { name = "regenerate-arrangement"; isVisible = false }
+    private val drawingHint = JLabel(AbyssusBundle.message("pathDrawingHint")).apply { name = "path-drawing-hint"; isVisible = false }
     private val addFoliageButton = JButton(AbyssusBundle.message("addFoliageTitle")).apply { name = "add-foliage" }
     private val paintButton = JToggleButton(AbyssusBundle.message("paintFoliageTitle")).apply { name = "paint-foliage" }
     private val paintLayers = ComboBox<Int>().apply { name = "foliage-brush-layer" }
@@ -293,6 +301,18 @@ class SceneViewPanel internal constructor(
                 JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
             ).showUnderneathOf(addAssetButton)
         }
+        addPathButton.isFocusable = false
+        addPathButton.toolTipText = AbyssusBundle.message("addPathArrangementTooltip")
+        addPathButton.addActionListener {
+            val actions = pathChoices() ?: return@addActionListener
+            JBPopupFactory.getInstance().createActionGroupPopup(
+                AbyssusBundle.message("addPathArrangementTitle"), actions, DataManager.getInstance().getDataContext(this),
+                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
+            ).showUnderneathOf(addPathButton)
+        }
+        regenerateButton.isFocusable = false
+        regenerateButton.toolTipText = AbyssusBundle.message("regenerateArrangementTooltip")
+        regenerateButton.addActionListener { interaction.selectedId?.let { onRegenerate?.invoke(it) } }
         cameraCombo.isFocusable = false
         addFoliageButton.isFocusable = false
         addFoliageButton.addActionListener {
@@ -339,6 +359,9 @@ class SceneViewPanel internal constructor(
             add(dropButton)
             add(addLightButton)
             if (assetActions != null) add(addAssetButton)
+            if (pathActions != null) add(addPathButton)
+            add(regenerateButton)
+            add(drawingHint)
             if (foliageActions != null) add(addFoliageButton)
             if (paintSession != null) { add(paintButton); add(paintStrip) }
             add(cameraCombo)
@@ -398,6 +421,10 @@ class SceneViewPanel internal constructor(
     internal fun assetChoices(): DefaultActionGroup? =
         if (canAddAsset()) assetActions?.invoke { orbit.target } else null
 
+    /** The Add Path Arrangement choices (the project's models); null while arrangements cannot be added. */
+    internal fun pathChoices(): DefaultActionGroup? =
+        if (canAddPath()) pathActions?.invoke { asset -> startDrawing(asset) } else null
+
     /** W/E switch the gizmo, D drops the selection, Esc cancels a drag, with focus anywhere in the view. */
     private fun bindKeys() {
         fun bind(key: Int, action: () -> Unit) {
@@ -410,6 +437,8 @@ class SceneViewPanel internal constructor(
         bind(KeyEvent.VK_E) { if (!play.active) interaction.mode = GizmoMode.ROTATE }
         bind(KeyEvent.VK_D) { if (!play.active) interaction.drop() }
         bind(KeyEvent.VK_ESCAPE) { if (!play.escape()) interaction.escape() }
+        bind(KeyEvent.VK_ENTER) { if (!play.active) interaction.enter() }
+        bind(KeyEvent.VK_BACK_SPACE) { if (!play.active) interaction.backspace() }
     }
 
     /** While playing, every key but Escape goes to the simulation and is consumed, so no editor shortcut fires. */
@@ -444,6 +473,11 @@ class SceneViewPanel internal constructor(
             dropButton.isEnabled = toolbar.dropEnabled
             addLightButton.isEnabled = toolbar.addLightEnabled
             addAssetButton.isEnabled = toolbar.addAssetEnabled
+            addPathButton.isEnabled = !play.active && !experimenting && pathActions != null && canAddPath()
+            val arrangementSelected = renderer.content.arrangements.any { it.entityId == interaction.selectedId }
+            regenerateButton.isVisible = arrangementSelected
+            regenerateButton.isEnabled = arrangementSelected && !play.active && onRegenerate != null
+            drawingHint.isVisible = interaction.drawing != null
             val foliage = interaction.selectedId?.let { foliageActions?.invoke(it) }
             addFoliageButton.isVisible = foliage != null
             addFoliageButton.isEnabled = !play.active && foliage?.templatePresentation?.isEnabled == true
@@ -602,6 +636,7 @@ class SceneViewPanel internal constructor(
                 }
                 forwardMouse(SimulationInput.Kind.BUTTON_DOWN, e)
                 sync()
+                if (e.isPopupTrigger && pointMenu(e)) return
                 updatePaintMode(e.isShiftDown)
                 cursor(e)
                 interaction.pressed(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
@@ -611,7 +646,8 @@ class SceneViewPanel internal constructor(
                 if (experimenting) return
                 forwardMouse(SimulationInput.Kind.BUTTON_UP, e)
                 sync()
-                interaction.released(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
+                if (e.isPopupTrigger && pointMenu(e)) return
+                interaction.released(e.x, e.y, SwingUtilities.isLeftMouseButton(e), e.clickCount)
             }
 
             override fun mouseDragged(e: MouseEvent) {
@@ -692,6 +728,53 @@ class SceneViewPanel internal constructor(
         set(value) {
             interaction.onTransform = value
         }
+
+    override var onArrangementCreate: ((RenderAsset, List<Vec3>, Boolean) -> Boolean)?
+        get() = interaction.onArrangementCreate
+        set(value) {
+            interaction.onArrangementCreate = value
+        }
+
+    override var onArrangementEdit: ((String, List<Vec3>) -> Boolean)?
+        get() = interaction.onArrangementEdit
+        set(value) {
+            interaction.onArrangementEdit = value
+        }
+
+    override var onRegenerate: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            syncControls()
+        }
+
+    override fun startDrawing(asset: RenderAsset) {
+        endPaintMode()
+        interaction.startDrawing(asset)
+        requestFocusInWindow()
+    }
+
+    override fun groundHeights(): GroundHeight? = renderer.groundHeights()
+
+    /**
+     * The right-click menu of a point handle of the selected arrangement: Remove Point, disabled while only two points
+     * remain. True when the click hit a handle and the menu was shown (the press is then not a pan).
+     */
+    private fun pointMenu(e: MouseEvent): Boolean {
+        val id = interaction.selectedId ?: return false
+        if (interaction.drawing != null || play.active) return false
+        val size = interaction.size
+        if (size.isEmpty) return false
+        val at = size.toFramebuffer(e.x, e.y)
+        val hit = renderer.queries.pathHandleAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) as? PathHit.Point ?: return false
+        val menu = JPopupMenu()
+        menu.add(JMenuItem(AbyssusBundle.message("removePathPoint")).apply {
+            name = "remove-path-point"
+            isEnabled = interaction.canRemovePoint(id)
+            addActionListener { interaction.removePoint(id, hit.index) }
+        })
+        menu.show(e.component, e.x, e.y)
+        return true
+    }
 
     override fun selectEntity(entityId: String) {
         if (renderer.state.selectedId != entityId) endPaintMode()

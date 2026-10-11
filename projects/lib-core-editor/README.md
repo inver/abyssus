@@ -30,6 +30,7 @@ namespace, including extension providers that use editor value types, must updat
 | `content` | Leaf value types: `Vec3`, `Quat`, `Pose`, the placements, `RenderAsset`, `PlacementTransform.toMatrix` |
 | `scene` | The read model: `SceneContent` / `sceneContentOf`, `FoliagePlacement`, `SceneRenderParams` / `renderParamsOf`, `PlacementMapper`, `CameraFrustum`, `LightSet`, `ModelEntity`, `AssetRevisions` |
 | `pick` | `ScenePicker`, `SnapshotSceneQueries` (incl. `terrainOf` / `terrainHit` for painting), `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction` (incl. the `Gesture.Painting` stroke and `FoliagePaint`), `FoliagePaintMode` in `SceneViewState`, `ScenePreview`, `SceneTransformWriter`, `SceneMarkers` / `LineSink` |
+| `arrange` | Path arrangements: `PathLayout` (stations along a line on X/Z arc length, sides, offset, yaw, the 1000-slot cap), `ArrangementEdits` (`create`, `regenerate`, `detach` over the scene JSON), the `GroundHeight` interface that gives the copies their heights (`GroundHeights` in `pick` implements it from terrains) |
 | `terrain` | Terrain generation, noise, recipe, new-terrain files and checks |
 | `foliage` | Terrain foliage authoring: `FoliageSettingsReader` / `FoliageRead` (typed settings from an `additional` node with validation), the field keys and defaults, `FoliageScatter` (deterministic copy generation), `FoliageBrush` / `MaskRect` (the density-mask brush and its dirty rectangles), `FoliageDraft` (uncommitted settings, masks and dirty chunks), `FoliageMetaEdits` (settings diffs as `DocumentTextEditor` edits), `FoliageColliderEdits` (a layer's `collider` member patched from the edited collider, nested unknown members kept, and the collider-only classification of a diff; `FoliageSettingsReader` validates colliders and `transitions` refuses OBJECT to DETAIL with one) and `NewFoliageFiles` / `FoliageAssetWriter` (planning a new `FOLIAGE` asset) |
 | `meta` | `AssetMetaEditor` and field descriptions, `MetaRows`, `AssetReferenceChoices`, the panel's entity sections and asset field states |
@@ -40,7 +41,8 @@ namespace, including extension providers that use editor value types, must updat
 
 The package graph has no cycle (`./gradlew checkPackageCycles`): `content` is a leaf, `document` and `components`
 build on it, `scene` reads the document through the component codecs, `foliage` builds on `terrain` and `document`,
-and `pick` and `ray` build on `scene`.
+and `pick` and `ray` build on `scene`. `arrange` builds on `document` and `ecs`; `pick` and `components` call it (`SceneTransformWriter` and
+`ComponentEditor` detach a moved copy), so it names no type from them.
 
 ## Imports
 
@@ -88,6 +90,12 @@ Project schema files and extension contributions do not currently add editable k
 -45 degrees X), Sun (warm, intensity 1.2, -30 degrees X) and Spot (white, intensity 1, -90 degrees X, 5 units above
 the placement). The new id is one above the highest numeric entity id; in a wrapped scene the matching archetype is
 reused or appended.
+
+`ArrangementEdits` edits a path arrangement: an entity of type `GROUP` with a `PathArrangementComponent`, and its copies,
+ordinary `OBJECT` entities with a `ParentComponent` to it. `regenerate` rewrites the copies in the arrangement's `slots`
+and adds or removes the rest. A moved, turned or position-edited copy is detached in the same edit (`SceneTransformWriter`
+and `ComponentEditor` call `detach`), so the headless edits match. Updating a setting of an arrangement through
+`ComponentEditor.update` regenerates in the same edit, on the `GroundHeight` passed in (the line's own height by default).
 
 ## Without the IDE
 

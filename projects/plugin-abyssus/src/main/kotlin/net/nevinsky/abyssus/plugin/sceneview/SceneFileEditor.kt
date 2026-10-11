@@ -8,6 +8,10 @@ package net.nevinsky.abyssus.plugin.sceneview
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.plugin.SceneRayControls
 
 import com.intellij.openapi.application.ApplicationManager
@@ -216,6 +220,9 @@ class SceneFileEditor(
             host.select(file, entityId)
         }
         created.onTransform = ::applyTransform
+        created.onArrangementCreate = ::createArrangement
+        created.onArrangementEdit = ::editArrangement
+        created.onRegenerate = ::regenerateArrangement
         (created as? RayControlProvider)?.rayControl?.let { rayControls.register(file, it, created) }
         view = created
         statusText = null
@@ -227,6 +234,37 @@ class SceneFileEditor(
         val isRotate = edit.rotation != null || edit.target != null
         val command = AbyssusBundle.message(if (isRotate) "commandRotateEntity" else "commandMoveEntity")
         return editSceneJson(project, file, command) { root -> SceneTransformWriter().apply(root, entityId, edit) }
+    }
+
+    /** The ground to place copies on: the view's, else one read from the project; null when the user cancelled the read. */
+    private fun ground(): GroundHeight? = view?.groundHeights() ?: ArrangementHeights.of(project).forScene(file)
+
+    /**
+     * Writes a finished drawing as an arrangement and its copies (one undoable command) and selects the new arrangement.
+     * False when nothing was written; a refusal is shown to the user.
+     */
+    internal fun createArrangement(asset: RenderAsset, points: List<Vec3>, closed: Boolean): Boolean {
+        val heights = ground() ?: return false
+        val result = ArrangementEditing.create(project, file, asset, points, closed, heights)
+        ArrangementEditing.report(project, result)
+        val id = (result as? ArrangementResult.Changed)?.entityId ?: return false
+        host.select(file, id)
+        view?.selectEntity(id)
+        return true
+    }
+
+    /** Writes new points for the arrangement [entityId] and regenerates its copies, as one undoable command. */
+    internal fun editArrangement(entityId: String, points: List<Vec3>): Boolean {
+        val heights = ground() ?: return false
+        val result = ArrangementEditing.setPoints(project, file, entityId, points, heights)
+        ArrangementEditing.report(project, result)
+        return result is ArrangementResult.Changed
+    }
+
+    /** Re-places the copies of the arrangement [entityId] on the current terrain; writes nothing when none would move. */
+    internal fun regenerateArrangement(entityId: String) {
+        val heights = ground() ?: return
+        ArrangementEditing.report(project, ArrangementEditing.regenerate(project, file, entityId, heights))
     }
 
     /** The scene's document, so that Undo and Redo in this tab reach the edits made here. */

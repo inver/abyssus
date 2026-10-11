@@ -6,6 +6,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
@@ -31,6 +32,7 @@ class ComponentRegistry {
         componentMap[PositionComponent::class.qualifiedName!!] = PositionComponent::class.java
         componentMap[TypeComponent::class.qualifiedName!!] = TypeComponent::class.java
         componentMap[FoliageComponent::class.qualifiedName!!] = FoliageComponent::class.java
+        componentMap[PathArrangementComponent::class.qualifiedName!!] = PathArrangementComponent::class.java
         componentMap.values.forEach {
             shortNames.putIfAbsent(it.simpleName, it)
             writtenNames[it] = it.simpleName

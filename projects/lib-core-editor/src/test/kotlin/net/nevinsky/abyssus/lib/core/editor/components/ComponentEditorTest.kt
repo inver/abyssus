@@ -5,6 +5,11 @@
 
 package net.nevinsky.abyssus.lib.core.editor.components
 
+import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -31,7 +36,7 @@ class ComponentEditorTest {
     @Test
     fun everyKindHasFields() {
         val names = editor.kinds.associate { it.name to it.fields.map { f -> f.name } }
-        assertEquals(8, names.size)
+        assertEquals(9, names.size)
         assertEquals(listOf("name"), names["NameComponent"])
         assertEquals(listOf("type"), names["TypeComponent"])
         assertEquals(listOf("parentEntityId"), names["ParentComponent"])
@@ -40,6 +45,7 @@ class ComponentEditorTest {
         assertEquals(listOf("color.r", "color.g", "color.b", "color.a", "intensity", "range", "coneAngle", "edgeSoftness"), names["LightComponent"])
         assertEquals(listOf("entity1Id", "entity2Id"), names["Point2PointPositionComponent"])
         assertEquals(listOf("assetType", "assetName", "shaderKey"), names["RenderComponent"])
+        assertEquals(listOf("asset.assetName", "spacing", "offset", "sides", "alignToPath", "yawOffset"), names["PathArrangementComponent"])
     }
 
     @Test
@@ -327,5 +333,66 @@ class ComponentEditorTest {
         assertEquals(before, root.toString())
         assertEquals(EditResult.Changed, editor.update(root, "0", "NameComponent", "name", "Renamed"))
         assertEquals(plane, components(root, 0)["PlaneComponent"].toString())
+    }
+
+
+    /** Main Scene with a line of trees: arrangement 11 and copies 12 to 16. */
+    private fun arranged(): JsonNode {
+        val root = SceneJson().parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
+        val points = listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f))
+        ArrangementEdits(ResourceEditorMessages()).create(root, RenderAsset("MODEL", "tree"), points, false, LineHeights())
+        return root
+    }
+
+    private fun slotsOf(root: JsonNode) = SceneEntityTree(root).components("11")!!["PathArrangementComponent"]["slots"].map { it.asInt() }
+
+    @Test
+    fun editAnArrangedCopysPosition() {
+        val root = arranged()
+        assertEquals(EditResult.Changed, editor.update(root, "14", "PositionComponent", "localPosition.z", "3"))
+        assertEquals(null, SceneEntityTree(root).components("14")!!["ParentComponent"])
+        assertEquals(listOf(12, 13, -1, 15, 16), slotsOf(root))
+    }
+
+    @Test
+    fun aRenameDoesNotDetach() {
+        val root = arranged()
+        assertEquals(EditResult.Changed, editor.update(root, "13", "NameComponent", "name", "Lamp"))
+        assertEquals(11, SceneEntityTree(root).components("13")!!["ParentComponent"]["parentEntityId"].asInt())
+        assertEquals(listOf(12, 13, 14, 15, 16), slotsOf(root))
+    }
+
+    @Test
+    fun changeAnArrangementsSpacing() {
+        val root = arranged()
+        assertEquals(EditResult.Changed, editor.update(root, "11", "PathArrangementComponent", "spacing", "20"))
+        assertEquals(listOf(12, 13, 14), slotsOf(root))
+        assertEquals(20, SceneEntityTree(root).components("11")!!["PathArrangementComponent"]["spacing"].asInt())
+        assertEquals(null, SceneEntityTree(root).entities()!!["15"])
+        assertEquals(EditResult.Unchanged, editor.update(root, "11", "PathArrangementComponent", "spacing", "20"))
+    }
+
+    @Test
+    fun aSpacingOfZeroIsRefused() {
+        val root = arranged()
+        val before = root.toString()
+        assertRejected(editor.update(root, "11", "PathArrangementComponent", "spacing", "0"))
+        assertRejected(editor.update(root, "11", "PathArrangementComponent", "offset", "-1"))
+        assertEquals(before, root.toString())
+    }
+
+    @Test
+    fun settingsThatMakeTooManyCopiesAreRefused() {
+        val root = arranged()
+        SceneEntityTree(root).components("11")!!["PathArrangementComponent"]["points"][1].let { (it as com.fasterxml.jackson.databind.node.ObjectNode).put("x", 2000) }
+        val before = root.toString()
+        assertRejected(editor.update(root, "11", "PathArrangementComponent", "spacing", "1"))
+        assertEquals(before, root.toString())
+    }
+
+    @Test
+    fun anArrangementIsNotOfferedAsANewComponent() {
+        val root = arranged()
+        assertFalse(editor.missingKinds(root, "0").any { it.name == "PathArrangementComponent" })
     }
 }
