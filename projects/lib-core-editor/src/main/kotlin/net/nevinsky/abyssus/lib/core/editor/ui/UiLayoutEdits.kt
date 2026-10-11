@@ -40,6 +40,8 @@ class UiTree(private val collection: UiCollection) {
                 widgets[w.id] = w
                 screens[w.id] = screen
                 w.children.forEach { parents[it.id] = w; stack.addLast(it) }
+                // a list's template and empty state belong to the list
+                listOfNotNull(w.template, w.empty).forEach { parents[it.id] = w; stack.addLast(it) }
             }
         }
     }

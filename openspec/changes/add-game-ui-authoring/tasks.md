@@ -69,3 +69,6 @@ Recorded, unrelated to this change: `verifyPlugin` reports the plugin compatible
 `AbyssusPropertiesToolWindowFactory`, `SceneFileEditorProvider`, `PhysicsSimulationProvider` and `EyeTree`. This change adds two
 deprecated-API uses (`ReadAction.compute`, `FileChooserDescriptorFactory.createSingleFileDescriptor`).
 
+
+
+> Superseded detail (2026-10-11, change `migrate-control-line-ui`): the standalone UI demo of task 3.3 (`runUiDemo`, `UiDemoGlTest`, the `uiDemo/UiDemo` project) was deleted once Control Line itself ran on a UI asset. The 3.3 verification and the `runUiDemo` run below describe what was true then; `ControlLineUiAssetTest`, `GameUiHostTest` and `GameScreensCharacterizationTest` now cover host parity on the real game.

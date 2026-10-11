@@ -87,6 +87,7 @@ class UiCollectionDecoder(private val format: AbyssusDocumentFormat = AbyssusDoc
                     if (++count > UI_MAX_WIDGETS) return UiIssue(UiIssueCode.TOO_MANY_WIDGETS, "$path[$i].root")
                     val children = node.get("children")
                     if (children != null && children.isArray) children.forEach { if (it.isObject) stack.addLast(it to depth + 1) }
+                    listOf("template", "empty").forEach { f -> node.get(f)?.takeIf { it.isObject }?.let { stack.addLast(it to depth + 1) } }
                 }
             }
             return null
@@ -133,6 +134,7 @@ class UiCollectionDecoder(private val format: AbyssusDocumentFormat = AbyssusDoc
                     if (h != null && h > 0) height = h.toFloat() else if (size.has("height")) error(UiIssueCode.BAD_GEOMETRY, "$path.referenceSize.height")
                 }
             }
+            val navigation = enumOf<UiNavigation>(node, "navigation", path, { it.json }, UiIssueCode.MALFORMED) ?: UiNavigation.TAB
             val modalNode = node.get("modal")
             if (modalNode != null && !modalNode.isBoolean) error(UiIssueCode.MALFORMED, "$path.modal")
             val rootNode = node.get("root")
@@ -140,12 +142,13 @@ class UiCollectionDecoder(private val format: AbyssusDocumentFormat = AbyssusDoc
             else widget(rootNode, "$path.root")
             if (id == null || root == null) return null
             return UiScreen(id, node.get("name")?.takeIf { it.isTextual }?.textValue() ?: id, kind, width, height,
-                modalNode?.takeIf { it.isBoolean }?.booleanValue() ?: false, root)
+                modalNode?.takeIf { it.isBoolean }?.booleanValue() ?: false, root, navigation)
         }
 
         private fun widget(node: JsonNode, path: String): UiWidget? {
             val id = text(node, "id", path)
             val rawType = text(node, "type", path)
+            if (id != null && id.contains('#')) error(UiIssueCode.MALFORMED, "$path.id") // '#' marks an expanded list row at runtime
             if (id != null && !widgetIds.add(id)) error(UiIssueCode.DUPLICATE_WIDGET_ID, "$path.id")
             if (id == null || rawType == null) return null
             val type = UiWidgetType.entries.firstOrNull { it.json == rawType }
@@ -164,10 +167,16 @@ class UiCollectionDecoder(private val format: AbyssusDocumentFormat = AbyssusDoc
                     else widget(child, "$path.children[$i]")?.let(children::add)
                 }
             }
+            fun nested(field: String): UiWidget? = node.get(field)?.let {
+                if (!it.isObject) { error(UiIssueCode.MALFORMED, "$path.$field"); null } else widget(it, "$path.$field")
+            }
+            val template = if (type == UiWidgetType.LIST) nested("template") else null
+            val empty = if (type == UiWidgetType.LIST) nested("empty") else null
+            if (type == UiWidgetType.LIST && node.get("template") == null) error(UiIssueCode.MISSING_TEMPLATE, "$path.template")
             val style = node.get("style")?.let { if (it.isTextual) it.textValue() else { error(UiIssueCode.MALFORMED, "$path.style"); null } }
             return UiWidget(id, rawType, type, layout(node.get("layout"), "$path.layout"), style,
                 objectMap(node.get("properties"), "$path.properties"), bindingMap(node.get("bindings"), "$path.bindings"),
-                actionMap(node.get("actions"), "$path.actions"), children, node)
+                actionMap(node.get("actions"), "$path.actions"), children, template, empty, node)
         }
 
         private fun layout(node: JsonNode?, path: String): UiLayout {
@@ -224,8 +233,10 @@ class UiCollectionDecoder(private val format: AbyssusDocumentFormat = AbyssusDoc
             val type = enumOf<UiBindingType>(node, "type", path, { it.json }, UiIssueCode.BAD_BINDING)
             if (node.get("type") == null) error(UiIssueCode.BAD_BINDING, "$path.type")
             val access = enumOf<UiBindingAccess>(node, "access", path, { it.json }, UiIssueCode.BAD_BINDING) ?: UiBindingAccess.READ_ONLY
+            val fields = if (type == UiBindingType.LIST) recordFields(node, path) else emptyList()
+            if (type == UiBindingType.LIST && access != UiBindingAccess.READ_ONLY) error(UiIssueCode.BAD_BINDING, "$path.access")
             val sample = node.get("sample")
-            if (sample != null && type != null && !sampleMatches(type, sample)) error(UiIssueCode.BAD_BINDING, "$path.sample")
+            if (sample != null && type != null && !sampleMatches(type, sample, fields)) error(UiIssueCode.BAD_BINDING, "$path.sample")
             val min = number(node, "min", path)
             val max = number(node, "max", path)
             if (min != null && max != null && min > max) error(UiIssueCode.BAD_BINDING, "$path.min")
@@ -236,13 +247,31 @@ class UiCollectionDecoder(private val format: AbyssusDocumentFormat = AbyssusDoc
                 else { error(UiIssueCode.BAD_BINDING, "$path.maxLength"); null }
             }
             if (name == null || type == null) return null
-            return UiBinding(name, type, access, sample, min, max, step, maxLength)
+            return UiBinding(name, type, access, sample, min, max, step, maxLength, fields)
         }
 
-        private fun sampleMatches(type: UiBindingType, sample: JsonNode) = when (type) {
+        private fun sampleMatches(type: UiBindingType, sample: JsonNode, fields: List<UiRecordField> = emptyList()): Boolean = when (type) {
             UiBindingType.NUMBER -> sample.isNumber && sample.doubleValue().isFinite()
             UiBindingType.BOOLEAN -> sample.isBoolean
             UiBindingType.STRING -> sample.isTextual
+            UiBindingType.LIST -> sample.isArray && sample.all { row ->
+                row.isObject && row.properties().all { (k, v) -> fields.firstOrNull { it.name == k }?.let { f -> sampleMatches(f.type, v) } == true }
+            }
+        }
+
+        /** The record of a `list` binding: at least one uniquely named field of a scalar type. */
+        private fun recordFields(node: JsonNode, path: String): List<UiRecordField> {
+            val array = node.get("fields")
+            if (array == null || !array.isArray || array.isEmpty) { error(UiIssueCode.BAD_BINDING, "$path.fields"); return emptyList() }
+            val result = mutableListOf<UiRecordField>()
+            array.forEachIndexed { i, f ->
+                val name = text(f, "name", "$path.fields[$i]")
+                val type = f.get("type")?.takeIf { it.isTextual }?.let { t -> UiBindingType.entries.firstOrNull { it.json == t.textValue() } }
+                if (type == null || type == UiBindingType.LIST) { error(UiIssueCode.BAD_BINDING, "$path.fields[$i].type"); return@forEachIndexed }
+                if (name == null) return@forEachIndexed
+                if (result.any { it.name == name }) error(UiIssueCode.BAD_BINDING, "$path.fields[$i].name") else result += UiRecordField(name, type)
+            }
+            return result
         }
 
         private fun resource(node: JsonNode, path: String): UiResource? {
@@ -261,21 +290,31 @@ class UiCollectionDecoder(private val format: AbyssusDocumentFormat = AbyssusDoc
         }
 
         private fun references(collection: UiCollection, bindingNames: Set<String>, base: String) {
-            for ((i, screen) in collection.screens.withIndex()) {
-                val stack = ArrayDeque<Pair<UiWidget, String>>()
-                stack.addLast(screen.root to "$base.screens[$i].root")
-                while (stack.isNotEmpty()) {
-                    val (widget, path) = stack.removeLast()
-                    for ((property, name) in widget.bindings)
-                        if (name !in bindingNames) warnings += UiIssue(UiIssueCode.UNRESOLVED_BINDING, "$path.bindings.$property")
-                    for ((event, action) in widget.actions) {
-                        val local = action.assetName == null && action.screenId != null
-                        if (local && (action.type == UiActionType.OPEN_SCREEN || action.type == UiActionType.SHOW_OVERLAY) && collection.screen(action.screenId!!) == null)
-                            warnings += UiIssue(UiIssueCode.UNRESOLVED_SCREEN, "$path.actions.$event")
+            fun walk(widget: UiWidget, path: String, item: Map<String, UiBindingType>?) {
+                for ((property, name) in widget.bindings) {
+                    when {
+                        name.startsWith(UI_ITEM_PREFIX) -> when {
+                            item == null -> warnings += UiIssue(UiIssueCode.ITEM_OUTSIDE_LIST, "$path.bindings.$property")
+                            name.removePrefix(UI_ITEM_PREFIX) !in item -> warnings += UiIssue(UiIssueCode.UNRESOLVED_ITEM_FIELD, "$path.bindings.$property")
+                        }
+                        name !in bindingNames -> warnings += UiIssue(UiIssueCode.UNRESOLVED_BINDING, "$path.bindings.$property")
                     }
-                    widget.children.forEachIndexed { c, child -> stack.addLast(child to "$path.children[$c]") }
+                }
+                for ((event, action) in widget.actions) {
+                    val local = action.assetName == null && action.screenId != null
+                    if (local && (action.type == UiActionType.OPEN_SCREEN || action.type == UiActionType.SHOW_OVERLAY) && collection.screen(action.screenId!!) == null)
+                        warnings += UiIssue(UiIssueCode.UNRESOLVED_SCREEN, "$path.actions.$event")
+                }
+                widget.children.forEachIndexed { c, child -> walk(child, "$path.children[$c]", item) }
+                if (widget.type == UiWidgetType.LIST) {
+                    // rows see the record of the list's items binding; the empty state is not a row and sees no item
+                    val record = widget.bindings["items"]?.let(collection::binding)?.takeIf { it.type == UiBindingType.LIST }
+                        ?.fields?.associate { it.name to it.type }.orEmpty()
+                    widget.template?.let { walk(it, "$path.template", record) }
+                    widget.empty?.let { walk(it, "$path.empty", null) }
                 }
             }
+            for ((i, screen) in collection.screens.withIndex()) walk(screen.root, "$base.screens[$i].root", null)
         }
     }
 }

@@ -92,6 +92,7 @@ class UiBindingSession(private val collection: UiCollection, private val writer:
         if (proposed.type != binding.type) return null
         return when (proposed) {
             is UiValue.Bool -> proposed
+            is UiValue.Rows -> null
             is UiValue.Text -> proposed.takeIf { binding.maxLength == null || it.value.length <= binding.maxLength }
             is UiValue.Num -> {
                 if (!proposed.value.isFinite()) return null

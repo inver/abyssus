@@ -448,13 +448,13 @@ version is separate from `formatVersion`; additive UI fields do not bump either.
 | Field | Meaning |
 |---|---|
 | `entryScreen` | optional id of the screen a host opens first; the first screen when missing, an error when it names no screen |
-| `screens[]` | `id`, `name`, `kind` (`screen` or `overlay`, default `screen`), `referenceSize` (`width`, `height`, default 1280 x 720), `modal` (default `false`) and `root`, a widget |
+| `screens[]` | `id`, `name`, `kind` (`screen` or `overlay`, default `screen`), `referenceSize` (`width`, `height`, default 1280 x 720), `modal` (default `false`), `navigation` (`tab`, the default, or `arrows`: Up / Down move focus) and `root`, a widget |
 | widget | `id`, `type`, `layout`, `style`, `properties`, `bindings`, `actions` and, for containers only, `children` |
-| widget `type` | `panel`, `row`, `column` (containers), `label`, `image`, `button`, `progressBar`, `slider`, `checkbox`, `textField`; any other name is kept and shown as an inert placeholder |
+| widget `type` | `panel`, `row`, `column` (containers), `label`, `image`, `button`, `progressBar`, `slider`, `checkbox`, `textField`, `list` (see *Lists*); any other name is kept and shown as an inert placeholder |
 | `layout` | `anchor`, `pivot` (`topLeft`, `top`, `topRight`, `left`, `center`, `right`, `bottomLeft`, `bottom`, `bottomRight`), `x`, `y`, `width`, `height`, `grow`, `padding`, `spacing`, `align` (`start`, `center`, `end`, `stretch`); sizes, `grow`, `padding` and `spacing` are not negative |
-| widget `bindings` | property name (`text`, `value`, `maximum`, `checked`, `visible`, `enabled`) to a binding name |
+| widget `bindings` | property name (`text`, `value`, `maximum`, `checked`, `visible`, `enabled`, `style`; `items` on a list) to a binding name, or inside a list row to `item.<field>` |
 | widget `actions` | event (`click`) to `{ "type": ..., "screenId", "assetName", "name" }`; `type` is `openScreen`, `back`, `showOverlay`, `closeOverlay` or `emitAction`; `assetName` is omitted for a screen of the same asset |
-| `bindings[]` | `name`, `type` (`number`, `boolean`, `string`), `access` (`readOnly` default, or `write`), `sample` of that type, optional `min`, `max`, `step` (positive) or `maxLength` |
+| `bindings[]` | `name`, `type` (`number`, `boolean`, `string`, `list`), `access` (`readOnly` default, or `write`), `sample` of that type, optional `min`, `max`, `step` (positive) or `maxLength` |
 | `resources[]` | `id`, `kind` (`image`, `bitmapFont`) and a `path` inside the asset folder |
 | `styles[]` | `name` and the style values the renderer reads |
 
@@ -463,6 +463,21 @@ side. Ids of screens, widgets, bindings and resources are unique. Errors (versio
 binding of the wrong type, a limit) refuse the whole collection; an unknown widget, a widget binding no `bindings[]`
 entry declares and a local screen target that does not exist are warnings. Unknown members stay in the tree and edits
 keep key order and number text.
+
+**Lists.** A `list` widget repeats its `template` widget once for every item of the list binding named by `bindings.items`
+(at most `properties.maxRows`), laid out like a column (`layout.spacing`, `padding`, `align`), and shows its optional
+`empty` widget instead when there are no items. A binding of type `list` declares `fields` (`name`, `type` of `number`,
+`boolean` or `string`) and a `sample` array of rows; it is read-only. Widgets inside the template bind to the current
+row's fields with `item.<field>` (for example `"text": "item.name"`), and a bound `style` (`"style": "item.look"`) picks a named
+style per row. Template and empty widgets have document-unique ids like any widget (ids may not contain `#`, which
+marks the runtime copy of a row, `<id>#<row>`). A host publishes the list as rows of typed fields; a field it leaves
+out or mistypes shows its type's zero value with a diagnostic, and a list it does not publish shows the sample. The widget
+limits count the expanded rows.
+
+A panel, row or column may carry a `click` action like a button, so a whole list row is one click target (it is not in the
+focus order, and shows its `hover` / `pressed` styles). An `emitAction` from inside a list row reaches the host as
+`<name>#<row>` with the zero-based row index. A text field with `properties.selectOnFocus: true` is replaced by the
+first character (or cleared by Backspace) typed after it gains focus.
 
 <!-- ui-minimal-example -->
 ```json

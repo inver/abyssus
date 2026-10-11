@@ -350,6 +350,12 @@ Every change is written to the document through one undoable command that keeps 
 an asset that Abyssus cannot edit (a newer UI version, errors) shows why and is never rewritten. Text you have not saved yet
 is what the editor shows and edits. **Use a copy** of a sample project when you try it: the committed `Untitled` project is test data.
 
+**Lists.** The **List** widget repeats one row template for every item of a *list* binding, which you declare in
+**Declarations** with a record of typed fields (`rank:number, name:string`) and sample rows. Inside the row, bind a widget
+to `item.<field>`; bind a widget's **Style** to a string field to colour a row from data; add an **empty state** for when
+there are no rows. The canvas shows the sample rows, and a click on any row selects the template. Tick **Up / Down move
+focus** on a screen to give a keyboard menu. In Preview, add, edit and remove sample rows.
+
 **Preview.** Switch the editor from **Edit** to **Preview** to use the UI as a player would: click buttons, drag sliders,
 tick checkboxes, type into fields, Tab / Shift-Tab between controls, Enter or Space to press, Escape to close an overlay or go
 back. The preview runs on the text in the editor, saved or not, and shows why it stopped if that text is not valid.
@@ -371,7 +377,7 @@ back. The preview runs on the text in the editor, saved or not, and shows why it
 
 The canvas draws through the same renderer a game uses, so layout, text size and styling match. Games load a registered
 asset by name; see [lib-core](projects/lib-core/README.md#ui-host-contract) for how a host supplies values, accepts
-changes and receives actions, and the [UI demo](projects/app-game-control-line/README.md#ui-demo) for a runnable example.
+changes and receives actions, and Control Line's [screens](projects/app-game-control-line/README.md#screens) for a complete example.
 
 ## Development
 

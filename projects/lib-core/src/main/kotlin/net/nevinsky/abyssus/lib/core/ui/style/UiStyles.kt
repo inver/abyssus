@@ -66,10 +66,11 @@ class UiStyleResolver(json: JsonProcessor) {
     /** The bundled default for a widget type name (`button`, ...); empty for a type the theme does not style. */
     fun bundledValue(type: String, key: String): JsonNode? = bundled[type]?.base?.get(key)
 
-    fun resolve(collection: UiCollection, widget: UiWidget, states: Set<UiVisualState>): UiResolvedStyle {
+    /** [styleName] is the named style to use; a widget with a bound `style` passes the bound name, else its own. */
+    fun resolve(collection: UiCollection, widget: UiWidget, states: Set<UiVisualState>, styleName: String? = widget.style): UiResolvedStyle {
         val diagnostics = mutableListOf<UiStyleDiagnostic>()
         val default = widget.type?.let { bundled[it.json] } ?: StyleLayer(emptyMap(), emptyMap())
-        val named = widget.style?.let { name ->
+        val named = styleName?.let { name ->
             collection.styles.firstOrNull { it.name == name }?.let { layerOf(it.values) }
                 ?: run { diagnostics += UiStyleDiagnostic(UiStyleIssue.MISSING_STYLE, widget.id, name); null }
         } ?: StyleLayer(emptyMap(), emptyMap())

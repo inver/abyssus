@@ -73,7 +73,7 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
 - `projects/app-game-control-line/src/test/kotlin/`: the Control Line game's flight, track, scoring, F2B pattern judging (`pattern`: synthetic flights built from the ideal tracks by `SyntheticFlight` / `SyntheticSchedule`, plus a scripted pilot), screen flow and Play module,
   headless (Jolt's `ReleaseSp` natives for the build machine, no window). They read the bundled project
   `projects/app-game-control-line/project/ControlLine` through `bundledProject()` / `loadField()`, and fly it with `FieldFlight`;
-  `ControlLinePlayTest` runs `PlayHostMain` in a child process. `CrashClipGlTest` and `GameUiGlTest` (every screen builds and draws) are the GL tests there (opt-in).
+  `ControlLinePlayTest` runs `PlayHostMain` in a child process. `CrashClipGlTest`, `GameUiGlTest` (every authored screen lays out and draws) and `GameScreensCharacterizationTest` (the screens' text against a golden file) are the GL tests there (opt-in); `ControlLineUiAssetTest` and `GameUiHostTest` check the `screens` asset against the game's contract without GL.
 - `projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/physics/`: overlay geometry, game/fallback launch selection and bundled play-host packaging.
 - `projects/lib-raytracing/src/test/kotlin/`: backend contracts, fake backend, snapshots, scheduling, budgets, optics, accumulation
   and native packaging. Metal and Vulkan device tests opt in separately with `-Dabyssus.metalTests=true` and

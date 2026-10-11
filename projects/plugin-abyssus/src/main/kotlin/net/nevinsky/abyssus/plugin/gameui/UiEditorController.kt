@@ -235,6 +235,9 @@ class UiEditorController(
         if (previewState == null) previewState = previews.of(c, screenId ?: c.entryScreen)
     }
 
+    /** The preview's sample world changed shape (a row added or removed): tell the views. */
+    fun resetView() { changed() }
+
     /** Returns the samples to the authored ones, empties the action log and sends the preview back to its start screen. */
     fun resetPreview() { previewState?.reset(); changed() }
 
@@ -321,6 +324,33 @@ class UiEditorController(
         val id = selection.widgetId ?: return false
         return perform(AbyssusBundle.message("uiCommandMoveWidget")) { e, m -> e.reorderWidget(m, id, newIndex) } is UiEditOutcome.Edited
     }
+
+    /** The selected list gets an empty state (or loses it). Selecting a widget inside the list's row or empty state also works. */
+    fun addListEmpty(): Boolean {
+        val list = enclosingList() ?: return false
+        return perform(AbyssusBundle.message("uiCommandListEmpty")) { e, m -> e.addListEmpty(m, list) } is UiEditOutcome.Edited
+    }
+
+    fun removeListEmpty(): Boolean {
+        val list = enclosingList() ?: return false
+        return perform(AbyssusBundle.message("uiCommandListEmpty")) { e, m -> e.removeListEmpty(m, list) } is UiEditOutcome.Edited
+    }
+
+    /** The list the selection is, or is inside of (its row or empty state); null when there is none. */
+    private fun enclosingList(): String? {
+        val c = collection ?: return null
+        val tree = UiTree(c)
+        var at = selection.widgetId?.let(tree::widget)
+        while (at != null) {
+            if (at.type == net.nevinsky.abyssus.lib.core.ui.model.UiWidgetType.LIST) return at.id
+            at = tree.parentOf(at.id)
+        }
+        return null
+    }
+
+    /** Up and Down move focus on [screenId] (`true`), or only Tab does (`false`, the default). */
+    fun setNavigation(screenId: String, arrows: Boolean) =
+        perform(AbyssusBundle.message("uiCommandNavigation")) { e, m -> e.setScreenNavigation(m, screenId, if (arrows) "arrows" else "tab") } is UiEditOutcome.Edited
 
     fun addScreen(name: String, kind: String): Boolean {
         val id = added(perform(AbyssusBundle.message("uiCommandAddScreen")) { e, m -> e.addScreen(m, name, kind) }) ?: return false

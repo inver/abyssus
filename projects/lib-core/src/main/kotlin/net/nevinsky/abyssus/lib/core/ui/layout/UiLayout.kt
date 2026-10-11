@@ -99,7 +99,7 @@ class UiLayoutEngine(private val measurer: UiMeasurer) {
         private fun preferred(widget: UiWidget): UiSizeF = preferred.getOrPut(widget.id) {
             val layout = widget.layout
             val content = when (widget.type) {
-                UiWidgetType.ROW, UiWidgetType.COLUMN, UiWidgetType.PANEL -> containerContent(widget)
+                UiWidgetType.ROW, UiWidgetType.COLUMN, UiWidgetType.PANEL, UiWidgetType.LIST -> containerContent(widget)
                 else -> measurer.preferredSize(widget).let { UiSizeF(sane(it.width, widget), sane(it.height, widget)) }
             }
             UiSizeF(layout.width ?: content.width, layout.height ?: content.height)
@@ -111,7 +111,7 @@ class UiLayoutEngine(private val measurer: UiMeasurer) {
             val gaps = widget.layout.spacing * max(0, children.size - 1)
             return when (widget.type) {
                 UiWidgetType.ROW -> UiSizeF(children.sumOf { it.width.toDouble() }.toFloat() + gaps + pad, (children.maxOfOrNull { it.height } ?: 0f) + pad)
-                UiWidgetType.COLUMN -> UiSizeF((children.maxOfOrNull { it.width } ?: 0f) + pad, children.sumOf { it.height.toDouble() }.toFloat() + gaps + pad)
+                UiWidgetType.COLUMN, UiWidgetType.LIST -> UiSizeF((children.maxOfOrNull { it.width } ?: 0f) + pad, children.sumOf { it.height.toDouble() }.toFloat() + gaps + pad)
                 else -> UiSizeF((children.maxOfOrNull { it.width } ?: 0f) + pad, (children.maxOfOrNull { it.height } ?: 0f) + pad)
             }
         }
@@ -148,7 +148,7 @@ class UiLayoutEngine(private val measurer: UiMeasurer) {
             val inner = UiRect(bounds.x + pad, bounds.y + pad, max(0f, bounds.width - 2 * pad), max(0f, bounds.height - 2 * pad))
             when (widget.type) {
                 UiWidgetType.ROW -> flow(widget, inner, visible, horizontal = true)
-                UiWidgetType.COLUMN -> flow(widget, inner, visible, horizontal = false)
+                UiWidgetType.COLUMN, UiWidgetType.LIST -> flow(widget, inner, visible, horizontal = false)
                 else -> widget.children.forEach { child -> place(child, anchored(child.layout, inner, preferred(child)), visible) }
             }
         }

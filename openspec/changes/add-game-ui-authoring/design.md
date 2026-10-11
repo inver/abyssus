@@ -79,3 +79,6 @@ One editor owns its UI session, backdrop and resources. Closing/rebuilding relea
 ## Migration Plan
 
 Deliver additive runtime support before enabling the editor's UI creation action. Existing projects with no uiAssetNames remain unchanged and existing Play behavior stays intact. No automatic migration of menus or scene files occurs. Rollback disables the new editor/runtime feature while preserving UI asset files as unknown metadata for later reopening; users must keep a version supporting UI to run authored menus. Do not remove data on downgrade.
+
+
+> Update (2026-10-11, change `migrate-control-line-ui`): the dedicated demo mentioned above was removed after Control Line migrated to an authored UI asset, which now proves host parity. The "separate demo avoids competing ownership" mitigation no longer applies.

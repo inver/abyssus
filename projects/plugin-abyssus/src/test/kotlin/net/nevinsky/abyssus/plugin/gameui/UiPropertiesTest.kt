@@ -94,10 +94,10 @@ class UiPropertiesTest : BasePlatformTestCase() {
 
     fun testBindingRowsOfferOnlyCompatibleBindingsAndTheActionRowOnlyForButtons() {
         val slider = fields("vol").bindings.associateBy { it.key }
-        assertEquals(setOf("binding.value", "binding.visible", "binding.enabled"), slider.keys)
+        assertEquals(setOf("binding.value", "binding.visible", "binding.enabled", "binding.style"), slider.keys)
         assertEquals("a number slider value lists number bindings", listOf("score", "volume"), (slider.getValue("binding.value") as UiField.Binding).options)
         assertEquals("visible and enabled list booleans", listOf("muted"), (slider.getValue("binding.visible") as UiField.Binding).options)
-        assertEquals(setOf("binding.text", "binding.visible", "binding.enabled"), fields("go").bindings.map { it.key }.toSet())
+        assertEquals(setOf("binding.text", "binding.visible", "binding.enabled", "binding.style"), fields("go").bindings.map { it.key }.toSet())
         assertEquals(listOf("action.click"), keys(fields("go").actions))
         assertTrue(fields("title").actions.isEmpty())
     }

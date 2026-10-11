@@ -234,7 +234,7 @@ internal class UiPainter(private val context: () -> UiPaintContext, private val 
 
 /** One Scene2D actor per widget: a rectangle in the layer stage whose draw is clipped to the widget's visible area. */
 internal class UiWidgetActor(
-    val widget: UiWidget,
+    var widget: UiWidget,
     private val painter: UiPainter,
     private val context: () -> UiPaintContext,
 ) : Actor() {

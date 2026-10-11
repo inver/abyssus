@@ -6,6 +6,7 @@ package net.nevinsky.abyssus.plugin.gameui
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.ui.model.UiBinding
 import net.nevinsky.abyssus.lib.core.ui.model.UiBindingAccess
 import net.nevinsky.abyssus.lib.core.ui.model.UiBindingType
@@ -28,10 +29,14 @@ sealed interface FormResult<out T> {
 data class BindingForm(
     val name: String = "", val type: String = "number", val access: String = "readOnly", val sample: String = "",
     val min: String = "", val max: String = "", val step: String = "", val maxLength: String = "",
+    /** For a list: the record as `name:type, name:type`; [sample] is then a JSON array of rows. */
+    val fields: String = "",
 ) {
     companion object {
-        fun of(b: UiBinding) = BindingForm(b.name, b.type.json, b.access.json, b.sample?.asText().orEmpty(),
-            b.min?.let(::trim).orEmpty(), b.max?.let(::trim).orEmpty(), b.step?.let(::trim).orEmpty(), b.maxLength?.toString().orEmpty())
+        fun of(b: UiBinding) = BindingForm(b.name, b.type.json, b.access.json,
+            b.sample?.let { if (b.type == UiBindingType.LIST) it.toString() else it.asText() }.orEmpty(),
+            b.min?.let(::trim).orEmpty(), b.max?.let(::trim).orEmpty(), b.step?.let(::trim).orEmpty(), b.maxLength?.toString().orEmpty(),
+            b.fields.joinToString(", ") { "${it.name}:${it.type.json}" })
 
         private fun trim(v: Double) = if (v == Math.rint(v)) v.toLong().toString() else v.toString()
     }
@@ -54,12 +59,13 @@ fun bindingMembers(form: BindingForm): FormResult<ObjectNode> {
     val maxLength = form.maxLength.takeIf { it.isNotBlank() }?.trim()?.toIntOrNull()?.takeIf { it >= 0 }
     if (form.maxLength.isNotBlank() && maxLength == null) errors += FormError("maxLength", "length")
     val f = JsonNodeFactory.instance
+    if (type == UiBindingType.LIST) return listMembers(form, errors)
     val sample = form.sample.takeIf { it.isNotBlank() }?.let {
         when (type) {
             UiBindingType.NUMBER -> it.trim().toDoubleOrNull()?.takeIf(Double::isFinite)?.let { d -> jsonNumber(d) }
             UiBindingType.BOOLEAN -> when (it.trim().lowercase()) { "true" -> f.booleanNode(true); "false" -> f.booleanNode(false); else -> null }
             UiBindingType.STRING -> f.textNode(it)
-            null -> null
+            UiBindingType.LIST, null -> null
         }.also { node -> if (node == null) errors += FormError("sample", "sample") }
     }
     if (errors.isNotEmpty()) return FormResult.Invalid(errors)
@@ -69,6 +75,47 @@ fun bindingMembers(form: BindingForm): FormResult<ObjectNode> {
         min?.let { set<com.fasterxml.jackson.databind.JsonNode>("min", jsonNumber(it)) }; max?.let { set<com.fasterxml.jackson.databind.JsonNode>("max", jsonNumber(it)) }
         step?.let { set<com.fasterxml.jackson.databind.JsonNode>("step", jsonNumber(it)) }
         maxLength?.let { put("maxLength", it) }
+    })
+}
+
+/** The record of a list binding from `name:type, name:type`: scalar types only, names unique and non-blank; null on a mistake. */
+fun parseRecord(spec: String): List<Pair<String, UiBindingType>>? {
+    val parts = spec.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    if (parts.isEmpty()) return null
+    val result = mutableListOf<Pair<String, UiBindingType>>()
+    for (part in parts) {
+        val name = part.substringBefore(':').trim()
+        val type = UiBindingType.entries.firstOrNull { it.json == part.substringAfter(':', "").trim() }
+        if (name.isEmpty() || type == null || type == UiBindingType.LIST || result.any { it.first == name }) return null
+        result += name to type
+    }
+    return result
+}
+
+/** The members of a list binding: its `fields` and a `sample` array whose rows match them. A list is always read-only. */
+private fun listMembers(form: BindingForm, errors: MutableList<FormError>): FormResult<ObjectNode> {
+    val f = JsonNodeFactory.instance
+    val record = parseRecord(form.fields)
+    if (record == null) errors += FormError("fields", "fields")
+    val sample = form.sample.takeIf { it.isNotBlank() }?.let { text ->
+        val rows = runCatchingKeepingCancellation { net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(text) }.getOrNull()
+        val ok = rows != null && rows.isArray && record != null && rows.all { row ->
+            row.isObject && row.properties().all { (k, v) ->
+                when (record.firstOrNull { it.first == k }?.second) {
+                    UiBindingType.NUMBER -> v.isNumber
+                    UiBindingType.BOOLEAN -> v.isBoolean
+                    UiBindingType.STRING -> v.isTextual
+                    else -> false
+                }
+            }
+        }
+        if (!ok) errors += FormError("sample", "sample")
+        rows
+    }
+    if (errors.isNotEmpty()) return FormResult.Invalid(errors)
+    return FormResult.Valid(f.objectNode().apply {
+        set<com.fasterxml.jackson.databind.JsonNode>("fields", f.arrayNode().also { a -> record!!.forEach { (n, t) -> a.addObject().put("name", n).put("type", t.json) } })
+        sample?.let { set<com.fasterxml.jackson.databind.JsonNode>("sample", it) }
     })
 }
 

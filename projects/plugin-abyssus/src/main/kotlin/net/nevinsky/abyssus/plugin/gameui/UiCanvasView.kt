@@ -32,6 +32,7 @@ import net.nevinsky.abyssus.lib.core.ui.render.UiPresenter
 import net.nevinsky.abyssus.lib.core.ui.state.UiBindingSession
 import net.nevinsky.abyssus.lib.core.ui.state.UiCollectionSource
 import net.nevinsky.abyssus.lib.core.ui.state.UiScreenRef
+import net.nevinsky.abyssus.lib.core.ui.state.uiBaseId
 import net.nevinsky.abyssus.lib.core.ui.state.UiWriteResult
 import net.nevinsky.abyssus.plugin.sceneview.CanvasOverlayHost
 import net.nevinsky.abyssus.plugin.sceneview.GdxContext
@@ -334,7 +335,7 @@ class UiCanvasView(
                 if (!SwingUtilities.isLeftMouseButton(e)) return
                 val x = e.x * scale(); val y = e.y * scale()
                 if (controller.mode == UiEditorMode.PREVIEW) { presenter?.touchDown(previewX(x), previewY(y)); return }
-                val id = controller.screenId?.let(::layoutOf)?.let { hits.pick(it, x, y) }
+                val id = controller.screenId?.let(::layoutOf)?.let { hits.pick(it, x, y) }?.let(::uiBaseId) // any row stands for its template
                 if (id != null) controller.beginGesture(id, x, y) else controller.select(null)
             }
 
@@ -355,7 +356,7 @@ class UiCanvasView(
             override fun mouseMoved(e: MouseEvent) {
                 val x = e.x * scale(); val y = e.y * scale()
                 if (controller.mode == UiEditorMode.PREVIEW) { presenter?.pointerMoved(previewX(x), previewY(y)); return }
-                overlay.hoverId = controller.screenId?.let(::layoutOf)?.let { hits.pick(it, x, y) }
+                overlay.hoverId = controller.screenId?.let(::layoutOf)?.let { hits.pick(it, x, y) }?.let(::uiBaseId)
             }
 
             override fun mouseExited(e: MouseEvent) { overlay.hoverId = null }

@@ -26,7 +26,7 @@ sealed interface SampleResult {
     data class Rejected(val reason: SampleProblem) : SampleResult
 }
 
-enum class SampleProblem { UNKNOWN_BINDING, NOT_A_NUMBER, NOT_A_BOOLEAN, BELOW_MINIMUM, ABOVE_MAXIMUM, TOO_LONG }
+enum class SampleProblem { UNKNOWN_BINDING, NOT_A_NUMBER, NOT_A_BOOLEAN, BELOW_MINIMUM, ABOVE_MAXIMUM, TOO_LONG, NOT_A_LIST, NO_SUCH_ROW, NO_SUCH_FIELD }
 
 /**
  * The preview's own world: sample values for the declared bindings, a bounded log of what the UI did, and nothing else. It
@@ -59,16 +59,20 @@ class UiPreviewState private constructor(
         for (b in collection.bindings) values[b.name] = authoredValue(b)
     }
 
-    private fun authoredValue(b: UiBinding): UiValue = b.sample?.let {
-        when (b.type) {
-            UiBindingType.NUMBER -> UiValue.Num(it.doubleValue())
-            UiBindingType.BOOLEAN -> UiValue.Bool(it.booleanValue())
-            UiBindingType.STRING -> UiValue.Text(it.textValue())
-        }
-    } ?: when (b.type) {
+    private fun authoredValue(b: UiBinding): UiValue = b.sample?.let { sampleOf(b.type, it, b.fields) } ?: zero(b.type)
+
+    private fun zero(type: UiBindingType): UiValue = when (type) {
         UiBindingType.NUMBER -> UiValue.Num(0.0)
         UiBindingType.BOOLEAN -> UiValue.Bool(false)
         UiBindingType.STRING -> UiValue.Text("")
+        UiBindingType.LIST -> UiValue.Rows(emptyList())
+    }
+
+    private fun sampleOf(type: UiBindingType, node: com.fasterxml.jackson.databind.JsonNode, fields: List<net.nevinsky.abyssus.lib.core.ui.model.UiRecordField>): UiValue = when (type) {
+        UiBindingType.NUMBER -> UiValue.Num(node.doubleValue())
+        UiBindingType.BOOLEAN -> UiValue.Bool(node.booleanValue())
+        UiBindingType.STRING -> UiValue.Text(node.textValue())
+        UiBindingType.LIST -> UiValue.Rows(node.map { row -> fields.associate { f -> f.name to (row.get(f.name)?.let { sampleOf(f.type, it, emptyList()) } ?: zero(f.type)) } })
     }
 
     /** What the UI is shown now: every binding's current sample. */
@@ -113,10 +117,60 @@ class UiPreviewState private constructor(
                 if (binding.maxLength != null && input.length > binding.maxLength!!) return SampleResult.Rejected(SampleProblem.TOO_LONG)
                 UiValue.Text(input)
             }
+            UiBindingType.LIST -> return SampleResult.Rejected(SampleProblem.NOT_A_LIST) // lists are edited row by row
         }
         values[name] = value
         log(UiLogKind.SAMPLE, "$name = ${show(value)}")
         return SampleResult.Applied(value)
+    }
+
+    private fun listBinding(name: String): Pair<UiBinding, UiValue.Rows>? {
+        val b = collection.binding(name)?.takeIf { it.type == UiBindingType.LIST } ?: return null
+        return b to (values[name] as? UiValue.Rows ?: UiValue.Rows(emptyList()))
+    }
+
+    /** Adds a row of zero values (or of the field texts in [fields]) to the list sample [name]. */
+    fun addRow(name: String, fields: Map<String, String> = emptyMap()): SampleResult {
+        val (binding, rows) = listBinding(name) ?: return SampleResult.Rejected(if (collection.binding(name) == null) SampleProblem.UNKNOWN_BINDING else SampleProblem.NOT_A_LIST)
+        val row = LinkedHashMap<String, UiValue>()
+        for (f in binding.fields) {
+            val v = fields[f.name]?.let { parseField(f.type, it) ?: return SampleResult.Rejected(problemOf(f.type)) } ?: zero(f.type)
+            row[f.name] = v
+        }
+        values[name] = UiValue.Rows(rows.items + row)
+        log(UiLogKind.SAMPLE, "$name + row ${rows.items.size}")
+        return SampleResult.Applied(values.getValue(name))
+    }
+
+    fun removeRow(name: String, index: Int): SampleResult {
+        val (_, rows) = listBinding(name) ?: return SampleResult.Rejected(SampleProblem.NOT_A_LIST)
+        if (index !in rows.items.indices) return SampleResult.Rejected(SampleProblem.NO_SUCH_ROW)
+        values[name] = UiValue.Rows(rows.items.filterIndexed { i, _ -> i != index })
+        log(UiLogKind.SAMPLE, "$name - row $index")
+        return SampleResult.Applied(values.getValue(name))
+    }
+
+    /** Sets one field of one row from typed text, with the field's type checked. */
+    fun setRowField(name: String, index: Int, field: String, input: String): SampleResult {
+        val (binding, rows) = listBinding(name) ?: return SampleResult.Rejected(SampleProblem.NOT_A_LIST)
+        if (index !in rows.items.indices) return SampleResult.Rejected(SampleProblem.NO_SUCH_ROW)
+        val f = binding.fields.firstOrNull { it.name == field } ?: return SampleResult.Rejected(SampleProblem.NO_SUCH_FIELD)
+        val v = parseField(f.type, input) ?: return SampleResult.Rejected(problemOf(f.type))
+        values[name] = UiValue.Rows(rows.items.mapIndexed { i, r -> if (i == index) r + (field to v) else r })
+        log(UiLogKind.SAMPLE, "$name[$index].$field = ${show(v)}")
+        return SampleResult.Applied(values.getValue(name))
+    }
+
+    private fun parseField(type: UiBindingType, input: String): UiValue? = when (type) {
+        UiBindingType.NUMBER -> input.trim().toDoubleOrNull()?.takeIf(Double::isFinite)?.let { UiValue.Num(it) }
+        UiBindingType.BOOLEAN -> when (input.trim().lowercase()) { "true", "on", "yes" -> UiValue.Bool(true); "false", "off", "no" -> UiValue.Bool(false); else -> null }
+        UiBindingType.STRING -> UiValue.Text(input)
+        UiBindingType.LIST -> null
+    }
+
+    private fun problemOf(type: UiBindingType) = when (type) {
+        UiBindingType.BOOLEAN -> SampleProblem.NOT_A_BOOLEAN
+        else -> SampleProblem.NOT_A_NUMBER
     }
 
     /** Authored samples again, an empty log, and a new [generation] so the host returns to the start screen. */
@@ -135,6 +189,7 @@ class UiPreviewState private constructor(
         is UiValue.Num -> if (value.value == Math.rint(value.value)) value.value.toLong().toString() else value.value.toString()
         is UiValue.Bool -> value.value.toString()
         is UiValue.Text -> "\"${value.value}\""
+        is UiValue.Rows -> "${value.items.size} rows"
     }
 
     class Factory(private val maxLog: Int = DEFAULT_LOG) {

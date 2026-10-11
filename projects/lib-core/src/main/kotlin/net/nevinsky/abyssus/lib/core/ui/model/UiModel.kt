@@ -25,6 +25,9 @@ enum class UiWidgetType(val json: String, val container: Boolean) {
     LABEL("label", false), IMAGE("image", false), BUTTON("button", false),
     PROGRESS_BAR("progressBar", false), SLIDER("slider", false),
     CHECKBOX("checkbox", false), TEXT_FIELD("textField", false),
+
+    /** Repeats its `template` widget for each item of its `items` list binding; laid out like a column. */
+    LIST("list", false),
 }
 
 enum class UiAnchor(val json: String) {
@@ -35,7 +38,16 @@ enum class UiAnchor(val json: String) {
 
 enum class UiAlign(val json: String) { START("start"), CENTER("center"), END("end"), STRETCH("stretch") }
 
-enum class UiBindingType(val json: String) { NUMBER("number"), BOOLEAN("boolean"), STRING("string") }
+enum class UiBindingType(val json: String) { NUMBER("number"), BOOLEAN("boolean"), STRING("string"), LIST("list") }
+
+/** How the keyboard moves focus on a screen: Tab / Shift-Tab, or Up / Down. */
+enum class UiNavigation(val json: String) { TAB("tab"), ARROWS("arrows") }
+
+/** A bindings prefix: `item.rank` names the `rank` field of the current row of the enclosing list. */
+const val UI_ITEM_PREFIX = "item."
+
+/** One typed field of a list binding's record. */
+data class UiRecordField(val name: String, val type: UiBindingType)
 
 enum class UiBindingAccess(val json: String) { READ_ONLY("readOnly"), WRITE("write") }
 
@@ -88,6 +100,9 @@ data class UiWidget(
     val bindings: Map<String, String> = emptyMap(),
     val actions: Map<String, UiAction> = emptyMap(),
     val children: List<UiWidget> = emptyList(),
+    /** For a `list`: the row that is repeated, and what is shown instead of rows when there are none. */
+    val template: UiWidget? = null,
+    val empty: UiWidget? = null,
     val raw: JsonNode,
 )
 
@@ -99,6 +114,7 @@ data class UiScreen(
     val referenceHeight: Float,
     val modal: Boolean,
     val root: UiWidget,
+    val navigation: UiNavigation = UiNavigation.TAB,
 )
 
 data class UiBinding(
@@ -110,6 +126,8 @@ data class UiBinding(
     val max: Double? = null,
     val step: Double? = null,
     val maxLength: Int? = null,
+    /** For a `list` binding: the typed fields of one item. */
+    val fields: List<UiRecordField> = emptyList(),
 )
 
 data class UiResource(val id: String, val kind: UiResourceKind, val path: String)
@@ -138,6 +156,7 @@ enum class UiIssueCode {
     UNKNOWN_ENTRY_SCREEN, DUPLICATE_SCREEN_ID, DUPLICATE_WIDGET_ID, DUPLICATE_BINDING, DUPLICATE_RESOURCE,
     BAD_GEOMETRY, TOO_DEEP, TOO_MANY_WIDGETS, CHILDREN_ON_LEAF, BAD_BINDING,
     UNKNOWN_WIDGET, UNRESOLVED_BINDING, UNRESOLVED_SCREEN,
+    MISSING_TEMPLATE, UNRESOLVED_ITEM_FIELD, ITEM_OUTSIDE_LIST,
 }
 
 /** A diagnostic carrying data, not text: [path] is a JSON pointer-like location, hosts choose presentation. */

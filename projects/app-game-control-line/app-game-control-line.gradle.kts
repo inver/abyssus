@@ -53,23 +53,12 @@ tasks.named<JavaExec>("run") {
     systemProperty("controlLine.project", dir)
 }
 
-// The standalone UI demo (uidemo/): authored menus against live demo data, on a fixture project of its own.
-val uiDemoProject = layout.projectDirectory.dir("uiDemo/UiDemo")
-
-tasks.register<JavaExec>("runUiDemo") {
-    group = "control line"
-    description = "Runs the standalone UI demo on uiDemo/UiDemo; Control Line itself is not started."
-    classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("net.nevinsky.abyssus.app.game.controlline.uidemo.UiDemoMainKt")
-    systemProperty("uiDemo.project", uiDemoProject.asFile.absolutePath)
-    if (System.getProperty("os.name").lowercase().contains("mac")) jvmArgs("-XstartOnFirstThread")
-}
-
 tasks.test {
-    systemProperty("uiDemo.project", uiDemoProject.asFile.absolutePath)
     systemProperty("controlLine.project", gameProject.asFile.absolutePath)
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
+    // re-records the pinned screens (screens.golden) from the screens under test: only when a screen is meant to change
+    System.getProperty("abyssus.recordScreens")?.let { systemProperty("abyssus.recordScreens", it) }
 }
 
 // Generators of the bundled project's assets (tools/): their output is committed, so the game needs none of them.

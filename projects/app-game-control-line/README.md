@@ -18,23 +18,6 @@ Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json` a
 `<user-home>/.abyssus-control-line/f2b-scores.json`; a file that cannot be read is renamed to `scores.json.bad` or
 `f2b-scores.json.bad`.
 
-## UI demo
-
-A separate, standalone host proves that menus and HUDs authored as Abyssus `UI` assets run in a game the same way as in
-the editor's preview. It does not start Control Line and does not touch its screens or its `project/ControlLine`:
-
-```
-./gradlew :app-game-control-line:runUiDemo
-```
-
-It opens the `menus` asset of its own fixture project `uiDemo/UiDemo` (open a *copy* of that folder in the IDE to edit
-it): a main menu with a name field, volume slider, mute checkbox and Start / Settings / Quit, a settings screen, a
-non-modal HUD overlay (health bar, score, Pause) and a modal pause overlay. `UiDemoHost` supplies changing values
-(health drains and the score climbs after Start), snaps the volume to 0.05 steps, rejects the names `admin` and blank,
-and handles the actions `startGame`, `toMenu` and `quit`. Tab / Shift-Tab, Enter / Space and Escape work as in the
-editor preview. Tests: `./gradlew :app-game-control-line:test --tests '*UiDemoHostTest'`, plus `UiDemoGlTest` with
-`-Dabyssus.glTests=true`.
-
 ## Controls
 
 | Where | Keys and mouse |
@@ -232,7 +215,7 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 | `pattern` | the F2B pattern: `Schedule` (`Figure`), `HemisphereGeometry`, `PathTokens`, `TrackBuilder`, `IdealTracks`, `IdealSampler`, `Matchers`, `Grader` / `MarkWeights`, `PatternJudge`, `ScoreSheet`, `PatternScoreTable`, and the debrief's `FlightRecording`, `RecordingStore`, `DebriefModel`, and the Noob guide `GuidePlanner` | no |
 | `flow` | `GameFlow` (the screen state machine, with the mode and assist level), `FlightReport` | no |
 | `input` | `HandleInput` (keyboard and mouse tilt) | no |
-| `render`, `screens` | `FieldScene`, `FieldRenderer` (with `shader/terrain.*`), `FieldShadows` (the sun's shadow map), `Cameras`, `GameUi` | yes |
+| `render`, `screens` | `FieldScene`, `FieldRenderer` (with `shader/terrain.*`), `FieldShadows` (the sun's shadow map), `Cameras`, `GameUiHost` (the authored screens over `lib-core`'s `UiPresenter`), `GameUiModel` (what the screens show and the actions and keys they send; no GL), `GameUiContract` | yes |
 | `play` | `ControlLinePlay : PlayModule` | no |
 
 ### Foliage
@@ -305,8 +288,21 @@ kinematic body; the plane is put at takeoff with `PhysicsBody.setPose`.
   textures, or generated from them. Each folder has a `source.json` with its source and licence. Nothing stands within
   28 m of the pilot. Sizes and positions are estimates, not survey data. See
   [the environment notes](project/environment/README.md) to rebuild it.
-- `src/main/resources/uiskin/`: libGDX's sample `uiskin` (`libGDX checkout: tests/gdx-tests-android/assets/data`, libGDX 1.14.2,
-  Apache-2.0).
+
+## Screens
+
+Every screen, the HUD and the pause menu are the `screens` UI asset of the bundled project
+(`project/ControlLine/assets/screens/meta.json`, registered in `ControlLine.abss`), drawn by `lib-core`'s `UiPresenter` through
+`GameUiHost`. Open a **copy** of `project/ControlLine` in Abyssus to edit them in the Game UI tab; the committed folder is
+asserted on by tests. The asset's contract with the game is `screens/GameUiContract.kt`: the bindings `GameUiModel`
+publishes every frame (lists carry the fields of their rows) and the named actions the asset may emit. When you change
+a screen, keep `ControlLineUiAssetTest` green (it admits the asset and checks both lists against the contract), and run the
+GL tests (`-Dabyssus.glTests=true`): `GameScreensCharacterizationTest` compares the text of 23 steps through a whole session
+with `characterization/screens.golden`, recorded from the original hand-written screens. Re-record it
+(`-Dabyssus.recordScreens=true`) only when a screen is meant to change.
+
+Screens fit a 1280 × 720 reference rectangle and use the bundled theme; the keys of the game (Escape, Left / Right, Enter on
+plane select and the boards, the debrief's keys) are handled by `GameUiModel.key` before the presenter sees them.
 
 ## Tuning
 

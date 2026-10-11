@@ -236,4 +236,22 @@ class UiCanvasViewGlTest {
         SwingUtilities.invokeAndWait { canvas.dispose(); window!!.contentPane.removeAll() }
         waitFor("the release") { canvas.released }
     }
+
+    @Test fun editModeDrawsSampleRowsAndFramesEveryCopyOfTheSelectedTemplate() {
+        val text = """{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
+            "bindings":[{"name":"scores","type":"list","fields":[{"name":"n","type":"number"}],"sample":[{"n":1},{"n":2},{"n":3}]}],
+            "screens":[{"id":"main","referenceSize":{"width":400,"height":300},"root":{"id":"root","type":"panel","children":[
+              {"id":"table","type":"list","layout":{"x":10,"y":10,"width":100,"spacing":2},"properties":{"maxRows":2},"bindings":{"items":"scores"},
+               "template":{"id":"row","type":"panel","layout":{"width":100,"height":20},"properties":{"styleOverrides":{"background":"#ff0000ff"}}}}]}}]}}}"""
+        val model = FakeModel(UiEditorState.Editable(UiCollectionDecoder().decode(SceneJson().parse(text)) as UiAdmission.Admitted, text))
+        val canvas = open(model)
+        val layout = canvas.layoutOf("main")!!
+        waitFor("both sample rows") { canvas.snapshot()?.let { at(it, layout, 50f, 20f) == 0xff0000 && at(it, layout, 50f, 42f) == 0xff0000 } == true }
+        assertNotEquals("maxRows 2: no third row", 0xff0000, at(snapshot(), layout, 50f, 64f))
+        model.selectedWidgetId = "row"
+        waitFor("a frame on the first row") { canvas.snapshot()?.let { at(it, layout, 10f, 20f) == 0x2d8cff } == true }
+        assertEquals("and on the second", 0x2d8cff, at(snapshot(), layout, 10f, 42f))
+        assertEquals("the rows are ids of copies; the template itself has no node of its own", listOf("row#0", "row#1"), layout.order.filter { it.startsWith("row") })
+    }
 }
+

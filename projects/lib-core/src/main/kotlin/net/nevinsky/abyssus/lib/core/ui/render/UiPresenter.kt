@@ -20,6 +20,8 @@ import net.nevinsky.abyssus.lib.core.ui.style.UiResolvedStyle
 import net.nevinsky.abyssus.lib.core.ui.style.UiStyleResolver
 import net.nevinsky.abyssus.lib.core.ui.style.UiVisualState
 
+private val CLICKABLE = setOf(UiWidgetType.PANEL, UiWidgetType.ROW, UiWidgetType.COLUMN)
+
 private val INTERACTIVE =
     setOf(UiWidgetType.BUTTON, UiWidgetType.SLIDER, UiWidgetType.CHECKBOX, UiWidgetType.TEXT_FIELD)
 
@@ -41,7 +43,7 @@ class UiPresenter(
     showEntry: Boolean = true,
     kit: UiGlKit? = null,
 ) : UiPaintContext {
-    val navigator = UiNavigator(assetName, collection, source, actions, showEntry)
+    val navigator = UiNavigator(assetName, collection, source, actions, showEntry).also { it.rootProvider = { ref -> expanded[ref] ?: it.screenOf(ref)?.root } }
     private val styles = UiStyleResolver(json)
     private val text = UiText { this }
     private val painter = UiPainter({ this }, text)
@@ -53,6 +55,16 @@ class UiPresenter(
 
     /** What an editor draws on top of the screen (selection, hover, a drag's drop target); null for a plain presentation. */
     var overlay: UiEditOverlay? = null
+
+    private var published: UiSnapshot? = null
+    private var forcePublish = false
+    private val expanded = HashMap<UiScreenRef, UiWidget>()
+    private var focusFirst = showEntry
+    private var freshFocus: String? = null
+
+    /** Problems found while expanding lists (a row limit hit), for the host's diagnostics. */
+    var listDiagnostics: List<UiBindingDiagnostic> = emptyList()
+        private set
 
     private var width = 0
     private var height = 0
@@ -77,7 +89,7 @@ class UiPresenter(
 
     // --- paint context ---
 
-    override fun style(widget: UiWidget): UiResolvedStyle = styles.resolve(collection, widget, states(widget))
+    override fun style(widget: UiWidget): UiResolvedStyle = styles.resolve(collection, widget, states(widget), view.styleName(widget))
 
     override fun states(widget: UiWidget): Set<UiVisualState> = buildSet {
         if (!session.view().enabled(widget)) add(UiVisualState.DISABLED)
@@ -109,7 +121,11 @@ class UiPresenter(
         dirty = true
     }
 
+    /** Takes the host's values for this update; nothing is laid out again when they are the ones already shown. */
     fun publish(snapshot: UiSnapshot) {
+        if (snapshot == published && !forcePublish) return
+        published = snapshot
+        forcePublish = false
         session.publish(snapshot)
         invalidate()
     }
@@ -148,17 +164,22 @@ class UiPresenter(
         dirty = false
         val live = navigator.layers().map { it.ref }.toSet()
         (stages.keys - live).forEach {
-            stages.remove(it)?.dispose(); actors.remove(it); layouts.remove(it); widgets.remove(it)
+            stages.remove(it)?.dispose(); actors.remove(it); layouts.remove(it); widgets.remove(it); expanded.remove(it)
         }
+        listDiagnostics = emptyList()
         for (ref in live) {
-            val screen = collection.screenFor(ref, navigator) ?: continue
+            val authored = collection.screenFor(ref, navigator) ?: continue
+            val expansion = expandLists(authored.root, view)
+            listDiagnostics = (listDiagnostics + expansion.diagnostics).distinct()
+            expanded[ref] = expansion.root
+            val screen = authored.copy(root = expansion.root)
             val result = engine.resolve(screen, width.toFloat(), height.toFloat())
             layouts[ref] = result
             widgets[ref] = index(screen.root)
             val stage =
                 stages.getOrPut(ref) { Stage(FitViewport(screen.referenceWidth, screen.referenceHeight), batch) }
             stage.viewport.update(width, height, true)
-            val byId = actors[ref]?.takeIf { it.keys == result.nodes.keys } ?: run {
+            val byId = actors[ref]?.takeIf { it.keys == result.nodes.keys }?.also { known -> known.forEach { (id, actor) -> actor.widget = widgets.getValue(ref).getValue(id) } } ?: run {
                 stage.clear()
                 result.order.associateWith { id ->
                     UiWidgetActor(
@@ -183,6 +204,9 @@ class UiPresenter(
         return map
     }
 
+    /** Whether the top layer's screen moves focus with Up and Down. */
+    private fun arrows(): Boolean = navigator.layers().firstOrNull()?.let { navigator.screenOf(it.ref)?.navigation == UiNavigation.ARROWS } == true
+
     private fun refreshHidden() {
         hidden.clear()
         fun walk(w: UiWidget, parentHidden: Boolean) {
@@ -190,13 +214,14 @@ class UiPresenter(
             if (hide) hidden += w.id
             w.children.forEach { walk(it, hide) }
         }
-        navigator.layers().forEach { layer -> collection.screenFor(layer.ref, navigator)?.let { walk(it.root, false) } }
+        navigator.layers().forEach { layer -> expanded[layer.ref]?.let { walk(it, false) } }
     }
 
     /** Draws all layers bottom to top. GL thread, on screen. */
     fun render(delta: Float = 0f) {
         relayout()
         refreshHidden()
+        settleFocus()
         for (layer in navigator.layers().asReversed()) {
             val stage = stages[layer.ref] ?: continue
             stage.viewport.update(width, height, true)
@@ -222,8 +247,9 @@ class UiPresenter(
         fun rectOf(r: net.nevinsky.abyssus.lib.core.ui.layout.UiRect) =
             com.badlogic.gdx.math.Rectangle(r.x, referenceHeight - r.bottom, r.width, r.height)
         if (overlay.outlines) layout.nodes.values.forEach { frame(rectOf(it.visible), 0xffffff30.toInt(), 1f) }
-        overlay.hoverId?.let { id -> layout.nodes[id]?.let { frame(rectOf(it.visible), 0x2d8cff90.toInt(), 1f) } }
-        overlay.selectedId?.let { id -> layout.nodes[id]?.let { frame(rectOf(it.bounds), 0x2d8cffff.toInt(), 2f) } }
+        // a widget inside a list's row has one copy per row; the frame goes on every copy
+        overlay.hoverId?.let { id -> layout.nodes.filterKeys { uiBaseId(it) == id }.values.forEach { frame(rectOf(it.visible), 0x2d8cff90.toInt(), 1f) } }
+        overlay.selectedId?.let { id -> layout.nodes.filterKeys { uiBaseId(it) == id }.values.forEach { frame(rectOf(it.bounds), 0x2d8cffff.toInt(), 2f) } }
         overlay.ghost?.let { frame(rectOf(it), 0xffcc33ff.toInt(), 2f) }
         batch.setColor(Color.WHITE)
         batch.end()
@@ -233,8 +259,8 @@ class UiPresenter(
     fun display(screenId: String, assetName: String): Boolean {
         val shown = navigator.display(UiScreenRef(assetName, screenId))
         if (shown) {
-            clearTransient(); invalidate()
-        }
+            clearTransient(); invalidate(); focusFirst = true
+        } else lastNavigationFailure = UiNavDiagnostic(UiNavIssue.MISSING_TARGET, "$assetName:$screenId")
         return shown
     }
 
@@ -256,13 +282,20 @@ class UiPresenter(
         for (id in layout.order.asReversed()) {
             if (!layout.nodes.getValue(id).visible.contains(lx, ly)) continue
             val widget = ids.getValue(id)
-            if (widget.type in INTERACTIVE && id !in hidden && view.enabled(widget)) return id
+            if (interactive(widget) && id !in hidden && view.enabled(widget)) return id
         }
         return null
     }
 
     private fun prepare() {
-        relayout(); refreshHidden()
+        relayout(); refreshHidden(); settleFocus()
+    }
+
+    /** An arrow-key screen starts with its first usable control focused. */
+    private fun settleFocus() {
+        if (!focusFirst || width <= 0) return
+        focusFirst = false
+        if (arrows()) { navigator.moveFocus(true, { view.visible(it) }, { view.enabled(it) }); freshFocus = navigator.focus }
     }
 
     fun pointerMoved(x: Float, y: Float) {
@@ -281,6 +314,7 @@ class UiPresenter(
         }
         val widget = widget(route.layer.ref, id!!) ?: return true
         navigator.focusOn(id)
+        freshFocus = id
         pressed = id
         when (widget.type) {
             UiWidgetType.SLIDER -> dragSlider(route.layer.ref, widget, x)
@@ -306,7 +340,7 @@ class UiPresenter(
         val widget = widget(ref, id) ?: return true
         val over = route?.widgetId == id
         when (widget.type) {
-            UiWidgetType.BUTTON -> if (over) widget.actions["click"]?.let(::activate)
+            UiWidgetType.BUTTON, UiWidgetType.PANEL, UiWidgetType.ROW, UiWidgetType.COLUMN -> if (over) widget.actions["click"]?.let(::activate)
             UiWidgetType.CHECKBOX -> if (over) commit(
                 widget,
                 UiValue.Bool(!view.flag(widget, "checked", false)),
@@ -336,7 +370,12 @@ class UiPresenter(
         return when (keycode) {
             Input.Keys.TAB -> {
                 commitFocused(UiEditGesture.FOCUS_LOST)
-                navigator.moveFocus(!shift, { view.visible(it) }, { view.enabled(it) }) != null
+                (navigator.moveFocus(!shift, { view.visible(it) }, { view.enabled(it) }) != null).also { freshFocus = navigator.focus }
+            }
+
+            Input.Keys.UP, Input.Keys.DOWN -> arrows() && run {
+                commitFocused(UiEditGesture.FOCUS_LOST)
+                (navigator.moveFocus(keycode == Input.Keys.DOWN, { view.visible(it) }, { view.enabled(it) }) != null).also { freshFocus = navigator.focus }
             }
 
             Input.Keys.ESCAPE -> navigator.escape().also {
@@ -399,6 +438,10 @@ class UiPresenter(
     /** Character typed into the focused text field; control characters are ignored. */
     fun keyTyped(char: Char): Boolean = if (char.isISOControl()) false else editFocused { it + char }
 
+    /** Controls, and panels / rows / columns that carry a click action (a whole list row can be one target). */
+    private fun interactive(widget: UiWidget): Boolean =
+        widget.type in INTERACTIVE || (widget.type in CLICKABLE && widget.actions.containsKey("click"))
+
     private fun editFocused(change: (String) -> String): Boolean {
         val w = focusedWidget()?.takeIf {
             it.type == UiWidgetType.TEXT_FIELD && session.plan.writeTarget(
@@ -406,7 +449,10 @@ class UiPresenter(
                 it
             ) != null
         } ?: return false
-        buffers[w.id] = change(buffers[w.id] ?: view.text(w))
+        // a field that selects its text on focus is replaced by the first edit after it gained focus
+        val fresh = w.id == freshFocus && w.properties["selectOnFocus"]?.asBoolean() == true
+        buffers[w.id] = change(if (fresh) "" else buffers[w.id] ?: view.text(w))
+        freshFocus = null
         return true
     }
 
@@ -451,6 +497,7 @@ class UiPresenter(
         when (val outcome = session.commit(widget, value)) {
             is UiCommitOutcome.Applied -> {
                 rejections.remove(widget.id); buffers.remove(widget.id); invalidate()
+                forcePublish = true // the host's next snapshot stays authoritative over what this write showed
             }
 
             is UiCommitOutcome.Rejected -> {

@@ -67,6 +67,9 @@ class UiNavigator(
     private val maxHistory: Int = 16,
 ) {
     private val ownCollection = own
+
+    /** The widget tree to walk for focus and Enter on [ref]; a host that expands lists supplies the expanded tree. */
+    var rootProvider: (UiScreenRef) -> UiWidget? = { screenOf(it)?.root }
     private class Entry(val ref: UiScreenRef, val focus: String?)
 
     private var current: UiScreenRef? = null
@@ -207,7 +210,7 @@ class UiNavigator(
 
     fun focusOrder(visible: (UiWidget) -> Boolean, enabled: (UiWidget) -> Boolean): List<String> {
         val layer = layers().firstOrNull() ?: return emptyList()
-        val root = screenOf(layer.ref)?.root ?: return emptyList()
+        val root = rootProvider(layer.ref) ?: return emptyList()
         val order = mutableListOf<String>()
         fun walk(widget: UiWidget) {
             if (!visible(widget)) return
@@ -221,7 +224,7 @@ class UiNavigator(
     /** Enter / Space on the focused widget: a focused button runs its `click` action. */
     fun activateFocused(): UiNavOutcome {
         val id = focus ?: return UiNavOutcome.NoOp
-        val root = layers().firstOrNull()?.let { screenOf(it.ref)?.root } ?: return UiNavOutcome.NoOp
+        val root = layers().firstOrNull()?.let { rootProvider(it.ref) } ?: return UiNavOutcome.NoOp
         fun find(widget: UiWidget): UiWidget? = if (widget.id == id) widget else widget.children.firstNotNullOfOrNull(::find)
         val widget = find(root)?.takeIf { it.type == UiWidgetType.BUTTON } ?: return UiNavOutcome.NoOp
         return widget.actions["click"]?.let(::activate) ?: UiNavOutcome.NoOp

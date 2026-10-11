@@ -125,7 +125,12 @@ A `UI` asset (`MetaType.UI`) holds screens and overlays under `additional.ui`; t
 `Admitted` (a `UiCollection` plus warnings such as an unknown widget kind or an unresolved binding) or `Refused` (the
 reasons, as `UiIssue` codes with a location, no text). `UiCollectionDecoder.decode` is pure: it never modifies the tree,
 and unknown widgets keep their authored object. Wire it by constructor (`UiCollectionDecoder(format)`); there is no
-singleton. A project's `uiAssetNames` list (`ProjectDto.uiAssetNames`, empty when omitted) names the registered assets,
+singleton. Lists (`list` widget, `list` bindings, `item.<field>` bindings, bound `style`) are expanded per update by `expandLists`
+into a plain tree of row copies, so layout, painting, focus and hit testing know nothing about items; `UiValue.Rows` is
+the value a host publishes. A screen with `navigation: "arrows"` moves focus with Up / Down and focuses its first usable
+control when shown. `UiPresenter.display(screenId, assetName)` shows exactly one screen or overlay (a game's state
+machine decides), reporting an unknown one in `lastNavigationFailure`; `publish` re-lays out only when the snapshot
+differs from the last one. A project's `uiAssetNames` list (`ProjectDto.uiAssetNames`, empty when omitted) names the registered assets,
 and `UiProjectRegistry(json, fileLoader).entries(project)` resolves them in order.
 
 ## UI host contract
@@ -211,8 +216,8 @@ returns true; false hands it to the game (only possible below a nonmodal overlay
   style, its `properties.styleOverrides`, then state overrides (disabled over pressed over hover over focused over
   normal). Keys read by the renderer: `color`, `fontSize`, `font` (a resource id), `background`, `fill`, `knob`, `tint`,
   `padding`, `borderColor`, `borderWidth`. Hidden widgets (`visible` binding) hide their subtree.
-- **Demo.** `./gradlew :app-game-control-line:runUiDemo` runs the standalone host on its own fixture project; see the
-  [game README](../app-game-control-line/README.md#ui-demo).
+- **Example.** Control Line's whole UI is a `UI` asset driven this way (`GameUiHost`, `GameUiModel`); see the
+  [game README](../app-game-control-line/README.md#screens).
 
 ## Loading and caching
 

@@ -39,6 +39,9 @@ sealed interface UiEditResult {
  * the number text it did not write, and appends new members. Ids are stable: a widget keeps its id through rename-like
  * edits, reparenting and reordering, and a duplicate gets fresh ids for every widget it contains. No IO, no IDE.
  */
+/** The members of a `list` widget that hold a widget of their own. */
+private val SUBTREES = listOf("template", "empty")
+
 class UiDocumentEdits {
     // ---- locating ----
 
@@ -63,6 +66,8 @@ class UiDocumentEdits {
                 val (widget, parent, siblings) = stack.removeLast()
                 if (widget.path("id").asText() == id) return Spot(widget, parent, siblings, screen)
                 children(widget)?.let { list -> list.forEach { if (it is ObjectNode) stack.addLast(Triple(it, widget, list)) } }
+                // a list's template and empty state are subtrees too; like a screen's root they have no sibling list to move in
+                SUBTREES.forEach { f -> (widget.get(f) as? ObjectNode)?.let { stack.addLast(Triple(it, widget, null)) } }
             }
         }
         return null
@@ -76,6 +81,7 @@ class UiDocumentEdits {
             val node = stack.removeLast()
             node.get("id")?.takeIf { it.isTextual }?.let { ids += it.textValue() }
             node.get("children")?.forEach(stack::addLast)
+            SUBTREES.forEach { f -> node.get(f)?.let(stack::addLast) }
         }
         return ids
     }
@@ -89,7 +95,8 @@ class UiDocumentEdits {
 
     private fun isDescendant(candidate: ObjectNode, ancestor: ObjectNode): Boolean {
         if (candidate === ancestor) return true
-        return children(ancestor)?.any { it is ObjectNode && isDescendant(candidate, it) } == true
+        return children(ancestor)?.any { it is ObjectNode && isDescendant(candidate, it) } == true ||
+            SUBTREES.any { f -> (ancestor.get(f) as? ObjectNode)?.let { isDescendant(candidate, it) } == true }
     }
 
     private fun containerType(widget: ObjectNode): Boolean =
@@ -164,6 +171,8 @@ class UiDocumentEdits {
                 UiWidgetType.LABEL -> putObject("properties").put("text", "Label")
                 UiWidgetType.BUTTON -> putObject("properties").put("text", "Button")
                 UiWidgetType.CHECKBOX -> putObject("properties").put("text", "Checkbox")
+                // a list needs a row to repeat: a row container the author fills with row widgets
+                UiWidgetType.LIST -> putObject("template").apply { put("id", uniqueId("$type-row", allWidgetIds(ui) + id)); put("type", "row") }
                 else -> Unit
             }
         }
@@ -184,6 +193,7 @@ class UiDocumentEdits {
             taken += fresh
             node.put("id", fresh)
             children(node)?.forEach { if (it is ObjectNode) renew(it) }
+            SUBTREES.forEach { f -> (node.get(f) as? ObjectNode)?.let(::renew) }
         }
         renew(copy)
         siblings.insert(siblings.indexOf(spot.widget) + 1, copy)
@@ -226,6 +236,34 @@ class UiDocumentEdits {
         if (from == to) return UiEditResult.Unchanged
         siblings.remove(from)
         siblings.insert(to, spot.widget)
+        return UiEditResult.Changed
+    }
+
+    /** Gives the list [listId] an empty state: a label that replaces the rows when the list has no items. */
+    fun addListEmpty(meta: JsonNode, listId: String): UiEditResult {
+        val ui = ui(meta) ?: return UiEditResult.Rejected(UiEditError.NOT_EDITABLE)
+        val list = spot(ui, listId)?.widget ?: return UiEditResult.Rejected(UiEditError.UNKNOWN_WIDGET, listId)
+        if (list.path("type").asText() != "list") return UiEditResult.Rejected(UiEditError.BAD_VALUE, listId)
+        if (list.has("empty")) return UiEditResult.Unchanged
+        val id = uniqueId("$listId-empty", allWidgetIds(ui))
+        list.putObject("empty").apply { put("id", id); put("type", "label"); putObject("properties").put("text", "Nothing here yet") }
+        return UiEditResult.Added(id)
+    }
+
+    fun removeListEmpty(meta: JsonNode, listId: String): UiEditResult {
+        val ui = ui(meta) ?: return UiEditResult.Rejected(UiEditError.NOT_EDITABLE)
+        val list = spot(ui, listId)?.widget ?: return UiEditResult.Rejected(UiEditError.UNKNOWN_WIDGET, listId)
+        return if (list.remove("empty") != null) UiEditResult.Changed else UiEditResult.Unchanged
+    }
+
+    /** Sets how Up and Down behave on a screen: `tab` (the default, removed from the document) or `arrows`. */
+    fun setScreenNavigation(meta: JsonNode, screenId: String, navigation: String): UiEditResult {
+        val ui = ui(meta) ?: return UiEditResult.Rejected(UiEditError.NOT_EDITABLE)
+        val screen = screenNode(ui, screenId) ?: return UiEditResult.Rejected(UiEditError.UNKNOWN_SCREEN, screenId)
+        if (navigation != "tab" && navigation != "arrows") return UiEditResult.Rejected(UiEditError.BAD_VALUE, "navigation")
+        val current = screen.path("navigation").asText("tab")
+        if (current == navigation) return UiEditResult.Unchanged
+        if (navigation == "tab") screen.remove("navigation") else screen.put("navigation", navigation)
         return UiEditResult.Changed
     }
 
@@ -389,6 +427,7 @@ class UiDocumentEdits {
             val widget = stack.removeLast()
             action(widget)
             children(widget)?.forEach { if (it is ObjectNode) stack.addLast(it) }
+            SUBTREES.forEach { f -> (widget.get(f) as? ObjectNode)?.let(stack::addLast) }
         }
     }
 }

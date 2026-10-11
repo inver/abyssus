@@ -44,7 +44,7 @@ data class UiFieldGroups(
     val all: List<UiField> get() = layout + content + style + bindings + actions
 }
 
-private val BINDABLE = listOf("text", "value", "maximum", "checked", "visible", "enabled")
+private val BINDABLE = listOf("items", "text", "value", "maximum", "checked", "visible", "enabled", "style")
 
 /**
  * Which rows the properties panel shows for a widget, from the widget's kind and its parent's layout policy: a panel's
@@ -69,7 +69,7 @@ class UiPropertiesModel {
             }
             add(UiField.Number("layout.width", l.width?.toDouble(), 0.0))
             add(UiField.Number("layout.height", l.height?.toDouble(), 0.0))
-            if (tree.isContainer(widget)) {
+            if (tree.isContainer(widget) || widget.type == UiWidgetType.LIST) {
                 add(UiField.Number("layout.padding", l.padding.toDouble(), 0.0))
                 if (widget.type != UiWidgetType.PANEL) {
                     add(UiField.Number("layout.spacing", l.spacing.toDouble(), 0.0))
@@ -85,6 +85,7 @@ class UiPropertiesModel {
                     add(UiField.Text("property.suffix", widget.properties["suffix"]?.asText().orEmpty()))
                     add(UiField.Number("property.precision", widget.properties["precision"]?.takeIf { it.isNumber }?.doubleValue(), 0.0))
                 }
+                UiWidgetType.LIST -> add(UiField.Number("property.maxRows", widget.properties["maxRows"]?.takeIf { it.isIntegralNumber }?.doubleValue(), 0.0))
                 UiWidgetType.BUTTON, UiWidgetType.CHECKBOX, UiWidgetType.TEXT_FIELD ->
                     add(UiField.Text("property.text", widget.properties["text"]?.asText().orEmpty()))
                 UiWidgetType.IMAGE -> {
@@ -103,11 +104,14 @@ class UiPropertiesModel {
             listOf(UiField.Choice("style", widget.style, collection.styles.map { it.name },
                 if (widget.style != null && collection.styles.none { it.name == widget.style }) UiFieldWarning.MISSING_STYLE else null))
         val type = widget.type
+        // inside a list's row the fields of its record can be bound as `item.<field>`
+        val record = rowRecord(tree, collection, widgetId)
         val bindings = if (type == null) emptyList() else BINDABLE.mapNotNull { property ->
             val slot = bindingSlot(type, property) ?: return@mapNotNull null
             val current = widget.bindings[property]
-            val declared = collection.binding(current ?: "")
-            val options = collection.bindings.filter { it.type in slot.types }.map { it.name }
+            val declared = current?.let { if (it.startsWith(UI_ITEM_PREFIX)) record[it.removePrefix(UI_ITEM_PREFIX)]?.let { t -> UiBinding(it, t, UiBindingAccess.READ_ONLY, null) } else collection.binding(it) }
+            val options = collection.bindings.filter { it.type in slot.types }.map { it.name } +
+                record.filter { it.value in slot.types }.keys.map { UI_ITEM_PREFIX + it }
             val warning = when {
                 current == null -> null
                 declared == null -> UiFieldWarning.UNKNOWN_BINDING
@@ -117,13 +121,28 @@ class UiPropertiesModel {
             }
             UiField.Binding("binding.$property", current, options, warning)
         }
-        val actions = if (type != UiWidgetType.BUTTON) emptyList() else {
+        // buttons, and panels / rows / columns (a whole list row can be one click target) take a click action
+        val actions = if (type !in setOf(UiWidgetType.BUTTON, UiWidgetType.PANEL, UiWidgetType.ROW, UiWidgetType.COLUMN)) emptyList() else {
             val action = widget.actions["click"]
             val local = action?.takeIf { it.assetName == null && it.screenId != null && (it.type == UiActionType.OPEN_SCREEN || it.type == UiActionType.SHOW_OVERLAY) }
             val warning = if (local != null && collection.screen(local.screenId!!) == null) UiFieldWarning.MISSING_SCREEN else null
             listOf(UiField.Action("action.click", action, collection.screens.map { it.id }, warning))
         }
         return UiFieldGroups(layout, content, style, bindings, actions)
+    }
+
+    /** The fields of the record of the list whose row [widgetId] is in; empty outside a row. */
+    private fun rowRecord(tree: UiTree, collection: UiCollection, widgetId: String): Map<String, UiBindingType> {
+        var child = tree.widget(widgetId) ?: return emptyMap()
+        var parent = tree.parentOf(child.id)
+        while (parent != null) {
+            if (parent.type == UiWidgetType.LIST && parent.template?.id == child.id) {
+                return parent.bindings["items"]?.let(collection::binding)?.takeIf { it.type == UiBindingType.LIST }?.fields?.associate { it.name to it.type }.orEmpty()
+            }
+            child = parent
+            parent = tree.parentOf(child.id)
+        }
+        return emptyMap()
     }
 
     // ---- turning a field change into the document edit ----
@@ -146,7 +165,7 @@ class UiPropertiesModel {
                 val name = key.removePrefix("property.")
                 val node: JsonNode? = when {
                     blank -> null
-                    name == "precision" || name == "value" || name == "maximum" -> input.trim().toDoubleOrNull()?.takeIf(Double::isFinite)?.let { number(it) } ?: return null
+                    name == "precision" || name == "value" || name == "maximum" || name == "maxRows" -> input.trim().toDoubleOrNull()?.takeIf(Double::isFinite)?.let { number(it) } ?: return null
                     else -> JsonNodeFactory.instance.textNode(input)
                 }
                 return { e, m -> e.setProperty(m, widgetId, name, node) }

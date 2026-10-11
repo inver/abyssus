@@ -28,7 +28,12 @@ import javax.swing.tree.TreePath
 /** One row of the widget tree. */
 data class UiTreeItem(val id: String, val label: String)
 
-private fun labelOf(widget: UiWidget): String {
+private fun labelOf(widget: UiWidget, role: String? = null): String {
+    val base = labelOfWidget(widget)
+    return if (role == null) base else "${AbyssusBundle.message(role)}: $base"
+}
+
+private fun labelOfWidget(widget: UiWidget): String {
     val kind = widget.type?.let { AbyssusBundle.message("uiWidgetType.${it.json}") } ?: "? ${widget.rawType}"
     val text = widget.properties["text"]?.takeIf { it.isTextual }?.textValue()?.take(24)
     return if (text != null) "$kind  \"$text\"  (${widget.id})" else "$kind  (${widget.id})"
@@ -66,9 +71,12 @@ class UiWidgetTreePanel(private val controller: UiEditorController) : JPanel(Bor
         try {
             val root = DefaultMutableTreeNode()
             if (screen != null) {
-                fun add(parent: DefaultMutableTreeNode, w: UiWidget) {
-                    val node = DefaultMutableTreeNode(UiTreeItem(w.id, labelOf(w))).also { parent.add(it) }
+                fun add(parent: DefaultMutableTreeNode, w: UiWidget, role: String? = null) {
+                    val node = DefaultMutableTreeNode(UiTreeItem(w.id, labelOf(w, role))).also { parent.add(it) }
                     w.children.forEach { add(node, it) }
+                    // a list shows the row it repeats and its empty state as parts of itself
+                    w.template?.let { add(node, it, "uiTreeRow") }
+                    w.empty?.let { add(node, it, "uiTreeEmpty") }
                 }
                 add(root, screen.root)
             }
@@ -134,6 +142,9 @@ class UiScreensPanel(private val project: Project?, private val controller: UiEd
     private var ids: List<String> = emptyList()
     private var syncing = false
 
+    /** Whether the selected screen moves focus with Up and Down instead of Tab. */
+    internal val arrows = JCheckBox(AbyssusBundle.message("uiScreenArrows")).apply { name = "screen-arrows" }
+
     init {
         list.addListSelectionListener {
             if (syncing || it.valueIsAdjusting) return@addListSelectionListener
@@ -148,7 +159,11 @@ class UiScreensPanel(private val project: Project?, private val controller: UiEd
         }
         add(JBLabel(AbyssusBundle.message("uiScreens")), BorderLayout.NORTH)
         add(JBScrollPane(list), BorderLayout.CENTER)
-        add(buttons, BorderLayout.SOUTH)
+        add(JPanel(BorderLayout()).apply {
+            add(buttons, BorderLayout.NORTH)
+            add(arrows, BorderLayout.SOUTH)
+        }, BorderLayout.SOUTH)
+        arrows.addActionListener { if (!syncing) controller.screenId?.let { controller.setNavigation(it, arrows.isSelected) } }
         controller.addListener(::rebuild)
         rebuild()
     }
@@ -167,6 +182,8 @@ class UiScreensPanel(private val project: Project?, private val controller: UiEd
                 model.addElement("${s.name}${if (s.kind == UiScreenKind.OVERLAY) " (overlay)" else ""}$mark")
             }
             list.selectedIndex = ids.indexOf(controller.screenId)
+            arrows.isSelected = c?.screen(controller.screenId ?: "")?.navigation == net.nevinsky.abyssus.lib.core.ui.model.UiNavigation.ARROWS
+            arrows.isEnabled = c != null
         } finally {
             syncing = false
         }
@@ -190,6 +207,8 @@ class UiPalettePanel(private val controller: UiEditorController) : JPanel(Border
             add(JButton(AbyssusBundle.message("uiDelete")).apply { name = "delete"; addActionListener { controller.deleteSelected() } })
             add(JButton(AbyssusBundle.message("uiMoveUp")).apply { name = "up"; addActionListener { shift(-1) } })
             add(JButton(AbyssusBundle.message("uiMoveDown")).apply { name = "down"; addActionListener { shift(1) } })
+            add(JButton(AbyssusBundle.message("uiAddEmpty")).apply { name = "add-empty"; addActionListener { controller.addListEmpty() } })
+            add(JButton(AbyssusBundle.message("uiRemoveEmpty")).apply { name = "remove-empty"; addActionListener { controller.removeListEmpty() } })
         }
         add(JBLabel(AbyssusBundle.message("uiPalette")), BorderLayout.NORTH)
         add(grid, BorderLayout.CENTER)

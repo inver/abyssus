@@ -8,7 +8,6 @@ import com.badlogic.gdx.*
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
-import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import net.nevinsky.abyssus.app.game.controlline.components.GAME_COMPONENTS
 import net.nevinsky.abyssus.app.game.controlline.flight.CONTROL_TENSION
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
@@ -25,7 +24,8 @@ import net.nevinsky.abyssus.app.game.controlline.pattern.GuidePlanner
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
-import net.nevinsky.abyssus.app.game.controlline.screens.GameUi
+import net.nevinsky.abyssus.app.game.controlline.screens.GameUiHost
+import net.nevinsky.abyssus.app.game.controlline.screens.createGameUi
 import net.nevinsky.abyssus.lib.core.BaseCtx
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
@@ -37,12 +37,15 @@ import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+/** The project file of the bundled native project. */
+private const val PROJECT_FILE = "ControlLine.abss"
+
 private val TAUT_LINE = Color(0.95f, 0.95f, 0.95f, 1f)
 private val SLACK_LINE = Color(0.5f, 0.5f, 0.5f, 1f)
 
 /**
  * The game (design decision 8): the field of [project] drawn by [FieldRenderer], the screens of [GameFlow] by
- * [GameUi], and a [FlightSession] while flying. Everything runs on the LWJGL3 main thread (design decision 11); only
+ * [GameUiHost] (the project's `screens` UI asset), and a [FlightSession] while flying. Everything runs on the LWJGL3 main thread (design decision 11); only
  * asset preparation runs on [executor]. Scores are kept in [scoresFile].
  */
 class ControlLineGame(
@@ -58,8 +61,7 @@ class ControlLineGame(
 
     private lateinit var flow: GameFlow
     private lateinit var renderer: FieldRenderer
-    private lateinit var ui: GameUi
-    private lateinit var skin: Skin
+    private lateinit var ui: GameUiHost
     private lateinit var cameras: Cameras
     private lateinit var parked: FieldScene
 
@@ -94,16 +96,16 @@ class ControlLineGame(
         parked = loadScene()
         flow = GameFlow(parked.planes, ScoreTable(scoresFile), PatternScoreTable(patternScoresFile))
         renderer = FieldRenderer(ctx)
-        skin = Skin(Gdx.files.classpath("uiskin/uiskin.json"))
-        ui = GameUi(flow, skin) { Gdx.app.exit() }
+        ui = createGameUi(project, PROJECT_FILE, flow, log) { Gdx.app.exit() }
         cameras = Cameras(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat())
-        Gdx.input.inputProcessor = InputMultiplexer(Keys(), ui.stage)
+        Gdx.input.inputProcessor = InputMultiplexer(Keys(), ui.inputProcessor)
+        ui.resize()
     }
 
     override fun resize(width: Int, height: Int) {
         if (width <= 0 || height <= 0) return
         cameras.resize(width.toFloat(), height.toFloat())
-        ui.resize(width, height)
+        ui.resize()
     }
 
     override fun render() {
@@ -160,7 +162,7 @@ class ControlLineGame(
             seconds = seconds,
         )
         ui.update(s, judge, seconds)
-        ui.draw()
+        ui.draw(seconds)
     }
 
     /** The debrief's own load of the field for [model], made when it opens and dropped when the screen is left. */
@@ -255,12 +257,11 @@ class ControlLineGame(
     override fun dispose() {
         endFlight()
         ui.dispose()
-        skin.dispose()
         renderer.dispose()
         executor.shutdownNow()
     }
 
-    /** The handle while flying; Escape pauses. Menus get their keys from [GameUi]. */
+    /** The handle while flying; Escape pauses. Menus get their keys from [GameUiHost]. */
     private inner class Keys : InputAdapter() {
         override fun keyDown(keycode: Int): Boolean {
             if (flow.screen is Screen.Flying) {

@@ -116,6 +116,7 @@ class UiPropertiesPanel(private val controller: UiEditorController, private val 
 
     /** Never replaces what someone is typing: a focused field keeps its text. */
     private fun setText(field: JTextField, value: String) {
+        field.putClientProperty(COMMITTED, value)
         if (!field.hasFocus() && field.text != value) field.text = value
     }
 
@@ -136,8 +137,10 @@ class UiPropertiesPanel(private val controller: UiEditorController, private val 
 
     private fun textRow(key: String, widgetId: String, value: String): JTextField = JTextField(value, 12).also { field ->
         val normal = field.background
+        // what the document holds now; kept current by [syncValues], so clearing a value just set is still a change
+        field.putClientProperty(COMMITTED, value)
         fun commit() {
-            if (field.text == value) return
+            if (field.text == field.getClientProperty(COMMITTED)) return
             val edit = model.edit(key, widgetId, field.text)
             if (edit == null) { field.background = ERROR; return }
             field.background = normal
@@ -179,6 +182,7 @@ class UiPropertiesPanel(private val controller: UiEditorController, private val 
     }
 
     private companion object {
+        const val COMMITTED = "abyssus.committed"
         val ERROR: Color = Color(0xff, 0xcc, 0xcc)
     }
 }

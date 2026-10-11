@@ -141,7 +141,7 @@ class UiEditorViewsTest : BasePlatformTestCase() {
         assertFalse(c.deleteSelected())
         assertEquals(UiEditError.ROOT_WIDGET, c.lastError)
         val statusText = (editor.components.flatMap { listOf(it) }.let { collectLabels(editor) })
-        assertTrue(statusText.any { it.contains("root widget", ignoreCase = true) })
+        assertTrue(statusText.any { it.contains("screen's root", ignoreCase = true) })
     }
 
     private fun collectLabels(c: java.awt.Container): List<String> = c.components.flatMap { child ->

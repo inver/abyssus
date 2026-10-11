@@ -141,6 +141,7 @@ class UiDeclarationsPanel(private val project: Project?, private val controller:
             FormInput("access", "uiFormAccess", start.access, UiBindingAccess.entries.map { it.json }),
             FormInput("sample", "uiFormSample", start.sample), FormInput("min", "uiFormMin", start.min), FormInput("max", "uiFormMax", start.max),
             FormInput("step", "uiFormStep", start.step), FormInput("maxLength", "uiFormMaxLength", start.maxLength),
+            FormInput("fields", "uiFormFields", start.fields),
         )) { v -> (bindingMembers(formOf(v)) as? FormResult.Invalid)?.errors.orEmpty() }
         if (!dialog.showAndGet()) return
         val form = formOf(dialog.values())
@@ -149,7 +150,7 @@ class UiDeclarationsPanel(private val project: Project?, private val controller:
     }
 
     private fun formOf(v: Map<String, String>) = BindingForm(v["name"].orEmpty(), v["type"].orEmpty(), v["access"].orEmpty(), v["sample"].orEmpty(),
-        v["min"].orEmpty(), v["max"].orEmpty(), v["step"].orEmpty(), v["maxLength"].orEmpty())
+        v["min"].orEmpty(), v["max"].orEmpty(), v["step"].orEmpty(), v["maxLength"].orEmpty(), v["fields"].orEmpty())
 
     // ---- styles ----
 
