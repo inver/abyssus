@@ -5,10 +5,16 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.skybox
 
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.CLOUD_DRIFT_REFRESH_SECONDS
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import java.io.File
 import kotlin.math.floor
+
+/**
+ * Seconds of cloud time between two bakes of a drifting sky. A bake renders the clouds at full resolution with several
+ * samples, which costs more than the raster view's clouds, and each one restarts ray accumulation; at the winds clouds
+ * have, five seconds moves them well under a degree.
+ */
+const val RAY_SKY_BAKE_REFRESH_SECONDS = 5.0
 
 /**
  * What a baked ray-tracing sky was made for. A new bake is needed when any part changes: the sky, project or sun, the
@@ -27,12 +33,12 @@ data class RaySkyBakeKey(
 /**
  * The bake key for the sky [name] at [timeSeconds] of the view's sky clock. [clouds] is the cloud asset to bake (null:
  * bake the bare atmosphere) and [drifting] says whether any of its bands has wind; a drifting sky is baked again every
- * [CLOUD_DRIFT_REFRESH_SECONDS] of cloud time, which bounds the rate at which ray accumulation restarts.
+ * [RAY_SKY_BAKE_REFRESH_SECONDS] of cloud time, which bounds the rate at which ray accumulation restarts.
  */
 fun raySkyBakeKey(name: String, projectDir: File?, sun: Vec3, clouds: Any?, drifting: Boolean, timeSeconds: Double) =
     RaySkyBakeKey(
         name, projectDir, sun, clouds,
-        if (clouds != null && drifting) floor(timeSeconds / CLOUD_DRIFT_REFRESH_SECONDS).toLong() else 0L,
+        if (clouds != null && drifting) floor(timeSeconds / RAY_SKY_BAKE_REFRESH_SECONDS).toLong() else 0L,
     )
 
 /**

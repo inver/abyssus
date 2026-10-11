@@ -178,7 +178,7 @@ class ProceduralSky(
         val (technique, renderer) = techniques.renderer(frame.technique ?: clouds.settings.technique) ?: return
         val scene = CloudScene(
             camera, invViewProj, frame.sun, frame.timeSeconds, clouds, params,
-            ambient.ambient(frame.sun, CLOUD_LIGHT_ALTITUDE),
+            ambient.ambient(frame.sun, CLOUD_LIGHT_ALTITUDE), frame.bake,
         )
         try {
             renderer.draw(scene)

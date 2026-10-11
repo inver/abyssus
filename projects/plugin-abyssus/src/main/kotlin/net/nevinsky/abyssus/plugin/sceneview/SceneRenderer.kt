@@ -691,7 +691,7 @@ class SceneRenderer(
     /**
      * The procedural sky rendered into a ray texture, with its clouds when it draws any; null while it loads or fails to
      * bake. Baked again when the sky, project, sun or cloud asset change and, for drifting clouds, every
-     * [net.nevinsky.abyssus.lib.core.assets.sky.procedural.CLOUD_DRIFT_REFRESH_SECONDS] of sky time. It is a display
+     * [net.nevinsky.abyssus.plugin.sceneview.skybox.RAY_SKY_BAKE_REFRESH_SECONDS] of sky time. It is a display
      * sample; the linear diffuse sky light reaches the rays through the ambient cube.
      */
     private fun bakedProceduralSky(c: SceneContent, p: SceneRenderParams): RaySkySnapshot? {

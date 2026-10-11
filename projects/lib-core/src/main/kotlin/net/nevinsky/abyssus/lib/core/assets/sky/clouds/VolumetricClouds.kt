@@ -25,6 +25,9 @@ private const val GL_FRAMEBUFFER_BINDING = 0x8CA6
 /** How much of the resolved image comes from this frame; the rest is the reprojected history. */
 private const val HISTORY_BLEND = 0.15f
 
+/** Jittered marches averaged into one baked face: the dither is shifted for each, so the grain cancels. */
+private const val BAKE_SAMPLES = 3
+
 /** A camera turning more than this many degrees between two frames starts the history again. */
 private const val HISTORY_RESET_DEGREES = 10f
 
@@ -86,17 +89,22 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
         ints.clear()
         gl.glGetIntegerv(GL_FRAMEBUFFER_BINDING, ints)
         val previousFramebuffer = ints.get(0)
-        ensureTargets(maxOf(1, viewport[2] / 2), maxOf(1, viewport[3] / 2))
+        // a baked face is drawn once, so it gets the full resolution (the cloud detail follows the pixel size) and a few samples
+        val divisor = if (scene.bake) 1 else 2
+        ensureTargets(maxOf(1, viewport[2] / divisor), maxOf(1, viewport[3] / divisor))
         rotationOnlyViewProj(scene.camera, viewProj)
-        if (hasHistory && jumped(scene.camera)) resetHistory()
+        if (scene.bake) hasHistory = false else if (hasHistory && jumped(scene.camera)) resetHistory()
 
         val blendWasOn = gl.glIsEnabled(GL20.GL_BLEND)
         try {
             gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, framebuffer)
             gl.glViewport(0, 0, width, height)
-            marchBands(scene)
-            gl.glDisable(GL20.GL_BLEND)
-            resolveHistory(scene)
+            if (scene.bake) prevViewProj.set(viewProj) // same view for every sample: the history lines up exactly
+            for (sample in 0 until if (scene.bake) BAKE_SAMPLES else 1) {
+                marchBands(scene, if (scene.bake) sample else frame % 64)
+                gl.glDisable(GL20.GL_BLEND)
+                resolveHistory(scene, if (scene.bake) 1f / (sample + 1) else HISTORY_BLEND)
+            }
         } finally {
             gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, previousFramebuffer)
             gl.glViewport(viewport[0], viewport[1], viewport[2], viewport[3])
@@ -123,7 +131,7 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
         historyResets++
     }
 
-    private fun marchBands(scene: CloudScene) {
+    private fun marchBands(scene: CloudScene, jitterFrame: Int) {
         val gl = Gdx.gl
         attach(current)
         gl.glClearColor(0f, 0f, 0f, 0f)
@@ -137,7 +145,7 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
             bindTexture(1, GL_TEXTURE_3D, scene.clouds.detailNoise)
             march.setUniformi("u_baseNoise", 0)
             march.setUniformi("u_detailNoise", 1)
-            march.setUniformf("u_frame", (frame % 64).toFloat())
+            march.setUniformf("u_frame", jitterFrame.toFloat())
             for (band in scene.clouds.settings.bandsFarToNear()) {
                 setCloudBand(march, band, field, scene.timeSeconds)
                 mesh.render(march, GL20.GL_TRIANGLES)
@@ -145,7 +153,7 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
         }
     }
 
-    private fun resolveHistory(scene: CloudScene) {
+    private fun resolveHistory(scene: CloudScene, blend: Float) {
         val next = 1 - latest
         attach(history[next])
         val resolve = checkNotNull(resolve)
@@ -153,7 +161,7 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
         resolve.setUniformMatrix("u_invViewProj", scene.invViewProj)
         resolve.setUniformMatrix("u_prevViewProj", prevViewProj)
         resolve.setUniformi("u_hasHistory", if (hasHistory) 1 else 0)
-        resolve.setUniformf("u_blend", HISTORY_BLEND)
+        resolve.setUniformf("u_blend", blend)
         resolve.setUniformf("u_texel", 1f / width, 1f / height)
         bindTexture(0, GL20.GL_TEXTURE_2D, current)
         bindTexture(1, GL20.GL_TEXTURE_2D, history[latest])

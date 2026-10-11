@@ -27,9 +27,9 @@ class RaySkyBakeTest {
     fun driftingCloudsAreBakedAgainEveryRefreshPeriodOfCloudTime() {
         fun key(time: Double) = raySkyBakeKey("sky", project, sun, clouds, drifting = true, timeSeconds = time)
         assertEquals(key(0.0), key(1.999))
-        assertNotEquals(key(0.0), key(2.0))
-        assertEquals(key(2.0), key(3.9))
-        assertNotEquals(key(2.0), key(4.0))
+        assertNotEquals(key(0.0), key(5.0))
+        assertEquals(key(5.0), key(9.9))
+        assertNotEquals(key(5.0), key(10.0))
     }
 
     @Test

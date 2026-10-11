@@ -218,7 +218,7 @@ stops submissions and releases the session; showing it resumes without stale ima
 CPU `RaySkySnapshot` (HDR and cube skies) or, for a procedural sky (arbitrary asset GLSL), rendered by `RaySkyBaker` into
 six faces on the render thread and resampled. That bake is a display-value sample of the sky as the view shows it, clouds
 included (`raySkyBakeKey`): it is taken again when the sky, project, sun or cloud asset change and, for clouds with wind,
-every 2 s of sky time, so a reflection or a ray miss shows the same clouds as the background, never a cloudless sky. It
+every 5 s of sky time (full-resolution, three-sample volumetric clouds), so a reflection or a ray miss shows the same clouds as the background, never a cloudless sky. It
 is not the linear light of the sky: that reaches the rays as the six axis colours of the current sky light (blended while
 it fades), when the sky has `lightsScene`. The clouds' shade on the sun reaches them as a `RaySunVisibility`: a 256²
 read-back of the cloud shadow map, with its world-to-map transform, the sun's entity id and the uniform factor for

@@ -31,6 +31,8 @@ class CloudScene(
     val clouds: Clouds,
     val params: AtmosphereParams,
     val ambient: SkyAmbient,
+    /** One still face of a baked sky: a technique may march at full resolution and average several samples. */
+    val bake: Boolean = false,
 )
 
 /**

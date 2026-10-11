@@ -12,6 +12,7 @@
 - Older unmarked files and files from other editors are unsupported. Plugin loading, editing and automatic formatting refuse them without
   rewriting them. No importer or automatic migration is included. External model, image, terrain binary and recipe encodings remain unchanged.
 ### Added
+- More realistic Ray Tracing clouds: a baked volumetric sky now marches its clouds at full resolution and averages three jittered samples per cube face. Before, the half-resolution single sample made the cloud shader think each pixel spanned a third of a degree, so it thinned and blurred the cloud detail away. Drifting skies are baked every 5 s instead of 2 s
 - Ray Tracing clouds are sharp and smooth: the baked procedural sky is rendered from 512 px faces, resampled bilinearly into a 2048x1024 image (it was 256 px faces, nearest, 1024x512, which showed blocky, striped clouds) and carried as 8-bit data
 - Ray Tracing no longer flickers in scenes with drifting clouds, terrain or animated models: terrain materials no longer count as changed every frame, a re-baked sky keeps the previous ray image on screen until the new one is ready, and an animated model with a still camera keeps an up to 500 ms old ray frame instead of flashing raster
 - Ray Tracing no longer stops with "Scene textures exceed 16777216 texels": the largest textures are reduced (halved) until they fit the ray tracing texture budget
