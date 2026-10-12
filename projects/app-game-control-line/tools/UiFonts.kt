@@ -31,9 +31,14 @@ private val CHARS: List<Char> = (' '..'~').toList() + "×½°·–—•←→�
 
 private const val GAP = 2
 
+/** The HiDPI variant of a font is rendered [HIDPI] times larger and named with [HIDPI_SUFFIX] (`display-28@2x`). */
+private const val HIDPI = 2
+private const val HIDPI_SUFFIX = "@2x"
+
 /**
  * Writes the screens' bitmap fonts into `<project>/assets/screens/fonts`: for every family and size a text `.fnt` plus
- * a white-on-transparent `.png` page (so a style's colour tints it), and `index.json` with each font's line height,
+ * a white-on-transparent `.png` page (so a style's colour tints it) and a `@2x` twin of both at twice the pixel size for
+ * HiDPI windows, and `index.json` with each font's line height,
  * which is what a style's `fontSize` is measured in. The source fonts (SIL OFL, see the licence files) are in
  * `tools/fonts`, so the output depends only on them and this file and running it again gives the same bytes. Run by
  * `./gradlew :app-game-control-line:generateUiFonts`.
@@ -51,6 +56,8 @@ fun main(args: Array<String>) {
         for (size in family.sizes) {
             val id = "${family.id}-$size"
             val lineHeight = writeFont(source.deriveFont(size.toFloat()), id, out)
+            // the HiDPI variant: the same font at twice the pixel size, which the game loads on a denser display
+            writeFont(source.deriveFont(size.toFloat() * HIDPI), "$id$HIDPI_SUFFIX", out)
             entries += "  \"$id\": $lineHeight"
         }
     }

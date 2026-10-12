@@ -15,6 +15,8 @@ import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.lib.core.assets.ui.UiBuiltResources
 import net.nevinsky.abyssus.lib.core.assets.ui.UiBundledFont
+import net.nevinsky.abyssus.lib.core.assets.ui.UiPreparedResource
+import net.nevinsky.abyssus.lib.core.assets.ui.UiPreparedResources
 import net.nevinsky.abyssus.lib.core.assets.ui.UiResourcePreparer
 import net.nevinsky.abyssus.lib.core.assets.ui.UiResourceResolver
 import net.nevinsky.abyssus.lib.core.io.FileLoader
@@ -27,6 +29,7 @@ import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.render.UiPresenter
 import net.nevinsky.abyssus.lib.core.ui.state.UiBindingSession
 import org.slf4j.Logger
+import java.io.File
 import java.nio.file.Path
 
 /** The name field of the name-entry screen: Enter there saves the name. */
@@ -90,6 +93,26 @@ class GameUiHost(
     fun dispose() = onDispose()
 }
 
+/** The back buffer's pixels per logical pixel; 1 on an ordinary display, 2 on a Retina one. */
+private fun backBufferScale(): Float = Gdx.graphics.backBufferWidth.toFloat() / Gdx.graphics.width.coerceAtLeast(1)
+
+/** From this scale on the sharper `@2x` fonts are used. */
+private const val HIDPI_FROM = 1.5f
+
+/**
+ * These resources with every bitmap font that has an `@2x` twin (`fonts/display-28@2x.fnt`, written by `generateUiFonts`)
+ * replaced by it. A style's `fontSize` is a size in logical pixels and the renderer scales a font to it, so the larger
+ * glyphs come out the same size and are sampled one to one on the denser back buffer.
+ */
+private fun UiPreparedResources.withHiDpiFonts(): UiPreparedResources = UiPreparedResources(
+    resources.mapValues { (_, resource) ->
+        if (resource !is UiPreparedResource.Font) return@mapValues resource
+        val twin = File(resource.fnt.parentFile, resource.fnt.nameWithoutExtension + "@2x.fnt")
+        val page = File(twin.parentFile, twin.nameWithoutExtension + ".png")
+        if (twin.isFile && page.isFile) UiPreparedResource.Font(resource.id, twin, listOf(page)) else resource
+    },
+)
+
 /**
  * Loads the `screens` asset of [project] (the folder of the native project) and builds the host for [flow]; the asset
  * must be registered in the project file and admitted. Needs the GL context, and the core-profile shader prefixes set.
@@ -105,6 +128,7 @@ fun createGameUi(project: Path, projectFile: String, flow: GameFlow, log: Logger
     val collection = admitted.collection
     admitted.warnings.forEach { log.warn("screens asset: {}", it) }
     val prepared = UiResourcePreparer(UiResourceResolver(project.resolve("assets/$SCREENS_ASSET").toFile())).prepare(collection)
+        .let { if (backBufferScale() >= HIDPI_FROM) it.withHiDpiFonts() else it }
     prepared.issues.forEach { log.warn("screens resource {}: {}", it.resourceId, it.problem) }
     val built = UiBuiltResources.Builder().build(prepared)
     val font = UiBundledFont()
