@@ -1,0 +1,505 @@
+== main-menu
+label|normal|Control Line
+button|enabled|checked|Free flight
+button|enabled|F2B pattern
+button|enabled|Scores
+button|enabled|Quit
+== assist-select
+label|normal|F2B pattern
+label|normal|The 15 manoeuvres of the FAI schedule in 7 minutes. Choose the assist level.
+button|enabled|checked|Pro
+button|enabled|Mid
+button|enabled|Noob
+button|enabled|Back
+label|muted|Pro: no help: tension, fuel and the clock
+label|muted|Mid: the next manoeuvre, the pause count, a height warning and each mark as you fly
+label|muted|Noob: all of Mid's, and the ideal track drawn ahead of the plane
+== plane-select-mid
+label|highlight|F2B pattern - Mid
+label|normal|Choose a plane  (1 of 1)
+button|enabled|<
+label|normal|Stunter
+button|enabled|>
+label|normal|Stunt    Lines 18 m    Mass 1.10 kg    Fuel 360 s
+button|enabled|Fly  (Enter)
+button|enabled|Back  (Esc)
+== hud-mid
+label|normal|Tension
+bar|0.00
+label|normal|0.0 N
+label|normal|Fuel
+label|normal|360 s
+label|normal|Time
+label|normal|0:00 / 7:00
+label|normal|Next
+label|normal|Take-off (K 2)
+label|normal|Pause
+label|normal|-
+label|muted|W / S or Up / Down or the mouse: handle    Esc: pause
+== paused-mid
+label|normal|Tension
+bar|0.00
+label|normal|0.0 N
+label|normal|Fuel
+label|normal|360 s
+label|normal|Time
+label|normal|0:00 / 7:00
+label|normal|Next
+label|normal|Take-off (K 2)
+label|normal|Pause
+label|normal|-
+label|muted|W / S or Up / Down or the mouse: handle    Esc: pause
+label|normal|Paused
+button|enabled|checked|Resume
+button|enabled|Main menu
+== name-entry-mid
+label|normal|GAME OVER
+label|highlight|Landed
+label|muted|F2B pattern - Mid - Stunter
+label|normal|1. Take-off
+label|muted|K 2
+label|normal|10.0 × 2 = 20.0
+label|normal|2. Reverse wingover
+label|muted|K 8
+label|normal|10.0 × 8 = 80.0
+label|normal|3. Three inside loops
+label|muted|K 6
+label|normal|10.0 × 6 = 60.0
+label|normal|4. Two laps of inverted flight
+label|muted|K 2
+label|normal|10.0 × 2 = 20.0
+label|normal|5. Three outside loops
+label|muted|K 6
+label|normal|10.0 × 6 = 60.0
+label|normal|6. Two inside square loops
+label|muted|K 12
+label|normal|10.0 × 12 = 120.0
+label|normal|7. Two outside square loops
+label|muted|K 12
+label|normal|10.0 × 12 = 120.0
+label|normal|8. Two inside triangular loops
+label|muted|K 14
+label|normal|10.0 × 14 = 140.0
+label|normal|9. Two horizontal eights
+label|muted|K 7
+label|normal|10.0 × 7 = 70.0
+label|normal|10. Two square horizontal eights
+label|muted|K 18
+label|normal|10.0 × 18 = 180.0
+label|normal|11. Two vertical eights
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|12. Hourglass
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|13. Two overhead eights
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|14. Four-leaf clover
+label|muted|K 8
+label|normal|10.0 × 8 = 80.0
+label|normal|15. Landing
+label|muted|K 5
+label|normal|10.0 × 5 = 50.0
+label|normal|Score 1300.00    Flight time 5:00
+label|normal|Your flight made the top 10. Your name:
+field|
+button|enabled|Save
+== game-over-mid
+label|normal|GAME OVER
+label|highlight|Landed
+label|muted|F2B pattern - Mid - Stunter
+label|normal|1. Take-off
+label|muted|K 2
+label|normal|10.0 × 2 = 20.0
+label|normal|2. Reverse wingover
+label|muted|K 8
+label|normal|10.0 × 8 = 80.0
+label|normal|3. Three inside loops
+label|muted|K 6
+label|normal|10.0 × 6 = 60.0
+label|normal|4. Two laps of inverted flight
+label|muted|K 2
+label|normal|10.0 × 2 = 20.0
+label|normal|5. Three outside loops
+label|muted|K 6
+label|normal|10.0 × 6 = 60.0
+label|normal|6. Two inside square loops
+label|muted|K 12
+label|normal|10.0 × 12 = 120.0
+label|normal|7. Two outside square loops
+label|muted|K 12
+label|normal|10.0 × 12 = 120.0
+label|normal|8. Two inside triangular loops
+label|muted|K 14
+label|normal|10.0 × 14 = 140.0
+label|normal|9. Two horizontal eights
+label|muted|K 7
+label|normal|10.0 × 7 = 70.0
+label|normal|10. Two square horizontal eights
+label|muted|K 18
+label|normal|10.0 × 18 = 180.0
+label|normal|11. Two vertical eights
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|12. Hourglass
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|13. Two overhead eights
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|14. Four-leaf clover
+label|muted|K 8
+label|normal|10.0 × 8 = 80.0
+label|normal|15. Landing
+label|muted|K 5
+label|normal|10.0 × 5 = 50.0
+label|normal|Score 1300.00    Flight time 5:00
+label|normal|Saved in place 1
+button|enabled|checked|Retry
+button|enabled|Debrief
+button|enabled|Scores
+button|enabled|Main menu
+== debrief-first
+label|highlight|Stunter - Mid
+label|highlight|> 1. Take-off
+label|highlight|K 2
+label|highlight|10.0 × 2 = 20.0
+label|normal|  2. Reverse wingover
+label|muted|K 8
+label|normal|10.0 × 8 = 80.0
+label|normal|  3. Three inside loops
+label|muted|K 6
+label|normal|10.0 × 6 = 60.0
+label|normal|  4. Two laps of inverted flight
+label|muted|K 2
+label|normal|10.0 × 2 = 20.0
+label|normal|  5. Three outside loops
+label|muted|K 6
+label|normal|10.0 × 6 = 60.0
+label|normal|  6. Two inside square loops
+label|muted|K 12
+label|normal|10.0 × 12 = 120.0
+label|normal|  7. Two outside square loops
+label|muted|K 12
+label|normal|10.0 × 12 = 120.0
+label|normal|  8. Two inside triangular loops
+label|muted|K 14
+label|normal|10.0 × 14 = 140.0
+label|normal|  9. Two horizontal eights
+label|muted|K 7
+label|normal|10.0 × 7 = 70.0
+label|normal|  10. Two square horizontal eights
+label|muted|K 18
+label|normal|10.0 × 18 = 180.0
+label|normal|  11. Two vertical eights
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|  12. Hourglass
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|  13. Two overhead eights
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|  14. Four-leaf clover
+label|muted|K 8
+label|normal|10.0 × 8 = 80.0
+label|normal|  15. Landing
+label|muted|K 5
+label|normal|10.0 × 5 = 50.0
+label|ideal|Ideal track
+label|flown|Flown track
+label|muted|Base and 45° parallel
+label|highlight|Take-off: deductions
+label|normal|No deductions
+label|normal|Pilot view    1×    playing    0.0 s / 15.4 s
+label|muted|Up / Down: manoeuvre    Space: pause    R: restart    1 / 2 / 3: speed ½× 1× 2×    V: view    Esc: back
+== debrief-second
+label|highlight|Stunter - Mid
+label|normal|  1. Take-off
+label|muted|K 2
+label|normal|10.0 × 2 = 20.0
+label|highlight|> 2. Reverse wingover
+label|highlight|K 8
+label|highlight|10.0 × 8 = 80.0
+label|normal|  3. Three inside loops
+label|muted|K 6
+label|normal|10.0 × 6 = 60.0
+label|normal|  4. Two laps of inverted flight
+label|muted|K 2
+label|normal|10.0 × 2 = 20.0
+label|normal|  5. Three outside loops
+label|muted|K 6
+label|normal|10.0 × 6 = 60.0
+label|normal|  6. Two inside square loops
+label|muted|K 12
+label|normal|10.0 × 12 = 120.0
+label|normal|  7. Two outside square loops
+label|muted|K 12
+label|normal|10.0 × 12 = 120.0
+label|normal|  8. Two inside triangular loops
+label|muted|K 14
+label|normal|10.0 × 14 = 140.0
+label|normal|  9. Two horizontal eights
+label|muted|K 7
+label|normal|10.0 × 7 = 70.0
+label|normal|  10. Two square horizontal eights
+label|muted|K 18
+label|normal|10.0 × 18 = 180.0
+label|normal|  11. Two vertical eights
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|  12. Hourglass
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|  13. Two overhead eights
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|  14. Four-leaf clover
+label|muted|K 8
+label|normal|10.0 × 8 = 80.0
+label|normal|  15. Landing
+label|muted|K 5
+label|normal|10.0 × 5 = 50.0
+label|ideal|Ideal track
+label|flown|Flown track
+label|muted|Base and 45° parallel
+label|highlight|Reverse wingover: deductions
+label|normal|No deductions
+label|normal|Pilot view    1×    playing    0.0 s / 7.8 s
+label|muted|Up / Down: manoeuvre    Space: pause    R: restart    1 / 2 / 3: speed ½× 1× 2×    V: view    Esc: back
+== game-over-after-debrief
+label|normal|GAME OVER
+label|highlight|Landed
+label|muted|F2B pattern - Mid - Stunter
+label|normal|1. Take-off
+label|muted|K 2
+label|normal|10.0 × 2 = 20.0
+label|normal|2. Reverse wingover
+label|muted|K 8
+label|normal|10.0 × 8 = 80.0
+label|normal|3. Three inside loops
+label|muted|K 6
+label|normal|10.0 × 6 = 60.0
+label|normal|4. Two laps of inverted flight
+label|muted|K 2
+label|normal|10.0 × 2 = 20.0
+label|normal|5. Three outside loops
+label|muted|K 6
+label|normal|10.0 × 6 = 60.0
+label|normal|6. Two inside square loops
+label|muted|K 12
+label|normal|10.0 × 12 = 120.0
+label|normal|7. Two outside square loops
+label|muted|K 12
+label|normal|10.0 × 12 = 120.0
+label|normal|8. Two inside triangular loops
+label|muted|K 14
+label|normal|10.0 × 14 = 140.0
+label|normal|9. Two horizontal eights
+label|muted|K 7
+label|normal|10.0 × 7 = 70.0
+label|normal|10. Two square horizontal eights
+label|muted|K 18
+label|normal|10.0 × 18 = 180.0
+label|normal|11. Two vertical eights
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|12. Hourglass
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|13. Two overhead eights
+label|muted|K 10
+label|normal|10.0 × 10 = 100.0
+label|normal|14. Four-leaf clover
+label|muted|K 8
+label|normal|10.0 × 8 = 80.0
+label|normal|15. Landing
+label|muted|K 5
+label|normal|10.0 × 5 = 50.0
+label|normal|Score 1300.00    Flight time 5:00
+label|normal|Saved in place 1
+button|enabled|checked|Retry
+button|enabled|Debrief
+button|enabled|Scores
+button|enabled|Main menu
+== scores-mid-saved
+label|normal|Best flights
+button|enabled|Free flight
+button|enabled|Pro
+button|enabled|checked|Mid
+button|enabled|Noob
+label|muted|Left / Right: change the tab    Up / Down, Enter or a click: replay a flight
+label|muted|#
+label|muted|Name
+label|muted|Plane
+label|muted|Score
+label|muted|Time
+label|muted|Date
+label|selected|> 1
+label|selected|Ann
+label|selected|Stunter
+label|selected|1300.00
+label|selected|5:00
+label|selected|2026-01-02
+button|enabled|checked|Back
+== scores-noob-empty
+label|normal|Best flights
+button|enabled|Free flight
+button|enabled|Pro
+button|enabled|Mid
+button|enabled|checked|Noob
+label|muted|Left / Right: change the tab    Up / Down, Enter or a click: replay a flight
+label|muted|#
+label|muted|Name
+label|muted|Plane
+label|muted|Score
+label|muted|Time
+label|muted|Date
+label|normal|No flights yet
+button|enabled|checked|Back
+== scores-free-empty
+label|normal|Best flights
+button|enabled|checked|Free flight
+button|enabled|Pro
+button|enabled|Mid
+button|enabled|Noob
+label|muted|Left / Right: change the tab
+label|muted|#
+label|muted|Name
+label|muted|Plane
+label|muted|Score
+label|muted|Laps
+label|muted|Combo
+label|muted|Time
+label|muted|Date
+label|normal|No flights yet
+button|enabled|checked|Back
+== scores-pro-empty
+label|normal|Best flights
+button|enabled|Free flight
+button|enabled|checked|Pro
+button|enabled|Mid
+button|enabled|Noob
+label|muted|Left / Right: change the tab    Up / Down, Enter or a click: replay a flight
+label|muted|#
+label|muted|Name
+label|muted|Plane
+label|muted|Score
+label|muted|Time
+label|muted|Date
+label|normal|No flights yet
+button|enabled|checked|Back
+== main-menu-again
+label|normal|Control Line
+button|enabled|checked|Free flight
+button|enabled|F2B pattern
+button|enabled|Scores
+button|enabled|Quit
+== plane-select-free
+label|normal|Choose a plane  (1 of 3)
+button|enabled|<
+label|normal|Racer
+button|enabled|>
+label|normal|Speed    Lines 21 m    Mass 0.50 kg    Fuel 60 s
+button|enabled|Fly  (Enter)
+button|enabled|Back  (Esc)
+== hud-free
+label|normal|Tension
+bar|0.00
+label|normal|0.0 N
+label|normal|Laps
+label|normal|0
+label|normal|Score
+label|normal|0
+label|normal|Combo
+label|normal|x1
+label|normal|Fuel
+label|normal|60 s
+label|muted|W / S or Up / Down or the mouse: handle    Esc: pause
+== name-entry-free
+label|normal|GAME OVER
+label|highlight|Crashed
+label|normal|Plane
+label|normal|Stunter
+label|normal|Score
+label|normal|1250
+label|normal|Laps
+label|normal|12
+label|normal|Best combo
+label|normal|x3
+label|normal|Flight time
+label|normal|1:35
+label|normal|Your flight made the top 10. Your name:
+field|Ann
+button|enabled|Save
+== game-over-free
+label|normal|GAME OVER
+label|highlight|Crashed
+label|normal|Plane
+label|normal|Stunter
+label|normal|Score
+label|normal|1250
+label|normal|Laps
+label|normal|12
+label|normal|Best combo
+label|normal|x3
+label|normal|Flight time
+label|normal|1:35
+label|normal|Saved in place 1
+button|enabled|checked|Retry
+button|enabled|Scores
+button|enabled|Main menu
+== scores-free-saved
+label|normal|Best flights
+button|enabled|checked|Free flight
+button|enabled|Pro
+button|enabled|Mid
+button|enabled|Noob
+label|muted|Left / Right: change the tab
+label|muted|#
+label|muted|Name
+label|muted|Plane
+label|muted|Score
+label|muted|Laps
+label|muted|Combo
+label|muted|Time
+label|muted|Date
+label|highlight|1
+label|highlight|Bob
+label|highlight|Stunter
+label|highlight|1250
+label|highlight|12
+label|highlight|x3
+label|highlight|1:35
+label|highlight|2026-01-02
+button|enabled|checked|Back
+== hud-pro
+label|normal|Tension
+bar|0.00
+label|normal|0.0 N
+label|normal|Fuel
+label|normal|360 s
+label|normal|Time
+label|normal|0:00 / 7:00
+label|muted|W / S or Up / Down or the mouse: handle    Esc: pause
+== hud-noob
+label|normal|Tension
+bar|0.00
+label|normal|0.0 N
+label|normal|Fuel
+label|normal|360 s
+label|normal|Time
+label|normal|0:00 / 7:00
+label|normal|Next
+label|normal|Take-off (K 2)
+label|normal|Pause
+label|normal|-
+label|muted|W / S or Up / Down or the mouse: handle    Esc: pause
+== main-menu-no-planes
+label|normal|Control Line
+button|disabled|Free flight
+button|disabled|F2B pattern
+button|enabled|checked|Scores
+button|enabled|Quit
+label|highlight|No plane was found in the field scene

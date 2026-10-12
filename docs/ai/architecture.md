@@ -7,7 +7,7 @@
 | `projects/plugin-abyssus/` | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.20): IDE glue over `lib-core-editor` (tree, tool windows, dialogs, the GL canvas and renderer, actions, file types, VFS) | `:lib-core-editor`, `:lib-core`, `:lib-physics` (non-transitive), `:lib-raytracing` (with `:lib-gdx` transitively), Jackson, libGDX, LWJGL3-AWT |
 | `projects/lib-core-editor/` | Plain JVM editing engine: scene documents and the write transform, component editing, the scene read model, picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge, `HeadlessEditing` | `:lib-core`, `:lib-raytracing`, `:lib-gdx` |
 | `projects/lib-physics/` | Plain JVM physics: the physics components and `PhysicsWorld` (Jolt through jolt-jni), run in a game or the play host, never in the IDE | `:lib-core`, jolt-jni |
-| `projects/app-game-control-line/` | **Control Line**, a libGDX desktop game (LWJGL3): flight on Jolt lines, scoring, screens, its bundled native project and its `PlayModule` for Play in Abyssus | `:lib-physics`, libGDX LWJGL3 backend, jolt-jni natives of the build machine |
+| `projects/app-game-control-line/` | **Control Line**, a libGDX desktop game (LWJGL3): flight on Jolt lines, scoring, screens (an authored UI asset drawn by `lib-core`'s `UiPresenter`), its bundled native project and its `PlayModule` for Play in Abyssus | `:lib-physics`, libGDX LWJGL3 backend, jolt-jni natives of the build machine |
 | `projects/lib-core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline (`AssetStorage`), CPU ray snapshots (`RaySnapshotStore`), the models, terrains and skies it builds, native DTOs, Ashley components and scene loading | `:lib-gdx`, Jackson, libGDX |
 | `projects/lib-gdx` | Plain JVM library: libGDX model runtime with 32-bit mesh indices, an Assimp importer and a binary glTF writer | libGDX, LWJGL Assimp |
 | `projects/lib-raytracing/` | Plain JVM ray tracing: backend contracts, immutable scene snapshots and linear host frames, the scheduler and quality policy, and optional native Metal and Vulkan backends | Kotlin stdlib, LWJGL Vulkan and VMA |
@@ -206,6 +206,27 @@ Terrain regeneration and creation are the exception (binary heights, new files a
 they go through `AssetFileCommand` (`assetfiles/AssetFileCommand.kt`), described in `docs/ai/conventions.md`, with
 `AssetTransactionEngine` holding the file logic (checks, ordered writes, rollback) apart from the platform so a test can
 fail it between any two writes. No scene or project file is written that way.
+
+UI assets follow the same split (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/gameui/UiAssetCommands.kt`).
+Editing an existing UI `meta.json` (`editUiMeta`) and registering or unregistering a name in `uiAssetNames` are
+`editSceneJson` edits: the pure edit is `lib-core-editor`'s `UiDocumentEdits` run through `UiTextEditor.transform`
+(`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/ui/UiTextEditor.kt`), so the document must be admitted UI before and after, a
+gesture that began on older text is refused as stale, and one edit is one undo. Creating a UI asset cannot be a
+document edit (a new folder and file), so `NewUiAssetFactory` stages one `AssetTransaction` holding the new `meta.json`
+and the project file with the name registered; `AssetFileCommand` checks both against what was staged (a concurrent edit
+is a conflict, a colliding folder a collision, a project file with unsaved changes or one that is read-only is refused),
+rolls back a failure part-way, and makes Undo and Redo restore both files together. Undo is refused while another UI
+asset navigates to the new one.
+
+The UI editor's **preview** never writes (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/ui/UiPreviewState.kt`): it is an immutable
+decoded definition plus session-local samples and a bounded action log, built from the editor's current text, so an
+interaction can only change a sample or add a log line. Entering preview creates the state, a definition change drops it
+(a fresh one starts from the authored samples), and invalid text drops it until the text is valid again. The canvas lays the UI
+out for the chosen preview size by drawing into an offscreen buffer of exactly that size (never the panel's) and fits that into the
+panel; an optional scene backdrop is the Scene view's `SceneRenderer` on the scene's editor text, drawn first, with no
+simulation. The size and backdrop are viewer preferences (`PropertiesComponent`-style, not documents). All GL work stays
+inside `GdxRuntime.withContext` on the AWT thread behind `GuardedGLCanvas.glSafe()`, and closing the tab releases the
+presenter, the offscreen buffer, the backdrop and the GL kit while the context is current.
 
 Foliage creation, Re-bake and stroke commits also use asset transactions for their new files, bake and masks.
 Apply combines its binary transaction with an `editSceneJson` metadata edit in one platform command

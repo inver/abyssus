@@ -44,11 +44,12 @@ class ProjectReader(
         val roots = sceneResults.flatMap { (_, result) -> result.obj?.let(::sceneReferences) ?: emptySet() }
             .toSet()
         val assets = readAssets(file)
-        val used = usedAssets(assets, roots)
+        val usage = usage(assets, roots, loading.uiAssetNames(file.path) { textOf(file) })
         ProjectDto(
             name ?: file.nameWithoutExtension,
             sceneResults.map { (f, result) -> result.obj?.let { SceneEntry(f, it) } ?: SceneError(f, result.message) },
-            assets.map { it.copy(unused = it.name !in used) },
+            assets.map { it.copy(unused = it.name !in usage.used) },
+            usage.uiIssues,
         )
     }.let { AssetReadResult.of(it) }
 
@@ -57,7 +58,11 @@ class ProjectReader(
     }.getOrElse { emptyList() }
 
     /** Folder names reachable from scene roots through UUID links and foliage's folder-name links, transitively. */
-    fun usedAssets(assets: List<Asset<Any>>, roots: Set<String>): Set<String> {
+    fun usedAssets(assets: List<Asset<Any>>, roots: Set<String>): Set<String> = usage(assets, roots, emptyList()).used
+
+    /** [usedAssets] with the project's registered UI assets as further roots, and the problems found along the UI links. */
+    fun usage(assets: List<Asset<Any>>, roots: Set<String>, uiAssetNames: List<String>): AssetUsage {
+        val ui = UiAssetUsage(assets, uiAssetNames)
         val byName = assets.associateBy { it.name }
         val byUuid = assets.filter { it.meta.uuid != null }.associateBy { it.meta.uuid.toString() }
         val used = mutableSetOf<String>()
@@ -68,9 +73,11 @@ class ProjectReader(
             }
         }
         roots.forEach { visit(byName[it]) }
+        ui.roots().forEach { visit(it) }
         while (pending.isNotEmpty()) {
             val asset = pending.removeFirst()
             asset.references.forEach { visit(byUuid[it]) }
+            ui.links(asset).forEach { visit(it) }
             if (asset.meta.type == MetaType.FOLIAGE) {
                 val additional = asset.meta.additional as? Map<*, *> ?: continue
                 (additional["terrain"] as? String)?.let { visit(byName[it]) }
@@ -84,7 +91,7 @@ class ProjectReader(
                 }
             }
         }
-        return used
+        return AssetUsage(used, ui.issues(used))
     }
 }
 

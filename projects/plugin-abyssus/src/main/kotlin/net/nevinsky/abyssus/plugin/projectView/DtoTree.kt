@@ -7,6 +7,8 @@ package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.editor.document.isSceneComponentEntry
 import net.nevinsky.abyssus.lib.core.editor.document.isSceneEcsEntry
+import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementCopyCount
+import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementCopyIds
 import net.nevinsky.abyssus.lib.core.editor.document.isSceneEntityEntry
 import net.nevinsky.abyssus.lib.core.editor.document.sceneComponentRows
 import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
@@ -15,6 +17,9 @@ import net.nevinsky.abyssus.lib.core.editor.document.sceneEntityView
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
+import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
+import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
 import net.nevinsky.abyssus.plugin.dto.SceneError
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
@@ -53,6 +58,8 @@ fun isScalar(value: Any?): Boolean = when (value) {
  */
 fun childrenOf(value: Any?): List<DtoRow> = when {
     value is SceneEntry -> childrenOf(value.scene)
+    value is UiMeta -> (value.admission as? UiAdmission.Admitted)?.collection?.screens.orEmpty().map { DtoRow(it.id, it) }
+    value is UiScreen -> emptyList()
     isScalar(value) -> emptyList()
     value is JsonNode ->
         if (value.isObject) value.properties().map { (k, v) -> DtoRow(k, v) } else value.mapIndexed { i, v -> DtoRow("$i", v) }
@@ -117,15 +124,30 @@ fun rowText(entry: DtoEntry, label: String? = null): RowText {
     return when {
         v is List<*> && entry.name == "scenes" -> RowText(AbyssusBundle.message("treeScenes"), v.size.toString())
         v is List<*> && entry.name == "assets" -> RowText(AbyssusBundle.message("treeAssets"), v.size.toString())
+        v is UiScreen -> RowText(v.name.ifBlank { v.id }, v.kind.json)
         isEcsEntry(entry) -> RowText(ECS, AbyssusBundle.message("treeEntities", sceneDocumentFromEcs(v as JsonNode).entitiesNode()?.size() ?: 0))
-        isEntityEntry(entry) -> RowText(entityName(entry), AbyssusBundle.message("treeComponents", sceneEntityView(entry.name, v as JsonNode).components?.size() ?: 0))
+        isEntityEntry(entry) -> entityText(entry, v as JsonNode)
         isComponentEntry(entry) -> RowText(entry.name.removeSuffix(COMPONENT_SUFFIX).ifEmpty { entry.name })
         else -> RowText(label ?: displayName(entry.name))
     }
 }
 
+/** An entity row: its name and `N components`, with `M copies` after it for a path arrangement. */
+private fun entityText(entry: DtoEntry, entity: JsonNode): RowText {
+    val components = sceneEntityView(entry.name, entity).components?.size() ?: 0
+    val copies = arrangementCopyCount(entity)
+    return RowText(
+        entityName(entry),
+        if (copies > 0) AbyssusBundle.message("treeComponentsCopies", components, copies) else AbyssusBundle.message("treeComponents", components),
+    )
+}
+
 /** The children of an `ecs` object: its entities directly (an older scene's `entities` level is skipped), then its other keys. */
-fun ecsRows(ecs: JsonNode): List<DtoRow> = sceneEcsRows(ecs).map { DtoRow(it.name, it.node, via = it.via) }
+fun ecsRows(ecs: JsonNode): List<DtoRow> {
+    // the linked copies of a path arrangement are squashed into its row, which counts them
+    val copies = arrangementCopyIds(ecs)
+    return sceneEcsRows(ecs).filter { it.name !in copies }.map { DtoRow(it.name, it.node, via = it.via) }
+}
 
 /** The component rows retain their skipped JSON path. */
 fun entityRows(entity: JsonNode): List<DtoRow> = sceneComponentRows(entity).map { DtoRow(it.name, it.node, via = it.via) }

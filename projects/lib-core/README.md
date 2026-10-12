@@ -26,6 +26,7 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 | `project`, `scene` (under `lib-core`) | `ProjectLoader`, `SceneLoader`, `RuntimeSceneLoader`, `SceneContext` and `SceneEnvironment` |
 | `core.ecs` | Component registration and loading, `SceneEngine`, `SceneEntityIds`, `SceneFoliageListing` (the terrain-bound foliage of a loaded engine: components only, no files or GL); `component/` holds Ashley classes and render-asset lookup, `system/` holds look-at and camera synchronization |
 | `core.assets` | `AssetMeta` and `MetaType` (the `meta.json` model; `uuid` is null when a meta declares none), `AssetMetaBinder` (one injectable settings-class registration map and metadata binding rule), `AssetMetaLoader` (validates and reads saved `meta.json`, binds through the binder, caches by timestamp and size), `AssetIndex` (the asset folder of a `uuid`), `Asset`, `runCatchingKeepingCancellation`, `Throwables` |
+| `core.ui` | The native UI asset: `ui.model` holds the immutable screen, widget, binding and resource definitions, `UiMeta` (the typed `additional` of a `UI` asset) and `UiAdmission`; `ui.validation` holds `UiCollectionDecoder`, which admits a `meta.json` tree (native markers, schema version 1, ids, geometry, limits) without IO. `project.UiProjectRegistry` resolves the project's `uiAssetNames`; `ui.layout` is the pure layout engine; `ui.state` holds typed bindings, validated write-back and navigation; `ui.render` is the shared Scene2D presenter; `ui.style` resolves styles; `assets.ui` prepares and owns the GL resources. See *UI assets*, *UI host contract* and *UI renderer and resources* below |
 | `core.assets.loading` | `AssetLoader` (prepare / dependencies / upload / build / discard), `AssetStorage` (the cache and owner of built assets: load once, fail once, slice GPU work per frame, load dependencies first) with `BuiltAssets`, `RaySnapshotStore` with `RaySnapshotLoader`, `RaySnapshot` and the leases (see below), `TextureUploadQueue`, `ShaderStorage` (GLSL from a resource folder) |
 | `core.assets.model` | `ModelLoader` (glTF and other formats through `lib-gdx`'s Assimp loader), `ModelMeta`, the ray model snapshot types and `ModelRaySnapshotLoader` |
 | `core.assets.terrain` | `TerrainLoader`, `TerrainData`, `TerrainMesh`, `TerrainMeta`, `RayTerrainSnapshot` and `TerrainRaySnapshotLoader` |
@@ -116,6 +117,107 @@ An asset loader never calls another asset loader. What an asset needs from anoth
 leaves the layer out), names the folders as its dependencies, and its `TerrainMesh` reads the textures from the storage
 on every draw: a replaced texture is picked up without rebuilding the terrain, and the mesh never owns or disposes one.
 The splat map is set to linear filtering and clamped edges the first time a texture is drawn as one.
+
+## UI assets
+
+A `UI` asset (`MetaType.UI`) holds screens and overlays under `additional.ui`; the schema, limits and a full example are in
+[file-formats](../../docs/ai/file-formats.md). `AssetMetaBinder` binds such a meta to `UiMeta(UiAdmission)`: either
+`Admitted` (a `UiCollection` plus warnings such as an unknown widget kind or an unresolved binding) or `Refused` (the
+reasons, as `UiIssue` codes with a location, no text). `UiCollectionDecoder.decode` is pure: it never modifies the tree,
+and unknown widgets keep their authored object. Wire it by constructor (`UiCollectionDecoder(format)`); there is no
+singleton. Lists (`list` widget, `list` bindings, `item.<field>` bindings, bound `style`) are expanded per update by `expandLists`
+into a plain tree of row copies, so layout, painting, focus and hit testing know nothing about items; `UiValue.Rows` is
+the value a host publishes. A screen with `navigation: "arrows"` moves focus with Up / Down and focuses its first usable
+control when shown. `UiPresenter.display(screenId, assetName)` shows exactly one screen or overlay (a game's state
+machine decides), reporting an unknown one in `lastNavigationFailure`; `publish` re-lays out only when the snapshot
+differs from the last one. A project's `uiAssetNames` list (`ProjectDto.uiAssetNames`, empty when omitted) names the registered assets,
+and `UiProjectRegistry(json, fileLoader).entries(project)` resolves them in order.
+
+## UI host contract
+
+A game hosts authored UI with four collaborators, all passed in by constructor and all used on the host's single UI
+thread (the GL thread for rendering). Nothing is global, and the UI never pauses gameplay or starts game code.
+
+- **Snapshot (host to UI).** `UiBindingSession.publish(UiSnapshot)` once per update. A value that is missing or has the
+  wrong type shows the binding's declared sample and a diagnostic. Publishing never calls the writer, so there is no
+  feedback loop.
+- **Write (UI to host).** `UiValueWriter.write(UiWrite)` runs synchronously on the UI thread and answers
+  `Accepted(authoritativeValue)` (possibly normalized) or `Rejected(reason)`. The session clamps and snaps a proposal to the
+  binding's `min`, `max`, `step` and `maxLength` first, and commits once per gesture (`commitsOn`: slider on release or
+  key step, checkbox on toggle, text field on Enter or focus loss). The host must still check authorization and game
+  rules. Slow work is scheduled by the host, which answers immediately.
+- **Action (UI to host).** `UiActionSink.emit(name)` receives each `emitAction` once per activation; return false when
+  nothing handles it and the UI reports it and stays usable. `UiCollectionSource` resolves other registered UI assets for
+  cross-asset navigation.
+- **Layout.** `UiLayoutEngine(UiMeasurer)` resolves rectangles in the screen's reference size (top-left origin) and
+  `fitReference` fits it uniformly into the viewport, centered with letterboxing. A panel places children by anchor,
+  pivot and offsets; a row or column positions its children (padding, spacing, `grow`, cross-axis `align`), so free
+  offsets do not apply there. Children clip to their parent; too little space clips and reports `OVERFLOW` and never
+  changes authored sizes. Hit testing uses the same rectangles (`UiLayoutResult.hit`).
+
+<!-- ui-host-example -->
+```kotlin
+class HostSettings(var volume: Double = 0.5)
+
+fun runHost(metaTree: com.fasterxml.jackson.databind.JsonNode, settings: HostSettings, started: MutableList<String>): UiBindingSession {
+    // 1. Admit the asset: nothing runs from a refused collection.
+    val admission = UiCollectionDecoder().decode(metaTree) as UiAdmission.Admitted
+    val collection = admission.collection
+
+    // 2. The host owns the callbacks. Writes are synchronous; schedule slow work yourself and answer now.
+    val session = UiBindingSession(collection) { write ->
+        if (write.binding == "volume" && write.value is UiValue.Num) {
+            settings.volume = (write.value as UiValue.Num).value
+            UiWriteResult.Accepted(UiValue.Num(settings.volume))
+        } else UiWriteResult.Rejected("read-only")
+    }
+    val navigator = UiNavigator("menus", collection, { null }, { name -> started += name; true })
+
+    // 3. Once per update, publish an immutable snapshot. Publishing never writes back.
+    session.publish(UiSnapshot(mapOf("volume" to UiValue.Num(settings.volume))))
+
+    // 4. Lay out for the real viewport; the same engine runs in the editor preview.
+    val screen = collection.screen(navigator.currentScreen()!!.screenId)!!
+    val layout = UiLayoutEngine(UiMeasurer { UiSizeF(100f, 24f) }).resolve(screen, 1280f, 720f)
+    check(layout.diagnostics.isEmpty())
+
+    // 5. Report input: a slider commits once on release, a button activates its action.
+    val slider = screen.root.children[0]
+    if (commitsOn(UiWidgetType.SLIDER, UiEditGesture.RELEASE)) session.commit(slider, UiValue.Num(0.8))
+    navigator.activate(screen.root.children[1].actions.getValue("click"))
+    return session
+}
+```
+
+## UI renderer and resources
+
+`ui.render.UiPresenter` draws and drives one UI collection for the editor preview and for games alike: layers (the
+standalone screen and its overlays) are laid out by `UiLayoutEngine`, drawn through one Scene2D `Stage` per layer with a
+`FitViewport` of the screen's reference size, and fed pointer and keyboard input through `touchDown` / `touchUp` /
+`touchDragged` / `pointerMoved` / `keyDown` / `keyTyped` (screen pixels, top-left origin). A press the UI consumes
+returns true; false hands it to the game (only possible below a nonmodal overlay).
+
+- **Lifecycle.** The constructor builds a `SpriteBatch` and a 1x1 pixel texture, so it needs a current GL context;
+  `resize`, `render` and the input methods run on the GL thread, and `dispose` (once) releases the stages, batch and
+  pixel. The presenter owns neither the resources nor the callbacks. Call `publish(UiSnapshot)` once per update.
+- **Resources.** Off the GL thread, `UiResourcePreparer(UiResourceResolver(assetFolder)).prepare(collection)` checks every
+  declared resource (CPU only); on the GL thread `UiBuiltResources.Builder().build(prepared)` creates the textures and
+  fonts and `dispose()` releases them, once, by the same owner. A failed resource is absent and reported in
+  `prepared.issues`; the widget falls back to a placeholder (images) or the default font. `forRenderer(defaultFont)`
+  adapts them to the presenter. The default font is shared through `UiBundledFont` leases (`acquire` / `release`); it needs
+  `Gdx.files`. Licenses of what is bundled: [ui-bundled-resources](third-party/ui-bundled-resources.md).
+- **Formats.** Images are PNG or JPEG, at most 8192 pixels on a side. Fonts are libGDX bitmap fonts in the text BMFont
+  `.fnt` format with PNG texture pages; every file must resolve inside the owning UI asset folder (no `..`, absolute
+  paths, symbolic links out of it or network URLs). Binary `.fnt`, TrueType and other formats are not supported yet.
+- **Host GL setup.** libGDX's own sprite-batch shader is legacy GLSL. In a 3.2 core context the host sets
+  `ShaderProgram.prependVertexCode` / `prependFragmentCode` as Control Line and the plugin's `GdxRuntime` do, or the
+  presenter's constructor fails to compile the shader.
+- **Styling.** `UiStyleResolver` merges the bundled theme (`src/main/resources/ui/default-theme.json`), the widget's named
+  style, its `properties.styleOverrides`, then state overrides (disabled over pressed over hover over focused over
+  normal). Keys read by the renderer: `color`, `fontSize`, `font` (a resource id), `background`, `fill`, `knob`, `tint`,
+  `padding`, `borderColor`, `borderWidth` (drawn whenever set, so a state override such as `focused` gives a focus ring), `uppercase` (a boolean: the text is measured and drawn in upper case; the widget's own text is unchanged). Hidden widgets (`visible` binding) hide their subtree.
+- **Example.** Control Line's whole UI is a `UI` asset driven this way (`GameUiHost`, `GameUiModel`); see the
+  [game README](../app-game-control-line/README.md#screens).
 
 ## Loading and caching
 

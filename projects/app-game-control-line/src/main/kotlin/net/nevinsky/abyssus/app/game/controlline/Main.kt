@@ -6,6 +6,7 @@ package net.nevinsky.abyssus.app.game.controlline
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration
+import net.nevinsky.abyssus.app.game.controlline.pattern.defaultPatternScoresFile
 import net.nevinsky.abyssus.app.game.controlline.score.defaultScoresFile
 import java.nio.file.Path
 
@@ -25,5 +26,5 @@ fun main() {
         // foliage is drawn instanced, which needs OpenGL 3: a 3.2 core context (forward compatible on macOS)
         setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL30, 3, 2)
     }
-    Lwjgl3Application(ControlLineGame(project, defaultScoresFile()), config)
+    Lwjgl3Application(ControlLineGame(project, defaultScoresFile(), defaultPatternScoresFile()), config)
 }

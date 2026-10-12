@@ -34,7 +34,8 @@ class AssetMetaBinderTest {
             val meta = binder.bind("asset", node)
             assertEquals(type, meta.type)
             assertEquals("asset", meta.name)
-            if (type in classes) assertTrue(type.name, classes.getValue(type).isInstance(meta.additional))
+            if (type == MetaType.UI) assertTrue(meta.additional is net.nevinsky.abyssus.lib.core.ui.model.UiMeta)
+            else if (type in classes) assertTrue(type.name, classes.getValue(type).isInstance(meta.additional))
             else assertEquals(mapOf("file" to "image.png", "extension" to 7), meta.additional)
             assertEquals(before, node.toString())
         }

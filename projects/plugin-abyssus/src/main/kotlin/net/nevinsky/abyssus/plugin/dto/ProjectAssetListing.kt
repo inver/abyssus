@@ -13,6 +13,8 @@ import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
+import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
 import net.nevinsky.abyssus.lib.core.util.obj
 import net.nevinsky.abyssus.lib.core.util.opt
 import net.nevinsky.abyssus.lib.core.util.text
@@ -22,6 +24,7 @@ import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 /** Lists a project's asset folders through the VFS, as the Abyssus tree shows them, parsing `meta.json` with [json]. */
 class ProjectAssetListing(json: JsonProcessor) {
     private val metaFiles = MetaFiles(AssetMetaReader(json))
+    private val uiDecoder = UiCollectionDecoder()
 
     /**
      * One [Asset] per folder under the `assets` next to [abss]. A folder whose `meta.json` is missing, malformed or of a
@@ -34,7 +37,8 @@ class ProjectAssetListing(json: JsonProcessor) {
             @Suppress("UNCHECKED_CAST")
             val bound = document.typed(AssetMeta::class.java as Class<AssetMeta<Any>>) ?: return@runCatchingKeepingCancellation null
             // the name is the folder's, not a field of the file
-            val parsedMeta = AssetMeta(dir.name, bound.formatVersion, bound.version, bound.lastModified, bound.type, bound.additional, bound.uuid)
+            val additional: Any = if (bound.type == MetaType.UI) UiMeta(uiDecoder.decode(document.json)) else bound.additional
+            val parsedMeta = AssetMeta(dir.name, bound.formatVersion, bound.version, bound.lastModified, bound.type, additional, bound.uuid)
             val references = runCatchingKeepingCancellation { references(document.json) }.getOrDefault(emptyList())
             Asset(File(dir.path), parsedMeta, references)
         }.getOrNull() ?: Asset(File(dir.path), AssetMeta(name = dir.name, type = MetaType.UNKNOWN, additional = Any()))

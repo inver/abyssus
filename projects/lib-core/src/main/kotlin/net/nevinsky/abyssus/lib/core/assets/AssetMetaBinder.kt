@@ -10,6 +10,8 @@ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.core.assets.texture.TextureMeta
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
+import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
 import kotlin.reflect.full.primaryConstructor
 
 /** Binds an admitted metadata tree; callers validate native identity before invoking [bind]. No IO or GL. */
@@ -26,13 +28,14 @@ class AssetMetaBinder(
         MetaType.CLOUDS to CloudMeta::class.java,
         MetaType.FOLIAGE to FoliageMeta::class.java,
     ),
+    private val ui: UiCollectionDecoder = UiCollectionDecoder(),
 ) {
     private val settings = settings.toMap()
 
     fun bind(name: String, tree: JsonNode): AssetMeta<Any> {
         val baseMeta = json.bind(tree, AssetMeta::class.java)
         val block = tree["additional"]?.takeIf { it.isObject } ?: json.readObject("{}")
-        val additional: Any = settings[baseMeta.type]?.let {
+        val additional: Any = if (baseMeta.type == MetaType.UI) UiMeta(ui.decode(tree)) else settings[baseMeta.type]?.let {
             try {
                 return@let json.bind(block, it)
             } catch (e: Exception) {

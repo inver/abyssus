@@ -48,8 +48,10 @@ Physics component add/edit choices follow the selected scene's native project se
   `ModelPreviewCanvasGlTest` (opt-in GL) covers drawing, framing, the animation loop, rebuilds, a failed frame and
   release while showing; `PreviewFramingTest` the framing math.
 - **Row identity is the entry path.** A `DtoEntry` is identified by its path inside the asset (the file path, then one segment per row, such as the root `fog` member).
-  Its `equals` also compares the toggle state, scalar values and the unused flag, because the tree keeps an existing
+  Its `equals` also compares the toggle state, scalar values, entity type and the unused flag, because the tree keeps an existing
   node when the refreshed one is equal. Leaving any of those out leaves a row stale after an edit.
+- **Entity icons follow `TypeComponent.type`.** Each built-in type has a distinct SVG icon; missing, null or unknown
+  types retain the generic ECS icon. Both short and fully qualified `TypeComponent` keys are recognized.
 - **After an edit the row is selected again.** An edit changes the row's identity, so the refresh drops the selection
   onto the parent. `reselect` walks back to the same path and restores its expansion.
 - **Every edit of an existing JSON document goes through `editSceneJson`.** It parses the document with `SceneJson`, lets the caller mutate the
@@ -100,3 +102,10 @@ metadata file through `AssetTransaction`; `AssetFileCommand.execute` owns rollba
 `AssetReferenceGuard` refuses deletion once saved or unsaved documents reference the snapshot.
 `selectAssetInAbyssusView` selects the created cloud asset after refresh. Its UUID, timestamp and bytes remain
 stable on Redo. Source cloud metadata, the sky, scenes and project are never edited by creation.
+
+## Arrangement copies in the tree
+
+`ecsRows` (`DtoTree.kt`) leaves out the linked copies of a path arrangement (`arrangementCopyIds` in `lib-core-editor`: the
+entities an arrangement lists in `slots` that point back to it with a `ParentComponent`), and the arrangement's row reads
+`N components, M copies`. A detached copy is listed as an ordinary entity. Only the tree changes: a hidden copy has no row,
+so picking it in the Scene view selects nothing in the tree (`selectEntityInAbyssusView` does nothing for a missing row).

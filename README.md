@@ -28,6 +28,9 @@ remain readable in the text editor; plugin editing and loading are refused. No i
   (blue from a clear noon sky, grey under overcast, warm at sunset), changing smoothly with the sun and the clouds, and
   clouds cast drifting shadows on the sun's light. Both follow the sky's atmosphere parameters, not a custom `sky.frag`
   that departs from them; Ray Tracing sees the same clouds and cloud shade.
+- **Game UI**: author menus, HUDs and pause screens as `UI` assets in a visual editor (screens and overlays, a widget
+  tree, a canvas, properties, bindings and styles), try them in an interactive preview with sample data, and run the same
+  layout and styling in a game.
 - **Built-in Physics**: select a project’s `.abss` file and enable **Physics** in Properties for editable physics
   components, collider/constraint overlays and Play in a separate process.
 - **Ray Tracing settings**: a selected scene's Properties switch turns Ray Tracing on for its open views (not saved), and
@@ -321,6 +324,60 @@ render tests are opt-in: `./gradlew check -Dabyssus.glTests=true` (opens a windo
 To add a project or scene file format, implement `ConfigFileReader` and wire it into `AssetReadCache` and
 `ProjectLayout.ASSET_EXTENSIONS`. Asset loading uses `core`'s `AssetLoader` implementations; see
 [architecture and extension points](docs/ai/architecture.md).
+
+## Game UI
+
+A **UI asset** holds named screens (menus) and overlays (a HUD, a pause menu) as a tree of widgets: panels, rows,
+columns, labels, images, buttons, progress bars, sliders, checkboxes and text fields. Its `meta.json` has `type` `UI` and the
+screens under `additional.ui` ([format](docs/ai/file-formats.md#ui-assets)).
+
+**Create and register.** Right-click the project's **Assets** node and choose **New UI Asset...**. The asset folder and the
+project file's `uiAssetNames` entry are created in one undoable step. **Register UI Asset** and **Unregister UI Asset** on an
+asset row change only that list. Registered assets count as used even when no scene mentions them, and so do the UI assets
+they navigate to.
+
+**Edit.** Open the asset's `meta.json`: the **Abyssus UI** tab sits beside the text editor.
+
+| Area | What it does |
+|---|---|
+| Screens | Add a screen or an overlay, rename, delete; the entry screen is marked |
+| Palette and widget tree | Add a widget to the selected container, duplicate, delete, move up or down, or drag it onto another row (beside it, or into a container) |
+| Canvas | Click to select, drag a panel child to move it, drag a row or column child to reorder it, release over another container to move it there. One drag is one undo step; a drag started on older text is refused |
+| Properties | Layout (anchor and offsets inside a panel; `grow` in a row or column; padding, spacing, alignment), text, style, bindings and the button's click action. A binding that cannot work is flagged: undeclared, the wrong type, or read-only on a control that writes back |
+| Declarations | Bindings (typed, read-only or writable, with a sample and limits), styles (font size, colours, a font, hover / pressed / disabled backgrounds) and resources: **Import Image...** (PNG or JPEG, at most 8192 pixels a side) and **Import Font...** (a text BMFont `.fnt` with its PNG pages) copy the files into the asset folder without overwriting anything |
+
+Every change is written to the document through one undoable command that keeps your formatting, key order and number text;
+an asset that Abyssus cannot edit (a newer UI version, errors) shows why and is never rewritten. Text you have not saved yet
+is what the editor shows and edits. **Use a copy** of a sample project when you try it: the committed `Untitled` project is test data.
+
+**Lists.** The **List** widget repeats one row template for every item of a *list* binding, which you declare in
+**Declarations** with a record of typed fields (`rank:number, name:string`) and sample rows. Inside the row, bind a widget
+to `item.<field>`; bind a widget's **Style** to a string field to colour a row from data; add an **empty state** for when
+there are no rows. The canvas shows the sample rows, and a click on any row selects the template. Tick **Up / Down move
+focus** on a screen to give a keyboard menu. In Preview, add, edit and remove sample rows.
+
+**Preview.** Switch the editor from **Edit** to **Preview** to use the UI as a player would: click buttons, drag sliders,
+tick checkboxes, type into fields, Tab / Shift-Tab between controls, Enter or Space to press, Escape to close an overlay or go
+back. The preview runs on the text in the editor, saved or not, and shows why it stopped if that text is not valid.
+
+- **Sample values.** The **Preview** tab lists every binding with an editable sample. A control that writes back changes the
+  sample, and a value you type is checked against the binding's type, minimum, maximum and length (a value it rejects is
+  explained and not applied). **Reset** restores the authored samples, empties the action log and returns to the screen the
+  preview started on.
+- **Actions are only logged.** A button's `emitAction` appears in the action log; no game starts, no setting is saved, no
+  game code runs, and neither the document nor its undo history changes. Editing the definition starts a fresh preview.
+- **Resolution.** Pick a size or enter one (1 to 4096 per side). The UI is laid out for exactly that size, however large the
+  panel is, and the result is shown scaled to fit. The screen's reference size is fitted into the preview uniformly and centred,
+  so a different aspect ratio leaves bars at the sides or at the top and bottom. The size and backdrop you choose are remembered
+  for you only; they are not stored in the project.
+- **Scene backdrop.** Choose one of the project's scenes to show behind the UI (an overlay over its game world). It is the
+  Scene view's own renderer on the scene's current text, looking through the scene's main camera: nothing moves, there is no
+  Play and no physics, and the scene is never changed. A scene that cannot be read or rendered is reported and the preview carries on without it.
+  Limits: no animation of the camera, and models and terrain load as they do in the Scene view, so a large scene may take a moment.
+
+The canvas draws through the same renderer a game uses, so layout, text size and styling match. Games load a registered
+asset by name; see [lib-core](projects/lib-core/README.md#ui-host-contract) for how a host supplies values, accepts
+changes and receives actions, and Control Line's [screens](projects/app-game-control-line/README.md#screens) for a complete example.
 
 ## Development
 

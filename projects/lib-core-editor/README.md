@@ -38,6 +38,7 @@ namespace, including extension providers that use editor value types, must updat
 | `headless` | `HeadlessEditing` (spec `headless-scene-editing`) |
 | `flightgear` | The FlightGear aircraft import: archive, model XML, AC3D and SGI readers, `FlightGearImport` |
 | `modelimport` | The model import: `ModelSource`, `ImportSettings`, `ImportTransform`, `TextureGather`, `ModelImport` |
+| `ui` | Game UI documents (spec `game-ui-authoring`): `UiDocumentEdits`, `UiTextEditor`, `UiRegistryEdits`, `UiAssetTemplate`, `UiTree` / `UiSelection` / `UiHitTest` and `UiLayoutGesture`. See *UI documents* below |
 
 The package graph has no cycle (`./gradlew checkPackageCycles`): `content` is a leaf, `document` and `components`
 build on it, `scene` reads the document through the component codecs, `foliage` builds on `terrain` and `document`,
@@ -96,6 +97,31 @@ ordinary `OBJECT` entities with a `ParentComponent` to it. `regenerate` rewrites
 and adds or removes the rest. A moved, turned or position-edited copy is detached in the same edit (`SceneTransformWriter`
 and `ComponentEditor` call `detach`), so the headless edits match. Updating a setting of an arrangement through
 `ComponentEditor.update` regenerates in the same edit, on the `GroundHeight` passed in (the line's own height by default).
+
+## UI documents
+
+`editor.ui` edits a `UI` asset's `meta.json` (`additional.ui`, schema in [file-formats](../../docs/ai/file-formats.md)) as data:
+no Swing, GL or platform classes.
+
+- **`UiDocumentEdits`** works on the parsed tree: add, rename and delete screens; add, duplicate, reparent, reorder and
+  delete widgets; set properties, layout fields, styles, bindings and actions; upsert and delete named styles and
+  bindings (deleting one clears the widget references to it in the same edit). Each edit returns `Changed`, `Added(id)`,
+  `Unchanged` or `Rejected(code, subject)` and leaves the tree untouched on a rejection. Ids are stable; a duplicate gets
+  fresh ids for every widget it contains; reparenting converts the widget to the destination's layout policy (free
+  placement is dropped under a row or column, `grow` under a panel); an unknown widget kind is kept as it is.
+- **`UiTextEditor`** wraps an edit as a text transform: the document must be an admitted UI asset before and after
+  (`UiCollectionDecoder`), a stale `expectedText` is refused, and the result is `Edited(before, after, result)`, whose
+  `before` is the exact text an undo restores. `transform(root, op)` is the same check for a caller that already holds the
+  tree inside its own document write.
+- **`UiRegistryEdits`** adds or removes a name in the project file's `uiAssetNames`; `UiAssetTemplate` is the text of a
+  new asset.
+- **Gestures.** `UiLayoutGesture` previews a drag (panel children move by offsets, row and column children reorder,
+  a drop over another container reparents) without writing; `commit()` returns the one edit of the whole gesture. Picking
+  (`UiHitTest`) goes through `lib-core`'s layout, so it follows clipping and the letterboxed fit.
+- **Persistence boundary.** An edit of an existing document is a text transform and goes through the plugin's
+  `editSceneJson`. Creating a UI asset (a new folder, a new `meta.json`, imported images and fonts) is not a document edit;
+  it is an `AssetTransaction` in the plugin that also edits the project file's registry, so creation and registration are
+  one undoable command. See `docs/ai/architecture.md`.
 
 ## Without the IDE
 

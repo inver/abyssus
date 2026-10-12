@@ -21,6 +21,8 @@ import java.nio.file.Path
 data class ProjectDto(
     val name: String? = null,
     val scenes: List<SceneDto> = emptyList(),
+    /** The registered UI asset folder names, in order; empty (and not written back) when the file omits them. */
+    val uiAssetNames: List<String> = emptyList(),
     @get:JsonIgnore val dir: Path? = null,
 ) {
     /** The project file: the first `.abss` of [dir] by name; null when there is none. */

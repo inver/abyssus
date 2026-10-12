@@ -6,7 +6,7 @@ Reads site_plan.py and each built model's bounds (source.json written by build_e
 rejects any whose transformed footprint comes within the clear radius of the pilot, and writes:
 - placements.json: every instance (asset, position, rotation, scale, footprint) with the estimates used;
 - layout.svg: a north-up placement diagram (not a render);
-- field-environment.patch.json: the scene edit, applied through editSceneJson by ScenePatchApplicationTest
+- field-environment.patch.json: the scene edit (the railway as one path arrangement with linked copies), applied through editSceneJson by ScenePatchApplicationTest
   (never applied here).
 """
 import hashlib
@@ -69,6 +69,7 @@ def distance_to_footprint(points, px=0.0, pz=0.0):
 class Layout:
     def __init__(self):
         self.items = []
+        self.arrangements = {}
         self.rng = random.Random(20261006)
 
     def place(self, name, asset, x, z, yaw=0.0, scale=1.0, y=None, slope=0.0, exempt=False, ground="min"):
@@ -81,6 +82,24 @@ class Layout:
             y = min(heights) if ground == "min" else plan.ground_height(x, z)
         self.items.append({"name": name, "asset": asset, "x": x, "y": y, "z": z, "yaw": yaw, "slope": slope,
                            "scale": scale, "footprint": points, "clearance": clear})
+
+    def arrange(self, name, asset, start, end, spacing):
+        """A path arrangement of `asset` from `start` to `end` ((x, z) pairs), a copy every `spacing` metres along the line.
+
+        Its copies are items too (named "<name> <n>", with the arrangement's name in `group`), so footprints, vegetation
+        clearance and the diagram see them; the scene patch writes them as one arrangement and its linked copies.
+        """
+        length = math.hypot(end[0] - start[0], end[1] - start[1])
+        count = int(length / spacing + 1e-6) + 1
+        yaw = yaw_along(end[0] - start[0], end[1] - start[1])
+        for k in range(count):
+            t = k * spacing / length
+            x, z = start[0] + (end[0] - start[0]) * t, start[1] + (end[1] - start[1]) * t
+            self.place(f"{name} {k + 1}", asset, x, z, yaw, y=plan.ground_height(x, z))
+            self.items[-1]["group"] = name
+        self.arrangements[name] = {"asset": asset, "spacing": spacing, "points": [
+            {"x": start[0], "y": plan.ground_height(*start), "z": start[1]},
+            {"x": end[0], "y": plan.ground_height(*end), "z": end[1]}]}
 
     @property
     def blockers(self):
@@ -148,21 +167,12 @@ def houses(layout):
 
 
 def railway(layout):
-    direction = (1.0, plan.RAIL_SLOPE)
-    length = math.hypot(*direction)
-    step = 50.0 / length
-    x = -300.0 + step / 2
-    i = 0
-    while x < 300.0:
-        z = plan.rail_z(x)
-        x0, x1 = x - step / 2, x + step / 2
-        y0 = plan.ground_height(x0, plan.rail_z(x0)) + 0.05
-        y1 = plan.ground_height(x1, plan.rail_z(x1)) + 0.05
-        slope = math.atan2(y1 - y0, 50.0)
-        i += 1
-        layout.place(f"Railway {i}", "model_airfield_railway", x, z, yaw_along(*direction), y=(y0 + y1) / 2,
-                     slope=slope)
-        x += step
+    """The two tracks, one path arrangement of 50 m segments along the line the site plan gives."""
+    step = 50.0 / math.hypot(1.0, plan.RAIL_SLOPE)  # metres of x per 50 m of track
+    first = -300.0 + step / 2
+    count = int((300.0 - first) / step) + 1 if (300.0 - first) % step else int((300.0 - first) / step)
+    last = first + (count - 1) * step
+    layout.arrange("Railway", "model_airfield_railway", (first, plan.rail_z(first)), (last, plan.rail_z(last)), 50.0)
 
 
 def street_lamps(layout):
@@ -284,6 +294,31 @@ def entity(item):
     }}
 
 
+def arrangement_entities(layout, name, first_id):
+    """The group entity of arrangement `name` and one linked copy per slot, ids from `first_id` (the group's)."""
+    arrangement = layout.arrangements[name]
+    copies = [item for item in layout.items if item.get("group") == name]
+    ids = [first_id + 1 + k for k in range(len(copies))]
+    group = {"components": {
+        "NameComponent": {"name": name},
+        "TypeComponent": {"type": "GROUP"},
+        "PathArrangementComponent": {
+            "points": [{k: round(v, 3) for k, v in p.items()} for p in arrangement["points"]],
+            "asset": {"type": "MODEL", "assetName": arrangement["asset"]},
+            "slots": ids,
+            "spacing": arrangement["spacing"],
+        },
+    }}
+    out = {str(first_id): group}
+    for k, (item, eid) in enumerate(zip(copies, ids)):
+        copy = entity(item)
+        copy["components"]["NameComponent"]["name"] = f"Path {first_id} #{k}"
+        del copy["components"]["PositionComponent"]["localScale"]
+        copy["components"]["ParentComponent"] = {"parentEntityId": first_id}
+        out[str(eid)] = copy
+    return out
+
+
 def svg(layout):
     size, half = 800, 250.0
     k = size / (2 * half)
@@ -336,7 +371,14 @@ def main():
 
     scenery = [dict(name="Airfield outer ground", asset="terrain_airfield_outer", x=-plan.OUTER_SIZE / 2, y=0.0,
                     z=-plan.OUTER_SIZE / 2, yaw=0.0, slope=0.0, scale=1.0)] + layout.items
-    entities = {str(FIRST_ID + i): entity(item) for i, item in enumerate(scenery)}
+    entities, groups = {}, set()
+    for item in scenery:
+        group = item.get("group")
+        if group is None:
+            entities[str(FIRST_ID + len(entities))] = entity(item)
+        elif group not in groups:
+            groups.add(group)
+            entities.update(arrangement_entities(layout, group, FIRST_ID + len(entities)))
     worst = min(item["clearance"] for item in layout.items if item["asset"] != "model_airfield_pad")
     print(f"{len(layout.items)} instances; nearest scenery {worst:.1f} m from the pilot")
 
@@ -346,6 +388,8 @@ def main():
             "padDiameter": 2 * plan.PAD_RADIUS, "ringRadii": plan.RING_RADII, "clearRadius": plan.CLEAR_RADIUS,
             "axes": "metres, pilot at the origin, north along -Z, east along +X",
         },
+        "arrangements": {name: {**a, "points": [{k: round(v, 3) for k, v in p.items()} for p in a["points"]]}
+                         for name, a in layout.arrangements.items()},
         "instances": [{k: (round(v, 3) if isinstance(v, float) else v) for k, v in item.items() if k != "footprint"}
                       for item in layout.items],
     }, indent=1) + "\n")

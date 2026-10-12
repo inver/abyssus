@@ -50,9 +50,12 @@
                 fieldName="INSTANCE"
                 language="JSON"
                 extensions="abss"/>
+        <projectService serviceInterface="net.nevinsky.abyssus.plugin.projectView.UiScreenOpener"
+                        serviceImplementation="net.nevinsky.abyssus.plugin.gameui.UiScreenOpenerService"/>
         <postStartupActivity implementation="net.nevinsky.abyssus.plugin.projectView.OpenAbyssusViewActivity"/>
         <projectViewPane implementation="net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane"/>
         <fileEditorProvider implementation="net.nevinsky.abyssus.plugin.SceneFileEditorProvider"/>
+        <fileEditorProvider implementation="net.nevinsky.abyssus.plugin.gameui.UiFileEditorProvider"/>
         <toolWindow id="Abyssus Properties"
                     anchor="right"
                     canCloseContents="false"
@@ -116,6 +119,15 @@
         <action id="Abyssus.RemoveComponent"
                 class="net.nevinsky.abyssus.plugin.projectView.RemoveComponentAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.NewUiAsset" class="net.nevinsky.abyssus.plugin.gameui.NewUiAssetAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.NewWeatherPreset"/>
+        </action>
+        <action id="Abyssus.RegisterUiAsset" class="net.nevinsky.abyssus.plugin.gameui.RegisterUiAssetAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.UnregisterUiAsset" class="net.nevinsky.abyssus.plugin.gameui.UnregisterUiAssetAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.RegisterUiAsset"/>
         </action>
     </actions>
 

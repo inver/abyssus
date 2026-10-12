@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.editor.document.scalarOf
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.plugin.EditorBundle
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -22,10 +23,15 @@ import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.ui.SimpleTextAttributes
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectIcons
 import net.nevinsky.abyssus.plugin.filetype.AssetIcons
 import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
+import net.nevinsky.abyssus.plugin.filetype.EntityIcons
 import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneIcons
 import net.nevinsky.abyssus.plugin.filetype.ScenesIcons
@@ -112,12 +118,21 @@ class DtoEntry(
     val parentKeys: List<String>,
 ) {
     // The tree keeps an existing node when a refreshed one is equal, so anything that changes how the
-    // row looks (the toggle state, a scalar's value) must take part, or the row stays stale after a toggle.
+    // row looks (the toggle state, a scalar's value, the entity type) must take part to avoid stale rows.
     override fun equals(other: Any?) =
         other is DtoEntry && other.path == path && other.enabled == enabled && rowText(other) == rowText(this) &&
             (if (isScalar(value)) scalarOf(value) == scalarOf(other.value) else !isScalar(other.value)) &&
-            (value as? Asset<*>)?.unused == (other.value as? Asset<*>)?.unused
+            (value as? Asset<*>)?.unused == (other.value as? Asset<*>)?.unused && entityType() == other.entityType()
     override fun hashCode() = path.hashCode()
+}
+
+/** Reads only the admitted row's JSON, without loading runtime components or assets. */
+private fun DtoEntry.entityType(): TypeComponent.Type? {
+    if (!isEntityEntry(this)) return null
+    val components = (value as? JsonNode)?.get("components") ?: return null
+    val component = components.get(TypeComponent::class.java.name) ?: components.get("TypeComponent")
+    val name = component?.get("type")?.takeIf { it.isTextual }?.textValue() ?: return null
+    return TypeComponent.Type.entries.firstOrNull { it.name == name }
 }
 
 private fun entryIcon(entry: DtoEntry): Icon {
@@ -125,8 +140,9 @@ private fun entryIcon(entry: DtoEntry): Icon {
     return when {
         dto is List<*> && entry.name == "scenes" -> ScenesIcons.LIST
         dto is List<*> && entry.name == "assets" -> AllIcons.Nodes.Folder
+        dto is UiScreen -> AllIcons.Actions.PreviewDetails
         dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
-        isEntityEntry(entry) -> PropertyIcons.ECS
+        isEntityEntry(entry) -> EntityIcons.forType(entry.entityType())
         isComponentEntry(entry) -> ComponentIcons.forComponent(entry.name)
         dto is SceneEntry && dto.file.extension == ProjectLayout.SCENE_EXTENSION -> SceneIcons.FILE
         PropertyIcons.forProperty(entry.name) != null -> PropertyIcons.forProperty(entry.name)!!
@@ -157,6 +173,32 @@ class DtoEntryNode(
         val keys = baseKeys + row.via
         val parentPath = row.via.fold(v.path) { acc, key -> "$acc/$key" }
         return DtoEntryNode(project!!, parentPath, row, src, keys, label, isGray)
+    }
+
+    /** The Game UI asset this row is, or the one it is a screen of, with the screen to show. */
+    private fun uiTarget(): Pair<Asset<*>, String?>? {
+        val own = value.value
+        if (own is Asset<*>) return own.takeIf { it.type == MetaType.UI }?.let { it to null }
+        if (own !is UiScreen) return null
+        var node: AbstractTreeNode<*>? = parent
+        while (node != null) {
+            val asset = (node as? DtoEntryNode)?.value?.value as? Asset<*>
+            if (asset != null) return asset to own.id
+            node = node.parent
+        }
+        return null
+    }
+
+    private fun uiMetaFile(asset: Asset<*>): VirtualFile? =
+        LocalFileSystem.getInstance().findFileByIoFile(java.io.File(asset.baseDir, "meta.json"))
+
+    override fun canNavigate() = uiTarget() != null
+
+    override fun canNavigateToSource() = canNavigate()
+
+    override fun navigate(requestFocus: Boolean) {
+        val (asset, screen) = uiTarget() ?: return
+        uiMetaFile(asset)?.let { project!!.service<UiScreenOpener>().open(it, screen) }
     }
 
     private val isDisabled get() = inheritedDisabled || value.enabled == false
