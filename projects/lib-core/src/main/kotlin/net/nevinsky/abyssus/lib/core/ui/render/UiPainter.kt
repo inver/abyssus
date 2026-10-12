@@ -61,13 +61,16 @@ internal class UiText(private val context: () -> UiPaintContext) {
         return style.resource("font")?.let(resources::font) ?: resources.defaultFont
     }
 
+    /** What is drawn and measured for [value]: upper case under the `uppercase` style key; the widget's own text is not changed. */
+    fun shown(style: UiResolvedStyle, value: String): String = if (style.flag("uppercase")) value.uppercase(java.util.Locale.ROOT) else value
+
     /** Lays [text] out in [style]'s font at its size; the font scale is set for this call only. */
     fun layout(style: UiResolvedStyle, text: String): GlyphLayout {
         val font = fontOf(style)
         val base = font.data.lineHeight / font.data.scaleY
         val scale = ((style.number("fontSize") ?: DEFAULT_FONT_SIZE) / base).toFloat()
         font.data.setScale(scale)
-        layout.setText(font, text)
+        layout.setText(font, shown(style, text))
         return layout
     }
 }
@@ -134,7 +137,7 @@ internal class UiPainter(private val context: () -> UiPaintContext, private val 
         val font = text.fontOf(style)
         rgba(batch, rgba, alpha)
         font.color = batch.color
-        font.draw(batch, value, if (center) x + (width - layout.width) / 2f else x, centerY + layout.height / 2f)
+        font.draw(batch, text.shown(style, value), if (center) x + (width - layout.width) / 2f else x, centerY + layout.height / 2f)
         font.data.setScale(1f)
     }
 
@@ -218,9 +221,8 @@ internal class UiPainter(private val context: () -> UiPaintContext, private val 
             null -> placeholder(batch, x, y, w, h, alpha)
             else -> Unit
         }
-        val states = c.states(widget)
         val borderWidth = (style.number("borderWidth") ?: 0.0).toFloat()
-        if (borderWidth > 0f && UiVisualState.FOCUSED in states) style.color("borderColor")
+        if (borderWidth > 0f) style.color("borderColor")
             ?.let { border(batch, it, borderWidth, x, y, w, h, alpha) }
         if (c.rejected(widget)) border(batch, 0xff5555ff.toInt(), 2f, x, y, w, h, alpha)
         batch.setColor(Color.WHITE)

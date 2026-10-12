@@ -13,8 +13,8 @@ Every screen and the HUD SHALL be visible and laid out as authored in a window o
 - **THEN** the main menu is drawn over the whole window and clicking a button presses that button
 
 #### Scenario: Centred content
-- **WHEN** a screen's root is authored with a centre anchor
-- **THEN** its content is centred in the window, not placed against the top edge
+- **WHEN** a screen's content is authored to be centred
+- **THEN** it is centred in the window, not placed against the top edge
 
 ### Requirement: One visual language
 All ten screens SHALL use the same palette, type and component styles: a dark navy ground, an orange accent for the primary action and key values, muted blue-grey for secondary text and borders, condensed display type for titles, buttons and large numbers, and a monospaced face for body text and data. Primary buttons SHALL be solid accent, other buttons outlined, and the focused button SHALL be clearly marked in addition to colour. Screens the design does not draw SHALL follow the same rules.

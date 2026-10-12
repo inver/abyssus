@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.screens
 
+import net.nevinsky.abyssus.lib.core.assets.ui.UiResourcePreparer
+import net.nevinsky.abyssus.lib.core.assets.ui.UiResourceResolver
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
@@ -54,5 +56,27 @@ class ControlLineUiAssetTest {
         }
         assertTrue(names.toString(), ACTIONS.containsAll(names))
         assertTrue(names.containsAll(ACTIONS))
+    }
+
+    @Test
+    fun everyResourceLoadsAndEveryStyledFontSizeIsItsFontsLineHeight() {
+        val folder = file.parentFile
+        val prepared = UiResourcePreparer(UiResourceResolver(folder)).prepare(collection)
+        assertEquals(emptyList<Any>(), prepared.issues)
+        // a style's fontSize is measured in line heights: a size that is not a font's own would scale a bitmap font
+        val native = json.readObject(File(folder, "fonts/index.json").readText())
+        for (style in collection.styles) {
+            val font = style.values.get("font")?.textValue() ?: continue
+            val size = style.values.get("fontSize")?.asInt()
+            assertEquals("${style.name}: fontSize of $font", native.get(font).asInt(), size)
+        }
+    }
+
+    @Test
+    fun everyWidgetStyleIsDefined() {
+        val known = collection.styles.map { it.name }.toSet()
+        val missing = mutableSetOf<String>()
+        collection.screens.forEach { screen -> walk(screen.root) { w -> w.style?.let { if (it !in known) missing += it } } }
+        assertTrue("undefined styles $missing", missing.isEmpty())
     }
 }

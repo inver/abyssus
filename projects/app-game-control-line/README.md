@@ -301,6 +301,10 @@ GL tests (`-Dabyssus.glTests=true`): `GameScreensCharacterizationTest` compares 
 with `characterization/screens.golden`, recorded from the original hand-written screens. Re-record it
 (`-Dabyssus.recordScreens=true`) only when a screen is meant to change.
 
+Look: a dark navy ground (`#0E1A23`), an orange accent (`#FF6A2B`) and muted blue-greys, from a design made in Claude's design canvas. The styles are in the asset: backgrounds `bg`, `dim`, `pane` (translucent HUD and table panels) and `card`; text `hero`, `title`, `big`, `mid`, `toast`, `body`, `hudLabel`, `hudValue`, `hudBig`, `tabLabel`; the roles the game publishes per row (`normal`, `highlight`, `muted`, `fail`, `selected`, `ideal`, `flown`); controls `primary`, `outline`, `tab`, `tabSelected`, `field`, `bar`. A style's `fontSize` is a font's line height (see `assets/screens/fonts/index.json`), and `uppercase` shows a label in capitals without changing its text. The renderer has no rounded corners or letter-spacing, so those parts of the design are left out. A screen's root fills the window: centre or edge-anchor content with a column inside a root panel, and give a label the height of its font's line (it is measured by cap height, which would clip descenders).
+
+Fonts and art are generated and committed, so the game needs neither the sources nor the tools: `./gradlew :app-game-control-line:generateUiFonts` renders the bitmap fonts from the SIL OFL fonts Barlow Condensed and IBM Plex Mono in `tools/fonts` (with their licences), and `generateUiArt` draws `art/menu-track.png`. To look at every screen, run the GL tests (`-Dabyssus.glTests=true`): `GameScreenshotsGlTest` writes a picture per step to `build/screenshots`, and `GameUiHiDpiGlTest` checks drawing and clicking on a window twice as dense as it is large.
+
 Screens fit a 1280 × 720 reference rectangle and use the bundled theme; the keys of the game (Escape, Left / Right, Enter on
 plane select and the boards, the debrief's keys) are handled by `GameUiModel.key` before the presenter sees them.
 

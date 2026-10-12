@@ -17,6 +17,9 @@ import net.nevinsky.abyssus.lib.core.editor.document.sceneEntityView
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
+import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
+import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
 import net.nevinsky.abyssus.plugin.dto.SceneError
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
@@ -55,6 +58,8 @@ fun isScalar(value: Any?): Boolean = when (value) {
  */
 fun childrenOf(value: Any?): List<DtoRow> = when {
     value is SceneEntry -> childrenOf(value.scene)
+    value is UiMeta -> (value.admission as? UiAdmission.Admitted)?.collection?.screens.orEmpty().map { DtoRow(it.id, it) }
+    value is UiScreen -> emptyList()
     isScalar(value) -> emptyList()
     value is JsonNode ->
         if (value.isObject) value.properties().map { (k, v) -> DtoRow(k, v) } else value.mapIndexed { i, v -> DtoRow("$i", v) }
@@ -119,6 +124,7 @@ fun rowText(entry: DtoEntry, label: String? = null): RowText {
     return when {
         v is List<*> && entry.name == "scenes" -> RowText(AbyssusBundle.message("treeScenes"), v.size.toString())
         v is List<*> && entry.name == "assets" -> RowText(AbyssusBundle.message("treeAssets"), v.size.toString())
+        v is UiScreen -> RowText(v.name.ifBlank { v.id }, v.kind.json)
         isEcsEntry(entry) -> RowText(ECS, AbyssusBundle.message("treeEntities", sceneDocumentFromEcs(v as JsonNode).entitiesNode()?.size() ?: 0))
         isEntityEntry(entry) -> entityText(entry, v as JsonNode)
         isComponentEntry(entry) -> RowText(entry.name.removeSuffix(COMPONENT_SUFFIX).ifEmpty { entry.name })

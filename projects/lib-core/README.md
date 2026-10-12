@@ -215,7 +215,7 @@ returns true; false hands it to the game (only possible below a nonmodal overlay
 - **Styling.** `UiStyleResolver` merges the bundled theme (`src/main/resources/ui/default-theme.json`), the widget's named
   style, its `properties.styleOverrides`, then state overrides (disabled over pressed over hover over focused over
   normal). Keys read by the renderer: `color`, `fontSize`, `font` (a resource id), `background`, `fill`, `knob`, `tint`,
-  `padding`, `borderColor`, `borderWidth`. Hidden widgets (`visible` binding) hide their subtree.
+  `padding`, `borderColor`, `borderWidth` (drawn whenever set, so a state override such as `focused` gives a focus ring), `uppercase` (a boolean: the text is measured and drawn in upper case; the widget's own text is unchanged). Hidden widgets (`visible` binding) hide their subtree.
 - **Example.** Control Line's whole UI is a `UI` asset driven this way (`GameUiHost`, `GameUiModel`); see the
   [game README](../app-game-control-line/README.md#screens).
 

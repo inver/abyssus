@@ -50,6 +50,8 @@
                 fieldName="INSTANCE"
                 language="JSON"
                 extensions="abss"/>
+        <projectService serviceInterface="net.nevinsky.abyssus.plugin.projectView.UiScreenOpener"
+                        serviceImplementation="net.nevinsky.abyssus.plugin.gameui.UiScreenOpenerService"/>
         <postStartupActivity implementation="net.nevinsky.abyssus.plugin.projectView.OpenAbyssusViewActivity"/>
         <projectViewPane implementation="net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane"/>
         <fileEditorProvider implementation="net.nevinsky.abyssus.plugin.SceneFileEditorProvider"/>

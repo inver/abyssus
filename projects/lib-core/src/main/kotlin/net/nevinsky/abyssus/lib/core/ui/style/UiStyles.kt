@@ -22,6 +22,9 @@ class UiResolvedStyle(private val values: Map<String, JsonNode>, val diagnostics
 
     fun number(key: String): Double? = values[key]?.takeIf { it.isNumber && it.doubleValue().isFinite() }?.doubleValue()
 
+    /** A boolean style value (`uppercase`); false when absent or not a boolean. */
+    fun flag(key: String): Boolean = values[key]?.takeIf { it.isBoolean }?.booleanValue() ?: false
+
     /** `#rrggbb` or `#rrggbbaa` as RGBA8888, or null when absent or malformed. */
     fun color(key: String): Int? = string(key)?.let(::parseUiColor)
 

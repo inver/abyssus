@@ -16,7 +16,9 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.project.DumbAware
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
+import net.nevinsky.abyssus.plugin.projectView.UiScreenOpener
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.components.JBLabel
@@ -120,6 +122,13 @@ class UiFileEditor(
         })
     }
 
+    private var pendingScreen: String? = null
+
+    /** Selects the screen [id] now, or as soon as the document has been read. */
+    fun showScreen(id: String) {
+        if (controller.collection != null) controller.selectScreen(id) else pendingScreen = id
+    }
+
     /** Runs the re-read waiting for the typing pause, if any. For tests. */
     internal fun flushPendingReload() = reloads.flush()
 
@@ -131,6 +140,7 @@ class UiFileEditor(
             banner.isVisible = false
             // the panel (and the GL canvas in it) is made once; a later invalid moment never rebuilds it
             if (panel == null) setContent(panelFactory(controller).also { panel = it })
+            pendingScreen?.let { pendingScreen = null; controller.selectScreen(it) }
             return
         }
         val text = when (state) {
@@ -205,3 +215,17 @@ internal fun defaultPanel(project: Project, file: VirtualFile, controller: UiEdi
 
 /** The message for one issue: its code's text with its location. */
 fun uiIssueMessage(issue: UiIssue): String = AbyssusBundle.message("uiIssue.${issue.code.name}", issue.path)
+
+/** Opens the Game UI editor tab of the UI asset whose `meta.json` is [metaFile], on the screen [screenId] when given. */
+fun openUiEditor(project: Project, metaFile: VirtualFile, screenId: String? = null) {
+    val manager = FileEditorManager.getInstance(project)
+    manager.openFile(metaFile, true)
+    manager.setSelectedEditor(metaFile, UiFileEditorProvider.EDITOR_TYPE_ID)
+    if (screenId != null) manager.getEditors(metaFile).filterIsInstance<UiFileEditor>().firstOrNull()?.showScreen(screenId)
+}
+
+/** The project's [UiScreenOpener]: opens the Game UI editor. */
+@Service(Service.Level.PROJECT)
+class UiScreenOpenerService(private val project: Project) : UiScreenOpener {
+    override fun open(metaFile: VirtualFile, screenId: String?) = openUiEditor(project, metaFile, screenId)
+}

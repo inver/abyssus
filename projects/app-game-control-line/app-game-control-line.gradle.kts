@@ -55,6 +55,8 @@ tasks.named<JavaExec>("run") {
 
 tasks.test {
     systemProperty("controlLine.project", gameProject.asFile.absolutePath)
+    // the tests read the bundled project (screens, scenes) from disk: a change to it reruns them
+    inputs.dir(gameProject).withPropertyName("controlLineProject")
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
     // re-records the pinned screens (screens.golden) from the screens under test: only when a screen is meant to change
@@ -65,7 +67,7 @@ tasks.test {
 val tools by sourceSets.creating {
     kotlin.srcDir("tools")
     // FieldFoliage.kt has its own source set (it needs the editing library): the older tools compile without it
-    kotlin.exclude("FieldFoliage.kt")
+    kotlin.exclude("FieldFoliage.kt", "UiFonts.kt", "UiArt.kt")
     compileClasspath += sourceSets["main"].runtimeClasspath
     runtimeClasspath += sourceSets["main"].runtimeClasspath
 }
@@ -78,6 +80,32 @@ tasks.register<JavaExec>("generatePlaneModels") {
     classpath = tools.runtimeClasspath
     mainClass.set("net.nevinsky.abyssus.app.game.controlline.tools.PlaneModels")
     args(gameProject.asFile.absolutePath)
+}
+// The screens' fonts and art (tools/UiFonts.kt, tools/UiArt.kt): a source set of their own, plain JDK drawing
+val uiTools by sourceSets.creating {
+    kotlin.srcDir("tools")
+    kotlin.include("UiFonts.kt", "UiArt.kt")
+    compileClasspath += sourceSets["main"].runtimeClasspath
+    runtimeClasspath += sourceSets["main"].runtimeClasspath
+}
+dependencies {
+    "uiToolsImplementation"(kotlin("stdlib"))
+}
+tasks.register<JavaExec>("generateUiFonts") {
+    group = "control line"
+    description = "Writes the screens' bitmap fonts from the OFL fonts in tools/fonts into the bundled project."
+    classpath = uiTools.runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.app.game.controlline.tools.UiFonts")
+    args(gameProject.asFile.absolutePath, layout.projectDirectory.dir("tools/fonts").asFile.absolutePath)
+    jvmArgs("-Djava.awt.headless=true")
+}
+tasks.register<JavaExec>("generateUiArt") {
+    group = "control line"
+    description = "Draws the screens' illustrations (menu track, plane top view) into the bundled project."
+    classpath = uiTools.runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.app.game.controlline.tools.UiArt")
+    args(gameProject.asFile.absolutePath)
+    jvmArgs("-Djava.awt.headless=true")
 }
 // Importers of bundled assets from outside sources (importers/): kept apart from tools/ so each builds on its own.
 val importers by sourceSets.creating {
@@ -178,7 +206,7 @@ tasks.named("check") { dependsOn("testFieldFoliageTools") }
 kover {
     currentProject {
         sources {
-            excludedSourceSets.addAll("tools", "importers", "fieldFoliageTools", "fieldFoliageToolsTest")
+            excludedSourceSets.addAll("tools", "importers", "fieldFoliageTools", "fieldFoliageToolsTest", "uiTools")
         }
     }
 }

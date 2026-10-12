@@ -43,6 +43,7 @@ class UiBuiltResources private constructor(
                 for (resource in prepared.resources.values) when (resource) {
                     is UiPreparedResource.Image -> textures[resource.id] = texture(resource.file)
                     is UiPreparedResource.Font -> fonts[resource.id] = BitmapFont(FileHandle(resource.fnt), false)
+                        .also { font -> font.regions.forEach { it.texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear) } }
                     is UiPreparedResource.Failed -> Unit
                 }
             } catch (e: Throwable) {

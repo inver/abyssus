@@ -23,6 +23,10 @@ import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.ui.SimpleTextAttributes
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectIcons
 import net.nevinsky.abyssus.plugin.filetype.AssetIcons
@@ -136,6 +140,7 @@ private fun entryIcon(entry: DtoEntry): Icon {
     return when {
         dto is List<*> && entry.name == "scenes" -> ScenesIcons.LIST
         dto is List<*> && entry.name == "assets" -> AllIcons.Nodes.Folder
+        dto is UiScreen -> AllIcons.Actions.PreviewDetails
         dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
         isEntityEntry(entry) -> EntityIcons.forType(entry.entityType())
         isComponentEntry(entry) -> ComponentIcons.forComponent(entry.name)
@@ -168,6 +173,32 @@ class DtoEntryNode(
         val keys = baseKeys + row.via
         val parentPath = row.via.fold(v.path) { acc, key -> "$acc/$key" }
         return DtoEntryNode(project!!, parentPath, row, src, keys, label, isGray)
+    }
+
+    /** The Game UI asset this row is, or the one it is a screen of, with the screen to show. */
+    private fun uiTarget(): Pair<Asset<*>, String?>? {
+        val own = value.value
+        if (own is Asset<*>) return own.takeIf { it.type == MetaType.UI }?.let { it to null }
+        if (own !is UiScreen) return null
+        var node: AbstractTreeNode<*>? = parent
+        while (node != null) {
+            val asset = (node as? DtoEntryNode)?.value?.value as? Asset<*>
+            if (asset != null) return asset to own.id
+            node = node.parent
+        }
+        return null
+    }
+
+    private fun uiMetaFile(asset: Asset<*>): VirtualFile? =
+        LocalFileSystem.getInstance().findFileByIoFile(java.io.File(asset.baseDir, "meta.json"))
+
+    override fun canNavigate() = uiTarget() != null
+
+    override fun canNavigateToSource() = canNavigate()
+
+    override fun navigate(requestFocus: Boolean) {
+        val (asset, screen) = uiTarget() ?: return
+        uiMetaFile(asset)?.let { project!!.service<UiScreenOpener>().open(it, screen) }
     }
 
     private val isDisabled get() = inheritedDisabled || value.enabled == false

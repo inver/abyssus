@@ -35,6 +35,21 @@ class UiLayoutTest {
         assertEquals(640f, boxy.toLogicalX(boxy.toViewportX(640f)), 1e-3f)
     }
 
+    @Test fun aRootPanelCentresAnAnchoredColumnButARootColumnIgnoresItsOwnAnchor() {
+        val centred = engine.resolve(screen("""{"id":"root","type":"panel","children":[
+            {"id":"col","type":"column","layout":{"anchor":"center","spacing":10},"children":[
+              {"id":"a","type":"label","layout":{"width":200,"height":40}},{"id":"b","type":"label","layout":{"width":200,"height":40}}]}]}"""), 1280f, 720f)
+        val col = centred.rect("col")
+        assertEquals(640f, col.x + col.width / 2f, 1e-3f)
+        assertEquals(360f, col.y + col.height / 2f, 1e-3f)
+        // a root fills the reference rectangle, so its own anchor changes nothing and its children flow from the top
+        val bare = engine.resolve(screen("""{"id":"root","type":"column","layout":{"anchor":"center"},"children":[
+            {"id":"a","type":"label","layout":{"width":200,"height":40}}]}"""), 1280f, 720f)
+        assertEquals(0f, bare.rect("root").y, 0f)
+        assertEquals(720f, bare.rect("root").height, 0f)
+        assertEquals(0f, bare.rect("a").y, 0f)
+    }
+
     @Test fun hudKeepsEdgeOffsetsAndColumnStaysCenteredAtBothResolutions() {
         val ui = screen("""{"id":"root","type":"panel","children":[
             {"id":"hud","type":"progressBar","layout":{"anchor":"topRight","x":-16,"y":16,"width":200,"height":16}},
