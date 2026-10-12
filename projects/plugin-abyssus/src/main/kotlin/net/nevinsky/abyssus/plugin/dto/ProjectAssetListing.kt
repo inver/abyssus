@@ -13,15 +13,18 @@ import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.runtime.obj
-import net.nevinsky.abyssus.lib.runtime.opt
-import net.nevinsky.abyssus.lib.runtime.text
+import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
+import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
+import net.nevinsky.abyssus.lib.core.util.obj
+import net.nevinsky.abyssus.lib.core.util.opt
+import net.nevinsky.abyssus.lib.core.util.text
 import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 
 /** Lists a project's asset folders through the VFS, as the Abyssus tree shows them, parsing `meta.json` with [json]. */
 class ProjectAssetListing(json: JsonProcessor) {
     private val metaFiles = MetaFiles(AssetMetaReader(json))
+    private val uiDecoder = UiCollectionDecoder()
 
     /**
      * One [Asset] per folder under the `assets` next to [abss]. A folder whose `meta.json` is missing, malformed or of a
@@ -34,20 +37,22 @@ class ProjectAssetListing(json: JsonProcessor) {
             @Suppress("UNCHECKED_CAST")
             val bound = document.typed(AssetMeta::class.java as Class<AssetMeta<Any>>) ?: return@runCatchingKeepingCancellation null
             // the name is the folder's, not a field of the file
-            val parsedMeta = AssetMeta(dir.name, bound.formatVersion, bound.version, bound.lastModified, bound.type, bound.additional, bound.uuid)
+            val additional: Any = if (bound.type == MetaType.UI) UiMeta(uiDecoder.decode(document.json)) else bound.additional
+            val parsedMeta = AssetMeta(dir.name, bound.formatVersion, bound.version, bound.lastModified, bound.type, additional, bound.uuid)
             val references = runCatchingKeepingCancellation { references(document.json) }.getOrDefault(emptyList())
             Asset(File(dir.path), parsedMeta, references)
         }.getOrNull() ?: Asset(File(dir.path), AssetMeta(name = dir.name, type = MetaType.UNKNOWN, additional = Any()))
     }
 
     /**
-     * The `uuid`s a `meta.json` holds in the fields Abyssus resolves to other assets: the splat textures and the
-     * `materials` list. Files named in `meta.json` live in the asset's own folder and are not references.
+     * The `uuid`s a `meta.json` holds in the fields Abyssus resolves to other assets: the splat textures, the
+     * `materials` list and a procedural sky's `clouds`. Files named in `meta.json` live in the asset's own folder and
+     * are not references.
      */
     private fun references(meta: JsonNode): List<String> {
         val additional = meta.obj("additional") ?: return emptyList()
         val materials = additional.opt("materials")?.takeIf { it.isArray }
             ?.mapNotNull { it.takeIf(JsonNode::isTextual)?.asText() }.orEmpty()
-        return SPLAT_FIELDS.mapNotNull { additional.text(it) } + materials
+        return SPLAT_FIELDS.mapNotNull { additional.text(it) } + materials + listOfNotNull(additional.text("clouds"))
     }
 }

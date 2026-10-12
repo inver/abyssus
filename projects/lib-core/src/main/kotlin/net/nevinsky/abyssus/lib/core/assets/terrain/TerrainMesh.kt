@@ -13,9 +13,9 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.graphics.g3d.Material
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.core.Renderable
+import net.nevinsky.abyssus.lib.gdx.Renderable
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.core.mesh.Mesh
+import net.nevinsky.abyssus.lib.gdx.mesh.Mesh
 
 
 /** The texture unit of the splat map; the layers take the units before it. */

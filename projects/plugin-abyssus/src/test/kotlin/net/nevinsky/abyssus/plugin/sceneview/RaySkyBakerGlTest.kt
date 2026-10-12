@@ -15,9 +15,9 @@ import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
-import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
-import net.nevinsky.abyssus.lib.core.assets.sky.Sky
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -27,7 +27,7 @@ import org.lwjgl.opengl.GL32C.glGetError
 /** Opt-in (`-Dabyssus.glTests=true`): the procedural-sky bake lands each world direction where the raster sky shows it. */
 class RaySkyBakerGlTest {
     /** Paints each pixel with its own world direction, built like a procedural sky does, from the inverse view-projection. */
-    private class DirectionSky : Sky {
+    private class DirectionSky : SkyRenderer {
         private val program = ShaderProgram(
             "attribute vec2 a_position;\nuniform mat4 u_invViewProj;\nvarying vec3 v_dir;\n" +
                 "void main() { vec4 p = u_invViewProj * vec4(a_position, 1.0, 1.0); v_dir = p.xyz / p.w; gl_Position = vec4(a_position, 1.0, 1.0); }",
@@ -37,7 +37,8 @@ class RaySkyBakerGlTest {
             it.setVertices(floatArrayOf(-1f, -1f, 3f, -1f, -1f, 3f))
         }
         private val inverse = Matrix4()
-        override fun draw(camera: Camera, sun: Vector3) {
+        override fun draw(camera: Camera, frame: SkyFrame) {
+            val sun = frame.sun
             inverse.set(camera.view); inverse.setTranslation(0f, 0f, 0f); inverse.mulLeft(camera.projection); inverse.inv()
             program.bind(); program.setUniformMatrix("u_invViewProj", inverse); mesh.render(program, GL20.GL_TRIANGLES)
         }
@@ -78,4 +79,55 @@ class RaySkyBakerGlTest {
         rendered.error?.let { throw it }
         assertTrue("the bake ran inside the GL context", checked)
     }
+
+    private val skyDir = java.io.File("src/test/testData/project/Untitled/assets/skybox_physical")
+
+    private fun proceduralSky(clouds: net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds?) =
+        net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky(
+            net.nevinsky.abyssus.lib.core.assets.sky.procedural.PreparedProceduralSky(
+                net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams(),
+                java.io.File(skyDir, "sky.vert").readText(), java.io.File(skyDir, "sky.frag").readText(), "skybox_physical",
+                clouds?.name,
+            ),
+            net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets { name -> clouds?.takeIf { it.name == name } },
+            net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage(),
+        )
+
+    @Test fun cloudyBakesShowCloudsFollowTheirTimeAndCarryARevision() {
+        assumeTrue(GlHarness.enabled)
+        var checked = false
+        val rendered = GlHarness.render(SceneRenderParams.DEFAULT, 2) { _, index ->
+            if (index != 0) return@render
+            val fair = net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds(
+                "weather",
+                net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta(
+                    low = net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand(
+                        net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType.CUMULUS,
+                    ),
+                ),
+                null,
+            )
+            val sky = proceduralSky(fair)
+            val baker = RaySkyBaker(faceSize = 64)
+            try {
+                val sun = Vec3(0f, 1f, 0f)
+                val bare = baker.bake(sky, sun)
+                val cloudy = baker.bake(sky, sun, 0.0, clouds = true)
+                val later = baker.bake(sky, sun, 600.0, clouds = true)
+                assertFalse("the clouds change the sky", bare.rgba().contentEquals(cloudy.rgba()))
+                assertFalse("wind moves them", cloudy.rgba().contentEquals(later.rgba()))
+                assertTrue("still a display sample, not HDR", !cloudy.hdr && !later.hdr)
+                assertEquals(listOf(1L, 2L, 3L), listOf(bare.revision, cloudy.revision, later.revision))
+                assertTrue("every sample is a finite display value", cloudy.rgba().all { it.isFinite() && it in 0f..1f })
+                assertArrayEquals("baking without clouds is the bare sky again", bare.rgba(), baker.bake(sky, sun, 600.0).rgba(), 0f)
+                assertEquals(GL_NO_ERROR, glGetError())
+                checked = true
+            } finally {
+                sky.dispose(); fair.dispose()
+            }
+        }
+        assertNull(rendered.error)
+        assertTrue(checked)
+    }
 }
+

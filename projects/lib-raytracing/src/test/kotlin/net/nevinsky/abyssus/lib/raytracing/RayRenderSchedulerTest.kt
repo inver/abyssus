@@ -181,6 +181,37 @@ class RayRenderSchedulerTest {
         assertNull(driver.scheduler.latest())
     }
 
+    @Test fun environmentOnlyChangeRestartsAccumulationButKeepsPresentingTheOlderFrame() {
+        val driver = Driver()
+        driver.scheduler.offer(input(1)); driver.scheduler.pump()
+        driver.finish(); driver.scheduler.pump()
+        val epoch = driver.submitted.last().accumulation.epoch
+        // drifting clouds re-bake the sky: sampling restarts, but the view must not drop to raster while the new batch renders
+        driver.scheduler.offer(input(1).copy(environmentRevision = 1)); driver.scheduler.pump()
+        driver.now += 1_000_000_000L
+        assertNotNull("A sky-only change must not blank the ray image", driver.scheduler.latest())
+        assertTrue(driver.submitted.last().accumulation.epoch > epoch)
+        assertEquals(0, driver.submitted.last().accumulation.sampleOffset)
+        driver.finish(); driver.scheduler.pump()
+        assertEquals(1L, driver.scheduler.latest()!!.batch.input.environmentRevision)
+        // other content changes keep the strict age bound
+        driver.scheduler.offer(input(1, content = 5).copy(environmentRevision = 1))
+        driver.now += 1_000_000_000L
+        assertNull(driver.scheduler.latest())
+    }
+
+    @Test fun animationOnlyMotionKeepsAnOlderFrameLongerThanCameraMotion() {
+        val driver = Driver()
+        driver.scheduler.offer(input(1)); driver.scheduler.pump()
+        driver.finish(); driver.scheduler.pump()
+        // same camera, new pose: a 300 ms old frame is still shown instead of dropping to raster
+        driver.scheduler.offer(input(1, pose = 2))
+        driver.now += 300_000_000L
+        assertNotNull(driver.scheduler.latest())
+        driver.now += 300_000_000L
+        assertNull(driver.scheduler.latest())
+    }
+
     private class Driver(policy: RayQualityPolicy = RayQualityPolicy()) {
         var now = 0L
         val submitted = mutableListOf<RayRenderBatch>()
@@ -195,11 +226,11 @@ class RayRenderSchedulerTest {
         }
     }
 
-    private fun input(revision: Long, generation: Long = 1, context: Long = 1, width: Int = 4, cameraId: String = "orbit", content: Long = 0): RayRenderInput {
+    private fun input(revision: Long, generation: Long = 1, context: Long = 1, width: Int = 4, cameraId: String = "orbit", content: Long = 0, pose: Long = revision): RayRenderInput {
         val mesh = RaySliceMesh(floatArrayOf(-1f, 0f, 0f, 1f, 0f, 0f, 0f, 1f, 0f), intArrayOf(0, 1, 2))
         val matrix = listOf(1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f)
         val camera = RaySliceCamera(listOf(0f, 0f, 2f), listOf(0f, 0f, -1f), listOf(0f, 1f, 0f), 60f, 0.1f, 100f)
-        return RayRenderInput(RayRequest(RayFrameKey(generation, context, revision, revision), width, 4, camera,
+        return RayRenderInput(RayRequest(RayFrameKey(generation, context, revision, pose), width, 4, camera,
             listOf(mesh), listOf(RaySliceInstance(0, matrix, listOf(1f, 1f, 1f)))), RayDisplayKey(width, 4, cameraId), content)
     }
 }

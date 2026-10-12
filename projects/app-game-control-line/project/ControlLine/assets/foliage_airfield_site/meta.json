@@ -1,0 +1,117 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1791244800000,
+  "uuid": "ee9f72a2-e539-3908-a02e-e91b685f9146",
+  "type": "FOLIAGE",
+  "additional": {
+    "terrain": "terrain_airfield_site",
+    "maskResolution": 128,
+    "layers": [
+      {
+        "id": 1,
+        "kind": "OBJECT",
+        "models": [
+          {
+            "asset": "model_airfield_tree_broadleaf",
+            "weight": 1.0
+          }
+        ],
+        "density": 0.003025,
+        "scale": {
+          "min": 0.8095,
+          "max": 1.185
+        },
+        "alignToNormal": 0.0,
+        "seed": 1413857057
+      },
+      {
+        "id": 2,
+        "kind": "OBJECT",
+        "models": [
+          {
+            "asset": "model_airfield_tree_young",
+            "weight": 1.0
+          }
+        ],
+        "density": 0.0023361112,
+        "scale": {
+          "min": 0.8282,
+          "max": 1.1941
+        },
+        "alignToNormal": 0.0,
+        "seed": 1413857055
+      },
+      {
+        "id": 3,
+        "kind": "OBJECT",
+        "models": [
+          {
+            "asset": "model_airfield_tree_acacia",
+            "weight": 1.0
+          }
+        ],
+        "density": 0.0023361112,
+        "scale": {
+          "min": 0.8153,
+          "max": 1.1885
+        },
+        "alignToNormal": 0.0,
+        "seed": 1413857028
+      },
+      {
+        "id": 4,
+        "kind": "OBJECT",
+        "models": [
+          {
+            "asset": "model_airfield_bush_tall",
+            "weight": 1.0
+          }
+        ],
+        "density": 0.003025,
+        "scale": {
+          "min": 0.802,
+          "max": 1.1953
+        },
+        "alignToNormal": 0.0,
+        "seed": 1413857029
+      },
+      {
+        "id": 5,
+        "kind": "OBJECT",
+        "models": [
+          {
+            "asset": "model_airfield_bush_low",
+            "weight": 1.0
+          }
+        ],
+        "density": 0.0026694445,
+        "scale": {
+          "min": 0.8031,
+          "max": 1.1938
+        },
+        "alignToNormal": 0.0,
+        "seed": 1413857029
+      },
+      {
+        "id": 6,
+        "kind": "DETAIL",
+        "models": [
+          {
+            "asset": "model_airfield_grass",
+            "weight": 1.0
+          }
+        ],
+        "density": 0.25166944,
+        "scale": {
+          "min": 0.8,
+          "max": 1.4
+        },
+        "alignToNormal": 1.0,
+        "drawDistance": 60.0,
+        "seed": 2037991936
+      }
+    ]
+  }
+}

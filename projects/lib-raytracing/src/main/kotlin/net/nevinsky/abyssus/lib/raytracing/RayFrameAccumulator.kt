@@ -15,14 +15,16 @@ internal class RayFrameAccumulator {
     fun add(request:RaySceneRequest,frame:RayFrame):RayFrame {
         val next=History(request.key,request.width,request.height,request.accumulationEpoch,request.settingsRevision,
             request.maxReflectionBounces,request.maxRefractionBounces)
-        val values=frame.colorValues()
         val previous=colors
-        if(request.sampleOffset>0 && history==next && samples==request.sampleOffset && previous!=null) {
+        val blend=request.sampleOffset>0 && history==next && samples==request.sampleOffset && previous!=null
+        // the incoming frame is discarded, so its arrays are adopted; only a blend needs a fresh array because history is read from `previous`
+        val values=if(blend) frame.colorValues() else frame.colorView()
+        if(blend && previous!=null) {
             val total=samples+request.samples
             for(i in values.indices) values[i]=(previous[i]*samples+values[i]*request.samples)/total
             samples=total
         } else samples=request.sampleOffset+request.samples
         history=next;colors=values
-        return RayFrame(frame.key,frame.width,frame.height,values,frame.depthValues())
+        return RayFrame(frame.key,frame.width,frame.height,values,frame.depthView(),true)
     }
 }

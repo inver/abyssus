@@ -64,4 +64,10 @@ class RayMaterialTest {
         assertTrue("rough sampling varies per pixel",(0 until 16).flatMap { x -> (0 until 16).map { y -> reference.reflectionDirection(normal,view,1f,x,y) } }.toSet().size>32)
     }
     private fun texture(id:String,c:RayColor)=RayTexture(id,1,1,floatArrayOf(c.r,c.g,c.b,c.a))
+
+    @org.junit.Test fun terrainMaterialsCompareByValue() {
+        fun terrain()=RayMaterial(kind=RayMaterialKind.TERRAIN,terrain=RayTerrainMaterial(RayTextureBinding(0),listOf(null,RayTextureBinding(1),null,null,null),2f))
+        org.junit.Assert.assertEquals(terrain(),terrain())
+        org.junit.Assert.assertNotEquals(terrain(),terrain().copy(terrain=RayTerrainMaterial(RayTextureBinding(0),listOf(null,RayTextureBinding(2),null,null,null),2f)))
+    }
 }

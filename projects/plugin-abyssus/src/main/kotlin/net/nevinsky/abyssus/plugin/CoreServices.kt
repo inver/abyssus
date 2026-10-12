@@ -7,11 +7,12 @@ package net.nevinsky.abyssus.plugin
 
 import javax.swing.SwingUtilities
 import net.nevinsky.abyssus.lib.core.editor.ray.rayBackendSelectorFromStartup
+import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageAssetWriter
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldDescriptions
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
 import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
@@ -37,8 +38,8 @@ class AssetServices(json: JsonProcessor, format: AbyssusDocumentFormat, log: Log
     val metaFiles = MetaFiles(AssetMetaReader(json, format))
     val fields = AssetFieldDescriptions()
     val editor = AssetMetaEditor(fields)
-    val sceneShaders = ShaderSource("/shader/scene", AbyssusCore::class.java)
-    val loading = AssetLoading(json, log, AppExecutorUtil.getAppExecutorService(), ShaderSource("/shader/sky", AssetLoading::class.java))
+    val sceneShaders = ShaderStorage().withResources("/shader/scene", AbyssusCore::class.java)
+    val loading = AssetLoading(json, log, AppExecutorUtil.getAppExecutorService(), ShaderStorage())
     val hdrPreviews = object : HdrPreviewSource { override val preview get() = loading.hdrPreview }
 }
 
@@ -48,6 +49,11 @@ class TerrainServices(json: JsonProcessor) {
     val writer = TerrainAssetWriter(json, heightEncoder)
     val recipes = TerrainRecipeCodec(json)
     val newTerrains = NewTerrainFactory(json, writer, heightEncoder, recipes)
+}
+
+/** Foliage services: the writer that plans a new foliage asset's files before any command writes them. */
+class FoliageServices(json: JsonProcessor) {
+    val newFoliages = FoliageAssetWriter(json)
 }
 
 /** Native resources keep their dedicated worker ownership and are closed only if initialized. */

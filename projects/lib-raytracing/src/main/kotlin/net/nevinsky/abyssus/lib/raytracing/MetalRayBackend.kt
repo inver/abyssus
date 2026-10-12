@@ -38,7 +38,7 @@ internal class MetalLibrary(
 }
 
 /** The native bridge builds at most this many bottom-level structures and instances per session. */
-internal const val METAL_MAX_INSTANCES = 1024
+internal const val METAL_MAX_INSTANCES = 4096
 
 /** Optional provider, injected once at the application composition root. All methods run on its serial worker. */
 class MetalRayBackendFactory(
@@ -243,7 +243,7 @@ class MetalRaySession internal constructor(
 /** The shading payload depends on everything except instance transforms and the camera. */
 internal fun shadingUnchanged(previous: RaySceneSnapshot?, next: RaySceneSnapshot): Boolean =
     previous != null && previous.materials == next.materials && previous.lights == next.lights &&
-        previous.environment == next.environment && previous.fog == next.fog &&
+        previous.environment == next.environment && previous.fog == next.fog && previous.sunVisibility == next.sunVisibility &&
         previous.instances.map { it.material } == next.instances.map { it.material } &&
         previous.meshes.size == next.meshes.size && previous.meshes.indices.all { previous.meshes[it].sameContentAs(next.meshes[it]) } &&
         previous.textures.size == next.textures.size && previous.textures.indices.all { previous.textures[it].sameContentAs(next.textures[it]) }

@@ -1,0 +1,304 @@
+"""Reproducible photo-referenced Classic reconstruction. Blender 5.2+, no add-ons.
+Run: blender -b --python build_classic.py. Geometry inputs are millimetres.
+"""
+import bpy, math, os, json, bmesh
+import numpy as np
+from mathutils import Vector, Matrix
+from math import sin, cos, pi, sqrt
+ROOT = os.path.dirname(os.path.abspath(__file__))
+bpy.ops.object.select_all(action='SELECT')
+bpy.ops.object.delete(use_global=False)
+for c in list(bpy.data.collections):
+    if c.name != 'Collection': bpy.data.collections.remove(c)
+base=bpy.data.collections.get('Collection'); base.name='01 Fuselage'
+cols={base.name:base}
+for name in ['02 Wings','03 Stabilizer','04 Landing gear','05 Engine and propeller','06 Cockpit','07 Studio']:
+    c=bpy.data.collections.new(name); bpy.context.scene.collection.children.link(c); cols[name]=c
+def put(o,c):
+    for old in list(o.users_collection): old.objects.unlink(o)
+    cols[c].objects.link(o)
+    return o
+def mat(name,color,metal=0,rough=.3):
+    m=bpy.data.materials.new(name); m.diffuse_color=(*color,1); m.use_nodes=True
+    p=m.node_tree.nodes.get('Principled BSDF'); p.inputs['Base Color'].default_value=(*color,1)
+    p.inputs['Metallic'].default_value=metal; p.inputs['Roughness'].default_value=rough
+    return m
+white=mat('White moulded finish',(.88,.91,.94)); red=mat('Red lacquer',(.58,.008,.014))
+black=mat('Rubber / dark hardware',(.012,.016,.022),0,.55)
+silver=mat('Machined aluminium',(.52,.58,.64),.8,.25)
+dark=mat('Cockpit grey',(.085,.115,.13),.1,.5)
+glass=mat('Canopy acrylic',(.65,.8,.92),0,.12)
+gp=glass.node_tree.nodes.get('Principled BSDF'); gp.inputs.get('Transmission Weight', gp.inputs.get('Transmission')).default_value=.92; gp.inputs['IOR'].default_value=1.46
+def photo(name,file):
+    m=mat(name,(1,1,1),0,.4); n=m.node_tree.nodes.new('ShaderNodeTexImage')
+    n.image=bpy.data.images.load(os.path.join(ROOT,'textures',file)); n.image.pack(); n.interpolation='Linear'
+    m.node_tree.links.new(n.outputs['Color'],m.node_tree.nodes.get('Principled BSDF').inputs['Base Color'])
+    return m
+paint=photo('SOURCE 07 | photographed upper-surface livery','classic-photo.jpg')
+def mesh(name,v,f,c,material=white,uv=None):
+    me=bpy.data.meshes.new(name); me.from_pydata([tuple(a*.001 for a in p) for p in v],[],f); me.update()
+    o=bpy.data.objects.new(name,me); cols[c].objects.link(o); me.materials.append(material)
+    if uv:
+        lay=me.uv_layers.new(name='Photo registration')
+        for p in me.polygons:
+            for li in p.loop_indices: lay.data[li].uv=uv[me.loops[li].vertex_index]
+    bm=bmesh.new(); bm.from_mesh(me); bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces)); bm.to_mesh(me); bm.free()
+    for p in me.polygons:p.use_smooth=True
+    return o
+def uvpx(x,y):return x/1200,1-y/900
+def project(corners):
+    # Projective, not affine: compensates for foreshortening in the photograph.
+    A=[]; B=[]
+    for (s,t),(x,y) in zip([(0,0),(1,0),(1,1),(0,1)],corners):
+        A.extend([[s,t,1,0,0,0,-x*s,-x*t],[0,0,0,s,t,1,-y*s,-y*t]]); B.extend([x,y])
+    h=np.append(np.linalg.solve(np.array(A),np.array(B)),1).reshape(3,3)
+    def fn(s,t):
+        q=h@np.array([s,t,1]);return uvpx(q[0]/q[2],q[1]/q[2])
+    return fn
+def foil(u,thick):
+    return 5*thick*(.2969*sqrt(max(0,u))-.126*u-.3516*u*u+.2843*u**3-.1036*u**4)
+def section(t,span,root,tip,le,sweep,thick):
+    # Dimensioned outer station and rounded contour traced from image 15.
+    is_tail=root<200
+    outer=span-(30 if is_tail else 80)
+    y=t*span
+    if y<=outer:
+        q=y/outer
+        return le+sweep*q, root+(tip-root)*q, (18+(12-18)*q if is_tail else 62-10*q)
+    q=(y-outer)/(span-outer)
+    if is_tail:
+        # 50/65 outer split occurs before the small rounded tip corners.
+        inset=10*(1-sqrt(max(0,1-q*q)))
+        return le+sweep+inset,tip-2*inset,12*(1-.55*q*q)
+    # LE/TE bounds sampled from the plan's curved outer 80 mm.
+    qs=[0,.5,.75,.9375,1]
+    dx=[0,3,8,33,65]; te=[275,273,268,218,118]; hh=[52,51,48,25,8]
+    return le+sweep+float(np.interp(q,qs,dx)),float(np.interp(q,qs,te))-float(np.interp(q,qs,dx)),float(np.interp(q,qs,hh))
+def wing(name,sign,span,root,tip,le,sweep,thick,z,c,corners):
+    v=[]; uv=[]; f=[]; N=96; mapper=project(corners)
+    ts=sorted(set([j/64 for j in range(65)]+[(span-(30 if root<200 else 80))/span]))
+    profile=[(i/N,1) for i in range(N+1)]+[(i/N,-1) for i in range(N-1,0,-1)]
+    K=len(profile)
+    peak=max(foil(i/10000,1) for i in range(10001))
+    for t in ts:
+        start,ch,h=section(t,span,root,tip,le,sweep,thick)
+        for u,side in profile:
+            x=start+ch*u
+            zz=z+side*max(.3,foil(u,1)/peak*h/2)
+            v.append((x,sign*span*t,zz));uv.append(mapper(.024+.952*u,.015+.965*t))
+    for j in range(len(ts)-1):
+        for i in range(K):f.append((j*K+i,j*K+(i+1)%K,(j+1)*K+(i+1)%K,(j+1)*K+i))
+    f.extend([tuple(reversed(range(K))),tuple((len(ts)-1)*K+i for i in range(K))])
+    o=mesh(name,v,f,c,paint,uv);o.data.materials.append(white)
+    for p in o.data.polygons:
+        if p.center.z < z*.001-.00001:p.material_index=1
+    o['airfoil_note']='Symmetric analytic section; root/outer thickness constrained to blueprint, exact original ordinates unavailable.'
+    o['outer_dimension_station_mm']=span-(30 if root<200 else 80)
+    return o
+wL=wing('Wing inboard | 740 mm',-1,740,340,275,250,32,62/340,0,'02 Wings',[(750,552),(584,360),(23,688),(66,851)])
+wR=wing('Wing outboard | 710 mm',1,710,340,275,250,32,62/340,0,'02 Wings',[(765,548),(595,353),(983,146),(1112,226)])
+tL=wing('Stabilizer left',-1,345,161,115,895,26,.11,5,'03 Stabilizer',[(414,205),(369,158),(134,246),(151,285)])
+tR=wing('Stabilizer right',1,345,161,115,895,26,.11,5,'03 Stabilizer',[(413,195),(377,151),(555,55),(596,89)])
+def loft(name,sections,c,material=white,uvfun=None):
+    v=[]; uv=[]; f=[]; K=64
+    for x,ry,rz,zc in sections:
+        for i in range(K):
+            a=2*pi*i/K; y=ry*cos(a); z=zc+rz*sin(a);v.append((x,y,z))
+            uv.append(uvfun(x,a) if uvfun else (i/K,x/1100))
+    for j in range(len(sections)-1):
+        for i in range(K): f.append((j*K+i,j*K+(i+1)%K,(j+1)*K+(i+1)%K,(j+1)*K+i))
+    f.extend([tuple(reversed(range(K))),tuple((len(sections)-1)*K+i for i in range(K))])
+    return mesh(name,v,f,c,material,uv)
+stations=[(0,27,29,10),(30,33,41,7),(95,37.5,55,-2),(210,37.5,59,-6),(300,35,59,-6),(470,29,58,-6),(600,23,55,-4),(760,17,51,-2),(895,12,47.5,.5),(1000,8,47.5,.5),(1045,4,47.5,.5),(1065,.7,43,1)]
+sections=[]
+for a,b in zip(stations,stations[1:]):
+    for j in range(5):sections.append(tuple(a[k]+(b[k]-a[k])*j/5 for k in range(4)))
+sections.append(stations[-1])
+def fuse_uv(x,a):
+    # Narrow strips from the visible red spine, away from canopy/background.
+    if x<215:
+        t=x/215;cx=892-142*t;cy=658-137*t;w=15
+    else:
+        t=(x-470)/(1065-470);cx=621-235*t;cy=370-195*t;w=8
+    return uvpx(cx+cos(a)*w,cy-cos(a)*w*.8)
+body=loft('Fuselage | moulded outer envelope',sections,'01 Fuselage',paint,fuse_uv);body.data.materials.append(white);body.data.materials.append(red)
+for p in body.data.polygons:
+    if p.center.z<.019:p.material_index=1
+    if .22<p.center.x<.47 and p.center.z>=.019:p.material_index=2
+# Fine longitudinal white stripes, separate geometry for editability.
+def curve(name,pts,r,material,c):
+    cu=bpy.data.curves.new(name,'CURVE');cu.dimensions='3D';cu.resolution_u=2;cu.bevel_depth=r*.001;cu.bevel_resolution=3
+    sp=cu.splines.new('POLY');sp.points.add(len(pts)-1)
+    for p,co in zip(sp.points,pts):p.co=(*[x*.001 for x in co],1)
+    o=bpy.data.objects.new(name,cu);cols[c].objects.link(o);cu.materials.append(material);return o
+for sg in [-1,1]:
+    for zz in [20,25]:
+        pts=[]
+        for x,ry,rz,zc in sections:
+            if rz>zz-zc:pts.append((x,sg*ry*sqrt(1-((zz-zc)/rz)**2)*1.005,zz))
+        curve('Fuselage pinstripe',pts,.8,white,'01 Fuselage')
+# Fin outline traced from plan, rounded through bevel.
+outline=[(865,48),(935,153),(949,171),(963,173),(1020,173),(1033,163),(1055,48),(1065,-32),(1054,-44),(990,-47)]
+v=[(x,y,z) for y in [-3.5,3.5] for x,z in outline]; n=len(outline)
+f=[tuple(reversed(range(n))),tuple(range(n,2*n))]+[(i,(i+1)%n,(i+1)%n+n,i+n) for i in range(n)]
+fin=mesh('Vertical fin and rudder',v,f,'01 Fuselage',red);fin.data.materials.append(white)
+for p in fin.data.polygons:
+    if p.center.z<.03:p.material_index=1
+be=fin.modifiers.new('Rounded moulded edges','BEVEL');be.width=.003;be.segments=4
+def ellipsoid(name,loc,scale,material,c):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=48,ring_count=24,location=[x*.001 for x in loc]);o=bpy.context.object;o.name=name
+    o.scale=[x*.001 for x in scale];bpy.ops.object.transform_apply(location=False,rotation=False,scale=True);o.data.materials.append(material)
+    for p in o.data.polygons:p.use_smooth=True
+    return put(o,c)
+def cyl(name,a,b,r,material,c,vertices=48):
+    aa=Vector(a)*.001;bb=Vector(b)*.001;d=bb-aa
+    bpy.ops.mesh.primitive_cylinder_add(vertices=vertices,radius=r*.001,depth=d.length,location=(aa+bb)/2)
+    o=bpy.context.object;o.name=name;o.rotation_euler=d.to_track_quat('Z','Y').to_euler();o.data.materials.append(material)
+    for p in o.data.polygons:p.use_smooth=True
+    return put(o,c)
+# Asymmetric canopy traced from the outer glazing silhouette, not the windscreen bow.
+def canopy_height(t):
+    xs=[0,.12,.27,.42,.53,.67,.81,.92,1]
+    ys=[0,.35,.70,.97,1,.91,.64,.34,0]
+    slopes=[(ys[i+1]-ys[i])/(xs[i+1]-xs[i]) for i in range(len(xs)-1)]
+    tangents=[slopes[0]]+[0 if slopes[i-1]*slopes[i]<=0 else 2*slopes[i-1]*slopes[i]/(slopes[i-1]+slopes[i]) for i in range(1,len(xs)-1)]+[slopes[-1]]
+    i=min(len(xs)-2,max(0,next((i for i in range(len(xs)-1) if t<=xs[i+1]),len(xs)-2)))
+    h=xs[i+1]-xs[i];u=(t-xs[i])/h
+    return (2*u**3-3*u*u+1)*ys[i]+(u**3-2*u*u+u)*h*tangents[i]+(-2*u**3+3*u*u)*ys[i+1]+(u**3-u*u)*h*tangents[i+1]
+# Canopy follows the 240 x 65 mm plan envelope.
+v=[];f=[];CK=48
+canopy_ts=sorted(set([j/64 for j in range(65)]+[.12,.27,.42,.53,.67,.78,.81,.92]));CS=len(canopy_ts)-1
+for t in canopy_ts:
+    sh=canopy_height(t)
+    for i in range(CK+1):
+        a=pi*i/CK;v.append((210+240*t,32*sin(pi*t)**.65*cos(a),53+65*sh*sin(a)))
+for j in range(CS):
+    for i in range(CK):a=j*(CK+1)+i;f.append((a,a+1,a+CK+2,a+CK+1))
+canopy=mesh('Clear removable canopy',v,f,'06 Cockpit',glass)
+sol=canopy.modifiers.new('Acrylic shell 0.8 mm','SOLIDIFY');sol.thickness=.0008
+for t in [.27,.78]:
+    sh=canopy_height(t);curve('Canopy bow',[(210+240*t,32*sin(pi*t)**.65*cos(pi*i/64),53+65*sh*sin(pi*i/64)) for i in range(65)],1.4,white,'06 Cockpit')
+for sg in [-1,1]:curve('Canopy sill',[(210+240*j/80,sg*32*sin(pi*j/80)**.65,53.5) for j in range(81)],1.3,white,'06 Cockpit')
+ellipsoid('Cockpit inset', (347,0,49),(111,29,3),black,'06 Cockpit')
+ellipsoid('Seat cushion',(377,0,54),(19,20,4),dark,'06 Cockpit')
+ellipsoid('Seat back',(399,0,70),(4,20,26),dark,'06 Cockpit')
+panel=ellipsoid('Instrument panel',(285,0,65),(3,24,16),black,'06 Cockpit')
+for y,z,r in [(-13,68,5),(0,73,6),(13,68,5),(0,60,4)]:
+    cyl('Instrument silver bezel',(289,y,z),(291,y,z),r,silver,'06 Cockpit')
+    cyl('Instrument dial',(291,y,z),(291.5,y,z),r*.8,black,'06 Cockpit')
+    curve('Instrument needle',[(292,y,z),(292,y+r*.45,z+r*.35)],.3,white,'06 Cockpit')
+cyl('Control stick',(350,0,52),(345,0,69),1.5,silver,'06 Cockpit');ellipsoid('Stick grip',(345,0,71),(2,2,4),black,'06 Cockpit')
+# Horizontally mounted 10 cc engine: cylinder axis is lateral, not vertical.
+cyl('Retro 60 crankcase',(14,-5,5),(125,-5,5),20,silver,'05 Engine and propeller')
+cyl('Horizontal cylinder',(76,-19,5),(76,-76,5),17,silver,'05 Engine and propeller')
+for j in range(12):cyl('Cooling fin %02d'%j,(76,-38-j*3.1,5),(76,-39.2-j*3.1,5),21,silver,'05 Engine and propeller')
+cyl('Cylinder head',(76,-77,5),(76,-82,5),19,silver,'05 Engine and propeller')
+cyl('Glow plug',(76,-82,5),(76,-88,5),4,silver,'05 Engine and propeller')
+cyl('Exhaust silencer',(114,-53,-9),(238,-53,-9),15,silver,'05 Engine and propeller')
+ellipsoid('Silencer rear dome',(238,-53,-9),(12,15,15),silver,'05 Engine and propeller')
+curve('Exhaust outlet',[(240,-53,-9),(253,-54,-15),(258,-54,-27)],5,silver,'05 Engine and propeller')
+loft('Polished spinner',[(-48,1,1,10),(-43,10,10,10),(-33,20,20,10),(-18,27,27,10),(-5,28,28,10)],'05 Engine and propeller',silver)
+for sg in [-1,1]:
+    # Elliptical blade section, twist reduces toward tip. 340 mm overall diameter.
+    vs=[];fs=[];N=32;K=16
+    for j in range(N+1):
+        rr=18+152*j/N;ww=(10+10*sin(pi*j/N))*(1-.9*(j/N)**9);ang=math.atan(140/(2*pi*rr))
+        for k in range(K):
+            a=2*pi*k/K;ch=ww*cos(a);tt=1.6*sin(a)
+            vs.append((-4+ch*sin(ang)+tt*cos(ang),sg*rr,10+sg*(ch*cos(ang)-tt*sin(ang))))
+    for j in range(N):
+        for k in range(K):fs.append((j*K+k,j*K+(k+1)%K,(j+1)*K+(k+1)%K,(j+1)*K+k))
+    fs.extend([tuple(reversed(range(K))),tuple(N*K+k for k in range(K))])
+    mesh('Propeller blade '+str(sg),vs,fs,'05 Engine and propeller',white)
+for sg in [-1,1]:
+    # Plan front view: leg leaves the wing underside at 144 mm from centreline and splays to the 370 mm track.
+    # Plan side view: leg top 65 mm behind wing LE, rakes forward ~30 mm to the axle; spat 166 mm long.
+    cyl('Main gear leg '+str(sg),(315,sg*144,-24),(287,sg*186,-142),4.0,silver,'04 Landing gear')
+    cyl('Ball-lock socket | schematic '+str(sg),(315,sg*144,-24),(312,sg*148,-36),7,silver,'04 Landing gear')
+    ellipsoid('Ball-lock detent | schematic '+str(sg),(313,sg*147,-30),(3,3,3),silver,'04 Landing gear')
+    ellipsoid('Wheel spat '+str(sg),(296,sg*185,-156),(83,16,22),white,'04 Landing gear')
+    cyl('Main tyre '+str(sg),(286,sg*185-8,-156),(286,sg*185+8,-156),22,black,'04 Landing gear')
+    cyl('Wheel hub '+str(sg),(286,sg*185-9,-156),(286,sg*185+9,-156),8,silver,'04 Landing gear')
+curve('Tail wheel wire',[(880,0,-38),(905,0,-85),(919,0,-111)],2,silver,'04 Landing gear')
+cyl('Tail wheel',(919,-5,-111),(919,5,-111),11,black,'04 Landing gear')
+# Straight blueprint hinge stations; independently dimensioned flap lengths.
+def surf_z(y,span,root,tip,le,sweep,x,zc=0):
+    start,ch,h=section(abs(y)/span,span,root,tip,le,sweep,0)
+    return zc+foil((x-start)/ch,1)/.50006*h/2
+for sg,sp,flapspan in [(-1,740,600),(1,710,570)]:
+    pts=[(514,sg*y,surf_z(y,sp,340,275,250,32,514)+.5) for y in np.linspace(0,flapspan,60)]
+    curve('Flap hinge seam',pts,.55,dark,'02 Wings')
+    start,ch,h=section(flapspan/sp,sp,340,275,250,32,0)
+    curve('Flap end seam',[(x,sg*flapspan,surf_z(flapspan,sp,340,275,250,32,x)+.5) for x in np.linspace(514,start+ch,25)],.5,dark,'02 Wings')
+    for y in [flapspan*.18,flapspan*.5,flapspan*.85]:
+        z=surf_z(y,sp,340,275,250,32,514)
+        cyl('Flap hinge',(512,sg*y,z+1),(517,sg*y,z+1),1.5,silver,'02 Wings')
+for sg in [-1,1]:
+    pts=[(971,sg*y,surf_z(y,345,161,115,895,26,971,5)+.4) for y in np.linspace(0,335,60)]
+    curve('Elevator hinge seam',pts,.45,dark,'03 Stabilizer')
+# Move cockpit internals with the re-registered canopy, retaining the shell coordinates.
+for o in cols['06 Cockpit'].objects:
+    if not any(k in o.name for k in ['canopy','Canopy']):o.location+=Vector((-.015,0,.005))
+# Engine/propeller assembly yaws 3 degrees about the propeller centre.
+pivot=Vector((-.004,0,.010))
+transform=Matrix.Translation(pivot) @ Matrix.Rotation(math.radians(3),4,'Z') @ Matrix.Translation(-pivot)
+for o in cols['05 Engine and propeller'].objects:o.matrix_world=transform @ o.matrix_world
+for x in [390,430]:
+    curve('Inboard control-line guide',[(x,-730,0),(x,-770,0)],.7,silver,'02 Wings')
+# Match the photograph's handedness (engine and registered wing on visible side).
+for o in bpy.data.objects:
+    if o.type in {'MESH','CURVE'}:
+        o.matrix_world = Matrix.Diagonal((1,-1,1,1)) @ o.matrix_world
+        bpy.ops.object.select_all(action='DESELECT');o.select_set(True);bpy.context.view_layer.objects.active=o
+        bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
+        if o.type=='MESH':
+            bm=bmesh.new();bm.from_mesh(o.data);bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces));bm.to_mesh(o.data);bm.free()
+scene=bpy.context.scene;scene.unit_settings.system='METRIC';scene.unit_settings.length_unit='MILLIMETERS'
+scene['Model']='Yuriy Yatsenko Classic, 1992, F2B — photo/plan reconstruction'
+scene['Reference flying mass']='1600 ±20 g; metadata only, not mesh mass'
+scene['Engine']='Discovery Retro 60, 10 cc, horizontal cylinder'
+scene['Caution']='Display/reference geometry. Exact airfoil, internal structure, demountable joints and Petrov ball-lock mechanism are not documented by supplied views; hardware is schematic.'
+scene['Sources']='http://discovery-aeromodels.com/en/yuriy-yatsenko-classic-f2b-model.html; images 7,8,9,15; other article images inspected for shape only.'
+scene['Blueprint revision']='Corrected aft-body 95 mm depth, straight 600/570 mm flap hinges, straight elevator hinge, dimensioned outer sections, asymmetric canopy, 3 degree engine yaw.'
+scene['Scale']='1:1. Blender coordinates in metres; STL coordinates in millimetres.'
+# Export a selection of closed principal solids, retaining assembly coordinates.
+for name,o in [('fuselage',body),('wing_inboard',wL),('wing_outboard',wR),('stabilizer_left',tL),('stabilizer_right',tR),('vertical_fin',fin)]:
+    bpy.ops.object.select_all(action='DESELECT');o.select_set(True);bpy.context.view_layer.objects.active=o
+    bpy.ops.wm.stl_export(filepath=os.path.join(ROOT,'stl',name+'.stl'),export_selected_objects=True,global_scale=1000)
+for o in list(cols['04 Landing gear'].objects):
+    bpy.ops.object.select_all(action='DESELECT');o.select_set(True);bpy.context.view_layer.objects.active=o
+    bpy.ops.wm.stl_export(filepath=os.path.join(ROOT,'stl',o.name.replace(' | ','_').replace(' ','_')+'.stl'),export_selected_objects=True,global_scale=1000)
+# Studio camera has nose bottom-right, tail top-left as in image 7.
+def track(o,p):o.rotation_euler=(Vector(p)-o.location).to_track_quat('-Z','Y').to_euler()
+bpy.ops.object.camera_add(location=(-1.9,1.4,3.2));cam=put(bpy.context.object,'07 Studio');cam.name='Primary photo angle';track(cam,(.49,0,0));cam.data.type='ORTHO';cam.data.ortho_scale=1.88;scene.camera=cam
+for name,loc,power,size in [('Large softbox',(-1,-1,3),180,3),('Rim softbox',(1,2,2),130,2)]:
+    bpy.ops.object.light_add(type='AREA',location=loc);o=put(bpy.context.object,'07 Studio');o.name=name;o.data.energy=power;o.data.shape='DISK';o.data.size=size;track(o,(.5,0,0))
+scene.world.color=(.32,.32,.32)
+scene.render.engine='CYCLES';scene.cycles.samples=32;scene.cycles.use_denoising=True
+scene.render.resolution_x=1600;scene.render.resolution_y=1200;scene.render.resolution_percentage=100
+scene.view_settings.view_transform='Standard';scene.view_settings.look='None';scene.view_settings.exposure=-.65;scene.view_settings.gamma=1
+scene.render.image_settings.file_format='PNG';scene.render.film_transparent=True
+# A clean editable viewport, packed textures and explanatory text embedded in file.
+note=bpy.data.texts.new('READ ME — accuracy and sources')
+note.write('Classic F2B / Yuriy Yatsenko\n1:1 reference geometry, metres internally.\nWing span 1450 mm (740+710); tail span 690 mm; root chord 340 mm; tip chord 275 mm; canopy 240 x 65 mm; propeller 340 mm; gear track 370 mm.\nPhoto 7 is UV-mapped onto upper wing and tail surfaces and the red fuselage spine. Texture is packed. Photograph contains baked reflections; hidden lower surfaces are plain white reconstructions. Photo 8 confirms livery; photo 9 informs cockpit detail.\nSymmetric airfoil is an analytic approximation scaled to the plan thickness, not a verified original section. Engine, cockpit, ball-lock sockets and detents are external visual approximations. No functional release mechanism or flightworthy structure is implied. No mass distribution/material layup is defined; 1600 ±20 g is reference metadata.\nPrincipal STL solids use millimetres and preserve assembly coordinates; not pre-split for printer beds. Fin is separate from fuselage; landing gear subparts are separate. No press-fit tolerances have been designed.\nArticle: http://discovery-aeromodels.com/en/yuriy-yatsenko-classic-f2b-model.html\n')
+for screen in bpy.data.screens:
+    for area in screen.areas:
+        if area.type=='VIEW_3D':
+            area.spaces.active.region_3d.view_perspective='CAMERA';area.spaces.active.shading.type='MATERIAL';area.spaces.active.clip_end=100
+bpy.ops.object.select_all(action='DESELECT');body.select_set(True);bpy.context.view_layer.objects.active=body
+bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT,'Classic_F2B.blend'))
+scene.render.filepath=os.path.join(ROOT,'rendered.png');bpy.ops.render.render(write_still=True)
+# Wireframe preview uses the same actual geometry and camera.
+scene.render.engine='BLENDER_WORKBENCH';scene.display.shading.light='STUDIO';scene.display.shading.color_type='MATERIAL';scene.display.shading.single_color=(.67,.75,.8);scene.display.shading.show_shadows=True;scene.display.shading.show_cavity=True
+for o in bpy.data.objects:
+    if o.type=='MESH':
+        o.data.materials.clear();o.data.materials.append(white);o.data.materials.append(black)
+        for p in o.data.polygons:p.material_index=0
+        mod=o.modifiers.new('Topology overlay','WIREFRAME');mod.thickness=.00025;mod.use_replace=False;mod.material_offset=1
+scene.render.filepath=os.path.join(ROOT,'wireframe.png');bpy.ops.render.render(write_still=True)
+report={}
+for o in [body,wL,wR,tL,tR,fin]:
+    bm=bmesh.new();bm.from_mesh(o.data)
+    report[o.name]={'vertices':len(bm.verts),'faces':len(bm.faces),'non_manifold_edges':sum(not e.is_manifold for e in bm.edges),'bounds_mm':[round(x*1000,3) for x in o.dimensions]};bm.free()
+with open(os.path.join(ROOT,'validation.json'),'w') as f:json.dump(report,f,indent=2)
+print('CLASSIC BUILD COMPLETE',json.dumps(report))

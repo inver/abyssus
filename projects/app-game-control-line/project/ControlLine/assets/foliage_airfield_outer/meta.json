@@ -1,0 +1,65 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1791244800000,
+  "uuid": "cedc0115-a102-36b3-94fc-5139e06a2e41",
+  "type": "FOLIAGE",
+  "additional": {
+    "terrain": "terrain_airfield_outer",
+    "maskResolution": 128,
+    "layers": [
+      {
+        "id": 1,
+        "kind": "OBJECT",
+        "models": [
+          {
+            "asset": "model_airfield_tree_broadleaf",
+            "weight": 1.0
+          }
+        ],
+        "density": 7.5625E-4,
+        "scale": {
+          "min": 0.8033,
+          "max": 1.18
+        },
+        "alignToNormal": 0.0,
+        "seed": 414300299
+      },
+      {
+        "id": 2,
+        "kind": "OBJECT",
+        "models": [
+          {
+            "asset": "model_airfield_tree_young",
+            "weight": 1.0
+          }
+        ],
+        "density": 7.5625E-4,
+        "scale": {
+          "min": 0.8067,
+          "max": 1.1997
+        },
+        "alignToNormal": 0.0,
+        "seed": 414300301
+      },
+      {
+        "id": 3,
+        "kind": "OBJECT",
+        "models": [
+          {
+            "asset": "model_airfield_tree_acacia",
+            "weight": 1.0
+          }
+        ],
+        "density": 6.6736114E-4,
+        "scale": {
+          "min": 0.8103,
+          "max": 1.1903
+        },
+        "alignToNormal": 0.0,
+        "seed": 414300300
+      }
+    ]
+  }
+}

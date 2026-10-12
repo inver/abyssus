@@ -15,8 +15,8 @@ import java.nio.file.Path
 import java.util.UUID
 
 /**
- * Writes the bundled project's models as asset folders under `<project>/assets`: two low-poly control-line planes
- * (`model_racer`, `model_stunter`) and the pilot (`model_pilot`), each a `model.gltf` with its
+ * Writes the bundled project's models as asset folders under `<project>/assets`: a low-poly control-line plane
+ * (`model_racer`; `model_stunter` is the Classic F2B export, see `models/classic-f2b`) and the pilot (`model_pilot`), each a `model.gltf` with its
  * `model.bin` and a native `meta.json`. The output depends only on this file, so running it again gives the same
  * bytes. Run by `./gradlew :games:control-line:generatePlaneModels`. The trainer is FlightGear's Cessna 172R, imported
  * by `TrainerModel` (`importTrainer`) in the same frame.
@@ -72,7 +72,6 @@ data class PlaneShape(
 
 val PLANES = listOf(
     PlaneShape("racer", span = 0.7f, chord = 0.13f, length = 0.6f, body = Paint("red", 0.8f, 0.1f, 0.08f), wing = Paint("white", 0.92f, 0.92f, 0.9f)),
-    PlaneShape("stunter", span = 1.3f, chord = 0.25f, length = 1.0f, body = Paint("blue", 0.1f, 0.25f, 0.75f), wing = Paint("yellow", 0.95f, 0.8f, 0.1f)),
 )
 
 /** A standing figure about 1.8 m tall, facing +Z, its right arm forward holding the handle at 1.5 m. */

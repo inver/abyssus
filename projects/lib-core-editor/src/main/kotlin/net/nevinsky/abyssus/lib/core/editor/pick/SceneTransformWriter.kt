@@ -11,6 +11,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.FloatNode
 import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 
 /**
@@ -28,11 +29,12 @@ data class TransformEdit(
 data class TargetMove(val entityId: String, val position: Vec3)
 
 /** Writes a [TransformEdit] into a scene's JSON tree, touching only the values that change. */
-class SceneTransformWriter {
+class SceneTransformWriter(private val arrangements: ArrangementEdits = ArrangementEdits()) {
     /**
      * Sets `PositionComponent.localPosition` / `localRotation` of the entity [entityId] under `ecs.entities`, adding
      * missing objects and fields. For an entity with a `CameraComponent.camera` object it also sets that object's
      * `position` and `viewPointPosition`. [target] is written as the target entity's `PositionComponent.localPosition`.
+     * Moving or turning a copy of a path arrangement detaches it in the same edit ([ArrangementEdits.detach]).
      * Returns false, leaving [root] as it was, when the entity or the target is missing, either has a
      * `PositionComponent` that is not an object, or no value differs.
      */
@@ -48,6 +50,7 @@ class SceneTransformWriter {
             val placement = placementOf(components)
             edit.position?.let { changed = setVec(placement, "localPosition", it) or changed }
             edit.rotation?.let { changed = setQuat(placement, "localRotation", it) or changed }
+            if (changed) arrangements.detach(root, entityId)
         }
         val camera = components.get("CameraComponent")?.get("camera") as? ObjectNode
         if (camera != null) {

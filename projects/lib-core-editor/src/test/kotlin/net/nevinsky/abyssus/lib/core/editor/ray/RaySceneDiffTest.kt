@@ -48,9 +48,9 @@ class RaySceneDiffTest {
         content: SceneContent = SceneContent(models = listOf(placement)), project: String = "project", preview: Map<String, DragResult> = emptyMap(),
         lights: LightSet = NO_LIGHTS, environment: RayEnvironment? = null, view: PerspectiveCamera = camera,
         state: RaySceneAssetState = assets, fog: FogParams? = null, poses: Map<String, RayModelPose> = emptyMap(),
-        snapshots: RaySceneSnapshots = converter,
+        snapshots: RaySceneSnapshots = converter, environmentRevision: Long = 0,
     ): RaySceneFrame = (snapshots.capture(SceneRenderParams.DEFAULT.copy(content = content, projectDir = File(project), fog = fog), view, lights,
-        state, preview, environment = environment, poses = poses) as RaySceneConversion.Ready).frame
+        state, preview, environment = environment, poses = poses, environmentRevision = environmentRevision) as RaySceneConversion.Ready).frame
 
     private fun moved(x: Float) = mapOf("entity" to DragResult(PlacementTransform(Vec3(x, 0f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f)), null))
 
@@ -109,5 +109,17 @@ class RaySceneDiffTest {
         val fogged = raySceneDiff(before, frame(fog = FogParams(Rgba(.5f, .5f, .5f, 1f), .02f, 1f)))
         assertEquals(setOf(RaySceneChange.ENVIRONMENT), fogged.changes)
         assertFalse(fogged.rebuild)
+    }
+
+    @Test fun aChangedSkyLightOrANewSkyBakeInvalidatesTheEnvironmentButAnUnchangedOneDoesNot() {
+        fun cube(blue: Float) = List(6) { RayColor(.1f, .1f, blue) }
+        val lit = frame(environment = RayEnvironment(ambientCube = cube(.4f)), environmentRevision = 5)
+        val same = frame(environment = RayEnvironment(ambientCube = cube(.4f)), environmentRevision = 5)
+        assertTrue("an unchanged sky light changes nothing", raySceneDiff(lit, same).changes.isEmpty())
+        val faded = frame(environment = RayEnvironment(ambientCube = cube(.5f)), environmentRevision = 5)
+        assertEquals("a diffuse sky light that fades", setOf(RaySceneChange.ENVIRONMENT), raySceneDiff(lit, faded).changes)
+        val rebaked = frame(environment = RayEnvironment(ambientCube = cube(.4f)), environmentRevision = 6)
+        assertEquals("a new sky bake with the same light", setOf(RaySceneChange.ENVIRONMENT), raySceneDiff(lit, rebaked).changes)
+        assertFalse(raySceneDiff(lit, rebaked).rebuild)
     }
 }

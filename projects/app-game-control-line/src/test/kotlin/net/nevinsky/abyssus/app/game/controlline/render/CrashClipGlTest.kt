@@ -9,9 +9,9 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.AnimationController
-import net.nevinsky.abyssus.lib.core.ModelInstance
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.AnimationController
+import net.nevinsky.abyssus.lib.gdx.ModelInstance
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.app.game.controlline.bundledProject
 import net.nevinsky.abyssus.app.game.controlline.flight.CrashSeverity
 import org.junit.Assert.assertEquals

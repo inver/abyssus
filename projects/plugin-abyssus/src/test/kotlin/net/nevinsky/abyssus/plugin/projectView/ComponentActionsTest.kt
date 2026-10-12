@@ -126,7 +126,7 @@ class ComponentActionsTest : BasePlatformTestCase() {
         val items = render.getChildren(null)
         assertEquals(assets.map { "${it.type.lowercase()} ${it.name}" }, items.map { it.templatePresentation.text })
         items.first().actionPerformed(TestActionEvent.createTestEvent(items.first()))
-        val asset = components("6")["RenderComponent"]["renderable"]["asset"]
+        val asset = components("6")["RenderComponent"]
         assertEquals(assets.first().name, asset["assetName"].asText())
         assertEquals(assets.first().type, asset["type"].asText())
     }

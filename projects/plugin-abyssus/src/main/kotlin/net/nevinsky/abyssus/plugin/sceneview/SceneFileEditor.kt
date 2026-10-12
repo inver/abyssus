@@ -8,6 +8,10 @@ package net.nevinsky.abyssus.plugin.sceneview
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.plugin.SceneRayControls
 
 import com.intellij.openapi.application.ApplicationManager
@@ -36,6 +40,12 @@ import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.components.JBLabel
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import java.awt.BorderLayout
@@ -92,6 +102,19 @@ class SceneFileEditor(
     internal var statusText: String? = null
         private set
 
+    // Physics availability is handled separately; it is not a render input.
+    private var projectInputs: JsonNode? = projectInputs()
+
+    private fun projectInputs(text: String? = null): JsonNode? = runCatchingKeepingCancellation {
+        val abss = ProjectLayout.abssFor(file) ?: return@runCatchingKeepingCancellation null
+        val root = SceneJson().parse(text ?: textOf(abss))
+        AbyssusDocumentFormat().requireSupported(root, DocumentKind.PROJECT)
+        (root as ObjectNode).also { it.remove("physicsEnabled") }
+    }.getOrNull()
+
+    private fun hasRenderChange(changed: VirtualFile, text: String? = null): Boolean =
+        changed == file || projectInputs(text).let { it == null || it != projectInputs }
+
     init {
         reload()
         assetRefresh?.let { refresh ->
@@ -115,26 +138,28 @@ class SceneFileEditor(
         }
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
-                if (events.any { it is VFileContentChangeEvent && isSource(it.file) }) {
+                if (events.any { it is VFileContentChangeEvent && isSource(it.file) && hasRenderChange(it.file) }) {
                     ApplicationManager.getApplication().invokeLater { if (!disposed) reloadNow() }
                 }
             }
         })
         // a plugin edit (gizmo, panel, tree, Add Light, ...) is shown at once, not after the typing pause
         project.messageBus.connect(this).subscribe(AbyssusSceneEdited.TOPIC, AbyssusSceneEdited { edited ->
-            if (isSource(edited)) reloadNow()
+            if (isSource(edited) && hasRenderChange(edited)) reloadNow()
         })
         // unsaved edits in the text tabs of the scene or of its project file: typing waits for a pause, Undo and Redo do not
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
             // any edit, from a text tab, the panel, the tree or a gizmo, stops play before it applies
             override fun beforeDocumentChange(event: DocumentEvent) {
                 val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
-                if (isSource(changed)) view?.stopPlay()
+                if (!isSource(changed)) return
+                val next = event.document.text.replaceRange(event.offset, event.offset + event.oldLength, event.newFragment.toString())
+                if (hasRenderChange(changed, next)) view?.stopPlay()
             }
 
             override fun documentChanged(event: DocumentEvent) {
                 val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
-                if (!isSource(changed)) return
+                if (!isSource(changed) || !hasRenderChange(changed)) return
                 val undoing = UndoManager.getInstance(project).let { it.isUndoInProgress || it.isRedoInProgress }
                 if (undoing) reloadNow() else reloadAfterPause()
             }
@@ -158,6 +183,12 @@ class SceneFileEditor(
         reload()
     }
 
+    /** The scene file this tab shows. */
+    internal val sceneFile: VirtualFile get() = file
+
+    /** The live view, or null while the tab shows a message instead of a render. */
+    internal val sceneView: SceneView? get() = view
+
     /** Runs the re-read that is waiting for the typing pause, if any, without waiting; for tests. */
     internal fun flushPendingReload() = reloadQueue.flush()
 
@@ -170,6 +201,7 @@ class SceneFileEditor(
     }
 
     private fun showScene(params: SceneRenderParams) {
+        projectInputs = projectInputs()
         rayControls.recordFacts(file, this, params.content)
         view?.let {
             it.setParams(params)
@@ -188,6 +220,9 @@ class SceneFileEditor(
             host.select(file, entityId)
         }
         created.onTransform = ::applyTransform
+        created.onArrangementCreate = ::createArrangement
+        created.onArrangementEdit = ::editArrangement
+        created.onRegenerate = ::regenerateArrangement
         (created as? RayControlProvider)?.rayControl?.let { rayControls.register(file, it, created) }
         view = created
         statusText = null
@@ -199,6 +234,37 @@ class SceneFileEditor(
         val isRotate = edit.rotation != null || edit.target != null
         val command = AbyssusBundle.message(if (isRotate) "commandRotateEntity" else "commandMoveEntity")
         return editSceneJson(project, file, command) { root -> SceneTransformWriter().apply(root, entityId, edit) }
+    }
+
+    /** The ground to place copies on: the view's, else one read from the project; null when the user cancelled the read. */
+    private fun ground(): GroundHeight? = view?.groundHeights() ?: ArrangementHeights.of(project).forScene(file)
+
+    /**
+     * Writes a finished drawing as an arrangement and its copies (one undoable command) and selects the new arrangement.
+     * False when nothing was written; a refusal is shown to the user.
+     */
+    internal fun createArrangement(asset: RenderAsset, points: List<Vec3>, closed: Boolean): Boolean {
+        val heights = ground() ?: return false
+        val result = ArrangementEditing.create(project, file, asset, points, closed, heights)
+        ArrangementEditing.report(project, result)
+        val id = (result as? ArrangementResult.Changed)?.entityId ?: return false
+        host.select(file, id)
+        view?.selectEntity(id)
+        return true
+    }
+
+    /** Writes new points for the arrangement [entityId] and regenerates its copies, as one undoable command. */
+    internal fun editArrangement(entityId: String, points: List<Vec3>): Boolean {
+        val heights = ground() ?: return false
+        val result = ArrangementEditing.setPoints(project, file, entityId, points, heights)
+        ArrangementEditing.report(project, result)
+        return result is ArrangementResult.Changed
+    }
+
+    /** Re-places the copies of the arrangement [entityId] on the current terrain; writes nothing when none would move. */
+    internal fun regenerateArrangement(entityId: String) {
+        val heights = ground() ?: return
+        ArrangementEditing.report(project, ArrangementEditing.regenerate(project, file, entityId, heights))
     }
 
     /** The scene's document, so that Undo and Redo in this tab reach the edits made here. */

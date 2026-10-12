@@ -11,8 +11,8 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.core.shader.ShadowAtlasAttribute
-import net.nevinsky.abyssus.lib.core.shader.ShadowLightRecord
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightRecord
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 
 /** GL resources belong to one active canvas context. Construct, render, and dispose only on its safe GL thread. */
@@ -75,7 +75,7 @@ class ShadowResources(private val size: Int = ShadowLayout.ATLAS_SIZE) : Disposa
 }
 
 /** Snapshot of state a depth pass can change, including a non-default caller framebuffer. */
-private class ShadowGlState {
+internal class ShadowGlState {
     private val gl = Gdx.gl
     private fun ints(name: Int, count: Int = 1): IntArray {
         val buffer = BufferUtils.newIntBuffer(count); gl.glGetIntegerv(name, buffer)

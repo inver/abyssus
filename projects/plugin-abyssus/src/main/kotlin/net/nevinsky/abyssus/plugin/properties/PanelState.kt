@@ -10,13 +10,23 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.editor.meta.ComponentSection
+import net.nevinsky.abyssus.lib.core.editor.meta.EntityAssetChoices
+import net.nevinsky.abyssus.lib.core.editor.meta.EntitySections
+import net.nevinsky.abyssus.lib.core.editor.meta.RenderOptics
+import net.nevinsky.abyssus.lib.core.editor.meta.readEntitySections
+import net.nevinsky.abyssus.lib.core.editor.meta.readRenderOptics
 import net.nevinsky.abyssus.lib.core.editor.document.*
 import net.nevinsky.abyssus.lib.core.editor.meta.*
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
+import net.nevinsky.abyssus.plugin.dto.ProjectSettings
+import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.foliage.FoliageSource
+import net.nevinsky.abyssus.plugin.foliage.readFoliageSource
 import net.nevinsky.abyssus.plugin.projectView.*
 import net.nevinsky.abyssus.plugin.terrain.TerrainSource
 import net.nevinsky.abyssus.plugin.terrain.readTerrainSource
@@ -29,6 +39,8 @@ import java.io.File
 sealed interface PanelState {
     /** No asset to describe: [message], and under it [hint] when there is one. */
     data class Empty(val message: String, val hint: String?) : PanelState
+
+    data class Project(val file: VirtualFile, val name: String, val settings: ProjectSettings) : PanelState
 
     data class UISceneState(
         val file: VirtualFile,
@@ -46,6 +58,8 @@ sealed interface PanelState {
         val fields: List<AssetFieldState> = emptyList(),
         /** For a terrain: what regeneration works from, or why it cannot. */
         val terrain: TerrainSource? = null,
+        /** For a foliage asset: what its settings, masks and bake read as, or why it cannot be edited. */
+        val foliage: FoliageSource? = null,
     ) : PanelState
 
     /**
@@ -89,6 +103,7 @@ fun readAssetState(folder: VirtualFile, services: PanelServices): PanelState {
             if (meta.type == MetaType.SKYBOX_HDR) hdrCell(folder, meta, services.hdr) else null,
             readFieldStates(folder, meta.type, meta.json, services),
             if (meta.type == MetaType.TERRAIN) readTerrainNow(folder, meta, services) else null,
+            if (meta.type == MetaType.FOLIAGE) readFoliageNow(folder, meta, services) else null,
         )
     }
 }
@@ -125,7 +140,8 @@ fun readEntityState(target: ComponentTarget, services: PanelServices): PanelStat
         SceneComponentEdits.renderAssets(target.file, services.metaFiles).map { it.name },
         SceneComponentEdits.assetsByType(target.file, services.metaFiles).orEmpty(),
     )
-    return when (val read = readEntitySections(root, target.entityId, target.kind, services.schemas.editorFor(target.file), assets,
+    return when (val read = readEntitySections(
+        root, target.entityId, target.kind, services.schemas.editorFor(target.file), assets,
         EditorBundle
     )) {
         is EntitySections.Gone -> PanelState.Empty(read.message, null)
@@ -167,9 +183,37 @@ fun readTerrainSourceNow(folder: VirtualFile, services: PanelServices): TerrainS
     return readTerrainNow(folder, meta, services)
 }
 
+/**
+ * Reads the foliage asset in [folder] for display: its settings and problems, the terrain it stands on, the layer
+ * masks and the state of the bake. Safe off the EDT, like the rest of the state it is read for.
+ */
+private fun readFoliageNow(folder: VirtualFile, meta: AssetMeta.Loaded, services: PanelServices): FoliageSource {
+    val text = folder.findChild(META_FILE)?.let { runReadAction { textOf(it) } } ?: ""
+    return readFoliageSource(
+        folder.name,
+        File(folder.path).parentFile.parentFile,
+        services.json,
+        text,
+        meta.json.get("additional"),
+    )
+}
+
+/** The foliage asset in [folder] as it is now, for the checks Apply makes just before it writes. UI thread. */
+fun readFoliageSourceNow(folder: VirtualFile, services: PanelServices): FoliageSource {
+    val meta = loadAssetMeta(folder, services.metaFiles)
+    if (meta !is AssetMeta.Loaded) {
+        return FoliageSource.Unusable((meta as? AssetMeta.Failed)?.message ?: AbyssusBundle.message("assetFieldUnreadable"))
+    }
+    return readFoliageNow(folder, meta, services)
+}
+
 /** Current native scene preferences, read off the EDT independently of renderer availability. */
 fun readSceneState(file: VirtualFile, name: String): PanelState = runCatchingKeepingCancellation {
     val root = SceneJson().parse(runReadAction { textOf(file) })
     AbyssusDocumentFormat().requireSupported(root, DocumentKind.SCENE)
     PanelState.UISceneState(file, name, root)
 }.getOrElse { PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.documentDisplayMessage()), null) }
+
+/** Project settings use the same admitted, stamp-aware document cache as scene availability. */
+fun readProjectState(file: VirtualFile, name: String, settings: AbyssusProjectSettings): PanelState.Project =
+    PanelState.Project(file, name, settings.getSettings(file))

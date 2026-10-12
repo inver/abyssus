@@ -8,8 +8,11 @@ package net.nevinsky.abyssus.plugin.projectView
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.fasterxml.jackson.databind.ObjectMapper
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.plugin.filetype.AssetIcons
 import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
+import net.nevinsky.abyssus.plugin.filetype.EntityIcons
 import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneIcons
 import net.nevinsky.abyssus.plugin.filetype.ScenesIcons
@@ -25,6 +28,45 @@ class NodeIconsTest : BasePlatformTestCase() {
     }
 
     private fun icon(node: AbstractTreeNode<*>) = node.presentation.getIcon(false)
+
+    private fun entityNode(typeJson: String, qualified: Boolean = false): DtoEntryNode {
+        val key = if (qualified) TypeComponent::class.java.name else "TypeComponent"
+        val entity = ObjectMapper().readTree("""{"components":{"$key":$typeJson}}""")
+        return DtoEntryNode(project, "/scene/ecs", DtoRow("1", entity), null, listOf("ecs"))
+    }
+
+    fun testEntityTypesHaveDistinctIconsForShortAndQualifiedComponentKeys() {
+        val icons = TypeComponent.Type.entries.map { type ->
+            val node = entityNode("""{"type":"${type.name}"}""")
+            val qualified = entityNode("""{"type":"${type.name}"}""", qualified = true)
+            node.update()
+            qualified.update()
+            val icon = icon(node)
+            assertNotSame(type.name, PropertyIcons.ECS, icon)
+            assertEquals(16, icon!!.iconWidth)
+            assertEquals(16, icon.iconHeight)
+            assertSame(icon, icon(qualified))
+            icon
+        }
+        assertEquals(TypeComponent.Type.entries.size, icons.toSet().size)
+    }
+
+    fun testMissingAndUnknownEntityTypesKeepGenericIcon() {
+        listOf("null", "{}", """{"type":null}""", """{"type":"FUTURE"}""", """{"type":7}""").forEach {
+            val node = entityNode(it)
+            node.update()
+            assertSame(PropertyIcons.ECS, icon(node))
+        }
+    }
+
+    fun testTypeChangeInvalidatesRowEvenWhenLabelAndComponentCountStayTheSame() {
+        val before = entityNode("""{"type":"OBJECT"}""").value
+        val same = entityNode("""{"type":"OBJECT"}""").value
+        val after = entityNode("""{"type":"CAMERA"}""").value
+        assertEquals(before, same)
+        assertEquals(rowText(before), rowText(after))
+        assertFalse("A refreshed type must replace the existing row", before == after)
+    }
 
     fun testEveryKindOfNodeHasAnIcon() {
         listOf(
@@ -53,10 +95,29 @@ class NodeIconsTest : BasePlatformTestCase() {
         val ecs = children(scene).first { text(it).startsWith("ecs") }
         val entity = children(ecs).first()
         text(entity)
-        assertSame(PropertyIcons.ECS, icon(entity))
+        assertSame(EntityIcons.forType(TypeComponent.Type.OBJECT), icon(entity))
         val components = children(entity).associateBy { text(it) }
         assertSame(ComponentIcons.TRANSFORM, icon(components.getValue("Position")))
         assertSame(ComponentIcons.GENERIC, icon(components.getValue("Name")))
         assertSame(AssetIcons.forType("MODEL"), icon(components.getValue("Render")))
+    }
+
+    fun testCloudAssetsHaveTheirOwnIcon() {
+        val preset = AssetIcons.forType("CLOUDS")
+        assertSame(preset, AssetIcons.forType(net.nevinsky.abyssus.lib.core.assets.MetaType.CLOUDS))
+        assertNotSame(AssetIcons.UNKNOWN, preset)
+        assertNotSame(AssetIcons.forType("SKYBOX_PROCEDURAL"), preset)
+
+        myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
+        myFixture.addFileToProject(
+            "p/assets/clouds_storm/meta.json",
+            """{"format":"abyssus","formatVersion":1,"version":1,"type":"CLOUDS","additional":{"low":{"type":"stratocumulus"},"mid":{"type":"altostratus"}}}""",
+        )
+        fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+        val abss = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
+        val assets = children(abss).single { label(it) == "assets" }
+        val row = children(assets).single()
+        assertTrue(text(row), text(row).contains("clouds_storm"))
+        assertSame(preset, icon(row))
     }
 }

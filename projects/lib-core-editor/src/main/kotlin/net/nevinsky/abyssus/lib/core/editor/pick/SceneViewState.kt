@@ -5,7 +5,21 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
+
+/**
+ * The Paint Foliage mode of a view: the terrain [entityId] (the selected entity) whose layer [layerId] mask is
+ * painted, the brush [radius] in world units, the [strength] from 0 through 1, and whether the brush [erase]s
+ * instead of painting (the strip's choice, flipped while Shift is held).
+ */
+data class FoliagePaintMode(
+    val entityId: String,
+    val layerId: Int,
+    val radius: Float,
+    val strength: Float,
+    val erase: Boolean = false,
+)
 
 /**
  * What the user has done in the scene view, apart from the scene itself: the selection, the gizmo and what it is
@@ -32,4 +46,19 @@ class SceneViewState {
 
     /** Whether gizmos are offered: off while a simulation plays. */
     var gizmosEnabled: Boolean = true
+
+    /** The cloud technique this view draws in place of the sky asset's own, or null for the asset's. */
+    var cloudTechnique: CloudTechnique? = null
+
+    /**
+     * The Paint Foliage mode this view is in, or null; gizmos are hidden and the left button paints while it is set.
+     * Selecting another entity (or nothing) ends it.
+     */
+    var paint: FoliagePaintMode? = null
+
+    /** The path arrangement being drawn (the model and the points clicked so far), or null; the left click adds points. */
+    var drawing: PathDrawing? = null
+
+    /** The points of an arrangement while a handle is dragged or just dropped, shown over the file's; null otherwise. */
+    var pathEdit: PathEdit? = null
 }

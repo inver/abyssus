@@ -7,13 +7,13 @@
 package net.nevinsky.abyssus.app.game.controlline.tools
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.JsonProcessor
-import net.nevinsky.abyssus.lib.core.flightgear.FlightGearArchive
-import net.nevinsky.abyssus.lib.core.flightgear.FlightGearImport
-import net.nevinsky.abyssus.lib.core.flightgear.FlightGearImportRequest
-import net.nevinsky.abyssus.lib.core.flightgear.IMPORTED_MODEL_FILE
-import net.nevinsky.abyssus.lib.core.flightgear.ImportOrigin
-import net.nevinsky.abyssus.lib.core.flightgear.ImportSize
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearArchive
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImport
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImportRequest
+import net.nevinsky.abyssus.lib.core.editor.flightgear.IMPORTED_MODEL_FILE
+import net.nevinsky.abyssus.lib.core.editor.flightgear.ImportOrigin
+import net.nevinsky.abyssus.lib.core.editor.flightgear.ImportSize
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import java.io.File
 import java.net.URI
@@ -40,7 +40,7 @@ val TRAINER_LEFT_OUT = setOf(
  * quarter of the wing's chord behind its leading edge, at the cabin's mid-height. It becomes the model's origin, as
  * the generated planes have theirs (`PlaneModels`). An estimate.
  */
-val TRAINER_CENTRE_OF_GRAVITY = _root_ide_package_.net.nevinsky.abyssus.lib.core.flightgear.ImportOrigin.SourcePoint(0.35, 0.0, 0.0)
+val TRAINER_CENTRE_OF_GRAVITY = ImportOrigin.SourcePoint(0.35, 0.0, 0.0)
 
 /**
  * Re-imports the bundled trainer (`assets/model_trainer`) from FlightGear's Cessna 172R through `core`'s FlightGear

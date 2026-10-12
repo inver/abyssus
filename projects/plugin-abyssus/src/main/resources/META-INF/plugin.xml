@@ -7,6 +7,8 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.json</depends>
 
+    <incompatible-with>net.nevinsky.abyssus.physics</incompatible-with>
+
     <resource-bundle>messages.AbyssusBundle</resource-bundle>
 
     <extensionPoints>
@@ -23,6 +25,11 @@
                         interface="net.nevinsky.abyssus.plugin.sceneview.SceneSimulationProvider"
                         dynamic="true"/>
     </extensionPoints>
+
+    <extensions defaultExtensionNs="net.nevinsky.abyssus">
+        <sceneOverlay implementation="net.nevinsky.abyssus.plugin.physics.PhysicsOverlayProvider"/>
+        <sceneSimulation implementation="net.nevinsky.abyssus.plugin.physics.PhysicsSimulationProvider"/>
+    </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
         <fileType
@@ -43,14 +50,19 @@
                 fieldName="INSTANCE"
                 language="JSON"
                 extensions="abss"/>
+        <projectService serviceInterface="net.nevinsky.abyssus.plugin.projectView.UiScreenOpener"
+                        serviceImplementation="net.nevinsky.abyssus.plugin.gameui.UiScreenOpenerService"/>
         <postStartupActivity implementation="net.nevinsky.abyssus.plugin.projectView.OpenAbyssusViewActivity"/>
         <projectViewPane implementation="net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane"/>
         <fileEditorProvider implementation="net.nevinsky.abyssus.plugin.SceneFileEditorProvider"/>
+        <fileEditorProvider implementation="net.nevinsky.abyssus.plugin.gameui.UiFileEditorProvider"/>
         <toolWindow id="Abyssus Properties"
                     anchor="right"
                     canCloseContents="false"
                     factoryClass="net.nevinsky.abyssus.plugin.AbyssusPropertiesToolWindowFactory"/>
+        <notificationGroup id="Abyssus Physics" displayType="BALLOON" key="notification.group.Abyssus Physics"/>
         <notificationGroup id="Abyssus Component Schemas" displayType="BALLOON" key="notification.group.Abyssus Component Schemas"/>
+        <notificationGroup id="Abyssus Project Settings" displayType="BALLOON" key="notification.group.Abyssus Project Settings"/>
         <lang.parserDefinition
                 language="GLTF"
                 implementationClass="net.nevinsky.abyssus.plugin.language.GltfParserDefinition"/>
@@ -65,15 +77,36 @@
                 class="net.nevinsky.abyssus.plugin.projectView.NewTerrainAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
+        <action id="Abyssus.NewFoliage"
+                class="net.nevinsky.abyssus.plugin.projectView.NewFoliageAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.NewTerrain"/>
+        </action>
+        <action id="Abyssus.NewWeatherPreset"
+                class="net.nevinsky.abyssus.plugin.projectView.NewWeatherPresetAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
         <action id="Abyssus.ImportFlightGear"
                 class="net.nevinsky.abyssus.plugin.projectView.ImportFlightGearAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.ImportModel"
+                class="net.nevinsky.abyssus.plugin.projectView.ImportModelAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.ImportFlightGear"/>
         </action>
         <action id="Abyssus.AddLight" class="net.nevinsky.abyssus.plugin.projectView.AddLightAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
         </action>
         <action id="Abyssus.AddAsset" class="net.nevinsky.abyssus.plugin.projectView.AddAssetAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddLight"/>
+        </action>
+        <action id="Abyssus.AddPathArrangement" class="net.nevinsky.abyssus.plugin.projectView.AddPathArrangementAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddAsset"/>
+        </action>
+        <action id="Abyssus.RegenerateArrangement" class="net.nevinsky.abyssus.plugin.projectView.RegenerateArrangementAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddPathArrangement"/>
+        </action>
+        <action id="Abyssus.AddFoliage" class="net.nevinsky.abyssus.plugin.projectView.AddFoliageAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddAsset"/>
         </action>
         <action id="Abyssus.AddComponent"
                 class="net.nevinsky.abyssus.plugin.projectView.AddComponentAction">
@@ -86,6 +119,15 @@
         <action id="Abyssus.RemoveComponent"
                 class="net.nevinsky.abyssus.plugin.projectView.RemoveComponentAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.NewUiAsset" class="net.nevinsky.abyssus.plugin.gameui.NewUiAssetAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.NewWeatherPreset"/>
+        </action>
+        <action id="Abyssus.RegisterUiAsset" class="net.nevinsky.abyssus.plugin.gameui.RegisterUiAssetAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.UnregisterUiAsset" class="net.nevinsky.abyssus.plugin.gameui.UnregisterUiAssetAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.RegisterUiAsset"/>
         </action>
     </actions>
 

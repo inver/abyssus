@@ -37,5 +37,8 @@ enum class MetaType {
     MATERIAL,
     SHADER,
     MODEL,
-    TERRAIN
+    TERRAIN,
+    CLOUDS,
+    FOLIAGE,
+    UI
 }

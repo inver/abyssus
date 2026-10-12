@@ -4,6 +4,7 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.utils.GdxNativesLoader
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import org.junit.After
@@ -43,7 +44,7 @@ class TerrainLoaderSplatTest {
     }
 
     /** The splat fields of the terrain `terr` that resolved to a texture folder. */
-    private fun splats(): Map<String, String> = loader.prepare("terr")!!.splats
+    private fun splats(): Map<String, String> = loader.prepare("terr")!!.staged.splats
 
     @Test
     fun aSplatFieldResolvesToTheFolderOfItsTextureUuid() {
@@ -75,14 +76,14 @@ class TerrainLoaderSplatTest {
     fun theTerrainNamesItsTextureFoldersAsDependencies() {
         texture("tex", BASE)
         texture("other", MISSING)
-        val prepared = loader.prepare("terr")!!
+        val prepared = loader.prepare("terr")!!.staged
         assertEquals(setOf("tex", "other"), loader.dependencies(prepared))
-        loader.discard(prepared)
+        loader.discardStaged(prepared)
     }
 
     @Test
     fun aTerrainWithoutTexturesNeedsNothing() {
-        assertEquals(emptySet<String>(), loader.dependencies(loader.prepare("terr")!!))
+        assertEquals(emptySet<String>(), loader.dependencies(loader.prepare("terr")!!.staged))
     }
 
     private companion object {

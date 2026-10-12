@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.terrain
 
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderSource
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
@@ -13,28 +13,39 @@ import com.badlogic.gdx.graphics.GLTexture
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.math.Matrix3
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.plugin.sceneview.TerrainEntity
-import net.nevinsky.abyssus.lib.core.shader.ShadowAtlasAttribute
-import net.nevinsky.abyssus.lib.core.shader.ShadowAtlasBindings
+import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasBindings
 
 /**
  * Draws terrains: splat-blended textures with the scene's ambient, directional and point lights and fog. A small
  * program of its own, since the terrain material is not something the model shaders know.
  */
-class TerrainShader(shaders: ShaderSource) : Disposable {
+class TerrainShader(shaders: ShaderStorage) : Disposable {
     private val program = shaders.program("terrain")
     private val normalMatrix = Matrix3()
+    private val identity = Matrix4()
     private val atlasBindings = ShadowAtlasBindings()
 
     /** Bound to the sampler units of the layers a terrain does not have, so no sampler is left without a texture. */
     private val blank = Texture(Pixmap(1, 1, Pixmap.Format.RGBA8888).also { it.setColor(1f, 1f, 1f, 1f); it.fill() }, false)
 
-    /** With [irradiance] (a built HDR sky's irradiance cube), terrains take their ambient from it instead of [ambient]. */
-    fun draw(camera: Camera, terrains: Collection<TerrainEntity>, ambient: Rgba?, fog: FogParams?, lights: LightSet, irradiance: GLTexture? = null, atlas: ShadowAtlasAttribute? = null) {
+    /**
+     * With [irradiance] (a built sky's irradiance cube), terrains take their ambient from it instead of [ambient].
+     * While a sky light cross-fades, [fadeIrradiance] is the cube it fades to and [fade] (0 to 1) how far it has got.
+     * With [sunVisibility] (the cloud shadow map), the directional light it names is multiplied by the map.
+     */
+    fun draw(
+        camera: Camera, terrains: Collection<TerrainEntity>, ambient: Rgba?, fog: FogParams?, lights: LightSet,
+        irradiance: GLTexture? = null, atlas: ShadowAtlasAttribute? = null,
+        fadeIrradiance: GLTexture? = null, fade: Float = 0f, sunVisibility: DirectionalVisibilityAttribute? = null,
+    ) {
         if (terrains.isEmpty()) return
         program.bind()
         program.setUniformMatrix("u_projViewTrans", camera.combined)
@@ -45,9 +56,14 @@ class TerrainShader(shaders: ShaderSource) : Disposable {
         program.setUniformi("u_irradiance", IRRADIANCE_UNIT)
         program.setUniformi("u_hasSky", if (irradiance != null) 1 else 0)
         irradiance?.bind(IRRADIANCE_UNIT)
+        val fading = irradiance != null && fadeIrradiance != null && fade > 0f
+        program.setUniformi("u_irradianceTo", IRRADIANCE_TO_UNIT)
+        program.setUniformf("u_skyFade", if (fading) fade.coerceAtMost(1f) else 0f)
+        if (fading) fadeIrradiance?.bind(IRRADIANCE_TO_UNIT)
         program.setUniformf("u_fogColor", fog?.color?.r ?: 0f, fog?.color?.g ?: 0f, fog?.color?.b ?: 0f)
         program.setUniformf("u_fogK", fog?.shaderCoefficient ?: 0f)
         setLights(lights)
+        bindSunVisibility(sunVisibility)
         (atlas?.atlas ?: blank).bind(SHADOW_UNIT)
         fun record(id: String) = atlas?.records?.firstOrNull { it.lightId == id }
         atlasBindings.bind(program, atlas, lights.directional.map { record(it.entityId) },
@@ -58,6 +74,14 @@ class TerrainShader(shaders: ShaderSource) : Disposable {
             program.setUniformMatrix("u_normalMatrix", normalMatrix.set(t.world).inv().transpose())
             t.terrain.draw(program, blank)
         }
+    }
+
+    private fun bindSunVisibility(visibility: DirectionalVisibilityAttribute?) {
+        program.setUniformi("u_dirVisMap", SUN_VISIBILITY_UNIT)
+        program.setUniformMatrix("u_dirVisWorldToMap", visibility?.worldToMap ?: identity)
+        program.setUniformf("u_dirVisParams", visibility?.edgeFade ?: 0.1f, visibility?.outside ?: 1f)
+        program.setUniformi("u_dirVisIndex", visibility?.lightIndex ?: -1)
+        visibility?.texture?.bind(SUN_VISIBILITY_UNIT)
     }
 
     private fun setLights(lights: LightSet) {
@@ -112,6 +136,8 @@ class TerrainShader(shaders: ShaderSource) : Disposable {
     private companion object {
         const val MAX = 5 // at least MAX_POINT and MAX_DIRECTIONAL; the array size in terrain.frag
         const val IRRADIANCE_UNIT = 7 // after the splat units (0 to assets.terrain.SPLAT_UNIT)
+        const val IRRADIANCE_TO_UNIT = 8 // the cube a sky light fades to; bound only while fading
+        const val SUN_VISIBILITY_UNIT = 9 // a directional light's visibility map (cloud shadows); bound only when set
         const val SHADOW_UNIT = 6 // 2D atlas between splat (0..5) and HDR cube (7)
     }
 }

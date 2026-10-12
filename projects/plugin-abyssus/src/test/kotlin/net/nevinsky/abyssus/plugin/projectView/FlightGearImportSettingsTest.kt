@@ -5,10 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.flightgear.FlightGearAircraft
-import net.nevinsky.abyssus.lib.core.flightgear.FlightGearInspection
-import net.nevinsky.abyssus.lib.core.flightgear.ImportPart
-import net.nevinsky.abyssus.lib.core.flightgear.ImportSize
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearAircraft
+import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearInspection
+import net.nevinsky.abyssus.lib.core.editor.flightgear.ImportPart
+import net.nevinsky.abyssus.lib.core.editor.flightgear.ImportSize
 import net.nevinsky.abyssus.lib.core.editor.terrain.FolderNameError
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

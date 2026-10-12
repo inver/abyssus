@@ -1,13 +1,18 @@
 package net.nevinsky.abyssus.lib.core.assets
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.core.assets.texture.TextureMeta
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
+import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
+import kotlin.reflect.full.primaryConstructor
 
 /** Binds an admitted metadata tree; callers validate native identity before invoking [bind]. No IO or GL. */
 class AssetMetaBinder(
@@ -20,22 +25,32 @@ class AssetMetaBinder(
         MetaType.SKYBOX_HDR to HdrSkyMeta::class.java,
         MetaType.TEXTURE to TextureMeta::class.java,
         MetaType.PIXMAP_TEXTURE to TextureMeta::class.java,
+        MetaType.CLOUDS to CloudMeta::class.java,
+        MetaType.FOLIAGE to FoliageMeta::class.java,
     ),
+    private val ui: UiCollectionDecoder = UiCollectionDecoder(),
 ) {
     private val settings = settings.toMap()
 
     fun bind(name: String, tree: JsonNode): AssetMeta<Any> {
-        val type = tree["type"]?.asText()?.let { name -> MetaType.entries.firstOrNull { it.name == name } } ?: MetaType.UNKNOWN
+        val baseMeta = json.bind(tree, AssetMeta::class.java)
         val block = tree["additional"]?.takeIf { it.isObject } ?: json.readObject("{}")
-        val additional: Any = settings[type]?.let { json.bind(block, it) } ?: json.bind(block, Map::class.java)
+        val additional: Any = if (baseMeta.type == MetaType.UI) UiMeta(ui.decode(tree)) else settings[baseMeta.type]?.let {
+            try {
+                return@let json.bind(block, it)
+            } catch (e: Exception) {
+                return@let it.kotlin.primaryConstructor?.callBy(mapOf())
+            }
+//            if (it == CloudMeta::class.java) CloudSettingsReader(json.log).read(block) else json.bind(block, it)
+        } ?: json.bind(block, Map::class.java)
         return AssetMeta(
             name = name,
-            formatVersion = tree["formatVersion"]?.asInt(1) ?: 1,
-            version = tree["version"]?.asInt(1) ?: 1,
-            lastModified = tree["lastModified"]?.asLong(0) ?: 0,
-            type = type,
             additional = additional,
-            uuid = parseUuidOrNull(tree["uuid"]?.asText()),
+            formatVersion = baseMeta.formatVersion,
+            version = baseMeta.version,
+            lastModified = baseMeta.lastModified,
+            type = baseMeta.type,
+            uuid = baseMeta.uuid,
         )
     }
 }

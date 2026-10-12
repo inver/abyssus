@@ -13,9 +13,9 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 class PluginBundleTitlesTest {
     @Test fun everyRegisteredActionAndNotificationHasItsBundleTitle() {
-        for (module in listOf("", "../plugin-abyssus-physics/")) {
+        for (module in listOf("")) {
             val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File(module + "src/main/resources/META-INF/plugin.xml"))
-            val bundle = if (module.isEmpty()) "AbyssusBundle" else "AbyssusPhysicsBundle"
+            val bundle = "AbyssusBundle"
             val properties = Properties().apply { File(module + "src/main/resources/messages/$bundle.properties").reader().use(::load) }
             val actions = document.getElementsByTagName("action")
             for (index in 0 until actions.length) {

@@ -8,6 +8,7 @@ package net.nevinsky.abyssus.lib.core.assets.loading
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import net.nevinsky.abyssus.lib.core.assets.loading.TextureUploadQueue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -4,6 +4,9 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.flight
 
+import net.nevinsky.abyssus.app.game.controlline.pattern.Figure
+import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
+import net.nevinsky.abyssus.app.game.controlline.pattern.ScriptedPilot
 import net.nevinsky.abyssus.app.game.controlline.track.wrapDegrees
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -93,6 +96,22 @@ class FlightTest {
     }
 
     @Test
+    fun stuntersEngineStopsAfterThreeHundredAndSixtySeconds() = FieldFlight("Stunter").use { f ->
+        assertEquals(360f, f.settings.fuelTime, 0f)
+        val aero = Aero()
+        assertTrue(aero.thrust(f.settings, 359f) > 0f)
+        assertEquals(0f, aero.thrust(f.settings, 360f), 0f)
+        assertEquals(0f, aero.thrust(f.settings, 400f), 0f)
+        // and in a flight: 360 s of level flight, then the engine is off
+        f.rig.tilt = 0f
+        var maxThrust = 0f
+        f.fly(361f) { if (f.flight.time > 360.1f) maxThrust = max(maxThrust, f.flight.forces.thrust) }
+        assertNull("the flight ended: ${f.flight.result}", f.flight.result)
+        assertTrue("flew ${f.flight.time} s", f.flight.time > 360.5f)
+        assertEquals(0f, maxThrust, 0f)
+    }
+
+    @Test
     fun trainerFliesTenLevelLapsWithAHeldTrim() = FieldFlight("Trainer").use { f ->
         f.rig.tilt = 0f
         var highest = 0f
@@ -104,5 +123,22 @@ class FlightTest {
         assertNull("the flight ended: ${f.flight.result}", f.flight.result)
         assertEquals(10, f.flight.scoring.keeper.laps)
         assertTrue("climbed to $highest degrees", highest < 20f)
+    }
+
+    @Test
+    fun anF2bJudgeMarksTheTakeoffAndTheArcadeScoreIsStillKept() {
+        val judge = PatternJudge(18f)
+        FieldFlight("Stunter", judge).use { f ->
+            // the take-off, then level laps with a held climb angle, until the judge has marked the take-off (3 laps)
+            val pilot = ScriptedPilot(f)
+            pilot.target = { 0f }
+            val marked = pilot.until(60f) { judge.sheet[Figure.TAKEOFF] != null }
+            assertNull("the flight ended: ${f.flight.result}", f.flight.result)
+            assertTrue("take-off not marked after ${f.flight.time} s", marked)
+            val mark = judge.sheet[Figure.TAKEOFF]!!
+            assertTrue("take-off ${mark.mark} ${mark.reason}", mark.reason == null && mark.tenths in 10..100)
+            assertEquals(Figure.REVERSE_WINGOVER, judge.expected)
+            assertTrue("laps ${f.flight.scoring.keeper.laps}", f.flight.scoring.keeper.laps >= 1 && f.flight.scoring.keeper.score > 0)
+        }
     }
 }

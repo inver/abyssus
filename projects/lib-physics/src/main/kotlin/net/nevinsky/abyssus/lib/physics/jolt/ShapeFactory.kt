@@ -7,22 +7,12 @@ package net.nevinsky.abyssus.lib.physics.jolt
 
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector3
-import com.github.stephengold.joltjni.BoxShapeSettings
-import com.github.stephengold.joltjni.CapsuleShapeSettings
-import com.github.stephengold.joltjni.ConvexHullShapeSettings
-import com.github.stephengold.joltjni.HeightFieldShapeConstants
-import com.github.stephengold.joltjni.HeightFieldShapeSettings
-import com.github.stephengold.joltjni.Jolt
-import com.github.stephengold.joltjni.JoltPhysicsObject
-import com.github.stephengold.joltjni.RotatedTranslatedShapeSettings
-import com.github.stephengold.joltjni.ShapeRefC
-import com.github.stephengold.joltjni.ShapeSettings
-import com.github.stephengold.joltjni.SphereShapeSettings
-import com.github.stephengold.joltjni.Vec3
+import com.github.stephengold.joltjni.*
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.ecs.component.assetName
 import net.nevinsky.abyssus.lib.physics.ColliderComponent
 import net.nevinsky.abyssus.lib.physics.ColliderShape
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
-import net.nevinsky.abyssus.lib.core.assets.MetaType
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -33,7 +23,10 @@ import kotlin.math.min
  * scale (non-uniformly only for boxes, hulls and height fields; a sphere or capsule takes the largest axis). Every
  * native object goes to [own], which releases it with the world.
  */
-internal class ShapeFactory(private val assets: PhysicsAssets, private val own: (JoltPhysicsObject) -> JoltPhysicsObject) {
+internal class ShapeFactory(
+    private val assets: PhysicsAssets,
+    private val own: (JoltPhysicsObject) -> JoltPhysicsObject
+) {
     sealed interface Built {
         class Shape(val ref: ShapeRefC, val warning: String?) : Built
         class Refused(val reason: String) : Built
@@ -51,21 +44,28 @@ internal class ShapeFactory(private val assets: PhysicsAssets, private val own: 
                 val h = collider.halfExtents
                 if (h.x <= 0f || h.y <= 0f || h.z <= 0f) return Built.Refused("ColliderComponent.halfExtents $h is not greater than 0")
                 val half = Vector3(h.x * s.x, h.y * s.y, h.z * s.z)
-                BoxShapeSettings(Vec3(half.x, half.y, half.z), min(Jolt.cDefaultConvexRadius, min(half.x, min(half.y, half.z))))
+                BoxShapeSettings(
+                    Vec3(half.x, half.y, half.z),
+                    min(Jolt.cDefaultConvexRadius, min(half.x, min(half.y, half.z)))
+                )
             }
+
             ColliderShape.SPHERE -> {
                 if (collider.radius <= 0f) return Built.Refused("ColliderComponent.radius ${collider.radius} is not greater than 0")
                 if (!uniform) warning = "has a non-uniform scale; its sphere takes the largest axis"
                 SphereShapeSettings(collider.radius * largest)
             }
+
             ColliderShape.CAPSULE -> {
                 if (collider.radius <= 0f) return Built.Refused("ColliderComponent.radius ${collider.radius} is not greater than 0")
                 if (collider.halfHeight <= 0f) return Built.Refused("ColliderComponent.halfHeight ${collider.halfHeight} is not greater than 0")
                 if (!uniform) warning = "has a non-uniform scale; its capsule takes the largest axis"
                 CapsuleShapeSettings(collider.halfHeight * largest, collider.radius * largest)
             }
+
             ColliderShape.CONVEX_HULL -> {
-                val name = assets.assetName(entity, MetaType.MODEL) ?: return Built.Refused("has a convex hull collider but no model")
+                val name = assetName(entity, MetaType.MODEL)
+                    ?: return Built.Refused("has a convex hull collider but no model")
                 val points = try {
                     assets.modelPoints(name)
                 } catch (e: Exception) {
@@ -75,8 +75,10 @@ internal class ShapeFactory(private val assets: PhysicsAssets, private val own: 
                 if (!solid(scaled)) return Built.Refused("its model $name has fewer than 4 points that are not in one plane, so it makes no convex hull")
                 ConvexHullShapeSettings(scaled.map { Vec3(it.x, it.y, it.z) })
             }
+
             ColliderShape.HEIGHT_FIELD -> {
-                val name = assets.assetName(entity, MetaType.TERRAIN) ?: return Built.Refused("has a height field collider but no terrain")
+                val name = assetName(entity, MetaType.TERRAIN)
+                    ?: return Built.Refused("has a height field collider but no terrain")
                 val terrain = try {
                     assets.terrain(name)
                 } catch (e: Exception) {
@@ -90,7 +92,18 @@ internal class ShapeFactory(private val assets: PhysicsAssets, private val own: 
         val base = create(settings) ?: return Built.Refused("Jolt refused its ${collider.shape} shape: $lastError")
         val offset = collider.offset
         if (offset.isZero) return Built.Shape(base, warning)
-        val moved = own(RotatedTranslatedShapeSettings(offset.x * s.x, offset.y * s.y, offset.z * s.z, 0f, 0f, 0f, 1f, base)) as ShapeSettings
+        val moved = own(
+            RotatedTranslatedShapeSettings(
+                offset.x * s.x,
+                offset.y * s.y,
+                offset.z * s.z,
+                0f,
+                0f,
+                0f,
+                1f,
+                base
+            )
+        ) as ShapeSettings
         val ref = create(moved) ?: return Built.Refused("Jolt refused its offset: $lastError")
         return Built.Shape(ref, warning)
     }
@@ -122,7 +135,8 @@ internal class ShapeFactory(private val assets: PhysicsAssets, private val own: 
     private fun nonFinite(c: ColliderComponent): String? = listOf(
         "halfExtents" to listOf(c.halfExtents.x, c.halfExtents.y, c.halfExtents.z), "radius" to listOf(c.radius),
         "halfHeight" to listOf(c.halfHeight), "offset" to listOf(c.offset.x, c.offset.y, c.offset.z),
-    ).firstOrNull { (_, v) -> v.any { !it.isFinite() } }?.let { (name, v) -> "ColliderComponent.$name is not finite (${v.joinToString(", ")})" }
+    ).firstOrNull { (_, v) -> v.any { !it.isFinite() } }
+        ?.let { (name, v) -> "ColliderComponent.$name is not finite (${v.joinToString(", ")})" }
 
     /** Whether [points] hold 4 distinct points that are not in one plane. */
     private fun solid(points: List<Vector3>): Boolean {

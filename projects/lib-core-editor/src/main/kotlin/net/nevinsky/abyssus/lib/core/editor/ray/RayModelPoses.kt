@@ -5,7 +5,7 @@
 package net.nevinsky.abyssus.lib.core.editor.ray
 
 import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.core.node.Node
+import net.nevinsky.abyssus.lib.gdx.node.Node
 
 /**
  * Copies each animated or skinned entity's displayed pose from its live `ModelInstance`: every node's global transform

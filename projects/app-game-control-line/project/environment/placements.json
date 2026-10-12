@@ -10,6 +10,24 @@
   "clearRadius": 28.0,
   "axes": "metres, pilot at the origin, north along -Z, east along +X"
  },
+ "arrangements": {
+  "Railway": {
+   "asset": "model_airfield_railway",
+   "spacing": 50.0,
+   "points": [
+    {
+     "x": -275.124,
+     "y": -1.1,
+     "z": 38.488
+    },
+    {
+     "x": 272.146,
+     "y": -1.1,
+     "z": 93.215
+    }
+   ]
+  }
+ },
  "instances": [
   {
    "name": "Flying circle",
@@ -235,133 +253,145 @@
    "name": "Railway 1",
    "asset": "model_airfield_railway",
    "x": -275.124,
-   "y": -1.05,
+   "y": -1.1,
    "z": 38.488,
    "yaw": -0.1,
    "slope": 0.0,
    "scale": 1.0,
-   "clearance": 252.198
+   "clearance": 252.198,
+   "group": "Railway"
   },
   {
    "name": "Railway 2",
    "asset": "model_airfield_railway",
    "x": -225.372,
-   "y": -1.05,
+   "y": -1.1,
    "z": 43.463,
    "yaw": -0.1,
    "slope": 0.0,
    "scale": 1.0,
-   "clearance": 203.988
+   "clearance": 203.988,
+   "group": "Railway"
   },
   {
    "name": "Railway 3",
    "asset": "model_airfield_railway",
    "x": -175.62,
-   "y": -1.05,
+   "y": -1.1,
    "z": 48.438,
    "yaw": -0.1,
    "slope": 0.0,
    "scale": 1.0,
-   "clearance": 156.901
+   "clearance": 156.901,
+   "group": "Railway"
   },
   {
    "name": "Railway 4",
    "asset": "model_airfield_railway",
    "x": -125.868,
-   "y": -0.8,
+   "y": -0.696,
    "z": 53.413,
    "yaw": -0.1,
-   "slope": 0.01,
+   "slope": 0.0,
    "scale": 1.0,
-   "clearance": 112.362
+   "clearance": 112.362,
+   "group": "Railway"
   },
   {
    "name": "Railway 5",
    "asset": "model_airfield_railway",
    "x": -76.117,
-   "y": -0.55,
+   "y": -0.6,
    "z": 58.388,
    "yaw": -0.1,
    "slope": 0.0,
    "scale": 1.0,
-   "clearance": 75.048
+   "clearance": 75.048,
+   "group": "Railway"
   },
   {
    "name": "Railway 6",
    "asset": "model_airfield_railway",
    "x": -26.365,
-   "y": -0.55,
+   "y": -0.6,
    "z": 63.364,
    "yaw": -0.1,
    "slope": 0.0,
    "scale": 1.0,
-   "clearance": 60.113
+   "clearance": 60.113,
+   "group": "Railway"
   },
   {
    "name": "Railway 7",
    "asset": "model_airfield_railway",
    "x": 23.387,
-   "y": -0.55,
+   "y": -0.6,
    "z": 68.339,
    "yaw": -0.1,
    "slope": 0.0,
    "scale": 1.0,
-   "clearance": 60.327
+   "clearance": 60.327,
+   "group": "Railway"
   },
   {
    "name": "Railway 8",
    "asset": "model_airfield_railway",
    "x": 73.139,
-   "y": -0.55,
+   "y": -0.6,
    "z": 73.314,
    "yaw": -0.1,
    "slope": 0.0,
    "scale": 1.0,
-   "clearance": 81.526
+   "clearance": 81.526,
+   "group": "Railway"
   },
   {
    "name": "Railway 9",
    "asset": "model_airfield_railway",
    "x": 122.891,
-   "y": -0.749,
+   "y": -0.655,
    "z": 78.289,
    "yaw": -0.1,
-   "slope": -0.008,
+   "slope": 0.0,
    "scale": 1.0,
-   "clearance": 121.052
+   "clearance": 121.052,
+   "group": "Railway"
   },
   {
    "name": "Railway 10",
    "asset": "model_airfield_railway",
    "x": 172.643,
-   "y": -0.999,
+   "y": -1.1,
    "z": 83.264,
    "yaw": -0.1,
-   "slope": -0.002,
+   "slope": 0.0,
    "scale": 1.0,
-   "clearance": 166.315
+   "clearance": 166.315,
+   "group": "Railway"
   },
   {
    "name": "Railway 11",
    "asset": "model_airfield_railway",
    "x": 222.395,
-   "y": -1.05,
+   "y": -1.1,
    "z": 88.239,
    "yaw": -0.1,
    "slope": 0.0,
    "scale": 1.0,
-   "clearance": 213.7
+   "clearance": 213.7,
+   "group": "Railway"
   },
   {
    "name": "Railway 12",
    "asset": "model_airfield_railway",
    "x": 272.146,
-   "y": -1.05,
+   "y": -1.1,
    "z": 93.215,
    "yaw": -0.1,
    "slope": 0.0,
    "scale": 1.0,
-   "clearance": 262.059
+   "clearance": 262.059,
+   "group": "Railway"
   },
   {
    "name": "Street lamp 1",

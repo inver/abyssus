@@ -130,11 +130,11 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         assertTrue(all(p, JBTextField::class.java).isEmpty())
     }
 
-    fun testSceneAndSettingsStillShowNothing() {
+    fun testProjectRootShowsSettingsWhileScenesGroupRemainsEmpty() {
         copyProject()
         val p = panel()
         p.show(children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") })
-        assertTrue(p.state is PanelState.Empty)
+        assertFalse((p.state as PanelState.Project).settings.physicsEnabled)
         p.show(descend(children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }, "scenes"))
         assertTrue(p.state is PanelState.Empty)
     }
@@ -188,40 +188,31 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         assertFalse("LightComponent" in after.addable)
     }
 
-    fun testSchemaComponentShowsGroupedLabelledFields() {
+    fun testCustomComponentIsShownAsReadOnlyJson() {
         copyCustom()
+        val before = text(sceneFile())
         val p = panel()
         p.show(component("0", "PlaneComponent"))
         val section = (p.state as PanelState.EntityDetails).sections.single()
-        assertNull(section.raw)
-        assertEquals("Plane", section.label)
-        assertEquals("Line length", (named(p, "label-PlaneComponent-lineLength") as JBLabel).text)
-        assertEquals("22", (named(p, "field-PlaneComponent-lineLength") as JBTextField).text)
-        assertEquals("Lines", (named(p, "group-PlaneComponent-Lines") as JBLabel).text)
-        assertEquals(listOf("lineLength", "leadout.x", "leadout.y", "leadout.z"), section.fields.filter { it.group == "Lines" }.map { it.field })
-        assertEquals("STUNT", (named(p, "field-PlaneComponent-kind") as JComboBox<*>).selectedItem)
-        for (axis in listOf("x", "y", "z")) assertNotNull(named(p, "field-PlaneComponent-leadout.$axis"))
-        val tip = named(p, "field-PlaneComponent-hasTipWeight") as JBCheckBox
-        assertTrue(tip.isSelected)
-        tip.doClick()
-        assertEquals(false, components(sceneFile(), "0")["PlaneComponent"]["hasTipWeight"].booleanValue())
-        assertNotNull(named(p, "remove-PlaneComponent"))
+        assertEquals("PlaneComponent", section.kind)
+        assertEquals(components(sceneFile(), "0")["PlaneComponent"], SceneJson().parse(section.raw!!))
+        assertTrue(section.fields.isEmpty())
+        assertNull(named(p, "field-PlaneComponent-lineLength"))
+        assertNull(named(p, "remove-PlaneComponent"))
+        assertEquals(before, text(sceneFile()))
     }
 
-    fun testAddPlaneFromThePanel() {
+    fun testCustomComponentsAreNotOfferedForAdding() {
         copyCustom()
+        val before = text(sceneFile())
         val p = panel()
         p.show(entity("1"))
         val state = p.state as PanelState.EntityDetails
-        assertTrue(state.addable.toString(), "PlaneComponent" in state.addable)
+        assertFalse("PlaneComponent" in state.addable)
         val group = addComponentGroup(project, sceneFile(), "1", state.addable, testMetaFiles())
-        val plane: AnAction = group.getChildren(null).first { it.templatePresentation.text == "Plane" }
-        plane.actionPerformed(TestActionEvent.createTestEvent(plane))
-        assertEquals("{}", components(sceneFile(), "1")["PlaneComponent"].toString())
-        val after = p.state as PanelState.EntityDetails
-        assertTrue(after.sections.any { it.kind == "PlaneComponent" && it.raw == null })
-        assertEquals("18", (named(p, "field-PlaneComponent-lineLength") as JBTextField).text)
-        assertFalse("PlaneComponent" in after.addable)
+        assertFalse(group.getChildren(null).any { it.templatePresentation.text == "Plane" })
+        assertFalse(components(sceneFile(), "1").has("PlaneComponent"))
+        assertEquals(before, text(sceneFile()))
     }
 
     fun testLightRangeEditorWritesThirty() {

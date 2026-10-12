@@ -25,7 +25,8 @@ fun main(args: Array<String>) {
     val rest = ArrayList<String>()
     var i = 0
     while (i < args.size) {
-        if (args[i].startsWith("--") && i + 1 < args.size) options[args[i].removePrefix("--")] = args[++i] else rest += args[i]
+        if (args[i].startsWith("--") && i + 1 < args.size) options[args[i].removePrefix("--")] =
+            args[++i] else rest += args[i]
         i++
     }
     val port = options["port"]?.toIntOrNull()

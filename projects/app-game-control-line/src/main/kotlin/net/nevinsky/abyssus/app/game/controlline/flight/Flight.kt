@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.app.game.controlline.score.FlightScoring
 import net.nevinsky.abyssus.app.game.controlline.track.SphereTrack
 import net.nevinsky.abyssus.app.game.controlline.track.TrackSample
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.runtime.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import kotlin.math.max
 
 /**
@@ -71,8 +71,16 @@ class Flight(
     /** Seconds of fuel left. */
     val fuelLeft: Float get() = max(0f, rig.planeSettings.fuelTime - time)
 
-    /** Starts a new flight: the plane at takeoff on the circle at [azimuth] degrees, the score at 0. */
-    fun takeoff(azimuth: Float = 0f) {
+    /** The judge marking this flight, or null (Free flight, Play). */
+    var judge: FlightJudge? = null
+        private set
+
+    /**
+     * Starts a new flight: the plane at takeoff on the circle at [azimuth] degrees, the score at 0. A [judge] gets every
+     * step's sample and the flight's end; the arcade score is kept either way.
+     */
+    fun takeoff(azimuth: Float = 0f, judge: FlightJudge? = null) {
+        this.judge = judge
         rig.takeoff(azimuth)
         outcome.reset()
         scoring = FlightScoring()
@@ -94,12 +102,15 @@ class Flight(
         if (started) {
             tension = rig.tension
             val p = position.localPosition
-            val airborne = p.y - ground.heightAt(p.x, p.z) > AIRBORNE_HEIGHT
+            val height = p.y - ground.heightAt(p.x, p.z)
+            val airborne = height > AIRBORNE_HEIGHT
+            val engineRunning = aero.thrust(rig.planeSettings, time) > 0f
             val upright = rotation.transform(Vector3(0f, 1f, 0f)).y >= 0f
             val wasSlack = outcome.slackInAir
-            val ended = outcome.check(seconds, world.contacts(), -lastVelocity.y, upright, airborne, aero.thrust(rig.planeSettings, time) > 0f, tension)
-            val sample = track.sample(time, rig.handle, p, velocity, rotation, airborne)
+            val ended = outcome.check(seconds, world.contacts(), -lastVelocity.y, upright, airborne, engineRunning, tension)
+            val sample = track.sample(time, rig.handle, p, velocity, rotation, airborne, height, engineRunning, rig.pilotSettings.handleHeight)
             lastSample = sample
+            judge?.sample(sample)
             scoring.sample(sample)
             if (outcome.slackInAir && !wasSlack) scoring.keeper.linesSlack()
             if (ended != null) {
@@ -109,6 +120,7 @@ class Flight(
                     crash = crashSeverity(impactSpeed)
                 }
                 scoring.finish(landed = ended == FlightEnd.LANDED)
+                judge?.ended(ended)
                 return
             }
         }

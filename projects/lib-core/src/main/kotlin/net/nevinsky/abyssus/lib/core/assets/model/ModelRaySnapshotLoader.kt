@@ -7,9 +7,9 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
-import net.nevinsky.abyssus.lib.core.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.core.model.ModelData
-import net.nevinsky.abyssus.lib.core.model.PbrModelMaterial
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 
 /** A parsed model and its decoded images, borrowed from a raster preparation; the snapshot copies them. */
 data class RayModelSource(val data: ModelData, val images: Map<String, Pixmap>)
