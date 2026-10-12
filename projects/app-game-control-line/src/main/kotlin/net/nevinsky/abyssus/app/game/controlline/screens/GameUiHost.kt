@@ -44,7 +44,6 @@ class GameUiHost(
     private val onDispose: () -> Unit,
 ) {
     private var shown: GameLayers? = null
-    private var scale = 1f
 
     /** Shows the flow's screen (when it changed) and takes the model's values for this frame. */
     fun update(session: FlightSession?, judge: PatternJudge?, seconds: Float) {
@@ -61,11 +60,11 @@ class GameUiHost(
 
     fun draw(seconds: Float) = presenter.render(seconds)
 
-    /** The window's size in logical units; the UI works in back-buffer pixels, which differ on HiDPI screens. */
-    fun resize() {
-        scale = Gdx.graphics.backBufferWidth.toFloat() / maxOf(1, Gdx.graphics.width)
-        presenter.resize(Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight)
-    }
+    /**
+     * Sizes the UI to the window. libGDX's default HiDPI mode is logical: `glViewport` and `glScissor` multiply by the
+     * back buffer's scale themselves, so the presenter gets the window's logical size and pointer events need no scaling.
+     */
+    fun resize() = presenter.resize(Gdx.graphics.width, Gdx.graphics.height)
 
     /** A key on a menu screen: the game's own keys first, then the presenter's (focus, the focused button, the name field). */
     fun keyDown(keycode: Int): Boolean {
@@ -81,10 +80,10 @@ class GameUiHost(
 
     /** Pointer and text input for the screens; the game puts it behind its own key processor. */
     val inputProcessor: InputProcessor = object : InputAdapter() {
-        override fun touchDown(x: Int, y: Int, pointer: Int, button: Int) = presenter.touchDown(x * scale, y * scale)
-        override fun touchUp(x: Int, y: Int, pointer: Int, button: Int) = presenter.touchUp(x * scale, y * scale)
-        override fun touchDragged(x: Int, y: Int, pointer: Int): Boolean { presenter.touchDragged(x * scale, y * scale); return true }
-        override fun mouseMoved(x: Int, y: Int): Boolean { presenter.pointerMoved(x * scale, y * scale); return false }
+        override fun touchDown(x: Int, y: Int, pointer: Int, button: Int) = presenter.touchDown(x.toFloat(), y.toFloat())
+        override fun touchUp(x: Int, y: Int, pointer: Int, button: Int) = presenter.touchUp(x.toFloat(), y.toFloat())
+        override fun touchDragged(x: Int, y: Int, pointer: Int): Boolean { presenter.touchDragged(x.toFloat(), y.toFloat()); return true }
+        override fun mouseMoved(x: Int, y: Int): Boolean { presenter.pointerMoved(x.toFloat(), y.toFloat()); return false }
         override fun keyTyped(character: Char) = presenter.keyTyped(character)
     }
 
