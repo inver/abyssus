@@ -1,7 +1,9 @@
 # Properties panel
 
 `PanelState` reads selections and `AssetPropertiesPanel` renders them. Component fields and edit validation come from
-`lib-core-editor`. `ComponentSchemas.editorFor(sceneFile)` supplies built-in kinds and three typed physics kinds only when
+`lib-core-editor`; the editors of a field (text, choice, check box, with confirm, refuse and revert) are shared between
+asset and component fields through `plugin/ui/FieldEditors.kt`, and a field's label and tooltip come with its description
+(`FieldValue.label`, `FieldValue.tooltip`). `ComponentSchemas.editorFor(sceneFile)` supplies built-in kinds and three typed physics kinds only when
 the scene's native project has admitted `physicsEnabled: true`. Game components and disabled physics entries remain
 read-only JSON. Settings changes publish a component-editor refresh; each edit obtains the current editor again.
 

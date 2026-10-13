@@ -249,8 +249,13 @@ chooses a loader by name instead, and `AssetStorage(executor, loader, log)` regi
 
 `AssetIndex` stays a pure lookup (asset folder of a `uuid`); the storage, not the index, owns the built assets.
 
+`StandardAssetLoaders(fileLoader, metaLoader, shaders)` (in `assets/standard/`) builds the loader of every drawn kind
+once; hosts register its `byType` map instead of listing loaders themselves. A host that needs only some kinds can still
+register a smaller map:
+
 ```kotlin
 val assets = AssetStorage(log, executor, metaLoader::loadBaseMeta)
+assets.registerAll(StandardAssetLoaders(fileLoader, metaLoader, shaders).byType)   // or a subset, for example:
 assets.registerAll(mapOf(
     MetaType.MODEL to ModelLoader(metaLoader, assimp, fileLoader),
     MetaType.TERRAIN to TerrainLoader(fileLoader, metaLoader),

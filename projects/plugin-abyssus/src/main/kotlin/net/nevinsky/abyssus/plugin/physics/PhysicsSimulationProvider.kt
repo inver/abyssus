@@ -6,11 +6,11 @@ package net.nevinsky.abyssus.plugin.physics
 
 import net.nevinsky.abyssus.lib.core.assets.displayMessage
 
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.extensions.PluginId
+import com.intellij.openapi.application.PathManager
+import java.io.File
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
@@ -26,8 +26,14 @@ import net.nevinsky.abyssus.plugin.sceneview.SimulationInput
 import net.nevinsky.abyssus.plugin.sceneview.SimulationListener
 import net.nevinsky.abyssus.plugin.sceneview.SimulationRequest
 
-/** This plugin's id, to find its bundled `play-host/` folder. */
-private const val PLUGIN_ID = "net.nevinsky.abyssus"
+/**
+ * This plugin's bundled `play-host/` folder: a sibling of the `lib/` folder that holds the plugin's jar. Null when the
+ * plugin does not run from a jar (tests) or the folder is missing.
+ */
+private fun bundledPlayHost(): File? {
+    val jar = PathManager.getJarPathForClass(PhysicsSimulationProvider::class.java)?.let(::File)?.takeIf { it.isFile }
+    return jar?.parentFile?.takeIf { it.name == "lib" }?.parentFile?.resolve("play-host")?.takeIf { it.isDirectory }
+}
 
 /** Play in the Scene view through a play process (see [PlayLaunch]); poses come back over the play protocol. */
 class PhysicsSimulationProvider : SceneSimulationProvider {
@@ -35,7 +41,7 @@ class PhysicsSimulationProvider : SceneSimulationProvider {
         ProjectLayout.abssFor(file)?.let { project.service<AbyssusProjectSettings>().getSettings(it).physicsEnabled } == true
     override fun start(request: SimulationRequest, listener: SimulationListener): SceneSimulation {
         val simulation = PhysicsSimulation(request.project, listener)
-        val playHost = PluginManagerCore.getPlugin(PluginId.getId(PLUGIN_ID))?.pluginPath?.resolve("play-host")?.toFile()
+        val playHost = bundledPlayHost()
         ApplicationManager.getApplication().executeOnPooledThread {
             simulation.launch(PlayLaunch.choose(request.projectDir, playHost), request)
         }

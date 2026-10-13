@@ -11,7 +11,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEdit
 import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEditing

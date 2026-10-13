@@ -64,7 +64,7 @@ class NewFoliageActionTest : BasePlatformTestCase() {
     /** Whether the action offers itself on a project whose Assets node is [abss]. */
     private fun offered(): Boolean {
         val action = object : NewFoliageAction() {
-            override fun owningProject(e: AnActionEvent): VirtualFile? = abss
+            override fun owningProject(node: Any?): VirtualFile? = abss
         }
         val event = TestActionEvent.createTestEvent(action)
         action.update(event)

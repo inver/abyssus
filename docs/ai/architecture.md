@@ -28,7 +28,11 @@ Inside every module the package graph is acyclic (`checkPackageCycles`). `lib-co
 `BaseCtx` is its standalone composition root, creating JSON, file/meta loaders, an asset executor and storage,
 shaders, component registration and ECS/scene loaders. The plugin uses its own `AssetLoading`, which takes a
 `JsonProcessor`, SLF4J `Logger`, executor and `ShaderStorage`; `AbyssusCore.assets` builds it and each view gets a
-project loading graph. Hosts own the standalone executor and asset-storage lifecycle.
+project loading graph. Hosts own the standalone executor and asset-storage lifecycle. Every host takes its asset
+loaders from one table, `StandardAssetLoaders` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/assets/standard/StandardAssetLoaders.kt`): `BaseCtx`, the Control Line game's
+`fieldAssets` and the plugin's `ProjectAssets` register `StandardAssetLoaders.byType`, so an asset kind is added in
+one place. A host differs only by what it passes in (ray model store, logger, and the plugin's `FoliageLoader` in
+place of the game's `RuntimeFoliageLoader`).
 `AbyssusCore` creates four groups independently on first access: `documents` owns JSON, native validation and parsing;
 `assets` owns metadata, loading, property descriptions and previews; `terrain` owns generation and file staging;
 `ray` owns the backend service and conversion worker. Actions, providers and factories pass the group collaborators
@@ -74,7 +78,9 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    A light's or camera's direction resolves its `PositionComponent.lookAtId` to an entity's `localPosition` when that
    target exists and is not at the entity itself; otherwise it uses the entity's `localRotation`. `handleIds` records
    the `HANDLE` entities that a light may be aimed at.
-3. `SceneViewPanel` hosts a `GuardedGLCanvas`. A Swing `Timer` renders frames through
+3. `SceneViewPanel` hosts a `GuardedGLCanvas` and wires small collaborators, each owning one job: `SceneInputForwarder`
+   (keys and mouse), `RayControlBinding`, `CloudControls`, `PlayControlsStrip` and `FoliagePaintControls`; the "Add ..."
+   menus come in as `PlacementMenu`s. A Swing `Timer` renders frames through
    `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each holding a
    `lib-core` `AssetStorage` built by `AssetLoading`) and draws markers (`lib-core-editor`'s `SceneMarkers` through a
    `LineSink`) and gizmos (`sceneview/gizmo/GizmoDraw.kt` over `lib-core-editor`'s `GizmoHandles`).
@@ -144,7 +150,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    safe AWT context lifecycle as assets, including CPU-only abandonment after context loss. See
    `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md` for fitting, budgets, sampler units and material limits.
 6. A terrain entity may name a `FOLIAGE` asset with its `FoliageComponent`; `sceneContentOf` carries it as a
-   `FoliagePlacement` in `SceneContent.foliages`. `AssetLoading` registers `FoliageLoader` for `MetaType.FOLIAGE`
+   `FoliagePlacement` in `SceneContent.foliages`. `AssetLoading` registers `FoliageLoader` (through `StandardAssetLoaders`) for `MetaType.FOLIAGE`
    (`prepare` reads the meta, the masks and the bake off the GL thread and declares the terrain and every layer model
    as dependencies), and `SceneFoliage` draws the built `FoliageDrawable` beside the terrains: it prefers the
    project's `FoliageDrafts` draft over the stored asset, generates a stale or draft-touched bake on the IDE's
@@ -369,8 +375,8 @@ The editor retains source aliases in its `format` package. None of these checks 
   on the EDT without reopening; settings are cached, with no parsing or IO in the draw path. Disabling physics stops
   its STARTING, PLAYING or PAUSED session once, drops late callbacks/poses, and restores authored content. Other
   available providers remain usable. See `PlayState` and `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md`.
-- **A new asset kind drawn in the scene view:** an `AssetLoader` in `lib-core` (built in `AssetLoading`), and a placement in
-  `SceneContent`.
+- **A new asset kind drawn in the scene view:** an `AssetLoader` in `lib-core` with one entry in
+  `StandardAssetLoaders` (the plugin, `BaseCtx` and the game then all load it), and a placement in `SceneContent`.
 
 ### Saved ray settings revisions
 

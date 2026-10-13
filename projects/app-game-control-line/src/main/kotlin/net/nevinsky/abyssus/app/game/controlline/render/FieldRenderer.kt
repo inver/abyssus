@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.render
 
+import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.*
@@ -17,28 +18,15 @@ import net.nevinsky.abyssus.lib.core.BaseCtx
 import net.nevinsky.abyssus.lib.gdx.ModelBatch
 import net.nevinsky.abyssus.lib.gdx.ModelInstance
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
-import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDrawable
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageRuntimeLoad
-import net.nevinsky.abyssus.lib.core.assets.foliage.RuntimeFoliageLoader
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
-import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.Model
 import net.nevinsky.abyssus.lib.core.scene.SceneEnvironment
 import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
@@ -48,8 +36,8 @@ import java.io.File
 import java.util.concurrent.Executor
 
 /**
- * The one asset storage of the project in [projectDir], wired by constructors like the plugin does: a composite over
- * every kind of asset, prepared on [executor] and built (and owned) by the storage on the GL thread.
+ * The one asset storage of the project in [projectDir], wired by constructors like the plugin does (both take the
+ * [StandardAssetLoaders] table): a composite over every kind of asset, prepared on [executor] and built (and owned) by the storage on the GL thread.
  */
 fun fieldAssets(
     projectDir: File,
@@ -59,23 +47,8 @@ fun fieldAssets(
 ): AssetStorage {
     val files = FileLoader(projectDir)
     val metas = AssetMetaLoader(json, files, log)
-    val skyShaders = ShaderStorage().withAssets(files)
-    val terrains = TerrainLoader(files, metas)
-    return AssetStorage(log, executor, metas::loadBaseMeta).also {
-        it.registerAll(
-            mapOf(
-                MetaType.MODEL to ModelLoader(metas, AssimpModelLoader(), files),
-                MetaType.TERRAIN to terrains,
-                MetaType.FOLIAGE to RuntimeFoliageLoader(metas, FoliageRuntimeLoad(files, metas, terrains)) { log.warn(it) },
-                MetaType.TEXTURE to TextureLoader(files, metas),
-                MetaType.PIXMAP_TEXTURE to TextureLoader(files, metas),
-                MetaType.SKYBOX to SkyboxLoader(files, metas, skyShaders),
-                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas),
-            MetaType.CLOUDS to CloudsLoader(metas),
-                MetaType.SKYBOX_HDR to HdrSkyLoader(metas, ExrLoader(files), skyShaders, ToneCurve()),
-            ),
-        )
-    }
+    val loaders = StandardAssetLoaders(files, metas, ShaderStorage().withAssets(files), log = log)
+    return AssetStorage(log, executor, metas::loadBaseMeta).also { it.registerAll(loaders.byType) }
 }
 
 /** A segment to draw: a control line or a debrief track from [from] to [to], in [color], [width] pixels wide (drivers may cap it at 1). */

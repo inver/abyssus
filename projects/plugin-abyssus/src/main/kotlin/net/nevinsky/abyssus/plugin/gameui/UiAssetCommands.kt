@@ -15,8 +15,8 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome

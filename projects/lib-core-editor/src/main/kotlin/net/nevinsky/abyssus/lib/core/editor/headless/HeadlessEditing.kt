@@ -13,8 +13,8 @@ import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome

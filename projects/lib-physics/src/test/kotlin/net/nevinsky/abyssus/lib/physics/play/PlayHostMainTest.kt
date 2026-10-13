@@ -6,7 +6,7 @@ package net.nevinsky.abyssus.lib.physics.play
 
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageCopy
 import net.nevinsky.abyssus.lib.physics.FoliageProject
-import net.nevinsky.abyssus.lib.physics.testProject
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue

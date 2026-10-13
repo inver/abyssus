@@ -110,8 +110,8 @@ internal fun normalized(v: Vec3): Vec3? {
 class MainCamera {
     fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
         val root = SceneJson().parse(abssText).takeIf { it.isObject } ?: return null
-        if (net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat()
-                .validate(root, net.nevinsky.abyssus.lib.core.editor.document.DocumentKind.PROJECT) != null
+        if (net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat()
+                .validate(root, net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT) != null
         ) return null
         val cam = root.obj("mainCamera") ?: return null
         val position = cam.vec("position") ?: return null

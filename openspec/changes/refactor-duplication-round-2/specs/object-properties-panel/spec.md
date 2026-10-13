@@ -14,7 +14,7 @@ any reason shown beside that field.
 
 - **WHEN** the user selects the `terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b` asset of the `Untitled` project, types
   `30` into `uv` and moves focus to another field
-- **THEN** the `meta.json` holds `30` for `uv` and the field shows `30`
+- **THEN** the `meta.json` holds `30.0` for `uv` and the field shows `30.0`
 
 #### Scenario: Confirm a component field by leaving it
 

@@ -23,6 +23,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.Files
 import java.util.Base64
+import net.nevinsky.abyssus.lib.core.assets.testProject
 
 class PhysicsWorldTest {
     private val natives = JoltNatives()

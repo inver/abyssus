@@ -264,7 +264,6 @@ tasks.named("check") { dependsOn(checkNoJolt) }
 
 tasks.test {
     systemProperty("abyssus.javac", File(System.getProperty("java.home"), "bin/javac").absolutePath)
-    systemProperty("abyssus.testData", rootProject.file("projects/plugin-abyssus/src/test/testData").absolutePath)
     val pluginDirectory = tasks.prepareSandbox.flatMap { it.pluginDirectory }
     dependsOn(tasks.prepareSandbox)
     jvmArgumentProviders += CommandLineArgumentProvider {

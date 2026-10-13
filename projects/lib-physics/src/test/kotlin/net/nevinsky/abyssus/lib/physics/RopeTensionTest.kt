@@ -12,6 +12,7 @@ import net.nevinsky.abyssus.lib.core.scene.SceneContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import net.nevinsky.abyssus.lib.core.assets.testProject
 
 class RopeTensionTest {
     /** A 1 kg sphere at (0, 8, 0), and [rope] as its constraint (none when empty). */

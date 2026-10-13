@@ -64,10 +64,10 @@ jobs:
         id: properties
         shell: bash
         run: |
-          PROPERTIES="$(./gradlew properties --console=plain -q)"
+          PROPERTIES="$(./gradlew :plugin-abyssus:properties --console=plain -q)"
           VERSION="$(echo "$PROPERTIES" | grep "^version:" | cut -f2- -d ' ')"
           NAME="$(echo "$PROPERTIES" | grep "^pluginName:" | cut -f2- -d ' ')"
-          CHANGELOG="$(./gradlew getChangelog --unreleased --no-header --console=plain -q)"
+          CHANGELOG="$(./gradlew :plugin-abyssus:getChangelog --unreleased --no-header --console=plain -q)"
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "name=$NAME" >> $GITHUB_OUTPUT
@@ -88,24 +88,24 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: tests-result
-          path: ${{ github.workspace }}/build/reports/tests
+          path: ${{ github.workspace }}/projects/plugin-abyssus/build/reports/tests
 
       # Upload Kover report to CodeCov
       - name: Upload Code Coverage Report
         uses: codecov/codecov-action@v5
         with:
-          files: ${{ github.workspace }}/build/reports/kover/report.xml
+          files: ${{ github.workspace }}/projects/plugin-abyssus/build/reports/kover/report.xml
 
       # Cache Plugin Verifier IDEs
       - name: Setup Plugin Verifier IDEs Cache
         uses: actions/cache@v6
         with:
           path: ${{ steps.properties.outputs.pluginVerifierHomeDir }}/ides
-          key: plugin-verifier-${{ runner.os }}-${{ hashFiles('app-game-control-line.gradle.kts', 'gradle.properties') }}
+          key: plugin-verifier-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', 'gradle.properties') }}
 
       # Run Verify Plugin task and IntelliJ Plugin Verifier tool
       - name: Run Plugin Verification tasks
-        run: ./gradlew :verifyPlugin -Dplugin.verifier.home.dir=${{ steps.properties.outputs.pluginVerifierHomeDir }}
+        run: ./gradlew :plugin-abyssus:verifyPlugin -Dplugin.verifier.home.dir=${{ steps.properties.outputs.pluginVerifierHomeDir }}
 
       # Collect Plugin Verifier Result
       - name: Collect Plugin Verifier Result
@@ -113,7 +113,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: pluginVerifier-result
-          path: ${{ github.workspace }}/build/reports/pluginVerifier
+          path: ${{ github.workspace }}/projects/plugin-abyssus/build/reports/pluginVerifier
 
       # Run Qodana inspections
       - name: Qodana - Code Inspection
@@ -124,7 +124,7 @@ jobs:
         id: artifact
         shell: bash
         run: |
-          cd ${{ github.workspace }}/build/distributions
+          cd ${{ github.workspace }}/projects/plugin-abyssus/build/distributions
           FILENAME=`ls *.zip`
           unzip "$FILENAME" -d content
 
@@ -135,7 +135,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.artifact.outputs.filename }}
-          path: ./build/distributions/content/*/*
+          path: ./projects/plugin-abyssus/build/distributions/content/*/*
 
   # Prepare a draft release for GitHub Releases page for the manual verification
   # If accepted and published, release workflow would be triggered

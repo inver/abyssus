@@ -9,6 +9,8 @@ import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import org.slf4j.Logger
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 
 /**
  * Reads `.abss` and `.scene` text from the editor (saved or not) as native documents: the format marker and version are

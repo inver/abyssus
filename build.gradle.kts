@@ -87,6 +87,11 @@ subprojects {
         }
     }
 
+    // the native fixture projects are shared by every module's tests; see testProject() in lib-core's testFixtures
+    tasks.withType<Test>().configureEach {
+        systemProperty("abyssus.testData", rootProject.file("projects/plugin-abyssus/src/test/testData").absolutePath)
+    }
+
     // every module scans its own sources
     extra["abyssusRunCatchingRoots"] = listOf("src/main/kotlin")
     apply(from = "${project.rootDir}/gradle/checks.gradle.kts")

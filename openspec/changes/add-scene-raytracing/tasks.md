@@ -32,6 +32,7 @@ Proposed test classes and Gradle tasks below are to be added during implementati
   Verify with opt-in VulkanRayBackendTest cases for visibility, reflection hit/miss and instance motion on compatible Windows and Linux devices, run with `-Dabyssus.raytracing.validation=true` and no validation errors.
 - [ ] 1.8 Connect the slices to experimental GL presentation and complete manual runIde check 1 on each OS: 30-second moving-instance/camera test at 1280x720, internal resolution no lower than 640x360, at least 30 presented fps and p95 preview latency below 100 ms; record EDT upload/submission timing against the 8 ms target, depth correctness and reference hardware. Stop and revise the design if the gate fails; leave this task open for untested platforms.
 - [ ] 1.9 Document module ownership, native toolchains, optional loading and opt-in backend-test commands in the new module README and docs/ai/architecture.md. Verify `scripts/check-docs.sh` and the documented build commands on the corresponding targets.
+- [ ] 1.10 Once 1.8 has recorded the feasibility result, remove the ray feasibility spike: the system property `abyssus.raytracing.experiment` read by `SceneViewPanel`, `RayFeasibilityPreview` (plugin) and `RayFeasibilityLoop` (`lib-core-editor`), with their toggle text and tests. Added by `refactor-duplication-round-2` (K3); that change leaves the code alone while 1.8 still needs it. Verify `rg -n 'raytracing.experiment|RayFeasibility' projects` prints nothing and `./gradlew check` passes.
 
 ## 2. Asset snapshots and live scene updates
 

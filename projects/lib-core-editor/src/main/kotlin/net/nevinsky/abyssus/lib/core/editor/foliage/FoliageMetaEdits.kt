@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
 

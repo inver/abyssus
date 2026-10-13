@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.editor.testProject
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Rule

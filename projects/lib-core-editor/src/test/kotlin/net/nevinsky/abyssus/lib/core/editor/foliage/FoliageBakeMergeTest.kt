@@ -15,7 +15,7 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.terrainData
-import net.nevinsky.abyssus.lib.core.editor.testProject
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame

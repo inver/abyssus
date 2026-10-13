@@ -7,10 +7,6 @@ import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import java.io.File
 
-/** A fixture project under the repository's `src/test/testData/project` (shared with the plugin's tests). */
-fun testProject(name: String): File =
-    File(checkNotNull(System.getProperty("abyssus.testData")) { "run through Gradle: abyssus.testData is not set" }, "project/$name")
-
 /** The sky shaders of this module, as the plugin passes them. */
 fun skyShaders(): ShaderStorage = ShaderStorage()
 

@@ -6,24 +6,14 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.graphics.Texture
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
-import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
-import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
+import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxCube
-import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSky
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
-import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.Model
 import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.After
@@ -62,20 +52,10 @@ class AssetLoadingGlTest {
     private inner class Project(val dir: File, val log: Logger = NOPLogger.NOP_LOGGER) {
         val files = FileLoader(dir)
         val metas = testMetaLoader(dir, log, files)
-        private val loaders: Map<MetaType, AssetLoader<*, *, *>> =
-            mapOf(
-                MetaType.MODEL to ModelLoader(metas, AssimpModelLoader(), files),
-                MetaType.TERRAIN to TerrainLoader(files, metas),
-                MetaType.TEXTURE to TextureLoader(files, metas),
-                MetaType.PIXMAP_TEXTURE to TextureLoader(files, metas),
-                MetaType.SKYBOX to SkyboxLoader(files, metas, skyShaders()),
-                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas, skyShaders(), log),
-                MetaType.CLOUDS to CloudsLoader(metas),
-                MetaType.SKYBOX_HDR to HdrSkyLoader(metas, ExrLoader(files), skyShaders(), ToneCurve()),
-            )
+        private val loaders = StandardAssetLoaders(files, metas, skyShaders(), log = log)
 
         /** The one storage of this project: it builds and owns every kind of asset. */
-        fun assets() = AssetStorage(log, Executor(Runnable::run), metas::loadBaseMeta).also { it.registerAll(loaders) }
+        fun assets() = AssetStorage(log, Executor(Runnable::run), metas::loadBaseMeta).also { it.registerAll(loaders.byType) }
     }
 
     /** Requests [names] and pumps frame after frame, as the scene view does, until nothing is loading. */
@@ -96,7 +76,10 @@ class AssetLoadingGlTest {
             try {
                 loadAll(assets, mainSceneModels.toSet() + mainSceneTerrain)
                 mainSceneModels.forEach { assertNotNull("model $it", assets.getAs<Model>(it)) }
-                assertNotNull("terrain", assets.getAs<TerrainMesh>(mainSceneTerrain))
+                val terrain = assets.getAs<TerrainMesh>(mainSceneTerrain)
+                assertNotNull("terrain", terrain)
+                assertEquals(1600, terrain!!.data.size)
+                assertEquals(60f, terrain.data.uv, 0f)
             } finally {
                 assets.dispose()
             }

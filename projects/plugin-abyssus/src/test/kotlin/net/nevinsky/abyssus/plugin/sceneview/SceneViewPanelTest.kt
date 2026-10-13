@@ -35,8 +35,9 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         val params = SceneRenderParams.DEFAULT.copy(camera = CameraParams.DEFAULT.copy(position = Vec3(10f, 0f, 6f), direction = Vec3(0f, 0f, -1f)))
         var selected: String? = null
         val panel = SceneViewPanel(params, testRenderer(),
-            lightActions = { position -> AddLightGroup(project, file, position, { selected = it }) },
-            canAddLight = { canAddLight(file, net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)) })
+            lightMenu = PlacementMenu({ canAddLight(file, net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)) }) { position ->
+                AddLightGroup(project, file, position, { selected = it })
+            })
         try {
             val button = named(panel, "add-light") as JButton
             assertTrue(button.isEnabled)
@@ -64,8 +65,9 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         var selected: String? = null
         val documents = net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)
         val panel = SceneViewPanel(params, testRenderer(),
-            assetActions = { position -> AddAssetGroup(project, file, position, { selected = it }) },
-            canAddAsset = { canAddAsset(file, documents) && hasRenderAssets(file) })
+            assetMenu = PlacementMenu({ canAddAsset(file, documents) && hasRenderAssets(file) }) { position ->
+                AddAssetGroup(project, file, position, { selected = it })
+            })
         try {
             val button = named(panel, "add-asset") as JButton
             assertTrue(button.isEnabled)
@@ -98,8 +100,9 @@ class SceneViewPanelTest : BasePlatformTestCase() {
     fun testToolbarOffersTheProjectsModelsAndStartsDrawing() {
         val file = untitled()
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer(),
-            pathActions = { start -> net.nevinsky.abyssus.plugin.projectView.AddPathArrangementGroup(project, file, start) },
-            canAddPath = { net.nevinsky.abyssus.plugin.projectView.canAddPathArrangement(file, net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)) })
+            pathMenu = PlacementMenu({ net.nevinsky.abyssus.plugin.projectView.canAddPathArrangement(file, net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)) }) { start ->
+                net.nevinsky.abyssus.plugin.projectView.AddPathArrangementGroup(project, file, start)
+            })
         try {
             val button = named(panel, "add-path-arrangement") as JButton
             assertTrue(button.isEnabled)

@@ -94,9 +94,10 @@ class ComponentEditor(
                 it.get(component),
                 it.choices,
                 it.optional,
-                it.label,
+                it.labelKey?.let(messages::message) ?: it.label,
                 it.group,
-                it.assetType
+                it.assetType,
+                it.tooltipKey?.let(messages::message),
             )
         }
     }

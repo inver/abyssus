@@ -21,12 +21,9 @@ import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.lib.core.editor.ray.RayModeSnapshot
-import net.nevinsky.abyssus.lib.core.editor.ray.RayViewFeed
 import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice
-import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudFrameBudget
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudViewState
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import org.lwjgl.opengl.GL
@@ -35,7 +32,6 @@ import org.lwjgl.opengl.awt.GLData
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.awt.event.*
-import java.util.concurrent.atomic.AtomicLong
 import javax.swing.*
 
 /**
@@ -45,11 +41,10 @@ import javax.swing.*
 class SceneViewPanel internal constructor(
     initial: SceneRenderParams,
     private val renderer: SceneRenderer,
-    private val lightActions: ((() -> Vec3) -> DefaultActionGroup)? = null,
-    private val canAddLight: () -> Boolean = { lightActions != null },
+    /** The Add Light choices, placed at the orbit target; null: the Add Light button stays disabled. */
+    private val lightMenu: PlacementMenu<() -> Vec3>? = null,
     /** The project's models and terrains to place at the orbit target; null: no Add Asset button. */
-    private val assetActions: ((() -> Vec3) -> DefaultActionGroup)? = null,
-    private val canAddAsset: () -> Boolean = { assetActions != null },
+    private val assetMenu: PlacementMenu<() -> Vec3>? = null,
     ray: RayIntegration? = null,
     /** Play in this view; without a simulation provider there are no play controls. */
     private val play: PlayState = PlayState(null),
@@ -60,8 +55,7 @@ class SceneViewPanel internal constructor(
     private val foliageActions: ((String) -> DefaultActionGroup?)? = null,
     private val paintSession: ((String, () -> FoliagePaintMode?, (net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession?) -> Unit) -> Unit)? = null,
     /** The project's models to arrange along a path; the callback starts drawing. Null: no Add Path Arrangement button. */
-    private val pathActions: (((RenderAsset) -> Unit) -> DefaultActionGroup)? = null,
-    private val canAddPath: () -> Boolean = { pathActions != null },
+    private val pathMenu: PlacementMenu<(RenderAsset) -> Unit>? = null,
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     private val frame = GdxFrame()
@@ -83,65 +77,24 @@ class SceneViewPanel internal constructor(
     private val regenerateButton = JButton(AbyssusBundle.message("regenerateArrangementTitle")).apply { name = "regenerate-arrangement"; isVisible = false }
     private val drawingHint = JLabel(AbyssusBundle.message("pathDrawingHint")).apply { name = "path-drawing-hint"; isVisible = false }
     private val addFoliageButton = JButton(AbyssusBundle.message("addFoliageTitle")).apply { name = "add-foliage" }
-    private val paintButton = JToggleButton(AbyssusBundle.message("paintFoliageTitle")).apply { name = "paint-foliage" }
-    private val paintLayers = ComboBox<Int>().apply { name = "foliage-brush-layer" }
-    private val paintRadius = JSpinner(SpinnerNumberModel(10.0, 0.01, 100000.0, 1.0)).apply { name = "foliage-brush-radius" }
-    private val paintStrength = JSpinner(SpinnerNumberModel(1.0, 0.0, 1.0, 0.05)).apply { name = "foliage-brush-strength" }
-    private val paintErase = JCheckBox(AbyssusBundle.message("foliageBrushErase")).apply { name = "foliage-brush-erase" }
-    private val paintStrip = JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply { name = "foliage-brush-strip"; isVisible = false }
-    private var loadedPaint: net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession? = null
-    private var paintEntity: String? = null
-    private var paintLoad = 0
-    private var closed = false
     private val cameraCombo = ComboBox<CameraChoice>()
-    private val playButton = JButton(AbyssusBundle.message("sceneViewPlay")).apply { name = "play" }
-    private val pauseButton = JButton(AbyssusBundle.message("sceneViewPause")).apply { name = "pause" }
-    private val stepButton = JButton(AbyssusBundle.message("sceneViewStep")).apply { name = "step" }
-    private val stopButton = JButton(AbyssusBundle.message("sceneViewStop")).apply { name = "stop" }
-    private val playStatus = JLabel()
-    private val cloudCombo =
-        ComboBox(CloudChoice.entries.map(::CloudChoiceItem).toTypedArray()).apply { name = "clouds" }
-    private val cloudNote = JLabel().apply { name = "clouds-note" }
+    private val paint = FoliagePaintControls(renderer, interaction, play, paintSession, ::syncControls)
+    private val playStrip = PlayControlsStrip(play, renderer, simulationRequest, { paint.end() }, { requestFocusInWindow() })
+    private val clouds = CloudControls(renderer) { experimenting }
 
     /** This view's Clouds choice and fallbacks; a reopened view gets a new panel, so it starts at Asset again. */
-    internal val cloudState = CloudViewState()
-    private val cloudBudget = CloudFrameBudget()
-    private var cloudsAvailable = false
+    internal val cloudState: CloudViewState get() = clouds.state
     private var choices: List<CameraChoice> = emptyList()
     private var updatingControls = false
-    private var rayFeed: RayViewFeed? = null
-    private var shownRay: RayModeSnapshot? = null
-    private var shownFoliage = false
-    private val rayListeners = mutableListOf<() -> Unit>()
+    private val rayBinding = RayControlBinding(renderer)
 
     /** The only switch for Ray Tracing: the Abyssus Properties panel flips it. The Scene View toolbar has no ray control. */
-    override val rayControl: RayControl? get() = if (rayFeed == null) null else panelRayControl
-    private val panelRayControl = object : RayControl {
-        override val mode: RayModeSnapshot? get() = rayMode
-
-        /** The ray-traced image traces this scene's models and terrains only, so a scene that shows foliage says so. */
-        override val foliageNote: String? get() =
-            if (renderer.content.foliages.isEmpty()) null else AbyssusBundle.message("propertiesSceneRayFoliage")
-
-        override fun setRequested(enabled: Boolean) {
-            rayFeed?.runtime?.setRequested(enabled)
-            refreshRay()
-        }
-
-        override fun retry() {
-            rayFeed?.runtime?.retry()
-            refreshRay()
-        }
-
-        override fun addListener(parent: com.intellij.openapi.Disposable, listener: () -> Unit) {
-            rayListeners += listener
-            com.intellij.openapi.util.Disposer.register(parent) { rayListeners -= listener }
-        }
-    }
+    override val rayControl: RayControl? get() = rayBinding.control
     private val experimentButton = if (java.lang.Boolean.getBoolean("abyssus.raytracing.experiment"))
         JToggleButton(AbyssusBundle.message("sceneViewRayExperiment")) else null
     private val experiment = experimentButton?.let { RayFeasibilityPreview { message -> thisLogger().info(message) } }
     private val experimenting: Boolean get() = experimentButton?.isSelected == true
+    private val input = SceneInputForwarder(this, renderer, interaction, play, { experimenting }, { experiment?.orbit }, paint::update)
 
     init {
         renderer.params = initial
@@ -150,32 +103,13 @@ class SceneViewPanel internal constructor(
         ray?.let(::installRay)
     }
 
-    /**
-     * Binds this view's Ray Tracing mode to [integration], replacing any earlier binding. Nothing native is created
-     * until ray tracing is switched on from Abyssus Properties.
-     */
-    internal fun installRay(integration: RayIntegration) {
-        rayFeed?.close()
-        val feed = integration.newFeed("scene-view-${NEXT_VIEW.incrementAndGet()}", renderer.assets)
-        feed.runtime.mode.addListener { SwingUtilities.invokeLater { if (rayFeed === feed) refreshRay() } }
-        rayFeed = feed
-        renderer.rayFrameProvider = { context -> feed.frame(context) }
-        shownRay = null
-        refreshRay()
-    }
+    /** Binds this view's Ray Tracing mode to [integration], replacing any earlier binding (see [RayControlBinding.install]). */
+    internal fun installRay(integration: RayIntegration) = rayBinding.install(integration)
 
     /** The current Ray Tracing mode of this view (Off until it is switched on from Abyssus Properties). */
-    internal val rayMode: RayModeSnapshot? get() = rayFeed?.runtime?.mode?.snapshot
+    internal val rayMode: RayModeSnapshot? get() = rayBinding.mode
 
-    /** Tells listeners (the Properties panel's switch) when the mode changed, or the foliage note with it. Cheap when nothing did. */
-    private fun refreshRay() {
-        val snapshot = rayFeed?.runtime?.mode?.snapshot
-        val foliage = renderer.content.foliages.isNotEmpty()
-        if (snapshot == shownRay && foliage == shownFoliage) return
-        shownRay = snapshot
-        shownFoliage = foliage
-        rayListeners.toList().forEach { it() }
-    }
+    private fun refreshRay() = rayBinding.refresh()
 
     /** Called (on the AWT thread) when rendering fails, e.g. when no GL 3.2 core context can be created. */
     override var onFailure: ((Throwable) -> Unit)? = null
@@ -197,7 +131,7 @@ class SceneViewPanel internal constructor(
             gdx = null
             capabilities?.let { GL.setCapabilities(it) }
             try {
-                rayFeed?.reset()
+                rayBinding.feed?.reset()
                 GdxRuntime.withContext(ctx) { experiment?.dispose(); renderer.dispose() }
             } catch (e: Throwable) {
                 thisLogger().warn("Failed to release scene view GL resources", e)
@@ -205,7 +139,7 @@ class SceneViewPanel internal constructor(
         }
 
         override fun onContextAbandoned() {
-            rayFeed?.reset()
+            rayBinding.feed?.reset()
             experiment?.abandon()
             renderer.abandonShadows()
             gdx = null
@@ -261,9 +195,9 @@ class SceneViewPanel internal constructor(
     init {
         add(buildToolbar(), BorderLayout.NORTH)
         add(canvasHost, BorderLayout.CENTER)
-        attachInput(canvas)
-        bindKeys()
-        forwardKeys()
+        input.attach(canvas)
+        input.bindKeys()
+        input.forwardKeys()
         interaction.onStateChanged = ::syncControls
         play.onChanged = ::syncControls
         syncControls()
@@ -323,51 +257,27 @@ class SceneViewPanel internal constructor(
                 JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
             ).showUnderneathOf(addFoliageButton)
         }
-        paintButton.addActionListener {
-            if (paintButton.isSelected) updatePaintMode() else endPaintMode()
-            syncControls()
-        }
-        paintLayers.addActionListener { if (!updatingControls) updatePaintMode() }
-        paintRadius.addChangeListener { updatePaintMode() }
-        paintStrength.addChangeListener { updatePaintMode() }
-        paintErase.addActionListener { updatePaintMode() }
-        paintStrip.add(JLabel(AbyssusBundle.message("foliageBrushLayer")))
-        paintStrip.add(paintLayers)
-        paintStrip.add(JLabel(AbyssusBundle.message("foliageBrushRadius")))
-        paintStrip.add(paintRadius)
-        paintStrip.add(JLabel(AbyssusBundle.message("foliageBrushStrength")))
-        paintStrip.add(paintStrength)
-        paintStrip.add(paintErase)
         cameraCombo.toolTipText = AbyssusBundle.message("sceneViewCameraTooltip")
         cameraCombo.addActionListener {
             if (updatingControls) return@addActionListener
             val choice = cameraCombo.selectedItem as? CameraChoice ?: return@addActionListener
             interaction.viewCamera = choice.id
         }
-        cloudCombo.isFocusable = false
-        cloudCombo.addActionListener {
-            if (updatingControls) return@addActionListener
-            val item = cloudCombo.selectedItem as? CloudChoiceItem ?: return@addActionListener
-            cloudState.choose(item.choice)
-            renderer.state.cloudTechnique = cloudState.override
-            cloudBudget.reset()
-            syncClouds()
-        }
         return JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply {
             add(moveButton)
             add(rotateButton)
             add(dropButton)
             add(addLightButton)
-            if (assetActions != null) add(addAssetButton)
-            if (pathActions != null) add(addPathButton)
+            if (assetMenu != null) add(addAssetButton)
+            if (pathMenu != null) add(addPathButton)
             add(regenerateButton)
             add(drawingHint)
             if (foliageActions != null) add(addFoliageButton)
-            if (paintSession != null) { add(paintButton); add(paintStrip) }
+            paint.addTo(this)
             add(cameraCombo)
-            add(cloudCombo)
-            add(cloudNote)
-            addPlayControls(this)
+            add(clouds.combo)
+            add(clouds.note)
+            playStrip.addTo(this)
             overlayToolbar()?.let { add(it) }
             experimentButton?.let { button ->
                 button.isFocusable = false
@@ -378,27 +288,6 @@ class SceneViewPanel internal constructor(
                 add(button)
             }
         }
-    }
-
-    private fun addPlayControls(toolbar: JPanel) {
-        playButton.toolTipText = AbyssusBundle.message("sceneViewPlayTooltip")
-        pauseButton.toolTipText = AbyssusBundle.message("sceneViewPauseTooltip")
-        stepButton.toolTipText = AbyssusBundle.message("sceneViewStepTooltip")
-        stopButton.toolTipText = AbyssusBundle.message("sceneViewStopTooltip")
-        for (button in listOf(playButton, pauseButton, stepButton, stopButton)) {
-            button.isFocusable = false
-            toolbar.add(button)
-        }
-        toolbar.add(playStatus)
-        playButton.addActionListener {
-            val request = simulationRequest ?: return@addActionListener
-            endPaintMode()
-            play.play { request(renderer.state.selectedId) }
-            requestFocusInWindow()
-        }
-        pauseButton.addActionListener { play.pause() }
-        stepButton.addActionListener { play.step() }
-        stopButton.addActionListener { play.stop() }
     }
 
     /** Each overlay's actions (such as Show Physics), in one small action toolbar; null when there are none. */
@@ -414,56 +303,22 @@ class SceneViewPanel internal constructor(
     }
 
     /** Choices retain a supplier so placement follows the current orbit target at the moment of creation. */
-    internal fun lightChoices(): DefaultActionGroup? =
-        if (canAddLight()) lightActions?.invoke { orbit.target } else null
+    internal fun lightChoices(): DefaultActionGroup? = lightMenu?.choicesAt { orbit.target }
 
     /** The Add Asset choices, placing at the orbit target when a choice is made; null while assets cannot be added. */
-    internal fun assetChoices(): DefaultActionGroup? =
-        if (canAddAsset()) assetActions?.invoke { orbit.target } else null
+    internal fun assetChoices(): DefaultActionGroup? = assetMenu?.choicesAt { orbit.target }
 
     /** The Add Path Arrangement choices (the project's models); null while arrangements cannot be added. */
-    internal fun pathChoices(): DefaultActionGroup? =
-        if (canAddPath()) pathActions?.invoke { asset -> startDrawing(asset) } else null
-
-    /** W/E switch the gizmo, D drops the selection, Esc cancels a drag, with focus anywhere in the view. */
-    private fun bindKeys() {
-        fun bind(key: Int, action: () -> Unit) {
-            val stroke = KeyStroke.getKeyStroke(key, 0)
-            registerKeyboardAction({ if (!experimenting) action() }, stroke, WHEN_FOCUSED)
-            registerKeyboardAction({ if (!experimenting) action() }, stroke, WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
-        }
-        // while playing these keys go to the simulation instead (forwardKeys), and Escape stops it
-        bind(KeyEvent.VK_W) { if (!play.active) interaction.mode = GizmoMode.MOVE }
-        bind(KeyEvent.VK_E) { if (!play.active) interaction.mode = GizmoMode.ROTATE }
-        bind(KeyEvent.VK_D) { if (!play.active) interaction.drop() }
-        bind(KeyEvent.VK_ESCAPE) { if (!play.escape()) interaction.escape() }
-        bind(KeyEvent.VK_ENTER) { if (!play.active) interaction.enter() }
-        bind(KeyEvent.VK_BACK_SPACE) { if (!play.active) interaction.backspace() }
-    }
-
-    /** While playing, every key but Escape goes to the simulation and is consumed, so no editor shortcut fires. */
-    private fun forwardKeys() {
-        addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(e: KeyEvent) = forward(e, SimulationInput.Kind.KEY_DOWN)
-            override fun keyReleased(e: KeyEvent) = forward(e, SimulationInput.Kind.KEY_UP)
-
-            private fun forward(e: KeyEvent, kind: SimulationInput.Kind) {
-                if (!play.active || e.keyCode == KeyEvent.VK_ESCAPE) return
-                play.input(SimulationInput(kind, key = keyName(e.keyCode)))
-                e.consume()
-            }
-        })
-    }
+    internal fun pathChoices(): DefaultActionGroup? = pathMenu?.choicesAt { asset -> startDrawing(asset) }
 
     /** Brings the toolbar's buttons and selector in line with the interaction state. */
     private fun syncControls() {
-        if (play.active && renderer.state.paint != null) endPaintMode()
-        refreshPaintSession()
+        paint.beforeSync()
         updatingControls = true
         try {
             val toolbar = toolbarState(
                 interaction.mode, experimenting, play.active, interaction.canDrop,
-                lightActions != null && canAddLight(), assetActions != null && canAddAsset(),
+                lightMenu?.available?.invoke() == true, assetMenu?.available?.invoke() == true,
             )
             moveButton.isSelected = toolbar.moveSelected
             rotateButton.isSelected = toolbar.rotateSelected
@@ -473,7 +328,7 @@ class SceneViewPanel internal constructor(
             dropButton.isEnabled = toolbar.dropEnabled
             addLightButton.isEnabled = toolbar.addLightEnabled
             addAssetButton.isEnabled = toolbar.addAssetEnabled
-            addPathButton.isEnabled = !play.active && !experimenting && pathActions != null && canAddPath()
+            addPathButton.isEnabled = !play.active && !experimenting && pathMenu?.available?.invoke() == true
             val arrangementSelected = renderer.content.arrangements.any { it.entityId == interaction.selectedId }
             regenerateButton.isVisible = arrangementSelected
             regenerateButton.isEnabled = arrangementSelected && !play.active && onRegenerate != null
@@ -482,125 +337,21 @@ class SceneViewPanel internal constructor(
             addFoliageButton.isVisible = foliage != null
             addFoliageButton.isEnabled = !play.active && foliage?.templatePresentation?.isEnabled == true
             addFoliageButton.toolTipText = foliage?.templatePresentation?.description
-            paintButton.isEnabled = !play.active && loadedPaint?.layers?.isNotEmpty() == true
-            paintButton.isSelected = renderer.state.paint != null
-            paintStrip.isVisible = renderer.state.paint != null
-            if (renderer.state.paint != null) { moveButton.isEnabled = false; rotateButton.isEnabled = false; dropButton.isEnabled = false }
-            syncPlayControls()
+            paint.sync()
+            if (paint.painting) { moveButton.isEnabled = false; rotateButton.isEnabled = false; dropButton.isEnabled = false }
+            playStrip.sync()
             cameraCombo.selectedItem = choices.firstOrNull { it.id == interaction.viewCamera } ?: choices.firstOrNull()
         } finally {
             updatingControls = false
         }
-        syncClouds()
+        clouds.sync()
     }
 
-    private fun refreshPaintSession(force: Boolean = false) {
-        val entity = interaction.selectedId
-        if (!force && entity == paintEntity) return
-        val wasPainting = renderer.state.paint != null && entity == paintEntity
-        endPaintMode()
-        loadedPaint?.dispose()
-        loadedPaint = null
-        paintEntity = entity
-        val token = ++paintLoad
-        if (closed || entity == null) return
-        paintSession?.invoke(entity, { renderer.state.paint }) { session ->
-            if (closed || token != paintLoad || interaction.selectedId != entity) { session?.dispose(); return@invoke }
-            loadedPaint = session
-            updatingControls = true
-            paintLayers.model = DefaultComboBoxModel(session?.layers.orEmpty().toTypedArray())
-            updatingControls = false
-            interaction.foliagePaint = session?.paint
-            if (wasPainting && session?.layers?.isNotEmpty() == true) {
-                paintButton.isSelected = true
-                updatePaintMode()
-            }
-            syncControls()
-        }
-    }
-
-    private fun updatePaintMode(shift: Boolean = false) {
-        if (play.active) { endPaintMode(); return }
-        if (!paintButton.isSelected || loadedPaint == null) return
-        val entity = interaction.selectedId ?: return
-        val layer = paintLayers.selectedItem as? Int ?: return
-        renderer.state.paint = FoliagePaintMode(entity, layer, (paintRadius.value as Number).toFloat(),
-            (paintStrength.value as Number).toFloat(), paintErase.isSelected || shift)
-        paintStrip.isVisible = true
-    }
-
-    private fun endPaintMode() {
-        interaction.foliagePaint?.cancelled()
-        renderer.state.paint = null
-        renderer.brushCursor = null
-        paintButton.isSelected = false
-        paintStrip.isVisible = false
-    }
-
-    /** Brings the Clouds choice and the fallback note in line with [cloudState] and the scene's sky. */
-    private fun syncClouds() {
-        cloudsAvailable = renderer.cloudsEnabled()
-        val wasUpdating = updatingControls
-        updatingControls = true
-        try {
-            cloudCombo.isEnabled = cloudsAvailable && !experimenting
-            cloudCombo.selectedItem = cloudCombo.model.let { model ->
-                (0 until model.size).map(model::getElementAt).first { it.choice == cloudState.choice }
-            }
-            cloudCombo.toolTipText = AbyssusBundle.message(
-                when {
-                    !cloudsAvailable -> "sceneViewCloudsUnavailableTooltip"
-                    cloudState.sticky -> "sceneViewCloudsStickyTooltip"
-                    else -> "sceneViewCloudsTooltip"
-                }
-            )
-            cloudNote.text = if (cloudState.fallbackNote) AbyssusBundle.message("sceneViewCloudsFallback") else ""
-            cloudNote.isVisible = cloudState.fallbackNote
-        } finally {
-            updatingControls = wasUpdating
-        }
-    }
-
-    /**
-     * After each rendered frame: counts it against the volumetric frame budget ([interval] seconds since the previous
-     * one; [volumetric] whether it drew volumetric clouds) and falls back to shells when the view has been too slow,
-     * and follows the sky gaining or losing clouds.
-     */
+    /** After each rendered frame; see [CloudControls.frameRendered]. */
     internal fun cloudFrameRendered(
         interval: Float,
-        volumetric: Boolean = renderer.drawnCloudTechnique == CloudTechnique.VOLUMETRIC
-    ) {
-        val measured = if (volumetric && SIMULATE_SLOW_CLOUDS) maxOf(interval, SLOW_FRAME_SECONDS) else interval
-        if (cloudBudget.frame(measured, volumetric)) {
-            cloudState.fallBack()
-            renderer.state.cloudTechnique = cloudState.override
-            thisLogger().info("Volumetric clouds were too slow in this view; drawing shells (fallback ${cloudState.fallbacks})")
-            syncClouds()
-        } else if (renderer.cloudsEnabled() != cloudsAvailable) {
-            syncClouds()
-        }
-    }
-
-    private fun syncPlayControls() {
-        for (c in listOf(playButton, pauseButton, stepButton, stopButton, playStatus)) c.isVisible = play.available
-        if (!play.available) {
-            for (c in listOf(playButton, pauseButton, stepButton, stopButton, playStatus)) c.isVisible = false
-            return
-        }
-        val phase = play.phase
-        val controls = playControls(phase, play.active)
-        playButton.isEnabled = controls.play
-        pauseButton.isEnabled = controls.pause
-        stepButton.isEnabled = controls.step
-        stopButton.isEnabled = controls.stop
-        playStatus.text = when (phase) {
-            PlayState.Phase.IDLE -> ""
-            PlayState.Phase.STARTING -> AbyssusBundle.message("sceneViewPlayStarting")
-            PlayState.Phase.PLAYING -> AbyssusBundle.message("sceneViewPlaying")
-            PlayState.Phase.PAUSED -> AbyssusBundle.message("sceneViewPaused")
-            PlayState.Phase.FAILED -> AbyssusBundle.message("sceneViewPlayFailed")
-        }
-    }
+        volumetric: Boolean = renderer.drawnCloudTechnique == CloudTechnique.VOLUMETRIC,
+    ) = clouds.frameRendered(interval, volumetric)
 
     private fun refreshCameraChoices(params: SceneRenderParams) {
         val fresh = cameraChoices(params.content, AbyssusBundle.message("sceneViewFreeCamera"))
@@ -617,92 +368,6 @@ class SceneViewPanel internal constructor(
         syncControls()
     }
 
-    private fun attachInput(target: GuardedGLCanvas) {
-        // The panel takes focus instead of the canvas: a heavyweight AWT canvas as the focus owner breaks IDE popups
-        // ("Unexpected component for dataContext"), which need a JComponent.
-        target.isFocusable = false
-        isFocusable = true
-        fun sync() {
-            interaction.size = ViewSize(target.width, target.height, target.framebufferWidth, target.framebufferHeight)
-        }
-
-        val input = object : MouseAdapter() {
-            private var experimentX = 0
-            private var experimentY = 0
-            override fun mousePressed(e: MouseEvent) {
-                requestFocusInWindow()
-                if (experimenting) {
-                    experimentX = e.x; experimentY = e.y; return
-                }
-                forwardMouse(SimulationInput.Kind.BUTTON_DOWN, e)
-                sync()
-                if (e.isPopupTrigger && pointMenu(e)) return
-                updatePaintMode(e.isShiftDown)
-                cursor(e)
-                interaction.pressed(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
-            }
-
-            override fun mouseReleased(e: MouseEvent) {
-                if (experimenting) return
-                forwardMouse(SimulationInput.Kind.BUTTON_UP, e)
-                sync()
-                if (e.isPopupTrigger && pointMenu(e)) return
-                interaction.released(e.x, e.y, SwingUtilities.isLeftMouseButton(e), e.clickCount)
-            }
-
-            override fun mouseDragged(e: MouseEvent) {
-                if (experimenting) {
-                    val dx = (e.x - experimentX).toFloat()
-                    val dy = (e.y - experimentY).toFloat()
-                    experimentX = e.x; experimentY = e.y
-                    if (SwingUtilities.isLeftMouseButton(e)) experiment?.orbit?.orbit(dx, dy)
-                    else experiment?.orbit?.pan(dx, dy)
-                    return
-                }
-                sync()
-                updatePaintMode(e.isShiftDown)
-                cursor(e)
-                interaction.dragged(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
-            }
-
-            override fun mouseMoved(e: MouseEvent) {
-                if (experimenting) return
-                forwardMouse(SimulationInput.Kind.MOUSE_MOVE, e)
-                sync()
-                interaction.moved(e.x, e.y)
-                cursor(e)
-            }
-
-            override fun mouseExited(e: MouseEvent) { renderer.brushCursor = null }
-
-            private fun cursor(e: MouseEvent) {
-                val mode = renderer.state.paint
-                val size = interaction.size
-                if (mode == null || size.isEmpty) { renderer.brushCursor = null; return }
-                val at = size.toFramebuffer(e.x, e.y)
-                val ray = renderer.queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
-                val terrain = renderer.queries.terrainOf(mode.entityId)
-                val hit = ray?.let { renderer.queries.terrainHit(mode.entityId, it) }
-                renderer.brushCursor = if (terrain != null && hit != null) FoliageBrushCursor(terrain, hit, mode.radius) else null
-            }
-
-            override fun mouseWheelMoved(e: MouseWheelEvent) {
-                if (experimenting) {
-                    experiment?.orbit?.zoom(e.preciseWheelRotation.toFloat()); return
-                }
-                interaction.wheel(e.preciseWheelRotation.toFloat())
-            }
-        }
-        target.addMouseListener(input)
-        target.addMouseMotionListener(input)
-        target.addMouseWheelListener(input)
-    }
-
-    /** While playing, mouse buttons and moves also go to the simulation; the camera still orbits, pans and zooms. */
-    private fun forwardMouse(kind: SimulationInput.Kind, e: MouseEvent) {
-        if (play.active) play.input(SimulationInput(kind, button = e.button, x = e.x, y = e.y))
-    }
-
     /**
      * An abandoned canvas keeps a native surface that macOS no longer sizes with the component, so showing it again
      * renders into a stale, cropped drawable. A new canvas gets a new native surface and a new context.
@@ -712,7 +377,7 @@ class SceneViewPanel internal constructor(
         abandoned = false
         remove(canvasHost)
         canvas = newCanvas()
-        attachInput(canvas)
+        input.attach(canvas)
         canvasHost = newCanvasHost()
         add(canvasHost, BorderLayout.CENTER)
     }
@@ -748,36 +413,15 @@ class SceneViewPanel internal constructor(
         }
 
     override fun startDrawing(asset: RenderAsset) {
-        endPaintMode()
+        paint.end()
         interaction.startDrawing(asset)
         requestFocusInWindow()
     }
 
     override fun groundHeights(): GroundHeight? = renderer.groundHeights()
 
-    /**
-     * The right-click menu of a point handle of the selected arrangement: Remove Point, disabled while only two points
-     * remain. True when the click hit a handle and the menu was shown (the press is then not a pan).
-     */
-    private fun pointMenu(e: MouseEvent): Boolean {
-        val id = interaction.selectedId ?: return false
-        if (interaction.drawing != null || play.active) return false
-        val size = interaction.size
-        if (size.isEmpty) return false
-        val at = size.toFramebuffer(e.x, e.y)
-        val hit = renderer.queries.pathHandleAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) as? PathHit.Point ?: return false
-        val menu = JPopupMenu()
-        menu.add(JMenuItem(AbyssusBundle.message("removePathPoint")).apply {
-            name = "remove-path-point"
-            isEnabled = interaction.canRemovePoint(id)
-            addActionListener { interaction.removePoint(id, hit.index) }
-        })
-        menu.show(e.component, e.x, e.y)
-        return true
-    }
-
     override fun selectEntity(entityId: String) {
-        if (renderer.state.selectedId != entityId) endPaintMode()
+        if (renderer.state.selectedId != entityId) paint.end()
         renderer.state.selectedId = entityId
         syncControls()
     }
@@ -793,13 +437,13 @@ class SceneViewPanel internal constructor(
             orbit.reset(params.camera)
         }
         interaction.paramsChanged(params)
-        if (bindingChanged) refreshPaintSession(force = true)
+        if (bindingChanged) paint.refreshSession(force = true)
         refreshCameraChoices(params)
     }
 
     override fun refreshAssets(revision: AssetRevisionBatch) {
         renderer.queueAssetRevision(revision)
-        refreshPaintSession(force = true)
+        paint.refreshSession(force = true)
     }
 
     override fun stopPlay() = play.documentChanging()
@@ -814,36 +458,30 @@ class SceneViewPanel internal constructor(
     override fun addNotify() {
         replaceAbandonedCanvas()
         super.addNotify()
-        rayFeed?.runtime?.setVisible(true)
+        rayBinding.feed?.runtime?.setVisible(true)
         timer.start()
     }
 
     override fun removeNotify() {
         stopLoop()
         experiment?.stop()
-        rayFeed?.runtime?.setVisible(false)
+        rayBinding.feed?.runtime?.setVisible(false)
         super.removeNotify()
     }
 
     override fun dispose() {
-        closed = true
-        paintLoad++
-        endPaintMode()
-        loadedPaint?.dispose()
+        paint.close()
         stopLoop()
         canvasHost.stop()
         play.stop()
         overlays?.dispose()
         experiment?.stop()
-        rayFeed?.close()
-        rayFeed = null
-        renderer.rayFrameProvider = null
+        rayBinding.close()
         canvas.disposeCanvas() // releases GL resources through disposeGL while the context is still current
     }
 
     private companion object {
         const val FRAME_MILLIS = 16
-        val NEXT_VIEW = AtomicLong()
 
         fun glData() = GLData().apply {
             majorVersion = 3
@@ -863,20 +501,3 @@ private val KEY_NAMES: Map<Int, String> by lazy {
 }
 
 internal fun keyName(code: Int): String = KEY_NAMES[code] ?: "KEY_$code"
-
-/** `-Dabyssus.clouds.simulateSlow=true` makes every volumetric frame count as slow, to try the fallback by hand. */
-private val SIMULATE_SLOW_CLOUDS = java.lang.Boolean.getBoolean("abyssus.clouds.simulateSlow")
-
-private const val SLOW_FRAME_SECONDS = 0.05f
-
-/** A Clouds choice as the toolbar's combo lists it. */
-internal class CloudChoiceItem(val choice: CloudChoice) {
-    override fun toString(): String = AbyssusBundle.message(
-        when (choice) {
-            CloudChoice.ASSET -> "sceneViewCloudsAsset"
-            CloudChoice.LAYERED -> "sceneViewCloudsLayered"
-            CloudChoice.SHELLS -> "sceneViewCloudsShells"
-            CloudChoice.VOLUMETRIC -> "sceneViewCloudsVolumetric"
-        }
-    )
-}

@@ -19,7 +19,11 @@ the toolbar, Play and the view's asset storage.
 | `shadows` | Per-context atlas, stable tile allocation, fitted light cameras and shared model/terrain/foliage depth pass |
 | `SceneFoliage`, `FoliageAssets` | The foliage of the scene's terrain entities, beside `SceneTerrains`: it asks the view's assets for the `FoliageComponent`s' folders, prefers the project's `FoliageDrafts` draft, generates a stale or draft-touched bake off the GL thread and culls the drawn copies against the camera (see **Terrain foliage**) |
 | `SceneView` | Interface of the view, so tests can pass a fake (`viewFactory`) |
-| `SceneViewPanel` | Swing panel: GL canvas, Swing `Timer` frame loop, toolbar, keys (W / E / D / Esc) |
+| `SceneViewPanel` | Swing panel: GL canvas, Swing `Timer` frame loop, the gizmo / Add / camera toolbar, and the wiring of the collaborators below |
+| `SceneInputForwarder` | Keys (W / E / D / Esc / Enter / Backspace) and the canvas mouse: into `SceneInteraction`, into the simulation while playing, the arrangement point menu |
+| `RayControlBinding` | The view's ray feed, the mode the Properties switch shows and its listeners |
+| `CloudControls`, `PlayControlsStrip`, `FoliagePaintControls` | The Clouds choice and fallback, the Play / Pause / Step / Stop buttons, the foliage brush and its paint session |
+| `PlacementMenu` | An "Add ..." menu: whether it can be offered, and its choices (`lightMenu`, `assetMenu`, `pathMenu` of the panel) |
 | `SceneViewState` *(lib-core-editor)* | What the user chose: selection, gizmo mode and hovered handle, the camera looked through, the drag/drop preview. The panel changes it; the renderer and the queries read it |
 | `SceneInteraction` *(lib-core-editor)* | Mouse and key logic without Swing or GL, over a `SceneViewState` and `SceneQueries`: click → pick/select, drag → gizmo or orbit/pan (one `Gesture`: Idle, Dragging or Cancelled), Drop → a Y-only move |
 | `FrameSnapshot`, `SceneQueries`, `SnapshotSceneQueries` *(lib-core-editor)* | What the last frame drew (camera copy, model boxes, terrain targets, `drawnVersion`), and the CPU-only questions asked of it: pick, ray, ground below, lowest point, gizmo handles and hits, drag start. Tested with hand-built snapshots |
@@ -119,13 +123,14 @@ the toolbar, Play and the view's asset storage.
 ## Add Light
 
 The toolbar's Add Light menu offers Directional, Sun and Spot through `AddLightGroup`. `SceneFileEditor` supplies
-the scene file and availability check; the panel supplies its current orbit target when a choice is made.
+a `PlacementMenu` (the scene file's availability check and its choices); the panel supplies its current orbit target when
+a choice is made.
 The new entity is written as one Add Light command and selected in the Abyssus tree. Spot adds 5 to placement Y.
 Unreadable scene text disables creation (and the editor shows its existing parse-error state).
 
 The toolbar's Add Asset button (`add-asset`) works the same way through `AddAssetGroup`: `SceneFileEditor` passes
-`assetActions` and `canAddAsset` (readable scene and a project with models or terrains), and the panel supplies the
-orbit target. A view built without `assetActions` has no such button.
+an `assetMenu` (available for a readable scene and a project with models or terrains), and the panel supplies the
+orbit target. A view built without an `assetMenu` has no such button.
 
 ## Path arrangements
 

@@ -4,16 +4,11 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import com.intellij.ide.projectView.ProjectView
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.InputValidator
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
@@ -21,7 +16,6 @@ import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.textOf
-import net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane
 import net.nevinsky.abyssus.plugin.projectView.AbyssusTreeAction
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
 import net.nevinsky.abyssus.plugin.projectView.assetsNodeProjectFile
@@ -33,24 +27,13 @@ fun registeredUiAssets(abss: VirtualFile): List<String> = runCatchingKeepingCanc
 }.getOrNull().orEmpty()
 
 /** Right-click on the Assets node: create a UI asset in this project. */
-open class NewUiAssetAction : AnAction(), DumbAware {
+open class NewUiAssetAction : AbyssusTreeAction<VirtualFile>() {
     init { templatePresentation.text = AbyssusBundle.message("uiNewAssetAction") }
 
-    override fun getActionUpdateThread() = ActionUpdateThread.EDT
+    override fun targetOf(node: Any?): VirtualFile? = assetsNodeProjectFile(node)
 
-    internal open fun owningProject(e: AnActionEvent): VirtualFile? {
-        val project = e.project ?: return null
-        val pane = ProjectView.getInstance(project).currentProjectViewPane?.takeIf { it.id == AbyssusProjectViewPane.ID } ?: return null
-        return assetsNodeProjectFile(TreeUtil.getUserObject(pane.selectedPath?.lastPathComponent))
-    }
-
-    override fun update(e: AnActionEvent) {
-        e.presentation.isEnabledAndVisible = owningProject(e) != null
-    }
-
-    override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
-        val abss = owningProject(e) ?: return
+    override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
+        val abss = target
         val assets = File(abss.parent.path, "assets")
         val name = Messages.showInputDialog(project, AbyssusBundle.message("uiNewAssetPrompt"), AbyssusBundle.message("commandNewUiAsset"), null, "menus",
             object : InputValidator {

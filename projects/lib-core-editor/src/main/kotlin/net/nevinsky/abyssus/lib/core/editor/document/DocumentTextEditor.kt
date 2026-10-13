@@ -7,6 +7,9 @@ package net.nevinsky.abyssus.lib.core.editor.document
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
 
 /** What [DocumentTextEditor.edit] made of a document's text. */
 sealed interface TextEditOutcome {

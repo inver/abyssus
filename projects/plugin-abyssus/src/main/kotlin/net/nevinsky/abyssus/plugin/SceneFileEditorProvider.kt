@@ -32,6 +32,7 @@ import com.intellij.ide.plugins.PluginManager
 import net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane
 import net.nevinsky.abyssus.plugin.projectView.ProjectSceneViewHost
 import net.nevinsky.abyssus.plugin.sceneview.NamedOverlay
+import net.nevinsky.abyssus.plugin.sceneview.PlacementMenu
 import net.nevinsky.abyssus.plugin.sceneview.PlayState
 import net.nevinsky.abyssus.plugin.sceneview.RayIntegration
 import net.nevinsky.abyssus.plugin.sceneview.SceneFileEditor
@@ -73,12 +74,9 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
                     ViewAssets(assets.loading), assets.sceneShaders, project.service<FoliageDrafts>(),
                     log = core.loggers.getLogger("sceneview"),
                 ),
-                lightActions = { position -> host.lightActions(file, position) },
-                canAddLight = { host.canAddLight(file) },
-                assetActions = { position -> host.assetActions(file, position) },
-                canAddAsset = { host.canAddAsset(file) },
-                pathActions = { start -> host.pathActions(file, start) },
-                canAddPath = { host.canAddPath(file) },
+                lightMenu = PlacementMenu({ host.canAddLight(file) }) { position -> host.lightActions(file, position) },
+                assetMenu = PlacementMenu({ host.canAddAsset(file) }) { position -> host.assetActions(file, position) },
+                pathMenu = PlacementMenu({ host.canAddPath(file) }) { start -> host.pathActions(file, start) },
                 ray = ray,
                 play = play,
                 simulationRequest = { selection -> simulationRequest(project, file, selection) },

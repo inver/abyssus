@@ -16,7 +16,7 @@ import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
-import net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.plugin.projectView.HdrPreviewSource
 import net.nevinsky.abyssus.lib.raytracing.MetalRayBackendFactory
 import net.nevinsky.abyssus.lib.raytracing.VulkanRayBackendFactory

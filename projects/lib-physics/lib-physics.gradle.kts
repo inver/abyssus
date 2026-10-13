@@ -47,8 +47,4 @@ dependencies {
     testImplementation(testFixtures(project(":lib-core")))
 }
 
-tasks.test {
-    systemProperty("abyssus.testData", rootProject.file("projects/plugin-abyssus/src/test/testData").absolutePath)
-}
-
 extra["abyssusSingletonExcludes"] = listOf<String>()

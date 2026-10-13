@@ -30,7 +30,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
 import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.testProject
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.ModelInstance

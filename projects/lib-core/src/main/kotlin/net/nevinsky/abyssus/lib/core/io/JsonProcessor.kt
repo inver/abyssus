@@ -19,9 +19,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.annotation.JsonAutoDetect
-import com.fasterxml.jackson.core.util.DefaultIndenter
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
-import com.fasterxml.jackson.core.util.Separators
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -56,21 +54,11 @@ private class ComponentFloatSerializer : StdSerializer<Any>(Any::class.java) {
  * enum values take their default, and properties keep declaration order. Create one and pass it to what needs it.
  */
 class JsonProcessor(internal val log: Logger) {
-    private val prettyPrinter: DefaultPrettyPrinter = DefaultPrettyPrinter(
-        Separators.createDefaultInstance()
-            .withObjectFieldValueSpacing(Separators.Spacing.AFTER)
-            .withObjectEmptySeparator("")
-            .withArrayEmptySeparator(""),
-    ).also {
-        val indenter = DefaultIndenter("  ", "\n")
-        it.indentObjectsWith(indenter)
-        it.indentArraysWith(indenter)
-    }
+    private val format = JsonFormat()
+    private val prettyPrinter: DefaultPrettyPrinter = format.prettyPrinter
 
     /** The configured mapper, for code that binds JSON itself (`readValue`, readers with injected values). */
-    private val mapper: JsonMapper = JsonMapper.builder()
-        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-        .disable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+    private val mapper: JsonMapper = format.mapperBuilder()
         .addModule(KotlinModule.Builder().build())
         .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
         .addMixIn(Vector3::class.java, PublicFieldsOnly::class.java)

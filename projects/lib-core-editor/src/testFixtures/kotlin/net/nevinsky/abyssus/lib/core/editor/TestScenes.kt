@@ -33,10 +33,6 @@ fun testAsset(
     unused,
 )
 
-/** A fixture project under the repository's `src/test/testData/project`, shared with `core`'s tests. */
-fun testProject(name: String): File =
-    File(System.getProperty("abyssus.testData") ?: "src/test/testData", "project/$name")
-
 /** The heights of the terrain asset [name] of the project in [projectDir], read as a scene view loads them. */
 fun terrainData(projectDir: File, name: String): TerrainData {
     val files = FileLoader(projectDir)

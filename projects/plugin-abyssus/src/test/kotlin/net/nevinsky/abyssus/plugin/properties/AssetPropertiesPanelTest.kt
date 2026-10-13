@@ -83,6 +83,9 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         c.postActionEvent()
     }
 
+    /** Moves focus away from [c] the way Swing reports it, without needing a focus owner in a headless test. */
+    private fun leave(c: Component) = c.focusListeners.forEach { it.focusLost(java.awt.event.FocusEvent(c, java.awt.event.FocusEvent.FOCUS_LOST)) }
+
     private fun thumbnails(c: Component): List<Thumbnail> = buildList {
         if (c is Thumbnail) add(c)
         if (c is Container) c.components.forEach { addAll(thumbnails(it)) }
@@ -414,6 +417,50 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
             assertEquals("1600", (field(p, "size") as JBTextField).text)
         }
         assertEquals(before, metaText(path))
+    }
+
+    fun testLeavingAFieldConfirmsItsValue() {
+        copyProject()
+        val path = "Untitled/assets/$terrain/meta.json"
+        val p = panel()
+        p.show(asset(terrain))
+        val field = field(p, "uv") as JBTextField
+        field.text = "30"
+        leave(field)
+        assertTrue(metaText(path), metaText(path).contains("\"uv\": 30.0"))
+        assertEquals("30.0", (field(p, "uv") as JBTextField).text)
+        assertEquals("", errorOf(p, "uv"))
+    }
+
+    fun testARefusedValueIsExplainedBesideTheFieldAndWritesNothing() {
+        copyProject()
+        val path = "Untitled/assets/$terrain/meta.json"
+        val before = metaText(path)
+        val p = panel()
+        p.show(asset(terrain))
+        type(field(p, "uv") as JBTextField, "abc")
+        assertEquals("60.0", (field(p, "uv") as JBTextField).text)
+        assertEquals("Enter a number.", errorOf(p, "uv"))
+        assertEquals(before, metaText(path))
+        // an accepted value clears the reason
+        type(field(p, "uv") as JBTextField, "30")
+        assertEquals("", errorOf(p, "uv"))
+    }
+
+    fun testAnEqualValueWritesNothingAndAddsNoUndo() {
+        copyProject()
+        val path = "Untitled/assets/$terrain/meta.json"
+        val before = metaText(path)
+        val stamp = FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!.modificationStamp
+        (com.intellij.openapi.command.undo.UndoManager.getInstance(project) as com.intellij.openapi.command.impl.UndoManagerImpl)
+            .clearUndoRedoQueueInTests(myFixture.findFileInTempDir(path))
+        val p = panel()
+        p.show(asset(terrain))
+        type(field(p, "uv") as JBTextField, "60.0")
+        leave(field(p, "uv")!!)
+        assertEquals(before, metaText(path))
+        assertEquals(stamp, FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!.modificationStamp)
+        assertFalse("no Undo entry", find(p, "asset-undo")!!.isEnabled)
     }
 
     fun testACommitBasedOnASupersededValueIsRejectedExplainedAndRefreshed() {

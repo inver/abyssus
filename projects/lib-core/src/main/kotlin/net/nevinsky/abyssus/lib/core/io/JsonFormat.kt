@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.document
-
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+package net.nevinsky.abyssus.lib.core.io
 
 import com.fasterxml.jackson.core.util.DefaultIndenter
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
@@ -17,7 +15,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 /**
  * How native JSON is read and written, in one place: unknown properties are skipped, properties keep declaration
  * order, and the pretty printer indents by two spaces with `"key": value` and empty containers closed on the same line.
- * [JsonProcessor] and the plugin's `SceneJson` both build on it, so the two cannot drift apart.
+ * [JsonProcessor] and the editor's `SceneJson` both build on it, so the two cannot drift apart.
  */
 class JsonFormat {
     /** A mapper builder with the shared reading settings; the caller adds whatever else it needs. */

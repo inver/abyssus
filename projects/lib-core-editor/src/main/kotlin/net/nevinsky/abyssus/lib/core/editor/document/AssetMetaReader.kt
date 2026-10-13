@@ -11,6 +11,8 @@ import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.util.text
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 
 /** One parsed `meta.json`: its [type], its raw [json] tree, and the typed binding on request. */
 class MetaDocument internal constructor(val type: MetaType, val json: JsonNode, private val processor: JsonProcessor) {

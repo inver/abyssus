@@ -38,8 +38,6 @@ dependencies {
 tasks.test {
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
-    // the native fixture projects are shared with the plugin's tests
-    systemProperty("abyssus.testData", rootProject.file("projects/plugin-abyssus/src/test/testData").absolutePath)
 }
 
 extra["abyssusSingletonExcludes"] = listOf(

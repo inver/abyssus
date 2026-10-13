@@ -125,6 +125,10 @@ Escape non-ASCII characters as `\uXXXX` in both files.
 
 - **KDoc:** explains *why* and the contract (thread, null meaning, what is never written), not what the next line
   does. Match the comment density of the file you edit.
+- **One place per rule:** a new asset kind is one entry in `StandardAssetLoaders`, not one per host; a right-click tree
+  action extends `AbyssusTreeAction` (target, enablement, perform) and never reads the project view selection itself
+  (`selectedNode` is the one lookup); an editable property field is built with `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/ui/FieldEditors.kt`
+  (`textEditor`, `choiceEditor`, `checkEditor`), so asset and component fields confirm, refuse and revert the same way.
 - **Keep logic testable:** keep math and decisions in plain classes without Swing or GL so they get unit tests; logic
   that needs no IDE type belongs in `lib-core-editor` (`ScenePicker`, `GizmoDrag`, `SceneMarkers`, `EntitySections`,
   `toolbarState`), and the plugin's Swing or GL class only forwards to it. A pure part that still needs a Swing or

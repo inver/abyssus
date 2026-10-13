@@ -37,7 +37,7 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageRuntimeLoad
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageScale
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_COPY_LIMIT

@@ -5,14 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import com.intellij.ide.projectView.ProjectView
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
-import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
@@ -21,7 +17,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
-import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FOLIAGE_DATA_FILE
@@ -29,7 +24,7 @@ import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_MASK_RESOLUTION_MAX
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_MASK_RESOLUTION_MIN
@@ -97,30 +92,21 @@ internal fun FoliageCreateError.message(): String = when (this) {
  * the terrain, the folder name and the mask resolution; Create writes the asset with no layers and selects it. No
  * scene, terrain or project file is touched, so the foliage does nothing until a terrain entity names it.
  */
-open class NewFoliageAction : AnAction(), DumbAware {
+open class NewFoliageAction : AbyssusTreeAction<VirtualFile>() {
     init {
         templatePresentation.text = AbyssusBundle.message("newFoliageAction")
     }
 
-    override fun getActionUpdateThread() = ActionUpdateThread.EDT
+    /** The recognized project's Assets node [node] stands for, or null when it is not one. Open for tests. */
+    internal open fun owningProject(node: Any?): VirtualFile? = assetsNodeProjectFile(node)
 
-    /** The recognized project's Assets node under the selection, or null when the selection is not one. Open for tests. */
-    internal open fun owningProject(e: AnActionEvent): VirtualFile? {
-        val project = e.project ?: return null
-        val pane = ProjectView.getInstance(project).currentProjectViewPane?.takeIf { it.id == AbyssusProjectViewPane.ID } ?: return null
-        return assetsNodeProjectFile(TreeUtil.getUserObject(pane.selectedPath?.lastPathComponent))
-    }
+    /** Only offered where the project has a terrain to scatter on, so it is hidden elsewhere. */
+    override fun targetOf(node: Any?): VirtualFile? = owningProject(node)?.takeIf { terrainsOf(it).isNotEmpty() }
 
     private fun terrainsOf(abss: VirtualFile) = foliageTerrains(File(abss.parent.path), service<AbyssusCore>().json)
 
-    override fun update(e: AnActionEvent) {
-        val abss = owningProject(e)
-        e.presentation.isEnabledAndVisible = abss != null && terrainsOf(abss).isNotEmpty()
-    }
-
-    override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
-        val abss = owningProject(e) ?: return
+    override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
+        val abss = target
         val terrains = terrainsOf(abss)
         if (terrains.isEmpty()) return
         val dialog = NewFoliageDialog(project, File(abss.parent.path), terrains)
