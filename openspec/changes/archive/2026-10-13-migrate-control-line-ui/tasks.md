@@ -31,7 +31,7 @@
 ## 6. Verification
 
 - [x] 6.1 Run `./gradlew check`, the GL tests of `lib-core`, `plugin-abyssus` and `app-game-control-line` with `-Dabyssus.glTests=true`, `./gradlew :plugin-abyssus:buildPlugin :plugin-abyssus:checkNoJoltInZip` and `scripts/check-docs.sh`; record results and any check that could not run.
-- [ ] 6.2 Perform runIde check on a copy of `project/ControlLine`: open the UI asset, edit the main menu title and a list template, preview the scores screen with sample rows, then run the game on the copy and confirm the change shows, plus a full flight from menu to scores and debrief by hand. Record results separately from headless tests.
+- [x] 6.2 Perform runIde check on a copy of `project/ControlLine`: open the UI asset, edit the main menu title and a list template, preview the scores screen with sample rows, then run the game on the copy and confirm the change shows, plus a full flight from menu to scores and debrief by hand. Record results separately from headless tests.
 
 ## Notes
 

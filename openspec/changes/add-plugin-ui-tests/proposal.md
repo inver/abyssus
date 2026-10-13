@@ -8,7 +8,7 @@ The plugin has platform and GL tests, but no automated interactions with its ins
 
 - Add a separate UI test suite using the official JetBrains `intellij-ui-test-robot` client and robot-server plugin, extending the existing `runIdeForUiTests` setup.
 - Exercise the Abyssus tree, asset/entity/component properties panels, Rename Scene dialog, and skybox chooser through real mouse and keyboard input.
-- Add committed screenshot baselines for tree, panels, and dialogs, explicit baseline updates, and expected/actual/diff artifacts when comparisons fail.
+- Add committed screenshot baselines for tree, panels (including model, terrain, cube, HDR and procedural-sky asset panels), and dialogs, explicit baseline updates, a check that the baseline set matches the scenario inventory, and expected/actual/diff artifacts when comparisons fail. Captures are Swing component images only.
 - Use disposable copies of the Untitled fixture and an isolated IDE sandbox; check file preservation and Undo through the UI.
 - Repair the existing UI workflow with Java 21, a dedicated test task, bounded startup/shutdown, and failure artifacts. Initially use one pinned Linux visual environment.
 - Document local runs, the canonical screenshot environment, and baseline review/update procedures.
@@ -21,7 +21,7 @@ None. This is test tooling for existing behavior; `.openspec.yaml` declares `ski
 
 ### Modified Capabilities
 
-None. Coverage targets existing `abyssus-project-view`, `object-properties-panel`, `abyssus-scene-skybox`, and `scene-component-editing` requirements. Tests follow the implemented state (including editable terrain, cube-skybox and procedural-sky asset properties, with HDR skyboxes still read-only) and applicable deltas of open changes rather than restoring superseded UI behavior.
+None. Coverage targets existing `abyssus-project-view`, `object-properties-panel`, `abyssus-scene-skybox`, and `scene-component-editing` requirements. Tests follow the implemented state (including editable terrain, cube-skybox and procedural-sky asset properties, with HDR skyboxes still read-only; the fixture holds one skybox of each type: `skybox_physical` procedural, `skybox_default` cube, `skybox_hdr` HDR) and applicable deltas of open changes rather than restoring superseded UI behavior.
 
 ## Impact
 
@@ -30,4 +30,4 @@ None. Coverage targets existing `abyssus-project-view`, `object-properties-panel
 - Existing `DesignScreenshotTest` remains a component/design diagnostic; the new suite supplies real IDE regression comparisons.
 - Tests read `.abss.name`, scene `id`, `name`, `fogEnabled`, `skyboxName`, `skyboxEnabled`, `ecs.entities` component fields, and asset `meta.json` fields/previews. UI edits in disposable copies cover scene `name`, `fogEnabled`, `skyboxName`, and `NameComponent.name`; tests do not introduce any file writer (scene writes go only through the plugin's `editSceneJson`, built on `DocumentTextEditor`). File format, unrelated keys, number text, and key order remain unchanged.
 - Documentation: `AGENTS.md` (commands table) and `docs/ai/testing.md` for new commands and environment requirements.
-- Out of scope: 3D viewport screenshots, GL/gizmo automation, new plugin features, exhaustive dialog coverage, multi-platform screenshot baselines, migrating to Starter/Driver, and replacing existing unit/platform/GL tests.
+- Out of scope: 3D viewport screenshots (GL under Xvfb is not deterministic), GL/gizmo automation, the Game UI editor tab (`gameui/`, being redesigned by `redesign-game-ui-editor-layout`), the Asset Library tool window (`add-remote-asset-library`), new plugin features, exhaustive dialog coverage, multi-platform screenshot baselines, migrating to Starter/Driver, and replacing existing unit/platform/GL tests.
