@@ -13,6 +13,12 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.math.tan
 
+private const val MIN_RADIUS = 1f
+private const val MIN_ASPECT = 0.1f
+
+/** The share of the view left around the framed sphere. */
+private const val MARGIN = 1.15f
+
 /** Where an orbit camera looks and from how far to show a box. */
 data class Framing(val target: Vec3, val distance: Float)
 
@@ -36,13 +42,5 @@ class FrameSelection {
         val half = min(vertical, horizontal)
         val distance = (radius / sin(half)).toFloat() * MARGIN
         return Framing(center, distance)
-    }
-
-    private companion object {
-        const val MIN_RADIUS = 1f
-        const val MIN_ASPECT = 0.1f
-
-        /** The share of the view left around the framed sphere. */
-        const val MARGIN = 1.15f
     }
 }

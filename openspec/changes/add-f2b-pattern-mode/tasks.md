@@ -175,11 +175,12 @@ All code is in `projects/app-game-control-line`, with new code in the package `p
 - [ ] 7.1 Fly a whole F2B pattern at Mid with `Stunter` (M6). Check that every manoeuvre flown appears on the sheet
   with a non-zero mark, the engine stops before 7:00, and a gentle dead-stick landing is marked. Tune `MarkWeights`
   if marks feel off, keeping `GraderTest` green.
-- [ ] 7.2 Run `./gradlew check` and `scripts/check-docs.sh`. Verify that both pass.
+- [x] 7.2 Run `./gradlew check` and `scripts/check-docs.sh`. Verify that both pass.
 
-  Status: `scripts/check-docs.sh` passes. `./gradlew check` passes except `:app-game-control-line:testFieldFoliageTools` (4
-  tests: the committed `Field.scene` no longer matches the foliage manifest). That failure is older than this change: it
-  fails the same with `Field.scene` at `HEAD`.
+  Status (2026-10-14): `scripts/check-docs.sh` passes (269 paths in 6 files), and `./gradlew check` passes
+  (144 actionable tasks), including the previously failing foliage-tool tests. With user authorization, moved
+  `FrameSelection`'s constants out of its companion object to satisfy `:lib-core-editor:checkNoSingletons`;
+  the singleton check and existing `FrameSelectionTest` tests also pass.
 
 ## Workflow follow-up
 
