@@ -25,6 +25,6 @@ class StatsTextTest {
 
     @Test fun theStatsLineBeginsWithTheFrameRateOnlyWhenItIsShown() {
         assertEquals("12 objects \u00b7 Move \u00b7 Local", statsLine(null, "12 objects", "Move \u00b7 Local"))
-        assertEquals("60 fps \u00b7 12 objects \u00b7 Move \u00b7 Local", statsLine(60, "12 objects", "Move \u00b7 Local"))
+        assertEquals("60 fps \u00b7 12 objects \u00b7 Move \u00b7 Local", statsLine("60 fps", "12 objects", "Move \u00b7 Local"))
     }
 }

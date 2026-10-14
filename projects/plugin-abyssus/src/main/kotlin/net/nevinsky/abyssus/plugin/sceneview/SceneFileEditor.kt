@@ -15,6 +15,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.plugin.SceneRayControls
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.application.ModalityState
 import com.intellij.util.concurrency.AppExecutorUtil
 import java.io.File
@@ -87,6 +88,8 @@ class SceneFileEditor(
 
     private var disposed = false
 
+    private val viewSettings = project.service<SceneViewSettings>()
+
     /** Reloads assets that change on disk or in an editor; null for a scene outside a project. */
     private val assetRefresh: AssetRefresh? = ProjectLayout.projectDirFor(file)?.let { dir ->
         AssetRefresh(
@@ -116,6 +119,7 @@ class SceneFileEditor(
         changed == file || projectInputs(text).let { it == null || it != projectInputs }
 
     init {
+        viewSettings.addShowFpsListener(this) { enabled -> view?.setFpsEnabled(enabled) }
         reload()
         assetRefresh?.let { refresh ->
             val assets = AssetsFolder(ProjectLayout.projectDirFor(file)!!)
@@ -215,6 +219,7 @@ class SceneFileEditor(
             return
         }
         created.onFailure = { e -> ApplicationManager.getApplication().invokeLater { showGlFailure(e) } }
+        created.setFpsEnabled(viewSettings.showFps)
         created.onPick = { entityId ->
             rayControls.selected(file, this, entityId)
             host.select(file, entityId)

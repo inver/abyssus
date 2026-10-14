@@ -295,6 +295,14 @@ be undone; resetting a default omits its saved field. These beam fields are part
 The toolbar's camera selector (**Free camera** and the scene's cameras by name) renders the view through a camera
 entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
+### Show FPS
+
+Select the project's `.abss` file in the Abyssus tree and tick **Show FPS** in **Abyssus Properties** to show each scene
+view's frame rate (`60 fps`, `-- fps` until a first measurement) at the start of the stats strip in its lower-left
+corner. It is off by default, applies to every scene view of the IDE project and is remembered with it. It is an IDE view setting:
+no `.abss`, `.scene` or asset file changes. The number counts frames the view actually presented over about a second (an
+idle view redraws less often, and a hidden view starts over when it is shown again).
+
 ### Physics
 
 Physics is built into Abyssus. Select the project's `.abss` file in the Abyssus tree and tick **Physics** in

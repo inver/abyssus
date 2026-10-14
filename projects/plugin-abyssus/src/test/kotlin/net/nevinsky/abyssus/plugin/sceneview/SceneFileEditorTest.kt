@@ -81,6 +81,8 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         var disposed = false
         var stops = 0
         override fun stopPlay() { stops++ }
+        val fpsCalls = mutableListOf<Boolean>()
+        override fun setFpsEnabled(enabled: Boolean) { fpsCalls += enabled }
         var updates = 0
         var selected: String? = null
         override fun selectEntity(entityId: String) { selected = entityId }
@@ -457,5 +459,68 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         editor.afterThePause()
         assertEquals(updates, views[0].updates)
         assertTrue(views[0].disposed)
+    }
+
+    private val fpsKey = "net.nevinsky.abyssus.sceneView.showFps"
+
+    private fun withFpsSetting(value: Boolean?, body: () -> Unit) {
+        val properties = com.intellij.ide.util.PropertiesComponent.getInstance(project)
+        try {
+            if (value != null) properties.setValue(fpsKey, value, false)
+            body()
+        } finally {
+            properties.unsetValue(fpsKey)
+        }
+    }
+
+    fun testANewViewGetsTheSavedFpsPreference() = withFpsSetting(true) {
+        val views = mutableListOf<FakeView>()
+        val (editor, _) = fakeEditor("fps/a.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""", views)
+        try {
+            assertEquals(listOf(true), views.single().fpsCalls)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
+    fun testAChangedPreferenceReachesEveryOpenEditor() = withFpsSetting(null) {
+        val views = mutableListOf<FakeView>()
+        val (one, _) = fakeEditor("fps/b.scene", """{"format":"abyssus","formatVersion":1,"name":"b"}""", views)
+        val (two, _) = fakeEditor("fps/c.scene", """{"format":"abyssus","formatVersion":1,"name":"c"}""", views)
+        try {
+            val settings = project.getService(SceneViewSettings::class.java)
+            settings.showFps = true
+            assertEquals(listOf(false, true), views[0].fpsCalls)
+            assertEquals(listOf(false, true), views[1].fpsCalls)
+            settings.showFps = false
+            assertEquals(false, views[1].fpsCalls.last())
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(one)
+            com.intellij.openapi.util.Disposer.dispose(two)
+        }
+    }
+
+    fun testADisposedEditorIsNotToldAboutTheChange() = withFpsSetting(null) {
+        val views = mutableListOf<FakeView>()
+        val (editor, _) = fakeEditor("fps/d.scene", """{"format":"abyssus","formatVersion":1,"name":"d"}""", views)
+        com.intellij.openapi.util.Disposer.dispose(editor)
+        val before = views.single().fpsCalls.toList()
+        project.getService(SceneViewSettings::class.java).showFps = true
+        assertEquals(before, views.single().fpsCalls)
+    }
+
+    fun testAReplacedViewGetsThePreferenceToo() = withFpsSetting(true) {
+        val views = mutableListOf<FakeView>()
+        val (editor, f) = fakeEditor("fps/e.scene", """{"format":"abyssus","formatVersion":1,"name":"e"}""", views)
+        try {
+            setText(f, "not json")
+            editor.afterThePause()
+            setText(f, """{"format":"abyssus","formatVersion":1,"name":"e2"}""")
+            editor.afterThePause()
+            assertEquals(2, views.size)
+            assertEquals(listOf(true), views[1].fpsCalls)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
     }
 }

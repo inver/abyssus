@@ -66,10 +66,10 @@ The scene view SHALL have a Snap toggle with a step, off by default and 0.5 when
 - **WHEN** Snap is on, a drag is in progress and the user presses Escape
 - **THEN** the object returns to its old place and the file is unchanged
 
-### Requirement: Tool state in the status line
+### Requirement: Tool state in the stats strip
 
-The scene view SHALL show a slim status line under the viewport with the current tool, space and snap step, such as `Move · Local · Snap 0.5`, and SHALL update it as they change. The IDE's own status bar is not used.
+The stats strip of the viewport SHALL show the current tool, space and snap step, such as `Move · Local · Snap 0.5`, and SHALL update as they change. No separate status row is shown under the viewport.
 
 #### Scenario: Status follows tools
 - **WHEN** the user presses E and turns Snap off
-- **THEN** the status line shows `Rotate · World`
+- **THEN** the stats strip ends with `Rotate · World`

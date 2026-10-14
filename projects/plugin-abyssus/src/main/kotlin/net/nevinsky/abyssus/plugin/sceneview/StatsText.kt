@@ -16,8 +16,8 @@ fun toolStatus(tool: String, space: String, snap: String?): String =
     listOfNotNull(tool, space, snap).joinToString(STATUS_SEPARATOR)
 
 /**
- * The stats strip text: the frame rate ([fps], `<n> fps`, only when the project shows it), the [objects] count, then the
+ * The stats strip text: the frame rate ([fps], already formatted such as `60 fps` or `-- fps`, only when the project shows it), the [objects] count, then the
  * [status] of [toolStatus]. [objectsText] is the translated `N objects`.
  */
-fun statsLine(fps: Int?, objectsText: String, status: String): String =
-    listOfNotNull(fps?.let { "$it fps" }, objectsText, status).joinToString(STATUS_SEPARATOR)
+fun statsLine(fps: String?, objectsText: String, status: String): String =
+    listOfNotNull(fps, objectsText, status).joinToString(STATUS_SEPARATOR)

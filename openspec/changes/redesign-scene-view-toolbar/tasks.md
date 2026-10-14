@@ -19,7 +19,7 @@
 
 - [x] 3.1 Add `SnapRound` and `GizmoSpace` in `lib-core-editor` and thread them through `GizmoHandles` and `GizmoDrag`. Verify with `SnapRoundTest` (0.5 step: 2.31 gives 2.5; 15 degree: 37 gives 30; off gives the raw value) and `GizmoSpaceTest` (axes at 0 and 90 degrees about Y).
 - [x] 3.2 Make the finished Local drag write the same position and rotation fields as World, keeping unrelated number text. Verify with a `SceneTransformWriterTest` case: a model rotated 90 degrees about Y dragged 2 units on its local X changes the position by 2 along world Z in exactly one edit and leaves all other numbers' text byte-identical; Escape during a snapped drag writes nothing (`SceneInteractionTest`).
-- [x] 3.3 Wire the Local/World drop-down and Snap toggle to the model and show `Move · Local · Snap 0.5` in the status bar (`StatsText`). Verify with `StatsTextTest` and `SceneFileEditorTest` that the status string follows the model.
+- [x] 3.3 Wire the Local/World drop-down and Snap toggle to the model and show `Move · Local · Snap 0.5` in the stats strip (`StatsText`; no separate status row). Verify with `StatsTextTest` and `SceneFileEditorTest` that the status string follows the model.
 - [ ] 3.4 runIde check: drag with Snap on and off, Local on a rotated model, Escape mid-drag, Undo after each; each is one undo step and the toggles are not saved.
 
 ## 4. Display: layers, shading, Frame, orientation widget, stats
@@ -33,14 +33,14 @@
 
 ## 5. Preview and source tabs
 
-- [ ] 5.1 Pin the existing mechanism with `SceneEditorTabsTest` (`projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/sceneview/`): opening through `openSceneView` selects the Scene View tab, the file has a `Text` and a Scene View editor, and both read one document. Verify with `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneEditorTabsTest'`.
-- [ ] 5.2 Pin that switching writes nothing of its own: after the text editor first shows the scene, switching `Text` and `Scene View` repeatedly leaves the document text unchanged (same test class). The existing `SceneFileEditorTest` cases (`testRendersAndUpdatesInPlaceOnUnsavedEdits`, `testMovingAnEntityWritesOnlyItsPositionAndUndoRestoresTheFile`) and `SceneTextEditorTest.testSwitchingToTextTabFormatsAScene` already cover edits across tabs, Undo and the formatting. Verify the three classes pass with `./gradlew :plugin-abyssus:test --tests '*SceneEditorTabsTest' --tests '*SceneFileEditorTest' --tests '*SceneTextEditorTest'`.
-- [ ] 5.3 Say in `sceneview/README.md` that a scene is two editors of one tab on one document and that no custom switch exists. Verify with `scripts/check-docs.sh`.
+- [x] 5.1 Pin the existing mechanism with `SceneEditorTabsTest` (`projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/sceneview/`): opening through `openSceneView` selects the Scene View tab, the file has a `Text` and a Scene View editor, and both read one document. Verify with `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneEditorTabsTest'`.
+- [x] 5.2 Pin that switching writes nothing of its own: after the text editor first shows the scene, switching `Text` and `Scene View` repeatedly leaves the document text unchanged (same test class). The existing `SceneFileEditorTest` cases (`testRendersAndUpdatesInPlaceOnUnsavedEdits`, `testMovingAnEntityWritesOnlyItsPositionAndUndoRestoresTheFile`) and `SceneTextEditorTest.testSwitchingToTextTabFormatsAScene` already cover edits across tabs, Undo and the formatting. Verify the three classes pass with `./gradlew :plugin-abyssus:test --tests '*SceneEditorTabsTest' --tests '*SceneFileEditorTest' --tests '*SceneTextEditorTest'`.
+- [x] 5.3 Say in `sceneview/README.md` that a scene is two editors of one tab on one document and that no custom switch exists. Verify with `scripts/check-docs.sh`.
 - [ ] 5.4 runIde check: open a scene from the tree (Scene View selected), type in `Text`, switch back (the render follows), Undo from either tab, and open a second scene tab.
 
 ## 6. FPS counter reconciliation
 
-- [ ] 6.1 Amend `openspec/changes/add-project-fps-counter` (`specs/scene-fps-display/spec.md`, `design.md`, `tasks.md`): the counter shows `<n> fps` at the start of the stats strip in the lower-left corner instead of `FPS: <n>` in the upper-right corner, keeps `FPS: --`-style placeholder behavior as `-- fps`, and stays hidden when `Show FPS` is off. Verify with `openspec validate add-project-fps-counter --strict` and `openspec validate redesign-scene-view-toolbar --strict`.
+- [x] 6.1 Amend `openspec/changes/add-project-fps-counter` (`specs/scene-fps-display/spec.md`, `design.md`, `tasks.md`): the counter shows `<n> fps` at the start of the stats strip in the lower-left corner instead of `FPS: <n>` in the upper-right corner, keeps `FPS: --`-style placeholder behavior as `-- fps`, and stays hidden when `Show FPS` is off. Verify with `openspec validate add-project-fps-counter --strict` and `openspec validate redesign-scene-view-toolbar --strict`.
 
 ## 7. Screenshot tests
 

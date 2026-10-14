@@ -59,6 +59,8 @@ class SceneViewPanel internal constructor(
     private val paintSession: ((String, () -> FoliagePaintMode?, (net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession?) -> Unit) -> Unit)? = null,
     /** The project's models to arrange along a path; the callback starts drawing. Null: no Add Path Arrangement button. */
     private val pathMenu: PlacementMenu<(RenderAsset) -> Unit>? = null,
+    /** The project's `Show FPS`, read before every frame so a missed change event cannot leave the counter off; null: only [setFpsEnabled]. */
+    private val showFps: (() -> Boolean)? = null,
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     private val frame = GdxFrame()
@@ -73,13 +75,40 @@ class SceneViewPanel internal constructor(
 
     /** Gizmo space, snapping, shading and layer toggles of this view; never saved. */
     internal val tools = SceneViewToolsModel()
-    /** The slim line under the viewport: tool, space and snap, such as `Move · Local · Snap 0.5`. */
-    private val statusLine = JLabel().apply {
-        name = "scene-status"
-        accessibleContext.accessibleName = AbyssusBundle.message("sceneViewStatusName")
-        border = JBUI.Borders.empty(2, 10)
-        foreground = JBColor.GRAY
+    /** The tool, space and snap, such as `Move · Local · Snap 0.5`; the stats strip shows it. */
+    internal var toolStatusText: String = ""
+        private set
+    /** This view's frame rate: sampled only while the project shows it, reset on every lifecycle break. */
+    private val fps = FpsCounter()
+    private var fpsEnabled = false
+
+    /** Monotonic nanoseconds; tests replace it. */
+    internal var nanoClock: () -> Long = System::nanoTime
+
+    override fun setFpsEnabled(enabled: Boolean) {
+        if (enabled == fpsEnabled) return
+        fpsEnabled = enabled
+        fps.reset()
     }
+
+    /** The per-frame read of the project's `Show FPS`; [updateCornerSprites] runs it, tests call it directly. */
+    internal fun refreshFpsSetting() {
+        showFps?.let { setFpsEnabled(it()) }
+    }
+
+    /** A frame is about to be drawn. Only while enabled; the sample starts before the first frame. */
+    internal fun fpsFrameStarted() {
+        if (fpsEnabled) fps.frameStarted(nanoClock())
+    }
+
+    /** A frame was presented (after the buffer swap). */
+    internal fun fpsFrameCompleted() {
+        if (fpsEnabled) fps.frameCompleted(nanoClock())
+    }
+
+    /** The surface cannot be drawn on, or the view was hidden, failed or re-created: the next sample starts fresh. */
+    internal fun fpsInterrupted() = fps.reset()
+
     private val orientation = OrientationWidget()
     private val statsStrip = StatsStrip()
     private var spriteScale = 0.0
@@ -156,6 +185,7 @@ class SceneViewPanel internal constructor(
         }
 
         override fun onContextAbandoned() {
+            fpsInterrupted()
             rayBinding.feed?.reset()
             experiment?.abandon()
             renderer.abandonShadows()
@@ -167,6 +197,7 @@ class SceneViewPanel internal constructor(
             val ctx = gdx ?: return
             capabilities?.let { GL.setCapabilities(it) }
             updateCornerSprites(width, framebufferWidth)
+            fpsFrameStarted()
             frame.tick(framebufferWidth, framebufferHeight)
             renderer.state.poses = play.poses() ?: emptyMap()
             renderer.state.gizmosEnabled = !play.active
@@ -183,6 +214,7 @@ class SceneViewPanel internal constructor(
                 AbyssusBundle.message("sceneViewRayExperimentFailure", it.documentDisplayMessage())
             } ?: AbyssusBundle.message("sceneViewRayExperimentTooltip")
             swapBuffers()
+            fpsFrameCompleted()
         }
     }
 
@@ -213,7 +245,7 @@ class SceneViewPanel internal constructor(
             renderer.presentedRayFrame
 
     private val timer: Timer = Timer(FRAME_MILLIS) {
-        if (!canvas.glSafe()) return@Timer
+        if (!canvas.glSafe()) { fpsInterrupted(); return@Timer }
         val now = System.nanoTime()
         if (!busy(now) && now - lastRenderNanos < IDLE_FRAME_MILLIS * 1_000_000L) return@Timer
         lastRenderNanos = now
@@ -233,6 +265,7 @@ class SceneViewPanel internal constructor(
 
     override fun showUnavailable(message: String): Boolean {
         stopLoop()
+        fpsInterrupted()
         unavailable = true
         remove(canvasHost)
         canvasHost.stop()
@@ -246,7 +279,6 @@ class SceneViewPanel internal constructor(
     init {
         add(buildToolbar(), BorderLayout.NORTH)
         add(canvasHost, BorderLayout.CENTER)
-        add(statusLine, BorderLayout.SOUTH)
         input.attach(canvas)
         input.bindKeys()
         input.forwardKeys()
@@ -262,6 +294,7 @@ class SceneViewPanel internal constructor(
      * show or the display scale changed. The widget shows the camera the frame is drawn from, so it also follows a scene camera.
      */
     private fun updateCornerSprites(logicalWidth: Int, framebufferWidth: Int) {
+        refreshFpsSetting()
         val scale = (framebufferWidth.toDouble() / logicalWidth.coerceAtLeast(1)).coerceAtLeast(1.0)
         val d = renderer.frameCamera.direction
         val widgetChanged = orientation.show(
@@ -281,10 +314,10 @@ class SceneViewPanel internal constructor(
         renderer.cornerSprites = listOfNotNull(orientationSprite, statsSprite)
     }
 
-    private fun statsText(): String = statsLine(
-        fps = null,
+    internal fun statsText(): String = statsLine(
+        fps = if (fpsEnabled) fps.display?.let { AbyssusBundle.message("sceneViewFps", it) } ?: AbyssusBundle.message("sceneViewFps", "--") else null,
         objectsText = AbyssusBundle.message("sceneViewObjects", renderer.drawnModels.size + renderer.drawnTerrains.size),
-        status = statusLine.text.orEmpty(),
+        status = toolStatusText,
     )
 
     /**
@@ -430,7 +463,7 @@ class SceneViewPanel internal constructor(
         renderer.state.gizmoSpace = tools.space
         renderer.display = tools.display
         renderer.state.snap = if (tools.snapOn) GizmoSnap(tools.snapStep, SNAP_ANGLE_DEGREES) else null
-        statusLine.text = toolStatus(
+        toolStatusText = toolStatus(
             AbyssusBundle.message(when (interaction.mode) {
                 GizmoMode.SELECT -> "sceneViewToolSelect"
                 GizmoMode.MOVE -> "sceneViewToolMove"
@@ -610,6 +643,7 @@ class SceneViewPanel internal constructor(
     override fun removeNotify() {
         java.awt.Toolkit.getDefaultToolkit().removeAWTEventListener(activityListener)
         stopLoop()
+        fpsInterrupted()
         experiment?.stop()
         rayBinding.feed?.runtime?.setVisible(false)
         super.removeNotify()
@@ -618,6 +652,7 @@ class SceneViewPanel internal constructor(
     override fun dispose() {
         paint.close()
         stopLoop()
+        fpsInterrupted()
         canvasHost.stop()
         play.stop()
         overlays?.dispose()

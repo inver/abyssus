@@ -327,10 +327,6 @@ class SceneViewToolbar(private val frame: IdeFrame) {
 
     fun isEnabled(tooltip: String): Boolean = button(tooltip).callJs<Boolean>("component.isEnabled()", runInEdt = true)
 
-    /** The tool status line under the viewport, such as `Move · World`. */
-    fun status(): String = frame.find<ComponentFixture>(byXpath("//div[@accessiblename='Scene tool status']"), SHORT)
-        .callJs<String>("component.getText()", runInEdt = true)
-
     /** Chooses [item] in the drop-down whose current text is [current] (Local-World, shading). */
     fun choose(current: String, item: String) {
         component.find<ComponentFixture>(byXpath("//div[@class='ComboBoxButton' and @visible_text='$current']"), SHORT).click()

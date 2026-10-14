@@ -29,13 +29,9 @@ Assumption: "for project" means the IntelliJ project's view preference. When one
 
 This is an IDE settings write, not a scene/project file edit, so `editSceneJson` is not involved. No `.abss`, `.scene` or asset fields are newly read or written.
 
-### 2. Add a project details state and view
+### 2. Add the checkbox to the existing project properties view
 
-Route valid `.abss` `AbyssusAssetNode` selections to `PanelState.ProjectDetails` before the non-asset fallback. Render a focused `ProjectDetailsView` with the project file name, a view-settings explanation and `Show FPS`. Its checkbox reads and updates `SceneViewSettings`, and listens for changes only while the details view is active. Selection, construction and updates run on the EDT; no background file read is necessary. On switching views, reuse `viewDisposable` cleanup and release any asset undo-editor/terrain state.
-
-Keep scene controls and asset/entity routing intact. Put checkbox, explanation and FPS text format in `AbyssusBundle.properties`. Use a stable component name for platform tests.
-
-The existing main selection requirement lists project and scene rows as empty. This change explicitly replaces that scenario while preserving the scene controls already present in the working tree. `add-realistic-water` separately modifies that same requirement: add an implementation task to amend its delta and related artifacts to preserve project settings and available scene controls along with water properties, rather than letting a later archive restore the empty-state behavior.
+The `.abss` row already routes to `PanelState.Project` and `ProjectDetailsView` (name, `Physics` checkbox, problems). Add a `Show FPS` checkbox and its explanation below the Physics controls. It reads and updates `SceneViewSettings`, which is an IDE setting, not the `.abss`: it works for an unsupported project too, and it never goes through `AbyssusProjectSettings`. The checkbox registers a listener on the view's disposable so it follows the setting if another view of it changes it. Construction and updates run on the EDT. Put the text in `AbyssusBundle.properties` and use the stable component name `show-fps` for tests. Scene controls and asset/entity routing are untouched.
 
 ### 3. Bind settings through the editor, sample independently per viewport
 
@@ -57,7 +53,7 @@ The scene view draws a stats strip in the lower-left corner (`redesign-scene-vie
 - [Core-profile font shader or HiDPI sizing is wrong] → Use the existing shader-loading pattern and add an opt-in real-GL composition check plus numbered runIde checks for scaling, resize and light/dark scenes.
 - [Settings listeners retain replaced/closed panels] → Attach panel listeners to the existing per-view disposable and editor listeners to the editor; verify disposal in platform tests.
 - [Resume reports stale or artificially low FPS] → Reset all unsafe/hidden lifecycle transitions and verify with explicit timestamps.
-- [Concurrent open proposals overwrite selection behavior] → Reconcile the water delta during implementation and validate both changes. If the runtime extraction proposal lands first, attach sampling at the equivalent viewport presentation boundary; keep it outside asset loading and backend production.
+- [The runtime extraction proposal lands first] → Attach sampling at the equivalent viewport presentation boundary; keep it outside asset loading and backend production.
 
 ## Migration Plan
 

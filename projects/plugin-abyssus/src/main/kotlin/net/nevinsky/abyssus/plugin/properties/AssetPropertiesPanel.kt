@@ -292,8 +292,10 @@ class AssetPropertiesPanel(
                 useTerrain(null)
                 useFoliage(null)
                 useUndoEditor(newState.file)
+                val own = com.intellij.openapi.util.Disposer.newDisposable(parentDisposable, "project-details")
+                    .also { viewDisposable = it }
                 content.removeAll()
-                content.add(JBScrollPane(ProjectDetailsView(newState, projectSettings)).apply {
+                content.add(JBScrollPane(ProjectDetailsView(newState, projectSettings, project.service<net.nevinsky.abyssus.plugin.sceneview.SceneViewSettings>(), own)).apply {
                     border = BorderFactory.createEmptyBorder()
                 }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)

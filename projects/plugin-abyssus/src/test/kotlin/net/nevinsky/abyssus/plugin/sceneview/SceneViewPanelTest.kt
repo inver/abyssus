@@ -346,19 +346,18 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         } finally { panel.dispose() }
     }
 
-    fun testStatusLineFollowsToolSpaceAndSnap() {
+    fun testToolStatusFollowsToolSpaceAndSnap() {
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer())
         try {
-            val status = named(panel, "scene-status") as javax.swing.JLabel
-            assertEquals("Move \u00b7 World", status.text)
+            assertEquals("Move \u00b7 World", panel.toolStatusText)
             panel.tools.space = net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.LOCAL
             panel.tools.snapOn = true
-            assertEquals("Move \u00b7 Local \u00b7 Snap 0.5", status.text)
+            assertEquals("Move \u00b7 Local \u00b7 Snap 0.5", panel.toolStatusText)
             val rotate = actionsOf(panel, "AbyssusSceneTools")[2] as com.intellij.openapi.actionSystem.ToggleAction
             rotate.setSelected(TestActionEvent.createTestEvent(rotate), true)
             panel.tools.snapOn = false
             panel.tools.space = net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.WORLD
-            assertEquals("Rotate \u00b7 World", status.text)
+            assertEquals("Rotate \u00b7 World", panel.toolStatusText)
         } finally { panel.dispose() }
     }
 
@@ -460,7 +459,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
                 action.update(event)
                 assertFalse(event.presentation.isEnabled)
             }
-            assertEquals("Move \u00b7 World", (named(panel, "scene-status") as javax.swing.JLabel).text)
+            assertEquals("Move \u00b7 World", panel.toolStatusText)
         } finally { panel.dispose() }
     }
 }

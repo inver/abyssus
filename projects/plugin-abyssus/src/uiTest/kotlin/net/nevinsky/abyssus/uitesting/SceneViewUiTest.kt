@@ -49,7 +49,6 @@ class SceneViewUiTest : UiTestBase() {
         assertEquals("controls in order: $tooltips", expected, tooltips.filter { it in expected })
         assertTrue("Move is the pressed tool", toolbar.isPressed("Move (W)"))
         assertFalse(toolbar.isPressed("Rotate (E)"))
-        assertEquals("Move \u00b7 World", toolbar.status())
         // no OpenGL here: every control is disabled and nothing can be written
         assertTrue(expected.none { toolbar.isEnabled(it) })
         shot("scene-toolbar-default", toolbar.component, focusTree = false)

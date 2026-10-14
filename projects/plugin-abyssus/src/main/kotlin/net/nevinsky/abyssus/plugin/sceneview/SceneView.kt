@@ -74,6 +74,9 @@ interface SceneView : Disposable {
      */
     fun showUnavailable(message: String): Boolean = false
 
+    /** Turns the frame rate in the view's stats strip on or off (the project's `Show FPS`); a view without one ignores it. */
+    fun setFpsEnabled(enabled: Boolean) {}
+
     /** Whether the view is in Play, when nothing may be added to its scene. */
     val playing: Boolean get() = false
 }

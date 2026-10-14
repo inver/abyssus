@@ -82,6 +82,7 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
                 simulationRequest = { selection -> simulationRequest(project, file, selection) },
                 overlays = overlays,
                 foliageActions = { entity -> net.nevinsky.abyssus.plugin.projectView.foliageGroup(project, file, entity) },
+                showFps = { project.service<net.nevinsky.abyssus.plugin.sceneview.SceneViewSettings>().showFps },
                 paintSession = { entity, mode, ready ->
                     project.service<net.nevinsky.abyssus.plugin.foliage.FoliageEditing>().open(file, entity, mode,
                         report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("paintFoliageTitle")) },
