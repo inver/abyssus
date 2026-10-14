@@ -73,14 +73,15 @@ the drawn model and terrain count after the frame, redrawn only when the text ch
 `GdxRuntime.withContext`, scales the image by the display scale so it is sharp on HiDPI, and draws after the loading overlay's
 gray-out so it stays readable above loading feedback.
 
-### D7. Preview / source switch via the platform's split editor
-Use `TextEditorWithPreview` semantics (the platform's layout switcher) rather than a hand-built toggle: the existing
-`SceneFileEditor` becomes the preview and the platform text editor the source, in one `FileEditor` tab. They share the
-`Document`, so Undo and unsaved text are shared and switching writes nothing. The switch icon strip is the platform's
-(top-right of the editor), styled with the new icons where the API allows. *Alternative:* a hand-built `CardLayout` toggle
-inside our panel; rejected because it would duplicate document wiring and break "plain text editor" behavior that
-`SceneFormatListener` and Undo tests rely on. If the provider change breaks `SceneFileEditorProvider` tests that assume a
-single editor, those tests are updated in the same task.
+### D7. Preview / source: the existing editor tabs
+`SceneFileEditorProvider` already registers the scene view as a second editor of the file (`PLACE_AFTER_DEFAULT_EDITOR`), so the
+IDE's own `Text` and `Scene View` tabs switch between the JSON and the render on one shared `Document`: Undo and unsaved text
+are shared, and `openSceneView` (the Abyssus open actions) selects Scene View. This change keeps that mechanism and builds no
+custom switch. *Alternatives:* the platform's `TextEditorWithPreview` (replaces the two editors, breaks the provider policy
+test and the text-editor tests of `SceneFormatListener` and the UI helpers) and a `CardLayout` toggle inside the panel
+(duplicates the document wiring). The segmented control at the top right of the mockup is therefore not built; the IDE's tab
+strip is not restyleable. `SceneFormatListener` still pretty-prints an unformatted scene when the text editor first shows it;
+that is existing behavior and the only write a tab switch can cause.
 
 ### D8. Icons
 Convert the mockup's glyph paths into 16 px SVGs: new `select`, `move`, `rotate`, `frame`, `snap`, `shading`, `shadows`, `fog`

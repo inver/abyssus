@@ -313,8 +313,13 @@ class SceneViewToolbar(private val frame: IdeFrame) {
 
     /** The texts of the toolbar's action buttons (their tooltips for icon buttons), left to right. */
     fun buttonTooltips(): List<String> = buttons()
-        .sortedBy { it.callJs<Int>("component.getLocationOnScreen().x", runInEdt = true) }
-        .map { it.callJs<String>("component.getPresentation().getText()", runInEdt = true) }
+        .map { button ->
+            val at = button.callJs<String>("var p = component.getLocationOnScreen(); p.x + ',' + p.y", runInEdt = true).split(',').map(String::toInt)
+            Triple(at[0], at[1], button.callJs<String>("component.getPresentation().getText()", runInEdt = true))
+        }
+        // rows first (a wrapped toolbar has several), then left to right
+        .sortedWith(compareBy({ it.second / 20 }, { it.first }))
+        .map { it.third }
 
     fun click(tooltip: String) = button(tooltip).click()
 

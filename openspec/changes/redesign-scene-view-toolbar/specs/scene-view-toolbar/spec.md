@@ -46,21 +46,21 @@ A toggle SHALL show a filled accent background when pressed and none when not. A
 - **WHEN** Play is running
 - **THEN** Select, Move, Rotate, Snap, Local/World and Drop are disabled, and Shadows, Fog and Grid still toggle
 
-### Requirement: Preview and source switch
+### Requirement: Preview and source tabs
 
-The `.scene` editor tab SHALL show a two-state switch at the right of the tab strip: the rendered preview, and the scene's JSON in the text editor. The preview SHALL be shown when the scene opens. Switching SHALL NOT write the document, SHALL keep the same file open, and SHALL keep Undo and the unsaved text shared between the two states.
+A `.scene` file SHALL open as two editors of one tab, chosen with the IDE's own editor tabs at the bottom of the editor: `Text` (the scene's JSON in the text editor) and `Scene View` (the rendered preview with the toolbar). Opening a scene from Abyssus SHALL select Scene View. Both editors SHALL share one document, so unsaved text and Undo are shared. Switching tabs SHALL write nothing of its own: the text editor's existing formatting of an unformatted scene is unchanged.
 
-#### Scenario: Open source
-- **WHEN** the user selects the source state on `Main Scene`
-- **THEN** the text editor shows the file's JSON and the scene toolbar is not shown
+#### Scenario: Open from Abyssus
+- **WHEN** the user opens `Main Scene` from the Abyssus tree
+- **THEN** the tab shows Scene View with its toolbar, and `Text` is the other tab of the same file
 
-#### Scenario: Edit in source then preview
-- **WHEN** the user changes a model's name in the source state and returns to the preview
+#### Scenario: Edit in text then preview
+- **WHEN** the user changes a model's name in the `Text` tab and returns to `Scene View`
 - **THEN** the preview reflects the edit and Undo reverts it
 
 #### Scenario: Nothing is written by switching
-- **WHEN** the user switches to source and back without typing
-- **THEN** the file's bytes are unchanged
+- **WHEN** the user switches between `Text` and `Scene View` repeatedly without typing
+- **THEN** the document's text does not change after the text editor first showed it
 
 ### Requirement: Toolbar fits the editor width
 

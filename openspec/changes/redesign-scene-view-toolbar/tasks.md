@@ -31,12 +31,12 @@
 - [x] 4.5 Update the key list and toolbar description in `sceneview/README.md`. Verify with `scripts/check-docs.sh`.
 - [x] 4.6 runIde check: toggle each layer and Unlit; Frame with and without a selection; click each orientation axis; resize the editor; open a notification above the viewport and confirm the strip and widget stay put.
 
-## 5. Preview / source switch
+## 5. Preview and source tabs
 
-- [ ] 5.1 Spike D7: make the `.scene` editor a preview-plus-text editor sharing the document, with preview as the default layout. Verify with `SceneFileEditorProviderTest` that the provider opens one tab with both states and that switching leaves the file bytes unchanged; if the spike fails, record the fallback (a `CardLayout` toggle) in `design.md` and use it.
-- [ ] 5.2 Keep `SceneFormatListener`, Undo and unsaved-text reload working across the switch. Verify with `SceneFileEditorTest` cases: edit in source then return to preview shows the edit; Undo reverts it; `SceneFormatListener` still pretty-prints a `.scene` opened in the text editor.
-- [ ] 5.3 Update `docs/ai/architecture.md`'s editor description. Verify with `scripts/check-docs.sh`.
-- [ ] 5.4 runIde check: switch both ways with unsaved edits and Undo; open a second scene tab.
+- [ ] 5.1 Pin the existing mechanism with `SceneEditorTabsTest` (`projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/sceneview/`): opening through `openSceneView` selects the Scene View tab, the file has a `Text` and a Scene View editor, and both read one document. Verify with `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneEditorTabsTest'`.
+- [ ] 5.2 Pin that switching writes nothing of its own: after the text editor first shows the scene, switching `Text` and `Scene View` repeatedly leaves the document text unchanged (same test class). The existing `SceneFileEditorTest` cases (`testRendersAndUpdatesInPlaceOnUnsavedEdits`, `testMovingAnEntityWritesOnlyItsPositionAndUndoRestoresTheFile`) and `SceneTextEditorTest.testSwitchingToTextTabFormatsAScene` already cover edits across tabs, Undo and the formatting. Verify the three classes pass with `./gradlew :plugin-abyssus:test --tests '*SceneEditorTabsTest' --tests '*SceneFileEditorTest' --tests '*SceneTextEditorTest'`.
+- [ ] 5.3 Say in `sceneview/README.md` that a scene is two editors of one tab on one document and that no custom switch exists. Verify with `scripts/check-docs.sh`.
+- [ ] 5.4 runIde check: open a scene from the tree (Scene View selected), type in `Text`, switch back (the render follows), Undo from either tab, and open a second scene tab.
 
 ## 6. FPS counter reconciliation
 
@@ -44,13 +44,13 @@
 
 ## 7. Screenshot tests
 
-- [ ] 7.1 Add `SceneViewUiTest` and the `SceneViewToolbar` page object under `src/uiTest`: the toolbar's controls and order, the tools pressing and releasing, Local/World and Snap reaching the status line, nothing written to the scene, and no overlapping buttons at a 900 px editor. Verify the interaction half with `ABYSSUS_UI_PLATFORM=linux/amd64 scripts/run-ui-tests-docker.sh --tests '*SceneViewUiTest' -- -PuiScreenshots=off` passing.
-- [ ] 7.2 The orientation widget and stats strip are shown through GL, so their pixels are checked where GL is not involved: `CornerPaintersTest` (painted marks, transparent corners, scale) and, under `-Dabyssus.glTests=true`, `SceneRenderGlTest.cornerOverlaysPaintTheirCornersOnly` (both corners changed, the middle untouched). Verify both pass; no GL pixels enter a committed baseline.
-- [ ] 7.3 The toolbar baselines (`scene-toolbar-default`, `scene-toolbar-narrow`) are also the icon check: every toolbar icon is drawn in them in the Dark theme, and `IconInventoryTest` keeps the resource files complete. Verify by changing one icon's path in a disposable copy and seeing the comparison fail with expected/actual/diff PNGs, then restoring it.
-- [ ] 7.4 Generate and commit the Linux baselines in `projects/plugin-abyssus/src/uiTest/resources/screenshots/linux/` with `ABYSSUS_UI_PLATFORM=linux/amd64 scripts/run-ui-tests-docker.sh -- -PupdateUiScreenshots=true -PuiScreenshotScenarios=scene-toolbar-default,scene-toolbar-narrow`; inspect every image for correct icons, order, no clipping and no incidental IDE UI. Verify `BaselineInventoryTest` passes and a second comparison run passes without writes.
-- [ ] 7.5 Update `docs/ai/testing.md` (new scenarios in the screenshot and scenario tables, and the icon inventory) and note the dependency on `add-plugin-ui-tests` task 4.1 for the CI job. Verify with `scripts/check-docs.sh`.
+- [x] 7.1 Add `SceneViewUiTest` and the `SceneViewToolbar` page object under `src/uiTest`: the toolbar's controls and order, the tools pressing and releasing, Local/World and Snap reaching the status line, nothing written to the scene, and no overlapping buttons at a 900 px editor. Verify the interaction half with `ABYSSUS_UI_PLATFORM=linux/amd64 scripts/run-ui-tests-docker.sh --tests '*SceneViewUiTest' -- -PuiScreenshots=off` passing.
+- [x] 7.2 The orientation widget and stats strip are shown through GL, so their pixels are checked where GL is not involved: `CornerPaintersTest` (painted marks, transparent corners, scale) and, under `-Dabyssus.glTests=true`, `SceneRenderGlTest.cornerOverlaysPaintTheirCornersOnly` (both corners changed, the middle untouched). Verify both pass; no GL pixels enter a committed baseline.
+- [x] 7.3 The toolbar baselines (`scene-toolbar-default`, `scene-toolbar-narrow`) are also the icon check: every toolbar icon is drawn in them in the Dark theme, and `IconInventoryTest` keeps the resource files complete. Verify by changing one icon's path in a disposable copy and seeing the comparison fail with expected/actual/diff PNGs, then restoring it.
+- [x] 7.4 Generate and commit the Linux baselines in `projects/plugin-abyssus/src/uiTest/resources/screenshots/linux/` with `ABYSSUS_UI_PLATFORM=linux/amd64 scripts/run-ui-tests-docker.sh -- -PupdateUiScreenshots=true -PuiScreenshotScenarios=scene-toolbar-default,scene-toolbar-narrow`; inspect every image for correct icons, order, no clipping and no incidental IDE UI. Verify `BaselineInventoryTest` passes and a second comparison run passes without writes.
+- [x] 7.5 Update `docs/ai/testing.md` (new scenarios in the screenshot and scenario tables, and the icon inventory) and note the dependency on `add-plugin-ui-tests` task 4.1 for the CI job. Verify with `scripts/check-docs.sh`.
 
 ## 8. Integration
 
 - [ ] 8.1 Run `./gradlew check`, `./gradlew :plugin-abyssus:verifyPlugin` if available, and `scripts/check-docs.sh` after all edits; run `scripts/run-ui-tests-docker.sh` once in comparison mode. Verify all pass, `git status` shows no committed fixture changes, and report unrelated failures without fixing them silently.
-- [ ] 8.2 Run `openspec validate redesign-scene-view-toolbar --strict`. Verify it passes, then confirm no `.scene`, `.abss` or `meta.json` writer was added (only `editSceneJson` and `SceneFormatListener` write scenes) and no IntelliJ or Swing import entered `lib-core-editor` (`NoPlatformClasspathTest`, `checkNoSingletons`).
+- [x] 8.2 Run `openspec validate redesign-scene-view-toolbar --strict`. Verify it passes, then confirm no `.scene`, `.abss` or `meta.json` writer was added (only `editSceneJson` and `SceneFormatListener` write scenes) and no IntelliJ or Swing import entered `lib-core-editor` (`NoPlatformClasspathTest`, `checkNoSingletons`).

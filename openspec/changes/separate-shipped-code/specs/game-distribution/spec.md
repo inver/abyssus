@@ -3,21 +3,21 @@
 ## Purpose
 
 Defines what a shipped game build contains: the game and the runtime it plays on, and none of the editor's code, while
-Play and the files Abyssus reads from the game keep working from a separate build of the same game.
+Play keeps working from a separate build of the same game.
 
 ## ADDED Requirements
 
 ### Requirement: Shipped game holds no editor code
 
 A game's distribution SHALL contain only the game and the runtime it plays on. It SHALL NOT contain asset importers,
-the Play bridge (play host, play protocol, and the play and schema export entry points), ray-tracing scene data, the scene writer, or any
-editor library or plugin.
+the Play bridge (play host, play protocol, and the play export entry point), ray-tracing scene data, the scene writer,
+or any editor library or plugin.
 
 #### Scenario: Control Line distribution
 
 - **WHEN** Control Line's distribution is built
 - **THEN** its libraries hold no editor module, and no class of the FlightGear importer, the play host or protocol,
-  the play or schema export entry points, the ray-tracing snapshots or the scene writer
+  the play export entry point, the ray-tracing snapshots or the scene writer
 
 #### Scenario: Game still plays
 
@@ -35,17 +35,18 @@ and without acting on them. Loading SHALL NOT change the file.
   block holding `"targetSamplesPerPixel": 64`
 - **THEN** the field loads and renders as without those keys, and the file's bytes are unchanged
 
-### Requirement: Play and exports come from a separate build of the game
+### Requirement: Play comes from a separate build of the game
 
-The files a game exports for Abyssus SHALL come from a build of the game that includes its Play code. Exporting
-`abyssus/play.json` SHALL name a classpath on which Play runs the game's module. Exporting
-`abyssus/components.schema.json` SHALL give the same bytes as before this separation.
+The launch file a game exports for Abyssus SHALL come from a build of the game that includes its Play code. Exporting
+`abyssus/play.json` SHALL name a classpath on which Play runs the game's module. This separation SHALL NOT change
+`abyssus/components.schema.json`.
 
 #### Scenario: Control Line export and Play
 
-- **WHEN** Control Line exports for Abyssus and its project is played in Abyssus
-- **THEN** `play.json` names the game's play module and protocol 1, the plane flies on its lines in Play as before,
-  and `components.schema.json` is byte-identical to the committed file
+- **WHEN** Control Line exports its launch file for a copy of its project and that project is played in Abyssus
+- **THEN** `play.json` names the game's play module and protocol 1, its classpath holds the game's play code, and the
+  plane flies on its lines in Play as before
+- **AND** the committed `components.schema.json` is unchanged
 
 #### Scenario: Physics-only Play unchanged
 
@@ -55,7 +56,7 @@ The files a game exports for Abyssus SHALL come from a build of the game that in
 ### Requirement: The build refuses editor code in shipped code
 
 The repository's checks SHALL fail when a game's shipped classpath reaches an editor-only library, or when a library
-that games ship contains importer or ray-tracing scene-data code. The failure SHALL name the offending library or
+that games ship contains editor imports or ray-tracing scene-data code. The failure SHALL name the offending library or
 source file.
 
 #### Scenario: Editor library added to the game

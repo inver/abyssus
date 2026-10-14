@@ -22,15 +22,22 @@ class SceneViewUiTest : UiTestBase() {
 
     private fun openScene(): SceneViewToolbar {
         val path = project.resolve(scenePath).toString()
+        // an open Properties window (1250 px) would squeeze the editor to nothing
+        if (frame.propertiesWindow() != null) frame.closeProperties()
         frame.normalizeLayout(ide)
         ide.openSceneView(path)
-        return frame.sceneToolbar().also { it.awaitShown() }
+        val toolbar = frame.sceneToolbar().also { it.awaitShown() }
+        waitFor(Duration.ofSeconds(20), Duration.ofMillis(300), "the editor is wide again") {
+            toolbar.component.callJs<Int>("component.getWidth()", runInEdt = true) > 1100
+        }
+        return toolbar
     }
 
     /** The scene must not stay open: its tool state would leak into the next test. */
     @After
     fun closeScene() {
         runCatching { ide.closeFile(project.resolve(scenePath).toString()) }
+        runCatching { ide.setToolWindowWidth("Project", IdeFrame.PROJECT_WIDTH) }
     }
 
     @Test
@@ -66,5 +73,27 @@ class SceneViewUiTest : UiTestBase() {
             assertFalse("buttons $i and $j overlap: ${boxes[i]} ${boxes[j]}", overlap)
         }
         shot("scene-toolbar-narrow", toolbar.component, focusTree = false)
+    }
+
+    private fun editorTab(name: String) = frame.find<ComponentFixture>(byXpath("//div[@class='TabLabel' and @accessiblename='$name']"), Duration.ofSeconds(10))
+
+    @Test
+    fun theIdeTabsSwitchBetweenTextAndSceneViewWithoutWritingOnTheirOwn() {
+        val path = project.resolve(scenePath).toString()
+        val toolbar = openScene()
+        // opened from the plugin's action: Scene View is the selected tab and Text is the other one
+        editorTab("Scene View")
+        editorTab("Text").click()
+        waitFor(Duration.ofSeconds(15), Duration.ofMillis(300), "the text editor shows the scene") { ide.editorHasFocus() || ide.documentText(path) != null }
+        Thread.sleep(1500) // the text editor may format an unformatted scene once, as it always did
+        val shown = ide.documentText(path)
+        editorTab("Scene View").click()
+        toolbar.awaitShown()
+        assertEquals("switching back writes nothing", shown, ide.documentText(path))
+        editorTab("Text").click()
+        Thread.sleep(1500)
+        assertEquals("switching again writes nothing", shown, ide.documentText(path))
+        editorTab("Scene View").click()
+        toolbar.awaitShown()
     }
 }

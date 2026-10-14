@@ -27,8 +27,8 @@ tree and Properties already use. This change brings the Scene View to that desig
   snaps the orbit camera to look along it.
 - New **stats strip** in the lower-left corner: object count and the current tool and space. It also shows the frame rate
   when `Show FPS` of `add-project-fps-counter` is on, which moves that counter from the upper-right corner into this strip.
-- The editor tab gets a **Preview / source** switch (the render or the scene's JSON in the text editor), as in the mockup.
-- UI screenshot tests (Remote Robot, the existing canonical Linux container) compare the toolbar, the tab switch, and the
+- The scene keeps opening as two editors of one tab, switched with the IDE's own `Text` and `Scene View` tabs (shared document, Undo and unsaved text); the mockup's custom Preview/source control is not built.
+- UI screenshot tests (Remote Robot, the existing canonical Linux container) compare the toolbar, the
   stats strip and orientation widget as component images, plus an icon inventory test that fails on a missing or orphaned icon.
 - Documentation: `sceneview/README.md`, `docs/ai/testing.md` and the key list in the scene specs.
 
@@ -41,8 +41,8 @@ existing `AbyssusDocumentFormat` check the view already performs.
 
 ### New Capabilities
 
-- `scene-view-toolbar`: layout, grouping, icons, tooltips and enabled state of the scene toolbar; the tab's Preview / source
-  switch; every existing action stays reachable.
+- `scene-view-toolbar`: layout, grouping, icons, tooltips and enabled state of the scene toolbar; the Preview and source tabs
+  (the IDE's own `Text` and `Scene View` tabs); every existing action stays reachable.
 - `scene-view-tools`: Select tool, Local/World gizmo space and Snap, and their keys.
 - `scene-view-display`: shading choice, Shadows / Fog / Grid view toggles, Frame selection, the orientation widget and the
   stats strip.
@@ -54,7 +54,7 @@ existing `AbyssusDocumentFormat` check the view already performs.
 ## Impact
 
 - Code: `projects/plugin-abyssus/.../plugin/sceneview/` (`SceneViewPanel` toolbar, `SceneRenderer` layer toggles and shading,
-  overlay components), `projects/plugin-abyssus/.../SceneFileEditorProvider` for the tab switch, new SVGs in
+  overlay components), new SVGs in
   `projects/plugin-abyssus/src/main/resources/icons/`, strings in `AbyssusBundle.properties`.
 - Pure, testable logic in `lib-core-editor`: snap rounding, local/world axes, framing distance, orientation-widget projection.
 - Tests: toolbar state tests, `lib-core-editor` math tests, new Remote Robot scenarios and baselines under
