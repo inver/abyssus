@@ -4282,6 +4282,2081 @@
             "parentEntityId": 647
           }
         }
+      },
+      "658": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 658"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 0.045512676,
+              "y": -0.03691125,
+              "z": 8.239469
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          }
+        }
+      },
+      "659": {
+        "archetype": 1,
+        "components": {
+          "NameComponent": {
+            "name": "Fence"
+          },
+          "TypeComponent": {
+            "type": "GROUP"
+          },
+          "PathArrangementComponent": {
+            "points": [
+              {
+                "x": 3.782238,
+                "y": 0.00015830994,
+                "z": 25.754305
+              },
+              {
+                "x": -2.740797,
+                "y": -0.00006866455,
+                "z": 24.352322
+              },
+              {
+                "x": -12.381886,
+                "y": 0.000009536743,
+                "z": 21.861942
+              },
+              {
+                "x": -17.573296,
+                "y": -0.000045776367,
+                "z": 17.651497
+              },
+              {
+                "x": -20.722322,
+                "y": -0.000059127808,
+                "z": 13.931845
+              },
+              {
+                "x": -23.643112,
+                "y": -0.00011444092,
+                "z": 7.9952307
+              },
+              {
+                "x": -24.74023,
+                "y": 0.00002670288,
+                "z": 2.6617665
+              },
+              {
+                "x": -24.577988,
+                "y": -0.000030517578,
+                "z": -3.0533173
+              },
+              {
+                "x": -23.406912,
+                "y": 0.00004005432,
+                "z": -8.005055
+              },
+              {
+                "x": -21.354427,
+                "y": 0.000034332275,
+                "z": -12.737977
+              },
+              {
+                "x": -17.081923,
+                "y": 0.0000076293945,
+                "z": -18.059847
+              },
+              {
+                "x": -9.280321,
+                "y": 0.00010871887,
+                "z": -23.142757
+              },
+              {
+                "x": -3.3662357,
+                "y": -0.00005531311,
+                "z": -24.614851
+              },
+              {
+                "x": 3.7461548,
+                "y": 0.00014305115,
+                "z": -24.483519
+              },
+              {
+                "x": 10.947857,
+                "y": 0.000118255615,
+                "z": -22.629168
+              },
+              {
+                "x": 15.968201,
+                "y": 0.00008010864,
+                "z": -19.192642
+              },
+              {
+                "x": 21.298128,
+                "y": 0.00010108948,
+                "z": -12.593514
+              },
+              {
+                "x": 24.163694,
+                "y": -0.0002593994,
+                "z": -6.3552513
+              },
+              {
+                "x": 24.38538,
+                "y": -0.00006484985,
+                "z": 0.8298569
+              },
+              {
+                "x": 22.59175,
+                "y": -0.0001487732,
+                "z": 9.385635
+              },
+              {
+                "x": 17.160824,
+                "y": -0.00031089783,
+                "z": 18.18529
+              },
+              {
+                "x": 11.232447,
+                "y": -0.00016021729,
+                "z": 22.505957
+              },
+              {
+                "x": 7.738554,
+                "y": 0.00006151199,
+                "z": 24.052696
+              }
+            ],
+            "asset": {
+              "type": "MODEL",
+              "assetName": "fence"
+            },
+            "slots": [
+              660,
+              661,
+              662,
+              663,
+              664,
+              665,
+              666,
+              667,
+              668,
+              669,
+              670,
+              671,
+              672,
+              673,
+              674,
+              675,
+              676,
+              677,
+              678,
+              679,
+              680,
+              681,
+              682,
+              683,
+              684,
+              685,
+              686,
+              687,
+              688,
+              689,
+              690,
+              691,
+              692,
+              693,
+              694,
+              695,
+              696,
+              697,
+              698,
+              699,
+              700,
+              701,
+              702,
+              703,
+              704,
+              705,
+              706,
+              707,
+              708,
+              709,
+              710,
+              711,
+              712,
+              713,
+              714,
+              715,
+              716,
+              717
+            ],
+            "spacing": 2.65,
+            "sides": "LEFT"
+          }
+        }
+      },
+      "660": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #0"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 3.782238,
+              "y": 0,
+              "z": 25.754305
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.9944027,
+              "z": 0,
+              "w": 0.105656184
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "661": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #1"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 1.1914029,
+              "y": 0,
+              "z": 25.197462
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.9944027,
+              "z": 0,
+              "w": 0.105656184
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "662": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #2"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -1.3994321,
+              "y": 0,
+              "z": 24.64062
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.9944027,
+              "z": 0,
+              "w": 0.105656184
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "663": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #3"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -3.9781854,
+              "y": 0,
+              "z": 24.032694
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.99202317,
+              "z": 0,
+              "w": 0.12605548
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "664": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #4"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -6.5439687,
+              "y": 0,
+              "z": 23.369928
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.99202317,
+              "z": 0,
+              "w": 0.12605548
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "665": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #5"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -9.109752,
+              "y": 0,
+              "z": 22.707163
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.99202317,
+              "z": 0,
+              "w": 0.12605548
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "666": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #6"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -11.675535,
+              "y": 0,
+              "z": 22.0444
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.99202317,
+              "z": 0,
+              "w": 0.12605548
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "667": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #7"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -13.87345,
+              "y": 0,
+              "z": 20.652224
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.94251484,
+              "z": 0,
+              "w": 0.33416435
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "668": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #8"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -15.931622,
+              "y": 0,
+              "z": 18.982962
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.94251484,
+              "z": 0,
+              "w": 0.33416435
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "669": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #9"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -17.919794,
+              "y": 0,
+              "z": 17.24221
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.9072312,
+              "z": 0,
+              "w": 0.42063233
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "670": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #10"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -19.632057,
+              "y": 0,
+              "z": 15.219674
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.9072312,
+              "z": 0,
+              "w": 0.42063233
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "671": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #11"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -21.14729,
+              "y": 0,
+              "z": 13.068086
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.84895784,
+              "z": 0,
+              "w": 0.5284606
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "672": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #12"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -22.317154,
+              "y": 0,
+              "z": 10.6902895
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.84895784,
+              "z": 0,
+              "w": 0.5284606
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "673": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #13"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -23.48702,
+              "y": 0,
+              "z": 8.312493
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.84895784,
+              "z": 0,
+              "w": 0.5284606
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "674": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #14"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -24.105808,
+              "y": 0,
+              "z": 5.745909
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.7750761,
+              "z": 0,
+              "w": 0.6318679
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "675": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #15"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -24.639746,
+              "y": 0,
+              "z": 3.1502569
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.7750761,
+              "z": 0,
+              "w": 0.6318679
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "676": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #16"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -24.679184,
+              "y": 0,
+              "z": 0.5113511
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.69700176,
+              "z": 0,
+              "w": 0.71706945
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "677": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #17"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -24.603985,
+              "y": 0,
+              "z": -2.1375818
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.69700176,
+              "z": 0,
+              "w": 0.71706945
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "678": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #18"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -24.178932,
+              "y": 0,
+              "z": -4.740667
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.62042356,
+              "z": 0,
+              "w": 0.7842669
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "679": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #19"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -23.569038,
+              "y": 0,
+              "z": -7.3195286
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.62042356,
+              "z": 0,
+              "w": 0.7842669
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "680": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #20"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -22.632849,
+              "y": 0,
+              "z": -9.790004
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.5486982,
+              "z": 0,
+              "w": 0.8360205
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "681": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #21"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -21.578518,
+              "y": 0,
+              "z": -12.221235
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.5486982,
+              "z": 0,
+              "w": 0.8360205
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "682": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #22"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -20.048042,
+              "y": 0,
+              "z": -14.365222
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.43241465,
+              "z": 0,
+              "w": 0.90167487
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "683": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #23"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -18.38905,
+              "y": 0,
+              "z": -16.431679
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.43241465,
+              "z": 0,
+              "w": 0.90167487
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "684": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #24"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -16.610998,
+              "y": 0,
+              "z": -18.366665
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.28472736,
+              "z": 0,
+              "w": 0.9586085
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "685": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #25"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -14.390667,
+              "y": 0,
+              "z": -19.813257
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.28472736,
+              "z": 0,
+              "w": 0.9586085
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "686": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #26"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -12.170336,
+              "y": 0,
+              "z": -21.259851
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.28472736,
+              "z": 0,
+              "w": 0.9586085
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "687": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #27"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -9.950006,
+              "y": 0,
+              "z": -22.706444
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.28472736,
+              "z": 0,
+              "w": 0.9586085
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "688": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #28"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -7.4843993,
+              "y": 0,
+              "z": -23.589787
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.12167549,
+              "z": 0,
+              "w": 0.9925699
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "689": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #29"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -4.9128656,
+              "y": 0,
+              "z": -24.229874
+            },
+            "localRotation": {
+              "x": 0,
+              "y": 0.12167549,
+              "z": 0,
+              "w": 0.9925699
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "690": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #30"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -2.3102381,
+              "y": 0,
+              "z": -24.595352
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.0092313485,
+              "z": 0,
+              "w": 0.9999574
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "691": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #31"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 0.33931023,
+              "y": 0,
+              "z": -24.546427
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.0092313485,
+              "z": 0,
+              "w": 0.9999574
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "692": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #32"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 2.9888587,
+              "y": 0,
+              "z": -24.497501
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.0092313485,
+              "z": 0,
+              "w": 0.9999574
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "693": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #33"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 5.5789475,
+              "y": 0,
+              "z": -24.011597
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.12567356,
+              "z": 0,
+              "w": 0.9920716
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "694": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #34"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 8.14524,
+              "y": 0,
+              "z": -23.350807
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.12567356,
+              "z": 0,
+              "w": 0.9920716
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "695": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #35"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 10.711533,
+              "y": 0,
+              "z": -22.690018
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.12567356,
+              "z": 0,
+              "w": 0.9920716
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "696": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #36"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 12.933233,
+              "y": 0,
+              "z": -21.270138
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.29564467,
+              "z": 0,
+              "w": 0.955298
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "697": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #37"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 15.119982,
+              "y": 0,
+              "z": -19.773264
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.29564467,
+              "z": 0,
+              "w": 0.955298
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "698": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #38"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 16.987404,
+              "y": 0,
+              "z": -17.930738
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.43108732,
+              "z": 0,
+              "w": 0.9023102
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "699": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #39"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 18.652472,
+              "y": 0,
+              "z": -15.869173
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.43108732,
+              "z": 0,
+              "w": 0.9023102
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "700": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #40"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 20.31754,
+              "y": 0,
+              "z": -13.807608
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.43108732,
+              "z": 0,
+              "w": 0.9023102
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "701": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #41"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 21.752851,
+              "y": 0,
+              "z": -11.603592
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.5397126,
+              "z": 0,
+              "w": 0.8418493
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "702": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #42"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 22.859016,
+              "y": 0,
+              "z": -9.195501
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.5397126,
+              "z": 0,
+              "w": 0.8418493
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "703": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #43"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 23.965181,
+              "y": 0,
+              "z": -6.7874107
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.5397126,
+              "z": 0,
+              "w": 0.8418493
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "704": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #44"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 24.230751,
+              "y": 0,
+              "z": -4.181858
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.69611824,
+              "z": 0,
+              "w": 0.71792716
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "705": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #45"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 24.312473,
+              "y": 0,
+              "z": -1.5331185
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.69611824,
+              "z": 0,
+              "w": 0.71792716
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "706": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #46"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 24.32672,
+              "y": 0,
+              "z": 1.1096745
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.77626646,
+              "z": 0,
+              "w": 0.6304049
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "707": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #47"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 23.782993,
+              "y": 0,
+              "z": 3.7032943
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.77626646,
+              "z": 0,
+              "w": 0.6304049
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "708": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #48"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 23.239267,
+              "y": 0,
+              "z": 6.2969136
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.77626646,
+              "z": 0,
+              "w": 0.6304049
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "709": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #49"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 22.695541,
+              "y": 0,
+              "z": 8.890533
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.77626646,
+              "z": 0,
+              "w": 0.6304049
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "710": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #50"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 21.465645,
+              "y": 0,
+              "z": 11.210247
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.8732703,
+              "z": 0,
+              "w": 0.48723617
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "711": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #51"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 20.07386,
+              "y": 0,
+              "z": 13.465338
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.8732703,
+              "z": 0,
+              "w": 0.48723617
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "712": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #52"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 18.682074,
+              "y": 0,
+              "z": 15.720428
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.8732703,
+              "z": 0,
+              "w": 0.48723617
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "713": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #53"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 17.290289,
+              "y": 0,
+              "z": 17.97552
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.8732703,
+              "z": 0,
+              "w": 0.48723617
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "714": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #54"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 15.218453,
+              "y": 0,
+              "z": 19.60091
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.95082706,
+              "z": 0,
+              "w": 0.30972227
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "715": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #55"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 13.076871,
+              "y": 0,
+              "z": 21.16172
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.95082706,
+              "z": 0,
+              "w": 0.30972227
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "716": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #56"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 10.896216,
+              "y": 0,
+              "z": 22.654804
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.9783668,
+              "z": 0,
+              "w": 0.20687781
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
+      },
+      "717": {
+        "archetype": 2,
+        "components": {
+          "NameComponent": {
+            "name": "Path 659 #57"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 8.473048,
+              "y": 0,
+              "z": 23.727537
+            },
+            "localRotation": {
+              "x": 0,
+              "y": -0.9783668,
+              "z": 0,
+              "w": 0.20687781
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "fence"
+          },
+          "ParentComponent": {
+            "parentEntityId": 659
+          }
+        }
       }
     },
     "archetypes": {
