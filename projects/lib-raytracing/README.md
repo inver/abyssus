@@ -323,7 +323,8 @@ found with `VK_LAYER_PATH` plus `LD_LIBRARY_PATH` pointing at its directory.
 `verifyVulkanPackaging` checks the SPIR-V in the jar, that no shaderc is on the runtime classpath, the
 `lwjgl-vma` natives for every target, MoltenVK for macOS only, and that a probe without a loader returns
 `RUNTIME_NOT_FOUND` (one JVM per test class, because LWJGL's library choice is process-global). Metal
-packaging moved to `verifyMetalPackaging`; `verifyNativePackaging` runs both where they apply. When they render, both
+packaging moved to `verifyMetalPackaging`; `verifyNativePackaging` runs both where they apply. These packaging tasks
+are excluded from Kover coverage and run explicitly, rather than as part of `check`. When they render, both
 packaging tests also draw a glass slab through the packaged scene shader (`assertPackagedSceneOptics`), so a jar whose
 shader predates the version 3 scene payload or the 28-float camera fails there. Metal and Vulkan both report
 `sceneOptics`; the Metal kernel and `scene.comp` change together with `RaySceneEncoding` and `RaySceneRequest.nativeCamera`.

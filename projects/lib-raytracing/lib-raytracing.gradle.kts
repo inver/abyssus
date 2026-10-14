@@ -171,3 +171,12 @@ val verifyNativePackaging = tasks.register("verifyNativePackaging") {
     dependsOn(verifyVulkanPackaging)
     if (hostIsMac) dependsOn(verifyMetalPackaging)
 }
+
+// Packaging checks are explicit: Kover would otherwise pull every Test task into check, including Metal on Linux.
+kover {
+    currentProject {
+        instrumentation {
+            disabledForTestTasks.addAll("verifyMetalPackaging", "verifyVulkanPackaging")
+        }
+    }
+}
