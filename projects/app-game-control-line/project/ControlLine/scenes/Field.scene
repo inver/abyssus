@@ -4283,29 +4283,6 @@
           }
         }
       },
-      "658": {
-        "archetype": 0,
-        "components": {
-          "NameComponent": {
-            "name": "Model 658"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 0.045512676,
-              "y": -0.03691125,
-              "z": 8.239469
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "fence"
-          }
-        }
-      },
       "659": {
         "archetype": 1,
         "components": {
