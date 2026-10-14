@@ -22,6 +22,8 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | Sandbox IDE | `./gradlew :plugin-abyssus:runIde` (open a project with `-PideProject=/path/to/project`) |
 | Control Line game: play / tests | `./gradlew :app-game-control-line:run` / `./gradlew :app-game-control-line:test` |
 | Plugin zip | `./gradlew :plugin-abyssus:buildPlugin` (to `projects/plugin-abyssus/build/distributions/`) |
+| UI tests (real IDE, Remote Robot), canonical Linux container | `scripts/run-ui-tests-docker.sh` (see `docs/ai/testing.md`) |
+| UI tests on the host, or only the headless helper tests | `scripts/run-ui-tests.sh` / `./gradlew :plugin-abyssus:uiHelperTest` |
 | Docs path check | `scripts/check-docs.sh` |
 
 Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs in the other modules and fails there with

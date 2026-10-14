@@ -24,6 +24,104 @@ classes of the old packages otherwise fail tests with `NoSuchMethodError` / `NoC
 Results are in each module's `build/test-results/test/*.xml` and `build/reports/tests/test/`; a later run overwrites them.
 CI also runs Plugin Verifier and Qodana separately from `check`.
 
+## UI tests (Remote Robot)
+
+`projects/plugin-abyssus/src/uiTest/kotlin` drives an installed Abyssus in a real sandbox IDE through the JetBrains
+Remote Robot client (version pinned to the robot-server plugin, `remoteRobotVersion` in `plugin-abyssus.gradle.kts`).
+It is a separate source set and `:plugin-abyssus:uiTest` task: the client is a plain JVM process with no platform
+classpath, and `check` never runs it. Nothing under `uiTest` ships in the plugin.
+
+| What | Command |
+|---|---|
+| Complete run in the canonical Linux/Xvfb container | `scripts/run-ui-tests-docker.sh [--tests '*UiStartupTest']` |
+| Complete run on the host (needs a usable desktop) | `scripts/run-ui-tests.sh [--tests <pattern>]` |
+| Headless helper tests only (`...uitesting.headless`), part of `check` | `./gradlew :plugin-abyssus:uiHelperTest` |
+| Attach to an IDE you started | `./gradlew :plugin-abyssus:uiTest -PuiProject=<copy of Untitled> -PuiRobotUrl=http://127.0.0.1:8082` |
+
+- **The runner** (`scripts/run-ui-tests.sh`) copies `src/test/testData/project/Untitled` (without `.idea`) into a temp
+  directory, starts `runIdeForUiTests` against it with an isolated sandbox (`-PuiSandbox`) and robot-server port
+  (`-PuiPort`, `ABYSSUS_UI_PORT`, default 8082), polls until robot-server answers, runs `uiTest`, then stops the IDE it
+  started (matched by its unique sandbox path) and copies the IDE logs to `projects/plugin-abyssus/build/reports/ui-tests/ide-logs`.
+  One run per port: a lock directory in the temp folder refuses a second. It fails if the committed fixture's hashes changed.
+- **The container** (`docker/ui-tests`) is Ubuntu 24.04 with Xvfb 1920x1080x24, a minimal window manager, UTC and an
+  English locale. `scripts/run-ui-tests-docker.sh` copies the working tree in (host build directories are never shared),
+  keeps the Gradle cache and the downloaded IDE in the volume `abyssus-ui-gradle` (the first run downloads gigabytes and
+  takes about an hour; later runs about a minute), and returns reports to `projects/plugin-abyssus/build/reports/ui-tests`.
+  `ABYSSUS_UI_PLATFORM=linux/amd64` selects the platform. Pixel baselines must come from the canonical platform.
+- **On the host (macOS)** the sandbox IDE never becomes the active window and Remote Robot screenshots are blank, so
+  mouse-driven scenarios and captures do not work there. Use the container.
+- **Failures** write `failures/<Class>.<method>/{screen.png,hierarchy.html,failure.txt}` under the reports folder; the
+  hierarchy is robot-server's component page, useful for finding locators (the tree is `EyeTree`, the view selector's
+  list is `MyList`).
+- **Troubleshooting:** a leftover lock (`abyssus-ui-tests-<port>.lock` in the temp folder) after a killed run can be
+  removed by hand; `ABYSSUS_UI_KEEP_WORK=1` keeps the temp project and sandbox; a changed `Untitled` copy never reaches
+  the committed fixture.
+- **Rules for tests:** mutate only through the UI; the helpers (`IdeQueries`) only read IDE state. `FixtureProject` copies
+  and restores the disposable project on disk, which the IDE then refreshes. Locate components by Swing name or class and
+  re-resolve them after any refresh; add production component names only when that is not enough.
+
+### UI tests in CI
+
+`.github/workflows/run-ui-tests.yml` runs `scripts/run-ui-tests-docker.sh` on `ubuntu-24.04` for pull requests and manual
+dispatch, separately from the headless `check` in `build.yml`. `CI=true` is forwarded into the container, so a baseline update
+request fails there. A run that discovers no UI test fails (`failOnNoDiscoveredTests`). The job always uploads
+`projects/plugin-abyssus/build/reports/ui-tests/` as the `ui-test-diagnostics` artifact (failure screenshots, component
+hierarchies, expected/actual/diff images, IDE logs and the JUnit report); download it from the run's summary page.
+
+### UI screenshot baselines
+
+Fifteen Swing captures (the tree, the Properties panels and two dialogs) are compared pixel for pixel with PNGs in
+`projects/plugin-abyssus/src/uiTest/resources/screenshots/linux/`, named `<scenario>.png`. The scenario list is
+`SCREENSHOT_SCENARIOS` (`ScreenshotInventory.kt`); `BaselineInventoryTest` fails on a missing or orphaned file. Captures are
+component images (the tool window or dialog), never the 3D viewport or the whole desktop.
+
+- **Canonical environment:** `docker/ui-tests` on the amd64 platform (Ubuntu 24.04, Xvfb 1920x1080x24, the IDE's own JBR 21 and Inter
+  font, Dark theme, UI scale 1, English, UTC). `environment.properties` in the baselines folder records it, including font and
+  X packages; before any comparison or update the running IDE is checked against it and a difference fails with the key, expected
+  and found value. Nothing is tolerated or masked. Reproduce with
+  `ABYSSUS_UI_PLATFORM=linux/amd64 scripts/run-ui-tests-docker.sh` (an arm64 image cannot show HDR previews).
+- **Readiness:** a capture is taken only after the scenario waited for the content (real previews, loaded chooser thumbnails, the
+  tree rows), the layout is normalised (`IdeFrame.normalizeLayout`: frame, Project and Properties widths, no blinking carets), the
+  pointer is moved away and the focus is on the tree (dialogs keep their own focus), and two consecutive captures are identical.
+- **Modes:** `-PuiScreenshots=compare` (default), `off` (interaction only: captures are kept as diagnostics, nothing is
+  compared; for hosts that are not the canonical environment) and update. A run outside the canonical environment in compare mode
+  fails explicitly rather than skipping.
+- **Update one or more baselines** (never on CI, only in the canonical environment, only the named scenarios, only after the
+  scenario's own checks passed; the PNGs are copied back to the working tree):
+  `ABYSSUS_UI_PLATFORM=linux/amd64 scripts/run-ui-tests-docker.sh -- -PupdateUiScreenshots=true -PuiScreenshotScenarios=props-empty,tree-expanded`.
+  Review every changed PNG by eye (content, loaded previews, nothing clipped or incidental) before committing, and commit the
+  environment manifest with them when the environment changed.
+- **On a failure** `build/reports/ui-tests/screenshots/<scenario>/` holds actual, expected and diff PNGs (changed pixels in
+  red over a dimmed copy) and a report text file with the changed-pixel count, bounds and the environment.
+- **Known layout facts the baselines record:** the entity panel's fields run past the Properties window's right edge at any width
+  (it keeps a horizontal scrollbar), and the skybox chooser clips the `unused` badge and `used by 1 scene` at its default width.
+  `DesignScreenshotTest` stays a separate design diagnostic and compares no pixels.
+
+### UI test scenarios
+
+Each scenario drives the installed plugin with the mouse and keyboard on a disposable copy of `Untitled` (restored before
+every test), checks disk bytes, and where it edits, presses Undo and checks the bytes come back.
+
+| Class | Scenarios |
+|---|---|
+| `UiStartupTest` | robot connection and project loaded; Abyssus installed, no scene editor open; Properties window opens and closes; Abyssus tree, entity 0 and the Camera component of entity 4 are found; fixture reset restores the IDE document and the tree |
+| `AbyssusTreeUiTest` | Project, Scenes, Assets and ECS expand; the fog eye toggles only `fogEnabled` and Undo restores the bytes; switching views does not duplicate nodes |
+| `PropertiesUiTest` | empty state; model and terrain assets; cube (editable, previews loaded), procedural (editable) and HDR (read-only, preview loaded) skyboxes; entity 0 and Camera fields; entity name edit and Undo; an invalid Camera number shows a field error and leaves the scene unedited |
+| `RenameSceneUiTest` | Rename Scene opens from the scene's context menu; Cancel is byte-identical; applying changes only `name`, refreshes the tree, and Undo restores the bytes |
+| `SkyboxChooserUiTest` | Choose opens the chooser with None and the three fixture skyboxes; the `hdr` filter and the no-match state; Cancel is byte-identical; Assign `skybox_default` changes only `skyboxName`, leaves `skyboxEnabled`, updates the tree, and Undo restores the bytes |
+| `...uitesting.headless.*` | helper unit tests (`FixtureIsolationTest`), run by `uiHelperTest` |
+
+Out of scope: the 3D viewport (GL under Xvfb is not deterministic), gizmos, the Game UI editor, the Asset Library, and
+add/remove component and terrain creation workflows.
+
+The Abyssus tree is refreshed by the plugin's own edits (`AbyssusSceneEdited`), not by Undo or by changes made outside the IDE, so scenarios assert Undo through the document and disk bytes, and each test starts with a Project view refresh and the view shown again (the tree otherwise keeps a name that Undo has already reverted).
+
+Undo is tied to the scene document, not the project tree: a scenario that Undoes first opens the scene file in the plain text
+editor (`IdeQueries.openTextEditor`, navigation only) and presses the IDE's Undo shortcut there.
+
+The HDR preview needs the `natives-linux` (x86_64) LWJGL natives, so on an arm64 container it shows "Cannot read sky.exr" and the
+HDR checks fail; run those with `ABYSSUS_UI_PLATFORM=linux/amd64`.
+
 ## Coverage
 
 Kover generates HTML and XML coverage reports for every module and a combined report at the root during

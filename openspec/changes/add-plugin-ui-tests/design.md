@@ -32,7 +32,7 @@ Copy Untitled into a unique directory with a stable basename, excluding existing
 
 Drive tree expansion, selection, dialogs, field commits, and Undo with mouse/keyboard. Read-only remote queries may retrieve row bounds, component names, selection, document text, and loading state. Custom painted actions use row bounds plus the existing action geometry, not desktop pixel coordinates. Locate a fresh row/component after every refresh. Only add stable Swing component names to production containers if scoped class/text locators prove insufficient; these identifiers must not change visible behavior.
 
-For unsaved edits, inspect the IDE document using a read-only query, then save through the IDE and verify disk bytes. Check the expected changed field, preservation of unrelated text, and byte-for-byte restoration after Undo. Keep screenshots independent of prior mutation history.
+`editSceneJson` already saves the document, so disk bytes are checked right after each edit. The IDE's Undo is tied to the scene document (`SceneFileEditor` is a `DocumentReferenceProvider`), so the project tree alone has no Undo scope: scenarios that Undo first open the scene file in the plain text editor (navigation only, via a read-only-style query) and press the IDE's Undo shortcut there, then save and verify disk bytes. For unsaved edits, inspect the IDE document using a read-only query, then save through the IDE and verify disk bytes. Check the expected changed field, preservation of unrelated text, and byte-for-byte restoration after Undo. Keep screenshots independent of prior mutation history.
 
 ### 3. Initial coverage and capture inventory
 

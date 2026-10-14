@@ -1,59 +1,45 @@
-# GitHub Actions Workflow for launching UI tests on Linux, Windows, and Mac in the following steps:
-# - prepare and launch IDE with your plugin and robot-server plugin, which is needed to interact with UI
-# - wait for IDE to start
-# - run UI tests with separate Gradle task
+# UI tests: the Abyssus plugin driven through Remote Robot in the canonical Linux environment (docker/ui-tests: Ubuntu 24.04,
+# Xvfb, amd64). Pixel baselines are compared in read-only mode; updating them never happens here (CI=true refuses it).
 #
-# Please check https://github.com/JetBrains/intellij-ui-test-robot for information about UI tests with IntelliJ Platform
-#
-# Workflow is triggered manually.
+# Runs on manual dispatch and on pull requests, independently of the headless 'check' in build.yml.
+# See docs/ai/testing.md ("UI tests", "UI screenshot baselines") for what is covered and how to reproduce a run locally.
 
 name: Run UI Tests
 on:
-  workflow_dispatch
+  workflow_dispatch:
+  pull_request:
+
+concurrency:
+  group: ui-tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-
-  testUI:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            runIde: |
-              export DISPLAY=:99.0
-              Xvfb -ac :99 -screen 0 1920x1080x16 &
-              gradle :plugin-abyssus:runIdeForUiTests &
-          - os: windows-latest
-            runIde: start gradlew.bat :plugin-abyssus:runIdeForUiTests
-          - os: macos-latest
-            runIde: ./gradlew :plugin-abyssus:runIdeForUiTests &
-
+  ui-tests:
+    name: UI tests (canonical Linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
     steps:
-
-      # Check out current repository
       - name: Fetch Sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Setup Java 11 environment for the next steps
-      - name: Setup Java
-        uses: actions/setup-java@v3
+      # The canonical image carries JDK 21 for Gradle and the virtual display; the wrapper runs inside it.
+      - name: Run UI tests
+        env:
+          ABYSSUS_UI_PLATFORM: linux/amd64
+          ABYSSUS_UI_STARTUP_TIMEOUT: "600"
+        run: scripts/run-ui-tests-docker.sh
+
+      # Screenshots, hierarchy dumps, expected/actual/diff images, IDE logs and the JUnit report of every run.
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          distribution: zulu
-          java-version: 11
+          name: ui-test-diagnostics
+          path: projects/plugin-abyssus/build/reports/ui-tests/
+          if-no-files-found: warn
+          retention-days: 14
 
-      # Run IDEA prepared for UI testing
-      - name: Run IDE
-        run: ${{ matrix.runIde }}
-
-      # Wait for IDEA to be started
-      - name: Health Check
-        uses: jtalk/url-health-check-action@v3
-        with:
-          url: http://127.0.0.1:8082
-          max-attempts: 15
-          retry-delay: 30s
-
-      # Run tests
-      - name: Tests
-        run: ./gradlew :plugin-abyssus:test
+      # A failed run must not leave the sandbox IDE or its container behind on a reused runner.
+      - name: Clean up
+        if: always()
+        run: docker ps -q | xargs -r docker stop

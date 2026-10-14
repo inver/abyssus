@@ -5,6 +5,7 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
+import java.time.Duration
 import java.util.zip.ZipFile
 
 fun properties(key: String) = providers.gradleProperty(key)
@@ -29,7 +30,15 @@ repositories {
     intellijPlatform {
         defaultRepositories()
     }
+    // Remote Robot client and fixtures (uiTest only)
+    maven("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies")
 }
+
+// Remote Robot client; must match the robot-server plugin that runIdeForUiTests installs (robotServerPlugin()).
+val remoteRobotVersion = "0.11.23"
+
+// UI tests drive an installed IDE through robot-server from a plain JVM client: no platform on this classpath.
+val uiTest: SourceSet by sourceSets.creating
 
 val playHostLibs by configurations.creating {
     isCanBeConsumed = false
@@ -51,6 +60,11 @@ dependencies {
     playHostLibs(project(":lib-physics"))
     playHostLibs(project(path = ":lib-physics", configuration = "playHost"))
     testImplementation(libs.junit4)
+    "uiTestImplementation"(libs.junit4)
+    "uiTestImplementation"("com.intellij.remoterobot:remote-robot:$remoteRobotVersion")
+    "uiTestImplementation"("com.intellij.remoterobot:remote-fixtures:$remoteRobotVersion")
+    // SceneJson / AbyssusDocumentFormat for assertions on the copied fixture documents
+    "uiTestImplementation"(project(":lib-core-editor"))
     // HdrFixtures: Radiance test images from a pixel function
     testImplementation(testFixtures(project(":lib-core")))
     // parseScene, testProject and the other scene helpers shared with editor-core's tests
@@ -107,6 +121,8 @@ kotlin {
 
 // Configure IntelliJ Platform Gradle Plugin - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html
 intellijPlatform {
+    // -PuiSandbox=<dir> isolates the UI-test IDE (config, system, plugins, logs) from the shared sandbox
+    providers.gradleProperty("uiSandbox").orNull?.let { sandboxContainer.set(file(it)) }
     pluginVerification {
         ides { recommended() }
         // Internal usages are checked against exact descriptions by checkPluginInternalApis below.
@@ -193,16 +209,71 @@ tasks {
 
 }
 
+// Runs against an IDE started by scripts/run-ui-tests.sh (or runIdeForUiTests); fails fast when none answers.
+tasks.register<Test>("uiTest") {
+    group = "verification"
+    description = "Interacts with an installed Abyssus through Remote Robot (needs a running runIdeForUiTests)."
+    testClassesDirs = uiTest.output.classesDirs
+    classpath = uiTest.runtimeClasspath
+    useJUnit()
+    // Remote Robot's Gson reads JDK classes (Throwable) reflectively
+    jvmArgs("--add-opens=java.base/java.lang=ALL-UNNAMED", "--add-opens=java.base/java.util=ALL-UNNAMED")
+    // Never part of check: the IDE must be started first.
+    outputs.upToDateWhen { false }
+    systemProperty("abyssus.ui.robotUrl", providers.gradleProperty("uiRobotUrl").orElse("http://127.0.0.1:8082").get())
+    providers.gradleProperty("uiTestFilter").orNull?.let { filter.includeTestsMatching(it) }
+    providers.gradleProperty("uiProject").orNull?.let { systemProperty("abyssus.ui.project", it) }
+    systemProperty("abyssus.ui.reportsDir", layout.buildDirectory.dir("reports/ui-tests").get().asFile.absolutePath)
+    systemProperty("abyssus.ui.fixtureSource", file("src/test/testData/project/Untitled").absolutePath)
+    // Screenshots: -PuiScreenshots=compare|update|off (default compare); -PupdateUiScreenshots=true with
+    // -PuiScreenshotScenarios=a,b rewrites only those baselines (canonical environment, never on CI).
+    systemProperty("abyssus.ui.baselines", file("src/uiTest/resources/screenshots/linux").absolutePath)
+    val updating = providers.gradleProperty("updateUiScreenshots").orNull == "true"
+    systemProperty("abyssus.ui.screenshots", if (updating) "update" else providers.gradleProperty("uiScreenshots").orElse("compare").get())
+    providers.gradleProperty("uiScreenshotScenarios").orNull?.let { systemProperty("abyssus.ui.screenshotScenarios", it) }
+    // Headless helper tests (package ...uitesting.headless) run through uiHelperTest instead
+    filter.excludeTestsMatching("net.nevinsky.abyssus.uitesting.headless.*")
+    failOnNoDiscoveredTests = true
+    timeout.set(Duration.ofMinutes(45))
+}
+
+// Headless tests of the UI-test helpers (fixture copies, screenshot comparison); no IDE needed, part of check.
+val uiHelperTest = tasks.register<Test>("uiHelperTest") {
+    group = "verification"
+    description = "Runs the headless tests of the UI-test helpers."
+    testClassesDirs = uiTest.output.classesDirs
+    classpath = uiTest.runtimeClasspath
+    useJUnit()
+    filter.includeTestsMatching("net.nevinsky.abyssus.uitesting.headless.*")
+    systemProperty("abyssus.ui.fixtureSource", file("src/test/testData/project/Untitled").absolutePath)
+    systemProperty("abyssus.ui.baselines", file("src/uiTest/resources/screenshots/linux").absolutePath)
+}
+tasks.named("check") { dependsOn(uiHelperTest) }
+// Kover's reports would otherwise run every Test task, including uiTest, which needs a running IDE
+kover {
+    currentProject {
+        instrumentation {
+            disabledForTestTasks.addAll("uiTest", "uiHelperTest")
+        }
+    }
+}
+
 // Sandbox IDE with the robot-server plugin for UI tests (run configuration "Run IDE for UI Tests", run-ui-tests.yml)
 val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
     task {
+        // -PuiProject=<dir> opens that project, -PuiSandbox=<dir> isolates IDE config/system, -PuiPort=<n> moves robot-server.
+        // The IDE does not auto-open a scene view (no abyssus.openView).
+        providers.gradleProperty("uiProject").orNull?.let { args(it) }
+        val port = providers.gradleProperty("uiPort").orElse("8082")
         jvmArgumentProviders += CommandLineArgumentProvider {
             listOf(
-                "-Drobot-server.port=8082",
+                "-Drobot-server.port=${port.get()}",
                 "-Dide.mac.message.dialogs.as.sheets=false",
                 "-Djb.privacy.policy.text=<!--999.999-->",
                 "-Djb.consents.confirmation.enabled=false",
                 "-Didea.trust.all.projects=true",
+                "-Dide.show.tips.on.startup.default.value=false",
+                "-Dide.no.platform.update=true",
             )
         }
     }
