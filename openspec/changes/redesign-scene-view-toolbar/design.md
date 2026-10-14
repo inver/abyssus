@@ -53,19 +53,25 @@ shadow pass, Unlit uses an unlit environment (full ambient, no lights, no shadow
 `SceneRenderParams.fogEnabled`. GL calls stay inside `GdxRuntime.withContext` on the AWT render thread; setting the value is a
 plain EDT field write read on the next frame.
 
-### D5. Frame selection and the orientation widget are CPU-only
-`FrameSelection` (lib-core-editor, pure): from a bounding box and the camera's field of view and direction, returns the orbit
-target and distance. It uses the picking bounds the view already keeps for the selection or all drawn boxes. The orientation
-widget is a Swing component over the canvas drawn from the camera's view rotation (`OrientationProjection`, pure: three unit
-axes to 2D points and depth order, and a hit test that returns the axis under a point). A click calls `OrbitCamera.lookAlong(axis)`.
-It is a lightweight `JComponent` in the `CanvasOverlayHost` layer, so the existing IDE-overlay snapshot logic keeps working and
-a screenshot of it is a component image. Picking ignores clicks outside its circle (`contains` is circular).
+### D5. Frame selection is CPU-only; the orientation widget is a Swing painter drawn through GL
+`FrameSelection` (lib-core-editor, pure): from a bounding box and the camera's field of view and aspect, returns the orbit
+target and distance (bounding sphere fit to the narrow side, with margin). `OrientationProjection` (pure): the camera's
+right/up/toward vectors to three 2D axis marks, depth order, and a circular hit test that returns the axis under a point.
+A click calls `OrbitCamera.lookAlong(-axis)` (the eye goes to the clicked axis's side).
+The canvas is a heavyweight AWT component, so a Swing component cannot sit over it (see `LoadingOverlay`). The widget is
+therefore *painted by Swing* (`OrientationWidget`, a plain `JComponent` that paints into any `Graphics2D`) and *shown by GL*:
+`CornerOverlay` renders it to a `BufferedImage` when its content changes, uploads it as a texture, and draws a blended quad at
+a fixed corner offset each frame. Hit testing happens in `SceneInputForwarder` on the canvas mouse events (a press inside the
+widget's rect goes to the widget, not the scene). The same `JComponent` is what screenshot tests capture.
 
-### D6. Stats strip is a Swing label strip
-`StatsStrip` is a small non-opaque `JComponent` (not mouse-opaque) rendered above the canvas, text from `StatsText` (pure:
-object count, tool, space, optional `<n> fps`). The frame rate comes from the sampling class of `add-project-fps-counter`;
-this change moves that change's overlay from the upper-right corner into this strip (see the task that amends its delta).
-The object count is `FrameSnapshot`'s drawn model and terrain count read after the frame, updated only when it changes.
+### D6. Stats strip uses the same corner-overlay path
+`StatsStrip` is a Swing painter (one rounded rectangle with the text from `StatsText`: optional `<n> fps`, object count, tool
+and space) shown by `CornerOverlay` in the lower-left corner; it takes no mouse events. The frame rate comes from the sampling
+class of `add-project-fps-counter`, whose overlay moves into this strip (see the task that amends its delta). The object count is
+the drawn model and terrain count after the frame, redrawn only when the text changes.
+`CornerOverlay` owns a texture, a quad and one shader program (`cornerquad`), is created and disposed with the renderer inside
+`GdxRuntime.withContext`, scales the image by the display scale so it is sharp on HiDPI, and draws after the loading overlay's
+gray-out so it stays readable above loading feedback.
 
 ### D7. Preview / source switch via the platform's split editor
 Use `TextEditorWithPreview` semantics (the platform's layout switcher) rather than a hand-built toggle: the existing
@@ -86,8 +92,8 @@ a headless test fails on a missing or orphaned resource.
 ### D9. Screenshots
 Swing components are captured as images with the existing `ScreenshotComparator` harness in the canonical Linux container.
 The scene toolbar and tab switch are captured through a Remote Robot fixture that opens a scene fixture; the orientation
-widget and stats strip are captured with the canvas replaced by a fixed color (a test-only `viewFactory` panel that builds the same
-`SceneViewPanel` chrome around a stub canvas), so the capture never contains GL. A baseline per scenario is committed under
+widget and stats strip are captured by painting their Swing components onto a fixed background in the test (the same code the
+GL overlay textures come from), so the capture never contains GL. A baseline per scenario is committed under
 the existing screenshots folder and listed in `SCREENSHOT_SCENARIOS`. The icon inventory is a headless test and is part of `check`.
 
 ## Risks / Trade-offs
@@ -101,6 +107,7 @@ the existing screenshots folder and listed in `SCREENSHOT_SCENARIOS`. The icon i
 - [Unlit changes can break the shadow atlas and cloud shadow paths] → Unlit skips the pass entirely and the toggle restores
   state; a GL test (`-Dabyssus.glTests=true`) renders once in each mode, and the runIde checklist covers it by eye.
 - [Two open changes touch the FPS overlay] → An amend task edits `add-project-fps-counter`'s delta and tasks in this change's group 6.
+- [A GL corner overlay may differ per platform (HiDPI scale, premultiplied alpha)] → One image-to-texture path with a pure scale/rect calculation tested headless; a GL test reads back the corner pixels; the runIde check covers macOS.
 - [Scope is large] → Groups are ordered so each lands working, tested chrome before the next: toolbar shell, tools, display, tab,
   screenshots. The toolbar shell ships alone if later groups slip.
 

@@ -78,6 +78,18 @@ class IdeQueries(private val robot: RemoteRobot) {
         )
     }
 
+    /**
+     * Opens [absolutePath] and selects its Scene View editor tab, as the plugin's own Open actions do. Navigation only; edits nothing.
+     */
+    fun openSceneView(absolutePath: String) {
+        robot.runJs(
+            js("var p = ProjectManager.getInstance().getOpenProjects()[0];" +
+                "var vf = LocalFileSystem.getInstance().findFileByPath(${quote(absolutePath)});" +
+                "var m = FileEditorManager.getInstance(p); m.openFile(vf, true); m.setSelectedEditor(vf, 'abyssus-scene-view')"),
+            runInEdt = true,
+        )
+    }
+
     /** True when the keyboard focus is in a text editor, so a shortcut reaches that editor's document. */
     fun editorHasFocus(): Boolean = robot.callJs(
         "var o = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();" +

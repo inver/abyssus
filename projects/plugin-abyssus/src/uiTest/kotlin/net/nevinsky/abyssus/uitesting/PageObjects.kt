@@ -297,3 +297,40 @@ class IdeDialog(private val frame: IdeFrame, val title: String) {
         }
     }
 }
+
+/** The Scene View editor's toolbar and tool status, once a scene is open in the Scene View tab. */
+class SceneViewToolbar(private val frame: IdeFrame) {
+    val component get() = frame.find<CommonContainerFixture>(byXpath("//div[@accessiblename='Scene toolbar']"), Duration.ofSeconds(60))
+
+    private fun button(tooltip: String) =
+        buttons().first { it.callJs<String>("component.getPresentation().getText()", runInEdt = true) == tooltip }
+
+    private fun buttons() = component.findAll<ComponentFixture>(byXpath("//div[contains(@class, 'ActionButton')]"))
+
+    fun awaitShown() = waitFor(Duration.ofSeconds(60), Duration.ofMillis(500), "the Scene View toolbar is shown") {
+        frame.findAll<ComponentFixture>(byXpath("//div[@accessiblename='Scene toolbar']")).isNotEmpty()
+    }
+
+    /** The texts of the toolbar's action buttons (their tooltips for icon buttons), left to right. */
+    fun buttonTooltips(): List<String> = buttons()
+        .sortedBy { it.callJs<Int>("component.getLocationOnScreen().x", runInEdt = true) }
+        .map { it.callJs<String>("component.getPresentation().getText()", runInEdt = true) }
+
+    fun click(tooltip: String) = button(tooltip).click()
+
+    fun isPressed(tooltip: String): Boolean = button(tooltip).callJs<Boolean>("component.isSelected()", runInEdt = true)
+
+    fun isEnabled(tooltip: String): Boolean = button(tooltip).callJs<Boolean>("component.isEnabled()", runInEdt = true)
+
+    /** The tool status line under the viewport, such as `Move · World`. */
+    fun status(): String = frame.find<ComponentFixture>(byXpath("//div[@accessiblename='Scene tool status']"), SHORT)
+        .callJs<String>("component.getText()", runInEdt = true)
+
+    /** Chooses [item] in the drop-down whose current text is [current] (Local-World, shading). */
+    fun choose(current: String, item: String) {
+        component.find<ComponentFixture>(byXpath("//div[@class='ComboBoxButton' and @visible_text='$current']"), SHORT).click()
+        frame.find<JListFixture>(byXpath("//div[@class='HeavyWeightWindow']//div[@class='MyList']"), SHORT).clickItem(item, fullMatch = true)
+    }
+}
+
+fun IdeFrame.sceneToolbar() = SceneViewToolbar(this)

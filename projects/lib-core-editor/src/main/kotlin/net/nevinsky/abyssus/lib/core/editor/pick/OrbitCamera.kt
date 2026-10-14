@@ -75,6 +75,27 @@ class OrbitCamera(var target: Vec3, var distance: Float, var yaw: Float, var pit
         pitch = fresh.pitch
     }
 
+    /**
+     * Turns the camera to look along [direction] (from the eye toward the target), keeping the target and distance.
+     * A direction that is straight up or down settles at the highest pitch the camera allows (89 degrees), keeping the yaw.
+     */
+    fun lookAlong(direction: Vec3) {
+        val length = kotlin.math.sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z)
+        if (length < 1e-6f) return
+        // the eye sits opposite to where the camera looks
+        val ux = -direction.x / length
+        val uy = -direction.y / length
+        val uz = -direction.z / length
+        pitch = asin(uy.coerceIn(-1f, 1f)).coerceIn(-MAX_PITCH, MAX_PITCH)
+        if (ux * ux + uz * uz > 1e-8f) yaw = atan2(ux, uz)
+    }
+
+    /** Moves the camera to look at [framing]'s target from its distance, keeping the view direction. */
+    fun frame(framing: Framing) {
+        target = framing.target
+        distance = framing.distance.coerceIn(MIN_DISTANCE, MAX_DISTANCE)
+    }
+
     fun zoom(wheelClicks: Float) {
         distance = (distance * ZOOM_BASE.pow(wheelClicks)).coerceIn(MIN_DISTANCE, MAX_DISTANCE)
     }

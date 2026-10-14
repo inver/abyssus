@@ -68,6 +68,12 @@ interface SceneView : Disposable {
     /** Where a new object is placed (the point the camera orbits around); null when the view places nothing. */
     fun placementPoint(): Vec3? = null
 
+    /**
+     * Rendering cannot continue: shows [message] in place of the viewport and keeps whatever else the view has (its toolbar,
+     * disabled). True when the view did that; false (the default) leaves the editor to show the message in place of the view.
+     */
+    fun showUnavailable(message: String): Boolean = false
+
     /** Whether the view is in Play, when nothing may be added to its scene. */
     val playing: Boolean get() = false
 }

@@ -28,8 +28,10 @@ internal class SceneInputForwarder(
     private val experimenting: () -> Boolean,
     private val experimentOrbit: () -> OrbitCamera?,
     private val updatePaintMode: (shift: Boolean) -> Unit,
+    private val frameSelection: () -> Unit = {},
+    private val pressOnOverlay: (x: Int, y: Int) -> Boolean = { _, _ -> false },
 ) {
-    /** W/E switch the gizmo, D drops the selection, Esc cancels a drag, with focus anywhere in the view. */
+    /** Q/W/E switch the tool (Select, Move, Rotate), F frames the selection, D drops the selection, Esc cancels a drag, with focus anywhere in the view. */
     fun bindKeys() {
         fun bind(key: Int, action: () -> Unit) {
             val stroke = KeyStroke.getKeyStroke(key, 0)
@@ -37,8 +39,10 @@ internal class SceneInputForwarder(
             panel.registerKeyboardAction({ if (!experimenting()) action() }, stroke, JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
         }
         // while playing these keys go to the simulation instead (forwardKeys), and Escape stops it
+        bind(KeyEvent.VK_Q) { if (!play.active) interaction.mode = GizmoMode.SELECT }
         bind(KeyEvent.VK_W) { if (!play.active) interaction.mode = GizmoMode.MOVE }
         bind(KeyEvent.VK_E) { if (!play.active) interaction.mode = GizmoMode.ROTATE }
+        bind(KeyEvent.VK_F) { if (!play.active) frameSelection() }
         bind(KeyEvent.VK_D) { if (!play.active) interaction.drop() }
         bind(KeyEvent.VK_ESCAPE) { if (!play.escape()) interaction.escape() }
         bind(KeyEvent.VK_ENTER) { if (!play.active) interaction.enter() }
@@ -71,11 +75,17 @@ internal class SceneInputForwarder(
         val input = object : MouseAdapter() {
             private var experimentX = 0
             private var experimentY = 0
+
+            /** True from a left press that landed on a viewport overlay until its release: the scene gets none of it. */
+            private var onOverlay = false
+
             override fun mousePressed(e: MouseEvent) {
                 panel.requestFocusInWindow()
                 if (experimenting()) {
                     experimentX = e.x; experimentY = e.y; return
                 }
+                onOverlay = SwingUtilities.isLeftMouseButton(e) && pressOnOverlay(e.x, e.y)
+                if (onOverlay) return
                 forwardMouse(SimulationInput.Kind.BUTTON_DOWN, e)
                 sync()
                 if (e.isPopupTrigger && pointMenu(e)) return
@@ -86,6 +96,7 @@ internal class SceneInputForwarder(
 
             override fun mouseReleased(e: MouseEvent) {
                 if (experimenting()) return
+                if (onOverlay) { onOverlay = false; return }
                 forwardMouse(SimulationInput.Kind.BUTTON_UP, e)
                 sync()
                 if (e.isPopupTrigger && pointMenu(e)) return
@@ -101,6 +112,7 @@ internal class SceneInputForwarder(
                     else experimentOrbit()?.pan(dx, dy)
                     return
                 }
+                if (onOverlay) return
                 sync()
                 updatePaintMode(e.isShiftDown)
                 cursor(e)

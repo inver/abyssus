@@ -69,3 +69,11 @@ At an editor width of 900 px the toolbar controls from Select through Frame sele
 #### Scenario: Narrow editor
 - **WHEN** the editor area is 900 px wide
 - **THEN** no toolbar control overlaps another and the first row ends with Frame selection or wraps cleanly before it
+
+### Requirement: Toolbar stays when the view cannot render
+
+When the scene view cannot render (for example no OpenGL context can be created), the viewport SHALL show the OpenGL-unavailable message in place of the scene and the toolbar SHALL stay above it with every control disabled. Nothing SHALL be written to the scene.
+
+#### Scenario: No OpenGL
+- **WHEN** rendering fails for good because no OpenGL context can be created
+- **THEN** the viewport shows the message `OpenGL scene is unavailable: <reason>`, the toolbar is still shown with all controls disabled, and the scene file is unchanged

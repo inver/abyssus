@@ -17,4 +17,6 @@ val SCREENSHOT_SCENARIOS: Set<String> = linkedSetOf(
     "skybox-chooser",
     "skybox-chooser-hdr",
     "skybox-chooser-nomatch",
+    "scene-toolbar-default",
+    "scene-toolbar-narrow",
 )

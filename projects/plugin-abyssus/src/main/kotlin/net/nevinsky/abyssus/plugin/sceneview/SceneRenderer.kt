@@ -135,6 +135,26 @@ class SceneRenderer(
         private set
     private var skybox: SceneSkybox? = null
     private var overlay: LoadingOverlay? = null
+    private var corners: CornerOverlay? = null
+
+    /** The Swing-painted images drawn in the corners of the view after everything else; set on the AWT thread before a frame. */
+    @Volatile
+    internal var cornerSprites: List<CornerSprite> = emptyList()
+    /**
+     * What this view draws: the Shadows, Fog and Grid toggles and the shading. Per view and never saved; set on the AWT thread
+     * and read on the next frame. Leaving Unlit makes the lights be applied to the environment again.
+     */
+    var display: ViewDisplay = ViewDisplay()
+        set(value) {
+            if (field.shading != value.shading) {
+                lightsKey = null
+                frameLightsKey = null
+            }
+            field = value
+        }
+
+    private val unlit: Boolean get() = display.shading == Shading.UNLIT
+
     private var lightsKey: Pair<List<LightPlacement>, Vec3>? = null
     private var lights = NO_LIGHTS
 
@@ -278,6 +298,8 @@ class SceneRenderer(
         skybox?.abandon()
         skybox = null
         overlay = null
+        corners?.abandon()
+        corners = null
         lineBatch = null
         terrainShader = null
         updateDrawnVersion()
@@ -288,6 +310,7 @@ class SceneRenderer(
         terrainShader = TerrainShader(shaders)
         skybox = SceneSkybox(AssetView(assets, SkyRenderer::class.java))
         overlay = LoadingOverlay(shaders)
+        corners = CornerOverlay(shaders)
         lineBatch = LineBatch(shaders)
         gridModel = GridModel.build().also { grid = ModelInstance(it) }
     }
@@ -323,6 +346,8 @@ class SceneRenderer(
         skyClock.advance(deltaSeconds)
         applyLights(c, orbit)
         applySunScale(c, orbit)
+        // Unlit: no lights reach the materials, and applyEnvironment already made the ambient white
+        if (unlit) NO_LIGHTS.applyTo(environment)
         models.update(c.models, p.projectDir, deltaSeconds)
         terrains.update(c.terrains, p.projectDir)
         foliage.update(c.foliages, p.projectDir, camera)
@@ -352,7 +377,7 @@ class SceneRenderer(
             ?.takeIf { compatibleRayDisplay(it, c, width, height) }
         presentedRayFrame = rayDisplay != null
         val atlas =
-            if (rayDisplay == null) shadows?.render(camera, lights, environment, models.drawn, terrains.drawn, foliage) else null
+            if (rayDisplay == null && display.drawsShadows) shadows?.render(camera, lights, environment, models.drawn, terrains.drawn, foliage) else null
         shadowedLightIds = atlas?.records?.mapTo(HashSet()) { it.lightId } ?: emptySet()
         Gdx.gl.glViewport(0, 0, width, height)
         Gdx.gl.glClearColor(p.clear.r, p.clear.g, p.clear.b, p.clear.a)
@@ -369,9 +394,11 @@ class SceneRenderer(
                 state.cloudTechnique
             )
             drawnCloudTechnique = (skybox?.sky(p.content.skybox) as? ProceduralSky)?.drawnTechnique
-            batch.begin(camera)
-            batch.render(grid, environment)
-            batch.end()
+            if (display.grid) {
+                batch.begin(camera)
+                batch.render(grid, environment)
+                batch.end()
+            }
             renderContent(p, c, atlas)
             drawOverlays(width, height)
         } else {
@@ -383,9 +410,11 @@ class SceneRenderer(
             applyEnvironment(p.copy(ambient = matched.ambient, fog = matched.fog))
             Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
             Gdx.gl.glDepthFunc(GL20.GL_LEQUAL)
-            batch.begin(rayCamera)
-            batch.render(grid, environment)
-            batch.end()
+            if (display.grid) {
+                batch.begin(rayCamera)
+                batch.render(grid, environment)
+                batch.end()
+            }
             drawOverlays(width, height, matched.content, rayCamera)
             applyEnvironment(p)
         }
@@ -393,6 +422,7 @@ class SceneRenderer(
         // grayed out with a spinner for as long as the scene's assets are on their way
         loading = (skybox?.isLoading ?: false) || models.isLoading || terrains.isLoading
         if (loading) overlay?.draw(width, height, deltaSeconds)
+        corners?.draw(width, height, cornerSprites)
         publishSnapshot()
     }
 
@@ -537,11 +567,23 @@ class SceneRenderer(
         return SceneMarkers().boundsOf(c, id)
     }
 
+    /**
+     * The world box of the entity [id], or of everything the last frame drew when [id] is null; null when there is nothing
+     * to frame. Reads CPU data only.
+     */
+    internal fun framedBounds(id: String?): BoundingBox? {
+        if (id != null) return boundsOf(content, id)
+        val box = BoundingBox().inf()
+        for (entity in models.drawn) box.ext(BoundingBox(entity.localBounds).mul(entity.instance.transform))
+        for (entity in terrains.drawn) box.ext(BoundingBox(entity.localBounds).mul(entity.world))
+        return box.takeIf { it.isValid }
+    }
+
     private fun renderContent(p: SceneRenderParams, c: SceneContent, atlas: ShadowAtlasAttribute?) {
         val contentBatch = contentBatch ?: return
         // after the grid: a built HDR sky replaces the ambient color for the content only (applyEnvironment undoes it)
         val ambient = SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) }
-        val sky = (ambient as? SceneAmbient.Sky)?.environment
+        val sky = if (unlit) null else (ambient as? SceneAmbient.Sky)?.environment
         val to = if (sky != null) skybox?.fadingTo(c.skybox) else null
         if (sky != null) {
             environment.remove(ColorAttribute.AmbientLight)
@@ -549,10 +591,11 @@ class SceneRenderer(
             environment.set(EnvironmentLightAttribute(sky.specular, sky.irradiance, sky.levels, sky.ambient, target, to?.weight ?: 0f))
         }
         if (atlas != null) environment.set(atlas)
-        sunVisibility?.let { environment.set(it) }
+        if (!unlit) sunVisibility?.let { environment.set(it) }
         terrainShader?.draw(
-            camera, terrains.drawn, p.ambient, p.fog, frameLights, sky?.irradiance, atlas,
-            to?.environment?.irradiance, to?.weight ?: 0f, sunVisibility,
+            camera, terrains.drawn, if (unlit) UNLIT_AMBIENT else p.ambient, if (display.fog) p.fog else null,
+            if (unlit) NO_LIGHTS else frameLights, sky?.irradiance, atlas,
+            to?.environment?.irradiance, to?.weight ?: 0f, if (unlit) null else sunVisibility,
         )
         contentBatch.begin(camera)
         for (entity in models.drawn) contentBatch.render(
@@ -666,13 +709,13 @@ class SceneRenderer(
         environment.remove(ShadowAtlasAttribute.Type)
         environment.remove(DirectionalVisibilityAttribute.Type)
         environment.remove(EnvironmentLightAttribute.Type)
-        val ambient = p.ambient
+        val ambient = if (unlit) UNLIT_AMBIENT else p.ambient
         if (ambient != null) {
             environment.set(ColorAttribute(ColorAttribute.AmbientLight, ambient.r, ambient.g, ambient.b, 1f))
         } else {
             environment.remove(ColorAttribute.AmbientLight)
         }
-        val fog = p.fog
+        val fog = if (display.fog) p.fog else null
         if (fog != null) {
             environment.set(ColorAttribute(ColorAttribute.Fog, fog.color.r, fog.color.g, fog.color.b, 1f))
             fogCoefficient = fog.shaderCoefficient
@@ -724,6 +767,8 @@ class SceneRenderer(
         lineBatch = null
         overlay?.dispose()
         overlay = null
+        corners?.dispose()
+        corners = null
         contentShaders?.dispose()
         contentShaders = null
         contentBatch = null
@@ -736,6 +781,9 @@ class SceneRenderer(
 
     private companion object {
         const val MIN_NEAR = 0.01f
+
+        /** Unlit shading lights every material fully by its own colors: a white ambient and no lights. */
+        val UNLIT_AMBIENT = net.nevinsky.abyssus.lib.core.editor.content.Rgba(1f, 1f, 1f, 1f)
 
         /** The outer share of the cloud shadow square over which its shade fades into the uniform sun dimming. */
         const val CLOUD_SHADOW_EDGE_FADE = 0.1f

@@ -39,7 +39,7 @@ class BaselineInventoryTest {
     }
 
     @Test
-    fun theInventoryHasNoDuplicatesAndFifteenScenarios() {
-        assertEquals(15, SCREENSHOT_SCENARIOS.size)
+    fun theInventoryHasNoDuplicatesAndSeventeenScenarios() {
+        assertEquals(17, SCREENSHOT_SCENARIOS.size)
     }
 }

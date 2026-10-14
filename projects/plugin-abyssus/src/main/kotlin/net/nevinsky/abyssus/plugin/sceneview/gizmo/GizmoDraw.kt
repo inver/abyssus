@@ -34,6 +34,7 @@ object GizmoDraw {
             when (handles.mode) {
                 GizmoMode.MOVE -> arrow(out, handles, axis, color)
                 GizmoMode.ROTATE -> ring(out, handles, axis, color)
+                GizmoMode.SELECT -> Unit
             }
         }
     }
@@ -43,7 +44,7 @@ object GizmoDraw {
         val a = handles.axisVector(axis)
         val tip = handles.tip(axis).toVector3()
         val base = Vector3(tip).mulAdd(a, -HEAD_LENGTH * handles.size)
-        val side = if (axis == GizmoAxis.Y) Vector3.X else Vector3.Y
+        val side = sideOf(a)
         val u = Vector3(a).crs(side).nor().scl(HEAD_RADIUS * handles.size)
         val v = Vector3(a).crs(u).nor().scl(HEAD_RADIUS * handles.size)
         for ((su, sv) in listOf(1f to 0f, -1f to 0f, 0f to 1f, 0f to -1f)) {
@@ -51,9 +52,12 @@ object GizmoDraw {
         }
     }
 
+    /** A world axis that is not parallel to [axis], to build a frame around it (Y, or X for an axis near Y). */
+    private fun sideOf(axis: Vector3): Vector3 = if (kotlin.math.abs(axis.y) < 0.9f) Vector3.Y else Vector3.X
+
     private fun ring(out: LineSink, handles: GizmoHandles, axis: GizmoAxis, color: Rgba) {
         val n = handles.axisVector(axis)
-        val side = if (axis == GizmoAxis.Y) Vector3.X else Vector3.Y
+        val side = sideOf(n)
         val u = Vector3(n).crs(side).nor()
         val v = Vector3(n).crs(u).nor()
         val center = handles.origin.toVector3()

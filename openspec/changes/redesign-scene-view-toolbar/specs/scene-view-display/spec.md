@@ -56,7 +56,7 @@ Frame selection, from the toolbar button or `F` while the view has focus, SHALL 
 
 ### Requirement: Orientation widget
 
-The viewport SHALL show an orientation widget in its upper-right corner: X, Y and Z axes in the gizmo colors, rotated to match the camera. Clicking an axis SHALL turn the orbit camera to look along it, keeping its target and distance. The widget SHALL stay in the corner when the view is resized, and SHALL NOT take clicks meant for the scene outside its circle.
+The viewport SHALL show an orientation widget drawn in its upper-right corner: X, Y and Z axes in the gizmo colors, rotated to match the camera. Clicking an axis SHALL turn the orbit camera to look along it, keeping its target and distance. The widget SHALL stay in the corner when the view is resized, and SHALL NOT take clicks meant for the scene outside its circle.
 
 #### Scenario: Follows the camera
 - **WHEN** the user orbits the camera 90 degrees about Y

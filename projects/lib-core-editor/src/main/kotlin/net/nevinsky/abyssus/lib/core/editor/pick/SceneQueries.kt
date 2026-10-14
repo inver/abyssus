@@ -235,7 +235,8 @@ class SnapshotSceneQueries(
         val id = state.selectedId ?: return null
         val selected = ScenePreview().selected(content, id) ?: return null
         val ray = rayAt(screenX, screenY, width, height) ?: return null
-        return GizmoDrag(state.gizmoMode, axis, selected.transform, ray, selected.direction).takeIf { it.isUsable }
+        val axes = gizmoAxes(state.gizmoSpace, selected.transform.rotation)
+        return GizmoDrag(state.gizmoMode, axis, selected.transform, ray, selected.direction, axes.getValue(axis), state.snap).takeIf { it.isUsable }
     }
 }
 
@@ -244,10 +245,13 @@ fun gizmoHandlesFor(c: SceneContent, eyeCamera: PerspectiveCamera, state: SceneV
     if (!state.gizmosEnabled) return null
     // Paint Foliage mode hides the move and rotate gizmos of the painted terrain.
     if (state.paint != null) return null
+    // Select mode highlights the selection without handles.
+    if (state.gizmoMode == GizmoMode.SELECT) return null
     val id = state.selectedId ?: return null
     if (state.gizmoMode == GizmoMode.ROTATE && !canRotate(c, id)) return null
     val selected = ScenePreview().selected(c, id) ?: return null
     val eye = Vec3(eyeCamera.position.x, eyeCamera.position.y, eyeCamera.position.z)
-    return GizmoHandles(selected.transform.position, state.gizmoMode, eye, eyeCamera.fieldOfView, height)
+    val axes = gizmoAxes(state.gizmoSpace, selected.transform.rotation)
+    return GizmoHandles(selected.transform.position, state.gizmoMode, eye, eyeCamera.fieldOfView, height, axes)
 }
 

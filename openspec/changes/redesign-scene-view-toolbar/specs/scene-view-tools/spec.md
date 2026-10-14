@@ -68,7 +68,7 @@ The scene view SHALL have a Snap toggle with a step, off by default and 0.5 when
 
 ### Requirement: Tool state in the status line
 
-The status bar of the scene editor SHALL show the current tool, space and snap step, such as `Move · Local · Snap 0.5`, and SHALL update as they change.
+The scene view SHALL show a slim status line under the viewport with the current tool, space and snap step, such as `Move · Local · Snap 0.5`, and SHALL update it as they change. The IDE's own status bar is not used.
 
 #### Scenario: Status follows tools
 - **WHEN** the user presses E and turns Snap off

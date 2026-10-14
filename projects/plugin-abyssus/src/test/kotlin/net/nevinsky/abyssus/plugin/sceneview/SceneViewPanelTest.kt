@@ -14,6 +14,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.Separator
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.plugin.projectView.AddAssetGroup
@@ -271,5 +272,195 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         }
         assertEquals("no file changes", before, snapshot(dir))
         dir.deleteRecursively()
+    }
+
+    private fun toolbarOf(panel: SceneViewPanel) = named(panel, "scene-toolbar") as javax.swing.JPanel
+
+    private fun actionsOf(panel: SceneViewPanel, place: String) =
+        (named(panel, place) as com.intellij.openapi.actionSystem.ActionToolbar).actions
+
+    fun testToolbarGroupsAppearInTheMockupsOrderWithDividers() {
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer())
+        try {
+            val names = toolbarOf(panel).components.map {
+                when {
+                    it.name != null -> it.name
+                    it is javax.swing.JComboBox<*> -> "camera"
+                    else -> it.javaClass.simpleName
+                }
+            }
+            val firstRow = names.take(9)
+            assertEquals(
+                listOf("AbyssusSceneTools", SceneToolsToolbar.DIVIDER_NAME, "AbyssusSceneSpace", SceneToolsToolbar.DIVIDER_NAME,
+                    "AbyssusSceneDisplay", SceneToolsToolbar.DIVIDER_NAME, "camera", "AbyssusSceneFrame", SceneToolsToolbar.DIVIDER_NAME),
+                firstRow,
+            )
+            assertTrue("existing actions follow", names.drop(9).containsAll(listOf("add-light")))
+        } finally { panel.dispose() }
+    }
+
+    fun testToolTooltipsNameTheirKeysAndMoveIsPressedFirst() {
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer())
+        try {
+            val tools = actionsOf(panel, "AbyssusSceneTools")
+            assertEquals(listOf("Select (Q)", "Move (W)", "Rotate (E)"), tools.map { it.templatePresentation.text })
+            val toggles = tools.map { it as com.intellij.openapi.actionSystem.ToggleAction }
+            fun pressed() = toggles.map { it.isSelected(TestActionEvent.createTestEvent(it)) }
+            assertEquals(listOf(false, true, false), pressed())
+            toggles[2].setSelected(TestActionEvent.createTestEvent(toggles[2]), true)
+            assertEquals(listOf(false, false, true), pressed())
+            toggles[0].setSelected(TestActionEvent.createTestEvent(toggles[0]), true)
+            assertEquals(listOf(true, false, false), pressed())
+        } finally { panel.dispose() }
+    }
+
+    fun testDisplayTogglesWriteTheModelAndNotAnything_Else() {
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer())
+        try {
+            val display = actionsOf(panel, "AbyssusSceneDisplay")
+            val grid = display.last() as com.intellij.openapi.actionSystem.ToggleAction
+            assertTrue(panel.tools.display.grid)
+            grid.setSelected(TestActionEvent.createTestEvent(grid), false)
+            assertFalse(panel.tools.display.grid)
+            assertTrue(panel.tools.display.shadows && panel.tools.display.fog)
+        } finally { panel.dispose() }
+    }
+
+    fun testToolbarWrapsInsteadOfOverlappingAtNineHundredPixels() {
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer(),
+            lightMenu = PlacementMenu({ true }) { _ -> DefaultActionGroup() },
+            assetMenu = PlacementMenu({ true }) { _ -> DefaultActionGroup() })
+        try {
+            panel.setSize(900, 600)
+            fun layoutAll(c: Component) { (c as? Container)?.let { it.doLayout(); it.components.forEach(::layoutAll) } }
+            layoutAll(panel)
+            val toolbar = toolbarOf(panel)
+            layoutAll(toolbar)
+            val boxes = toolbar.components.filter { it.isVisible }.map { it.name to it.bounds }
+            assertTrue("all controls fit inside the width", boxes.all { (_, b) -> b.x >= 0 && b.x + b.width <= 900 })
+            for (i in boxes.indices) for (j in i + 1 until boxes.size) {
+                assertFalse("${boxes[i].first} overlaps ${boxes[j].first}", boxes[i].second.intersects(boxes[j].second))
+            }
+            val frame = toolbar.components.first { it.name == "AbyssusSceneFrame" }
+            assertTrue("the first row ends with Frame selection or wraps before it", frame.width > 0)
+        } finally { panel.dispose() }
+    }
+
+    fun testStatusLineFollowsToolSpaceAndSnap() {
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer())
+        try {
+            val status = named(panel, "scene-status") as javax.swing.JLabel
+            assertEquals("Move \u00b7 World", status.text)
+            panel.tools.space = net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.LOCAL
+            panel.tools.snapOn = true
+            assertEquals("Move \u00b7 Local \u00b7 Snap 0.5", status.text)
+            val rotate = actionsOf(panel, "AbyssusSceneTools")[2] as com.intellij.openapi.actionSystem.ToggleAction
+            rotate.setSelected(TestActionEvent.createTestEvent(rotate), true)
+            panel.tools.snapOn = false
+            panel.tools.space = net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.WORLD
+            assertEquals("Rotate \u00b7 World", status.text)
+        } finally { panel.dispose() }
+    }
+
+    fun testToolsReachTheViewStateThatDrivesTheGizmo() {
+        val renderer = testRenderer()
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, renderer)
+        try {
+            panel.tools.space = net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.LOCAL
+            panel.tools.snapOn = true
+            panel.tools.snapStep = 0.25f
+            assertEquals(net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.LOCAL, renderer.state.gizmoSpace)
+            assertEquals(net.nevinsky.abyssus.lib.core.editor.pick.GizmoSnap(0.25f, SNAP_ANGLE_DEGREES), renderer.state.snap)
+            panel.tools.snapOn = false
+            assertNull(renderer.state.snap)
+            panel.tools.setGrid(false)
+            panel.tools.setShading(Shading.UNLIT)
+            assertEquals(ViewDisplay(grid = false, shading = Shading.UNLIT), renderer.display)
+        } finally { panel.dispose() }
+    }
+
+    private val mainParams = net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf(
+        net.nevinsky.abyssus.lib.core.editor.parseScene(java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
+        CameraParams.DEFAULT,
+    )
+
+    fun testFrameSelectionLooksAtTheSelectedMarker() {
+        val renderer = testRenderer()
+        val panel = SceneViewPanel(mainParams, renderer)
+        try {
+            val camera = mainParams.content.cameras.single()
+            renderer.state.selectedId = camera.entityId
+            panel.frameSelection()
+            assertEquals(camera.position.x, panel.orbit.target.x, 1.5f)
+            assertEquals(camera.position.y, panel.orbit.target.y, 1.5f)
+            assertEquals(camera.position.z, panel.orbit.target.z, 1.5f)
+        } finally { panel.dispose() }
+    }
+
+    fun testFrameSelectionDoesNothingWhileLookingThroughASceneCamera() {
+        val renderer = testRenderer()
+        val panel = SceneViewPanel(mainParams, renderer)
+        try {
+            renderer.state.selectedId = mainParams.content.cameras.single().entityId
+            renderer.state.viewCamera = mainParams.content.cameras.single().entityId
+            val before = panel.orbit.target
+            panel.frameSelection()
+            assertEquals(before, panel.orbit.target)
+        } finally { panel.dispose() }
+    }
+
+    fun testFrameSelectionWithNothingDrawnAndNothingSelectedDoesNothing() {
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer())
+        try {
+            val before = panel.orbit.target
+            panel.frameSelection()
+            assertEquals(before, panel.orbit.target)
+        } finally { panel.dispose() }
+    }
+
+    private fun laidOut(panel: SceneViewPanel) {
+        panel.setSize(800, 600)
+        fun layoutAll(c: Component) { (c as? Container)?.let { it.doLayout(); it.components.forEach(::layoutAll) } }
+        layoutAll(panel)
+    }
+
+    fun testAPressOnTheOrientationWidgetsXMarkLooksAlongMinusXFromItsSide() {
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer())
+        try {
+            laidOut(panel)
+            val x = (panel.width - CORNER_MARGIN - OrientationWidget.SIZE / 2 + OrientationWidget.ARM).toInt()
+            val y = CORNER_MARGIN + OrientationWidget.SIZE / 2
+            assertTrue(panel.pressOnOrientationWidget(x, y))
+            assertEquals(Math.PI.toFloat() / 2, panel.orbit.yaw, 1e-4f)
+        } finally { panel.dispose() }
+    }
+
+    fun testAPressOutsideTheWidgetsDiscGoesToTheScene() {
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer())
+        try {
+            laidOut(panel)
+            assertFalse(panel.pressOnOrientationWidget(5, 5))
+            // inside the widget's rectangle but outside its circle
+            assertFalse(panel.pressOnOrientationWidget(panel.width - CORNER_MARGIN - 1, CORNER_MARGIN + 1))
+        } finally { panel.dispose() }
+    }
+
+    fun testAnUnavailableViewKeepsItsToolbarDisabledAboveTheMessage() {
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer(),
+            lightMenu = PlacementMenu({ true }) { _ -> DefaultActionGroup() })
+        try {
+            assertTrue(panel.showUnavailable("OpenGL scene is unavailable: no GL"))
+            val message = named(panel, "scene-unavailable") as javax.swing.JLabel
+            assertEquals("OpenGL scene is unavailable: no GL", message.text)
+            assertNotNull("the toolbar stays", named(panel, "scene-toolbar"))
+            assertFalse((named(panel, "add-light") as JButton).isEnabled)
+            val tools = actionsOf(panel, "AbyssusSceneTools")
+            for (action in tools) {
+                val event = TestActionEvent.createTestEvent(action)
+                action.update(event)
+                assertFalse(event.presentation.isEnabled)
+            }
+            assertEquals("Move \u00b7 World", (named(panel, "scene-status") as javax.swing.JLabel).text)
+        } finally { panel.dispose() }
     }
 }

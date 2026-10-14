@@ -30,6 +30,9 @@ import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GLCapabilities
 import org.lwjgl.opengl.awt.GLData
 import java.awt.BorderLayout
+import com.intellij.ui.JBColor
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.WrapLayout
 import java.awt.FlowLayout
 import java.awt.event.*
 import javax.swing.*
@@ -59,7 +62,7 @@ class SceneViewPanel internal constructor(
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     private val frame = GdxFrame()
-    private val orbit = OrbitCamera(initial.camera)
+    internal val orbit = OrbitCamera(initial.camera)
     private val interaction = SceneInteraction(renderer.state, renderer.queries, orbit)
     private var gdx: GdxContext? = null
 
@@ -68,8 +71,22 @@ class SceneViewPanel internal constructor(
 
     override val view: JComponent get() = this
 
-    private val moveButton = JToggleButton(AbyssusBundle.message("sceneViewMove"), true)
-    private val rotateButton = JToggleButton(AbyssusBundle.message("sceneViewRotate"))
+    /** Gizmo space, snapping, shading and layer toggles of this view; never saved. */
+    internal val tools = SceneViewToolsModel()
+    /** The slim line under the viewport: tool, space and snap, such as `Move · Local · Snap 0.5`. */
+    private val statusLine = JLabel().apply {
+        name = "scene-status"
+        accessibleContext.accessibleName = AbyssusBundle.message("sceneViewStatusName")
+        border = JBUI.Borders.empty(2, 10)
+        foreground = JBColor.GRAY
+    }
+    private val orientation = OrientationWidget()
+    private val statsStrip = StatsStrip()
+    private var spriteScale = 0.0
+    private var orientationSprite: CornerSprite? = null
+    private var statsSprite: CornerSprite? = null
+    private var lastToolbar = toolbarState(GizmoMode.MOVE, experimenting = false, playing = false, canDrop = false, canAddLight = false, canAddAsset = false)
+    private val toolsToolbar = SceneToolsToolbar(interaction, tools, { lastToolbar }, { frameSelection() }, this)
     private val dropButton = JButton(AbyssusBundle.message("sceneViewDrop"))
     private val addLightButton = JButton(AbyssusBundle.message("addLightTitle")).apply { name = "add-light" }
     private val addAssetButton = JButton(AbyssusBundle.message("addAssetTitle")).apply { name = "add-asset" }
@@ -94,7 +111,7 @@ class SceneViewPanel internal constructor(
         JToggleButton(AbyssusBundle.message("sceneViewRayExperiment")) else null
     private val experiment = experimentButton?.let { RayFeasibilityPreview { message -> thisLogger().info(message) } }
     private val experimenting: Boolean get() = experimentButton?.isSelected == true
-    private val input = SceneInputForwarder(this, renderer, interaction, play, { experimenting }, { experiment?.orbit }, paint::update)
+    private val input = SceneInputForwarder(this, renderer, interaction, play, { experimenting }, { experiment?.orbit }, paint::update, ::frameSelection, ::pressOnOrientationWidget)
 
     init {
         renderer.params = initial
@@ -149,6 +166,7 @@ class SceneViewPanel internal constructor(
         override fun paintGL() {
             val ctx = gdx ?: return
             capabilities?.let { GL.setCapabilities(it) }
+            updateCornerSprites(width, framebufferWidth)
             frame.tick(framebufferWidth, framebufferHeight)
             renderer.state.poses = play.poses() ?: emptyMap()
             renderer.state.gizmosEnabled = !play.active
@@ -179,8 +197,26 @@ class SceneViewPanel internal constructor(
     }
     private var canvasHost = newCanvasHost()
 
+    private var lastActivityNanos = System.nanoTime()
+    private var lastRenderNanos = 0L
+
+    /** Marks input on this view: it renders at the full frame rate for [IDLE_AFTER_NANOS] after the last event. */
+    private val activityListener = java.awt.event.AWTEventListener { event ->
+        if (event is InputEvent && event.source.let { it is java.awt.Component && SwingUtilities.isDescendingFrom(it, this) }) {
+            lastActivityNanos = System.nanoTime()
+        }
+    }
+
+    /** True while something moves or may change at once; an idle view (the sky still drifts) renders at [IDLE_FRAME_MILLIS]. */
+    private fun busy(now: Long): Boolean =
+        now - lastActivityNanos < IDLE_AFTER_NANOS || play.active || experimenting || renderer.loading ||
+            renderer.presentedRayFrame
+
     private val timer: Timer = Timer(FRAME_MILLIS) {
         if (!canvas.glSafe()) return@Timer
+        val now = System.nanoTime()
+        if (!busy(now) && now - lastRenderNanos < IDLE_FRAME_MILLIS * 1_000_000L) return@Timer
+        lastRenderNanos = now
         try {
             canvas.render()
         } catch (e: Throwable) {
@@ -192,28 +228,101 @@ class SceneViewPanel internal constructor(
 
     private fun stopLoop() = timer.stop()
 
+    /** True once rendering failed for good: the viewport shows a message and the toolbar is disabled. */
+    private var unavailable = false
+
+    override fun showUnavailable(message: String): Boolean {
+        stopLoop()
+        unavailable = true
+        remove(canvasHost)
+        canvasHost.stop()
+        add(com.intellij.ui.components.JBLabel(message, SwingConstants.CENTER).apply { name = "scene-unavailable" }, BorderLayout.CENTER)
+        syncControls()
+        revalidate()
+        repaint()
+        return true
+    }
+
     init {
         add(buildToolbar(), BorderLayout.NORTH)
         add(canvasHost, BorderLayout.CENTER)
+        add(statusLine, BorderLayout.SOUTH)
         input.attach(canvas)
         input.bindKeys()
         input.forwardKeys()
         interaction.onStateChanged = ::syncControls
+        tools.onChanged = ::syncControls
         play.onChanged = ::syncControls
         syncControls()
         refreshCameraChoices(initial)
     }
 
+    /**
+     * Repaints the orientation widget and the stats strip into the sprites the renderer draws in the corners, when what they
+     * show or the display scale changed. The widget shows the camera the frame is drawn from, so it also follows a scene camera.
+     */
+    private fun updateCornerSprites(logicalWidth: Int, framebufferWidth: Int) {
+        val scale = (framebufferWidth.toDouble() / logicalWidth.coerceAtLeast(1)).coerceAtLeast(1.0)
+        val d = renderer.frameCamera.direction
+        val widgetChanged = orientation.show(
+            kotlin.math.atan2(-d.x, -d.z), kotlin.math.asin((-d.y).coerceIn(-1f, 1f)),
+        )
+        val statsChanged = statsStrip.show(statsText())
+        val rescaled = scale != spriteScale
+        if (!widgetChanged && !statsChanged && !rescaled && orientationSprite != null) return
+        spriteScale = scale
+        val margin = Math.round(CORNER_MARGIN * scale).toInt()
+        if (widgetChanged || rescaled || orientationSprite == null) {
+            orientationSprite = CornerSprite(orientation.corner, orientation.toImage(scale), orientation.version, margin)
+        }
+        if (statsChanged || rescaled || statsSprite == null) {
+            statsSprite = CornerSprite(statsStrip.corner, statsStrip.toImage(scale), statsStrip.version, margin)
+        }
+        renderer.cornerSprites = listOfNotNull(orientationSprite, statsSprite)
+    }
+
+    private fun statsText(): String = statsLine(
+        fps = null,
+        objectsText = AbyssusBundle.message("sceneViewObjects", renderer.drawnModels.size + renderer.drawnTerrains.size),
+        status = statusLine.text.orEmpty(),
+    )
+
+    /**
+     * A left press at ([x], [y]) in the canvas: true when it landed on the orientation widget's disc and so is not for the
+     * scene. On one of its axes it turns the orbit camera to look along that axis, from the axis's side.
+     */
+    internal fun pressOnOrientationWidget(x: Int, y: Int): Boolean {
+        val rect = cornerRect(Corner.UPPER_RIGHT, canvas.width, canvas.height, OrientationWidget.SIZE, OrientationWidget.SIZE, CORNER_MARGIN)
+        if (!rect.contains(x, y)) return false
+        val radius = OrientationWidget.SIZE / 2f
+        val dx = x - rect.x - radius
+        val dy = y - rect.y - radius
+        if (dx * dx + dy * dy > radius * radius) return false
+        if (play.active || experimenting || interaction.viewCamera != null) return true
+        orientation.axisAt(x - rect.x, y - rect.y)?.let { axis ->
+            val direction = axis.direction
+            orbit.lookAlong(Vec3(-direction.x, -direction.y, -direction.z))
+        }
+        return true
+    }
+
+    /**
+     * Frame selection: the orbit camera looks at the selected object, or at everything drawn when nothing is selected,
+     * keeping its view direction. Nothing while looking through a scene camera, playing or in the ray experiment.
+     */
+    internal fun frameSelection() {
+        if (play.active || experimenting || interaction.viewCamera != null) return
+        val box = renderer.framedBounds(interaction.selectedId) ?: return
+        val camera = renderer.frameCamera
+        val aspect = (camera.viewportWidth / camera.viewportHeight).takeIf { it.isFinite() && it > 0f } ?: 1f
+        orbit.frame(
+            FrameSelection().frame(
+                Vec3(box.min.x, box.min.y, box.min.z), Vec3(box.max.x, box.max.y, box.max.z), camera.fieldOfView, aspect,
+            ),
+        )
+    }
+
     private fun buildToolbar(): JPanel {
-        val group = ButtonGroup()
-        group.add(moveButton)
-        group.add(rotateButton)
-        moveButton.toolTipText = AbyssusBundle.message("sceneViewMoveTooltip")
-        rotateButton.toolTipText = AbyssusBundle.message("sceneViewRotateTooltip")
-        moveButton.isFocusable = false
-        rotateButton.isFocusable = false
-        moveButton.addActionListener { if (!updatingControls) interaction.mode = GizmoMode.MOVE }
-        rotateButton.addActionListener { if (!updatingControls) interaction.mode = GizmoMode.ROTATE }
         dropButton.isFocusable = false
         dropButton.toolTipText = AbyssusBundle.message("sceneViewDropTooltip")
         dropButton.addActionListener { interaction.drop() }
@@ -263,9 +372,15 @@ class SceneViewPanel internal constructor(
             val choice = cameraCombo.selectedItem as? CameraChoice ?: return@addActionListener
             interaction.viewCamera = choice.id
         }
-        return JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply {
-            add(moveButton)
-            add(rotateButton)
+        return JPanel(WrapLayout(FlowLayout.LEFT, 4, 2)).apply {
+            name = "scene-toolbar"
+            accessibleContext.accessibleName = AbyssusBundle.message("sceneViewToolbarName")
+            val groups = toolsToolbar.components()
+            groups.forEach { add(it) }
+            add(toolsToolbar.divider())
+            add(cameraCombo)
+            add(toolsToolbar.frameComponent())
+            add(toolsToolbar.divider())
             add(dropButton)
             add(addLightButton)
             if (assetMenu != null) add(addAssetButton)
@@ -274,7 +389,6 @@ class SceneViewPanel internal constructor(
             add(drawingHint)
             if (foliageActions != null) add(addFoliageButton)
             paint.addTo(this)
-            add(cameraCombo)
             add(clouds.combo)
             add(clouds.note)
             playStrip.addTo(this)
@@ -313,17 +427,31 @@ class SceneViewPanel internal constructor(
 
     /** Brings the toolbar's buttons and selector in line with the interaction state. */
     private fun syncControls() {
+        renderer.state.gizmoSpace = tools.space
+        renderer.display = tools.display
+        renderer.state.snap = if (tools.snapOn) GizmoSnap(tools.snapStep, SNAP_ANGLE_DEGREES) else null
+        statusLine.text = toolStatus(
+            AbyssusBundle.message(when (interaction.mode) {
+                GizmoMode.SELECT -> "sceneViewToolSelect"
+                GizmoMode.MOVE -> "sceneViewToolMove"
+                GizmoMode.ROTATE -> "sceneViewToolRotate"
+            }),
+            AbyssusBundle.message(if (tools.space == GizmoSpace.WORLD) "sceneViewSpaceWorld" else "sceneViewSpaceLocal"),
+            if (tools.snapOn) AbyssusBundle.message("sceneViewSnap", formatStep(tools.snapStep)) else null,
+        )
         paint.beforeSync()
         updatingControls = true
         try {
             val toolbar = toolbarState(
                 interaction.mode, experimenting, play.active, interaction.canDrop,
                 lightMenu?.available?.invoke() == true, assetMenu?.available?.invoke() == true,
+                tools.display, renderer.content.lights.isNotEmpty(), renderer.params.fog != null, interaction.viewCamera != null,
             )
-            moveButton.isSelected = toolbar.moveSelected
-            rotateButton.isSelected = toolbar.rotateSelected
-            moveButton.isEnabled = toolbar.gizmoEnabled
-            rotateButton.isEnabled = toolbar.gizmoEnabled
+            lastToolbar = when {
+                unavailable -> toolbar.disabled()
+                paint.painting -> toolbar.copy(gizmoEnabled = false, spaceEnabled = false, snapEnabled = false)
+                else -> toolbar
+            }
             cameraCombo.isEnabled = toolbar.cameraEnabled
             dropButton.isEnabled = toolbar.dropEnabled
             addLightButton.isEnabled = toolbar.addLightEnabled
@@ -338,13 +466,24 @@ class SceneViewPanel internal constructor(
             addFoliageButton.isEnabled = !play.active && foliage?.templatePresentation?.isEnabled == true
             addFoliageButton.toolTipText = foliage?.templatePresentation?.description
             paint.sync()
-            if (paint.painting) { moveButton.isEnabled = false; rotateButton.isEnabled = false; dropButton.isEnabled = false }
+            if (paint.painting) dropButton.isEnabled = false
             playStrip.sync()
             cameraCombo.selectedItem = choices.firstOrNull { it.id == interaction.viewCamera } ?: choices.firstOrNull()
         } finally {
             updatingControls = false
         }
+        toolsToolbar.update()
         clouds.sync()
+        if (unavailable) disableToolbarComponents()
+    }
+
+    /** Every plain Swing control of the toolbar off (the action toolbars read [lastToolbar]); the view cannot render. */
+    private fun disableToolbarComponents() {
+        fun off(c: java.awt.Component) {
+            if (c is AbstractButton || c is JComboBox<*>) c.isEnabled = false
+            (c as? java.awt.Container)?.components?.forEach(::off)
+        }
+        components.firstOrNull { it.name == "scene-toolbar" }?.let(::off)
     }
 
     /** After each rendered frame; see [CloudControls.frameRendered]. */
@@ -459,10 +598,17 @@ class SceneViewPanel internal constructor(
         replaceAbandonedCanvas()
         super.addNotify()
         rayBinding.feed?.runtime?.setVisible(true)
+        lastActivityNanos = System.nanoTime()
+        java.awt.Toolkit.getDefaultToolkit().addAWTEventListener(
+            activityListener,
+            java.awt.AWTEvent.MOUSE_EVENT_MASK or java.awt.AWTEvent.MOUSE_MOTION_EVENT_MASK or
+                java.awt.AWTEvent.MOUSE_WHEEL_EVENT_MASK or java.awt.AWTEvent.KEY_EVENT_MASK,
+        )
         timer.start()
     }
 
     override fun removeNotify() {
+        java.awt.Toolkit.getDefaultToolkit().removeAWTEventListener(activityListener)
         stopLoop()
         experiment?.stop()
         rayBinding.feed?.runtime?.setVisible(false)
@@ -482,6 +628,10 @@ class SceneViewPanel internal constructor(
 
     private companion object {
         const val FRAME_MILLIS = 16
+
+        /** An idle view (no input for [IDLE_AFTER_NANOS], nothing loading or playing) renders every this many ms. */
+        const val IDLE_FRAME_MILLIS = 100
+        const val IDLE_AFTER_NANOS = 1_000_000_000L
 
         fun glData() = GLData().apply {
             majorVersion = 3

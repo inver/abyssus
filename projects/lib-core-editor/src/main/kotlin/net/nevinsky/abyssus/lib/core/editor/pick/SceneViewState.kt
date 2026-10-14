@@ -32,6 +32,12 @@ class SceneViewState {
 
     var gizmoMode: GizmoMode = GizmoMode.MOVE
 
+    /** Whether the gizmo follows the world axes or the selected object's own. */
+    var gizmoSpace: GizmoSpace = GizmoSpace.WORLD
+
+    /** Snapping of gizmo drags, or null while it is off. */
+    var snap: GizmoSnap? = null
+
     /** The gizmo handle under the cursor, drawn brighter. */
     var hoveredAxis: GizmoAxis? = null
 

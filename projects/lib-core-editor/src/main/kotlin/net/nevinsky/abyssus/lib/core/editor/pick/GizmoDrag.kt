@@ -50,20 +50,26 @@ class GizmoDrag(
     val start: PlacementTransform,
     startRay: Ray,
     private val startDirection: Vec3? = null,
+    axisDirection: Vec3 = axis.direction,
+    private val snap: GizmoSnap? = null,
 ) {
     private val origin = start.position.toVector3()
-    private val axisVector = axis.direction.toVector3()
+    private val axisVector = axisDirection.toVector3()
     private val startParameter: Float? = when (mode) {
         GizmoMode.MOVE -> GizmoMath().rayLine(startRay, origin, axisVector)
-        GizmoMode.ROTATE -> null
+        GizmoMode.ROTATE, GizmoMode.SELECT -> null
     }
     private val startArm: Vector3? = when (mode) {
-        GizmoMode.MOVE -> null
+        GizmoMode.MOVE, GizmoMode.SELECT -> null
         GizmoMode.ROTATE -> armOf(startRay)
     }
 
     /** Whether the press could be turned into a drag at all (the ray was not parallel to the axis or the ring). */
-    val isUsable: Boolean get() = if (mode == GizmoMode.MOVE) startParameter != null else startArm != null
+    val isUsable: Boolean get() = when (mode) {
+        GizmoMode.MOVE -> startParameter != null
+        GizmoMode.ROTATE -> startArm != null
+        GizmoMode.SELECT -> false
+    }
 
     private var last = DragResult(start, startDirection)
 
@@ -72,6 +78,7 @@ class GizmoDrag(
         last = when (mode) {
             GizmoMode.MOVE -> move(ray)
             GizmoMode.ROTATE -> rotate(ray)
+            GizmoMode.SELECT -> null
         } ?: last
         return last
     }
@@ -81,6 +88,8 @@ class GizmoDrag(
         val to = GizmoMath().rayLine(ray, origin, axisVector) ?: return null
         val shift = Vector3(axisVector).scl(to - from)
         val p = Vector3(origin).add(shift)
+        // Snapping rounds the coordinate along the axis, not the distance dragged.
+        snap?.let { p.mulAdd(axisVector, it.move(p.dot(axisVector)) - p.dot(axisVector)) }
         return DragResult(start.copy(position = p.toVec3()), startDirection)
     }
 
@@ -88,7 +97,8 @@ class GizmoDrag(
         val from = startArm ?: return null
         val to = armOf(ray) ?: return null
         val angle = atan2(axisVector.dot(Vector3(from).crs(to)), from.dot(to))
-        val delta = Quaternion(axisVector, Math.toDegrees(angle.toDouble()).toFloat())
+        val degrees = Math.toDegrees(angle.toDouble()).toFloat()
+        val delta = Quaternion(axisVector, snap?.rotate(degrees) ?: degrees)
         val q = Quaternion(start.rotation.x, start.rotation.y, start.rotation.z, start.rotation.w).mulLeft(delta).nor()
         val direction = startDirection?.let { delta.transform(it.toVector3()).toVec3() }
         return DragResult(start.copy(rotation = Quat(q.x, q.y, q.z, q.w)), direction)

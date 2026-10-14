@@ -67,6 +67,10 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             val status = editor.statusText
             assertNotNull(status)
             assertTrue(status!!, status.startsWith("OpenGL scene is unavailable") && status.contains("no GL 3.2"))
+            // a real view keeps its toolbar above the message
+            fun find(c: java.awt.Component, name: String): java.awt.Component? =
+                if (c.name == name) c else (c as? java.awt.Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+            if (editor.sceneView != null) assertNotNull(find(editor.component, "scene-toolbar"))
         } finally {
             editor.dispose()
         }

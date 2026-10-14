@@ -275,7 +275,13 @@ class SceneFileEditor(
 
     internal fun showGlFailure(e: Throwable) {
         if (disposed) return
-        showStatus(AbyssusBundle.message("glUnavailable", e.documentDisplayMessage()))
+        val text = AbyssusBundle.message("glUnavailable", e.documentDisplayMessage())
+        // a view that can keep its toolbar shows the message itself; any other is replaced by it
+        if (view?.showUnavailable(text) == true) {
+            statusText = text
+            return
+        }
+        showStatus(text)
     }
 
     private fun showStatus(text: String) {

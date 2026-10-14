@@ -98,4 +98,60 @@ class GizmoDragTest {
         val turned = drag.update(ray(Vector3(1f, 10f, 0f), Vector3(1f, 0f, 0f))).transform
         assertVec(Vec3(0f, 0f, 1f), forward(turned.rotation)) // 180 degrees about Y
     }
+
+    private val snap = GizmoSnap(0.5f, 15f)
+
+    @Test
+    fun aSnappedMoveRoundsTheCoordinateAlongTheAxis() {
+        val drag = GizmoDrag(GizmoMode.MOVE, GizmoAxis.X, at(), ray(Vector3(0f, 10f, 20f), Vector3(0f, 0f, 0f)), null, GizmoAxis.X.direction, snap)
+        val moved = drag.update(ray(Vector3(2.31f, 10f, 20f), Vector3(2.31f, 0f, 0f))).transform
+        assertVec(Vec3(2.5f, 0f, 0f), moved.position)
+    }
+
+    @Test
+    fun aSnappedMoveKeepsTheOtherCoordinates() {
+        val start = at(Vec3(1.3f, 2.2f, 3.7f))
+        val drag = GizmoDrag(GizmoMode.MOVE, GizmoAxis.X, start, ray(Vector3(1.3f, 12.2f, 23.7f), Vector3(1.3f, 2.2f, 3.7f)), null, GizmoAxis.X.direction, snap)
+        val moved = drag.update(ray(Vector3(2.1f, 12.2f, 23.7f), Vector3(2.1f, 2.2f, 3.7f))).transform
+        assertVec(Vec3(2.0f, 2.2f, 3.7f), moved.position)
+    }
+
+    @Test
+    fun withoutSnapTheRawValueIsKept() {
+        val drag = GizmoDrag(GizmoMode.MOVE, GizmoAxis.X, at(), ray(Vector3(0f, 10f, 20f), Vector3(0f, 0f, 0f)))
+        val moved = drag.update(ray(Vector3(2.31f, 10f, 20f), Vector3(2.31f, 0f, 0f))).transform
+        assertVec(Vec3(2.31f, 0f, 0f), moved.position)
+    }
+
+    @Test
+    fun aSnappedRotationTurnsInFifteenDegreeSteps() {
+        val start = Ray(Vector3(1f, 10f, 0f), Vector3(0f, -1f, 0f))
+        val drag = GizmoDrag(GizmoMode.ROTATE, GizmoAxis.Y, at(), start, null, GizmoAxis.Y.direction, snap)
+        val a = Math.toRadians(37.0)
+        val to = Ray(Vector3(Math.cos(a).toFloat(), 10f, -Math.sin(a).toFloat()), Vector3(0f, -1f, 0f))
+        val turned = drag.update(to).transform
+        assertVec(Vec3(-0.5f, 0f, -0.8660254f), forward(turned.rotation))
+    }
+
+    @Test
+    fun aLocalMoveGoesAlongTheObjectsOwnAxis() {
+        val axes = gizmoAxes(GizmoSpace.LOCAL, Quaternion(Vector3.Y, 90f).let { Quat(it.x, it.y, it.z, it.w) })
+        val localX = axes.getValue(GizmoAxis.X)
+        val drag = GizmoDrag(GizmoMode.MOVE, GizmoAxis.X, at(), ray(Vector3(10f, 0f, 0f), Vector3(0f, 0f, 0f)), null, localX)
+        val moved = drag.update(ray(Vector3(10f, 0f, -2f), Vector3(0f, 0f, -2f))).transform
+        assertVec(Vec3(0f, 0f, -2f), moved.position)
+    }
+
+    @Test
+    fun aLocalRotationTurnsAboutTheObjectsOwnAxis() {
+        // an object turned 90 degrees about Y: its local X axis is world -Z; turning 90 degrees about it
+        val start = Quaternion(Vector3.Y, 90f).let { Quat(it.x, it.y, it.z, it.w) }
+        val localX = gizmoAxes(GizmoSpace.LOCAL, start).getValue(GizmoAxis.X)
+        val drag = GizmoDrag(GizmoMode.ROTATE, GizmoAxis.X, at(rotation = start), Ray(Vector3(0f, 1f, 10f), Vector3(0f, 0f, -1f)), null, localX)
+        val turned = drag.update(Ray(Vector3(1f, 0f, 10f), Vector3(0f, 0f, -1f))).transform.rotation
+        // the arm went from +Y to +X about the world -Z axis: a quarter turn, so the object's own X axis is still world -Z
+        val axisAfter = gizmoAxes(GizmoSpace.LOCAL, turned).getValue(GizmoAxis.X)
+        assertVec(Vec3(0f, 0f, -1f), axisAfter)
+        assertFalse("the rotation changed", turned == start)
+    }
 }

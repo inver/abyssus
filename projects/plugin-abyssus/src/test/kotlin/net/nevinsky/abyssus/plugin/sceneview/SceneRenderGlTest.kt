@@ -649,7 +649,9 @@ class SceneRenderGlTest {
                 gizmo = renderer.drewGizmo
             }
             assertNull(r.error)
-            assertTrue("no $mode gizmo drawn", gizmo)
+            // Select mode highlights the selection and draws no handles
+            if (mode == net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode.SELECT) assertFalse("a $mode gizmo was drawn", gizmo)
+            else assertTrue("no $mode gizmo drawn", gizmo)
         }
     }
 
@@ -730,5 +732,69 @@ class SceneRenderGlTest {
             val differing = content.count { (x, y) -> sky.getRGB(x, y) != none.getRGB(x, y) }
             assertEquals("lightsScene=$field changed $differing of ${content.size} content pixels", 0, differing)
         }
+    }
+
+    private fun renderWith(p: SceneRenderParams, display: ViewDisplay) =
+        GlHarness.render(p, 80) { r, frame ->
+            if (frame == 0) r.display = display
+            if (r.drawnModels.isEmpty()) Thread.sleep(10)
+        }
+
+    private fun differs(a: java.awt.image.BufferedImage, b: java.awt.image.BufferedImage): Boolean {
+        if (a.width != b.width || a.height != b.height) return true
+        for (y in 0 until a.height) for (x in 0 until a.width) if (a.getRGB(x, y) != b.getRGB(x, y)) return true
+        return false
+    }
+
+    @Test
+    fun everyDisplayModeRendersWithoutAGlError() {
+        val p = params("Untitled", "Main Scene.scene")
+        for (display in listOf(
+            ViewDisplay(), ViewDisplay(grid = false), ViewDisplay(fog = false), ViewDisplay(shadows = false), ViewDisplay(shading = Shading.UNLIT),
+        )) assertNull("$display", renderWith(p, display).error)
+    }
+
+    @Test
+    fun theGridToggleChangesThePicture() {
+        val p = params("Untitled", "Main Scene.scene")
+        assertTrue(differs(renderWith(p, ViewDisplay()).image, renderWith(p, ViewDisplay(grid = false)).image))
+    }
+
+    @Test
+    fun unlitDrawsDifferentlyFromLitAndComesBack() {
+        val p = params("Untitled", "Main Scene.scene")
+        val lit = renderWith(p, ViewDisplay()).image
+        assertTrue(differs(lit, renderWith(p, ViewDisplay(shading = Shading.UNLIT)).image))
+    }
+
+    @Test
+    fun cornerOverlaysPaintTheirCornersOnly() {
+        val p = params("Untitled", "Main Scene.scene")
+        val widget = OrientationWidget().apply { show(0.4f, 0.3f) }
+        val strip = StatsStrip().apply { show("12 objects \u00b7 Move \u00b7 World") }
+        val plain = GlHarness.render(p, 60)
+        val withOverlays = GlHarness.render(p, 60) { r, frame ->
+            if (frame == 0) {
+                r.cornerSprites = listOf(
+                    CornerSprite(widget.corner, widget.toImage(1.0), widget.version, CORNER_MARGIN),
+                    CornerSprite(strip.corner, strip.toImage(1.0), strip.version, CORNER_MARGIN),
+                )
+            }
+        }
+        assertNull(withOverlays.error)
+        val w = plain.image.width
+        val h = plain.image.height
+        fun changed(rect: PixelRect): Int {
+            var n = 0
+            for (y in rect.y until rect.y + rect.height) for (x in rect.x until rect.x + rect.width) {
+                if (plain.image.getRGB(x, y) != withOverlays.image.getRGB(x, y)) n++
+            }
+            return n
+        }
+        assertTrue("the widget paints its corner", changed(cornerRect(Corner.UPPER_RIGHT, w, h, OrientationWidget.SIZE, OrientationWidget.SIZE, CORNER_MARGIN)) > 200)
+        val stripSize = strip.measure()
+        assertTrue("the strip paints its corner", changed(cornerRect(Corner.LOWER_LEFT, w, h, stripSize.width, stripSize.height, CORNER_MARGIN)) > 200)
+        // the middle of the picture is untouched
+        assertEquals(0, changed(PixelRect(w / 3, h / 3, w / 3, h / 3)))
     }
 }
