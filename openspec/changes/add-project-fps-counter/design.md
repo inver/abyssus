@@ -47,13 +47,9 @@ The overlay draws the latest published value; a value computed after swapping is
 
 Settings delivery and sampling run on the AWT/EDT thread. Reset on disable/enable, hidden or unsafe timer ticks, `removeNotify`, failure, disposal, context abandonment and re-creation. Resume with the placeholder; never fold hidden time into the next sample. Pure state/reset behavior belongs in `FpsCounter` and its tests; the panel supplies lifecycle events.
 
-### 4. Draw a GL text overlay owned by the canvas
+### 4. Show the value in the stats strip drawn by the scene view
 
-Introduce `FpsOverlay`, created lazily when enabled with a safe current context, drawing after scene content and loading feedback and before swapping. Keep it at the panel canvas level so raster and ray rendering use the same overlay and do not depend on ray frame production. The experimental render branch can use this same final draw without changing its measurements or control flow.
-
-Use libGDX's existing bitmap-font support with a batch and shader compatible with the established GL 3.2 core profile; do not assume the default text shader works on that profile. Draw a compact translucent dark backing and light text at the upper-right, inset from the edge. Convert logical padding/font size to framebuffer coordinates using the canvas's logical-to-framebuffer ratio. Restore any GL state the draw changes; handle tiny viewports by keeping drawing within bounds. Avoid per-frame text texture uploads and do not construct GPU resources while disabled.
-
-All creation, drawing and safe disposal occur only inside `GdxRuntime.withContext` on the rendering AWT thread. Dispose alongside renderer resources in `disposeGL`; on abandonment drop references without GL calls and recreate when a safe context returns. Existing guarded rendering stays authoritative. A Swing label in the toolbar is simpler but does not provide the requested viewport counter; a Swing overlay cannot reliably cover this canvas.
+The scene view draws a stats strip in the lower-left corner (`redesign-scene-view-toolbar`): Swing paints it into an image and a small GL pass (`CornerOverlay`) shows it as a quad after the loading overlay, so no bitmap-font batch or text shader is needed here. This change supplies the sampled integer to `statsLine(fps, ...)`, which puts `<n> fps` (or `-- fps` before the first sample) first when the counter is enabled and omits it otherwise. The overlay stays at the panel level, so raster and ray rendering share it, and it follows the existing safe-surface and context-lifecycle rules of `CornerOverlay`. Padding, fonts and HiDPI scale come from the strip's Swing painting.
 
 ## Risks / Trade-offs
 

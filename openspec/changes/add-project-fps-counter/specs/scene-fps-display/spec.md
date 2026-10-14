@@ -28,15 +28,15 @@ The FPS counter SHALL be off when no preference is saved. `Show FPS` in project 
 
 ### Requirement: Readable viewport overlay
 
-An enabled counter SHALL show `FPS: <integer>` in the upper-right corner of the scene viewport, with readable contrast against light and dark backgrounds. Before the first complete sample it SHALL show `FPS: --`. The overlay SHALL follow viewport resizing and display scaling, remain visible over loading feedback, and preserve camera navigation, picking and gizmo interaction.
+An enabled counter SHALL show `<integer> fps` at the start of the stats strip in the lower-left corner of the scene viewport (the strip of `redesign-scene-view-toolbar`, which also shows the object count and tool), with readable contrast against light and dark backgrounds. Before the first complete sample it SHALL show `-- fps`. The overlay SHALL follow viewport resizing and display scaling, remain visible over loading feedback, and preserve camera navigation, picking and gizmo interaction.
 
 #### Scenario: Enable on the fixture scene
 - **WHEN** the user enables the counter in a copy of `Untitled` and opens `Main Scene`
-- **THEN** the viewport shows `FPS: --` initially and a numeric FPS value after a complete sample
+- **THEN** the viewport shows `-- fps` initially and a numeric FPS value after a complete sample
 
 #### Scenario: Resize and navigate
 - **WHEN** the enabled viewport is resized and the user orbits or selects `Model 0`
-- **THEN** the counter stays in the upper-right corner and navigation and selection continue to work
+- **THEN** the counter stays in the lower-left corner and navigation and selection continue to work
 
 #### Scenario: Loading feedback
 - **WHEN** an enabled view is rendering loading feedback
@@ -48,11 +48,11 @@ Each counter SHALL measure completed frames of its own viewport per elapsed seco
 
 #### Scenario: Stable frame cadence
 - **WHEN** a viewport completes 60 frames in one second of active sampling
-- **THEN** its counter shows `FPS: 60`
+- **THEN** its counter shows `60 fps`
 
 #### Scenario: A slow frame
 - **WHEN** a viewport completes 10 frames over a two-second sample because rendering stalls
-- **THEN** its counter shows `FPS: 5` rather than its requested update rate
+- **THEN** its counter shows `5 fps` rather than its requested update rate
 
 #### Scenario: Separate viewport rates
 - **WHEN** two visible viewports complete frames at different rates
@@ -64,7 +64,7 @@ Each counter SHALL measure completed frames of its own viewport per elapsed seco
 
 ### Requirement: FPS sampling follows view lifecycle
 
-Disabled, hidden, minimized, zero-size, failed or disposed views SHALL NOT perform counter-driven rendering or count frames. Enabling the counter or resuming a suspended view SHALL discard its previous sample and show `FPS: --` until a fresh sample completes. Counter resources SHALL follow the view's graphics lifecycle without causing unsafe rendering or retaining closed views.
+Disabled, hidden, minimized, zero-size, failed or disposed views SHALL NOT perform counter-driven rendering or count frames. Enabling the counter or resuming a suspended view SHALL discard its previous sample and show `-- fps` until a fresh sample completes. Counter resources SHALL follow the view's graphics lifecycle without causing unsafe rendering or retaining closed views.
 
 #### Scenario: Hidden view resumes
 - **WHEN** an enabled view is hidden for ten seconds and then shown again
@@ -72,7 +72,7 @@ Disabled, hidden, minimized, zero-size, failed or disposed views SHALL NOT perfo
 
 #### Scenario: Toggle on again
 - **WHEN** the counter is disabled and then re-enabled
-- **THEN** its first display is `FPS: --` and the next numeric value uses only new completed frames
+- **THEN** its first display is `-- fps` and the next numeric value uses only new completed frames
 
 #### Scenario: Unsafe surface or closed view
 - **WHEN** an enabled view becomes zero-size, minimized or disposed
