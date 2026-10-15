@@ -514,8 +514,9 @@ class SceneViewPanel internal constructor(
             drawingHint.isVisible = interaction.drawing != null
             val foliage = interaction.selectedId?.let { foliageActions?.invoke(it) }
             addFoliageButton.isVisible = foliage != null
-            addFoliageButton.isEnabled = !play.active && foliage?.templatePresentation?.isEnabled == true
-            addFoliageButton.toolTipText = foliage?.templatePresentation?.description
+            val hasChoices = foliage != null && foliage.childrenCount > 0
+            addFoliageButton.isEnabled = !play.active && hasChoices
+            addFoliageButton.toolTipText = if (foliage != null && !hasChoices) AbyssusBundle.message("addFoliageNone") else null
             paint.sync()
             if (paint.painting) dropButton.isEnabled = false
             playStrip.sync()

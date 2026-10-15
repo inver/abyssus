@@ -26,6 +26,33 @@
   },
   "skyboxEnabled": true,
   "skyboxName": "skybox_physical",
+  "abyssus": {
+    "waterSurfaces": {
+      "5b0c6f0e-3c1d-4f4a-9a58-7d2f6a1e9b31": {
+        "name": "Lake",
+        "preset": "LAKE",
+        "enabled": true,
+        "position": {
+          "x": -94.0,
+          "y": -1.2,
+          "z": -106.0
+        },
+        "width": 64.0,
+        "length": 64.0,
+        "tint": {
+          "r": 0.03,
+          "g": 0.22,
+          "b": 0.25
+        },
+        "clarity": 8.0,
+        "waveAmplitude": 0.08,
+        "waveLength": 4.0,
+        "waveSpeed": 0.5,
+        "foamAmount": 0.5,
+        "foamWidth": 0.6
+      }
+    }
+  },
   "ecs": {
     "entities": {
       "0": {

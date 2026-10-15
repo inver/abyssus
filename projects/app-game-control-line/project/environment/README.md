@@ -28,6 +28,7 @@ north-up placement diagram (not a render).
 | Houses and gardens | south-east between the lane and the railway, and south beyond the railway |
 | Trees and bushes | dense to the north-east and east, sparse on the worn plot (125 trees, 90 bushes); foliage assets since the foliage migration (below) |
 | Grass | generated clumps on the site terrain wherever the base ground shows, never within 25 m of the pilot |
+| Lake | north-west, centre (-94, -106), shoreline ~23 m; a basin hand-carved into `terrain_airfield_site` (about 3 m deep) under an Abyssus water surface (`abyssus.waterSurfaces` in `Field.scene`, level y = -1.2, Lake preset, 64 m square). Water is drawn by the Abyssus scene view only; the game does not render it yet |
 
 Where the brief and the image disagree:
 
