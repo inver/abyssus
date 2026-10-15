@@ -265,7 +265,7 @@ Water has pure checks and GL checks, all named for the capability they pin down.
   a blended quad model, a cloudy sky). The water animation is stood still (`SceneRenderer.waterTime`) so two renders can be
   compared pixel for pixel, and `testRenderer` / `GlHarness.render` take a logger and a scene `ShaderStorage` (the failure
   checks put a broken `water.frag` in front of the real one).
-- **By eye:** the visual checks of the OpenSpec change (`openspec/changes/add-realistic-water`) are sandbox-IDE checks; the
+- **By eye:** the visual checks of the OpenSpec change (`openspec/changes/archive/2026-10-15-add-realistic-water`) are sandbox-IDE checks; the
   GL tests assert numbers (colour ordering, pixel counts, byte equality), not a screenshot.
 
 ## GL-free seams

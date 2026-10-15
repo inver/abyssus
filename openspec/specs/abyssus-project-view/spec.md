@@ -100,7 +100,7 @@ properties, one child per list element. The `scenes` and `assets` lists SHALL be
 `<x>Name`) SHALL show a clickable eye icon at the right edge of its row, shown as visible when enabled and
 as hidden (with grayed text) when disabled. Clicking the eye SHALL set the `<x>Enabled` value in
 the file the property was read from to the opposite value, changing nothing else in that file,
-and the view SHALL refresh. A scene listed under a project SHALL be labeled `<name> (<id>)` (for example `Main Scene (6275127)`) and SHALL NOT repeat `id` and `name` as child rows; its name SHALL instead be changed through a right-click "Rename Scene..." action, which sets only `name` in that scene's file. A project scene's skybox row SHALL also offer a skybox chooser (see the `abyssus-scene-skybox` capability), which sets only `skyboxName` in that scene's file. These three actions are the only ones that write to an asset file. An asset node SHALL remain a single node even when its model is expanded
+and the view SHALL refresh. A scene listed under a project SHALL be labeled `<name> (<id>)` (for example `Main Scene (6275127)`) and SHALL NOT repeat `id` and `name` as child rows; its name SHALL instead be changed through a right-click "Rename Scene..." action, which sets only `name` in that scene's file. A project scene's skybox row SHALL also offer a skybox chooser (see the `abyssus-scene-skybox` capability), which sets only `skyboxName` in that scene's file. Water authoring and visibility actions SHALL also write the scene extension as defined by `scene-water`; existing scene and asset actions remain available. An asset node SHALL remain a single node even when its model is expanded
 - expanding a file SHALL NOT add extra entries to the view root.
 
 #### Scenario: File expands into its properties
@@ -297,3 +297,19 @@ is the number of its slots that name an entity. An entity without such a `Parent
 
 - **WHEN** a copy has been detached, so it has no `ParentComponent` and its slot is `-1`
 - **THEN** it is listed under `ecs` as an ordinary entity
+
+### Requirement: Water rows in a scene
+
+A scene containing `abyssus.waterSurfaces` SHALL show a Water group with one row per surface in saved order, labelled by name, with a visibility eye and an Abyssus-only indication. Water rows SHALL be distinct from ECS entities and assets and support selection, rename and removal.
+
+#### Scenario: Water in Main Scene
+- **WHEN** a user adds a Lake to a copy of `Untitled/scenes/Main Scene.scene`
+- **THEN** a Lake row appears under Water and `Model 0`, `Terrain` (entity 1) and `Camera 4` remain in the ECS tree
+
+#### Scenario: Hide one surface
+- **WHEN** the user clicks a visible Lake's eye
+- **THEN** only that surface's `enabled` changes, the surface disappears from the Scene view and its row remains with a hidden eye
+
+#### Scenario: Existing scene
+- **WHEN** a scene has no water extension
+- **THEN** reading it creates no extension and the Add Water action remains available
