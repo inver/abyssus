@@ -27,6 +27,18 @@ class ShadowDepthPass {
     val lightPosition = Vector3()
     var radialDepth: Boolean = false
     var far: Float = 1f
+
+    /**
+     * A world clip plane `(a, b, c, d)`: fragments with `a x + b y + c z + d < 0` are discarded (alpha-tested cutouts
+     * are unaffected otherwise). Null: no clipping, as for a shadow pass.
+     */
+    var clipPlane: FloatArray? = null
+
+    /**
+     * Above 0: the pass writes the linear view depth (the distance along the camera's forward axis) divided by this
+     * far distance instead of the window depth, with an even precision over the range. The water passes read it back.
+     */
+    var linearFar: Float = 0f
 }
 
 /** Depth shader for the library's custom mesh/index implementation, including posed vertices and alpha cutouts. */
@@ -64,6 +76,10 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
         program.setUniformi("u_radialDepth", if (pass.radialDepth) 1 else 0)
         program.setUniformf("u_lightPosition", pass.lightPosition)
         program.setUniformf("u_far", pass.far)
+        val clip = pass.clipPlane
+        program.setUniformi("u_clipEnabled", if (clip != null) 1 else 0)
+        if (clip != null) program.setUniformf("u_clipPlane", clip[0], clip[1], clip[2], clip[3])
+        program.setUniformf("u_linearFar", pass.linearFar)
         val bones = renderable.bones
         val matrices = boneMatrices
         for (i in 0 until boneCount) {
@@ -91,7 +107,7 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
     private fun vertexSource(): String = buildString {
         val hasUv = (0 until meshAttributes.size()).any { meshAttributes.get(it).alias == "a_texCoord0" }
         val color = meshAttributes.findByUsage(VertexAttributes.Usage.ColorUnpacked) ?: meshAttributes.findByUsage(VertexAttributes.Usage.ColorPacked)
-        append("attribute vec3 a_position; uniform mat4 u_projViewTrans; varying vec3 v_worldPos; varying vec2 v_uv; varying float v_alpha;\n")
+        append("attribute vec3 a_position; uniform mat4 u_projViewTrans; varying vec3 v_worldPos; varying vec2 v_uv; varying float v_alpha; varying float v_viewDepth;\n")
         if (instanced) {
             // four vec4 columns, each bound to its own attribute location by name
             InstanceAttributes.ALIASES.forEach { append("attribute vec4 $it;\n") }
@@ -110,7 +126,7 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
         append("v_worldPos=world.xyz;\n")
         append(if (color != null) "v_alpha=${color.alias}.a;\n" else "v_alpha=1.0;\n")
         if (hasUv) append("v_uv=a_texCoord0*u_uvTransform.zw+u_uvTransform.xy;\n") else append("v_uv=vec2(0.0);\n")
-        append("gl_Position=u_projViewTrans*world;}\n")
+        append("gl_Position=u_projViewTrans*world; v_viewDepth=gl_Position.w;}\n")
     }
 
     companion object {
@@ -129,11 +145,15 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
             uniform int u_radialDepth;
             uniform vec3 u_lightPosition;
             uniform float u_far;
+            uniform int u_clipEnabled;
+            uniform vec4 u_clipPlane;
+            uniform float u_linearFar;
             varying vec2 v_uv;
             varying vec3 v_worldPos;
             varying float v_alpha;
+            varying float v_viewDepth;
             vec4 packDepth(float depth){ vec4 value=fract(min(depth,0.99999994)*vec4(16581375.0,65025.0,255.0,1.0)); value-=value.xxyz*vec4(0.0,1.0/255.0,1.0/255.0,1.0/255.0); return value; }
-            void main(){ float alpha=u_diffuseAlpha*v_alpha; if(u_hasDiffuse==1) alpha*=texture2D(u_diffuseTexture,v_uv).a; if(alpha<u_alphaTest) discard; float depth=gl_FragCoord.z; if(u_radialDepth==1) depth=length(v_worldPos-u_lightPosition)/u_far; gl_FragColor=packDepth(clamp(depth,0.0,1.0)); }
+            void main(){ if(u_clipEnabled==1 && dot(v_worldPos,u_clipPlane.xyz)+u_clipPlane.w<0.0) discard; float alpha=u_diffuseAlpha*v_alpha; if(u_hasDiffuse==1) alpha*=texture2D(u_diffuseTexture,v_uv).a; if(alpha<u_alphaTest) discard; float depth=gl_FragCoord.z; if(u_linearFar>0.0) depth=v_viewDepth/u_linearFar; if(u_radialDepth==1) depth=length(v_worldPos-u_lightPosition)/u_far; gl_FragColor=packDepth(clamp(depth,0.0,1.0)); }
         """
     }
 }

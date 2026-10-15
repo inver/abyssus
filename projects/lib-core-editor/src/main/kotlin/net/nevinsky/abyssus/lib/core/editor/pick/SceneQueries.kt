@@ -9,6 +9,11 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
+import net.nevinsky.abyssus.lib.core.editor.water.WaterHit
+import net.nevinsky.abyssus.lib.core.editor.water.WaterPreview
 import net.nevinsky.abyssus.lib.core.editor.arrange.pointsOf
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
@@ -34,6 +39,13 @@ interface SceneQueries {
 
     /** The entity under the pixel ([screenX], [screenY]) of a [width] x [height] view, or null. */
     fun pick(screenX: Int, screenY: Int, width: Int, height: Int): String?
+
+    /**
+     * What is under the pixel: the entity [pick] finds, or a water surface when one is met nearer than that entity (or
+     * nothing is). A water rectangle never wins over nearer terrain or a model.
+     */
+    fun pickTarget(screenX: Int, screenY: Int, width: Int, height: Int): SceneTarget? =
+        pick(screenX, screenY, width, height)?.let(SceneTarget::Entity)
 
     /** The ray through the pixel of a [width] x [height] view, or null for an empty view. */
     fun rayAt(screenX: Int, screenY: Int, width: Int, height: Int): Ray?
@@ -106,16 +118,21 @@ class SnapshotSceneQueries(
     private var contentOf: SceneContent? = null
     private var contentBase: SceneContent? = null
     private var contentPreview: Map<String, DragResult>? = null
+    private var contentWaterPreview: Map<String, Vec3>? = null
 
     override val content: SceneContent
         get() {
             val base = sceneContent
             val preview = state.preview
-            contentOf?.takeIf { base === contentBase && preview === contentPreview }?.let { return it }
-            return (if (preview.isEmpty()) base else ScenePreview().apply(base, preview)).also {
+            val waterPreview = state.waterPreview
+            contentOf?.takeIf { base === contentBase && preview === contentPreview && waterPreview === contentWaterPreview }
+                ?.let { return it }
+            val posed = if (preview.isEmpty()) base else ScenePreview().apply(base, preview)
+            return (if (waterPreview.isEmpty()) posed else posed.copy(water = WaterPreview().apply(posed.water, waterPreview))).also {
                 contentOf = it
                 contentBase = base
                 contentPreview = preview
+                contentWaterPreview = waterPreview
             }
         }
 
@@ -139,6 +156,20 @@ class SnapshotSceneQueries(
         val targets = targets() ?: return null
         val ray = ScenePicker().pickRay(frame.camera, screenX, screenY, width, height)
         return ScenePicker().pick(ray, targets.boxes.map { BoxTarget(it.id, BoundingBox(it.local).mul(it.world)) }, targets.terrains, frame.camera.far)
+    }
+
+    override fun pickTarget(screenX: Int, screenY: Int, width: Int, height: Int): SceneTarget? {
+        if (width <= 0 || height <= 0) return null
+        val frame = snapshot() ?: return null
+        val targets = targets() ?: return null
+        val ray = ScenePicker().pickRay(frame.camera, screenX, screenY, width, height)
+        val entity = ScenePicker().nearest(ray, targets.boxes.map { BoxTarget(it.id, BoundingBox(it.local).mul(it.world)) }, targets.terrains, frame.camera.far)
+        val water = WaterHit().nearest(ray, content.water.filterIsInstance<ValidWater>().map { it.settings }, frame.camera.far)
+        return when {
+            water != null && (entity == null || water.distance < entity.second) -> SceneTarget.Water(water.id)
+            entity != null -> SceneTarget.Entity(entity.first)
+            else -> null
+        }
     }
 
     override fun rayAt(screenX: Int, screenY: Int, width: Int, height: Int): Ray? {
@@ -231,7 +262,16 @@ class SnapshotSceneQueries(
         return GizmoHit().find(ray, handles)
     }
 
+    /** A drag of the move handle [axis] of water surface [waterId]; its transform is the surface centre, unrotated. */
+    private fun beginWaterDrag(waterId: String, axis: GizmoAxis, screenX: Int, screenY: Int, width: Int, height: Int): GizmoDrag? {
+        val centre = waterCentre(content, waterId) ?: return null
+        val ray = rayAt(screenX, screenY, width, height) ?: return null
+        val start = PlacementTransform(centre, Quat.IDENTITY, Vec3(1f, 1f, 1f))
+        return GizmoDrag(GizmoMode.MOVE, axis, start, ray, null, axis.direction, state.snap).takeIf { it.isUsable }
+    }
+
     override fun beginDrag(axis: GizmoAxis, screenX: Int, screenY: Int, width: Int, height: Int): GizmoDrag? {
+        state.selectedWater?.let { return beginWaterDrag(it, axis, screenX, screenY, width, height) }
         val id = state.selectedId ?: return null
         val selected = ScenePreview().selected(content, id) ?: return null
         val ray = rayAt(screenX, screenY, width, height) ?: return null
@@ -247,6 +287,13 @@ fun gizmoHandlesFor(c: SceneContent, eyeCamera: PerspectiveCamera, state: SceneV
     if (state.paint != null) return null
     // Select mode highlights the selection without handles.
     if (state.gizmoMode == GizmoMode.SELECT) return null
+    // Water only moves: it has no rotation to turn, and its handles follow the world axes.
+    state.selectedWater?.let { waterId ->
+        if (state.gizmoMode != GizmoMode.MOVE) return null
+        val centre = waterCentre(c, waterId) ?: return null
+        val eye = Vec3(eyeCamera.position.x, eyeCamera.position.y, eyeCamera.position.z)
+        return GizmoHandles(centre, GizmoMode.MOVE, eye, eyeCamera.fieldOfView, height, WORLD_AXES)
+    }
     val id = state.selectedId ?: return null
     if (state.gizmoMode == GizmoMode.ROTATE && !canRotate(c, id)) return null
     val selected = ScenePreview().selected(c, id) ?: return null
@@ -255,3 +302,7 @@ fun gizmoHandlesFor(c: SceneContent, eyeCamera: PerspectiveCamera, state: SceneV
     return GizmoHandles(selected.transform.position, state.gizmoMode, eye, eyeCamera.fieldOfView, height, axes)
 }
 
+
+/** The centre of the valid water surface [waterId] of [c], or null when the scene has no such drawable surface. */
+fun waterCentre(c: SceneContent, waterId: String): Vec3? =
+    (c.water.firstOrNull { it.id == waterId } as? ValidWater)?.settings?.let { Vec3(it.x.toFloat(), it.level.toFloat(), it.z.toFloat()) }

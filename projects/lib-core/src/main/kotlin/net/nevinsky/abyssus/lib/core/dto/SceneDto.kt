@@ -6,9 +6,6 @@
 package net.nevinsky.abyssus.lib.core.dto
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.dto.BaseLightDto
-import net.nevinsky.abyssus.lib.core.dto.FogDto
-import net.nevinsky.abyssus.lib.core.dto.RayTracingDto
 import java.util.*
 
 data class SceneDto(
@@ -23,6 +20,8 @@ data class SceneDto(
     val skyboxName: String? = null,
     val rayTracing: RayTracingDto? = null,
     val rayTracingEnabled: Boolean = rayTracing != null,
+    /** The scene's `abyssus` extension block as the file holds it (water surfaces live in it), kept raw so nothing in it is lost. */
+    val abyssus: JsonNode? = null,
     // parsing ecs graph should be done externally of deserializing scene
     val ecs: JsonNode? = null
 )

@@ -96,6 +96,15 @@
         <action id="Abyssus.AddLight" class="net.nevinsky.abyssus.plugin.projectView.AddLightAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
         </action>
+        <action id="Abyssus.AddWater" class="net.nevinsky.abyssus.plugin.projectView.AddWaterAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddLight"/>
+        </action>
+        <action id="Abyssus.RenameWater" class="net.nevinsky.abyssus.plugin.projectView.RenameWaterAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+        </action>
+        <action id="Abyssus.RemoveWater" class="net.nevinsky.abyssus.plugin.projectView.RemoveWaterAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.RenameWater"/>
+        </action>
         <action id="Abyssus.AddAsset" class="net.nevinsky.abyssus.plugin.projectView.AddAssetAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddLight"/>
         </action>

@@ -142,7 +142,11 @@ float directionalVisibility(vec3 worldPos) {
     return mix(u_dirVisParams.y, texture2D(u_dirVisMap, clamp(uv, 0.0, 1.0)).r, inside);
 }
 
+uniform int u_clipEnabled; // 1 in a planar reflection pass: fragments with a x + b y + c z + d < 0 are discarded
+uniform vec4 u_clipPlane;
+
 void main() {
+    if (u_clipEnabled == 1 && dot(v_world, u_clipPlane.xyz) + u_clipPlane.w < 0.0) discard;
     vec4 color = vec4(0.8, 0.8, 0.8, 1.0);
     if (u_has_splatBase == 1) color = texture2D(u_splatBase, v_uv);
     if (u_hasSplat == 1) {

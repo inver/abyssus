@@ -63,8 +63,9 @@ enabled and as hidden (with grayed text) when disabled. Clicking the eye SHALL s
 property was read from to the opposite value, changing nothing else in that file, and the view SHALL refresh. A scene
 listed under a project SHALL be labeled `<name> (<id>)` (for example `Main Scene (6275127)`) and SHALL NOT repeat `id` and
 `name` as child rows; its name SHALL instead be changed through a right-click "Rename Scene..." action, which sets only
-`name` in that scene's file. The eye toggle, "Rename Scene..." and the skybox assignment of `abyssus-scene-skybox` are the
-only actions that write to an asset file from the tree. An asset node SHALL remain a single node even when its model is
+`name` in that scene's file. The eye toggle, "Rename Scene...", the skybox assignment of `abyssus-scene-skybox` and the
+water actions of `scene-water` (Add Water, and the eye, rename and removal of a water row, which write only that scene's
+`abyssus.waterSurfaces` extension) are the only actions that write to an asset file from the tree. An asset node SHALL remain a single node even when its model is
 expanded; expanding a file SHALL NOT add extra entries to the view root.
 
 #### Scenario: File expands into its properties

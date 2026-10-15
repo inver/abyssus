@@ -76,6 +76,7 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
                 ),
                 lightMenu = PlacementMenu({ host.canAddLight(file) }) { position -> host.lightActions(file, position) },
                 assetMenu = PlacementMenu({ host.canAddAsset(file) }) { position -> host.assetActions(file, position) },
+                waterMenu = PlacementMenu({ host.canAddWater(file) }) { position -> host.waterActions(file, position) },
                 pathMenu = PlacementMenu({ host.canAddPath(file) }) { start -> host.pathActions(file, start) },
                 ray = ray,
                 play = play,

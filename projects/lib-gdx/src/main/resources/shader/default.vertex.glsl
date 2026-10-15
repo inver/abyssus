@@ -63,6 +63,12 @@ varying vec3 v_binormal;
 #endif
 #endif // normalFlag
 
+// a clip plane tests the world position, which exists without lighting or normals only for it
+#if defined(clipPlaneFlag) && !defined(worldPositionFlag)
+#define worldPositionFlag
+varying vec3 v_worldPos;
+#endif
+
 #ifdef textureFlag
 attribute vec2 a_texCoord0;
 #endif // textureFlag
@@ -258,6 +264,10 @@ void main() {
 	#endif
 
 	gl_Position = u_projViewTrans * pos;
+
+	#if defined(clipPlaneFlag) && !defined(normalFlag)
+		v_worldPos = pos.xyz;
+	#endif
 
 	#if defined(lightingFlag) && defined(shadowMapFlag)
 		vec4 spos = u_shadowMapProjViewTrans * pos;

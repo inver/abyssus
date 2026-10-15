@@ -36,6 +36,8 @@ import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneIcons
 import net.nevinsky.abyssus.plugin.filetype.ScenesIcons
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
+import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
+import net.nevinsky.abyssus.plugin.water.WaterGroup
 import javax.swing.Icon
 
 /** Shown in a scene entry's label (`name (id)`) and edited via Rename, so not repeated as rows. */
@@ -141,6 +143,8 @@ private fun entryIcon(entry: DtoEntry): Icon {
         dto is List<*> && entry.name == "scenes" -> ScenesIcons.LIST
         dto is List<*> && entry.name == "assets" -> AllIcons.Nodes.Folder
         dto is UiScreen -> AllIcons.Actions.PreviewDetails
+        dto is WaterGroup -> AllIcons.Nodes.Folder
+        dto is WaterSurface -> AllIcons.Nodes.Variable
         dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
         isEntityEntry(entry) -> EntityIcons.forType(entry.entityType())
         isComponentEntry(entry) -> ComponentIcons.forComponent(entry.name)

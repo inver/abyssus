@@ -164,7 +164,7 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
         val icon = if (entry.enabled) EyeIcons.ON else EyeIcons.OFF
         return IconAction(icon, null) { r ->
             val wasExpanded = isExpanded(getPathForRow(r))
-            if (toggleEnabled(project, entry)) reselect(entry.path, wasExpanded)
+            if (toggleRow(project, entry)) reselect(entry.path, wasExpanded)
         }
     }
 

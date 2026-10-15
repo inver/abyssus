@@ -486,6 +486,7 @@ open class DefaultShader(
             context!!.setBlending(false, GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
         }
         bindMaterial(combinedAttributes)
+        bindClipPlane(combinedAttributes)
         if (lighting) {
             bindLights(renderable, combinedAttributes)
         }
@@ -557,6 +558,13 @@ open class DefaultShader(
         context!!.setCullFace(cullFace)
         context!!.setDepthTest(depthFunc, depthRangeNear, depthRangeFar)
         context!!.setDepthMask(depthMask)
+    }
+
+    /** The world clip plane of the pass, when it set one; the shader was compiled with the test only in that case. */
+    private fun bindClipPlane(attributes: Attributes) {
+        val plane = attributes.get(ClipPlaneAttribute.Type) as? ClipPlaneAttribute ?: return
+        val location = program!!.fetchUniformLocation("u_clipPlane", false)
+        if (location >= 0) program!!.setUniformf(location, plane.normalX, plane.normalY, plane.normalZ, plane.offset)
     }
 
     protected fun bindLights(renderable: Renderable, attributes: Attributes) {
@@ -749,6 +757,9 @@ open class DefaultShader(
     ) {
         if (and(vertexMask, VertexAttributes.Usage.Position.toLong())) {
             prefix.append("#define positionFlag\n")
+        }
+        if (attributes.has(ClipPlaneAttribute.Type)) {
+            prefix.append("#define clipPlaneFlag\n")
         }
         if (or(vertexMask, (VertexAttributes.Usage.ColorUnpacked or VertexAttributes.Usage.ColorPacked).toLong())) {
             prefix.append("#define colorFlag\n")

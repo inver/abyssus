@@ -49,6 +49,10 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
+import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
+import net.nevinsky.abyssus.lib.core.water.WaterField
+import net.nevinsky.abyssus.plugin.water.WaterSceneEdits
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
@@ -140,6 +144,7 @@ class SceneFileEditor(
             rayControls.selected(file, this, entityId)
             view?.selectEntity(entityId)
         }
+        host.listenWater(file, this) { waterId -> view?.selectWater(waterId) }
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 if (events.any { it is VFileContentChangeEvent && isSource(it.file) && hasRenderChange(it.file) }) {
@@ -224,6 +229,8 @@ class SceneFileEditor(
             rayControls.selected(file, this, entityId)
             host.select(file, entityId)
         }
+        created.onPickWater = { waterId -> host.selectWater(file, waterId) }
+        created.onWaterMove = ::applyWaterMove
         created.onTransform = ::applyTransform
         created.onArrangementCreate = ::createArrangement
         created.onArrangementEdit = ::editArrangement
@@ -239,6 +246,23 @@ class SceneFileEditor(
         val isRotate = edit.rotation != null || edit.target != null
         val command = AbyssusBundle.message(if (isRotate) "commandRotateEntity" else "commandMoveEntity")
         return editSceneJson(project, file, command) { root -> SceneTransformWriter().apply(root, entityId, edit) }
+    }
+
+    /**
+     * Writes the new centre of the water surface [waterId] as one undoable command, changing only the coordinates that
+     * differ from the saved ones (so a Y drag leaves X and Z's number text alone). False when nothing was written.
+     */
+    internal fun applyWaterMove(waterId: String, at: Vec3): Boolean {
+        val saved = runCatchingKeepingCancellation {
+            WaterCodec().read(SceneJson().parse(textOf(file)).get("abyssus")).valid.firstOrNull { it.id == waterId }
+        }.getOrNull() ?: return false
+        val moved = buildMap {
+            if (at.x != saved.x.toFloat()) put(WaterField.X, at.x.toDouble())
+            if (at.y != saved.level.toFloat()) put(WaterField.LEVEL, at.y.toDouble())
+            if (at.z != saved.z.toFloat()) put(WaterField.Z, at.z.toDouble())
+        }
+        if (moved.isEmpty()) return false
+        return WaterSceneEdits(project).move(file, waterId, moved) == WaterEdit.Changed
     }
 
     /** The ground to place copies on: the view's, else one read from the project; null when the user cancelled the read. */

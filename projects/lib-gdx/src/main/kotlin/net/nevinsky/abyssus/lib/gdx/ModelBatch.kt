@@ -43,6 +43,14 @@ class ModelBatch(context: RenderContext?, sorter: RenderableSorter?, protected v
     }
 
     private var camera: Camera? = null
+
+    /**
+     * Decides which renderables of a provider are drawn: one for which this returns false is dropped before it is
+     * queued. Null (the default) draws everything. A pass sets it to split the opaque and the blended parts of a model
+     * without the provider knowing; it applies to every `render` call until it is set again.
+     */
+    var renderableFilter: ((Renderable) -> Boolean)? = null
+
     protected val renderablesPool: RenderablePool = RenderablePool()
 
     /**
@@ -192,6 +200,17 @@ class ModelBatch(context: RenderContext?, sorter: RenderableSorter?, protected v
         camera = null
     }
 
+    /** Drops the queued renderables from [offset] on that [renderableFilter] refuses; the pool takes them back at the flush. */
+    private fun applyFilter(offset: Int) {
+        val filter = renderableFilter ?: return
+        var kept = offset
+        for (i in offset..<renderables.size) {
+            val renderable = renderables.get(i)
+            if (filter(renderable)) renderables.set(kept++, renderable)
+        }
+        renderables.truncate(kept)
+    }
+
     /**
      * Calls [RenderableProvider.getRenderables] and adds all returned [Renderable] instances
      * to the current batch to be rendered. Any shaders set on the returned renderables will be replaced with the given
@@ -203,6 +222,7 @@ class ModelBatch(context: RenderContext?, sorter: RenderableSorter?, protected v
     fun render(renderableProvider: RenderableProvider, shaderKey: String?) {
         val offset = renderables.size
         renderableProvider.getRenderables(renderables, renderablesPool)
+        applyFilter(offset)
         for (i in offset..<renderables.size) {
             val renderable = renderables.get(i)
             renderable.shader = shaderProvider.get(shaderKey, renderable)
@@ -239,6 +259,7 @@ class ModelBatch(context: RenderContext?, sorter: RenderableSorter?, protected v
     ) {
         val offset = renderables.size
         renderableProvider.getRenderables(renderables, renderablesPool)
+        applyFilter(offset)
         for (i in offset..<renderables.size) {
             val renderable = renderables.get(i)
             renderable.environment = environment

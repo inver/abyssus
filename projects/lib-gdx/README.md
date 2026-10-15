@@ -32,6 +32,17 @@ libGDX's own `g3d` meshes use 16-bit indices, so one mesh can address at most 65
   The atlas depth format uses base-255 RGBA8 digits (least significant in R) to match channel quantization. Disable
   color dithering and sRGB output while writing it and use nearest texture filtering. The receivers interpolate PCF
   comparisons and correct sample depths using receiver-plane gradients; the atlas's UV rectangles may vary in size.
+- Optional pass support for planar reflections and water depth (all of it off by default, so a scene that sets nothing
+  renders and compiles exactly as before):
+  - `ClipPlaneAttribute` is a world-space clip plane `a x + b y + c z + d >= 0` set on an `Environment` (or a material)
+    while a pass draws. `DefaultShader` and `PbrShader` then compile a `clipPlaneFlag` variant that discards the fragments
+    below it from the world position (the vertex shader supplies it even without lighting or normals); the plane is
+    bound per renderable. Skinned and instanced meshes are clipped after posing, and alpha-tested cutouts keep their holes.
+  - `ShadowDepthPass.clipPlane` clips the depth pass the same way, and `ShadowDepthPass.linearFar` (above 0) makes it
+    write the linear view depth divided by that distance, packed like the shadow depths, instead of the window depth.
+    `ModelDepthShader` still skips alpha-blended materials.
+  - `ModelBatch.renderableFilter` drops the renderables of a provider that a pass should not draw (the opaque and the
+    blended parts of one model can be drawn in separate passes).
 - `net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader`:
   - `loadData` parses a file without a GL context.
   - `decodeTextures` decodes the textures off the GL thread.

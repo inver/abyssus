@@ -41,6 +41,9 @@ object GlHarness {
         orbit: OrbitCamera = OrbitCamera(params.camera),
         executor: java.util.concurrent.Executor? = null,
         framebufferSize: Pair<Int, Int>? = null,
+        log: org.slf4j.Logger = printingLog,
+        sceneShaders: net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage =
+            net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java),
         afterFrame: (SceneRenderer, Int) -> Unit = { _, _ -> },
     ): Result {
         val done = CountDownLatch(1)
@@ -48,7 +51,7 @@ object GlHarness {
         var error: Throwable? = null
         val pool = Executors.newCachedThreadPool { r -> Thread(r).also { it.isDaemon = true } }
         val frame = GdxFrame()
-        val renderer = testRenderer(executor ?: pool).also { it.params = params }
+        val renderer = testRenderer(executor ?: pool, log, sceneShaders).also { it.params = params }
         var count = 0
         lateinit var timer: Timer
         lateinit var window: JFrame

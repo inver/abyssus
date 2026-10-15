@@ -28,6 +28,12 @@ import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.foliage.FoliageSource
 import net.nevinsky.abyssus.plugin.foliage.readFoliageSource
 import net.nevinsky.abyssus.plugin.projectView.*
+import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
+import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
+import net.nevinsky.abyssus.lib.core.editor.water.WaterText
+import net.nevinsky.abyssus.lib.core.water.WaterField
+import net.nevinsky.abyssus.lib.core.water.WaterPreset
+import net.nevinsky.abyssus.lib.core.water.WaterPresets
 import net.nevinsky.abyssus.plugin.terrain.TerrainSource
 import net.nevinsky.abyssus.plugin.terrain.readTerrainSource
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
@@ -49,6 +55,18 @@ sealed interface PanelState {
         val name: String,
         val rayRoot: JsonNode = SceneJson().parse("{}"),
         val raySettings: SceneRaySettingsState = SceneRaySettingsCodec().read(rayRoot),
+    ) : PanelState
+
+    /**
+     * A water surface of [target]'s scene. [texts] is what each value reads in the file (a valid surface shows its
+     * numbers, an invalid one the values it can be fixed from); [surface] says whether the surface is drawn.
+     */
+    data class WaterDetails(
+        val target: WaterTarget,
+        val surface: WaterSurface,
+        val texts: Map<WaterField, String>,
+        val enabled: Boolean?,
+        val preset: WaterPreset?,
     ) : PanelState
 
     /** An asset's Meta; [fields] are its editable properties (empty for a type without editors, which stays read only). */
@@ -219,3 +237,22 @@ fun readSceneState(file: VirtualFile, name: String): PanelState = runCatchingKee
 /** Project settings use the same admitted, stamp-aware document cache as scene availability. */
 fun readProjectState(file: VirtualFile, name: String, settings: AbyssusProjectSettings): PanelState.Project =
     PanelState.Project(file, name, settings.getSettings(file))
+
+/**
+ * Reads the water surface of [target] from its scene's current text for display. Safe off the EDT. The state is
+ * `Empty` with a message when the scene cannot be read or the surface is gone.
+ */
+fun readWaterState(target: WaterTarget): PanelState {
+    val root = runCatchingKeepingCancellation {
+        SceneJson().parse(runReadAction { textOf(target.file) }).also {
+            AbyssusDocumentFormat().requireSupported(it, DocumentKind.SCENE)
+        }
+    }.getOrElse { return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.documentDisplayMessage()), null) }
+    val extension = root.get("abyssus")
+    val node = extension?.get("waterSurfaces")?.get(target.id)
+    val surface = node?.let { WaterCodec().surface(target.id, it) }
+        ?: return PanelState.Empty(AbyssusBundle.message("waterErrorNotFound"), null)
+    val enabled = node.get("enabled")?.takeIf { it.isBoolean }?.booleanValue() ?: true
+    val preset = WaterPresets().parse(node.get("preset")?.takeIf { it.isTextual }?.textValue())
+    return PanelState.WaterDetails(target, surface, WaterText().texts(node), enabled, preset)
+}

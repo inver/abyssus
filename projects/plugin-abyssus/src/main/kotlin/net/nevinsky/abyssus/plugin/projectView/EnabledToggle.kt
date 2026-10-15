@@ -17,6 +17,9 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
+import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
+import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
+import net.nevinsky.abyssus.plugin.water.WaterSceneEdits
 
 private fun JsonNode.child(key: String): JsonNode? = when (this) {
     is ObjectNode -> get(key)
@@ -40,6 +43,14 @@ fun toggleEnabled(project: Project, entry: DtoEntry): Boolean {
         target.set<JsonNode>(toggle, BooleanNode.valueOf(!current))
         true
     }
+}
+
+/** Flips the eye of [entry]: a water surface's own `enabled`, else the `<x>Enabled` toggle that gates it. */
+fun toggleRow(project: Project, entry: DtoEntry): Boolean {
+    val surface = entry.value as? WaterSurface ?: return toggleEnabled(project, entry)
+    val file = entry.source ?: return false
+    val enabled = entry.enabled ?: return false
+    return WaterSceneEdits(project).setEnabled(file, surface.id, !enabled) == WaterEdit.Changed
 }
 
 /** The `.scene` file behind a scene entry listed under a project, or null for any other entry. */

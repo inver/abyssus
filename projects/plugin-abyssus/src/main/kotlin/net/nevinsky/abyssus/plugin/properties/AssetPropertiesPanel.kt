@@ -173,8 +173,16 @@ class AssetPropertiesPanel(
         if (assetFolder != terrainFolder) useTerrain(null) // another selection: its draft and pending preview are discarded
         if (assetFolder != foliageFolder) useFoliage(null)
         val entity = if (assetFolder == null) componentTargetOf(node) else null
-        scene = entity?.file
+        val water = if (assetFolder == null && entity == null) waterTargetOf(node) else null
+        scene = entity?.file ?: water?.file
         projectFile = null
+        if (water != null) {
+            background {
+                val result = readWaterState(water)
+                ui { if (token == generation && !disposed) apply(result) }
+            }
+            return
+        }
         if (entity != null) {
             background {
                 val result = readEntityState(entity, services)
@@ -323,6 +331,17 @@ class AssetPropertiesPanel(
                 useUndoEditor(null)
                 fillEmpty(newState)
                 cards.show(this, EMPTY)
+            }
+
+            is PanelState.WaterDetails -> {
+                useTerrain(null)
+                useFoliage(null)
+                useUndoEditor(newState.target.file)
+                content.removeAll()
+                content.add(JBScrollPane(WaterPropertiesView(project, newState)).apply {
+                    border = BorderFactory.createEmptyBorder()
+                }, BorderLayout.CENTER)
+                cards.show(this, DETAILS)
             }
 
             is PanelState.EntityDetails -> {

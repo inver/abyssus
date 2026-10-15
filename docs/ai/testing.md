@@ -245,6 +245,29 @@ clear only fixture-creation history before the first panel edit, then retain exa
 - **Harness:** `GlHarness` (`projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/sceneview/GlHarness.kt`) renders a few frames on
   an AWT GL canvas inside `GdxRuntime.withContext` and runs checks after each frame.
 
+### Water
+
+Water has pure checks and GL checks, all named for the capability they pin down.
+
+- **Without GL:** `WaterSettingsTest`, `WaterWavesTest` (also the mesh ceiling), `WaterReflectionCameraTest`,
+  `WaterDepthMathTest`, `WaterPassPlanTest` and `WaterScreenAreaTest` (`./gradlew :lib-core:test`); the codec, edits, hit
+  and interaction tests in `lib-core-editor` (`WaterCodecTest`, `WaterEditsTest`, `WaterHitTest`, `SceneQueriesWaterTest`,
+  `WaterInteractionTest`); and the plugin's `WaterSceneEditsTest`, `WaterTreeTest`, `WaterActionTest`, `WaterPropertiesTest`
+  and `WaterSceneEditorTest`.
+- **With `-Dabyssus.glTests=true`:** `lib-gdx`'s `ModelWaterPassGlTest` (`./gradlew :lib-gdx:test`: the clip plane, the
+  linear depth pass, skinning, alpha cutouts and the batch filter), `lib-core`'s `WaterShaderGlTest`
+  (`./gradlew :lib-core:test`: the shader and both presets), and the plugin's `SceneFrameSnapshotTest` (one animation
+  update, previews, an unchanged no-water frame), `SceneWaterPassGlTest`, `SceneWaterResourcesGlTest`,
+  `SceneWaterReflectionGlTest`, `SceneWaterShallowsGlTest`, `SceneWaterFoamGlTest`, `SceneWaterFallbackGlTest` and
+  `WaterFailureTest` (`./gradlew :plugin-abyssus:test --tests '*Water*' -Dabyssus.glTests=true`).
+- **Rig:** `WaterGlRig.shoot` renders a scene for a number of frames and returns the canvas image with the reflection
+  and depth targets read back; `WaterGlScenes` makes the scenes (a copy of Untitled over a flat or bowl-shaped terrain,
+  a blended quad model, a cloudy sky). The water animation is stood still (`SceneRenderer.waterTime`) so two renders can be
+  compared pixel for pixel, and `testRenderer` / `GlHarness.render` take a logger and a scene `ShaderStorage` (the failure
+  checks put a broken `water.frag` in front of the real one).
+- **By eye:** the visual checks of the OpenSpec change (`openspec/changes/add-realistic-water`) are sandbox-IDE checks; the
+  GL tests assert numbers (colour ordering, pixel counts, byte equality), not a screenshot.
+
 ## GL-free seams
 
 - **`SceneView` interface:** `SceneFileEditor` takes a `viewFactory`, so tests pass a fake view and check the params

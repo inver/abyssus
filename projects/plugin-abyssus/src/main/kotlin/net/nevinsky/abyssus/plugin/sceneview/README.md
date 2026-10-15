@@ -137,6 +137,59 @@ The toolbar's Add Asset button (`add-asset`) works the same way through `AddAsse
 an `assetMenu` (available for a readable scene and a project with models or terrains), and the panel supplies the
 orbit target. A view built without an `assetMenu` has no such button.
 
+## Water authoring
+
+The toolbar's Add Water button (`add-water`) offers Lake and Sea through `AddWaterGroup`; `SceneFileEditor` supplies a
+`waterMenu` (readable scene whose `abyssus` data is an object) and the panel the orbit target. Water selection is a
+separate identity from ECS ids: `SceneViewState.selection` is a `SceneTarget` (`Entity` or `Water`), `selectedId` reads
+only an entity and `selectedWater` only a surface, so a water id never reaches an ECS writer. A click picks through
+`SceneQueries.pickTarget`: the rectangle of an enabled, valid surface at its mean level, seen from above only, wins only
+when it is nearer than the terrain or model under the cursor (`WaterHit`). Water offers the Move gizmo only (no rotate
+handles, and `canDrop` is false); a drag previews through `SceneViewState.waterPreview` and `SceneFileEditor.applyWaterMove`
+writes only the coordinates that changed, as one Move Water command. Esc restores the position and writes nothing, and a
+surface deleted elsewhere clears the selection. The selected extent is outlined by `WaterOutline`. Water is never in the
+ground lists (`groundHit`, `groundBelow`).
+
+## Water rendering
+
+`SceneRenderer.render` updates the frame once (assets, animation, previews, lights, shadow atlas) and plans the water.
+`SceneWater` (`sceneview/water/`, one per view, created on the first frame that has water) owns the pass order; the pure
+planning is `WaterPassPlanner` in `lib-core` (`core.water`). A frame with no valid, enabled surface in view above the camera
+(`WaterScreenArea` measures what is in view; a camera at or below the level skips that surface) does nothing extra:
+`renderContent` draws everything, as before.
+
+With water the frame is: shadows, then one **reflection pass per reflected level** into `WaterResources`' targets
+(at most two levels at half the viewport and at most 1024 a side, chosen by on-screen area with a 1.25 hysteresis so two
+similar levels do not swap), then the main sky, grid and **opaque** content (`ContentParts.OPAQUE`: alpha-tested parts
+included, blended parts left out) on the canvas, `captureScene` (a copy of the canvas colour made with
+`glCopyTexSubImage2D` from whatever framebuffer is bound, so it is the opaque scene without editor overlays), the **scene
+and terrain depth targets** (packed linear view depth, `ModelDepthShader` with `linearFar`, at most 2048 a side; terrain
+alone makes a shoreline), the **surfaces** far to near (`WaterDrawable`: a bounded wave grid, vertex waves, `water.frag`),
+then the blended models (`ContentParts.BLENDED`), then the overlays. The reflection draws through `MirroredCamera`
+(`view * mirror`, clockwise front faces for the pass) with a world clip plane just below the mean level (the bias grows with
+wave height and distance) on the model shaders (`ClipPlaneAttribute`) and on `TerrainShader` (`u_clipPlane`); grid, markers,
+gizmos, water and blended models are never in a reflection or a depth target. The water shader samples the
+reflection, the scene copy and the depths at the fragment's own screen position: Fresnel mixes the reflection with the
+refracted scene, which fades into the tint with the distance light travels in the water (`clarity` is the distance scale,
+`tint` sets the per-channel absorption), sun glints add to it, and foam grows where terrain depth says the bottom comes
+within `foamWidth` of the level. A fragment is discarded when something opaque is nearer than the surface, or when the
+scene behind it is land above the mean level, so crests never show over a beach; waves die out toward the shore, and
+fine waves fade with the pixel footprint so distant water does not alias. The water is drawn with a polygon offset because
+the window depth buffer is coarse at a distance, and the shader's own exact depth test decides the shoreline. Scene fog is
+applied once, to the final water colour. Limits: above-water viewing only (no underwater look), reflections and refraction
+show opaque and alpha-tested scene geometry and the sky only (no blended models and no other water), the sky fallback is
+the sky colour (or the sky's lighting cube when it has one), and water neither casts nor receives geometry shadows.
+
+Budget and failure rules: a level beyond the reflection budget, or whose pass failed, shows the sky. For a procedural
+sky with clouds the view holds an `EnvironmentLease` only while some level needs that fallback and samples the cloudy
+lighting cube (an HDR sky's cube needs none); the lease is released when no level falls back and with the view, and just
+forgotten when the context is replaced. `WaterResources` allocates once per size, releases surplus reflection targets,
+restores the caller's framebuffer, viewport and state after every pass (`ShadowGlState`, plus the winding), refuses an
+unusable size without retrying until the size changes, and is abandoned without GL calls on context loss. A shader or mesh
+that cannot be made skips the water in that view (logged once, retried after the context is replaced); targets that cannot
+be made leave plain tinted water; a failing surface is skipped while the rest draw. The animation time advances with the
+frame's delta (`SceneRenderer.waterTime` stands it still, for tests). See `docs/ai/testing.md` for the GL checks.
+
 ## Path arrangements
 
 The toolbar's Add Path Arrangement button (`add-path-arrangement`) lists the project's models through

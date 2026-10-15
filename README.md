@@ -22,6 +22,12 @@ remain readable in the text editor; plugin editing and loading are refused. No i
   aircraft from a FlightGear `.zip` into a model asset.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
+- **Water**: **Add Water** (a Lake or a Sea, from the Scene view toolbar or a scene's right-click menu) adds a finite
+  horizontal surface that is drawn from above with animated waves, reflections of the sky and the scene, wave-distorted
+  refraction that fades to a tint with depth and animated foam where terrain meets it. Terrain above the level defines
+  the shoreline and islands. Select a surface in the view or the tree to move it with the Move gizmo and edit its level,
+  size, tint, clarity, waves and foam in Properties; hide, rename, remove and undo like anything else. Water is saved in
+  the scene's `abyssus.waterSurfaces` and is Abyssus-only data; there is no underwater look, and water is not a drop target.
 - **Terrain foliage**: **New Foliage...** creates layered scatter settings for trees, rocks and grass;
   **Add Foliage...** attaches them to a terrain entity, and **Paint Foliage** paints or erases their density, with Undo.
 - **Sky light and cloud shadows**: a procedural sky with `"lightsScene": true` lights models and terrain with its own colour

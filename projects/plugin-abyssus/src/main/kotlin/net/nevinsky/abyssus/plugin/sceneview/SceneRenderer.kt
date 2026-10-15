@@ -33,6 +33,9 @@ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.SKY_CAMERA_HEIGHT
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.editor.content.*
+import net.nevinsky.abyssus.lib.core.editor.water.InvalidWater
+import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
+import net.nevinsky.abyssus.lib.core.editor.water.WaterPreview
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.lib.core.editor.ray.RayFrameContext
 import net.nevinsky.abyssus.lib.raytracing.RaySunVisibility
@@ -59,6 +62,12 @@ import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw
 import net.nevinsky.abyssus.plugin.sceneview.shadows.CloudShadowMap
 import net.nevinsky.abyssus.plugin.sceneview.shadows.SceneShadows
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SkyClock
+import net.nevinsky.abyssus.plugin.sceneview.water.SceneWater
+import net.nevinsky.abyssus.plugin.sceneview.water.WaterFrameInput
+import net.nevinsky.abyssus.lib.core.water.WaterPassPlan
+import net.nevinsky.abyssus.lib.gdx.shader.ClipPlaneAttribute
+import com.badlogic.gdx.graphics.Camera
+import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SunDirection
 import net.nevinsky.abyssus.plugin.sceneview.skybox.RaySkyBakeKey
 import net.nevinsky.abyssus.plugin.sceneview.skybox.RaySunVisibilityKey
@@ -113,7 +122,9 @@ class SceneRenderer(
         get() {
             val c = posedContent
             val p = state.preview
-            return if (p.isEmpty()) c else ScenePreview().apply(c, p)
+            val moved = if (p.isEmpty()) c else ScenePreview().apply(c, p)
+            val water = state.waterPreview
+            return if (water.isEmpty()) moved else moved.copy(water = WaterPreview().apply(moved.water, water))
         }
 
     /** Other plugins' overlays for this view; drawn after the markers, then again over everything. */
@@ -131,6 +142,8 @@ class SceneRenderer(
     private val foliage = SceneFoliage(ViewFoliageAssets(AssetView(assets, FoliageDrawable::class.java)), foliageDrafts)
     private var terrainShader: TerrainShader? = null
     private var shadows: SceneShadows? = null
+    private var water: SceneWater? = null
+    private val loggedInvalidWater = HashSet<String>()
     internal var shadowedLightIds: Set<String> = emptySet()
         private set
     private var skybox: SceneSkybox? = null
@@ -290,6 +303,10 @@ class SceneRenderer(
         rayPresenter = null
         abandonShadows()
         shadows = SceneShadows()
+        water?.abandon()
+        water = null
+        skyLease = null
+        skyLeaseOwner = null
         models.abandon()
         terrains.abandon()
         foliage.abandon()
@@ -379,6 +396,14 @@ class SceneRenderer(
         val atlas =
             if (rayDisplay == null && display.drawsShadows) shadows?.render(camera, lights, environment, models.drawn, terrains.drawn, foliage) else null
         shadowedLightIds = atlas?.records?.mapTo(HashSet()) { it.lightId } ?: emptySet()
+        // water: planned once per frame; null (the ordinary path) when no valid surface above the camera is in view
+        val waterInput = if (rayDisplay == null) waterInputOf(p, c, width, height, deltaSeconds) else null
+        val waterPlan = waterInput?.let { water().begin(it) }
+        if (waterPlan != null) {
+            water().renderReflections(waterPlan, waterInput) { mirrored, clip -> drawReflected(p, c, atlas, mirrored, clip) }
+        } else {
+            lastWaterPlan = null
+        }
         Gdx.gl.glViewport(0, 0, width, height)
         Gdx.gl.glClearColor(p.clear.r, p.clear.g, p.clear.b, p.clear.a)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
@@ -399,7 +424,12 @@ class SceneRenderer(
                 batch.render(grid, environment)
                 batch.end()
             }
-            renderContent(p, c, atlas)
+            renderContent(p, c, atlas, parts = if (waterPlan != null) ContentParts.OPAQUE else ContentParts.ALL)
+            if (waterPlan != null) {
+                water().drawSurfaces(waterPlan, waterInput!!, waterSkyCube(c, water().usesSkyFallback(waterPlan)))
+                renderContent(p, c, atlas, parts = ContentParts.BLENDED)
+            }
+            lastWaterPlan = waterPlan
             drawOverlays(width, height)
         } else {
             drawnCloudTechnique = null
@@ -483,6 +513,13 @@ class SceneRenderer(
         overlays?.draw(overlayView(c, displayCamera, height, onTop = false), lines)
         lines.end()
         lines.begin(displayCamera, depthTest = false)
+        state.selectedWater?.let { id ->
+            (c.water.firstOrNull { it.id == id } as? ValidWater)?.let { WaterOutline().draw(lines, it.settings) }
+            gizmoHandlesFor(c, displayCamera, state, height)?.let {
+                GizmoDraw.draw(lines, it, state.hoveredAxis)
+                drewGizmo = true
+            }
+        }
         state.selectedId?.let { id ->
             boundsOf(c, id)?.let { SelectionBox.draw(lines, it) }
             gizmoHandlesFor(c, displayCamera, state, height)?.let {
@@ -579,7 +616,89 @@ class SceneRenderer(
         return box.takeIf { it.isValid }
     }
 
-    private fun renderContent(p: SceneRenderParams, c: SceneContent, atlas: ShadowAtlasAttribute?) {
+    /** Which parts of the content a pass draws: all of it; the opaque and alpha-tested parts; or the blended model parts only. */
+    private enum class ContentParts { ALL, OPAQUE, BLENDED }
+
+    private fun isBlended(renderable: net.nevinsky.abyssus.lib.gdx.Renderable): Boolean =
+        (renderable.material?.get(BlendingAttribute.Type) as? BlendingAttribute)?.blended == true
+
+    private fun water(): SceneWater = (water ?: SceneWater(shaders, log).also { water = it }).also { it.frozenSeconds = waterTime }
+
+    /** Stands the water animation at this time (seconds) instead of letting it run; for tests that compare frames. */
+    internal var waterTime: Double? = null
+
+    /** The water plan of the last frame, or null when it drew none; for tests. */
+    internal var lastWaterPlan: WaterPassPlan? = null
+        private set
+
+    /** The water state of this view (null before any water is planned), for tests. */
+    internal val waterStatus: SceneWater? get() = water
+
+    /** What the water passes read of this frame; logs each invalid surface once and never draws it. */
+    private fun waterInputOf(p: SceneRenderParams, c: SceneContent, width: Int, height: Int, deltaSeconds: Float): WaterFrameInput? {
+        if (c.water.isEmpty()) return null
+        for (surface in c.water) if (surface is InvalidWater && loggedInvalidWater.add(surface.id + surface.problems)) {
+            log.warn("Water surface '${surface.name}' (${surface.id}) is skipped: ${surface.problems.joinToString("; ")}")
+        }
+        val surfaces = c.water.filterIsInstance<ValidWater>().map { it.settings }
+        if (surfaces.isEmpty()) return null
+        return WaterFrameInput(
+            camera, width, height, deltaSeconds, surfaces, p.clear,
+            if (unlit) UNLIT_AMBIENT else p.ambient, if (display.fog) p.fog else null,
+            if (unlit) NO_LIGHTS else frameLights, models.drawn, terrains.drawn, foliage,
+        )
+    }
+
+    private var skyLease: ProceduralSky.EnvironmentLease? = null
+
+    /** Whether this view holds a lease on its sky's cloudy environment for water that shows the sky; for tests. */
+    internal val skyLeaseActive: Boolean get() = skyLease != null
+    private var skyLeaseOwner: ProceduralSky? = null
+
+    private fun releaseSkyLease() {
+        skyLease?.close()
+        skyLease = null
+        skyLeaseOwner = null
+    }
+
+    /**
+     * The lighting cube of the scene's sky for water that shows the sky instead of a planar reflection, or null when
+     * the sky has none (a plain cube sky) or it is not built yet. A procedural sky with clouds builds its cloudy cube only
+     * while this view holds a lease, so the lease is taken while some surface needs the fallback and given back when
+     * none does (and with the view).
+     */
+    private fun waterSkyCube(c: SceneContent, needed: Boolean): com.badlogic.gdx.graphics.GLTexture? {
+        val sky = skybox?.sky(c.skybox)
+        if (!needed || sky !== skyLeaseOwner) releaseSkyLease()
+        if (!needed) return null
+        return when (sky) {
+            is net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSky -> sky.environment.specular
+            is ProceduralSky -> {
+                if (skyLease == null && sky.hasClouds) {
+                    skyLease = sky.acquireEnvironment()
+                    skyLeaseOwner = sky
+                }
+                (sky.lightingEnvironment ?: skyLease?.environment)?.specular
+            }
+            else -> null
+        }
+    }
+
+    /** The sky and the opaque scene through the mirrored [view], clipped to what is above the water ([clip]). */
+    private fun drawReflected(p: SceneRenderParams, c: SceneContent, atlas: ShadowAtlasAttribute?, view: Camera, clip: FloatArray) {
+        skybox?.draw(view, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights), skyClock.seconds, state.cloudTechnique)
+        Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
+        renderContent(p, c, atlas, view, clip, ContentParts.OPAQUE)
+    }
+
+    private fun renderContent(
+        p: SceneRenderParams,
+        c: SceneContent,
+        atlas: ShadowAtlasAttribute?,
+        view: Camera = camera,
+        clip: FloatArray? = null,
+        parts: ContentParts = ContentParts.ALL,
+    ) {
         val contentBatch = contentBatch ?: return
         // after the grid: a built HDR sky replaces the ambient color for the content only (applyEnvironment undoes it)
         val ambient = SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) }
@@ -592,19 +711,32 @@ class SceneRenderer(
         }
         if (atlas != null) environment.set(atlas)
         if (!unlit) sunVisibility?.let { environment.set(it) }
-        terrainShader?.draw(
-            camera, terrains.drawn, if (unlit) UNLIT_AMBIENT else p.ambient, if (display.fog) p.fog else null,
-            if (unlit) NO_LIGHTS else frameLights, sky?.irradiance, atlas,
-            to?.environment?.irradiance, to?.weight ?: 0f, if (unlit) null else sunVisibility,
-        )
-        contentBatch.begin(camera)
-        for (entity in models.drawn) contentBatch.render(
-            entity.instance,
-            environment,
-            ShaderProvider.DEFAULT_SHADER_KEY
-        )
-        foliage.draw(contentBatch, environment)
-        contentBatch.end()
+        if (parts != ContentParts.BLENDED) {
+            terrainShader?.draw(
+                view, terrains.drawn, if (unlit) UNLIT_AMBIENT else p.ambient, if (display.fog) p.fog else null,
+                if (unlit) NO_LIGHTS else frameLights, sky?.irradiance, atlas,
+                to?.environment?.irradiance, to?.weight ?: 0f, if (unlit) null else sunVisibility, clip,
+            )
+        }
+        if (clip != null) environment.set(ClipPlaneAttribute(clip))
+        contentBatch.renderableFilter = when (parts) {
+            ContentParts.ALL -> null
+            ContentParts.OPAQUE -> { r -> !isBlended(r) }
+            ContentParts.BLENDED -> { r -> isBlended(r) }
+        }
+        try {
+            contentBatch.begin(view)
+            for (entity in models.drawn) contentBatch.render(
+                entity.instance,
+                environment,
+                ShaderProvider.DEFAULT_SHADER_KEY
+            )
+            if (parts != ContentParts.BLENDED) foliage.draw(contentBatch, environment)
+            contentBatch.end()
+        } finally {
+            contentBatch.renderableFilter = null
+            environment.remove(ClipPlaneAttribute.Type)
+        }
     }
 
     /** Recomputed only when the scene's lights or the orbit target (which decides the nearest point lights) change. */
@@ -747,6 +879,9 @@ class SceneRenderer(
         rayPresenter = null
         bakedSky = null
         presentedRayFrame = false
+        releaseSkyLease()
+        water?.dispose()
+        water = null
         shadows?.dispose()
         shadows = null
         shadowedLightIds = emptySet()

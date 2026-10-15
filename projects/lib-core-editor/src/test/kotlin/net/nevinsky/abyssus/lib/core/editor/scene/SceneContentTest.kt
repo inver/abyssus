@@ -337,4 +337,13 @@ class SceneContentTest {
         assertTrue(c.foliages.isEmpty())
         assertEquals(1, c.terrains.size)
     }
+
+    @Test
+    fun waterIsReadFromTheAbyssusExtensionAndAbsentWhenMissing() {
+        assertTrue(content(entity("{}")).water.isEmpty())
+        val withWater = """{"format":"abyssus","formatVersion":1,"abyssus":{"unknown":1,"waterSurfaces":{"a":{"preset":"SEA"},"b":{"preset":"nope"}}}}"""
+        assertEquals(listOf("a", "b"), content(withWater).water.map { it.id })
+        val broken = """{"format":"abyssus","formatVersion":1,"abyssus":[]}"""
+        assertTrue(content(broken).water.isEmpty())
+    }
 }

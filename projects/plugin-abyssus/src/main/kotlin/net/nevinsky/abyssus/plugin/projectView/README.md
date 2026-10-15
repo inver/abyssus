@@ -83,6 +83,20 @@ on the JSON tree. It is written as one undoable Add Asset command and selected w
 Add Light uses too. Disabled for unreadable scene text, a scene outside a project, or a project without models and
 terrains.
 
+## Water rows
+
+A scene row lists its water surfaces under a **Water** group, shown only when `abyssus.waterSurfaces` holds surfaces
+(`sceneRows` in `DtoTree.kt` drops the raw `abyssus` member and adds the group, so a scene without water shows no extra
+row and reading one writes nothing). The group's value is a `WaterGroup` (`water/WaterText.kt`) and each row's a
+`WaterSurface` from `WaterCodec`: a valid one shows its name with "Abyssus only" and an eye (`DtoRow.enabled` is its
+`enabled`), an invalid one shows "invalid", no eye, and can still be renamed or removed. A water row is not an ECS
+entity or component: `waterTargetOf` (`WaterActions.kt`) maps it to a `WaterTarget(file, id, name)` and
+`componentTargetOf` does not match it. The eye calls `toggleRow`, which writes only that surface's `enabled` through
+`WaterSceneEdits`; `AddWaterAction` (scene rows, Lake or Sea at the origin), `RenameWaterAction` and `RemoveWaterAction`
+(water rows) use the same adapter. `AddWaterGroup` is shared with the Scene view toolbar. After an add the new row is
+selected (`selectCreatedWater`, `selectWaterInAbyssusView`). A refused add (an `abyssus` or `waterSurfaces` value that is
+not an object) shows its reason and writes nothing.
+
 ## Add Path Arrangement and Regenerate
 
 `AddPathArrangementAction` (scene rows) shares `AddPathArrangementGroup` with the Scene view toolbar: the project's MODEL

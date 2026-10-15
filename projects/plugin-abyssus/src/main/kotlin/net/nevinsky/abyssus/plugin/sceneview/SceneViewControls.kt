@@ -36,13 +36,14 @@ data class ToolbarState(
     val gridEnabled: Boolean = true,
     val shadingEnabled: Boolean = true,
     val frameEnabled: Boolean = true,
+    val addWaterEnabled: Boolean = false,
 )
 
 /** This state with every control disabled, as when the view cannot render; what is pressed stays pressed. */
 fun ToolbarState.disabled(): ToolbarState = copy(
     gizmoEnabled = false, cameraEnabled = false, dropEnabled = false, addLightEnabled = false, addAssetEnabled = false,
     spaceEnabled = false, snapEnabled = false, shadowsEnabled = false, fogEnabled = false, gridEnabled = false,
-    shadingEnabled = false, frameEnabled = false,
+    shadingEnabled = false, frameEnabled = false, addWaterEnabled = false,
 )
 
 /**
@@ -62,6 +63,7 @@ fun toolbarState(
     hasShadowCasters: Boolean = true,
     sceneUsesFog: Boolean = true,
     lookingThroughCamera: Boolean = false,
+    canAddWater: Boolean = false,
 ): ToolbarState {
     val editing = !experimenting && !playing
     return ToolbarState(
@@ -72,6 +74,7 @@ fun toolbarState(
         dropEnabled = editing && canDrop,
         addLightEnabled = editing && canAddLight,
         addAssetEnabled = editing && canAddAsset,
+        addWaterEnabled = editing && canAddWater,
         selectSelected = mode == GizmoMode.SELECT,
         spaceEnabled = editing,
         snapEnabled = editing,

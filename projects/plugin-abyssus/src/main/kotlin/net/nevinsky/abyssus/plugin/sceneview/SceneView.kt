@@ -24,6 +24,19 @@ interface SceneView : Disposable {
     /** Called on the AWT thread with the id (key under `ecs/entities`) of the entity the user clicked. */
     var onPick: ((String) -> Unit)?
 
+    /** Called on the AWT thread with the id of the water surface the user clicked. */
+    var onPickWater: ((String) -> Unit)?
+        get() = null
+        set(_) {}
+
+    /**
+     * Called on the AWT thread when a move of a water surface ends, with its id and new centre. Returns whether it was
+     * written to the scene.
+     */
+    var onWaterMove: ((String, Vec3) -> Boolean)?
+        get() = null
+        set(_) {}
+
     /**
      * Called on the AWT thread when a drag of a gizmo handle ends with the entity moved or rotated, with the entity's id
      * (key under `ecs/entities`) and the change. Returns whether it was written to the scene.
@@ -56,6 +69,9 @@ interface SceneView : Disposable {
 
     /** Selects an entity after creation or a selection in the Abyssus tree. */
     fun selectEntity(entityId: String) {}
+
+    /** Selects the water surface [waterId] after creation or a selection in the Abyssus tree. */
+    fun selectWater(waterId: String) {}
 
     fun setParams(params: SceneRenderParams)
 

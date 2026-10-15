@@ -40,11 +40,13 @@ class TerrainShader(shaders: ShaderStorage) : Disposable {
      * With [irradiance] (a built sky's irradiance cube), terrains take their ambient from it instead of [ambient].
      * While a sky light cross-fades, [fadeIrradiance] is the cube it fades to and [fade] (0 to 1) how far it has got.
      * With [sunVisibility] (the cloud shadow map), the directional light it names is multiplied by the map.
+     * With a [clipPlane] `(a, b, c, d)` (a planar reflection pass), fragments with `a x + b y + c z + d < 0` are discarded.
      */
     fun draw(
         camera: Camera, terrains: Collection<TerrainEntity>, ambient: Rgba?, fog: FogParams?, lights: LightSet,
         irradiance: GLTexture? = null, atlas: ShadowAtlasAttribute? = null,
         fadeIrradiance: GLTexture? = null, fade: Float = 0f, sunVisibility: DirectionalVisibilityAttribute? = null,
+        clipPlane: FloatArray? = null,
     ) {
         if (terrains.isEmpty()) return
         program.bind()
@@ -62,6 +64,8 @@ class TerrainShader(shaders: ShaderStorage) : Disposable {
         if (fading) fadeIrradiance?.bind(IRRADIANCE_TO_UNIT)
         program.setUniformf("u_fogColor", fog?.color?.r ?: 0f, fog?.color?.g ?: 0f, fog?.color?.b ?: 0f)
         program.setUniformf("u_fogK", fog?.shaderCoefficient ?: 0f)
+        program.setUniformi("u_clipEnabled", if (clipPlane != null) 1 else 0)
+        if (clipPlane != null) program.setUniformf("u_clipPlane", clipPlane[0], clipPlane[1], clipPlane[2], clipPlane[3])
         setLights(lights)
         bindSunVisibility(sunVisibility)
         (atlas?.atlas ?: blank).bind(SHADOW_UNIT)

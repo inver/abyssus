@@ -48,6 +48,8 @@ class SceneViewPanel internal constructor(
     private val lightMenu: PlacementMenu<() -> Vec3>? = null,
     /** The project's models and terrains to place at the orbit target; null: no Add Asset button. */
     private val assetMenu: PlacementMenu<() -> Vec3>? = null,
+    /** The Lake and Sea presets to place at the orbit target; null: no Add Water button. */
+    private val waterMenu: PlacementMenu<() -> Vec3>? = null,
     ray: RayIntegration? = null,
     /** Play in this view; without a simulation provider there are no play controls. */
     private val play: PlayState = PlayState(null),
@@ -119,6 +121,7 @@ class SceneViewPanel internal constructor(
     private val dropButton = JButton(AbyssusBundle.message("sceneViewDrop"))
     private val addLightButton = JButton(AbyssusBundle.message("addLightTitle")).apply { name = "add-light" }
     private val addAssetButton = JButton(AbyssusBundle.message("addAssetTitle")).apply { name = "add-asset" }
+    private val addWaterButton = JButton(AbyssusBundle.message("addWaterTitle")).apply { name = "add-water" }
     private val addPathButton = JButton(AbyssusBundle.message("addPathArrangementTitle")).apply { name = "add-path-arrangement" }
     private val regenerateButton = JButton(AbyssusBundle.message("regenerateArrangementTitle")).apply { name = "regenerate-arrangement"; isVisible = false }
     private val drawingHint = JLabel(AbyssusBundle.message("pathDrawingHint")).apply { name = "path-drawing-hint"; isVisible = false }
@@ -377,6 +380,15 @@ class SceneViewPanel internal constructor(
                 JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
             ).showUnderneathOf(addAssetButton)
         }
+        addWaterButton.isFocusable = false
+        addWaterButton.toolTipText = AbyssusBundle.message("addWaterTooltip")
+        addWaterButton.addActionListener {
+            val actions = waterChoices() ?: return@addActionListener
+            JBPopupFactory.getInstance().createActionGroupPopup(
+                AbyssusBundle.message("addWaterTitle"), actions, DataManager.getInstance().getDataContext(this),
+                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
+            ).showUnderneathOf(addWaterButton)
+        }
         addPathButton.isFocusable = false
         addPathButton.toolTipText = AbyssusBundle.message("addPathArrangementTooltip")
         addPathButton.addActionListener {
@@ -417,6 +429,7 @@ class SceneViewPanel internal constructor(
             add(dropButton)
             add(addLightButton)
             if (assetMenu != null) add(addAssetButton)
+            if (waterMenu != null) add(addWaterButton)
             if (pathMenu != null) add(addPathButton)
             add(regenerateButton)
             add(drawingHint)
@@ -455,6 +468,9 @@ class SceneViewPanel internal constructor(
     /** The Add Asset choices, placing at the orbit target when a choice is made; null while assets cannot be added. */
     internal fun assetChoices(): DefaultActionGroup? = assetMenu?.choicesAt { orbit.target }
 
+    /** The Add Water presets, placing at the orbit target when a choice is made; null while water cannot be added. */
+    internal fun waterChoices(): DefaultActionGroup? = waterMenu?.choicesAt { orbit.target }
+
     /** The Add Path Arrangement choices (the project's models); null while arrangements cannot be added. */
     internal fun pathChoices(): DefaultActionGroup? = pathMenu?.choicesAt { asset -> startDrawing(asset) }
 
@@ -479,6 +495,7 @@ class SceneViewPanel internal constructor(
                 interaction.mode, experimenting, play.active, interaction.canDrop,
                 lightMenu?.available?.invoke() == true, assetMenu?.available?.invoke() == true,
                 tools.display, renderer.content.lights.isNotEmpty(), renderer.params.fog != null, interaction.viewCamera != null,
+                waterMenu?.available?.invoke() == true,
             )
             lastToolbar = when {
                 unavailable -> toolbar.disabled()
@@ -489,6 +506,7 @@ class SceneViewPanel internal constructor(
             dropButton.isEnabled = toolbar.dropEnabled
             addLightButton.isEnabled = toolbar.addLightEnabled
             addAssetButton.isEnabled = toolbar.addAssetEnabled
+            addWaterButton.isEnabled = toolbar.addWaterEnabled
             addPathButton.isEnabled = !play.active && !experimenting && pathMenu?.available?.invoke() == true
             val arrangementSelected = renderer.content.arrangements.any { it.entityId == interaction.selectedId }
             regenerateButton.isVisible = arrangementSelected
@@ -560,6 +578,18 @@ class SceneViewPanel internal constructor(
             interaction.onPick = value
         }
 
+    override var onPickWater: ((String) -> Unit)?
+        get() = interaction.onPickWater
+        set(value) {
+            interaction.onPickWater = value
+        }
+
+    override var onWaterMove: ((String, Vec3) -> Boolean)?
+        get() = interaction.onWaterMove
+        set(value) {
+            interaction.onWaterMove = value
+        }
+
     override var onTransform: ((String, TransformEdit) -> Boolean)?
         get() = interaction.onTransform
         set(value) {
@@ -591,6 +621,12 @@ class SceneViewPanel internal constructor(
     }
 
     override fun groundHeights(): GroundHeight? = renderer.groundHeights()
+
+    override fun selectWater(waterId: String) {
+        paint.end()
+        interaction.selectWater(waterId)
+        syncControls()
+    }
 
     override fun selectEntity(entityId: String) {
         if (renderer.state.selectedId != entityId) paint.end()

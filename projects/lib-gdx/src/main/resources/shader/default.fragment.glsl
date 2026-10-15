@@ -43,6 +43,13 @@ varying HIGH vec3 v_worldPos;
 #endif
 #endif //normalFlag
 
+#ifdef clipPlaneFlag
+uniform vec4 u_clipPlane; // a, b, c, d: fragments with a x + b y + c z + d < 0 are discarded
+#if !(defined(normalFlag) && (defined(lightingFlag) || defined(normalTextureFlag)))
+varying HIGH vec3 v_worldPos;
+#endif
+#endif //clipPlaneFlag
+
 #if defined(colorFlag)
 varying vec4 v_color;
 #endif
@@ -291,6 +298,9 @@ mat3 cotangentFrame(vec3 n, vec3 p, vec2 uv)
 #endif
 
 void main() {
+	#ifdef clipPlaneFlag
+		if (dot(v_worldPos, u_clipPlane.xyz) + u_clipPlane.w < 0.0) discard;
+	#endif
 	#if defined(normalFlag)
 		vec3 normal = normalize(v_normal);
 		#if defined(normalTextureFlag)

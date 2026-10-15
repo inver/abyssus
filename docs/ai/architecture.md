@@ -159,6 +159,22 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    through `RayControl.foliageNote`. See
    `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md`.
 
+7. Water is procedural scene data under `abyssus.waterSurfaces` (see `docs/ai/file-formats.md`), not an entity or an
+   asset. `sceneContentOf` reads it with `WaterCodec` into `SceneContent.water` (valid surfaces and removable invalid rows).
+   A frame is updated once (`SceneRenderer.render`: assets, each model's animation, previews, lights, the shadow atlas) and
+   then drawn as often as water needs, from the same posed `models.drawn` / `terrains.drawn`; no pass advances an animation.
+   Without a valid, enabled surface above the camera and in view, the frame takes the ordinary single pass unchanged.
+   With water, `SceneWater` (`sceneview/water/`) runs: a bounded planar reflection per level (at most two levels, half
+   resolution, each drawn through `MirroredCamera` with a world clip plane and flipped winding), the opaque and alpha-tested
+   scene on the canvas, a copy of that colour, packed linear depth targets (everything opaque, and terrain alone), the
+   surfaces far to near (`WaterDrawable`), then the alpha-blended models and the editor overlays. Grid, markers, gizmos,
+   water and blended models never enter a reflection or a depth target. Targets belong to one canvas context
+   (`WaterResources`), are made once per size, restore the caller's framebuffer and render state, and are abandoned
+   without GL calls when the context is lost. `lib-gdx` provides the optional clip plane, the linear depth pass and the
+   batch filter (see `projects/lib-gdx/README.md`); `TerrainShader` takes the clip plane too. Failures degrade in steps
+   (no targets: plain tinted water; no reflection: the sky colour or cube; no water shader: no water) and are logged once.
+   See `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md`.
+
 ### Clicks, drags and writes
 
 - **Mouse and keys:** `SceneInteraction` (`lib-core-editor`, `editor.pick`, like everything in this list but the panel and
