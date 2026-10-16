@@ -13,6 +13,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.dto.SceneReader
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.plugin.dto.textOf
@@ -35,7 +36,8 @@ fun interface SceneParamsSource {
                 net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat().requireSupported(net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(text), net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)
                 MainCamera().parse(text)
             } ?: CameraParams.DEFAULT
-            renderParamsOf(reader.parse(textOf(file)), camera, ProjectLayout.projectDirFor(file))
+            val parsed = SceneDocumentCache.parsedScene(reader, textOf(file))
+            renderParamsOf(parsed.scene, camera, ProjectLayout.projectDirFor(file), parsed.root)
         }
     }
 }

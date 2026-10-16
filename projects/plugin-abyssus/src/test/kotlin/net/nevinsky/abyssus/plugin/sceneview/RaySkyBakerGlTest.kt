@@ -15,7 +15,6 @@ import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
-import net.nevinsky.abyssus.lib.core.assets.sky.RAY_SKY_MAX_WIDTH
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import org.junit.Assert.*
@@ -53,7 +52,7 @@ class RaySkyBakerGlTest {
             val sky = DirectionSky()
             try {
                 val snapshot = RaySkyBaker(faceSize = 128).bake(sky, Vec3(0f, 1f, 0f))
-                assertEquals(RAY_SKY_MAX_WIDTH, snapshot.width); assertFalse(snapshot.hdr)
+                assertEquals("a baked sky is 2048 wide", 2048, snapshot.width); assertFalse(snapshot.hdr)
                 val pixels = snapshot.rgba()
                 fun at(u: Float, v: Float): FloatArray {
                     val x = (u * snapshot.width).toInt().coerceIn(0, snapshot.width - 1); val y = (v * snapshot.height).toInt().coerceIn(0, snapshot.height - 1)

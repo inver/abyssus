@@ -8,8 +8,8 @@ package net.nevinsky.abyssus.plugin.sceneview.shadows
 import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
-import net.nevinsky.abyssus.lib.gdx.Renderable
-import net.nevinsky.abyssus.lib.gdx.mesh.Mesh
+import com.badlogic.gdx.graphics.g3d.Renderable
+import com.badlogic.gdx.graphics.Mesh
 import java.util.IdentityHashMap
 
 /** Conservative bounds for normalized skin weights: each posed vertex lies within its bone contributions' union.

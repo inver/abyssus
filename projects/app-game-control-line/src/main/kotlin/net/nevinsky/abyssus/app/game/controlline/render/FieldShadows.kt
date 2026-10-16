@@ -19,10 +19,10 @@ import com.badlogic.gdx.math.Vector4
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.Pool
-import net.nevinsky.abyssus.lib.gdx.ModelInstance
-import net.nevinsky.abyssus.lib.gdx.Renderable
+import com.badlogic.gdx.graphics.g3d.ModelInstance
+import com.badlogic.gdx.graphics.g3d.Renderable
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
-import net.nevinsky.abyssus.lib.gdx.shader.ModelDepthShaderProvider
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelDepthShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasView
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowDepthPass

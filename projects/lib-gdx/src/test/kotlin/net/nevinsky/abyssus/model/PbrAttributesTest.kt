@@ -16,7 +16,8 @@ import com.badlogic.gdx.graphics.g3d.utils.TextureDescriptor
 import net.nevinsky.abyssus.lib.gdx.model.PBRColorAttribute
 import net.nevinsky.abyssus.lib.gdx.model.PBRFloatAttribute
 import net.nevinsky.abyssus.lib.gdx.model.PBRTextureAttribute
-import net.nevinsky.abyssus.lib.gdx.model.Model
+import com.badlogic.gdx.graphics.g3d.utils.TextureProvider
+import net.nevinsky.abyssus.lib.gdx.g3d.IntModel
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 import org.junit.Assert.assertEquals
@@ -34,9 +35,9 @@ class PbrAttributesTest {
             baseColor = Color(1f, 1f, 1f, 0.6f)
             opacity = 0.6f
         }
-        val model = Model(ModelData().also { it.materials.add(input) })
+        val model = IntModel(ModelData().also { it.materials.add(input) }, TextureProvider { error("no texture expected") })
         try {
-            val material = model.materials.getValue("mask")
+            val material = model.getMaterial("mask")
             assertTrue(material.has(FloatAttribute.AlphaTest))
             assertFalse(material.has(BlendingAttribute.Type))
             assertEquals(0.6f, (material.get(ColorAttribute.Diffuse) as ColorAttribute).color.a, 0f)

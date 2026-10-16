@@ -13,7 +13,7 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySkySnapshot
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import kotlin.math.PI

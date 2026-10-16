@@ -57,8 +57,10 @@ dependencies {
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
     implementation(project(":lib-physics")) { isTransitive = false }
+    implementation(project(":lib-game-link")) { isTransitive = false }
+    playHostLibs(project(":lib-game-link"))
     playHostLibs(project(":lib-physics"))
-    playHostLibs(project(path = ":lib-physics", configuration = "playHost"))
+    playHostLibs(project(path = ":lib-game-link", configuration = "playHost"))
     testImplementation(libs.junit4)
     "uiTestImplementation"(libs.junit4)
     "uiTestImplementation"("com.intellij.remoterobot:remote-robot:$remoteRobotVersion")
@@ -164,6 +166,9 @@ tasks {
         // GL render tests open a real window: opt in with -Dabyssus.glTests=true
         System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
         System.getProperty("abyssus.rayTimingTests")?.let { systemProperty("abyssus.rayTimingTests", it) }
+        // the opt-in graphics workload runner (docs/ai/testing.md, "Graphics performance evidence")
+        System.getProperties().stringPropertyNames().filter { it.startsWith("abyssus.perf.") }
+            .forEach { systemProperty(it, System.getProperty(it)) }
         // device tests that render through the real Metal backend: opt in with -Dabyssus.metalTests=true
         System.getProperty("abyssus.metalTests")?.let { systemProperty("abyssus.metalTests", it) }
         // and through the real Vulkan backend: -Dabyssus.vulkanTests=true (add -Dabyssus.raytracing.validation=true for the validation layer)
@@ -307,7 +312,7 @@ tasks.named("compileJava") { dependsOn(generateGltfParser, generateGltfLexer) }
 
 apply(from = "${project.rootDir}/gradle/plugin-verification.gradle.kts")
 
-// Jolt's natives must never load in the IDE: the plugin's own code may not name jolt-jni or physics' Jolt package.
+// Jolt's natives must never load in the IDE: the plugin's own code may not name jolt-jni or physics' Jolt package .
 val checkNoJolt by tasks.registering {
     dependsOn(generateGltfParser, generateGltfLexer)
     val sources = fileTree("src/main") { include("**/*.kt", "**/*.java", "**/*.xml") }
@@ -357,6 +362,8 @@ val checkNoJoltInZip by tasks.registering {
                 (it.contains("jolt", ignoreCase = true) || it.contains("stephengold", ignoreCase = true)) }
             check(forbidden.isEmpty()) { "Jolt must stay outside IDE-loaded lib/: $forbidden" }
             check(names.any { it.contains("/lib/lib-physics") }) { "Missing physics library in lib/" }
+            check(names.any { it.contains("/lib/lib-game-link") }) { "Missing game link library in lib/" }
+            check(names.any { it.contains("/play-host/lib-game-link") }) { "Missing game link library in play-host/" }
             check(names.any { it.contains("/play-host/") && it.contains("jolt", ignoreCase = true) }) {
                 "Missing native physics dependencies in play-host/"
             }

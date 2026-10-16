@@ -13,10 +13,10 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.gdx.AnimationController
+import com.badlogic.gdx.graphics.g3d.utils.AnimationController
 import net.nevinsky.abyssus.lib.core.BaseCtx
-import net.nevinsky.abyssus.lib.gdx.ModelBatch
-import net.nevinsky.abyssus.lib.gdx.ModelInstance
+import com.badlogic.gdx.graphics.g3d.ModelBatch
+import com.badlogic.gdx.graphics.g3d.ModelInstance
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
@@ -27,10 +27,9 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDrawable
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.model.Model
+import com.badlogic.gdx.graphics.g3d.Model
 import net.nevinsky.abyssus.lib.core.scene.SceneEnvironment
-import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
-import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
 import org.slf4j.Logger
 import java.io.File
 import java.util.concurrent.Executor
@@ -70,7 +69,7 @@ private const val SHADOW_UNIT = 6
  * prepared off the GL thread, built here. GL thread only.
  */
 class FieldRenderer(private val ctx: BaseCtx) : Disposable {
-    private val modelShaders = DefaultShaderProvider()
+    private val modelShaders = ModelShaderProvider()
     private val batch = ModelBatch(modelShaders)
     private val terrainShader = ctx.shaderStorage.program("terrain")
     private val blank = Texture(Pixmap(1, 1, Pixmap.Format.RGBA8888).apply { setColor(Color.WHITE); fill() }, false)
@@ -182,9 +181,9 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
         batch.begin(camera)
         for ((entity, instance) in drawn) {
             if (entity === hidden) continue
-            batch.render(instance, environment, ShaderProvider.DEFAULT_SHADER_KEY)
+            batch.render(instance, environment)
         }
-        for (placement in foliage.values) batch.render(placement.drawable, environment, ShaderProvider.DEFAULT_SHADER_KEY)
+        for (placement in foliage.values) batch.render(placement.drawable, environment)
         batch.end()
 
         if (lines.isNotEmpty()) {

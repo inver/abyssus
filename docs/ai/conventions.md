@@ -18,6 +18,15 @@
 `lib-gdx` depends only on libGDX, LWJGL Assimp and the slf4j API (`projects/lib-gdx`). Nothing in it may import
 `com.intellij.*` or `net.nevinsky.abyssus` plugin packages. `lib-core` exposes it with `api(project(":lib-gdx"))`; the plugin receives it through `lib-core` and `lib-core-editor`.
 
+## Model rendering
+
+Models are drawn with stock libGDX g3d (`ModelInstance`, `ModelBatch`, `Renderable`, `Shader`, `AnimationController` from
+`com.badlogic.gdx.graphics.g3d`); `lib-gdx` adds only what stock cannot do. A mesh with model-sized geometry is an `IntMesh`
+(a stock `Mesh` holds at most 65,535 vertices; `IntMesh` throws from the 16-bit index members), and a model built from
+`ModelData` is an `IntModel`. Model shaders come from `ModelShaderProvider` and subclass the stock `DefaultShader`; there is no
+shader key. Instancing is one `mat4 a_instance`: pass `InstanceAttributes.of()` to `Mesh.enableInstancedRendering`.
+Don't copy a stock g3d class into the repository: subclass it, or wrap it as `FilteredRenderables` does.
+
 ## Logging
 
 - **SLF4J is the one logging interface.** `lib-gdx`, `lib-core`, `lib-raytracing` and `lib-physics` (plain JVM) log through

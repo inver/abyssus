@@ -25,23 +25,23 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.ArrayMap
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSkinning
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.lib.core.assets.model.ModelRaySnapshotLoader
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSource
-import net.nevinsky.abyssus.lib.gdx.AnimationController
-import net.nevinsky.abyssus.lib.gdx.ModelInstance
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSkinning
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.ModelRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSource
+import com.badlogic.gdx.graphics.g3d.utils.AnimationController
+import com.badlogic.gdx.graphics.g3d.ModelInstance
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.gdx.mesh.MeshPart
-import net.nevinsky.abyssus.lib.gdx.model.Model
+import com.badlogic.gdx.graphics.g3d.model.MeshPart
+import com.badlogic.gdx.graphics.g3d.Model
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
 import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
-import net.nevinsky.abyssus.lib.gdx.node.Animation
-import net.nevinsky.abyssus.lib.gdx.node.Node
-import net.nevinsky.abyssus.lib.gdx.node.NodeAnimation
-import net.nevinsky.abyssus.lib.gdx.node.NodePart
+import com.badlogic.gdx.graphics.g3d.model.Animation
+import com.badlogic.gdx.graphics.g3d.model.Node
+import com.badlogic.gdx.graphics.g3d.model.NodeAnimation
+import com.badlogic.gdx.graphics.g3d.model.NodePart
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
@@ -136,7 +136,7 @@ class RayAnimationSnapshotTest {
                 add(NodeKeyframe(0f, Vector3(0f, 0f, 0f))); add(NodeKeyframe(1f, Vector3(2f, 0f, 0f)))
             }
         }
-        model.animations.add(Animation("slide").apply { duration = 1f; nodeAnimations.add(slide) })
+        model.animations.add(Animation().apply { id = "slide"; duration = 1f; nodeAnimations.add(slide) })
         model.calculateTransforms()
         return model
     }

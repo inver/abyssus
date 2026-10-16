@@ -28,6 +28,15 @@ afterEvaluate {
     }
 }
 
+// A library that games ship holds no editor code: no import of an editor-only module and no ray-tracing snapshot type.
+afterEvaluate {
+    if (extra.has("abyssusShippedLibrary")) {
+        registerSourceCheck("checkNoEditorCode", fileTree("src/main/kotlin") { include("**/*.kt") },
+            Regex("""^\s*import\s+net\.nevinsky\.abyssus\.(lib\.core\.editor|lib\.gamelink|lib\.raytracing|plugin)\b|\bRaySnapshot\w*|\bRay\w*Snapshot\b"""),
+            "A shipped library must not hold editor code ($path); the editor owns it (lib-core-editor, lib-game-link):")
+    }
+}
+
 if (extra.has("abyssusRunCatchingRoots")) {
     @Suppress("UNCHECKED_CAST")
     val roots = extra["abyssusRunCatchingRoots"] as List<String>

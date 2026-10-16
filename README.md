@@ -330,7 +330,7 @@ The separate Abyssus Physics plugin must be uninstalled; the IDE marks it incomp
 Disabling Physics during Play stops that session and restores authored poses without changing scene files or Undo history.
 Jolt, the physics engine, is loaded only by the play process, never by the IDE.
 
-The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `lib-gdx` module, a
+The model runtime (Assimp import, 32-bit meshes and the model shaders on stock libGDX g3d) is the `lib-gdx` module, a
 plain JVM library reusable in other libGDX projects; see [source provenance](docs/third-party/gdx-model-origin.md)
 for its origin and license. The GL
 render tests are opt-in: `./gradlew check -Dabyssus.glTests=true` (opens a window).

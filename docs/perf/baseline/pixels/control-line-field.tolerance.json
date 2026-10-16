@@ -1,0 +1,11 @@
+{
+  "case" : "control-line-field",
+  "runs" : 5,
+  "width" : 1280,
+  "height" : 720,
+  "tolerance" : {
+    "maxChannel" : 0,
+    "differingShare" : 0.0,
+    "noticeableShare" : 0.0
+  }
+}

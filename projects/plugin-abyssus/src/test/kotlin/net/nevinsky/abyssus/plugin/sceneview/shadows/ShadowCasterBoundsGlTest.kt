@@ -9,8 +9,8 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.gdx.Renderable
-import net.nevinsky.abyssus.lib.gdx.mesh.Mesh
+import com.badlogic.gdx.graphics.g3d.Renderable
+import net.nevinsky.abyssus.lib.gdx.g3d.IntMesh
 import net.nevinsky.abyssus.plugin.sceneview.GlHarness
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import org.junit.Assert.*
@@ -23,7 +23,7 @@ class ShadowCasterBoundsGlTest {
         var checked = false
         val result = GlHarness.render(SceneRenderParams.DEFAULT, 2) { _, frame ->
             if (frame != 0) return@render
-            val mesh = Mesh(true, 3, 3, VertexAttribute.Position(), VertexAttribute.BoneWeight(0)).apply {
+            val mesh = IntMesh(true, 3, 3, VertexAttribute.Position(), VertexAttribute.BoneWeight(0)).apply {
                 setVertices(floatArrayOf(-1f,0f,0f,0f,1f, 1f,0f,0f,0f,1f, 0f,1f,0f,0f,1f))
                 setIndices(intArrayOf(0,1,2))
             }

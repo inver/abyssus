@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSky
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.gdx.model.Model
+import com.badlogic.gdx.graphics.g3d.Model
 import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.After
 import org.junit.Assert.*

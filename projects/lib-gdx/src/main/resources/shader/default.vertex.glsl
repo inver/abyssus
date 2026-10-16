@@ -23,12 +23,9 @@
 attribute vec3 a_position;
 uniform mat4 u_projViewTrans;
 #ifdef instancedFlag
-// each instance carries its own world matrix in four columns; there is no u_worldTrans uniform to set
-attribute vec4 a_instance0;
-attribute vec4 a_instance1;
-attribute vec4 a_instance2;
-attribute vec4 a_instance3;
-#define u_worldTrans mat4(a_instance0, a_instance1, a_instance2, a_instance3)
+// each instance carries its own world matrix as one mat4 attribute (four locations); there is no u_worldTrans uniform to set
+attribute mat4 a_instance;
+#define u_worldTrans a_instance
 #else
 uniform mat4 u_worldTrans;
 #endif // instancedFlag

@@ -74,3 +74,6 @@ tasks.test {
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
 }
+
+// Games ship this library: `checkNoEditorCode` keeps editor imports and ray-tracing snapshot types out of it.
+extra["abyssusShippedLibrary"] = true

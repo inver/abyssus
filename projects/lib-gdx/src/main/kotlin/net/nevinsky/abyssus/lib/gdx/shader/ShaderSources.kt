@@ -10,13 +10,13 @@ import java.io.UncheckedIOException
 import java.nio.charset.StandardCharsets
 
 /**
- * The GLSL sources bundled with this library. They are the canonical version: the bundled editor shaders are copies of
- * these files.
+ * The GLSL sources bundled with this library. The model shaders of the `g3d` package read them; instancing is one `mat4 a_instance`.
  */
 object ShaderSources {
     const val DEFAULT_VERTEX: String = "/shader/default.vertex.glsl"
     const val DEFAULT_FRAGMENT: String = "/shader/default.fragment.glsl"
     const val PBR_FRAGMENT: String = "/shader/pbr.fragment.glsl"
+
 
     fun read(resource: String): String {
         try {

@@ -17,8 +17,11 @@ import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.gdx.mesh.Mesh
-import net.nevinsky.abyssus.lib.gdx.model.Model
+import com.badlogic.gdx.graphics.Mesh
+import com.badlogic.gdx.graphics.g3d.Model
+import net.nevinsky.abyssus.lib.gdx.g3d.InstanceAttributes
+import net.nevinsky.abyssus.lib.gdx.g3d.IntMesh
+import net.nevinsky.abyssus.lib.gdx.g3d.IntModel
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
 import org.junit.Assert.*
@@ -69,10 +72,10 @@ class FoliageMeshSourceTest {
         val file = FileHandle(File(untitled, "assets/$name/${checkNotNull(meta.typedAdditional<ModelMeta>().file)}"))
         val assimp = AssimpModelLoader()
         val data = assimp.loadData(file)
-        val model = Model(data, StubTextures())
+        val model = IntModel(data, StubTextures())
         try {
             val meshes = model.meshes
-            assertTrue("$name keeps meshes", meshes.isNotEmpty())
+            assertTrue("$name keeps meshes", meshes.size > 0)
             var copied = false
             for (mesh in meshes) {
                 val read = readBack(name, mesh)
@@ -98,7 +101,7 @@ class FoliageMeshSourceTest {
         mesh.getVertices(vertices)
         val indices = IntArray(mesh.numIndices)
         if (mesh.numIndices > 0) {
-            mesh.getIndices(indices)
+            (mesh as IntMesh).getIndices(0, mesh.numIndices, indices, 0)
         }
         return ReadBack(vertices, indices, stride, position.offset / 4, position.numComponents)
     }
@@ -127,13 +130,13 @@ class FoliageMeshSourceTest {
 
     /** The copy an instanced drawable makes reads back exactly the bytes it was built from. */
     private fun assertAnInstancedCopyReadsItBack(name: String, mesh: Mesh, read: ReadBack) {
-        val copy = Mesh(true, mesh.numVertices, mesh.numIndices, mesh.vertexAttributes)
+        val copy = IntMesh(true, mesh.numVertices, mesh.numIndices, mesh.vertexAttributes)
         try {
             copy.setVertices(read.vertices)
             if (mesh.numIndices > 0) {
                 copy.setIndices(read.indices)
             }
-            copy.enableInstancedRendering(true, 2, *instanceAttributes())
+            copy.enableInstancedRendering(true, 2, *InstanceAttributes.of())
             copy.setInstanceData(FloatArray(2 * 4 * 4).also { floats -> (0 until 2).forEach { floats[it * 16] = 1f } })
             assertTrue("$name copy is instanced", copy.isInstanced)
 
@@ -142,7 +145,7 @@ class FoliageMeshSourceTest {
             assertArrayEquals("$name copy reads the same vertices", read.vertices, vertices, 0f)
             if (copy.numIndices > 0) {
                 val indices = IntArray(copy.numIndices)
-                copy.getIndices(indices)
+                copy.getIndices(0, copy.numIndices, indices, 0)
                 assertArrayEquals("$name copy reads the same indices", read.indices, indices)
             }
             assertFalse("$name model mesh stays shared and un-instanced", mesh.isInstanced)
@@ -150,11 +153,6 @@ class FoliageMeshSourceTest {
             copy.dispose()
         }
     }
-
-    /** The four `vec4` attributes a `mat4` instance transform is made of. */
-    private fun instanceAttributes(): Array<VertexAttribute> = (0 until 4).map {
-        VertexAttribute(VertexAttributes.Usage.Generic, 4, "a_instance$it")
-    }.toTypedArray()
 
     private fun ModelMesh.ownIndices(): IntArray =
         parts.flatMap { it.indices.asList() }.toIntArray()

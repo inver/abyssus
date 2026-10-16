@@ -122,8 +122,8 @@ class SceneWaterReflectionGlTest {
         }
         val hdr = skyAt { dir, root ->
             val sky = java.io.File(dir, "assets/sky")
-            net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrFixtures.write(java.io.File(sky, "sky.hdr"), 64, 32, pixel = net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrFixtures.uniform(2.0f))
-            java.io.File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+            net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrFixtures.writeExr(java.io.File(sky, "sky.exr"), 64, 32, pixel = { _, _ -> floatArrayOf(2.0f, 0.1f, 0.1f) })
+            java.io.File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{"file":"sky.exr"}}""")
             root.put("skyboxEnabled", true).put("skyboxName", "sky")
         }
         assertTrue("the cube sky shows ($cube vs clear $clearAt)", apart(cube) > 30)

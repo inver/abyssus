@@ -29,15 +29,15 @@ import net.nevinsky.abyssus.lib.core.editor.foliage.ScatterOutcome
 import net.nevinsky.abyssus.lib.core.editor.foliage.ScatterRefusal
 import net.nevinsky.abyssus.lib.core.editor.foliage.mergeFoliageChunks
 import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
-import net.nevinsky.abyssus.lib.gdx.Renderable
-import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
+import com.badlogic.gdx.graphics.g3d.Renderable
 import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
 import net.nevinsky.abyssus.plugin.log.IntellijLoggerFactory
 import net.nevinsky.abyssus.plugin.sceneview.shadows.FoliageCastSource
 import org.slf4j.Logger
 import java.io.File
 import java.util.concurrent.ConcurrentLinkedQueue
-import net.nevinsky.abyssus.lib.gdx.ModelBatch as ContentBatch
+import com.badlogic.gdx.graphics.g3d.ModelBatch
+import net.nevinsky.abyssus.lib.gdx.g3d.FilteredRenderables
 
 /** One drawn foliage: the placement that named it, the asset it draws and the entity transform its copies stand under. */
 class DrawnFoliage(val placement: FoliagePlacement, val foliage: FoliageDrawable, val entity: Matrix4)
@@ -138,9 +138,14 @@ class SceneFoliage(
         for (entry in drawn) entry.foliage.update(camera, entry.entity)
     }
 
-    /** The renderables of the drawn foliage, with the entity transform [update] culled them under. */
-    fun draw(batch: ContentBatch, environment: Environment) {
-        for (entry in drawn) batch.render(entry.foliage, environment, ShaderProvider.DEFAULT_SHADER_KEY)
+    /**
+     * The renderables of the drawn foliage, with the entity transform [update] culled them under; only those [accept]
+     * takes when it is given.
+     */
+    fun draw(batch: ModelBatch, environment: Environment, accept: ((Renderable) -> Boolean)? = null) {
+        for (entry in drawn) {
+            batch.render(if (accept == null) entry.foliage else FilteredRenderables(entry.foliage, accept), environment)
+        }
     }
 
     /** The OBJECT layers' instanced parts of the drawn foliage: the depth pass draws those, never a DETAIL layer's. */

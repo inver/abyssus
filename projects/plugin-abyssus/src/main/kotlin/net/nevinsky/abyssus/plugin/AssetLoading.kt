@@ -19,24 +19,25 @@ import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
-import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotStore
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySnapshotStore
 import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
-import net.nevinsky.abyssus.lib.core.assets.model.ModelRaySnapshotLoader
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelMaterialInfo
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSource
-import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
-import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.ModelRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.asPreparationTap
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelMaterialInfo
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSource
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySkySnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.SkyboxRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrPreview
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.HdrSkyRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyRaySnapshotLoader
-import net.nevinsky.abyssus.lib.core.assets.terrain.RayTerrainSnapshot
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.ProceduralSkyRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayTerrainSnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.TerrainRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
@@ -115,7 +116,7 @@ class ProjectAssets internal constructor(
 
     /** Every loader of the project, from the table all hosts share; foliage reads the editor's bake cache. */
     private val loaders = StandardAssetLoaders(
-        files, metas, skyShaders, assimp, toneCurve, rayModels, log,
+        files, metas, skyShaders, assimp, toneCurve, rayModels.asPreparationTap(), log,
         foliage = { terrains -> FoliageLoader(files, metas, terrains) },
     )
 

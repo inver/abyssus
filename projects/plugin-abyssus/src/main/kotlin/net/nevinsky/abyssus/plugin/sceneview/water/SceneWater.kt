@@ -30,8 +30,8 @@ import net.nevinsky.abyssus.lib.core.water.WaterReflectionCamera
 import net.nevinsky.abyssus.lib.core.water.WaterScreenArea
 import net.nevinsky.abyssus.lib.core.water.WaterSettings
 import net.nevinsky.abyssus.lib.core.water.WaterTextures
-import net.nevinsky.abyssus.lib.gdx.Renderable
-import net.nevinsky.abyssus.lib.gdx.shader.ModelDepthShaderProvider
+import com.badlogic.gdx.graphics.g3d.Renderable
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelDepthShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowDepthPass
 import net.nevinsky.abyssus.plugin.sceneview.TerrainEntity
 import net.nevinsky.abyssus.plugin.sceneview.shadows.FoliageCastSource

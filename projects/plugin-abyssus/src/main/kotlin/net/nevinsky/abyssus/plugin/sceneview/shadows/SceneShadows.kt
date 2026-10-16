@@ -26,8 +26,8 @@ import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Pool
 import com.badlogic.gdx.utils.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import net.nevinsky.abyssus.lib.gdx.Renderable
-import net.nevinsky.abyssus.lib.gdx.shader.ModelDepthShaderProvider
+import com.badlogic.gdx.graphics.g3d.Renderable
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelDepthShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowDepthPass
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasView

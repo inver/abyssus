@@ -33,11 +33,12 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.ModelInstance
-import net.nevinsky.abyssus.lib.gdx.Renderable
+import com.badlogic.gdx.graphics.g3d.ModelInstance
+import com.badlogic.gdx.graphics.g3d.Renderable
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.gdx.mesh.Mesh
-import net.nevinsky.abyssus.lib.gdx.model.Model
+import com.badlogic.gdx.graphics.Mesh
+import com.badlogic.gdx.graphics.g3d.Model
+import net.nevinsky.abyssus.lib.gdx.g3d.IntModel
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
 import net.nevinsky.abyssus.plugin.sceneview.FakeFoliageAssets
@@ -243,7 +244,7 @@ class SceneShadowsTest {
         return layerModels.map { (folder, asset) ->
             val meta = checkNotNull(metas.loadBaseMeta(asset)) { "$asset has a meta" }
             val file = FileHandle(File(untitled, "assets/$asset/${checkNotNull(meta.typedAdditional<ModelMeta>().file)}"))
-            folder to Model(AssimpModelLoader().loadData(file), StubTextures())
+            folder to IntModel(AssimpModelLoader().loadData(file), StubTextures())
         }.toMap()
     }
 

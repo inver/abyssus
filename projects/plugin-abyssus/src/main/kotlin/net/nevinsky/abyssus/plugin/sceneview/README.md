@@ -394,9 +394,9 @@ A `SKYBOX_PROCEDURAL` asset with `additional.lightsScene: true` lights models an
 color with it, and until the first build is done the ambient color is used. When the sun or clouds change, a new
 environment is built in the background and fades in over about one second: `SceneSkybox.fadingTo` gives the next
 environment and the weight (0 to 1). `renderContent` passes them on in two ways:
-- models get an `EnvironmentLightAttribute` whose `fadeTo` / `weight` carry the second environment. `PbrShader` compiles a
+- models get an `EnvironmentLightAttribute` whose `fadeTo` / `weight` carry the second environment. `PbrModelShader` compiles a
   program with `environmentFadeFlag` (one more irradiance and specular fetch) only while an environment fades, and
-  `DefaultShader` blends the six axis colors on the CPU;
+  `ModelShader` blends the six axis colors on the CPU;
 - `TerrainShader` binds the next irradiance cube on unit 8 and `terrain.frag` mixes the two by `u_skyFade`. Without a
   fade, or without a sky, the shader is bound exactly as before.
 
@@ -410,7 +410,7 @@ target, redrawn every frame at the sky's own time and cloud asset, so patches dr
 cloud asset reload. `planSunShading` picks the map or the uniform `SunOcclusion` dimming, never both: with the map
 the sun keeps its full color in `litLights` and `DirectionalVisibilityAttribute` carries the map, the sun's directional
 index, the sun-ray world-to-map transform (so a tall model is looked up at its ground footprint), a 10% edge fade, and
-the uniform factor for beyond the square. `DefaultShader`, `PbrShader` and `terrain.frag` (unit 9) multiply only that
+the uniform factor for beyond the square. `ModelShader`, `PbrModelShader` and `terrain.frag` (unit 9) multiply only that
 light, on top of its atlas shadow. No usable sun, a sun outside the rendered light budget, no clouds, exhausted cloud
 techniques or a map that could not be made (logged once to the `sceneview` logger) leave the uniform dimming as before.
 

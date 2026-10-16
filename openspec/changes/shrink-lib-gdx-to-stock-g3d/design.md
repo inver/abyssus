@@ -162,3 +162,31 @@ short migration list.
 ## Open Questions
 
 - Whether to merge the plugin's `batch` and `contentBatch` once both are stock. Deferred; it is a behavior-neutral cleanup.
+
+## Verification record
+
+Recorded while applying the change.
+
+- **Pixel parity (task 3.1).** `StockPipelineParityGlTest` draws one scene through the forked pipeline and the stock one:
+  a static PBR cube, a skinned and animated glTF model, a Phong ground, a two-instance foliage mesh, a shadowed
+  directional light (each pipeline renders its own depth atlas with its own depth shader), an environment light and fog.
+  On macOS (GL 3.2 core) the two 128 x 128 images are **identical: 0/255 worst channel difference**. The test allows 2/255
+  per channel (rounding); no difference is accepted beyond that. The test also checks that the scene is not flat and that
+  the shadow changes the image, so an empty comparison cannot pass.
+- **Scope the original plan did not foresee.** The water feature (`add-realistic-water`) landed in `lib-gdx` before this
+  change was applied, so group 2 also ports what it added to the forked pipeline: the world clip plane
+  (`ClipPlaneAttribute`, `clipPlaneFlag`, bound per renderable) in `ModelShader`, `ShadowDepthPass.clipPlane` and
+  `linearFar` in the new `ModelDepthShader`, and `ModelBatch.renderableFilter`, which stock `ModelBatch` lacks. The
+  filter becomes `FilteredRenderables`, a `RenderableProvider` wrapper (a refused renderable stays with the pool, which
+  takes it back at the flush). `ModelWaterPassGlTest` is ported to the new pipeline. Task 4.1 is therefore moot as
+  worded: there is no open `add-realistic-water` change to amend (it is archived), and nothing in it needed amending.
+- **Audit of the 16-bit `Mesh` API (task 3.2).** The grep over all modules (`getIndicesBuffer`, `indicesBuffer`,
+  `.setIndices(`, `.getIndices(`, mesh `copy`, `Intersector`, `MeshPartBuilder`) finds no call that passes or reads `short`
+  indices on a model mesh. The callers of the fork `Mesh` outside `lib-gdx` are `TerrainMesh`, `FoliageDrawable`,
+  `ShadowCasterBounds` and tests. They use only `IntArray` indices (`setIndices(IntArray)`, `getIndices(srcOffset, count,
+  IntArray, destOffset)`, both on `IntMesh`) or vertex data (`getVertices`), so none needs a fix. **Correction to the
+  Risks section:** `TerrainMesh` does not already use a stock `Mesh`; it uses the fork `Mesh` with 32-bit indices, which
+  a terrain needs, so it moves to `IntMesh`, not to a stock `Mesh` (as do `FoliageDrawable`'s per-part meshes).
+  `ShadowCasterBounds` only reads vertices and takes the stock `Mesh` type. `SkyboxCube` (8 vertices) and
+  `WaterDrawable` already use stock meshes. `IntMesh` throws from the 16-bit members, so a future call fails loudly.
+

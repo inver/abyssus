@@ -179,12 +179,20 @@ the tests assert on its scene. `PlaneComponent` and `PilotComponent` are registe
 remain read-only JSON in the editor. The committed `abyssus/components.schema.json` is retained data; it does not
 enable Properties editing. A plane duplicated in the field scene appears on plane select at the next game start.
 
-`play/ControlLinePlay.kt` provides the game's `PlayModule`: it flies the selected plane (or the first by name),
-handles W / S or Up / Down input and publishes telemetry. The current Gradle file does not define
-`exportAbyssus`, `exportComponentSchema` or `exportPlay`. To launch that module in Abyssus, provide a machine-local
-`<project>/abyssus/play.json` using `PlayExportMain` on the game's runtime classpath, as described in
-[the physics guide](../lib-physics/README.md#play-in-abyssus). Export into the disposable project copy and refresh it
-when the classpath changes. Without that launch file, Abyssus Physics selects its bundled physics-only host.
+`play/ControlLinePlay.kt` (in the game's `play` source set, `src/play/kotlin`) provides the game's `PlayModule`: it flies the
+selected plane (or the first by name), handles W / S or Up / Down input and publishes telemetry. The `play` source set
+depends on `lib-game-link`; the game's main classpath and its distribution do not (`checkShippedClasspath`).
+To launch the module in Abyssus, run `exportPlay` on a disposable copy of the project:
+
+```
+./gradlew :app-game-control-line:exportPlay -PplayProject=/path/to/copy/of/ControlLine
+```
+
+It writes the machine-local `<project>/abyssus/play.json` (git-ignored), whose classpath holds the game, its `play`
+output and `lib-game-link`. Export again whenever the classpath changes, and once after updating to this layout. The
+current Gradle file does not define `exportAbyssus` or `exportComponentSchema`; `abyssus/components.schema.json` is
+committed data. Without a launch file, Abyssus selects its bundled physics-only host. See
+[`lib-game-link`](../lib-game-link/README.md).
 
 Play gives a module no project folder, so the game's Play ground is flat at height 0, where the field's flying
 circle is.
@@ -216,7 +224,7 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 | `flow` | `GameFlow` (the screen state machine, with the mode and assist level), `FlightReport` | no |
 | `input` | `HandleInput` (keyboard and mouse tilt) | no |
 | `render`, `screens` | `FieldScene`, `FieldRenderer` (with `shader/terrain.*`), `FieldShadows` (the sun's shadow map), `Cameras`, `GameUiHost` (the authored screens over `lib-core`'s `UiPresenter`), `GameUiModel` (what the screens show and the actions and keys they send; no GL), `GameUiContract` | yes |
-| `play` | `ControlLinePlay : PlayModule` | no |
+| `play` (own source set, `src/play`) | `ControlLinePlay : PlayModule` | no |
 
 ### Foliage
 

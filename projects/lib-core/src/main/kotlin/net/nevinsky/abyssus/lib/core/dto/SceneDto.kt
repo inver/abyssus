@@ -18,8 +18,6 @@ data class SceneDto(
     val fog: FogDto? = null,
     val skyboxEnabled: Boolean = false,
     val skyboxName: String? = null,
-    val rayTracing: RayTracingDto? = null,
-    val rayTracingEnabled: Boolean = rayTracing != null,
     /** The scene's `abyssus` extension block as the file holds it (water surfaces live in it), kept raw so nothing in it is lost. */
     val abyssus: JsonNode? = null,
     // parsing ecs graph should be done externally of deserializing scene

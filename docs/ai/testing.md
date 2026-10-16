@@ -24,6 +24,11 @@ classes of the old packages otherwise fail tests with `NoSuchMethodError` / `NoC
 Results are in each module's `build/test-results/test/*.xml` and `build/reports/tests/test/`; a later run overwrites them.
 CI also runs Plugin Verifier and Qodana separately from `check`.
 
+**Java 21 is the baseline** for `.github/workflows/build.yml`, `.github/workflows/release.yml`, `.github/workflows/package-rehearsal.yml` and `build.gradle.kts`. The packaging
+rehearsal builds the unsigned plugin zip and checks it (no Jolt in `lib/`, play host present) with no publish credentials
+or release trigger: `scripts/rehearse-package.sh` (CI: the *Package Rehearsal* workflow). The zip lands in
+`projects/plugin-abyssus/build/distributions/`.
+
 ## UI tests (Remote Robot)
 
 `projects/plugin-abyssus/src/uiTest/kotlin` drives an installed Abyssus in a real sandbox IDE through the JetBrains
@@ -149,7 +154,10 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
   `terrain`, `meta`, `ray`, `headless`), plain JUnit with no IntelliJ class on the classpath (`NoPlatformClasspathTest`).
   Their working directory is `projects/plugin-abyssus/`, so `src/test/testData/project/` resolves to the same
   fixtures as the plugin tests.
-- `projects/lib-gdx`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`).
+- `projects/lib-gdx`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`) and, in
+  `net.nevinsky.abyssus.lib.gdx.g3d`, the stock-typed pipeline's (`IntMeshGlTest` with its 16-bit negative control,
+  `IntModelGlTest`, `ModelShaderGlTest`, `InstancedModelShaderGlTest`, `ModelDepthGlTest`, the ported `ModelShadowGlTest`
+  and `DirectionalVisibilityGlTest`, and the GL-free `ShaderDefinesTest` and `InstanceAttributesTest`).
 - `projects/lib-core/src/test/kotlin/`: asset reading and loading tests, plain JUnit with no IntelliJ classes. They read the shared
   fixtures through `testProject(name)` (Gradle passes the folder as `abyssus.testData`) and get a project's
   `FileLoader` and `AssetMetaLoader` from `testFileLoader(dir)` / `testMetaLoader(dir)` (`TestData.kt`); loaders and
@@ -163,7 +171,7 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
   models and a foliage asset with a matching or stale bake) instead of copying a committed fixture:
   `PhysicsFoliageTest` (settling box, imported DETAIL collider, invalid collider, moving owner, stale/missing bake),
   `PhysicsFoliageLifecycleTest` (owner removal, injected layer failure, 100 worlds, the copy cap), `ShapeFactoryTest`
-  (compound sub-shape poses and sizes) and `PlayHostMainTest` (a box settling for 5 s of simulated time on a foliage
+  (compound sub-shape poses and sizes) and, in `lib-game-link`, `PlayHostMainTest` (a box settling for 5 s of simulated time on a foliage
   collider in the child play process). The pure parts are `FoliageColliderTransformsTest` and `FoliageAdmissionTest`.
 - `projects/app-game-control-line/toolsTest/`: the field foliage migration (`./gradlew :app-game-control-line:testFieldFoliageTools`,
   part of `check`). It starts from `projects/app-game-control-line/toolsTest/fixtures/Field.original.scene`, the scene from before the migration, because
@@ -237,6 +245,96 @@ HDR preview platform tests require real filesystem-backed EXR files and TinyEXR'
 adds those classifiers with `testRuntimeOnly`; this test setup does not add them to plugin packaging. Undo tests
 clear only fixture-creation history before the first panel edit, then retain exact Undo/Redo assertions.
 
+## Graphics performance evidence
+
+Evidence for the render refactors of `openspec/changes/reduce-architecture-duplication`: a measured baseline taken before
+a change, and a comparison after it. Nothing here is a platform-wide claim; every number belongs to the machine that made it.
+
+### Runner and lane
+
+- **GPU runner:** the maintainer's Mac, *Apple M1 Pro (14 GPU cores), macOS arm64, Metal-backed OpenGL 4.1*, running the
+  repository's JetBrains Runtime 21. It is the only GPU runner. Reports from another machine, driver or JDK are never
+  compared with its baseline (`MISMATCHED`).
+- **Lane:** manual, on that Mac, with a display and the machine otherwise idle (no other build or IDE busy; on power).
+  There is no scheduled GPU job. The runner commands below are the whole lane.
+- **CPU CI** (`.github/workflows/build.yml`, `./gradlew check`) only validates the report schema, the comparison policy and
+  the stress scene (`lib-core`'s `testing.perf` tests) and the skipped path: without `-Dabyssus.glTests=true` the runners
+  write a report whose workloads are `SKIPPED` with a reason. A skipped or unavailable workload is never a pass.
+
+### What is measured
+
+All workloads draw at 1280 x 720 with fixed cameras, a fixed time step of 1/60 s per frame (sky, clouds, animation and water
+advance identically in every run), a 10 s warmup and five samples of 30 s, over disposable copies of the projects:
+
+| Host | Workload | Scene |
+|---|---|---|
+| editor | `untitled` | `Untitled`, `Main Scene` (plain and PBR models, terrain, lights, procedural sky) |
+| editor | `animated` | `Animated`, `Main` (skinned, animated models) |
+| editor | `foliage` | `Foliage`, `Main Scene` (the fixture holds no model binaries, so this measures the terrain and an empty scene) |
+| editor | `stress` | the generated stress scene: 1,000 placements of one model, the 1600 m `Untitled` terrain and 5,000 foliage copies, seed `20261016` (`StressScene`; its SHA-256 over scene and bake is in the report) |
+| game | `control-line-field` | Control Line's `Field.scene` through `FieldRenderer` |
+
+Per workload the report holds: commit and dirty state, OS, JDK, GPU and driver (GL_RENDERER / GL_VERSION), backend, scene
+hash, the settings above, CPU frame time p50 / p95 / p99 (the p95 of each sample too), steady-state allocation per frame and
+GC count and time of the render thread, upload work (the frames the cold load took, as uploads are sliced per frame), asset
+counts, and cold-load and reload times. **Frame time is the CPU time of the renderer's draw call (command submission), not GPU
+time**; `gpuMs` stays empty unless a timer query measured it on its own. A report can say `MEASURED`, `SKIPPED` or `UNAVAILABLE`.
+
+### Commands
+
+| What | Command |
+|---|---|
+| Editor workloads | `./gradlew :plugin-abyssus:test --tests '*perf.PerfWorkloadsGlTest' -Dabyssus.glTests=true -Dabyssus.perf.report=<file.json>` |
+| Control Line workload | `./gradlew :app-game-control-line:test --tests '*render.PerfWorkloadsGlTest' -Dabyssus.glTests=true -Dabyssus.perf.report=<file.json>` |
+| Some editor workloads | add `-Dabyssus.perf.workloads=untitled,stress` |
+| Smoke run (never compared) | add `-Dabyssus.perf.warmupSeconds=2 -Dabyssus.perf.sampleSeconds=3 -Dabyssus.perf.samples=2` |
+| Pixel tolerances | `./gradlew :plugin-abyssus:test --tests '*perf.PixelEvidenceGlTest' -Dabyssus.glTests=true -Dabyssus.perf.pixels=record -Dabyssus.perf.pixelsDir=<dir>` (and the game's `*render.PixelEvidenceGlTest`) |
+| Check pixels against a recording | the same with `-Dabyssus.perf.pixels=compare -Dabyssus.perf.pixelsReference=<dir>` |
+| Compare two reports | `./gradlew :lib-core:comparePerf -Pbaseline=<file.json> -Pcandidate=<file.json>` |
+
+A run lasts about 3 minutes per workload at the full protocol (the editor's four take about 13 minutes, plus a reload each).
+
+### Comparison policy
+
+`PerfComparison` compares matched environments only (OS, JDK, GPU, driver, backend, and per workload the scene hash and the
+settings; the commit and dirty state may differ). The p95 frame time and the steady-state allocation per frame may grow by a
+**provisional 10%**; more is a `REGRESSION`. If the baseline's own five sample p95s spread by more than the threshold the answer is
+`INCONCLUSIVE`: improve repeatability, do not accept a regression. A mismatch, or a skipped or missing workload, is
+`MISMATCHED` or `NOT_MEASURED`. No absolute frame rate or speedup is promised.
+
+### Pixel tolerances
+
+`PixelEvidence` renders each case five times on the same device and records the loosest difference between runs (largest
+channel difference, share of differing pixels, share differing by more than 2/255) as the case's tolerance, with the first render
+as the reference image. A later render must be within that tolerance; the tolerance is never widened to hide a change. Cases:
+plain, PBR and terrain (`untitled`), skinned (`animated`), instanced (`stress`), cutout (`cutout`: `Untitled` with every
+textured material alpha-masked) and the game's field.
+
+### Baseline
+
+Taken 2026-10-16 on the runner above, before any change of `reduce-architecture-duplication` touched rendering. The tree was
+commit `1887442e` plus the uncommitted `shrink-lib-gdx-to-stock-g3d` and `separate-shipped-code` work (`dirty: true` in the
+reports). Full protocol (10 s warmup, five 30 s samples, 1280 x 720, 1/60 s step).
+
+| File | What |
+|---|---|
+| `docs/perf/baseline/editor.json` | the editor's four workloads |
+| `docs/perf/baseline/game.json` | Control Line's field |
+| `docs/perf/baseline/pixels/` | reference images and repeated-run tolerances of `untitled`, `animated`, `stress`, `cutout` and `control-line-field` |
+
+| Workload | p95 CPU frame | sample p95 spread | Gate |
+|---|---|---|---|
+| `untitled` | 6.1 ms | 4% | usable |
+| `animated` | 0.19 ms | 46% | **inconclusive**: sub-millisecond frames, dominated by timer jitter |
+| `foliage` | 0.21 ms | 13% | **inconclusive**: same |
+| `stress` | 225 ms | 4% | usable (the editor draws 1,000 placements slowly; that is the number to beat) |
+| `control-line-field` | 9.1 ms | 5% | usable |
+
+Five repeated renders of every pixel case were bit-identical on this device, so every recorded pixel tolerance is 0. Until
+`animated` and `foliage` are made heavier or steadier they can only report `INCONCLUSIVE` against this baseline; they still
+guard the pixels. Measured with the editor in `GlHarness` (a 16 ms Swing timer paces frames) and the game with `glFinish` per frame,
+so the two hosts' frame times are not comparable with each other.
+
 ## GL tests
 
 - **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `ModelPreviewCanvasGlTest`, `LargeMeshGlTest`, `lib-core`'s `*GlTest`, Control Line's `CrashClipGlTest` and `GameUiGlTest`) run only with
@@ -255,7 +353,7 @@ Water has pure checks and GL checks, all named for the capability they pin down.
   `WaterInteractionTest`); and the plugin's `WaterSceneEditsTest`, `WaterTreeTest`, `WaterActionTest`, `WaterPropertiesTest`
   and `WaterSceneEditorTest`.
 - **With `-Dabyssus.glTests=true`:** `lib-gdx`'s `ModelWaterPassGlTest` (`./gradlew :lib-gdx:test`: the clip plane, the
-  linear depth pass, skinning, alpha cutouts and the batch filter), `lib-core`'s `WaterShaderGlTest`
+  linear depth pass, skinning, alpha cutouts and `FilteredRenderables`), `lib-core`'s `WaterShaderGlTest`
   (`./gradlew :lib-core:test`: the shader and both presets), and the plugin's `SceneFrameSnapshotTest` (one animation
   update, previews, an unchanged no-water frame), `SceneWaterPassGlTest`, `SceneWaterResourcesGlTest`,
   `SceneWaterReflectionGlTest`, `SceneWaterShallowsGlTest`, `SceneWaterFoamGlTest`, `SceneWaterFallbackGlTest` and

@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.model.Model
+import com.badlogic.gdx.graphics.g3d.Model
 import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

@@ -39,7 +39,48 @@ dependencies {
     testImplementation(testFixtures(project(":lib-gdx")))
 }
 
+// Play in Abyssus (src/play): the game's PlayModule, on the play bridge. A source set of its own, so the game's main
+// classpath and its distribution never see `lib-game-link`; `exportPlay` writes a play.json whose classpath includes both.
+val play by sourceSets.creating {
+    compileClasspath += sourceSets["main"].output + sourceSets["main"].runtimeClasspath
+    runtimeClasspath += output + compileClasspath
+}
+dependencies {
+    "playImplementation"(kotlin("stdlib"))
+    "playImplementation"(project(":lib-game-link"))
+    // ControlLinePlayTest runs the play host against the play module
+    testImplementation(play.output)
+    testImplementation(project(":lib-game-link"))
+}
+
 val gameProject = layout.projectDirectory.dir("project/ControlLine")
+
+// A shipped game carries no editor code: nothing on the main runtime classpath may reach an editor-only module.
+val checkShippedClasspath by tasks.registering {
+    group = "verification"
+    description = "Fails when the game's main runtime classpath holds an editor-only module."
+    val root = configurations.runtimeClasspath.flatMap { it.incoming.resolutionResult.rootComponent }
+    doLast {
+        val editorOnly = setOf(":lib-core-editor", ":lib-game-link", ":lib-raytracing")
+        val found = sortedSetOf<String>()
+        val seen = mutableSetOf<ResolvedComponentResult>()
+        fun visit(component: ResolvedComponentResult) {
+            if (!seen.add(component)) return
+            val id = component.id
+            if (id is ProjectComponentIdentifier && (id.projectPath in editorOnly || id.projectPath.startsWith(":plugin-"))) {
+                found += id.projectPath
+            }
+            component.dependencies.filterIsInstance<ResolvedDependencyResult>().forEach { visit(it.selected) }
+        }
+        visit(root.get())
+        if (found.isNotEmpty()) {
+            throw GradleException(
+                "The shipped game's runtime classpath must not hold editor code, but it reaches: " + found.joinToString()
+            )
+        }
+    }
+}
+tasks.named("check") { dependsOn(checkShippedClasspath) }
 
 application {
     mainClass.set("net.nevinsky.abyssus.app.game.controlline.MainKt")
@@ -53,12 +94,31 @@ tasks.named<JavaExec>("run") {
     systemProperty("controlLine.project", dir)
 }
 
+val playProject = providers.gradleProperty("playProject")
+tasks.register<JavaExec>("exportPlay") {
+    group = "control line"
+    description = "Writes abyssus/play.json (the game's play module and its classpath) into the project given as " +
+        "-PplayProject=<folder>; use a copy of project/ControlLine, as the file holds machine-local paths."
+    classpath = play.runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.lib.gamelink.play.PlayExportMain")
+    val folder = playProject
+    argumentProviders.add(CommandLineArgumentProvider {
+        listOf(
+            "net.nevinsky.abyssus.app.game.controlline.play.ControlLinePlay",
+            folder.orNull ?: throw GradleException("Pass the project folder: -PplayProject=<folder> (a copy first)"),
+        )
+    })
+}
+
 tasks.test {
     systemProperty("controlLine.project", gameProject.asFile.absolutePath)
     // the tests read the bundled project (screens, scenes) from disk: a change to it reruns them
     inputs.dir(gameProject).withPropertyName("controlLineProject")
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
+    // the opt-in graphics workload runner (docs/ai/testing.md, "Graphics performance evidence")
+    System.getProperties().stringPropertyNames().filter { it.startsWith("abyssus.perf.") }
+        .forEach { systemProperty(it, System.getProperty(it)) }
     // re-records the pinned screens (screens.golden) from the screens under test: only when a screen is meant to change
     System.getProperty("abyssus.recordScreens")?.let { systemProperty("abyssus.recordScreens", it) }
 }

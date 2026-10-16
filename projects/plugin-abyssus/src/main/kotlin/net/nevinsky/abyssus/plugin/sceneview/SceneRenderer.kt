@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.Model
 import com.badlogic.gdx.graphics.g3d.ModelBatch
+import com.badlogic.gdx.graphics.g3d.Renderable
 import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.math.Matrix4
@@ -23,7 +24,7 @@ import com.intellij.openapi.Disposable
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDrawable
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySkySnapshot
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SunOcclusion
@@ -51,9 +52,9 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.scene.cameraDirectionOf
 import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
-import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
+import net.nevinsky.abyssus.lib.gdx.g3d.FilteredRenderables
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
-import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
@@ -79,7 +80,6 @@ import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.plugin.sceneview.terrain.TerrainShader
 import java.io.File
-import net.nevinsky.abyssus.lib.gdx.ModelBatch as ContentBatch
 
 /**
  * Draws a scene's environment, a ground grid and the content the scene places (skybox, terrains, models), and picks
@@ -131,13 +131,13 @@ class SceneRenderer(
     internal var overlays: SceneOverlayHost? = null
 
     private var batch: ModelBatch? = null
-    private var contentBatch: ContentBatch? = null
-    private var contentShaders: DefaultShaderProvider? = null
+    private var contentBatch: ModelBatch? = null
+    private var contentShaders: ModelShaderProvider? = null
 
     /** Asset changes waiting for a frame that can safely replace GL resources; merged until [render] takes them. */
     private val pendingRevision = PendingAssetRevision()
 
-    private val models = SceneModels(AssetView(assets, net.nevinsky.abyssus.lib.gdx.model.Model::class.java))
+    private val models = SceneModels(AssetView(assets, com.badlogic.gdx.graphics.g3d.Model::class.java))
     private val terrains = SceneTerrains(AssetView(assets, TerrainMesh::class.java))
     private val foliage = SceneFoliage(ViewFoliageAssets(AssetView(assets, FoliageDrawable::class.java)), foliageDrafts)
     private var terrainShader: TerrainShader? = null
@@ -321,9 +321,9 @@ class SceneRenderer(
         terrainShader = null
         updateDrawnVersion()
         batch = ModelBatch(FogShaderProvider { fogCoefficient })
-        contentShaders = DefaultShaderProvider(net.nevinsky.abyssus.lib.gdx.shader.ShaderConfig().apply {
+        contentShaders = ModelShaderProvider(com.badlogic.gdx.graphics.g3d.shaders.DefaultShader.Config().apply {
             numSpotLights = MAX_POINT
-        }).also { contentBatch = ContentBatch(it) }
+        }).also { contentBatch = ModelBatch(it) }
         terrainShader = TerrainShader(shaders)
         skybox = SceneSkybox(AssetView(assets, SkyRenderer::class.java))
         overlay = LoadingOverlay(shaders)
@@ -619,7 +619,7 @@ class SceneRenderer(
     /** Which parts of the content a pass draws: all of it; the opaque and alpha-tested parts; or the blended model parts only. */
     private enum class ContentParts { ALL, OPAQUE, BLENDED }
 
-    private fun isBlended(renderable: net.nevinsky.abyssus.lib.gdx.Renderable): Boolean =
+    private fun isBlended(renderable: Renderable): Boolean =
         (renderable.material?.get(BlendingAttribute.Type) as? BlendingAttribute)?.blended == true
 
     private fun water(): SceneWater = (water ?: SceneWater(shaders, log).also { water = it }).also { it.frozenSeconds = waterTime }
@@ -719,22 +719,19 @@ class SceneRenderer(
             )
         }
         if (clip != null) environment.set(ClipPlaneAttribute(clip))
-        contentBatch.renderableFilter = when (parts) {
+        val accept: ((Renderable) -> Boolean)? = when (parts) {
             ContentParts.ALL -> null
             ContentParts.OPAQUE -> { r -> !isBlended(r) }
             ContentParts.BLENDED -> { r -> isBlended(r) }
         }
         try {
             contentBatch.begin(view)
-            for (entity in models.drawn) contentBatch.render(
-                entity.instance,
-                environment,
-                ShaderProvider.DEFAULT_SHADER_KEY
-            )
-            if (parts != ContentParts.BLENDED) foliage.draw(contentBatch, environment)
+            for (entity in models.drawn) {
+                contentBatch.render(if (accept == null) entity.instance else FilteredRenderables(entity.instance, accept), environment)
+            }
+            if (parts != ContentParts.BLENDED) foliage.draw(contentBatch, environment, accept)
             contentBatch.end()
         } finally {
-            contentBatch.renderableFilter = null
             environment.remove(ClipPlaneAttribute.Type)
         }
     }

@@ -11,9 +11,9 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelMaterial
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.lib.core.assets.model.ModelRaySnapshotLoader
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSource
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.ModelRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSource
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.ModelData

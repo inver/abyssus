@@ -29,15 +29,16 @@ import net.nevinsky.abyssus.lib.core.assets.testFileLoader
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
-import net.nevinsky.abyssus.lib.gdx.ModelBatch
-import net.nevinsky.abyssus.lib.gdx.Renderable
+import com.badlogic.gdx.graphics.g3d.ModelBatch
+import com.badlogic.gdx.graphics.g3d.Renderable
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.gdx.mesh.Mesh
-import net.nevinsky.abyssus.lib.gdx.model.Model
-import net.nevinsky.abyssus.lib.gdx.shader.DefaultShader
-import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
-import net.nevinsky.abyssus.lib.gdx.shader.ShaderConfig
-import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
+import com.badlogic.gdx.graphics.Mesh
+import com.badlogic.gdx.graphics.g3d.Model
+import net.nevinsky.abyssus.lib.gdx.g3d.IntMesh
+import net.nevinsky.abyssus.lib.gdx.g3d.IntModel
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelShader
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
+import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -79,7 +80,7 @@ class FoliageDrawableGlTest {
     private fun loadModels(): Map<String, Model> = modelFolders.map { (folder, asset) ->
         val meta = checkNotNull(testMetaLoader(untitled).loadBaseMeta(asset)) { "$asset has a meta" }
         val file = FileHandle(File(untitled, "assets/$asset/${checkNotNull(meta.typedAdditional<ModelMeta>().file)}"))
-        folder to Model(AssimpModelLoader().loadData(file), StubTextures())
+        folder to IntModel(AssimpModelLoader().loadData(file), StubTextures())
     }.toMap()
 
     private fun camera(): PerspectiveCamera = PerspectiveCamera(60f, 4f, 3f).apply { // a 4 by 3 viewport: aspect 4/3
@@ -327,13 +328,13 @@ class FoliageDrawableGlTest {
     }
 
     private fun assertTheyDrawWithoutGlErrors(drawable: FoliageDrawable, camera: Camera) {
-        val provider = DefaultShaderProvider(ShaderConfig().apply { numPointLights = 0; numSpotLights = 0 })
+        val provider = ModelShaderProvider(DefaultShader.Config().apply { numPointLights = 0; numSpotLights = 0 })
         try {
             val renderables = renderables(drawable)
-            val shader = provider.get(renderables.first()) as DefaultShader
+            val shader = provider.getShader(renderables.first()) as ModelShader
             assertTrue("an instanced mesh is drawn by the instanced variant", shader.instanced)
 
-            val batch = ModelBatch(null, null, provider)
+            val batch = ModelBatch(provider)
             val environment = Environment().apply {
                 add(DirectionalLight().set(Color(0.8f, 0.8f, 0.8f, 1f), 0f, -1f, 0f))
                 set(ColorAttribute.createAmbientLight(0.25f, 0.25f, 0.25f, 1f))
@@ -344,7 +345,7 @@ class FoliageDrawableGlTest {
             Gdx.gl.glClearColor(0f, 0f, 0f, 1f)
             Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
             batch.begin(camera)
-            batch.render(drawable, environment, ShaderProvider.DEFAULT_SHADER_KEY)
+            batch.render(drawable, environment)
             batch.end()
             assertEquals(GL20.GL_NO_ERROR, Gdx.gl.glGetError())
         } finally {
@@ -370,7 +371,7 @@ class FoliageDrawableGlTest {
 
     /** How many instances each distinct mesh draws, in the order [meshes] gives them. */
     private fun instances(renderables: Array<Renderable>): List<Int> =
-        meshes(renderables).map { it.instances?.getNumInstances() ?: 0 }.sorted()
+        meshes(renderables).map { (it as IntMesh).numInstances }.sorted()
 
     /** `Matrix4` has no identity predicate in this libGDX version: read the sixteen floats. */
     private fun isIdentity(matrix: Matrix4): Boolean {

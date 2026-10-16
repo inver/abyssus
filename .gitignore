@@ -13,3 +13,5 @@ projects/plugin-abyssus/src/main/gen
 
 .DS_Store
 __pycache__
+# machine-local launch file written by exportPlay (absolute classpath)
+projects/app-game-control-line/project/ControlLine/abyssus/play.json

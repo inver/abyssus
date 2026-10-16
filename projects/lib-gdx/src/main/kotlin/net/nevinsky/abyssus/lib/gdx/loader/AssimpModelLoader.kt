@@ -9,14 +9,14 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import net.nevinsky.abyssus.lib.gdx.assimp.AssimpFlags
 import net.nevinsky.abyssus.lib.gdx.assimp.AssimpModelDataLoader
-import net.nevinsky.abyssus.lib.gdx.model.Model
+import net.nevinsky.abyssus.lib.gdx.g3d.IntModel
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 
 /**
  * Loads a model file through Assimp. Trimmed copy of Mundus' `AssimpModelLoader` (no exporter, no import preview).
  *
  *
- * [loadData] needs no OpenGL context and may run on any thread; [build] creates the GPU resources and
+ * [loadData] needs no OpenGL context and may run on any thread; [buildIntModel] creates the GPU resources and
  * must run with the GL context current.
  */
 class AssimpModelLoader {
@@ -26,9 +26,6 @@ class AssimpModelLoader {
     fun loadData(file: FileHandle): ModelData {
         return dataLoader.load(file.name(), file, AssimpFlags.DEFAULT, file.parent().child("embedded"))
     }
-
-    fun build(data: ModelData, file: FileHandle): Model =
-        Model(data, ParentBasedTextureProvider(file))
 
     /**
      * Decodes the images the model's materials use. Needs no OpenGL context and may run on any thread; an image that
@@ -53,10 +50,14 @@ class AssimpModelLoader {
         return result
     }
 
+    /** Builds the model with the GL context current: a stock libGDX model with 32-bit meshes ([IntModel]). */
+    fun buildIntModel(data: ModelData, file: FileHandle): IntModel =
+        IntModel(data, ParentBasedTextureProvider(file))
+
     /**
-     * Builds the model from textures that are already uploaded (see [PreloadedTextureProvider.upload]); GL
-     * context required. Textures the model did not take stay in `uploaded` for the caller to dispose.
+     * Builds the model from textures that are already uploaded (see [PreloadedTextureProvider.upload]); GL context
+     * required. Textures the model did not take stay in `uploaded` for the caller to dispose.
      */
-    fun build(data: ModelData, file: FileHandle, uploaded: MutableMap<String, Texture>): Model =
-        Model(data, PreloadedTextureProvider(uploaded, ParentBasedTextureProvider(file)))
+    fun buildIntModel(data: ModelData, file: FileHandle, uploaded: MutableMap<String, Texture>): IntModel =
+        IntModel(data, PreloadedTextureProvider(uploaded, ParentBasedTextureProvider(file)))
 }

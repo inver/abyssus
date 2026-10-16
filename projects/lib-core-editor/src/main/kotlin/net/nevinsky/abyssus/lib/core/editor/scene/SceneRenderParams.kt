@@ -67,8 +67,14 @@ data class SceneRenderParams(
     }
 }
 
-/** The view parameters of [scene], seen through [camera]; [projectDir] holds its assets. */
-fun renderParamsOf(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
+/**
+ * The view parameters of [scene], seen through [camera]; [projectDir] holds its assets. [root] is the scene document the
+ * editor-only `rayTracing` settings are read from, as the file holds them (the game's scene binding ignores them); without
+ * it the ray settings are the defaults.
+ */
+fun renderParamsOf(
+    scene: SceneDto, camera: CameraParams, projectDir: File? = null, root: JsonNode? = null,
+): SceneRenderParams {
     val fog = fogOf(scene)
     return SceneRenderParams(
         fog?.color ?: SceneRenderParams.DEFAULT_CLEAR,
@@ -78,9 +84,7 @@ fun renderParamsOf(scene: SceneDto, camera: CameraParams, projectDir: File? = nu
         sceneContentOf(scene),
         projectDir,
         scene.ecs,
-        SceneRaySettingsCodec().read(SceneJson().mapper.createObjectNode().also { root ->
-            scene.rayTracing?.let { root.set<JsonNode>("rayTracing", SceneJson().mapper.valueToTree(it)) }
-        }),
+        SceneRaySettingsCodec().read(root ?: SceneJson().mapper.createObjectNode()),
     )
 }
 

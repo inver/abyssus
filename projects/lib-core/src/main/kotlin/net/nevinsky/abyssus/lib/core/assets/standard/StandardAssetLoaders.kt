@@ -12,11 +12,9 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageRuntimeLoad
 import net.nevinsky.abyssus.lib.core.assets.foliage.PreparedFoliage
 import net.nevinsky.abyssus.lib.core.assets.foliage.RuntimeFoliageLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotStore
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSource
+import net.nevinsky.abyssus.lib.core.assets.model.ModelPreparationTap
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
@@ -33,9 +31,9 @@ import org.slf4j.helpers.NOPLogger
 /**
  * The loader of every asset kind a host draws, in one place: the scene view, a standalone game and any other host take
  * [byType] and register it with an `AssetStorage`, so adding an asset kind is one line here. The loaders a host also
- * needs by themselves (to build ray snapshots, say) are exposed as typed properties, so it never makes a second one.
+ * needs by themselves are exposed as typed properties, so it never makes a second one.
  *
- * Hosts differ in three things only: [rayModels] (models also feed CPU ray snapshots), [log] (where loaders report), and
+ * Hosts differ in three things only: [modelPreparation] (a tap on the prepared model data), [log] (where loaders report), and
  * [foliage] (the editor reads foliage from its bake cache, a game from the baked data; the default is the game's).
  * Constructors only, no GL: the loaders touch GL in their `build` step on the GL thread, as before.
  */
@@ -45,13 +43,13 @@ class StandardAssetLoaders(
     skyShaders: ShaderStorage,
     assimp: AssimpModelLoader = AssimpModelLoader(),
     toneCurve: ToneCurve = ToneCurve(),
-    rayModels: RaySnapshotStore<RayModelSnapshot, RayModelSource>? = null,
+    modelPreparation: ModelPreparationTap? = null,
     log: Logger = NOPLogger.NOP_LOGGER,
     foliage: (TerrainLoader) -> AssetLoader<Unit, PreparedFoliage, FoliageDrawable> = { terrains ->
         RuntimeFoliageLoader(metas, FoliageRuntimeLoad(files, metas, terrains)) { log.warn(it) }
     },
 ) {
-    val model = ModelLoader(metas, assimp, files, rayModels)
+    val model = ModelLoader(metas, assimp, files, modelPreparation)
     val terrain = TerrainLoader(files, metas)
     val foliage: AssetLoader<Unit, PreparedFoliage, FoliageDrawable> = foliage(terrain)
     val texture = TextureLoader(files, metas)

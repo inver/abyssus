@@ -252,8 +252,8 @@ class SceneRenderGlTest {
         val dir = java.nio.file.Files.createTempDirectory("hdrscene").toFile()
         try {
             val sky = File(dir, "assets/sky")
-            HdrFixtures.write(File(sky, "sky.hdr"), 64, 32, pixel = HdrFixtures.uniform(radiance))
-            File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+            HdrFixtures.writeExr(File(sky, "sky.exr"), 64, 32, pixel = HdrFixtures.uniform(radiance))
+            File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{"file":"sky.exr"}}""")
             val text = edit(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()) { root ->
                 noFog(root); root.put("skyboxEnabled", true); root.put("skyboxName", "sky")
             }
@@ -299,7 +299,7 @@ class SceneRenderGlTest {
         assertNull(withSky.error)
         assertEquals(3, models)
         // the same view with no entities shows the sky alone; without a sky it shows where the content is
-        val skyOnly = GlHarness.render(params("Untitled", "Main Scene.scene") { edit(it) { root -> sky(root); (root.get("ecs") as ObjectNode).putObject("entities") } }, 240)
+        val skyOnly = GlHarness.render(params("Untitled", "Main Scene.scene") { edit(it) { root -> sky(root); (root.get("ecs") as ObjectNode).removeAll() } }, 240)
         val noSky = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.putNull("skyboxName") } }
         val without = GlHarness.render(noSky, 240)
         val c = noSky.clear
@@ -325,13 +325,13 @@ class SceneRenderGlTest {
             val source = File("src/test/testData/project/Untitled")
             File(source, "assets").copyRecursively(File(dir, "assets"))
             val sky = File(dir, "assets/sky")
-            HdrFixtures.write(File(sky, "sky.hdr"), 64, 32, pixel = pixel)
-            File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+            HdrFixtures.writeExr(File(sky, "sky.exr"), 64, 32, pixel = pixel)
+            File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{"file":"sky.exr"}}""")
             val text = File(source, "scenes/Main Scene.scene").readText()
             return variants.map { variant ->
                 val patched = edit(text) { root ->
                     noFog(root) // the fixture's ambient light is an enabled grey 0.3
-                    val entities = root.get("ecs").get("entities") as ObjectNode
+                    val entities = root.get("ecs") as ObjectNode
                     if (keep != null) entities.fieldNames().asSequence().toList().filter { it !in keep }.forEach(entities::remove)
                     variant(root)
                 }
@@ -346,7 +346,7 @@ class SceneRenderGlTest {
 
     private val litBySky: (ObjectNode) -> Unit = { it.put("skyboxEnabled", true); it.put("skyboxName", "sky") }
     private val noSkyAtAll: (ObjectNode) -> Unit = { it.putNull("skyboxName") }
-    private val noEntities: (ObjectNode) -> Unit = { it.putNull("skyboxName"); (it.get("ecs") as ObjectNode).putObject("entities") }
+    private val noEntities: (ObjectNode) -> Unit = { it.putNull("skyboxName"); (it.get("ecs") as ObjectNode).removeAll() }
 
     /** Pixels drawn by the content: where the scene without a sky differs from the grid alone. */
     private fun contentPixels(scene: java.awt.image.BufferedImage, gridOnly: java.awt.image.BufferedImage): List<Pair<Int, Int>> = buildList {
@@ -415,7 +415,7 @@ class SceneRenderGlTest {
         val lit = params("Untitled", "Main Scene.scene") {
             edit(it) { root ->
                 noFog(root)
-                (root.get("ecs").get("entities") as ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>("99", SceneJson().parse(light))
+                (root.get("ecs") as ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>("99", SceneJson().parse(light))
             }
         }
         val isolated = lit.copy(content = lit.content.copy(lights = lit.content.lights.filter { it.entityId == "99" }))

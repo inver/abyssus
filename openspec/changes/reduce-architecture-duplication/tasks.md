@@ -6,21 +6,21 @@ GPU/manual items are never marked done from a skipped test.
 
 ## 1. Release toolchain and dependency reconciliation (R1, R2)
 
-- [ ] 1.1 Change `.github/workflows/release.yml` from Java 11 to Java 21 to match `build.yml` and `build.gradle.kts`; verify with `grep -n "java-version" .github/workflows/*.yml` showing one version.
-- [ ] 1.2 Add a non-publishing packaging rehearsal (a workflow job or documented script) that runs `./gradlew :plugin-abyssus:buildPlugin` plus `checkNoJoltInZip` on Java 21 with no publish credentials or release trigger; verify by running it locally and confirming the unsigned zip in `projects/plugin-abyssus/build/distributions/`.
-- [ ] 1.3 Update `openspec/changes/separate-shipped-code` artifacts to the current seven-module checkout: drop `lib-runtime` / `lib-gdx-model` / `plugin-abyssus-physics` references and already-done FlightGear/EcsWriter moves, keep game-distribution requirements; verify with `openspec validate separate-shipped-code`.
-- [ ] 1.4 Amend `shrink-lib-gdx-to-stock-g3d` shader-copy tasks so both temporary pipelines consume the shared shadow fragment from group 3; verify with `openspec validate shrink-lib-gdx-to-stock-g3d`.
+- [x] 1.1 Change `.github/workflows/release.yml` from Java 11 to Java 21 to match `build.yml` and `build.gradle.kts`; verify with `grep -n "java-version" .github/workflows/*.yml` showing one version.
+- [x] 1.2 Add a non-publishing packaging rehearsal (a workflow job or documented script) that runs `./gradlew :plugin-abyssus:buildPlugin` plus `checkNoJoltInZip` on Java 21 with no publish credentials or release trigger; verify by running it locally and confirming the unsigned zip in `projects/plugin-abyssus/build/distributions/`.
+- [x] 1.3 Update `openspec/changes/separate-shipped-code` artifacts to the current seven-module checkout: drop `lib-runtime` / `lib-gdx-model` / `plugin-abyssus-physics` references and already-done FlightGear/EcsWriter moves, keep game-distribution requirements; verify with `openspec validate separate-shipped-code`.
+- [x] 1.4 Amend `shrink-lib-gdx-to-stock-g3d` shader-copy tasks so both temporary pipelines consume the shared shadow fragment from group 3; verify with `openspec validate shrink-lib-gdx-to-stock-g3d`.
 - [ ] 1.5 Note in `add-realistic-water` that its renderer module targets are reconciled when group 6 lands; verify with `openspec validate add-realistic-water`.
-- [ ] 1.6 Document the Java 21 baseline and rehearsal command in `docs/ai/testing.md` (or the build section of `AGENTS.md`); verify with `scripts/check-docs.sh`.
+- [x] 1.6 Document the Java 21 baseline and rehearsal command in `docs/ai/testing.md` (or the build section of `AGENTS.md`); verify with `scripts/check-docs.sh`.
 
 ## 2. Graphics regression and performance evidence (R4)
 
-- [ ] 2.1 Choose and record the GPU-capable runner identities and the execution lane in `docs/ai/testing.md`, resolving the design's open question; verify the doc names each runner and states that CPU CI only validates schema/skipped status.
-- [ ] 2.2 Build the deterministic stress scene (1,000 repeated model placements, terrain, foliage, fixed seed) as a disposable-copy fixture generator; verify with a headless test asserting the stable scene hash and triangle/instance counts.
-- [ ] 2.3 Add a report data model and writer in the existing test fixtures: commit, dirty state, OS, JDK, GPU/driver, backend, scene hash, settings, p50/p95/p99 CPU frame time, allocations/GC, upload work, asset counts, cold-load/reload times, with explicit `skipped`/`unavailable` status; verify with a headless schema test including the skipped case.
-- [ ] 2.4 Add the comparison policy (matched environments only; provisional 10% p95/allocation threshold; "inconclusive" when baseline variance exceeds it); verify with unit tests for pass, regress, inconclusive and mismatched-environment inputs.
-- [ ] 2.5 Add the opt-in workload runner extending `TestGl`, `GlHarness` and `FieldRendererGlTest` harnesses (1280x720, fixed cameras/time/clouds, 10 s warmup, five 30 s samples) over copies of Untitled, Animated, Foliage, Control Line and the stress scene; verify with `./gradlew :plugin-abyssus:test -Dabyssus.glTests=true` on a GPU machine producing a report.
-- [ ] 2.6 Record same-device repeated-run pixel tolerances for plain/PBR/terrain, cutout, skinned and instanced cases and capture the pre-change baseline report; verify the baseline report is committed or stored per 2.1 and referenced from `docs/ai/testing.md`. (GPU/manual: leave unchecked until measured.)
+- [x] 2.1 Choose and record the GPU-capable runner identities and the execution lane in `docs/ai/testing.md`, resolving the design's open question; verify the doc names each runner and states that CPU CI only validates schema/skipped status.
+- [x] 2.2 Build the deterministic stress scene (1,000 repeated model placements, terrain, foliage, fixed seed) as a disposable-copy fixture generator; verify with a headless test asserting the stable scene hash and triangle/instance counts.
+- [x] 2.3 Add a report data model and writer in the existing test fixtures: commit, dirty state, OS, JDK, GPU/driver, backend, scene hash, settings, p50/p95/p99 CPU frame time, allocations/GC, upload work, asset counts, cold-load/reload times, with explicit `skipped`/`unavailable` status; verify with a headless schema test including the skipped case.
+- [x] 2.4 Add the comparison policy (matched environments only; provisional 10% p95/allocation threshold; "inconclusive" when baseline variance exceeds it); verify with unit tests for pass, regress, inconclusive and mismatched-environment inputs.
+- [x] 2.5 Add the opt-in workload runner extending `TestGl`, `GlHarness` and `FieldRendererGlTest` harnesses (1280x720, fixed cameras/time/clouds, 10 s warmup, five 30 s samples) over copies of Untitled, Animated, Foliage, Control Line and the stress scene; verify with `./gradlew :plugin-abyssus:test -Dabyssus.glTests=true` on a GPU machine producing a report.
+- [x] 2.6 Record same-device repeated-run pixel tolerances for plain/PBR/terrain, cutout, skinned and instanced cases and capture the pre-change baseline report; verify the baseline report is committed or stored per 2.1 and referenced from `docs/ai/testing.md`. (GPU/manual: leave unchecked until measured.)
 
 ## 3. Shared shadow/visibility shader source (R3)
 
