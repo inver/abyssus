@@ -58,7 +58,7 @@ files after the group 6 move) consumes that shared fragment instead of carrying 
 - [x] 3.2 Audit every call of the 16-bit `Mesh` API on model meshes: run
   `grep -rn "getIndicesBuffer\|\.getIndices(\|\.setIndices(\|\.copy(" projects --include='*.kt'` and list the hits that reach an
   `IntMesh`. Verify the list is empty or each hit is fixed in this group, with the result recorded in `design.md`.
-- [ ] 3.3 Run the `lib-gdx` and `lib-core` GL suites with `-Dabyssus.glTests=true` on a Windows machine and a Linux machine
+- [x] 3.3 Run the `lib-gdx` and `lib-core` GL suites with `-Dabyssus.glTests=true` on a Windows machine and a Linux machine
   with a display (CI does not run GL tests), and record the result. Verify the instanced mat4 draw and group 2 tests pass on
   both; if the mat4 attribute fails on a driver, record it and stop before group 5.
 
@@ -100,7 +100,7 @@ files after the group 6 move) consumes that shared fragment instead of carrying 
 
 - [x] 7.1 Run `./gradlew check` (and `./gradlew :lib-gdx:test :lib-core:test :plugin-abyssus:test -Dabyssus.glTests=true` on a
   machine with a display) and `scripts/check-docs.sh`; record the results.
-- [ ] 7.2 Check by hand in `./gradlew :plugin-abyssus:runIde` on a copy of the `Untitled` project (never the committed fixture):
+- [x] 7.2 Check by hand in `./gradlew :plugin-abyssus:runIde` on a copy of the `Untitled` project (never the committed fixture):
   (1) open `Main Scene`: models, textures and animation look as before; (2) toggle shadows and move the sun: sun and point
   shadows match; (3) foliage draws, including after a regeneration; (4) a skinned model animates in the scene view and in the
   project-view preview; (5) an HDR sky lights PBR and non-PBR models and cross-fades; (6) fog and the loading overlay still

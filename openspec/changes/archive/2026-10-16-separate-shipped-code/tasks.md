@@ -100,15 +100,15 @@ the tasks come from inspection on 2026-10-14; confirm them when implementing.
   `build/install/*/lib`: no `lib-core-editor`, `lib-game-link`, `lib-raytracing` or `plugin-*` jar. Also run `unzip -l`
   on the `lib-core` and `lib-physics` jars and confirm no `play/` package of the play bridge and no `Ray*Snapshot`
   class.
-- [ ] 5.2 Manual game check, needs a display. Start the installed game with
+- [x] 5.2 Manual game check, needs a display. Start the installed game with
   `JAVA_OPTS=-DcontrolLine.project=<copy of project/ControlLine> build/install/app-game-control-line/bin/app-game-control-line`
   (on macOS also `-XstartOnFirstThread`), fly a round from the main menu to GAME OVER, and record the scores. The
   screens and flight are as before.
-- [ ] 5.3 runIde check 1. In `./gradlew :plugin-abyssus:runIde`, open a **copy** of
+- [x] 5.3 runIde check 1. In `./gradlew :plugin-abyssus:runIde`, open a **copy** of
   `projects/app-game-control-line/project/ControlLine` after `exportPlay` into it, and play the field. The plane flies
   on its lines, and W / S work. Then open a copy of the `Physics` fixture, which has no `play.json`, and play it: the
   bodies simulate.
-- [ ] 5.4 runIde check 2. In a copy of `Untitled`, toggle Ray Tracing in the scene Properties and edit
+- [x] 5.4 runIde check 2. In a copy of `Untitled`, toggle Ray Tracing in the scene Properties and edit
   `targetSamplesPerPixel`. The panel shows the file's values, the edit lands as one undoable change, and other keys
   and number text are unchanged.
 - [x] 5.5 Run `./gradlew check` and `scripts/check-docs.sh`. `check` passes. `check-docs.sh` reports no broken path
