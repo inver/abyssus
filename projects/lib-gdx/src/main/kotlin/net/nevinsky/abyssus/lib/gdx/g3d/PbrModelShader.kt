@@ -26,7 +26,7 @@ class PbrModelShader(
 ) : ModelShader(
     renderable, config,
     prefix = modelPrefix(renderable, config) + pbrDefines(renderable.material?.mask ?: 0L, renderable.environment),
-    fragmentSource = config.fragmentShader ?: ShaderSources.read(ShaderSources.PBR_FRAGMENT)
+    fragmentSource = config.fragmentShader ?: ShaderSources.readAssembled(ShaderSources.PBR_FRAGMENT)
 ) {
     /** True when this program was made for an environment fading to a second one (with the second cube fetch). */
     private val fading = EnvironmentLightAttribute.isFading(renderable.environment)

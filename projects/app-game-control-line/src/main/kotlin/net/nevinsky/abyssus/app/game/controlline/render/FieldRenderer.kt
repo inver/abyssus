@@ -30,6 +30,15 @@ import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import com.badlogic.gdx.graphics.g3d.Model
 import net.nevinsky.abyssus.lib.core.scene.SceneEnvironment
 import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
+import net.nevinsky.abyssus.lib.render.frame.FrameInputs
+import net.nevinsky.abyssus.lib.render.frame.RenderFog
+import net.nevinsky.abyssus.lib.render.light.DirectionalInput
+import net.nevinsky.abyssus.lib.render.light.RenderLights
+import net.nevinsky.abyssus.lib.render.terrain.SunShadowInput
+import net.nevinsky.abyssus.lib.render.terrain.TerrainDraw
+import net.nevinsky.abyssus.lib.render.terrain.TerrainLighting
+import net.nevinsky.abyssus.lib.render.terrain.TerrainPass
+import net.nevinsky.abyssus.lib.render.terrain.TerrainVariant
 import org.slf4j.Logger
 import java.io.File
 import java.util.concurrent.Executor
@@ -59,9 +68,6 @@ class LineSegment(val from: Vector3, val to: Vector3, val color: Color, val widt
  */
 private val GAME_CLOUDS = CloudTechnique.LAYERED
 
-/** The texture unit of the terrain's shadow map: the splat layers and the splat map take the units before it. */
-private const val SHADOW_UNIT = 6
-
 /**
  * Draws a [FieldScene] (design decision 8): the sky, the terrain with the game's own shader, the models with the
  * default shader lit by the scene's sun and ambient light, and the control lines. The sun casts shadows from models and
@@ -71,8 +77,7 @@ private const val SHADOW_UNIT = 6
 class FieldRenderer(private val ctx: BaseCtx) : Disposable {
     private val modelShaders = ModelShaderProvider()
     private val batch = ModelBatch(modelShaders)
-    private val terrainShader = ctx.shaderStorage.program("terrain")
-    private val blank = Texture(Pixmap(1, 1, Pixmap.Format.RGBA8888).apply { setColor(Color.WHITE); fill() }, false)
+    private val terrainPass = TerrainPass(ctx.shaderStorage, TerrainVariant.GAME_SINGLE_SUN)
     private val shapes = ShapeRenderer()
     private val instances = HashMap<Entity, Pair<Model, ModelInstance>>()
     private val playing = HashMap<Entity, Pair<String, AnimationController>>()
@@ -157,24 +162,17 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
         Gdx.gl.glDepthFunc(GL20.GL_LEQUAL)
         Gdx.gl.glEnable(GL20.GL_CULL_FACE)
         Gdx.gl.glCullFace(GL20.GL_BACK)
-        terrainShader.bind()
-        terrainShader.setUniformMatrix("u_projViewTrans", camera.combined)
-        terrainShader.setUniformf("u_cameraPosition", camera.position)
-        terrainShader.setUniformf("u_fogDensity", if (field.fogColor != null) field.fogDensity else 0f)
-        terrainShader.setUniformf("u_fogGradient", field.fogGradient)
-        terrainShader.setUniformf("u_fogColor", fog.r, fog.g, fog.b)
-        terrainShader.setUniformf("u_lightDirection", field.sunDirection)
-        terrainShader.setUniformf("u_lightColor", field.sunColor.r, field.sunColor.g, field.sunColor.b)
-        terrainShader.setUniformf("u_ambient", field.ambient.r, field.ambient.g, field.ambient.b)
-        terrainShader.setUniformMatrix("u_shadowMatrix", shadows.matrix)
-        terrainShader.setUniformf("u_shadowTexel", 1f / SHADOW_MAP_SIZE)
-        terrainShader.setUniformf("u_shadowBias", shadows.bias)
-        terrainShader.setUniformi("u_shadowTexture", SHADOW_UNIT)
-        for ((mesh, world) in terrains) {
-            shadows.texture.bind(SHADOW_UNIT)
-            terrainShader.setUniformMatrix("u_worldTrans", world)
-            mesh.draw(terrainShader, blank)
-        }
+        val sunInput = DirectionalInput("sun", Vector3(field.sunDirection).scl(-1f), field.sunColor.r, field.sunColor.g, field.sunColor.b)
+        val frame = FrameInputs(
+            camera.combined, camera.position, floatArrayOf(field.ambient.r, field.ambient.g, field.ambient.b),
+            RenderFog(fog.r, fog.g, fog.b, if (field.fogColor != null) field.fogDensity else 0f, field.fogGradient),
+            RenderLights(listOf(sunInput)), TerrainVariant.GAME_SINGLE_SUN.profile,
+        )
+        val sun = TerrainLighting.Sun(
+            field.sunDirection, field.sunColor.r, field.sunColor.g, field.sunColor.b,
+            SunShadowInput(shadows.texture, shadows.matrix, 1f / SHADOW_MAP_SIZE, shadows.bias),
+        )
+        terrainPass.draw(frame, sun, terrains.map { (mesh, world) -> TerrainDraw(mesh, world) })
 
         // the viewer's own culling and buffers, after the light pass: casters never touch them
         for ((entity, placement) in foliage) placement.drawable.update(camera, field.position(entity).getTransform())
@@ -279,8 +277,7 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
         ctx.assetStorage.dispose()
         shadows.dispose()
         modelShaders.dispose()
-        terrainShader.dispose()
-        blank.dispose()
+        terrainPass.dispose()
         shapes.dispose()
     }
 }

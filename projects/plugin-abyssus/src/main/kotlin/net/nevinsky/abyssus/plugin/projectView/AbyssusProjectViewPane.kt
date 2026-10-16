@@ -42,7 +42,6 @@ import javax.swing.JPanel
 import javax.swing.JTree
 import java.awt.BorderLayout
 import javax.swing.tree.DefaultTreeModel
-import net.nevinsky.abyssus.plugin.filetype.AbyssusSceneEdited
 import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.plugin.AbyssusCore
 import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
@@ -51,10 +50,8 @@ import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
 // Keep that integration here; the public ViewSettings/node contracts do not construct a custom pane.
 class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
     SceneViewHost by ProjectSceneViewHost(project) {
-    init {
-        // a plugin edit of a scene or project file changes what the tree shows (names, toggles, counts)
-        project.messageBus.connect(this).subscribe(AbyssusSceneEdited.TOPIC, AbyssusSceneEdited { updateFromRoot(true) })
-    }
+    /** Rebuilds the tree after plugin edits, document changes (Undo/Redo, unsaved text) and VFS changes, keeping selection and expansion. */
+    internal val refresh = AbyssusTreeRefresh(project, { tree }, { done -> updateFromRoot(true).doWhenProcessed { done() } }, this)
 
     override fun getTitle(): String = AbyssusBundle.message("abyssusViewName")
 

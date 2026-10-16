@@ -9,6 +9,7 @@ pluginManagement {
 
 include(":lib-gdx")
 include(":lib-core")
+include(":lib-render")
 include(":lib-raytracing")
 include(":lib-core-editor")
 include(":lib-physics")

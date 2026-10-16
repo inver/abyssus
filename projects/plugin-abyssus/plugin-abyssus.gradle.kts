@@ -98,6 +98,11 @@ dependencies {
         exclude(group = "org.jetbrains.kotlin")
         exclude(group = "org.slf4j")
     }
+    // Shared rendering mechanics (terrain pass, depth submission); a shipped game links it too
+    implementation(project(":lib-render")) {
+        exclude(group = "org.jetbrains.kotlin")
+        exclude(group = "org.slf4j")
+    }
     implementation(project(":lib-raytracing")) {
         exclude(group = "org.jetbrains.kotlin")
         exclude(group = "org.slf4j")

@@ -11,6 +11,7 @@ the row actions that call `editSceneJson` (`projects/plugin-abyssus/src/main/kot
 | `AbyssusProjectViewPane` | The pane; its tree paints row actions at the right edge and publishes the selection |
 | `AbyssusNodes.kt` | `AbyssusRootNode`, `AbyssusAssetNode` (one per `.abss` / standalone `.scene`) and `DtoEntryNode` (everything below) |
 | `DtoTree.kt` | DTO → rows: `childrenOf`, `foldToggles` (`<x>Enabled` → eye), display names (`skyboxName` → `skybox`), labels |
+| `AbyssusTreeRefresh` | The pane's refresh coordinator, alive as long as the pane: plugin edits (`AbyssusSceneEdited`), document changes (typing, Undo/Redo, unsaved text) and this project's VFS create/delete/move/rename/content events for `.scene`, `.abss`, `meta.json` and folders under `assets` mark the tree stale; `lib-core-editor`'s `RefreshCoalescer` turns a burst into one `updateFromRoot`, plus one more when an event arrives during it; selection and expansion are captured on the EDT as row identities (`NavigationState`: the entry or asset path, never a label) and restored with `restoreNavigation`, so a removed selection stays cleared. Unrelated files do not rebuild; a refresh writes nothing and adds no undo entry; disposal cancels pending work |
 | `AssetReadCache` | Parsed files per project, re-read when the reader's `stamp` changes |
 | `RowActions.kt` | What a row paints at its right edge: eye, "View", the `unused` tag, the skybox **Choose** button |
 | `SceneComponentEdits.kt` | Add, update and remove a component as undoable `editSceneJson` commands; also lists a project's model and terrain assets |
@@ -57,7 +58,7 @@ Physics component add/edit choices follow the selected scene's native project se
   onto the parent. `reselect` walks back to the same path and restores its expansion.
 - **Every edit of an existing JSON document goes through `editSceneJson`.** It parses the document with `SceneJson`, lets the caller mutate the
   tree (returning false writes nothing), re-serializes in the file's style, replaces the text in a named
-  `WriteCommandAction`, saves, and publishes `AbyssusSceneEdited.TOPIC`, on which this pane refreshes itself. A new writer should use it and add a `command*` message.
+  `WriteCommandAction`, saves, and publishes `AbyssusSceneEdited.TOPIC`; this pane refreshes on it, and equally on Undo/Redo and external changes, through `AbyssusTreeRefresh`. A new writer should use it and add a `command*` message.
 - **Where an entry writes back.** An entry knows its `source` file and the `parentKeys` leading to its container. A
   scene listed under a project writes to its own `.scene` file, not the `.abss`.
 - **Display names are labels only.** `displayName` changes what a row shows. `DtoEntry.name` stays the JSON key,

@@ -6,6 +6,7 @@
 |---|---|
 | All module tests and verification tasks | `./gradlew check` (CI requires compiled shaders; see `AGENTS.md`) |
 | Core tests | `./gradlew :lib-core:test` |
+| Rendering library tests | `./gradlew :lib-render:test` (with `-Dabyssus.glTests=true`, `TerrainPassGlTest`: both terrain variants draw, agree under one sun, and a lent texture is not disposed) |
 | Physics library / plugin tests | `./gradlew :lib-physics:test` / `./gradlew :plugin-abyssus:test` |
 | Ray tracing contracts / jar packaging | `./gradlew :lib-raytracing:test` / `./gradlew :lib-raytracing:verifyNativePackaging` |
 | Control Line tests | `./gradlew :app-game-control-line:test` |
@@ -165,6 +166,7 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
   covers the loading pipeline with a fake loader; `AssetLoadingGlTest` covers the `asset-loading` spec on real GL.
 - Scene loading, Ashley component registration, `EcsLoader` and systems are tested in `projects/lib-core/src/test/kotlin/`.
   Component editing and `EcsWriter` are tested in `projects/lib-core-editor/src/test/kotlin/`; there is no separate runtime module.
+- `projects/lib-render/src/test/kotlin/`: light profiles, uniform packing, the sun shadow camera (plain JUnit), `RenderBoundaryTest` (no IDE, editor, physics or ray module on its classpath or in its imports) and the opt-in `TerrainPassGlTest`.
 - `projects/lib-physics/src/test/kotlin/`: physics components, `PhysicsWorld`, rope tension and the Jolt natives. Plain JUnit, no
   IntelliJ or GL. They load the build machine's `DebugSp` Jolt natives, and use `testProject(name)` and
   `loadPhysicsScene()`. Foliage collision tests write a temporary project with `FoliageProject` (a flat 100 m terrain, two

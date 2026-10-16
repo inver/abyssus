@@ -6,6 +6,7 @@
 |---|---|---|
 | `projects/plugin-abyssus/` | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.20): IDE glue over `lib-core-editor` (tree, tool windows, dialogs, the GL canvas and renderer, actions, file types, VFS) | `:lib-core-editor`, `:lib-core`, `:lib-physics` and `:lib-game-link` (non-transitive), `:lib-raytracing` (with `:lib-gdx` transitively), Jackson, libGDX, LWJGL3-AWT |
 | `projects/lib-core-editor/` | Plain JVM editing engine: scene documents and the write transform, component editing, the scene read model, picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge with its CPU snapshots (`RaySnapshotStore`), `HeadlessEditing` | `:lib-core`, `:lib-raytracing`, `:lib-gdx` |
+| `projects/lib-render/` | Plain JVM shared rendering mechanics: `TerrainPass` (editor and game terrain variants), shadow depth submission, host-neutral frame inputs and light profiles, the sun shadow camera | `:lib-core`, `:lib-gdx` |
 | `projects/lib-game-link/` | Plain JVM: the play host and protocol, `PlayModule`, the play launch file and its export, which a game links only for Abyssus (its `play` source set, never its main code) | `:lib-physics`, `:lib-core` |
 | `projects/lib-physics/` | Plain JVM physics: the physics components and `PhysicsWorld` (Jolt through jolt-jni), run in a game or the play host, never in the IDE | `:lib-core`, jolt-jni |
 | `projects/app-game-control-line/` | **Control Line**, a libGDX desktop game (LWJGL3): flight on Jolt lines, scoring, screens (an authored UI asset drawn by `lib-core`'s `UiPresenter`), its bundled native project and its `PlayModule` for Play in Abyssus | `:lib-physics`, libGDX LWJGL3 backend, jolt-jni natives of the build machine |
@@ -15,6 +16,8 @@
 
 ```text
 lib-gdx <- lib-core <- lib-physics <- app-game-control-line
+lib-core <- lib-render <- app-game-control-line
+lib-render <- plugin-abyssus (bundled)
 lib-core <- lib-core-editor <- plugin-abyssus
 lib-raytracing <- lib-core-editor
 lib-raytracing <- plugin-abyssus
@@ -23,7 +26,7 @@ lib-physics <- lib-game-link
 lib-game-link <- plugin-abyssus (non-transitive, bundled)
 ```
 
-A shipped game holds only the left of this graph: `lib-gdx`, `lib-core` and `lib-physics`. The editor side is
+A shipped game holds only the left of this graph: `lib-gdx`, `lib-core`, `lib-render` and `lib-physics`. The editor side is
 `lib-core-editor`, `lib-raytracing`, `lib-game-link` (Play, linked only by a game's separate `play` source set) and the
 plugin. Two checks keep it that way: `checkNoEditorCode` (no editor import or ray snapshot type in the shipped libraries'
 main sources) and `:app-game-control-line:checkShippedClasspath` (no editor module on the game's main runtime classpath).
@@ -74,7 +77,7 @@ command pools, output images) that is disposed on the owner worker.
 `SceneFileEditor` watches the project's `assets` (VFS events and `meta.json` documents). `AssetRefresh` diffs snapshots of
 effective asset revisions off the EDT (unsaved metadata text is captured on the EDT first), and a real change reaches
 `SceneRenderer.queueAssetRevision` as an `AssetRevisionBatch`. The next safe frame invalidates the changed names in each
-`AssetStorage` and swaps old assets for new ones as they finish building. See
+`AssetStorage` and swaps old assets for new ones as they finish building (its revision and dependency bookkeeping is the GL-free `LoadBook`). See
 `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md`.
 
 ### A scene file to the scene view
@@ -122,7 +125,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    with a usable map and the sun among the budgeted directional lights, the lit set keeps the sun undimmed and a
    `lib-gdx` `DirectionalVisibilityAttribute` (map, the sun's directional index from `LightSet.directionalIndexOf`,
    world-to-map, edge fade, and the uniform factor to use beyond the map) is set on the content environment and passed
-   to `TerrainShader`; `ModelShader`, `PbrModelShader` and `terrain.frag` multiply that one light by the map, on top of its
+   to `TerrainShader`; `ModelShader`, `PbrModelShader` and `terrain_editor.frag` multiply that one light by the map, on top of its
    atlas visibility. A map that fails to build is logged once and the view keeps the uniform dimming. The map is created
    with the first clouds that cast shadows, dropped without GL calls on context loss and disposed with the renderer.
    `SceneRenderer` advances the view's `SkyClock`, passes `SceneViewState.cloudTechnique` (the toolbar's per-view
@@ -147,13 +150,14 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    sun in `frameLights` and gives the shaders a `DirectionalVisibilityAttribute` (`lib-gdx`: a generic visibility texture
    for one directional light, with the world-to-map transform, an edge fade and the visibility outside the map, which is the
    smoothed uniform `SunOcclusion` scale). `ModelShader` / `PbrModelShader` multiply that light's contribution by it next to its
-   atlas shadow, `terrain.frag` does the same through `TerrainShader`. Otherwise (no clouds, no sun, a failed map or exhausted
+   atlas shadow, `terrain_editor.frag` does the same through `TerrainShader` (an adapter over `lib-render`'s `TerrainPass`). Otherwise (no clouds, no sun, a failed map or exhausted
    cloud techniques) nothing is set and the sun is dimmed uniformly as before. The map is a GL resource of the canvas: disposed
    with the renderer, abandoned without GL calls when the context is lost.
 5. `SceneShadows` captures model and terrain renderables after their single animation/transform update, then draws
    bounded depth tiles before the color passes. Its per-canvas `ShadowResources` restores framebuffer and render
    state and falls back to direct lighting if allocation or depth rendering fails. Default/PBR models and terrain
-   apply atlas visibility per light; ambient, HDR and emissive terms remain independent. The 4096-square atlas supports sixteen views,
+   apply atlas visibility per light, all from one GLSL file (`lib-gdx` `shader/shared/shadow_visibility.glsl`, expanded from
+   `#pragma include` by `ShaderSourceAssembler`, used by `ShaderSources.readAssembled` and `ShaderStorage.fragment`); ambient, HDR and emissive terms remain independent. The 4096-square atlas supports sixteen views,
    shared by one directional, two six-face point and three spot shadows; small sets use larger tiles. Resources use the same
    safe AWT context lifecycle as assets, including CPU-only abandonment after context loss. See
    `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md` for fitting, budgets, sampler units and material limits.
@@ -226,7 +230,7 @@ The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and componen
    parses the document with `SceneJson` and admits it, lets the caller mutate the tree, admits the result and
    re-serializes it with `SceneJson().inStyleOf`, which keeps indentation, key order and number text.
 2. Unless the document changed meanwhile, replace the text in a `WriteCommandAction` and save.
-3. Publish `AbyssusSceneEdited.TOPIC` (the file). The Abyssus pane listens and refreshes itself; the writer knows no UI.
+3. Publish `AbyssusSceneEdited.TOPIC` (the file). The Abyssus pane's `AbyssusTreeRefresh` listens and refreshes the tree; the writer knows no UI. The same coordinator also follows document changes (Undo/Redo, unsaved text) and project VFS events for native documents, asset `meta.json` and asset folders, coalescing them with `lib-core-editor`'s `RefreshCoalescer` and restoring selection and expansion by row identity.
 
 `HeadlessEditing` (`lib-core-editor`, `editor.headless`) runs the same `DocumentTextEditor` on text with no IDE, so a
 caller without the plugin validates and edits a scene, project or `meta.json` with byte-identical results and the same

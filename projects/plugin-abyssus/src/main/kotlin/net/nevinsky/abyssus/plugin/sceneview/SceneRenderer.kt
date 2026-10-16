@@ -141,6 +141,9 @@ class SceneRenderer(
     private val terrains = SceneTerrains(AssetView(assets, TerrainMesh::class.java))
     private val foliage = SceneFoliage(ViewFoliageAssets(AssetView(assets, FoliageDrawable::class.java)), foliageDrafts)
     private var terrainShader: TerrainShader? = null
+
+    /** The GL objects of the current context that only this renderer owns; abandoned or released as a whole (see [RenderResources]). */
+    private val resources = RenderResources()
     private var shadows: SceneShadows? = null
     private var water: SceneWater? = null
     private val loggedInvalidWater = HashSet<String>()
@@ -312,24 +315,28 @@ class SceneRenderer(
         foliage.abandon()
         snapshot = null
         // the previous context's GL objects went with it: forget them without GL calls, as for models and terrains
-        skybox?.abandon()
+        resources.abandonAll()
         skybox = null
         overlay = null
-        corners?.abandon()
         corners = null
         lineBatch = null
         terrainShader = null
+        contentShaders = null
+        contentBatch = null
+        batch = null
+        gridModel = null
+        grid = null
         updateDrawnVersion()
-        batch = ModelBatch(FogShaderProvider { fogCoefficient })
-        contentShaders = ModelShaderProvider(com.badlogic.gdx.graphics.g3d.shaders.DefaultShader.Config().apply {
+        batch = resources.own(ModelBatch(FogShaderProvider { fogCoefficient }), ModelBatch::dispose).value
+        contentShaders = resources.own(ModelShaderProvider(com.badlogic.gdx.graphics.g3d.shaders.DefaultShader.Config().apply {
             numSpotLights = MAX_POINT
-        }).also { contentBatch = ModelBatch(it) }
-        terrainShader = TerrainShader(shaders)
-        skybox = SceneSkybox(AssetView(assets, SkyRenderer::class.java))
-        overlay = LoadingOverlay(shaders)
-        corners = CornerOverlay(shaders)
-        lineBatch = LineBatch(shaders)
-        gridModel = GridModel.build().also { grid = ModelInstance(it) }
+        }), ModelShaderProvider::dispose).value.also { contentBatch = ModelBatch(it) }
+        terrainShader = resources.own(TerrainShader(shaders), TerrainShader::dispose).value
+        skybox = resources.own(SceneSkybox(AssetView(assets, SkyRenderer::class.java)), SceneSkybox::dispose, SceneSkybox::abandon).value
+        overlay = resources.own(LoadingOverlay(shaders), LoadingOverlay::dispose).value
+        corners = resources.own(CornerOverlay(shaders), CornerOverlay::dispose, CornerOverlay::abandon).value
+        lineBatch = resources.own(LineBatch(shaders), LineBatch::dispose).value
+        gridModel = resources.own(GridModel.build(), Model::dispose).value.also { grid = ModelInstance(it) }
     }
 
     /**
@@ -891,21 +898,14 @@ class SceneRenderer(
         terrains.dispose()
         foliage.dispose()
         updateDrawnVersion()
-        terrainShader?.dispose()
+        resources.releaseAll()
         terrainShader = null
-        skybox?.dispose()
         skybox = null
-        lineBatch?.dispose()
         lineBatch = null
-        overlay?.dispose()
         overlay = null
-        corners?.dispose()
         corners = null
-        contentShaders?.dispose()
         contentShaders = null
         contentBatch = null
-        batch?.dispose()
-        gridModel?.dispose()
         batch = null
         gridModel = null
         grid = null

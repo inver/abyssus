@@ -218,7 +218,24 @@ All local lights fade from 75 percent of their range to zero at the range limit.
 and 0.2 softness without writing the scene. Properties displays softness as percent; storage and compatibility
 limits are documented in `docs/ai/file-formats.md`.
 
+## GL resource lifecycle
+
+`RenderResources` owns the GL objects `SceneRenderer` makes for one context (the model batch and shader provider, `TerrainShader`,
+the skybox, loading and corner overlays, the line batch and the grid model). `create()` registers each in the current
+generation; `dispose()` calls `releaseAll()` (valid context only: newest first, one failing release does not stop the rest) and a
+hidden canvas that lost its context calls `abandonAll()` through `create()`, which runs only the GL-free abandon hooks
+(`SceneSkybox.abandon`, `CornerOverlay.abandon`), deletes nothing and starts the next generation. A handle of an older generation is
+never released through the new context. Release and abandon stay separate operations, and this is not a service container: the
+assets, shadows, water, foliage and cloud shadow map keep their own `abandon()` / `dispose()`. `RenderResourcesTest` counts release
+against abandon with fake resources.
+
 ## Scene shadows
+
+The shader side of the atlas is one GLSL file, `lib-gdx`'s `shader/shared/shadow_visibility.glsl`: the atlas uniforms,
+`shadowCompare`, `shadowBilinear`, `shadowTileVisibility`, `pointShadowVisibility` (under `shadowAtlasFlag`) and
+`directionalVisibility` (under `directionalVisibilityFlag`). The default and PBR model fragments and `terrain_editor.frag` (`lib-render`) pull it
+in with `#pragma include "shadow_visibility.glsl"`, so a change to the filter is made once. `terrain_editor.frag` defines both flags
+itself and `ShaderStorage.fragment` expands the include; the model shaders read through `ShaderSources.readAssembled`.
 
 After applying drag previews, each frame updates model poses and terrain transforms once. `SceneShadows` captures
 their renderables plus the drawn foliage's OBJECT layers (`SceneFoliage` as a `FoliageCastSource`; DETAIL layers are
@@ -397,7 +414,7 @@ environment and the weight (0 to 1). `renderContent` passes them on in two ways:
 - models get an `EnvironmentLightAttribute` whose `fadeTo` / `weight` carry the second environment. `PbrModelShader` compiles a
   program with `environmentFadeFlag` (one more irradiance and specular fetch) only while an environment fades, and
   `ModelShader` blends the six axis colors on the CPU;
-- `TerrainShader` binds the next irradiance cube on unit 8 and `terrain.frag` mixes the two by `u_skyFade`. Without a
+- `TerrainShader` (the scene view's adapter over `lib-render`'s `TerrainPass`: it turns the camera, `LightSet` and `FogParams` into `FrameInputs` and `TerrainLighting.Editor`) binds the next irradiance cube on unit 8 and `terrain_editor.frag` mixes the two by `u_skyFade`. Without a
   fade, or without a sky, the shader is bound exactly as before.
 
 The light follows the asset's atmosphere parameters, not a custom `sky.frag` that departs from them.
@@ -410,7 +427,7 @@ target, redrawn every frame at the sky's own time and cloud asset, so patches dr
 cloud asset reload. `planSunShading` picks the map or the uniform `SunOcclusion` dimming, never both: with the map
 the sun keeps its full color in `litLights` and `DirectionalVisibilityAttribute` carries the map, the sun's directional
 index, the sun-ray world-to-map transform (so a tall model is looked up at its ground footprint), a 10% edge fade, and
-the uniform factor for beyond the square. `ModelShader`, `PbrModelShader` and `terrain.frag` (unit 9) multiply only that
+the uniform factor for beyond the square. `ModelShader`, `PbrModelShader` and `terrain_editor.frag` (unit 9) multiply only that
 light, on top of its atlas shadow. No usable sun, a sun outside the rendered light budget, no clouds, exhausted cloud
 techniques or a map that could not be made (logged once to the `sceneview` logger) leave the uniform dimming as before.
 

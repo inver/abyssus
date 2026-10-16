@@ -5,6 +5,8 @@
 package net.nevinsky.abyssus.app.game.controlline.render
 
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.render.shadow.sunShadowBias
+import net.nevinsky.abyssus.lib.render.shadow.sunShadowCamera
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -13,7 +15,7 @@ import kotlin.math.abs
 class SunShadowCameraTest {
     private val towardSun = Vector3(60f, 100f, 40f).nor()
 
-    private fun project(point: Vector3): Vector3 = Vector3(point).prj(sunShadowCamera(towardSun, Vector3.Zero).combined)
+    private fun project(point: Vector3): Vector3 = Vector3(point).prj(sunShadowCamera(towardSun, Vector3.Zero, SHADOW_EXTENT, SHADOW_MAP_SIZE).combined)
 
     @Test
     fun pilotIsInTheMiddleOfTheMap() {
@@ -44,15 +46,15 @@ class SunShadowCameraTest {
     @Test
     fun centreSnapsToWholeTexels() {
         val texel = SHADOW_EXTENT / SHADOW_MAP_SIZE
-        val a = Vector3(Vector3.Zero).prj(sunShadowCamera(towardSun, Vector3(0.01f, 0f, 0f)).combined)
-        val b = Vector3(Vector3.Zero).prj(sunShadowCamera(towardSun, Vector3.Zero).combined)
+        val a = Vector3(Vector3.Zero).prj(sunShadowCamera(towardSun, Vector3(0.01f, 0f, 0f), SHADOW_EXTENT, SHADOW_MAP_SIZE).combined)
+        val b = Vector3(Vector3.Zero).prj(sunShadowCamera(towardSun, Vector3.Zero, SHADOW_EXTENT, SHADOW_MAP_SIZE).combined)
         assertEquals(b.x, a.x, 1e-4f)
         assertTrue(texel > 0.01f)
     }
 
     @Test
     fun biasIsAFractionOfATexelInDepth() {
-        val bias = sunShadowBias(sunShadowCamera(towardSun, Vector3.Zero))
+        val bias = sunShadowBias(sunShadowCamera(towardSun, Vector3.Zero, SHADOW_EXTENT, SHADOW_MAP_SIZE), SHADOW_MAP_SIZE)
         assertTrue("bias $bias", bias > 0f && bias < 1e-3f)
     }
 }

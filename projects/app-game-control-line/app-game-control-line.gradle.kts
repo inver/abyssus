@@ -27,6 +27,7 @@ val joltJniBuildPlatform: String = run {
 dependencies {
     implementation(kotlin("stdlib"))
     implementation(project(":lib-physics"))
+    implementation(project(":lib-render"))
     implementation(libs.gdx.backend.lwjgl3)
     runtimeOnly(libs.gdx.platform) {
         artifact {

@@ -110,3 +110,44 @@ Rollback is per phase: revert a host switch to its previous renderer while share
 
 - Exact GPU runner identities and scheduling availability: choose and record them before R4 capture. Until then there is no platform-wide performance claim.
 - Maintainer availability and release milestone affect scheduling, not the dependency graph. Estimates from review remain approximate: R1 0.5–2 days, R2 1–2 days, R3 2–4 days, R4 3–6 days, external R5 2–4 weeks, R6 3–6 weeks, R7 1–3 weeks, R8 2–5 days.
+
+## Gate evidence for group 6 (task 6.1, recorded 2026-10-16)
+
+- `separate-shipped-code`: archived as `openspec/changes/archive/2026-10-16-separate-shipped-code/` with 18 of 18 tasks done; its
+  requirements are `openspec/specs/game-distribution/`. Observed now, not inferred from files: `./gradlew checkNoEditorCode
+  :app-game-control-line:checkShippedClasspath` passes.
+- `shrink-lib-gdx-to-stock-g3d`: archived as `openspec/changes/archive/2026-10-16-shrink-lib-gdx-to-stock-g3d/` with 24 of 24 tasks done;
+  its parity gate is `StockPipelineParityGlTest` (tolerance recorded in that change's `design.md`). The model shaders in `lib-gdx`
+  are the stock-pipeline ones (`ModelShader`, `PbrModelShader`), and group 3 here runs on them.
+- Group 2 baseline: `docs/perf/baseline/editor.json`, `docs/perf/baseline/game.json` and `docs/perf/baseline/pixels/`, taken on
+  Apple M1 Pro. After group 3 the editor's pixel cases (`untitled`, `animated`, `stress`, `cutout`) match their recorded
+  tolerances (0) with `PixelEvidenceGlTest` in `compare` mode.
+
+## Group 6 as built (recorded 2026-10-16)
+
+- `lib-render` holds the terrain pass (`TerrainPass`, variants `EDITOR_MULTI_LIGHT` and `GAME_SINGLE_SUN`, each with its own program and
+  binding), shadow depth submission (`DepthSubmission`), the pure frame inputs, light profiles, uniform packing and the sun shadow
+  camera. The two terrain programs stay separate on purpose (different lights, fog and shadow filter); they share the mechanics.
+- Old/new comparison: the superseded code was not kept as a test-only path. The recorded group 2 baseline (`docs/perf/baseline`) is
+  the old path's output, so "old vs new" is `PixelEvidenceGlTest` in `compare` mode against it, for the editor's four cases and the game's field.
+- Water (archived `add-realistic-water`) reaches terrain only through `TerrainShader` and its clip plane; that argument is now
+  `TerrainLighting.Editor.clipPlane`, so water's renderer targets needed no other change.
+
+## Group 6 and 7 measurements (recorded 2026-10-16, Apple M1 Pro, full protocol)
+
+Against the stored baseline (`docs/perf/baseline`), 10% p95 / allocation threshold:
+
+| Workload | Result | Note |
+|---|---|---|
+| editor `untitled` | PASS, p95 -20.7%, allocation +0.5% | |
+| editor `animated`, `foliage` | INCONCLUSIVE | baseline p95 spread 46% and 13% (sub-millisecond frames), as recorded |
+| editor `stress` | REGRESSION, p95 +10.2%, allocation +0.0% | just over the threshold; see below |
+| game `control-line-field` | REGRESSION against the stored baseline, p95 +16.3% to +17.2% in three runs | see below |
+
+The game number is environmental, not the change: the same session's run of the unchanged code (`HEAD` in a worktree) is +18.0% against that
+baseline, and the new code against that same-session old run is PASS (p95 -0.7%, allocation +0.0%). The stored baseline therefore no longer matches
+this machine's current state, and a same-session old/new pair is the fair comparison. For editor `stress` a same-session old run could not be
+obtained (the `HEAD` worktree ran out of heap compiling the plugin), so its +10.2%, 0.2 points over the threshold and inside the drift seen on the game,
+is unattributed: treat it as inconclusive until a same-session pair is measured. Pixel evidence (`PixelEvidenceGlTest`, `compare`) passes for the editor
+and the game. After 7.1, `:plugin-abyssus:test --tests '*sceneview*' -Dabyssus.glTests=true` (including the context-loss tests) passes and
+`:lib-core:test` (group 4) passes.

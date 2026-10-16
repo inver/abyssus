@@ -223,7 +223,7 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 | `pattern` | the F2B pattern: `Schedule` (`Figure`), `HemisphereGeometry`, `PathTokens`, `TrackBuilder`, `IdealTracks`, `IdealSampler`, `Matchers`, `Grader` / `MarkWeights`, `PatternJudge`, `ScoreSheet`, `PatternScoreTable`, and the debrief's `FlightRecording`, `RecordingStore`, `DebriefModel`, and the Noob guide `GuidePlanner` | no |
 | `flow` | `GameFlow` (the screen state machine, with the mode and assist level), `FlightReport` | no |
 | `input` | `HandleInput` (keyboard and mouse tilt) | no |
-| `render`, `screens` | `FieldScene`, `FieldRenderer` (with `shader/terrain.*`), `FieldShadows` (the sun's shadow map), `Cameras`, `GameUiHost` (the authored screens over `lib-core`'s `UiPresenter`), `GameUiModel` (what the screens show and the actions and keys they send; no GL), `GameUiContract` | yes |
+| `render`, `screens` | `FieldScene`, `FieldRenderer` (terrain through `lib-render`'s `TerrainPass`, variant `GAME_SINGLE_SUN`), `FieldShadows` (the sun's shadow map, drawn by `lib-render`'s `DepthSubmission`), `Cameras`, `GameUiHost` (the authored screens over `lib-core`'s `UiPresenter`), `GameUiModel` (what the screens show and the actions and keys they send; no GL), `GameUiContract` | yes |
 | `play` (own source set, `src/play`) | `ControlLinePlay : PlayModule` | no |
 
 ### Foliage

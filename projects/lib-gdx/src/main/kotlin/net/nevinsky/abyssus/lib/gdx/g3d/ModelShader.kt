@@ -45,7 +45,7 @@ open class ModelShader(
     config: Config,
     prefix: String = modelPrefix(renderable, config),
     vertexSource: String = config.vertexShader ?: ShaderSources.read(ShaderSources.DEFAULT_VERTEX),
-    fragmentSource: String = config.fragmentShader ?: ShaderSources.read(ShaderSources.DEFAULT_FRAGMENT)
+    fragmentSource: String = config.fragmentShader ?: ShaderSources.readAssembled(ShaderSources.DEFAULT_FRAGMENT)
 ) : DefaultShader(renderable, config, prefix, vertexSource, fragmentSource) {
     /** `true` for the `instancedFlag` variant: the world matrix comes from the mesh's instance data. */
     val instanced: Boolean = renderable.meshPart.mesh.isInstanced

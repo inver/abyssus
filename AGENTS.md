@@ -14,6 +14,7 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | Plugin tests only | `./gradlew :plugin-abyssus:test` |
 | `lib-gdx` tests only | `./gradlew :lib-gdx:test` |
 | Ray tracing tests / native jar packaging | `./gradlew :lib-raytracing:test` / `./gradlew :lib-raytracing:verifyNativePackaging` |
+| `lib-render` tests only | `./gradlew :lib-render:test` (add `-Dabyssus.glTests=true` for the terrain pass GL test) |
 | `lib-physics` tests only | `./gradlew :lib-physics:test` |
 | `lib-game-link` tests only (play host, protocol) | `./gradlew :lib-game-link:test` |
 | `lib-core` tests only | `./gradlew :lib-core:test` (one class: `./gradlew :lib-core:test --tests 'net.nevinsky.abyssus.lib.core.assets.loading.AssetStorageTest'`) |
@@ -64,6 +65,9 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   in `AssetLoading`. See `projects/lib-core/README.md`.
 - `projects/lib-raytracing/`: plain JVM GPU ray tracing contracts, snapshots, scheduling, and optional Metal/Vulkan backends.
   The plugin owns view integration; native probing starts only when enabled. See `projects/lib-raytracing/README.md`.
+- `projects/lib-render/`: a plain JVM library on `lib-core` and `lib-gdx`, root package `net.nevinsky.abyssus.lib.render`: the rendering mechanics the
+  editor and games share (the terrain pass and its two shader variants, shadow depth submission, host-neutral frame inputs, light profiles
+  and the sun shadow camera). Hosts keep their scenes and passes and adapt their own types to it. See `projects/lib-render/README.md`.
 - `projects/lib-physics/`: a plain JVM library on `lib-core`, root package `net.nevinsky.abyssus.lib.physics`: the physics components
   (`PHYSICS_COMPONENTS`) and `PhysicsWorld`, which runs Jolt through jolt-jni (only its `jolt` package imports Jolt). See
   `projects/lib-physics/README.md`.
@@ -76,7 +80,7 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   that project in the IDE, never the committed folder (its tests assert on the scene). See `projects/app-game-control-line/README.md`.
 - `projects/plugin-abyssus/src/main/java/`: only the grammar sources `Gltf.bnf` / `Gltf.flex`; `projects/plugin-abyssus/src/main/gen` is generated from them.
 - `projects/plugin-abyssus/src/test/kotlin/`, `projects/lib-core-editor/src/test/kotlin/`, `projects/lib-gdx`, `projects/lib-core/src/test/kotlin/`,
-  `projects/lib-physics/src/test/kotlin/`, `projects/lib-game-link/src/test/kotlin/`,
+  `projects/lib-render/src/test/kotlin/`, `projects/lib-physics/src/test/kotlin/`, `projects/lib-game-link/src/test/kotlin/`,
   `projects/lib-raytracing/src/test/kotlin/`, `projects/app-game-control-line/src/test/kotlin/`: tests. Fixtures in `projects/plugin-abyssus/src/test/testData/project/`
   (shared with `lib-core`'s and `lib-core-editor`'s tests). Test helpers shared across modules live in `testFixtures` source
   sets (`lib-gdx`: `TestGl`; `lib-core`: `HdrFixtures`; `lib-core-editor`: `parseScene`, `testProject`, `rayTestModel`).
@@ -89,11 +93,13 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   Reject legacy `ecs.componentIdentifiers` and renderable `class`; a component entry is keyed by the class name of a built-in or registered component (fully qualified, or its short name), assets use `kind: "asset"`.
   Keep unknown native extension data, unrelated numbers/key order and default omission. No importer or implicit migration.
 
-- **A shipped game carries no editor code.** `lib-gdx`, `lib-core` and `lib-physics` hold no import of `lib-core-editor`,
+- **A shipped game carries no editor code.** `lib-gdx`, `lib-core`, `lib-render` and `lib-physics` hold no import of `lib-core-editor`,
   `lib-game-link`, `lib-raytracing` or the plugin, and no ray-tracing snapshot type (`./gradlew checkNoEditorCode`, part of
   `check`). Control Line's main runtime classpath reaches none of those modules, nor any `plugin-*` module
   (`./gradlew :app-game-control-line:checkShippedClasspath`, part of `check`). Editor-only scene keys such as `rayTracing`
   are read by the editor from the document; the game ignores them.
+- **`lib-render` stays a plain JVM library wired by constructors**, like `lib-core` (`./gradlew :lib-render:checkNoSingletons` is part of
+  `check`), with no IntelliJ, Swing, AWT, editor, physics or ray-backend type (`RenderBoundaryTest`). Its passes borrow resources and dispose only what they create.
 - **`lib-physics` stays a plain JVM library wired by constructors**, like `lib-core` (`./gradlew :lib-physics:checkNoSingletons`
   is part of `check`). **Jolt never loads in the IDE process:** only a game or the play host (`lib-game-link`) calls `JoltNatives`.
 - **Abyssus bundles `lib-physics` without its dependencies.** Jolt and natives ship only in the bundled play-host folder, outside

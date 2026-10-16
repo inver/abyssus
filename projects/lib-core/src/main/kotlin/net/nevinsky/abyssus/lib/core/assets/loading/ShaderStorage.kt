@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.lib.core.assets.loading
 
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.gdx.shader.ShaderSources
 
 /** The classpath folder of the shaders bundled with this module. */
 const val DEFAULT_SHADER_ROOT = "/shader/sky"
@@ -68,9 +69,9 @@ class ShaderStorage private constructor(
         return null
     }
 
-    /** The files [fragment] joined in order (shared functions first), as one fragment shader. */
+    /** The files [fragment] joined in order (shared functions first), as one fragment shader, with each file's `#pragma include` lines expanded from the shared GLSL of `lib-gdx`. */
     fun fragment(vararg fragment: String, asset: String? = null): String =
-        fragment.joinToString("\n") { read(it, asset) }
+        fragment.joinToString("\n") { ShaderSources.assemble(read(it, asset), it) }
 
     /** The program of [name]`.vert` and [name]`.frag`. */
     fun program(name: String): ShaderProgram = program("$name.vert", "$name.frag")
