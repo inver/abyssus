@@ -30,14 +30,14 @@ user has to scan the whole list to find the importers or the creators. Grouping 
   current name from that file, since a standalone scene has no `SceneEntry`.
 - **Entity, component, UI-asset, foliage and weather-preset rows keep their existing menus unchanged.** Add Component,
   Remove Component, Add Foliage, Regenerate, Register / Unregister UI Asset and New Weather Preset are not moved.
-- **Group labels are localized** through `AbyssusBundle` (`group.Abyssus.Menu.*.text`), and the groups hide when they have no
-  visible child.
+- **Group labels are localized** through `AbyssusBundle` (`group.Abyssus.Menu.*.text`).
 - **Tests updated.** `TreeActionVisibilityTest` keeps its "offered on its row" assertions (grouping changes only
   `plugin.xml`, not any `targetOf`) and gains assertions on the registered groups and their children; a new
   `RenameSceneActionTest` covers target and name lookup for a scene listed under a project and a standalone scene.
 
-No document format changes. No new reads or writes. Every action keeps its existing `targetOf`, `isEnabled` and `perform`;
-only the `plugin.xml` grouping, the group labels, and `RenameSceneAction`'s target and name lookup change.
+No document format changes and no new file writes. Every action other than `RenameSceneAction` keeps its existing
+`targetOf`, `isEnabled` and `perform`; only the `plugin.xml` grouping, the group labels, and `RenameSceneAction`'s target
+and name lookup change.
 
 ## Capabilities
 

@@ -2,38 +2,44 @@
 
 ## 1. Group the Assets-row and Scene-row menus in plugin.xml
 
-- [ ] 1.1 Declare the `Abyssus.Menu.ImportModel` and `Abyssus.Menu.New` popup groups (added to `ProjectViewPopupMenu`, anchor first)
-  and move Import FlightGear Aircraft, Import Model, New UI Asset, New Terrain and New Foliage into them: verify
-  `plugin.xml` has no Assets-row action added directly to `ProjectViewPopupMenu`
-- [ ] 1.2 Declare the `Abyssus.Menu.Add` popup group (after `Abyssus.RenameScene`) and move Add Asset, Add Path Arrangement,
-  Add Light and Add Water into it, leaving Rename Scene flat: verify `plugin.xml` shows the group, the child order and Rename
-  Scene outside it
-- [ ] 1.3 Add `group.Abyssus.Menu.ImportModel.text`, `.New.text` and `.Add.text` to `AbyssusBundle.properties`: verify the
-  groups use the bundle keys, not literal text
-- [ ] 1.4 Build the plugin: run `./gradlew :plugin-abyssus:verifyPluginStructure` and confirm no descriptor error
+- [x] 1.1 Declare the `Abyssus.Menu.ImportModel` and `Abyssus.Menu.New` groups
+  (`class="com.intellij.ide.actions.NonTrivialActionGroup"`, `popup="true"`) with the anchors from the design and move
+  Import FlightGear Aircraft, Import Model, New UI Asset, New Terrain and New Foliage into them: verify `plugin.xml` no
+  longer adds any of those actions directly to `ProjectViewPopupMenu`
+- [x] 1.2 Declare the `Abyssus.Menu.Add` group after `Abyssus.RenameScene` and move Add Asset, Add Path Arrangement,
+  Add Light and Add Water into it, leaving Rename Scene flat: verify `plugin.xml` shows the group, the child order and
+  Rename Scene outside it
+- [x] 1.3 Re-anchor `Abyssus.RegenerateArrangement` after `Abyssus.Menu.Add`, `Abyssus.AddFoliage` after
+  `Abyssus.RegenerateArrangement`, and give `Abyssus.NewUiAsset` its `first` anchor inside `New`: verify no
+  `relative-to-action` in `plugin.xml` still points at an action that is no longer in the same group
+- [x] 1.4 Add `group.Abyssus.Menu.ImportModel.text`, `group.Abyssus.Menu.New.text` and `group.Abyssus.Menu.Add.text` to
+  `AbyssusBundle.properties`: verify the groups use the bundle keys, not literal text
+- [x] 1.5 Extend `TreeActionVisibilityTest` with the registered group structure — `ActionManager.getAction(id)` is a
+  `NonTrivialActionGroup` and its children are the expected action ids in order — keeping its per-action "offered on its
+  row" assertions: verify
+  `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.projectView.TreeActionVisibilityTest'` passes
+- [x] 1.6 Update the menu part of
+  `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/projectView/README.md` to describe the three
+  groups and their contents: verify the README names `Import Model`, `New` and `Add` and what each contains
+- [x] 1.7 Run `./gradlew :plugin-abyssus:verifyPluginStructure`: verify the descriptor is accepted
 
 ## 2. Offer Rename Scene on a standalone scene
 
-- [ ] 2.1 Make `RenameSceneAction` target the scene `VirtualFile` through `viewableSceneFile(node)` and read the current name
-  from the file in `perform`: verify `RenameSceneActionTest` covers a standalone scene and a scene listed under a project
-  (offered, initial name, one undoable rename) and a scene with no `name`
+- [x] 2.1 Make `RenameSceneAction` an `AbyssusTreeAction<VirtualFile>` with `targetOf = viewableSceneFile(node)`, read
+  the dialog's initial name through a new internal `sceneNameOf(project, file)`
+  (`SceneDocumentCache.of(project).read(file)?.scene?.name`), keep `renameScene` as the single write, and remove the
+  now-unused `sceneName(entry)` (switch `AbyssusViewTest` to `sceneNameOf`): verify
+  `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.AbyssusViewTest'` passes
+- [x] 2.2 Add `RenameSceneActionTest` covering a standalone `.scene` row and a scene listed under a project (offered on
+  both, the initial name comes from the file, one undoable rename writes only `name`) and non-scene rows: verify
+  `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.projectView.RenameSceneActionTest'` passes
+- [x] 2.3 Update the `RenameSceneAction` row in `projectView/README.md` to say it is offered on any scene row, including
+  standalone scenes: verify the README matches the action
 
-## 3. Update the menu-visibility tests
+## 3. Integration checks
 
-- [ ] 3.1 Update `TreeActionVisibilityTest` to assert the grouped structure: verify it checks the `Import Model` / `New` /
-  `Add` groups and their children on the Assets and Scene rows (using the registered action ids), that Rename Scene is
-  offered on a standalone scene row and not on other rows, and that the existing "offered alone on its row" assertions are
-  replaced
-- [ ] 3.2 Cover empty groups: verify a test shows a group with no visible child is not visible, and if a plain `<group>` is
-  shown disabled, register a hiding `DefaultActionGroup` subclass for it
-- [ ] 3.3 Run `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.projectView.TreeActionVisibilityTest'`
-  and the `RenameSceneActionTest` class: verify both pass
-
-## 4. Documentation and full check
-
-- [ ] 4.1 Update `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/projectView/README.md` (the
-  `RenameSceneAction` row and the action list) to describe the grouped menus: verify it lists the `Import Model` / `New` /
-  `Add` groups and Rename on any scene row
-- [ ] 4.2 Open a copy of a project with `./gradlew :plugin-abyssus:runIde`: verify by hand that the Assets and Scene menus show
-  the groups and that Rename works on a standalone scene
-- [ ] 4.3 Run `scripts/check-docs.sh` and `./gradlew check` for the affected modules: verify both pass
+- [ ] 3.1 Check both menus by hand in `./gradlew :plugin-abyssus:runIde` on a copy of a project (never the committed
+  test fixture): verify the Assets row shows Import Model then New, a scene row shows Rename Scene then Add, Add Asset
+  and Add Path Arrangement are disabled with no model or terrain, no empty sub-menu shows anywhere, and a standalone
+  scene can be renamed
+- [ ] 3.2 Run `scripts/check-docs.sh` and `./gradlew check`: verify both pass
