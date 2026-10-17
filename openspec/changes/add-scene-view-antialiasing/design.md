@@ -4,7 +4,7 @@
 
 See `proposal.md` for motivation and `specs/scene-view-antialiasing/spec.md` for the behavior contract.
 
-`SceneViewPanel` builds a `GuardedGLCanvas` from `glData()` (GL 3.2 core, 24-bit depth, swap interval 0) and renders
+`SceneViewPanel` builds a `GuardedGLCanvas` from `glData()` (GL 3.3 core, 24-bit depth, swap interval 0) and renders
 straight into the canvas's default framebuffer; there is no offscreen color buffer. The context is created lazily on
 the first `canvas.render()` from the Swing frame timer, which then calls `initGL` (renderer resources) and `paintGL`. A
 throw from `render()` currently stops the loop and reports `onFailure`. The panel already knows how to swap in a fresh
@@ -14,8 +14,7 @@ new context recreates the renderer's GL resources.
 The shadow atlas and the ray sky baker render into their own framebuffers; the ray-traced image is a fullscreen
 textured quad. The GL test harnesses (`GlHarness`, `TestGl`) build their own `GLData` and read pixels back.
 
-Design is included because the change adds the plugin's first IDE settings page and touches the canvas/context
-lifecycle, which is fragile on macOS.
+Design covers native project preference persistence and the canvas/context lifecycle, which is fragile on macOS.
 
 ## Goals / Non-Goals
 
@@ -41,21 +40,20 @@ context, but adds a buffer that must follow resizes and `glSafe`, and an extra f
 canvas on a setting change is rare and already supported, so the simpler pixel format wins. FXAA was rejected because it
 softens one-pixel gizmo and grid lines, which are the main thing to fix.
 
-### 2. One IDE-wide setting
+### 2. One setting per native project
 
-`SceneViewAntialiasing` is an application service holding the chosen `AntialiasingLevel` (`OFF`, `X2`, `X4`, `X8`,
-default `X4`), stored with application-level `PropertiesComponent` under a namespaced key. A stored value that is
-missing or unknown reads as `X4`. It exposes the value, a setter that saves first and notifies only on a real change, and
-listeners registered with a `Disposable` parent. Reads, writes and notifications happen on the EDT.
+The existing `AbyssusProjectSettings` service reads and edits each native `.abss` independently, using its document
+cache and `ProjectSettingsListener` notifications. Extend `ProjectSettings` with the plain `AntialiasingLevel` value.
+Keep the enum in a neutral plugin settings package so DTO parsing does not depend on the scene-view package.
 
-`AntialiasingLevel` and its parsing (stored text to level, level to sample count) are plain Kotlin, tested headlessly.
+The root key `sceneViewAntialiasing` stores `OFF`, `X2`, `X4` or `X8`. Missing means `X4`; unsupported or wrongly typed
+values show a localized project-settings problem and render with `X4` without changing text. Unsupported native
+markers disable editing. `setAntialiasing` uses `editSceneJson`, removes only this key for the default, suppresses
+unchanged writes, and preserves unrelated numbers, ordering, extension fields and formatting.
 
-The settings page is an `applicationConfigurable` under Tools (`parentId="tools"`), titled Abyssus, with one
-**Scene view antialiasing** combo box (Off, 2×, 4×, 8×) and a one-line explanation that it applies to open views and
-needs a GPU that supports it. Text lives in `AbyssusBundle.properties`. `isModified` / `apply` / `reset` follow the
-standard `Configurable` contract; `apply` calls the service setter.
-
-This is an IDE preference, not a document edit, so `editSceneJson` is not involved.
+`ProjectDetailsView` adds the localized **Scene view antialiasing** combo beside the existing project controls.
+The existing properties panel refresh and undo editor handle text edits and Undo/Redo. Remove the IDE Settings page
+and application preference service; do not migrate their stored values or write anything on opening a project.
 
 ### 3. Fallback order in a pure class
 
@@ -72,10 +70,11 @@ The panel exposes the effective sample count of its current canvas (`internal`, 
 
 ### 4. Applying a change to open views
 
-`SceneFileEditor` subscribes to `SceneViewAntialiasing` with itself as the disposable parent and passes the level to its
-current view through a new default no-op `SceneView.setAntialiasing(level)`, which keeps test fakes compiling. A view
-created or replaced later reads the current level when it is built. Projectless panels and harness construction start
-with an explicit level.
+`SceneFileEditor` subscribes to `ProjectSettingsListener` with itself as owner, and only applies events for its
+scene's owning `.abss`. New and replaced views read the current document-backed value; standalone scenes use `X4`.
+Remove `sceneViewAntialiasing` from the editor's render-content comparison, as for `physicsEnabled`, so an antialiasing
+edit recreates the canvas without stopping Play or reloading scene content. Reuse the default no-op
+`SceneView.setAntialiasing(level)` for fake or alternate views.
 
 `SceneViewPanel.setAntialiasing` stores the level, resets the fallback list, and replaces the canvas through the same
 path as `replaceAbandonedCanvas` (generalised to `replaceCanvas`): the old canvas is disposed with `disposeCanvas()`,
@@ -89,7 +88,7 @@ its GL resources in `initGL`; assets that must be uploaded again show the existi
 
 ### Threads
 
-- Settings page, service, listeners, `SceneFileEditor` binding and `setAntialiasing`: EDT.
+- Project controls, document edits, settings notifications, editor binding and `setAntialiasing`: EDT.
 - Canvas replacement and the fallback retry: the EDT, which is the AWT thread that runs the frame timer and renders the
   canvas. GL resource creation and release stay inside `initGL` / `disposeGL` under `GdxRuntime.withContext`, as today.
 - `AntialiasingLevel`, its parsing and `SampleFallback`: no thread affinity, no Swing, GL or platform code.
@@ -98,7 +97,7 @@ its GL resources in `initGL`; assets that must be uploaded again show the existi
 
 - [macOS context churn] Replacing a canvas while shown is the riskiest step on macOS → reuse `GuardedGLCanvas.disposeCanvas`
   and defer replacement of hidden views to `addNotify`; cover by runIde checks on macOS where available.
-- [Driver accepts samples but renders wrongly] Not detectable automatically → the user can pick Off in the settings.
+- [Driver accepts samples but renders wrongly] Not detectable automatically → the user can pick Off in project properties.
 - [Cost of 8× on large views] Fill-rate cost grows with samples → default stays 4×, matching the game.
 - [Depth read-back with multisampling] Production code does not read the canvas's depth; tests that do use their own
   single-sampled harness.

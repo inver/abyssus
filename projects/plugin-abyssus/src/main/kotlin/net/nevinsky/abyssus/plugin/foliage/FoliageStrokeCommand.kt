@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaint
 import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaintMode
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
@@ -111,7 +111,7 @@ class FoliageStrokeCommand(
                 expected["assets/${settings.terrain}/$terrainFile"] =
                     FileSnapshot.Bytes(File(terrainFolder, terrainFile).readBytes())
                 val fresh = readCurrent?.invoke() ?: run {
-                    val json = service<AbyssusCore>().json
+                    val json = service<AbyssusPluginCtx>().json
                     readFoliageSource(folder.name, projectDir, json, currentText, SceneJson().parseObject(currentText)["additional"])
                 }
                 require(fresh is FoliageSource.Ready && fresh.sameAs(stroke.source)) {

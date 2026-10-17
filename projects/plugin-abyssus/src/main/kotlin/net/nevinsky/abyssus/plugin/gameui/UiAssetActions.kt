@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.projectView.AbyssusTreeAction
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
-import net.nevinsky.abyssus.plugin.projectView.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
 import java.io.File
 
 /** The names in the project file's `uiAssetNames`, from its current text; empty when it is missing or malformed. */

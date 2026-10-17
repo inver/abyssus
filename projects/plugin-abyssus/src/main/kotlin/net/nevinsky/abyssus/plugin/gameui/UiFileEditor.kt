@@ -10,7 +10,6 @@ import com.intellij.openapi.command.undo.DocumentReference
 import com.intellij.openapi.command.undo.DocumentReferenceManager
 import com.intellij.openapi.command.undo.DocumentReferenceProvider
 import com.intellij.openapi.command.undo.UndoManager
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -198,7 +197,7 @@ class UiFileEditor(
 
 /** The real editor view: the panels around the GL canvas, or a message when OpenGL cannot be used. */
 internal fun defaultPanel(project: Project, file: VirtualFile, controller: UiEditorController): JComponent {
-    val core = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusCore>()
+    val core = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>()
     val abss = uiAssetOwner(file)
     val canvas = try {
         UiCanvasView(controller, file.parent.name, java.io.File(file.parent.path), core.documents.json, ProjectUiSource(abss)) { sceneName ->

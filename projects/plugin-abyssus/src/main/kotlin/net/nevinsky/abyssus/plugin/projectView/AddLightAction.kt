@@ -21,6 +21,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 
 /** The same three choices in the tree and toolbar; placement is read when a choice is made. */
 class AddLightGroup(

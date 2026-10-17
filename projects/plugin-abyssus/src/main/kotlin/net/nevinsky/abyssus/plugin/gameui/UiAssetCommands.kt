@@ -36,12 +36,11 @@ import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.model.UiIssue
 import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.*
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
-import net.nevinsky.abyssus.plugin.projectView.selectAssetInAbyssusView
+import net.nevinsky.abyssus.plugin.projectView.asset.selectAssetInAbyssusView
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.io.File
 import java.util.UUID
@@ -172,7 +171,7 @@ fun createUiAsset(
         { if (!project.isDisposed) selectAssetInAbyssusView(project, abss, created) }, ModalityState.nonModal()) },
 ): AssetCommandResult? {
     val staged = runCatchingKeepingCancellation {
-        NewUiAssetFactory(service<AbyssusCore>().documents.json).stage(abss, name)
+        NewUiAssetFactory(service<AbyssusPluginCtx>().documents.json).stage(abss, name)
     }.getOrElse { report(it.documentDisplayMessage()); return null }
     val result = AssetFileCommand(project, LocalAssetFileStore(File(abss.parent.path)))
         .execute(staged.transaction, onDone = { select(staged.name) })

@@ -1,17 +1,17 @@
 package net.nevinsky.abyssus.plugin.dto
 
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.plugin.AbyssusCore
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 
 @Service(Service.Level.PROJECT)
 class ProjectReader(
@@ -22,9 +22,9 @@ class ProjectReader(
 ) : ConfigFileReader<net.nevinsky.abyssus.plugin.dto.ProjectDto> {
     constructor(project: Project) : this(project, null, null, null)
 
-    private val json by lazy { json ?: service<AbyssusCore>().documents.json }
+    private val json by lazy { json ?: service<AbyssusPluginCtx>().documents.json }
     private val scenes by lazy { scenes ?: service<SceneReader>() }
-    private val loading by lazy { loading ?: service<AbyssusCore>().documents.parsing }
+    private val loading by lazy { loading ?: service<AbyssusPluginCtx>().documents.parsing }
     private val assetListing by lazy { ProjectAssetListing(this.json) }
 
     override fun stamp(file: VirtualFile): Long {
@@ -38,20 +38,26 @@ class ProjectReader(
             })
     }
 
-    override fun read(file: VirtualFile): AssetReadResult<net.nevinsky.abyssus.plugin.dto.ProjectDto> = runCatchingKeepingCancellation {
-        val name = loading.projectName(file.path) { textOf(file) }
-        val sceneResults = ProjectLayout.sceneFiles(file).map { it to scenes.read(it) }
-        val roots = sceneResults.flatMap { (_, result) -> result.obj?.let(::sceneReferences) ?: emptySet() }
-            .toSet()
-        val assets = readAssets(file)
-        val usage = usage(assets, roots, loading.uiAssetNames(file.path) { textOf(file) })
-        ProjectDto(
-            name ?: file.nameWithoutExtension,
-            sceneResults.map { (f, result) -> result.obj?.let { SceneEntry(f, it) } ?: SceneError(f, result.message) },
-            assets.map { it.copy(unused = it.name !in usage.used) },
-            usage.uiIssues,
-        )
-    }.let { AssetReadResult.of(it) }
+    override fun read(file: VirtualFile): AssetReadResult<net.nevinsky.abyssus.plugin.dto.ProjectDto> =
+        runCatchingKeepingCancellation {
+            val name = loading.projectName(file.path) { textOf(file) }
+            val sceneResults = ProjectLayout.sceneFiles(file).map { it to scenes.read(it) }
+            val roots = sceneResults.flatMap { (_, result) -> result.obj?.let(::sceneReferences) ?: emptySet() }
+                .toSet()
+            val assets = readAssets(file)
+            val usage = usage(assets, roots, loading.uiAssetNames(file.path) { textOf(file) })
+            ProjectDto(
+                name ?: file.nameWithoutExtension,
+                sceneResults.map { (f, result) ->
+                    result.obj?.let { SceneEntry(f, it) } ?: SceneError(
+                        f,
+                        result.message
+                    )
+                },
+                assets.map { it.copy(unused = it.name !in usage.used) },
+                usage.uiIssues,
+            )
+        }.let { AssetReadResult.of(it) }
 
     private fun readAssets(abss: VirtualFile): List<Asset<Any>> = runCatchingKeepingCancellation {
         return assetListing.list(abss)

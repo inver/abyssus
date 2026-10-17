@@ -9,7 +9,7 @@ lines, gizmos, camera and light markers, selection highlights, overlays from oth
 SHALL be smoothed. Antialiasing SHALL NOT change what a click selects or what is written to the scene file.
 
 #### Scenario: Open a scene with the default setting
-- **WHEN** the user opens `Main Scene` of the Untitled project in an IDE where the antialiasing setting was never changed
+- **WHEN** the user opens `Main Scene` of the Untitled project whose project omits `sceneViewAntialiasing`
 - **THEN** the grid lines and the model edges in the scene view are drawn smoothed rather than stair-stepped
 
 #### Scenario: Picking is unaffected
@@ -18,29 +18,44 @@ SHALL be smoothed. Antialiasing SHALL NOT change what a click selects or what is
 
 ### Requirement: Antialiasing setting
 
-The IDE settings SHALL offer **Scene view antialiasing** under Tools | Abyssus with the choices Off, 2×, 4× and 8×,
-showing 4× until the user changes it. The choice SHALL be remembered across IDE restarts and SHALL be shared by every
-project open in that IDE. Changing it SHALL leave `.abss`, `.scene` and asset `meta.json` files unchanged.
+A native project's Abyssus Properties panel SHALL offer **Scene view antialiasing** with Off, 2×, 4× and 8×,
+showing 4× by default. The IDE Settings dialog SHALL NOT contain this control. The project's `.abss` SHALL persist
+`sceneViewAntialiasing` as `OFF`, `X2`, `X4` or `X8`, with the default omitted. Each native project SHALL be independent.
+
+Reading and editing SHALL validate native markers first. Unsupported projects SHALL be read-only. Missing values
+SHALL use 4×. Invalid present values SHALL report a localized problem and use 4× without rewriting the document.
+Opening a project SHALL NOT insert defaults or migrate an old application preference.
+
+Changing the value SHALL be one undoable edit through `editSceneJson`, touching only the setting and preserving
+unknown data, key order, unrelated number text and formatting. `.scene` and asset `meta.json` files SHALL stay unchanged.
 
 #### Scenario: Default choice
-- **WHEN** the user opens Settings | Tools | Abyssus in an IDE where the setting was never changed
-- **THEN** Scene view antialiasing shows 4×
+- **WHEN** the user selects a native project whose `.abss` omits the field
+- **THEN** Scene view antialiasing shows 4× without writing any file
 
 #### Scenario: Choice is remembered
-- **WHEN** the user selects Off, applies, and restarts the IDE
-- **THEN** the setting shows Off and scene views draw without antialiasing
+- **WHEN** the user selects Off in project properties and reopens the project
+- **THEN** its `.abss` contains `"sceneViewAntialiasing":"OFF"` and its views draw without antialiasing
 
-#### Scenario: Shared by projects
-- **WHEN** the user selects 2× while one project is open and then opens another project
-- **THEN** the setting shows 2× there and its scene views draw with 2× antialiasing
+#### Scenario: Projects are independent
+- **WHEN** the user selects 2× for one native project
+- **THEN** a second native project, including one open in the same IDE project, keeps its own choice
 
-#### Scenario: No game files change
-- **WHEN** the user changes the setting with `Main Scene` open
-- **THEN** `Untitled.abss`, `Main Scene.scene` and every asset `meta.json` keep their exact text
+#### Scenario: Undo and external editing
+- **WHEN** the user changes the field in an unsaved text document or invokes Undo/Redo after a properties edit
+- **THEN** the project control and its open scene views reflect the resulting value
+
+#### Scenario: Only the project preference changes
+- **WHEN** the user chooses 8× and then 4×
+- **THEN** the first edit writes `X8` and the second removes the field, while unrelated `.abss` text, scenes and assets stay unchanged
+
+#### Scenario: Unsupported native project
+- **WHEN** a project has unsupported format markers
+- **THEN** the setting cannot edit it and its text stays unchanged
 
 ### Requirement: Changes apply to open views
 
-Applying a new antialiasing choice SHALL take effect in every open scene view without closing or reopening it. Each
+Applying a new antialiasing choice SHALL take effect in every open scene view of that native project without closing or reopening it. Each
 view SHALL keep its camera, selection, chosen look-through camera, Move/Rotate mode, Play state and Ray Tracing mode.
 A view that is hidden when the choice changes SHALL use the new choice when it is shown again.
 

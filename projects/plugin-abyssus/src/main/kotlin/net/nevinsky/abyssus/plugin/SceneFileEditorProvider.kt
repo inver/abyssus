@@ -46,13 +46,11 @@ import net.nevinsky.abyssus.plugin.sceneview.SceneViewPanel
 import net.nevinsky.abyssus.plugin.sceneview.SimulationRequest
 import net.nevinsky.abyssus.plugin.sceneview.ViewAssets
 
-import net.nevinsky.abyssus.plugin.sceneview.*
-
 class SceneFileEditorProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile) = ProjectLayout.isScene(file)
 
     override fun createEditor(project: Project, file: VirtualFile): FileEditor {
-        val core = service<AbyssusCore>()
+        val core = service<AbyssusPluginCtx>()
         val assets = core.assets
         val reader = service<SceneReader>()
         val host = (com.intellij.ide.projectView.ProjectView.getInstance(project)

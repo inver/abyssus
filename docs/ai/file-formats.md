@@ -60,6 +60,12 @@ Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored
 properties writes only `physicsEnabled` through `editSceneJson` as one undoable command; off is explicit `false`.
 Reads never insert the key or repair malformed values. `SceneFormatListener` may also format a supported `.abss`.
 
+`sceneViewAntialiasing` is an optional editor preference for this native project's scene views: `OFF`, `X2`, `X4`
+or `X8`. Missing means 4×; saving 4× removes the key. Invalid present values are reported and displayed as 4× without
+rewriting the file. Select the project in Abyssus Properties to edit it through `editSceneJson` as one undoable command.
+Text edits and Undo/Redo update its open views; other projects are independent. Unsupported native documents cannot be
+edited. The runtime ignores this editor preference; `.scene` and asset metadata are unaffected.
+
 ## `.scene`
 
 Top level, bound to `SceneDto` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/dto/SceneDto.kt`):

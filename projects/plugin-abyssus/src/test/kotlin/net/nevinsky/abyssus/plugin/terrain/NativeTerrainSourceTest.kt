@@ -6,7 +6,7 @@ package net.nevinsky.abyssus.plugin.terrain
 
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.lib.core.editor.terrain.RecipeStatus
 import net.nevinsky.abyssus.lib.core.editor.terrain.SourceSnapshot
@@ -17,7 +17,7 @@ import java.io.File
 class NativeTerrainSourceTest : BasePlatformTestCase() {
     fun testRejectedMetadataStopsSourceReadingAndQueuedPreview() {
         val folder = myFixture.tempDirFixture.findOrCreateDir("assets/terrain")
-        val core = service<AbyssusCore>()
+        val core = service<AbyssusPluginCtx>()
         val choices = AssetReferenceChoices(core.json)
         for (text in listOf("{}", """{"format":"abyssus","formatVersion":2}""")) {
             val rejected = readTerrainSource(File(folder.path), text, SceneJson().parse(text), choices, core.terrainRecipes)

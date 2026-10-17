@@ -35,13 +35,16 @@ import net.nevinsky.abyssus.lib.core.editor.modelimport.StagedModelImport
 import net.nevinsky.abyssus.lib.core.editor.modelimport.isBlenderFile
 import net.nevinsky.abyssus.lib.core.editor.modelimport.sourceFormatOf
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileUndoAction
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.plugin.assetfiles.PlacedEntity
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
+import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.asset.selectAssetInAbyssusView
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.sceneview.SceneFileEditor
 import java.io.File
 
@@ -72,7 +75,7 @@ open class ImportModelAction : AbyssusTreeAction<VirtualFile>() {
             val opened = try {
                 runCatchingKeepingCancellation {
                     ProgressManager.getInstance().runProcessWithProgressSynchronously<ModelSource, Exception>({
-                        service<AbyssusCore>().modelSources.open(form.sourceFile) { ProgressManager.checkCanceled() }
+                        service<AbyssusPluginCtx>().modelSources.open(form.sourceFile) { ProgressManager.checkCanceled() }
                     }, AbyssusBundle.message("importModelReading"), true, project)
                 }
             } catch (e: ProcessCanceledException) {
@@ -135,7 +138,7 @@ fun importModel(
     placement: ScenePlacement?,
     report: (String) -> Unit,
 ): ModelImportOutcome? {
-    val core = service<AbyssusCore>()
+    val core = service<AbyssusPluginCtx>()
     val fail = { reason: String -> report(AbyssusBundle.message("importModelFailed", reason)) }
     projectRefusal(abss)?.let { fail(it); return null }
     val cache = SceneDocumentCache.of(project)

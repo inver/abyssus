@@ -2,47 +2,37 @@
 
 ## Why
 
-The scene view draws without antialiasing. The grid, gizmos, camera and light markers and selection boxes are one-pixel
-lines, and model and terrain silhouettes have hard stair-stepped edges, which makes the editor look rough next to the
-Control Line game, whose window already asks for 4× multisampling. Users also need a way to lower or turn it off on a
-slow or unusual GPU.
+Scene view lines and silhouettes need multisample antialiasing, with a choice that can be saved and shared with a
+native Abyssus project. The user revised the original IDE-wide preference to a project document setting.
 
 ## What Changes
 
-- Scene views draw with 4× multisample antialiasing by default.
-- A new IDE-wide setting, **Settings | Tools | Abyssus | Scene view antialiasing**, offers Off, 2×, 4× and 8×. It is
-  remembered across IDE restarts and shared by every project.
-- Changing the setting applies to every open scene view at once, without reopening the view. Camera, selection, the
-  chosen look-through camera, Play and Ray Tracing mode are kept.
-- If the graphics driver refuses the requested sample count, the view tries the next lower one down to Off, logs a
-  warning once per view, and keeps drawing. A view never stays blank because of antialiasing.
-- Reads and writes no document fields: `.abss`, `.scene` and asset `meta.json` stay unchanged and the Abyssus format
-  does not change. No document validation is involved.
-- Out of scope: post-process antialiasing (FXAA, SMAA, TAA), a per-scene or per-project value, a scene view toolbar
-  toggle, antialiasing inside the ray-traced image (it keeps its own sample accumulation), shadow-atlas filtering, the
-  Control Line game window and its play host, and multisampling in the GL test harnesses.
+- Scene views use 4× multisampling by default, with Off, 2×, 4× and 8× choices.
+- **Scene view antialiasing** appears in Abyssus Properties when a native project is selected. Remove the IDE Settings page.
+- Save the choice in that project's `.abss` as `sceneViewAntialiasing` (`OFF`, `X2`, `X4`, `X8`). Omit the default `X4`.
+- Validate native markers before reading or writing. Use `editSceneJson` for an isolated undoable edit, preserving unknown
+  data, formatting, key order and unrelated number text. Scene and asset files remain unchanged.
+- Every open scene view belonging to that native project follows its setting, including unsaved text edits and Undo/Redo.
+  Other native projects are independent, even within one IDE project. Standalone scenes use 4×.
+- Keep camera, selection, look-through camera, tools, Play and Ray Tracing mode during changes. Unsupported samples
+  fall back through lower choices to Off without rewriting the requested value.
+- Old application preferences are ignored; no implicit migration or eager document writes.
+- Out of scope: post-process antialiasing, per-scene preferences, a toolbar toggle, changing the ray image's own
+  accumulation, game/play-host rendering, and changing GL test harness pixel formats.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `scene-view-antialiasing`: Default multisampling of scene views, the IDE-wide setting, applying it to open views,
-  and the fallback when the driver refuses a sample count.
+- `scene-view-antialiasing`: Default multisampling, a native project setting, live view updates and GPU fallback.
 
 ### Modified Capabilities
 
-None. Existing scene rendering, picking, Ray Tracing and Play requirements are unchanged; picking uses scene data, not
-pixels.
+None. Existing picking, rendering, Play and ray requirements remain unchanged.
 
 ## Impact
 
-- Plugin `sceneview` package: the canvas pixel format in `SceneViewPanel`, canvas replacement on a setting change and on
-  a refused pixel format.
-- A new application-level setting with a settings page registered in `plugin.xml`, and its text in
-  `AbyssusBundle.properties`.
-- No changes to `core`, `gdx-model`, `runtime`, `physics`, `physics-plugin` or the game.
-- The open `add-project-fps-counter` change adds project-scoped view settings in Abyssus Properties. This change keeps
-  antialiasing IDE-wide and in the IDE settings dialog because it depends on the machine's GPU, not on the project; the
-  two settings do not interact.
-- Docs: README feature list, CHANGELOG Unreleased, `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md`, and
-  `docs/ai/architecture.md` if its threading or extension notes become incomplete.
+- Plugin project settings reader/service, project Properties view, scene editor bindings and canvas lifecycle.
+- Remove `AntialiasingConfigurable`, `SceneViewAntialiasing` and the `applicationConfigurable` registration.
+- No game or runtime module dependency changes; the runtime ignores the editor preference.
+- Update README, CHANGELOG, file-format and architecture docs, and package notes.

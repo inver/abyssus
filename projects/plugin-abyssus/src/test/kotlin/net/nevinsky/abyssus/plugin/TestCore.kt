@@ -5,14 +5,12 @@
 
 package net.nevinsky.abyssus.plugin
 
-import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
-
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import net.nevinsky.abyssus.plugin.properties.PanelServices
 
 /** The collaborators production code is handed by its provider, factory or action, for tests that call it directly. */
-internal val testCore: AbyssusCore get() = service()
+internal val testCore: AbyssusPluginCtx get() = service()
 
 internal fun testMetaFiles() = testCore.metaFiles
 

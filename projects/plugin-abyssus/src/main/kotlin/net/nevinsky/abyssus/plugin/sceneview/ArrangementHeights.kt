@@ -26,7 +26,7 @@ import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
 import java.io.File
@@ -71,13 +71,13 @@ class ArrangementHeights(private val project: Project) {
     private class Placement(val entityId: String, val asset: String, val world: com.badlogic.gdx.math.Matrix4)
 
     private fun terrainPlacements(file: VirtualFile): List<Placement> {
-        val core = service<AbyssusCore>()
+        val core = service<AbyssusPluginCtx>()
         val scene = runCatchingKeepingCancellation { core.json.parse(textOf(file), SceneDto::class.java) }.getOrNull() ?: return emptyList()
         return sceneContentOf(scene).terrains.map { Placement(it.entityId, it.assetName, it.transform.toMatrix()) }
     }
 
     private fun load(projectDir: File, placements: List<Placement>): List<TerrainTarget> {
-        val json = service<AbyssusCore>().json
+        val json = service<AbyssusPluginCtx>().json
         val files = FileLoader(projectDir)
         val metas = AssetMetaLoader(json, files)
         val loader = TerrainLoader(files, metas)

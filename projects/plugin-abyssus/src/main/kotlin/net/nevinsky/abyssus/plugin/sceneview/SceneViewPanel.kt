@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
+
 import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.intellij.ide.DataManager
@@ -63,6 +65,7 @@ class SceneViewPanel internal constructor(
     private val pathMenu: PlacementMenu<(RenderAsset) -> Unit>? = null,
     /** The project's `Show FPS`, read before every frame so a missed change event cannot leave the counter off; null: only [setFpsEnabled]. */
     private val showFps: (() -> Boolean)? = null,
+    antialiasingLevel: AntialiasingLevel = AntialiasingLevel.DEFAULT,
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     private val frame = GdxFrame()
@@ -163,11 +166,31 @@ class SceneViewPanel internal constructor(
     /** Called (on the AWT thread) when rendering fails, e.g. when no GL 3.2 core context can be created. */
     override var onFailure: ((Throwable) -> Unit)? = null
 
-    /** Set when the canvas had to give up its context while hidden; its native surface can no longer be trusted. */
-    private var abandoned = false
+    private var contextInitialized = false
+    private val antialiasing = CanvasAntialiasing(
+        antialiasingLevel,
+        ::replaceCanvas,
+        { samples, error -> thisLogger().warn("Scene view refused $samples MSAA samples; trying lower sample counts", error) },
+        { error ->
+            thisLogger().warn("Scene render failed, stopping the view", error)
+            stopLoop()
+            onFailure?.invoke(error)
+        },
+    )
 
-    private fun newCanvas(): GuardedGLCanvas = object : GuardedGLCanvas(glData()) {
+    /** Sample count requested for the current canvas, after any pixel-format fallback. */
+    internal val effectiveSampleCount: Int get() = antialiasing.samples
+
+    override fun setAntialiasing(level: AntialiasingLevel) {
+        com.intellij.openapi.application.ApplicationManager.getApplication().assertIsDispatchThread()
+        if (unavailable) return
+        antialiasing.setLevel(level, isShowing)
+    }
+
+    private fun newCanvas(samples: Int): GuardedGLCanvas = object : GuardedGLCanvas(glData(samples)) {
         override fun initGL() {
+            // Even a failure in capability/resource creation is a renderer error, not a refused pixel format.
+            contextInitialized = true
             capabilities = GL.createCapabilities()
             val ctx = GdxRuntime.newContext(frame, GdxGlBridge.gl20(), GdxGlBridge.gl30(), Lwjgl3Files())
             gdx = ctx
@@ -193,7 +216,7 @@ class SceneViewPanel internal constructor(
             experiment?.abandon()
             renderer.abandonShadows()
             gdx = null
-            abandoned = true
+            antialiasing.abandoned()
         }
 
         override fun paintGL() {
@@ -221,7 +244,7 @@ class SceneViewPanel internal constructor(
         }
     }
 
-    private var canvas: GuardedGLCanvas = newCanvas()
+    private var canvas: GuardedGLCanvas = newCanvas(antialiasing.samples)
     private fun newCanvasHost() = CanvasOverlayHost(canvas) {
         try {
             canvas.captureFrame { capabilities?.let { GL.setCapabilities(it) } }
@@ -255,9 +278,9 @@ class SceneViewPanel internal constructor(
         try {
             canvas.render()
         } catch (e: Throwable) {
-            thisLogger().warn("Scene render failed, stopping the view", e)
-            stopLoop()
-            onFailure?.invoke(e)
+            if (e is com.intellij.openapi.progress.ProcessCanceledException || e is java.util.concurrent.CancellationException) throw e
+            fpsInterrupted()
+            antialiasing.renderFailed(e, contextInitialized)
         }
     }
 
@@ -283,6 +306,11 @@ class SceneViewPanel internal constructor(
         add(buildToolbar(), BorderLayout.NORTH)
         add(canvasHost, BorderLayout.CENTER)
         input.attach(canvas)
+        addHierarchyListener { event ->
+            if (event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() != 0L && isShowing && !unavailable) {
+                antialiasing.shown()
+            }
+        }
         input.bindKeys()
         input.forwardKeys()
         interaction.onStateChanged = ::syncControls
@@ -559,18 +587,19 @@ class SceneViewPanel internal constructor(
         syncControls()
     }
 
-    /**
-     * An abandoned canvas keeps a native surface that macOS no longer sizes with the component, so showing it again
-     * renders into a stale, cropped drawable. A new canvas gets a new native surface and a new context.
-     */
-    private fun replaceAbandonedCanvas() {
-        if (!abandoned) return
-        abandoned = false
+    /** Reuses the guarded disposal path; only the native canvas changes, never the view's CPU state. */
+    private fun replaceCanvas(samples: Int) {
+        fpsInterrupted()
+        canvasHost.stop()
+        canvas.disposeCanvas()
         remove(canvasHost)
-        canvas = newCanvas()
+        contextInitialized = false
+        canvas = newCanvas(samples)
         input.attach(canvas)
         canvasHost = newCanvasHost()
         add(canvasHost, BorderLayout.CENTER)
+        revalidate()
+        repaint()
     }
 
     override var onPick: ((String) -> Unit)?
@@ -665,7 +694,7 @@ class SceneViewPanel internal constructor(
     internal val playState: PlayState get() = play
 
     override fun addNotify() {
-        replaceAbandonedCanvas()
+        antialiasing.shown()
         super.addNotify()
         rayBinding.feed?.runtime?.setVisible(true)
         lastActivityNanos = System.nanoTime()
@@ -705,7 +734,9 @@ class SceneViewPanel internal constructor(
         const val IDLE_FRAME_MILLIS = 100
         const val IDLE_AFTER_NANOS = 1_000_000_000L
 
-        fun glData() = GLData().apply {
+        fun glData(sampleCount: Int) = GLData().apply {
+            samples = sampleCount
+            sampleBuffers = if (sampleCount > 0) 1 else 0
             majorVersion = 3
             // instanced foliage shadows call glVertexAttribDivisor, which is core only from 3.3; a context made as exactly 3.2 aborts the JVM on it
             minorVersion = 3

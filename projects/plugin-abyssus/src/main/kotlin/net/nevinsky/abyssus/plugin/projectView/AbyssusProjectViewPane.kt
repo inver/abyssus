@@ -10,8 +10,6 @@ import com.intellij.ide.impl.ProjectViewSelectInTarget
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.projectView.impl.*
 import com.intellij.ide.util.treeView.AbstractTreeNode
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
@@ -21,10 +19,14 @@ import com.intellij.ui.render.RenderingUtil
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.filetype.EyeIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneViewIcons
+import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.asset.showAssetsMenu
+import net.nevinsky.abyssus.plugin.projectView.scene.sceneNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.scene.showSceneMenu
 import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
 import net.nevinsky.abyssus.plugin.sceneview.openSceneView
 import java.awt.*
@@ -133,7 +135,7 @@ private class AbyssusSelectInTarget(project: Project) : ProjectViewSelectInTarge
  * Paints clickable icons at the right edge of rows that have actions: the eye on entries gated by an `xxxEnabled`
  * toggle, "View" on scenes, and "..." left of the eye on a project scene's skybox.
  */
-internal class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
+class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
 
     /** The row's actions, rightmost first. */
@@ -163,7 +165,7 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
     private fun skyboxAction(entry: DtoEntry): RowAction? {
         val abss = skyboxProjectOf(entry) ?: return null
         return ChooseButton(AbyssusBundle.message("skyboxChooserTooltip")) {
-            val assets = service<AbyssusCore>().assets
+            val assets = service<AbyssusPluginCtx>().assets
             if (chooseSkybox(project, entry, abss, assets.metaFiles, assets.hdrPreviews)) reselect(entry.path, false)
         }
     }
@@ -220,11 +222,23 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
         if (e.isPopupTrigger) {
             val row = rowOf(e)
             val node = row?.let { TreeUtil.getUserObject(getPathForRow(it)?.lastPathComponent) }
-            if (row != null && assetsNodeProjectFile(node) != null) {
+            if (row == null) {
+                super.processMouseEvent(e)
+                return
+            }
+            if (assetsNodeProjectFile(node) != null) {
                 if (e.id == MouseEvent.MOUSE_PRESSED || e.id == MouseEvent.MOUSE_RELEASED) {
                     requestFocusInWindow()
                     setSelectionRow(row)
-                    showAssetsMenu(e.x, e.y)
+                    showAssetsMenu(this, e.x, e.y)
+                }
+                e.consume()
+                return
+            } else if (sceneNodeProjectFile(node) != null) {
+                if (e.id == MouseEvent.MOUSE_PRESSED || e.id == MouseEvent.MOUSE_RELEASED) {
+                    requestFocusInWindow()
+                    setSelectionRow(row)
+                    showSceneMenu(this, e.x, e.y)
                 }
                 e.consume()
                 return
@@ -233,11 +247,6 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
         super.processMouseEvent(e)
     }
 
-    private fun showAssetsMenu(x: Int, y: Int) {
-        val actions = ActionManager.getInstance()
-        val group = DefaultActionGroup(ASSETS_MENU_ACTION_IDS.mapNotNull { actions.getAction(it) })
-        actions.createActionPopupMenu(ActionPlaces.PROJECT_VIEW_POPUP, group).component.show(this, x, y)
-    }
 
     override fun getToolTipText(event: MouseEvent): String? =
         actionAt(event)?.second?.tooltip ?: super.getToolTipText(event)
@@ -280,6 +289,3 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
     }
 
 }
-
-/** The only actions offered on the Assets folder row, in order. */
-internal val ASSETS_MENU_ACTION_IDS = listOf("Abyssus.Menu.ImportModel", "Abyssus.Menu.New")

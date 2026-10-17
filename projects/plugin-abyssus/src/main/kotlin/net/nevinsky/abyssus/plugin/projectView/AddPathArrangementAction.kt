@@ -18,14 +18,15 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.sceneview.SceneFileEditor
 import net.nevinsky.abyssus.plugin.sceneview.openSceneView
 
 /** The MODEL assets of the project [file] belongs to, by folder name: the only assets a path can arrange. */
 internal fun pathModels(file: VirtualFile): List<RenderAsset> =
-    SceneComponentEdits.renderAssets(file, service<AbyssusCore>().assets.metaFiles).filter { it.type == MetaType.MODEL.name }
+    SceneComponentEdits.renderAssets(file, service<AbyssusPluginCtx>().assets.metaFiles).filter { it.type == MetaType.MODEL.name }
 
 /** Whether a path arrangement can be added to [file] now: the scene reads as a native scene and its project has a model. */
 internal fun canAddPathArrangement(file: VirtualFile, cache: SceneDocumentCache): Boolean =

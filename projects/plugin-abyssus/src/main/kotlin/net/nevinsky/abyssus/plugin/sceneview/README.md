@@ -13,6 +13,8 @@ the toolbar, Play and the view's asset storage.
 | Class | Role |
 |---|---|
 | `SceneFileEditor` / `SceneFileEditorProvider` | The tab, the second editor of the file after the text editor: the IDE's own `Text` and `Scene View` tabs switch between the JSON and the render on one shared document (unsaved text and Undo shared), and `openSceneView` selects Scene View. There is no custom preview/source switch. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo. The provider in the root package is where the tab's collaborators are looked up and passed in; `SceneViewHost` carries tree selection and Add actions |
+| `AntialiasingLevel`, `SampleFallback`, `CanvasAntialiasing` | Plain setting values and canvas lifecycle decisions: default 4×, fallback 8 → 4 → 2 → Off; hidden changes coalesce until shown. `SceneViewPanel` supplies replacement, warning and terminal failure callbacks |
+| `AbyssusProjectSettings` (filetype package) | The native project's `sceneViewAntialiasing` field, edited in project Properties through `editSceneJson`. `SceneFileEditor` reads its owning `.abss` for new views and subscribes to `ProjectSettingsListener` for live updates, including unsaved text and Undo/Redo. The preference is excluded from content comparisons so Play keeps running. Standalone scenes use 4×; there is no application setting |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
 | `SceneContent`, `PlacementMapper` *(lib-core-editor)* | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. The components are decoded by the same codecs the Properties panel uses (`DecodedEntity`), so both show the same values and defaults; `PlacementMapper` (pure) maps them. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
 | `LightSet`, `SpotCone` *(lib-core-editor)* | Deterministic light selection and CPU cone/range attenuation math |
@@ -51,6 +53,14 @@ the toolbar, Play and the view's asset storage.
   `gl*` / `files` and the GLSL 150 prefixes under a lock, and restores the old values afterwards. Every libGDX call
   must be inside it. Clicks arrive outside it, so `ScenePicker.pickRay` unprojects by hand instead of using
   `Camera.getPickRay`.
+- **Multisampled default framebuffer.** `glData(samples)` requests a GL 3.3 core canvas with 24-bit depth, no swap
+  interval, and sample buffers only when the count is positive. Default 4× smooths raster edges and overlays; shadow,
+  water and ray targets retain their own formats and the ray image retains its own accumulation. Test harness formats
+  stay unchanged. Applying a level replaces only the native canvas through guarded `disposeCanvas`, reattaches input
+  and rebuilds renderer resources in `initGL`; camera, selection, tools, look-through camera, Play and Ray Tracing mode
+  stay in the view. The ray feed resets accumulation on context loss. Hidden views defer replacement until `addNotify`
+  or a showing hierarchy event. A failure before `initGL` retries lower sample counts down to Off, warns once per view,
+  and leaves the requested preference intact. A renderer failure after `initGL`, or a failed Off format, uses `onFailure`.
 - **GL only on a safe surface.** `GuardedGLCanvas.glSafe` needs the canvas showing, non-empty, not minimized, and
   stable for 250 ms. On macOS a zero-sized surface aborts the JVM. A canvas disposed while hidden drops its context
   without making it current, so its GL objects can't be released. macOS also stops sizing that canvas's native

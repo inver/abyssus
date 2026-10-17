@@ -365,6 +365,11 @@ The editor retains source aliases in its `format` package. None of these checks 
 - **GL safety:** `GuardedGLCanvas` refuses GL until the canvas has been on screen with a non-zero size for 250 ms.
   When disposed while hidden, it drops the context without making it current, because on macOS that would abort the
   JVM.
+- **Scene antialiasing:** `AbyssusProjectSettings` reads `sceneViewAntialiasing` from each native `.abss`, and the
+  project's Properties combo writes through `editSceneJson`. `ProjectSettingsListener` delivers document/VFS changes
+  on EDT, scoped by the scene's owning `.abss`; Undo/Redo follows the same path. Antialiasing is excluded from the
+  render-content comparison so changing it keeps Play running. Canvas replacement and fallback stay on EDT, and
+  hidden views wait until shown. There is no application preference or IDE configurable.
 - **Ray tracing:** the EDT only copies state, offers requests and uploads completed frames (inside the safe canvas
   context). Scene conversion and skin deformation run on one converter thread fed by a latest-wins mailbox; native
   preparation, submission, completion polling and disposal run on the ray service's serial worker. Mode transitions

@@ -12,7 +12,7 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import net.nevinsky.abyssus.plugin.dto.*
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
@@ -44,7 +44,7 @@ internal fun setFoliage(project: Project, file: VirtualFile, entityId: String, n
 fun foliageGroup(project: Project, file: VirtualFile, entityId: String): DefaultActionGroup? {
     val root = SceneDocumentCache.of(project).read(file)?.root ?: return null
     if (SceneDocument(root).renderAsset(entityId)?.type != MetaType.TERRAIN.name) return null
-    val metas = service<AbyssusCore>().assets.metaFiles
+    val metas = service<AbyssusPluginCtx>().assets.metaFiles
     val names = foliageChoices(project, file, entityId, metas)
     return DefaultActionGroup().apply {
         for (name in names) add(object : AnAction(), DumbAware {

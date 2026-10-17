@@ -20,8 +20,9 @@ import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 
 /** Tells the user why an edit was refused; anything else needs no word. */
 internal fun reportRejection(project: Project, result: EditResult) {
@@ -96,7 +97,7 @@ open class AddComponentAction : AbyssusTreeAction<ComponentTarget>() {
     internal fun choices(project: Project, target: ComponentTarget): DefaultActionGroup {
         val root = SceneDocumentCache.of(project).read(target.file)?.root ?: return DefaultActionGroup()
         val kinds = ComponentSchemas.of(project).editorFor(target.file).missingKinds(root, target.entityId).map { it.name }
-        return addComponentGroup(project, target.file, target.entityId, kinds, service<AbyssusCore>().assets.metaFiles)
+        return addComponentGroup(project, target.file, target.entityId, kinds, service<AbyssusPluginCtx>().assets.metaFiles)
     }
 
     override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) {
@@ -135,7 +136,7 @@ open class AddComponentOnEcsAction : AbyssusTreeAction<VirtualFile>() {
     /** The kinds a new entity can start with, each creating one when chosen. */
     internal fun choices(project: Project, target: VirtualFile): DefaultActionGroup {
         val kinds = ComponentSchemas.of(project).editorFor(target).kinds.map { it.name }.filter { it != "NameComponent" }
-        val metaFiles = service<AbyssusCore>().assets.metaFiles
+        val metaFiles = service<AbyssusPluginCtx>().assets.metaFiles
         return addComponentGroup(project, target, kinds, metaFiles) { name, initial ->
             val added = SceneComponentEdits.addAsNewEntity(project, target, name, metaFiles, initial)
             reportRejection(project, added.result)

@@ -13,6 +13,9 @@ import com.intellij.openapi.command.undo.DocumentReference
 import com.intellij.openapi.command.undo.DocumentReferenceManager
 import com.intellij.openapi.command.undo.DocumentReferenceProvider
 import com.intellij.openapi.command.undo.UndoManager
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
+import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
+import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.EditorFactory
@@ -100,6 +103,11 @@ class SceneFileEditor(
     private var disposed = false
 
     private val viewSettings = project.service<SceneViewSettings>()
+    private val projectSettings = project.service<AbyssusProjectSettings>()
+
+    private fun antialiasingLevel(): AntialiasingLevel = ProjectLayout.abssFor(file)?.let {
+        projectSettings.getSettings(it).antialiasing
+    } ?: AntialiasingLevel.DEFAULT
 
     /** Reloads assets that change on disk or in an editor; null for a scene outside a project. */
     private val assetRefresh: AssetRefresh? = ProjectLayout.projectDirFor(file)?.let { dir ->
@@ -116,20 +124,24 @@ class SceneFileEditor(
     internal var statusText: String? = null
         private set
 
-    // Physics availability is handled separately; it is not a render input.
+    // Physics availability and canvas antialiasing are handled separately from render content.
     private var projectInputs: JsonNode? = projectInputs()
 
     private fun projectInputs(text: String? = null): JsonNode? = runCatchingKeepingCancellation {
         val abss = ProjectLayout.abssFor(file) ?: return@runCatchingKeepingCancellation null
         val root = SceneJson().parse(text ?: textOf(abss))
         AbyssusDocumentFormat().requireSupported(root, DocumentKind.PROJECT)
-        (root as ObjectNode).also { it.remove("physicsEnabled") }
+        (root as ObjectNode).also { it.remove(listOf("physicsEnabled", "sceneViewAntialiasing")) }
     }.getOrNull()
 
     private fun hasRenderChange(changed: VirtualFile, text: String? = null): Boolean =
         changed == file || projectInputs(text).let { it == null || it != projectInputs }
 
     init {
+        project.messageBus.connect(this).subscribe(ProjectSettingsListener.TOPIC,
+            ProjectSettingsListener { abss, settings ->
+                if (!disposed && abss == ProjectLayout.abssFor(file)) view?.setAntialiasing(settings.antialiasing)
+            })
         viewSettings.addShowFpsListener(this) { enabled -> view?.setFpsEnabled(enabled) }
         reload()
         assetRefresh?.let { refresh ->
@@ -236,6 +248,7 @@ class SceneFileEditor(
         }
         created.onFailure = { e -> ApplicationManager.getApplication().invokeLater { showGlFailure(e) } }
         created.setFpsEnabled(viewSettings.showFps)
+        created.setAntialiasing(antialiasingLevel())
         created.onPick = { entityId ->
             rayControls.selected(file, this, entityId)
             host.select(file, entityId)

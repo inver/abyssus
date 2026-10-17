@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.plugin.projectView
+package net.nevinsky.abyssus.plugin.projectView.asset
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import com.intellij.ide.projectView.ProjectView
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -17,22 +17,38 @@ import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.projectView.*
 
 private val LOG = Logger.getInstance("net.nevinsky.abyssus.projectView.AssetSelection")
+
+/** The only actions offered on the Assets folder row, in order. */
+internal val ASSETS_MENU_ACTION_IDS = listOf("Abyssus.Menu.ImportModel", "Abyssus.Menu.New")
 
 /** The project file (`.abss`) a selected Assets node belongs to, or null for any other node. */
 fun assetsNodeProjectFile(node: Any?): VirtualFile? {
     val entry = (node as? DtoEntryNode)?.value ?: return null
     if (entry.name != "assets" || entry.value !is List<*>) return null
-    return entry.source?.takeIf { it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
-        net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation {
-            net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat().validate(
-                net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(textOf(it)),
-                net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT,
-            ) == null
-        }.getOrDefault(false) }
+    return entry.source?.takeIf {
+        it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
+                runCatchingKeepingCancellation {
+                    AbyssusDocumentFormat().validate(
+                        SceneJson().parse(textOf(it)),
+                        DocumentKind.PROJECT,
+                    ) == null
+                }.getOrDefault(false)
+    }
+}
+
+fun showAssetsMenu(invoker: EyeTree, x: Int, y: Int) {
+    val actions = ActionManager.getInstance()
+    val group = DefaultActionGroup(ASSETS_MENU_ACTION_IDS.mapNotNull { actions.getAction(it) })
+    actions.createActionPopupMenu(ActionPlaces.PROJECT_VIEW_POPUP, group).component.show(invoker, x, y)
 }
 
 /**
@@ -72,7 +88,9 @@ fun selectAssetInAbyssusView(project: Project, abss: VirtualFile, assetName: Str
         val pane = view.getProjectViewPaneById(AbyssusProjectViewPane.ID) ?: return
         pane.updateFromRoot(true)
         val tree = pane.tree ?: return
-        TreeUtil.promiseSelect(tree, TreeVisitor { path -> assetVisitAction(abss, assetName, path.path.map(TreeUtil::getUserObject)) })
+        TreeUtil.promiseSelect(
+            tree,
+            TreeVisitor { path -> assetVisitAction(abss, assetName, path.path.map(TreeUtil::getUserObject)) })
     } catch (e: Throwable) {
         LOG.warn("Could not select asset $assetName in the Abyssus view", e)
     }

@@ -167,7 +167,7 @@ fun runHost(metaTree: com.fasterxml.jackson.databind.JsonNode, settings: HostSet
     // 2. The host owns the callbacks. Writes are synchronous; schedule slow work yourself and answer now.
     val session = UiBindingSession(collection) { write ->
         if (write.binding == "volume" && write.value is UiValue.Num) {
-            settings.volume = (write.value as UiValue.Num).value
+            settings.volume = write.value.value
             UiWriteResult.Accepted(UiValue.Num(settings.volume))
         } else UiWriteResult.Rejected("read-only")
     }

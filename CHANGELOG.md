@@ -5,6 +5,10 @@
 ## [Unreleased]
 
 ### Changed
+- Scene views use 4× multisample antialiasing by default. A project's Abyssus Properties offers Off, 2×, 4× and 8×,
+  saved in its `.abss` as `sceneViewAntialiasing` (4× omitted). Changes, text edits and Undo/Redo update that project's
+  open views without losing editing or Play state; unsupported GPU sample counts fall back to lower levels.
+  The IDE-wide settings page is removed, and scene and asset files remain unchanged.
 - `lib-core-editor` packages now use `net.nevinsky.abyssus.lib.core.editor`; consumers and extension providers using editor types must update imports and rebuild.
 - Physics ships in Abyssus and is enabled per native project with `physicsEnabled: true` in its `.abss`. Existing projects must enable Physics in project properties once.
 - Abyssus is now an independent libGDX scene editor using native format version 1. Projects, scenes and asset metadata
@@ -54,6 +58,8 @@
 - Template sample tool window, frame listener and project service
 
 ### Fixed
+- Saved water surfaces are read from the native `abyssus.waterSurfaces` extension again, restoring their scene rendering,
+  tree rows, properties and editing without rewriting scene files.
 - Ray Tracing stopped with "Minimum ray frame exceeds dimension, pixel, memory or ray bounds" in ordinary windows: the per-frame ray budget is now soft (the frame stays at half resolution with one sample) and only real allocation limits refuse a view.
 - Ray Tracing reported "Packaged Vulkan shader slice is missing" when the plugin was built without a shader compiler on `PATH`; the build now also finds `glslangValidator`/`glslc` under `VULKAN_SDK` and the Android NDK.
 - Ray Tracing refused real scenes ("RESOURCE_LIMIT: Scene exceeds instance, triangle or byte limits"): scenes can now have up to 1024 model parts on Metal and 32 blended surfaces, image textures stay 8-bit, and a scene that is still too big says exactly which limit it exceeded

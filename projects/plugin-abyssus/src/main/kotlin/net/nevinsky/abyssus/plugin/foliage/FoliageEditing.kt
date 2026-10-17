@@ -19,7 +19,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaintMode
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.dto.textOf
@@ -40,7 +40,7 @@ class FoliageEditing(private val project: Project, private val scope: CoroutineS
         val text = textOf(metadata)
         val projectText = textOf(abss)
         val projectDir = java.io.File(abss.parent.path)
-        val json = service<AbyssusCore>().json
+        val json = service<AbyssusPluginCtx>().json
         scope.launch {
             val source = withContext(Dispatchers.IO) {
                 runCatchingKeepingCancellation {

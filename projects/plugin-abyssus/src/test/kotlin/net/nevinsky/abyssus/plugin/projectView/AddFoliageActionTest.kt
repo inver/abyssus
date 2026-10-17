@@ -10,14 +10,13 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.document.SceneDocument
-import java.io.File
 
 class AddFoliageActionTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
-    private val metas get() = service<AbyssusCore>().assets.metaFiles
+    private val metas get() = service<AbyssusPluginCtx>().assets.metaFiles
     private fun fixture() = myFixture.copyDirectoryToProject("Foliage", "Foliage")
     private fun scene() = myFixture.findFileInTempDir("Foliage/scenes/Main Scene.scene")!!
     private fun doc() = FileDocumentManager.getInstance().getDocument(scene())!!

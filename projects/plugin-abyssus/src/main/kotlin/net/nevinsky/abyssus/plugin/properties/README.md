@@ -7,9 +7,9 @@ asset and component fields through `plugin/ui/FieldEditors.kt`, and a field's la
 the scene's native project has admitted `physicsEnabled: true`. Game components and disabled physics entries remain
 read-only JSON. Settings changes publish a component-editor refresh; each edit obtains the current editor again.
 
-Project roots show `PanelState.Project` through `ProjectDetailsView`: the localized Physics checkbox and settings
+Project roots show `PanelState.Project` through `ProjectDetailsView`: the localized Physics checkbox, Scene view antialiasing combo and settings
 problems come from `AbyssusProjectSettings`. Unsupported files disable editing. Document/settings events refresh the
-checkbox without saving or reselection, and the panel supplies a text editor for platform Undo/Redo of the `.abss`.
+controls without saving or reselection, and the panel supplies a text editor for platform Undo/Redo of the `.abss`.
 Scene properties retain the ray settings controls. The foliage section (`plugin/foliage`) offers collider controls on
 OBJECT layers; a change that touches only colliders (`FoliageColliderEdits.onlyColliders`) is applied by
 `FoliageController.applyColliders` through `editSceneJson` as one command with the document-save actions that keep Undo

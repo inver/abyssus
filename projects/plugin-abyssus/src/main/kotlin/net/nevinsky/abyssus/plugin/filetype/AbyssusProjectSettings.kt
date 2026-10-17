@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.plugin.filetype
 
 import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
@@ -93,6 +94,22 @@ class AbyssusProjectSettings(private val project: Project) : Disposable {
         }
     }
 
+    /** One native document edit; a default is omitted and unrelated project data stays intact. */
+    fun setAntialiasing(abss: VirtualFile, level: AntialiasingLevel): Boolean {
+        if (!getSettings(abss).supported) return false
+        return editSceneJson(project, abss, AbyssusBundle.message("commandSetProjectAntialiasing")) { root ->
+            if (root !is ObjectNode) return@editSceneJson false
+            val current = root.get("sceneViewAntialiasing")
+            if (current == null && level == AntialiasingLevel.DEFAULT) return@editSceneJson false
+            if (level == AntialiasingLevel.DEFAULT) root.remove("sceneViewAntialiasing")
+            else {
+                if (current?.isTextual == true && current.textValue() == level.name) return@editSceneJson false
+                root.put("sceneViewAntialiasing", level.name)
+            }
+            true
+        }
+    }
+
     private fun invalidate(abss: VirtualFile) {
         val previous = cache.remove(abss.path)?.settings
         val settings = getSettings(abss)
@@ -110,7 +127,7 @@ class AbyssusProjectSettings(private val project: Project) : Disposable {
         else if (reported.put(abss.path, result.problems) != result.problems) onEdt {
             NotificationGroupManager.getInstance().getNotificationGroup("Abyssus Project Settings")
                 .createNotification(AbyssusBundle.message("projectSettingsProblem", abss.name,
-                    if (result.supported) AbyssusBundle.message("physicsEnabledNotBoolean") else result.problems.joinToString()),
+                    if (result.supported) projectSettingsProblems(result) else result.problems.joinToString()),
                     NotificationType.WARNING).notify(project)
         }
         result
@@ -123,4 +140,13 @@ class AbyssusProjectSettings(private val project: Project) : Disposable {
     }
 
     override fun dispose() = Unit
+}
+
+/** Localized problems for each supported native project field. */
+fun projectSettingsProblems(settings: ProjectSettings): String = settings.problems.joinToString(" ") { key ->
+    when (key) {
+        "physicsEnabled" -> AbyssusBundle.message("physicsEnabledNotBoolean")
+        "sceneViewAntialiasing" -> AbyssusBundle.message("projectAntialiasingInvalid")
+        else -> key
+    }
 }

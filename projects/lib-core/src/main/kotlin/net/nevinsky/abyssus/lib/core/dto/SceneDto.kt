@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.dto
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.JsonNode
 import java.util.*
 
@@ -18,6 +19,9 @@ data class SceneDto(
     val fog: FogDto? = null,
     val skyboxEnabled: Boolean = false,
     val skyboxName: String? = null,
+    /** Raw native extension block; the editor displays its water surfaces without renaming the file key. */
+    @param:JsonProperty("abyssus")
+    @get:JsonProperty("abyssus")
     val water: JsonNode? = null,
     // parsing ecs graph should be done externally of deserializing scene
     val ecs: JsonNode? = null

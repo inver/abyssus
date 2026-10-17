@@ -26,7 +26,7 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
@@ -38,6 +38,8 @@ import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImportRequest
 import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearInspection
 import net.nevinsky.abyssus.plugin.terrain.message
 import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
+import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.asset.selectAssetInAbyssusView
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.io.File
@@ -78,7 +80,7 @@ open class ImportFlightGearAction : AbyssusTreeAction<VirtualFile>() {
 
 /** Every aircraft of [archiveFile] with what it would import; throws when the archive is unreadable. */
 fun inspectArchive(archiveFile: File, cancel: () -> Unit = {}): List<FlightGearInspection> {
-    val importer = service<AbyssusCore>().flightGearImport
+    val importer = service<AbyssusPluginCtx>().flightGearImport
     return FlightGearArchive(archiveFile).use { archive ->
         archive.aircraft().filter { it.modelPath != null }.map { importer.inspect(archive, it, cancel) }
     }
@@ -95,7 +97,7 @@ fun importFlightGear(
     request: FlightGearImportRequest,
     report: (String) -> Unit,
 ): AssetCommandResult? {
-    val core = service<AbyssusCore>()
+    val core = service<AbyssusPluginCtx>()
     projectRefusal(abss)?.let { report(AbyssusBundle.message("importFlightGearFailed", it)); return null }
     val projectDir = File(abss.parent.path)
     val stage = {
@@ -112,7 +114,13 @@ fun importFlightGear(
     }.getOrElse { report(AbyssusBundle.message("importFlightGearFailed", it.displayMessage())); return null }
     val result = AssetFileCommand(project, LocalAssetFileStore(projectDir)).execute(
         importTransaction(projectDir, staged),
-        onDone = { ApplicationManager.getApplication().invokeLater({ selectAssetInAbyssusView(project, abss, staged.folder) }, ModalityState.nonModal()) },
+        onDone = { ApplicationManager.getApplication().invokeLater({
+            selectAssetInAbyssusView(
+                project,
+                abss,
+                staged.folder
+            )
+        }, ModalityState.nonModal()) },
     )
     val problem = when (result) {
         AssetCommandResult.Done -> null

@@ -29,7 +29,7 @@ import net.nevinsky.abyssus.lib.core.editor.components.FieldKind
 import net.nevinsky.abyssus.lib.core.editor.components.FieldValue
 import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
 import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
-import net.nevinsky.abyssus.plugin.projectView.SceneComponentEdits
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
 import net.nevinsky.abyssus.plugin.projectView.reportRejection
 import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit

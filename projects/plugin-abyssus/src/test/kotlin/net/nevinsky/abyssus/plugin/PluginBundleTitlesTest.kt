@@ -29,7 +29,7 @@ class PluginBundleTitlesTest {
                 assertNotNull(group.getAttribute("id"), properties.getProperty(group.getAttribute("key")))
             }
             if (module.isEmpty()) {
-                assertEquals("Rename Scene...", properties.getProperty("action.Abyssus.RenameScene.text"))
+                assertEquals("Rename", properties.getProperty("action.Abyssus.RenameScene.text"))
                 assertEquals("New Terrain...", properties.getProperty("action.Abyssus.NewTerrain.text"))
                 assertEquals("Add Light", properties.getProperty("action.Abyssus.AddLight.text"))
                 assertEquals("Add Component...", properties.getProperty("action.Abyssus.AddComponent.text"))

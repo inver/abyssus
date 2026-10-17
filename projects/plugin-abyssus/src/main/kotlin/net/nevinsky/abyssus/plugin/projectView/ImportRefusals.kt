@@ -9,7 +9,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 
@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
  * FlightGear Aircraft and Import Model, which both refuse before any dialog opens; the file is only read.
  */
 internal fun projectRefusal(abss: VirtualFile): String? {
-    val core = service<AbyssusCore>()
+    val core = service<AbyssusPluginCtx>()
     return runCatchingKeepingCancellation {
         core.format.requireSupported(core.json.readObject(textOf(abss)), DocumentKind.PROJECT)
     }.exceptionOrNull()?.let { with(it) { documentDisplayMessage() } }

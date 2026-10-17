@@ -11,7 +11,7 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import java.awt.Component
 import java.awt.Container
 import java.io.File
@@ -29,7 +29,7 @@ class NewTerrainFormTest : BasePlatformTestCase() {
     }
 
     private fun form() = NewTerrainForm(
-        projectDir, service<AbyssusCore>().terrainGenerator,
+        projectDir, service<AbyssusPluginCtx>().terrainGenerator,
         background = { if (deferred) queue += it else it.run() }, ui = { it.run() },
     )
 

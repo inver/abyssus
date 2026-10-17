@@ -34,7 +34,7 @@ import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.plugin.assetfiles.AssetReferenceGuard
@@ -43,6 +43,8 @@ import net.nevinsky.abyssus.plugin.assetfiles.FileChange
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.asset.selectAssetInAbyssusView
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.io.File
 import javax.swing.JComponent
@@ -103,7 +105,7 @@ open class NewFoliageAction : AbyssusTreeAction<VirtualFile>() {
     /** Only offered where the project has a terrain to scatter on, so it is hidden elsewhere. */
     override fun targetOf(node: Any?): VirtualFile? = owningProject(node)?.takeIf { terrainsOf(it).isNotEmpty() }
 
-    private fun terrainsOf(abss: VirtualFile) = foliageTerrains(File(abss.parent.path), service<AbyssusCore>().json)
+    private fun terrainsOf(abss: VirtualFile) = foliageTerrains(File(abss.parent.path), service<AbyssusPluginCtx>().json)
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
         val abss = target
@@ -121,7 +123,7 @@ internal class NewFoliageDialog(
     private val projectDir: File,
     private val terrains: List<String>,
 ) : DialogWrapper(project) {
-    private val writer = service<AbyssusCore>().newFoliages
+    private val writer = service<AbyssusPluginCtx>().newFoliages
     val terrainCombo = ComboBox(terrains.toTypedArray())
     val nameField = JBTextField(foliageFolderName(terrains.first()))
     val resolutionField = JBTextField(FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT.toString(), 8)
@@ -190,7 +192,7 @@ fun createFoliage(
         )
     },
 ): AssetCommandResult? {
-    val core = service<AbyssusCore>()
+    val core = service<AbyssusPluginCtx>()
     val projectDir = File(abss.parent.path)
     val accepted = runCatchingKeepingCancellation {
         core.documents.format.requireSupported(core.documents.json.readObject(textOf(abss)), DocumentKind.PROJECT)

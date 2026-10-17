@@ -42,6 +42,7 @@ import java.awt.image.BufferedImage
 import java.io.File
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 
 /** What the panel shows. */
 sealed interface PanelState {

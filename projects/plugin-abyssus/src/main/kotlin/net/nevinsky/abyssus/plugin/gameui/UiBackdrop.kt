@@ -8,7 +8,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.SceneReader
 import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
 import net.nevinsky.abyssus.plugin.sceneview.SceneParamsSource
@@ -27,7 +27,7 @@ interface UiBackdrop {
  * Scene view does and runs no simulation, no Play and no game module. Created and disposed on the GL thread.
  */
 class SceneBackdrop(project: Project, sceneFile: VirtualFile) : UiBackdrop {
-    private val core = service<AbyssusCore>()
+    private val core = service<AbyssusPluginCtx>()
     private val renderer = SceneRenderer(ViewAssets(core.assets.loading), core.assets.sceneShaders, project.service<FoliageDrafts>(), log = core.loggers.getLogger("uibackdrop"))
     private val orbit: OrbitCamera
 
