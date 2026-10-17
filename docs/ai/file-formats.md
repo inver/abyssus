@@ -559,7 +559,7 @@ Native version 1 scenes may contain a root `rayTracing` object. Omitted fields u
 | Field | Default | Accepted integers |
 |---|---:|---:|
 | `targetSamplesPerPixel` | 256 | 1–4096 |
-| `maxRaysPerFrame` | 2097152 | 1–67108864 |
+| `maxRaysPerFrame` | 33554432 | 1–268435456 |
 | `maxReflectionBounces` | 1 | 0–16 |
 | `maxRefractionBounces` | 0 | 0–16 |
 | `maxInstances` | 4096 | 1–4096 |

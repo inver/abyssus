@@ -707,7 +707,8 @@ class SceneViewPanel internal constructor(
 
         fun glData() = GLData().apply {
             majorVersion = 3
-            minorVersion = 2
+            // instanced foliage shadows call glVertexAttribDivisor, which is core only from 3.3; a context made as exactly 3.2 aborts the JVM on it
+            minorVersion = 3
             profile = GLData.Profile.CORE
             forwardCompatible = true
             depthSize = 24

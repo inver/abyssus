@@ -115,15 +115,15 @@ internal class RayFramePresenter : Disposable {
 
     private fun upload(frame: RayFrame) {
         val resized = width != frame.width || height != frame.height
-        fun texture(unit: Int, handle: Int, format: Int, channels: Int, size: Int, fill: (java.nio.FloatBuffer) -> Unit) {
+        fun texture(unit: Int, handle: Int, format: Int, channels: Int, size: Int, filter: Int, fill: (java.nio.FloatBuffer) -> Unit) {
             glActiveTexture(unit)
             glBindTexture(GL_TEXTURE_2D, handle)
             val buffer = MemoryUtil.memAllocFloat(size)
             try {
                 fill(buffer); buffer.flip()
                 if (resized) {
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter)
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter)
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
                     glTexImage2D(GL_TEXTURE_2D, 0, format, frame.width, frame.height, 0, channels, GL_FLOAT, buffer)
@@ -132,8 +132,8 @@ internal class RayFramePresenter : Disposable {
                 }
             } finally { MemoryUtil.memFree(buffer) }
         }
-        texture(GL_TEXTURE0, color, GL_RGBA32F, GL_RGBA, frame.width * frame.height * 4, frame::copyColorTo)
-        texture(GL_TEXTURE1, depth, GL_R32F, GL_RED, frame.width * frame.height, frame::copyDepthTo)
+        texture(GL_TEXTURE0, color, GL_RGBA32F, GL_RGBA, frame.width * frame.height * 4, GL_LINEAR, frame::copyColorTo) // a frame below view size is smoothed when stretched
+        texture(GL_TEXTURE1, depth, GL_R32F, GL_RED, frame.width * frame.height, GL_NEAREST, frame::copyDepthTo) // depth is data: never blended
         width = frame.width
         height = frame.height
     }

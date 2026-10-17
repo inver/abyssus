@@ -6,11 +6,12 @@ package net.nevinsky.abyssus.lib.core.editor.document
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.raytracing.MAX_RAYS_PER_FRAME
 
 /** Saved scene preferences; runtime enable state is deliberately separate. */
 data class SceneRaySettings(
     val targetSamplesPerPixel: Int = 256,
-    val maxRaysPerFrame: Int = 2097152,
+    val maxRaysPerFrame: Int = 33554432,
     val maxReflectionBounces: Int = 1,
     val maxRefractionBounces: Int = 0,
     /** Most model parts and terrains one ray view may hold; the backends cap it at 4096. */
@@ -18,14 +19,14 @@ data class SceneRaySettings(
 ) {
     init {
         require(maxInstances in 1..4096)
-        require(targetSamplesPerPixel in 1..4096 && maxRaysPerFrame in 1..67108864)
+        require(targetSamplesPerPixel in 1..4096 && maxRaysPerFrame in 1..MAX_RAYS_PER_FRAME)
         require(maxReflectionBounces in 0..16 && maxRefractionBounces in 0..16)
     }
 }
 
-enum class SceneRayField(val key: String, val default: Int, val minimum: Int, val maximum: Int) {
+enum class SceneRayField(val key: String, val default: Int, val minimum: Int, val maximum: Long) {
     SAMPLES("targetSamplesPerPixel", 256, 1, 4096),
-    RAYS("maxRaysPerFrame", 2097152, 1, 67108864),
+    RAYS("maxRaysPerFrame", 33554432, 1, MAX_RAYS_PER_FRAME),
     REFLECTIONS("maxReflectionBounces", 1, 0, 16),
     REFRACTIONS("maxRefractionBounces", 0, 0, 16),
     INSTANCES("maxInstances", 4096, 1, 4096),

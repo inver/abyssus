@@ -221,7 +221,7 @@ or project file access in this scheduler.
 Stable rendering raises resolution from recent worker timing and increases samples.
 Defaults cap dimensions at 4096, pixels at 4,194,304, retained frame/presentation
 payload at 128 MiB (80 bytes/pixel), samples at 8 per batch and 256 per accumulation
-epoch, and worst-case ray count at 2,097,152 per batch. The adapter supplies primary,
+epoch, and worst-case ray count at 33,554,432 per batch. The adapter supplies primary,
 visibility and reflection ray cost per sample; scene/native allocations are budgeted
 separately. All limits, including the intersection-query budget, are hard. If one sample at the half-resolution
 floor exceeds the query, dimension, pixel or memory bounds, the policy throws `RayQualityLimitException` for explicit

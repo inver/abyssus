@@ -53,14 +53,20 @@ class RayQualityPolicyTest {
         val policy = RayQualityPolicy()
         repeat(20) { policy.observe(1_000_000L) }
         val plan = policy.choose(1280, 720, 20, raysPerSample = 8)
-        assertTrue(plan.width.toLong() * plan.height * plan.samples * 8 <= 2_097_152)
+        assertTrue(plan.width.toLong() * plan.height * plan.samples * 8 <= policy.limits.maxRaysPerFrame)
     }
 
+    @Test fun aBudgetTooSmallForTheMinimumScaleShrinksTheFrameInsteadOfStopping() {
+        val policy = RayQualityPolicy()
+        val plan = policy.choose(1761, 1201, 20, raysPerSample = 96, maxRaysPerFrame = 33_554_432)
+        assertTrue(plan.width < 880 && plan.width >= (1761 * policy.limits.budgetFloorScale).toInt())
+        assertTrue(plan.width.toLong() * plan.height * plan.samples * 96 <= 33_554_432)
+    }
     @Test fun anOverBudgetRayCostExplainsFallbackAtTheMinimumFrame() {
         val policy = RayQualityPolicy()
         for (stable in listOf(0,20)) {
-            val error=assertThrows(RayQualityLimitException::class.java) { policy.choose(1920,1080,stable,raysPerSample=14) }
-            assertTrue(error.message!!.contains("ray budget"))
+            val error=assertThrows(RayQualityLimitException::class.java) { policy.choose(2560,1440,stable,raysPerSample=300) }
+            assertTrue(error.message, error.message!!.contains("ray budget") && error.message!!.contains("512x288 pixels") && error.message!!.contains("needs at least 44236800"))
         }
         assertThrows(RayQualityLimitException::class.java) { RayQualityPolicy(RayQualityLimits(maxDimension=400)).choose(1920,1080,0) }
     }

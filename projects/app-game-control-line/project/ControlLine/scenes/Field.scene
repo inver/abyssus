@@ -6383,5 +6383,11 @@
         "ParentComponent"
       ]
     }
+  },
+  "rayTracing": {
+    "maxRaysPerFrame": 268435456,
+    "targetSamplesPerPixel": 4096,
+    "maxReflectionBounces": 4,
+    "maxRefractionBounces": 1
   }
 }

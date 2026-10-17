@@ -22,9 +22,11 @@ interface RayRenderRequest {
     fun withRenderPlan(width: Int, height: Int, samples: Int, sampleOffset: Int, accumulationEpoch: Long): RayRenderRequest
 }
 
+
+const val MAX_RAYS_PER_FRAME: Long = 268435456
 /** Saved limits carried by the mailbox; adaptive policy and native work stay on the serial worker. */
-data class RayRenderSettings(val targetSamples: Int = 256, val maxRaysPerFrame: Long = 2097152) {
-    init { require(targetSamples in 1..4096 && maxRaysPerFrame in 1..67108864) }
+data class RayRenderSettings(val targetSamples: Int = 256, val maxRaysPerFrame: Long = 33554432) {
+    init { require(targetSamples in 1..4096 && maxRaysPerFrame in 1..MAX_RAYS_PER_FRAME) }
 }
 
 /** Content revision covers transforms/lights/materials/environment/geometry beyond camera/pose keys.
