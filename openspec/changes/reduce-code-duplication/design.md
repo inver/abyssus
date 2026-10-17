@@ -42,21 +42,25 @@ Three homes, chosen by dependency direction, not convenience:
 
 | Kind of helper | Home | Why |
 |---|---|---|
-| Editor logic later used by the editor or the plugin (number text, angle wrap, azimuth, atomic JSON store, asset-meta builder, SHA-256 hex) | `lib-core-editor` (`util`/`document`) | GL-free and Swing-free, so it is unit-testable headless; the plugin already depends on it |
-| Runtime rendering primitives and the light budget (shadow helpers, GL target renderer, light packing) | `lib-render` | Both the plugin and the game already depend on it; `lib-core` must not depend back on it |
+| Editor logic used by the editor or the plugin only (number text, `AssetMetaDocument` and its per-kind DTOs, typed read seam) | `lib-core-editor` (`util`/`document`) | GL-free and Swing-free, so it is unit-testable headless; the plugin already depends on it |
+| A helper that `lib-core` or a shipped game also needs (SHA-256 hex, shared GL constants, the shader-budget contract) | `lib-core` | Lowest module every consumer reaches; `lib-core-editor`, `lib-render` and the plugin all depend on it, and the game must not reach `lib-core-editor` (`checkShippedClasspath`) |
+| A helper only the Control Line game needs (angle wrap/azimuth, atomic JSON store) | `app-game-control-line` | Every copy is in the game; no shared module is needed or allowed |
+| Runtime rendering primitives (shadow helpers, GL target renderer, light packing) | `lib-render` | Both the plugin and the game already depend on it; `lib-core` must not depend back on it |
 | Values that describe a shader ABI shared with `lib-gdx` (`ShadowLightKind`, face keys) | `lib-gdx` (the enum/attribute that already declares them) | The enum already lives there; the plugin imports it, the game does not need a second copy |
 
 Helpers that pure math or JSON needs and `lib-core` owns stay in `lib-core`. Nothing is moved "up" into the plugin.
 
-### D2. The validated-tree read seam
+### D2. The typed read seam
 
-The ~15 plugin sites do `SceneJson().parse(text).also { AbyssusDocumentFormat().requireSupported(it, kind) }`. They are
-not interchangeable with `DocumentParsing.parse` (which binds `SceneDto`) and must keep the tree for number text and
-key order. So add one small seam, alongside `DocumentParsing`, that does exactly parse + validate and returns the
-`JsonNode` (and the existing `runCatchingKeepingCancellation { … }.getOrNull()` swallow form). It reuses
-`SceneJson`/`NativeJsonTree` and `AbyssusDocumentFormat`; it does **not** introduce a parser and does **not** replace
-`DocumentParsing` for the DTO path. Alternative rejected: redirecting all sites into `DocumentParsing` - it would lose
-the tree and change write behavior.
+The ~15 plugin sites do `SceneJson().parse(text).also { AbyssusDocumentFormat().requireSupported(it, kind) }` and then
+read a few fields off the `JsonNode`. Almost none of them need a tree: most only check the header, the rest read a
+handful of known fields. So the seam is typed, alongside `DocumentParsing`: `requireSupported(text, kind)` for header
+checks, and `project`/`assetMeta`/`scene` returning the existing DTOs (`ProjectDto`, `AssetMeta`, `SceneDto`). The
+`JsonNode` is private to `DocumentParsing` and `AbyssusDocumentFormat`, which validate the tree (they must: the legacy
+`ecs.componentIdentifiers` and `renderable.class` checks look at arbitrary keys) and then bind. It reuses
+`SceneJson`/`NativeJsonTree` and does **not** introduce a parser. Header strictness is unchanged: `formatVersion` must be
+an integral `1`, so `1.0`, `"1"` and `1e0` are refused exactly as today (pinned by a table test; a lenient DTO int
+coercion would silently accept them).
 
 ### D3. Loaders: Template Method plus one Strategy
 
@@ -69,8 +73,10 @@ and `AssetStorage`'s contract do not change.
 ### D4. One shader-budget contract
 
 The array sizes and texture-unit numbers are a contract between the bundled GLSL and the Kotlin that binds it. Define
-them once in the module that owns the shader contract (`lib-render` for the light profile; `lib-gdx` for the atlas
-attribute) and derive `WaterDrawable`, `TerrainMesh`, `RenderLights` and `SceneLighting` limits from it.
+them once in `lib-core`. `WaterDrawable` and `TerrainMesh` live there and cannot import `lib-render` (which depends on
+`lib-core`), and `lib-core-editor`'s `SceneLighting` does not depend on `lib-render` either, so `lib-render` cannot own the
+contract; `lib-render`'s `LightProfile`, `TerrainPass`, and `SceneLighting` derive from the `lib-core` definition instead.
+`SceneRenderer` also sets `numSpotLights = MAX_POINT`; it gets its own spot constant (equal today, so no rendered change).
 
 Per-kind maxima and array capacity are different quantities. `TerrainPass.MAX` is the capacity of each of the three
 uploaded light arrays (the editor fragment shader declares all three as `[5]`), so it is the maximum of the profile's
@@ -150,3 +156,28 @@ reverting a step needs no migration.
 
 - Whether the `AssetStorage` split can take the off-GL executor factory out without touching the reflection-based
   creation on the current JDK - resolved when the split is implemented, and it does not change the task breakdown.
+
+### D9. DTO mapping in, DTO mapping out; the tree only where it is the point
+
+Rule: code that **creates** a native document or **reads known fields** from one maps through a DTO with
+`SceneJson`'s mapper (declaration order = key order; `null`s kept; no HTML escaping) instead of building or walking
+`ObjectNode`/`JsonNode`. That covers the new-asset writers (terrain, foliage, UI, model, FlightGear) through one generic
+`AssetMetaDocument<A>` with a typed `additional` per kind, and the import records (`stated`, `chosen`, `skipped`,
+`approximated`, `source`) through named record DTOs instead of `linkedMapOf`.
+
+The tree stays in the places whose job is losslessness, and only there (these are the allowlist of the guard test):
+
+- the edit paths behind `editSceneJson`: `DocumentTextEditor`, `ComponentEditor`, `AssetMetaEditor`, `SceneDocument`,
+  `SceneEntityTree` and the transform writers (a DTO round trip would reformat numbers, reorder keys and drop unknown
+  extension data, which the Hard rules forbid);
+- `WeatherPresetDraft`, which copies a source preset's number text and unknown keys into the new one;
+- generic scans over arbitrary payloads: `AssetReferenceGuard` (finds `assetName`/`shaderKey` anywhere) and
+  `PanelState`'s `rayRoot`, which is an edit target;
+- `UiCollectionDecoder` input (`UiAssetCommands.uiNavigationBlocker`), until the decoder takes a DTO;
+- `AbyssusDocumentFormat` itself.
+
+Byte-identical output is the acceptance test for every writer moved to a DTO. Where a DTO cannot reproduce today's
+text exactly (explicit `null` splat fields, float text like `0.5`), the DTO carries the annotation or a small
+serializer that does, never a tree fallback. Game-side tools that hand-write meta JSON (`app-game-control-line/tools`)
+are not touched here: the game must not depend on `lib-core-editor`, so they stay a follow-up if a shared DTO ever moves
+into `lib-core`.

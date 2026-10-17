@@ -5,10 +5,10 @@
 The `lib-render` and `lib-core-editor` extractions landed, but they left near-copies behind: the plugin re-implements
 shadow math, depth submission and GL state handling that now lives in `lib-render`, `lib-core`'s loaders repeat the
 same `prepare`/`discard` boilerplate seven and ten times, and the same small helpers (SHA-256 hex, native asset-meta
-maps, validated tree reads, number formatting, angle wrap) are written again wherever they are needed. Several classes
+maps, document header and field reads, number formatting, angle wrap) are written again wherever they are needed. Several classes
 have also grown past a single responsibility (`AssetStorage` 1094 lines, `SceneRenderer` 967, `SceneViewPanel` 725,
 `PhysicsWorld` 700). Each copy is a place a future change can miss, and the shader light/unit budgets are already
-declared independently in three modules, where they can silently drift and change rendering.
+declared independently in four modules (`lib-core`, `lib-render`, `lib-core-editor` and the plugin), where they can silently drift and change rendering.
 
 ## What Changes
 
@@ -19,12 +19,13 @@ declared independently in three modules, where they can silently drift and chang
   `ShadowResources` and `WaterResources`.
 - **R2. Collapse lib-core loader boilerplate.** One Template-Method loader base implements `prepare` and provides a
   default `discard`; the two foliage loaders become one loader parameterized by a read policy (Strategy).
-- **R3. One home for the shared small helpers.** SHA-256 hex, native asset-`meta.json` construction, validated-tree
-  reads, number-text formatting, angle wrap/azimuth, the white/pixel texture factory, shader face keys and the
+- **R3. One home for the shared small helpers.** SHA-256 hex, native asset-`meta.json` construction through one typed
+  `AssetMetaDocument` DTO (no hand-built `ObjectNode` trees), typed document reads (DTO in, DTO out; the tree only on
+  the lossless edit paths, design D9), number-text formatting, angle wrap/azimuth, the white/pixel texture factory, shader face keys and the
   duplicated GL constants move to a single definition and are imported everywhere.
 - **R4. One shader-budget contract.** The directional/point/spot and texture-unit budgets that `TerrainPass`,
-  `WaterDrawable`, `TerrainMesh`, `RenderLights` and `SceneLighting` currently declare independently come from one
-  contract, so they cannot drift. Any real mismatch found is fixed deliberately with GL parity evidence.
+  `WaterDrawable`, `TerrainMesh`, `LightProfile` and `SceneLighting` currently declare independently come from one
+  contract defined in `lib-core`, so they cannot drift. Any real mismatch found is fixed deliberately with GL parity evidence.
 - **R5. Split the overloaded classes.** `AssetStorage`, `SceneRenderer`, `SceneViewPanel`, `PhysicsWorld`,
   `SceneInteraction`, `FlightGearImport`, and the `UiCanvasView`/`UiEditorController` pair lose their secondary
   responsibilities to constructor-wired collaborators; behavior and public APIs are preserved.
@@ -58,19 +59,20 @@ existing tests and GL parity checks.
 Native documents: this change reads and writes **no** new or changed `.abss`, `.scene` or `meta.json` fields. It adds
 no format version, no migration and no write path: existing edits still go through `editSceneJson`, and document
 validation stays exactly `AbyssusDocumentFormat` with `format: "abyssus"` and integral `formatVersion: 1`. Where a
-helper is shared, it preserves the current number text, key order, omitted defaults and unknown-payload rules.
+helper is shared, it preserves the current number text, key order, omitted defaults and unknown-payload rules. Moving
+writers from `ObjectNode` building to DTO mapping must leave every produced file byte-identical.
 
 ## Impact
 
 - `lib-core`: the loader hierarchy and `AssetStorage`; the shared helpers (SHA-256, blank texture, GL state,
   framebuffer checks); the shader-budget contract; the `GeometryUtils`/`SceneEnvironment` removals.
-- `lib-core-editor`: shared text/JSON helpers, the angle/azimuth helpers, the atomic JSON store, and the
+- `lib-core-editor`: shared number-text and asset-meta helpers, the typed read seam, and the
   `FlightGearImport`/`SceneInteraction` splits.
 - `lib-render` and `lib-gdx`: the shadow helpers and the `ShadowLightKind` enum become the single source the plugin
   and the game both use.
 - `plugin-abyssus`: `sceneview` (shadows, water), `projectView`, `properties`, `gameui`, `foliage`, `dto`; the
   `AssetStorage` collaborators, the `service<…>` call sites, and the action/selection boilerplate.
-- `app-game-control-line` / `lib-physics`: the `PhysicsWorld` split and the Jolt sub-shape builder.
+- `app-game-control-line` / `lib-physics`: the game-local angle/azimuth helper and atomic JSON store, the `PhysicsWorld` split and the Jolt sub-shape builder.
 - Docs: `docs/ai/architecture.md`, the affected package/module `README.md`s and `AGENTS.md` where a class moves or a
   helper gets a new home; `docs/reviews/design-review-2026-10.md` gains a status line for the findings this closes.
 - Verification: existing unit tests are the acceptance gate, plus `-Dabyssus.glTests=true` for the shadow/water/terrain
