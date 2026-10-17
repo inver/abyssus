@@ -89,8 +89,8 @@ class ScreenshotComparatorTest {
         val verdict = artifacts.check("size", baseline, image(9, 6), tmp.root.toPath().resolve("reports")) as Verdict.Failed
         assertTrue(verdict.reason, "size mismatch" in verdict.reason)
         assertTrue(Files.exists(verdict.reportDir!!.resolve("actual.png")))
-        assertTrue(Files.exists(verdict.reportDir!!.resolve("expected.png")))
-        assertTrue(!Files.exists(verdict.reportDir!!.resolve("diff.png")))
+        assertTrue(Files.exists(verdict.reportDir.resolve("expected.png")))
+        assertTrue(!Files.exists(verdict.reportDir.resolve("diff.png")))
     }
 
     @Test

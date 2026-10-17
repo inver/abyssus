@@ -161,9 +161,10 @@ val verifyMetalPackaging = packagingTest("verifyMetalPackaging", "*MetalNativePa
 
 // SPIR-V present and valid, no shaderc, natives for every target, MoltenVK only for macOS, and "runtime not found"
 // (not an exception) without a loader. Add -Dabyssus.vulkanTests=true on a machine with a Vulkan device to also render.
-val verifyVulkanPackaging = packagingTest("verifyVulkanPackaging", "*VulkanNativePackagingTest", "*VulkanRuntimeMissingTest") {
+val verifyVulkanPackaging = packagingTest("verifyVulkanPackaging", "*VulkanNativePackagingTest", "*VulkanRuntimeMissingTest", "*VulkanExplicitInitTest") {
     forkEvery = 1 // LWJGL's loader choice is process-global
     systemProperty("abyssus.vulkanMissingLoaderTest", "true")
+    systemProperty("org.lwjgl.vulkan.explicitInit", "true")
     System.getProperty("abyssus.vulkanTests")?.let { systemProperty("abyssus.vulkanTests", it) }
 }
 

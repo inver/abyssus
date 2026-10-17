@@ -333,6 +333,13 @@ On a machine without a GPU, Mesa's software driver (lavapipe, `mesa-vulkan-drive
 runs the whole suite: `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json`. The first scene frame on a cold lavapipe
 compiles the shader on the CPU and can exceed the kit's 5 second wait once; rerun it.
 
+**Vulkan runtime evidence on this host.** The runtime-loading path (`VulkanDevice.loadVulkanLibrary`, now state-aware so
+explicit-init hosts load normally) was exercised through lavapipe in three full runs of the conformance suite against
+the closed-glass case: one run stalled past the kit's completion bound (a glass stall, recovered to raster per the
+scheduler's frame-completion bound) and two runs completed cleanly. The Khronos validation layer is not installed on
+this host, so validation-layer behavior could not be evidenced here; `VulkanRayBackendTest` with
+`-Dabyssus.raytracing.validation=true` covers it where a layer is available.
+
 ## Saved quality limits and query accounting
 
 `RayRenderInput` can carry a frozen `RayRenderSettings` target (1–4096 camera samples per pixel) and frame budget

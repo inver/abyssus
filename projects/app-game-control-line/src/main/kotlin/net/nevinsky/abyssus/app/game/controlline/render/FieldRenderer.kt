@@ -4,48 +4,47 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.render
 
-import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.graphics.*
+import com.badlogic.gdx.graphics.Camera
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.g3d.Model
+import com.badlogic.gdx.graphics.g3d.ModelBatch
+import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
+import com.badlogic.gdx.graphics.g3d.utils.AnimationController
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
-import com.badlogic.gdx.graphics.g3d.utils.AnimationController
 import net.nevinsky.abyssus.lib.core.BaseCtx
-import com.badlogic.gdx.graphics.g3d.ModelBatch
-import com.badlogic.gdx.graphics.g3d.ModelInstance
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDrawable
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDrawable
+import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import com.badlogic.gdx.graphics.g3d.Model
 import net.nevinsky.abyssus.lib.core.scene.SceneEnvironment
 import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
 import net.nevinsky.abyssus.lib.render.frame.FrameInputs
 import net.nevinsky.abyssus.lib.render.frame.RenderFog
 import net.nevinsky.abyssus.lib.render.light.DirectionalInput
 import net.nevinsky.abyssus.lib.render.light.RenderLights
-import net.nevinsky.abyssus.lib.render.terrain.SunShadowInput
-import net.nevinsky.abyssus.lib.render.terrain.TerrainDraw
-import net.nevinsky.abyssus.lib.render.terrain.TerrainLighting
-import net.nevinsky.abyssus.lib.render.terrain.TerrainPass
-import net.nevinsky.abyssus.lib.render.terrain.TerrainVariant
+import net.nevinsky.abyssus.lib.render.terrain.*
 import org.slf4j.Logger
 import java.io.File
 import java.util.concurrent.Executor
 
 /**
  * The one asset storage of the project in [projectDir], wired by constructors like the plugin does (both take the
- * [StandardAssetLoaders] table): a composite over every kind of asset, prepared on [executor] and built (and owned) by the storage on the GL thread.
+ * [StandardAssetLoaders] table): a composite over every kind of asset, prepared on [executor] and built (and owned) by
+ * the storage on the GL thread.
  */
 fun fieldAssets(
     projectDir: File,
@@ -59,12 +58,28 @@ fun fieldAssets(
     return AssetStorage(log, executor, metas::loadBaseMeta).also { it.registerAll(loaders.byType) }
 }
 
-/** A segment to draw: a control line or a debrief track from [from] to [to], in [color], [width] pixels wide (drivers may cap it at 1). */
+/**
+ *  A segment to draw: a control line or a debrief track from [from] to [to], in [color], [width] pixels wide
+ * (drivers may cap it at 1).
+ */
 class LineSegment(val from: Vector3, val to: Vector3, val color: Color, val width: Float = 1f)
+
+/** The game's field view: draw a frame, resize with the window, and release GL resources. Raster and ray modes both
+ * present through this interface; `Main` picks the implementation at launch (design decision 7). */
+interface FieldView {
+    fun draw(
+        field: FieldScene, camera: Camera, lines: List<LineSegment> = emptyList(), hidden: Entity? = null,
+        clips: Map<Entity, String> = emptyMap(), seconds: Float = 0f
+    )
+
+    fun resize(width: Float, height: Float)
+    fun dispose()
+}
 
 /**
  * The cloud technique the game draws its sky with. The asset's own (shells: eight noise layers per band at the full
- * window resolution, every frame) keeps a 3.2 core context under 40 frames a second; layered clouds cost almost nothing.
+ * window resolution, every frame) keeps a 3.2 core context under 40 frames a second; layered clouds cost almost
+ * nothing.
  */
 private val GAME_CLOUDS = CloudTechnique.LAYERED
 
@@ -74,7 +89,7 @@ private val GAME_CLOUDS = CloudTechnique.LAYERED
  * terrain onto both ([FieldShadows]), aimed at the pilot. Assets load through `core`'s [AssetStorage] ([fieldAssets]):
  * prepared off the GL thread, built here. GL thread only.
  */
-class FieldRenderer(private val ctx: BaseCtx) : Disposable {
+class FieldRenderer(private val ctx: BaseCtx) : FieldView, Disposable {
     private val modelShaders = ModelShaderProvider()
     private val batch = ModelBatch(modelShaders)
     private val terrainPass = TerrainPass(ctx.shaderStorage, TerrainVariant.GAME_SINGLE_SUN)
@@ -107,9 +122,9 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
      * entity in [clips] plays that clip of its model once, from when it first appears there, and then holds its last
      * frame; [seconds] is the frame's time. A model without the clip is drawn as it is.
      */
-    fun draw(
-        field: FieldScene, camera: Camera, lines: List<LineSegment> = emptyList(), hidden: Entity? = null,
-        clips: Map<Entity, String> = emptyMap(), seconds: Float = 0f,
+    override fun draw(
+        field: FieldScene, camera: Camera, lines: List<LineSegment>, hidden: Entity?,
+        clips: Map<Entity, String>, seconds: Float,
     ) {
         skyTime += seconds
         if (scene !== field) {
@@ -152,7 +167,10 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
         val foliage = foliageOf(field)
         shadows.aim(sun, field.sunDirection, field.pilot?.let { field.position(it).localPosition } ?: Vector3.Zero)
         val light = shadows.casterCamera()
-        for ((entity, placement) in foliage) placement.drawable.updateCasters(light, field.position(entity).getTransform())
+        for ((entity, placement) in foliage) placement.drawable.updateCasters(
+            light,
+            field.position(entity).getTransform()
+        )
         shadows.render(drawn.map { it.second }, terrains) { out, pool ->
             for (placement in foliage.values) placement.drawable.getCasterRenderables(out, pool)
         }
@@ -162,7 +180,13 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
         Gdx.gl.glDepthFunc(GL20.GL_LEQUAL)
         Gdx.gl.glEnable(GL20.GL_CULL_FACE)
         Gdx.gl.glCullFace(GL20.GL_BACK)
-        val sunInput = DirectionalInput("sun", Vector3(field.sunDirection).scl(-1f), field.sunColor.r, field.sunColor.g, field.sunColor.b)
+        val sunInput = DirectionalInput(
+            "sun",
+            Vector3(field.sunDirection).scl(-1f),
+            field.sunColor.r,
+            field.sunColor.g,
+            field.sunColor.b
+        )
         val frame = FrameInputs(
             camera.combined, camera.position, floatArrayOf(field.ambient.r, field.ambient.g, field.ambient.b),
             RenderFog(fog.r, fog.g, fog.b, if (field.fogColor != null) field.fogDensity else 0f, field.fogGradient),
@@ -219,7 +243,10 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
             val bound = shared.foliage.meta.terrain
             if (bound != entry.terrain) {
                 if (reported.add("${entry.entityId}:${entry.foliage}")) {
-                    ctx.log.warn("Foliage '${entry.foliage}' is bound to terrain '$bound', but entity ${entry.entityId} draws '${entry.terrain}': nothing drawn for it")
+                    ctx.log.warn(
+                        "Foliage '${entry.foliage}' is bound to terrain '$bound',"
+                                + " but entity ${entry.entityId} draws '${entry.terrain}': nothing drawn for it"
+                    )
                 }
                 placements.remove(entry.entity)?.drawable?.dispose()
                 continue
@@ -227,11 +254,17 @@ class FieldRenderer(private val ctx: BaseCtx) : Disposable {
             val current = placements[entry.entity]
             val placement = if (current != null && current.shared === shared) current else {
                 current?.drawable?.dispose()
-                Placement(shared, FoliageDrawable(shared.foliage, ctx.assetStorage)).also { placements[entry.entity] = it }
+                Placement(shared, FoliageDrawable(shared.foliage, ctx.assetStorage)).also {
+                    placements[entry.entity] = it
+                }
             }
             shown[entry.entity] = placement
         }
         return shown
+    }
+
+    override fun resize(width: Float, height: Float) {
+        // The renderer draws from the camera passed to [draw], so a window resize needs no stored viewport state.
     }
 
     /** The placement drawables of the last [draw], by entity: for tests. */

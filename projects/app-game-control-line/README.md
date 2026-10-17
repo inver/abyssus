@@ -18,6 +18,34 @@ Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json` a
 `<user-home>/.abyssus-control-line/f2b-scores.json`; a file that cannot be read is renamed to `scores.json.bad` or
 `f2b-scores.json.bad`.
 
+## Ray mode (development aid)
+
+The game supports an opt-in ray-traced field view, chosen at launch with the `controlLine.fieldView=ray` system
+property:
+
+```
+./gradlew :app-game-control-line:runRay
+```
+
+The `runRay` task runs the game with the `ray` source set (`lib-raytracing` + `lib-core-editor`) and `controlLine.fieldView=ray`.
+Raster remains the default and the only shipped path: `checkShippedClasspath` continues to pass, and `installDist` /
+`exportPlay` contain neither the ray-tracing modules nor any ray source-set class.
+
+In ray mode the field image is produced by the ray tracer and shows the field's terrain, the field scene's models
+(moving planes follow their simulation transforms), sunlight, sky and fog through the game's camera view. Input,
+physics, flight, scoring and the HUD, menus and screens behave as in raster mode and stay raster-drawn.
+
+**Documented limitations:**
+- Ray mode does **not** draw foliage.
+- Animated models render in their **bind pose** (no animation poses in ray mode).
+- Ray mode is a **development aid**, not a distribution feature: it is never shipped, and there is no in-game graphics-menu
+  toggle for it.
+
+When no ray-tracing backend is usable (runtime or crate missing, device unsupported, or the probe refusing it), the game
+starts the raster field and states the reason in the window title and the application log; it never fails to start and
+never silently ignores the request. If ray rendering fails after start (quality limit, stalled frame or lost device),
+the game falls back to the raster field and states the reason the same way.
+
 ## Controls
 
 | Where | Keys and mouse |

@@ -8,13 +8,8 @@ package net.nevinsky.abyssus.lib.core.editor.water
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.water.WaterField
-import net.nevinsky.abyssus.lib.core.water.WaterIssue
-import net.nevinsky.abyssus.lib.core.water.WaterPreset
-import net.nevinsky.abyssus.lib.core.water.WaterPresets
-import net.nevinsky.abyssus.lib.core.water.WaterSettings
-import net.nevinsky.abyssus.lib.core.water.WaterValidation
-import java.util.UUID
+import net.nevinsky.abyssus.lib.core.water.*
+import java.util.*
 
 /** Why a water edit was refused; a refused edit leaves the tree exactly as it was. */
 sealed interface WaterEditError {
@@ -87,12 +82,17 @@ class WaterEdits(
 
     /** Sets several scalars at once; all are checked first, so a bad one rejects the whole edit. */
     fun setFields(root: JsonNode, id: String, values: Map<WaterField, Double>): WaterEdit {
-        for ((field, value) in values) validation.check(field, value)?.let { return reject(WaterEditError.InvalidValue(field, it)) }
+        for ((field, value) in values) validation.check(field, value)
+            ?.let { return reject(WaterEditError.InvalidValue(field, it)) }
         val surface = surface(root, id) ?: return surfaceMissing(root)
         val changed = values.filter { (field, value) -> !sameNumber(lookup(surface, field.path), value) }
         if (changed.isEmpty()) return WaterEdit.Unchanged
         // check the parents first so nothing is written when one is not an object
-        for (field in changed.keys) if (!writable(surface, field.path)) return reject(WaterEditError.IncompatibleContainer)
+        for (field in changed.keys) if (!writable(
+                surface,
+                field.path
+            )
+        ) return reject(WaterEditError.IncompatibleContainer)
         for ((field, value) in changed) write(surface, field.path, value)
         return WaterEdit.Changed
     }
@@ -141,10 +141,11 @@ class WaterEdits(
         val rootObject = root as? ObjectNode ?: return null
         val abyssus = rootObject.get(ABYSSUS_EXTENSION)
         if (abyssus != null && abyssus !is ObjectNode) return null
-        val water = (abyssus as ObjectNode?)?.get(WATER_SURFACES)
+        val water = abyssus?.get(WATER_SURFACES)
         if (water != null && water !is ObjectNode) return null
         if (!create) return water as ObjectNode? ?: nodes.objectNode()
-        val extension = abyssus as ObjectNode? ?: nodes.objectNode().also { rootObject.set<JsonNode>(ABYSSUS_EXTENSION, it) }
+        val extension =
+            abyssus as ObjectNode? ?: nodes.objectNode().also { rootObject.set<JsonNode>(ABYSSUS_EXTENSION, it) }
         return water as ObjectNode? ?: nodes.objectNode().also { extension.set<JsonNode>(WATER_SURFACES, it) }
     }
 
@@ -154,7 +155,8 @@ class WaterEdits(
         return current
     }
 
-    private fun sameNumber(node: JsonNode?, value: Double) = node != null && node.isNumber && node.doubleValue() == value
+    private fun sameNumber(node: JsonNode?, value: Double) =
+        node != null && node.isNumber && node.doubleValue() == value
 
     private fun writable(surface: ObjectNode, path: List<String>): Boolean {
         var current: JsonNode = surface
@@ -164,12 +166,17 @@ class WaterEdits(
 
     private fun write(surface: ObjectNode, path: List<String>, value: Double) {
         var current = surface
-        for (key in path.dropLast(1)) current = current.get(key) as? ObjectNode ?: nodes.objectNode().also { current.set<JsonNode>(key, it) }
+        for (key in path.dropLast(1)) current =
+            current.get(key) as? ObjectNode ?: nodes.objectNode().also { current.set<JsonNode>(key, it) }
         current.putNumber(path.last(), value)
     }
 
     private fun rejectedSurface(settings: WaterSettings, issues: Map<WaterField, WaterIssue>): WaterEdit =
-        if (settings.name.isBlank() && issues.isEmpty()) reject(WaterEditError.BlankName) else reject(WaterEditError.InvalidSurface(issues))
+        if (settings.name.isBlank() && issues.isEmpty()) reject(WaterEditError.BlankName) else reject(
+            WaterEditError.InvalidSurface(
+                issues
+            )
+        )
 
     private fun reject(error: WaterEditError): WaterEdit = WaterEdit.Rejected(error)
 }

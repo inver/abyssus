@@ -4,8 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ray
 
-import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
 import com.badlogic.gdx.graphics.g3d.model.Node
+import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
 
 /**
  * Copies each animated or skinned entity's displayed pose from its live `ModelInstance`: every node's global transform
@@ -16,7 +16,11 @@ import com.badlogic.gdx.graphics.g3d.model.Node
  * one. Entities that were not captured in a call forget their revision.
  */
 class RayModelPoses {
-    private class Last(val pose: RayModelPose, val nodes: Map<String, FloatArray>, val bones: Map<String, List<FloatArray>>)
+    private class Last(
+        val pose: RayModelPose,
+        val nodes: Map<String, FloatArray>,
+        val bones: Map<String, List<FloatArray>>
+    )
 
     private var previous = emptyMap<String, Last>()
 
@@ -31,8 +35,12 @@ class RayModelPoses {
             val id = entity.placement.entityId
             val before = previous[id]
             val unchanged = before != null && same(before.nodes, nodes) && sameBones(before.bones, bones)
-            val pose = if (unchanged) before!!.pose else RayModelPose((before?.pose?.revision ?: 0L) + 1, nodes, bones)
-            captured[id] = if (unchanged) before!! else Last(pose, nodes, bones)
+            val pose = if (unchanged) {
+                before.pose
+            } else {
+                RayModelPose((before?.pose?.revision ?: 0L) + 1, nodes, bones)
+            }
+            captured[id] = if (unchanged) before else Last(pose, nodes, bones)
         }
         previous = captured
         return captured.mapValues { it.value.pose }
@@ -41,7 +49,11 @@ class RayModelPoses {
     private fun skinned(node: Node): Boolean =
         node.parts.any { it.bones != null } || (0 until node.childCount).any { skinned(node.getChild(it)!!) }
 
-    private fun collect(node: Node, nodes: MutableMap<String, FloatArray>, bones: MutableMap<String, List<FloatArray>>) {
+    private fun collect(
+        node: Node,
+        nodes: MutableMap<String, FloatArray>,
+        bones: MutableMap<String, List<FloatArray>>
+    ) {
         node.id?.let { nodes[it] = node.globalTransform.`val`.copyOf() }
         for (part in node.parts) {
             val skin = part.bones ?: continue

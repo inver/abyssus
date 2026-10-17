@@ -249,7 +249,7 @@ clear only fixture-creation history before the first panel edit, then retain exa
 
 ## Graphics performance evidence
 
-Evidence for the render refactors of `openspec/changes/reduce-architecture-duplication`: a measured baseline taken before
+Evidence for the render refactors of `openspec/changes/archive/2026-10-17-reduce-architecture-duplication`: a measured baseline taken before
 a change, and a comparison after it. Nothing here is a platform-wide claim; every number belongs to the machine that made it.
 
 ### Runner and lane

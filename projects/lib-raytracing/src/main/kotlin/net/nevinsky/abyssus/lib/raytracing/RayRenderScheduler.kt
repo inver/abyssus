@@ -10,7 +10,9 @@ import java.util.concurrent.atomic.AtomicReference
 
 /** Output framebuffer size and active camera identity, independent of adaptive internal dimensions. */
 data class RayDisplayKey(val width: Int, val height: Int, val cameraId: String) {
-    init { require(width > 0 && height > 0) }
+    init {
+        require(width > 0 && height > 0)
+    }
 }
 
 /** Immutable scene/slice requests share scheduling metadata, while retaining their concrete native submit API. */
@@ -19,14 +21,23 @@ interface RayRenderRequest {
     val width: Int
     val height: Int
     val camera: RaySliceCamera
-    fun withRenderPlan(width: Int, height: Int, samples: Int, sampleOffset: Int, accumulationEpoch: Long): RayRenderRequest
+    fun withRenderPlan(
+        width: Int,
+        height: Int,
+        samples: Int,
+        sampleOffset: Int,
+        accumulationEpoch: Long
+    ): RayRenderRequest
 }
 
 
 const val MAX_RAYS_PER_FRAME: Long = 268435456
+
 /** Saved limits carried by the mailbox; adaptive policy and native work stay on the serial worker. */
 data class RayRenderSettings(val targetSamples: Int = 256, val maxRaysPerFrame: Long = 33554432) {
-    init { require(targetSamples in 1..4096 && maxRaysPerFrame in 1..MAX_RAYS_PER_FRAME) }
+    init {
+        require(targetSamples in 1..4096 && maxRaysPerFrame in 1..MAX_RAYS_PER_FRAME)
+    }
 }
 
 /** Content revision covers transforms/lights/materials/environment/geometry beyond camera/pose keys.
@@ -44,12 +55,21 @@ data class RayRenderInput(
      */
     val environmentRevision: Long = 0,
 ) {
-    init { require(raysPerSample > 0) }
+    init {
+        require(raysPerSample > 0)
+    }
 }
+
 data class RayAccumulation(val epoch: Long, val sampleOffset: Int, val sampleCount: Int)
 
 /** Worker adapter applies the sample/history plan; camera/geometry metadata travels with completed frames. */
-data class RayRenderBatch(val input: RayRenderInput, val request: RayRenderRequest, val quality: RayRenderQuality, val accumulation: RayAccumulation)
+data class RayRenderBatch(
+    val input: RayRenderInput,
+    val request: RayRenderRequest,
+    val quality: RayRenderQuality,
+    val accumulation: RayAccumulation
+)
+
 data class RayRenderCompleted(val frame: RayFrame, val batch: RayRenderBatch, val offeredNanos: Long)
 
 /**
@@ -61,14 +81,31 @@ class RayRenderScheduler(
     private val poll: () -> RayFrame?,
     private val policy: RayQualityPolicy,
     private val clock: () -> Long,
+    private val frameCompletionDeadlineNs: Long = 10_000_000_000L,
+    private val onStall: () -> Unit = {},
     private val maxMotionAgeNanos: Long = 100_000_000,
     /** The age bound while the camera is still and only animation or pose moves: an older frame beats a flash of raster. */
     private val maxAnimationAgeNanos: Long = 500_000_000,
     private val log: Logger = NOPLogger.NOP_LOGGER,
 ) {
-    private data class History(val key: RayFrameKey, val display: RayDisplayKey, val content: Long, val raysPerSample: Int, val settings: RayRenderSettings?, val settingsRevision: Long, val environment: Long)
+    private data class History(
+        val key: RayFrameKey,
+        val display: RayDisplayKey,
+        val content: Long,
+        val raysPerSample: Int,
+        val settings: RayRenderSettings?,
+        val settingsRevision: Long,
+        val environment: Long
+    )
+
     private data class Offered(val input: RayRenderInput, val nanos: Long)
-    private data class Flight(val batch: RayRenderBatch, val offeredNanos: Long, val submittedNanos: Long, val lifetime: Long)
+    private data class Flight(
+        val batch: RayRenderBatch,
+        val offeredNanos: Long,
+        val submittedNanos: Long,
+        val lifetime: Long
+    )
+
     private val lock = Any()
     private var desired: RayRenderInput? = null
     private var pending: Offered? = null
@@ -79,10 +116,14 @@ class RayRenderScheduler(
     private var samples = 0
     private var stableFrames = 0
     private var dimensions: Pair<Int, Int>? = null
+
     // These two fields belong exclusively to the caller's serial worker.
     private val worker = AtomicReference<Thread?>()
     private var inFlight: Flight? = null
-    init { require(maxMotionAgeNanos > 0) }
+
+    init {
+        require(maxMotionAgeNanos > 0)
+    }
 
     fun offer(input: RayRenderInput) = synchronized(lock) {
         if (history(input) != history) {
@@ -120,21 +161,28 @@ class RayRenderScheduler(
         worker.compareAndSet(null, thread)
         check(worker.get() === thread) { "Ray scheduler pump must stay on its serial worker" }
         inFlight?.let { flight ->
-            val frame = poll() ?: return
-            check(frame.key == flight.batch.request.key && frame.width == flight.batch.request.width && frame.height == flight.batch.request.height) {
-                "Backend completion does not match the submitted ray batch"
-            }
-            inFlight = null
-            val now = clock()
-            policy.observe((now - flight.submittedNanos).coerceAtLeast(0))
-            synchronized(lock) {
-                val current = desired
-                if (flight.lifetime == lifetime && current != null && compatible(flight.batch.input, current)) {
-                    val value = RayRenderCompleted(frame, flight.batch, flight.offeredNanos)
-                    if (timely(value, current)) completed = value
-                    if (history(flight.batch.input) == history && flight.batch.accumulation.epoch == epoch) {
-                        samples += flight.batch.accumulation.sampleCount
-                        stableFrames = minOf(stableFrames + 1, 64)
+            val frame = poll()
+            if (frame == null) {
+                if (clock() - flight.submittedNanos <= frameCompletionDeadlineNs) return
+                inFlight = null
+                onStall()
+                return
+            } else {
+                check(frame.key == flight.batch.request.key && frame.width == flight.batch.request.width && frame.height == flight.batch.request.height) {
+                    "Backend completion does not match the submitted ray batch"
+                }
+                inFlight = null
+                val now = clock()
+                policy.observe((now - flight.submittedNanos).coerceAtLeast(0))
+                synchronized(lock) {
+                    val current = desired
+                    if (flight.lifetime == lifetime && current != null && compatible(flight.batch.input, current)) {
+                        val value = RayRenderCompleted(frame, flight.batch, flight.offeredNanos)
+                        if (timely(value, current)) completed = value
+                        if (history(flight.batch.input) == history && flight.batch.accumulation.epoch == epoch) {
+                            samples += flight.batch.accumulation.sampleCount
+                            stableFrames = minOf(stableFrames + 1, 64)
+                        }
                     }
                 }
             }
@@ -142,31 +190,60 @@ class RayRenderScheduler(
         val next = synchronized(lock) {
             val offered = pending ?: return@synchronized null
             pending = null
-            val quality = policy.choose(offered.input.display.width, offered.input.display.height, stableFrames, offered.input.raysPerSample, offered.input.settings?.maxRaysPerFrame ?: policy.limits.maxRaysPerFrame)
+            val quality = policy.choose(
+                offered.input.display.width,
+                offered.input.display.height,
+                stableFrames,
+                offered.input.raysPerSample,
+                offered.input.settings?.maxRaysPerFrame ?: policy.limits.maxRaysPerFrame
+            )
             val size = quality.width to quality.height
-            if (dimensions != size) log.atDebug().log { "Ray frame ${offered.input.display.width}x${offered.input.display.height} renders at ${size.first}x${size.second}, ${quality.samples} samples per batch, ${offered.input.raysPerSample} rays per sample" }
+            if (dimensions != size) log.atDebug()
+                .log { "Ray frame ${offered.input.display.width}x${offered.input.display.height} renders at ${size.first}x${size.second}, ${quality.samples} samples per batch, ${offered.input.raysPerSample} rays per sample" }
             if (dimensions != null && dimensions != size) {
                 epoch++
                 samples = 0
             }
             dimensions = size
-            val count = minOf(quality.samples, (offered.input.settings?.targetSamples ?: policy.limits.maxAccumulatedSamples) - samples)
+            val count = minOf(
+                quality.samples,
+                (offered.input.settings?.targetSamples ?: policy.limits.maxAccumulatedSamples) - samples
+            )
             if (count <= 0) return@synchronized null
             val original = offered.input.request
             val request = original.withRenderPlan(quality.width, quality.height, count, samples, epoch)
-            val batch = RayRenderBatch(offered.input, request, quality.copy(samples = count), RayAccumulation(epoch, samples, count))
+            val batch = RayRenderBatch(
+                offered.input,
+                request,
+                quality.copy(samples = count),
+                RayAccumulation(epoch, samples, count)
+            )
             Flight(batch, offered.nanos, clock(), lifetime)
         } ?: return
         inFlight = next
-        try { submit(next.batch) } catch (failure: Throwable) { inFlight = null; throw failure }
+        try {
+            submit(next.batch)
+        } catch (failure: Throwable) {
+            inFlight = null; throw failure
+        }
     }
 
-    private fun history(input: RayRenderInput) = History(input.request.key, input.display, input.contentRevision, input.raysPerSample, input.settings, input.settingsRevision, input.environmentRevision)
+    private fun history(input: RayRenderInput) = History(
+        input.request.key,
+        input.display,
+        input.contentRevision,
+        input.raysPerSample,
+        input.settings,
+        input.settingsRevision,
+        input.environmentRevision
+    )
+
     private fun compatible(rendered: RayRenderInput, desired: RayRenderInput) = rendered.display == desired.display &&
-        rendered.request.key.sceneGeneration == desired.request.key.sceneGeneration &&
-        rendered.request.key.contextGeneration == desired.request.key.contextGeneration &&
-        rendered.settingsRevision == desired.settingsRevision && rendered.settings == desired.settings
+            rendered.request.key.sceneGeneration == desired.request.key.sceneGeneration &&
+            rendered.request.key.contextGeneration == desired.request.key.contextGeneration &&
+            rendered.settingsRevision == desired.settingsRevision && rendered.settings == desired.settings
+
     private fun timely(completed: RayRenderCompleted, desired: RayRenderInput) =
         history(completed.batch.input).copy(environment = 0) == history(desired).copy(environment = 0) ||
-            clock() - completed.offeredNanos <= if (completed.batch.input.request.key.cameraRevision == desired.request.key.cameraRevision) maxAnimationAgeNanos else maxMotionAgeNanos
+                clock() - completed.offeredNanos <= if (completed.batch.input.request.key.cameraRevision == desired.request.key.cameraRevision) maxAnimationAgeNanos else maxMotionAgeNanos
 }

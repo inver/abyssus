@@ -43,7 +43,8 @@ enum class TerrainVariant(internal val program: String, val profile: LightProfil
  * GL context; call it on the thread that owns that context.
  */
 class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Texture? = null) : Disposable {
-    private val program: ShaderProgram = shaders.withResources(RENDER_SHADER_ROOT, TerrainPass::class.java).program(variant.program)
+    private val program: ShaderProgram =
+        shaders.withResources(RENDER_SHADER_ROOT, TerrainPass::class.java).program(variant.program)
     private val ownedBlank: Texture? = if (blank == null) newBlank() else null
     private val blank: Texture = blank ?: ownedBlank!!
     private val binding: Binding = when (variant) {
@@ -86,17 +87,21 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
         private val atlasBindings = ShadowAtlasBindings()
 
         override fun bindFrame(program: ShaderProgram, frame: FrameInputs, lighting: TerrainLighting) {
-            val editor = lighting as? TerrainLighting.Editor ?: throw IllegalArgumentException("the editor terrain needs TerrainLighting.Editor")
+            val editor = lighting as? TerrainLighting.Editor
+                ?: throw IllegalArgumentException("the editor terrain needs TerrainLighting.Editor")
             program.setUniformf("u_cameraPos", frame.cameraPosition)
             program.setUniformf("u_ambient", frame.ambient[0], frame.ambient[1], frame.ambient[2])
             // always on its own unit: a samplerCube left on unit 0 would share it with a 2D splat texture, which GL forbids
             program.setUniformi("u_irradiance", IRRADIANCE_UNIT)
             program.setUniformi("u_hasSky", if (editor.irradiance != null) 1 else 0)
             editor.irradiance?.bind(IRRADIANCE_UNIT)
+
             val fading = editor.irradiance != null && editor.fadeIrradiance != null && editor.fade > 0f
             program.setUniformi("u_irradianceTo", IRRADIANCE_TO_UNIT)
             program.setUniformf("u_skyFade", if (fading) editor.fade.coerceAtMost(1f) else 0f)
-            if (fading) editor.fadeIrradiance?.bind(IRRADIANCE_TO_UNIT)
+            if (fading) {
+                editor.fadeIrradiance.bind(IRRADIANCE_TO_UNIT)
+            }
             val fog = frame.fog
             program.setUniformf("u_fogColor", fog?.r ?: 0f, fog?.g ?: 0f, fog?.b ?: 0f)
             program.setUniformf("u_fogK", fog?.quadraticCoefficient ?: 0f)
@@ -108,8 +113,10 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
             (editor.atlas?.atlas ?: blank).bind(SHADOW_UNIT)
             fun record(id: String) = editor.atlas?.records?.firstOrNull { it.lightId == id }
             val lights = frame.lights
-            atlasBindings.bind(program, editor.atlas, lights.directional.map { record(it.entityId) },
-                lights.point.map { record(it.entityId) }, lights.spot.map { record(it.entityId) }, SHADOW_UNIT)
+            atlasBindings.bind(
+                program, editor.atlas, lights.directional.map { record(it.entityId) },
+                lights.point.map { record(it.entityId) }, lights.spot.map { record(it.entityId) }, SHADOW_UNIT
+            )
         }
 
         override fun bindTerrain(program: ShaderProgram, lighting: TerrainLighting, terrain: TerrainDraw) {
@@ -148,7 +155,8 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
         private val outsideShadow = Matrix4().setTranslation(OUTSIDE_SHADOW_OFFSET, 0f, 0f)
 
         override fun bindFrame(program: ShaderProgram, frame: FrameInputs, lighting: TerrainLighting) {
-            val sun = lighting as? TerrainLighting.Sun ?: throw IllegalArgumentException("the game terrain needs TerrainLighting.Sun")
+            val sun = lighting as? TerrainLighting.Sun
+                ?: throw IllegalArgumentException("the game terrain needs TerrainLighting.Sun")
             program.setUniformf("u_cameraPosition", frame.cameraPosition)
             val fog = frame.fog
             program.setUniformf("u_fogDensity", fog?.density ?: 0f)

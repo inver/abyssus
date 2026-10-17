@@ -82,7 +82,7 @@ fun childrenOf(value: Any?): List<DtoRow> = when {
  */
 private fun sceneRows(scene: SceneDto): List<DtoRow> {
     val rows = beanProperties(scene).filter { it.name != "abyssus" }
-    val surfaces = WaterCodec().read(scene.abyssus).surfaces
+    val surfaces = WaterCodec().read(scene.water).surfaces
     return if (surfaces.isEmpty()) rows else rows + DtoRow(WATER_ROW, WaterGroup(surfaces))
 }
 

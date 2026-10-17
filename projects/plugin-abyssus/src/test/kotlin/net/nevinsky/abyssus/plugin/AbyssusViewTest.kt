@@ -340,7 +340,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals("$fixtureSceneName (0)", text(sceneNode()))
         val entry = sceneNode().value
         assertEquals(file, net.nevinsky.abyssus.plugin.projectView.sceneFileOf(entry))
-        assertEquals(fixtureSceneName, net.nevinsky.abyssus.plugin.projectView.sceneName(entry))
+        assertEquals(fixtureSceneName, net.nevinsky.abyssus.plugin.projectView.sceneNameOf(project, file))
         assertTrue(net.nevinsky.abyssus.plugin.projectView.renameScene(project, file, "Forest"))
         assertEquals(original.replace(Regex("\"name\":(\\s*)\"$fixtureSceneName\""), "\"name\":$1\"Forest\""), String(file.contentsToByteArray()))
         assertEquals("Forest (0)", text(sceneNode()))

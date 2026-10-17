@@ -41,4 +41,11 @@ class RayQueuedSessionTest {
         assertEquals("the next request reaches the driver at once", 2, driver.submitted)
         assertEquals(3L, session.poll()!!.key.cameraRevision)
     }
+
+    @Test fun frameStallExceptionCarriesReason() {
+        val reason = "frame did not complete within the deadline"
+        val thrown = RayFrameStallException(reason)
+        assertEquals(reason, thrown.reason)
+        assertEquals(reason, thrown.message)
+    }
 }

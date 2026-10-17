@@ -16,6 +16,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
 import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
@@ -57,7 +58,7 @@ fun toggleRow(project: Project, entry: DtoEntry): Boolean {
 fun sceneFileOf(entry: DtoEntry): VirtualFile? =
     (entry.value as? SceneEntry)?.file?.takeIf { it.extension == ProjectLayout.SCENE_EXTENSION }
 
-fun sceneName(entry: DtoEntry): String? = (entry.value as? SceneEntry)?.scene?.name
+fun sceneNameOf(project: Project, file: VirtualFile): String? = SceneDocumentCache.of(project).read(file)?.scene?.name
 
 /** Sets the scene's `skyboxName` to [name] (an asset folder, or null for none); false, writing nothing, when it already is. */
 fun setSkybox(project: Project, file: VirtualFile, name: String?): Boolean =

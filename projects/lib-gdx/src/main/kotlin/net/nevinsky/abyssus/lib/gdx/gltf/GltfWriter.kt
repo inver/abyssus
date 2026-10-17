@@ -8,11 +8,7 @@ package net.nevinsky.abyssus.lib.gdx.gltf
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.VertexAttributes.Usage
-import com.badlogic.gdx.graphics.g3d.model.data.ModelMaterial
-import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
-import com.badlogic.gdx.graphics.g3d.model.data.ModelNodeKeyframe
-import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
-import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
+import com.badlogic.gdx.graphics.g3d.model.data.*
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
@@ -25,7 +21,7 @@ import java.io.ByteArrayOutputStream
 import java.io.StringWriter
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.util.IdentityHashMap
+import java.util.*
 import kotlin.math.abs
 
 /** The model data cannot be written as valid glTF; nothing was written. */
@@ -105,7 +101,8 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             if (images.isNotEmpty()) {
                 doc["textures"] = images.values.map { mapOf("sampler" to 0, "source" to it) }
                 doc["images"] = images.keys.map { mapOf("uri" to it) }
-                doc["samplers"] = listOf(mapOf("magFilter" to 9729, "minFilter" to 9987, "wrapS" to 10497, "wrapT" to 10497))
+                doc["samplers"] =
+                    listOf(mapOf("magFilter" to 9729, "minFilter" to 9987, "wrapS" to 10497, "wrapT" to 10497))
             }
             if (accessors.isNotEmpty()) doc["accessors"] = accessors
             if (bufferViews.isNotEmpty()) doc["bufferViews"] = bufferViews
@@ -137,7 +134,8 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                 val q = Quaternion(it).nor()
                 out["rotation"] = finite(listOf(q.x, q.y, q.z, q.w), node)
             }
-            node.scale?.takeIf { !it.epsilonEquals(1f, 1f, 1f, 0f) }?.let { out["scale"] = finite(listOf(it.x, it.y, it.z), node) }
+            node.scale?.takeIf { !it.epsilonEquals(1f, 1f, 1f, 0f) }
+                ?.let { out["scale"] = finite(listOf(it.x, it.y, it.z), node) }
         }
 
         /** Parts that can share one mesh and one skin: the bones (node index and inverse bind matrix) by part. */
@@ -153,7 +151,9 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                         val at = joints.indexOf(joint)
                         if (at >= 0 && !same(matrices[at], matrix)) return false
                     }
-                    for ((joint, matrix) in bones) if (joint !in joints) { joints += joint; matrices += matrix }
+                    for ((joint, matrix) in bones) if (joint !in joints) {
+                        joints += joint; matrices += matrix
+                    }
                 }
                 parts += part
                 return true
@@ -198,27 +198,48 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
 
             val attributes = LinkedHashMap<String, Any>()
             attributes["POSITION"] = attributeAccessor(mesh, "POSITION") {
-                val p = layout.floats(layout.offset(Usage.Position, 0) ?: throw GltfWriteException("${mesh.id} has no positions"), 3)
+                val p = layout.floats(
+                    layout.offset(Usage.Position, 0) ?: throw GltfWriteException("${mesh.id} has no positions"), 3
+                )
                 if (p.any { !it.isFinite() }) throw GltfWriteException("${mesh.id} has a position that is not finite")
                 floatAccessor(p, 3, "VEC3", ARRAY_BUFFER, bounds = true)
             }
             layout.offset(Usage.Normal, 0)?.let { at ->
-                attributes["NORMAL"] = attributeAccessor(mesh, "NORMAL") { floatAccessor(layout.floats(at, 3), 3, "VEC3", ARRAY_BUFFER) }
+                attributes["NORMAL"] =
+                    attributeAccessor(mesh, "NORMAL") { floatAccessor(layout.floats(at, 3), 3, "VEC3", ARRAY_BUFFER) }
                 layout.offset(Usage.Tangent, 0)?.let { tangentAt ->
                     attributes["TANGENT"] = attributeAccessor(mesh, "TANGENT") {
-                        floatAccessor(layout.tangents(at, tangentAt, layout.offset(Usage.BiNormal, 0)), 4, "VEC4", ARRAY_BUFFER)
+                        floatAccessor(
+                            layout.tangents(at, tangentAt, layout.offset(Usage.BiNormal, 0)),
+                            4,
+                            "VEC4",
+                            ARRAY_BUFFER
+                        )
                     }
                 }
             }
             for (unit in layout.units(Usage.TextureCoordinates)) {
                 attributes["TEXCOORD_$unit"] = attributeAccessor(mesh, "TEXCOORD_$unit") {
-                    floatAccessor(layout.floats(layout.offset(Usage.TextureCoordinates, unit)!!, 2), 2, "VEC2", ARRAY_BUFFER)
+                    floatAccessor(
+                        layout.floats(layout.offset(Usage.TextureCoordinates, unit)!!, 2),
+                        2,
+                        "VEC2",
+                        ARRAY_BUFFER
+                    )
                 }
             }
             layout.offset(Usage.ColorUnpacked, null)?.let { at ->
-                attributes["COLOR_0"] = attributeAccessor(mesh, "COLOR_0") { floatAccessor(layout.floats(at, 4), 4, "VEC4", ARRAY_BUFFER) }
+                attributes["COLOR_0"] =
+                    attributeAccessor(mesh, "COLOR_0") { floatAccessor(layout.floats(at, 4), 4, "VEC4", ARRAY_BUFFER) }
             } ?: layout.offset(Usage.ColorPacked, null)?.let { at ->
-                attributes["COLOR_0"] = attributeAccessor(mesh, "COLOR_0") { floatAccessor(layout.packedColors(at), 4, "VEC4", ARRAY_BUFFER) }
+                attributes["COLOR_0"] = attributeAccessor(mesh, "COLOR_0") {
+                    floatAccessor(
+                        layout.packedColors(at),
+                        4,
+                        "VEC4",
+                        ARRAY_BUFFER
+                    )
+                }
             }
             if (group.skinned) skinAttributes(part, mesh, layout, group, attributes)
 
@@ -234,7 +255,13 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             attributeAccessors.getOrPut((mesh.id ?: "") to name, build)
 
         /** JOINTS_n and WEIGHTS_n, the part's bone indices mapped to the group's joints. */
-        fun skinAttributes(part: ModelNodePart, mesh: ModelMesh, layout: Layout, group: Group, attributes: MutableMap<String, Any>) {
+        fun skinAttributes(
+            part: ModelNodePart,
+            mesh: ModelMesh,
+            layout: Layout,
+            group: Group,
+            attributes: MutableMap<String, Any>
+        ) {
             val units = layout.units(Usage.BoneWeight)
             val bones = bonesOf(part)!!
             val toJoint = IntArray(bones.size) { group.jointOf(bones[it].first) }
@@ -294,7 +321,13 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
         fun animation(animation: com.badlogic.gdx.graphics.g3d.model.data.ModelAnimation) {
             val channels = ArrayList<Map<String, Any>>()
             val samplers = ArrayList<Map<String, Any>>()
-            fun <T> channel(node: Int, path: String, keys: Iterable<ModelNodeKeyframe<T>?>?, components: Int, value: (T) -> List<Float>) {
+            fun <T> channel(
+                node: Int,
+                path: String,
+                keys: Iterable<ModelNodeKeyframe<T>?>?,
+                components: Int,
+                value: (T) -> List<Float>
+            ) {
                 val times = ArrayList<Float>()
                 val values = ArrayList<Float>()
                 for (key in keys ?: return) {
@@ -306,8 +339,17 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                     values += components
                 }
                 if (times.isEmpty()) return
-                val input = timeAccessors.getOrPut(times) { floatAccessor(times.toFloatArray(), 1, "SCALAR", null, bounds = true) }
-                val output = floatAccessor(values.toFloatArray(), components, if (components == 4) "VEC4" else "VEC3", null)
+                val input = timeAccessors.getOrPut(times) {
+                    floatAccessor(
+                        times.toFloatArray(),
+                        1,
+                        "SCALAR",
+                        null,
+                        bounds = true
+                    )
+                }
+                val output =
+                    floatAccessor(values.toFloatArray(), components, if (components == 4) "VEC4" else "VEC3", null)
                 samplers += mapOf("input" to input, "interpolation" to "LINEAR", "output" to output)
                 channels += mapOf("sampler" to samplers.size - 1, "target" to mapOf("node" to node, "path" to path))
             }
@@ -335,7 +377,8 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             val out = LinkedHashMap<String, Any>()
             out["name"] = source.id ?: "material${materials.size}"
             val pbr = LinkedHashMap<String, Any>()
-            val base = material.baseColor ?: material.diffuse?.let { Color(it).also { c -> c.a = material.opacity } } ?: Color.WHITE
+            val base = material.baseColor ?: material.diffuse?.let { Color(it).also { c -> c.a = material.opacity } }
+            ?: Color.WHITE
             pbr["baseColorFactor"] = listOf(base.r, base.g, base.b, base.a)
             texture(material, ModelTexture.USAGE_DIFFUSE)?.let { pbr["baseColorTexture"] = it }
             material.metallic?.let { pbr["metallicFactor"] = it }
@@ -378,7 +421,13 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             return bufferViews.size - 1
         }
 
-        fun floatAccessor(values: FloatArray, components: Int, type: String, target: Int?, bounds: Boolean = false): Int {
+        fun floatAccessor(
+            values: FloatArray,
+            components: Int,
+            type: String,
+            target: Int?,
+            bounds: Boolean = false
+        ): Int {
             val buffer = ByteBuffer.allocate(values.size * 4).order(ByteOrder.LITTLE_ENDIAN)
             values.forEach(buffer::putFloat)
             val accessor = LinkedHashMap<String, Any>()
@@ -387,8 +436,10 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             accessor["count"] = values.size / components
             accessor["type"] = type
             if (bounds && values.isNotEmpty()) {
-                accessor["min"] = (0 until components).map { c -> (c until values.size step components).minOf { values[it] } }
-                accessor["max"] = (0 until components).map { c -> (c until values.size step components).maxOf { values[it] } }
+                accessor["min"] =
+                    (0 until components).map { c -> (c until values.size step components).minOf { values[it] } }
+                accessor["max"] =
+                    (0 until components).map { c -> (c until values.size step components).maxOf { values[it] } }
             }
             accessors += accessor
             return accessors.size - 1
@@ -397,8 +448,10 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
         fun shortAccessor(values: IntArray, components: Int, type: String, target: Int?): Int {
             val buffer = ByteBuffer.allocate(values.size * 2).order(ByteOrder.LITTLE_ENDIAN)
             values.forEach { buffer.putShort(it.toShort()) }
-            accessors += mapOf("bufferView" to view(buffer.array(), target), "componentType" to UNSIGNED_SHORT,
-                "count" to values.size / components, "type" to type)
+            accessors += mapOf(
+                "bufferView" to view(buffer.array(), target), "componentType" to UNSIGNED_SHORT,
+                "count" to values.size / components, "type" to type
+            )
             return accessors.size - 1
         }
 
@@ -407,8 +460,12 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             val short = vertexCount <= 0xFFFF
             val buffer = ByteBuffer.allocate(indices.size * if (short) 2 else 4).order(ByteOrder.LITTLE_ENDIAN)
             if (short) indices.forEach { buffer.putShort(it.toShort()) } else indices.forEach(buffer::putInt)
-            accessors += mapOf("bufferView" to view(buffer.array(), ELEMENT_ARRAY_BUFFER),
-                "componentType" to if (short) UNSIGNED_SHORT else UNSIGNED_INT, "count" to indices.size, "type" to "SCALAR")
+            accessors += mapOf(
+                "bufferView" to view(buffer.array(), ELEMENT_ARRAY_BUFFER),
+                "componentType" to if (short) UNSIGNED_SHORT else UNSIGNED_INT,
+                "count" to indices.size,
+                "type" to "SCALAR"
+            )
             return accessors.size - 1
         }
 
@@ -439,7 +496,12 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
 
         fun floats(offset: Int, components: Int): FloatArray {
             val out = FloatArray(count * components)
-            for (v in 0 until count) vertices.copyInto(out, v * components, v * stride + offset, v * stride + offset + components)
+            for (v in 0 until count) vertices.copyInto(
+                out,
+                v * components,
+                v * stride + offset,
+                v * stride + offset + components
+            )
             return out
         }
 
@@ -454,7 +516,11 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                 var w = 1f
                 if (binormalAt != null) {
                     n.set(vertices[base + normalAt], vertices[base + normalAt + 1], vertices[base + normalAt + 2])
-                    val b = Vector3(vertices[base + binormalAt], vertices[base + binormalAt + 1], vertices[base + binormalAt + 2])
+                    val b = Vector3(
+                        vertices[base + binormalAt],
+                        vertices[base + binormalAt + 1],
+                        vertices[base + binormalAt + 2]
+                    )
                     if (n.crs(t).dot(b) < 0f) w = -1f
                 }
                 out[v * 4] = t.x
@@ -508,11 +574,13 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                         }
                         writer.pop()
                     }
+
                     is List<*> -> {
                         writer.array()
                         value.forEach(::emit)
                         writer.pop()
                     }
+
                     is Float -> writer.value(value)
                     is Int -> writer.value(value)
                     is Boolean -> writer.value(value)

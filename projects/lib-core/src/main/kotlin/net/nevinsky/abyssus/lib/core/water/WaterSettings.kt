@@ -91,13 +91,21 @@ class WaterPresets {
     /** The preset named [name] exactly (`LAKE` or `SEA`), or null for anything else. */
     fun parse(name: String?): WaterPreset? = WaterPreset.entries.firstOrNull { it.name == name }
 
-    fun defaults(preset: WaterPreset, id: String, name: String, x: Double = 0.0, level: Double = 0.0, z: Double = 0.0): WaterSettings =
+    fun defaults(
+        preset: WaterPreset,
+        id: String,
+        name: String,
+        x: Double = 0.0,
+        level: Double = 0.0,
+        z: Double = 0.0
+    ): WaterSettings =
         when (preset) {
             WaterPreset.LAKE -> WaterSettings(
                 id, name, preset, x, level, z, width = 100.0, length = 100.0,
                 tintR = 0.03, tintG = 0.22, tintB = 0.25, clarity = 8.0,
                 waveAmplitude = 0.08, waveLength = 4.0, waveSpeed = 0.5, foamAmount = 0.5, foamWidth = 0.6,
             )
+
             WaterPreset.SEA -> WaterSettings(
                 id, name, preset, x, level, z, width = 2000.0, length = 2000.0,
                 tintR = 0.02, tintG = 0.12, tintB = 0.20, clarity = 15.0,
@@ -107,7 +115,12 @@ class WaterPresets {
 }
 
 /** Why a value is refused. */
-enum class WaterIssue { NOT_FINITE, NOT_POSITIVE, NEGATIVE, OUT_OF_UNIT_RANGE }
+enum class WaterIssue {
+    NOT_FINITE,
+    NOT_POSITIVE,
+    NEGATIVE,
+    OUT_OF_UNIT_RANGE
+}
 
 /** The range rules of every water scalar; pure and shared by the file reader and the properties editors. */
 class WaterValidation {
@@ -122,7 +135,9 @@ class WaterValidation {
     /** Every field of [settings] that breaks its rule, in field order. */
     fun check(settings: WaterSettings): Map<WaterField, WaterIssue> {
         val issues = linkedMapOf<WaterField, WaterIssue>()
-        for (field in WaterField.entries) check(field, settings.value(field))?.let { issues[field] = it }
+        for (field in WaterField.entries) {
+            check(field, settings.value(field))?.let { issues[field] = it }
+        }
         return issues
     }
 

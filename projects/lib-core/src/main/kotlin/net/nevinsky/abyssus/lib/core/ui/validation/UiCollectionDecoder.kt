@@ -302,7 +302,7 @@ class UiCollectionDecoder(private val format: AbyssusDocumentFormat = AbyssusDoc
                 }
                 for ((event, action) in widget.actions) {
                     val local = action.assetName == null && action.screenId != null
-                    if (local && (action.type == UiActionType.OPEN_SCREEN || action.type == UiActionType.SHOW_OVERLAY) && collection.screen(action.screenId!!) == null)
+                    if (local && (action.type == UiActionType.OPEN_SCREEN || action.type == UiActionType.SHOW_OVERLAY) && collection.screen(action.screenId) == null)
                         warnings += UiIssue(UiIssueCode.UNRESOLVED_SCREEN, "$path.actions.$event")
                 }
                 widget.children.forEachIndexed { c, child -> walk(child, "$path.children[$c]", item) }

@@ -20,16 +20,26 @@ data class WaterPick(val id: String, val distance: Float)
 class WaterHit {
     /** The distance along [ray] to [surface]'s rectangle, or null when it is not met. */
     fun distance(ray: Ray, surface: WaterSettings, maxDistance: Float = Float.MAX_VALUE): Float? {
-        if (!surface.enabled) return null
+        if (!surface.enabled) {
+            return null
+        }
         val dy = ray.direction.y
-        if (dy > -PARALLEL) return null
+        if (dy > -PARALLEL) {
+            return null
+        }
         val dropToSurface = ray.origin.y - surface.level
-        if (dropToSurface <= 0.0) return null
+        if (dropToSurface <= 0.0) {
+            return null
+        }
         val t = (dropToSurface / -dy).toFloat()
-        if (!t.isFinite() || t > maxDistance) return null
+        if (!t.isFinite() || t > maxDistance) {
+            return null
+        }
         val x = ray.origin.x + ray.direction.x * t
         val z = ray.origin.z + ray.direction.z * t
-        if (kotlin.math.abs(x - surface.x) > surface.width / 2 || kotlin.math.abs(z - surface.z) > surface.length / 2) return null
+        if (kotlin.math.abs(x - surface.x) > surface.width / 2 || kotlin.math.abs(z - surface.z) > surface.length / 2) {
+            return null
+        }
         return t
     }
 
@@ -53,7 +63,13 @@ class WaterPreview {
     fun apply(water: List<WaterSurface>, moved: Map<String, Vec3>): List<WaterSurface> =
         if (moved.isEmpty()) water else water.map { surface ->
             val at = moved[surface.id]
-            if (surface is ValidWater && at != null) ValidWater(surface.settings.copy(x = at.x.toDouble(), level = at.y.toDouble(), z = at.z.toDouble()))
+            if (surface is ValidWater && at != null) ValidWater(
+                surface.settings.copy(
+                    x = at.x.toDouble(),
+                    level = at.y.toDouble(),
+                    z = at.z.toDouble()
+                )
+            )
             else surface
         }
 }

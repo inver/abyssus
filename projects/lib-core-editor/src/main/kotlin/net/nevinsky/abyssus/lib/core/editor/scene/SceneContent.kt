@@ -62,7 +62,7 @@ fun sceneContentOf(scene: SceneDto): SceneContent {
         runCatchingKeepingCancellation { decode(entity) }.getOrNull()
     }
     val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled && it.isNotBlank() }
-    return PlacementMapper().map(entities, skybox).copy(water = WaterCodec().read(scene.abyssus).surfaces)
+    return PlacementMapper().map(entities, skybox).copy(water = WaterCodec().read(scene.water).surfaces)
 }
 
 /**

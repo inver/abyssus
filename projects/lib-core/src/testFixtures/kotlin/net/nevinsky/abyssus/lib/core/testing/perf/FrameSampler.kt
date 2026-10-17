@@ -47,7 +47,7 @@ class FrameSampler(expectedFrames: Int = 4096) {
         )
     }
 
-    private fun allocated(): Long = thread?.getThreadAllocatedBytes(Thread.currentThread().id) ?: 0L
+    private fun allocated(): Long = thread?.getThreadAllocatedBytes(Thread.currentThread().threadId()) ?: 0L
 
     companion object {
         /** The nearest-rank percentile of [sortedNanos], in milliseconds. */

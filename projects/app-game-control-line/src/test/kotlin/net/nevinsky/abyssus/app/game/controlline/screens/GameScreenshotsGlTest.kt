@@ -55,7 +55,11 @@ class GameScreenshotsGlTest {
             val file = File(dir, "step-%02d.png".format(pictures.size))
             // the frame buffer reads bottom-up
             val flipped = Pixmap(1280, 720, Pixmap.Format.RGBA8888)
-            for (y in 0 until 720) for (x in 0 until 1280) flipped.drawPixel(x, y, pixmap.getPixel(x, 719 - y))
+            for (y in 0 until 720) {
+                for (x in 0 until 1280){
+                    flipped.drawPixel(x, y, pixmap.getPixel(x, 719 - y))
+                }
+            }
             PixmapIO.writePNG(Gdx.files.absolute(file.absolutePath), flipped)
             pixmap.dispose(); flipped.dispose()
             pictures += file

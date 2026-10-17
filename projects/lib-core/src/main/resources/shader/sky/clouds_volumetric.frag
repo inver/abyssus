@@ -75,15 +75,18 @@ void main() {
         if (coverage <= 0.0) continue;
         float density = cloudVolumeDensity(p, coverage, true);
         if (density <= 0.0) continue;
+        // the light-march offsets are dithered per pixel and frame (at most half a light step), so the sun shafts
+        // resolve through the temporal filter instead of banding
+        float lightJitter = cloudDither(gl_FragCoord.xy + u_frame * 7.13) - 0.5;
         float sunTau = 0.0;
         for (int j = 1; j <= CLOUD_LIGHT_STEPS; j++) {
-            sunTau += cloudVolumeDensity(p + sun * (lightStep * float(j)), coverage, false);
+            sunTau += cloudVolumeDensity(p + sun * (lightStep * (float(j) + lightJitter)), coverage, false);
         }
         sunTau *= CLOUD_EXTINCTION * lightStep;
         float h = clamp((cloudAltitude(p) - u_bandBase) / thickness, 0.0, 1.0);
         float alpha = (1.0 - exp(-CLOUD_EXTINCTION * density * step)) * cloudDistanceFade(t) * keep;
         float skyTau = CLOUD_EXTINCTION * u_bandDensity * coverage * (1.0 - h) * thickness;
-        vec3 radiance = cloudAerial(cloudRadiance(d, sunTau, skyTau, 1.0 - h, cloudUp(d, t)), t);
+        vec3 radiance = cloudAerial(cloudRadiance(d, sunTau, skyTau, 1.0 - h, density, cloudUp(d, t)), t, d);
         color += transmittance * alpha * cloudToneMap(radiance);
         transmittance *= 1.0 - alpha;
         if (transmittance < 0.01) break;

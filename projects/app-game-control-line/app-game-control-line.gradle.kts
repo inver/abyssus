@@ -54,6 +54,38 @@ dependencies {
     testImplementation(project(":lib-game-link"))
 }
 
+// An opt-in ray-traced field view, mirroring `play`: a source set of its own so the game's main runtime classpath
+// and its distribution never see `lib-raytracing` or `lib-core-editor`. `checkShippedClasspath` continues to visit
+// only the shipped classpath, and `installDist`/`exportPlay` never include the ray set.
+val ray by sourceSets.creating {
+    compileClasspath += sourceSets["main"].output + sourceSets["main"].runtimeClasspath
+    runtimeClasspath += output + compileClasspath
+}
+dependencies {
+    "rayImplementation"(kotlin("stdlib"))
+    "rayImplementation"(project(":lib-raytracing"))
+    "rayImplementation"(project(":lib-core-editor"))
+    "rayImplementation"(libs.gdx)
+    "rayImplementation"(libs.gdx.platform) {
+        artifact {
+            classifier = "natives-desktop"
+        }
+    }
+    // rayImplementation is a development-only configuration: it must never reach checkShippedClasspath
+}
+
+tasks.register<JavaExec>("runRay") {
+    group = "application"
+    description = "Runs Control Line with the opt-in ray-traced field view (controlLine.fieldView=ray)."
+    classpath = ray.runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.app.game.controlline.MainKt")
+    val dir = gameProject.asFile.absolutePath
+    systemProperty("controlLine.project", dir)
+    systemProperty("controlLine.fieldView", "ray")
+    // GLFW needs the process's first thread on macOS
+    if (System.getProperty("os.name").lowercase().contains("mac")) jvmArgs = listOf("-XstartOnFirstThread")
+}
+
 val gameProject = layout.projectDirectory.dir("project/ControlLine")
 
 // A shipped game carries no editor code: nothing on the main runtime classpath may reach an editor-only module.

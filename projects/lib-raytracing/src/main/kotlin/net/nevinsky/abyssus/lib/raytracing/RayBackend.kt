@@ -61,6 +61,8 @@ interface RaySession : AutoCloseable {
     fun poll(): RayFrame?
     /** How many times this session built acceleration structures; transform-only updates must not increase it. */
     val geometryBuilds: Long get() = 0
+    /** Called when a submitted frame missed its completion deadline; sessions that track health mark themselves unusable. */
+    fun reportStalled(reason: String) {}
     fun dispose()
     override fun close() = dispose()
 }

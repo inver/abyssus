@@ -5,8 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import com.intellij.ide.actions.NonTrivialActionGroup
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
+import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -72,4 +74,26 @@ class TreeActionVisibilityTest : BasePlatformTestCase() {
 
     fun testNewUiAssetIsOfferedOnTheAssetsRowOnly() =
         assertOnlyOnAssetsRow { node -> object : NewUiAssetAction() { override fun selected(e: AnActionEvent) = node } }
+
+    private fun groupOf(id: String): NonTrivialActionGroup =
+        ActionManager.getInstance().getAction(id) as NonTrivialActionGroup
+
+    private fun childIds(group: NonTrivialActionGroup): List<String> =
+        (group as com.intellij.openapi.actionSystem.DefaultActionGroup).getChildren(null)
+            .mapNotNull { ActionManager.getInstance().getId(it) }
+
+    fun testImportModelGroupContainsFlightGearThenModel() {
+        val group = groupOf("Abyssus.Menu.ImportModel")
+        assertEquals(listOf("Abyssus.ImportFlightGear", "Abyssus.ImportModel"), childIds(group))
+    }
+
+    fun testNewGroupContainsUiAssetThenTerrainThenFoliage() {
+        val group = groupOf("Abyssus.Menu.New")
+        assertEquals(listOf("Abyssus.NewUiAsset", "Abyssus.NewTerrain", "Abyssus.NewFoliage"), childIds(group))
+    }
+
+    fun testAddGroupContainsAssetThenPathArrangementThenLightThenWater() {
+        val group = groupOf("Abyssus.Menu.Add")
+        assertEquals(listOf("Abyssus.AddAsset", "Abyssus.AddPathArrangement", "Abyssus.AddLight", "Abyssus.AddWater"), childIds(group))
+    }
 }

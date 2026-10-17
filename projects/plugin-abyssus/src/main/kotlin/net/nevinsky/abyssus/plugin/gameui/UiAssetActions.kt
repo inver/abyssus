@@ -23,19 +23,27 @@ import java.io.File
 
 /** The names in the project file's `uiAssetNames`, from its current text; empty when it is missing or malformed. */
 fun registeredUiAssets(abss: VirtualFile): List<String> = runCatchingKeepingCancellation {
-    SceneJson().parse(textOf(abss))["uiAssetNames"]?.takeIf { it.isArray }?.mapNotNull { it.takeIf { n -> n.isTextual }?.textValue() }
+    SceneJson().parse(textOf(abss))["uiAssetNames"]?.takeIf { it.isArray }
+        ?.mapNotNull { it.takeIf { n -> n.isTextual }?.textValue() }
 }.getOrNull().orEmpty()
 
 /** Right-click on the Assets node: create a UI asset in this project. */
 open class NewUiAssetAction : AbyssusTreeAction<VirtualFile>() {
-    init { templatePresentation.text = AbyssusBundle.message("uiNewAssetAction") }
+    init {
+        templatePresentation.text = AbyssusBundle.message("uiNewAssetAction")
+    }
 
     override fun targetOf(node: Any?): VirtualFile? = assetsNodeProjectFile(node)
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
         val abss = target
         val assets = File(abss.parent.path, "assets")
-        val name = Messages.showInputDialog(project, AbyssusBundle.message("uiNewAssetPrompt"), AbyssusBundle.message("commandNewUiAsset"), null, "menus",
+        val name = Messages.showInputDialog(
+            project,
+            AbyssusBundle.message("uiNewAssetPrompt"),
+            AbyssusBundle.message("commandNewUiAsset"),
+            null,
+            "menus",
             object : InputValidator {
                 override fun checkInput(input: String?) = input != null && checkFolderName(assets, input) == null
                 override fun canClose(input: String?) = checkInput(input)
@@ -56,22 +64,35 @@ internal fun uiAssetTarget(node: Any?): UiAssetTarget? = runCatchingKeepingCance
 }.getOrNull()
 
 open class RegisterUiAssetAction : AbyssusTreeAction<UiAssetTarget>() {
-    init { templatePresentation.text = AbyssusBundle.message("uiRegisterAction") }
+    init {
+        templatePresentation.text = AbyssusBundle.message("uiRegisterAction")
+    }
+
     override fun targetOf(node: Any?) = uiAssetTarget(node)?.takeIf { !it.registered }
-    override fun perform(project: Project, target: UiAssetTarget, e: AnActionEvent) { registerUiAsset(project, target.abss, target.name) }
+    override fun perform(project: Project, target: UiAssetTarget, e: AnActionEvent) {
+        registerUiAsset(project, target.abss, target.name)
+    }
 }
 
 open class UnregisterUiAssetAction : AbyssusTreeAction<UiAssetTarget>() {
-    init { templatePresentation.text = AbyssusBundle.message("uiUnregisterAction") }
+    init {
+        templatePresentation.text = AbyssusBundle.message("uiUnregisterAction")
+    }
+
     override fun targetOf(node: Any?) = uiAssetTarget(node)?.takeIf { it.registered }
-    override fun perform(project: Project, target: UiAssetTarget, e: AnActionEvent) { unregisterUiAsset(project, target.abss, target.name) }
+    override fun perform(project: Project, target: UiAssetTarget, e: AnActionEvent) {
+        unregisterUiAsset(project, target.abss, target.name)
+    }
 }
 
 /**
  * Other UI assets of the project, for navigation in a preview: only registered names, read from the editor's current text
  * (unsaved included), the way a game opening a registered collection sees them.
  */
-class ProjectUiSource(private val abss: VirtualFile?, private val decoder: net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder = net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder()) :
+class ProjectUiSource(
+    private val abss: VirtualFile?,
+    private val decoder: net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder = net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder()
+) :
     net.nevinsky.abyssus.lib.core.ui.state.UiCollectionSource {
     override fun collection(assetName: String): net.nevinsky.abyssus.lib.core.ui.model.UiCollection? {
         val project = abss ?: return null

@@ -6,11 +6,19 @@ package net.nevinsky.abyssus.lib.raytracing
 
 class RayDeviceLostException(message: String) : IllegalStateException(message)
 
+/** A submitted frame did not complete within the frame-completion deadline; distinct from device loss. */
+class RayFrameStallException(val reason: String) : IllegalStateException(reason)
+
 /** One per backend/device, accessed on its serial worker. Also the conformance kit's loss-injection hook. */
 class RayDeviceHealth {
     private var loss: String? = null
+    private var stall: String? = null
     fun reportLost(reason: String) { loss = reason }
-    fun checkUsable() { loss?.let { throw RayDeviceLostException(it) } }
+    fun reportStalled(reason: String) { stall = reason }
+    fun checkUsable() {
+        loss?.let { throw RayDeviceLostException(it) }
+        stall?.let { throw RayFrameStallException(it) }
+    }
 }
 
 /** Feasibility scheduling boundary. One submitted frame and one replaceable pending request per view. */
@@ -76,4 +84,7 @@ class RayQueuedSession(private val driver: RaySession, private val health: RayDe
         latest = null
         driver.dispose()
     }
+
+    /** Called by the scheduler when a frame stalls; marks the session unusable so checkUsable rethrows. */
+    override fun reportStalled(reason: String) { health.reportStalled(reason) }
 }

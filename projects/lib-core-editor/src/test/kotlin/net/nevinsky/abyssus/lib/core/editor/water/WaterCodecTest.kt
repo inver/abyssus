@@ -108,7 +108,7 @@ class WaterCodecTest {
         val file = File("../plugin-abyssus/src/test/testData/project/Untitled/scenes/Main Scene.scene")
         val text = file.readText()
         val scene = parseScene(text)
-        assertEquals(null, scene.abyssus)
+        assertEquals(null, scene.water)
         assertTrue(sceneContentOf(scene).water.isEmpty())
         assertEquals(text, file.readText())
     }
