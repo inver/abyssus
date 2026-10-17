@@ -10,9 +10,10 @@ id of the scene. It SHALL hold:
 - a render component naming the asset (`kind` `asset`, `asset.type` `MODEL` or `TERRAIN`, `asset.assetName` the folder,
   and `shaderKey` `defaultShader` for a model or `terrain` for a terrain).
 
-When adding a model, the chooser MAY offer the model's meshes; choosing one mesh records that mesh's id as the render
-component's `meshId`, so the placed entity draws only that mesh with its material. When no mesh is chosen, `meshId` is
-absent and the whole model is drawn.
+When adding a model that holds more than one mesh, Add Asset SHALL offer each of its meshes besides placing the whole
+model; choosing a mesh records that mesh's id as the render component's `meshId`, so the placed entity draws only that
+mesh with its materials. A model with a single mesh SHALL be offered only as a whole. When the whole model is chosen,
+`meshId` is absent. The headless editing API SHALL accept the same optional `meshId`.
 
 Everything else in the file SHALL stay as it was. The addition SHALL be one undoable edit.
 
@@ -25,9 +26,14 @@ Everything else in the file SHALL stay as it was. The addition SHALL be one undo
 #### Scenario: Add a model with a chosen mesh
 
 - **WHEN** a model asset holding meshes `body` and `glass` is chosen in `Main Scene`, whose highest entity id is `8`,
-  and the user chooses mesh `glass`
+  and the user chooses mesh `glass` from the model's mesh choices
 - **THEN** the file gains entity `9` named `Model 9` with type `OBJECT` and a render component of asset `MODEL`
   `<asset>` with shader key `defaultShader` and `meshId` `glass`, and entities `0` to `8` are unchanged
+
+#### Scenario: A single-mesh model
+
+- **WHEN** Add Asset lists a model that holds one mesh
+- **THEN** it offers only the whole model and no mesh choices
 
 #### Scenario: Add a terrain
 
