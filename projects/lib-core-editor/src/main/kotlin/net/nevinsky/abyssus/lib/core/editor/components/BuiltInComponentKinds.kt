@@ -26,8 +26,12 @@ import net.nevinsky.abyssus.lib.core.editor.components.FieldKind
 import net.nevinsky.abyssus.lib.core.editor.components.RuntimeCodec
 import net.nevinsky.abyssus.lib.core.editor.components.decimalText
 
-private fun <C : Component> floatField(name: String, get: (C) -> Float, set: (C, Float) -> Unit) =
-    ComponentField<C>(name, FieldKind.FLOAT, { decimalText(get(it)) }, { c, t -> set(c, t.trim().toFloat()) })
+private fun <C : Component> floatField(
+    name: String, get: (C) -> Float, set: (C, Float) -> Unit, labelKey: String? = null, tooltipKey: String? = null,
+) = ComponentField<C>(
+    name, FieldKind.FLOAT, { decimalText(get(it)) }, { c, t -> set(c, t.trim().toFloat()) },
+    labelKey = labelKey, tooltipKey = tooltipKey,
+)
 
 private fun <C : Component> refField(name: String, get: (C) -> Int, set: (C, Int) -> Unit) =
     ComponentField<C>(name, FieldKind.ENTITY_REF, { get(it).toString() }, { c, t -> set(c, t.trim().toInt()) })
@@ -103,9 +107,12 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
                 floatField("color.b", { it.light.color.b }, { c, v -> c.light.color.b = v }),
                 floatField("color.a", { it.light.color.a }, { c, v -> c.light.color.a = v }),
                 floatField("intensity", { it.light.intensity }, { c, v -> c.light.intensity = v }),
-                floatField("range", { it.light.range }, { c, v -> c.light.range = v }),
-                floatField("coneAngle", { it.light.coneAngle }, { c, v -> c.light.coneAngle = v }),
-                floatField("edgeSoftness", { it.light.edgeSoftness * 100f }, { c, v -> c.light.edgeSoftness = v / 100f }),
+                floatField("range", { it.light.range }, { c, v -> c.light.range = v }, "lightRangeLabel", "lightRangeTooltip"),
+                floatField("coneAngle", { it.light.coneAngle }, { c, v -> c.light.coneAngle = v }, "lightConeAngleLabel"),
+                floatField(
+                    "edgeSoftness", { it.light.edgeSoftness * 100f }, { c, v -> c.light.edgeSoftness = v / 100f },
+                    "lightEdgeSoftnessLabel",
+                ),
             ),
         ) { LightComponent(LightDto()) },
         kind<Point2PointPositionComponent>(

@@ -4,21 +4,32 @@
 
 | Module | What | Depends on |
 |---|---|---|
-| `projects/plugin-abyssus/` | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.20): IDE glue over `lib-core-editor` (tree, tool windows, dialogs, the GL canvas and renderer, actions, file types, VFS) | `:lib-core-editor`, `:lib-core`, `:lib-physics` (non-transitive), `:lib-raytracing` (with `:lib-gdx` transitively), Jackson, libGDX, LWJGL3-AWT |
-| `projects/lib-core-editor/` | Plain JVM editing engine: scene documents and the write transform, component editing, the scene read model, picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge, `HeadlessEditing` | `:lib-core`, `:lib-raytracing`, `:lib-gdx` |
+| `projects/plugin-abyssus/` | The IntelliJ plugin (IC 2025.2.4+, since-build 252, Java 21, Kotlin 2.4.20): IDE glue over `lib-core-editor` (tree, tool windows, dialogs, the GL canvas and renderer, actions, file types, VFS) | `:lib-core-editor`, `:lib-core`, `:lib-physics` and `:lib-game-link` (non-transitive), `:lib-raytracing` (with `:lib-gdx` transitively), Jackson, libGDX, LWJGL3-AWT |
+| `projects/lib-core-editor/` | Plain JVM editing engine: scene documents and the write transform, component editing, the scene read model, picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge with its CPU snapshots (`RaySnapshotStore`), `HeadlessEditing` | `:lib-core`, `:lib-raytracing`, `:lib-gdx` |
+| `projects/lib-render/` | Plain JVM shared rendering mechanics: `TerrainPass` (editor and game terrain variants), shadow depth submission, host-neutral frame inputs and light profiles, the sun shadow camera | `:lib-core`, `:lib-gdx` |
+| `projects/lib-game-link/` | Plain JVM: the play host and protocol, `PlayModule`, the play launch file and its export, which a game links only for Abyssus (its `play` source set, never its main code) | `:lib-physics`, `:lib-core` |
 | `projects/lib-physics/` | Plain JVM physics: the physics components and `PhysicsWorld` (Jolt through jolt-jni), run in a game or the play host, never in the IDE | `:lib-core`, jolt-jni |
 | `projects/app-game-control-line/` | **Control Line**, a libGDX desktop game (LWJGL3): flight on Jolt lines, scoring, screens (an authored UI asset drawn by `lib-core`'s `UiPresenter`), its bundled native project and its `PlayModule` for Play in Abyssus | `:lib-physics`, libGDX LWJGL3 backend, jolt-jni natives of the build machine |
-| `projects/lib-core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline (`AssetStorage`), CPU ray snapshots (`RaySnapshotStore`), the models, terrains and skies it builds, native DTOs, Ashley components and scene loading | `:lib-gdx`, Jackson, libGDX |
-| `projects/lib-gdx` | Plain JVM library: libGDX model runtime with 32-bit mesh indices, an Assimp importer and a binary glTF writer | libGDX, LWJGL Assimp |
+| `projects/lib-core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline (`AssetStorage`), the models, terrains and skies it builds, native DTOs, Ashley components and scene loading | `:lib-gdx`, Jackson, libGDX |
+| `projects/lib-gdx` | Plain JVM library: stock libGDX g3d plus 32-bit meshes (`IntMesh`, `IntModel`), the PBR, image-based-light, shadow-atlas and instanced shaders on the stock `DefaultShader`, an Assimp importer and a binary glTF writer | libGDX, LWJGL Assimp |
 | `projects/lib-raytracing/` | Plain JVM ray tracing: backend contracts, immutable scene snapshots and linear host frames, the scheduler and quality policy, and optional native Metal and Vulkan backends | Kotlin stdlib, LWJGL Vulkan and VMA |
 
 ```text
 lib-gdx <- lib-core <- lib-physics <- app-game-control-line
+lib-core <- lib-render <- app-game-control-line
+lib-render <- plugin-abyssus (bundled)
 lib-core <- lib-core-editor <- plugin-abyssus
 lib-raytracing <- lib-core-editor
 lib-raytracing <- plugin-abyssus
 lib-physics <- plugin-abyssus
+lib-physics <- lib-game-link
+lib-game-link <- plugin-abyssus (non-transitive, bundled)
 ```
+
+A shipped game holds only the left of this graph: `lib-gdx`, `lib-core`, `lib-render` and `lib-physics`. The editor side is
+`lib-core-editor`, `lib-raytracing`, `lib-game-link` (Play, linked only by a game's separate `play` source set) and the
+plugin. Two checks keep it that way: `checkNoEditorCode` (no editor import or ray snapshot type in the shipped libraries'
+main sources) and `:app-game-control-line:checkShippedClasspath` (no editor module on the game's main runtime classpath).
 
 Arrows point toward dependencies. `lib-core-editor` also directly depends on `lib-gdx` and `lib-raytracing`;
 `plugin-abyssus` directly depends on `lib-core`, `lib-core-editor` and `lib-raytracing`.
@@ -28,7 +39,11 @@ Inside every module the package graph is acyclic (`checkPackageCycles`). `lib-co
 `BaseCtx` is its standalone composition root, creating JSON, file/meta loaders, an asset executor and storage,
 shaders, component registration and ECS/scene loaders. The plugin uses its own `AssetLoading`, which takes a
 `JsonProcessor`, SLF4J `Logger`, executor and `ShaderStorage`; `AbyssusCore.assets` builds it and each view gets a
-project loading graph. Hosts own the standalone executor and asset-storage lifecycle.
+project loading graph. Hosts own the standalone executor and asset-storage lifecycle. Every host takes its asset
+loaders from one table, `StandardAssetLoaders` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/assets/standard/StandardAssetLoaders.kt`): `BaseCtx`, the Control Line game's
+`fieldAssets` and the plugin's `ProjectAssets` register `StandardAssetLoaders.byType`, so an asset kind is added in
+one place. A host differs only by what it passes in (model preparation tap, logger, and the plugin's `FoliageLoader` in
+place of the game's `RuntimeFoliageLoader`).
 `AbyssusCore` creates four groups independently on first access: `documents` owns JSON, native validation and parsing;
 `assets` owns metadata, loading, property descriptions and previews; `terrain` owns generation and file staging;
 `ray` owns the backend service and conversion worker. Actions, providers and factories pass the group collaborators
@@ -46,7 +61,7 @@ to launch (`PlayLaunch`): the game's `<project>/abyssus/play.json` classpath and
 loopback port, waits 20 s for the hello, and keeps the last 200 output lines. `PlayClient` sends `load` (the editor's
 scene text), then `play`. A reader thread publishes the latest poses, which the Scene view shows through the
 `sceneSimulation` extension point. The process exits on `bye` or when the socket closes. The protocol is in
-`projects/lib-physics/src/main/kotlin/net/nevinsky/abyssus/lib/physics/play/PlayProtocol.kt`.
+`projects/lib-game-link/src/main/kotlin/net/nevinsky/abyssus/lib/gamelink/play/PlayProtocol.kt`.
 
 `lib-raytracing` is an optional GPU ray tracing renderer, off by default per view (switched from the **Ray Tracing**
 switch in Abyssus Properties; the Scene View has no button for it). It owns nothing global: the plugin's `AbyssusCore` lazily builds one `RayBackendService` (a
@@ -62,7 +77,7 @@ command pools, output images) that is disposed on the owner worker.
 `SceneFileEditor` watches the project's `assets` (VFS events and `meta.json` documents). `AssetRefresh` diffs snapshots of
 effective asset revisions off the EDT (unsaved metadata text is captured on the EDT first), and a real change reaches
 `SceneRenderer.queueAssetRevision` as an `AssetRevisionBatch`. The next safe frame invalidates the changed names in each
-`AssetStorage` and swaps old assets for new ones as they finish building. See
+`AssetStorage` and swaps old assets for new ones as they finish building (its revision and dependency bookkeeping is the GL-free `LoadBook`). See
 `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md`.
 
 ### A scene file to the scene view
@@ -74,15 +89,17 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    A light's or camera's direction resolves its `PositionComponent.lookAtId` to an entity's `localPosition` when that
    target exists and is not at the entity itself; otherwise it uses the entity's `localRotation`. `handleIds` records
    the `HANDLE` entities that a light may be aimed at.
-3. `SceneViewPanel` hosts a `GuardedGLCanvas`. A Swing `Timer` renders frames through
+3. `SceneViewPanel` hosts a `GuardedGLCanvas` and wires small collaborators, each owning one job: `SceneInputForwarder`
+   (keys and mouse), `RayControlBinding`, `CloudControls`, `PlayControlsStrip` and `FoliagePaintControls`; the "Add ..."
+   menus come in as `PlacementMenu`s. A Swing `Timer` renders frames through
    `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each holding a
    `lib-core` `AssetStorage` built by `AssetLoading`) and draws markers (`lib-core-editor`'s `SceneMarkers` through a
    `LineSink`) and gizmos (`sceneview/gizmo/GizmoDraw.kt` over `lib-core-editor`'s `GizmoHandles`).
 4. An HDR sky also lights the content. `lib-core`'s `HdrSkyLoader` decodes the `.exr` through TinyEXR on the pool thread, then
    `HdrEnvironmentBuild` builds a specular cube, an irradiance cube and six axis colors on the GPU, one step per
    frame. Once built, `SceneSkybox.environment` hands them to `SceneRenderer`, which (`SceneAmbient.of`) swaps
-   `ColorAttribute.AmbientLight` for `lib-gdx`'s `EnvironmentLightAttribute` after drawing the grid: the PBR shader
-   samples both cubes, the default shader takes the six colors as its ambient cubemap, and `TerrainShader` samples the
+   `ColorAttribute.AmbientLight` for `lib-gdx`'s `EnvironmentLightAttribute` after drawing the grid: `PbrModelShader`
+   samples both cubes, `ModelShader` takes the six colors as its ambient cubemap, and `TerrainShader` samples the
    irradiance cube. Without a built HDR sky the content is lit by the ambient color exactly as before.
    A procedural sky may have **clouds** (`lib-core`'s `assets.sky.clouds`): a `CLOUDS` asset its `additional.clouds` names
    by `uuid`. `ProceduralSkyLoader` resolves the `uuid` to a folder (`AssetIndex`) and names it in `dependencies`, so the
@@ -108,7 +125,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    with a usable map and the sun among the budgeted directional lights, the lit set keeps the sun undimmed and a
    `lib-gdx` `DirectionalVisibilityAttribute` (map, the sun's directional index from `LightSet.directionalIndexOf`,
    world-to-map, edge fade, and the uniform factor to use beyond the map) is set on the content environment and passed
-   to `TerrainShader`; `DefaultShader`, `PbrShader` and `terrain.frag` multiply that one light by the map, on top of its
+   to `TerrainShader`; `ModelShader`, `PbrModelShader` and `terrain_editor.frag` multiply that one light by the map, on top of its
    atlas visibility. A map that fails to build is logged once and the view keeps the uniform dimming. The map is created
    with the first clouds that cast shadows, dropped without GL calls on context loss and disposed with the renderer.
    `SceneRenderer` advances the view's `SkyClock`, passes `SceneViewState.cloudTechnique` (the toolbar's per-view
@@ -132,19 +149,20 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    rendered `LightSet.directional` (`sunLightIndex`), and the map was drawn; `SceneRenderer.applySunScale` then keeps the whole
    sun in `frameLights` and gives the shaders a `DirectionalVisibilityAttribute` (`lib-gdx`: a generic visibility texture
    for one directional light, with the world-to-map transform, an edge fade and the visibility outside the map, which is the
-   smoothed uniform `SunOcclusion` scale). `DefaultShader` / `PbrShader` multiply that light's contribution by it next to its
-   atlas shadow, `terrain.frag` does the same through `TerrainShader`. Otherwise (no clouds, no sun, a failed map or exhausted
+   smoothed uniform `SunOcclusion` scale). `ModelShader` / `PbrModelShader` multiply that light's contribution by it next to its
+   atlas shadow, `terrain_editor.frag` does the same through `TerrainShader` (an adapter over `lib-render`'s `TerrainPass`). Otherwise (no clouds, no sun, a failed map or exhausted
    cloud techniques) nothing is set and the sun is dimmed uniformly as before. The map is a GL resource of the canvas: disposed
    with the renderer, abandoned without GL calls when the context is lost.
 5. `SceneShadows` captures model and terrain renderables after their single animation/transform update, then draws
    bounded depth tiles before the color passes. Its per-canvas `ShadowResources` restores framebuffer and render
    state and falls back to direct lighting if allocation or depth rendering fails. Default/PBR models and terrain
-   apply atlas visibility per light; ambient, HDR and emissive terms remain independent. The 4096-square atlas supports sixteen views,
+   apply atlas visibility per light, all from one GLSL file (`lib-gdx` `shader/shared/shadow_visibility.glsl`, expanded from
+   `#pragma include` by `ShaderSourceAssembler`, used by `ShaderSources.readAssembled` and `ShaderStorage.fragment`); ambient, HDR and emissive terms remain independent. The 4096-square atlas supports sixteen views,
    shared by one directional, two six-face point and three spot shadows; small sets use larger tiles. Resources use the same
    safe AWT context lifecycle as assets, including CPU-only abandonment after context loss. See
    `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md` for fitting, budgets, sampler units and material limits.
 6. A terrain entity may name a `FOLIAGE` asset with its `FoliageComponent`; `sceneContentOf` carries it as a
-   `FoliagePlacement` in `SceneContent.foliages`. `AssetLoading` registers `FoliageLoader` for `MetaType.FOLIAGE`
+   `FoliagePlacement` in `SceneContent.foliages`. `AssetLoading` registers `FoliageLoader` (through `StandardAssetLoaders`) for `MetaType.FOLIAGE`
    (`prepare` reads the meta, the masks and the bake off the GL thread and declares the terrain and every layer model
    as dependencies), and `SceneFoliage` draws the built `FoliageDrawable` beside the terrains: it prefers the
    project's `FoliageDrafts` draft over the stored asset, generates a stale or draft-touched bake on the IDE's
@@ -152,6 +170,22 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    targets, only OBJECT layers cast into the shadow atlas, and ray tracing leaves foliage out while the view says so
    through `RayControl.foliageNote`. See
    `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md`.
+
+7. Water is procedural scene data under `abyssus.waterSurfaces` (see `docs/ai/file-formats.md`), not an entity or an
+   asset. `sceneContentOf` reads it with `WaterCodec` into `SceneContent.water` (valid surfaces and removable invalid rows).
+   A frame is updated once (`SceneRenderer.render`: assets, each model's animation, previews, lights, the shadow atlas) and
+   then drawn as often as water needs, from the same posed `models.drawn` / `terrains.drawn`; no pass advances an animation.
+   Without a valid, enabled surface above the camera and in view, the frame takes the ordinary single pass unchanged.
+   With water, `SceneWater` (`sceneview/water/`) runs: a bounded planar reflection per level (at most two levels, half
+   resolution, each drawn through `MirroredCamera` with a world clip plane and flipped winding), the opaque and alpha-tested
+   scene on the canvas, a copy of that colour, packed linear depth targets (everything opaque, and terrain alone), the
+   surfaces far to near (`WaterDrawable`), then the alpha-blended models and the editor overlays. Grid, markers, gizmos,
+   water and blended models never enter a reflection or a depth target. Targets belong to one canvas context
+   (`WaterResources`), are made once per size, restore the caller's framebuffer and render state, and are abandoned
+   without GL calls when the context is lost. `lib-gdx` provides the optional clip plane, the linear depth pass and
+   `FilteredRenderables` (see `projects/lib-gdx/README.md`); `TerrainShader` takes the clip plane too. Failures degrade in steps
+   (no targets: plain tinted water; no reflection: the sky colour or cube; no water shader: no water) and are logged once.
+   See `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md`.
 
 ### Clicks, drags and writes
 
@@ -196,7 +230,7 @@ The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and componen
    parses the document with `SceneJson` and admits it, lets the caller mutate the tree, admits the result and
    re-serializes it with `SceneJson().inStyleOf`, which keeps indentation, key order and number text.
 2. Unless the document changed meanwhile, replace the text in a `WriteCommandAction` and save.
-3. Publish `AbyssusSceneEdited.TOPIC` (the file). The Abyssus pane listens and refreshes itself; the writer knows no UI.
+3. Publish `AbyssusSceneEdited.TOPIC` (the file). The Abyssus pane's `AbyssusTreeRefresh` listens and refreshes the tree; the writer knows no UI. The same coordinator also follows document changes (Undo/Redo, unsaved text) and project VFS events for native documents, asset `meta.json` and asset folders, coalescing them with `lib-core-editor`'s `RefreshCoalescer` and restoring selection and expansion by row identity.
 
 `HeadlessEditing` (`lib-core-editor`, `editor.headless`) runs the same `DocumentTextEditor` on text with no IDE, so a
 caller without the plugin validates and edits a scene, project or `meta.json` with byte-identical results and the same
@@ -369,14 +403,14 @@ The editor retains source aliases in its `format` package. None of these checks 
   on the EDT without reopening; settings are cached, with no parsing or IO in the draw path. Disabling physics stops
   its STARTING, PLAYING or PAUSED session once, drops late callbacks/poses, and restores authored content. Other
   available providers remain usable. See `PlayState` and `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md`.
-- **A new asset kind drawn in the scene view:** an `AssetLoader` in `lib-core` (built in `AssetLoading`), and a placement in
-  `SceneContent`.
+- **A new asset kind drawn in the scene view:** an `AssetLoader` in `lib-core` with one entry in
+  `StandardAssetLoaders` (the plugin, `BaseCtx` and the game then all load it), and a placement in `SceneContent`.
 
 ### Saved ray settings revisions
 
-Scene DTOs live in `core.dto`: `SceneDto.rayTracing` binds to the typed `RayTracingDto`. Plugin
-`SceneRenderParams` re-serializes it before decoding the four preferences with `SceneRaySettingsCodec`. Properties reads
-the original JSON. These paths do not preserve the same malformed inputs; see the documentation audit for that gap.
+Scene DTOs live in `core.dto`; `SceneDto` does not bind `rayTracing` or `rayTracingEnabled` (a game ignores them as
+unknown keys). `renderParamsOf` takes the scene's parsed root node and decodes the four preferences from it with
+`SceneRaySettingsCodec`, so the view and Properties both read exactly what the file holds, including a malformed field.
 `RayMaterialOverrides` reads pure JSON from each Render component, and `RaySceneSnapshots` resolves unique PBR
 material IDs on the converter thread. Per-instance copied materials retain shared meshes and textures.
 Malformed settings or unresolved optical overrides cause explicit ray conversion fallback.

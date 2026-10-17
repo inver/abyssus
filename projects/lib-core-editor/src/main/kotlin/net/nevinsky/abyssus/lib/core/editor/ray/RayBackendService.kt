@@ -99,7 +99,14 @@ class RayBackendService(
                             }
                             else -> error("Unsupported ray request type")
                         }
-                    }, session::poll, RayQualityPolicy(quality), clock, log = log)
+                    }, session::poll, RayQualityPolicy(quality), clock,
+                        onStall = {
+                            val reason = "frame did not complete within the deadline"
+                            session.reportStalled(reason)
+                            // a stalled backend is never retried in place: fail like a lost device so a retry re-probes
+                            failView(view, revision, RayFrameStallException(reason))
+                        },
+                        log = log)
                     if (!view.install(scheduler, revision)) {
                         session.dispose()
                         return@runCatchingKeepingCancellation
@@ -112,7 +119,7 @@ class RayBackendService(
                 }
             }
         }.onFailure { failure ->
-            if (failure is RayDeviceLostException && preparingBackend != null && bindings[view] == null) {
+            if ((failure is RayDeviceLostException || failure is RayFrameStallException) && preparingBackend != null && bindings[view] == null) {
                 failBackend(checkNotNull(preparingBackend), failure)
             }
             failView(view, revision, failure)
@@ -140,7 +147,7 @@ class RayBackendService(
                     publish { view.mode.prepared(binding.revision) }
                 }
             }.onFailure { failure ->
-                if (failure is RayDeviceLostException) failBackend(binding.backend, failure)
+                if (failure is RayDeviceLostException || failure is RayFrameStallException) failBackend(binding.backend, failure)
                 else failView(view, binding.revision, failure)
             }
         }
@@ -148,7 +155,7 @@ class RayBackendService(
 
     private fun failView(view: RayViewRuntime<*>, revision: Long, failure: Throwable) {
         val binding = bindings[view]
-        if (failure is RayDeviceLostException && binding != null) {
+        if ((failure is RayDeviceLostException || failure is RayFrameStallException) && binding != null) {
             failBackend(binding.backend, failure)
             return
         }

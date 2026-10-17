@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.Model
 import com.badlogic.gdx.graphics.g3d.ModelBatch
+import com.badlogic.gdx.graphics.g3d.Renderable
 import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.math.Matrix4
@@ -23,7 +24,7 @@ import com.intellij.openapi.Disposable
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDrawable
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySkySnapshot
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SunOcclusion
@@ -33,6 +34,9 @@ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.SKY_CAMERA_HEIGHT
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.editor.content.*
+import net.nevinsky.abyssus.lib.core.editor.water.InvalidWater
+import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
+import net.nevinsky.abyssus.lib.core.editor.water.WaterPreview
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.lib.core.editor.ray.RayFrameContext
 import net.nevinsky.abyssus.lib.raytracing.RaySunVisibility
@@ -48,9 +52,9 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.scene.cameraDirectionOf
 import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
-import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
+import net.nevinsky.abyssus.lib.gdx.g3d.FilteredRenderables
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
-import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
@@ -59,6 +63,12 @@ import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw
 import net.nevinsky.abyssus.plugin.sceneview.shadows.CloudShadowMap
 import net.nevinsky.abyssus.plugin.sceneview.shadows.SceneShadows
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SkyClock
+import net.nevinsky.abyssus.plugin.sceneview.water.SceneWater
+import net.nevinsky.abyssus.plugin.sceneview.water.WaterFrameInput
+import net.nevinsky.abyssus.lib.core.water.WaterPassPlan
+import net.nevinsky.abyssus.lib.gdx.shader.ClipPlaneAttribute
+import com.badlogic.gdx.graphics.Camera
+import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SunDirection
 import net.nevinsky.abyssus.plugin.sceneview.skybox.RaySkyBakeKey
 import net.nevinsky.abyssus.plugin.sceneview.skybox.RaySunVisibilityKey
@@ -70,7 +80,6 @@ import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.plugin.sceneview.terrain.TerrainShader
 import java.io.File
-import net.nevinsky.abyssus.lib.gdx.ModelBatch as ContentBatch
 
 /**
  * Draws a scene's environment, a ground grid and the content the scene places (skybox, terrains, models), and picks
@@ -113,28 +122,55 @@ class SceneRenderer(
         get() {
             val c = posedContent
             val p = state.preview
-            return if (p.isEmpty()) c else ScenePreview().apply(c, p)
+            val moved = if (p.isEmpty()) c else ScenePreview().apply(c, p)
+            val water = state.waterPreview
+            return if (water.isEmpty()) moved else moved.copy(water = WaterPreview().apply(moved.water, water))
         }
 
     /** Other plugins' overlays for this view; drawn after the markers, then again over everything. */
     internal var overlays: SceneOverlayHost? = null
 
     private var batch: ModelBatch? = null
-    private var contentBatch: ContentBatch? = null
-    private var contentShaders: DefaultShaderProvider? = null
+    private var contentBatch: ModelBatch? = null
+    private var contentShaders: ModelShaderProvider? = null
 
     /** Asset changes waiting for a frame that can safely replace GL resources; merged until [render] takes them. */
     private val pendingRevision = PendingAssetRevision()
 
-    private val models = SceneModels(AssetView(assets, net.nevinsky.abyssus.lib.gdx.model.Model::class.java))
+    private val models = SceneModels(AssetView(assets, com.badlogic.gdx.graphics.g3d.Model::class.java))
     private val terrains = SceneTerrains(AssetView(assets, TerrainMesh::class.java))
     private val foliage = SceneFoliage(ViewFoliageAssets(AssetView(assets, FoliageDrawable::class.java)), foliageDrafts)
     private var terrainShader: TerrainShader? = null
+
+    /** The GL objects of the current context that only this renderer owns; abandoned or released as a whole (see [RenderResources]). */
+    private val resources = RenderResources()
     private var shadows: SceneShadows? = null
+    private var water: SceneWater? = null
+    private val loggedInvalidWater = HashSet<String>()
     internal var shadowedLightIds: Set<String> = emptySet()
         private set
     private var skybox: SceneSkybox? = null
     private var overlay: LoadingOverlay? = null
+    private var corners: CornerOverlay? = null
+
+    /** The Swing-painted images drawn in the corners of the view after everything else; set on the AWT thread before a frame. */
+    @Volatile
+    internal var cornerSprites: List<CornerSprite> = emptyList()
+    /**
+     * What this view draws: the Shadows, Fog and Grid toggles and the shading. Per view and never saved; set on the AWT thread
+     * and read on the next frame. Leaving Unlit makes the lights be applied to the environment again.
+     */
+    var display: ViewDisplay = ViewDisplay()
+        set(value) {
+            if (field.shading != value.shading) {
+                lightsKey = null
+                frameLightsKey = null
+            }
+            field = value
+        }
+
+    private val unlit: Boolean get() = display.shading == Shading.UNLIT
+
     private var lightsKey: Pair<List<LightPlacement>, Vec3>? = null
     private var lights = NO_LIGHTS
 
@@ -270,26 +306,37 @@ class SceneRenderer(
         rayPresenter = null
         abandonShadows()
         shadows = SceneShadows()
+        water?.abandon()
+        water = null
+        skyLease = null
+        skyLeaseOwner = null
         models.abandon()
         terrains.abandon()
         foliage.abandon()
         snapshot = null
         // the previous context's GL objects went with it: forget them without GL calls, as for models and terrains
-        skybox?.abandon()
+        resources.abandonAll()
         skybox = null
         overlay = null
+        corners = null
         lineBatch = null
         terrainShader = null
+        contentShaders = null
+        contentBatch = null
+        batch = null
+        gridModel = null
+        grid = null
         updateDrawnVersion()
-        batch = ModelBatch(FogShaderProvider { fogCoefficient })
-        contentShaders = DefaultShaderProvider(net.nevinsky.abyssus.lib.gdx.shader.ShaderConfig().apply {
+        batch = resources.own(ModelBatch(FogShaderProvider { fogCoefficient }), ModelBatch::dispose).value
+        contentShaders = resources.own(ModelShaderProvider(com.badlogic.gdx.graphics.g3d.shaders.DefaultShader.Config().apply {
             numSpotLights = MAX_POINT
-        }).also { contentBatch = ContentBatch(it) }
-        terrainShader = TerrainShader(shaders)
-        skybox = SceneSkybox(AssetView(assets, SkyRenderer::class.java))
-        overlay = LoadingOverlay(shaders)
-        lineBatch = LineBatch(shaders)
-        gridModel = GridModel.build().also { grid = ModelInstance(it) }
+        }), ModelShaderProvider::dispose).value.also { contentBatch = ModelBatch(it) }
+        terrainShader = resources.own(TerrainShader(shaders), TerrainShader::dispose).value
+        skybox = resources.own(SceneSkybox(AssetView(assets, SkyRenderer::class.java)), SceneSkybox::dispose, SceneSkybox::abandon).value
+        overlay = resources.own(LoadingOverlay(shaders), LoadingOverlay::dispose).value
+        corners = resources.own(CornerOverlay(shaders), CornerOverlay::dispose, CornerOverlay::abandon).value
+        lineBatch = resources.own(LineBatch(shaders), LineBatch::dispose).value
+        gridModel = resources.own(GridModel.build(), Model::dispose).value.also { grid = ModelInstance(it) }
     }
 
     /**
@@ -323,6 +370,8 @@ class SceneRenderer(
         skyClock.advance(deltaSeconds)
         applyLights(c, orbit)
         applySunScale(c, orbit)
+        // Unlit: no lights reach the materials, and applyEnvironment already made the ambient white
+        if (unlit) NO_LIGHTS.applyTo(environment)
         models.update(c.models, p.projectDir, deltaSeconds)
         terrains.update(c.terrains, p.projectDir)
         foliage.update(c.foliages, p.projectDir, camera)
@@ -352,8 +401,16 @@ class SceneRenderer(
             ?.takeIf { compatibleRayDisplay(it, c, width, height) }
         presentedRayFrame = rayDisplay != null
         val atlas =
-            if (rayDisplay == null) shadows?.render(camera, lights, environment, models.drawn, terrains.drawn, foliage) else null
+            if (rayDisplay == null && display.drawsShadows) shadows?.render(camera, lights, environment, models.drawn, terrains.drawn, foliage) else null
         shadowedLightIds = atlas?.records?.mapTo(HashSet()) { it.lightId } ?: emptySet()
+        // water: planned once per frame; null (the ordinary path) when no valid surface above the camera is in view
+        val waterInput = if (rayDisplay == null) waterInputOf(p, c, width, height, deltaSeconds) else null
+        val waterPlan = waterInput?.let { water().begin(it) }
+        if (waterPlan != null) {
+            water().renderReflections(waterPlan, waterInput) { mirrored, clip -> drawReflected(p, c, atlas, mirrored, clip) }
+        } else {
+            lastWaterPlan = null
+        }
         Gdx.gl.glViewport(0, 0, width, height)
         Gdx.gl.glClearColor(p.clear.r, p.clear.g, p.clear.b, p.clear.a)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
@@ -369,10 +426,17 @@ class SceneRenderer(
                 state.cloudTechnique
             )
             drawnCloudTechnique = (skybox?.sky(p.content.skybox) as? ProceduralSky)?.drawnTechnique
-            batch.begin(camera)
-            batch.render(grid, environment)
-            batch.end()
-            renderContent(p, c, atlas)
+            if (display.grid) {
+                batch.begin(camera)
+                batch.render(grid, environment)
+                batch.end()
+            }
+            renderContent(p, c, atlas, parts = if (waterPlan != null) ContentParts.OPAQUE else ContentParts.ALL)
+            if (waterPlan != null) {
+                water().drawSurfaces(waterPlan, waterInput!!, waterSkyCube(c, water().usesSkyFallback(waterPlan)))
+                renderContent(p, c, atlas, parts = ContentParts.BLENDED)
+            }
+            lastWaterPlan = waterPlan
             drawOverlays(width, height)
         } else {
             drawnCloudTechnique = null
@@ -383,9 +447,11 @@ class SceneRenderer(
             applyEnvironment(p.copy(ambient = matched.ambient, fog = matched.fog))
             Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
             Gdx.gl.glDepthFunc(GL20.GL_LEQUAL)
-            batch.begin(rayCamera)
-            batch.render(grid, environment)
-            batch.end()
+            if (display.grid) {
+                batch.begin(rayCamera)
+                batch.render(grid, environment)
+                batch.end()
+            }
             drawOverlays(width, height, matched.content, rayCamera)
             applyEnvironment(p)
         }
@@ -393,6 +459,7 @@ class SceneRenderer(
         // grayed out with a spinner for as long as the scene's assets are on their way
         loading = (skybox?.isLoading ?: false) || models.isLoading || terrains.isLoading
         if (loading) overlay?.draw(width, height, deltaSeconds)
+        corners?.draw(width, height, cornerSprites)
         publishSnapshot()
     }
 
@@ -453,6 +520,13 @@ class SceneRenderer(
         overlays?.draw(overlayView(c, displayCamera, height, onTop = false), lines)
         lines.end()
         lines.begin(displayCamera, depthTest = false)
+        state.selectedWater?.let { id ->
+            (c.water.firstOrNull { it.id == id } as? ValidWater)?.let { WaterOutline().draw(lines, it.settings) }
+            gizmoHandlesFor(c, displayCamera, state, height)?.let {
+                GizmoDraw.draw(lines, it, state.hoveredAxis)
+                drewGizmo = true
+            }
+        }
         state.selectedId?.let { id ->
             boundsOf(c, id)?.let { SelectionBox.draw(lines, it) }
             gizmoHandlesFor(c, displayCamera, state, height)?.let {
@@ -537,11 +611,105 @@ class SceneRenderer(
         return SceneMarkers().boundsOf(c, id)
     }
 
-    private fun renderContent(p: SceneRenderParams, c: SceneContent, atlas: ShadowAtlasAttribute?) {
+    /**
+     * The world box of the entity [id], or of everything the last frame drew when [id] is null; null when there is nothing
+     * to frame. Reads CPU data only.
+     */
+    internal fun framedBounds(id: String?): BoundingBox? {
+        if (id != null) return boundsOf(content, id)
+        val box = BoundingBox().inf()
+        for (entity in models.drawn) box.ext(BoundingBox(entity.localBounds).mul(entity.instance.transform))
+        for (entity in terrains.drawn) box.ext(BoundingBox(entity.localBounds).mul(entity.world))
+        return box.takeIf { it.isValid }
+    }
+
+    /** Which parts of the content a pass draws: all of it; the opaque and alpha-tested parts; or the blended model parts only. */
+    private enum class ContentParts { ALL, OPAQUE, BLENDED }
+
+    private fun isBlended(renderable: Renderable): Boolean =
+        (renderable.material?.get(BlendingAttribute.Type) as? BlendingAttribute)?.blended == true
+
+    private fun water(): SceneWater = (water ?: SceneWater(shaders, log).also { water = it }).also { it.frozenSeconds = waterTime }
+
+    /** Stands the water animation at this time (seconds) instead of letting it run; for tests that compare frames. */
+    internal var waterTime: Double? = null
+
+    /** The water plan of the last frame, or null when it drew none; for tests. */
+    internal var lastWaterPlan: WaterPassPlan? = null
+        private set
+
+    /** The water state of this view (null before any water is planned), for tests. */
+    internal val waterStatus: SceneWater? get() = water
+
+    /** What the water passes read of this frame; logs each invalid surface once and never draws it. */
+    private fun waterInputOf(p: SceneRenderParams, c: SceneContent, width: Int, height: Int, deltaSeconds: Float): WaterFrameInput? {
+        if (c.water.isEmpty()) return null
+        for (surface in c.water) if (surface is InvalidWater && loggedInvalidWater.add(surface.id + surface.problems)) {
+            log.warn("Water surface '${surface.name}' (${surface.id}) is skipped: ${surface.problems.joinToString("; ")}")
+        }
+        val surfaces = c.water.filterIsInstance<ValidWater>().map { it.settings }
+        if (surfaces.isEmpty()) return null
+        return WaterFrameInput(
+            camera, width, height, deltaSeconds, surfaces, p.clear,
+            if (unlit) UNLIT_AMBIENT else p.ambient, if (display.fog) p.fog else null,
+            if (unlit) NO_LIGHTS else frameLights, models.drawn, terrains.drawn, foliage,
+        )
+    }
+
+    private var skyLease: ProceduralSky.EnvironmentLease? = null
+
+    /** Whether this view holds a lease on its sky's cloudy environment for water that shows the sky; for tests. */
+    internal val skyLeaseActive: Boolean get() = skyLease != null
+    private var skyLeaseOwner: ProceduralSky? = null
+
+    private fun releaseSkyLease() {
+        skyLease?.close()
+        skyLease = null
+        skyLeaseOwner = null
+    }
+
+    /**
+     * The lighting cube of the scene's sky for water that shows the sky instead of a planar reflection, or null when
+     * the sky has none (a plain cube sky) or it is not built yet. A procedural sky with clouds builds its cloudy cube only
+     * while this view holds a lease, so the lease is taken while some surface needs the fallback and given back when
+     * none does (and with the view).
+     */
+    private fun waterSkyCube(c: SceneContent, needed: Boolean): com.badlogic.gdx.graphics.GLTexture? {
+        val sky = skybox?.sky(c.skybox)
+        if (!needed || sky !== skyLeaseOwner) releaseSkyLease()
+        if (!needed) return null
+        return when (sky) {
+            is net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSky -> sky.environment.specular
+            is ProceduralSky -> {
+                if (skyLease == null && sky.hasClouds) {
+                    skyLease = sky.acquireEnvironment()
+                    skyLeaseOwner = sky
+                }
+                (sky.lightingEnvironment ?: skyLease?.environment)?.specular
+            }
+            else -> null
+        }
+    }
+
+    /** The sky and the opaque scene through the mirrored [view], clipped to what is above the water ([clip]). */
+    private fun drawReflected(p: SceneRenderParams, c: SceneContent, atlas: ShadowAtlasAttribute?, view: Camera, clip: FloatArray) {
+        skybox?.draw(view, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights), skyClock.seconds, state.cloudTechnique)
+        Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
+        renderContent(p, c, atlas, view, clip, ContentParts.OPAQUE)
+    }
+
+    private fun renderContent(
+        p: SceneRenderParams,
+        c: SceneContent,
+        atlas: ShadowAtlasAttribute?,
+        view: Camera = camera,
+        clip: FloatArray? = null,
+        parts: ContentParts = ContentParts.ALL,
+    ) {
         val contentBatch = contentBatch ?: return
         // after the grid: a built HDR sky replaces the ambient color for the content only (applyEnvironment undoes it)
         val ambient = SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) }
-        val sky = (ambient as? SceneAmbient.Sky)?.environment
+        val sky = if (unlit) null else (ambient as? SceneAmbient.Sky)?.environment
         val to = if (sky != null) skybox?.fadingTo(c.skybox) else null
         if (sky != null) {
             environment.remove(ColorAttribute.AmbientLight)
@@ -549,19 +717,30 @@ class SceneRenderer(
             environment.set(EnvironmentLightAttribute(sky.specular, sky.irradiance, sky.levels, sky.ambient, target, to?.weight ?: 0f))
         }
         if (atlas != null) environment.set(atlas)
-        sunVisibility?.let { environment.set(it) }
-        terrainShader?.draw(
-            camera, terrains.drawn, p.ambient, p.fog, frameLights, sky?.irradiance, atlas,
-            to?.environment?.irradiance, to?.weight ?: 0f, sunVisibility,
-        )
-        contentBatch.begin(camera)
-        for (entity in models.drawn) contentBatch.render(
-            entity.instance,
-            environment,
-            ShaderProvider.DEFAULT_SHADER_KEY
-        )
-        foliage.draw(contentBatch, environment)
-        contentBatch.end()
+        if (!unlit) sunVisibility?.let { environment.set(it) }
+        if (parts != ContentParts.BLENDED) {
+            terrainShader?.draw(
+                view, terrains.drawn, if (unlit) UNLIT_AMBIENT else p.ambient, if (display.fog) p.fog else null,
+                if (unlit) NO_LIGHTS else frameLights, sky?.irradiance, atlas,
+                to?.environment?.irradiance, to?.weight ?: 0f, if (unlit) null else sunVisibility, clip,
+            )
+        }
+        if (clip != null) environment.set(ClipPlaneAttribute(clip))
+        val accept: ((Renderable) -> Boolean)? = when (parts) {
+            ContentParts.ALL -> null
+            ContentParts.OPAQUE -> { r -> !isBlended(r) }
+            ContentParts.BLENDED -> { r -> isBlended(r) }
+        }
+        try {
+            contentBatch.begin(view)
+            for (entity in models.drawn) {
+                contentBatch.render(if (accept == null) entity.instance else FilteredRenderables(entity.instance, accept), environment)
+            }
+            if (parts != ContentParts.BLENDED) foliage.draw(contentBatch, environment, accept)
+            contentBatch.end()
+        } finally {
+            environment.remove(ClipPlaneAttribute.Type)
+        }
     }
 
     /** Recomputed only when the scene's lights or the orbit target (which decides the nearest point lights) change. */
@@ -666,13 +845,13 @@ class SceneRenderer(
         environment.remove(ShadowAtlasAttribute.Type)
         environment.remove(DirectionalVisibilityAttribute.Type)
         environment.remove(EnvironmentLightAttribute.Type)
-        val ambient = p.ambient
+        val ambient = if (unlit) UNLIT_AMBIENT else p.ambient
         if (ambient != null) {
             environment.set(ColorAttribute(ColorAttribute.AmbientLight, ambient.r, ambient.g, ambient.b, 1f))
         } else {
             environment.remove(ColorAttribute.AmbientLight)
         }
-        val fog = p.fog
+        val fog = if (display.fog) p.fog else null
         if (fog != null) {
             environment.set(ColorAttribute(ColorAttribute.Fog, fog.color.r, fog.color.g, fog.color.b, 1f))
             fogCoefficient = fog.shaderCoefficient
@@ -704,6 +883,9 @@ class SceneRenderer(
         rayPresenter = null
         bakedSky = null
         presentedRayFrame = false
+        releaseSkyLease()
+        water?.dispose()
+        water = null
         shadows?.dispose()
         shadows = null
         shadowedLightIds = emptySet()
@@ -716,19 +898,14 @@ class SceneRenderer(
         terrains.dispose()
         foliage.dispose()
         updateDrawnVersion()
-        terrainShader?.dispose()
+        resources.releaseAll()
         terrainShader = null
-        skybox?.dispose()
         skybox = null
-        lineBatch?.dispose()
         lineBatch = null
-        overlay?.dispose()
         overlay = null
-        contentShaders?.dispose()
+        corners = null
         contentShaders = null
         contentBatch = null
-        batch?.dispose()
-        gridModel?.dispose()
         batch = null
         gridModel = null
         grid = null
@@ -736,6 +913,9 @@ class SceneRenderer(
 
     private companion object {
         const val MIN_NEAR = 0.01f
+
+        /** Unlit shading lights every material fully by its own colors: a white ambient and no lights. */
+        val UNLIT_AMBIENT = net.nevinsky.abyssus.lib.core.editor.content.Rgba(1f, 1f, 1f, 1f)
 
         /** The outer share of the cloud shadow square over which its shade fades into the uniform sun dimming. */
         const val CLOUD_SHADOW_EDGE_FADE = 0.1f

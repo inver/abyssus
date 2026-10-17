@@ -17,8 +17,6 @@ import com.badlogic.gdx.graphics.g3d.attributes.SpotLightsAttribute
 import com.badlogic.gdx.graphics.g3d.environment.BaseLight
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
-import com.badlogic.gdx.graphics.g3d.utils.DefaultTextureBinder
-import com.badlogic.gdx.graphics.g3d.utils.RenderContext
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.Vector4
 import com.badlogic.gdx.math.collision.BoundingBox
@@ -26,9 +24,10 @@ import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Pool
 import com.badlogic.gdx.utils.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import net.nevinsky.abyssus.lib.gdx.Renderable
-import net.nevinsky.abyssus.lib.gdx.shader.ModelDepthShaderProvider
+import com.badlogic.gdx.graphics.g3d.Renderable
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelDepthShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowDepthPass
+import net.nevinsky.abyssus.lib.render.shadow.DepthSubmission
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasView
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightRecord
@@ -46,7 +45,7 @@ class SceneShadows : Disposable {
     private val layout = ShadowLayout()
     private val pass = ShadowDepthPass()
     private val shaders = ModelDepthShaderProvider(pass)
-    private val context = RenderContext(DefaultTextureBinder(DefaultTextureBinder.LRU, 1))
+    private val submission = DepthSubmission { shaders.get(it) }
     private val pool = object : Pool<Renderable>() { override fun newObject() = Renderable() }
     private val renderables = Array<Renderable>()
     private val casterBounds = ShadowCasterBounds()
@@ -101,15 +100,7 @@ class SceneShadows : Disposable {
             pass.lightPosition.set(sourcePosition); pass.far = range
             for ((view, tile) in views.zip(allocation.tiles)) {
                 val success = resources.render(tile) {
-                    context.begin()
-                    try {
-                        for (caster in casters) {
-                            if (!view.camera.frustum.boundsInFrustum(caster.bounds)) continue
-                            val shader = shaders.get(caster.renderable) ?: continue
-                            shader.begin(view.camera, context)
-                            try { shader.render(caster.renderable) } finally { shader.end() }
-                        }
-                    } finally { context.end() }
+                    submission.submit(view.camera, casters.filter { view.camera.frustum.boundsInFrustum(it.bounds) }.map { it.renderable })
                 }
                 if (!success) {
                     failed = true

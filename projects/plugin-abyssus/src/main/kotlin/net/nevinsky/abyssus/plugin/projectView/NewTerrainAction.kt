@@ -6,20 +6,15 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import com.intellij.ide.projectView.ProjectView
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
-import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusCore
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
@@ -37,24 +32,10 @@ import javax.swing.JComponent
  * resolution and generation settings with a heightmap preview; Create writes the asset and selects it. The scene
  * files and the project file are not touched, so the terrain is unused until a scene references it.
  */
-class NewTerrainAction : AnAction(), DumbAware {
-    override fun getActionUpdateThread() = ActionUpdateThread.EDT
+open class NewTerrainAction : AbyssusTreeAction<VirtualFile>() {
+    override fun targetOf(node: Any?): VirtualFile? = assetsNodeProjectFile(node)
 
-    private fun owningProject(e: AnActionEvent): VirtualFile? {
-        val project = e.project ?: return null
-        val pane = ProjectView.getInstance(project).currentProjectViewPane?.takeIf { it.id == AbyssusProjectViewPane.ID } ?: return null
-        return assetsNodeProjectFile(TreeUtil.getUserObject(pane.selectedPath?.lastPathComponent))
-    }
-
-    override fun update(e: AnActionEvent) {
-        e.presentation.isEnabledAndVisible = owningProject(e) != null
-    }
-
-    override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
-        val abss = owningProject(e) ?: return
-        createInteractively(project, abss)
-    }
+    override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) = createInteractively(project, target)
 }
 
 /** The dialog around a [NewTerrainForm]; OK is enabled only while the form has a request to create from. */
@@ -95,7 +76,7 @@ fun createTerrain(project: Project, abss: VirtualFile, request: NewTerrainReques
     val core = service<AbyssusCore>()
     val terrain = core.terrain
     val accepted = net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation {
-        core.documents.format.requireSupported(core.documents.json.readObject(textOf(abss)), net.nevinsky.abyssus.lib.core.editor.document.DocumentKind.PROJECT)
+        core.documents.format.requireSupported(core.documents.json.readObject(textOf(abss)), net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)
     }
     accepted.exceptionOrNull()?.let { report(it.documentDisplayMessage()); return null }
     val projectDir = File(abss.parent.path)

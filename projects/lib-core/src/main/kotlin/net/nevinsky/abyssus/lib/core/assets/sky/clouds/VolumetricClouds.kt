@@ -113,7 +113,6 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
         val composite = checkNotNull(composite)
         withPremultipliedBlend {
             composite.bind()
-            composite.setUniformMatrix("u_invViewProj", scene.invViewProj)
             bindTexture(0, GL20.GL_TEXTURE_2D, history[latest])
             composite.setUniformi("u_clouds", 0)
             checkNotNull(mesh).render(composite, GL20.GL_TRIANGLES)

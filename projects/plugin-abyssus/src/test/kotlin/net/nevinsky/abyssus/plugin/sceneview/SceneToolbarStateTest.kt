@@ -37,6 +37,12 @@ class SceneToolbarStateTest {
         assertFalse(experimenting.cameraEnabled || experimenting.gizmoEnabled)
     }
 
+    @Test fun withoutAnAddLightOrAddAssetMenuTheirButtonsStayDisabled() {
+        val state = toolbarState(GizmoMode.MOVE, experimenting = false, playing = false, canDrop = false, canAddLight = false, canAddAsset = false)
+        assertFalse(state.addLightEnabled || state.addAssetEnabled || state.dropEnabled)
+        assertTrue("the gizmo and camera still work", state.gizmoEnabled && state.cameraEnabled)
+    }
+
     @Test fun playControlsFollowThePhase() {
         assertEquals(PlayControls(play = true, pause = false, step = false, stop = false), playControls(PlayState.Phase.IDLE, active = false))
         assertEquals(PlayControls(play = false, pause = true, step = false, stop = true), playControls(PlayState.Phase.PLAYING, active = true))

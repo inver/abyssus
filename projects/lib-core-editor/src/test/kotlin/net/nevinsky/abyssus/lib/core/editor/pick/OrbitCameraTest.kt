@@ -88,4 +88,33 @@ class OrbitCameraTest {
         cam.reset(params)
         assertVec(params.position, cam.position(), 0.05f)
     }
+
+    @Test
+    fun lookingAlongAnAxisPutsTheEyeOnTheOppositeSideKeepingTargetAndDistance() {
+        val orbit = OrbitCamera(Vec3(1f, 2f, 3f), 8f, 0.4f, 0.2f)
+        orbit.lookAlong(Vec3(0f, 0f, -1f))
+        val eye = orbit.position()
+        assertEquals(1f, eye.x, 1e-4f)
+        assertEquals(2f, eye.y, 1e-4f)
+        assertEquals(3f + 8f, eye.z, 1e-4f)
+        assertEquals(Vec3(1f, 2f, 3f), orbit.target)
+        assertEquals(8f, orbit.distance, 0f)
+    }
+
+    @Test
+    fun lookingStraightDownSettlesAtTheHighestPitchKeepingYaw() {
+        val orbit = OrbitCamera(Vec3(0f, 0f, 0f), 10f, 0.7f, 0.1f)
+        orbit.lookAlong(Vec3(0f, -1f, 0f))
+        assertEquals(0.7f, orbit.yaw, 0f)
+        assertTrue(orbit.pitch > 1.5f)
+        assertTrue(orbit.position().y > 9.9f)
+    }
+
+    @Test
+    fun aZeroDirectionChangesNothing() {
+        val orbit = OrbitCamera(Vec3(0f, 0f, 0f), 10f, 0.7f, 0.1f)
+        orbit.lookAlong(Vec3(0f, 0f, 0f))
+        assertEquals(0.7f, orbit.yaw, 0f)
+        assertEquals(0.1f, orbit.pitch, 0f)
+    }
 }

@@ -252,8 +252,8 @@ class SceneRenderGlTest {
         val dir = java.nio.file.Files.createTempDirectory("hdrscene").toFile()
         try {
             val sky = File(dir, "assets/sky")
-            HdrFixtures.write(File(sky, "sky.hdr"), 64, 32, pixel = HdrFixtures.uniform(radiance))
-            File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+            HdrFixtures.writeExr(File(sky, "sky.exr"), 64, 32, pixel = HdrFixtures.uniform(radiance))
+            File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{"file":"sky.exr"}}""")
             val text = edit(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()) { root ->
                 noFog(root); root.put("skyboxEnabled", true); root.put("skyboxName", "sky")
             }
@@ -299,7 +299,7 @@ class SceneRenderGlTest {
         assertNull(withSky.error)
         assertEquals(3, models)
         // the same view with no entities shows the sky alone; without a sky it shows where the content is
-        val skyOnly = GlHarness.render(params("Untitled", "Main Scene.scene") { edit(it) { root -> sky(root); (root.get("ecs") as ObjectNode).putObject("entities") } }, 240)
+        val skyOnly = GlHarness.render(params("Untitled", "Main Scene.scene") { edit(it) { root -> sky(root); (root.get("ecs") as ObjectNode).removeAll() } }, 240)
         val noSky = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.putNull("skyboxName") } }
         val without = GlHarness.render(noSky, 240)
         val c = noSky.clear
@@ -325,13 +325,13 @@ class SceneRenderGlTest {
             val source = File("src/test/testData/project/Untitled")
             File(source, "assets").copyRecursively(File(dir, "assets"))
             val sky = File(dir, "assets/sky")
-            HdrFixtures.write(File(sky, "sky.hdr"), 64, 32, pixel = pixel)
-            File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{}}""")
+            HdrFixtures.writeExr(File(sky, "sky.exr"), 64, 32, pixel = pixel)
+            File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{"file":"sky.exr"}}""")
             val text = File(source, "scenes/Main Scene.scene").readText()
             return variants.map { variant ->
                 val patched = edit(text) { root ->
                     noFog(root) // the fixture's ambient light is an enabled grey 0.3
-                    val entities = root.get("ecs").get("entities") as ObjectNode
+                    val entities = root.get("ecs") as ObjectNode
                     if (keep != null) entities.fieldNames().asSequence().toList().filter { it !in keep }.forEach(entities::remove)
                     variant(root)
                 }
@@ -346,7 +346,7 @@ class SceneRenderGlTest {
 
     private val litBySky: (ObjectNode) -> Unit = { it.put("skyboxEnabled", true); it.put("skyboxName", "sky") }
     private val noSkyAtAll: (ObjectNode) -> Unit = { it.putNull("skyboxName") }
-    private val noEntities: (ObjectNode) -> Unit = { it.putNull("skyboxName"); (it.get("ecs") as ObjectNode).putObject("entities") }
+    private val noEntities: (ObjectNode) -> Unit = { it.putNull("skyboxName"); (it.get("ecs") as ObjectNode).removeAll() }
 
     /** Pixels drawn by the content: where the scene without a sky differs from the grid alone. */
     private fun contentPixels(scene: java.awt.image.BufferedImage, gridOnly: java.awt.image.BufferedImage): List<Pair<Int, Int>> = buildList {
@@ -415,7 +415,7 @@ class SceneRenderGlTest {
         val lit = params("Untitled", "Main Scene.scene") {
             edit(it) { root ->
                 noFog(root)
-                (root.get("ecs").get("entities") as ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>("99", SceneJson().parse(light))
+                (root.get("ecs") as ObjectNode).set<com.fasterxml.jackson.databind.JsonNode>("99", SceneJson().parse(light))
             }
         }
         val isolated = lit.copy(content = lit.content.copy(lights = lit.content.lights.filter { it.entityId == "99" }))
@@ -649,7 +649,9 @@ class SceneRenderGlTest {
                 gizmo = renderer.drewGizmo
             }
             assertNull(r.error)
-            assertTrue("no $mode gizmo drawn", gizmo)
+            // Select mode highlights the selection and draws no handles
+            if (mode == net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode.SELECT) assertFalse("a $mode gizmo was drawn", gizmo)
+            else assertTrue("no $mode gizmo drawn", gizmo)
         }
     }
 
@@ -730,5 +732,69 @@ class SceneRenderGlTest {
             val differing = content.count { (x, y) -> sky.getRGB(x, y) != none.getRGB(x, y) }
             assertEquals("lightsScene=$field changed $differing of ${content.size} content pixels", 0, differing)
         }
+    }
+
+    private fun renderWith(p: SceneRenderParams, display: ViewDisplay) =
+        GlHarness.render(p, 80) { r, frame ->
+            if (frame == 0) r.display = display
+            if (r.drawnModels.isEmpty()) Thread.sleep(10)
+        }
+
+    private fun differs(a: java.awt.image.BufferedImage, b: java.awt.image.BufferedImage): Boolean {
+        if (a.width != b.width || a.height != b.height) return true
+        for (y in 0 until a.height) for (x in 0 until a.width) if (a.getRGB(x, y) != b.getRGB(x, y)) return true
+        return false
+    }
+
+    @Test
+    fun everyDisplayModeRendersWithoutAGlError() {
+        val p = params("Untitled", "Main Scene.scene")
+        for (display in listOf(
+            ViewDisplay(), ViewDisplay(grid = false), ViewDisplay(fog = false), ViewDisplay(shadows = false), ViewDisplay(shading = Shading.UNLIT),
+        )) assertNull("$display", renderWith(p, display).error)
+    }
+
+    @Test
+    fun theGridToggleChangesThePicture() {
+        val p = params("Untitled", "Main Scene.scene")
+        assertTrue(differs(renderWith(p, ViewDisplay()).image, renderWith(p, ViewDisplay(grid = false)).image))
+    }
+
+    @Test
+    fun unlitDrawsDifferentlyFromLitAndComesBack() {
+        val p = params("Untitled", "Main Scene.scene")
+        val lit = renderWith(p, ViewDisplay()).image
+        assertTrue(differs(lit, renderWith(p, ViewDisplay(shading = Shading.UNLIT)).image))
+    }
+
+    @Test
+    fun cornerOverlaysPaintTheirCornersOnly() {
+        val p = params("Untitled", "Main Scene.scene")
+        val widget = OrientationWidget().apply { show(0.4f, 0.3f) }
+        val strip = StatsStrip().apply { show("12 objects \u00b7 Move \u00b7 World") }
+        val plain = GlHarness.render(p, 60)
+        val withOverlays = GlHarness.render(p, 60) { r, frame ->
+            if (frame == 0) {
+                r.cornerSprites = listOf(
+                    CornerSprite(widget.corner, widget.toImage(1.0), widget.version, CORNER_MARGIN),
+                    CornerSprite(strip.corner, strip.toImage(1.0), strip.version, CORNER_MARGIN),
+                )
+            }
+        }
+        assertNull(withOverlays.error)
+        val w = plain.image.width
+        val h = plain.image.height
+        fun changed(rect: PixelRect): Int {
+            var n = 0
+            for (y in rect.y until rect.y + rect.height) for (x in rect.x until rect.x + rect.width) {
+                if (plain.image.getRGB(x, y) != withOverlays.image.getRGB(x, y)) n++
+            }
+            return n
+        }
+        assertTrue("the widget paints its corner", changed(cornerRect(Corner.UPPER_RIGHT, w, h, OrientationWidget.SIZE, OrientationWidget.SIZE, CORNER_MARGIN)) > 200)
+        val stripSize = strip.measure()
+        assertTrue("the strip paints its corner", changed(cornerRect(Corner.LOWER_LEFT, w, h, stripSize.width, stripSize.height, CORNER_MARGIN)) > 200)
+        // the middle of the picture is untouched
+        assertEquals(0, changed(PixelRect(w / 3, h / 3, w / 3, h / 3)))
     }
 }

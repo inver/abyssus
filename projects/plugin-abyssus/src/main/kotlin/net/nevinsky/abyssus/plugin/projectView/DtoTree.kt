@@ -24,6 +24,12 @@ import net.nevinsky.abyssus.plugin.dto.SceneError
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
+import net.nevinsky.abyssus.lib.core.editor.water.InvalidWater
+import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
+import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
+import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
+import net.nevinsky.abyssus.plugin.water.WATER_ROW
+import net.nevinsky.abyssus.plugin.water.WaterGroup
 
 /**
  * A named, ordered child of a DTO as shown by the Abyssus view. [enabled] is set when the row is gated by an
@@ -60,11 +66,24 @@ fun childrenOf(value: Any?): List<DtoRow> = when {
     value is SceneEntry -> childrenOf(value.scene)
     value is UiMeta -> (value.admission as? UiAdmission.Admitted)?.collection?.screens.orEmpty().map { DtoRow(it.id, it) }
     value is UiScreen -> emptyList()
+    value is SceneDto -> sceneRows(value)
+    value is WaterGroup -> value.surfaces.map { DtoRow(it.id, it, enabled = (it as? ValidWater)?.settings?.enabled) }
+    value is WaterSurface -> emptyList()
     isScalar(value) -> emptyList()
     value is JsonNode ->
         if (value.isObject) value.properties().map { (k, v) -> DtoRow(k, v) } else value.mapIndexed { i, v -> DtoRow("$i", v) }
     value is List<*> -> value.mapIndexed { i, v -> DtoRow("$i", v) }
     else -> beanProperties(value!!)
+}
+
+/**
+ * A scene's own properties, then its Water group when `abyssus.waterSurfaces` holds surfaces. The raw `abyssus`
+ * extension is not listed as a row: water is the only thing in it Abyssus shows, and an absent one must stay absent.
+ */
+private fun sceneRows(scene: SceneDto): List<DtoRow> {
+    val rows = beanProperties(scene).filter { it.name != "abyssus" }
+    val surfaces = WaterCodec().read(scene.water).surfaces
+    return if (surfaces.isEmpty()) rows else rows + DtoRow(WATER_ROW, WaterGroup(surfaces))
 }
 
 private fun beanProperties(bean: Any): List<DtoRow> =
@@ -125,6 +144,9 @@ fun rowText(entry: DtoEntry, label: String? = null): RowText {
         v is List<*> && entry.name == "scenes" -> RowText(AbyssusBundle.message("treeScenes"), v.size.toString())
         v is List<*> && entry.name == "assets" -> RowText(AbyssusBundle.message("treeAssets"), v.size.toString())
         v is UiScreen -> RowText(v.name.ifBlank { v.id }, v.kind.json)
+        v is WaterGroup -> RowText(AbyssusBundle.message("treeWater"), v.surfaces.size.toString())
+        v is ValidWater -> RowText(v.name, AbyssusBundle.message("treeWaterAbyssusOnly"))
+        v is InvalidWater -> RowText(v.name, AbyssusBundle.message("treeWaterInvalid"))
         isEcsEntry(entry) -> RowText(ECS, AbyssusBundle.message("treeEntities", sceneDocumentFromEcs(v as JsonNode).entitiesNode()?.size() ?: 0))
         isEntityEntry(entry) -> entityText(entry, v as JsonNode)
         isComponentEntry(entry) -> RowText(entry.name.removeSuffix(COMPONENT_SUFFIX).ifEmpty { entry.name })

@@ -5,56 +5,42 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.ide.SelectInTarget
 import com.intellij.ide.impl.ProjectViewSelectInTarget
-import com.intellij.openapi.project.DumbAware
 import com.intellij.ide.projectView.ViewSettings
-import com.intellij.ide.projectView.impl.ProjectAbstractTreeStructureBase
-import com.intellij.ide.projectView.impl.ProjectTreeStructure
-import com.intellij.ide.projectView.impl.ProjectViewPane
-import com.intellij.ide.projectView.impl.ProjectViewRenderer
-import com.intellij.ide.projectView.impl.ProjectViewTree
-import com.intellij.ui.SimpleTextAttributes
-import javax.swing.tree.TreeCellRenderer
+import com.intellij.ide.projectView.impl.*
 import com.intellij.ide.util.treeView.AbstractTreeNode
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.components.service
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
-import com.intellij.util.ui.tree.TreeUtil
+import com.intellij.ui.SimpleTextAttributes
+import com.intellij.ui.render.RenderingUtil
 import com.intellij.ui.tree.TreeVisitor
+import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.AbyssusCore
 import net.nevinsky.abyssus.plugin.filetype.EyeIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneViewIcons
+import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
 import net.nevinsky.abyssus.plugin.sceneview.openSceneView
-import javax.swing.ToolTipManager
-import com.intellij.ui.render.RenderingUtil
-import java.awt.Color
-import java.awt.Cursor
-import java.util.function.Supplier
-import java.awt.Graphics
-import java.awt.Graphics2D
-import java.awt.Rectangle
+import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.Icon
-import javax.swing.JComponent
-import javax.swing.JPanel
-import javax.swing.JTree
-import java.awt.BorderLayout
+import java.util.function.Supplier
+import javax.swing.*
 import javax.swing.tree.DefaultTreeModel
-import net.nevinsky.abyssus.plugin.filetype.AbyssusSceneEdited
-import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.plugin.AbyssusCore
-import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
+import javax.swing.tree.TreeCellRenderer
 
 // Platform project-view implementation APIs supply its native selection, toolbar and tree lifecycle.
 // Keep that integration here; the public ViewSettings/node contracts do not construct a custom pane.
 class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
     SceneViewHost by ProjectSceneViewHost(project) {
-    init {
-        // a plugin edit of a scene or project file changes what the tree shows (names, toggles, counts)
-        project.messageBus.connect(this).subscribe(AbyssusSceneEdited.TOPIC, AbyssusSceneEdited { updateFromRoot(true) })
-    }
+    // Rebuilds the tree after plugin edits, document changes (Undo/Redo, unsaved text) and VFS changes, keeping
+    // selection and expansion.
+    internal val refresh =
+        AbyssusTreeRefresh(project, { tree }, { done -> updateFromRoot(true).doWhenProcessed { done() } }, this)
 
     override fun getTitle(): String = AbyssusBundle.message("abyssusViewName")
 
@@ -76,7 +62,8 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
 
     private var wrapped: JComponent? = null
 
-    /** The platform's tree component with the counts footer under it; the platform caches its own component, so the wrapper is cached too. */
+    /** The platform's tree component with the counts footer under it; the platform caches its own component,
+     *  so the wrapper is cached too. */
     override fun createComponent(): JComponent {
         val inner = super.createComponent()
         wrapped?.let { return it }
@@ -101,10 +88,13 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
     }
 }
 
-/** Publishes the user object of [tree]'s selected node (null when nothing is selected) as the Abyssus selection of [project]. */
+/** Publishes the user object of [tree]'s selected node (null when nothing is selected) as the Abyssus selection of
+ *  [project].
+ */
 internal fun publishSelectionOf(tree: JTree, project: Project) {
     tree.addTreeSelectionListener { e ->
-        AbyssusSelection.of(project).select(e.newLeadSelectionPath?.let { TreeUtil.getUserObject(it.lastPathComponent) })
+        AbyssusSelection.of(project)
+            .select(e.newLeadSelectionPath?.let { TreeUtil.getUserObject(it.lastPathComponent) })
     }
 }
 
@@ -164,7 +154,7 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
         val icon = if (entry.enabled) EyeIcons.ON else EyeIcons.OFF
         return IconAction(icon, null) { r ->
             val wasExpanded = isExpanded(getPathForRow(r))
-            if (toggleEnabled(project, entry)) reselect(entry.path, wasExpanded)
+            if (toggleRow(project, entry)) reselect(entry.path, wasExpanded)
         }
     }
 
@@ -191,7 +181,8 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
         val row = rowOf(e) ?: return null
         val actions = actionsFor(row)
         val bounds = actionBounds(row, actions) ?: return null
-        return actions.indices.firstOrNull { actions[it].run != null && bounds[it].contains(e.point) }?.let { row to actions[it] }
+        return actions.indices.firstOrNull { actions[it].run != null && bounds[it].contains(e.point) }
+            ?.let { row to actions[it] }
     }
 
     init {
@@ -210,12 +201,17 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
         })
         addMouseMotionListener(object : MouseAdapter() {
             override fun mouseMoved(e: MouseEvent) {
-                cursor = if (actionAt(e) != null) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
+                cursor = if (actionAt(e) != null) {
+                    Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                } else {
+                    Cursor.getDefaultCursor()
+                }
             }
         })
     }
 
-    override fun getToolTipText(event: MouseEvent): String? = actionAt(event)?.second?.tooltip ?: super.getToolTipText(event)
+    override fun getToolTipText(event: MouseEvent): String? =
+        actionAt(event)?.second?.tooltip ?: super.getToolTipText(event)
 
     /**
      * A toggled row changes identity (see [DtoEntry.equals]), so the refresh drops the selection onto

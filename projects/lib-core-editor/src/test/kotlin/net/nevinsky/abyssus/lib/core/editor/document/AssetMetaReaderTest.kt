@@ -7,6 +7,7 @@ import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import org.junit.Assert.*
 import org.junit.Test
+import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
 
 class AssetMetaReaderTest {
     private val reader = AssetMetaReader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER))

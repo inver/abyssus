@@ -6,6 +6,7 @@
 |---|---|
 | All module tests and verification tasks | `./gradlew check` (CI requires compiled shaders; see `AGENTS.md`) |
 | Core tests | `./gradlew :lib-core:test` |
+| Rendering library tests | `./gradlew :lib-render:test` (with `-Dabyssus.glTests=true`, `TerrainPassGlTest`: both terrain variants draw, agree under one sun, and a lent texture is not disposed) |
 | Physics library / plugin tests | `./gradlew :lib-physics:test` / `./gradlew :plugin-abyssus:test` |
 | Ray tracing contracts / jar packaging | `./gradlew :lib-raytracing:test` / `./gradlew :lib-raytracing:verifyNativePackaging` |
 | Control Line tests | `./gradlew :app-game-control-line:test` |
@@ -23,6 +24,112 @@
 classes of the old packages otherwise fail tests with `NoSuchMethodError` / `NoClassDefFoundError`.
 Results are in each module's `build/test-results/test/*.xml` and `build/reports/tests/test/`; a later run overwrites them.
 CI also runs Plugin Verifier and Qodana separately from `check`.
+
+**Java 21 is the baseline** for `.github/workflows/build.yml`, `.github/workflows/release.yml`, `.github/workflows/package-rehearsal.yml` and `build.gradle.kts`. The packaging
+rehearsal builds the unsigned plugin zip and checks it (no Jolt in `lib/`, play host present) with no publish credentials
+or release trigger: `scripts/rehearse-package.sh` (CI: the *Package Rehearsal* workflow). The zip lands in
+`projects/plugin-abyssus/build/distributions/`.
+
+## UI tests (Remote Robot)
+
+`projects/plugin-abyssus/src/uiTest/kotlin` drives an installed Abyssus in a real sandbox IDE through the JetBrains
+Remote Robot client (version pinned to the robot-server plugin, `remoteRobotVersion` in `plugin-abyssus.gradle.kts`).
+It is a separate source set and `:plugin-abyssus:uiTest` task: the client is a plain JVM process with no platform
+classpath, and `check` never runs it. Nothing under `uiTest` ships in the plugin.
+
+| What | Command |
+|---|---|
+| Complete run in the canonical Linux/Xvfb container | `scripts/run-ui-tests-docker.sh [--tests '*UiStartupTest']` |
+| Complete run on the host (needs a usable desktop) | `scripts/run-ui-tests.sh [--tests <pattern>]` |
+| Headless helper tests only (`...uitesting.headless`), part of `check` | `./gradlew :plugin-abyssus:uiHelperTest` |
+| Attach to an IDE you started | `./gradlew :plugin-abyssus:uiTest -PuiProject=<copy of Untitled> -PuiRobotUrl=http://127.0.0.1:8082` |
+
+- **The runner** (`scripts/run-ui-tests.sh`) copies `src/test/testData/project/Untitled` (without `.idea`) into a temp
+  directory, starts `runIdeForUiTests` against it with an isolated sandbox (`-PuiSandbox`) and robot-server port
+  (`-PuiPort`, `ABYSSUS_UI_PORT`, default 8082), polls until robot-server answers, runs `uiTest`, then stops the IDE it
+  started (matched by its unique sandbox path) and copies the IDE logs to `projects/plugin-abyssus/build/reports/ui-tests/ide-logs`.
+  One run per port: a lock directory in the temp folder refuses a second. It fails if the committed fixture's hashes changed.
+- **The container** (`docker/ui-tests`) is Ubuntu 24.04 with Xvfb 1920x1080x24, a minimal window manager, UTC and an
+  English locale. `scripts/run-ui-tests-docker.sh` copies the working tree in (host build directories are never shared),
+  keeps the Gradle cache and the downloaded IDE in the volume `abyssus-ui-gradle` (the first run downloads gigabytes and
+  takes about an hour; later runs about a minute), and returns reports to `projects/plugin-abyssus/build/reports/ui-tests`.
+  `ABYSSUS_UI_PLATFORM=linux/amd64` selects the platform. Pixel baselines must come from the canonical platform.
+- **On the host (macOS)** the sandbox IDE never becomes the active window and Remote Robot screenshots are blank, so
+  mouse-driven scenarios and captures do not work there. Use the container.
+- **Failures** write `failures/<Class>.<method>/{screen.png,hierarchy.html,failure.txt}` under the reports folder; the
+  hierarchy is robot-server's component page, useful for finding locators (the tree is `EyeTree`, the view selector's
+  list is `MyList`).
+- **Troubleshooting:** a leftover lock (`abyssus-ui-tests-<port>.lock` in the temp folder) after a killed run can be
+  removed by hand; `ABYSSUS_UI_KEEP_WORK=1` keeps the temp project and sandbox; a changed `Untitled` copy never reaches
+  the committed fixture.
+- **Rules for tests:** mutate only through the UI; the helpers (`IdeQueries`) only read IDE state. `FixtureProject` copies
+  and restores the disposable project on disk, which the IDE then refreshes. Locate components by Swing name or class and
+  re-resolve them after any refresh; add production component names only when that is not enough.
+
+### UI tests in CI
+
+`.github/workflows/run-ui-tests.yml` runs `scripts/run-ui-tests-docker.sh` on `ubuntu-24.04` for pull requests and manual
+dispatch, separately from the headless `check` in `build.yml`. `CI=true` is forwarded into the container, so a baseline update
+request fails there. A run that discovers no UI test fails (`failOnNoDiscoveredTests`). The job always uploads
+`projects/plugin-abyssus/build/reports/ui-tests/` as the `ui-test-diagnostics` artifact (failure screenshots, component
+hierarchies, expected/actual/diff images, IDE logs and the JUnit report); download it from the run's summary page.
+
+### UI screenshot baselines
+
+Seventeen Swing captures (the tree, the Properties panels, two dialogs and the Scene View toolbar) are compared pixel for pixel with PNGs in
+`projects/plugin-abyssus/src/uiTest/resources/screenshots/linux/`, named `<scenario>.png`. The scenario list is
+`SCREENSHOT_SCENARIOS` (`ScreenshotInventory.kt`); `BaselineInventoryTest` fails on a missing or orphaned file. Captures are
+component images (the tool window or dialog), never the 3D viewport or the whole desktop.
+
+- **Canonical environment:** `docker/ui-tests` on the amd64 platform (Ubuntu 24.04, Xvfb 1920x1080x24, the IDE's own JBR 21 and Inter
+  font, Dark theme, UI scale 1, English, UTC). `environment.properties` in the baselines folder records it, including font and
+  X packages; before any comparison or update the running IDE is checked against it and a difference fails with the key, expected
+  and found value. Nothing is tolerated or masked. Reproduce with
+  `ABYSSUS_UI_PLATFORM=linux/amd64 scripts/run-ui-tests-docker.sh` (an arm64 image cannot show HDR previews).
+- **Readiness:** a capture is taken only after the scenario waited for the content (real previews, loaded chooser thumbnails, the
+  tree rows), the layout is normalised (`IdeFrame.normalizeLayout`: frame, Project and Properties widths, no blinking carets), the
+  pointer is moved away and the focus is on the tree (dialogs keep their own focus), and two consecutive captures are identical.
+- **Modes:** `-PuiScreenshots=compare` (default), `off` (interaction only: captures are kept as diagnostics, nothing is
+  compared; for hosts that are not the canonical environment) and update. A run outside the canonical environment in compare mode
+  fails explicitly rather than skipping.
+- **Update one or more baselines** (never on CI, only in the canonical environment, only the named scenarios, only after the
+  scenario's own checks passed; the PNGs are copied back to the working tree):
+  `ABYSSUS_UI_PLATFORM=linux/amd64 scripts/run-ui-tests-docker.sh -- -PupdateUiScreenshots=true -PuiScreenshotScenarios=props-empty,tree-expanded`.
+  Review every changed PNG by eye (content, loaded previews, nothing clipped or incidental) before committing, and commit the
+  environment manifest with them when the environment changed.
+- **On a failure** `build/reports/ui-tests/screenshots/<scenario>/` holds actual, expected and diff PNGs (changed pixels in
+  red over a dimmed copy) and a report text file with the changed-pixel count, bounds and the environment.
+- **Known layout facts the baselines record:** the entity panel's fields run past the Properties window's right edge at any width
+  (it keeps a horizontal scrollbar), and the skybox chooser clips the `unused` badge and `used by 1 scene` at its default width.
+  `DesignScreenshotTest` stays a separate design diagnostic and compares no pixels.
+
+### UI test scenarios
+
+Each scenario drives the installed plugin with the mouse and keyboard on a disposable copy of `Untitled` (restored before
+every test), checks disk bytes, and where it edits, presses Undo and checks the bytes come back.
+
+| Class | Scenarios |
+|---|---|
+| `UiStartupTest` | robot connection and project loaded; Abyssus installed, no scene editor open; Properties window opens and closes; Abyssus tree, entity 0 and the Camera component of entity 4 are found; fixture reset restores the IDE document and the tree |
+| `AbyssusTreeUiTest` | Project, Scenes, Assets and ECS expand; the fog eye toggles only `fogEnabled` and Undo restores the bytes; switching views does not duplicate nodes |
+| `PropertiesUiTest` | empty state; model and terrain assets; cube (editable, previews loaded), procedural (editable) and HDR (read-only, preview loaded) skyboxes; entity 0 and Camera fields; entity name edit and Undo; an invalid Camera number shows a field error and leaves the scene unedited |
+| `RenameSceneUiTest` | Rename Scene opens from the scene's context menu; Cancel is byte-identical; applying changes only `name`, refreshes the tree, and Undo restores the bytes |
+| `SkyboxChooserUiTest` | Choose opens the chooser with None and the three fixture skyboxes; the `hdr` filter and the no-match state; Cancel is byte-identical; Assign `skybox_default` changes only `skyboxName`, leaves `skyboxEnabled`, updates the tree, and Undo restores the bytes |
+| `SceneViewUiTest` | the Scene View toolbar in the order `Select, Move, Rotate, Snap, Shadows, Fog, Grid, Frame selection` with Move pressed and `Move · World` in the tool status; it wraps without overlapping buttons at a 900 px editor; opening the view writes nothing. The container has no usable OpenGL, so the view shows the unavailable message and the toolbar is disabled above it: the tools' behavior is covered by the plugin tests, and the captures show layout and icons (dimmed) only |
+| `...uitesting.headless.*` | helper unit tests (`FixtureIsolationTest`), run by `uiHelperTest` |
+
+The Scene View toolbar baselines (`scene-toolbar-default`, `scene-toolbar-narrow`) capture the toolbar component only. They are also the icon check: every toolbar icon is drawn in them, and `IconInventoryTest` (`:plugin-abyssus:test`) fails on a missing or unlisted icon resource. The orientation widget and stats strip are shown through GL, so their pixels are checked by `CornerPaintersTest` and, with `-Dabyssus.glTests=true`, `SceneRenderGlTest.cornerOverlaysPaintTheirCornersOnly`.
+
+Out of scope: the 3D viewport (GL under Xvfb is not deterministic), gizmos, the Game UI editor, the Asset Library, and
+add/remove component and terrain creation workflows.
+
+The Abyssus tree is refreshed by the plugin's own edits (`AbyssusSceneEdited`), not by Undo or by changes made outside the IDE, so scenarios assert Undo through the document and disk bytes, and each test starts with a Project view refresh and the view shown again (the tree otherwise keeps a name that Undo has already reverted).
+
+Undo is tied to the scene document, not the project tree: a scenario that Undoes first opens the scene file in the plain text
+editor (`IdeQueries.openTextEditor`, navigation only) and presses the IDE's Undo shortcut there.
+
+The HDR preview needs the `natives-linux` (x86_64) LWJGL natives, so on an arm64 container it shows "Cannot read sky.exr" and the
+HDR checks fail; run those with `ABYSSUS_UI_PLATFORM=linux/amd64`.
 
 ## Coverage
 
@@ -48,7 +155,10 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
   `terrain`, `meta`, `ray`, `headless`), plain JUnit with no IntelliJ class on the classpath (`NoPlatformClasspathTest`).
   Their working directory is `projects/plugin-abyssus/`, so `src/test/testData/project/` resolves to the same
   fixtures as the plugin tests.
-- `projects/lib-gdx`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`).
+- `projects/lib-gdx`: model runtime tests (`AssimpLoadingTest`, `PbrAttributesTest`, `LargeMeshGlTest`) and, in
+  `net.nevinsky.abyssus.lib.gdx.g3d`, the stock-typed pipeline's (`IntMeshGlTest` with its 16-bit negative control,
+  `IntModelGlTest`, `ModelShaderGlTest`, `InstancedModelShaderGlTest`, `ModelDepthGlTest`, the ported `ModelShadowGlTest`
+  and `DirectionalVisibilityGlTest`, and the GL-free `ShaderDefinesTest` and `InstanceAttributesTest`).
 - `projects/lib-core/src/test/kotlin/`: asset reading and loading tests, plain JUnit with no IntelliJ classes. They read the shared
   fixtures through `testProject(name)` (Gradle passes the folder as `abyssus.testData`) and get a project's
   `FileLoader` and `AssetMetaLoader` from `testFileLoader(dir)` / `testMetaLoader(dir)` (`TestData.kt`); loaders and
@@ -56,13 +166,14 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
   covers the loading pipeline with a fake loader; `AssetLoadingGlTest` covers the `asset-loading` spec on real GL.
 - Scene loading, Ashley component registration, `EcsLoader` and systems are tested in `projects/lib-core/src/test/kotlin/`.
   Component editing and `EcsWriter` are tested in `projects/lib-core-editor/src/test/kotlin/`; there is no separate runtime module.
+- `projects/lib-render/src/test/kotlin/`: light profiles, uniform packing, the sun shadow camera (plain JUnit), `RenderBoundaryTest` (no IDE, editor, physics or ray module on its classpath or in its imports) and the opt-in `TerrainPassGlTest`.
 - `projects/lib-physics/src/test/kotlin/`: physics components, `PhysicsWorld`, rope tension and the Jolt natives. Plain JUnit, no
   IntelliJ or GL. They load the build machine's `DebugSp` Jolt natives, and use `testProject(name)` and
   `loadPhysicsScene()`. Foliage collision tests write a temporary project with `FoliageProject` (a flat 100 m terrain, two
   models and a foliage asset with a matching or stale bake) instead of copying a committed fixture:
   `PhysicsFoliageTest` (settling box, imported DETAIL collider, invalid collider, moving owner, stale/missing bake),
   `PhysicsFoliageLifecycleTest` (owner removal, injected layer failure, 100 worlds, the copy cap), `ShapeFactoryTest`
-  (compound sub-shape poses and sizes) and `PlayHostMainTest` (a box settling for 5 s of simulated time on a foliage
+  (compound sub-shape poses and sizes) and, in `lib-game-link`, `PlayHostMainTest` (a box settling for 5 s of simulated time on a foliage
   collider in the child play process). The pure parts are `FoliageColliderTransformsTest` and `FoliageAdmissionTest`.
 - `projects/app-game-control-line/toolsTest/`: the field foliage migration (`./gradlew :app-game-control-line:testFieldFoliageTools`,
   part of `check`). It starts from `projects/app-game-control-line/toolsTest/fixtures/Field.original.scene`, the scene from before the migration, because
@@ -136,6 +247,96 @@ HDR preview platform tests require real filesystem-backed EXR files and TinyEXR'
 adds those classifiers with `testRuntimeOnly`; this test setup does not add them to plugin packaging. Undo tests
 clear only fixture-creation history before the first panel edit, then retain exact Undo/Redo assertions.
 
+## Graphics performance evidence
+
+Evidence for the render refactors of `openspec/changes/archive/2026-10-17-reduce-architecture-duplication`: a measured baseline taken before
+a change, and a comparison after it. Nothing here is a platform-wide claim; every number belongs to the machine that made it.
+
+### Runner and lane
+
+- **GPU runner:** the maintainer's Mac, *Apple M1 Pro (14 GPU cores), macOS arm64, Metal-backed OpenGL 4.1*, running the
+  repository's JetBrains Runtime 21. It is the only GPU runner. Reports from another machine, driver or JDK are never
+  compared with its baseline (`MISMATCHED`).
+- **Lane:** manual, on that Mac, with a display and the machine otherwise idle (no other build or IDE busy; on power).
+  There is no scheduled GPU job. The runner commands below are the whole lane.
+- **CPU CI** (`.github/workflows/build.yml`, `./gradlew check`) only validates the report schema, the comparison policy and
+  the stress scene (`lib-core`'s `testing.perf` tests) and the skipped path: without `-Dabyssus.glTests=true` the runners
+  write a report whose workloads are `SKIPPED` with a reason. A skipped or unavailable workload is never a pass.
+
+### What is measured
+
+All workloads draw at 1280 x 720 with fixed cameras, a fixed time step of 1/60 s per frame (sky, clouds, animation and water
+advance identically in every run), a 10 s warmup and five samples of 30 s, over disposable copies of the projects:
+
+| Host | Workload | Scene |
+|---|---|---|
+| editor | `untitled` | `Untitled`, `Main Scene` (plain and PBR models, terrain, lights, procedural sky) |
+| editor | `animated` | `Animated`, `Main` (skinned, animated models) |
+| editor | `foliage` | `Foliage`, `Main Scene` (the fixture holds no model binaries, so this measures the terrain and an empty scene) |
+| editor | `stress` | the generated stress scene: 1,000 placements of one model, the 1600 m `Untitled` terrain and 5,000 foliage copies, seed `20261016` (`StressScene`; its SHA-256 over scene and bake is in the report) |
+| game | `control-line-field` | Control Line's `Field.scene` through `FieldRenderer` |
+
+Per workload the report holds: commit and dirty state, OS, JDK, GPU and driver (GL_RENDERER / GL_VERSION), backend, scene
+hash, the settings above, CPU frame time p50 / p95 / p99 (the p95 of each sample too), steady-state allocation per frame and
+GC count and time of the render thread, upload work (the frames the cold load took, as uploads are sliced per frame), asset
+counts, and cold-load and reload times. **Frame time is the CPU time of the renderer's draw call (command submission), not GPU
+time**; `gpuMs` stays empty unless a timer query measured it on its own. A report can say `MEASURED`, `SKIPPED` or `UNAVAILABLE`.
+
+### Commands
+
+| What | Command |
+|---|---|
+| Editor workloads | `./gradlew :plugin-abyssus:test --tests '*perf.PerfWorkloadsGlTest' -Dabyssus.glTests=true -Dabyssus.perf.report=<file.json>` |
+| Control Line workload | `./gradlew :app-game-control-line:test --tests '*render.PerfWorkloadsGlTest' -Dabyssus.glTests=true -Dabyssus.perf.report=<file.json>` |
+| Some editor workloads | add `-Dabyssus.perf.workloads=untitled,stress` |
+| Smoke run (never compared) | add `-Dabyssus.perf.warmupSeconds=2 -Dabyssus.perf.sampleSeconds=3 -Dabyssus.perf.samples=2` |
+| Pixel tolerances | `./gradlew :plugin-abyssus:test --tests '*perf.PixelEvidenceGlTest' -Dabyssus.glTests=true -Dabyssus.perf.pixels=record -Dabyssus.perf.pixelsDir=<dir>` (and the game's `*render.PixelEvidenceGlTest`) |
+| Check pixels against a recording | the same with `-Dabyssus.perf.pixels=compare -Dabyssus.perf.pixelsReference=<dir>` |
+| Compare two reports | `./gradlew :lib-core:comparePerf -Pbaseline=<file.json> -Pcandidate=<file.json>` |
+
+A run lasts about 3 minutes per workload at the full protocol (the editor's four take about 13 minutes, plus a reload each).
+
+### Comparison policy
+
+`PerfComparison` compares matched environments only (OS, JDK, GPU, driver, backend, and per workload the scene hash and the
+settings; the commit and dirty state may differ). The p95 frame time and the steady-state allocation per frame may grow by a
+**provisional 10%**; more is a `REGRESSION`. If the baseline's own five sample p95s spread by more than the threshold the answer is
+`INCONCLUSIVE`: improve repeatability, do not accept a regression. A mismatch, or a skipped or missing workload, is
+`MISMATCHED` or `NOT_MEASURED`. No absolute frame rate or speedup is promised.
+
+### Pixel tolerances
+
+`PixelEvidence` renders each case five times on the same device and records the loosest difference between runs (largest
+channel difference, share of differing pixels, share differing by more than 2/255) as the case's tolerance, with the first render
+as the reference image. A later render must be within that tolerance; the tolerance is never widened to hide a change. Cases:
+plain, PBR and terrain (`untitled`), skinned (`animated`), instanced (`stress`), cutout (`cutout`: `Untitled` with every
+textured material alpha-masked) and the game's field.
+
+### Baseline
+
+Taken 2026-10-16 on the runner above, before any change of `reduce-architecture-duplication` touched rendering. The tree was
+commit `1887442e` plus the uncommitted `shrink-lib-gdx-to-stock-g3d` and `separate-shipped-code` work (`dirty: true` in the
+reports). Full protocol (10 s warmup, five 30 s samples, 1280 x 720, 1/60 s step).
+
+| File | What |
+|---|---|
+| `docs/perf/baseline/editor.json` | the editor's four workloads |
+| `docs/perf/baseline/game.json` | Control Line's field |
+| `docs/perf/baseline/pixels/` | reference images and repeated-run tolerances of `untitled`, `animated`, `stress`, `cutout` and `control-line-field` |
+
+| Workload | p95 CPU frame | sample p95 spread | Gate |
+|---|---|---|---|
+| `untitled` | 6.1 ms | 4% | usable |
+| `animated` | 0.19 ms | 46% | **inconclusive**: sub-millisecond frames, dominated by timer jitter |
+| `foliage` | 0.21 ms | 13% | **inconclusive**: same |
+| `stress` | 225 ms | 4% | usable (the editor draws 1,000 placements slowly; that is the number to beat) |
+| `control-line-field` | 9.1 ms | 5% | usable |
+
+Five repeated renders of every pixel case were bit-identical on this device, so every recorded pixel tolerance is 0. Until
+`animated` and `foliage` are made heavier or steadier they can only report `INCONCLUSIVE` against this baseline; they still
+guard the pixels. Measured with the editor in `GlHarness` (a 16 ms Swing timer paces frames) and the game with `glFinish` per frame,
+so the two hosts' frame times are not comparable with each other.
+
 ## GL tests
 
 - **Opt-in:** tests that open a GL window (`SceneRenderGlTest`, `ModelPreviewCanvasGlTest`, `LargeMeshGlTest`, `lib-core`'s `*GlTest`, Control Line's `CrashClipGlTest` and `GameUiGlTest`) run only with
@@ -143,6 +344,29 @@ clear only fixture-creation history before the first panel edit, then retain exa
   (counted as skipped, not failed).
 - **Harness:** `GlHarness` (`projects/plugin-abyssus/src/test/kotlin/net/nevinsky/abyssus/plugin/sceneview/GlHarness.kt`) renders a few frames on
   an AWT GL canvas inside `GdxRuntime.withContext` and runs checks after each frame.
+
+### Water
+
+Water has pure checks and GL checks, all named for the capability they pin down.
+
+- **Without GL:** `WaterSettingsTest`, `WaterWavesTest` (also the mesh ceiling), `WaterReflectionCameraTest`,
+  `WaterDepthMathTest`, `WaterPassPlanTest` and `WaterScreenAreaTest` (`./gradlew :lib-core:test`); the codec, edits, hit
+  and interaction tests in `lib-core-editor` (`WaterCodecTest`, `WaterEditsTest`, `WaterHitTest`, `SceneQueriesWaterTest`,
+  `WaterInteractionTest`); and the plugin's `WaterSceneEditsTest`, `WaterTreeTest`, `WaterActionTest`, `WaterPropertiesTest`
+  and `WaterSceneEditorTest`.
+- **With `-Dabyssus.glTests=true`:** `lib-gdx`'s `ModelWaterPassGlTest` (`./gradlew :lib-gdx:test`: the clip plane, the
+  linear depth pass, skinning, alpha cutouts and `FilteredRenderables`), `lib-core`'s `WaterShaderGlTest`
+  (`./gradlew :lib-core:test`: the shader and both presets), and the plugin's `SceneFrameSnapshotTest` (one animation
+  update, previews, an unchanged no-water frame), `SceneWaterPassGlTest`, `SceneWaterResourcesGlTest`,
+  `SceneWaterReflectionGlTest`, `SceneWaterShallowsGlTest`, `SceneWaterFoamGlTest`, `SceneWaterFallbackGlTest` and
+  `WaterFailureTest` (`./gradlew :plugin-abyssus:test --tests '*Water*' -Dabyssus.glTests=true`).
+- **Rig:** `WaterGlRig.shoot` renders a scene for a number of frames and returns the canvas image with the reflection
+  and depth targets read back; `WaterGlScenes` makes the scenes (a copy of Untitled over a flat or bowl-shaped terrain,
+  a blended quad model, a cloudy sky). The water animation is stood still (`SceneRenderer.waterTime`) so two renders can be
+  compared pixel for pixel, and `testRenderer` / `GlHarness.render` take a logger and a scene `ShaderStorage` (the failure
+  checks put a broken `water.frag` in front of the real one).
+- **By eye:** the visual checks of the OpenSpec change (`openspec/changes/archive/2026-10-15-add-realistic-water`) are sandbox-IDE checks; the
+  GL tests assert numbers (colour ordering, pixel counts, byte equality), not a screenshot.
 
 ## GL-free seams
 

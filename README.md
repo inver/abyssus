@@ -22,6 +22,12 @@ remain readable in the text editor; plugin editing and loading are refused. No i
   aircraft from a FlightGear `.zip` into a model asset.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
+- **Water**: **Add Water** (a Lake or a Sea, from the Scene view toolbar or a scene's right-click menu) adds a finite
+  horizontal surface that is drawn from above with animated waves, reflections of the sky and the scene, wave-distorted
+  refraction that fades to a tint with depth and animated foam where terrain meets it. Terrain above the level defines
+  the shoreline and islands. Select a surface in the view or the tree to move it with the Move gizmo and edit its level,
+  size, tint, clarity, waves and foam in Properties; hide, rename, remove and undo like anything else. Water is saved in
+  the scene's `abyssus.waterSurfaces` and is Abyssus-only data; there is no underwater look, and water is not a drop target.
 - **Terrain foliage**: **New Foliage...** creates layered scatter settings for trees, rocks and grass;
   **Add Foliage...** attaches them to a terrain entity, and **Paint Foliage** paints or erases their density, with Undo.
 - **Sky light and cloud shadows**: a procedural sky with `"lightsScene": true` lights models and terrain with its own colour
@@ -295,6 +301,14 @@ be undone; resetting a default omits its saved field. These beam fields are part
 The toolbar's camera selector (**Free camera** and the scene's cameras by name) renders the view through a camera
 entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
+### Show FPS
+
+Select the project's `.abss` file in the Abyssus tree and tick **Show FPS** in **Abyssus Properties** to show each scene
+view's frame rate (`60 fps`, `-- fps` until a first measurement) at the start of the stats strip in its lower-left
+corner. It is off by default, applies to every scene view of the IDE project and is remembered with it. It is an IDE view setting:
+no `.abss`, `.scene` or asset file changes. The number counts frames the view actually presented over about a second (an
+idle view redraws less often, and a hidden view starts over when it is shown again).
+
 ### Physics
 
 Physics is built into Abyssus. Select the project's `.abss` file in the Abyssus tree and tick **Physics** in
@@ -316,7 +330,7 @@ The separate Abyssus Physics plugin must be uninstalled; the IDE marks it incomp
 Disabling Physics during Play stops that session and restores authored poses without changing scene files or Undo history.
 Jolt, the physics engine, is loaded only by the play process, never by the IDE.
 
-The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `lib-gdx` module, a
+The model runtime (Assimp import, 32-bit meshes and the model shaders on stock libGDX g3d) is the `lib-gdx` module, a
 plain JVM library reusable in other libGDX projects; see [source provenance](docs/third-party/gdx-model-origin.md)
 for its origin and license. The GL
 render tests are opt-in: `./gradlew check -Dabyssus.glTests=true` (opens a window).

@@ -35,6 +35,14 @@ class SceneTransformWriterTest {
     }
 
     @Test
+    fun aLocalMoveAlongATurnedObjectsAxisChangesOnlyTheWorldCoordinateThatMovedAndKeepsTheOthersText() {
+        val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"PositionComponent":{"localPosition":{"x":1.230000,"y":5.000,"z":-2.34000}}}}}}}"""
+        val root = SceneJson().parse(text)
+        assertTrue(SceneTransformWriter().apply(root, "0", TransformEdit(position = Vec3(1.23f, 5f, -4.34f))))
+        assertEquals(text.replace("-2.34000", "-4.34"), SceneJson().compact(root))
+    }
+
+    @Test
     fun droppingACameraChangesOnlyBothYsAndPreservesTheRest() {
         val root = SceneJson().parse(text)
         val before = SceneJson().parse(text)

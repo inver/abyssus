@@ -35,15 +35,20 @@ entities SHALL be drawn as small markers, with a direction line for directional 
 
 ### Requirement: Move and rotate modes
 
-The scene view SHALL have a Move and a Rotate mode, switched by a toolbar toggle or by W (Move) and E (Rotate) while
+The scene view SHALL have a Select, a Move and a Rotate mode, switched by a toolbar toggle or by Q (Select), W (Move) and E (Rotate) while
 the view has focus; Move SHALL be the initial mode. In Move mode the selected object SHALL show X, Y and Z arrows along
-the world axes; in Rotate mode, X, Y and Z rings around them. Handles SHALL keep a constant size on screen and be drawn
-on top of the scene.
+the world axes, or along the object's own axes when the view's space is Local; in Rotate mode, X, Y and Z rings around them. In Select mode the selected object SHALL show no handles.
+Handles SHALL keep a constant size on screen and be drawn on top of the scene.
 
 #### Scenario: Switch with keys
 
 - **WHEN** an object is selected and the user presses E, then W
 - **THEN** the rotate rings are shown, then the move arrows
+
+#### Scenario: Select shows no handles
+
+- **WHEN** an object is selected and the user presses Q
+- **THEN** the object stays highlighted and neither arrows nor rings are shown
 
 #### Scenario: Handles stay visible
 

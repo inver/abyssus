@@ -67,8 +67,14 @@ data class SceneRenderParams(
     }
 }
 
-/** The view parameters of [scene], seen through [camera]; [projectDir] holds its assets. */
-fun renderParamsOf(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
+/**
+ * The view parameters of [scene], seen through [camera]; [projectDir] holds its assets. [root] is the scene document the
+ * editor-only `rayTracing` settings are read from, as the file holds them (the game's scene binding ignores them); without
+ * it the ray settings are the defaults.
+ */
+fun renderParamsOf(
+    scene: SceneDto, camera: CameraParams, projectDir: File? = null, root: JsonNode? = null,
+): SceneRenderParams {
     val fog = fogOf(scene)
     return SceneRenderParams(
         fog?.color ?: SceneRenderParams.DEFAULT_CLEAR,
@@ -78,9 +84,7 @@ fun renderParamsOf(scene: SceneDto, camera: CameraParams, projectDir: File? = nu
         sceneContentOf(scene),
         projectDir,
         scene.ecs,
-        SceneRaySettingsCodec().read(SceneJson().mapper.createObjectNode().also { root ->
-            scene.rayTracing?.let { root.set<JsonNode>("rayTracing", SceneJson().mapper.valueToTree(it)) }
-        }),
+        SceneRaySettingsCodec().read(root ?: SceneJson().mapper.createObjectNode()),
     )
 }
 
@@ -110,8 +114,8 @@ internal fun normalized(v: Vec3): Vec3? {
 class MainCamera {
     fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
         val root = SceneJson().parse(abssText).takeIf { it.isObject } ?: return null
-        if (net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat()
-                .validate(root, net.nevinsky.abyssus.lib.core.editor.document.DocumentKind.PROJECT) != null
+        if (net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat()
+                .validate(root, net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT) != null
         ) return null
         val cam = root.obj("mainCamera") ?: return null
         val position = cam.vec("position") ?: return null

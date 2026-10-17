@@ -54,8 +54,10 @@ kover {
 // checks and plugin verification) stays in projects/plugin-abyssus.
 subprojects {
     apply(plugin = "java")
+//    apply(plugin = "checkstyle")
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "org.jetbrains.kotlinx.kover")
+
 
     repositories {
         mavenLocal()
@@ -85,6 +87,21 @@ subprojects {
                 }
             }
         }
+    }
+
+//    configure<CheckstyleExtension> {
+//        configFile = rootProject.layout.projectDirectory.file("gradle/checkstyle/checkstyle.xml").asFile
+//        toolVersion = "14.3.0"
+//        sourceSets = listOf(project.the<SourceSetContainer>()["main"])
+//    }
+//
+//    tasks.named("check") {
+//        dependsOn("checkstyle")
+//    }
+
+    // the native fixture projects are shared by every module's tests; see testProject() in lib-core's testFixtures
+    tasks.withType<Test>().configureEach {
+        systemProperty("abyssus.testData", rootProject.file("projects/plugin-abyssus/src/test/testData").absolutePath)
     }
 
     // every module scans its own sources

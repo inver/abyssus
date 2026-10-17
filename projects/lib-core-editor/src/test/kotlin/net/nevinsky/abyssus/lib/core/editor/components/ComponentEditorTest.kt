@@ -34,6 +34,18 @@ class ComponentEditorTest {
     private fun assertRejected(result: EditResult) = assertTrue("expected Rejected, was $result", result is EditResult.Rejected)
 
     @Test
+    fun spotLightFieldsCarryTheirLabelsAndTheRangeTooltip() {
+        val scene = SceneJson().parse(File(net.nevinsky.abyssus.lib.core.assets.testProject("Untitled"), "scenes/Main Scene.scene").readText())
+        val fields = editor.read(scene, "8", "LightComponent")!!.associateBy { it.field }
+        assertEquals("Range", fields.getValue("range").label)
+        assertEquals("Distance a point or spot light reaches.", fields.getValue("range").tooltip)
+        assertEquals("Cone angle (degrees)", fields.getValue("coneAngle").label)
+        assertEquals("Edge softness (%)", fields.getValue("edgeSoftness").label)
+        assertEquals("a field without a message key keeps its name", "intensity", fields.getValue("intensity").label)
+        assertEquals(null, fields.getValue("intensity").tooltip)
+    }
+
+    @Test
     fun everyKindHasFields() {
         val names = editor.kinds.associate { it.name to it.fields.map { f -> f.name } }
         assertEquals(9, names.size)

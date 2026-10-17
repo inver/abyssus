@@ -51,6 +51,42 @@ object HdrFixtures {
         return file
     }
 
+    /** A complete uncompressed OpenEXR file (float channels B, G, R) of [width] x [height] pixels from [pixel]. */
+    fun exrBytes(width: Int, height: Int, pixel: (Int, Int) -> FloatArray): ByteArray {
+        val header = java.nio.ByteBuffer.allocate(1024).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        fun text(value: String) { header.put(value.toByteArray(Charsets.US_ASCII)); header.put(0) }
+        fun attribute(name: String, type: String, size: Int, write: () -> Unit) { text(name); text(type); header.putInt(size); write() }
+        header.putInt(0x01312f76); header.putInt(2)
+        attribute("channels", "chlist", 3 * 18 + 1) {
+            for (c in "BGR") { text(c.toString()); header.putInt(2); header.put(0); header.put(0); header.put(0); header.put(0); header.putInt(1); header.putInt(1) }
+            header.put(0)
+        }
+        attribute("compression", "compression", 1) { header.put(0) }
+        for (name in listOf("dataWindow", "displayWindow")) attribute(name, "box2i", 16) { header.putInt(0); header.putInt(0); header.putInt(width - 1); header.putInt(height - 1) }
+        attribute("lineOrder", "lineOrder", 1) { header.put(0) }
+        attribute("pixelAspectRatio", "float", 4) { header.putFloat(1f) }
+        attribute("screenWindowCenter", "v2f", 8) { header.putFloat(0f); header.putFloat(0f) }
+        attribute("screenWindowWidth", "float", 4) { header.putFloat(1f) }
+        header.put(0)
+        val headerSize = header.position()
+        val lineBytes = 3 * width * 4
+        val out = java.nio.ByteBuffer.allocate(headerSize + height * 8 + height * (8 + lineBytes)).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        out.put(header.array(), 0, headerSize)
+        val first = headerSize + height * 8
+        for (y in 0 until height) out.putLong((first + y * (8 + lineBytes)).toLong())
+        for (y in 0 until height) {
+            out.putInt(y); out.putInt(lineBytes)
+            for (channel in intArrayOf(2, 1, 0)) for (x in 0 until width) out.putFloat(pixel(x, y)[channel])
+        }
+        return out.array()
+    }
+
+    fun writeExr(file: File, width: Int, height: Int, pixel: (Int, Int) -> FloatArray): File {
+        file.parentFile.mkdirs()
+        file.writeBytes(exrBytes(width, height, pixel))
+        return file
+    }
+
     /** A uniform sky of [radiance] in every pixel. */
     fun uniform(radiance: Float): (Int, Int) -> FloatArray = { _, _ -> floatArrayOf(radiance, radiance, radiance) }
 

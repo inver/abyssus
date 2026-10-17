@@ -336,6 +336,22 @@ abstract class RayBackendConformanceKit {
         }
     }
 
+    @Test
+    fun stallReportedOnASessionFailsEverySessionOnTheDevice() = withBackend { backend, health ->
+        backend.openSession("stall-first", RayLimits()).use { first ->
+            backend.openSession("stall-second", RayLimits()).use { second ->
+                first.submit(triangleRequest())
+                // the scheduler's deadline marks a stalled session through reportStalled
+                first.reportStalled("Injected stall")
+                assertThrows(RayFrameStallException::class.java) { first.poll() }
+                assertThrows(RayFrameStallException::class.java) { first.submit(triangleRequest()) }
+                // a stalled backend is never retried in place: the shared health fails its other sessions as a lost device does
+                assertThrows(RayFrameStallException::class.java) { second.poll() }
+                assertThrows(RayFrameStallException::class.java) { health.checkUsable() }
+            }
+        }
+    }
+
     @Test fun defaultSceneMaterialMatchesRasterReference() {
         org.junit.Assume.assumeTrue(sceneMaterials)
         withBackend { backend,_ -> backend.openSession("default-material",RayLimits()).use { session ->

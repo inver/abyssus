@@ -25,7 +25,7 @@ class RayFrame internal constructor(
     adopt: Boolean,
 ) {
     constructor(key: RayFrameKey, width: Int, height: Int, color: FloatArray, depth: FloatArray) :
-        this(key, width, height, color, depth, false)
+            this(key, width, height, color, depth, false)
 
     private val color: FloatArray
     private val depth: FloatArray
@@ -47,8 +47,13 @@ class RayFrame internal constructor(
     fun depthValues(): FloatArray = depth.copyOf()
 
     /** Writes the color values at the buffer's position without an intermediate copy. */
-    fun copyColorTo(target: java.nio.FloatBuffer) { target.put(color) }
-    fun copyDepthTo(target: java.nio.FloatBuffer) { target.put(depth) }
+    fun copyColorTo(target: java.nio.FloatBuffer) {
+        target.put(color)
+    }
+
+    fun copyDepthTo(target: java.nio.FloatBuffer) {
+        target.put(depth)
+    }
 
     /** Read-only views for in-module consumers that never mutate or retain them beyond this frame's life. */
     internal fun colorView(): FloatArray = color

@@ -24,16 +24,15 @@ import com.badlogic.gdx.utils.BufferUtils
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
-import net.nevinsky.abyssus.lib.gdx.AnimationController
-import net.nevinsky.abyssus.lib.gdx.ModelInstance
+import com.badlogic.gdx.graphics.g3d.utils.AnimationController
+import com.badlogic.gdx.graphics.g3d.ModelInstance
 import net.nevinsky.abyssus.lib.core.assets.model.PreparedModel
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.gdx.model.Model
+import com.badlogic.gdx.graphics.g3d.Model
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
-import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
-import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.sceneview.GdxContext
 import net.nevinsky.abyssus.plugin.sceneview.GdxFrame
@@ -53,7 +52,6 @@ import javax.swing.SwingConstants
 import javax.swing.Timer
 import com.badlogic.gdx.graphics.g3d.Model as GdxModel
 import com.badlogic.gdx.graphics.g3d.ModelInstance as GdxModelInstance
-import net.nevinsky.abyssus.lib.gdx.ModelBatch as ContentBatch
 
 /**
  * A model as the preview draws it: the transformed [data], its [pixmaps] decoded off the AWT thread (the canvas takes
@@ -92,8 +90,8 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
 
     // GL state, touched only inside the context
     private var gridBatch: ModelBatch? = null
-    private var contentShaders: DefaultShaderProvider? = null
-    private var contentBatch: ContentBatch? = null
+    private var contentShaders: ModelShaderProvider? = null
+    private var contentBatch: ModelBatch? = null
     private var grid: GdxModel? = null
     private var post: GdxModel? = null
     private var gridInstance: GdxModelInstance? = null
@@ -239,7 +237,7 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
 
     private fun create() {
         gridBatch = ModelBatch()
-        contentBatch = ContentBatch(DefaultShaderProvider().also { contentShaders = it })
+        contentBatch = ModelBatch(ModelShaderProvider().also { contentShaders = it })
         grid = GridModel.build().also { gridInstance = GdxModelInstance(it) }
         val material = Material(ColorAttribute.createDiffuse(Color(0.95f, 0.55f, 0.1f, 1f)))
         post = ModelBuilder().createBox(PreviewFraming.POST_WIDTH * 2, PreviewFraming.POST_HEIGHT, PreviewFraming.POST_WIDTH * 2,
@@ -288,7 +286,7 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
         instance?.let { shown ->
             contentBatch?.let { batch ->
                 batch.begin(camera)
-                batch.render(shown, environment, ShaderProvider.DEFAULT_SHADER_KEY)
+                batch.render(shown, environment)
                 batch.end()
             }
         }
@@ -314,7 +312,7 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
         val building = prepared ?: return
         if (!building.uploadNext()) return
         prepared = null
-        val built = AssimpModelLoader().build(building.data, building.file, building.textures)
+        val built = AssimpModelLoader().buildIntModel(building.data, building.file, building.textures)
         building.dispose()
         animation = null
         model?.dispose()

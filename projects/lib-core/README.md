@@ -22,26 +22,26 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 |---|---|
 | `core.io`, `core.util` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `NativeJsonTree` (the lossless reader: key order, nulls and number text such as `2.50` and `1.0E-4` kept; `SceneJson` and `SceneLoader` both read through it), `SourceBackedComponent` (a component written back from the object it was read from), `GeometryUtils` |
 | `core.defaults` | Top-level `NO_ENTITY` reference sentinel |
-| `core.dto` | `ProjectDto`, `SceneDto`, camera, light, fog and ray preference DTOs |
+| `core.dto` | `ProjectDto`, `SceneDto`, camera, light and fog DTOs |
 | `project`, `scene` (under `lib-core`) | `ProjectLoader`, `SceneLoader`, `RuntimeSceneLoader`, `SceneContext` and `SceneEnvironment` |
 | `core.ecs` | Component registration and loading, `SceneEngine`, `SceneEntityIds`, `SceneFoliageListing` (the terrain-bound foliage of a loaded engine: components only, no files or GL); `component/` holds Ashley classes and render-asset lookup, `system/` holds look-at and camera synchronization |
 | `core.assets` | `AssetMeta` and `MetaType` (the `meta.json` model; `uuid` is null when a meta declares none), `AssetMetaBinder` (one injectable settings-class registration map and metadata binding rule), `AssetMetaLoader` (validates and reads saved `meta.json`, binds through the binder, caches by timestamp and size), `AssetIndex` (the asset folder of a `uuid`), `Asset`, `runCatchingKeepingCancellation`, `Throwables` |
 | `core.ui` | The native UI asset: `ui.model` holds the immutable screen, widget, binding and resource definitions, `UiMeta` (the typed `additional` of a `UI` asset) and `UiAdmission`; `ui.validation` holds `UiCollectionDecoder`, which admits a `meta.json` tree (native markers, schema version 1, ids, geometry, limits) without IO. `project.UiProjectRegistry` resolves the project's `uiAssetNames`; `ui.layout` is the pure layout engine; `ui.state` holds typed bindings, validated write-back and navigation; `ui.render` is the shared Scene2D presenter; `ui.style` resolves styles; `assets.ui` prepares and owns the GL resources. See *UI assets*, *UI host contract* and *UI renderer and resources* below |
-| `core.assets.loading` | `AssetLoader` (prepare / dependencies / upload / build / discard), `AssetStorage` (the cache and owner of built assets: load once, fail once, slice GPU work per frame, load dependencies first) with `BuiltAssets`, `RaySnapshotStore` with `RaySnapshotLoader`, `RaySnapshot` and the leases (see below), `TextureUploadQueue`, `ShaderStorage` (GLSL from a resource folder) |
-| `core.assets.model` | `ModelLoader` (glTF and other formats through `lib-gdx`'s Assimp loader), `ModelMeta`, the ray model snapshot types and `ModelRaySnapshotLoader` |
-| `core.assets.terrain` | `TerrainLoader`, `TerrainData`, `TerrainMesh`, `TerrainMeta`, `RayTerrainSnapshot` and `TerrainRaySnapshotLoader` |
+| `core.assets.loading` | `AssetLoader` (prepare / dependencies / upload / build / discard), `AssetStorage` (the cache and owner of built assets: load once, fail once, slice GPU work per frame, load dependencies first) with `BuiltAssets`, `TextureUploadQueue`, `LoadBook` (package-internal, GL-free: the current load and the replacement of each name, which generation owns a message, dependency satisfaction and failure, cycles, retain closure; `AssetStorage` keeps upload, build, discard and notifications), `ShaderStorage` (GLSL from a resource folder; `#pragma include` lines are expanded from `lib-gdx`'s shared GLSL) |
+| `core.assets.model` | `ModelLoader` (glTF and other formats through `lib-gdx`'s Assimp loader), `ModelMeta`, `ModelPreparationTap` |
+| `core.assets.terrain` | `TerrainLoader`, `TerrainData`, `TerrainMesh`, `TerrainMeta` |
 | `core.assets.foliage` | `FoliageLoader` (`FOLIAGE` assets: reads the meta, the masks and the bake off the GL thread and declares the terrain and layer models as dependencies), `FoliageMeta` and the layer model types, `FoliageMaskFile` (`layer-<id>.mask`: `maskResolution²` bytes z-major, a missing file is a full mask), `FoliageDataFile` (the `ABFO` bake: `FoliageBake`, `FoliageLayerBake`, `FoliageCopy`, read as stale when it does not fit), `FoliageFingerprint` (SHA-256 of the generation inputs), `FoliageRuntimeLoad` (the read policy of games and physics: metadata, terrain, bake and masks as written, never generated or written; a stale or unverifiable bake keeps its saved copies, copies that cannot be placed are dropped, and problems are returned as bounded warnings), `FoliageCollider` / `FoliageColliderReader` (a layer's optional neutral BOX/SPHERE/CAPSULE `collider`, with the `ColliderComponent` defaults; absent is told apart from invalid) and `FoliageDrawable` (the instanced GL side, reused by the runtime) |
 | `core.assets.texture` | `TextureLoader` (`TEXTURE` and `PIXMAP_TEXTURE` assets: image decoded off the GL thread, uploaded as a mipmapped repeating texture), `PreparedTexture` (the decoded image; `release()` hands the `Pixmap` to a caller that uploads it itself) and `TextureMeta` |
-| `core.assets.sky` | `SkyRenderer` (a drawable background) and `RaySkySnapshot`; `cube/` six-face skyboxes, `procedural/` skies drawn by the asset's own GLSL, `hdr/` OpenEXR skies and their lighting environment. Each has a `*Loader` and a `*RaySnapshotLoader` |
+| `core.assets.sky` | `SkyRenderer` (a drawable background); `cube/` six-face skyboxes, `procedural/` skies drawn by the asset's own GLSL, `hdr/` OpenEXR skies and their lighting environment. Each has a `*Loader` |
+| `core.water` | Realistic water viewed from above, as plain constructor-wired classes with no IDE or editor imports: `WaterSettings` / `WaterPresets` / `WaterValidation` (the saved scalars, the Lake and Sea defaults and their range rules), the pure math the renderer and its tests share (`WaterWaves` and `WaterMeshPlanner` for the bounded wave grid, `WaterReflectionCamera`, `WaterDepthMath` for the packed linear depth, `WaterScreenArea`, `WaterPassPlanner` for the per-frame reflection budget), and `WaterDrawable` with its GLSL under `resources/shader/water` (`ShaderStorage.withWaterShaders()`). The scene view owns the offscreen targets and the pass order; see `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md` |
 | `core.assets.sky.clouds` | The clouds of a procedural sky: `CloudMeta`, nested `CloudMeta.CloudBand`, `CloudType` (level and defaults), `CloudLevel` with its `CloudBandLimits`, `CloudTechnique`; settings decode through `AssetMetaBinder` / `CloudSettingsReader`; `CloudsLoader` and `Clouds` (the `CLOUDS` asset: bands, technique and the volumetric 3D noise from `CloudNoiseGenerator`, built on FastNoiseLite), which a procedural sky names by `uuid` and loads as a dependency; `CloudField`, the cloud techniques and `SunOcclusion` |
 
 `ExrLoader.dimensions` and `HdrPreview.dimensions` read the EXR data-window dimensions without decoding pixels.
 Header parsing is shared with decoding; native headers and images each have explicit cleanup. Chooser and panel
 labels use original dimensions, while previews retain their existing reduction and tone mapping.
 
-`SceneDto.rayTracing` retains explicit null limits for editor validation; omitted limits keep their defaults.
-`RayTracingDto` limit properties are nullable integers. Standalone consumers compiled against primitive accessors
-must rebuild against this core version.
+`SceneDto` does not bind `rayTracingEnabled` or `rayTracing`: those scene keys are editor-only data, read by
+`lib-core-editor` from the validated document, and a game ignores them as unknown properties.
 
 `core.dto` holds `ProjectDto` / `SceneDto`; `core.project` holds `ProjectLoader`, and the `scene` package holds
 `SceneLoader` / `RuntimeSceneLoader`.
@@ -249,8 +249,13 @@ chooses a loader by name instead, and `AssetStorage(executor, loader, log)` regi
 
 `AssetIndex` stays a pure lookup (asset folder of a `uuid`); the storage, not the index, owns the built assets.
 
+`StandardAssetLoaders(fileLoader, metaLoader, shaders)` (in `assets/standard/`) builds the loader of every drawn kind
+once; hosts register its `byType` map instead of listing loaders themselves. A host that needs only some kinds can still
+register a smaller map:
+
 ```kotlin
 val assets = AssetStorage(log, executor, metaLoader::loadBaseMeta)
+assets.registerAll(StandardAssetLoaders(fileLoader, metaLoader, shaders).byType)   // or a subset, for example:
 assets.registerAll(mapOf(
     MetaType.MODEL to ModelLoader(metaLoader, assimp, fileLoader),
     MetaType.TERRAIN to TerrainLoader(fileLoader, metaLoader),
@@ -261,74 +266,13 @@ assets.update()                                 // once per frame, GL current
 val terrain = assets.getAs<TerrainMesh>("terrain_x")   // null until built
 ```
 
-## Optional CPU companions (ray snapshots)
+## Observing a prepared model
 
-`RaySnapshotStore<S, D>(executor, metaLoader, loader, label, maxBytes)` is one shared, reference-counted cache of
-immutable CPU snapshots for one asset kind of one project, keyed by asset name. The plugin builds one each for models,
-terrains and skies. `S` is the snapshot (a `RaySnapshot` with a `byteSize`), `D` is the source a raster preparation
-already holds, and `label` ("model", "terrain", "sky") names the kind in failure messages.
-
-- `acquire(name)` returns a closeable `RaySnapshotLease`: `snapshot` is null while preparation is pending, `failure`
-  explains an unreadable or over-budget asset. Close leases on ray-mode disable, asset removal and project/view
-  replacement. Repeated instances/views share the same immutable snapshot; the last close removes the cached bytes. A
-  closed lease holds no snapshot, and results arriving after release are dropped.
-- `invalidate(name)` drops the old revision and any read in flight, then allows a fresh acquisition.
-- `RaySnapshotLoader<S, D>` builds the snapshot: `load(meta)` reads the asset afresh (the fallback when ray mode starts
-  after the raster asset is cached), and `capture(source)` copies a `D` that raster preparation offers. Kinds with no
-  raster capture (skies) leave `capture` at its default and use `D = Nothing`.
-- Ordinary raster preparation retains nothing when no lease requests the asset. When one does, `ModelLoader` calls
-  `store.preparation(name)?.offer(source)` (`RayModelSource`) before upload disposes the Pixmaps; an offer after cancellation or reacquisition is a no-op. The fallback `load` disposes its own
-  decoded images after copying, including failures. It never reads back, reloads or disposes a GPU resource.
-- The terrain store has no raster capture (`D = Nothing`): the raster terrain keeps no pixels once its textures are
-  on the GPU, so `TerrainRaySnapshotLoader` reads heights (through a `TerrainLoader`) and splat images (through a
-  `TextureLoader`) afresh. It is a CPU companion read, not an asset load, so it uses both loaders directly.
-
-## Optional CPU model companions
-
-Snapshots copy 32-bit indices, interleaved vertex data/layout, mesh parts, material
-parameters, node transforms/material assignments/bind transforms, and RGBA8888 image
-bytes. Mutable libGDX objects and GL handles never cross this boundary. Image rows
-retain Pixmap upload order; texture bindings keep UV transforms and the raster
-renderer's Linear/Repeat/no-mipmap sampling. Raster default/PBR shaders sample all
-these bytes linearly, including diffuse/emissive images, so snapshots apply no sRGB
-conversion. Animation pose/deformation and native material conversion remain later
-ray-renderer work.
-
-Default bounds are 128 MiB geometry/image payload per model (`ModelRaySnapshotLoader`) and 256 MiB retained
-payload across the store. Exceeding them reports a CPU companion failure without
-breaking raster loading. These account for retained array payload, not native/GPU
-allocations or temporary decoder memory; backend/application budgets are separate.
-
-## Optional CPU terrain companions
-
-The terrain store has the same lease lifecycle, with separate default bounds of 128 MiB per terrain
-(`TerrainRaySnapshotLoader`) and 256 MiB retained across the store. It copies heights, the raster mesh's 32-bit triangle indices, interleaved
-positions/normals/layer UVs, and decoded splat image bytes before upload/disposal.
-Late acquisition loads the terrain through the plain `TerrainLoader` without touching cached GPU resources.
-Snapshots stay terrain-local and can be shared across transformed instances; the
-scene conversion supplies world transforms and inverse-transpose normal transforms.
-
-Splat-map coordinates are local xz divided by terrain size, with linear filtering
-and clamp-to-edge wrapping. Layers use the terrain's repeated UVs, Repeat wrapping,
-linear magnification and trilinear mipmap minification; snapshots retain base-level
-bytes and the mipmap requirement for later backend upload. All images follow the
-raster shader's linear color convention and Pixmap row order. Layer bindings retain
-base/R/G/B/A order: the shader mixes each present channel sequentially rather than
-normalizing the weights. Missing or unreadable images are omitted, matching raster
-loading: absent base means neutral gray, absent channel means skip that mix. Native
-sampling/shading remains later ray-renderer work. Cancellation drops late results,
-including raster preparations that began before a request was closed and reacquired.
-
-## Optional CPU sky companions
-
-The sky store hands out leases of an immutable `RaySkySnapshot`: the scene's sky as an equirectangular RGBA float image
-(centre column faces -Z, top row is +Y), at most `RAY_SKY_MAX_WIDTH` (1024) wide (a procedural sky baked by the view is 2048 wide, bilinear, as 8-bit `rgba8()` data). `HdrSkyRaySnapshotLoader` decodes an
-HDR sky again on the CPU and box-filters it down, keeping linear radiance far above 1; `SkyboxRaySnapshotLoader`
-resamples a cube skybox with the GL cube lookup the raster sky uses (faces are back, front, left, right, bottom, top =
-+X, -X, +Y, -Y, +Z, -Z) and keeps its display values. `ProceduralSkyRaySnapshotLoader` returns null: a procedural sky is
-the asset's own GLSL and has no CPU form, so it reads as unavailable and the caller falls back to the background colour.
-Leases share one read per asset, drop the bytes with the last reference (default bound 128 MiB in the plugin's wiring),
-and never touch the GPU caches or GL.
+`ModelLoader` takes an optional `ModelPreparationTap`: `begin(name)` returns a `Capture` (or null), and the loader offers
+it the parsed `ModelData` and decoded images once, on the prepare thread, before the textures are uploaded. A host uses it
+to copy what the loader already holds (the editor's ray snapshots do); the loader keeps ownership and a cancellation from
+`offer` disposes the prepared model. A game passes none. The ray-tracing CPU snapshots themselves live in `lib-core-editor`
+(`editor.ray.snapshot`), not here.
 
 ## Procedural sky light and the cloudy environment
 
@@ -361,7 +305,7 @@ from the asset's atmosphere parameters can look different from this light; that 
 `./gradlew :lib-core:test`; GL tests opt in with `-Dabyssus.glTests=true`. Tests read the repository's
 `projects/plugin-abyssus/src/test/testData/project` fixtures through `testProject(name)`; `testFileLoader` and `testMetaLoader` build a project's
 loaders, and `exrFixture()` gives the bundled EXR sky as a file (`TestData.kt`). The GL context is `lib-gdx`'s `TestGl`
-test fixture. `HdrFixtures` and `RecordingLogger` are in `src/testFixtures`, shared with the plugin's tests. `AssetStorageTest` covers the loading pipeline with a fake loader and a
+test fixture. `HdrFixtures` and `RecordingLogger` are in `src/testFixtures`, shared with the plugin's tests. `LoadBookTest` covers the bookkeeping with fake loads; `AssetStorageTest` covers the loading pipeline with a fake loader and a
 queued executor.
 
 ## Terrain format

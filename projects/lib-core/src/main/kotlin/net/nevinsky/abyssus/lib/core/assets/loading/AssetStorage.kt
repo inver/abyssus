@@ -185,11 +185,13 @@ class AssetStorage(
     /** Stands in for a name nothing can load: it prepares to nothing, so the asset fails as absent. */
     private val absent = LoaderRegistration(AbsentLoader(), { _, _ -> false })
 
+    private val book = LoadBook<Live>()
+
     /** The current asset of each requested name. */
-    private val lives = LinkedHashMap<String, Live>()
+    private val lives = book.lives
 
     /** The replacement of a built asset that [invalidate] marked changed, while it loads. */
-    private val revisions = LinkedHashMap<String, Live>()
+    private val revisions = book.revisions
     private val builtMap = LinkedHashMap<String, Disposable>()
 
     /** How many assets were published under each name; changes exactly when [get] starts returning another asset. */
@@ -267,13 +269,13 @@ class AssetStorage(
     /** True while any requested asset has not finished loading (neither built and current nor failed). */
     fun isLoading(): Boolean {
         bindThread()
-        return lives.values.any { it.loading() } || revisions.isNotEmpty()
+        return lives.values.any { book.loading(it) } || revisions.isNotEmpty()
     }
 
     /** True while [name] is requested but neither built (and current) nor failed; false for a name never requested. */
     fun isLoading(name: String): Boolean {
         bindThread()
-        return lives[name]?.loading() == true || revisions.containsKey(name)
+        return lives[name]?.let(book::loading) == true || revisions.containsKey(name)
     }
 
     /** The number of assets built under [name] so far: another value means [get] returns a new asset. */
@@ -289,7 +291,7 @@ class AssetStorage(
             Phase.Preparing -> AssetState.Preparing
             Phase.Waiting -> {
                 val deps = live.dependencies ?: emptySet()
-                AssetState.Waiting(deps, unmet(deps))
+                AssetState.Waiting(deps, book.unmet(deps))
             }
 
             Phase.Uploading, Phase.UploadDone -> AssetState.Uploading
@@ -345,7 +347,7 @@ class AssetStorage(
     fun retain(names: Set<String>) {
         onGl {
             check(!disposed) { "AssetStorage is disposed" }
-            val keep = withDependencies(names)
+            val keep = book.withDependencies(names)
             val errors = ArrayList<Throwable>()
             for (name in (lives.keys + revisions.keys).toSet()) {
                 if (name !in keep) errors += forget(name)
@@ -647,9 +649,7 @@ class AssetStorage(
     }
 
     /** The load that [id] belongs to, or null when it was forgotten or superseded meanwhile. */
-    private fun liveOf(name: String, id: Long): Live? =
-        (revisions[name]?.takeIf { it.id == id } ?: lives[name]?.takeIf { it.id == id })
-            ?.takeUnless { cancelledIds.contains(id) }
+    private fun liveOf(name: String, id: Long): Live? = book.owner(name, id)?.takeUnless { cancelledIds.contains(id) }
 
     private fun applyFailure(message: Inbound.Failed) {
         val live = liveOf(message.name, message.id)
@@ -690,7 +690,7 @@ class AssetStorage(
     /** A dependency [invalidate] marked changed after its dependent was prepared is reloaded here; nobody else asks. */
     private fun requestStaleDependencies() {
         for (live in active()) {
-            if (!live.blocksOnDependencies()) continue
+            if (!book.blocksOnDependencies(live)) continue
             for (dependency in live.dependencies.orEmpty()) {
                 if (lives[dependency]?.stale != true) continue
                 requestName(live.name, dependency)?.let { fail(live, it) }
@@ -722,7 +722,7 @@ class AssetStorage(
 
     private fun buildAllReady() {
         while (true) {
-            val live = active().firstOrNull { it.phase == Phase.UploadDone && it.depsSatisfied() } ?: return
+            val live = active().firstOrNull { it.phase == Phase.UploadDone && book.depsSatisfied(it) } ?: return
             val staged = live.staged
             if (staged == null) {
                 fail(live, AssetPipelineException("Asset '${live.name}' lost its staged value"))
@@ -759,66 +759,18 @@ class AssetStorage(
         while (changed) {
             changed = false
             for (live in active()) {
-                if (!live.blocksOnDependencies()) continue
-                val dependencies = live.dependencies ?: continue
-                for (dependency in dependencies) {
-                    val other = lives[dependency]
-                    val reason = when {
-                        other == null -> MissingDependencyException(live.name, dependency)
-                        other.phase == Phase.Failed -> DependencyFailedException(
-                            live.name,
-                            dependency,
-                            other.error ?: AssetPipelineException("dependency failed"),
-                        )
-
-                        else -> null
-                    }
-                    if (reason != null) {
-                        fail(live, reason)
-                        changed = true
-                        break
-                    }
-                }
+                if (!book.blocksOnDependencies(live)) continue
+                val reason = book.dependencyProblem(live) ?: continue
+                fail(live, reason)
+                changed = true
             }
         }
     }
 
     private fun failCycles() {
-        val color = HashMap<String, Int>()
-        val stack = ArrayList<String>()
-        val cyclic = LinkedHashSet<String>()
-
-        fun entry(name: String): Live? = revisions[name] ?: lives[name]
-
-        fun outgoing(name: String): List<String> {
-            val dependencies = entry(name)?.dependencies ?: return emptyList()
-            return dependencies.filter { dependency ->
-                val other = entry(dependency)
-                other != null && other.phase != Phase.Ready && other.phase != Phase.Failed
-            }
-        }
-
-        fun dfs(name: String) {
-            color[name] = 1
-            stack.add(name)
-            for (dependency in outgoing(name)) {
-                when (color[dependency] ?: 0) {
-                    0 -> dfs(dependency)
-                    1 -> {
-                        val at = stack.indexOf(dependency)
-                        if (at >= 0) cyclic.addAll(stack.subList(at, stack.size))
-                    }
-                }
-            }
-            stack.removeAt(stack.lastIndex)
-            color[name] = 2
-        }
-
-        for (live in active().filter { it.phase == Phase.Waiting }) {
-            if ((color[live.name] ?: 0) == 0) dfs(live.name)
-        }
+        val cyclic = book.cyclicNames()
         for (name in cyclic) {
-            val live = entry(name) ?: continue
+            val live = book.entry(name) ?: continue
             if (live.phase != Phase.Failed && live.phase != Phase.Ready) {
                 fail(live, CyclicDependencyException(cyclic.toList()))
             }
@@ -853,45 +805,13 @@ class AssetStorage(
         }
     }
 
-    private fun active(): List<Live> = lives.values.toList() + revisions.values
-
-    private fun unmet(dependencies: Set<String>): Set<String> =
-        dependencies.filterNot { lives[it]?.settled() == true }.toSet()
-
-    /** [names] and, transitively, what the loading and built assets among them need. */
-    private fun withDependencies(names: Set<String>): Set<String> {
-        val keep = HashSet(names)
-        var frontier: Collection<String> = names
-        while (frontier.isNotEmpty()) {
-            frontier = frontier
-                .flatMap { (lives[it]?.dependencies.orEmpty()) + (revisions[it]?.dependencies.orEmpty()) }
-                .filter(keep::add)
-        }
-        return keep
-    }
+    private fun active(): List<Live> = book.active()
 
     private fun Live.canUpload(): Boolean {
         if (staged == null) return false
         if (phase != Phase.Waiting && phase != Phase.Uploading) return false
-        return depsSatisfied()
+        return book.depsSatisfied(this)
     }
-
-    private fun Live.depsSatisfied(): Boolean {
-        val dependencies = dependencies ?: return false
-        return dependencies.all { lives[it]?.settled() == true && !revisions.containsKey(it) }
-    }
-
-    /** Built and not marked changed. */
-    private fun Live.settled(): Boolean = phase == Phase.Ready && !stale
-
-    private fun Live.loading(): Boolean = when (phase) {
-        Phase.Failed -> false
-        Phase.Ready -> stale
-        else -> true
-    }
-
-    private fun Live.blocksOnDependencies(): Boolean =
-        phase == Phase.Waiting || phase == Phase.Uploading || phase == Phase.UploadDone
 
     private fun discardModelQuiet(registration: LoaderRegistration<*, *, *>, model: Any) {
         try {
@@ -956,30 +876,21 @@ class AssetStorage(
         }
     }
 
-    private enum class Phase {
-        Preparing,
-        Waiting,
-        Uploading,
-        UploadDone,
-        Ready,
-        Failed,
-    }
-
     private class Live(
-        val id: Long,
-        val name: String,
+        override val id: Long,
+        override val name: String,
         val registration: LoaderRegistration<*, *, *>,
-        var phase: Phase,
+        override var phase: Phase,
         /** True while this load is the replacement of a built asset (see [revisions]). */
         var revision: Boolean = false,
         var staged: Any? = null,
-        var dependencies: Set<String>? = null,
+        override var dependencies: Set<String>? = null,
         var asset: Disposable? = null,
-        var error: Throwable? = null,
+        override var error: Throwable? = null,
         /** [invalidate] marked the built asset changed; the next [request] loads its replacement. */
-        var stale: Boolean = false,
+        override var stale: Boolean = false,
         val handlerErrors: MutableList<Throwable> = ArrayList(),
-    )
+    ) : LoadView
 
     private sealed interface Inbound {
         val id: Long

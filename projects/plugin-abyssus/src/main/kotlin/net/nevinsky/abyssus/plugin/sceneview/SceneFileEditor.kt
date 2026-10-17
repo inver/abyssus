@@ -5,23 +5,16 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
-import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.plugin.SceneRayControls
-
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
-import com.intellij.util.concurrency.AppExecutorUtil
-import java.io.File
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.command.undo.DocumentReference
 import com.intellij.openapi.command.undo.DocumentReferenceManager
 import com.intellij.openapi.command.undo.DocumentReferenceProvider
+import com.intellij.openapi.command.undo.UndoManager
+import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -38,29 +31,40 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.components.JBLabel
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.plugin.dto.textOf
+import com.intellij.util.Alarm
+import com.intellij.util.concurrency.AppExecutorUtil
+import com.intellij.util.ui.update.MergingUpdateQueue
+import com.intellij.util.ui.update.Update
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
+import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.water.WaterField
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.SceneRayControls
+import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.filetype.AbyssusSceneEdited
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
+import net.nevinsky.abyssus.plugin.water.WaterSceneEdits
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
+import java.io.File
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import com.intellij.openapi.command.undo.UndoManager
-import com.intellij.util.Alarm
-import com.intellij.util.ui.update.MergingUpdateQueue
-import com.intellij.util.ui.update.Update
-import net.nevinsky.abyssus.plugin.filetype.AbyssusSceneEdited
-import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 
 /** How long typing must pause before the view re-reads the scene; the view then catches up within 300 ms of the last keystroke. */
 private const val RELOAD_PAUSE_MS = 200
@@ -83,9 +87,19 @@ class SceneFileEditor(
     private val content = JPanel(BorderLayout()).apply { isFocusable = true }
     private var view: SceneView? = null
     private val reloads = ReloadPolicy()
-    private val reloadQueue = MergingUpdateQueue("abyssus-scene-reload", RELOAD_PAUSE_MS, true, content, this, null, Alarm.ThreadToUse.SWING_THREAD)
+    private val reloadQueue = MergingUpdateQueue(
+        "abyssus-scene-reload",
+        RELOAD_PAUSE_MS,
+        true,
+        content,
+        this,
+        null,
+        Alarm.ThreadToUse.SWING_THREAD
+    )
 
     private var disposed = false
+
+    private val viewSettings = project.service<SceneViewSettings>()
 
     /** Reloads assets that change on disk or in an editor; null for a scene outside a project. */
     private val assetRefresh: AssetRefresh? = ProjectLayout.projectDirFor(file)?.let { dir ->
@@ -116,6 +130,7 @@ class SceneFileEditor(
         changed == file || projectInputs(text).let { it == null || it != projectInputs }
 
     init {
+        viewSettings.addShowFpsListener(this) { enabled -> view?.setFpsEnabled(enabled) }
         reload()
         assetRefresh?.let { refresh ->
             val assets = AssetsFolder(ProjectLayout.projectDirFor(file)!!)
@@ -136,6 +151,7 @@ class SceneFileEditor(
             rayControls.selected(file, this, entityId)
             view?.selectEntity(entityId)
         }
+        host.listenWater(file, this) { waterId -> view?.selectWater(waterId) }
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 if (events.any { it is VFileContentChangeEvent && isSource(it.file) && hasRenderChange(it.file) }) {
@@ -153,7 +169,11 @@ class SceneFileEditor(
             override fun beforeDocumentChange(event: DocumentEvent) {
                 val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
                 if (!isSource(changed)) return
-                val next = event.document.text.replaceRange(event.offset, event.offset + event.oldLength, event.newFragment.toString())
+                val next = event.document.text.replaceRange(
+                    event.offset,
+                    event.offset + event.oldLength,
+                    event.newFragment.toString()
+                )
                 if (hasRenderChange(changed, next)) view?.stopPlay()
             }
 
@@ -215,10 +235,13 @@ class SceneFileEditor(
             return
         }
         created.onFailure = { e -> ApplicationManager.getApplication().invokeLater { showGlFailure(e) } }
+        created.setFpsEnabled(viewSettings.showFps)
         created.onPick = { entityId ->
             rayControls.selected(file, this, entityId)
             host.select(file, entityId)
         }
+        created.onPickWater = { waterId -> host.selectWater(file, waterId) }
+        created.onWaterMove = ::applyWaterMove
         created.onTransform = ::applyTransform
         created.onArrangementCreate = ::createArrangement
         created.onArrangementEdit = ::editArrangement
@@ -234,6 +257,23 @@ class SceneFileEditor(
         val isRotate = edit.rotation != null || edit.target != null
         val command = AbyssusBundle.message(if (isRotate) "commandRotateEntity" else "commandMoveEntity")
         return editSceneJson(project, file, command) { root -> SceneTransformWriter().apply(root, entityId, edit) }
+    }
+
+    /**
+     * Writes the new centre of the water surface [waterId] as one undoable command, changing only the coordinates that
+     * differ from the saved ones (so a Y drag leaves X and Z's number text alone). False when nothing was written.
+     */
+    internal fun applyWaterMove(waterId: String, at: Vec3): Boolean {
+        val saved = runCatchingKeepingCancellation {
+            WaterCodec().read(SceneJson().parse(textOf(file)).get("abyssus")).valid.firstOrNull { it.id == waterId }
+        }.getOrNull() ?: return false
+        val moved = buildMap {
+            if (at.x != saved.x.toFloat()) put(WaterField.X, at.x.toDouble())
+            if (at.y != saved.level.toFloat()) put(WaterField.LEVEL, at.y.toDouble())
+            if (at.z != saved.z.toFloat()) put(WaterField.Z, at.z.toDouble())
+        }
+        if (moved.isEmpty()) return false
+        return WaterSceneEdits(project).move(file, waterId, moved) == WaterEdit.Changed
     }
 
     /** The ground to place copies on: the view's, else one read from the project; null when the user cancelled the read. */
@@ -275,7 +315,13 @@ class SceneFileEditor(
 
     internal fun showGlFailure(e: Throwable) {
         if (disposed) return
-        showStatus(AbyssusBundle.message("glUnavailable", e.documentDisplayMessage()))
+        val text = AbyssusBundle.message("glUnavailable", e.documentDisplayMessage())
+        // a view that can keep its toolbar shows the message itself; any other is replaced by it
+        if (view?.showUnavailable(text) == true) {
+            statusText = text
+            return
+        }
+        showStatus(text)
     }
 
     private fun showStatus(text: String) {
@@ -324,6 +370,8 @@ internal fun unsavedAssetMeta(projectDir: File): Map<File, String> {
     return manager.unsavedDocuments.mapNotNull { document ->
         val file = manager.getFile(document)?.takeIf { it.name == META_FILE } ?: return@mapNotNull null
         val io = File(file.path).absoluteFile
-        if (assets.contains(io.path)) io to document.text else null
+        if (assets.contains(io.path)) {
+            io to document.text
+        } else null
     }.toMap()
 }

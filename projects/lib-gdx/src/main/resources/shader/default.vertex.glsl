@@ -23,12 +23,9 @@
 attribute vec3 a_position;
 uniform mat4 u_projViewTrans;
 #ifdef instancedFlag
-// each instance carries its own world matrix in four columns; there is no u_worldTrans uniform to set
-attribute vec4 a_instance0;
-attribute vec4 a_instance1;
-attribute vec4 a_instance2;
-attribute vec4 a_instance3;
-#define u_worldTrans mat4(a_instance0, a_instance1, a_instance2, a_instance3)
+// each instance carries its own world matrix as one mat4 attribute (four locations); there is no u_worldTrans uniform to set
+attribute mat4 a_instance;
+#define u_worldTrans a_instance
 #else
 uniform mat4 u_worldTrans;
 #endif // instancedFlag
@@ -62,6 +59,12 @@ varying vec3 v_binormal;
 #endif
 #endif
 #endif // normalFlag
+
+// a clip plane tests the world position, which exists without lighting or normals only for it
+#if defined(clipPlaneFlag) && !defined(worldPositionFlag)
+#define worldPositionFlag
+varying vec3 v_worldPos;
+#endif
 
 #ifdef textureFlag
 attribute vec2 a_texCoord0;
@@ -258,6 +261,10 @@ void main() {
 	#endif
 
 	gl_Position = u_projViewTrans * pos;
+
+	#if defined(clipPlaneFlag) && !defined(normalFlag)
+		v_worldPos = pos.xyz;
+	#endif
 
 	#if defined(lightingFlag) && defined(shadowMapFlag)
 		vec4 spos = u_shadowMapProjViewTrans * pos;

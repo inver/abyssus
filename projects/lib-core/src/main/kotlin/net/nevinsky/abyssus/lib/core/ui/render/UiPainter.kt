@@ -225,7 +225,7 @@ internal class UiPainter(private val context: () -> UiPaintContext, private val 
         if (borderWidth > 0f) style.color("borderColor")
             ?.let { border(batch, it, borderWidth, x, y, w, h, alpha) }
         if (c.rejected(widget)) border(batch, 0xff5555ff.toInt(), 2f, x, y, w, h, alpha)
-        batch.setColor(Color.WHITE)
+        batch.color = Color.WHITE
     }
 
     private fun placeholder(batch: Batch, x: Float, y: Float, w: Float, h: Float, alpha: Float) {

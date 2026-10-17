@@ -1,0 +1,21 @@
+{
+  "importer": "model",
+  "source": "grass_green.glb",
+  "sourcePath": "/home/inv3r/Downloads/grass_green.glb",
+  "sourceSha256": "b6d4be4fbc232dcd98fc29649740c64aebdb915a775a1c0866d935dfef55666f",
+  "sourceFormat": "GLB",
+  "stated": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "chosen": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "size": {
+    "height": 0.5
+  },
+  "animations": [],
+  "skipped": [],
+  "approximated": []
+}

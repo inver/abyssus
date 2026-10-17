@@ -42,6 +42,14 @@ class ShaderStorageTest {
     }
 
     @Test
+    fun includeDirectivesAreExpandedFromTheSharedGlsl() {
+        assetFile("a", "main.frag", "#define shadowAtlasFlag\n#pragma include \"shadow_visibility.glsl\"\nvoid main() {}\n")
+        val out = bare.withAssets(FileLoader(dir)).fragment("main.frag", asset = "a")
+        assertEquals(1, Regex("""(?m)^float shadowTileVisibility\(""").findAll(out).count())
+        assertTrue(out.indexOf("#define shadowAtlasFlag") < out.indexOf("float shadowTileVisibility("))
+    }
+
+    @Test
     fun resourcesOverrideDefaultsFileByFile() {
         val shaders = layered
         assertEquals("host main\n", shaders.read("main.frag"))

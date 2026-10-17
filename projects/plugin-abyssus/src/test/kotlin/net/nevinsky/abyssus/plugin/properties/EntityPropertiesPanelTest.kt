@@ -139,6 +139,48 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         assertTrue(p.state is PanelState.Empty)
     }
 
+    private fun leave(c: Component) = c.focusListeners.forEach { it.focusLost(java.awt.event.FocusEvent(c, java.awt.event.FocusEvent.FOCUS_LOST)) }
+
+    fun testLeavingAFieldConfirmsItsValue() {
+        copyProject()
+        val p = panel()
+        p.show(component("8", "LightComponent"))
+        val field = named(p, "field-LightComponent-intensity") as JBTextField
+        field.text = "2"
+        leave(field)
+        assertEquals(2, components(sceneFile(), "8")["LightComponent"]["light"]["intensity"].asInt())
+        assertEquals("2", (named(p, "field-LightComponent-intensity") as JBTextField).text)
+        assertEquals("", (named(p, "error-LightComponent-intensity") as JBLabel).text)
+    }
+
+    fun testARefusedValueIsExplainedBesideTheFieldAndWritesNothing() {
+        copyProject()
+        val p = panel()
+        p.show(component("8", "LightComponent"))
+        val before = text(sceneFile())
+        val field = named(p, "field-LightComponent-intensity") as JBTextField
+        field.text = "abc"
+        field.postActionEvent()
+        assertEquals("1", field.text)
+        assertTrue((named(p, "error-LightComponent-intensity") as JBLabel).text.contains("abc"))
+        assertEquals(before, text(sceneFile()))
+    }
+
+    fun testAnEqualValueWritesNothingAndAddsNoUndo() {
+        copyProject()
+        val p = panel()
+        p.show(component("8", "LightComponent"))
+        val file = sceneFile()
+        val document = FileDocumentManager.getInstance().getDocument(file)!!
+        val before = text(file)
+        val stamp = document.modificationStamp
+        val field = named(p, "field-LightComponent-intensity") as JBTextField
+        field.text = "1"
+        field.postActionEvent()
+        assertEquals(before, text(file))
+        assertEquals(stamp, document.modificationStamp)
+    }
+
     fun testEditingAValueWritesTheFile() {
         copyProject()
         val p = panel()

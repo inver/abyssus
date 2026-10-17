@@ -18,6 +18,15 @@
 `lib-gdx` depends only on libGDX, LWJGL Assimp and the slf4j API (`projects/lib-gdx`). Nothing in it may import
 `com.intellij.*` or `net.nevinsky.abyssus` plugin packages. `lib-core` exposes it with `api(project(":lib-gdx"))`; the plugin receives it through `lib-core` and `lib-core-editor`.
 
+## Model rendering
+
+Models are drawn with stock libGDX g3d (`ModelInstance`, `ModelBatch`, `Renderable`, `Shader`, `AnimationController` from
+`com.badlogic.gdx.graphics.g3d`); `lib-gdx` adds only what stock cannot do. A mesh with model-sized geometry is an `IntMesh`
+(a stock `Mesh` holds at most 65,535 vertices; `IntMesh` throws from the 16-bit index members), and a model built from
+`ModelData` is an `IntModel`. Model shaders come from `ModelShaderProvider` and subclass the stock `DefaultShader`; there is no
+shader key. Instancing is one `mat4 a_instance`: pass `InstanceAttributes.of()` to `Mesh.enableInstancedRendering`.
+Don't copy a stock g3d class into the repository: subclass it, or wrap it as `FilteredRenderables` does.
+
 ## Logging
 
 - **SLF4J is the one logging interface.** `lib-gdx`, `lib-core`, `lib-raytracing` and `lib-physics` (plain JVM) log through
@@ -125,6 +134,10 @@ Escape non-ASCII characters as `\uXXXX` in both files.
 
 - **KDoc:** explains *why* and the contract (thread, null meaning, what is never written), not what the next line
   does. Match the comment density of the file you edit.
+- **One place per rule:** a new asset kind is one entry in `StandardAssetLoaders`, not one per host; a right-click tree
+  action extends `AbyssusTreeAction` (target, enablement, perform) and never reads the project view selection itself
+  (`selectedNode` is the one lookup); an editable property field is built with `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/ui/FieldEditors.kt`
+  (`textEditor`, `choiceEditor`, `checkEditor`), so asset and component fields confirm, refuse and revert the same way.
 - **Keep logic testable:** keep math and decisions in plain classes without Swing or GL so they get unit tests; logic
   that needs no IDE type belongs in `lib-core-editor` (`ScenePicker`, `GizmoDrag`, `SceneMarkers`, `EntitySections`,
   `toolbarState`), and the plugin's Swing or GL class only forwards to it. A pure part that still needs a Swing or

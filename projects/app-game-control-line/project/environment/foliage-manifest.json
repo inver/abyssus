@@ -8,9 +8,9 @@
   },
   "source": {
     "scene": "scenes/Field.scene",
-    "sceneSha256": "de857298107b4c59dc546035e93ee6b9ab7d16306cbf70ec00c0418bb6dd8257",
+    "sceneSha256": "8c73229f4f39d9782a1c4d290798290132e23317bc93741d5e8fbb7d86711d14",
     "vegetationSha256": "09c525b8891c764d10904725a639c6247833085c68ac043e7278e22137394838",
-    "restSha256": "6702d3ffb921c04504e7e8bca229ce8c52d78ed291086de014b3dabe16d4e9d1"
+    "restSha256": "ce1bb511501a01e804746b67e50659d0c02ec1ccaf065dfdc4c6756711b959b6"
   },
   "pilot": {
     "x": 0.0,
@@ -25,7 +25,7 @@
     "assets/terrain_airfield_outer/meta.json": "9be0798ef5309743da7049500abf5abef43f1670418108c209db31bf1c91240c",
     "assets/terrain_airfield_outer/terrain.data": "476a11376bfd9ad0aaaf652c467fa35c1814e15cbfcd0e1b7ae8efbdbd5c183b",
     "assets/terrain_airfield_site/meta.json": "f2c237b853ed06d104ef7645145ffa9f2c27b2848035f5ce9f28cfc2baa55d24",
-    "assets/terrain_airfield_site/terrain.data": "6e493d1caff7a4341404441c9886dc6d39893a35531bceab2e53243b25cf9385",
+    "assets/terrain_airfield_site/terrain.data": "eba79cf19083c49db09ba4d8f2ded5c4b869d6f4c2b2df9745c9fca93e54d4df",
     "assets/texture_airfield_site_splat/splat.png": "b01856ed1c3a1286923f571e23a79d7fbb894c44487bf5b2dacc7291da2688ce"
   },
   "terrains": [

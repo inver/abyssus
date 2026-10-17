@@ -1,0 +1,45 @@
+{
+  "schema" : 1,
+  "host" : "game",
+  "environment" : {
+    "commit" : "1887442e6b613c5352bf7bfc8d29c6e54868b157",
+    "dirty" : true,
+    "os" : "Mac OS X 27.0.1 aarch64",
+    "jdk" : "Eclipse Adoptium 25.0.4",
+    "gpu" : "Apple M1 Pro",
+    "driver" : "4.1 Metal - 91.7",
+    "backend" : "OpenGL"
+  },
+  "workloads" : [ {
+    "name" : "control-line-field",
+    "status" : "MEASURED",
+    "reason" : null,
+    "sceneHash" : "4cc1be3e0496b05348232f003217d43a8da6fc5153822bea70c8e52ae2f54407",
+    "settings" : {
+      "resolution" : "1280x720",
+      "warmupSeconds" : "10.0",
+      "sampleSeconds" : "30.0",
+      "samples" : "5",
+      "fixedDeltaSeconds" : "0.016666668",
+      "frameTime" : "CPU time of FieldRenderer.draw (submission), not GPU time"
+    },
+    "stats" : {
+      "frames" : 10408,
+      "p50Ms" : 8.486993503843198,
+      "p95Ms" : 9.115884645657188,
+      "p99Ms" : 9.792799276325903,
+      "samplesP95Ms" : [ 9.294041, 9.285125, 9.099041, 9.028666, 8.874208 ],
+      "allocatedBytesPerFrame" : 2123028.8347425056,
+      "gcCount" : 285,
+      "gcMillis" : 216
+    },
+    "uploadWork" : 185,
+    "assetCounts" : {
+      "models" : 180,
+      "terrains" : 2
+    },
+    "coldLoadMs" : 1605.9032817325592,
+    "reloadMs" : 24.291739732559222,
+    "gpuMs" : null
+  } ]
+}

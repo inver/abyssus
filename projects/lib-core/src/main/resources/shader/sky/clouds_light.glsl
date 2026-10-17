@@ -13,8 +13,9 @@
 // limitations under the License.
 
 // What every cloud technique shares after clouds_common.glsl: the band being drawn, where a view ray meets it, and how
-// clouds are lit (the sun after the atmosphere, Henyey-Greenstein scattering, Beer-Lambert extinction, the sky's zenith
-// and horizon light). Colors are tone mapped like the fixture sky (1 - exp(-c), gamma 2.2) and returned premultiplied.
+// clouds are lit (the sun after the atmosphere, Henyey-Greenstein scattering, Beer-Lambert extinction with a
+// multiple-scattering sum, powder on the direct sun, the sky's zenith and horizon light). Colors are tone mapped like
+// the fixture sky (1 - exp(-c), gamma 2.2) and returned premultiplied.
 
 uniform vec3 u_sunDir;          // unit vector toward the sun
 uniform float u_planetRadius;   // metres
@@ -94,24 +95,40 @@ float cloudHg(float mu, float g) {
     return (1.0 - g * g) / (4.0 * CLOUD_PI * pow(1.0 + g * g - 2.0 * g * mu, 1.5));
 }
 
-// Forward scattering toward the sun with a little back scattering.
+// Forward scattering toward the sun (the silver lining) with a little back scattering: two energy-conserving lobes.
 float cloudPhase(float mu) {
-    return mix(cloudHg(mu, 0.6), cloudHg(mu, -0.25), 0.3);
+    return mix(cloudHg(mu, 0.72), cloudHg(mu, -0.2), 0.25);
 }
 
-// Light reaching a cloud point through optical depth tau toward the sun; the second term stands in for light
-// scattered more than once, so thick clouds are dark but never black.
+// Light reaching a cloud point through optical depth tau toward the sun: a sum of three octaves, each half the energy
+// standing in for light scattered once more through half the extinction, so thick clouds stay luminous and soft
+// instead of clipping to a constant floor.
 float cloudSunTransmittance(float tau) {
-    return max(exp(-tau), 0.25 * exp(-tau * 0.25));
+    float total = 0.0;
+    float contribution = 1.0;
+    for (int o = 0; o < 3; o++) {
+        total += contribution * exp(-tau);
+        contribution *= 0.5;
+        tau *= 0.5;
+    }
+    return total;
 }
 
-// Linear radiance of a cloud point: the sun scattered toward the viewer through sunTau, and the sky's light from above
-// through skyTau (the cloud over the point), dimmed further by `underside` (0 at the top of a cloud, 1 at its base).
-vec3 cloudRadiance(vec3 d, float sunTau, float skyTau, float underside, vec3 up) {
+// How much direct sun a cloud point keeps by its own density: thin near-surface cloud is darker than dense cores,
+// the depth cue that reads as the cauliflower edges.
+float cloudPowder(float density) {
+    return 0.35 + 0.65 * (1.0 - exp(-2.0 * density));
+}
+
+// Linear radiance of a cloud point: the sun scattered toward the viewer through sunTau, powdered by the local
+// density, and the sky's light from above through skyTau (the cloud over the point), dimmed further by `underside`
+// (0 at the top of a cloud, 1 at its base).
+vec3 cloudRadiance(vec3 d, float sunTau, float skyTau, float underside, float density, vec3 up) {
     float mu = dot(d, normalize(u_sunDir));
     vec3 sky = mix(u_horizon, u_zenith, clamp(up.y * 0.5 + 0.5, 0.0, 1.0)) * 2.0;
-    float skyLight = max(exp(-skyTau * 0.25), 0.12) * (1.0 - 0.4 * underside);
-    return u_sunlight * cloudPhase(mu) * cloudSunTransmittance(sunTau) + sky * skyLight;
+    float skyLight = max(exp(-skyTau * 0.25), 0.12) * (1.0 - 0.5 * underside);
+    float sun = cloudPhase(mu) * cloudSunTransmittance(sunTau) * cloudPowder(density);
+    return u_sunlight * sun + sky * skyLight;
 }
 
 // How much of a cloud at distance t is kept: far clouds thin out instead of aliasing at the horizon.
@@ -124,10 +141,12 @@ float cloudDither(vec2 pixel) {
     return fract(52.9829189 * fract(dot(pixel, vec2(0.06711056, 0.00583715))));
 }
 
-// Far clouds fade toward the horizon light, as the atmosphere between hides them.
-vec3 cloudAerial(vec3 radiance, float t) {
+// Far clouds fade toward the horizon light, as the atmosphere between hides them; toward a low sun the haze takes the
+// sun's color, so the clouds around it glow warm at sunset.
+vec3 cloudAerial(vec3 radiance, float t, vec3 d) {
     float fog = 1.0 - exp(-t / CLOUD_FADE_DISTANCE);
-    return mix(radiance, u_horizon * 1.5, fog * 0.7);
+    vec3 haze = u_horizon * 1.5 + u_sunlight * pow(max(dot(d, normalize(u_sunDir)), 0.0), 6.0);
+    return mix(radiance, haze, fog * 0.7);
 }
 
 vec3 cloudToneMap(vec3 radiance) {

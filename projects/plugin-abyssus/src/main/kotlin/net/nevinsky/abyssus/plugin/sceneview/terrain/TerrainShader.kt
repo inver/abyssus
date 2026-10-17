@@ -5,139 +5,68 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.terrain
 
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
-import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GLTexture
-import com.badlogic.gdx.graphics.Pixmap
-import com.badlogic.gdx.graphics.Texture
-import com.badlogic.gdx.math.Matrix3
-import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.Disposable
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.plugin.sceneview.TerrainEntity
+import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
-import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasBindings
+import net.nevinsky.abyssus.lib.render.frame.FrameInputs
+import net.nevinsky.abyssus.lib.render.frame.RenderFog
+import net.nevinsky.abyssus.lib.render.light.DirectionalInput
+import net.nevinsky.abyssus.lib.render.light.PointInput
+import net.nevinsky.abyssus.lib.render.light.RenderLights
+import net.nevinsky.abyssus.lib.render.light.SpotInput
+import net.nevinsky.abyssus.lib.render.terrain.TerrainDraw
+import net.nevinsky.abyssus.lib.render.terrain.TerrainLighting
+import net.nevinsky.abyssus.lib.render.terrain.TerrainPass
+import net.nevinsky.abyssus.lib.render.terrain.TerrainVariant
+import net.nevinsky.abyssus.plugin.sceneview.TerrainEntity
 
 /**
- * Draws terrains: splat-blended textures with the scene's ambient, directional and point lights and fog. A small
- * program of its own, since the terrain material is not something the model shaders know.
+ * Draws terrains for the scene view: splat-blended textures with the scene's ambient, directional, point and spot lights
+ * and fog. The drawing is `lib-render`'s [TerrainPass] (the editor variant); this adapts the view's own types, the camera,
+ * the [LightSet] and [FogParams], to its host-neutral inputs.
  */
 class TerrainShader(shaders: ShaderStorage) : Disposable {
-    private val program = shaders.program("terrain")
-    private val normalMatrix = Matrix3()
-    private val identity = Matrix4()
-    private val atlasBindings = ShadowAtlasBindings()
-
-    /** Bound to the sampler units of the layers a terrain does not have, so no sampler is left without a texture. */
-    private val blank = Texture(Pixmap(1, 1, Pixmap.Format.RGBA8888).also { it.setColor(1f, 1f, 1f, 1f); it.fill() }, false)
+    private val pass = TerrainPass(shaders, TerrainVariant.EDITOR_MULTI_LIGHT)
 
     /**
      * With [irradiance] (a built sky's irradiance cube), terrains take their ambient from it instead of [ambient].
      * While a sky light cross-fades, [fadeIrradiance] is the cube it fades to and [fade] (0 to 1) how far it has got.
      * With [sunVisibility] (the cloud shadow map), the directional light it names is multiplied by the map.
+     * With a [clipPlane] `(a, b, c, d)` (a planar reflection pass), fragments with `a x + b y + c z + d < 0` are discarded.
      */
     fun draw(
         camera: Camera, terrains: Collection<TerrainEntity>, ambient: Rgba?, fog: FogParams?, lights: LightSet,
         irradiance: GLTexture? = null, atlas: ShadowAtlasAttribute? = null,
         fadeIrradiance: GLTexture? = null, fade: Float = 0f, sunVisibility: DirectionalVisibilityAttribute? = null,
+        clipPlane: FloatArray? = null,
     ) {
         if (terrains.isEmpty()) return
-        program.bind()
-        program.setUniformMatrix("u_projViewTrans", camera.combined)
-        program.setUniformf("u_cameraPos", camera.position)
-        val a = ambient
-        program.setUniformf("u_ambient", a?.r ?: 0f, a?.g ?: 0f, a?.b ?: 0f)
-        // always on its own unit: a samplerCube left on unit 0 would share it with a 2D splat texture, which GL forbids
-        program.setUniformi("u_irradiance", IRRADIANCE_UNIT)
-        program.setUniformi("u_hasSky", if (irradiance != null) 1 else 0)
-        irradiance?.bind(IRRADIANCE_UNIT)
-        val fading = irradiance != null && fadeIrradiance != null && fade > 0f
-        program.setUniformi("u_irradianceTo", IRRADIANCE_TO_UNIT)
-        program.setUniformf("u_skyFade", if (fading) fade.coerceAtMost(1f) else 0f)
-        if (fading) fadeIrradiance?.bind(IRRADIANCE_TO_UNIT)
-        program.setUniformf("u_fogColor", fog?.color?.r ?: 0f, fog?.color?.g ?: 0f, fog?.color?.b ?: 0f)
-        program.setUniformf("u_fogK", fog?.shaderCoefficient ?: 0f)
-        setLights(lights)
-        bindSunVisibility(sunVisibility)
-        (atlas?.atlas ?: blank).bind(SHADOW_UNIT)
-        fun record(id: String) = atlas?.records?.firstOrNull { it.lightId == id }
-        atlasBindings.bind(program, atlas, lights.directional.map { record(it.entityId) },
-            lights.point.map { record(it.entityId) }, lights.spot.map { record(it.entityId) }, SHADOW_UNIT)
-        Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
-        for (t in terrains) {
-            program.setUniformMatrix("u_worldTrans", t.world)
-            program.setUniformMatrix("u_normalMatrix", normalMatrix.set(t.world).inv().transpose())
-            t.terrain.draw(program, blank)
-        }
+        val frame = FrameInputs(
+            camera.combined, camera.position, floatArrayOf(ambient?.r ?: 0f, ambient?.g ?: 0f, ambient?.b ?: 0f),
+            fog?.let { RenderFog(it.color.r, it.color.g, it.color.b, it.density, it.gradient) },
+            renderLights(lights), TerrainVariant.EDITOR_MULTI_LIGHT.profile,
+        )
+        pass.draw(
+            frame, TerrainLighting.Editor(irradiance, atlas, fadeIrradiance, fade, sunVisibility, clipPlane),
+            terrains.map { TerrainDraw(it.terrain, it.world) },
+        )
     }
 
-    private fun bindSunVisibility(visibility: DirectionalVisibilityAttribute?) {
-        program.setUniformi("u_dirVisMap", SUN_VISIBILITY_UNIT)
-        program.setUniformMatrix("u_dirVisWorldToMap", visibility?.worldToMap ?: identity)
-        program.setUniformf("u_dirVisParams", visibility?.edgeFade ?: 0.1f, visibility?.outside ?: 1f)
-        program.setUniformi("u_dirVisIndex", visibility?.lightIndex ?: -1)
-        visibility?.texture?.bind(SUN_VISIBILITY_UNIT)
-    }
-
-    private fun setLights(lights: LightSet) {
-        val dirs = FloatArray(MAX * 3)
-        val dirColors = FloatArray(MAX * 3)
-        lights.directional.forEachIndexed { i, d ->
-            dirs[i * 3] = d.direction.x; dirs[i * 3 + 1] = d.direction.y; dirs[i * 3 + 2] = d.direction.z
-            dirColors[i * 3] = d.color.r; dirColors[i * 3 + 1] = d.color.g; dirColors[i * 3 + 2] = d.color.b
-        }
-        val pos = FloatArray(MAX * 3)
-        val pointColors = FloatArray(MAX * 3)
-        val pointRanges = FloatArray(MAX)
-        lights.point.forEachIndexed { i, p ->
-            pos[i * 3] = p.position.x; pos[i * 3 + 1] = p.position.y; pos[i * 3 + 2] = p.position.z
-            pointRanges[i] = p.range
-            pointColors[i * 3] = p.color.r; pointColors[i * 3 + 1] = p.color.g; pointColors[i * 3 + 2] = p.color.b
-        }
-        program.setUniformi("u_numDirectional", lights.directional.size)
-        program.setUniform3fv("u_dirDirection", dirs, 0, MAX * 3)
-        program.setUniform3fv("u_dirColor", dirColors, 0, MAX * 3)
-        program.setUniformi("u_numPoint", lights.point.size)
-        program.setUniform3fv("u_pointPosition", pos, 0, MAX * 3)
-        program.setUniform3fv("u_pointColor", pointColors, 0, MAX * 3)
-        program.setUniform1fv("u_pointRange", pointRanges, 0, MAX)
-        val spotPos = FloatArray(MAX * 3)
-        val spotDir = FloatArray(MAX * 3)
-        val spotColors = FloatArray(MAX * 3)
-        val spotRange = FloatArray(MAX)
-        val outer = FloatArray(MAX)
-        val inner = FloatArray(MAX)
-        lights.spot.forEachIndexed { i, s ->
-            spotPos[i * 3] = s.position.x; spotPos[i * 3 + 1] = s.position.y; spotPos[i * 3 + 2] = s.position.z
-            spotDir[i * 3] = s.direction.x; spotDir[i * 3 + 1] = s.direction.y; spotDir[i * 3 + 2] = s.direction.z
-            spotColors[i * 3] = s.color.r; spotColors[i * 3 + 1] = s.color.g; spotColors[i * 3 + 2] = s.color.b
-            spotRange[i] = s.range
-            outer[i] = s.cone.outerCos; inner[i] = s.cone.innerCos
-        }
-        program.setUniformi("u_numSpot", lights.spot.size)
-        program.setUniform3fv("u_spotPosition", spotPos, 0, MAX * 3)
-        program.setUniform3fv("u_spotDirection", spotDir, 0, MAX * 3)
-        program.setUniform3fv("u_spotColor", spotColors, 0, MAX * 3)
-        program.setUniform1fv("u_spotRange", spotRange, 0, MAX)
-        program.setUniform1fv("u_spotOuter", outer, 0, MAX)
-        program.setUniform1fv("u_spotInner", inner, 0, MAX)
-    }
-
-    override fun dispose() {
-        program.dispose()
-        blank.dispose()
-    }
-
-    private companion object {
-        const val MAX = 5 // at least MAX_POINT and MAX_DIRECTIONAL; the array size in terrain.frag
-        const val IRRADIANCE_UNIT = 7 // after the splat units (0 to assets.terrain.SPLAT_UNIT)
-        const val IRRADIANCE_TO_UNIT = 8 // the cube a sky light fades to; bound only while fading
-        const val SUN_VISIBILITY_UNIT = 9 // a directional light's visibility map (cloud shadows); bound only when set
-        const val SHADOW_UNIT = 6 // 2D atlas between splat (0..5) and HDR cube (7)
-    }
+    override fun dispose() = pass.dispose()
 }
+
+/** The view's lights in `lib-render`'s host-neutral form. */
+internal fun renderLights(lights: LightSet) = RenderLights(
+    lights.directional.map { DirectionalInput(it.entityId, it.direction.toVector3(), it.color.r, it.color.g, it.color.b) },
+    lights.point.map { PointInput(it.entityId, it.position.toVector3(), it.color.r, it.color.g, it.color.b, it.range) },
+    lights.spot.map {
+        SpotInput(it.entityId, it.position.toVector3(), it.direction.toVector3(), it.color.r, it.color.g, it.color.b, it.range, it.cone.outerCos, it.cone.innerCos)
+    },
+)

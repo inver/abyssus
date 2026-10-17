@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
 /**
  * The Paint Foliage mode of a view: the terrain [entityId] (the selected entity) whose layer [layerId] mask is
@@ -21,16 +22,46 @@ data class FoliagePaintMode(
     val erase: Boolean = false,
 )
 
+/** What the view has selected: an entity of the scene, or a water surface (separate namespaces, so an id is never confused). */
+sealed interface SceneTarget {
+    data class Entity(val id: String) : SceneTarget
+
+    data class Water(val id: String) : SceneTarget
+}
+
 /**
  * What the user has done in the scene view, apart from the scene itself: the selection, the gizmo and what it is
  * hovering, the camera entity looked through, and the transforms previewed during a drag or after a drop. The view
  * panel changes it, the renderer draws from it and the picking queries read it; all on the AWT thread.
  */
 class SceneViewState {
-    /** The entity id the view highlights and shows a gizmo on, or null. */
-    var selectedId: String? = null
+    /** What the view highlights and shows a gizmo on, or null. */
+    var selection: SceneTarget? = null
+
+    /** The entity id the view highlights and shows a gizmo on, or null (also when a water surface is selected). */
+    var selectedId: String?
+        get() = (selection as? SceneTarget.Entity)?.id
+        set(value) {
+            selection = value?.let(SceneTarget::Entity)
+        }
+
+    /** The water surface the view highlights and shows a move gizmo on, or null. */
+    var selectedWater: String?
+        get() = (selection as? SceneTarget.Water)?.id
+        set(value) {
+            selection = value?.let(SceneTarget::Water)
+        }
+
+    /** The new centre of each water surface while it is dragged or just dropped, shown over the file's (water id to where it is now). */
+    var waterPreview: Map<String, Vec3> = emptyMap()
 
     var gizmoMode: GizmoMode = GizmoMode.MOVE
+
+    /** Whether the gizmo follows the world axes or the selected object's own. */
+    var gizmoSpace: GizmoSpace = GizmoSpace.WORLD
+
+    /** Snapping of gizmo drags, or null while it is off. */
+    var snap: GizmoSnap? = null
 
     /** The gizmo handle under the cursor, drawn brighter. */
     var hoveredAxis: GizmoAxis? = null

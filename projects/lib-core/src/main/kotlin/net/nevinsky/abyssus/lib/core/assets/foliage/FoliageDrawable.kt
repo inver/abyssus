@@ -7,14 +7,14 @@ package net.nevinsky.abyssus.lib.core.assets.foliage
 
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.gdx.Renderable
-import net.nevinsky.abyssus.lib.gdx.RenderableProvider
-import net.nevinsky.abyssus.lib.gdx.mesh.InstanceAttributes
-import net.nevinsky.abyssus.lib.gdx.mesh.Mesh
-import net.nevinsky.abyssus.lib.gdx.mesh.MeshPart
-import net.nevinsky.abyssus.lib.gdx.model.Model
-import net.nevinsky.abyssus.lib.gdx.node.Node
-import net.nevinsky.abyssus.lib.gdx.node.NodePart
+import com.badlogic.gdx.graphics.g3d.Renderable
+import com.badlogic.gdx.graphics.g3d.RenderableProvider
+import net.nevinsky.abyssus.lib.gdx.g3d.InstanceAttributes
+import net.nevinsky.abyssus.lib.gdx.g3d.IntMesh
+import com.badlogic.gdx.graphics.g3d.model.MeshPart
+import com.badlogic.gdx.graphics.g3d.Model
+import com.badlogic.gdx.graphics.g3d.model.Node
+import com.badlogic.gdx.graphics.g3d.model.NodePart
 
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.g3d.Material
@@ -422,8 +422,9 @@ class FoliageDrawable(
      */
     private fun instancedPart(part: MeshPart, capacity: Int): MeshPart? {
         val source = part.mesh ?: return null
+        check(source is IntMesh) { "foliage models are built with 32-bit meshes (IntModel), not ${source.javaClass.name}" }
         val indexed = source.numIndices > 0
-        val mesh = Mesh(true, source.numVertices, if (indexed) part.size else 0, source.vertexAttributes)
+        val mesh = IntMesh(true, source.numVertices, if (indexed) part.size else 0, source.vertexAttributes)
         try {
             val vertices = FloatArray(source.numVertices * source.vertexSize / 4)
             source.getVertices(vertices)

@@ -17,10 +17,7 @@ import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import java.io.File
-
-/** Shared native test fixtures, supplied by Gradle so tests do not depend on their working directory. */
-fun testProject(name: String): File =
-    File(checkNotNull(System.getProperty("abyssus.testData")) { "run through Gradle: abyssus.testData is not set" }, "project/$name")
+import net.nevinsky.abyssus.lib.core.assets.testProject
 
 /**
  * A scene loader for the project in [project]: the physics components are registered unless [physics] is false, plus

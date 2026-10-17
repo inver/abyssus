@@ -40,7 +40,7 @@ internal fun setFoliage(project: Project, file: VirtualFile, entityId: String, n
     }
 }
 
-/** The same terrain-bound choices serve the tree and the Scene view toolbar. */
+/** The same terrain-bound choices serve the tree and the Scene view toolbar; an empty group means none fit. */
 fun foliageGroup(project: Project, file: VirtualFile, entityId: String): DefaultActionGroup? {
     val root = SceneDocumentCache.of(project).read(file)?.root ?: return null
     if (SceneDocument(root).renderAsset(entityId)?.type != MetaType.TERRAIN.name) return null
@@ -52,8 +52,6 @@ fun foliageGroup(project: Project, file: VirtualFile, entityId: String): Default
             override fun getActionUpdateThread() = ActionUpdateThread.BGT
             override fun actionPerformed(e: AnActionEvent) { setFoliage(project, file, entityId, name, metas) }
         })
-        templatePresentation.isEnabled = names.isNotEmpty()
-        if (names.isEmpty()) templatePresentation.description = AbyssusBundle.message("addFoliageNone")
     }
 }
 
@@ -68,8 +66,9 @@ open class AddFoliageAction : AbyssusTreeAction<ComponentTarget>() {
     }
     override fun isEnabled(e: AnActionEvent, target: ComponentTarget): Boolean {
         val group = e.project?.let { foliageGroup(it, target.file, target.entityId) }
-        e.presentation.description = group?.templatePresentation?.description
-        return group?.templatePresentation?.isEnabled == true
+        val hasChoices = group != null && group.childrenCount > 0
+        e.presentation.description = if (group != null && !hasChoices) AbyssusBundle.message("addFoliageNone") else null
+        return hasChoices
     }
     override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) {
         val group = foliageGroup(project, target.file, target.entityId) ?: return

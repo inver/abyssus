@@ -179,6 +179,7 @@ rules:
   design:
     - "Keep logic that can be tested (math, hit tests, list and filter models, JSON edits) in classes free of Swing, GL and the platform, and say which ones."
     - "Say which thread each new piece runs on. libGDX calls happen only inside GdxRuntime.withContext on the AWT thread that renders the canvas."
+    - "Do not hand-write JSON parsing or serialization: bind documents to DTOs through the existing mappers (JsonProcessor.bind, SceneReader.parse, SceneJson.bind) and serialize through the same mappers. NativeJsonTree is the only token-level reader, kept for exact number text and key order; do not replace it with stock Jackson tree parsing or add another hand-written parser."
   tasks:
     - "Each task names its verification: a test class and case, a command, or a numbered runIde check."
     - "Split code a headless test can cover from behavior only runIde can show, so a task is not left unchecked for want of a manual check."

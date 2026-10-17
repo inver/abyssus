@@ -24,6 +24,7 @@ class GizmoHit {
             val t = when (handles.mode) {
                 GizmoMode.MOVE -> arrowHit(ray, handles, axis, tolerance)
                 GizmoMode.ROTATE -> ringHit(ray, handles, axis, tolerance)
+                GizmoMode.SELECT -> null
             } ?: continue
             if (t < bestT) {
                 bestT = t

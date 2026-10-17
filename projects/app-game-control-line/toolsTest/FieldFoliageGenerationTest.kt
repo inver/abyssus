@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageBakeState
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDataFile
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageRuntimeLoad
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_CANDIDATE_LIMIT
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_COPY_LIMIT

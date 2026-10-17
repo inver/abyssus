@@ -119,13 +119,14 @@ class CloudTechniqueGlTest {
         technique: CloudTechnique? = null,
         sun: Vector3 = noon,
         elevation: Float = 60f,
+        yaw: Float = 0f,
         frames: Int = 1,
     ): Image {
         var image: Image? = null
         TestGl.run {
             val sky = sky(clouds)
             try {
-                val camera = camera(elevation)
+                val camera = camera(elevation, yaw)
                 repeat(frames - 1) { capture { sky.draw(camera, SkyFrame(sun, 30.0, technique)) } }
                 image = capture { sky.draw(camera, SkyFrame(sun, 30.0, technique)) }
             } finally {
@@ -133,6 +134,34 @@ class CloudTechniqueGlTest {
             }
         }
         return image!!
+    }
+
+    /** The luminance (0.2126 R + 0.7152 G + 0.0722 B) of pixel [i]. */
+    private fun luminance(image: Image, i: Int) =
+        0.2126f * image.red(i) + 0.7152f * image.green(i) + 0.0722f * image.blue(i)
+
+    /** The mean luminance of the pixels [mask] selects; there must be some. */
+    private fun meanLuminance(image: Image, mask: BooleanArray): Double {
+        val picked = mask.indices.filter { mask[it] }
+        check(picked.isNotEmpty()) { "no pixels selected" }
+        return picked.sumOf { luminance(image, it).toDouble() } / picked.size
+    }
+
+    /** The mean red-to-blue ratio of the pixels [pixels] select. */
+    private fun redness(image: Image, pixels: List<Int>): Double {
+        check(pixels.isNotEmpty()) { "no pixels selected" }
+        val red = pixels.sumOf { image.red(it) }
+        val blue = pixels.sumOf { image.blue(it) }
+        return red.toDouble() / maxOf(1, blue)
+    }
+
+    /** The mean of the lowest and highest decile of the covered pixels' luminance in [image]/[clear]. */
+    private fun deciles(image: Image, clear: Image): Pair<Double, Double> {
+        val mask = mask(image, clear)
+        val luminances = mask.indices.filter { mask[it] }.map { luminance(image, it).toDouble() }.sorted()
+        check(luminances.size >= 20) { "too few covered pixels: ${luminances.size}" }
+        val decile = maxOf(1, luminances.size / 10)
+        return luminances.take(decile).average() to luminances.takeLast(decile).average()
     }
 
     /** The pixels where [image] differs from [clear] (the same sky without clouds) by more than [threshold]. */
@@ -200,6 +229,17 @@ class CloudTechniqueGlTest {
         assertModelStaysInFront()
     }
 
+    @Test
+    fun thickCloudsStayLuminous() {
+        // a dense overcast (stratus at coverage 1, density 2) hides the bright atmosphere, so the zenith shade is the
+        // cloud's own; the threshold sits between the pre-change 189.3 (the old clipped single term) and the current
+        // 218.1 (the multiple-scattering sum)
+        val thick = clouds(CloudBand(CloudType.STRATUS, CloudLevel.LOW, coverage = 1f, density = 2f))
+        val overcast = render(thick, elevation = 90f)
+        val luminance = meanLuminance(overcast, BooleanArray(overcast.rgb.size) { true })
+        assertTrue("the overcast zenith luminance $luminance stays above the old flat shade", luminance >= 205.0)
+    }
+
     private fun assertModelStaysInFront() {
         var image: Image? = null
         TestGl.run {
@@ -227,6 +267,38 @@ class CloudTechniqueGlTest {
         }
         val centre = image!!.at(SIZE / 2, SIZE / 2)
         assertEquals("the model is drawn over the clouds", 0xFF0000, image.rgb[centre])
+    }
+
+    @Test
+    fun cloudSurfacesShowDepth() {
+        // measured with the new shaders: darkest decile 87.1, brightest 232.4, ratio 0.37
+        val clear = render(null, elevation = 60f)
+        val lowSun = Vector3(0.6f, 0.25f, -0.75f).nor()
+        val image = render(scattered, sun = lowSun, elevation = 60f)
+        val (darkest, brightest) = deciles(image, clear)
+        assertTrue(
+            "the darkest decile $darkest is not at least 25% darker than the brightest decile $brightest",
+            darkest <= brightest * 0.75,
+        )
+    }
+
+    @Test
+    fun silverLining() {
+        // measured with the new shaders: sunward 107.8 vs away 86.2 (1.25x), redness 1.74 vs 1.46 (1.19x)
+        val clear = render(null, sun = sunset, elevation = 10f, yaw = 45f)
+        val image = render(scattered, sun = sunset, elevation = 10f, yaw = 45f)
+        val mask = mask(image, clear)
+        val covered = mask.indices.filter { mask[it] }
+        check(covered.size > 200) { "too few covered pixels: ${covered.size}" }
+        // with this yaw the sun sits in the right half of the frame
+        val around = covered.filter { it % SIZE >= SIZE / 2 }
+        val opposite = covered.filter { it % SIZE < SIZE / 2 }
+        val sunward = meanLuminance(image, BooleanArray(SIZE * SIZE) { it in around })
+        val away = meanLuminance(image, BooleanArray(SIZE * SIZE) { it in opposite })
+        val sunwardRedness = redness(image, around)
+        val awayRedness = redness(image, opposite)
+        assertTrue("the sun side $sunward is not brighter than the far side $away", sunward >= away * 1.05)
+        assertTrue("the sun side is not redder: $sunwardRedness vs $awayRedness", sunwardRedness >= awayRedness * 1.05)
     }
 
     @Test
@@ -312,6 +384,53 @@ class CloudTechniqueGlTest {
         assertEquals("a small turn keeps the history", 0, resetsAfterNudge)
         assertEquals("a camera jump resets the history", 1, resetsAfterTurn)
         assertTrue("no history leaks after a resize", leaked!!.rgb.contentEquals(clearAfterResize!!.rgb))
+    }
+
+    @Test
+    fun volumetricIsStableAcrossFrames() = TestGl.run {
+        // measured with the new shaders: the mean per-channel frame-to-frame delta is about 0.02 (of 255)
+        val sky = sky(scattered, factory = { technique ->
+            check(technique == CloudTechnique.VOLUMETRIC)
+            VolumetricClouds(skyShaders(), CloudField())
+        })
+        try {
+            val camera = camera(80f)
+            val frame = SkyFrame(noon, 30.0, CloudTechnique.VOLUMETRIC)
+            repeat(6) { capture { sky.draw(camera, frame) } }
+            val first = capture { sky.draw(camera, frame) }
+            val second = capture { sky.draw(camera, frame) }
+            assertEquals(CloudTechnique.VOLUMETRIC, sky.drawnTechnique)
+            assertTrue("clouds are drawn", sky.hasClouds)
+            val deltas = (0 until 3).map { channel ->
+                (0 until first.rgb.size).sumOf { i ->
+                    val (a, b) = when (channel) {
+                        0 -> first.red(i) to second.red(i)
+                        1 -> first.green(i) to second.green(i)
+                        else -> first.blue(i) to second.blue(i)
+                    }
+                    Math.abs(a - b).toDouble()
+                } / first.rgb.size
+            }
+            assertTrue("the dithered light march shimmers: $deltas", deltas.all { it < 4.0 })
+        } finally {
+            sky.dispose()
+        }
+    }
+
+    @Test
+    fun techniquesLightAlike() {
+        // measured with the new shaders: layered 221.7, shells 215.3, volumetric 216.4 (within 3%)
+        val clear = render(null, elevation = 60f)
+        val means = listOf(CloudTechnique.LAYERED, CloudTechnique.SHELLS, CloudTechnique.VOLUMETRIC).map { technique ->
+            val image = render(
+                scattered, technique, elevation = 60f,
+                frames = if (technique == CloudTechnique.VOLUMETRIC) 8 else 1,
+            )
+            technique.key to meanLuminance(image, mask(image, clear))
+        }
+        val lowest = means.minOf { it.second }
+        val highest = means.maxOf { it.second }
+        assertTrue("mean covered luminance per technique $means", highest <= lowest * 1.25)
     }
 
     @Test

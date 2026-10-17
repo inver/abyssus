@@ -168,6 +168,80 @@ class RayRenderSchedulerTest {
             assertEquals(target,driver.submitted.last().accumulation.let { it.sampleOffset+it.sampleCount })
         }
     }
+    @Test fun stalledFrameReleasesInFlightAndStopsSubmissions() {
+        val batches = mutableListOf<RayRenderBatch>()
+        var finished: RayFrame? = null
+        var now = 0L
+        val deadline = 1_000_000_000L
+        var stallReported = false
+        val policy = RayQualityPolicy(RayQualityLimits(maxDimension = 4, minimumScale = .5, maxRaysPerFrame = 64))
+        val scheduler = RayRenderScheduler(
+            { batches += it },
+            { finished.also { finished = null } },
+            policy,
+            { now },
+            frameCompletionDeadlineNs = deadline,
+            onStall = { stallReported = true }
+        )
+        val camera = RaySliceCamera(listOf(0f, 0f, 2f), listOf(0f, 0f, -1f), listOf(0f, 1f, 0f), 60f, .1f, 100f)
+        val scene = RaySceneSnapshot(emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+        val request = RaySceneRequest(RayFrameKey(1, 1, 1, 1), 8, 8, camera, scene)
+        val input = RayRenderInput(request, RayDisplayKey(8, 8, "orbit"), 1)
+
+        scheduler.offer(input)
+        scheduler.pump()
+        assertEquals(1, batches.size)
+
+        scheduler.pump()
+        assertEquals(1, batches.size)
+        assertFalse(stallReported)
+
+        now = deadline + 1
+        scheduler.pump()
+        assertTrue(stallReported)
+        assertEquals(1, batches.size)
+    }
+
+    @Test fun aFakeBackendThatNeverCompletesReportsAStallAndStopsSubmissions() {
+        val batches = mutableListOf<RayRenderBatch>()
+        var now = 0L
+        val deadline = 1_000_000_000L
+        var stallReported = false
+        val health = RayDeviceHealth()
+        val policy = RayQualityPolicy(RayQualityLimits(maxDimension = 4, minimumScale = .5, maxRaysPerFrame = 64))
+        // The submit lambda mimics RayQueuedSession.submit: it consults session health before submitting, so a stalled
+        // session rejects later submissions.
+        val scheduler = RayRenderScheduler(
+            { health.checkUsable(); batches += it },
+            { null }, // the fake backend never completes, so nothing is ever finished
+            policy,
+            { now },
+            frameCompletionDeadlineNs = deadline,
+            onStall = { stallReported = true; health.reportStalled("injected stall") }
+        )
+        val camera = RaySliceCamera(listOf(0f, 0f, 2f), listOf(0f, 0f, -1f), listOf(0f, 1f, 0f), 60f, .1f, 100f)
+        val scene = RaySceneSnapshot(emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+        val request = RaySceneRequest(RayFrameKey(1, 1, 1, 1), 8, 8, camera, scene)
+        val input = RayRenderInput(request, RayDisplayKey(8, 8, "orbit"), 1)
+
+        // One submission is offered and selected; the fake backend never completes it.
+        scheduler.offer(input)
+        scheduler.pump()
+        assertEquals(1, batches.size)
+
+        // Past the deadline the stall is reported and the session's health is marked unusable.
+        now = deadline + 1
+        scheduler.pump()
+        assertTrue(stallReported)
+        assertEquals(1, batches.size)
+        assertThrows(RayFrameStallException::class.java) { health.checkUsable() }
+
+        // The stalled session stops submissions: offering again and pumping is rejected by the health check.
+        scheduler.offer(input)
+        assertThrows(RayFrameStallException::class.java) { scheduler.pump() }
+        assertEquals(1, batches.size)
+    }
+
     @Test fun settingsRevisionImmediatelyRejectsOldCompletedAndInflightFrames() {
         val driver=Driver()
         val old=input(1).copy(settings=RayRenderSettings(),settingsRevision=1)

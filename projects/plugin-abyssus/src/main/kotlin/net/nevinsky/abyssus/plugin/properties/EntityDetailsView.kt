@@ -5,16 +5,18 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.plugin.ui.CommitOutcome
+import net.nevinsky.abyssus.plugin.ui.checkEditor
+import net.nevinsky.abyssus.plugin.ui.choiceEditor
+import net.nevinsky.abyssus.plugin.ui.textEditor
 import net.nevinsky.abyssus.lib.core.editor.meta.ComponentSection
 import net.nevinsky.abyssus.lib.core.editor.meta.OpticalMaterialRow
 import net.nevinsky.abyssus.lib.core.editor.meta.RenderOptics
 import net.nevinsky.abyssus.plugin.EditorBundle
 import com.intellij.ide.DataManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.JBColor
-import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.panels.VerticalLayout
@@ -259,18 +261,11 @@ internal class EntityDetailsView(
         val error = JBLabel("").apply { foreground = JBColor.RED; name = "error-${section.kind}-${field.field}" }
         val editor = editorFor(section, field, error)
         editor.name = "field-${section.kind}-${field.field}"
-        val labelKey = if (section.kind == "LightComponent") when (field.field) {
-            "range" -> "lightRangeLabel"
-            "coneAngle" -> "lightConeAngleLabel"
-            "edgeSoftness" -> "lightEdgeSoftnessLabel"
-            else -> null
-        } else null
-        val label = JBLabel(labelKey?.let { AbyssusBundle.message(it) } ?: field.label).apply {
+        val label = JBLabel(field.label).apply {
             name = "label-${section.kind}-${field.field}"
             preferredSize = Dimension(JBUI.scale(LABEL_WIDTH), preferredSize.height)
         }
-        if (section.kind == "LightComponent" && field.field == "range") editor.toolTipText =
-            AbyssusBundle.message("lightRangeTooltip")
+        field.tooltip?.let { editor.toolTipText = it }
         return JPanel(GridBagLayout()).apply {
             border = JBUI.Borders.empty(2, 0)
             add(label, GridBagConstraints().apply { gridx = 0; anchor = GridBagConstraints.WEST })
@@ -279,9 +274,8 @@ internal class EntityDetailsView(
         }
     }
 
-    /** Saves [text] for [field]; a refused value goes back to what the file holds, with the reason beside the field. */
-    private fun commit(section: ComponentSection, field: FieldValue, text: String, error: JBLabel, revert: () -> Unit) {
-        if (text == field.value) return
+    /** Saves [text] for [field]; the editor shows a refusal and puts the stored value back. */
+    private fun commit(section: ComponentSection, field: FieldValue, text: String): CommitOutcome =
         when (val result = SceneComponentEdits.update(
             project,
             target.file,
@@ -291,49 +285,22 @@ internal class EntityDetailsView(
             text,
             metaFiles
         )) {
-            is EditResult.Rejected -> {
-                error.text = result.reason
-                revert()
-            }
-
-            EditResult.Unchanged -> {
-                error.text = ""
-                revert()
-            }
-
-            EditResult.Changed -> error.text = ""
+            is EditResult.Rejected -> CommitOutcome.Refused(result.reason)
+            EditResult.Unchanged -> CommitOutcome.Unchanged
+            EditResult.Changed -> CommitOutcome.Saved
         }
-    }
 
     private fun editorFor(section: ComponentSection, field: FieldValue, error: JBLabel): JComponent {
         if (field.kind == FieldKind.BOOLEAN) {
-            val box = JBCheckBox("", field.value == "true")
-            box.addActionListener {
-                commit(section, field, box.isSelected.toString(), error) {
-                    box.isSelected = field.value == "true"
-                }
-            }
-            return box
+            return checkEditor(field.value == "true", error) { commit(section, field, it.toString()) }
         }
         val useChoices =
             field.kind == FieldKind.CHOICE || (field.kind == FieldKind.ASSET_NAME && field.choices.size > 1)
         if (useChoices) {
             val choices = (if (field.optional) listOf("") else emptyList()) + field.choices
-            val combo = ComboBox(choices.toTypedArray())
-            combo.selectedItem = field.value
-            combo.addActionListener {
-                val chosen = combo.selectedItem as? String ?: return@addActionListener
-                commit(section, field, chosen, error) { combo.selectedItem = field.value }
-            }
-            return combo
+            return choiceEditor(choices, field.value, error) { commit(section, field, it) }
         }
-        val textField = JBTextField(field.value)
-        val save = { commit(section, field, textField.text, error) { textField.text = field.value } }
-        textField.addActionListener { save() }
-        textField.addFocusListener(object : FocusAdapter() {
-            override fun focusLost(e: FocusEvent) = save()
-        })
-        return textField
+        return textEditor(field.value, error) { commit(section, field, it) }
     }
 
     private fun addButton(): JComponent = JPanel(BorderLayout()).apply {

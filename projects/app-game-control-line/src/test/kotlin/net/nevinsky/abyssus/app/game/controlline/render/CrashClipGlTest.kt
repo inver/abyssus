@@ -9,8 +9,8 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.gdx.AnimationController
-import net.nevinsky.abyssus.lib.gdx.ModelInstance
+import com.badlogic.gdx.graphics.g3d.utils.AnimationController
+import com.badlogic.gdx.graphics.g3d.ModelInstance
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.app.game.controlline.bundledProject
 import net.nevinsky.abyssus.app.game.controlline.flight.CrashSeverity
@@ -29,7 +29,7 @@ class CrashClipGlTest {
         Gdx.files = Lwjgl3Files()
         val file = FileHandle(bundledProject().resolve("assets/model_trainer/model.glb").toFile())
         val loader = AssimpModelLoader()
-        val model = loader.build(loader.loadData(file), file)
+        val model = loader.buildIntModel(loader.loadData(file), file)
         try {
             val moved = mapOf(
                 CrashSeverity.LITTLE to listOf("NoseWheel", "RightWheel"),

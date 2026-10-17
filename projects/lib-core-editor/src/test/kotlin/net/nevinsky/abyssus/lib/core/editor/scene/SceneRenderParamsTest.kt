@@ -9,6 +9,9 @@ import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.SceneRayField
+import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsState
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -167,5 +170,35 @@ class SceneRenderParamsTest {
         assertEquals(listOf("m"), p.content.models.map { it.assetName })
         assertEquals("sky", p.content.skybox)
         assertEquals(dir, p.projectDir)
+    }
+
+    /** The ray settings as the file holds them, through the same path the plugin takes: the scene and its root node. */
+    private fun rayOf(rayBlock: String?): SceneRaySettingsState {
+        val text = """{"format":"abyssus","formatVersion":1${rayBlock?.let { ",\"rayTracing\":$it" }.orEmpty()}}"""
+        return renderParamsOf(scene(text), CameraParams.DEFAULT, root = SceneJson().parse(text)).rayTracing
+    }
+
+    @Test
+    fun aMissingAnEmptyAndADefaultsOnlyRayBlockGiveTheSameSettings() {
+        val missing = rayOf(null)
+        assertNotNull(missing.settings)
+        assertEquals(missing, rayOf("{}"))
+        assertEquals(256, missing.values.getValue(SceneRayField.SAMPLES))
+        assertEquals(1, missing.values.getValue(SceneRayField.REFLECTIONS))
+        assertEquals(0, missing.values.getValue(SceneRayField.REFRACTIONS))
+        // a scene without a root node (no document) sees the defaults too
+        assertEquals(missing, renderParamsOf(scene("""{"format":"abyssus","formatVersion":1}"""), CameraParams.DEFAULT).rayTracing)
+    }
+
+    @Test
+    fun anExplicitNullRayFieldIsReportedAsMalformedNotDefaulted() {
+        val state = rayOf("""{"maxRefractionBounces":null}""")
+        assertNull(state.settings)
+        assertTrue(state.errors.containsKey("maxRefractionBounces"))
+    }
+
+    @Test
+    fun explicitRayValuesReachTheParamsFromTheDocument() {
+        assertEquals(64, rayOf("""{"targetSamplesPerPixel":64}""").values.getValue(SceneRayField.SAMPLES))
     }
 }

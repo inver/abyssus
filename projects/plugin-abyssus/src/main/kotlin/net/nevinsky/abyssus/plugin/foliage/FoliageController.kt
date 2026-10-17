@@ -337,7 +337,7 @@ class FoliageController(
             AbyssusBundle.message(if (!metadataChanged && changes.isEmpty()) "commandFoliageRebake" else "commandFoliageApply"),
             changes = changes,
             expectedFiles = if (metadataChanged) emptyMap() else mapOf(metaPath to FileSnapshot.Bytes(source.metaText.toByteArray())),
-            derived = listOf(DerivedFile("$base/${settings.dataFileName()}", source.dataSha256, after!!, rebuild)),
+            derived = listOf(DerivedFile("$base/${settings.dataFileName()}", source.dataSha256, after, rebuild)),
         )
         var committed = false
         val result = try {

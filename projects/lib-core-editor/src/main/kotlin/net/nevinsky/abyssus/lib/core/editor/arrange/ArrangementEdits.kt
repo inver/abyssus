@@ -131,7 +131,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
             val oldId = oldSlots.getOrNull(k)
             val filled = oldId != null && isCopy(tree, oldId, arrangementId)
             written += when {
-                filled -> oldId!!.also { place(tree, it.toString(), slot, component.asset, heights) }
+                filled -> oldId.also { place(tree, it.toString(), slot, component.asset, heights) }
                 k < oldSlots.size && !refill -> NO_ENTITY
                 else -> tree.insert { id -> copyComponents(arrangementId, k, slot, component.asset, heights) }?.toInt()
                     ?: return unreadable()

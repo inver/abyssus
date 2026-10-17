@@ -49,12 +49,21 @@ internal class VulkanCandidate(
     val scratchAlignment: Long, val portabilitySubset: Boolean, val discrete: Boolean,
 )
 
-/** Process-global LWJGL Vulkan function loading; nothing is loaded before the first probe. */
+/** Process-global LWJGL Vulkan function loading; nothing is loaded before the first probe.
+ * Works with both automatic initialization and explicit initialization
+ * (`org.lwjgl.vulkan.explicitInit=true`): when nothing is loaded yet the provider's getter
+ * throws `IllegalStateException`, so this calls `VK.create()` itself. A missing loader
+ * surfaces as `UnsatisfiedLinkError` (`RUNTIME_NOT_FOUND`); a failed `VK.create()` as
+ * `IllegalStateException` (`INITIALIZATION_FAILED`). Both propagate to the probe unchanged.
+ */
 internal fun loadVulkanLibrary() = synchronized(VulkanInstance::class.java) {
     try {
         if (VK.getFunctionProvider() == null) {
             VK.create()
         }
+    } catch (initFailed: IllegalStateException) {
+        // Explicit initialization with nothing loaded yet: create the Vulkan function table now.
+        VK.create()
     } catch (missing: LinkageError) {
         // A failed static initializer surfaces as ExceptionInInitializerError/NoClassDefFoundError; both mean "no loader".
         throw missing as? UnsatisfiedLinkError ?: UnsatisfiedLinkError("Vulkan runtime not found: ${missing.cause?.message ?: missing.message}")

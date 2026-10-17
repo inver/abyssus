@@ -10,8 +10,6 @@ import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
-import com.badlogic.gdx.graphics.g3d.utils.DefaultTextureBinder
-import com.badlogic.gdx.graphics.g3d.utils.RenderContext
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
@@ -19,16 +17,18 @@ import com.badlogic.gdx.math.Vector4
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.Pool
-import net.nevinsky.abyssus.lib.gdx.ModelInstance
-import net.nevinsky.abyssus.lib.gdx.Renderable
+import com.badlogic.gdx.graphics.g3d.ModelInstance
+import com.badlogic.gdx.graphics.g3d.Renderable
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
-import net.nevinsky.abyssus.lib.gdx.shader.ModelDepthShaderProvider
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelDepthShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasView
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowDepthPass
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightKind
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightRecord
-import kotlin.math.abs
+import net.nevinsky.abyssus.lib.render.shadow.DepthSubmission
+import net.nevinsky.abyssus.lib.render.shadow.sunShadowBias
+import net.nevinsky.abyssus.lib.render.shadow.sunShadowCamera
 
 /** Side of the square shadow map, in texels. */
 const val SHADOW_MAP_SIZE = 2048
@@ -38,39 +38,6 @@ private const val WHITE = -1
 
 /** Side of the square the sun's shadow covers around the pilot, in metres: the field, the facilities, street and railway. */
 const val SHADOW_EXTENT = 160f
-
-/** How far the light camera sits back along the sun, and how deep it sees: tall scenery upwind still casts. */
-private const val SHADOW_DEPTH = 400f
-
-/**
- * The sun's orthographic shadow camera: [extent] metres square around [center], looking along the light ([towardSun]
- * reversed). Its centre is snapped to whole texels of a [resolution] map, so a moving centre does not make edges
- * shimmer. No GL.
- */
-fun sunShadowCamera(towardSun: Vector3, center: Vector3, extent: Float = SHADOW_EXTENT, resolution: Int = SHADOW_MAP_SIZE): OrthographicCamera {
-    val direction = Vector3(towardSun).nor().scl(-1f)
-    val up = if (abs(direction.y) > 0.98f) Vector3.Z else Vector3.Y
-    val right = Vector3(direction).crs(up).nor()
-    val lightUp = Vector3(right).crs(direction).nor()
-    val texel = extent / resolution
-    val x = Math.round(center.dot(right) / texel) * texel
-    val y = Math.round(center.dot(lightUp) / texel) * texel
-    val snapped = Vector3(right).scl(x).mulAdd(lightUp, y).mulAdd(direction, center.dot(direction))
-    return OrthographicCamera().apply {
-        viewportWidth = extent
-        viewportHeight = extent
-        position.set(snapped).mulAdd(direction, -SHADOW_DEPTH / 2f)
-        this.direction.set(direction)
-        this.up.set(lightUp)
-        near = 1f
-        far = SHADOW_DEPTH
-        update(false) // the map is drawn whole: no frustum culling, so no frustum
-    }
-}
-
-/** The depth bias for [camera]'s map: a quarter texel's worth of depth, as the editor's directional shadows use. */
-fun sunShadowBias(camera: OrthographicCamera, resolution: Int = SHADOW_MAP_SIZE): Float =
-    0.25f * camera.viewportWidth / (camera.far - camera.near) / resolution
 
 /**
  * The sun's shadow for the game (design decision "Game shadows"): one [SHADOW_MAP_SIZE] depth map drawn from
@@ -85,7 +52,7 @@ class FieldShadows : Disposable {
     }
     private val pass = ShadowDepthPass()
     private val shaders = ModelDepthShaderProvider(pass)
-    private val context = RenderContext(DefaultTextureBinder(DefaultTextureBinder.LRU, 1))
+    private val submission = DepthSubmission { shaders.get(it) }
     private val pool = object : Pool<Renderable>() {
         override fun newObject() = Renderable()
     }
@@ -99,11 +66,11 @@ class FieldShadows : Disposable {
     /** World to light clip space of the current map. */
     val matrix: Matrix4 get() = camera.combined
 
-    val bias: Float get() = sunShadowBias(camera)
+    val bias: Float get() = sunShadowBias(camera, SHADOW_MAP_SIZE)
 
     /** Aims the map at [center] for [sun] (whose direction points away from the sun). */
     fun aim(sun: DirectionalLight, towardSun: Vector3, center: Vector3) {
-        val aimed = sunShadowCamera(towardSun, center)
+        val aimed = sunShadowCamera(towardSun, center, SHADOW_EXTENT, SHADOW_MAP_SIZE)
         if (light !== sun || attribute == null || !aimed.combined.`val`.contentEquals(camera.combined.`val`)) {
             camera = aimed
             light = sun
@@ -172,20 +139,7 @@ class FieldShadows : Disposable {
             gl.glClearColor(1f, 1f, 1f, 1f)
             gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
             pass.radialDepth = false
-            context.begin()
-            try {
-                for (renderable in renderables) {
-                    val shader = shaders.get(renderable) ?: continue
-                    shader.begin(camera, context)
-                    try {
-                        shader.render(renderable)
-                    } finally {
-                        shader.end()
-                    }
-                }
-            } finally {
-                context.end()
-            }
+            submission.submit(camera, renderables)
         } finally {
             framebuffer.end()
             gl.glEnable(GL20.GL_DITHER)

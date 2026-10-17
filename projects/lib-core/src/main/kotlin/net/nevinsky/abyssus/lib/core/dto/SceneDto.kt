@@ -6,9 +6,6 @@
 package net.nevinsky.abyssus.lib.core.dto
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.dto.BaseLightDto
-import net.nevinsky.abyssus.lib.core.dto.FogDto
-import net.nevinsky.abyssus.lib.core.dto.RayTracingDto
 import java.util.*
 
 data class SceneDto(
@@ -21,8 +18,7 @@ data class SceneDto(
     val fog: FogDto? = null,
     val skyboxEnabled: Boolean = false,
     val skyboxName: String? = null,
-    val rayTracing: RayTracingDto? = null,
-    val rayTracingEnabled: Boolean = rayTracing != null,
+    val water: JsonNode? = null,
     // parsing ecs graph should be done externally of deserializing scene
     val ecs: JsonNode? = null
 )

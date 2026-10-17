@@ -5,9 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import com.intellij.ide.projectView.ProjectView
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -15,7 +12,6 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
@@ -29,7 +25,6 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusCore
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
@@ -57,22 +52,11 @@ import javax.swing.event.DocumentListener
  * aircraft, folder name, size and parts; Create writes one native MODEL asset as an undoable command and selects it.
  * Scenes and the project file are not touched. Reading and converting run off the EDT under a modal progress.
  */
-class ImportFlightGearAction : AnAction(), DumbAware {
-    override fun getActionUpdateThread() = ActionUpdateThread.EDT
+open class ImportFlightGearAction : AbyssusTreeAction<VirtualFile>() {
+    override fun targetOf(node: Any?): VirtualFile? = assetsNodeProjectFile(node)
 
-    private fun owningProject(e: AnActionEvent): VirtualFile? {
-        val project = e.project ?: return null
-        val pane = ProjectView.getInstance(project).currentProjectViewPane?.takeIf { it.id == AbyssusProjectViewPane.ID } ?: return null
-        return assetsNodeProjectFile(TreeUtil.getUserObject(pane.selectedPath?.lastPathComponent))
-    }
-
-    override fun update(e: AnActionEvent) {
-        e.presentation.isEnabledAndVisible = owningProject(e) != null
-    }
-
-    override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
-        val abss = owningProject(e) ?: return
+    override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
+        val abss = target
         val title = AbyssusBundle.message("importFlightGearTitle")
         val report = { message: String -> Messages.showErrorDialog(project, message, title) }
         projectRefusal(abss)?.let { report(AbyssusBundle.message("importFlightGearFailed", it)); return }

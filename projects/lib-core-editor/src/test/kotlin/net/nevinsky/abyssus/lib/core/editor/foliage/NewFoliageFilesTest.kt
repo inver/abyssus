@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.editor.terrain.FolderNameError
 import net.nevinsky.abyssus.lib.core.editor.terrainData
-import net.nevinsky.abyssus.lib.core.editor.testProject
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals

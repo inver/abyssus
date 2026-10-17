@@ -29,7 +29,10 @@ import javax.swing.SwingUtilities
 object TestGl {
     val enabled: Boolean get() = System.getProperty("abyssus.glTests") == "true" && !GraphicsEnvironment.isHeadless()
 
-    fun <T> run(block: () -> T): T {
+    fun <T> run(block: () -> T): T = run(30, block)
+
+    /** [timeoutSeconds] bounds the whole block; a measurement run needs far more than the default. */
+    fun <T> run(timeoutSeconds: Long, block: () -> T): T {
         GdxNativesLoader.load()
         val done = CountDownLatch(1)
         var result: Result<T>? = null
@@ -60,7 +63,7 @@ object TestGl {
             // the canvas has a context only once it is shown: render from a later event
             javax.swing.Timer(50) { e -> if (result == null) canvas.render() else (e.source as javax.swing.Timer).stop() }.start()
         }
-        check(done.await(30, TimeUnit.SECONDS)) { "GL test timed out" }
+        check(done.await(timeoutSeconds, TimeUnit.SECONDS)) { "GL test timed out" }
         SwingUtilities.invokeLater { window.dispose() }
         return result!!.getOrThrow()
     }

@@ -120,7 +120,7 @@ class FoliageRuntimeLoadTest {
         meta(ONE_MODEL)
         val read = runtime.read("foliage_meadow")
         assertEquals(FoliageBakeState.STALE, read.foliage!!.state)
-        assertEquals(listOf(0, 0), read.foliage!!.bake.layers.single().chunks.single().map { it.model })
+        assertEquals(listOf(0, 0), read.foliage.bake.layers.single().chunks.single().map { it.model })
         assertTrue(read.warnings.toString(), read.warnings.any { "model index" in it })
     }
 

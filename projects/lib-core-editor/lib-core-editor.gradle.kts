@@ -28,8 +28,6 @@ tasks.test {
     systemProperty("abyssus.editorCoreSources", file("src/main/kotlin").absolutePath)
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
-    // the native fixture projects are shared with the plugin's tests
-    systemProperty("abyssus.testData", rootProject.file("projects/plugin-abyssus/src/test/testData").absolutePath)
     // MakeImportFixtures rewrites the binary model import fixtures here: opt in with -Dabyssus.makeFixtures=true
     systemProperty("abyssus.importFixtures", file("src/test/resources/modelimport").absolutePath)
     System.getProperty("abyssus.makeFixtures")?.let { systemProperty("abyssus.makeFixtures", it) }

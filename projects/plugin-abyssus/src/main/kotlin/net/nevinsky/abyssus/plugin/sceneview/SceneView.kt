@@ -24,6 +24,19 @@ interface SceneView : Disposable {
     /** Called on the AWT thread with the id (key under `ecs/entities`) of the entity the user clicked. */
     var onPick: ((String) -> Unit)?
 
+    /** Called on the AWT thread with the id of the water surface the user clicked. */
+    var onPickWater: ((String) -> Unit)?
+        get() = null
+        set(_) {}
+
+    /**
+     * Called on the AWT thread when a move of a water surface ends, with its id and new centre. Returns whether it was
+     * written to the scene.
+     */
+    var onWaterMove: ((String, Vec3) -> Boolean)?
+        get() = null
+        set(_) {}
+
     /**
      * Called on the AWT thread when a drag of a gizmo handle ends with the entity moved or rotated, with the entity's id
      * (key under `ecs/entities`) and the change. Returns whether it was written to the scene.
@@ -57,6 +70,9 @@ interface SceneView : Disposable {
     /** Selects an entity after creation or a selection in the Abyssus tree. */
     fun selectEntity(entityId: String) {}
 
+    /** Selects the water surface [waterId] after creation or a selection in the Abyssus tree. */
+    fun selectWater(waterId: String) {}
+
     fun setParams(params: SceneRenderParams)
 
     /** Loads the assets of [revision] again once the view can safely draw; a hidden view keeps it until it is shown. */
@@ -67,6 +83,15 @@ interface SceneView : Disposable {
 
     /** Where a new object is placed (the point the camera orbits around); null when the view places nothing. */
     fun placementPoint(): Vec3? = null
+
+    /**
+     * Rendering cannot continue: shows [message] in place of the viewport and keeps whatever else the view has (its toolbar,
+     * disabled). True when the view did that; false (the default) leaves the editor to show the message in place of the view.
+     */
+    fun showUnavailable(message: String): Boolean = false
+
+    /** Turns the frame rate in the view's stats strip on or off (the project's `Show FPS`); a view without one ignores it. */
+    fun setFpsEnabled(enabled: Boolean) {}
 
     /** Whether the view is in Play, when nothing may be added to its scene. */
     val playing: Boolean get() = false

@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.core.editor.testProject
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.editor.terrainData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

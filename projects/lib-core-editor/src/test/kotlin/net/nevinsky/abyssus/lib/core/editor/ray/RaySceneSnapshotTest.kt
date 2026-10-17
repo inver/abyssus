@@ -12,6 +12,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
 
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
@@ -25,7 +26,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSnapshot
 import net.nevinsky.abyssus.lib.raytracing.RayColor
 import net.nevinsky.abyssus.lib.raytracing.RayEnvironment
 import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
@@ -198,8 +199,8 @@ class RaySceneSnapshotTest {
     }
 
     @Test fun malformedSettingsPreventRayConversionButKeepOrdinarySceneParsing() {
-        val scene = net.nevinsky.abyssus.lib.core.editor.parseScene("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxRefractionBounces":null}}""")
-        val p = renderParamsOf(scene, CameraParams.DEFAULT)
+        val text = """{"format":"abyssus","formatVersion":1,"rayTracing":{"maxRefractionBounces":null}}"""
+        val p = renderParamsOf(net.nevinsky.abyssus.lib.core.editor.parseScene(text), CameraParams.DEFAULT, root = SceneJson().parse(text))
         assertNull(p.rayTracing.settings)
         assertTrue(RaySceneSnapshots().capture(p,camera,NO_LIGHTS,assets) is RaySceneConversion.Fallback)
     }

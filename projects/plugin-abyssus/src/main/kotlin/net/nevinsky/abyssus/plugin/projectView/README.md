@@ -11,12 +11,14 @@ the row actions that call `editSceneJson` (`projects/plugin-abyssus/src/main/kot
 | `AbyssusProjectViewPane` | The pane; its tree paints row actions at the right edge and publishes the selection |
 | `AbyssusNodes.kt` | `AbyssusRootNode`, `AbyssusAssetNode` (one per `.abss` / standalone `.scene`) and `DtoEntryNode` (everything below) |
 | `DtoTree.kt` | DTO → rows: `childrenOf`, `foldToggles` (`<x>Enabled` → eye), display names (`skyboxName` → `skybox`), labels |
+| `AbyssusTreeRefresh` | The pane's refresh coordinator, alive as long as the pane: plugin edits (`AbyssusSceneEdited`), document changes (typing, Undo/Redo, unsaved text) and this project's VFS create/delete/move/rename/content events for `.scene`, `.abss`, `meta.json` and folders under `assets` mark the tree stale; `lib-core-editor`'s `RefreshCoalescer` turns a burst into one `updateFromRoot`, plus one more when an event arrives during it; selection and expansion are captured on the EDT as row identities (`NavigationState`: the entry or asset path, never a label) and restored with `restoreNavigation`, so a removed selection stays cleared. Unrelated files do not rebuild; a refresh writes nothing and adds no undo entry; disposal cancels pending work |
 | `AssetReadCache` | Parsed files per project, re-read when the reader's `stamp` changes |
 | `RowActions.kt` | What a row paints at its right edge: eye, "View", the `unused` tag, the skybox **Choose** button |
 | `SceneComponentEdits.kt` | Add, update and remove a component as undoable `editSceneJson` commands; also lists a project's model and terrain assets |
 | `ComponentActions.kt`, `ComponentTarget.kt` | The **Add Component...** / **Remove Component** tree actions and the entity or component a row stands for; `AddComponentOnEcsAction` is Add Component... on a scene's `ecs` row, creating a new `Entity <id>` with the chosen component (`SceneComponentEdits.addAsNewEntity`, inserted by `SceneEntities`) |
 | `EnabledToggle.kt` | The writes built on `editSceneJson`: `toggleEnabled`, `renameScene`, `setSkybox` |
-| `RenameSceneAction` | Right-click **Rename Scene...** |
+| `AbyssusTreeAction` | The Template Method of a right-click action: `targetOf` (the node it applies to), `isEnabled`, `perform`; `update` and `actionPerformed` are final and read the one selection lookup, `selectedNode`. Rename Scene, New Terrain, New Foliage, Import Model, Import FlightGear, New UI Asset and the component and light actions extend it; tests replace `selected` |
+| `RenameSceneAction` | Right-click **Rename Scene...**: offered on any scene row — a standalone `.scene` at the top of the view and a scene listed under a project — starting from the scene's current `name` and editing only `name` in one undoable command. Right-click menus group creation/import actions under **Import Model** (Import FlightGear Aircraft, Import Model), **New** (New UI Asset, New Terrain, New Foliage) and **Add** (Add Asset, Add Path Arrangement, Add Light, Add Water); Rename Scene stays flat above **Add** on scene rows.
 | `ImportFlightGearAction.kt`, `FlightGearImportSettings.kt` | Right-click **Import FlightGear Aircraft...** on the Assets node: the dialog over a Swing-free settings model, `importFlightGear` (stage off the EDT through `lib-core-editor`'s `flightgear`, then one undoable `AssetFileCommand`), `importTransaction` and the shared `assetFolderTransaction` |
 | `ImportModelAction.kt`, `ModelImportForm.kt`, `ImportModelDialog.kt` | Right-click **Import Model...** on the Assets node: the source is read once off the EDT (`lib-core-editor`'s `modelimport`), the dialog binds the Swing-free `ModelImportForm` (settings, values read from the file, placement option, Create state), and `importModel` stages and writes the folder, with Add to scene also the entity, in one command |
 | `ImportRefusals.kt` | `projectRefusal`: both import actions refuse a project whose `.abss` is not a supported native document |
@@ -56,7 +58,7 @@ Physics component add/edit choices follow the selected scene's native project se
   onto the parent. `reselect` walks back to the same path and restores its expansion.
 - **Every edit of an existing JSON document goes through `editSceneJson`.** It parses the document with `SceneJson`, lets the caller mutate the
   tree (returning false writes nothing), re-serializes in the file's style, replaces the text in a named
-  `WriteCommandAction`, saves, and publishes `AbyssusSceneEdited.TOPIC`, on which this pane refreshes itself. A new writer should use it and add a `command*` message.
+  `WriteCommandAction`, saves, and publishes `AbyssusSceneEdited.TOPIC`; this pane refreshes on it, and equally on Undo/Redo and external changes, through `AbyssusTreeRefresh`. A new writer should use it and add a `command*` message.
 - **Where an entry writes back.** An entry knows its `source` file and the `parentKeys` leading to its container. A
   scene listed under a project writes to its own `.scene` file, not the `.abss`.
 - **Display names are labels only.** `displayName` changes what a row shows. `DtoEntry.name` stays the JSON key,
@@ -81,6 +83,20 @@ from `SceneComponentEdits.renderAssets`, under Models / Terrains, labelled with 
 on the JSON tree. It is written as one undoable Add Asset command and selected with `selectCreatedEntity`, which
 Add Light uses too. Disabled for unreadable scene text, a scene outside a project, or a project without models and
 terrains.
+
+## Water rows
+
+A scene row lists its water surfaces under a **Water** group, shown only when `abyssus.waterSurfaces` holds surfaces
+(`sceneRows` in `DtoTree.kt` drops the raw `abyssus` member and adds the group, so a scene without water shows no extra
+row and reading one writes nothing). The group's value is a `WaterGroup` (`water/WaterText.kt`) and each row's a
+`WaterSurface` from `WaterCodec`: a valid one shows its name with "Abyssus only" and an eye (`DtoRow.enabled` is its
+`enabled`), an invalid one shows "invalid", no eye, and can still be renamed or removed. A water row is not an ECS
+entity or component: `waterTargetOf` (`WaterActions.kt`) maps it to a `WaterTarget(file, id, name)` and
+`componentTargetOf` does not match it. The eye calls `toggleRow`, which writes only that surface's `enabled` through
+`WaterSceneEdits`; `AddWaterAction` (scene rows, Lake or Sea at the origin), `RenameWaterAction` and `RemoveWaterAction`
+(water rows) use the same adapter. `AddWaterGroup` is shared with the Scene view toolbar. After an add the new row is
+selected (`selectCreatedWater`, `selectWaterInAbyssusView`). A refused add (an `abyssus` or `waterSurfaces` value that is
+not an object) shows its reason and writes nothing.
 
 ## Add Path Arrangement and Regenerate
 

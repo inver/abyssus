@@ -41,6 +41,19 @@ object GlHarness {
         orbit: OrbitCamera = OrbitCamera(params.camera),
         executor: java.util.concurrent.Executor? = null,
         framebufferSize: Pair<Int, Int>? = null,
+        log: org.slf4j.Logger = printingLog,
+        sceneShaders: net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage =
+            net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java),
+        /** Seconds the harness allows the whole run. */
+        timeoutSeconds: Long = 60,
+        /** Advances the sky, animation and water by this step every frame instead of by the real elapsed time. */
+        fixedDeltaSeconds: Float? = null,
+        /** Called after each frame with the nanoseconds [SceneRenderer.render] took, on the AWT thread inside the context. */
+        onFrameNanos: ((Int, Long) -> Unit)? = null,
+        /** Called once the context exists with its GL_RENDERER and GL_VERSION strings. */
+        onGlInfo: ((String, String) -> Unit)? = null,
+        /** Checked after each frame; true ends the run early. */
+        shouldStop: (Int) -> Boolean = { false },
         afterFrame: (SceneRenderer, Int) -> Unit = { _, _ -> },
     ): Result {
         val done = CountDownLatch(1)
@@ -48,7 +61,7 @@ object GlHarness {
         var error: Throwable? = null
         val pool = Executors.newCachedThreadPool { r -> Thread(r).also { it.isDaemon = true } }
         val frame = GdxFrame()
-        val renderer = testRenderer(executor ?: pool).also { it.params = params }
+        val renderer = testRenderer(executor ?: pool, log, sceneShaders).also { it.params = params }
         var count = 0
         lateinit var timer: Timer
         lateinit var window: JFrame
@@ -62,12 +75,15 @@ object GlHarness {
                     GL.createCapabilities()
                     ctx = GdxRuntime.newContext(frame, GdxGlBridge.gl20(), GdxGlBridge.gl30(), Lwjgl3Files())
                     GdxRuntime.withContext(ctx!!) { renderer.create() }
+                    onGlInfo?.invoke(GL11.glGetString(GL11.GL_RENDERER) ?: "unknown", GL11.glGetString(GL11.GL_VERSION) ?: "unknown")
                 }
 
                 override fun paintGL() {
                     frame.tick(framebufferWidth, framebufferHeight)
                     GdxRuntime.withContext(ctx!!) {
-                        renderer.render(frame.width, frame.height, orbit, frame.deltaSeconds)
+                        val started = System.nanoTime()
+                        renderer.render(frame.width, frame.height, orbit, fixedDeltaSeconds ?: frame.deltaSeconds)
+                        onFrameNanos?.invoke(count, System.nanoTime() - started)
                         afterFrame(renderer, count)
                     }
                     count++
@@ -96,7 +112,7 @@ object GlHarness {
                     e.printStackTrace()
                     count = frames
                 }
-                if (count >= frames) {
+                if (count >= frames || shouldStop(count)) {
                     timer.stop()
                     try {
                         ctx?.let { GdxRuntime.withContext(it) { renderer.dispose() } }
@@ -109,7 +125,7 @@ object GlHarness {
             }
             timer.start()
         }
-        check(done.await(60, TimeUnit.SECONDS)) { "GL test timed out after $count frames" }
+        check(done.await(timeoutSeconds, TimeUnit.SECONDS)) { "GL test timed out after $count frames" }
         return Result(image, error)
     }
 

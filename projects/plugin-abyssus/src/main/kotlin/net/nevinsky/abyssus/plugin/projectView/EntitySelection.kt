@@ -14,6 +14,7 @@ import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.water.WATER_ROW
 
 private val LOG = Logger.getInstance("net.nevinsky.abyssus.projectView.EntitySelection")
 
@@ -25,12 +26,18 @@ private fun entityPath(entityId: String) = net.nevinsky.abyssus.lib.core.editor.
  * looking for the row of entity [entityId] of [sceneFile]. The scene is found either as a standalone `.scene` asset
  * or as an entry of its project's `scenes` list.
  */
-fun entityVisitAction(sceneFile: VirtualFile, entityId: String, chain: List<Any?>): TreeVisitor.Action {
+fun entityVisitAction(sceneFile: VirtualFile, entityId: String, chain: List<Any?>): TreeVisitor.Action =
+    rowVisitAction(sceneFile, entityPath(entityId), chain)
+
+/**
+ * What a tree visitor should do with the node at the end of [chain] when looking for the row [wanted] (row names
+ * below the scene's node) of [sceneFile]. Shared by entity and water rows.
+ */
+fun rowVisitAction(sceneFile: VirtualFile, wanted: List<String>, chain: List<Any?>): TreeVisitor.Action {
     val nodes = chain.filterNotNull()
     val sceneIndex = nodes.indexOfFirst { isSceneRoot(it, sceneFile) }
     if (sceneIndex >= 0) {
         val below = nodes.drop(sceneIndex + 1).map { (it as? DtoEntryNode)?.value?.name ?: return TreeVisitor.Action.SKIP_CHILDREN }
-        val wanted = entityPath(entityId)
         return when {
             below == wanted -> TreeVisitor.Action.INTERRUPT
             below.size < wanted.size && wanted.subList(0, below.size) == below -> TreeVisitor.Action.CONTINUE
@@ -68,5 +75,20 @@ fun selectEntityInAbyssusView(project: Project, sceneFile: VirtualFile, entityId
         TreeUtil.promiseSelect(tree, visitor)
     } catch (e: Throwable) {
         LOG.warn("Could not select entity $entityId in the Abyssus view", e)
+    }
+}
+
+/** Like [selectEntityInAbyssusView] for the water surface [waterId] of [sceneFile]. */
+fun selectWaterInAbyssusView(project: Project, sceneFile: VirtualFile, waterId: String) {
+    try {
+        ToolWindowManager.getInstance(project).getToolWindow(ToolWindowId.PROJECT_VIEW)?.show()
+        val view = ProjectView.getInstance(project)
+        view.changeView(AbyssusProjectViewPane.ID)
+        val tree = view.getProjectViewPaneById(AbyssusProjectViewPane.ID)?.tree ?: return
+        val wanted = listOf(WATER_ROW, waterId)
+        val visitor = TreeVisitor { path -> rowVisitAction(sceneFile, wanted, path.path.map(TreeUtil::getUserObject)) }
+        TreeUtil.promiseSelect(tree, visitor)
+    } catch (e: Throwable) {
+        LOG.warn("Could not select water $waterId in the Abyssus view", e)
     }
 }

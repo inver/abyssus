@@ -12,14 +12,23 @@ the toolbar, Play and the view's asset storage.
 
 | Class | Role |
 |---|---|
-| `SceneFileEditor` / `SceneFileEditorProvider` | The tab. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo. The provider in the root package is where the tab's collaborators are looked up and passed in; `SceneViewHost` carries tree selection and Add actions |
+| `SceneFileEditor` / `SceneFileEditorProvider` | The tab, the second editor of the file after the text editor: the IDE's own `Text` and `Scene View` tabs switch between the JSON and the render on one shared document (unsaved text and Undo shared), and `openSceneView` selects Scene View. There is no custom preview/source switch. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo. The provider in the root package is where the tab's collaborators are looked up and passed in; `SceneViewHost` carries tree selection and Add actions |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
 | `SceneContent`, `PlacementMapper` *(lib-core-editor)* | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. The components are decoded by the same codecs the Properties panel uses (`DecodedEntity`), so both show the same values and defaults; `PlacementMapper` (pure) maps them. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
 | `LightSet`, `SpotCone` *(lib-core-editor)* | Deterministic light selection and CPU cone/range attenuation math |
 | `shadows` | Per-context atlas, stable tile allocation, fitted light cameras and shared model/terrain/foliage depth pass |
 | `SceneFoliage`, `FoliageAssets` | The foliage of the scene's terrain entities, beside `SceneTerrains`: it asks the view's assets for the `FoliageComponent`s' folders, prefers the project's `FoliageDrafts` draft, generates a stale or draft-touched bake off the GL thread and culls the drawn copies against the camera (see **Terrain foliage**) |
 | `SceneView` | Interface of the view, so tests can pass a fake (`viewFactory`) |
-| `SceneViewPanel` | Swing panel: GL canvas, Swing `Timer` frame loop, toolbar, keys (W / E / D / Esc) |
+| `SceneViewPanel` | Swing panel: GL canvas, Swing `Timer` frame loop, the toolbar (a wrapping row of the groups below, then the Drop / Add / paint / Clouds / Play controls), and the wiring of the collaborators below |
+| `SceneToolsToolbar`, `SceneViewToolsModel` | The mockup's groups as platform action toolbars: Select / Move / Rotate, Local-World and Snap, shading with the Shadows / Fog / Grid toggles, the camera chooser and Frame selection. The actions are per view and unregistered; they read `ToolbarState` and write the model. The model (space, snap, `ViewDisplay`) is per view, never saved, and tested without Swing |
+| `SceneViewIcon` | The toolbar and tab icons: the design artifact's stroke glyphs (24 px grid, 1.8 stroke, round caps) as 16 px SVGs `icons/scene_view_<name>_icon.svg` plus a `_dark` twin the platform picks in dark themes. `IconInventoryTest` fails on a missing or unlisted file |
+| `CornerOverlay`, `CornerSprite`, `CornerPainter` (`OrientationWidget`, `StatsStrip`), `cornerRect` | The orientation widget (upper right) and the stats strip (lower left). A Swing component cannot sit over the heavyweight canvas, so Swing paints each into an image (`toImage`, at the display scale) and `CornerOverlay` draws it as a blended quad after the loading overlay, uploading the texture only when the painter's `version` changes. A press on the widget's disc is handled by the panel (`pressOnOrientationWidget`, look along the clicked axis from its side) and never reaches the scene. The geometry is `cornerRect`, tested headless |
+| `FpsCounter`, `SceneViewSettings` | The optional frame rate. `SceneViewSettings` (project service over the IDE's project `PropertiesComponent`, EDT) holds `showFps`; `SceneFileEditor` applies it to every view it creates (`SceneView.setFpsEnabled`) and to open views when it changes, and the panel also reads the setting itself before every frame (`showFps`), so a missed change event cannot leave the counter off. `FpsCounter` is pure: the panel gives it nanosecond timestamps before a frame (`frameStarted`) and after its buffer swap (`frameCompleted`), it publishes a whole number once a window reached a second, and `reset` (disable, unsafe or hidden surface, `removeNotify`, failure, context abandonment, disposal) forgets everything so the next sample never includes inactive time. The value is drawn as the first part of the stats strip (`<n> fps`, `-- fps` before the first sample); sampling adds no timer or render |
+| `ViewDisplay`, `Shading` | The Shadows / Fog / Grid toggles and Lit / Unlit of one view, set on `SceneRenderer.display` and read on the next frame. Per view and never saved; the scene's own `fogEnabled` is untouched. Unlit gives every material a white ambient and no lights or shadow pass |
+| `SceneInputForwarder` | Keys (Q / W / E / F / D / Esc / Enter / Backspace) and the canvas mouse: into `SceneInteraction`, into the simulation while playing, the arrangement point menu |
+| `RayControlBinding` | The view's ray feed, the mode the Properties switch shows and its listeners |
+| `CloudControls`, `PlayControlsStrip`, `FoliagePaintControls` | The Clouds choice and fallback, the Play / Pause / Step / Stop buttons, the foliage brush and its paint session |
+| `PlacementMenu` | An "Add ..." menu: whether it can be offered, and its choices (`lightMenu`, `assetMenu`, `pathMenu` of the panel) |
 | `SceneViewState` *(lib-core-editor)* | What the user chose: selection, gizmo mode and hovered handle, the camera looked through, the drag/drop preview. The panel changes it; the renderer and the queries read it |
 | `SceneInteraction` *(lib-core-editor)* | Mouse and key logic without Swing or GL, over a `SceneViewState` and `SceneQueries`: click → pick/select, drag → gizmo or orbit/pan (one `Gesture`: Idle, Dragging or Cancelled), Drop → a Y-only move |
 | `FrameSnapshot`, `SceneQueries`, `SnapshotSceneQueries` *(lib-core-editor)* | What the last frame drew (camera copy, model boxes, terrain targets, `drawnVersion`), and the CPU-only questions asked of it: pick, ray, ground below, lowest point, gizmo handles and hits, drag start. Tested with hand-built snapshots |
@@ -119,13 +128,67 @@ the toolbar, Play and the view's asset storage.
 ## Add Light
 
 The toolbar's Add Light menu offers Directional, Sun and Spot through `AddLightGroup`. `SceneFileEditor` supplies
-the scene file and availability check; the panel supplies its current orbit target when a choice is made.
+a `PlacementMenu` (the scene file's availability check and its choices); the panel supplies its current orbit target when
+a choice is made.
 The new entity is written as one Add Light command and selected in the Abyssus tree. Spot adds 5 to placement Y.
 Unreadable scene text disables creation (and the editor shows its existing parse-error state).
 
 The toolbar's Add Asset button (`add-asset`) works the same way through `AddAssetGroup`: `SceneFileEditor` passes
-`assetActions` and `canAddAsset` (readable scene and a project with models or terrains), and the panel supplies the
-orbit target. A view built without `assetActions` has no such button.
+an `assetMenu` (available for a readable scene and a project with models or terrains), and the panel supplies the
+orbit target. A view built without an `assetMenu` has no such button.
+
+## Water authoring
+
+The toolbar's Add Water button (`add-water`) offers Lake and Sea through `AddWaterGroup`; `SceneFileEditor` supplies a
+`waterMenu` (readable scene whose `abyssus` data is an object) and the panel the orbit target. Water selection is a
+separate identity from ECS ids: `SceneViewState.selection` is a `SceneTarget` (`Entity` or `Water`), `selectedId` reads
+only an entity and `selectedWater` only a surface, so a water id never reaches an ECS writer. A click picks through
+`SceneQueries.pickTarget`: the rectangle of an enabled, valid surface at its mean level, seen from above only, wins only
+when it is nearer than the terrain or model under the cursor (`WaterHit`). Water offers the Move gizmo only (no rotate
+handles, and `canDrop` is false); a drag previews through `SceneViewState.waterPreview` and `SceneFileEditor.applyWaterMove`
+writes only the coordinates that changed, as one Move Water command. Esc restores the position and writes nothing, and a
+surface deleted elsewhere clears the selection. The selected extent is outlined by `WaterOutline`. Water is never in the
+ground lists (`groundHit`, `groundBelow`).
+
+## Water rendering
+
+`SceneRenderer.render` updates the frame once (assets, animation, previews, lights, shadow atlas) and plans the water.
+`SceneWater` (`sceneview/water/`, one per view, created on the first frame that has water) owns the pass order; the pure
+planning is `WaterPassPlanner` in `lib-core` (`core.water`). A frame with no valid, enabled surface in view above the camera
+(`WaterScreenArea` measures what is in view; a camera at or below the level skips that surface) does nothing extra:
+`renderContent` draws everything, as before.
+
+With water the frame is: shadows, then one **reflection pass per reflected level** into `WaterResources`' targets
+(at most two levels at half the viewport and at most 1024 a side, chosen by on-screen area with a 1.25 hysteresis so two
+similar levels do not swap), then the main sky, grid and **opaque** content (`ContentParts.OPAQUE`: alpha-tested parts
+included, blended parts left out) on the canvas, `captureScene` (a copy of the canvas colour made with
+`glCopyTexSubImage2D` from whatever framebuffer is bound, so it is the opaque scene without editor overlays), the **scene
+and terrain depth targets** (packed linear view depth, `ModelDepthShader` with `linearFar`, at most 2048 a side; terrain
+alone makes a shoreline), the **surfaces** far to near (`WaterDrawable`: a bounded wave grid, vertex waves, `water.frag`),
+then the blended models (`ContentParts.BLENDED`), then the overlays. The reflection draws through `MirroredCamera`
+(`view * mirror`, clockwise front faces for the pass) with a world clip plane just below the mean level (the bias grows with
+wave height and distance) on the model shaders (`ClipPlaneAttribute`) and on `TerrainShader` (`u_clipPlane`); grid, markers,
+gizmos, water and blended models are never in a reflection or a depth target. The water shader samples the
+reflection, the scene copy and the depths at the fragment's own screen position: Fresnel mixes the reflection with the
+refracted scene, which fades into the tint with the distance light travels in the water (`clarity` is the distance scale,
+`tint` sets the per-channel absorption), sun glints add to it, and foam grows where terrain depth says the bottom comes
+within `foamWidth` of the level. A fragment is discarded when something opaque is nearer than the surface, or when the
+scene behind it is land above the mean level, so crests never show over a beach; waves die out toward the shore, and
+fine waves fade with the pixel footprint so distant water does not alias. The water is drawn with a polygon offset because
+the window depth buffer is coarse at a distance, and the shader's own exact depth test decides the shoreline. Scene fog is
+applied once, to the final water colour. Limits: above-water viewing only (no underwater look), reflections and refraction
+show opaque and alpha-tested scene geometry and the sky only (no blended models and no other water), the sky fallback is
+the sky colour (or the sky's lighting cube when it has one), and water neither casts nor receives geometry shadows.
+
+Budget and failure rules: a level beyond the reflection budget, or whose pass failed, shows the sky. For a procedural
+sky with clouds the view holds an `EnvironmentLease` only while some level needs that fallback and samples the cloudy
+lighting cube (an HDR sky's cube needs none); the lease is released when no level falls back and with the view, and just
+forgotten when the context is replaced. `WaterResources` allocates once per size, releases surplus reflection targets,
+restores the caller's framebuffer, viewport and state after every pass (`ShadowGlState`, plus the winding), refuses an
+unusable size without retrying until the size changes, and is abandoned without GL calls on context loss. A shader or mesh
+that cannot be made skips the water in that view (logged once, retried after the context is replaced); targets that cannot
+be made leave plain tinted water; a failing surface is skipped while the rest draw. The animation time advances with the
+frame's delta (`SceneRenderer.waterTime` stands it still, for tests). See `docs/ai/testing.md` for the GL checks.
 
 ## Path arrangements
 
@@ -155,7 +218,24 @@ All local lights fade from 75 percent of their range to zero at the range limit.
 and 0.2 softness without writing the scene. Properties displays softness as percent; storage and compatibility
 limits are documented in `docs/ai/file-formats.md`.
 
+## GL resource lifecycle
+
+`RenderResources` owns the GL objects `SceneRenderer` makes for one context (the model batch and shader provider, `TerrainShader`,
+the skybox, loading and corner overlays, the line batch and the grid model). `create()` registers each in the current
+generation; `dispose()` calls `releaseAll()` (valid context only: newest first, one failing release does not stop the rest) and a
+hidden canvas that lost its context calls `abandonAll()` through `create()`, which runs only the GL-free abandon hooks
+(`SceneSkybox.abandon`, `CornerOverlay.abandon`), deletes nothing and starts the next generation. A handle of an older generation is
+never released through the new context. Release and abandon stay separate operations, and this is not a service container: the
+assets, shadows, water, foliage and cloud shadow map keep their own `abandon()` / `dispose()`. `RenderResourcesTest` counts release
+against abandon with fake resources.
+
 ## Scene shadows
+
+The shader side of the atlas is one GLSL file, `lib-gdx`'s `shader/shared/shadow_visibility.glsl`: the atlas uniforms,
+`shadowCompare`, `shadowBilinear`, `shadowTileVisibility`, `pointShadowVisibility` (under `shadowAtlasFlag`) and
+`directionalVisibility` (under `directionalVisibilityFlag`). The default and PBR model fragments and `terrain_editor.frag` (`lib-render`) pull it
+in with `#pragma include "shadow_visibility.glsl"`, so a change to the filter is made once. `terrain_editor.frag` defines both flags
+itself and `ShaderStorage.fragment` expands the include; the model shaders read through `ShaderSources.readAssembled`.
 
 After applying drag previews, each frame updates model poses and terrain transforms once. `SceneShadows` captures
 their renderables plus the drawn foliage's OBJECT layers (`SceneFoliage` as a `FoliageCastSource`; DETAIL layers are
@@ -331,10 +411,10 @@ A `SKYBOX_PROCEDURAL` asset with `additional.lightsScene: true` lights models an
 color with it, and until the first build is done the ambient color is used. When the sun or clouds change, a new
 environment is built in the background and fades in over about one second: `SceneSkybox.fadingTo` gives the next
 environment and the weight (0 to 1). `renderContent` passes them on in two ways:
-- models get an `EnvironmentLightAttribute` whose `fadeTo` / `weight` carry the second environment. `PbrShader` compiles a
+- models get an `EnvironmentLightAttribute` whose `fadeTo` / `weight` carry the second environment. `PbrModelShader` compiles a
   program with `environmentFadeFlag` (one more irradiance and specular fetch) only while an environment fades, and
-  `DefaultShader` blends the six axis colors on the CPU;
-- `TerrainShader` binds the next irradiance cube on unit 8 and `terrain.frag` mixes the two by `u_skyFade`. Without a
+  `ModelShader` blends the six axis colors on the CPU;
+- `TerrainShader` (the scene view's adapter over `lib-render`'s `TerrainPass`: it turns the camera, `LightSet` and `FogParams` into `FrameInputs` and `TerrainLighting.Editor`) binds the next irradiance cube on unit 8 and `terrain_editor.frag` mixes the two by `u_skyFade`. Without a
   fade, or without a sky, the shader is bound exactly as before.
 
 The light follows the asset's atmosphere parameters, not a custom `sky.frag` that departs from them.
@@ -347,7 +427,7 @@ target, redrawn every frame at the sky's own time and cloud asset, so patches dr
 cloud asset reload. `planSunShading` picks the map or the uniform `SunOcclusion` dimming, never both: with the map
 the sun keeps its full color in `litLights` and `DirectionalVisibilityAttribute` carries the map, the sun's directional
 index, the sun-ray world-to-map transform (so a tall model is looked up at its ground footprint), a 10% edge fade, and
-the uniform factor for beyond the square. `DefaultShader`, `PbrShader` and `terrain.frag` (unit 9) multiply only that
+the uniform factor for beyond the square. `ModelShader`, `PbrModelShader` and `terrain_editor.frag` (unit 9) multiply only that
 light, on top of its atlas shadow. No usable sun, a sun outside the rendered light budget, no clouds, exhausted cloud
 techniques or a map that could not be made (logged once to the `sceneview` logger) leave the uniform dimming as before.
 

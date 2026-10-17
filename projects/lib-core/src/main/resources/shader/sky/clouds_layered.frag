@@ -31,6 +31,6 @@ void main() {
     float alpha = (1.0 - exp(-tau)) * cloudDistanceFade(t) * cloudFootprintFade(footprint);
     float sunTau = CLOUD_EXTINCTION * density * 0.5 * cloudSlant(normalize(u_sunDir), up, thickness);
     float skyTau = CLOUD_EXTINCTION * density * thickness * 0.5;
-    vec3 radiance = cloudAerial(cloudRadiance(d, sunTau, skyTau, 0.5, up), t);
+    vec3 radiance = cloudAerial(cloudRadiance(d, sunTau, skyTau, 0.5, density, up), t, d);
     gl_FragColor = vec4(cloudToneMap(radiance) * alpha, alpha);
 }

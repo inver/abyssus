@@ -221,7 +221,7 @@ or project file access in this scheduler.
 Stable rendering raises resolution from recent worker timing and increases samples.
 Defaults cap dimensions at 4096, pixels at 4,194,304, retained frame/presentation
 payload at 128 MiB (80 bytes/pixel), samples at 8 per batch and 256 per accumulation
-epoch, and worst-case ray count at 2,097,152 per batch. The adapter supplies primary,
+epoch, and worst-case ray count at 33,554,432 per batch. The adapter supplies primary,
 visibility and reflection ray cost per sample; scene/native allocations are budgeted
 separately. All limits, including the intersection-query budget, are hard. If one sample at the half-resolution
 floor exceeds the query, dimension, pixel or memory bounds, the policy throws `RayQualityLimitException` for explicit
@@ -323,7 +323,8 @@ found with `VK_LAYER_PATH` plus `LD_LIBRARY_PATH` pointing at its directory.
 `verifyVulkanPackaging` checks the SPIR-V in the jar, that no shaderc is on the runtime classpath, the
 `lwjgl-vma` natives for every target, MoltenVK for macOS only, and that a probe without a loader returns
 `RUNTIME_NOT_FOUND` (one JVM per test class, because LWJGL's library choice is process-global). Metal
-packaging moved to `verifyMetalPackaging`; `verifyNativePackaging` runs both where they apply. When they render, both
+packaging moved to `verifyMetalPackaging`; `verifyNativePackaging` runs both where they apply. These packaging tasks
+are excluded from Kover coverage and run explicitly, rather than as part of `check`. When they render, both
 packaging tests also draw a glass slab through the packaged scene shader (`assertPackagedSceneOptics`), so a jar whose
 shader predates the version 3 scene payload or the 28-float camera fails there. Metal and Vulkan both report
 `sceneOptics`; the Metal kernel and `scene.comp` change together with `RaySceneEncoding` and `RaySceneRequest.nativeCamera`.
@@ -331,6 +332,13 @@ shader predates the version 3 scene payload or the 28-float camera fails there. 
 On a machine without a GPU, Mesa's software driver (lavapipe, `mesa-vulkan-drivers`) exposes ray queries and
 runs the whole suite: `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json`. The first scene frame on a cold lavapipe
 compiles the shader on the CPU and can exceed the kit's 5 second wait once; rerun it.
+
+**Vulkan runtime evidence on this host.** The runtime-loading path (`VulkanDevice.loadVulkanLibrary`, now state-aware so
+explicit-init hosts load normally) was exercised through lavapipe in three full runs of the conformance suite against
+the closed-glass case: one run stalled past the kit's completion bound (a glass stall, recovered to raster per the
+scheduler's frame-completion bound) and two runs completed cleanly. The Khronos validation layer is not installed on
+this host, so validation-layer behavior could not be evidenced here; `VulkanRayBackendTest` with
+`-Dabyssus.raytracing.validation=true` covers it where a layer is available.
 
 ## Saved quality limits and query accounting
 

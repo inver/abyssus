@@ -100,7 +100,7 @@ properties, one child per list element. The `scenes` and `assets` lists SHALL be
 `<x>Name`) SHALL show a clickable eye icon at the right edge of its row, shown as visible when enabled and
 as hidden (with grayed text) when disabled. Clicking the eye SHALL set the `<x>Enabled` value in
 the file the property was read from to the opposite value, changing nothing else in that file,
-and the view SHALL refresh. A scene listed under a project SHALL be labeled `<name> (<id>)` (for example `Main Scene (6275127)`) and SHALL NOT repeat `id` and `name` as child rows; its name SHALL instead be changed through a right-click "Rename Scene..." action, which sets only `name` in that scene's file. A project scene's skybox row SHALL also offer a skybox chooser (see the `abyssus-scene-skybox` capability), which sets only `skyboxName` in that scene's file. These three actions are the only ones that write to an asset file. An asset node SHALL remain a single node even when its model is expanded
+and the view SHALL refresh. A scene listed under a project SHALL be labeled `<name> (<id>)` (for example `Main Scene (6275127)`) and SHALL NOT repeat `id` and `name` as child rows; its name SHALL instead be changed through a right-click "Rename Scene..." action, which sets only `name` in that scene's file. A project scene's skybox row SHALL also offer a skybox chooser (see the `abyssus-scene-skybox` capability), which sets only `skyboxName` in that scene's file. Water authoring and visibility actions SHALL also write the scene extension as defined by `scene-water`; existing scene and asset actions remain available. An asset node SHALL remain a single node even when its model is expanded
 - expanding a file SHALL NOT add extra entries to the view root.
 
 #### Scenario: File expands into its properties
@@ -297,3 +297,62 @@ is the number of its slots that name an entity. An entity without such a `Parent
 
 - **WHEN** a copy has been detached, so it has no `ParentComponent` and its slot is `-1`
 - **THEN** it is listed under `ecs` as an ordinary entity
+
+### Requirement: Water rows in a scene
+
+A scene containing `abyssus.waterSurfaces` SHALL show a Water group with one row per surface in saved order, labelled by name, with a visibility eye and an Abyssus-only indication. Water rows SHALL be distinct from ECS entities and assets and support selection, rename and removal.
+
+#### Scenario: Water in Main Scene
+- **WHEN** a user adds a Lake to a copy of `Untitled/scenes/Main Scene.scene`
+- **THEN** a Lake row appears under Water and `Model 0`, `Terrain` (entity 1) and `Camera 4` remain in the ECS tree
+
+#### Scenario: Hide one surface
+- **WHEN** the user clicks a visible Lake's eye
+- **THEN** only that surface's `enabled` changes, the surface disappears from the Scene view and its row remains with a hidden eye
+
+#### Scenario: Existing scene
+- **WHEN** a scene has no water extension
+- **THEN** reading it creates no extension and the Add Water action remains available
+
+### Requirement: Tree follows document and filesystem changes
+
+The Abyssus tree SHALL refresh automatically after edits, Undo/Redo, and detected filesystem changes to its projects, scenes and asset metadata. Open unsaved document text SHALL take precedence over saved text. Refresh SHALL display the latest state without reopening the view, rewriting files or creating undo entries.
+
+#### Scenario: Undo and redo a scene rename
+- **WHEN** the user renames `Main Scene` in a copy of Untitled, undoes that edit, and redoes it
+- **THEN** the scene label follows each resulting name without manually refreshing the tree
+- **AND** refresh itself creates no additional edit or undo entry
+
+#### Scenario: Unsaved fog edit
+- **WHEN** the user changes `fogEnabled` in the open text document of Untitled's `Main Scene.scene` without saving
+- **THEN** the tree's fog eye reflects the unsaved value
+- **AND** undoing the edit restores the eye without saving the document
+
+#### Scenario: External scene replacement
+- **WHEN** a saved scene is replaced externally and the IDE detects the change, with no conflicting unsaved document
+- **THEN** its displayed values reflect the replacement without reopening the view
+
+#### Scenario: Files and metadata change
+- **WHEN** a scene or asset folder is added, removed or renamed, or asset metadata changes, and the IDE detects it
+- **THEN** the tree's membership, labels, applicable counts and unused markings reflect the resulting project
+
+#### Scenario: Unsupported replacement remains unchanged
+- **WHEN** a displayed native scene is replaced with malformed text or an unsupported format version
+- **THEN** the tree displays its existing unreadable-file presentation and keeps other files usable
+- **AND** refresh does not repair or rewrite the replacement
+
+### Requirement: Refresh preserves surviving navigation
+
+Automatic refresh SHALL preserve selection and expansion for entries that still exist. Removed entries SHALL disappear without duplicate nodes or stale details. Updates to a closed project SHALL not reopen its view.
+
+#### Scenario: Selected entity survives an unrelated edit
+- **WHEN** entity `0` of Untitled's Main Scene is selected and expanded while another entity's name changes
+- **THEN** entity `0` remains selected and expanded after refresh
+
+#### Scenario: Selected entry is removed
+- **WHEN** the selected entity is removed from the scene and the tree refreshes
+- **THEN** that entity no longer appears and its old details are no longer presented as the current selection
+
+#### Scenario: Close with pending changes
+- **WHEN** the project is closed while a refresh is pending
+- **THEN** the pending change does not reopen the project or display a tree for it

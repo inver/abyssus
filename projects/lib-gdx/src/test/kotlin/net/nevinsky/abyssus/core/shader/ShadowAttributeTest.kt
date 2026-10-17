@@ -7,13 +7,10 @@ package net.nevinsky.abyssus.lib.gdx.shader
 
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GLTexture
-import com.badlogic.gdx.graphics.g3d.Material
-import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.Vector4
-import net.nevinsky.abyssus.lib.gdx.Renderable
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -47,14 +44,5 @@ class ShadowAttributeTest {
         assertEquals("4", attribute.recordFor(a)?.lightId)
         assertEquals("9", attribute.recordFor(b)?.lightId)
         assertNull(attribute.recordFor(DirectionalLight()))
-    }
-
-    @Test fun blendedMaterialsAreExcludedFromTheDepthPass() {
-        val renderable = Renderable().apply { material = Material() }
-        assertTrue(ModelDepthShader.castsShadow(renderable))
-        renderable.material!!.set(BlendingAttribute(true, 0.5f))
-        assertFalse(ModelDepthShader.castsShadow(renderable))
-        renderable.material!!.set(BlendingAttribute(false, 1f))
-        assertTrue(ModelDepthShader.castsShadow(renderable))
     }
 }

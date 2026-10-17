@@ -6,6 +6,7 @@ package net.nevinsky.abyssus.lib.core.ui.state
 
 import net.nevinsky.abyssus.lib.core.ui.model.*
 import java.util.Locale
+import kotlin.collections.ArrayDeque
 import kotlin.math.abs
 import kotlin.math.floor
 
@@ -13,12 +14,22 @@ import kotlin.math.floor
 sealed interface UiValue {
     val type: UiBindingType
 
-    data class Num(val value: Double) : UiValue { override val type get() = UiBindingType.NUMBER }
-    data class Bool(val value: Boolean) : UiValue { override val type get() = UiBindingType.BOOLEAN }
-    data class Text(val value: String) : UiValue { override val type get() = UiBindingType.STRING }
+    data class Num(val value: Double) : UiValue {
+        override val type get() = UiBindingType.NUMBER
+    }
+
+    data class Bool(val value: Boolean) : UiValue {
+        override val type get() = UiBindingType.BOOLEAN
+    }
+
+    data class Text(val value: String) : UiValue {
+        override val type get() = UiBindingType.STRING
+    }
 
     /** The items of a `list` binding: one record per item, keyed by the declared field names. */
-    data class Rows(val items: List<Map<String, UiValue>>) : UiValue { override val type get() = UiBindingType.LIST }
+    data class Rows(val items: List<Map<String, UiValue>>) : UiValue {
+        override val type get() = UiBindingType.LIST
+    }
 }
 
 /** The authored id behind a runtime id of an expanded list row (`title#3` is `title`). */
@@ -42,7 +53,12 @@ enum class UiBindingIssue {
 }
 
 /** A diagnostic with data only; [binding] and [widgetId] are set when they apply. */
-data class UiBindingDiagnostic(val code: UiBindingIssue, val binding: String? = null, val widgetId: String? = null, val property: String? = null)
+data class UiBindingDiagnostic(
+    val code: UiBindingIssue,
+    val binding: String? = null,
+    val widgetId: String? = null,
+    val property: String? = null
+)
 
 /** What a widget property accepts: the [types] a binding may have, and whether the control writes it back. */
 data class UiBindingSlot(val types: Set<UiBindingType>, val writable: Boolean)
@@ -61,11 +77,13 @@ fun bindingSlot(type: UiWidgetType, property: String): UiBindingSlot? = when (pr
         UiWidgetType.TEXT_FIELD -> UiBindingSlot(setOf(UiBindingType.STRING), true)
         else -> null
     }
+
     "value" -> when (type) {
         UiWidgetType.PROGRESS_BAR -> UiBindingSlot(ONLY_NUMBER, false)
         UiWidgetType.SLIDER -> UiBindingSlot(ONLY_NUMBER, true)
         else -> null
     }
+
     "maximum" -> if (type == UiWidgetType.PROGRESS_BAR) UiBindingSlot(ONLY_NUMBER, false) else null
     "checked" -> if (type == UiWidgetType.CHECKBOX) UiBindingSlot(ONLY_BOOLEAN, true) else null
     else -> null
@@ -98,26 +116,31 @@ fun planBindings(collection: UiCollection): UiBindingPlan {
     val ignored = HashSet<Pair<String, String>>()
     fun walk(widget: UiWidget, item: Map<String, UiBindingType>?) {
         val type = widget.type
-        if (type != null) for ((property, name) in widget.bindings) {
-            val slot = bindingSlot(type, property)
-            // a row widget names a field of its list's record; anything else is a declared binding
-            val binding = if (name.startsWith(UI_ITEM_PREFIX)) item?.get(name.removePrefix(UI_ITEM_PREFIX))?.let { UiBinding(name, it, UiBindingAccess.READ_ONLY, null) }
-            else collection.binding(name)
-            fun problem(code: UiBindingIssue) {
-                diagnostics += UiBindingDiagnostic(code, name, widget.id, property)
-                ignored += widget.id to property
-                if (slot?.writable == true) disabled += widget.id
-            }
-            when {
-                slot == null -> problem(UiBindingIssue.UNSUPPORTED_PROPERTY)
-                binding == null -> problem(UiBindingIssue.UNKNOWN_BINDING)
-                binding.type !in slot.types -> problem(UiBindingIssue.INCOMPATIBLE_TARGET)
-                slot.writable && binding.access != UiBindingAccess.WRITE -> problem(UiBindingIssue.READ_ONLY_TARGET)
+        if (type != null) {
+            for ((property, name) in widget.bindings) {
+                val slot = bindingSlot(type, property)
+                // a row widget names a field of its list's record; anything else is a declared binding
+                val binding = if (name.startsWith(UI_ITEM_PREFIX)) item?.get(name.removePrefix(UI_ITEM_PREFIX))
+                    ?.let { UiBinding(name, it, UiBindingAccess.READ_ONLY, null) }
+                else collection.binding(name)
+
+                fun problem(code: UiBindingIssue) {
+                    diagnostics += UiBindingDiagnostic(code, name, widget.id, property)
+                    ignored += widget.id to property
+                    if (slot?.writable == true) disabled += widget.id
+                }
+                when {
+                    slot == null -> problem(UiBindingIssue.UNSUPPORTED_PROPERTY)
+                    binding == null -> problem(UiBindingIssue.UNKNOWN_BINDING)
+                    binding.type !in slot.types -> problem(UiBindingIssue.INCOMPATIBLE_TARGET)
+                    slot.writable && binding.access != UiBindingAccess.WRITE -> problem(UiBindingIssue.READ_ONLY_TARGET)
+                }
             }
         }
         widget.children.forEach { walk(it, item) }
         if (type == UiWidgetType.LIST) {
-            val record = widget.bindings["items"]?.let(collection::binding)?.takeIf { it.type == UiBindingType.LIST }?.fields?.associate { it.name to it.type }.orEmpty()
+            val record = widget.bindings["items"]?.let(collection::binding)
+                ?.takeIf { it.type == UiBindingType.LIST }?.fields?.associate { it.name to it.type }.orEmpty()
             widget.template?.let { walk(it, record) }
             widget.empty?.let { walk(it, null) }
         }
@@ -137,14 +160,20 @@ internal fun writableProperty(type: UiWidgetType?): String? = when (type) {
  * The values widgets show for one published [UiSnapshot]: a missing or wrongly typed value falls back to the declared
  * sample (or the type's zero) with a diagnostic. Pure; building a view never writes.
  */
-class UiBindingView(private val collection: UiCollection, private val plan: UiBindingPlan, private val values: Map<String, UiValue>, val diagnostics: List<UiBindingDiagnostic>) {
+class UiBindingView(
+    private val collection: UiCollection,
+    private val plan: UiBindingPlan,
+    private val values: Map<String, UiValue>,
+    val diagnostics: List<UiBindingDiagnostic>
+) {
     fun value(binding: String): UiValue? = values[binding]
 
     /** The items of list binding [binding]; empty when it is not a list. */
     fun rows(binding: String): List<Map<String, UiValue>> = (values[binding] as? UiValue.Rows)?.items.orEmpty()
 
     /** The style name of [widget]: the bound string when it has a usable `style` binding, else its authored `style`. */
-    fun styleName(widget: UiWidget): String? = (bound(widget, "style") as? UiValue.Text)?.value?.takeIf { it.isNotEmpty() } ?: widget.style
+    fun styleName(widget: UiWidget): String? =
+        (bound(widget, "style") as? UiValue.Text)?.value?.takeIf { it.isNotEmpty() } ?: widget.style
 
     private fun bound(widget: UiWidget, property: String): UiValue? =
         if (plan.isIgnored(widget.id, property)) null else widget.bindings[property]?.let(values::get)
@@ -152,16 +181,22 @@ class UiBindingView(private val collection: UiCollection, private val plan: UiBi
     /** Displayed text: the bound value (numbers with `precision`), else the literal `text`, wrapped in `prefix` / `suffix`. */
     fun text(widget: UiWidget): String {
         val value = bound(widget, "text")
-        val body = if (value != null) formatValue(value, widget.properties["precision"]?.takeIf { it.isIntegralNumber }?.intValue())
+        val body = if (value != null) formatValue(
+            value,
+            widget.properties["precision"]?.takeIf { it.isIntegralNumber }?.intValue()
+        )
         else widget.properties["text"]?.takeIf { it.isTextual }?.textValue().orEmpty()
-        return (widget.properties["prefix"]?.asText().orEmpty()) + body + (widget.properties["suffix"]?.asText().orEmpty())
+        return (widget.properties["prefix"]?.asText().orEmpty()) + body + (widget.properties["suffix"]?.asText()
+            .orEmpty())
     }
 
     fun number(widget: UiWidget, property: String, default: Double): Double =
-        (bound(widget, property) as? UiValue.Num)?.value ?: widget.properties[property]?.takeIf { it.isNumber }?.doubleValue() ?: default
+        (bound(widget, property) as? UiValue.Num)?.value ?: widget.properties[property]?.takeIf { it.isNumber }
+            ?.doubleValue() ?: default
 
     fun flag(widget: UiWidget, property: String, default: Boolean): Boolean =
-        (bound(widget, property) as? UiValue.Bool)?.value ?: widget.properties[property]?.takeIf { it.isBoolean }?.booleanValue() ?: default
+        (bound(widget, property) as? UiValue.Bool)?.value ?: widget.properties[property]?.takeIf { it.isBoolean }
+            ?.booleanValue() ?: default
 
     fun visible(widget: UiWidget) = flag(widget, "visible", true)
 
@@ -195,15 +230,20 @@ class UiBindingResolver(private val collection: UiCollection) {
                 published == null -> diagnostics += UiBindingDiagnostic(UiBindingIssue.MISSING_VALUE, binding.name)
                 published.type != binding.type || (published is UiValue.Num && !published.value.isFinite()) ->
                     diagnostics += UiBindingDiagnostic(UiBindingIssue.INCOMPATIBLE_VALUE, binding.name)
-                else -> { values[binding.name] = published; continue }
+
+                else -> {
+                    values[binding.name] = published; continue
+                }
             }
             values[binding.name] = fallback(binding)
         }
         for (binding in collection.bindings) if (binding.type == UiBindingType.LIST) {
-            val rows = sanitize(binding, values[binding.name] as? UiValue.Rows ?: UiValue.Rows(emptyList()), diagnostics)
+            val rows =
+                sanitize(binding, values[binding.name] as? UiValue.Rows ?: UiValue.Rows(emptyList()), diagnostics)
             values[binding.name] = rows
             // each field of each row is also a value of its own, which the expanded row widgets are bound to
-            rows.items.take(MAX_LIST_ROWS).forEachIndexed { i, row -> for ((field, v) in row) values[uiRowBinding(binding.name, i, field)] = v }
+            rows.items.take(MAX_LIST_ROWS)
+                .forEachIndexed { i, row -> for ((field, v) in row) values[uiRowBinding(binding.name, i, field)] = v }
         }
         val view = UiBindingView(collection, plan, values, diagnostics)
         val stack = ArrayDeque<UiWidget>()
@@ -214,13 +254,19 @@ class UiBindingResolver(private val collection: UiCollection) {
             widget.template?.let(stack::addLast); widget.empty?.let(stack::addLast)
             if (widget.type == UiWidgetType.PROGRESS_BAR && ("maximum" in widget.bindings || "maximum" in widget.properties)) {
                 val max = view.number(widget, "maximum", 1.0)
-                if (!(max > 0.0) || !max.isFinite()) diagnostics += UiBindingDiagnostic(UiBindingIssue.INVALID_MAXIMUM, widget.bindings["maximum"], widget.id, "maximum")
+                if (!(max > 0.0) || !max.isFinite()) diagnostics += UiBindingDiagnostic(
+                    UiBindingIssue.INVALID_MAXIMUM,
+                    widget.bindings["maximum"],
+                    widget.id,
+                    "maximum"
+                )
             }
         }
         return view
     }
 
-    private fun fallback(binding: UiBinding): UiValue = binding.sample?.let { scalar(binding.type, it, binding.fields) } ?: zero(binding.type)
+    private fun fallback(binding: UiBinding): UiValue =
+        binding.sample?.let { scalar(binding.type, it, binding.fields) } ?: zero(binding.type)
 
     private fun zero(type: UiBindingType): UiValue = when (type) {
         UiBindingType.NUMBER -> UiValue.Num(0.0)
@@ -229,7 +275,11 @@ class UiBindingResolver(private val collection: UiCollection) {
         UiBindingType.LIST -> UiValue.Rows(emptyList())
     }
 
-    private fun scalar(type: UiBindingType, node: com.fasterxml.jackson.databind.JsonNode, fields: List<UiRecordField>): UiValue = when (type) {
+    private fun scalar(
+        type: UiBindingType,
+        node: com.fasterxml.jackson.databind.JsonNode,
+        fields: List<UiRecordField>
+    ): UiValue = when (type) {
         UiBindingType.NUMBER -> UiValue.Num(node.doubleValue())
         UiBindingType.BOOLEAN -> UiValue.Bool(node.booleanValue())
         UiBindingType.STRING -> UiValue.Text(node.textValue())
@@ -239,7 +289,11 @@ class UiBindingResolver(private val collection: UiCollection) {
     }
 
     /** The rows with every declared field present and typed: a bad or missing field is its type's zero, reported once per row and field. */
-    private fun sanitize(binding: UiBinding, rows: UiValue.Rows, diagnostics: MutableList<UiBindingDiagnostic>): UiValue.Rows =
+    private fun sanitize(
+        binding: UiBinding,
+        rows: UiValue.Rows,
+        diagnostics: MutableList<UiBindingDiagnostic>
+    ): UiValue.Rows =
         UiValue.Rows(rows.items.mapIndexed { i, row ->
             binding.fields.associate { f ->
                 val v = row[f.name]

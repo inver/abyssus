@@ -54,7 +54,11 @@ class ScenePicker {
     }
 
     /** [maxDistance] limits how far a terrain is searched along the ray (the camera's far plane). */
-    fun pick(ray: Ray, boxes: List<BoxTarget>, terrains: List<TerrainTarget>, maxDistance: Float): String? {
+    fun pick(ray: Ray, boxes: List<BoxTarget>, terrains: List<TerrainTarget>, maxDistance: Float): String? =
+        nearest(ray, boxes, terrains, maxDistance)?.first
+
+    /** Like [pick], with the distance along [ray] to the hit. */
+    fun nearest(ray: Ray, boxes: List<BoxTarget>, terrains: List<TerrainTarget>, maxDistance: Float): Pair<String, Float>? {
         var best: String? = null
         var bestDistance = Float.MAX_VALUE
         val hit = Vector3()
@@ -73,7 +77,7 @@ class ScenePicker {
                 best = t.entityId
             }
         }
-        return best
+        return best?.let { it to bestDistance }
     }
 
     /**

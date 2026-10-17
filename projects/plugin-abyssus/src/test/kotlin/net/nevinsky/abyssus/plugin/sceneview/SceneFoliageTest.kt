@@ -27,7 +27,7 @@ import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageScatter
 import net.nevinsky.abyssus.lib.core.editor.foliage.MaskRect
 import net.nevinsky.abyssus.lib.core.editor.foliage.mergeFoliageChunks
 import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
-import net.nevinsky.abyssus.lib.core.editor.testProject
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger

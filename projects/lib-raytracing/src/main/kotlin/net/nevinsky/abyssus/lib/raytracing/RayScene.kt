@@ -246,11 +246,11 @@ fun sameGeometry(previous:List<RayMesh>?,next:List<RayMesh>)=previous!=null && p
 
 class RaySceneRequest(override val key: RayFrameKey, override val width: Int, override val height: Int, override val camera: RaySliceCamera, val scene: RaySceneSnapshot,
     val samples: Int=1, val sampleOffset: Int=0, val accumulationEpoch: Long=0,
-    val maxReflectionBounces: Int=1, val maxRefractionBounces: Int=0, val maxRaysPerFrame: Long=2097152,
+    val maxReflectionBounces: Int=1, val maxRefractionBounces: Int=0, val maxRaysPerFrame: Long=33554432,
     val settingsRevision: Long=0) : RayRenderRequest {
     init {
         require(width>0 && height>0 && samples in 1..8 && sampleOffset>=0)
-        require(maxReflectionBounces in 0..16 && maxRefractionBounces in 0..16 && maxRaysPerFrame in 1..67108864)
+        require(maxReflectionBounces in 0..16 && maxRefractionBounces in 0..16 && maxRaysPerFrame in 1..MAX_RAYS_PER_FRAME)
     }
     override fun withRenderPlan(width: Int,height: Int,samples: Int,sampleOffset: Int,accumulationEpoch: Long) =
         RaySceneRequest(key,width,height,camera,scene,samples,sampleOffset,accumulationEpoch,maxReflectionBounces,maxRefractionBounces,maxRaysPerFrame,settingsRevision)

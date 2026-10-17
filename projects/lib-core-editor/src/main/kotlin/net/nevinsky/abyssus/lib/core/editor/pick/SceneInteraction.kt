@@ -40,6 +40,12 @@ class SceneInteraction(
     /** Called with the entity id of a click that selected something. */
     var onPick: ((String) -> Unit)? = null
 
+    /** Called with the id of a click that selected a water surface. */
+    var onPickWater: ((String) -> Unit)? = null
+
+    /** Called when a water move ends with the surface at a new centre; returns whether it was written to the scene. */
+    var onWaterMove: ((String, Vec3) -> Boolean)? = null
+
     /** Called when a drag ends with a changed transform; returns whether it was written to the scene. */
     var onTransform: ((String, TransformEdit) -> Boolean)? = null
 
@@ -63,6 +69,17 @@ class SceneInteraction(
         private set(value) {
             state.selectedId = value
         }
+
+    /** The water surface that is selected, or null. */
+    val selectedWater: String? get() = state.selectedWater
+
+    /** Selects the water surface [id] (from the tree or after adding it); ends Paint Foliage. */
+    fun selectWater(id: String) {
+        if (state.selectedWater == id) return
+        state.selectedWater = id
+        state.paint = null
+        stateChanged()
+    }
 
     var mode: GizmoMode
         get() = state.gizmoMode
@@ -88,6 +105,11 @@ class SceneInteraction(
             var result: DragResult? = null
         }
 
+        /** A move handle of the water surface [waterId] is being dragged; [result] is where its centre is now. */
+        class DraggingWater(val drag: GizmoDrag, val waterId: String) : Gesture {
+            var result: DragResult? = null
+        }
+
         /** Set by Esc (or by the dragged entity leaving the scene): the rest of the gesture, up to the release, does nothing. */
         data object Cancelled : Gesture
 
@@ -106,7 +128,7 @@ class SceneInteraction(
     private var lastY = 0
     private var gesture: Gesture = Gesture.Idle
 
-    val isDragging: Boolean get() = gesture is Gesture.Dragging
+    val isDragging: Boolean get() = gesture is Gesture.Dragging || gesture is Gesture.DraggingWater
 
     /** The arrangement being drawn, or null outside the drawing mode. */
     val drawing: PathDrawing? get() = state.drawing
@@ -167,7 +189,9 @@ class SceneInteraction(
         click.pressed(x, y)
         val id = selectedId
         // Drawing mode: a press only starts a click that adds a point (or a camera drag).
-        if (!left || state.drawing != null || id == null || size.isEmpty) return
+        if (!left || state.drawing != null || size.isEmpty) return
+        state.selectedWater?.let { startWaterDrag(it, x, y); return }
+        if (id == null) return
         val at = size.toFramebuffer(x, y)
         if (startPathDrag(id, at)) return
         val paint = state.paint
@@ -178,6 +202,16 @@ class SceneInteraction(
         val axis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
         val started = queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
         gesture = Gesture.Dragging(started, id)
+        state.hoveredAxis = axis
+        stateChanged()
+    }
+
+    /** The left press on a move handle of the selected water surface starts a drag of its centre. */
+    private fun startWaterDrag(waterId: String, x: Int, y: Int) {
+        val at = size.toFramebuffer(x, y)
+        val axis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
+        val started = queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
+        gesture = Gesture.DraggingWater(started, waterId)
         state.hoveredAxis = axis
         stateChanged()
     }
@@ -226,6 +260,13 @@ class SceneInteraction(
                 g.result = result
                 state.preview = mapOf(g.entityId to result)
             }
+            is Gesture.DraggingWater -> {
+                val at = size.toFramebuffer(x, y)
+                val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
+                val result = g.drag.update(ray)
+                g.result = result
+                state.waterPreview = mapOf(g.waterId to result.transform.position)
+            }
             is Gesture.DraggingPathPoint -> {
                 val at = size.toFramebuffer(x, y)
                 val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
@@ -270,6 +311,16 @@ class SceneInteraction(
             }
             is Gesture.Painting -> {
                 foliagePaint?.released()
+                stateChanged()
+            }
+            is Gesture.DraggingWater -> {
+                val result = ended.result
+                if (result != null && result.transform != ended.drag.start) {
+                    val written = onWaterMove?.invoke(ended.waterId, result.transform.position) ?: false
+                    if (!written) state.waterPreview = emptyMap()
+                } else {
+                    state.waterPreview = emptyMap()
+                }
                 stateChanged()
             }
             is Gesture.Dragging -> {
@@ -392,6 +443,7 @@ class SceneInteraction(
         if (!isDragging) return
         gesture = Gesture.Cancelled
         state.preview = emptyMap()
+        state.waterPreview = emptyMap()
         state.hoveredAxis = null
         stateChanged()
     }
@@ -399,7 +451,16 @@ class SceneInteraction(
     private fun pickAt(x: Int, y: Int) {
         if (size.isEmpty) return
         val at = size.toFramebuffer(x, y)
-        val picked = queries.pick(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
+        val target = queries.pickTarget(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
+        if (target is SceneTarget.Water) {
+            val changed = state.selectedWater != target.id || state.paint != null
+            state.selectedWater = target.id
+            state.paint = null
+            onPickWater?.invoke(target.id)
+            if (changed) stateChanged()
+            return
+        }
+        val picked = (target as? SceneTarget.Entity)?.id
         // A line lies on the terrain, so it wins over the terrain under it but not over a model (a copy) in front of it.
         val line = if (picked == null || queries.content.terrains.any { it.entityId == picked }) {
             queries.pathLineAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
@@ -422,9 +483,15 @@ class SceneInteraction(
     fun paramsChanged(params: SceneRenderParams) {
         refreshDropAfterFrame = true
         state.preview = emptyMap()
+        state.waterPreview = emptyMap()
         if (gesture !is Gesture.DraggingPathPoint) state.pathEdit = null
         var changed = false
         selectedId?.let { if (!ScenePreview().contains(params.content, it)) { selectedId = null; changed = true } }
+        // a surface deleted (or made invalid) elsewhere leaves nothing selected rather than another target
+        state.selectedWater?.let { id ->
+            if (params.content.water.none { it.id == id }) { state.selection = null; changed = true }
+        }
+        (gesture as? Gesture.DraggingWater)?.let { if (params.content.water.none { w -> w.id == it.waterId }) gesture = Gesture.Cancelled }
         state.viewCamera?.let { id -> if (params.content.cameras.none { it.entityId == id }) { state.viewCamera = null; changed = true } }
         val dragging = gesture as? Gesture.Dragging
         if (dragging != null && !ScenePreview().contains(params.content, dragging.entityId)) gesture = Gesture.Cancelled

@@ -13,9 +13,9 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.graphics.g3d.Material
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.gdx.Renderable
+import com.badlogic.gdx.graphics.g3d.Renderable
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.gdx.mesh.Mesh
+import net.nevinsky.abyssus.lib.gdx.g3d.IntMesh
 
 
 /** The texture unit of the splat map; the layers take the units before it. */
@@ -33,7 +33,7 @@ private val LAYER_UNIFORMS = SPLAT_LAYERS.map { "u_$it" }
 class TerrainMesh(prepared: PreparedTerrain, private val assets: BuiltAssets) : Disposable {
     val data = prepared.data
     private val indexCount: Int
-    private val mesh: Mesh
+    private val mesh: IntMesh
     private val splats = prepared.splats
     private var configuredSplat: Texture? = null
     private val depthMaterial = Material()
@@ -42,7 +42,7 @@ class TerrainMesh(prepared: PreparedTerrain, private val assets: BuiltAssets) : 
         val vertices = prepared.vertices
         val indices = prepared.indices
         indexCount = indices.size
-        mesh = Mesh(
+        mesh = IntMesh(
             true, vertices.size / TERRAIN_FLOATS_PER_VERTEX, indices.size,
             VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0)
         )

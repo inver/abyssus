@@ -71,6 +71,7 @@ Top level, bound to `SceneDto` (`projects/lib-core/src/main/kotlin/net/nevinsky/
 | `fogEnabled` / `fog` | `color`, `density`, `gradient` |
 | `skyboxEnabled` / `skyboxName` | `skyboxName` is a `SKYBOX`, `SKYBOX_PROCEDURAL` or `SKYBOX_HDR` asset folder name, or `null` |
 | `ecs` | Entities, kept as raw JSON (`JsonNode`) |
+| `abyssus` | Abyssus-only extension data, kept as raw JSON; today it holds `waterSurfaces` (see "Water surfaces") |
 
 **Toggles:** an `<x>Enabled` boolean gates `<x>` (or `<x>Name`). The tree folds it into an eye on the gated row. The
 tree shows `skyboxName` as `skybox`, but the key in the file stays `skyboxName`.
@@ -558,7 +559,7 @@ Native version 1 scenes may contain a root `rayTracing` object. Omitted fields u
 | Field | Default | Accepted integers |
 |---|---:|---:|
 | `targetSamplesPerPixel` | 256 | 1–4096 |
-| `maxRaysPerFrame` | 2097152 | 1–67108864 |
+| `maxRaysPerFrame` | 33554432 | 1–268435456 |
 | `maxReflectionBounces` | 1 | 0–16 |
 | `maxRefractionBounces` | 0 | 0–16 |
 | `maxInstances` | 4096 | 1–4096 |
@@ -576,3 +577,49 @@ IDs. A PBR material entry accepts finite `transmission` from 0 through 1 (defaul
 (default 1.5). Default fields are omitted on reset. These overrides belong to the scene instance and never change
 model sources or asset metadata. Unresolved or ambiguous material IDs are preserved without retargeting; ray
 conversion refuses unsupported overrides. Geometry and textures stay shared while affected materials are copied.
+
+## Water surfaces
+
+A native scene may carry procedural water under the root `abyssus.waterSurfaces` object, keyed by a stable surface id
+(a UUID string). Water is not an ECS entity and not an asset. It is Abyssus-only extension data inside a version 1
+document: the loader keeps it, no other tool is promised to. The codec is `WaterCodec`
+(`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/water/WaterCodec.kt`); the edits are
+`WaterEdits` in the same package; the scalars and rules are `WaterSettings` / `WaterValidation`
+(`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/water/WaterSettings.kt`).
+
+```json
+"abyssus": { "waterSurfaces": { "<id>": {
+  "name": "Lake", "preset": "LAKE", "enabled": true,
+  "position": { "x": 0, "y": 0, "z": 0 },
+  "width": 100, "length": 100,
+  "tint": { "r": 0.03, "g": 0.22, "b": 0.25 },
+  "clarity": 8,
+  "waveAmplitude": 0.08, "waveLength": 4, "waveSpeed": 0.5,
+  "foamAmount": 0.5, "foamWidth": 0.6 } } }
+```
+
+`position` is the surface centre; `y` is the mean water level. `width` runs along X and `length` along Z (world
+units); there is no rotation or scale. `clarity` is the distance over which the tint hides a submerged bottom.
+`preset` (`LAKE` or `SEA`) records the starting choice; it is not a live link, and editing a value never changes it.
+
+| Field | Lake | Sea | Rule |
+|---|---:|---:|---|
+| `width` / `length` | 100 / 100 | 2000 / 2000 | finite, > 0 |
+| `tint` r, g, b | 0.03, 0.22, 0.25 | 0.02, 0.12, 0.20 | finite, 0 to 1 |
+| `clarity` | 8 | 15 | finite, > 0 |
+| `waveAmplitude` | 0.08 | 0.6 | finite, >= 0 |
+| `waveLength` | 4 | 24 | finite, > 0 |
+| `waveSpeed` | 0.5 | 2 | finite, >= 0 |
+| `foamAmount` | 0.5 | 0.8 | finite, 0 to 1 |
+| `foamWidth` | 0.6 | 1.5 | finite, > 0 |
+
+Creating a surface writes every value explicitly, so retuned defaults never change a saved surface. When reading, a
+missing scalar takes its preset's default without any write. A surface with an unknown or missing `preset`, a value of
+the wrong type, or an out-of-range value is invalid: it stays a removable row, is not drawn, and is logged; nothing is
+repaired. If `abyssus` or `waterSurfaces` is not an object, no water is read and an add is refused; an incompatible
+container is never replaced.
+
+Edits go through `editSceneJson` as one named undoable command and touch only the targeted `abyssus.waterSurfaces.<id>`
+members. Unknown members, key order and number text elsewhere survive, and removing the last surface leaves an empty
+`waterSurfaces` object so unrelated `abyssus` members are undisturbed. Opening or reading a scene writes nothing, and a
+scene without the extension has no water. There is no migration: nothing adds, converts or rewrites the extension.

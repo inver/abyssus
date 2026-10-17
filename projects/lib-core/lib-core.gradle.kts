@@ -38,11 +38,29 @@ dependencies {
 tasks.test {
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
-    // the native fixture projects are shared with the plugin's tests
-    systemProperty("abyssus.testData", rootProject.file("projects/plugin-abyssus/src/test/testData").absolutePath)
+}
+
+// Compares two graphics reports (docs/ai/testing.md, "Graphics performance evidence"):
+// ./gradlew :lib-core:comparePerf -Pbaseline=<report.json> -Pcandidate=<report.json>
+tasks.register<JavaExec>("comparePerf") {
+    group = "verification"
+    description = "Compares a candidate graphics report with a baseline; fails on a regression."
+    classpath = sourceSets["testFixtures"].runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.lib.core.testing.perf.PerfCompareMain")
+    val baseline = providers.gradleProperty("baseline")
+    val candidate = providers.gradleProperty("candidate")
+    argumentProviders.add(CommandLineArgumentProvider {
+        listOf(
+            baseline.orNull ?: throw GradleException("Pass -Pbaseline=<report.json>"),
+            candidate.orNull ?: throw GradleException("Pass -Pcandidate=<report.json>"),
+        )
+    })
 }
 
 extra["abyssusSingletonExcludes"] = listOf(
     "net/nevinsky/abyssus/lib/core/io/AbyssusProjectLayout.kt",
     "net/nevinsky/abyssus/lib/core/util/GeometryUtils.kt"
 )
+
+// Games ship this library: `checkNoEditorCode` keeps editor imports and ray-tracing snapshot types out of it.
+extra["abyssusShippedLibrary"] = true

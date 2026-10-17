@@ -11,11 +11,10 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.collision.BoundingBox
-import net.nevinsky.abyssus.lib.gdx.ModelBatch
-import net.nevinsky.abyssus.lib.gdx.ModelInstance
+import com.badlogic.gdx.graphics.g3d.ModelBatch
+import com.badlogic.gdx.graphics.g3d.ModelInstance
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.gdx.shader.DefaultShaderProvider
-import net.nevinsky.abyssus.lib.gdx.shader.ShaderProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -34,8 +33,8 @@ class LargeMeshGlTest {
         val data = loader.loadData(FileHandle(file))
 
         TestGl.run {
-            val model = loader.build(data, FileHandle(file))
-            val shaders = DefaultShaderProvider()
+            val model = loader.buildIntModel(data, FileHandle(file))
+            val shaders = ModelShaderProvider()
             try {
                 val mesh = model.meshes.single()
                 assertEquals(grid.vertexCount, mesh.numVertices)
@@ -43,7 +42,7 @@ class LargeMeshGlTest {
 
                 // reads positions through the 32-bit index buffer: a 16-bit index would stop at row 218
                 val instance = ModelInstance(model)
-                val box = instance.calculateBoundingBox(BoundingBox())!!
+                val box = instance.calculateBoundingBox(BoundingBox())
                 val far = (grid.size - 1).toFloat()
                 assertEquals(0f, box.min.x, 1e-4f)
                 assertEquals(0f, box.min.z, 1e-4f)
@@ -59,7 +58,7 @@ class LargeMeshGlTest {
                 }
                 val batch = ModelBatch(shaders)
                 batch.begin(camera)
-                batch.render(instance, ShaderProvider.DEFAULT_SHADER_KEY)
+                batch.render(instance)
                 batch.end()
                 assertEquals("GL error after drawing", GL20.GL_NO_ERROR, Gdx.gl.glGetError())
             } finally {

@@ -53,16 +53,16 @@ class SceneRaySettingsPanelTest:BasePlatformTestCase() {
         val samples=(named(view,"ray-setting-targetSamplesPerPixel-help") as JLabel).text
         val rays=(named(view,"ray-setting-maxRaysPerFrame-help") as JLabel).text
         assertTrue(samples,samples.contains("accumulated") && samples.contains("1–4096") && samples.contains("default 256"))
-        assertTrue(rays,rays.contains("submitted frame") && rays.contains("shadow") && rays.contains("1–67108864") && rays.contains("default 2097152"))
+        assertTrue(rays,rays.contains("submitted frame") && rays.contains("shadow") && rays.contains("1–268435456") && rays.contains("default 33554432"))
         for(key in listOf("maxReflectionBounces","maxRefractionBounces"))
             assertTrue((named(view,"ray-setting-$key-help") as JLabel).text.contains("0–16"))
-        assertEquals(listOf("256","2097152","1","0"),listOf("targetSamplesPerPixel","maxRaysPerFrame","maxReflectionBounces","maxRefractionBounces")
+        assertEquals(listOf("256","33554432","1","0"),listOf("targetSamplesPerPixel","maxRaysPerFrame","maxReflectionBounces","maxRefractionBounces")
             .map { (named(view,"ray-setting-$it") as JBTextField).text })
     }
     fun testOutOfRangeAndNonNumericEditsAreRejectedForEveryField() {
         val file=file();val document=FileDocumentManager.getInstance().getDocument(file)!!;val original=document.text
         val view=view(file)
-        for((key,bad) in listOf("targetSamplesPerPixel" to "0","targetSamplesPerPixel" to "4097","maxRaysPerFrame" to "67108865",
+        for((key,bad) in listOf("targetSamplesPerPixel" to "0","targetSamplesPerPixel" to "4097","maxRaysPerFrame" to "268435457",
             "maxReflectionBounces" to "-1","maxRefractionBounces" to "17","maxRefractionBounces" to "two")) {
             val field=named(view,"ray-setting-$key") as JBTextField
             field.text=bad;field.postActionEvent()

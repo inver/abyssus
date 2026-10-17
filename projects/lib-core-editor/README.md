@@ -34,7 +34,7 @@ namespace, including extension providers that use editor value types, must updat
 | `terrain` | Terrain generation, noise, recipe, new-terrain files and checks |
 | `foliage` | Terrain foliage authoring: `FoliageSettingsReader` / `FoliageRead` (typed settings from an `additional` node with validation), the field keys and defaults, `FoliageScatter` (deterministic copy generation), `FoliageBrush` / `MaskRect` (the density-mask brush and its dirty rectangles), `FoliageDraft` (uncommitted settings, masks and dirty chunks), `FoliageMetaEdits` (settings diffs as `DocumentTextEditor` edits), `FoliageColliderEdits` (a layer's `collider` member patched from the edited collider, nested unknown members kept, and the collider-only classification of a diff; `FoliageSettingsReader` validates colliders and `transitions` refuses OBJECT to DETAIL with one) and `NewFoliageFiles` / `FoliageAssetWriter` (planning a new `FOLIAGE` asset) |
 | `meta` | `AssetMetaEditor` and field descriptions, `MetaRows`, `AssetReferenceChoices`, the panel's entity sections and asset field states |
-| `ray` | The ray tracing bridge: `RayBackendService`, `RayBackendSelector`, `RayViewRuntime`, `RayViewFeed`, `RaySceneSnapshots`, `RaySkyBaker` (a display-value sky bake with clouds at a given sky time and a revision per bake), `RayModeState`, diagnostics. A `RayFrameContext` carries the sky light (six axis colours), the baked sky and the cloud shade on the sun (`sunVisibility`, a `RaySunVisibility` from `raytracing`); a changed light, bake revision or visibility is an `ENVIRONMENT` change that restarts accumulation |
+| `ray` | The ray tracing bridge: `RayBackendService`, `RayBackendSelector`, `RayViewRuntime`, `RayViewFeed`, `RaySceneSnapshots`, `RaySkyBaker` (a display-value sky bake with clouds at a given sky time and a revision per bake), `RayModeState`, diagnostics. The CPU snapshots of models, terrains and skies are in `ray.snapshot` (see Optional CPU companions below). A `RayFrameContext` carries the sky light (six axis colours), the baked sky and the cloud shade on the sun (`sunVisibility`, a `RaySunVisibility` from `raytracing`); a changed light, bake revision or visibility is an `ENVIRONMENT` change that restarts accumulation |
 | `headless` | `HeadlessEditing` (spec `headless-scene-editing`) |
 | `flightgear` | The FlightGear aircraft import: archive, model XML, AC3D and SGI readers, `FlightGearImport` |
 | `modelimport` | The model import: `ModelSource`, `ImportSettings`, `ImportTransform`, `TextureGather`, `ModelImport` |
@@ -134,7 +134,79 @@ asset-property edits, returning the edited text or a `Refusal` with the reason t
 
 `./gradlew :lib-core-editor:test` (one class: `--tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`). Tests use
 `projects/plugin-abyssus` as their working directory, so `src/test/testData/project/` resolves to the shared fixtures.
+
 The test fixtures (`parseScene`, `testProject`, `testAsset`, `terrainData`, `rayTestModel`) are shared with the plugin's tests.
+
+## Optional CPU companions (ray snapshots)
+
+These live in the `editor.ray.snapshot` package. They are editor-only, so a shipped game links none of them.
+
+`RaySnapshotStore<S, D>(executor, metaLoader, loader, label, maxBytes)` is one shared, reference-counted cache of
+immutable CPU snapshots for one asset kind of one project, keyed by asset name. The plugin builds one each for models,
+terrains and skies. `S` is the snapshot (a `RaySnapshot` with a `byteSize`), `D` is the source a raster preparation
+already holds, and `label` ("model", "terrain", "sky") names the kind in failure messages.
+
+- `acquire(name)` returns a closeable `RaySnapshotLease`: `snapshot` is null while preparation is pending, `failure`
+  explains an unreadable or over-budget asset. Close leases on ray-mode disable, asset removal and project/view
+  replacement. Repeated instances/views share the same immutable snapshot; the last close removes the cached bytes. A
+  closed lease holds no snapshot, and results arriving after release are dropped.
+- `invalidate(name)` drops the old revision and any read in flight, then allows a fresh acquisition.
+- `RaySnapshotLoader<S, D>` builds the snapshot: `load(meta)` reads the asset afresh (the fallback when ray mode starts
+  after the raster asset is cached), and `capture(source)` copies a `D` that raster preparation offers. Kinds with no
+  raster capture (skies) leave `capture` at its default and use `D = Nothing`.
+- Ordinary raster preparation retains nothing when no lease requests the asset. When one does, `ModelLoader` calls the store through `store.asPreparationTap()` (a `lib-core` `ModelPreparationTap`; the offer is
+  `store.preparation(name)?.offer(source)` with a `RayModelSource`) before upload disposes the Pixmaps; an offer after cancellation or reacquisition is a no-op. The fallback `load` disposes its own
+  decoded images after copying, including failures. It never reads back, reloads or disposes a GPU resource.
+- The terrain store has no raster capture (`D = Nothing`): the raster terrain keeps no pixels once its textures are
+  on the GPU, so `TerrainRaySnapshotLoader` reads heights (through a `TerrainLoader`) and splat images (through a
+  `TextureLoader`) afresh. It is a CPU companion read, not an asset load, so it uses both loaders directly.
+
+### Optional CPU model companions
+
+Snapshots copy 32-bit indices, interleaved vertex data/layout, mesh parts, material
+parameters, node transforms/material assignments/bind transforms, and RGBA8888 image
+bytes. Mutable libGDX objects and GL handles never cross this boundary. Image rows
+retain Pixmap upload order; texture bindings keep UV transforms and the raster
+renderer's Linear/Repeat/no-mipmap sampling. Raster default/PBR shaders sample all
+these bytes linearly, including diffuse/emissive images, so snapshots apply no sRGB
+conversion. Animation pose/deformation and native material conversion remain later
+ray-renderer work.
+
+Default bounds are 128 MiB geometry/image payload per model (`ModelRaySnapshotLoader`) and 256 MiB retained
+payload across the store. Exceeding them reports a CPU companion failure without
+breaking raster loading. These account for retained array payload, not native/GPU
+allocations or temporary decoder memory; backend/application budgets are separate.
+
+### Optional CPU terrain companions
+
+The terrain store has the same lease lifecycle, with separate default bounds of 128 MiB per terrain
+(`TerrainRaySnapshotLoader`) and 256 MiB retained across the store. It copies heights, the raster mesh's 32-bit triangle indices, interleaved
+positions/normals/layer UVs, and decoded splat image bytes before upload/disposal.
+Late acquisition loads the terrain through the plain `TerrainLoader` without touching cached GPU resources.
+Snapshots stay terrain-local and can be shared across transformed instances; the
+scene conversion supplies world transforms and inverse-transpose normal transforms.
+
+Splat-map coordinates are local xz divided by terrain size, with linear filtering
+and clamp-to-edge wrapping. Layers use the terrain's repeated UVs, Repeat wrapping,
+linear magnification and trilinear mipmap minification; snapshots retain base-level
+bytes and the mipmap requirement for later backend upload. All images follow the
+raster shader's linear color convention and Pixmap row order. Layer bindings retain
+base/R/G/B/A order: the shader mixes each present channel sequentially rather than
+normalizing the weights. Missing or unreadable images are omitted, matching raster
+loading: absent base means neutral gray, absent channel means skip that mix. Native
+sampling/shading remains later ray-renderer work. Cancellation drops late results,
+including raster preparations that began before a request was closed and reacquired.
+
+### Optional CPU sky companions
+
+The sky store hands out leases of an immutable `RaySkySnapshot`: the scene's sky as an equirectangular RGBA float image
+(centre column faces -Z, top row is +Y), at most `RAY_SKY_MAX_WIDTH` (1024) wide (a procedural sky baked by the view is 2048 wide, bilinear, as 8-bit `rgba8()` data). `HdrSkyRaySnapshotLoader` decodes an
+HDR sky again on the CPU and box-filters it down, keeping linear radiance far above 1; `SkyboxRaySnapshotLoader`
+resamples a cube skybox with the GL cube lookup the raster sky uses (faces are back, front, left, right, bottom, top =
++X, -X, +Y, -Y, +Z, -Z) and keeps its display values. `ProceduralSkyRaySnapshotLoader` returns null: a procedural sky is
+the asset's own GLSL and has no CPU form, so it reads as unavailable and the caller falls back to the background colour.
+Leases share one read per asset, drop the bytes with the last reference (default bound 128 MiB in the plugin's wiring),
+and never touch the GPU caches or GL.
 
 ## Weather snapshots
 

@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.plugin.ui.CommitOutcome
+import net.nevinsky.abyssus.plugin.ui.choiceEditor
+import net.nevinsky.abyssus.plugin.ui.textEditor
 import com.intellij.openapi.components.service
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
@@ -22,7 +25,6 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
@@ -31,7 +33,6 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.panels.VerticalLayout
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBFont
@@ -39,8 +40,6 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.meta.PropertyRow
-import net.nevinsky.abyssus.lib.core.editor.meta.RowKind
 import net.nevinsky.abyssus.lib.core.editor.meta.*
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.plugin.AbyssusBundle
@@ -59,9 +58,6 @@ import net.nevinsky.abyssus.plugin.terrain.TerrainGenerationSection
 import net.nevinsky.abyssus.plugin.terrain.TerrainSource
 import net.nevinsky.abyssus.plugin.terrain.terrainUnusableNote
 import java.awt.*
-import java.awt.event.FocusAdapter
-import java.awt.event.FocusEvent
-import java.awt.image.BufferedImage
 import javax.swing.*
 
 /**
@@ -177,8 +173,16 @@ class AssetPropertiesPanel(
         if (assetFolder != terrainFolder) useTerrain(null) // another selection: its draft and pending preview are discarded
         if (assetFolder != foliageFolder) useFoliage(null)
         val entity = if (assetFolder == null) componentTargetOf(node) else null
-        scene = entity?.file
+        val water = if (assetFolder == null && entity == null) waterTargetOf(node) else null
+        scene = entity?.file ?: water?.file
         projectFile = null
+        if (water != null) {
+            background {
+                val result = readWaterState(water)
+                ui { if (token == generation && !disposed) apply(result) }
+            }
+            return
+        }
         if (entity != null) {
             background {
                 val result = readEntityState(entity, services)
@@ -296,8 +300,10 @@ class AssetPropertiesPanel(
                 useTerrain(null)
                 useFoliage(null)
                 useUndoEditor(newState.file)
+                val own = com.intellij.openapi.util.Disposer.newDisposable(parentDisposable, "project-details")
+                    .also { viewDisposable = it }
                 content.removeAll()
-                content.add(JBScrollPane(ProjectDetailsView(newState, projectSettings)).apply {
+                content.add(JBScrollPane(ProjectDetailsView(newState, projectSettings, project.service<net.nevinsky.abyssus.plugin.sceneview.SceneViewSettings>(), own)).apply {
                     border = BorderFactory.createEmptyBorder()
                 }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)
@@ -325,6 +331,17 @@ class AssetPropertiesPanel(
                 useUndoEditor(null)
                 fillEmpty(newState)
                 cards.show(this, EMPTY)
+            }
+
+            is PanelState.WaterDetails -> {
+                useTerrain(null)
+                useFoliage(null)
+                useUndoEditor(newState.target.file)
+                content.removeAll()
+                content.add(JBScrollPane(WaterPropertiesView(project, newState)).apply {
+                    border = BorderFactory.createEmptyBorder()
+                }, BorderLayout.CENTER)
+                cards.show(this, DETAILS)
             }
 
             is PanelState.EntityDetails -> {
@@ -382,7 +399,7 @@ class AssetPropertiesPanel(
         // supported fields a file omits (procedural sky defaults) are listed with their effective value
         for (row in detailRows(d.meta.rows, d.fields)) rows.add(
             when (row) {
-                is DetailRow.Field -> fieldRow(d, row.state)
+                is DetailRow.Field -> fieldRow(row.state)
                 is DetailRow.Plain -> rowOf(row.row)
             }
         )
@@ -397,7 +414,7 @@ class AssetPropertiesPanel(
             is FoliageSource.Ready -> foliageController?.let { box.add(FoliageSection(it, undoButtons())) }
             null -> {}
         }
-        d.faces?.let { box.add(previews(it)) }
+        d.faces?.let { box.add(facePreviews(it)) }
         d.hdr?.let { box.add(hdrPreview(it)) }
         return JPanel(BorderLayout()).apply { add(box, BorderLayout.NORTH) }
     }
@@ -454,46 +471,14 @@ class AssetPropertiesPanel(
         }
     }
 
-    private fun columnHeader(): JComponent = twoColumns(
-        JBLabel(AbyssusBundle.message("propertiesNameColumn").uppercase()).apply {
-            foreground = secondary(); font = JBFont.small()
-        },
-        JBLabel(AbyssusBundle.message("propertiesValueColumn").uppercase()).apply {
-            foreground = secondary(); font = JBFont.small()
-        },
-    ).apply {
-        border = BorderFactory.createCompoundBorder(
-            JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0),
-            JBUI.Borders.empty(6, 16)
-        )
-    }
-
-    private fun rowOf(row: PropertyRow): JComponent = when (row.kind) {
-        RowKind.HEADING -> twoColumns(JBLabel(row.name).apply { foreground = ACCENT }, JBLabel("")).apply {
-            border = BorderFactory.createCompoundBorder(
-                JBUI.Borders.customLine(JBColor.border(), 1, 0, 0, 0),
-                JBUI.Borders.empty(10, 16, 4, 16)
-            )
-        }
-
-        else -> {
-            val indent = if (row.kind == RowKind.ADDITIONAL) "    " else ""
-            val value = JBLabel(row.value).apply {
-                font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size); toolTipText =
-                row.value.ifEmpty { null }
-            }
-            twoColumns(JBLabel(indent + row.name), value).apply { border = JBUI.Borders.empty(4, 16) }
-        }
-    }
-
     /** The editor of one supported property; a refused value goes back to what the file holds, with the reason beside it. */
-    private fun fieldRow(d: PanelState.Details, state: AssetFieldState): JComponent {
+    private fun fieldRow(state: AssetFieldState): JComponent {
         val error = JBLabel("").apply { foreground = JBColor.RED; name = "asset-error-${state.key}" }
         if (conflictKey == state.key) {
             conflictKey = null
             error.text = EditorBundle.message("assetFieldConflict")
         }
-        val editor = fieldEditor(d, state, error)
+        val editor = fieldEditor(state, error)
         editor.name = "asset-field-${state.key}"
         val editorAndError = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
             isOpaque = false
@@ -503,166 +488,52 @@ class AssetPropertiesPanel(
         return twoColumns(JBLabel("    " + state.key), editorAndError).apply { border = JBUI.Borders.empty(4, 16) }
     }
 
-    private fun fieldEditor(d: PanelState.Details, state: AssetFieldState, error: JBLabel): JComponent {
+    private fun fieldEditor(state: AssetFieldState, error: JBLabel): JComponent {
         if (state.field.kind == FieldKind.ASSET_REFERENCE || state.field.kind == FieldKind.LOCAL_FILE) {
-            val combo = ComboBox(state.choices.toTypedArray())
-            combo.renderer = SimpleListCellRenderer.create("") { choiceLabel(it) }
-            combo.selectedItem = state.choices.firstOrNull { it.value == (state.value as? FieldValue.Text)?.value }
-            combo.addActionListener {
-                val chosen = combo.selectedItem as? AssetChoice ?: return@addActionListener
-                val value = chosen.value?.let { FieldValue.Text(it) } ?: FieldValue.None
-                if (value != state.value) commitField(d, state, value, error) {
-                    combo.selectedItem =
-                        state.choices.firstOrNull { it.value == (state.value as? FieldValue.Text)?.value }
-                }
+            val selected = state.choices.firstOrNull { it.value == (state.value as? FieldValue.Text)?.value }
+            return choiceEditor(
+                state.choices, selected, error, SimpleListCellRenderer.create("") { choiceLabel(it) },
+            ) { chosen ->
+                commitField(state, chosen.value?.let { FieldValue.Text(it) } ?: FieldValue.None)
             }
-            return combo
         }
-        val field = JBTextField(state.text)
+        val field = textEditor(state.text, error) { text ->
+            when (val parsed = services.assetEditor.parse(state.field, text)) {
+                is ParseOutcome.Failed -> CommitOutcome.Refused(editErrorMessage(parsed.error))
+                is ParseOutcome.Parsed -> commitField(state, parsed.value)
+            }
+        }
         field.font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size)
-        val save = save@{
-            if (field.text == state.text) return@save
-            when (val parsed = services.assetEditor.parse(state.field, field.text)) {
-                is ParseOutcome.Failed -> {
-                    error.text = editErrorMessage(parsed.error)
-                    field.text = state.text
-                }
-
-                is ParseOutcome.Parsed -> commitField(d, state, parsed.value, error) { field.text = state.text }
-            }
-        }
-        field.addActionListener { save() }
-        field.addFocusListener(object : FocusAdapter() {
-            override fun focusLost(e: FocusEvent) = save()
-        })
         return field
     }
 
-    private fun commitField(
-        d: PanelState.Details,
-        state: AssetFieldState,
-        value: FieldValue,
-        error: JBLabel,
-        revert: () -> Unit
-    ) {
-        val folder = this.folder ?: return
-        when (val result =
+    /** Writes [value] for [state]'s property; the editor shows a refusal and puts the stored value back. */
+    private fun commitField(state: AssetFieldState, value: FieldValue): CommitOutcome {
+        val folder = this.folder ?: return CommitOutcome.Unchanged
+        if (value == state.value) return CommitOutcome.Unchanged
+        return when (val result =
             AssetMetaEdits.update(project, folder, state.key, state.value, value, services.assetEditor)) {
             AssetEditResult.Changed -> {
-                error.text = ""
                 refresh() // the document listener ran inside the command, before Undo became available
+                CommitOutcome.Saved
             }
 
-            AssetEditResult.Unchanged -> {
-                error.text = ""
-                revert()
-            }
-
-            is AssetEditResult.Rejected -> {
-                error.text = editErrorMessage(result.error)
-                revert()
-            }
-
+            AssetEditResult.Unchanged -> CommitOutcome.Unchanged
+            is AssetEditResult.Rejected -> CommitOutcome.Refused(editErrorMessage(result.error))
             is AssetEditResult.Conflict -> {
-                error.text = EditorBundle.message("assetFieldConflict")
-                revert()
                 conflictKey = state.key
                 refresh()
+                CommitOutcome.Refused(EditorBundle.message("assetFieldConflict"))
             }
 
-            AssetEditResult.Unreadable -> {
-                error.text = AbyssusBundle.message("assetFieldUnreadable")
-                revert()
-            }
+            AssetEditResult.Unreadable -> CommitOutcome.Refused(AbyssusBundle.message("assetFieldUnreadable"))
         }
     }
 
-    private fun twoColumns(name: JComponent, value: JComponent): JPanel = JPanel(GridBagLayout()).apply {
-        add(
-            name,
-            GridBagConstraints().apply { gridx = 0; anchor = GridBagConstraints.NORTHWEST; ipadx = 0 }
-                .also { name.preferredSize = Dimension(JBUI.scale(NAME_COLUMN), name.preferredSize.height) })
-        add(
-            value,
-            GridBagConstraints().apply {
-                gridx = 1; weightx = 1.0; fill = GridBagConstraints.HORIZONTAL; anchor = GridBagConstraints.NORTHWEST
-            })
-    }
-
-    private fun previews(faces: List<FaceCell>): JComponent {
-        val grid = JPanel(GridLayout(0, 3, JBUI.scale(10), JBUI.scale(10)))
-        for (f in faces) grid.add(faceCell(f))
-        return JPanel(VerticalLayout(JBUI.scale(8))).apply {
-            border = BorderFactory.createCompoundBorder(
-                JBUI.Borders.customLine(JBColor.border(), 1, 0, 0, 0),
-                JBUI.Borders.empty(12, 16, 16, 16)
-            )
-            add(JBLabel(AbyssusBundle.message("propertiesFacePreviews").uppercase()).apply {
-                foreground = secondary(); font = JBFont.small()
-            })
-            add(grid)
-        }
-    }
-
-    private fun hdrPreview(cell: HdrCell): JComponent = JPanel(VerticalLayout(JBUI.scale(8))).apply {
-        border = BorderFactory.createCompoundBorder(
-            JBUI.Borders.customLine(JBColor.border(), 1, 0, 0, 0),
-            JBUI.Borders.empty(12, 16, 16, 16)
-        )
-        add(JBLabel(AbyssusBundle.message("propertiesHdrPreview").uppercase()).apply {
-            foreground = secondary(); font = JBFont.small()
-        })
-        add(Thumbnail(cell.image).apply {
-            name = "hdr-preview"
-            preferredSize = Dimension(JBUI.scale(288), JBUI.scale(144))
-        })
-        add(JBLabel(cell.label).apply {
-            foreground = secondary(); font = Font(Font.MONOSPACED, Font.PLAIN, JBFont.small().size)
-        })
-    }
-
-    private fun faceCell(f: FaceCell): JComponent {
-        val caption = JPanel(BorderLayout(JBUI.scale(6), 0)).apply {
-            add(JBLabel(f.face), BorderLayout.WEST)
-            add(JBLabel(f.file).apply {
-                foreground = secondary(); font =
-                Font(Font.MONOSPACED, Font.PLAIN, JBFont.small().size); horizontalAlignment = SwingConstants.RIGHT
-            }, BorderLayout.CENTER)
-        }
-        return JPanel(BorderLayout(0, JBUI.scale(4))).apply {
-            add(Thumbnail(f.image).apply { name = "face-${f.face}" }, BorderLayout.CENTER)
-            add(caption, BorderLayout.SOUTH)
-        }
-    }
-
-    private fun secondary(): Color = UIUtil.getContextHelpForeground()
+    private fun secondary(): Color = secondaryColor()
 
     companion object {
         private const val DETAILS = "details"
         private const val EMPTY = "empty"
-        private const val NAME_COLUMN = 150
-
-        /** The accent of the design canvas (`#3fb8c9` on dark), darkened for light themes. */
-        private val ACCENT = JBColor(Color(0x1E8A99), Color(0x3FB8C9))
-    }
-}
-
-/** A face thumbnail fitted into its cell; a bordered blank cell when the image is missing. */
-internal class Thumbnail(val image: BufferedImage?) : JComponent() {
-    init {
-        preferredSize = Dimension(JBUI.scale(96), JBUI.scale(72))
-    }
-
-    override fun paintComponent(g: Graphics) {
-        val img = image
-        if (img == null) {
-            g.color = JBColor.border()
-            g.drawRect(0, 0, width - 1, height - 1)
-            return
-        }
-        val ratio = minOf(width.toDouble() / img.width, height.toDouble() / img.height)
-        val w = (img.width * ratio).toInt()
-        val h = (img.height * ratio).toInt()
-        g.drawImage(img, (width - w) / 2, (height - h) / 2, w, h, null)
     }
 }

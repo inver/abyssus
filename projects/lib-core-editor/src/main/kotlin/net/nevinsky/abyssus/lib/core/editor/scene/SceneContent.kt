@@ -5,30 +5,21 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.document.renderAssetOf
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
-
+import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.editor.document.EntityView
-import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
-import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
-import org.slf4j.helpers.NOPLogger
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
+import net.nevinsky.abyssus.lib.core.editor.content.*
+import net.nevinsky.abyssus.lib.core.editor.document.EntityView
+import net.nevinsky.abyssus.lib.core.editor.document.renderAssetOf
+import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
+import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
+import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.util.opt
+import org.slf4j.helpers.NOPLogger
 
 /**
  * A terrain entity's foliage: [foliageName] is the foliage asset folder its `FoliageComponent.assetName` holds as a
@@ -57,6 +48,8 @@ data class SceneContent(
     val handleIds: Set<String> = emptySet(),
     /** The path arrangements: the lines the view shows handles on when one is selected. */
     val arrangements: List<ArrangementPlacement> = emptyList(),
+    /** The saved water surfaces in file order, invalid ones included (they are rows, not drawn). */
+    val water: List<WaterSurface> = emptyList(),
 ) {
     /** The id of the direction handle (a `HANDLE` entity) [light] looks at, or null when it looks at none. */
     fun aimHandleOf(light: LightPlacement): String? = light.lookAtId?.takeIf { it in handleIds }
@@ -68,8 +61,8 @@ fun sceneContentOf(scene: SceneDto): SceneContent {
         if (entity.components == null) return@mapNotNull null
         runCatchingKeepingCancellation { decode(entity) }.getOrNull()
     }
-    val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled == true && it.isNotBlank() }
-    return PlacementMapper().map(entities, skybox)
+    val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled && it.isNotBlank() }
+    return PlacementMapper().map(entities, skybox).copy(water = WaterCodec().read(scene.water).surfaces)
 }
 
 /**

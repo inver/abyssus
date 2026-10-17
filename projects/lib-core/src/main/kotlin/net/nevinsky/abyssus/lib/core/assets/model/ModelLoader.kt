@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.loader.PreloadedTextureProvider
-import net.nevinsky.abyssus.lib.gdx.model.Model
+import com.badlogic.gdx.graphics.g3d.Model
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -27,19 +27,19 @@ class ModelLoader(
     private val metaLoader: AssetMetaLoader,
     private val assimp: AssimpModelLoader,
     private val fileLoader: FileLoader,
-    private val raySnapshots: RaySnapshotStore<RayModelSnapshot, RayModelSource>? = null,
+    private val preparation: ModelPreparationTap? = null,
     private val decodeTextures: Boolean = true,
 ) : AssetLoader<Unit, PreparedModel, Model> {
     override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedModel> = Prepared(read(meta))
 
     private fun read(meta: AssetMeta<Any>): PreparedModel {
-        val capture = raySnapshots?.preparation(meta.name)
+        val capture = preparation?.begin(meta.name)
         val handle = FileHandle(fileLoader.loadAssetFile(meta.name, meta.typedAdditional<ModelMeta>().file))
         val data = assimp.loadData(handle)
         val images = if (decodeTextures) assimp.decodeTextures(data, handle) else mutableMapOf()
         val prepared = PreparedModel(data, handle, images)
         try {
-            capture?.offer(RayModelSource(data, images))
+            capture?.offer(data, images)
             return prepared
         } catch (cancelled: CancellationException) {
             prepared.dispose()
@@ -53,7 +53,7 @@ class ModelLoader(
     override fun upload(staged: PreparedModel) = staged.uploadNext()
 
     override fun build(staged: PreparedModel, assets: BuiltAssets): Model =
-        assimp.build(staged.data, staged.file, staged.textures).also { staged.dispose() }
+        assimp.buildIntModel(staged.data, staged.file, staged.textures).also { staged.dispose() }
 
     override fun discard(model: Unit) = Unit
 

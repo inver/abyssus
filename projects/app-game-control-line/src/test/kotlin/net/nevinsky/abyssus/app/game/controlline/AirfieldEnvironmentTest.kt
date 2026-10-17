@@ -85,7 +85,7 @@ class AirfieldEnvironmentTest {
             val footprint = corners(box).map { Vector3(it).mul(world) }.map { Vector2(it.x - pilot.x, it.z - pilot.z) }
             val distance = distanceFromOrigin(footprint)
             assertTrue("$name ${field.position(entity).localPosition} is ${"%.1f".format(distance)} m from the pilot",
-                distance >= CLEAR_RADIUS)
+                distance >= if (name == "fence") FENCE_CLEAR_RADIUS else CLEAR_RADIUS)
             scenery++
         }
         assertTrue("no scenery in the field", scenery > 0)
@@ -241,5 +241,8 @@ class AirfieldEnvironmentTest {
     private companion object {
         /** No scenery this close to the pilot (design: Clearance). */
         const val CLEAR_RADIUS = 28f
+
+        /** The perimeter fence stands just outside the 18 m control lines. */
+        const val FENCE_CLEAR_RADIUS = 20f
     }
 }

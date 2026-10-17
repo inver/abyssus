@@ -18,7 +18,7 @@ that shows a Name / Value table for the selected asset.
 
 ### Requirement: Panel follows the asset selection
 
-The panel SHALL show the Meta of the asset selected in the Abyssus view and SHALL update when the selection changes. For a selected entity or one of its components it SHALL show that entity's components or that component's fields instead (see "Entity and component properties"). For a selected project file it SHALL show the project's properties instead (see "Project properties").
+The panel SHALL show the Meta of the asset selected in the Abyssus view and SHALL update when the selection changes. For a selected entity or one of its components it SHALL show that entity's components or that component's fields instead (see "Entity and component properties"). For a selected project file it SHALL show the project's properties instead (see "Project properties"). A selected water surface SHALL show editable water properties (see "Water properties").
 
 #### Scenario: Select an asset
 - **WHEN** the user selects an asset row in the Abyssus view
@@ -29,7 +29,7 @@ The panel SHALL show the Meta of the asset selected in the Abyssus view and SHAL
 - **THEN** the panel shows `Nothing selected.` and a hint to select a skybox, model or terrain under Assets to see its `meta.json`
 
 #### Scenario: Selection is not an asset
-- **WHEN** the selected node is not an asset, an entity, a component or a project file (for example, a setting)
+- **WHEN** the selected node is not an asset, an entity, a component, a project file or a water surface (for example, a setting)
 - **THEN** the panel shows `Nothing to show: <name> is <what it is>.` and the same hint
 
 #### Scenario: Scene selection retains its properties
@@ -292,3 +292,71 @@ follow edits made to the `.abss` elsewhere, and SHALL show the switch read-only 
 #### Scenario: Unsupported project
 - **WHEN** the selected `.abss` has unsupported or missing native format markers and `physicsEnabled: true`
 - **THEN** physics remains off, the panel explains the unsupported format and the checkbox cannot write the file
+
+### Requirement: Asset and component fields edit the same way
+An editable field in the Abyssus Properties panel SHALL behave the same whether it belongs to an asset's `meta.json` or
+to an entity's component. A text field SHALL save when the user presses Enter or moves focus away. A choice field
+SHALL save when the user picks a value. A value equal to the current one SHALL write nothing. A refused value SHALL put
+the previous value back in the field and show the reason beside it, with nothing written. An accepted value SHALL clear
+any reason shown beside that field.
+
+#### Scenario: Confirm an asset field by leaving it
+- **WHEN** the user selects the `terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b` asset of the `Untitled` project, types
+  `30` into `uv` and moves focus to another field
+- **THEN** the `meta.json` holds `30.0` for `uv` and the field shows `30.0`
+
+#### Scenario: Confirm a component field by leaving it
+- **WHEN** the user selects `Spot Light 8` in `Main Scene` of the `Untitled` project, types `2` into the light's
+  `intensity` and moves focus to another field
+- **THEN** the scene file holds `2` for that light's `intensity` and the field shows `2`
+
+#### Scenario: Refused values look the same in both panels
+- **WHEN** the user enters `abc` into `uv` of that terrain, and then into `intensity` of `Spot Light 8`, pressing Enter
+  each time
+- **THEN** each field shows its previous value again (`60.0` and `1`), a reason appears beside each, and neither file
+  changes
+
+#### Scenario: Equal value writes nothing
+- **WHEN** the user presses Enter in `intensity` of `Spot Light 8` without changing `1`
+- **THEN** the scene file is not written and no Undo entry is added
+
+#### Scenario: Light field labels are unchanged
+- **WHEN** the user selects `Spot Light 8`
+- **THEN** its range, cone angle and edge softness fields show the same labels as before this change, and the range
+  field shows the same tooltip
+
+### Requirement: Project view settings
+
+The project properties view (see "Project properties") SHALL also show a `Show FPS` checkbox reflecting the saved preference defined by `scene-fps-display`. The checkbox SHALL be usable with no scene open. The view SHALL explain that these are IDE view settings, and changing the checkbox SHALL leave `.abss`, `.scene` and asset files unchanged.
+
+#### Scenario: New project preference
+- **WHEN** `Untitled.abss` is selected in an IDE project with no saved FPS preference
+- **THEN** `Show FPS` is unchecked
+
+#### Scenario: Toggle before opening a scene
+- **WHEN** the user checks `Show FPS` with no scene view open and then opens `Main Scene`
+- **THEN** the scene view shows the FPS value and the project, scene and asset files are unchanged
+
+#### Scenario: Reselect the project
+- **WHEN** the user checks `Show FPS`, selects an asset and then reselects `Untitled.abss`
+- **THEN** `Show FPS` remains checked
+
+### Requirement: Water properties
+
+Selecting a water surface SHALL show its name and Abyssus-only status, position including water level, width, length, tint, clarity, wave amplitude, wavelength and speed, and foam amount and width. Confirmed valid edits SHALL refresh the scene; invalid edits SHALL restore the previous value with a reason and leave the file unchanged.
+
+#### Scenario: Change water level
+- **WHEN** a user sets a selected Lake's water level to 3
+- **THEN** only its `position.y` changes to 3 and the shoreline and rendering refresh
+
+#### Scenario: Invalid extent
+- **WHEN** the user sets width to zero or enters a non-finite number
+- **THEN** the edit is rejected, the previous width remains and a reason appears beside the field
+
+#### Scenario: Text edits refresh properties
+- **WHEN** a selected surface's clarity changes in the scene text
+- **THEN** its property editor shows the new clarity without reselecting
+
+#### Scenario: Removed surface
+- **WHEN** the selected surface is deleted elsewhere
+- **THEN** the panel shows that it no longer exists rather than editing a different surface

@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.meta
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.editor.testProject
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -131,6 +131,15 @@ class AssetMetaEditorTest {
         assertEquals(EditError.NOT_FINITE, rejected(edit(root, MetaType.TERRAIN, "uv", FieldValue.Real(Float.POSITIVE_INFINITY))))
         assertEquals(EditError.NOT_A_UUID, rejected(edit(root, MetaType.TERRAIN, "splatMap", FieldValue.Text("nope"))))
         assertEquals(terrain(), root)
+    }
+
+    @Test
+    fun `asset reference text must be a uuid`() {
+        val root = terrain()
+        val uuid = "2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
+        assertEquals(EditError.NOT_A_UUID, rejected(edit(root, MetaType.TERRAIN, "splatMap", FieldValue.Text(""))))
+        assertEquals(EditError.NOT_A_UUID, rejected(edit(root, MetaType.TERRAIN, "splatMap", FieldValue.Text("not-a-uuid"))))
+        assertEquals(false, edit(root, MetaType.TERRAIN, "splatMap", FieldValue.Text(uuid)) is EditOutcome.Rejected)
     }
 
     @Test

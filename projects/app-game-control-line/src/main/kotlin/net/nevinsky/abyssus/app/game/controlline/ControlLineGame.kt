@@ -51,6 +51,7 @@ private val SLACK_LINE = Color(0.5f, 0.5f, 0.5f, 1f)
 class ControlLineGame(
     private val project: Path, private val scoresFile: Path,
     private val patternScoresFile: Path = scoresFile.resolveSibling("f2b-scores.json"),
+    private val fieldView: FieldView? = null,
 ) : ApplicationAdapter() {
     /** Problems go to stderr through `physics`'s slf4j-simple binding. */
     private val log = LoggerFactory.getLogger("control-line")
@@ -60,7 +61,11 @@ class ControlLineGame(
     private val input = HandleInput()
 
     private lateinit var flow: GameFlow
-    private lateinit var renderer: FieldRenderer
+    private val raster = lazy { FieldRenderer(ctx) }
+
+    /** The opt-in view (ray mode) while it works; null once it failed or when there was none: the raster field draws. */
+    private var optIn: FieldView? = fieldView
+    private val renderer: FieldView get() = optIn ?: raster.value
     private lateinit var ui: GameUiHost
     private lateinit var cameras: Cameras
     private lateinit var parked: FieldScene
@@ -95,7 +100,6 @@ class ControlLineGame(
             "#define textureCube texture\n#define gl_FragColor fragColor\nout vec4 fragColor;\n"
         parked = loadScene()
         flow = GameFlow(parked.planes, ScoreTable(scoresFile), PatternScoreTable(patternScoresFile))
-        renderer = FieldRenderer(ctx)
         ui = createGameUi(project, PROJECT_FILE, flow, log) { Gdx.app.exit() }
         cameras = Cameras(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat())
         Gdx.input.inputProcessor = InputMultiplexer(Keys(), ui.inputProcessor)
@@ -105,6 +109,7 @@ class ControlLineGame(
     override fun resize(width: Int, height: Int) {
         if (width <= 0 || height <= 0) return
         cameras.resize(width.toFloat(), height.toFloat())
+        renderer.resize(width.toFloat(), height.toFloat())
         ui.resize()
     }
 
@@ -161,8 +166,17 @@ class ControlLineGame(
             clips = if (screen is Screen.Debrief) emptyMap() else s?.flight?.crash?.let { mapOf(s.plane to it.clip) }.orEmpty(),
             seconds = seconds,
         )
+        (optIn as? FailableFieldView)?.failure?.let(::fallBackToRaster)
         ui.update(s, judge, seconds)
         ui.draw(seconds)
+    }
+
+    /** Ray rendering failed after start: dispose it and continue raster, with the reason in the title and the log. */
+    private fun fallBackToRaster(reason: String) {
+        log.warn("Ray-traced field view stopped: {}; continuing with the raster field", reason)
+        Gdx.graphics.setTitle("Control Line (raster: $reason)")
+        optIn?.dispose()
+        optIn = null
     }
 
     /** The debrief's own load of the field for [model], made when it opens and dropped when the screen is left. */
@@ -257,7 +271,8 @@ class ControlLineGame(
     override fun dispose() {
         endFlight()
         ui.dispose()
-        renderer.dispose()
+        optIn?.dispose()
+        if (optIn == null || raster.isInitialized()) raster.value.dispose()
         executor.shutdownNow()
     }
 

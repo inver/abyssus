@@ -16,6 +16,14 @@ class ProjectSceneViewHost(private val project: Project) : SceneViewHost {
             componentTargetOf(node)?.takeIf { it.file == file }?.let { selected(it.entityId) }
         })
     }
+    override fun listenWater(file: VirtualFile, parent: Disposable, selected: (String) -> Unit) {
+        project.messageBus.connect(parent).subscribe(AbyssusSelectionListener.TOPIC, AbyssusSelectionListener { node ->
+            waterTargetOf(node)?.takeIf { it.file == file }?.let { selected(it.id) }
+        })
+    }
+    override fun selectWater(file: VirtualFile, waterId: String) = selectWaterInAbyssusView(project, file, waterId)
+    override fun waterActions(file: VirtualFile, position: () -> Vec3) = AddWaterGroup(project, file, position)
+    override fun canAddWater(file: VirtualFile) = canAddWater(file, project.service<SceneDocumentCache>())
     override fun select(file: VirtualFile, entityId: String) = selectEntityInAbyssusView(project, file, entityId)
     override fun lightActions(file: VirtualFile, position: () -> Vec3) = AddLightGroup(project, file, position)
     override fun assetActions(file: VirtualFile, position: () -> Vec3) = AddAssetGroup(project, file, position)

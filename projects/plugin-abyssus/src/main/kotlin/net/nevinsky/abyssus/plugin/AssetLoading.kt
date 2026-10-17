@@ -19,30 +19,25 @@ import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
-import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.RaySnapshotStore
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySnapshotStore
+import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
-import net.nevinsky.abyssus.lib.core.assets.model.ModelRaySnapshotLoader
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelMaterialInfo
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSnapshot
-import net.nevinsky.abyssus.lib.core.assets.model.RayModelSource
-import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
-import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
-import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.ModelRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.asPreparationTap
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelMaterialInfo
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSource
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySkySnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.SkyboxRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrPreview
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.HdrSkyRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
-import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyRaySnapshotLoader
-import net.nevinsky.abyssus.lib.core.assets.terrain.RayTerrainSnapshot
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainRaySnapshotLoader
-import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.ProceduralSkyRaySnapshotLoader
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayTerrainSnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.TerrainRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
@@ -117,19 +112,21 @@ class ProjectAssets internal constructor(
     val rayModels: RaySnapshotStore<RayModelSnapshot, RayModelSource> =
         RaySnapshotStore(executor, metas, ModelRaySnapshotLoader(files, assimp), "model")
 
-    private val terrainLoader = TerrainLoader(files, metas)
-    private val foliageLoader = FoliageLoader(files, metas, terrainLoader)
-    private val textureLoader = TextureLoader(files, metas)
-    val rayTerrains: RaySnapshotStore<RayTerrainSnapshot, Nothing> =
-        RaySnapshotStore(executor, metas, TerrainRaySnapshotLoader(terrainLoader, textureLoader), "terrain")
-
     private val skyShaders = shaders.withAssets(files)
-    private val skyboxLoader = SkyboxLoader(files, metas, skyShaders)
-    private val hdrSkyLoader = HdrSkyLoader(metas, ExrLoader(files), skyShaders, toneCurve)
+
+    /** Every loader of the project, from the table all hosts share; foliage reads the editor's bake cache. */
+    private val loaders = StandardAssetLoaders(
+        files, metas, skyShaders, assimp, toneCurve, rayModels.asPreparationTap(), log,
+        foliage = { terrains -> FoliageLoader(files, metas, terrains) },
+    )
+
+    val rayTerrains: RaySnapshotStore<RayTerrainSnapshot, Nothing> =
+        RaySnapshotStore(executor, metas, TerrainRaySnapshotLoader(loaders.terrain, loaders.texture), "terrain")
+
     val raySkies: RaySnapshotStore<RaySkySnapshot, Nothing> = RaySnapshotStore(
         executor, metas,
         SkyRaySnapshotLoader(
-            SkyboxRaySnapshotLoader(skyboxLoader), HdrSkyRaySnapshotLoader(hdrSkyLoader), ProceduralSkyRaySnapshotLoader(),
+            SkyboxRaySnapshotLoader(loaders.skybox), HdrSkyRaySnapshotLoader(loaders.hdrSky), ProceduralSkyRaySnapshotLoader(),
         ),
         "sky",
     )
@@ -138,21 +135,7 @@ class ProjectAssets internal constructor(
         log,
         executor,
         UnsavedMetas(json, files, { unsaved }, metas, log)::load,
-    ).also {
-        it.registerAll(
-            mapOf(
-                MetaType.MODEL to ModelLoader(metas, assimp, files, rayModels),
-                MetaType.TERRAIN to terrainLoader,
-                MetaType.FOLIAGE to foliageLoader,
-                MetaType.TEXTURE to textureLoader,
-                MetaType.PIXMAP_TEXTURE to textureLoader,
-                MetaType.SKYBOX to skyboxLoader,
-                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader(files, metas, skyShaders, log),
-                MetaType.CLOUDS to CloudsLoader(metas),
-                MetaType.SKYBOX_HDR to hdrSkyLoader,
-            ),
-        )
-    }
+    ).also { it.registerAll(loaders.byType) }
 
     override fun dispose() = storage.dispose()
 }

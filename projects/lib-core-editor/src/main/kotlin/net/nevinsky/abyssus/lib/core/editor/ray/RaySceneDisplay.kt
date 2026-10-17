@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import net.nevinsky.abyssus.lib.core.assets.sky.RaySkySnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySkySnapshot
 import net.nevinsky.abyssus.lib.raytracing.RayFrame
 import net.nevinsky.abyssus.lib.raytracing.RaySunVisibility
 import java.io.File

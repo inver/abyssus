@@ -15,9 +15,13 @@ val printingLog: Logger = RecordingLogger(echo = true)
  * A renderer wired by hand, with no IntelliJ application: the same graph `AbyssusCore` builds in the IDE, with `prepare`
  * on [executor] (the calling thread by default) and problems to [log].
  */
-fun testRenderer(executor: Executor = Executor(Runnable::run), log: Logger = printingLog): SceneRenderer = SceneRenderer(
+fun testRenderer(
+    executor: Executor = Executor(Runnable::run),
+    log: Logger = printingLog,
+    sceneShaders: ShaderStorage = ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java),
+): SceneRenderer = SceneRenderer(
     ViewAssets(AssetLoading(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), log, executor, ShaderStorage())),
-    ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java),
+    sceneShaders,
     FoliageDrafts(),
     log = log,
 )

@@ -10,7 +10,7 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Pool
-import net.nevinsky.abyssus.lib.gdx.Renderable
+import com.badlogic.gdx.graphics.g3d.Renderable
 import net.nevinsky.abyssus.plugin.sceneview.TerrainEntity
 
 /**
@@ -51,7 +51,14 @@ internal fun shadowCasters(
     }
     casterBounds.retain(renderables.mapNotNull { it.meshPart.mesh }.toSet())
     terrains.forEach { entity ->
-        val out = pool.obtain().also { it.cleanup() }
+        val out = pool.obtain().also {
+            // a pooled renderable keeps what its last user set; this one is drawn by a depth shader that reads these
+            it.environment = null
+            it.material = null
+            it.meshPart.set("", null, 0, 0, 0)
+            it.shader = null
+            it.userData = null
+        }
         entity.terrain.depthRenderable(entity.world, out); renderables.add(out)
         val data = entity.terrain.data
         casters += ShadowCaster(out, BoundingBox(

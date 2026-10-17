@@ -17,8 +17,7 @@ import com.fasterxml.jackson.databind.node.TextNode
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
 import java.math.BigDecimal
-import java.util.UUID
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.parseUuidOrNull
 
 /** How an editable `additional` field is shown and checked. */
 enum class FieldKind {
@@ -134,9 +133,9 @@ class AssetFieldDescriptions {
  * caller picks a parser that keeps number text and key order; an edit changes exactly one key and nothing else, and
  * never touches `version`, `uuid`, `type`, `lastModified` or unknown keys.
  */
-class AssetMetaEditor(private val descriptions: AssetFieldDescriptions, private val format: net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat = net.nevinsky.abyssus.lib.core.editor.document.AbyssusDocumentFormat()) {
+class AssetMetaEditor(private val descriptions: AssetFieldDescriptions, private val format: net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat = net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat()) {
     fun typeOf(root: JsonNode): MetaType =
-        root.takeIf { format.validate(it, net.nevinsky.abyssus.lib.core.editor.document.DocumentKind.ASSET) == null }?.get("type")?.takeIf { it.isTextual }?.asText()?.let { name -> MetaType.entries.firstOrNull { it.name == name } }
+        root.takeIf { format.validate(it, net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET) == null }?.get("type")?.takeIf { it.isTextual }?.asText()?.let { name -> MetaType.entries.firstOrNull { it.name == name } }
             ?: MetaType.UNKNOWN
 
     /** The effective value of [field] in [root]: the stored value, the default of an omitted key, or none. */
@@ -226,7 +225,7 @@ class AssetMetaEditor(private val descriptions: AssetFieldDescriptions, private 
 
         FieldKind.ASSET_REFERENCE -> when (value) {
             FieldValue.None -> null
-            is FieldValue.Text -> if (runCatchingKeepingCancellation { UUID.fromString(value.value) }.isSuccess) null else EditError.NOT_A_UUID
+            is FieldValue.Text -> if (parseUuidOrNull(value.value) != null) null else EditError.NOT_A_UUID
             else -> EditError.NOT_A_UUID
         }
 
@@ -253,7 +252,7 @@ class AssetMetaEditor(private val descriptions: AssetFieldDescriptions, private 
      * effect.
      */
     fun edit(root: JsonNode, key: String, expected: FieldValue, value: FieldValue): EditOutcome {
-        if (format.validate(root, net.nevinsky.abyssus.lib.core.editor.document.DocumentKind.ASSET) != null) return EditOutcome.Rejected(EditError.UNSUPPORTED_FORMAT)
+        if (format.validate(root, net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET) != null) return EditOutcome.Rejected(EditError.UNSUPPORTED_FORMAT)
         val field = descriptions.field(typeOf(root), key) ?: return EditOutcome.Rejected(EditError.UNSUPPORTED_FIELD)
         val additional = root.get("additional") as? ObjectNode ?: return EditOutcome.Rejected(EditError.NOT_AN_OBJECT)
         val actual = current(root, field)

@@ -26,11 +26,31 @@ data class ToolbarState(
     val dropEnabled: Boolean,
     val addLightEnabled: Boolean,
     val addAssetEnabled: Boolean,
+    val selectSelected: Boolean = false,
+    /** Local/World and Snap: editing controls, off while Play or the ray experiment runs. */
+    val spaceEnabled: Boolean = gizmoEnabled,
+    val snapEnabled: Boolean = gizmoEnabled,
+    /** The view toggles stay usable while playing; Shadows and Fog only when the scene has something for them. */
+    val shadowsEnabled: Boolean = true,
+    val fogEnabled: Boolean = true,
+    val gridEnabled: Boolean = true,
+    val shadingEnabled: Boolean = true,
+    val frameEnabled: Boolean = true,
+    val addWaterEnabled: Boolean = false,
+)
+
+/** This state with every control disabled, as when the view cannot render; what is pressed stays pressed. */
+fun ToolbarState.disabled(): ToolbarState = copy(
+    gizmoEnabled = false, cameraEnabled = false, dropEnabled = false, addLightEnabled = false, addAssetEnabled = false,
+    spaceEnabled = false, snapEnabled = false, shadowsEnabled = false, fogEnabled = false, gridEnabled = false,
+    shadingEnabled = false, frameEnabled = false, addWaterEnabled = false,
 )
 
 /**
  * The toolbar for gizmo [mode]: editing is possible when neither the ray experiment nor Play runs; Drop needs a
- * droppable selection ([canDrop]), and Add Light / Add Asset their choices ([canAddLight], [canAddAsset]).
+ * droppable selection ([canDrop]), and Add Light / Add Asset their choices ([canAddLight], [canAddAsset]). Shadows
+ * needs a shadow-casting light ([hasShadowCasters]) and a Lit view, Fog a scene that uses fog ([sceneUsesFog]); Frame
+ * selection is off while looking through a scene camera ([lookingThroughCamera]) or playing.
  */
 fun toolbarState(
     mode: GizmoMode,
@@ -39,6 +59,11 @@ fun toolbarState(
     canDrop: Boolean,
     canAddLight: Boolean,
     canAddAsset: Boolean,
+    display: ViewDisplay = ViewDisplay(),
+    hasShadowCasters: Boolean = true,
+    sceneUsesFog: Boolean = true,
+    lookingThroughCamera: Boolean = false,
+    canAddWater: Boolean = false,
 ): ToolbarState {
     val editing = !experimenting && !playing
     return ToolbarState(
@@ -49,6 +74,15 @@ fun toolbarState(
         dropEnabled = editing && canDrop,
         addLightEnabled = editing && canAddLight,
         addAssetEnabled = editing && canAddAsset,
+        addWaterEnabled = editing && canAddWater,
+        selectSelected = mode == GizmoMode.SELECT,
+        spaceEnabled = editing,
+        snapEnabled = editing,
+        shadowsEnabled = hasShadowCasters && display.shading == Shading.LIT,
+        fogEnabled = sceneUsesFog,
+        gridEnabled = true,
+        shadingEnabled = true,
+        frameEnabled = !playing && !experimenting && !lookingThroughCamera,
     )
 }
 

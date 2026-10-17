@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.io.JsonFormat
 import net.nevinsky.abyssus.lib.core.io.NativeJsonTree
 
 /** Unknown fields are ignored and properties keep declaration order, so a DTO lists its fields as the file does. */

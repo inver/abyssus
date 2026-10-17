@@ -5,7 +5,8 @@ jolt-jni 6.1.1 (`com.github.stephengold`, MIT). No IntelliJ or plugin imports. I
 `object` or `companion object`, and `checkNoSingletons` runs as part of `check`. Depends on `lib-core` and jolt-jni.
 
 Jolt's natives load only in a game or the play host, never in the IDE. Only `jolt/` imports Jolt. Component classes
-and the play protocol do not.
+do not. The play host and protocol live in [`lib-game-link`](../lib-game-link/README.md), not here: a shipped game links
+`lib-physics` and none of the Play bridge.
 
 ## Components
 
@@ -71,34 +72,16 @@ change the velocity, so the value is an estimate. Tests hold a hanging 1 kg weig
 
 ## Play in Abyssus
 
-Abyssus runs Play in a separate process, `PlayHostMain`. `PlayHost` loads the scene text it is sent, builds a
-`PhysicsWorld` and runs at 120 Hz. Each frame it runs the game's systems, then `advance`. It sends poses at most 60
-times a second, over a loopback socket that speaks the play protocol (`play/PlayProtocol.kt`, version
-`PLAY_PROTOCOL` = 1). The host exits on `bye` or when the socket closes.
-
-A game names what Play runs with a `PlayModule`. The module provides its components (without the physics ones), the
-systems to run before each advance, input handling, telemetry and extra debug lines. `PlayExportMain` writes
-`<project>/abyssus/play.json` (`{protocol, module, classpath}`, stable bytes), with the classpath it runs on made
-absolute. A game can add this Gradle task (Control Line currently has no export task):
-
-```kotlin
-tasks.register<JavaExec>("exportPlay") {
-    classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("net.nevinsky.abyssus.lib.physics.play.PlayExportMain")
-    args("com.example.game.GamePlayModule", rootProject.file("assets-project").absolutePath)
-}
-```
-
-The runtime classpath must hold `lib-physics` and the jolt-jni natives for the platforms the game is played on.
-Without `<project>/abyssus/play.json`, Abyssus runs its bundled play host with `PhysicsOnlyPlayModule`, which runs physics
-alone and reports each rope's tension. Export again whenever the classpath changes. A launch file naming a jar that
-no longer exists stops Play with that message.
+The play host, the play protocol, `PlayModule` and `PlayExportMain` are in [`lib-game-link`](../lib-game-link/README.md),
+which depends on this module. A game that wants Play puts its `PlayModule` in a separate source set on `lib-game-link`
+(Control Line's `play` source set), so its main classpath and its distribution stay free of the bridge. Without
+`<project>/abyssus/play.json`, Abyssus runs its bundled play host with `PhysicsOnlyPlayModule`, which runs physics alone.
 
 ## Natives
 
 `JoltNatives.load()` extracts the platform's library from the classpath to
 `<java.io.tmpdir>/abyssus-jolt-jni-6.1.1/` and loads it. It then sets Jolt up (allocator, callbacks, factory, types),
-once per process. Tests use the build machine's `DebugSp` jar. The `playHost` configuration resolves the four
+once per process. Tests use the build machine's `DebugSp` jar. `lib-game-link`'s `playHost` configuration resolves the four
 `ReleaseSp` jars (Linux64, Windows64, MacOSX64, MacOSX_ARM64) that the play host ships.
 
 Tests run with `./gradlew :lib-physics:test`. They use the `Physics` fixture (`projects/plugin-abyssus/src/test/testData/project/Physics`).

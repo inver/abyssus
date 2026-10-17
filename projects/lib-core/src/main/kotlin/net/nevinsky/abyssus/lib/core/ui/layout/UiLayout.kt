@@ -34,7 +34,13 @@ fun interface UiMeasurer {
  * Uniform fit of a reference rectangle into a viewport: [scale] maps logical to viewport units and the fitted
  * rectangle starts at ([offsetX], [offsetY]), centered, so the unused side is letterboxed.
  */
-data class UiFit(val scale: Float, val offsetX: Float, val offsetY: Float, val referenceWidth: Float, val referenceHeight: Float) {
+data class UiFit(
+    val scale: Float,
+    val offsetX: Float,
+    val offsetY: Float,
+    val referenceWidth: Float,
+    val referenceHeight: Float
+) {
     fun toViewportX(x: Float) = offsetX + x * scale
     fun toViewportY(y: Float) = offsetY + y * scale
     fun toLogicalX(x: Float) = (x - offsetX) / scale
@@ -61,9 +67,21 @@ data class UiLayoutResult(
 
 /** Fits [referenceWidth] x [referenceHeight] into the viewport; null when any size is not positive and finite. */
 fun fitReference(referenceWidth: Float, referenceHeight: Float, viewportWidth: Float, viewportHeight: Float): UiFit? {
-    if (!listOf(referenceWidth, referenceHeight, viewportWidth, viewportHeight).all { it.isFinite() && it > 0f }) return null
+    if (!listOf(
+            referenceWidth,
+            referenceHeight,
+            viewportWidth,
+            viewportHeight
+        ).all { it.isFinite() && it > 0f }
+    ) return null
     val scale = min(viewportWidth / referenceWidth, viewportHeight / referenceHeight)
-    return UiFit(scale, (viewportWidth - referenceWidth * scale) / 2f, (viewportHeight - referenceHeight * scale) / 2f, referenceWidth, referenceHeight)
+    return UiFit(
+        scale,
+        (viewportWidth - referenceWidth * scale) / 2f,
+        (viewportHeight - referenceHeight * scale) / 2f,
+        referenceWidth,
+        referenceHeight
+    )
 }
 
 /**
@@ -75,7 +93,12 @@ class UiLayoutEngine(private val measurer: UiMeasurer) {
 
     fun resolve(screen: UiScreen, viewportWidth: Float, viewportHeight: Float): UiLayoutResult {
         val fit = fitReference(screen.referenceWidth, screen.referenceHeight, viewportWidth, viewportHeight)
-            ?: return UiLayoutResult(null, emptyMap(), emptyList(), listOf(UiLayoutDiagnostic(UiLayoutIssue.INVALID_VIEWPORT, null)))
+            ?: return UiLayoutResult(
+                null,
+                emptyMap(),
+                emptyList(),
+                listOf(UiLayoutDiagnostic(UiLayoutIssue.INVALID_VIEWPORT, null))
+            )
         return Run(measurer).resolve(screen, fit)
     }
 
@@ -93,7 +116,9 @@ class UiLayoutEngine(private val measurer: UiMeasurer) {
         }
 
         private fun sane(value: Float, widget: UiWidget): Float =
-            if (value.isFinite() && value >= 0f) value else { diagnostics += UiLayoutDiagnostic(UiLayoutIssue.INVALID_MEASURE, widget.id); 0f }
+            if (value.isFinite() && value >= 0f) value else {
+                diagnostics += UiLayoutDiagnostic(UiLayoutIssue.INVALID_MEASURE, widget.id); 0f
+            }
 
         /** Explicit size, else content size: a container from its children, a leaf from the measurer. */
         private fun preferred(widget: UiWidget): UiSizeF = preferred.getOrPut(widget.id) {
@@ -110,9 +135,15 @@ class UiLayoutEngine(private val measurer: UiMeasurer) {
             val pad = widget.layout.padding * 2
             val gaps = widget.layout.spacing * max(0, children.size - 1)
             return when (widget.type) {
-                UiWidgetType.ROW -> UiSizeF(children.sumOf { it.width.toDouble() }.toFloat() + gaps + pad, (children.maxOfOrNull { it.height } ?: 0f) + pad)
-                UiWidgetType.COLUMN, UiWidgetType.LIST -> UiSizeF((children.maxOfOrNull { it.width } ?: 0f) + pad, children.sumOf { it.height.toDouble() }.toFloat() + gaps + pad)
-                else -> UiSizeF((children.maxOfOrNull { it.width } ?: 0f) + pad, (children.maxOfOrNull { it.height } ?: 0f) + pad)
+                UiWidgetType.ROW -> UiSizeF(
+                    children.sumOf { it.width.toDouble() }.toFloat() + gaps + pad,
+                    (children.maxOfOrNull { it.height } ?: 0f) + pad)
+
+                UiWidgetType.COLUMN, UiWidgetType.LIST -> UiSizeF((children.maxOfOrNull { it.width } ?: 0f) + pad,
+                    children.sumOf { it.height.toDouble() }.toFloat() + gaps + pad)
+
+                else -> UiSizeF((children.maxOfOrNull { it.width } ?: 0f) + pad,
+                    (children.maxOfOrNull { it.height } ?: 0f) + pad)
             }
         }
 
@@ -145,11 +176,22 @@ class UiLayoutEngine(private val measurer: UiMeasurer) {
             nodes[widget.id] = UiLayoutNode(widget.id, bounds, visible)
             if (widget.children.isEmpty()) return
             val pad = widget.layout.padding
-            val inner = UiRect(bounds.x + pad, bounds.y + pad, max(0f, bounds.width - 2 * pad), max(0f, bounds.height - 2 * pad))
+            val inner = UiRect(
+                bounds.x + pad,
+                bounds.y + pad,
+                max(0f, bounds.width - 2 * pad),
+                max(0f, bounds.height - 2 * pad)
+            )
             when (widget.type) {
                 UiWidgetType.ROW -> flow(widget, inner, visible, horizontal = true)
                 UiWidgetType.COLUMN, UiWidgetType.LIST -> flow(widget, inner, visible, horizontal = false)
-                else -> widget.children.forEach { child -> place(child, anchored(child.layout, inner, preferred(child)), visible) }
+                else -> widget.children.forEach { child ->
+                    place(
+                        child,
+                        anchored(child.layout, inner, preferred(child)),
+                        visible
+                    )
+                }
             }
         }
 
@@ -168,13 +210,19 @@ class UiLayoutEngine(private val measurer: UiMeasurer) {
             var cursor = if (horizontal) inner.x else inner.y
             children.forEachIndexed { i, child ->
                 val explicitCross = if (horizontal) child.layout.height else child.layout.width
-                val cross = explicitCross ?: if (widget.layout.align == UiAlign.STRETCH) crossAvailable else if (horizontal) sizes[i].height else sizes[i].width
+                val cross = explicitCross
+                    ?: if (widget.layout.align == UiAlign.STRETCH) crossAvailable else if (horizontal) sizes[i].height else sizes[i].width
                 val crossStart = (if (horizontal) inner.y else inner.x) + when (widget.layout.align) {
                     UiAlign.CENTER -> (crossAvailable - cross) / 2f
                     UiAlign.END -> crossAvailable - cross
                     else -> 0f
                 }
-                val rect = if (horizontal) UiRect(cursor, crossStart, main[i], cross) else UiRect(crossStart, cursor, cross, main[i])
+                val rect = if (horizontal) UiRect(cursor, crossStart, main[i], cross) else UiRect(
+                    crossStart,
+                    cursor,
+                    cross,
+                    main[i]
+                )
                 place(child, rect, visible)
                 cursor += main[i] + spacing
             }

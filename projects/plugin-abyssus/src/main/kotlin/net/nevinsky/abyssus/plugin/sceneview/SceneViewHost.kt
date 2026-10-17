@@ -14,6 +14,12 @@ interface SceneViewHost {
     fun assetActions(file: VirtualFile, position: () -> Vec3): DefaultActionGroup
     /** The project's models to arrange along a path; choosing one calls [start]. */
     fun pathActions(file: VirtualFile, start: (RenderAsset) -> Unit): DefaultActionGroup = DefaultActionGroup()
+    /** Called with the id of the water surface of [file] selected in the tree. */
+    fun listenWater(file: VirtualFile, parent: Disposable, selected: (String) -> Unit) {}
+    fun selectWater(file: VirtualFile, waterId: String) {}
+    /** The Lake and Sea presets, placed at [position] when chosen. */
+    fun waterActions(file: VirtualFile, position: () -> Vec3): DefaultActionGroup = DefaultActionGroup()
+    fun canAddWater(file: VirtualFile): Boolean = false
     fun canAddLight(file: VirtualFile): Boolean
     fun canAddPath(file: VirtualFile): Boolean = false
     fun canAddAsset(file: VirtualFile): Boolean

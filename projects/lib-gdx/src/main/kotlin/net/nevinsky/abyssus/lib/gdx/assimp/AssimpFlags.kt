@@ -16,7 +16,7 @@ import org.lwjgl.assimp.Assimp
  * generates normals for meshes that have none.
  */
 object AssimpFlags {
-    val DEFAULT: Int = (Assimp.aiProcess_Triangulate
+    const val DEFAULT: Int = (Assimp.aiProcess_Triangulate
             or Assimp.aiProcess_JoinIdenticalVertices
             or Assimp.aiProcess_SortByPType
             or Assimp.aiProcess_GenSmoothNormals

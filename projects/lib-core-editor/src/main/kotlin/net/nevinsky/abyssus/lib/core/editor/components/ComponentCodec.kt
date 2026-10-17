@@ -30,6 +30,9 @@ class ComponentField<C : Component>(
     val minExclusive: Boolean = false,
     /** For a schema's asset reference: the meta type the asset folder must have. */
     val assetType: String? = null,
+    /** Keys of [EditorMessages] for the label and tooltip the panel shows instead of [label] (no tooltip when null). */
+    val labelKey: String? = null,
+    val tooltipKey: String? = null,
 )
 
 /** Reads and writes one kind of component as the native scene format holds it, under its short [name]. */
@@ -71,5 +74,7 @@ class ComponentKind<C : Component>(
 data class FieldValue(
     val field: String, val kind: FieldKind, val value: String, val choices: List<String>, val optional: Boolean,
     val label: String = field, val group: String = "", val assetType: String? = null,
+    /** Help text for the field, or null. */
+    val tooltip: String? = null,
 )
 

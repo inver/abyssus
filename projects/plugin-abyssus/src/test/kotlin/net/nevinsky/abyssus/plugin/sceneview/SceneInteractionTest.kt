@@ -84,6 +84,28 @@ class SceneInteractionTest {
 
     private fun droppingCamera(height: Float?): Setup = setup(ground = { height }).also { it.renderer.state.selectedId = "4" }
 
+    @Test fun selectModeShowsNoHandlesAndAPressOnTheFormerHandleDoesNotDrag() {
+        val s = movingModel()
+        val tip = screenOf(s.renderer, s.renderer.queries.gizmoHandles(height)!!.tip(GizmoAxis.X))
+        s.interaction.mode = GizmoMode.SELECT
+        assertNull(s.renderer.queries.gizmoHandles(height))
+        s.interaction.pressed(tip.first, tip.second, true)
+        assertFalse(s.interaction.isDragging)
+        val yawBefore = s.orbit.yaw
+        s.interaction.dragged(tip.first + 40, tip.second + 10, true)
+        s.interaction.released(tip.first + 40, tip.second + 10, true)
+        assertTrue("a drag orbits the camera", s.orbit.yaw != yawBefore)
+        assertTrue("select mode writes nothing", s.transforms.isEmpty())
+        assertEquals("the selection stays", "0", s.interaction.selectedId)
+    }
+
+    @Test fun switchingBackToMoveShowsTheArrowsAgain() {
+        val s = movingModel()
+        s.interaction.mode = GizmoMode.SELECT
+        s.interaction.mode = GizmoMode.MOVE
+        assertEquals(GizmoMode.MOVE, s.renderer.queries.gizmoHandles(height)!!.mode)
+    }
+
     @Test fun canDropIsFalseWithNothingSelected() { assertFalse(setup(ground = { 0f }).interaction.canDrop) }
     @Test fun canDropIsFalseWithNothingBelow() { assertFalse(droppingCamera(null).interaction.canDrop) }
     @Test fun canDropIsFalseForAnAlreadyRestingObject() {
@@ -279,6 +301,70 @@ class SceneInteractionTest {
         // the drag did not touch the orbit view
         assertEquals(yaw, s.orbit.yaw, 0f)
         assertEquals(pitch, s.orbit.pitch, 0f)
+    }
+
+    private fun turnedModel(space: net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace, snap: net.nevinsky.abyssus.lib.core.editor.pick.GizmoSnap? = null): Setup {
+        val s = movingModel()
+        val q = com.badlogic.gdx.math.Quaternion(Vector3.Y, 90f)
+        val turned = mainParams.content.models.map {
+            if (it.entityId == "0") it.copy(transform = it.transform.copy(rotation = net.nevinsky.abyssus.lib.core.editor.content.Quat(q.x, q.y, q.z, q.w))) else it
+        }
+        s.renderer.params = mainParams.copy(content = mainParams.content.copy(models = turned))
+        s.renderer.state.gizmoSpace = space
+        s.renderer.state.snap = snap
+        s.renderer.updateCamera(width, height, s.orbit)
+        return s
+    }
+
+    @Test
+    fun aLocalMoveOnATurnedModelWritesOneWorldPositionEdit() {
+        val s = turnedModel(net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.LOCAL)
+        val handles = s.renderer.queries.gizmoHandles(height)!!
+        val origin = handles.origin
+        // the local X axis of a model turned 90 degrees about Y is world -Z
+        val tipVector = handles.tip(GizmoAxis.X)
+        assertEquals(origin.x, tipVector.x, 1e-4f)
+        assertEquals(origin.z - handles.size, tipVector.z, 1e-4f)
+        val tip = screenOf(s.renderer, tipVector)
+        val farther = screenOf(s.renderer, Vec3(origin.x, origin.y, origin.z - 2 * handles.size))
+        s.interaction.pressed(tip.first, tip.second, true)
+        assertTrue(s.interaction.isDragging)
+        s.interaction.dragged(farther.first, farther.second, true)
+        s.interaction.released(farther.first, farther.second, true)
+        val edit = s.transforms.single().second
+        assertEquals(origin.x, edit.position!!.x, 1e-3f)
+        assertEquals(origin.y, edit.position!!.y, 1e-3f)
+        assertEquals(origin.z - handles.size, edit.position!!.z, handles.size * 0.1f)
+        assertNull(edit.rotation)
+    }
+
+    @Test
+    fun escapeDuringASnappedDragWritesNothingAndRestoresTheObject() {
+        val s = turnedModel(net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.WORLD, net.nevinsky.abyssus.lib.core.editor.pick.GizmoSnap(0.5f, 15f))
+        val handles = s.renderer.queries.gizmoHandles(height)!!
+        val origin = handles.origin
+        val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
+        val farther = screenOf(s.renderer, Vec3(origin.x + 2 * handles.size, origin.y, origin.z))
+        s.interaction.pressed(tip.first, tip.second, true)
+        s.interaction.dragged(farther.first, farther.second, true)
+        s.interaction.escape()
+        assertFalse(s.interaction.isDragging)
+        assertTrue(s.transforms.isEmpty())
+        assertEquals(origin.x, s.renderer.content.models.first { it.entityId == "0" }.transform.position.x, 1e-4f)
+    }
+
+    @Test
+    fun aSnappedMoveWritesAMultipleOfTheStep() {
+        val s = turnedModel(net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.WORLD, net.nevinsky.abyssus.lib.core.editor.pick.GizmoSnap(0.5f, 15f))
+        val handles = s.renderer.queries.gizmoHandles(height)!!
+        val origin = handles.origin
+        val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
+        val farther = screenOf(s.renderer, Vec3(origin.x + 1.37f * handles.size, origin.y, origin.z))
+        s.interaction.pressed(tip.first, tip.second, true)
+        s.interaction.dragged(farther.first, farther.second, true)
+        s.interaction.released(farther.first, farther.second, true)
+        val x = s.transforms.single().second.position!!.x
+        assertEquals("x is a multiple of 0.5", 0f, (x / 0.5f) - Math.round(x / 0.5f), 1e-4f)
     }
 
     @Test
