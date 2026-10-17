@@ -12,16 +12,21 @@ and configurable are removed. The current implementation uses project Properties
   unchanged scene/asset files, and absence of the old IDE configurable.
 - `SceneFileEditorTest`: owning-project initial/live values, independent projects in one IDE project, new/replaced
   views, disposal, standalone 4×, Undo/Redo, unsaved edits and Play preservation.
-- The focused run including the above classes and `ProjectFpsSettingsTest` passed. A subsequent review requested an
-  additional external VFS regression; that case requires the final verification run.
+- The focused run including the above classes and `ProjectFpsSettingsTest` passed. The final full run also passed
+  the additional external VFS case without a cached Document: 6 persistence tests, 3 project Properties tests and
+  31 scene-editor tests, with zero failures/errors/skips in those classes.
 - Existing pure fallback and real-window GL tests are retained with the shared enum's new package.
 
 ## Full checks
 
-Final full-suite and GL results are pending for this revision. The clean check caught a recurrence of the previously
-repaired native water binding after its annotations disappeared from the shared working copy. The same small
-`SceneDto` binding repair was restored under the user's existing instruction to fix all test failures; unrelated
-concurrent work was left intact.
+- `./gradlew check --continue --console=plain`: **passed**, 2m 32s, 185 tasks. Log:
+  `/private/tmp/abyssus-aa-project-final-check.log`.
+- `./gradlew :plugin-abyssus:test --tests '*SceneViewAntialiasingGlTest' -Dabyssus.glTests=true`: **passed**,
+  2 real-window cases, zero failures. Log: `/private/tmp/abyssus-aa-project-gl.log`.
+- `scripts/check-docs.sh`: **passed**, 301 paths. Strict OpenSpec validation and diff checks passed.
+- An earlier clean run caught a recurrence of the previously repaired native water binding after its annotations
+  disappeared from the shared working copy. The same small `SceneDto` binding repair was restored under the user's
+  existing instruction to fix all test failures, and the final full suite passed. Unrelated concurrent work was preserved.
 
 ## Review
 

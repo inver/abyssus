@@ -22,5 +22,6 @@
   "physicsEnabled": true,
   "uiAssetNames": [
     "screens"
-  ]
+  ],
+  "sceneViewAntialiasing": "X4"
 }

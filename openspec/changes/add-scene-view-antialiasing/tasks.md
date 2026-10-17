@@ -34,7 +34,7 @@
 
 ## 6. Verification
 
-- [ ] 6.1 Run `./gradlew check`; record results and any unresolved failures without claiming a green suite.
+- [x] 6.1 Run `./gradlew check`; record results and any unresolved failures without claiming a green suite.
 
 ## Commands
 
