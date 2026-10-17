@@ -10,6 +10,8 @@ import com.intellij.ide.impl.ProjectViewSelectInTarget
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.projectView.impl.*
 import com.intellij.ide.util.treeView.AbstractTreeNode
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
@@ -210,6 +212,33 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
         })
     }
 
+    /**
+     * The Assets row's right-click menu holds only Import Model and New, not the platform's project-view actions;
+     * every other row keeps the platform popup.
+     */
+    override fun processMouseEvent(e: MouseEvent) {
+        if (e.isPopupTrigger) {
+            val row = rowOf(e)
+            val node = row?.let { TreeUtil.getUserObject(getPathForRow(it)?.lastPathComponent) }
+            if (row != null && assetsNodeProjectFile(node) != null) {
+                if (e.id == MouseEvent.MOUSE_PRESSED || e.id == MouseEvent.MOUSE_RELEASED) {
+                    requestFocusInWindow()
+                    setSelectionRow(row)
+                    showAssetsMenu(e.x, e.y)
+                }
+                e.consume()
+                return
+            }
+        }
+        super.processMouseEvent(e)
+    }
+
+    private fun showAssetsMenu(x: Int, y: Int) {
+        val actions = ActionManager.getInstance()
+        val group = DefaultActionGroup(ASSETS_MENU_ACTION_IDS.mapNotNull { actions.getAction(it) })
+        actions.createActionPopupMenu(ActionPlaces.PROJECT_VIEW_POPUP, group).component.show(this, x, y)
+    }
+
     override fun getToolTipText(event: MouseEvent): String? =
         actionAt(event)?.second?.tooltip ?: super.getToolTipText(event)
 
@@ -251,3 +280,6 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
     }
 
 }
+
+/** The only actions offered on the Assets folder row, in order. */
+internal val ASSETS_MENU_ACTION_IDS = listOf("Abyssus.Menu.ImportModel", "Abyssus.Menu.New")
