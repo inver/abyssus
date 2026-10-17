@@ -375,6 +375,8 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             panel.tools.setGrid(false)
             panel.tools.setShading(Shading.UNLIT)
             assertEquals(ViewDisplay(grid = false, shading = Shading.UNLIT), renderer.display)
+            panel.tools.setShading(Shading.WIREFRAME)
+            assertEquals(ViewDisplay(grid = false, shading = Shading.WIREFRAME), renderer.display)
         } finally { panel.dispose() }
     }
 

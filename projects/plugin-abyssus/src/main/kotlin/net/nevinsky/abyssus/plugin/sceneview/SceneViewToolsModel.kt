@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace
 
 /** How the view shades what it draws. */
-enum class Shading { LIT, UNLIT }
+enum class Shading { LIT, UNLIT, WIREFRAME }
 
 /** Which layers a view draws; per view and never saved. [shadows] only matters while [shading] is [Shading.LIT]. */
 data class ViewDisplay(

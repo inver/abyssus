@@ -76,6 +76,7 @@ import net.nevinsky.abyssus.plugin.sceneview.skybox.raySunVisibilityKey
 import net.nevinsky.abyssus.plugin.sceneview.skybox.blendAxisColors
 import net.nevinsky.abyssus.plugin.sceneview.skybox.planSunShading
 import net.nevinsky.abyssus.plugin.sceneview.skybox.raySkyBakeKey
+import org.lwjgl.opengl.GL11
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.plugin.sceneview.terrain.TerrainShader
@@ -417,24 +418,30 @@ class SceneRenderer(
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
 
         if (rayDisplay == null) {
-            skybox?.draw(
-                camera,
-                p.content.skybox,
-                p.projectDir,
-                SunDirection.of(p.content.lights),
-                skyClock.seconds,
-                state.cloudTechnique
-            )
+            wireframePass {
+                skybox?.draw(
+                    camera,
+                    p.content.skybox,
+                    p.projectDir,
+                    SunDirection.of(p.content.lights),
+                    skyClock.seconds,
+                    state.cloudTechnique
+                )
+            }
             drawnCloudTechnique = (skybox?.sky(p.content.skybox) as? ProceduralSky)?.drawnTechnique
             if (display.grid) {
                 batch.begin(camera)
                 batch.render(grid, environment)
                 batch.end()
             }
-            renderContent(p, c, atlas, parts = if (waterPlan != null) ContentParts.OPAQUE else ContentParts.ALL)
+            wireframePass {
+                renderContent(p, c, atlas, parts = if (waterPlan != null) ContentParts.OPAQUE else ContentParts.ALL)
+            }
             if (waterPlan != null) {
-                water().drawSurfaces(waterPlan, waterInput!!, waterSkyCube(c, water().usesSkyFallback(waterPlan)))
-                renderContent(p, c, atlas, parts = ContentParts.BLENDED)
+                wireframePass {
+                    water().drawSurfaces(waterPlan, waterInput!!, waterSkyCube(c, water().usesSkyFallback(waterPlan)))
+                    renderContent(p, c, atlas, parts = ContentParts.BLENDED)
+                }
             }
             lastWaterPlan = waterPlan
             drawOverlays(width, height)
@@ -693,9 +700,22 @@ class SceneRenderer(
 
     /** The sky and the opaque scene through the mirrored [view], clipped to what is above the water ([clip]). */
     private fun drawReflected(p: SceneRenderParams, c: SceneContent, atlas: ShadowAtlasAttribute?, view: Camera, clip: FloatArray) {
-        skybox?.draw(view, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights), skyClock.seconds, state.cloudTechnique)
-        Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
-        renderContent(p, c, atlas, view, clip, ContentParts.OPAQUE)
+        wireframePass {
+            skybox?.draw(view, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights), skyClock.seconds, state.cloudTechnique)
+            Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
+            renderContent(p, c, atlas, view, clip, ContentParts.OPAQUE)
+        }
+    }
+
+    /** Runs [block] with `GL_LINE` polygon mode when shading is Wireframe, restoring `GL_FILL` afterwards. */
+    private fun wireframePass(block: () -> Unit) {
+        val wireframe = display.shading == Shading.WIREFRAME
+        if (wireframe) GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_LINE)
+        try {
+            block()
+        } finally {
+            if (wireframe) GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL)
+        }
     }
 
     private fun renderContent(
