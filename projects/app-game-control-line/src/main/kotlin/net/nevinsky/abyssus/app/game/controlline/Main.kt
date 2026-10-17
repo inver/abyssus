@@ -38,7 +38,10 @@ fun main() {
     val fieldView = resolveFieldView(project)
     val reason = if (fieldView is RayFieldResult.Unavailable) fieldView.reason else null
     val game = when (fieldView) {
-        is RayFieldResult.Available -> ControlLineGame(project, defaultScoresFile(), defaultPatternScoresFile(), fieldView.view)
+        is RayFieldResult.Available -> {
+            config.setTitle("Control Line (ray)")
+            ControlLineGame(project, defaultScoresFile(), defaultPatternScoresFile(), fieldView.view)
+        }
         else -> {
             reason?.let { r ->
                 config.setTitle("Control Line (raster: $r)")
@@ -61,8 +64,8 @@ internal fun resolveFieldView(project: Path): RayFieldResult {
     if ("ray" != System.getProperty("controlLine.fieldView")) return RayFieldResult.Unavailable(null)
     return try {
         val entry = Class.forName("net.nevinsky.abyssus.app.game.controlline.ray.RayFieldEntry")
-        val method = entry.getMethod("fieldView")
-        val result = method.invoke(null)
+        val method = entry.getMethod("fieldView", Path::class.java)
+        val result = method.invoke(null, project)
         when (result) {
             is RayFieldResult.Available -> result
             is RayFieldResult.Unavailable -> result

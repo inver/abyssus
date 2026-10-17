@@ -5,24 +5,16 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
-import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.plugin.SceneRayControls
-
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.service
 import com.intellij.openapi.application.ModalityState
-import com.intellij.util.concurrency.AppExecutorUtil
-import java.io.File
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.command.undo.DocumentReference
 import com.intellij.openapi.command.undo.DocumentReferenceManager
 import com.intellij.openapi.command.undo.DocumentReferenceProvider
+import com.intellij.openapi.command.undo.UndoManager
+import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -39,33 +31,40 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.components.JBLabel
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.plugin.dto.textOf
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ObjectNode
+import com.intellij.util.Alarm
+import com.intellij.util.concurrency.AppExecutorUtil
+import com.intellij.util.ui.update.MergingUpdateQueue
+import com.intellij.util.ui.update.Update
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
 import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.water.WaterField
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.SceneRayControls
+import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.filetype.AbyssusSceneEdited
+import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import net.nevinsky.abyssus.plugin.water.WaterSceneEdits
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
+import java.io.File
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import com.intellij.openapi.command.undo.UndoManager
-import com.intellij.util.Alarm
-import com.intellij.util.ui.update.MergingUpdateQueue
-import com.intellij.util.ui.update.Update
-import net.nevinsky.abyssus.plugin.filetype.AbyssusSceneEdited
-import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 
 /** How long typing must pause before the view re-reads the scene; the view then catches up within 300 ms of the last keystroke. */
 private const val RELOAD_PAUSE_MS = 200
@@ -88,7 +87,15 @@ class SceneFileEditor(
     private val content = JPanel(BorderLayout()).apply { isFocusable = true }
     private var view: SceneView? = null
     private val reloads = ReloadPolicy()
-    private val reloadQueue = MergingUpdateQueue("abyssus-scene-reload", RELOAD_PAUSE_MS, true, content, this, null, Alarm.ThreadToUse.SWING_THREAD)
+    private val reloadQueue = MergingUpdateQueue(
+        "abyssus-scene-reload",
+        RELOAD_PAUSE_MS,
+        true,
+        content,
+        this,
+        null,
+        Alarm.ThreadToUse.SWING_THREAD
+    )
 
     private var disposed = false
 
@@ -162,7 +169,11 @@ class SceneFileEditor(
             override fun beforeDocumentChange(event: DocumentEvent) {
                 val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
                 if (!isSource(changed)) return
-                val next = event.document.text.replaceRange(event.offset, event.offset + event.oldLength, event.newFragment.toString())
+                val next = event.document.text.replaceRange(
+                    event.offset,
+                    event.offset + event.oldLength,
+                    event.newFragment.toString()
+                )
                 if (hasRenderChange(changed, next)) view?.stopPlay()
             }
 
@@ -359,6 +370,8 @@ internal fun unsavedAssetMeta(projectDir: File): Map<File, String> {
     return manager.unsavedDocuments.mapNotNull { document ->
         val file = manager.getFile(document)?.takeIf { it.name == META_FILE } ?: return@mapNotNull null
         val io = File(file.path).absoluteFile
-        if (assets.contains(io.path)) io to document.text else null
+        if (assets.contains(io.path)) {
+            io to document.text
+        } else null
     }.toMap()
 }

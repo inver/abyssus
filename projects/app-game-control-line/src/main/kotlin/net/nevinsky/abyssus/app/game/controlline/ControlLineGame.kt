@@ -61,7 +61,11 @@ class ControlLineGame(
     private val input = HandleInput()
 
     private lateinit var flow: GameFlow
-    private val renderer: FieldView by lazy { fieldView ?: FieldRenderer(ctx) }
+    private val raster = lazy { FieldRenderer(ctx) }
+
+    /** The opt-in view (ray mode) while it works; null once it failed or when there was none: the raster field draws. */
+    private var optIn: FieldView? = fieldView
+    private val renderer: FieldView get() = optIn ?: raster.value
     private lateinit var ui: GameUiHost
     private lateinit var cameras: Cameras
     private lateinit var parked: FieldScene
@@ -162,8 +166,17 @@ class ControlLineGame(
             clips = if (screen is Screen.Debrief) emptyMap() else s?.flight?.crash?.let { mapOf(s.plane to it.clip) }.orEmpty(),
             seconds = seconds,
         )
+        (optIn as? FailableFieldView)?.failure?.let(::fallBackToRaster)
         ui.update(s, judge, seconds)
         ui.draw(seconds)
+    }
+
+    /** Ray rendering failed after start: dispose it and continue raster, with the reason in the title and the log. */
+    private fun fallBackToRaster(reason: String) {
+        log.warn("Ray-traced field view stopped: {}; continuing with the raster field", reason)
+        Gdx.graphics.setTitle("Control Line (raster: $reason)")
+        optIn?.dispose()
+        optIn = null
     }
 
     /** The debrief's own load of the field for [model], made when it opens and dropped when the screen is left. */
@@ -258,7 +271,8 @@ class ControlLineGame(
     override fun dispose() {
         endFlight()
         ui.dispose()
-        renderer.dispose()
+        optIn?.dispose()
+        if (optIn == null || raster.isInitialized()) raster.value.dispose()
         executor.shutdownNow()
     }
 

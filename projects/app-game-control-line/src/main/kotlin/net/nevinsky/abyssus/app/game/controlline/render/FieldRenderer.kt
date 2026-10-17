@@ -77,6 +77,14 @@ interface FieldView {
 }
 
 /**
+ * A field view that can give up while the game runs (the ray-traced view: a quality limit, a stalled frame, a lost
+ * device). Once [failure] is set, the game disposes the view and continues with the raster field, stating the reason.
+ */
+interface FailableFieldView : FieldView {
+    val failure: String?
+}
+
+/**
  * The cloud technique the game draws its sky with. The asset's own (shells: eight noise layers per band at the full
  * window resolution, every frame) keeps a 3.2 core context under 40 frames a second; layered clouds cost almost
  * nothing.

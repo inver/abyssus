@@ -17,7 +17,9 @@ class WaterScreenArea {
     private class Vertex(val x: Double, val y: Double, val z: Double, val w: Double)
 
     fun pixels(viewProjection: Matrix4, surface: WaterSettings, viewWidth: Int, viewHeight: Int): Double {
-        if (viewWidth <= 0 || viewHeight <= 0) return 0.0
+        if (viewWidth <= 0 || viewHeight <= 0) {
+            return 0.0
+        }
         val hw = surface.width / 2
         val hl = surface.length / 2
         var polygon = listOf(
@@ -32,7 +34,9 @@ class WaterScreenArea {
         )
         for (distance in planes) {
             polygon = clipAgainst(polygon, distance)
-            if (polygon.size < 3) return 0.0
+            if (polygon.size < 3) {
+                return 0.0
+            }
         }
         val screen = polygon.map { (it.x / it.w) to (it.y / it.w) }
         var twice = 0.0
@@ -47,7 +51,9 @@ class WaterScreenArea {
 
     private fun clip(m: Matrix4, x: Double, y: Double, z: Double): Vertex {
         val v = m.`val`
-        val fx = x.toFloat(); val fy = y.toFloat(); val fz = z.toFloat()
+        val fx = x.toFloat();
+        val fy = y.toFloat();
+        val fz = z.toFloat()
         return Vertex(
             (v[Matrix4.M00] * fx + v[Matrix4.M01] * fy + v[Matrix4.M02] * fz + v[Matrix4.M03]).toDouble(),
             (v[Matrix4.M10] * fx + v[Matrix4.M11] * fy + v[Matrix4.M12] * fz + v[Matrix4.M13]).toDouble(),
@@ -67,7 +73,12 @@ class WaterScreenArea {
             if (da >= 0) out += a
             if ((da >= 0) != (db >= 0)) {
                 val t = da / (da - db)
-                out += Vertex(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, a.w + (b.w - a.w) * t)
+                out += Vertex(
+                    a.x + (b.x - a.x) * t,
+                    a.y + (b.y - a.y) * t,
+                    a.z + (b.z - a.z) * t,
+                    a.w + (b.w - a.w) * t
+                )
             }
         }
         return out

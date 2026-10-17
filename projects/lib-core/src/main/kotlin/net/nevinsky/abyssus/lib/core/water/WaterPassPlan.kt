@@ -48,7 +48,8 @@ class WaterPassPlan(
     val isEmpty: Boolean get() = drawOrder.isEmpty()
 
     /** The group of [surface] among the reflected ones, or null (it uses the fallback). */
-    fun reflectionOf(surface: WaterSettings): WaterLevelGroup? = reflected.firstOrNull { it.key == levelKey(surface.level) }
+    fun reflectionOf(surface: WaterSettings): WaterLevelGroup? =
+        reflected.firstOrNull { it.key == levelKey(surface.level) }
 }
 
 /**

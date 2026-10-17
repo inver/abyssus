@@ -60,6 +60,28 @@ class RaySceneConverterTest {
         assertEquals(2, converter.instances.size)
     }
 
+    @Test fun resetKeepsMeshAndTextureIdentityForTheNextConversion() {
+        val converter = RaySceneConverter()
+        converter.model("a", Matrix4(), snapshot)
+        val mesh = converter.meshes.first()
+        val texture = converter.textures.first()
+        converter.reset()
+        assertTrue(converter.meshes.isEmpty() && converter.instances.isEmpty() && converter.topology.isEmpty())
+        converter.model("a", Matrix4().translate(1f, 0f, 0f), snapshot)
+        assertSame(mesh, converter.meshes.first())
+        assertSame(texture, converter.textures.first())
+        assertEquals(1, converter.instances.size)
+    }
+
+    @Test fun resetSeedsEnvironmentTexturesAtTheFirstIndices() {
+        val sky = RayTexture("sky", 1, 1, floatArrayOf(1f, 1f, 1f, 1f), RayWrap.REPEAT, RayWrap.CLAMP_TO_EDGE, RayFilter.LINEAR)
+        val converter = RaySceneConverter()
+        converter.reset(listOf(sky))
+        converter.model("a", Matrix4(), snapshot)
+        assertSame(sky, converter.textures.first())
+        assertEquals(2, converter.textures.size)
+    }
+
     @Test fun convertsTerrain() {
         // 3 vertices * 8 floats/vertex = 24 floats; one triangle (0,1,2)
         val terrain = RayTerrainSnapshot(4, 4, 1f, floatArrayOf(0f, 0f, 0f, 0f),

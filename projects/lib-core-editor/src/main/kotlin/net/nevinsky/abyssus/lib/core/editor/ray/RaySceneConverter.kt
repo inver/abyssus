@@ -46,16 +46,34 @@ class RaySceneConverter(private val limits: RaySnapshotLimits = RaySnapshotLimit
     private val materialIds = mutableMapOf<String, Int>()
     private var bytes = 0L
     private var triangles = 0L
-    private val cache: MutableMap<String, Any> = HashMap()
+    // Converted meshes per retained asset object, so a frame that reuses an asset reuses its `RayMesh` identity.
+    private val caches = java.util.WeakHashMap<Any, MutableMap<String, Any>>()
+    private val textureCache = HashMap<String, Pair<RayModelImage, RayTexture>>()
+    private val assetIds = java.util.WeakHashMap<Any, Int>()
+    private var nextAssetId = 0
+    private fun assetKey(asset: Any) = "a${assetIds.getOrPut(asset) { nextAssetId++ }}"
+
+    /**
+     * Starts the next conversion: the outputs and bounds are cleared, the per-asset mesh and texture caches are kept.
+     * [environmentTextures] take the first texture indices, which is where `RayEnvironment.texture` points.
+     */
+    fun reset(environmentTextures: List<RayTexture> = emptyList()) {
+        meshes.clear(); materials.clear(); textures.clear(); instances.clear(); topology.clear(); transforms.clear()
+        textures.addAll(environmentTextures)
+        geometry.clear(); materialIds.clear(); bytes = 0L; triangles = 0L
+    }
 
     /** Converts one placed model (mesh parts → meshes/instances, materials → materials, images → textures) in bind pose. */
     fun model(instanceId: String, world: Matrix4, asset: RayModelSnapshot) {
         val prefix = "model:$instanceId"
+        // geometry, materials and textures belong to the asset, not the instance: many instances share one of each
+        val shared = "model:${assetKey(asset)}"
+        val cache = caches.getOrPut(asset) { HashMap() }
         val textureIds =
-            asset.images.mapValues { (name, image) -> texture("$prefix:$name", image, RayTextureSampler()) }
+            asset.images.mapValues { (name, image) -> texture("$shared:$name", image, RayTextureSampler()) }
 
         fun material(id: String?): Int =
-            materialIds.getOrPut("$prefix:$id") {
+            materialIds.getOrPut("$shared:$id") {
                 val source = requireNotNull(asset.materials.firstOrNull { it.id == id }) { "Missing material $id" }
                 materials.add(convertMaterial(source, textureIds))
                 materials.lastIndex
@@ -77,7 +95,7 @@ class RaySceneConverter(private val limits: RaySnapshotLimits = RaySnapshotLimit
                     "Missing mesh part ${part.meshPartId}"
                 }
                 require(meshPart.primitiveType == GL20.GL_TRIANGLES) { "Only triangle mesh parts are supported" }
-                val key = "$prefix:${part.meshPartId}"
+                val key = "$shared:${part.meshPartId}"
                 val built = cache.getOrPut("mesh:${part.meshPartId}") {
                     buildMesh(source)
                 } as CachedMesh
@@ -90,7 +108,7 @@ class RaySceneConverter(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 val id = "$instanceId/$path/$ordinal"
                 val worldMat = Matrix4(world).mul(global)
                 instance(id, meshIndex, material(part.materialId), worldMat)
-                topology += "$id:$key:${part.materialId}"
+                topology += "$id:$prefix:${part.meshPartId}:${part.materialId}"
             }
             node.children.forEachIndexed { index, child -> visit(child, global, "$path/$index") }
         }
@@ -100,8 +118,9 @@ class RaySceneConverter(private val limits: RaySnapshotLimits = RaySnapshotLimit
     /** Converts one placed terrain into a mesh, material and instance. */
     fun terrain(instanceId: String, world: Matrix4, asset: RayTerrainSnapshot) {
         val key = "terrain:$instanceId"
+        val cache = caches.getOrPut(asset) { HashMap() }
         val meshIndex = geometry.getOrPut(key) {
-            val built = buildTerrainMesh(asset)
+            val built = cache.getOrPut("terrain") { buildTerrainMesh(asset) } as CachedMesh
             bytes += built.bytes
             triangles += built.mesh.indexCount / 3
             meshes.add(built.mesh)
@@ -162,12 +181,13 @@ class RaySceneConverter(private val limits: RaySnapshotLimits = RaySnapshotLimit
         val existing = textures.indexOfFirst { it.id == id }
         if (existing >= 0) return existing
         bytes += image.byteSize
+        val cached = textureCache[id]?.takeIf { it.first === image }?.second
         textures.add(
-            RayTexture(
+            cached ?: RayTexture(
                 id, image.width, image.height, image.rgba(),
                 if (sampler.wrapU == RayTextureWrap.REPEAT) RayWrap.REPEAT else RayWrap.CLAMP_TO_EDGE,
                 if (sampler.wrapV == RayTextureWrap.REPEAT) RayWrap.REPEAT else RayWrap.CLAMP_TO_EDGE
-            )
+            ).also { textureCache[id] = image to it }
         )
         return textures.lastIndex
     }

@@ -4,100 +4,124 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.ray
 
-import net.nevinsky.abyssus.app.game.controlline.render.FieldScene
+import com.badlogic.gdx.math.Matrix4
 import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneConverter
 import net.nevinsky.abyssus.lib.core.editor.ray.RaySnapshotLimits
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSnapshot
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySkySnapshot
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayTerrainSnapshot
 import net.nevinsky.abyssus.lib.raytracing.*
-import com.badlogic.gdx.math.Matrix4
-import java.nio.file.Path
 
-/**
- * Builds one [RaySceneSnapshot] per frame (task 3.5): terrain, static models, moving planes/pilot from their Ashley
- * transforms in bind pose, sun from the scene light, sky/fog from the game's render parameters, and the camera from the
- * field camera. Meshes/materials/textures are cached through [RaySceneConverter] so transform-only frames do not
- * rebuild geometry.
- *
- * The caller supplies the already-loaded model/terrain snapshots (keyed by asset folder) and the per-instance world
- * transforms; the builder converts them with [RaySceneConverter] and assembles a `RaySceneSnapshot`. This keeps the
- * builder free of GL and of the editor's scene types.
- */
-class RayFieldSceneBuilder(
-    private val project: java.nio.file.Path,
-    private val limits: RaySnapshotLimits = RaySnapshotLimits(),
-) {
-    private val converter = RaySceneConverter(limits)
+/** One placed model in bind pose: a stable [id] (so its geometry keeps its identity), its asset and world transform. */
+class RayPlacedModel(val id: String, val asset: RayModelSnapshot, val world: Matrix4)
 
-    /** The most recently built snapshot, reused to detect transform-only frames. */
-    private var previous: RaySceneSnapshot? = null
+/** One placed terrain. */
+class RayPlacedTerrain(val id: String, val asset: RayTerrainSnapshot, val world: Matrix4)
 
-    /**
-     * Builds a [RaySceneSnapshot] for the current frame.
-     *
-     * @param models the loaded model snapshots, keyed by asset folder
-     * @param terrains the loaded terrain snapshots, keyed by asset folder
-     * @param instances one entry per drawn instance: `(instanceId, assetKey, worldTransform, materialId)`. `materialId`
-     *        selects the material within the model asset (`null` for terrain, which has one material).
-     * @param lights the scene's directional/point/spot lights
-     * @param environment the ray environment (ambient/background)
-     * @param fog the scene fog, or null
-     * @return the assembled `RaySceneSnapshot`
-     */
-    fun build(
-        models: Map<String, RayModelSnapshot>,
-        terrains: Map<String, RayTerrainSnapshot>,
-        instances: List<RayFieldInstance>,
-        lights: List<RayLight>,
-        environment: RayEnvironment,
-        fog: RayFog?,
-    ): RaySceneSnapshot {
-        converter.meshes.clear()
-        converter.materials.clear()
-        converter.textures.clear()
-        converter.instances.clear()
-        converter.topology.clear()
-        converter.transforms.clear()
-
-        for ((assetKey, asset) in models) {
-            val placed = instances.filter { it.assetKey == assetKey && it.assetKind == RayFieldAssetKind.MODEL }
-            for (inst in placed) {
-                converter.model(inst.instanceId, inst.world, asset)
-            }
-        }
-        for ((assetKey, asset) in terrains) {
-            val placed = instances.filter { it.assetKey == assetKey && it.assetKind == RayFieldAssetKind.TERRAIN }
-            for (inst in placed) {
-                converter.terrain(inst.instanceId, inst.world, asset)
-            }
-        }
-        converter.checkBounds()
-
-        val scene = RaySceneSnapshot(
-            converter.meshes,
-            converter.instances,
-            converter.materials,
-            converter.textures,
-            lights,
-            environment,
-            fog,
-        )
-        previous = scene
-        return scene
-    }
-
-    /** Whether the previous frame was transform-only (no geometry/material/texture change). */
-    fun transformOnly(): Boolean = previous != null
-}
-
-/** One placed instance: an id, the asset it draws, its world transform, and the material index within the asset. */
-data class RayFieldInstance(
-    val instanceId: String,
-    val assetKey: String,
-    val assetKind: RayFieldAssetKind,
-    val world: Matrix4,
-    val materialId: String?,
+/** The field camera as plain numbers: nothing mutable crosses to the ray worker. */
+class RayFieldCamera(
+    val position: List<Float>, val direction: List<Float>, val up: List<Float>,
+    val fieldOfView: Float, val near: Float, val far: Float,
 )
 
-/** The kind of asset an instance draws. */
-enum class RayFieldAssetKind { MODEL, TERRAIN }
+/** What the game knows about one frame of the field, with no GL and no Ashley type. */
+class RayFieldInputs(
+    val models: List<RayPlacedModel>,
+    val terrains: List<RayPlacedTerrain>,
+    val lights: List<RayLight>,
+    val ambient: RayColor,
+    val background: RayColor,
+    val fog: RayFog?,
+    val sky: RaySkySnapshot?,
+    val camera: RayFieldCamera,
+)
+
+/** A built frame: the scene, the camera, and the revisions the scheduler keys its history on. */
+class RayFieldFrame(
+    val scene: RaySceneSnapshot,
+    val camera: RaySliceCamera,
+    val key: RayFrameKey,
+    val contentRevision: Long,
+    val environmentRevision: Long,
+)
+
+/**
+ * Builds one [RaySceneSnapshot] per frame (terrain, models in bind pose, sun, sky and fog) through the editor's
+ * [RaySceneConverter], which keeps converted meshes and textures per asset: a frame that only moves instances or the
+ * camera reuses every mesh, so the backend does not rebuild geometry. The structure, content, environment and camera
+ * revisions say what changed since the previous frame.
+ */
+class RayFieldSceneBuilder(limits: RaySnapshotLimits = RaySnapshotLimits()) {
+    private val converter = RaySceneConverter(limits)
+    private var skyTexture: Pair<RaySkySnapshot, RayTexture>? = null
+
+    private var sceneGeneration = 0L
+    private var cameraRevision = 0L
+    private var contentRevision = 0L
+    private var environmentRevision = 0L
+
+    private var assets: List<Any> = emptyList()
+    private var topology: List<String> = emptyList()
+    private var transforms: Map<String, List<Float>> = emptyMap()
+    private var camera: List<Any>? = null
+    private var lights: List<RayLight> = emptyList()
+    private var environment: Triple<RayEnvironment, RayFog?, Any?>? = null
+
+    /** Geometry builds so far: the number of times the structure changed. */
+    val structureChanges: Long get() = sceneGeneration
+
+    fun build(inputs: RayFieldInputs): RayFieldFrame {
+        val texture = inputs.sky?.let(::textureOf)
+        converter.reset(listOfNotNull(texture))
+        for (placed in inputs.models) converter.model(placed.id, placed.world, placed.asset)
+        for (placed in inputs.terrains) converter.terrain(placed.id, placed.world, placed.asset)
+        converter.checkBounds()
+
+        val environmentNow = RayEnvironment(inputs.ambient, inputs.background, texture = texture?.let { 0 })
+        val scene = RaySceneSnapshot(
+            converter.meshes, converter.instances, converter.materials,
+            fitTextureTexels(converter.textures, halve = ::halvedTexture)
+                ?: throw IllegalArgumentException("The scene textures cannot be reduced to $RAY_MAX_TEXTURE_TEXELS texels"),
+            inputs.lights, environmentNow, inputs.fog,
+        )
+        val c = inputs.camera
+        val rayCamera = RaySliceCamera(c.position, c.direction, c.up, c.fieldOfView, c.near, c.far)
+
+        val assetsNow = inputs.models.map<RayPlacedModel, Any> { it.asset } + inputs.terrains.map { it.asset }
+        val structure = topology != converter.topology.toList() ||
+            assets.size != assetsNow.size || assets.indices.any { assets[it] !== assetsNow[it] }
+        val moved = transforms != converter.transforms
+        val cameraNow = listOf(c.position, c.direction, c.up, c.fieldOfView, c.near, c.far)
+        val lit = lights != inputs.lights
+        val skyNow = Triple(environmentNow, inputs.fog, inputs.sky)
+        val env = environment?.let { it.first != skyNow.first || it.second != skyNow.second || it.third !== skyNow.third } ?: true
+
+        if (structure) sceneGeneration++
+        if (camera != cameraNow) cameraRevision++
+        // a sky-only change keeps the older frame shown; any other change restarts sampling
+        if (structure || moved || lit) contentRevision++ else if (env) environmentRevision++
+
+        assets = assetsNow
+        topology = converter.topology.toList()
+        transforms = converter.transforms.toMap()
+        camera = cameraNow
+        lights = inputs.lights
+        environment = skyNow
+        return RayFieldFrame(
+            scene, rayCamera, RayFrameKey(sceneGeneration, 1, cameraRevision, 0), contentRevision, environmentRevision,
+        )
+    }
+
+    // halved copies of oversized textures, per source, so a scene over the texel budget reduces them once, not every frame
+    private val halved = java.util.WeakHashMap<RayTexture, RayTexture>()
+    private fun halvedTexture(texture: RayTexture): RayTexture? =
+        halved[texture] ?: texture.halved()?.also { halved[texture] = it }
+
+    private fun textureOf(sky: RaySkySnapshot): RayTexture {
+        skyTexture?.takeIf { it.first === sky }?.let { return it.second }
+        val bytes = sky.rgba8()
+        return (if (bytes != null) RayTexture("sky", sky.width, sky.height, bytes, RayWrap.REPEAT, RayWrap.CLAMP_TO_EDGE, RayFilter.LINEAR)
+        else RayTexture("sky", sky.width, sky.height, sky.rgba(), RayWrap.REPEAT, RayWrap.CLAMP_TO_EDGE, RayFilter.LINEAR))
+            .also { skyTexture = sky to it }
+    }
+}

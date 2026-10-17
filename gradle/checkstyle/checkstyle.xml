@@ -31,11 +31,4 @@
         <property name="format" value="\r"/>
         <property name="message" value="Line contains a carriage return; use LF line endings only."/>
     </module>
-
-    <!-- Avoid single-line if-else without braces around both branches. -->
-    <module name="RegexpSingleline">
-        <property name="format" value="if \(actionAt\(e\) != null\) Cursor\.getPredefinedCursor\(Cursor\.HAND_CURSOR\) else Cursor\.getDefaultCursor\(\)"/>
-        <property name="message" value="Avoid single-line if-else; use braces around both branches."/>
-    </module>
-
 </module>

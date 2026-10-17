@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.lib.core.water
 
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.sqrt
 
@@ -17,7 +18,7 @@ import kotlin.math.sqrt
  */
 class WaterMeshPlan internal constructor(val cellsX: Int, val cellsZ: Int, val width: Double, val length: Double) {
     /** The longest side of a cell in world units. */
-    val cellSize: Double get() = kotlin.math.max(width / cellsX, length / cellsZ)
+    val cellSize: Double get() = max(width / cellsX, length / cellsZ)
 
     val vertexCount: Int get() = (cellsX + 1) * (cellsZ + 1)
     val indexCount: Int get() = cellsX * cellsZ * 6
@@ -55,14 +56,15 @@ class WaterMeshPlan internal constructor(val cellsX: Int, val cellsZ: Int, val w
 class WaterMeshPlanner {
     fun plan(width: Double, length: Double, wavelength: Double): WaterMeshPlan {
         require(width > 0.0 && length > 0.0 && width.isFinite() && length.isFinite()) { "a surface has a positive finite extent" }
-        val cell = max((if (wavelength.isFinite() && wavelength > 0.0) wavelength else 1.0) / CELLS_PER_WAVELENGTH, MIN_CELL)
+        val cell =
+            max((if (wavelength.isFinite() && wavelength > 0.0) wavelength else 1.0) / CELLS_PER_WAVELENGTH, MIN_CELL)
         var nx = ceil(width / cell).coerceIn(1.0, MAX_CELLS_PER_SIDE.toDouble())
         var nz = ceil(length / cell).coerceIn(1.0, MAX_CELLS_PER_SIDE.toDouble())
         val vertices = (nx + 1) * (nz + 1)
         if (vertices > MAX_WATER_VERTICES) {
             val shrink = sqrt(MAX_WATER_VERTICES / vertices)
-            nx = Math.floor(nx * shrink).coerceAtLeast(1.0)
-            nz = Math.floor(nz * shrink).coerceAtLeast(1.0)
+            nx = floor(nx * shrink).coerceAtLeast(1.0)
+            nz = floor(nz * shrink).coerceAtLeast(1.0)
             // flooring can leave one side needing a last trim to stay under the ceiling
             while ((nx + 1) * (nz + 1) > MAX_WATER_VERTICES) if (nx >= nz) nx-- else nz--
         }

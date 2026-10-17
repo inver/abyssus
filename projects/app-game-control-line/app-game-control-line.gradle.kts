@@ -88,6 +88,24 @@ tasks.register<JavaExec>("runRay") {
 
 val gameProject = layout.projectDirectory.dir("project/ControlLine")
 
+// Tests of the ray set (src/rayTest), headless: the scene builder and the failure reporting of the ray view. Kept out of
+// the game's test source set so its classpath never sees the ray modules.
+val rayTest by sourceSets.creating {
+    compileClasspath += ray.output + ray.runtimeClasspath
+    runtimeClasspath += output + compileClasspath
+}
+dependencies {
+    "rayTestImplementation"(libs.junit4)
+    "rayTestImplementation"(testFixtures(project(":lib-core-editor")))
+}
+tasks.register<Test>("testRay") {
+    group = "verification"
+    description = "Runs the headless tests of the ray-traced field view."
+    testClassesDirs = rayTest.output.classesDirs
+    classpath = rayTest.runtimeClasspath
+}
+tasks.named("check") { dependsOn("testRay") }
+
 // A shipped game carries no editor code: nothing on the main runtime classpath may reach an editor-only module.
 val checkShippedClasspath by tasks.registering {
     group = "verification"

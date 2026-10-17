@@ -10,14 +10,21 @@ import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
 import net.nevinsky.abyssus.lib.core.ui.model.UiWidget
 
 /** Appearance states, lowest priority first: a later state in [UiVisualState.entries] wins over an earlier one. */
-enum class UiVisualState(val json: String) { NORMAL("normal"), FOCUSED("focused"), HOVER("hover"), PRESSED("pressed"), DISABLED("disabled") }
+enum class UiVisualState(val json: String) {
+    NORMAL("normal"), FOCUSED("focused"), HOVER("hover"), PRESSED("pressed"), DISABLED(
+        "disabled"
+    )
+}
 
 enum class UiStyleIssue { MISSING_STYLE, BAD_VALUE }
 
 data class UiStyleDiagnostic(val code: UiStyleIssue, val widgetId: String, val key: String? = null)
 
 /** The merged style values of one widget in one set of states, with typed readers that ignore a malformed value. */
-class UiResolvedStyle(private val values: Map<String, JsonNode>, val diagnostics: List<UiStyleDiagnostic> = emptyList()) {
+class UiResolvedStyle(
+    private val values: Map<String, JsonNode>,
+    val diagnostics: List<UiStyleDiagnostic> = emptyList()
+) {
     fun string(key: String): String? = values[key]?.takeIf { it.isTextual }?.textValue()
 
     fun number(key: String): Double? = values[key]?.takeIf { it.isNumber && it.doubleValue().isFinite() }?.doubleValue()
@@ -50,7 +57,8 @@ private fun layerOf(node: JsonNode?): StyleLayer {
     if (node == null || !node.isObject) return StyleLayer(emptyMap(), emptyMap())
     val base = node.properties().filter { it.key != "states" && it.key != "name" }.associate { it.key to it.value }
     val states = UiVisualState.entries.mapNotNull { state ->
-        node.get("states")?.get(state.json)?.takeIf { it.isObject }?.let { state to it.properties().associate { e -> e.key to e.value } }
+        node.get("states")?.get(state.json)?.takeIf { it.isObject }
+            ?.let { state to it.properties().associate { e -> e.key to e.value } }
     }.toMap()
     return StyleLayer(base, states)
 }
@@ -61,8 +69,9 @@ private fun layerOf(node: JsonNode?): StyleLayer {
  */
 class UiStyleResolver(json: JsonProcessor) {
     private val bundled: Map<String, StyleLayer> = run {
-        val text = checkNotNull(UiStyleResolver::class.java.getResourceAsStream("/ui/default-theme.json")) { "default UI theme missing" }
-            .use { String(it.readAllBytes(), Charsets.UTF_8) }
+        val text =
+            checkNotNull(UiStyleResolver::class.java.getResourceAsStream("/ui/default-theme.json")) { "default UI theme missing" }
+                .use { String(it.readAllBytes(), Charsets.UTF_8) }
         json.readObject(text).properties().associate { it.key to layerOf(it.value) }
     }
 
@@ -70,7 +79,12 @@ class UiStyleResolver(json: JsonProcessor) {
     fun bundledValue(type: String, key: String): JsonNode? = bundled[type]?.base?.get(key)
 
     /** [styleName] is the named style to use; a widget with a bound `style` passes the bound name, else its own. */
-    fun resolve(collection: UiCollection, widget: UiWidget, states: Set<UiVisualState>, styleName: String? = widget.style): UiResolvedStyle {
+    fun resolve(
+        collection: UiCollection,
+        widget: UiWidget,
+        states: Set<UiVisualState>,
+        styleName: String? = widget.style
+    ): UiResolvedStyle {
         val diagnostics = mutableListOf<UiStyleDiagnostic>()
         val default = widget.type?.let { bundled[it.json] } ?: StyleLayer(emptyMap(), emptyMap())
         val named = styleName?.let { name ->
@@ -79,10 +93,16 @@ class UiStyleResolver(json: JsonProcessor) {
         } ?: StyleLayer(emptyMap(), emptyMap())
         val own = layerOf(widget.properties["styleOverrides"])
         val merged = LinkedHashMap<String, JsonNode>()
-        for (layer in listOf(default, named, own)) merged.putAll(layer.base)
+        for (layer in listOf(default, named, own)) {
+            merged.putAll(layer.base)
+        }
         val active = UiVisualState.entries.filter { it == UiVisualState.NORMAL || it in states }
         for (state in active) for (layer in listOf(default, named, own)) layer.states[state]?.let(merged::putAll)
-        for ((key, value) in merged) if (value.isNull) diagnostics += UiStyleDiagnostic(UiStyleIssue.BAD_VALUE, widget.id, key)
+        for ((key, value) in merged) if (value.isNull) diagnostics += UiStyleDiagnostic(
+            UiStyleIssue.BAD_VALUE,
+            widget.id,
+            key
+        )
         return UiResolvedStyle(merged.filterValues { !it.isNull }, diagnostics)
     }
 }
