@@ -18,7 +18,7 @@ context: |
   - Every document edit to a scene, project or asset metadata file goes through editSceneJson: one undoable command that keeps the file's
     formatting and number text.
   - A plan that needs another write path must say why.
-  - gdx-model stays a plain JVM library with no IntelliJ or plugin imports; it is meant to be reusable in other libGDX
+  - lib-gdx stays a plain JVM library with no IntelliJ or plugin imports; it is meant to be reusable in other libGDX
     projects.
 
   Specs and docs:
@@ -183,7 +183,7 @@ rules:
   tasks:
     - "Each task names its verification: a test class and case, a command, or a numbered runIde check."
     - "Split code a headless test can cover from behavior only runIde can show, so a task is not left unchecked for want of a manual check."
-    - "Run single tests with ./gradlew :test --tests '<class>' (plain test --tests also runs gdx-model and fails there)."
+    - "Run single tests with ./gradlew :plugin-abyssus:test --tests '<class>' (plain test --tests also runs in the other modules and fails there with \"No tests found\")."
     - "End with a task that runs ./gradlew check and scripts/check-docs.sh."
 
 operations:
