@@ -40,6 +40,8 @@ object PanelMetrics {
     fun scaled(value: Int): Int = JBUI.scale(value)
 }
 
+private const val HAIRLINE_PX = 1
+
 /** The monospace font of values, in the label size. */
 internal fun monoFont(): Font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size)
 
@@ -169,6 +171,36 @@ class DimPanel(layout: java.awt.LayoutManager, private var alpha: Float = 1f) : 
     }
 }
 
+/** A header group: its children in a row, 6 px apart and centered on the header's height. */
+private fun centeredRow(): JPanel = object : JPanel() {
+    init {
+        layout = BoxLayout(this, BoxLayout.X_AXIS)
+        isOpaque = false
+    }
+
+    override fun add(comp: java.awt.Component): java.awt.Component {
+        if (componentCount > 0) super.add(Box.createHorizontalStrut(JBUI.scale(6)))
+        (comp as? JComponent)?.alignmentY = java.awt.Component.CENTER_ALIGNMENT
+        return super.add(comp)
+    }
+
+    override fun getPreferredSize(): Dimension =
+        Dimension(super.getPreferredSize().width, PanelMetrics.scaled(PanelMetrics.SECTION_HEADER))
+}
+
+/** The gray line that fills the section header between the title and the right-hand controls, at mid height. */
+private class TitleRule : JComponent() {
+    init {
+        isOpaque = false
+    }
+
+    override fun paintComponent(g: Graphics) {
+        g.color = DesignColors.HAIRLINE
+        val y = height / 2
+        g.fillRect(0, y, width, 1)
+    }
+}
+
 /**
  * One framed section: the collapse chevron, the kind icon, the title, a `game` badge and the class hint, the `Enabled`
  * check box when the section has one, a hairline, and the [body] indented under it. Components are named
@@ -213,27 +245,38 @@ class PropertySection(
             border = JBUI.Borders.empty(0, 12)
             preferredSize = Dimension(0, PanelMetrics.scaled(PanelMetrics.SECTION_HEADER))
         }
-        val left = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply {
-            isOpaque = false
+        val left = centeredRow().apply {
             add(chevron)
-            icon?.let { add(JBLabel(if (dim) dimmed(it) else it).apply { name = "section-icon-${section.key}" }) }
+            icon?.let {
+                add(
+                    JBLabel(
+                        if (dim) {
+                            dimmed(it)
+                        } else it
+                    ).apply { name = "section-icon-${section.key}" })
+            }
             add(JBLabel(section.title).apply {
                 name = "section-title-${section.key}"; font = JBFont.label().asBold()
                 if (dim) foreground = DesignColors.SECONDARY
             })
-            if (section.game) add(BadgeLabel.game())
-            if (section.classHint.isNotEmpty()) add(JBLabel(section.classHint).apply {
-                name = "section-hint-${section.key}"; font = monoFont().deriveFont(UIUtil.getLabelFont().size2D - 1f)
-                foreground = DesignColors.SECONDARY
-            })
+            if (section.game) {
+                add(BadgeLabel.game())
+            }
+            if (section.classHint.isNotEmpty()) {
+                add(JBLabel(section.classHint).apply {
+                    name = "section-hint-${section.key}"; font =
+                    monoFont().deriveFont(UIUtil.getLabelFont().size2D - 1f)
+                    foreground = DesignColors.SECONDARY
+                })
+            }
         }
-        val right = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(6), 0)).apply {
-            isOpaque = false
+        val right = centeredRow().apply {
             actions.forEach { add(it) }
             enabledBox?.let { add(it) }
         }
         head.add(left, BorderLayout.WEST)
         head.add(right, BorderLayout.EAST)
+        head.add(TitleRule().apply { name = "section-rule-${section.key}" }, BorderLayout.CENTER)
         val toggle = object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) = setCollapsed(!isCollapsed)
         }
@@ -249,25 +292,33 @@ class PropertySection(
         indented.isVisible = !collapsed
         this.indented = indented
         add(indented, BorderLayout.CENTER)
-        border = JBUI.Borders.customLine(DesignColors.HAIRLINE, 0, 0, 1, 0)
     }
 
     /** Collapses or expands the body; tells the listener so the state survives a refresh of the same node. */
     fun setCollapsed(collapsed: Boolean) {
-        if (collapsed == isCollapsed) return
+        if (collapsed == isCollapsed) {
+            return
+        }
         isCollapsed = collapsed
         indented.isVisible = !collapsed
         body.isVisible = !collapsed
         chevron.icon = chevronIcon(collapsed)
         chevron.accessibleContext.accessibleName =
-            AbyssusBundle.message(if (collapsed) "panelExpand" else "panelCollapse", section.title)
+            AbyssusBundle.message(
+                if (collapsed) {
+                    "panelExpand"
+                } else {
+                    "panelCollapse"
+                }, section.title
+            )
         onCollapse(collapsed)
         revalidate()
         repaint()
     }
 
-    private fun chevronIcon(collapsed: Boolean): Icon =
-        if (collapsed) AllIcons.General.ArrowRight else AllIcons.General.ArrowDown
+    private fun chevronIcon(collapsed: Boolean): Icon = if (collapsed) {
+        AllIcons.General.ArrowRight
+    } else AllIcons.General.ArrowDown
 }
 
 /** Hosts [view] in a scroll pane that follows the viewport's width, so a section never needs a horizontal scroll bar. */

@@ -113,8 +113,7 @@ class PropertySectionTest : BasePlatformTestCase() {
     }
 
     fun testTheSectionHeaderIs34PixelsHigh() {
-        val head = (frame(section()).layout as java.awt.BorderLayout).getLayoutComponent(java.awt.BorderLayout.NORTH)
-        assertEquals(JBUI.scale(PanelMetrics.SECTION_HEADER), head.preferredSize.height)
+        assertEquals(JBUI.scale(PanelMetrics.SECTION_HEADER), frame(section(), collapsed = true).preferredSize.height)
     }
 
     // ---- header ----

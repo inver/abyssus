@@ -5,26 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.util.numberText
-import net.nevinsky.abyssus.lib.core.editor.util.NumberTextStyle
-
-import net.nevinsky.abyssus.lib.core.editor.panel.FieldRef
-import net.nevinsky.abyssus.lib.core.editor.panel.NoteRow
-import net.nevinsky.abyssus.lib.core.editor.panel.ReadonlyRow
-import net.nevinsky.abyssus.lib.core.editor.panel.Section
-import net.nevinsky.abyssus.plugin.filetype.setEnabled
-import net.nevinsky.abyssus.plugin.panel.RowHooks
-import net.nevinsky.abyssus.plugin.ui.CommitOutcome
-import net.nevinsky.abyssus.plugin.ui.checkEditor
-import net.nevinsky.abyssus.plugin.ui.choiceEditor
-import net.nevinsky.abyssus.plugin.ui.textEditor
-import net.nevinsky.abyssus.lib.core.editor.meta.ComponentSection
-import net.nevinsky.abyssus.lib.core.editor.meta.OpticalMaterialRow
-import net.nevinsky.abyssus.lib.core.editor.meta.RenderOptics
-import net.nevinsky.abyssus.plugin.EditorBundle
+import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
 import com.intellij.openapi.project.Project
-import net.nevinsky.abyssus.plugin.ui.showActionGroup
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
@@ -32,32 +15,36 @@ import com.intellij.ui.components.panels.VerticalLayout
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.components.FieldKind
-import net.nevinsky.abyssus.lib.core.editor.components.FieldValue
-import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
-import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
-import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
-import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
-import net.nevinsky.abyssus.plugin.projectView.reportRejection
 import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
 import net.nevinsky.abyssus.lib.core.editor.document.RayDataError
 import net.nevinsky.abyssus.lib.core.editor.document.RayOpticalField
+import net.nevinsky.abyssus.lib.core.editor.meta.OpticalMaterialRow
+import net.nevinsky.abyssus.lib.core.editor.meta.RenderOptics
+import net.nevinsky.abyssus.lib.core.editor.panel.FieldRef
+import net.nevinsky.abyssus.lib.core.editor.panel.NoteRow
+import net.nevinsky.abyssus.lib.core.editor.panel.ReadonlyRow
+import net.nevinsky.abyssus.lib.core.editor.panel.Section
+import net.nevinsky.abyssus.lib.core.editor.util.NumberTextStyle
+import net.nevinsky.abyssus.lib.core.editor.util.numberText
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.EditorBundle
+import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.filetype.SceneRayEdits
-import java.awt.BorderLayout
-import java.awt.Dimension
-import java.awt.Font
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
+import net.nevinsky.abyssus.plugin.filetype.setEnabled
+import net.nevinsky.abyssus.plugin.panel.RowHooks
+import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
+import net.nevinsky.abyssus.plugin.projectView.reportRejection
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
+import net.nevinsky.abyssus.plugin.ui.CommitOutcome
+import net.nevinsky.abyssus.plugin.ui.showActionGroup
+import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
-import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
-import javax.swing.JTextArea
-import net.nevinsky.abyssus.plugin.dto.MetaFiles
 
 /**
  * An entity (or one component) of a scene with an editor for every field of the components the plugin models. Editors
@@ -91,7 +78,9 @@ internal class EntityDetailsView @JvmOverloads constructor(
         )
         // the raw JSON of a component the plugin does not edit is reached by `raw-<Kind>`
         view.sections.forEach { frame ->
-            frame.section.kind?.let { kind -> allComponents(frame).firstOrNull { it.name == "raw" }?.name = "raw-$kind" }
+            frame.section.kind?.let { kind ->
+                allComponents(frame).firstOrNull { it.name == "raw" }?.name = "raw-$kind"
+            }
         }
         add(view, BorderLayout.CENTER)
     }
@@ -101,12 +90,25 @@ internal class EntityDetailsView @JvmOverloads constructor(
 
     private fun secondary() = UIUtil.getContextHelpForeground()
 
-    /** The Remove button of a modeled component's section; an unmodeled one is read only. */
+    /** The Remove button of a modeled component's section; an unmodeled one is read only, and the name is not removable. */
     private fun removeButton(section: Section): List<JComponent> {
         val kind = section.kind ?: return emptyList()
-        if (section.rows.any { it is ReadonlyRow && it.label.isEmpty() } || section.rows.any { it is NoteRow }) return emptyList()
-        return listOf(JButton(AbyssusBundle.message("propertiesRemoveComponent")).apply {
+        if (kind == NameComponent::class.simpleName) {
+            return emptyList()
+        }
+        if (section.rows.any { it is ReadonlyRow && it.label.isEmpty() } || section.rows.any { it is NoteRow }) {
+            return emptyList()
+        }
+        val label = AbyssusBundle.message("propertiesRemoveComponent")
+        return listOf(object : JButton(AllIcons.Actions.GC) {
+            /** Square, as wide as the button is high. */
+            override fun getPreferredSize(): Dimension = super.getPreferredSize().let { Dimension(it.height, it.height) }
+        }.apply {
             name = "remove-$kind"
+            toolTipText = label
+            accessibleContext.accessibleName = label
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            margin = JBUI.emptyInsets()
             addActionListener {
                 reportRejection(project, SceneComponentEdits.remove(project, target.file, target.entityId, kind))
             }
@@ -231,7 +233,8 @@ internal class EntityDetailsView @JvmOverloads constructor(
 
     /** Saves [text] for field [field] of component [kind]; the editor shows a refusal and puts the stored value back. */
     private fun commit(kind: String, field: String, text: String): CommitOutcome =
-        when (val result = SceneComponentEdits.update(project, target.file, target.entityId, kind, field, text, metaFiles)) {
+        when (val result =
+            SceneComponentEdits.update(project, target.file, target.entityId, kind, field, text, metaFiles)) {
             is EditResult.Rejected -> CommitOutcome.Refused(result.reason)
             EditResult.Unchanged -> CommitOutcome.Unchanged
             EditResult.Changed -> CommitOutcome.Saved
