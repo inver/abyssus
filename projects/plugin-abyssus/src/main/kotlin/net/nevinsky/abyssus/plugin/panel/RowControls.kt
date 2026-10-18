@@ -5,13 +5,14 @@
 
 package net.nevinsky.abyssus.plugin.panel
 
+import com.intellij.ide.ui.laf.darcula.DarculaUIUtil
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.components.*
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import com.intellij.ide.ui.laf.darcula.DarculaUIUtil
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.editor.panel.*
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.filetype.TreeActionIcons
@@ -24,6 +25,9 @@ import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import javax.swing.*
+
+/** The width of a single-line input and of one axis box. */
+private const val INPUT_WIDTH = 120
 
 /** What the rows of a section need from the view that hosts them: saving a field, the hosted editors and links. */
 interface RowHooks {
@@ -75,12 +79,18 @@ fun rowComponent(row: Row, hooks: RowHooks): JComponent = (row as? TextRow)?.fie
     ?.let { hooks.assetField(it.field, row.label) } ?: (row as? AssetRow)?.field?.takeIf { it.kind in HOSTED }
     ?.let { hooks.assetField(it.field, row.label) } ?: when (row) {
     is TextRow -> editable(row.label, row.field, row.dim, row.tooltip, hooks) { ref, error ->
-        textEditor(row.value, error) { hooks.commit(ref, it) }.also { it.styled(row.dim) }
+        textEditor(row.value, error) { hooks.commit(ref, it) }.also {
+            it.styled(row.dim)
+            // a component's inputs share one width; the Name field keeps filling the row
+            if (ref.kind == PositionComponent::class.simpleName) {
+                it.pinFieldHeight(PanelMetrics.scaled(INPUT_WIDTH))
+            }
+        }
     } ?: fieldRow(row.label, readonlyValue(row.value, row.dim))
 
     is NumberRow -> editable(row.label, row.field, row.dim, row.tooltip, hooks) { ref, error ->
         val field = textEditor(row.value, error) { hooks.commit(ref, it) }.also { it.styled(row.dim) }
-        field.pinFieldHeight(PanelMetrics.scaled(150))
+        field.pinFieldHeight(PanelMetrics.scaled(INPUT_WIDTH))
         if (row.unit.isEmpty()) field else unitBox(field, row.unit)
     } ?: fieldRow(row.label, readonlyValue(row.value + unitSuffix(row.unit), row.dim))
 
@@ -124,8 +134,6 @@ fun rowComponent(row: Row, hooks: RowHooks): JComponent = (row as? TextRow)?.fie
 /** The kinds of [FieldRef] whose finished row the host supplies: an asset property, a scene's skybox. */
 private val HOSTED = setOf("asset", "scene")
 
-/** Wide enough for a full float such as `-0.94851714` in the monospace font. */
-private const val AXIS_BOX = 108
 
 private fun unitSuffix(unit: String) = if (unit.isEmpty()) "" else " $unit"
 
@@ -170,9 +178,12 @@ private fun nameEditor(editor: JComponent, ref: FieldRef) {
 
 private fun vectorRow(label: String, axes: List<Axis>, dim: Boolean, hooks: RowHooks): JComponent {
     val error = JBLabel("").apply { foreground = Color.RED }
-    val boxes = JPanel(GridLayout(1, axes.size.coerceAtLeast(1), JBUI.scale(8), 0)).apply {
+    // a box layout, not a flow layout, which would indent the first box by its gap
+    val boxes = JPanel().apply {
+        layout = BoxLayout(this, BoxLayout.X_AXIS)
         isOpaque = false
-        for (axis in axes) {
+        for ((i, axis) in axes.withIndex()) {
+            if (i > 0) add(Box.createHorizontalStrut(JBUI.scale(8)))
             val ref = axis.field
             val field = if (ref == null) JBTextField(axis.value).apply { isEditable = false }
             else textEditor(axis.value, error) { hooks.commit(ref, it) }.also { it.name = fieldName(ref) }
@@ -221,9 +232,9 @@ private fun axisBox(tag: JBLabel, field: JBTextField): JComponent {
     })
     // the height of every other text box, from a plain field in the same look and feel
     val height = JBTextField().apply { font = monoFont(); pinFieldHeight() }.preferredSize.height
-    box.preferredSize = Dimension(PanelMetrics.scaled(AXIS_BOX), height)
-    box.minimumSize = Dimension(0, height)
-    box.maximumSize = Dimension(Int.MAX_VALUE, height)
+    box.preferredSize = Dimension(PanelMetrics.scaled(INPUT_WIDTH), height)
+    box.minimumSize = box.preferredSize
+    box.maximumSize = box.preferredSize
     return box
 }
 
