@@ -85,7 +85,7 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
         super.addToolbarActions(actionGroup)
         // the platform's Expand All and Collapse All keep working; only their glyphs are the design's
         val icons = mapOf("ExpandAll" to TreeActionIcons.EXPAND_ALL, "CollapseAll" to TreeActionIcons.COLLAPSE_ALL)
-        val children = actionGroup.getChildren(null)
+        val children = actionGroup.childActionsOrStubs
         actionGroup.removeAll()
         for (child in children) {
             val icon = ActionManager.getInstance().getId(child)?.let(icons::get)
