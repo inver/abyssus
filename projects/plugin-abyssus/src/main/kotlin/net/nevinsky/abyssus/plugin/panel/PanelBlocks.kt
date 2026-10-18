@@ -18,24 +18,10 @@ import net.nevinsky.abyssus.lib.core.editor.panel.Header
 import net.nevinsky.abyssus.lib.core.editor.panel.Section
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.projectView.DesignColors
-import java.awt.AlphaComposite
-import java.awt.BorderLayout
-import java.awt.Color
-import java.awt.Component
-import java.awt.Cursor
-import java.awt.Dimension
-import java.awt.FlowLayout
-import java.awt.Font
-import java.awt.Graphics
-import java.awt.Graphics2D
-import java.awt.RenderingHints
+import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.BorderFactory
-import javax.swing.BoxLayout
-import javax.swing.Icon
-import javax.swing.JComponent
-import javax.swing.JPanel
+import javax.swing.*
 import javax.swing.border.AbstractBorder
 
 /** The sizes of the panel's design (at scale 1): a 150 px label column, 24 px fields, a 26 px Browse, a 34 px section header. */
@@ -83,8 +69,9 @@ class BadgeLabel(text: String, foreground: Color, private val outline: Color) : 
             BadgeKind.UNUSED -> BadgeLabel(badge.text, DesignColors.AMBER, DesignColors.AMBER)
         }.also { it.name = if (badge.kind == BadgeKind.READ_ONLY) "badge-read-only" else "badge-unused" }
 
-        fun game(): BadgeLabel = BadgeLabel(AbyssusBundle.message("panelBadgeGame"), DesignColors.GAME, DesignColors.GAME)
-            .also { it.name = "badge-game" }
+        fun game(): BadgeLabel =
+            BadgeLabel(AbyssusBundle.message("panelBadgeGame"), DesignColors.GAME, DesignColors.GAME)
+                .also { it.name = "badge-game" }
     }
 }
 
@@ -97,7 +84,7 @@ class HeaderPanel(header: Header, icon: Icon, titleName: String = "header-title"
     init {
         name = "header"
         border = BorderFactory.createCompoundBorder(
-            JBUI.Borders.customLine(DesignColors.HAIRLINE, 0, 0, 1, 0), JBUI.Borders.empty(10, 16, 12, 16),
+            JBUI.Borders.customLine(DesignColors.HAIRLINE, 0, 0, 1, 0), JBUI.Borders.empty(0, 12, 8, 12),
         )
         val column = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -110,14 +97,17 @@ class HeaderPanel(header: Header, icon: Icon, titleName: String = "header-title"
                 alignmentX = LEFT_ALIGNMENT; border = JBUI.Borders.emptyBottom(6)
             },
         )
-        val title = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0)).apply {
+        val title = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
             isOpaque = false; alignmentX = LEFT_ALIGNMENT
             add(JBLabel(sized(icon, PanelMetrics.HEADER_ICON)).apply { name = "header-icon" })
             add(JBLabel(header.title).apply {
-                name = titleName; font = JBFont.label().asBold().biggerOn(2f)
+                name = titleName; font = JBFont.label().asBold().biggerOn(2f); border = JBUI.Borders.emptyLeft(8)
                 if (dim) foreground = DesignColors.SECONDARY
             })
-            header.badges.forEach { add(BadgeLabel.of(it)) }
+            header.badges.forEach {
+                add(Box.createHorizontalStrut(JBUI.scale(8)))
+                add(BadgeLabel.of(it))
+            }
         }
         column.add(title)
         column.add(
@@ -184,7 +174,8 @@ class PropertySection(
     private val chevron = JBLabel(chevronIcon(collapsed)).apply {
         name = "section-chevron-${section.key}"
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        accessibleContext.accessibleName = AbyssusBundle.message(if (collapsed) "panelExpand" else "panelCollapse", section.title)
+        accessibleContext.accessibleName =
+            AbyssusBundle.message(if (collapsed) "panelExpand" else "panelCollapse", section.title)
     }
     val enabledBox: JBCheckBox? = section.enable?.let { toggle ->
         JBCheckBox(AbyssusBundle.message("panelEnabled"), toggle.checked).apply {
@@ -268,8 +259,12 @@ class WidthTrackingPanel(view: JComponent) : JPanel(BorderLayout()), javax.swing
     }
 
     override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
-    override fun getScrollableUnitIncrement(visibleRect: java.awt.Rectangle, orientation: Int, direction: Int) = JBUI.scale(16)
-    override fun getScrollableBlockIncrement(visibleRect: java.awt.Rectangle, orientation: Int, direction: Int) = visibleRect.height
+    override fun getScrollableUnitIncrement(visibleRect: java.awt.Rectangle, orientation: Int, direction: Int) =
+        JBUI.scale(16)
+
+    override fun getScrollableBlockIncrement(visibleRect: java.awt.Rectangle, orientation: Int, direction: Int) =
+        visibleRect.height
+
     override fun getScrollableTracksViewportWidth() = true
     override fun getScrollableTracksViewportHeight() = false
 }
