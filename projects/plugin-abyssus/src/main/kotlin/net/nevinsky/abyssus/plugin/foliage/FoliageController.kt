@@ -145,17 +145,23 @@ class FoliageController(
     /** True while a finished preview of exactly the current settings, over the files as they are, may be written. */
     val canApply: Boolean get() = if (colliderOnly) canApplyColliders else canApplyGeneration
 
-    private val canApplyGeneration: Boolean get() = !disposed && !generating && problems.isEmpty() && hasChanges &&
-        outcome?.refusal == null && outcomeSettings == settings && outcomeDataSha256 != null
+    private val canApplyGeneration: Boolean
+        get() = !disposed && !generating && problems.isEmpty() && hasChanges &&
+                outcome?.refusal == null && outcomeSettings == settings && outcomeDataSha256 != null
 
     /** True when the edit changes nothing but layer colliders and no brush stroke is pending: no preview or bake is involved. */
-    val colliderOnly: Boolean get() = overriddenMasks().isEmpty() && colliderEdits.onlyColliders(source.settings, settings)
+    val colliderOnly: Boolean
+        get() = overriddenMasks().isEmpty() && colliderEdits.onlyColliders(
+            source.settings,
+            settings
+        )
 
     /** A collider-only edit needs a valid result and a changed text, not a finished preview, and works with a stale or missing bake. */
     private val canApplyColliders: Boolean get() = !disposed && problems.isEmpty() && editedText != source.metaText
 
-    private val hasChanges: Boolean get() = editedText != source.metaText || overriddenMasks().isNotEmpty() ||
-        outcomeDataSha256 != source.dataSha256
+    private val hasChanges: Boolean
+        get() = editedText != source.metaText || overriddenMasks().isNotEmpty() ||
+                outcomeDataSha256 != source.dataSha256
 
     /**
      * Applies [transform] to the settings and previews the result without writing anything; the reason to refuse it,
@@ -207,8 +213,9 @@ class FoliageController(
     fun addLayer(): String? {
         val model = modelChoices.firstOrNull() ?: return AbyssusBundle.message("foliageNoModels")
         return edit { settings ->
-            settings.copy(layers = settings.layers + FoliageLayerMeta(
-                id = (settings.layers.maxOfOrNull { it.id } ?: 0) + 1,
+            settings.copy(
+                layers = settings.layers + FoliageLayerMeta(
+                    id = (settings.layers.maxOfOrNull { it.id } ?: 0) + 1,
                 models = listOf(net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta(asset = model)),
             ))
         }
@@ -274,7 +281,8 @@ class FoliageController(
     val canRebake: Boolean get() = canApplyGeneration
 
     /** Applies the settings together with the preview's bake, even when only colliders changed. */
-    fun rebake(command: AssetFileCommand? = null, onDone: () -> Unit = {}): AssetCommandResult? = applyGeneration(command, onDone)
+    fun rebake(command: AssetFileCommand? = null, onDone: () -> Unit = {}): AssetCommandResult? =
+        applyGeneration(command, onDone)
 
     private fun applyGeneration(command: AssetFileCommand?, onDone: () -> Unit): AssetCommandResult? {
         val preview = outcome
@@ -341,12 +349,19 @@ class FoliageController(
         )
         var committed = false
         val result = try {
-            applyFoliageFiles(project, runner, txn, folder.findChild(META_FILE)!!, source.metaText, editedText).also { result ->
+            applyFoliageFiles(
+                project,
+                runner,
+                txn,
+                folder.findChild(META_FILE)!!,
+                source.metaText,
+                editedText
+            ).also { result ->
                 if (result == AssetCommandResult.Done) {
-                committed = true
-                drafts.discard(source.folderName)
-                message = null
-                onDone()
+                    committed = true
+                    drafts.discard(source.folderName)
+                    message = null
+                    onDone()
                 }
             }
         } finally {
@@ -354,12 +369,26 @@ class FoliageController(
         }
         message = when (result) {
             AssetCommandResult.Done -> null
-            is AssetCommandResult.Conflict -> AbyssusBundle.message("foliageApplyConflict", result.path.substringAfterLast('/'))
-            is AssetCommandResult.Collision -> AbyssusBundle.message("foliageApplyConflict", result.path.substringAfterLast('/'))
+            is AssetCommandResult.Conflict -> AbyssusBundle.message(
+                "foliageApplyConflict",
+                result.path.substringAfterLast('/')
+            )
+
+            is AssetCommandResult.Collision -> AbyssusBundle.message(
+                "foliageApplyConflict",
+                result.path.substringAfterLast('/')
+            )
+
             is AssetCommandResult.Blocked -> result.reason
             AssetCommandResult.Cancelled -> AbyssusBundle.message("foliageApplyCancelled")
-            is AssetCommandResult.Failed -> AbyssusBundle.message("foliageApplyFailed", result.cause.documentDisplayMessage()) +
-                if (result.leftover.isEmpty()) "" else " " + AbyssusBundle.message("foliageApplyLeftover", result.leftover.joinToString())
+            is AssetCommandResult.Failed -> AbyssusBundle.message(
+                "foliageApplyFailed",
+                result.cause.documentDisplayMessage()
+            ) +
+                    if (result.leftover.isEmpty()) "" else " " + AbyssusBundle.message(
+                        "foliageApplyLeftover",
+                        result.leftover.joinToString()
+                    )
         }
         if (result != AssetCommandResult.Done) onChange()
         return result
@@ -390,7 +419,13 @@ class FoliageController(
             return null
         }
         val written = runCatchingKeepingCancellation {
-            applyFoliageMetadata(project, meta, AbyssusBundle.message("commandFoliageColliders"), source.metaText, editedText)
+            applyFoliageMetadata(
+                project,
+                meta,
+                AbyssusBundle.message("commandFoliageColliders"),
+                source.metaText,
+                editedText
+            )
         }.getOrElse {
             message = AbyssusBundle.message("foliageApplyFailed", it.documentDisplayMessage())
             onChange()

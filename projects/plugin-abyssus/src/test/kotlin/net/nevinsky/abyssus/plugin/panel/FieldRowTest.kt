@@ -90,6 +90,13 @@ class FieldRowTest : BasePlatformTestCase() {
         find<JBTextField>(view, "field-PositionComponent-localRotation.w").apply { text = "0.5" }
     }
 
+    fun testAxisBoxesAreAsTallAsTextFields() {
+        val text = find<JBTextField>(row(TextRow("name", "Racer", false, FieldRef("NameComponent", "name"))), "field-NameComponent-name")
+        val view = row(VectorRow("pos", listOf(Axis("x", "1", FieldRef("PositionComponent", "localPosition.x")))))
+        val box = find<JBTextField>(view, "field-PositionComponent-localPosition.x").parent as JComponent
+        assertEquals(text.preferredSize.height, box.preferredSize.height)
+    }
+
     fun testEditingAFieldCommitsThroughTheHook() {
         val view = row(TextRow("name", "Racer", false, FieldRef("NameComponent", "name")))
         val field = find<JBTextField>(view, "field-NameComponent-name")

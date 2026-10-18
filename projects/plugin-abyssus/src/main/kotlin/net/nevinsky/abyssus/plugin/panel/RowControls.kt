@@ -5,51 +5,25 @@
 
 package net.nevinsky.abyssus.plugin.panel
 
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.plugin.ui.checkEditor
-import net.nevinsky.abyssus.plugin.ui.choiceEditor
-import net.nevinsky.abyssus.plugin.ui.textEditor
-import net.nevinsky.abyssus.plugin.ui.CommitOutcome
-import com.intellij.ui.components.ActionLink
-import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBTextField
-import com.intellij.ui.components.JBTextArea
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.ui.components.*
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
-import net.nevinsky.abyssus.lib.core.editor.panel.AssetRow
-import net.nevinsky.abyssus.lib.core.editor.panel.Axis
-import net.nevinsky.abyssus.lib.core.editor.panel.CheckRow
-import net.nevinsky.abyssus.lib.core.editor.panel.ChoiceRow
-import net.nevinsky.abyssus.lib.core.editor.panel.ColorRow
-import net.nevinsky.abyssus.lib.core.editor.panel.CustomRow
-import net.nevinsky.abyssus.lib.core.editor.panel.FieldRef
-import net.nevinsky.abyssus.lib.core.editor.panel.LinkRow
-import net.nevinsky.abyssus.lib.core.editor.panel.NoteRow
-import net.nevinsky.abyssus.lib.core.editor.panel.NumberRow
-import net.nevinsky.abyssus.lib.core.editor.panel.ReadonlyRow
-import net.nevinsky.abyssus.lib.core.editor.panel.Row
-import net.nevinsky.abyssus.lib.core.editor.panel.SubHeadingRow
-import net.nevinsky.abyssus.lib.core.editor.panel.TableRow
-import net.nevinsky.abyssus.lib.core.editor.panel.TextRow
-import net.nevinsky.abyssus.lib.core.editor.panel.VectorRow
+import com.intellij.util.ui.UIUtil
+import com.intellij.ide.ui.laf.darcula.DarculaUIUtil
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.editor.panel.*
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.filetype.TreeActionIcons
 import net.nevinsky.abyssus.plugin.projectView.DesignColors
-import java.awt.BorderLayout
-import java.awt.Color
-import java.awt.Dimension
-import java.awt.FlowLayout
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
-import java.awt.GridLayout
-import javax.swing.BorderFactory
-import javax.swing.BoxLayout
-import javax.swing.JButton
-import javax.swing.JComponent
-import javax.swing.JPanel
-import javax.swing.SwingConstants
+import net.nevinsky.abyssus.plugin.ui.CommitOutcome
+import net.nevinsky.abyssus.plugin.ui.checkEditor
+import net.nevinsky.abyssus.plugin.ui.choiceEditor
+import net.nevinsky.abyssus.plugin.ui.textEditor
+import java.awt.*
+import java.awt.event.FocusAdapter
+import java.awt.event.FocusEvent
+import javax.swing.*
 
 /** What the rows of a section need from the view that hosts them: saving a field, the hosted editors and links. */
 interface RowHooks {
@@ -67,10 +41,13 @@ interface RowHooks {
 }
 
 /** The component name of the editor of [ref]: `field-<Kind>-<field>`, which tests and the page objects look up. */
-fun fieldName(ref: FieldRef): String = if (ref.kind == "asset") "asset-field-${ref.field}" else "field-${ref.kind}-${ref.field}"
+fun fieldName(ref: FieldRef): String = if (ref.kind == "asset") {
+    "asset-field-${ref.field}"
+} else "field-${ref.kind}-${ref.field}"
 
 /** The name of the message beside it: `error-<Kind>-<field>`. */
-fun errorName(ref: FieldRef): String = if (ref.kind == "asset") "asset-error-${ref.field}" else "error-${ref.kind}-${ref.field}"
+fun errorName(ref: FieldRef): String =
+    if (ref.kind == "asset") "asset-error-${ref.field}" else "error-${ref.kind}-${ref.field}"
 
 /**
  * One row of a section: a 150 px label column, the control at the look and feel's field height, and the reason a value was refused beside it. A row
@@ -85,7 +62,11 @@ fun fieldRow(label: String, control: JComponent, error: JComponent? = null, labe
             preferredSize = Dimension(PanelMetrics.scaled(PanelMetrics.LABEL_COLUMN), preferredSize.height)
         }
         add(labelView, GridBagConstraints().apply { gridx = 0; anchor = GridBagConstraints.WEST })
-        add(control, GridBagConstraints().apply { gridx = 1; weightx = 1.0; fill = GridBagConstraints.HORIZONTAL; anchor = GridBagConstraints.WEST })
+        add(
+            control,
+            GridBagConstraints().apply {
+                gridx = 1; weightx = 1.0; fill = GridBagConstraints.HORIZONTAL; anchor = GridBagConstraints.WEST
+            })
         if (error != null) add(error, GridBagConstraints().apply { gridx = 2; insets = JBUI.insetsLeft(8) })
     }
 
@@ -189,21 +170,61 @@ private fun nameEditor(editor: JComponent, ref: FieldRef) {
 
 private fun vectorRow(label: String, axes: List<Axis>, dim: Boolean, hooks: RowHooks): JComponent {
     val error = JBLabel("").apply { foreground = Color.RED }
-    val boxes = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply {
+    val boxes = JPanel(GridLayout(1, axes.size.coerceAtLeast(1), JBUI.scale(8), 0)).apply {
         isOpaque = false
         for (axis in axes) {
-            add(JBLabel(axis.name).apply { foreground = DesignColors.SECONDARY; name = "axis-label-${axis.name}" })
             val ref = axis.field
             val field = if (ref == null) JBTextField(axis.value).apply { isEditable = false }
             else textEditor(axis.value, error) { hooks.commit(ref, it) }.also { it.name = fieldName(ref) }
             field.font = monoFont()
             if (dim) field.foreground = DesignColors.SECONDARY
-            field.pinFieldHeight(PanelMetrics.scaled(AXIS_BOX))
-            add(field)
+            val tag = JBLabel(axis.name).apply { foreground = DesignColors.SECONDARY; name = "axis-label-${axis.name}" }
+            add(axisBox(tag, field))
         }
     }
     axes.firstOrNull { it.field != null }?.field?.let { error.name = errorName(it) }
     return fieldRow(label, boxes, error, labelName = "label-vector-$label")
+}
+
+/** An outlined rounded box with the axis [tag] at the left and [field]'s value right-aligned; the outline follows focus. */
+private fun axisBox(tag: JBLabel, field: JBTextField): JComponent {
+    field.horizontalAlignment = SwingConstants.RIGHT
+    field.border = JBUI.Borders.empty()
+    field.isOpaque = false
+    val box = object : JPanel(BorderLayout(JBUI.scale(6), 0)) {
+        override fun paintComponent(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                val arc = JBUI.scale(8)
+                g2.color = field.background
+                // Darcula text fields draw their outline this far inside their bounds; match it so the edges line up
+                val inset = DarculaUIUtil.BW.get()
+                val w = width - 2 * inset - 1
+                val h = height - 2 * inset - 1
+                g2.fillRoundRect(inset, inset, w, h, arc, arc)
+                g2.color = if (field.hasFocus()) UIUtil.getFocusedBorderColor() else DesignColors.BORDER
+                g2.drawRoundRect(inset, inset, w, h, arc, arc)
+            } finally {
+                g2.dispose()
+            }
+        }
+    }.apply {
+        isOpaque = false
+        border = JBUI.Borders.empty(0, 10)
+        add(tag, BorderLayout.WEST)
+        add(field, BorderLayout.CENTER)
+    }
+    field.addFocusListener(object : FocusAdapter() {
+        override fun focusGained(e: FocusEvent) = box.repaint()
+        override fun focusLost(e: FocusEvent) = box.repaint()
+    })
+    // the height of every other text box, from a plain field in the same look and feel
+    val height = JBTextField().apply { font = monoFont(); pinFieldHeight() }.preferredSize.height
+    box.preferredSize = Dimension(PanelMetrics.scaled(AXIS_BOX), height)
+    box.minimumSize = Dimension(0, height)
+    box.maximumSize = Dimension(Int.MAX_VALUE, height)
+    return box
 }
 
 private fun colorRow(row: ColorRow, hooks: RowHooks): JComponent {
@@ -217,7 +238,9 @@ private fun colorRow(row: ColorRow, hooks: RowHooks): JComponent {
         add(swatch)
         add(readonlyValue(row.hex, row.dim).also { it.name = "hex" })
     }
-    if (row.axes.isEmpty()) return fieldRow(row.label, line)
+    if (row.axes.isEmpty()) {
+        return fieldRow(row.label, line)
+    }
     val channels = vectorRow("", row.axes, row.dim, hooks)
     val both = JPanel().apply {
         layout = BoxLayout(this, BoxLayout.Y_AXIS); isOpaque = false
@@ -244,7 +267,11 @@ private fun assetRow(row: AssetRow, hooks: RowHooks): JComponent {
             it.name = fieldName(ref); it.font = monoFont()
             it.pinFieldHeight(PanelMetrics.scaled(300))
         }
-        val line = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply { isOpaque = false; add(icon); add(typed) }
+        val line = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply {
+            isOpaque = false;
+            add(icon);
+            add(typed)
+        }
         return fieldRow(row.label, line, typedError, labelName = "label-${ref.kind}-${ref.field}")
     }
     val error = JBLabel("").apply { foreground = Color.RED; name = errorName(ref) }
@@ -260,7 +287,8 @@ private fun assetRow(row: AssetRow, hooks: RowHooks): JComponent {
             name = "browse-${ref.kind}-${ref.field}"
             toolTipText = AbyssusBundle.message("panelBrowse")
             accessibleContext.accessibleName = AbyssusBundle.message("panelBrowse")
-            preferredSize = Dimension(PanelMetrics.scaled(PanelMetrics.BROWSE), PanelMetrics.scaled(PanelMetrics.BROWSE))
+            preferredSize =
+                Dimension(PanelMetrics.scaled(PanelMetrics.BROWSE), PanelMetrics.scaled(PanelMetrics.BROWSE))
             addActionListener { combo.showPopup() }
         })
     }
@@ -279,10 +307,19 @@ private fun tableView(row: TableRow): JComponent {
             isOpaque = false; name = if (header) "table-header" else "table-row"
             border = JBUI.Borders.empty(4, 8)
             for (cell in cells.take(columns)) add(JBLabel(cell).apply {
-                if (header) { font = JBFont.small(); foreground = DesignColors.SECONDARY } else font = monoFont()
+                if (header) {
+                    font = JBFont.small(); foreground = DesignColors.SECONDARY
+                } else font = monoFont()
                 toolTipText = cell.ifEmpty { null }
             })
         })
     }
-    return JPanel(BorderLayout()).apply { isOpaque = false; border = JBUI.Borders.empty(4, 0); add(box, BorderLayout.CENTER) }
+    return JPanel(BorderLayout()).apply {
+        isOpaque = false;
+        border = JBUI.Borders.empty(4, 0);
+        add(
+            box,
+            BorderLayout.CENTER
+        )
+    }
 }
