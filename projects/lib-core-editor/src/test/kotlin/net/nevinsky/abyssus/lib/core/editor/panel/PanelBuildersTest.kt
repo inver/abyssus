@@ -131,7 +131,7 @@ class PanelBuildersTest {
         val panel = builders.entity(field, "3", read("3"), "ControlLine.abss")
         assertEquals(listOf("ControlLine.abss", "Field", "ecs"), panel.header.breadcrumb)
         assertEquals("Racer", panel.header.title)
-        assertEquals("Entity 3 · OBJECT", panel.header.subtitle)
+        assertEquals("Entity (3) · OBJECT", panel.header.subtitle)
         assertEquals("object", panel.header.iconKey)
         assertEquals(
             listOf("Name", "Type", "Position", "Render", "Rigid body", "Collider", "Plane"), panel.titles(),
@@ -200,7 +200,7 @@ class PanelBuildersTest {
     @Test
     fun theSunIsALightEntity() {
         val panel = builders.entity(field, "2", read("2"), "ControlLine.abss")
-        assertEquals("Entity 2 · LIGHT_DIRECTIONAL", panel.header.subtitle)
+        assertEquals("Entity (2) · LIGHT_DIRECTIONAL", panel.header.subtitle)
         assertEquals("dlight", panel.header.iconKey)
         val light = panel.sections.single { it.title == "Light" }
         val color = light.row<ColorRow>("color")

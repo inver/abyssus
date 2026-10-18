@@ -312,10 +312,10 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         copyProject()
         val p = panel()
         p.show(entity("0"))
-        (named(p, "remove-TypeComponent") as JButton).doClick()
-        assertFalse(components(sceneFile(), "0").has("TypeComponent"))
-        assertFalse((p.state as PanelState.EntityDetails).sections.any { it.kind == "TypeComponent" })
-        assertNull(named(p, "field-TypeComponent-type"))
+        (named(p, "remove-PositionComponent") as JButton).doClick()
+        assertFalse(components(sceneFile(), "0").has("PositionComponent"))
+        assertFalse((p.state as PanelState.EntityDetails).sections.any { it.kind == "PositionComponent" })
+        assertNull(named(p, "field-PositionComponent-localPosition.x"))
     }
 
     fun testPanelFollowsTextEdits() {

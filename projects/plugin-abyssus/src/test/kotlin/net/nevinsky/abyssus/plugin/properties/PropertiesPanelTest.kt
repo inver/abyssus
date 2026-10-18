@@ -131,7 +131,7 @@ class PropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.show(entity("0"))
         assertEquals("Untitled.abss  ›  Ololo  ›  ecs", (find(p, "header-breadcrumb") as JBLabel).text)
-        assertEquals("Entity 0 · OBJECT", (find(p, "header-subtitle") as JBLabel).text)
+        assertEquals("Entity (0) · OBJECT", (find(p, "header-subtitle") as JBLabel).text)
         assertTrue(sections(p).containsAll(listOf("Name", "Position", "Render")))
         assertNull("the Name section has no Enabled box", find(p, "section-enabled-0.NameComponent"))
         assertNotNull(find(p, "section-enabled-0.RenderComponent"))

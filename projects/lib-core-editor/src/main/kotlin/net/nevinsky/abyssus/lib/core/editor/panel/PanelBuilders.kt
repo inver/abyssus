@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FAR
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_NEAR
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.format.isEnabled
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.meta.ComponentSection
@@ -205,7 +206,8 @@ class PanelBuilders(
                 listOf(projectFile, scene.text("name"), "ecs"), entityIconKey(type), read.name,
                 messages.message("panelSubtitleEntity", entityId, type ?: "OBJECT"),
             ),
-            read.sections.map { componentSection(scene, entityId, it, read.name, type, entityOn) },
+            read.sections.filter { it.kind != TypeComponent::class.simpleName }
+                .map { componentSection(scene, entityId, it, read.name, type, entityOn) },
             messages.message("panelFooterDefaults"),
         )
     }

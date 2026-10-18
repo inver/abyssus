@@ -178,7 +178,14 @@ fun readEntityState(target: ComponentTarget, services: PanelServices): PanelStat
         SceneJson().parse(runReadAction { textOf(target.file) }).also {
             AbyssusDocumentFormat().requireSupported(it, DocumentKind.SCENE)
         }
-    }.getOrElse { return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.documentDisplayMessage()), null) }
+    }.getOrElse {
+        return PanelState.Empty(
+            AbyssusBundle.message(
+                "propertiesSceneUnreadable",
+                it.documentDisplayMessage()
+            ), null
+        )
+    }
     val assets = EntityAssetChoices(
         SceneComponentEdits.renderAssets(target.file, services.metaFiles).map { it.name },
         SceneComponentEdits.assetsByType(target.file, services.metaFiles).orEmpty(),
@@ -191,8 +198,9 @@ fun readEntityState(target: ComponentTarget, services: PanelServices): PanelStat
         is EntitySections.Read -> {
             val builders = PanelBuilders(EditorBundle, ::isGameComponent)
             val projectName = ProjectLayout.abssFor(target.file)?.name.orEmpty()
-            val model = if (target.kind == null) builders.entity(root, target.entityId, read, projectName)
-            else builders.component(root, target.entityId, read, projectName)
+            val model = if (target.kind == null) {
+                builders.entity(root, target.entityId, read, projectName)
+            } else builders.component(root, target.entityId, read, projectName)
             PanelState.EntityDetails(target, read.name, read.sections, read.addable, read.render?.let { render ->
                 readRenderOptics(render, { assetName ->
                     ProjectLayout.projectDirFor(target.file)?.let { services.rayMaterials(it, assetName) }
@@ -251,7 +259,9 @@ private fun readFoliageNow(folder: VirtualFile, meta: AssetMeta.Loaded, services
 fun readFoliageSourceNow(folder: VirtualFile, services: PanelServices): FoliageSource {
     val meta = loadAssetMeta(folder, services.metaFiles)
     if (meta !is AssetMeta.Loaded) {
-        return FoliageSource.Unusable((meta as? AssetMeta.Failed)?.message ?: AbyssusBundle.message("assetFieldUnreadable"))
+        return FoliageSource.Unusable(
+            (meta as? AssetMeta.Failed)?.message ?: AbyssusBundle.message("assetFieldUnreadable")
+        )
     }
     return readFoliageNow(folder, meta, services)
 }
@@ -279,7 +289,14 @@ fun readWaterState(target: WaterTarget): PanelState {
         SceneJson().parse(runReadAction { textOf(target.file) }).also {
             AbyssusDocumentFormat().requireSupported(it, DocumentKind.SCENE)
         }
-    }.getOrElse { return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.documentDisplayMessage()), null) }
+    }.getOrElse {
+        return PanelState.Empty(
+            AbyssusBundle.message(
+                "propertiesSceneUnreadable",
+                it.documentDisplayMessage()
+            ), null
+        )
+    }
     val extension = root.get("abyssus")
     val node = extension?.get("waterSurfaces")?.get(target.id)
     val surface = node?.let { WaterCodec().surface(target.id, it) }
@@ -295,26 +312,44 @@ internal fun readStructuralState(selection: Structural): PanelState {
     val builders = PanelBuilders(EditorBundle, ::isGameComponent)
     fun project(abss: VirtualFile?) = abss?.name.orEmpty()
     fun scene(file: VirtualFile): JsonNode? = runCatchingKeepingCancellation {
-        SceneJson().parse(runReadAction { textOf(file) }).also { AbyssusDocumentFormat().requireSupported(it, DocumentKind.SCENE) }
+        SceneJson().parse(runReadAction { textOf(file) })
+            .also { AbyssusDocumentFormat().requireSupported(it, DocumentKind.SCENE) }
     }.getOrNull()
     return when (selection) {
         is Structural.Folder -> {
-            val trail = listOf(project(selection.abss)) + if (selection.kind == PanelFolderKind.GROUP) listOf(AbyssusBundle.message("panelAssetsFolder")) else emptyList()
-            PanelState.StructuralDetails(selection, builders.folder(selection.kind, selection.name, selection.items, trail.filter { it.isNotEmpty() }))
+            val trail = listOf(project(selection.abss)) + if (selection.kind == PanelFolderKind.GROUP) listOf(
+                AbyssusBundle.message("panelAssetsFolder")
+            ) else emptyList()
+            PanelState.StructuralDetails(
+                selection,
+                builders.folder(selection.kind, selection.name, selection.items, trail.filter { it.isNotEmpty() })
+            )
         }
 
         is Structural.Setting -> {
             val root = scene(selection.file)
-                ?: return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", selection.file.name), null)
+                ?: return PanelState.Empty(
+                    AbyssusBundle.message("propertiesSceneUnreadable", selection.file.name),
+                    null
+                )
             PanelState.StructuralDetails(
-                selection, builders.setting(root, selection.setting, project(ProjectLayout.abssFor(selection.file))), root,
+                selection,
+                builders.setting(root, selection.setting, project(ProjectLayout.abssFor(selection.file))),
+                root,
             )
         }
 
         is Structural.Ecs -> {
             val root = scene(selection.file)
-                ?: return PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", selection.file.name), null)
-            PanelState.StructuralDetails(selection, builders.ecs(root, project(ProjectLayout.abssFor(selection.file))), root)
+                ?: return PanelState.Empty(
+                    AbyssusBundle.message("propertiesSceneUnreadable", selection.file.name),
+                    null
+                )
+            PanelState.StructuralDetails(
+                selection,
+                builders.ecs(root, project(ProjectLayout.abssFor(selection.file))),
+                root
+            )
         }
 
         is Structural.Screen -> PanelState.StructuralDetails(

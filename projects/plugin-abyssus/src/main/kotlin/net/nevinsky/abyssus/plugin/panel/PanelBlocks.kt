@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.plugin.panel
 
 import com.intellij.icons.AllIcons
-import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.IconUtil
@@ -28,9 +27,10 @@ import javax.swing.border.AbstractBorder
 /** The sizes of the panel's design (at scale 1): a 150 px label column, fields at the look and feel's height, a 26 px Browse, a 34 px section header. */
 object PanelMetrics {
     const val LABEL_COLUMN = 150
-        const val BROWSE = 26
+    const val BROWSE = 26
     const val SECTION_HEADER = 34
-    const val BODY_INDENT = 20
+    const val HEADER_SIDE = 12
+    const val HEADER_GAP = 6
     const val HEADER_ICON = 24
 
     /** The opacity of a disabled section's body. */
@@ -100,8 +100,11 @@ class HeaderPanel(header: Header, icon: Icon, titleName: String = "header-title"
     init {
         name = "header"
         border = BorderFactory.createCompoundBorder(
-            JBUI.Borders.customLine(JBColor.BLACK, 0, 0, 1, 0),
-            JBUI.Borders.empty(0, 12, 8, 12),
+            JBUI.Borders.emptyBottom(4),
+            BorderFactory.createCompoundBorder(
+                JBUI.Borders.customLine(Color.BLACK, 0, 0, 1, 0),
+                JBUI.Borders.empty(0, 12, 8, 12),
+            ),
         )
         val column = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -191,9 +194,11 @@ private fun centeredRow(): JPanel = object : JPanel() {
         isOpaque = false
     }
 
-    override fun add(comp: java.awt.Component): java.awt.Component {
-        if (componentCount > 0) super.add(Box.createHorizontalStrut(JBUI.scale(6)))
-        (comp as? JComponent)?.alignmentY = java.awt.Component.CENTER_ALIGNMENT
+    override fun add(comp: Component): Component {
+        if (componentCount > 0) {
+            super.add(Box.createHorizontalStrut(JBUI.scale(PanelMetrics.HEADER_GAP)))
+        }
+        (comp as? JComponent)?.alignmentY = CENTER_ALIGNMENT
         return super.add(comp)
     }
 
@@ -255,7 +260,7 @@ class PropertySection(
         val dim = section.disabled
         val head = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
             isOpaque = false
-            border = JBUI.Borders.empty(0, 12)
+            border = JBUI.Borders.empty(0, PanelMetrics.HEADER_SIDE)
             preferredSize = Dimension(0, PanelMetrics.scaled(PanelMetrics.SECTION_HEADER))
         }
         val left = centeredRow().apply {
@@ -297,7 +302,9 @@ class PropertySection(
         add(head, BorderLayout.NORTH)
         val indented = DimPanel(BorderLayout()).apply {
             isOpaque = false
-            border = JBUI.Borders.empty(0, PanelMetrics.BODY_INDENT, 6, 16)
+            // the labels start where the kind icon does: past the header's side padding, the chevron and the gap
+            val indent = JBUI.scale(PanelMetrics.HEADER_SIDE + PanelMetrics.HEADER_GAP) + chevron.preferredSize.width
+            border = BorderFactory.createEmptyBorder(0, indent, JBUI.scale(6), JBUI.scale(16))
             add(body, BorderLayout.CENTER)
             setDim(dim)
         }
