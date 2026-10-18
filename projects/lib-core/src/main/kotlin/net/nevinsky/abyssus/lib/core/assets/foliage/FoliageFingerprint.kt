@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.assets.foliage
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
-import java.security.MessageDigest
+import net.nevinsky.abyssus.lib.core.util.sha256
 
 /** The id of the generator whose copies the bakes hold; changing the algorithm changes it, so old bakes go stale. */
 const val FOLIAGE_GENERATOR_ID = "foliage-grid-v1"
@@ -49,7 +49,7 @@ class FoliageFingerprint {
                 out.write(masks[layer.id] ?: fullMask(meta.maskResolution))
             }
         }
-        return MessageDigest.getInstance("SHA-256").digest(bytes.toByteArray())
+        return sha256(bytes.toByteArray())
     }
 
     private fun DataOutputStream.text(value: String) {

@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.lib.core.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.PROJECT_EXTENSION
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.SCENES_DIR
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.SCENE_EXTENSION
@@ -22,6 +23,7 @@ data class ProjectDto(
     val name: String? = null,
     val scenes: List<SceneDto> = emptyList(),
     /** The registered UI asset folder names, in order; empty (and not written back) when the file omits them. */
+    @param:JsonDeserialize(using = UiAssetNamesDeserializer::class)
     val uiAssetNames: List<String> = emptyList(),
     @get:JsonIgnore val dir: Path? = null,
 ) {

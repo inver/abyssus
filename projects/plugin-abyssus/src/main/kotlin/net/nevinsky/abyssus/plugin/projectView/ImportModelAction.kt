@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
+
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -186,14 +188,7 @@ fun importModel(
     command.flush()
 
     rejection?.let { fail(it); return ModelImportOutcome(AssetCommandResult.Cancelled, null) }
-    val problem = when (val r = result) {
-        AssetCommandResult.Done -> null
-        is AssetCommandResult.Collision -> AbyssusBundle.message("newTerrainNameError.EXISTS")
-        is AssetCommandResult.Conflict -> r.path
-        is AssetCommandResult.Blocked -> r.reason
-        AssetCommandResult.Cancelled -> AbyssusBundle.message("importModelCancelled")
-        is AssetCommandResult.Failed -> r.cause.displayMessage()
-    }
+    val problem = assetResultMessage(result, "importModelCancelled", failure = { it.displayMessage() })
     if (problem != null) {
         fail(problem)
         return ModelImportOutcome(result, null)

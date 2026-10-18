@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
+
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -122,14 +124,7 @@ fun importFlightGear(
             )
         }, ModalityState.nonModal()) },
     )
-    val problem = when (result) {
-        AssetCommandResult.Done -> null
-        is AssetCommandResult.Collision -> AbyssusBundle.message("newTerrainNameError.EXISTS")
-        is AssetCommandResult.Conflict -> result.path
-        is AssetCommandResult.Blocked -> result.reason
-        AssetCommandResult.Cancelled -> AbyssusBundle.message("importFlightGearCancelled")
-        is AssetCommandResult.Failed -> result.cause.displayMessage()
-    }
+    val problem = assetResultMessage(result, "importFlightGearCancelled", failure = { it.displayMessage() })
     if (problem != null) report(AbyssusBundle.message("importFlightGearFailed", problem))
     return result
 }

@@ -16,16 +16,16 @@ import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 @Service(Service.Level.PROJECT)
 class ProjectReader(
     val project: Project,
-    json: JsonProcessor?,
-    scenes: SceneReader?,
-    loading: DocumentParsing?,
+    private val json: JsonProcessor,
+    private val scenes: SceneReader,
+    private val loading: DocumentParsing,
 ) : ConfigFileReader<net.nevinsky.abyssus.plugin.dto.ProjectDto> {
-    constructor(project: Project) : this(project, null, null, null)
+    /** The platform's entry: resolves the application collaborators once. */
+    constructor(project: Project) : this(
+        project, service<AbyssusPluginCtx>().documents.json, service<SceneReader>(), service<AbyssusPluginCtx>().documents.parsing,
+    )
 
-    private val json by lazy { json ?: service<AbyssusPluginCtx>().documents.json }
-    private val scenes by lazy { scenes ?: service<SceneReader>() }
-    private val loading by lazy { loading ?: service<AbyssusPluginCtx>().documents.parsing }
-    private val assetListing by lazy { ProjectAssetListing(this.json) }
+    private val assetListing by lazy { ProjectAssetListing(json) }
 
     override fun stamp(file: VirtualFile): Long {
         return (ProjectLayout.sceneFiles(file)

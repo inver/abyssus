@@ -20,6 +20,6 @@ import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 internal fun projectRefusal(abss: VirtualFile): String? {
     val core = service<AbyssusPluginCtx>()
     return runCatchingKeepingCancellation {
-        core.format.requireSupported(core.json.readObject(textOf(abss)), DocumentKind.PROJECT)
+        core.documents.parsing.requireSupported(textOf(abss), DocumentKind.PROJECT)
     }.exceptionOrNull()?.let { with(it) { documentDisplayMessage() } }
 }

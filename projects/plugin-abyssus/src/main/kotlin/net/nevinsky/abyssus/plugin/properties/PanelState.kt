@@ -130,7 +130,7 @@ fun readAssetState(folder: VirtualFile, services: PanelServices): PanelState {
 }
 
 /** The preview of an HDR sky: its image decoded and tone mapped here, so off the EDT like the rest of the state. */
-private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreviewSource): HdrCell {
+private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreviewService): HdrCell {
     val info = hdrSkyInfo(folder, meta.json, hdr)
     val file = info.file ?: return HdrCell(AbyssusBundle.message("propertiesHdrNoFile"), null)
     val image = runCatchingKeepingCancellation {

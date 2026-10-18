@@ -11,7 +11,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.ui.popup.JBPopupFactory
+import net.nevinsky.abyssus.plugin.ui.showActionGroup
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
@@ -94,23 +94,15 @@ open class AddComponentAction : AbyssusTreeAction<ComponentTarget>() {
     override fun targetOf(node: Any?) = componentTargetOf(node)?.takeIf { it.kind == null }
 
     /** What can be added to the entity [target] stands for: the modeled kinds it lacks in the scene's current text. */
-    internal fun choices(project: Project, target: ComponentTarget): DefaultActionGroup {
+    internal fun choices(project: Project, target: ComponentTarget, metaFiles: MetaFiles): DefaultActionGroup {
         val root = SceneDocumentCache.of(project).read(target.file)?.root ?: return DefaultActionGroup()
         val kinds = ComponentSchemas.of(project).editorFor(target.file).missingKinds(root, target.entityId).map { it.name }
-        return addComponentGroup(project, target.file, target.entityId, kinds, service<AbyssusPluginCtx>().assets.metaFiles)
+        return addComponentGroup(project, target.file, target.entityId, kinds, metaFiles)
     }
 
     override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) {
-        val group = choices(project, target)
-        JBPopupFactory.getInstance()
-            .createActionGroupPopup(
-                AbyssusBundle.message("addComponentTitle"),
-                group,
-                e.dataContext,
-                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
-                true
-            )
-            .showInBestPositionFor(e.dataContext)
+        val group = choices(project, target, service<AbyssusPluginCtx>().assets.metaFiles)
+        showActionGroup(e, group, AbyssusBundle.message("addComponentTitle"))
     }
 }
 
@@ -134,9 +126,8 @@ open class AddComponentOnEcsAction : AbyssusTreeAction<VirtualFile>() {
         e.project?.let { canAddLight(target, SceneDocumentCache.of(it)) } ?: false
 
     /** The kinds a new entity can start with, each creating one when chosen. */
-    internal fun choices(project: Project, target: VirtualFile): DefaultActionGroup {
+    internal fun choices(project: Project, target: VirtualFile, metaFiles: MetaFiles): DefaultActionGroup {
         val kinds = ComponentSchemas.of(project).editorFor(target).kinds.map { it.name }.filter { it != "NameComponent" }
-        val metaFiles = service<AbyssusPluginCtx>().assets.metaFiles
         return addComponentGroup(project, target, kinds, metaFiles) { name, initial ->
             val added = SceneComponentEdits.addAsNewEntity(project, target, name, metaFiles, initial)
             reportRejection(project, added.result)
@@ -145,11 +136,7 @@ open class AddComponentOnEcsAction : AbyssusTreeAction<VirtualFile>() {
     }
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
-        JBPopupFactory.getInstance()
-            .createActionGroupPopup(
-                AbyssusBundle.message("addComponentTitle"), choices(project, target), e.dataContext,
-                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true)
-            .showInBestPositionFor(e.dataContext)
+        showActionGroup(e, choices(project, target, service<AbyssusPluginCtx>().assets.metaFiles), AbyssusBundle.message("addComponentTitle"))
     }
 }
 

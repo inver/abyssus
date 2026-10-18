@@ -25,7 +25,11 @@ model, and a height field from its terrain's `terrain.data`. Both are read by `P
 
 ## The world
 
-`PhysicsWorld(engine, PhysicsAssets(projectDir, log), log, JoltNatives())`:
+`PhysicsWorld(engine, PhysicsAssets(projectDir, log), log, JoltNatives())` is the public facade and owns native
+resources, body records, foliage, constraints and contact collection. It constructor-wires three internal collaborators
+in `jolt/`: `PhysicsBodyFactory` validates and constructs ordinary bodies, `PhysicsStepper` advances the fixed-step
+clock and runs forces and rope measurements, and `PhysicsPoseWriter` reads native poses for write-back and rope anchors.
+They borrow the world's resources; `PhysicsWorld.close()` retains responsibility for releasing them.
 
 - **Build:** one body per entity with a collider: dynamic, kinematic or static as its rigid body says, static without
   one. A rigid body without a collider is left out with one warning. Each entity's pose comes from its

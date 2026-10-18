@@ -4,11 +4,14 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
+
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.track.TrackSample
 import kotlin.math.acos
 import kotlin.math.asin
+import net.nevinsky.abyssus.lib.core.util.azimuthOf
 import kotlin.math.atan2
 
 /** The simulation step the samples are spaced for (s). */
@@ -61,7 +64,6 @@ class IdealSampler(private val radius: Float, speed: Float = 22f) {
         heading.nor()
         val left = Vector3(u).crs(heading).nor()
         val planeUp = if (inverted) left.scl(-1f) else left
-        val az = atan2(-u.z, u.x)
         val east = Vector3(0f, 1f, 0f).crs(u)
         val east2 = if (east.len2() > 1e-8f) east.nor() else Vector3(1f, 0f, 0f)
         val up = Vector3(u).crs(east2)
@@ -71,9 +73,9 @@ class IdealSampler(private val radius: Float, speed: Float = 22f) {
         val height = offset.y
         return TrackSample(
             time,
-            wrapDeg(az * MathUtils.radiansToDegrees),
+            wrapDegrees(azimuthOf(u.x, u.z)),
             asin(u.y.coerceIn(-1f, 1f)) * MathUtils.radiansToDegrees,
-            wrapDeg(climb * MathUtils.radiansToDegrees),
+            wrapDegrees(climb * MathUtils.radiansToDegrees),
             inv,
             height > 0.5f,
             offset,

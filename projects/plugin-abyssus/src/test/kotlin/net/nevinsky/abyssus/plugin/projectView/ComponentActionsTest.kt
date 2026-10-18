@@ -101,22 +101,22 @@ class ComponentActionsTest : BasePlatformTestCase() {
         copyProject()
         val add = AddOn(entity("0"))
         val target = componentTargetOf(entity("0"))!!
-        val names = add.choices(project, target).getChildren(null).map { it.templatePresentation.text }
+        val names = add.choices(project, target, testMetaFiles()).getChildren(null).map { it.templatePresentation.text }
         assertFalse("Position" in names)
         assertFalse("Pickable" in names)
         assertTrue("Light" in names)
         assertTrue("Render" !in names)
-        val light = add.choices(project, target).getChildren(null).first { it.templatePresentation.text == "Light" }
+        val light = add.choices(project, target, testMetaFiles()).getChildren(null).first { it.templatePresentation.text == "Light" }
         light.actionPerformed(TestActionEvent.createTestEvent(light))
         assertTrue(components("0").has("LightComponent"))
-        assertFalse(add.choices(project, target).getChildren(null).any { it.templatePresentation.text == "Light" })
+        assertFalse(add.choices(project, target, testMetaFiles()).getChildren(null).any { it.templatePresentation.text == "Light" })
     }
 
     fun testRenderIsOfferedPerProjectAsset() {
         copyProject()
         SceneComponentEdits.remove(project, scene(), "6", "RenderComponent")
         val target = componentTargetOf(entity("6"))!!
-        val render = AddOn(null).choices(project, target).getChildren(null)
+        val render = AddOn(null).choices(project, target, testMetaFiles()).getChildren(null)
             .filterIsInstance<com.intellij.openapi.actionSystem.ActionGroup>().single { it.templatePresentation.text == "Render" }
         val assets = SceneComponentEdits.renderAssets(scene(), testMetaFiles())
         assertTrue(assets.isNotEmpty())
@@ -148,7 +148,7 @@ class ComponentActionsTest : BasePlatformTestCase() {
     fun testTreeShowsTheNewComponentAndCount() {
         copyProject()
         val add = AddOn(entity("0"))
-        val light = add.choices(project, componentTargetOf(entity("0"))!!).getChildren(null).first { it.templatePresentation.text == "Light" }
+        val light = add.choices(project, componentTargetOf(entity("0"))!!, testMetaFiles()).getChildren(null).first { it.templatePresentation.text == "Light" }
         light.actionPerformed(TestActionEvent.createTestEvent(light))
         val node = entity("0") as DtoEntryNode
         assertTrue(children(node).any { label(it) == "LightComponent" })

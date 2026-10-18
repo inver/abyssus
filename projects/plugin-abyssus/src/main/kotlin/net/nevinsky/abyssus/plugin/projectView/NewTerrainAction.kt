@@ -77,7 +77,7 @@ fun createTerrain(project: Project, abss: VirtualFile, request: NewTerrainReques
     val core = service<AbyssusPluginCtx>()
     val terrain = core.terrain
     val accepted = net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation {
-        core.documents.format.requireSupported(core.documents.json.readObject(textOf(abss)), net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)
+        core.documents.parsing.requireSupported(textOf(abss), net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)
     }
     accepted.exceptionOrNull()?.let { report(it.documentDisplayMessage()); return null }
     val projectDir = File(abss.parent.path)

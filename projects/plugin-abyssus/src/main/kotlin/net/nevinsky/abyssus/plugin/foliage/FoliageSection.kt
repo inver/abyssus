@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.foliage
 
+import net.nevinsky.abyssus.lib.core.editor.util.numberText
+import net.nevinsky.abyssus.lib.core.editor.util.NumberTextStyle
+
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
@@ -40,7 +43,6 @@ import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
-import java.math.BigDecimal
 import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JComponent
@@ -385,10 +387,7 @@ private val FOLIAGE_FIELDS = listOf(
 )
 
 /** A float as its file spells it: plain text rather than the exponent form small values would otherwise take. */
-private fun Float.editText(): String {
-    val text = toString()
-    return if (text.indexOf('E') < 0) text else BigDecimal(text).stripTrailingZeros().toPlainString()
-}
+private fun Float.editText(): String = numberText(this, NumberTextStyle.FOLIAGE)
 
 /** Shown instead of the controls when the foliage asset cannot be edited. */
 internal fun foliageUnusableNote(reason: String): JComponent = JPanel(BorderLayout()).apply {

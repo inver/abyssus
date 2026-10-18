@@ -5,20 +5,17 @@
 package net.nevinsky.abyssus.plugin.foliage
 
 import com.badlogic.gdx.math.Vector3
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.foliage.*
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.foliage.*
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaint
 import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaintMode
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
+import net.nevinsky.abyssus.plugin.DocumentServices
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
@@ -31,6 +28,8 @@ class FoliageStrokeCommand(
     private val folder: VirtualFile,
     initial: FoliageSource.Ready,
     private val drafts: FoliageDrafts,
+    private val documents: DocumentServices,
+    private val undoCache: FoliageUndoCache,
     private val mode: () -> FoliagePaintMode?,
     private val background: (Runnable) -> Unit,
     private val ui: (Runnable) -> Unit,
@@ -93,7 +92,8 @@ class FoliageStrokeCommand(
         val masks = stroke.source.masks + (stroke.mode.layerId to stroke.mask.copyOf())
         background(Runnable {
             val staged = runCatchingKeepingCancellation {
-                AbyssusDocumentFormat().requireSupported(SceneJson().parse(currentText), DocumentKind.ASSET)
+                val parsing = documents.parsing
+                parsing.requireSupported(currentText, DocumentKind.ASSET)
                 val maskPresent = File(folder.path, foliageMaskFileName(stroke.mode.layerId)).isFile
                 val expected = settings.layers.filter { it.id != stroke.mode.layerId }.associate { layer ->
                     val path = "assets/${folder.name}/${foliageMaskFileName(layer.id)}"
@@ -105,14 +105,11 @@ class FoliageStrokeCommand(
                 val terrainFolder = File(projectDir, "assets/${settings.terrain}")
                 val terrainMeta = File(terrainFolder, "meta.json").readBytes()
                 expected["assets/${settings.terrain}/meta.json"] = FileSnapshot.Bytes(terrainMeta)
-                val terrainDocument = SceneJson().parse(terrainMeta.toString(Charsets.UTF_8))
-                AbyssusDocumentFormat().requireSupported(terrainDocument, DocumentKind.ASSET)
-                val terrainFile = terrainDocument.path("additional").path("terrainFile").asText()
+                val terrainFile = parsing.assetFields(terrainMeta.toString(Charsets.UTF_8)).terrainFile
                 expected["assets/${settings.terrain}/$terrainFile"] =
                     FileSnapshot.Bytes(File(terrainFolder, terrainFile).readBytes())
                 val fresh = readCurrent?.invoke() ?: run {
-                    val json = service<AbyssusPluginCtx>().json
-                    readFoliageSource(folder.name, projectDir, json, currentText, SceneJson().parseObject(currentText)["additional"])
+                    readFoliageSource(folder.name, projectDir, documents.json, currentText, parsing.foliageMeta(currentText))
                 }
                 require(fresh is FoliageSource.Ready && fresh.sameAs(stroke.source)) {
                     AbyssusBundle.message("foliageSourceChanged")
@@ -127,7 +124,7 @@ class FoliageStrokeCommand(
                 }
                 val bytes = FoliageDataFile().write(counted.bake)
                 val backup = if (stroke.source.stale && stroke.source.dataSha256 != null)
-                    project.service<FoliageUndoCache>().preserve(
+                    undoCache.preserve(
                         File(folder.path, settings.dataFileName()).toPath(), stroke.source.dataSha256,
                     ) else null
                 synchronized(stagedBackups) {

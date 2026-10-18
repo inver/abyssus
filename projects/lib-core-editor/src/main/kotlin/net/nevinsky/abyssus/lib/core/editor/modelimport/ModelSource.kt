@@ -24,7 +24,7 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.Files
-import java.security.MessageDigest
+import net.nevinsky.abyssus.lib.core.util.sha256Hex
 import javax.imageio.ImageIO
 import javax.xml.stream.XMLStreamException
 
@@ -177,16 +177,7 @@ class ModelSource(
     }
 
     private fun sha256(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(1 shl 16)
-            while (true) {
-                val n = input.read(buffer)
-                if (n < 0) break
-                digest.update(buffer, 0, n)
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
+        return file.inputStream().use { sha256Hex(it) }
     }
 
     /** The `extensionsUsed` of a glTF file or of a GLB's JSON chunk; Assimp drops the ones it doesn't know silently. */

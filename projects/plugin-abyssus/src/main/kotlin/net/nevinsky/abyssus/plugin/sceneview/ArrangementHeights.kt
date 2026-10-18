@@ -25,6 +25,7 @@ import net.nevinsky.abyssus.lib.core.editor.pick.GroundHeights
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
@@ -39,7 +40,10 @@ import java.util.concurrent.ConcurrentHashMap
  * next edit does not read them again. A terrain that cannot be read is left out: copies over it take the line's height.
  */
 @Service(Service.Level.PROJECT)
-class ArrangementHeights(private val project: Project) {
+class ArrangementHeights(private val project: Project, private val json: JsonProcessor) {
+    /** The platform's entry: resolves the application's JSON once. */
+    constructor(project: Project) : this(project, service<AbyssusPluginCtx>().json)
+
     private class Stamped(val stamp: List<Long>, val data: TerrainData?)
 
     private val cache = ConcurrentHashMap<String, Stamped>()
@@ -71,13 +75,11 @@ class ArrangementHeights(private val project: Project) {
     private class Placement(val entityId: String, val asset: String, val world: com.badlogic.gdx.math.Matrix4)
 
     private fun terrainPlacements(file: VirtualFile): List<Placement> {
-        val core = service<AbyssusPluginCtx>()
-        val scene = runCatchingKeepingCancellation { core.json.parse(textOf(file), SceneDto::class.java) }.getOrNull() ?: return emptyList()
+        val scene = runCatchingKeepingCancellation { json.parse(textOf(file), SceneDto::class.java) }.getOrNull() ?: return emptyList()
         return sceneContentOf(scene).terrains.map { Placement(it.entityId, it.assetName, it.transform.toMatrix()) }
     }
 
     private fun load(projectDir: File, placements: List<Placement>): List<TerrainTarget> {
-        val json = service<AbyssusPluginCtx>().json
         val files = FileLoader(projectDir)
         val metas = AssetMetaLoader(json, files)
         val loader = TerrainLoader(files, metas)

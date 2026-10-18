@@ -7,16 +7,8 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 
-import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
-import com.intellij.ide.DataManager
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.diagnostic.thisLogger
-import com.intellij.openapi.ui.ComboBox
-import com.intellij.openapi.ui.popup.JBPopupFactory
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
@@ -29,13 +21,7 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudViewState
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import org.lwjgl.opengl.GL
-import org.lwjgl.opengl.GLCapabilities
-import org.lwjgl.opengl.awt.GLData
 import java.awt.BorderLayout
-import com.intellij.ui.JBColor
-import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.WrapLayout
-import java.awt.FlowLayout
 import java.awt.event.*
 import javax.swing.*
 
@@ -68,21 +54,17 @@ class SceneViewPanel internal constructor(
     antialiasingLevel: AntialiasingLevel = AntialiasingLevel.DEFAULT,
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
-    private val frame = GdxFrame()
     internal val orbit = OrbitCamera(initial.camera)
     private val interaction = SceneInteraction(renderer.state, renderer.queries, orbit)
-    private var gdx: GdxContext? = null
 
     private var lastCamera = initial.camera
-    private var capabilities: GLCapabilities? = null
 
     override val view: JComponent get() = this
 
     /** Gizmo space, snapping, shading and layer toggles of this view; never saved. */
     internal val tools = SceneViewToolsModel()
     /** The tool, space and snap, such as `Move · Local · Snap 0.5`; the stats strip shows it. */
-    internal var toolStatusText: String = ""
-        private set
+    internal val toolStatusText: String get() = toolbar.statusText
     /** This view's frame rate: sampled only while the project shows it, reset on every lifecycle break. */
     private val fps = FpsCounter()
     private var fpsEnabled = false
@@ -119,25 +101,12 @@ class SceneViewPanel internal constructor(
     private var spriteScale = 0.0
     private var orientationSprite: CornerSprite? = null
     private var statsSprite: CornerSprite? = null
-    private var lastToolbar = toolbarState(GizmoMode.MOVE, experimenting = false, playing = false, canDrop = false, canAddLight = false, canAddAsset = false)
-    private val toolsToolbar = SceneToolsToolbar(interaction, tools, { lastToolbar }, { frameSelection() }, this)
-    private val dropButton = JButton(AbyssusBundle.message("sceneViewDrop"))
-    private val addLightButton = JButton(AbyssusBundle.message("addLightTitle")).apply { name = "add-light" }
-    private val addAssetButton = JButton(AbyssusBundle.message("addAssetTitle")).apply { name = "add-asset" }
-    private val addWaterButton = JButton(AbyssusBundle.message("addWaterTitle")).apply { name = "add-water" }
-    private val addPathButton = JButton(AbyssusBundle.message("addPathArrangementTitle")).apply { name = "add-path-arrangement" }
-    private val regenerateButton = JButton(AbyssusBundle.message("regenerateArrangementTitle")).apply { name = "regenerate-arrangement"; isVisible = false }
-    private val drawingHint = JLabel(AbyssusBundle.message("pathDrawingHint")).apply { name = "path-drawing-hint"; isVisible = false }
-    private val addFoliageButton = JButton(AbyssusBundle.message("addFoliageTitle")).apply { name = "add-foliage" }
-    private val cameraCombo = ComboBox<CameraChoice>()
-    private val paint = FoliagePaintControls(renderer, interaction, play, paintSession, ::syncControls)
+    private val paint: FoliagePaintControls = FoliagePaintControls(renderer, interaction, play, paintSession, ::syncControls)
     private val playStrip = PlayControlsStrip(play, renderer, simulationRequest, { paint.end() }, { requestFocusInWindow() })
     private val clouds = CloudControls(renderer) { experimenting }
 
     /** This view's Clouds choice and fallbacks; a reopened view gets a new panel, so it starts at Asset again. */
     internal val cloudState: CloudViewState get() = clouds.state
-    private var choices: List<CameraChoice> = emptyList()
-    private var updatingControls = false
     private val rayBinding = RayControlBinding(renderer)
 
     /** The only switch for Ray Tracing: the Abyssus Properties panel flips it. The Scene View toolbar has no ray control. */
@@ -147,6 +116,16 @@ class SceneViewPanel internal constructor(
     private val experiment = experimentButton?.let { RayFeasibilityPreview { message -> thisLogger().info(message) } }
     private val experimenting: Boolean get() = experimentButton?.isSelected == true
     private val input = SceneInputForwarder(this, renderer, interaction, play, { experimenting }, { experiment?.orbit }, paint::update, ::frameSelection, ::pressOnOrientationWidget)
+
+    private val toolbar: SceneViewToolbar = SceneViewToolbar(
+        this, renderer, interaction, tools, play, paint, playStrip, clouds, experimentButton,
+        { experiment?.stop() },
+        SceneViewToolbarSources(
+            lightMenu, assetMenu, waterMenu, pathMenu, foliageActions, overlays,
+            ::lightChoices, ::assetChoices, ::waterChoices, ::pathChoices, { onRegenerate }, { unavailable },
+        ),
+        ::frameSelection,
+    )
 
     init {
         renderer.params = initial
@@ -166,14 +145,13 @@ class SceneViewPanel internal constructor(
     /** Called (on the AWT thread) when rendering fails, e.g. when no GL 3.2 core context can be created. */
     override var onFailure: ((Throwable) -> Unit)? = null
 
-    private var contextInitialized = false
-    private val antialiasing = CanvasAntialiasing(
+    private val antialiasing: CanvasAntialiasing = CanvasAntialiasing(
         antialiasingLevel,
         ::replaceCanvas,
         { samples, error -> thisLogger().warn("Scene view refused $samples MSAA samples; trying lower sample counts", error) },
         { error ->
             thisLogger().warn("Scene render failed, stopping the view", error)
-            stopLoop()
+            driver.stop()
             onFailure?.invoke(error)
         },
     )
@@ -187,44 +165,27 @@ class SceneViewPanel internal constructor(
         antialiasing.setLevel(level, isShowing)
     }
 
-    private fun newCanvas(samples: Int): GuardedGLCanvas = object : GuardedGLCanvas(glData(samples)) {
-        override fun initGL() {
-            // Even a failure in capability/resource creation is a renderer error, not a refused pixel format.
-            contextInitialized = true
-            capabilities = GL.createCapabilities()
-            val ctx = GdxRuntime.newContext(frame, GdxGlBridge.gl20(), GdxGlBridge.gl30(), Lwjgl3Files())
-            gdx = ctx
-            GdxRuntime.withContext(ctx) { renderer.create() }
+    private val lifecycle: SceneGlLifecycle = SceneGlLifecycle(renderer, object : SceneGlHooks {
+        override fun beforeDispose() {
+            rayBinding.feed?.reset()
         }
 
-        /** Runs once per GL context, with it current: on `removeNotify` and on `disposeCanvas`. */
-        override fun disposeGL() {
-            val ctx = gdx ?: return
-            gdx = null
-            capabilities?.let { GL.setCapabilities(it) }
-            try {
-                rayBinding.feed?.reset()
-                GdxRuntime.withContext(ctx) { experiment?.dispose(); renderer.dispose() }
-            } catch (e: Throwable) {
-                thisLogger().warn("Failed to release scene view GL resources", e)
-            }
+        override fun disposeInContext() {
+            experiment?.dispose()
         }
 
-        override fun onContextAbandoned() {
+        override fun abandoned() {
             fpsInterrupted()
             rayBinding.feed?.reset()
             experiment?.abandon()
-            renderer.abandonShadows()
-            gdx = null
-            antialiasing.abandoned()
         }
 
-        override fun paintGL() {
-            val ctx = gdx ?: return
-            capabilities?.let { GL.setCapabilities(it) }
-            updateCornerSprites(width, framebufferWidth)
+        override fun contextLost() = antialiasing.abandoned()
+
+        override fun paintFrame(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame) {
+            updateCornerSprites(canvas.width, canvas.framebufferWidth)
             fpsFrameStarted()
-            frame.tick(framebufferWidth, framebufferHeight)
+            frame.tick(canvas.framebufferWidth, canvas.framebufferHeight)
             renderer.state.poses = play.poses() ?: emptyMap()
             renderer.state.gizmosEnabled = !play.active
             GdxRuntime.withContext(ctx) {
@@ -239,15 +200,15 @@ class SceneViewPanel internal constructor(
             experimentButton?.toolTipText = experiment?.failure?.let {
                 AbyssusBundle.message("sceneViewRayExperimentFailure", it.documentDisplayMessage())
             } ?: AbyssusBundle.message("sceneViewRayExperimentTooltip")
-            swapBuffers()
-            fpsFrameCompleted()
         }
-    }
 
-    private var canvas: GuardedGLCanvas = newCanvas(antialiasing.samples)
+        override fun framePresented() = fpsFrameCompleted()
+    })
+
+    private var canvas: GuardedGLCanvas = lifecycle.newCanvas(antialiasing.samples)
     private fun newCanvasHost() = CanvasOverlayHost(canvas) {
         try {
-            canvas.captureFrame { capabilities?.let { GL.setCapabilities(it) } }
+            canvas.captureFrame { lifecycle.capabilities?.let { GL.setCapabilities(it) } }
         } catch (e: Exception) {
             thisLogger().warn("Failed to capture the scene beneath an IDE overlay", e)
             null
@@ -255,42 +216,19 @@ class SceneViewPanel internal constructor(
     }
     private var canvasHost = newCanvasHost()
 
-    private var lastActivityNanos = System.nanoTime()
-    private var lastRenderNanos = 0L
-
-    /** Marks input on this view: it renders at the full frame rate for [IDLE_AFTER_NANOS] after the last event. */
-    private val activityListener = java.awt.event.AWTEventListener { event ->
-        if (event is InputEvent && event.source.let { it is java.awt.Component && SwingUtilities.isDescendingFrom(it, this) }) {
-            lastActivityNanos = System.nanoTime()
-        }
-    }
-
-    /** True while something moves or may change at once; an idle view (the sky still drifts) renders at [IDLE_FRAME_MILLIS]. */
-    private fun busy(now: Long): Boolean =
-        now - lastActivityNanos < IDLE_AFTER_NANOS || play.active || experimenting || renderer.loading ||
-            renderer.presentedRayFrame
-
-    private val timer: Timer = Timer(FRAME_MILLIS) {
-        if (!canvas.glSafe()) { fpsInterrupted(); return@Timer }
-        val now = System.nanoTime()
-        if (!busy(now) && now - lastRenderNanos < IDLE_FRAME_MILLIS * 1_000_000L) return@Timer
-        lastRenderNanos = now
-        try {
-            canvas.render()
-        } catch (e: Throwable) {
-            if (e is com.intellij.openapi.progress.ProcessCanceledException || e is java.util.concurrent.CancellationException) throw e
-            fpsInterrupted()
-            antialiasing.renderFailed(e, contextInitialized)
-        }
-    }
-
-    private fun stopLoop() = timer.stop()
+    /** Renders at the full frame rate while something moves or may change at once; an idle view (the sky still drifts) renders slowly. */
+    private val driver: SceneFrameDriver = SceneFrameDriver(
+        this, { canvas },
+        { play.active || experimenting || renderer.loading || renderer.presentedRayFrame },
+        ::fpsInterrupted,
+        { error -> antialiasing.renderFailed(error, lifecycle.contextInitialized) },
+    )
 
     /** True once rendering failed for good: the viewport shows a message and the toolbar is disabled. */
     private var unavailable = false
 
     override fun showUnavailable(message: String): Boolean {
-        stopLoop()
+        driver.stop()
         fpsInterrupted()
         unavailable = true
         remove(canvasHost)
@@ -303,7 +241,7 @@ class SceneViewPanel internal constructor(
     }
 
     init {
-        add(buildToolbar(), BorderLayout.NORTH)
+        add(toolbar.component, BorderLayout.NORTH)
         add(canvasHost, BorderLayout.CENTER)
         input.attach(canvas)
         addHierarchyListener { event ->
@@ -317,7 +255,7 @@ class SceneViewPanel internal constructor(
         tools.onChanged = ::syncControls
         play.onChanged = ::syncControls
         syncControls()
-        refreshCameraChoices(initial)
+        toolbar.refreshCameraChoices(initial)
     }
 
     /**
@@ -386,110 +324,6 @@ class SceneViewPanel internal constructor(
         )
     }
 
-    private fun buildToolbar(): JPanel {
-        dropButton.isFocusable = false
-        dropButton.toolTipText = AbyssusBundle.message("sceneViewDropTooltip")
-        dropButton.addActionListener { interaction.drop() }
-        addLightButton.isFocusable = false
-        addLightButton.toolTipText = AbyssusBundle.message("addLightTooltip")
-        addLightButton.addActionListener {
-            val actions = lightChoices() ?: return@addActionListener
-            JBPopupFactory.getInstance().createActionGroupPopup(
-                AbyssusBundle.message("addLightTitle"), actions, DataManager.getInstance().getDataContext(this),
-                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
-            ).showUnderneathOf(addLightButton)
-        }
-        addAssetButton.isFocusable = false
-        addAssetButton.toolTipText = AbyssusBundle.message("addAssetTooltip")
-        addAssetButton.addActionListener {
-            val actions = assetChoices() ?: return@addActionListener
-            JBPopupFactory.getInstance().createActionGroupPopup(
-                AbyssusBundle.message("addAssetTitle"), actions, DataManager.getInstance().getDataContext(this),
-                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
-            ).showUnderneathOf(addAssetButton)
-        }
-        addWaterButton.isFocusable = false
-        addWaterButton.toolTipText = AbyssusBundle.message("addWaterTooltip")
-        addWaterButton.addActionListener {
-            val actions = waterChoices() ?: return@addActionListener
-            JBPopupFactory.getInstance().createActionGroupPopup(
-                AbyssusBundle.message("addWaterTitle"), actions, DataManager.getInstance().getDataContext(this),
-                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
-            ).showUnderneathOf(addWaterButton)
-        }
-        addPathButton.isFocusable = false
-        addPathButton.toolTipText = AbyssusBundle.message("addPathArrangementTooltip")
-        addPathButton.addActionListener {
-            val actions = pathChoices() ?: return@addActionListener
-            JBPopupFactory.getInstance().createActionGroupPopup(
-                AbyssusBundle.message("addPathArrangementTitle"), actions, DataManager.getInstance().getDataContext(this),
-                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
-            ).showUnderneathOf(addPathButton)
-        }
-        regenerateButton.isFocusable = false
-        regenerateButton.toolTipText = AbyssusBundle.message("regenerateArrangementTooltip")
-        regenerateButton.addActionListener { interaction.selectedId?.let { onRegenerate?.invoke(it) } }
-        cameraCombo.isFocusable = false
-        addFoliageButton.isFocusable = false
-        addFoliageButton.addActionListener {
-            val id = interaction.selectedId ?: return@addActionListener
-            val actions = foliageActions?.invoke(id) ?: return@addActionListener
-            JBPopupFactory.getInstance().createActionGroupPopup(
-                AbyssusBundle.message("addFoliageTitle"), actions, DataManager.getInstance().getDataContext(this),
-                JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
-            ).showUnderneathOf(addFoliageButton)
-        }
-        cameraCombo.toolTipText = AbyssusBundle.message("sceneViewCameraTooltip")
-        cameraCombo.addActionListener {
-            if (updatingControls) return@addActionListener
-            val choice = cameraCombo.selectedItem as? CameraChoice ?: return@addActionListener
-            interaction.viewCamera = choice.id
-        }
-        return JPanel(WrapLayout(FlowLayout.LEFT, 4, 2)).apply {
-            name = "scene-toolbar"
-            accessibleContext.accessibleName = AbyssusBundle.message("sceneViewToolbarName")
-            val groups = toolsToolbar.components()
-            groups.forEach { add(it) }
-            add(toolsToolbar.divider())
-            add(cameraCombo)
-            add(toolsToolbar.frameComponent())
-            add(toolsToolbar.divider())
-            add(dropButton)
-            add(addLightButton)
-            if (assetMenu != null) add(addAssetButton)
-            if (waterMenu != null) add(addWaterButton)
-            if (pathMenu != null) add(addPathButton)
-            add(regenerateButton)
-            add(drawingHint)
-            if (foliageActions != null) add(addFoliageButton)
-            paint.addTo(this)
-            add(clouds.combo)
-            add(clouds.note)
-            playStrip.addTo(this)
-            overlayToolbar()?.let { add(it) }
-            experimentButton?.let { button ->
-                button.isFocusable = false
-                button.addActionListener {
-                    experiment?.stop()
-                    syncControls()
-                }
-                add(button)
-            }
-        }
-    }
-
-    /** Each overlay's actions (such as Show Physics), in one small action toolbar; null when there are none. */
-    private fun overlayToolbar(): JComponent? {
-        if (overlays == null) return null
-        val group = object : DefaultActionGroup() {
-            override fun getChildren(e: AnActionEvent?): Array<AnAction> =
-                overlays.overlays.flatMap { it.overlay.actions() }.toTypedArray()
-        }
-        val toolbar = ActionManager.getInstance().createActionToolbar("AbyssusSceneOverlays", group, true)
-        toolbar.targetComponent = this
-        return toolbar.component
-    }
-
     /** Choices retain a supplier so placement follows the current orbit target at the moment of creation. */
     internal fun lightChoices(): DefaultActionGroup? = lightMenu?.choicesAt { orbit.target }
 
@@ -502,69 +336,7 @@ class SceneViewPanel internal constructor(
     /** The Add Path Arrangement choices (the project's models); null while arrangements cannot be added. */
     internal fun pathChoices(): DefaultActionGroup? = pathMenu?.choicesAt { asset -> startDrawing(asset) }
 
-    /** Brings the toolbar's buttons and selector in line with the interaction state. */
-    private fun syncControls() {
-        renderer.state.gizmoSpace = tools.space
-        renderer.display = tools.display
-        renderer.state.snap = if (tools.snapOn) GizmoSnap(tools.snapStep, SNAP_ANGLE_DEGREES) else null
-        toolStatusText = toolStatus(
-            AbyssusBundle.message(when (interaction.mode) {
-                GizmoMode.SELECT -> "sceneViewToolSelect"
-                GizmoMode.MOVE -> "sceneViewToolMove"
-                GizmoMode.ROTATE -> "sceneViewToolRotate"
-            }),
-            AbyssusBundle.message(if (tools.space == GizmoSpace.WORLD) "sceneViewSpaceWorld" else "sceneViewSpaceLocal"),
-            if (tools.snapOn) AbyssusBundle.message("sceneViewSnap", formatStep(tools.snapStep)) else null,
-        )
-        paint.beforeSync()
-        updatingControls = true
-        try {
-            val toolbar = toolbarState(
-                interaction.mode, experimenting, play.active, interaction.canDrop,
-                lightMenu?.available?.invoke() == true, assetMenu?.available?.invoke() == true,
-                tools.display, renderer.content.lights.isNotEmpty(), renderer.params.fog != null, interaction.viewCamera != null,
-                waterMenu?.available?.invoke() == true,
-            )
-            lastToolbar = when {
-                unavailable -> toolbar.disabled()
-                paint.painting -> toolbar.copy(gizmoEnabled = false, spaceEnabled = false, snapEnabled = false)
-                else -> toolbar
-            }
-            cameraCombo.isEnabled = toolbar.cameraEnabled
-            dropButton.isEnabled = toolbar.dropEnabled
-            addLightButton.isEnabled = toolbar.addLightEnabled
-            addAssetButton.isEnabled = toolbar.addAssetEnabled
-            addWaterButton.isEnabled = toolbar.addWaterEnabled
-            addPathButton.isEnabled = !play.active && !experimenting && pathMenu?.available?.invoke() == true
-            val arrangementSelected = renderer.content.arrangements.any { it.entityId == interaction.selectedId }
-            regenerateButton.isVisible = arrangementSelected
-            regenerateButton.isEnabled = arrangementSelected && !play.active && onRegenerate != null
-            drawingHint.isVisible = interaction.drawing != null
-            val foliage = interaction.selectedId?.let { foliageActions?.invoke(it) }
-            addFoliageButton.isVisible = foliage != null
-            val hasChoices = foliage != null && foliage.childrenCount > 0
-            addFoliageButton.isEnabled = !play.active && hasChoices
-            addFoliageButton.toolTipText = if (foliage != null && !hasChoices) AbyssusBundle.message("addFoliageNone") else null
-            paint.sync()
-            if (paint.painting) dropButton.isEnabled = false
-            playStrip.sync()
-            cameraCombo.selectedItem = choices.firstOrNull { it.id == interaction.viewCamera } ?: choices.firstOrNull()
-        } finally {
-            updatingControls = false
-        }
-        toolsToolbar.update()
-        clouds.sync()
-        if (unavailable) disableToolbarComponents()
-    }
-
-    /** Every plain Swing control of the toolbar off (the action toolbars read [lastToolbar]); the view cannot render. */
-    private fun disableToolbarComponents() {
-        fun off(c: java.awt.Component) {
-            if (c is AbstractButton || c is JComboBox<*>) c.isEnabled = false
-            (c as? java.awt.Container)?.components?.forEach(::off)
-        }
-        components.firstOrNull { it.name == "scene-toolbar" }?.let(::off)
-    }
+    private fun syncControls() = toolbar.sync()
 
     /** After each rendered frame; see [CloudControls.frameRendered]. */
     internal fun cloudFrameRendered(
@@ -572,29 +344,14 @@ class SceneViewPanel internal constructor(
         volumetric: Boolean = renderer.drawnCloudTechnique == CloudTechnique.VOLUMETRIC,
     ) = clouds.frameRendered(interval, volumetric)
 
-    private fun refreshCameraChoices(params: SceneRenderParams) {
-        val fresh = cameraChoices(params.content, AbyssusBundle.message("sceneViewFreeCamera"))
-        if (fresh != choices) {
-            choices = fresh
-            updatingControls = true
-            try {
-                cameraCombo.removeAllItems()
-                fresh.forEach(cameraCombo::addItem)
-            } finally {
-                updatingControls = false
-            }
-        }
-        syncControls()
-    }
-
     /** Reuses the guarded disposal path; only the native canvas changes, never the view's CPU state. */
     private fun replaceCanvas(samples: Int) {
         fpsInterrupted()
         canvasHost.stop()
         canvas.disposeCanvas()
         remove(canvasHost)
-        contextInitialized = false
-        canvas = newCanvas(samples)
+        lifecycle.contextInitialized = false
+        canvas = lifecycle.newCanvas(samples)
         input.attach(canvas)
         canvasHost = newCanvasHost()
         add(canvasHost, BorderLayout.CENTER)
@@ -676,7 +433,7 @@ class SceneViewPanel internal constructor(
         }
         interaction.paramsChanged(params)
         if (bindingChanged) paint.refreshSession(force = true)
-        refreshCameraChoices(params)
+        toolbar.refreshCameraChoices(params)
     }
 
     override fun refreshAssets(revision: AssetRevisionBatch) {
@@ -697,18 +454,11 @@ class SceneViewPanel internal constructor(
         antialiasing.shown()
         super.addNotify()
         rayBinding.feed?.runtime?.setVisible(true)
-        lastActivityNanos = System.nanoTime()
-        java.awt.Toolkit.getDefaultToolkit().addAWTEventListener(
-            activityListener,
-            java.awt.AWTEvent.MOUSE_EVENT_MASK or java.awt.AWTEvent.MOUSE_MOTION_EVENT_MASK or
-                java.awt.AWTEvent.MOUSE_WHEEL_EVENT_MASK or java.awt.AWTEvent.KEY_EVENT_MASK,
-        )
-        timer.start()
+        driver.start()
     }
 
     override fun removeNotify() {
-        java.awt.Toolkit.getDefaultToolkit().removeAWTEventListener(activityListener)
-        stopLoop()
+        driver.release()
         fpsInterrupted()
         experiment?.stop()
         rayBinding.feed?.runtime?.setVisible(false)
@@ -717,7 +467,7 @@ class SceneViewPanel internal constructor(
 
     override fun dispose() {
         paint.close()
-        stopLoop()
+        driver.stop()
         fpsInterrupted()
         canvasHost.stop()
         play.stop()
@@ -725,26 +475,6 @@ class SceneViewPanel internal constructor(
         experiment?.stop()
         rayBinding.close()
         canvas.disposeCanvas() // releases GL resources through disposeGL while the context is still current
-    }
-
-    private companion object {
-        const val FRAME_MILLIS = 16
-
-        /** An idle view (no input for [IDLE_AFTER_NANOS], nothing loading or playing) renders every this many ms. */
-        const val IDLE_FRAME_MILLIS = 100
-        const val IDLE_AFTER_NANOS = 1_000_000_000L
-
-        fun glData(sampleCount: Int) = GLData().apply {
-            samples = sampleCount
-            sampleBuffers = if (sampleCount > 0) 1 else 0
-            majorVersion = 3
-            // instanced foliage shadows call glVertexAttribDivisor, which is core only from 3.3; a context made as exactly 3.2 aborts the JVM on it
-            minorVersion = 3
-            profile = GLData.Profile.CORE
-            forwardCompatible = true
-            depthSize = 24
-            swapInterval = 0 // the Swing timer paces frames; a vsync-blocked swap would stall the IDE thread
-        }
     }
 }
 

@@ -9,7 +9,7 @@ import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.File
 import java.io.IOException
-import java.security.MessageDigest
+import net.nevinsky.abyssus.lib.core.util.sha256Hex
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 
@@ -71,16 +71,7 @@ class FlightGearArchive(val file: File, private val xml: FlightGearXml = FlightG
 
     /** The SHA-256 of the archive file, in hex. */
     fun sha256(): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(1 shl 16)
-            while (true) {
-                val n = input.read(buffer)
-                if (n < 0) break
-                digest.update(buffer, 0, n)
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
+        return file.inputStream().use { sha256Hex(it) }
     }
 
     /** The bytes of [path], or null when the archive has no such file. */

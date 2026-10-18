@@ -4,20 +4,22 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
+import net.nevinsky.abyssus.plugin.dto.SceneReader
+import com.intellij.openapi.components.service
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.command.undo.DocumentReference
 import com.intellij.openapi.command.undo.DocumentReferenceManager
 import com.intellij.openapi.command.undo.DocumentReferenceProvider
 import com.intellij.openapi.command.undo.UndoManager
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.project.DumbAware
-import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
-import net.nevinsky.abyssus.plugin.projectView.UiScreenOpener
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.components.JBLabel
@@ -32,8 +34,10 @@ import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DI
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.ui.model.UiIssue
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.dto.NativeFileChanges
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.projectView.UiScreenOpener
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
 import java.util.concurrent.Executor
@@ -53,7 +57,9 @@ private const val MAX_SNIFF_BYTES = 8L * 1024 * 1024
 /** Whether [file] is a `meta.json` of type `UI` inside a project; the type is all that is read, so an unsupported UI version is still ours. */
 fun isUiAsset(file: VirtualFile): Boolean {
     if (uiAssetOwner(file) == null || file.length > MAX_SNIFF_BYTES) return false
-    return runCatchingKeepingCancellation { SceneJson().parse(textOf(file))["type"]?.takeIf { it.isTextual }?.textValue() == "UI" }.getOrDefault(false)
+    return runCatchingKeepingCancellation {
+        SceneJson().parse(textOf(file))["type"]?.takeIf { it.isTextual }?.textValue() == "UI"
+    }.getOrDefault(false)
 }
 
 /** The visual editor of a `UI` asset, beside the text tab. Refused or unreadable documents show their reason and are never rewritten. */
@@ -83,12 +89,25 @@ class UiFileEditor(
     private val panelFactory: (UiEditorController) -> JComponent = { defaultPanel(project, file, it) },
 ) : UserDataHolderBase(), FileEditor, DocumentReferenceProvider {
     private val content = JPanel(BorderLayout())
-    internal val controller = UiEditorController(project, file, background, { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
-        preferences = PropertiesUiPreferences(project))
-    private val reloads = MergingUpdateQueue("abyssus-ui-reload", RELOAD_PAUSE_MS, true, content, this, null, Alarm.ThreadToUse.SWING_THREAD)
+    internal val controller = UiEditorController(
+        project, file, background, { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
+        preferences = PropertiesUiPreferences(project)
+    )
+    private val reloads = MergingUpdateQueue(
+        "abyssus-ui-reload",
+        RELOAD_PAUSE_MS,
+        true,
+        content,
+        this,
+        null,
+        Alarm.ThreadToUse.SWING_THREAD
+    )
     private var panel: JComponent? = null
     private var disposed = false
-    private val banner = JBLabel().apply { isVisible = false; foreground = com.intellij.ui.JBColor.RED; border = javax.swing.BorderFactory.createEmptyBorder(4, 8, 4, 8) }
+    private val banner = JBLabel().apply {
+        isVisible = false; foreground = com.intellij.ui.JBColor.RED; border =
+        javax.swing.BorderFactory.createEmptyBorder(4, 8, 4, 8)
+    }
 
     /** The message the tab shows instead of an editor, or null for an editable asset. For tests. */
     internal var statusText: String? = null
@@ -102,8 +121,13 @@ class UiFileEditor(
                 val changed = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getFile(event.document)
                 if (changed != file) return
                 val undoing = UndoManager.getInstance(project).let { it.isUndoInProgress || it.isRedoInProgress }
-                if (undoing) { reloads.cancelAllUpdates(); controller.reload() }
-                else reloads.queue(object : Update("reload") { override fun run() { if (!disposed) controller.reload() } })
+                if (undoing) {
+                    reloads.cancelAllUpdates(); controller.reload()
+                } else reloads.queue(object : Update("reload") {
+                    override fun run() {
+                        if (!disposed) controller.reload()
+                    }
+                })
             }
         }, this)
     }
@@ -111,14 +135,14 @@ class UiFileEditor(
     init {
         // an image or font the asset refers to changed on disk: the canvas reloads its resources
         val folder = file.parent
-        project.messageBus.connect(this).subscribe(com.intellij.openapi.vfs.VirtualFileManager.VFS_CHANGES, object : com.intellij.openapi.vfs.newvfs.BulkFileListener {
-            override fun after(events: List<com.intellij.openapi.vfs.newvfs.events.VFileEvent>) {
-                val base = folder?.path ?: return
-                if (events.any { it.path.startsWith("$base/") && !it.path.endsWith("/$META_FILE") }) {
-                    ApplicationManager.getApplication().invokeLater({ if (!disposed) controller.resourcesChanged() }, ModalityState.any())
+        project.getService(NativeFileChanges::class.java)
+            .subscribe(this, nativeOnly = false) { events ->
+                val base = folder?.path
+                if (base != null && events.any { it.path.startsWith("$base/") && !it.path.endsWith("/$META_FILE") }) {
+                    ApplicationManager.getApplication()
+                        .invokeLater({ if (!disposed) controller.resourcesChanged() }, ModalityState.any())
                 }
             }
-        })
     }
 
     private var pendingScreen: String? = null
@@ -169,7 +193,8 @@ class UiFileEditor(
     }
 
     override fun getDocumentReferences(): Collection<DocumentReference> {
-        val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file) ?: return emptyList()
+        val document =
+            com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file) ?: return emptyList()
         return listOf(DocumentReferenceManager.getInstance().create(document))
     }
 
@@ -200,16 +225,31 @@ internal fun defaultPanel(project: Project, file: VirtualFile, controller: UiEdi
     val core = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>()
     val abss = uiAssetOwner(file)
     val canvas = try {
-        UiCanvasView(controller, file.parent.name, java.io.File(file.parent.path), core.documents.json, ProjectUiSource(abss)) { sceneName ->
+        UiCanvasView(
+            controller,
+            file.parent.name,
+            java.io.File(file.parent.path),
+            core.documents.json,
+            ProjectUiSource(abss)
+        ) { sceneName ->
             val scene = abss?.parent?.findChild("scenes")?.findChild(sceneName) ?: error("scene $sceneName not found")
-            SceneBackdrop(project, scene)
+            SceneBackdrop(scene, core.assets, project.service<FoliageDrafts>(), service<SceneReader>(), core.loggers.getLogger("uibackdrop"))
         }
     } catch (e: Throwable) {
-        com.intellij.openapi.diagnostic.Logger.getInstance(UiFileEditor::class.java).warn("Failed to create the UI canvas", e)
+        com.intellij.openapi.diagnostic.Logger.getInstance(UiFileEditor::class.java)
+            .warn("Failed to create the UI canvas", e)
         return JBLabel(AbyssusBundle.message("uiCanvasUnavailable", e.message.orEmpty()), SwingConstants.CENTER)
     }
-    val scenes = { abss?.parent?.findChild("scenes")?.children?.filter { it.extension == "scene" }?.map { it.name }?.sorted().orEmpty() }
-    return UiEditorPanel(project, controller, canvas, scenes).also { com.intellij.openapi.util.Disposer.register(controller, canvas) }
+    val scenes = {
+        abss?.parent?.findChild("scenes")?.children?.filter { it.extension == "scene" }?.map { it.name }?.sorted()
+            .orEmpty()
+    }
+    return UiEditorPanel(project, controller, canvas, scenes).also {
+        com.intellij.openapi.util.Disposer.register(
+            controller,
+            canvas
+        )
+    }
 }
 
 /** The message for one issue: its code's text with its location. */
@@ -220,7 +260,8 @@ fun openUiEditor(project: Project, metaFile: VirtualFile, screenId: String? = nu
     val manager = FileEditorManager.getInstance(project)
     manager.openFile(metaFile, true)
     manager.setSelectedEditor(metaFile, UiFileEditorProvider.EDITOR_TYPE_ID)
-    if (screenId != null) manager.getEditors(metaFile).filterIsInstance<UiFileEditor>().firstOrNull()?.showScreen(screenId)
+    if (screenId != null) manager.getEditors(metaFile).filterIsInstance<UiFileEditor>().firstOrNull()
+        ?.showScreen(screenId)
 }
 
 /** The project's [UiScreenOpener]: opens the Game UI editor. */

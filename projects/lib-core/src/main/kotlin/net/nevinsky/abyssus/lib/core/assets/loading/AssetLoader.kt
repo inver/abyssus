@@ -41,7 +41,7 @@ interface AssetLoader<P : Any, U : Any, T : Disposable> {
     fun build(staged: U, assets: BuiltAssets): T
 
     /** Frees [model]. Invoked once after the `onPrepared` chain, off the GL thread. Idempotent. */
-    fun discard(model: P)
+    fun discard(model: P) {}
 
     /**
      * Frees [staged]. Invoked once: after `onBuilt` on success, or when the staged value is

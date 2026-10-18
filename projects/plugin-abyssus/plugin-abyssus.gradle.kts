@@ -168,6 +168,7 @@ changelog {
 
 tasks {
     test {
+        systemProperty("abyssus.pluginSources", file("src/main/kotlin").absolutePath)
         // GL render tests open a real window: opt in with -Dabyssus.glTests=true
         System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
         System.getProperty("abyssus.rayTimingTests")?.let { systemProperty("abyssus.rayTimingTests", it) }

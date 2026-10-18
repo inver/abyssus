@@ -15,7 +15,7 @@ import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.SceneRayControls
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.facts.SceneFacts
-import net.nevinsky.abyssus.plugin.projectView.HdrPreviewSource
+import net.nevinsky.abyssus.plugin.projectView.HdrPreviewService
 import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
 import java.io.File
 
@@ -26,7 +26,7 @@ import java.io.File
  */
 class PanelServices(
     val metaFiles: MetaFiles,
-    val hdr: HdrPreviewSource,
+    val hdr: HdrPreviewService,
     val json: JsonProcessor,
     val assetFields: AssetFieldDescriptions,
     val assetEditor: AssetMetaEditor,

@@ -13,7 +13,7 @@ presentation; a game's lines and hidden pilot) and adapts its own types at the b
 |---|---|
 | `light` | `RenderLights` (directional, point, spot), `LightProfile` (named policies `EDITOR_MULTI_LIGHT` and `GAME_SINGLE_SUN` with their budgets) and `packLights`, which lays lights out for uniform arrays. No GL |
 | `frame` | `FrameInputs` (camera matrices and position, ambient, `RenderFog`, the lights cut to the profile) and `RenderFog`. No GL |
-| `shadow` | `sunShadowCamera` / `sunShadowBias` (a single sun's texel-snapped orthographic camera; no GL) and `DepthSubmission`, which draws casters through the host's depth shaders (`DepthShaders`) into whatever target the host bound |
+| `shadow` | `sunShadowCamera` / `sunShadowBias` and `cameraUp` (camera math; no GL), `DepthSubmission` (draws casters through the host's `DepthShaders`), and `GlRenderTarget` / `ShadowGlState` (packed-depth target rendering and caller-state restoration in the current GL context) |
 | `terrain` | `TerrainPass` with `TerrainVariant`: the terrain program's binding and drawing. `TerrainLighting.Editor` (several lights, HDR sky, shadow atlas, cloud shadow map, clip plane) and `TerrainLighting.Sun` (one sun, one shadow map) are the inputs only their variant understands; the GLSL is `terrain_editor.{vert,frag}` and `terrain_game.{vert,frag}` in `src/main/resources/shader/render` |
 
 ## Ownership
@@ -22,6 +22,10 @@ Passes borrow what they are handed and dispose only what they create. `TerrainPa
 the host lends a `blank` texture, the 1x1 white stand-in for a missing splat layer; every texture, map and atlas in its inputs
 stays the host's (`TerrainPassGlTest` checks that a lent texture is not disposed). `DepthSubmission` borrows the depth shaders and
 the target. Storage of assets stays outside: assets come from the host's `AssetStorage`.
+
+`GlRenderTarget` borrows a framebuffer and restores the caller's GL state, including winding, after success or failure.
+Hosts may override its viewport/scissor step for atlas tiles. `ShadowGlState` can also surround a host's own draw,
+as the editor's cloud shadow pass does. Neither helper allocates or disposes targets or shaders.
 
 ## Variants
 
@@ -33,4 +37,5 @@ the editor program's shadow functions with the model shaders. With one sun, no s
 
 ## Tests
 
-`./gradlew :lib-render:test` (pure plans, the boundary test); add `-Dabyssus.glTests=true` for `TerrainPassGlTest`.
+`./gradlew :lib-render:test` (pure plans, the boundary test); add `-Dabyssus.glTests=true` for `TerrainPassGlTest` and
+`GlRenderTargetGlTest` (caller-state restoration and a second pass after failure).

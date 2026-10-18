@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
+
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -102,7 +104,7 @@ class Matchers(radius: Float) {
         val n = (turned / 360f).roundToInt()
         val figure = if (side == Side.INSIDE) Figure.INSIDE_LOOPS else Figure.OUTSIDE_LOOPS
         val verdict = if (turned < 300f) Verdict.NOT_COMPLETED else verdictOf(n, 3)
-        return Recognition(figure, verdict, from, to, n, wrap(geometry.azimuth(centre(big.first(), points)) + LOOP_VERTICAL_OFFSET))
+        return Recognition(figure, verdict, from, to, n, wrapDegrees(geometry.azimuth(centre(big.first(), points)) + LOOP_VERTICAL_OFFSET))
     }
 
     private fun overhead(arcs: List<Arc>, points: List<PathPoint>, n: Int): Recognition {
@@ -110,7 +112,7 @@ class Matchers(radius: Float) {
         val to = arcs.last().to
         // the first loop is the left one, whose centre lies at the azimuth opposite the axis
         val axis = geometry.azimuth(centre(arcs.first(), points)) - 180f
-        return Recognition(Figure.OVERHEAD_EIGHTS, verdictOf(n, 2), from, to, n, wrap(axis))
+        return Recognition(Figure.OVERHEAD_EIGHTS, verdictOf(n, 2), from, to, n, wrapDegrees(axis))
     }
 
     // squares, triangles, the hourglass, the square eights
@@ -161,7 +163,7 @@ class Matchers(radius: Float) {
         while (to + 1 < points.size && points[to + 1].azimuth - start < SQUARE_WIDTH) to++
         val leg = legs.firstOrNull { it.from >= from }
         val axis = (equatorCrossing(leg, points) ?: azimuthAt(points, from)) - SQUARE_WIDTH / 2f
-        return Recognition(Figure.HOURGLASS, verdict, from, to, 1, wrap(axis))
+        return Recognition(Figure.HOURGLASS, verdict, from, to, 1, wrapDegrees(axis))
     }
 
     // the reverse wingover
@@ -204,13 +206,12 @@ class Matchers(radius: Float) {
         else -> Verdict.WRONG_REPEATS
     }
 
-    private fun wrap(degrees: Float) = wrapDeg(degrees)
 
     /** The mean azimuth of a straight's points. */
     private fun wrapMean(points: List<PathPoint>, straight: Straight): Float {
         val first = azimuth(points[straight.from])
         var sum = 0f
-        for (k in straight.from..straight.to) sum += wrapDeg(azimuth(points[k]) - first)
-        return wrapDeg(first + sum / (straight.to - straight.from + 1))
+        for (k in straight.from..straight.to) sum += wrapDegrees(azimuth(points[k]) - first)
+        return wrapDegrees(first + sum / (straight.to - straight.from + 1))
     }
 }

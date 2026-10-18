@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.shadows
 
+import net.nevinsky.abyssus.lib.render.shadow.cameraUp
+
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.PerspectiveCamera
@@ -51,7 +53,7 @@ class ShadowProjection(private val resolution: Int = ShadowLayout.TILE_SIZE) {
         if (!finite(position) || !finite(direction) || direction.len2() <= 1e-12f || !angle.isFinite() || angle <= 0f || angle >= 180f || !range.isFinite() || range <= 0f) return null
         val camera = PerspectiveCamera(angle, resolution.toFloat(), resolution.toFloat())
         camera.position.set(position); camera.direction.set(direction).nor()
-        camera.up.set(if (abs(camera.direction.y) > 0.98f) Vector3.Z else Vector3.Y)
+        camera.up.set(cameraUp(camera.direction))
         camera.near = max(1e-6f, range / 10000f).coerceAtMost(range / 2f); camera.far = range
         camera.update(true)
         return ShadowView(camera, camera.combined.cpy(), camera.near, camera.far)
@@ -61,7 +63,7 @@ class ShadowProjection(private val resolution: Int = ShadowLayout.TILE_SIZE) {
     fun directional(direction: Vector3, receiverBounds: BoundingBox, casterBounds: List<BoundingBox>): ShadowView? {
         if (!finite(direction) || direction.len2() <= 1e-12f || !valid(receiverBounds)) return null
         val dir = direction.cpy().nor()
-        val up = if (abs(dir.y) > 0.98f) Vector3.Z else Vector3.Y
+        val up = cameraUp(dir)
         val right = Vector3(dir).crs(up).nor()
         val correctedUp = Vector3(right).crs(dir).nor()
         val receiverCorners = corners(receiverBounds)

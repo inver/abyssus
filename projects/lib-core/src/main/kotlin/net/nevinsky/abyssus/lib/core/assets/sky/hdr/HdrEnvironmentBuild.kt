@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
+import net.nevinsky.abyssus.lib.core.util.checkFramebufferComplete
+
+import net.nevinsky.abyssus.lib.core.util.GL_HALF_FLOAT
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GL30
@@ -14,7 +18,7 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.core.util.createFullscreenTriangle
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -32,7 +36,6 @@ const val IRRADIANCE_SIZE = 32
 
 private const val SOURCE_LEVELS = 9 // 256 down to 1
 private const val GL_RGB16F = 0x881B
-private const val GL_HALF_FLOAT = 0x140B
 private const val GL_TEXTURE_CUBE_MAP_SEAMLESS = 0x884F
 private const val GL_FRAMEBUFFER_BINDING = 0x8CA6
 
@@ -300,14 +303,7 @@ class HdrEnvironmentBuild(private val input: EnvironmentSource, private val shad
             target.textureObjectHandle,
             level
         )
-        val status = gl.glCheckFramebufferStatus(GL20.GL_FRAMEBUFFER)
-        check(status == GL20.GL_FRAMEBUFFER_COMPLETE) {
-            "16-bit float framebuffer is incomplete (status 0x${
-                status.toString(
-                    16
-                )
-            })"
-        }
+        checkFramebufferComplete("16-bit float framebuffer")
     }
 
     /** Runs [block] with [fbo] bound and blending, depth, culling and scissor off; restores what it found. */

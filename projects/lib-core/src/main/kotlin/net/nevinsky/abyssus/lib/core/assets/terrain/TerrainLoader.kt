@@ -9,7 +9,7 @@ import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.AssetIndex
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.MetaAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import java.nio.ByteBuffer
@@ -26,9 +26,9 @@ import kotlin.math.sqrt
  */
 class TerrainLoader(
     private val fileLoader: FileLoader,
-    private val metaLoader: AssetMetaLoader,
+    metaLoader: AssetMetaLoader,
     private val index: AssetIndex = AssetIndex(fileLoader, metaLoader),
-) : AssetLoader<Unit, PreparedTerrain, TerrainMesh> {
+) : MetaAssetLoader<Unit, PreparedTerrain, TerrainMesh>(metaLoader) {
 
     override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedTerrain> = Prepared(read(meta))
 
@@ -47,9 +47,6 @@ class TerrainLoader(
         return PreparedTerrain(data, splats)
     }
 
-    override fun prepare(name: String): Prepared<Unit, PreparedTerrain>? =
-        metaLoader.loadBaseMeta(name)?.let(::loadPrepared)
-
     private fun read(assetName: String, meta: TerrainMeta): TerrainData {
         val bytes = fileLoader.loadAssetFile(assetName, meta.terrainFile).readBytes()
         val heights = FloatArray(bytes.size / Float.SIZE_BYTES)
@@ -63,7 +60,6 @@ class TerrainLoader(
 
     override fun build(staged: PreparedTerrain, assets: BuiltAssets) = TerrainMesh(staged, assets)
 
-    override fun discard(model: Unit) = Unit
 }
 
 /** A parsed terrain waiting for its GL resources: [splats] maps each splat field to its texture asset's folder. */

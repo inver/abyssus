@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
+
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.track.TrackSample
@@ -149,7 +151,7 @@ class PathTokens(private val radius: Float) {
         val az = geometry.azimuth(u)
         val previousAzimuth = lastAzimuth
         lastAzimuth = az
-        if (lat < 85f && previousAzimuth != null) flownAzimuth += wrapDeg(az - previousAzimuth)
+        if (lat < 85f && previousAzimuth != null) flownAzimuth += wrapDegrees(az - previousAzimuth)
         val east = Vector3(0f, 1f, 0f).crs(u)
         val heading = if (lat < 80f && route.isNotEmpty() && east.len2() > 1e-6f) {
             val t = tangent(route.last().u, u)
@@ -170,7 +172,7 @@ class PathTokens(private val radius: Float) {
 
     /** The heading change (rad) at point [i], positive turning left seen from outside, and the side of the bend. */
     private fun heading(i: Int): Float {
-        pitchTurns += if (i >= 1 && !route[i].heading.isNaN() && !route[i - 1].heading.isNaN()) wrapDeg(route[i].heading - route[i - 1].heading) * MathUtils.degreesToRadians else Float.NaN
+        pitchTurns += if (i >= 1 && !route[i].heading.isNaN() && !route[i - 1].heading.isNaN()) wrapDegrees(route[i].heading - route[i - 1].heading) * MathUtils.degreesToRadians else Float.NaN
         if (i < 2) {
             turns += 0f
             sides += Side.INSIDE
@@ -344,7 +346,7 @@ class PathTokens(private val radius: Float) {
         for (k in from + 1..to) {
             val a = route[k - 1].heading
             val b = route[k].heading
-            if (!a.isNaN() && !b.isNaN()) sum += wrapDeg(b - a)
+            if (!a.isNaN() && !b.isNaN()) sum += wrapDegrees(b - a)
         }
         return abs(sum)
     }
@@ -365,7 +367,7 @@ class PathTokens(private val radius: Float) {
             lowest = min(lowest, lat)
             highest = max(highest, lat)
             if (!route[k].inverted) uprightCount++
-            if (k > from && lat < 85f) sumAzimuth += wrapDeg(geometry.azimuth(route[k].u) - geometry.azimuth(route[k - 1].u))
+            if (k > from && lat < 85f) sumAzimuth += wrapDegrees(geometry.azimuth(route[k].u) - geometry.azimuth(route[k - 1].u))
         }
         val along = abs(sumAzimuth) * cos(MathUtils.degreesToRadians * (lowest + highest) / 2f)
         if (highest - lowest <= LEVEL_LATITUDE_SPAN && highest < 85f && along >= LEVEL_FLATNESS * (highest - lowest)) {
@@ -379,12 +381,4 @@ class PathTokens(private val radius: Float) {
         val offVertical = asin(abs(n.y).coerceIn(0f, 1f)) * MathUtils.radiansToDegrees
         return Straight(from, to, length, offVertical, lat0, lat1)
     }
-}
-
-/** [degrees] wrapped into (-180, 180]. */
-internal fun wrapDeg(degrees: Float): Float {
-    var d = degrees % 360f
-    if (d > 180f) d -= 360f
-    if (d <= -180f) d += 360f
-    return d
 }

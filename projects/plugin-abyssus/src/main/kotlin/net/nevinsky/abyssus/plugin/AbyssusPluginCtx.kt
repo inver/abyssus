@@ -31,7 +31,7 @@ class AbyssusPluginCtx : Disposable {
     val assets by lazy { AssetServices(json, format, loggers.getLogger("assets")) }
     val terrain by lazy { TerrainServices(json) }
     val foliage by lazy { FoliageServices(json) }
-    private val rayHolder = lazy { RayServices(loggers.getLogger("ray")) { assets.loading.toneCurve.exposure } }
+    private val rayHolder = lazy { RayServices(loggers.getLogger("ray")) { assets.hdrPreviews.exposure } }
     internal val ray get() = rayHolder.value
 
     // Source compatibility for existing callers; production entry points use the groups.

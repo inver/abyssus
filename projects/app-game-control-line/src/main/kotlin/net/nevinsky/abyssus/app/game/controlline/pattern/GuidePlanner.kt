@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
+
 import com.badlogic.gdx.math.Vector3
 
 /** How far ahead of the plane a guide starts (degrees of azimuth): a quarter lap. */
@@ -118,8 +120,8 @@ class GuidePlanner(radius: Float) {
 
     /** [track], turned about the vertical so that its first point is at the gate, a quarter lap ahead of azimuth [here]. */
     private fun gated(figure: Figure, track: IdealTrack, here: Float): Guide {
-        val gate = wrapAzimuth(here + GUIDE_LEAD)
-        return guideOf(figure, track, gate, wrapAzimuth(gate - geometry.azimuth(track.points.first().u)))
+        val gate = wrapDegrees(here + GUIDE_LEAD)
+        return guideOf(figure, track, gate, wrapDegrees(gate - geometry.azimuth(track.points.first().u)))
     }
 
     private fun guideOf(figure: Figure, track: IdealTrack, gate: Float?, turn: Float): Guide {

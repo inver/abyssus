@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
+
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -28,6 +30,7 @@ import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_MASK_RESOLUTION_MAX
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_MASK_RESOLUTION_MIN
+import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageAssetWriter
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageCreateError
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
@@ -35,6 +38,8 @@ import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
+import net.nevinsky.abyssus.plugin.DocumentServices
+import net.nevinsky.abyssus.plugin.FoliageServices
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.plugin.assetfiles.AssetReferenceGuard
@@ -111,9 +116,10 @@ open class NewFoliageAction : AbyssusTreeAction<VirtualFile>() {
         val abss = target
         val terrains = terrainsOf(abss)
         if (terrains.isEmpty()) return
-        val dialog = NewFoliageDialog(project, File(abss.parent.path), terrains)
+        val core = service<AbyssusPluginCtx>()
+        val dialog = NewFoliageDialog(project, File(abss.parent.path), terrains, core.foliage.newFoliages)
         if (!dialog.showAndGet()) return
-        createFoliage(project, abss, dialog.terrain, dialog.name, dialog.maskResolution)
+        createFoliage(project, abss, dialog.terrain, dialog.name, dialog.maskResolution, core.documents, core.foliage)
     }
 }
 
@@ -122,8 +128,8 @@ internal class NewFoliageDialog(
     project: Project,
     private val projectDir: File,
     private val terrains: List<String>,
+    private val writer: FoliageAssetWriter,
 ) : DialogWrapper(project) {
-    private val writer = service<AbyssusPluginCtx>().newFoliages
     val terrainCombo = ComboBox(terrains.toTypedArray())
     val nameField = JBTextField(foliageFolderName(terrains.first()))
     val resolutionField = JBTextField(FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT.toString(), 8)
@@ -185,6 +191,8 @@ fun createFoliage(
     terrainFolder: String,
     rawName: String,
     maskResolution: Int,
+    documents: DocumentServices,
+    foliage: FoliageServices,
     report: (String) -> Unit = { Messages.showErrorDialog(project, it, AbyssusBundle.message("newFoliageTitle")) },
     select: (String) -> Unit = { created ->
         ApplicationManager.getApplication().invokeLater(
@@ -192,24 +200,23 @@ fun createFoliage(
         )
     },
 ): AssetCommandResult? {
-    val core = service<AbyssusPluginCtx>()
     val projectDir = File(abss.parent.path)
     val accepted = runCatchingKeepingCancellation {
-        core.documents.format.requireSupported(core.documents.json.readObject(textOf(abss)), DocumentKind.PROJECT)
+        documents.parsing.requireSupported(textOf(abss), DocumentKind.PROJECT)
     }
     accepted.exceptionOrNull()?.let { report(it.documentDisplayMessage()); return null }
 
     val name = rawName.trim()
-    core.newFoliages.check(projectDir, name, maskResolution)?.let {
+    foliage.newFoliages.check(projectDir, name, maskResolution)?.let {
         report(AbyssusBundle.message("newFoliageFailed", it.message()))
         return null
     }
-    val terrain = foliageTerrainData(projectDir, core.json, terrainFolder) ?: run {
+    val terrain = foliageTerrainData(projectDir, documents.json, terrainFolder) ?: run {
         report(AbyssusBundle.message("newFoliageFailed", AbyssusBundle.message("newFoliageUnreadable", terrainFolder)))
         return null
     }
     // re-checked inside plan: the folder may have appeared since the dialog was opened
-    val staged = core.newFoliages.plan(projectDir, terrainFolder, name, maskResolution, terrain) ?: run {
+    val staged = foliage.newFoliages.plan(projectDir, terrainFolder, name, maskResolution, terrain) ?: run {
         report(AbyssusBundle.message("newFoliageFailed", AbyssusBundle.message("newTerrainNameError.EXISTS")))
         return null
     }
@@ -228,14 +235,7 @@ fun createFoliage(
         transaction,
         onDone = { select(staged.folder) },
     )
-    val problem = when (result) {
-        AssetCommandResult.Done -> null
-        is AssetCommandResult.Collision -> AbyssusBundle.message("newTerrainNameError.EXISTS")
-        is AssetCommandResult.Conflict -> result.path
-        is AssetCommandResult.Blocked -> result.reason
-        AssetCommandResult.Cancelled -> AbyssusBundle.message("newFoliageCancelled")
-        is AssetCommandResult.Failed -> result.cause.documentDisplayMessage()
-    }
+    val problem = assetResultMessage(result, "newFoliageCancelled")
     problem?.let { report(AbyssusBundle.message("newFoliageFailed", it)) }
     return result
 }

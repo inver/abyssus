@@ -5,15 +5,12 @@
 
 package net.nevinsky.abyssus.plugin.projectView.asset
 
-import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.wm.ToolWindowId
-import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.lib.core.assets.Asset
@@ -82,15 +79,11 @@ fun assetVisitAction(abss: VirtualFile, assetName: String, chain: List<Any?>): T
  */
 fun selectAssetInAbyssusView(project: Project, abss: VirtualFile, assetName: String) {
     try {
-        ToolWindowManager.getInstance(project).getToolWindow(ToolWindowId.PROJECT_VIEW)?.show()
-        val view = ProjectView.getInstance(project)
-        view.changeView(AbyssusProjectViewPane.ID)
-        val pane = view.getProjectViewPaneById(AbyssusProjectViewPane.ID) ?: return
-        pane.updateFromRoot(true)
-        val tree = pane.tree ?: return
-        TreeUtil.promiseSelect(
-            tree,
-            TreeVisitor { path -> assetVisitAction(abss, assetName, path.path.map(TreeUtil::getUserObject)) })
+        selectInAbyssusView(
+            project,
+            TreeVisitor { path -> assetVisitAction(abss, assetName, path.path.map(TreeUtil::getUserObject)) },
+            refresh = true
+        )
     } catch (e: Throwable) {
         LOG.warn("Could not select asset $assetName in the Abyssus view", e)
     }
