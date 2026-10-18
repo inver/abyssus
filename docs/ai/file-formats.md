@@ -82,6 +82,14 @@ Top level, bound to `SceneDto` (`projects/lib-core/src/main/kotlin/net/nevinsky/
 **Toggles:** an `<x>Enabled` boolean gates `<x>` (or `<x>Name`). The tree folds it into an eye on the gated row. The
 tree shows `skyboxName` as `skybox`, but the key in the file stays `skyboxName`.
 
+An entity entry and a component entry of `ecs` may also carry an optional boolean `enabled`, written only as `false` (a
+missing key means enabled). On an entity it sits beside `components`; on a component it is the last key of the component
+object and is reserved: `EcsLoader` strips it before binding, so a component class never sees it, and a registered class
+that declares a field named `enabled` is kept as read-only raw JSON with a warning. A disabled entity or component loads as
+data but does nothing (no rendering, light, camera, foliage, body or shape) and is neither drawn nor picked in the scene
+view. A non-boolean `enabled` makes the scene unsupported for editing. `formatVersion` stays 1; a file that never uses the
+key is unchanged by any edit.
+
 ### `ecs`
 
 ```

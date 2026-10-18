@@ -92,6 +92,9 @@ class SceneDocument(private val root: JsonNode, private val decoder: SceneCompon
 class EntityView(val id: String, private val node: JsonNode, private val decoder: SceneComponentDecoder?) {
     val components: ObjectNode? get() = SceneEcsPaths().componentsOf(node)
     val name: String get() = SceneEcsPaths().entityName(components, id)
+
+    /** False when the entity entry carries `enabled: false`; a disabled entity is data without behavior. */
+    val enabled: Boolean get() = net.nevinsky.abyssus.lib.core.format.isEnabled(node)
     fun componentNode(name: String): JsonNode? = components?.get(name)
     fun <C : Component> component(type: Class<C>): C? = componentNode(type.simpleName)?.let { value ->
         val reader = checkNotNull(decoder) { "Typed component access requires a scene component decoder" }

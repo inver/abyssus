@@ -100,9 +100,9 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     fun testStartsWithNothingSelected() {
         val p = panel()
         val state = p.state as PanelState.Empty
-        assertEquals("Nothing selected.", state.message)
-        assertEquals("Select a skybox, model or terrain under Assets to see its meta.json.", state.hint)
-        assertTrue(texts(p).contains("Nothing selected."))
+        assertEquals("Nothing is selected.", state.message)
+        assertEquals("Select a scene, an entity, a component or an asset in the Abyssus tree.", state.hint)
+        assertTrue(texts(p).contains("Nothing is selected."))
     }
 
     fun testANonAssetShowsItsNameAndKind() {
@@ -163,9 +163,9 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         assertEquals("skybox_default", details.name)
         val shown = texts(p)
         assertTrue(shown.toString(), shown.contains("skybox_default"))
-        assertTrue(shown.contains("skybox asset"))
+        assertTrue(shown.contains("SKYBOX asset"))
         assertTrue(shown.contains("Edits change every instance that uses this asset."))
-        assertTrue(shown.contains("NAME") && shown.contains("VALUE"))
+        assertFalse("the Name / Value table is gone", shown.contains("NAME") || shown.contains("VALUE"))
         assertTrue(shown.contains("additional"))
         assertEquals(6, shown.count { it == "skybox_default.png" }) // the six face captions; the rows are choosers
     }
@@ -178,7 +178,8 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         p.show(node)
         val details = p.state as PanelState.Details
         assertNull(details.faces)
-        assertTrue(texts(p).contains("widget asset · read-only"))
+        assertTrue(texts(p).contains("WIDGET asset"))
+        assertNotNull(find(p, "badge-read-only"))
         assertSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.UNKNOWN, net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType(details.meta.type))
     }
 
@@ -197,7 +198,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         AbyssusSelection.of(project).select(asset("skybox_default"))
         assertTrue(p.state is PanelState.Details)
         AbyssusSelection.of(project).select(null)
-        assertEquals("Nothing selected.", (p.state as PanelState.Empty).message)
+        assertEquals("Nothing is selected.", (p.state as PanelState.Empty).message)
     }
 
     fun testBrokenMetaShowsACannotReadMessage() {
@@ -248,7 +249,8 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.show(asset("skybox_hdr"))
         val details = p.state as PanelState.Details
-        assertTrue(texts(p).contains("skybox_hdr asset · read-only"))
+        assertTrue(texts(p).contains("SKYBOX_HDR asset"))
+        assertNotNull(find(p, "badge-read-only"))
         assertSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType("SKYBOX_HDR"), net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType(details.meta.type))
         assertNotSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.UNKNOWN, net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType(details.meta.type))
     }
@@ -342,7 +344,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         for (key in listOf("splatMap", "splatBase", "splatR", "splatG", "splatB", "splatA")) assertTrue(key, field(p, key) is com.intellij.openapi.ui.ComboBox<*>)
         assertNull("terrainFile is not editable", field(p, "terrainFile"))
         assertNull(field(p, "uuid"))
-        assertTrue(texts(p).contains("terrain asset"))
+        assertTrue(texts(p).contains("TERRAIN asset"))
         assertTrue(texts(p).contains("Edits change every instance that uses this asset."))
     }
 
@@ -373,10 +375,12 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.show(asset("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"))
         assertTrue((p.state as PanelState.Details).fields.isEmpty())
-        assertTrue(texts(p).contains("model asset · read-only"))
+        assertTrue(texts(p).contains("MODEL asset"))
+        assertNotNull(find(p, "badge-read-only"))
         assertFalse(texts(p).contains("Edits change every instance that uses this asset."))
         p.show(asset("skybox_hdr"))
-        assertTrue(texts(p).contains("skybox_hdr asset · read-only"))
+        assertTrue(texts(p).contains("SKYBOX_HDR asset"))
+        assertNotNull(find(p, "badge-read-only"))
         assertNull(field(p, "file"))
     }
 

@@ -244,6 +244,7 @@ class DtoEntryNode(
             presentation.addText(shown.label, attrs)
             shown.secondary?.let { presentation.addText("  $it", secondaryAttrs) }
         }
-        presentation.setIcon(entryIcon(v))
+        // a disabled row, and everything under a disabled one, shows a dimmed icon
+        presentation.setIcon(entryIcon(v).let { if (isDisabled) com.intellij.openapi.util.IconLoader.getDisabledIcon(it) else it })
     }
 }

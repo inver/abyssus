@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.lib.core.editor.panel.FieldRef
+import net.nevinsky.abyssus.lib.core.editor.panel.PanelBuilders
+import net.nevinsky.abyssus.plugin.projectView.assetUnusedOf
+import net.nevinsky.abyssus.plugin.panel.RowHooks
 import net.nevinsky.abyssus.plugin.ui.CommitOutcome
 import net.nevinsky.abyssus.plugin.ui.choiceEditor
 import net.nevinsky.abyssus.plugin.ui.textEditor
@@ -104,6 +108,9 @@ class AssetPropertiesPanel(
     /** The property whose edit was rejected as stale: its next row says so, because the refresh rebuilds the row. */
     private var conflictKey: String? = null
 
+    /** The sections the user collapsed on the node shown, by section key; cleared when the selection moves to another node. */
+    private val collapsedSections = HashMap<String, Boolean>()
+
     /** What the panel currently shows. */
     internal var state: PanelState = emptyState(null)
         private set
@@ -166,16 +173,30 @@ class AssetPropertiesPanel(
 
     /** Shows [node]: an asset row's Meta, else the empty state. Reads the asset in the background. */
     fun show(node: Any?) {
+        if (node != selected) collapsedSections.clear()
         selected = node
         val token = ++generation
         val assetFolder = (node as? VirtualFile)?.takeIf { it.isDirectory } ?: assetFolderOf(node)
+        selectedUnused = assetUnusedOf(node)
         folder = assetFolder
         if (assetFolder != terrainFolder) useTerrain(null) // another selection: its draft and pending preview are discarded
         if (assetFolder != foliageFolder) useFoliage(null)
         val entity = if (assetFolder == null) componentTargetOf(node) else null
         val water = if (assetFolder == null && entity == null) waterTargetOf(node) else null
-        scene = entity?.file ?: water?.file
+        val structural = if (assetFolder == null && entity == null && water == null) structuralOf(node) else null
+        scene = entity?.file ?: water?.file ?: when (structural) {
+            is Structural.Setting -> structural.file
+            is Structural.Ecs -> structural.file
+            else -> null
+        }
         projectFile = null
+        if (structural != null) {
+            background {
+                val result = readStructuralState(structural)
+                ui { if (token == generation && !disposed) apply(result) }
+            }
+            return
+        }
         if (water != null) {
             background {
                 val result = readWaterState(water)
@@ -303,7 +324,7 @@ class AssetPropertiesPanel(
                 val own = com.intellij.openapi.util.Disposer.newDisposable(parentDisposable, "project-details")
                     .also { viewDisposable = it }
                 content.removeAll()
-                content.add(JBScrollPane(ProjectDetailsView(newState, projectSettings, project.service<net.nevinsky.abyssus.plugin.sceneview.SceneViewSettings>(), own)).apply {
+                content.add(scrolled(ProjectDetailsView(newState, projectSettings, project.service<net.nevinsky.abyssus.plugin.sceneview.SceneViewSettings>(), own, collapsedSections)).apply {
                     border = BorderFactory.createEmptyBorder()
                 }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)
@@ -317,9 +338,9 @@ class AssetPropertiesPanel(
                     .also { viewDisposable = it }
                 content.removeAll()
                 val conflict = conflictKey.also { conflictKey = null }
-                val view = SceneDetailsView(services.rayControls, newState, own, conflict) { conflictKey = it }
+                val view = SceneDetailsView(services.rayControls, newState, own, conflict, onConflict = { conflictKey = it }, collapsed = collapsedSections)
                 content.add(
-                    JBScrollPane(view).apply { border = BorderFactory.createEmptyBorder() },
+                    scrolled(view).apply { border = BorderFactory.createEmptyBorder() },
                     BorderLayout.CENTER
                 )
                 cards.show(this, DETAILS)
@@ -338,7 +359,7 @@ class AssetPropertiesPanel(
                 useFoliage(null)
                 useUndoEditor(newState.target.file)
                 content.removeAll()
-                content.add(JBScrollPane(WaterPropertiesView(project, newState)).apply {
+                content.add(scrolled(WaterPropertiesView(project, newState, collapsedSections)).apply {
                     border = BorderFactory.createEmptyBorder()
                 }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)
@@ -349,7 +370,19 @@ class AssetPropertiesPanel(
                 useFoliage(null)
                 useUndoEditor(newState.target.file)
                 content.removeAll()
-                content.add(JBScrollPane(EntityDetailsView(project, newState, services.metaFiles)).apply {
+                content.add(scrolled(EntityDetailsView(project, newState, services.metaFiles, collapsedSections)).apply {
+                    border = BorderFactory.createEmptyBorder()
+                }, BorderLayout.CENTER)
+                cards.show(this, DETAILS)
+            }
+
+            is PanelState.StructuralDetails -> {
+                useTerrain(null)
+                useFoliage(null)
+                val file = (newState.selection as? Structural.Setting)?.file ?: (newState.selection as? Structural.Ecs)?.file
+                useUndoEditor(file)
+                content.removeAll()
+                content.add(scrolled(StructuralView(project, newState, collapsedSections)).apply {
                     border = BorderFactory.createEmptyBorder()
                 }, BorderLayout.CENTER)
                 cards.show(this, DETAILS)
@@ -365,7 +398,7 @@ class AssetPropertiesPanel(
                 )
                 content.removeAll()
                 content.add(
-                    JBScrollPane(details(newState)).apply { border = BorderFactory.createEmptyBorder() },
+                    scrolled(details(newState)).apply { border = BorderFactory.createEmptyBorder() },
                     BorderLayout.CENTER
                 )
                 cards.show(this, DETAILS)
@@ -373,6 +406,11 @@ class AssetPropertiesPanel(
         }
         revalidate()
         repaint()
+    }
+
+    /** [view] in a scroll pane that follows the width of the tool window. */
+    private fun scrolled(view: JComponent) = JBScrollPane(net.nevinsky.abyssus.plugin.panel.WidthTrackingPanel(view)).apply {
+        horizontalScrollBarPolicy = javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
     }
 
     private fun fillEmpty(e: PanelState.Empty) {
@@ -391,60 +429,48 @@ class AssetPropertiesPanel(
         empty.add(box, GridBagConstraints().apply { weightx = 1.0; weighty = 1.0; insets = JBUI.insets(24) })
     }
 
+    /** The asset the selection stands for is used by no scene, which the header says with a badge. */
+    private var selectedUnused = false
+
     private fun details(d: PanelState.Details): JComponent {
-        val box = JPanel(VerticalLayout(0))
-        box.add(header(d))
-        box.add(columnHeader())
-        val rows = JPanel(VerticalLayout(0)).apply { border = JBUI.Borders.empty(4, 0) }
-        // supported fields a file omits (procedural sky defaults) are listed with their effective value
-        for (row in detailRows(d.meta.rows, d.fields)) rows.add(
-            when (row) {
-                is DetailRow.Field -> fieldRow(row.state)
-                is DetailRow.Plain -> rowOf(row.row)
-            }
+        val editable = d.fields.map { it.key }.toSet()
+        val hasEditors = d.fields.isNotEmpty() || d.foliage != null
+        val model = PanelBuilders(EditorBundle, { false }).asset(
+            d.name, d.meta.json, !selectedUnused, editable, d.meta.folder.parent?.parent?.children?.firstOrNull { it.extension == ProjectLayout.PROJECT_EXTENSION }?.name.orEmpty(), hasEditors,
         )
-        box.add(rows)
-        when (val terrain = d.terrain) {
-            is TerrainSource.Unusable -> box.add(terrainUnusableNote(terrain.reason))
-            is TerrainSource.Ready -> terrainController?.let { box.add(TerrainGenerationSection(it)) }
-            null -> {}
+        val hooks = object : RowHooks {
+            override fun commit(ref: FieldRef, text: String): CommitOutcome = CommitOutcome.Unchanged
+            override fun openScreenEditor() = openScreen(d)
+            override fun assetField(key: String, label: String): JComponent? =
+                d.fields.firstOrNull { it.key == key }?.let { fieldRow(it, label) }
+
+            override fun custom(key: String): JComponent? = when (key) {
+                "terrain" -> when (val terrain = d.terrain) {
+                    is TerrainSource.Unusable -> terrainUnusableNote(terrain.reason)
+                    is TerrainSource.Ready -> terrainController?.let { TerrainGenerationSection(it) }
+                    null -> null
+                }
+
+                "foliage" -> when (val foliage = d.foliage) {
+                    is FoliageSource.Unusable -> foliageUnusableNote(foliage.reason)
+                    is FoliageSource.Ready -> foliageController?.let { FoliageSection(it, undoButtons()) }
+                    null -> null
+                }
+
+                "faces" -> d.faces?.let { facePreviews(it) }
+                "hdr" -> d.hdr?.let { hdrPreview(it) }
+                else -> null
+            }
         }
-        when (val foliage = d.foliage) {
-            is FoliageSource.Unusable -> box.add(foliageUnusableNote(foliage.reason))
-            is FoliageSource.Ready -> foliageController?.let { box.add(FoliageSection(it, undoButtons())) }
-            null -> {}
-        }
-        d.faces?.let { box.add(facePreviews(it)) }
-        d.hdr?.let { box.add(hdrPreview(it)) }
-        return JPanel(BorderLayout()).apply { add(box, BorderLayout.NORTH) }
+        return PanelModelView(
+            model, hooks, collapsedSections, headerExtra = if (hasEditors) undoButtons() else null,
+        )
     }
 
-    private fun header(d: PanelState.Details): JComponent {
-        val editable = d.fields.isNotEmpty() || d.foliage != null
-        val text = JPanel(VerticalLayout(JBUI.scale(2))).apply {
-            add(JBLabel(d.name).apply { font = JBFont.label().asBold().biggerOn(1f) })
-            val type = (d.meta.json.get("type")?.takeIf { it.isTextual }?.asText()
-                ?: AbyssusBundle.message("propertiesUnknownType")).lowercase() // as the file spells it
-            if (!editable) {
-                add(JBLabel(AbyssusBundle.message("propertiesSubtitle", type)).apply { foreground = secondary() })
-            } else {
-                add(JBLabel(AbyssusBundle.message("propertiesSubtitleEditable", type)).apply {
-                    foreground = secondary()
-                })
-                add(JBLabel(AbyssusBundle.message("propertiesSharedNote")).apply {
-                    foreground = secondary(); font = JBFont.small(); name = "shared-asset-note"
-                })
-            }
-        }
-        return JPanel(BorderLayout(JBUI.scale(10), 0)).apply {
-            border = BorderFactory.createCompoundBorder(
-                JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0),
-                JBUI.Borders.empty(12, 16)
-            )
-            add(JBLabel(AssetIcons.forType(d.meta.type)), BorderLayout.WEST)
-            add(text, BorderLayout.CENTER)
-            if (editable) add(undoButtons(), BorderLayout.EAST)
-        }
+    /** Opens the Screen Editor on the UI asset shown. */
+    private fun openScreen(d: PanelState.Details) {
+        val meta = d.meta.folder.findChild(META_FILE) ?: return
+        project.service<net.nevinsky.abyssus.plugin.projectView.UiScreenOpener>().open(meta, null)
     }
 
     /** Undo and Redo for edits made here: the platform commands on this asset's `meta.json`. */
@@ -472,7 +498,7 @@ class AssetPropertiesPanel(
     }
 
     /** The editor of one supported property; a refused value goes back to what the file holds, with the reason beside it. */
-    private fun fieldRow(state: AssetFieldState): JComponent {
+    private fun fieldRow(state: AssetFieldState, label: String): JComponent {
         val error = JBLabel("").apply { foreground = JBColor.RED; name = "asset-error-${state.key}" }
         if (conflictKey == state.key) {
             conflictKey = null
@@ -485,7 +511,7 @@ class AssetPropertiesPanel(
             add(editor, BorderLayout.CENTER)
             add(error, BorderLayout.EAST)
         }
-        return twoColumns(JBLabel("    " + state.key), editorAndError).apply { border = JBUI.Borders.empty(4, 16) }
+        return net.nevinsky.abyssus.plugin.panel.fieldRow(label, editorAndError)
     }
 
     private fun fieldEditor(state: AssetFieldState, error: JBLabel): JComponent {

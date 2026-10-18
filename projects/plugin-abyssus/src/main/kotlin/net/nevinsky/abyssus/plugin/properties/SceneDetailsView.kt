@@ -4,6 +4,14 @@
  */
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.lib.core.editor.panel.CustomRow
+import net.nevinsky.abyssus.lib.core.editor.panel.FieldRef
+import net.nevinsky.abyssus.lib.core.editor.panel.PanelBuilders
+import net.nevinsky.abyssus.lib.core.editor.panel.Section
+import net.nevinsky.abyssus.plugin.filetype.setSceneToggle
+import net.nevinsky.abyssus.plugin.ui.CommitOutcome
+import net.nevinsky.abyssus.plugin.panel.RowHooks
+import net.nevinsky.abyssus.plugin.panel.fieldRow
 import com.intellij.openapi.Disposable
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBCheckBox
@@ -48,13 +56,14 @@ import javax.swing.JPanel
  * tests reach them. `ray-tracing-foliage` carries the foliage note the open Scene view's Ray Control reports, which says
  * its ray-traced image leaves foliage out, while that view shows a scene with any.
  */
-internal class SceneDetailsView(
+internal class SceneDetailsView @JvmOverloads constructor(
     private val controls: SceneRayControls, private val state: PanelState.UISceneState, parent: Disposable,
     /** The saved field whose last edit lost to a newer value; the panel rebuilds this view on that change, so it carries it over. */
     private val conflict: String? = null,
     /** Opens the skybox chooser for the scene [state] shows and returns true when it assigned a skybox; replaced in tests. */
     private val browseSkybox: (VirtualFile) -> Boolean = { chooseSceneSkybox(controls.project, it) },
     private val onConflict: (String) -> Unit = {},
+    collapsed: MutableMap<String, Boolean> = HashMap(),
 ) : JPanel(BorderLayout()) {
     private val facts: SceneFacts<*> = controls
     private val file = state.file
@@ -66,17 +75,33 @@ internal class SceneDetailsView(
     private var updating = false
 
     private val skyboxModel = scenePanelModel(state.rayRoot, ProjectLayout.abssFor(file) != null).skybox
-    private val skyboxField = JBTextField(skyboxText(skyboxModel.value)).apply {
-        name = "scene-skybox"; isEditable = false; columns = 16
-        accessibleContext.accessibleName = AbyssusBundle.message("propertiesSceneSkybox")
+    private val skybox = SkyboxRow(file, skyboxModel.value, skyboxModel.browsable, browseSkybox)
+
+    private val hooks = object : RowHooks {
+        override fun commit(ref: FieldRef, text: String): CommitOutcome = CommitOutcome.Unchanged
+        override fun custom(key: String): JComponent? = if (key == "rendering") renderingBody() else null
+        override fun openScreenEditor() {}
+        override fun assetField(key: String, label: String): JComponent? = if (key == "skyboxName") skybox.component(label) else null
     }
 
     init {
-        val box = JPanel(VerticalLayout(0))
-        box.add(header())
-        box.add(skyboxSection())
-        box.add(section())
-        add(box, BorderLayout.NORTH)
+        val abss = ProjectLayout.abssFor(file)
+        val base = PanelBuilders(EditorBundle, { false }).scene(
+            state.rayRoot, abss?.name.orEmpty(), "scenes/${file.name}",
+        )
+        // the Rendering section (ray tracing) is not part of the board; it stays, framed like the others
+        val rendering = Section(
+            "scene.rendering", AbyssusBundle.message("propertiesSceneRendering"), "render", listOf(CustomRow("rendering")),
+        )
+        val view = PanelModelView(
+            base.copy(
+                header = base.header.copy(title = state.name),
+                sections = base.sections + rendering,
+            ),
+            hooks, collapsed, titleName = "scene-name",
+            onEnabled = { section, checked -> section.enable?.settingKey?.let { setSceneToggle(controls.project, file, it, checked) } },
+        )
+        add(view, BorderLayout.CENTER)
         switch.addActionListener { if (!updating) controls.request(file, switch.isSelected) }
         retry.addActionListener { controls.retry(file) }
         controls.addListener(file, parent) { refresh() }
@@ -85,48 +110,12 @@ internal class SceneDetailsView(
 
     private fun secondary() = UIUtil.getContextHelpForeground()
 
-    private fun header(): JComponent {
-        val text = JPanel(VerticalLayout(JBUI.scale(2))).apply {
-            add(JBLabel(state.name).apply { font = JBFont.label().asBold().biggerOn(1f); name = "scene-name" })
-            add(JBLabel(AbyssusBundle.message("propertiesSceneSubtitle")).apply { foreground = secondary() })
-        }
-        return JPanel(BorderLayout(JBUI.scale(10), 0)).apply {
-            border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0), JBUI.Borders.empty(12, 16))
-            add(JBLabel(SceneIcons.FILE), BorderLayout.WEST)
-            add(text, BorderLayout.CENTER)
-        }
-    }
-
-    private fun skyboxText(value: String?) = value ?: AbyssusBundle.message("propertiesSceneSkyboxNone")
-
-    /** The scene's skybox: its saved name, and for a project scene a 26 px Browse button that opens the chooser. */
-    private fun skyboxSection(): JComponent {
-        val row = JPanel(BorderLayout(JBUI.scale(6), 0)).apply { isOpaque = false; add(skyboxField, BorderLayout.CENTER) }
-        if (skyboxModel.browsable) {
-            val tooltip = AbyssusBundle.message("propertiesSceneSkyboxBrowse")
-            val browse = JButton(TreeActionIcons.BROWSE).apply {
-                name = "scene-skybox-browse"; toolTipText = tooltip; isFocusable = true
-                accessibleContext.accessibleName = tooltip
-                val side = JBUI.scale(26)
-                preferredSize = Dimension(side, side)
-            }
-            browse.addActionListener {
-                if (browseSkybox(file)) skyboxField.text = skyboxText(SceneJson().parse(textOf(file)).get("skyboxName")?.takeIf { it.isTextual }?.textValue())
-            }
-            row.add(browse, BorderLayout.EAST)
-        }
-        return JPanel(VerticalLayout(JBUI.scale(6))).apply {
-            border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0), JBUI.Borders.empty(12, 16))
-            add(JBLabel(AbyssusBundle.message("propertiesSceneSkybox").uppercase()).apply { foreground = secondary(); font = JBFont.small() })
-            add(row)
-        }
-    }
-
-    private fun section(): JComponent {
+    /** The ray tracing switch, its status and the saved limits: the body of the Rendering section. */
+    private fun renderingBody(): JComponent {
         val row = JPanel(BorderLayout(JBUI.scale(8), 0)).apply { isOpaque = false; add(switch, BorderLayout.WEST); add(retry, BorderLayout.EAST) }
         return JPanel(VerticalLayout(JBUI.scale(6))).apply {
-            border = JBUI.Borders.empty(12, 16, 16, 16)
-            add(JBLabel(AbyssusBundle.message("propertiesSceneRendering").uppercase()).apply { foreground = secondary(); font = JBFont.small() })
+            isOpaque = false
+            border = JBUI.Borders.empty(4, 0, 8, 0)
             add(row)
             add(status)
             add(detail)
@@ -215,7 +204,7 @@ internal class SceneDetailsView(
 }
 
 /** Opens the skybox chooser for [file], the scene Abyssus Properties shows; true when a skybox was assigned. */
-private fun chooseSceneSkybox(project: com.intellij.openapi.project.Project, file: VirtualFile): Boolean {
+internal fun chooseSceneSkybox(project: com.intellij.openapi.project.Project, file: VirtualFile): Boolean {
     val abss = ProjectLayout.abssFor(file) ?: return false
     val assets = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().assets
     val current = SceneJson().parse(textOf(file)).get("skyboxName")?.takeIf { it.isTextual }?.textValue()

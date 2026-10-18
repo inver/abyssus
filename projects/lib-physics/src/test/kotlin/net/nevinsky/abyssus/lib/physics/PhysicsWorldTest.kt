@@ -15,6 +15,8 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import net.nevinsky.abyssus.lib.core.ecs.EnabledState
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -62,6 +64,41 @@ class PhysicsWorldTest {
             assertTrue(messages.single(), messages.single().contains("Model 0 (entity 0)") && messages.single().contains("no collider"))
             assertFalse(scene.named("Model 0") in world.entities)
             assertTrue(scene.named("Terrain") in world.entities)
+        }
+    }
+
+    @Test
+    fun aDisabledColliderCreatesNoBodyAndNoWarning() {
+        val messages = mutableListOf<String>()
+        val scene = loadPhysicsScene()
+        scene.named("Model 0").add(EnabledState(disabledComponents = linkedSetOf(ColliderComponent::class.java)))
+        world(scene, messages).use { world ->
+            // only Model 2's constraint to the now body-less Model 0 is reported; Model 0 itself is silent
+            assertTrue(messages.toString(), messages.none { it.startsWith("Physics: Model 0") })
+            assertFalse(scene.named("Model 0") in world.entities)
+            assertNull(world.bodyOf(scene.named("Model 0")))
+            assertTrue(scene.named("Terrain") in world.entities)
+        }
+    }
+
+    @Test
+    fun aDisabledRigidBodyLeavesAStaticBody() {
+        val scene = loadPhysicsScene()
+        scene.named("Model 0").add(EnabledState(disabledComponents = linkedSetOf(RigidBodyComponent::class.java)))
+        world(scene, mutableListOf()).use { world ->
+            assertEquals(MotionType.STATIC, world.bodyOf(scene.named("Model 0"))!!.motionType)
+        }
+    }
+
+    @Test
+    fun aDisabledEntityHoldsNoBody() {
+        val messages = mutableListOf<String>()
+        val scene = loadPhysicsScene()
+        scene.named("Model 0").add(EnabledState(entityEnabled = false))
+        world(scene, messages).use { world ->
+            assertTrue(messages.toString(), messages.none { it.startsWith("Physics: Model 0") })
+            assertNull(world.bodyOf(scene.named("Model 0")))
+            assertFalse(scene.named("Model 0") in world.entities)
         }
     }
 

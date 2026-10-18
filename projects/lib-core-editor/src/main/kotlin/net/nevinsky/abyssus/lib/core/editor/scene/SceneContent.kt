@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import net.nevinsky.abyssus.lib.core.format.isEnabled
 import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
@@ -72,24 +73,33 @@ fun sceneContentOf(scene: SceneDto): SceneContent {
 private fun decode(entity: EntityView): DecodedEntity {
     val components = entity.components!!
     val position = components.opt("PositionComponent")
-    val asset = renderAssetOf(components.opt("RenderComponent"))
+    val type = components.opt("TypeComponent")?.let { read<TypeComponent>(it)?.type }
+    // a disabled entity is present as data (its position still answers a look-at) and absent as behavior
+    if (!entity.enabled) {
+        return DecodedEntity(
+            entity.id, entity.name, position?.let { read<PositionComponent>(it) }, position?.opt("localPosition") != null,
+            null, null, null, null,
+        )
+    }
+    /** A component's node, or null when the entry is missing or disabled. */
+    fun active(name: String): JsonNode? = components.opt(name)?.takeIf { isEnabled(it) }
+    val asset = renderAssetOf(active("RenderComponent"))
+    val light = active("LightComponent")
+    // a light entity whose light is disabled is not a light: without the component it would still shine with defaults
+    val lightDisabled = type?.name?.startsWith("LIGHT") == true && components.opt("LightComponent")?.let { !isEnabled(it) } == true
     return DecodedEntity(
         entity.id,
         entity.name,
         position?.let { read<PositionComponent>(it) },
         position?.opt("localPosition") != null,
-        components.opt("TypeComponent")?.let { read<TypeComponent>(it)?.type },
-        components.opt("CameraComponent")?.let { read<CameraComponent>(it) },
-        components.opt("LightComponent")?.let { read<LightComponent>(it) },
+        if (lightDisabled) null else type,
+        active("CameraComponent")?.let { read<CameraComponent>(it) },
+        light?.let { read<LightComponent>(it) },
         asset?.let { DecodedAsset(it.type, it.name) },
-        foliageAssetName(components),
-        components.opt("PathArrangementComponent")?.let { read<PathArrangementComponent>(it) },
+        active("FoliageComponent")?.get("assetName")?.takeIf { it.isTextual }?.asText(),
+        active("PathArrangementComponent")?.let { read<PathArrangementComponent>(it) },
     )
 }
-
-/** The raw `FoliageComponent.assetName` of [components] when it is a string, else null (the component is not coded yet). */
-private fun foliageAssetName(components: JsonNode): String? =
-    components.opt("FoliageComponent")?.get("assetName")?.takeIf { it.isTextual }?.asText()
 
 /** Binds components the way a scene load does, so the view and the Properties panel show the same values. */
 private val components = ComponentReader(JsonProcessor(NOPLogger.NOP_LOGGER))

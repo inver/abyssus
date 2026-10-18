@@ -8,6 +8,12 @@ package net.nevinsky.abyssus.plugin.properties
 import net.nevinsky.abyssus.lib.core.editor.util.numberText
 import net.nevinsky.abyssus.lib.core.editor.util.NumberTextStyle
 
+import net.nevinsky.abyssus.lib.core.editor.panel.FieldRef
+import net.nevinsky.abyssus.lib.core.editor.panel.NoteRow
+import net.nevinsky.abyssus.lib.core.editor.panel.ReadonlyRow
+import net.nevinsky.abyssus.lib.core.editor.panel.Section
+import net.nevinsky.abyssus.plugin.filetype.setEnabled
+import net.nevinsky.abyssus.plugin.panel.RowHooks
 import net.nevinsky.abyssus.plugin.ui.CommitOutcome
 import net.nevinsky.abyssus.plugin.ui.checkEditor
 import net.nevinsky.abyssus.plugin.ui.choiceEditor
@@ -60,93 +66,58 @@ import net.nevinsky.abyssus.plugin.dto.MetaFiles
  * Ray Tracing overrides: `optics-<field>-<material>` (message `optics-error-<material>`), `optics-unresolved-<material>`
  * and `optics-problem`.
  */
-internal class EntityDetailsView(
+internal class EntityDetailsView @JvmOverloads constructor(
     private val project: Project,
     private val state: PanelState.EntityDetails,
-    private val metaFiles: MetaFiles
+    private val metaFiles: MetaFiles,
+    private val collapsed: MutableMap<String, Boolean> = HashMap(),
 ) : JPanel(BorderLayout()) {
     private val target = state.target
 
-    init {
-        val box = JPanel(VerticalLayout(0))
-        box.add(header())
-        for (section in state.sections) box.add(sectionView(section))
-        if (target.kind == null) box.add(addButton())
-        add(box, BorderLayout.NORTH)
+    private val hooks = object : RowHooks {
+        override fun commit(ref: FieldRef, text: String): CommitOutcome = commit(ref.kind, ref.field, text)
+        override fun custom(key: String): JComponent? = null
+        override fun openScreenEditor() {}
     }
+
+    init {
+        val model = state.model ?: error("The entity panel needs its model")
+        val view = PanelModelView(
+            model, hooks, collapsed, titleName = "entity-name",
+            onEnabled = { section, checked -> toggle(section, checked) },
+            sectionActions = { removeButton(it) },
+            sectionExtra = { section -> if (section.kind == "RenderComponent") state.optics?.let { opticsView(it) } else null },
+            after = if (target.kind == null) listOf(addButton()) else emptyList(),
+        )
+        // the raw JSON of a component the plugin does not edit is reached by `raw-<Kind>`
+        view.sections.forEach { frame ->
+            frame.section.kind?.let { kind -> allComponents(frame).firstOrNull { it.name == "raw" }?.name = "raw-$kind" }
+        }
+        add(view, BorderLayout.CENTER)
+    }
+
+    private fun allComponents(c: java.awt.Component): List<java.awt.Component> =
+        listOf(c) + ((c as? java.awt.Container)?.components?.flatMap { allComponents(it) } ?: emptyList())
 
     private fun secondary() = UIUtil.getContextHelpForeground()
 
-    private fun header(): JComponent {
-        val text = JPanel(VerticalLayout(JBUI.scale(2))).apply {
-            add(JBLabel(state.name).apply { font = JBFont.label().asBold().biggerOn(1f); name = "entity-name" })
-            add(JBLabel(AbyssusBundle.message("propertiesEntitySubtitle", target.entityId)).apply {
-                foreground = secondary()
-            })
-        }
-        return JPanel(BorderLayout(JBUI.scale(10), 0)).apply {
-            border = BorderFactory.createCompoundBorder(
-                JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0),
-                JBUI.Borders.empty(12, 16)
-            )
-            add(JBLabel(PropertyIcons.ECS), BorderLayout.WEST)
-            add(text, BorderLayout.CENTER)
-        }
+    /** The Remove button of a modeled component's section; an unmodeled one is read only. */
+    private fun removeButton(section: Section): List<JComponent> {
+        val kind = section.kind ?: return emptyList()
+        if (section.rows.any { it is ReadonlyRow && it.label.isEmpty() } || section.rows.any { it is NoteRow }) return emptyList()
+        return listOf(JButton(AbyssusBundle.message("propertiesRemoveComponent")).apply {
+            name = "remove-$kind"
+            addActionListener {
+                reportRejection(project, SceneComponentEdits.remove(project, target.file, target.entityId, kind))
+            }
+        })
     }
 
-    private fun sectionView(section: ComponentSection): JComponent {
-        val title = JPanel(BorderLayout()).apply {
-            add(JBLabel(section.label, ComponentIcons.forComponent(section.kind), JBLabel.LEADING).apply {
-                font = JBFont.label().asBold()
-            }, BorderLayout.WEST)
-            if (section.raw == null) {
-                add(JButton(AbyssusBundle.message("propertiesRemoveComponent")).apply {
-                    name = "remove-${section.kind}"
-                    addActionListener {
-                        reportRejection(
-                            project,
-                            SceneComponentEdits.remove(project, target.file, target.entityId, section.kind)
-                        )
-                    }
-                }, BorderLayout.EAST)
-            }
-        }
-        val body = JPanel(VerticalLayout(0)).apply { border = JBUI.Borders.empty(4, 0) }
-        if (section.raw != null) {
-            body.add(JBLabel(AbyssusBundle.message("propertiesUnmodeledNote")).apply {
-                foreground = secondary(); border = JBUI.Borders.empty(2, 16)
-            })
-            body.add(JTextArea(section.raw).apply {
-                isEditable = false
-                name = "raw-${section.kind}"
-                font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size)
-                border = JBUI.Borders.empty(2, 16)
-                isOpaque = false
-            })
-        } else {
-            var group = ""
-            for (field in section.fields) {
-                if (field.group != group) {
-                    group = field.group
-                    if (group.isNotEmpty()) body.add(JBLabel(group).apply {
-                        name = "group-${section.kind}-$group"
-                        foreground = secondary()
-                        font = JBFont.small().asBold()
-                        border = JBUI.Borders.empty(6, 0, 2, 0)
-                    })
-                }
-                body.add(fieldRow(section, field))
-            }
-        }
-        if (section.kind == "RenderComponent") state.optics?.let { body.add(opticsView(it)) }
-        return JPanel(VerticalLayout(0)).apply {
-            border = BorderFactory.createCompoundBorder(
-                JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0),
-                JBUI.Borders.empty(8, 16)
-            )
-            add(title)
-            add(body)
-        }
+    /** The `Enabled` box of a component section: one undoable edit that writes only the flag. */
+    private fun toggle(section: Section, checked: Boolean) {
+        val toggle = section.enable ?: return
+        val component = toggle.target ?: return
+        setEnabled(project, target.file, component, checked)
     }
 
     /** Transmission (in percent) and IOR per PBR material of the model, as overrides of this entity only. */
@@ -239,7 +210,7 @@ internal class EntityDetailsView(
             })
             val label =
                 JBLabel(AbyssusBundle.message(if (field == RayOpticalField.TRANSMISSION) "propertiesOpticsTransmission" else "propertiesOpticsIor")).apply {
-                    preferredSize = Dimension(JBUI.scale(LABEL_WIDTH), preferredSize.height)
+                    preferredSize = Dimension(JBUI.scale(170), preferredSize.height)
                 }
             box.add(JPanel(GridBagLayout()).apply {
                 add(label, GridBagConstraints().apply { gridx = 0; anchor = GridBagConstraints.WEST })
@@ -258,51 +229,13 @@ internal class EntityDetailsView(
     private fun number(value: Double): String =
         numberText(value, NumberTextStyle.DETAIL)
 
-    private fun fieldRow(section: ComponentSection, field: FieldValue): JComponent {
-        val error = JBLabel("").apply { foreground = JBColor.RED; name = "error-${section.kind}-${field.field}" }
-        val editor = editorFor(section, field, error)
-        editor.name = "field-${section.kind}-${field.field}"
-        val label = JBLabel(field.label).apply {
-            name = "label-${section.kind}-${field.field}"
-            preferredSize = Dimension(JBUI.scale(LABEL_WIDTH), preferredSize.height)
-        }
-        field.tooltip?.let { editor.toolTipText = it }
-        return JPanel(GridBagLayout()).apply {
-            border = JBUI.Borders.empty(2, 0)
-            add(label, GridBagConstraints().apply { gridx = 0; anchor = GridBagConstraints.WEST })
-            add(editor, GridBagConstraints().apply { gridx = 1; weightx = 1.0; fill = GridBagConstraints.HORIZONTAL })
-            add(error, GridBagConstraints().apply { gridx = 2; insets = JBUI.insetsLeft(8) })
-        }
-    }
-
-    /** Saves [text] for [field]; the editor shows a refusal and puts the stored value back. */
-    private fun commit(section: ComponentSection, field: FieldValue, text: String): CommitOutcome =
-        when (val result = SceneComponentEdits.update(
-            project,
-            target.file,
-            target.entityId,
-            section.kind,
-            field.field,
-            text,
-            metaFiles
-        )) {
+    /** Saves [text] for field [field] of component [kind]; the editor shows a refusal and puts the stored value back. */
+    private fun commit(kind: String, field: String, text: String): CommitOutcome =
+        when (val result = SceneComponentEdits.update(project, target.file, target.entityId, kind, field, text, metaFiles)) {
             is EditResult.Rejected -> CommitOutcome.Refused(result.reason)
             EditResult.Unchanged -> CommitOutcome.Unchanged
             EditResult.Changed -> CommitOutcome.Saved
         }
-
-    private fun editorFor(section: ComponentSection, field: FieldValue, error: JBLabel): JComponent {
-        if (field.kind == FieldKind.BOOLEAN) {
-            return checkEditor(field.value == "true", error) { commit(section, field, it.toString()) }
-        }
-        val useChoices =
-            field.kind == FieldKind.CHOICE || (field.kind == FieldKind.ASSET_NAME && field.choices.size > 1)
-        if (useChoices) {
-            val choices = (if (field.optional) listOf("") else emptyList()) + field.choices
-            return choiceEditor(choices, field.value, error) { commit(section, field, it) }
-        }
-        return textEditor(field.value, error) { commit(section, field, it) }
-    }
 
     private fun addButton(): JComponent = JPanel(BorderLayout()).apply {
         border = JBUI.Borders.empty(12, 16)
@@ -315,9 +248,5 @@ internal class EntityDetailsView(
                 showActionGroup(DataManager.getInstance().getDataContext(this), group, null, underneath = this)
             }
         }, BorderLayout.WEST)
-    }
-
-    private companion object {
-        const val LABEL_WIDTH = 170
     }
 }

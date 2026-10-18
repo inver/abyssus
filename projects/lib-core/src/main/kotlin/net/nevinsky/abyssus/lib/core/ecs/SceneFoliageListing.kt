@@ -30,7 +30,7 @@ class SceneFoliageListing(private val warn: (String) -> Unit) {
     fun list(engine: SceneEngine): List<SceneFoliage> {
         val out = ArrayList<SceneFoliage>()
         for (entity in engine.entities.sortedBy { it.getComponent(IdComponent::class.java)?.id ?: Long.MAX_VALUE }) {
-            val component = entity.getComponent(FoliageComponent::class.java) ?: continue
+            val component = entity.activeComponent(FoliageComponent::class.java) ?: continue
             val foliage = component.assetName?.takeIf { it.isNotEmpty() } ?: continue
             val terrain = assetName(entity, MetaType.TERRAIN)?.takeIf { it.isNotEmpty() }
             if (terrain == null) {

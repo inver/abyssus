@@ -76,7 +76,7 @@ hierarchies, expected/actual/diff images, IDE logs and the JUnit report); downlo
 
 ### UI screenshot baselines
 
-Seventeen Swing captures (the tree, the Properties panels, two dialogs and the Scene View toolbar) are compared pixel for pixel with PNGs in
+Twenty Swing captures (the tree, the Properties panels, two dialogs and the Scene View toolbar) are compared pixel for pixel with PNGs in
 `projects/plugin-abyssus/src/uiTest/resources/screenshots/linux/`, named `<scenario>.png`. The scenario list is
 `SCREENSHOT_SCENARIOS` (`ScreenshotInventory.kt`); `BaselineInventoryTest` fails on a missing or orphaned file. Captures are
 component images (the tool window or dialog), never the 3D viewport or the whole desktop.
@@ -94,7 +94,7 @@ component images (the tool window or dialog), never the 3D viewport or the whole
   fails explicitly rather than skipping.
 - **Update one or more baselines** (never on CI, only in the canonical environment, only the named scenarios, only after the
   scenario's own checks passed; the PNGs are copied back to the working tree):
-  `ABYSSUS_UI_PLATFORM=linux/amd64 scripts/run-ui-tests-docker.sh -- -PupdateUiScreenshots=true -PuiScreenshotScenarios=props-empty,tree-expanded`.
+  `ABYSSUS_UI_PLATFORM=linux/amd64 scripts/run-ui-tests-docker.sh -- -PupdateUiScreenshots=true -PuiScreenshotScenarios=props-entity-design,tree-expanded`.
   Review every changed PNG by eye (content, loaded previews, nothing clipped or incidental) before committing, and commit the
   environment manifest with them when the environment changed.
 - **On a failure** `build/reports/ui-tests/screenshots/<scenario>/` holds actual, expected and diff PNGs (changed pixels in
@@ -110,9 +110,11 @@ every test), checks disk bytes, and where it edits, presses Undo and checks the 
 
 | Class | Scenarios |
 |---|---|
-| `UiStartupTest` | robot connection and project loaded; Abyssus installed, no scene editor open; Properties window opens and closes; Abyssus tree, entity 0 and the Camera component of entity 4 are found; fixture reset restores the IDE document and the tree |
+| `UiStartupTest` | robot connection and project loaded; the header of a selected entity is readable (`PropertiesPanel.subtitle` / `breadcrumb`); Abyssus installed, no scene editor open; Properties window opens and closes; Abyssus tree, entity 0 and the Camera component of entity 4 are found; fixture reset restores the IDE document and the tree |
 | `AbyssusTreeUiTest` | Project, Scenes, Assets and ECS expand; the fog eye toggles only `fogEnabled` and Undo restores the bytes; switching views does not duplicate nodes |
-| `PropertiesUiTest` | empty state; model and terrain assets; cube (editable, previews loaded), procedural (editable) and HDR (read-only, preview loaded) skyboxes; entity 0 and Camera fields; entity name edit and Undo; an invalid Camera number shows a field error and leaves the scene unedited |
+| `PropertiesLayoutUiTest` | the redesigned panel in the real IDE: label column 150 px, field height 24 px, section header 34 px, dim defaults in the secondary colour, collapse, breadcrumb / subtitle / badges for an entity, a folder, `ecs`, the project and a read-only unused asset (the `game` badge and the 26 px Browse are covered by plugin tests: the fixture has no game component). Scenarios `props-entity-design`, `props-folder`, `props-ecs`, `props-project` |
+| `PropertiesEnabledUiTest` | the section `Enabled` box writes `enabled: false` on one entry and one Undo restores the bytes; the tree eye on an entity writes and removes the flag. That a disabled entity is not picked needs the Scene view, which cannot draw in the container, so `SceneViewPanelTest` and the `lib-core-editor` content tests cover it |
+| `PropertiesUiTest` | the Assets folder layout; model and terrain assets; cube (editable, previews loaded), procedural (editable) and HDR (read-only, preview loaded) skyboxes; entity 0 and Camera fields; entity name edit and Undo; an invalid Camera number shows a field error and leaves the scene unedited |
 | `RenameSceneUiTest` | Rename Scene opens from the scene's context menu; Cancel is byte-identical; applying changes only `name`, refreshes the tree, and Undo restores the bytes |
 | `SkyboxChooserUiTest` | Choose opens the chooser with None and the three fixture skyboxes; the `hdr` filter and the no-match state; Cancel is byte-identical; Assign `skybox_default` changes only `skyboxName`, leaves `skyboxEnabled`, updates the tree, and Undo restores the bytes |
 | `SceneViewUiTest` | the Scene View toolbar in the order `Select, Move, Rotate, Snap, Shadows, Fog, Grid, Frame selection` with Move pressed and `Move · World` in the tool status; it wraps without overlapping buttons at a 900 px editor; opening the view writes nothing. The container has no usable OpenGL, so the view shows the unavailable message and the toolbar is disabled above it: the tools' behavior is covered by the plugin tests, and the captures show layout and icons (dimmed) only |
@@ -391,3 +393,6 @@ Water has pure checks and GL checks, all named for the capability they pin down.
   fails on a difference only with `-Dabyssus.designStrict=true`.
 - **Component edits:** `ComponentEditorTest` (`lib-core-editor`) runs on JSON trees; `SceneComponentEditsTest` checks the undoable writes;
   `ComponentActionsTest` subclasses the tree actions to supply the selected node.
+
+The empty state (`Nothing is selected.`) has no UI scenario: the Abyssus tree restores its selection after a `clearSelection`, so it is checked by `PropertiesPanelTest.testNothingSelectedShowsTheEmptyState`. `PropertiesPanel` page-object helpers: `headerTitle`, `breadcrumb`, `subtitle`, `badges`, `hasGameBadge`, `sectionTitles`, `width` / `height` / `preferredWidth`, `sectionHeaderHeight`, `foreground`, `isCollapsed`, `clickChevron`, `enabledChecked`, `clickEnabled`. `AbyssusTree.expandAssetGroups` opens the type groups under Assets.
+

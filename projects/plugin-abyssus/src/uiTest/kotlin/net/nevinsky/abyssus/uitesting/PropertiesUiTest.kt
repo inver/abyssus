@@ -22,6 +22,7 @@ class PropertiesUiTest : UiTestBase() {
         tree.expand(scene().treeLabel)
         tree.expand("ecs")
         tree.expand("Assets")
+        tree.expandAssetGroups()
         frame.normalizeLayout(ide)
         return tree
     }
@@ -39,10 +40,9 @@ class PropertiesUiTest : UiTestBase() {
     }
 
     @Test
-    fun assetsRowShowsTheEmptyState() {
+    fun assetsRowShowsTheReadOnlyFolderLayout() {
         tree().clickRow("Assets")
-        waitForTexts("empty state") { texts -> texts.any { it.startsWith("Nothing to show") } }
-        shot("props-empty", frame.properties().component)
+        waitForTexts("folder layout") { texts -> texts.any { it.startsWith("Folder ·") } }
     }
 
     @Test
@@ -51,7 +51,7 @@ class PropertiesUiTest : UiTestBase() {
         for (type in listOf("MODEL", "TERRAIN")) {
             val asset = assetOfType(type)
             tree.clickRow(asset)
-            waitForTexts("$asset meta") { texts -> asset in texts && type in texts }
+            waitForTexts("$asset meta") { texts -> asset in texts && type in texts && texts.contains("$type asset") }
             shot("props-asset-${type.lowercase()}", frame.properties().component)
         }
     }
@@ -62,21 +62,21 @@ class PropertiesUiTest : UiTestBase() {
 
         val cube = assetOfType("SKYBOX")
         tree.clickRow(cube)
-        waitForTexts("cube skybox") { texts -> cube in texts && "SKYBOX" in texts }
+        waitForTexts("cube skybox") { texts -> cube in texts && "SKYBOX asset" in texts }
         waitForPreviews()
         assertTrue("cube skybox has editable fields", frame.properties().fieldNames("asset-field-").isNotEmpty())
         shot("props-asset-sky-cube", frame.properties().component)
 
         val procedural = assetOfType("SKYBOX_PROCEDURAL")
         tree.clickRow(procedural)
-        waitForTexts("procedural sky") { texts -> procedural in texts && "SKYBOX_PROCEDURAL" in texts }
+        waitForTexts("procedural sky") { texts -> procedural in texts && "SKYBOX_PROCEDURAL asset" in texts }
         assertTrue("procedural sky has editable fields", frame.properties().fieldNames("asset-field-").isNotEmpty())
         shot("props-asset-sky-procedural", frame.properties().component)
 
         val hdr = assetOfType("SKYBOX_HDR")
         tree.clickRow(hdr)
-        waitForTexts("hdr skybox") { texts -> hdr in texts && "SKYBOX_HDR" in texts }
-        assertTrue("hdr skybox is read-only: ${frame.properties().texts()}", frame.properties().texts().any { it.endsWith("read-only") })
+        waitForTexts("hdr skybox") { texts -> hdr in texts && "SKYBOX_HDR asset" in texts }
+        assertTrue("hdr skybox is read-only: ${frame.properties().texts()}", frame.properties().badges().contains("read-only"))
         assertTrue("hdr skybox has no editable fields", frame.properties().fieldNames("asset-field-").isEmpty())
         waitForPreviews()
         shot("props-asset-sky-hdr", frame.properties().component)
@@ -88,13 +88,13 @@ class PropertiesUiTest : UiTestBase() {
         val tree = tree()
         val entityName = facts.entityName(0)!!
         tree.clickRow(entityName)
-        waitForTexts("entity 0") { texts -> entityName in texts && "entity 0" in texts }
+        waitForTexts("entity 0") { texts -> entityName in texts && texts.any { it.startsWith("Entity 0 ·") } }
         assertEquals(entityName, frame.properties().fieldText("field-NameComponent-name"))
         shot("props-entity", frame.properties().component)
 
         tree.expand("Camera 4")
         tree.clickRow("Camera 4")
-        waitForTexts("camera entity") { texts -> "Camera 4" in texts && "entity 4" in texts }
+        waitForTexts("camera entity") { texts -> "Camera 4" in texts && texts.any { it.startsWith("Entity 4 ·") } }
         val fields = frame.properties().fieldNames("field-CameraComponent-")
         assertTrue("camera fields in $fields", "field-CameraComponent-camera.fieldOfView" in fields)
         tree.clickRow("Camera") // the Camera component row under Camera 4
@@ -110,7 +110,7 @@ class PropertiesUiTest : UiTestBase() {
         assertEquals(1, Regex("\"name\": \"$oldName\"").findAll(original).count())
         val tree = tree()
         tree.clickRow(oldName)
-        waitForTexts("entity 0") { texts -> "entity 0" in texts }
+        waitForTexts("entity 0") { texts -> texts.any { it.startsWith("Entity 0 ·") } }
 
         frame.properties().enter("field-NameComponent-name", "Renamed 0")
         val expected = original.replace("\"name\": \"$oldName\"", "\"name\": \"Renamed 0\"")

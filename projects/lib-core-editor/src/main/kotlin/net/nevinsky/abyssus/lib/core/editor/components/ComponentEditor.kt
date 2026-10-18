@@ -98,7 +98,21 @@ class ComponentEditor(
                 it.group,
                 it.assetType,
                 it.tooltipKey?.let(messages::message),
+                it.unit,
+                !isWritten(node, it.name),
             )
+        }
+    }
+
+    /**
+     * Whether the file holds a value for the field [name] of a component entry [node]. It is the presence of the key,
+     * never a comparison with the default, so a default that was written explicitly is not dim. A few components keep
+     * their values one level down (`light`, `camera`), and the render component calls its `type` key `assetType`.
+     */
+    private fun isWritten(node: JsonNode, name: String): Boolean {
+        val path = (FILE_KEYS[name] ?: name).split('.')
+        return listOf(node, node.get("light"), node.get("camera")).any { base ->
+            base != null && path.fold(base as JsonNode?) { n, key -> n?.get(key) } != null
         }
     }
 
@@ -394,3 +408,6 @@ class ComponentEditor(
     private fun reject(key: String, vararg params: Any) = EditResult.Rejected(messages.message(key, *params))
 
 }
+
+/** Fields whose key in the file differs from the field's name. */
+private val FILE_KEYS = mapOf("assetType" to "type")

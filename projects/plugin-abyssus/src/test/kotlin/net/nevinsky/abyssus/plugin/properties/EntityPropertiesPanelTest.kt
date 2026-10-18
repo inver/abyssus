@@ -130,13 +130,15 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         assertTrue(all(p, JBTextField::class.java).isEmpty())
     }
 
-    fun testProjectRootShowsSettingsWhileScenesGroupRemainsEmpty() {
+    fun testProjectRootShowsSettingsWhileScenesGroupShowsAReadOnlyFolder() {
         copyProject()
         val p = panel()
         p.show(children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") })
         assertFalse((p.state as PanelState.Project).settings.physicsEnabled)
         p.show(descend(children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }, "scenes"))
-        assertTrue(p.state is PanelState.Empty)
+        val folder = p.state as PanelState.StructuralDetails
+        assertEquals("Folder · 1 item", folder.model.header.subtitle)
+        assertTrue(all(p, JBTextField::class.java).isEmpty())
     }
 
     private fun leave(c: Component) = c.focusListeners.forEach { it.focusLost(java.awt.event.FocusEvent(c, java.awt.event.FocusEvent.FOCUS_LOST)) }

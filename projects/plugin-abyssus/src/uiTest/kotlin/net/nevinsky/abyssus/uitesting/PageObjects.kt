@@ -171,6 +171,13 @@ class AbyssusTree(private val frame: IdeFrame) {
 
     fun clickRow(text: String) = fixture.clickRow(indexOf(text))
 
+    /** Expands the type groups under Assets (Models, Skyboxes, Terrains, ...) so asset rows are listed. */
+    fun expandAssetGroups() {
+        for (group in listOf("Models", "Skyboxes", "Terrains", "Foliage", "Textures", "Clouds")) {
+            if (rows().any { it.startsWith("$group ") || it == group }) expand(group)
+        }
+    }
+
     /**
      * Clicks a painted row action. The tree paints actions from the right edge of its visible area leftwards, 8px
      * apart, so [fromRight] pixels in from that edge on the row's vertical centre hits one: 14 is the eye (rightmost),
@@ -229,6 +236,60 @@ class PropertiesPanel(private val frame: IdeFrame) {
     fun errorText(kind: String, field: String): String =
         window.findAll<ComponentFixture>(byXpath("//div[@class='JBLabel' and @name='error-$kind-$field']")).firstOrNull()
             ?.callJs<String>("component.getText()", runInEdt = true).orEmpty()
+
+    private fun byName(name: String) = window.find<ComponentFixture>(byXpath("//div[@name='$name']"), SHORT)
+
+    private fun existing(name: String) = window.findAll<ComponentFixture>(byXpath("//div[@name='$name']")).firstOrNull()
+
+    private fun text(name: String): String = byName(name).callJs("component.getText()", runInEdt = true)
+
+    /** The title of the shown node's header, whichever view drew it. */
+    fun headerTitle(): String = listOf("header-title", "entity-name", "scene-name", "project-name", "water-title", "structural-title")
+        .firstNotNullOf { existing(it)?.callJs<String>("component.getText()", runInEdt = true) }
+
+    /** The breadcrumb steps, or empty when the header has none. */
+    fun breadcrumb(): List<String> = existing("header-breadcrumb")?.callJs<String>("component.getText()", runInEdt = true)
+        ?.split("  ›  ").orEmpty()
+
+    fun subtitle(): String = text("header-subtitle")
+
+    /** The badges of the header: `read-only`, `no scene uses this`. */
+    fun badges(): List<String> = listOf("badge-read-only", "badge-unused").mapNotNull { existing(it)?.callJs<String>("component.getText()", runInEdt = true) }
+
+    fun hasGameBadge(): Boolean = existing("badge-game") != null
+
+    fun sectionTitles(): List<String> =
+        window.findAll<ComponentFixture>(byXpath("//div[starts-with(@name, 'section-title-')]")).map { it.callJs<String>("component.getText()", runInEdt = true) }
+
+    fun labelTexts(prefix: String): List<String> =
+        window.findAll<ComponentFixture>(byXpath("//div[starts-with(@name, '$prefix')]")).map { it.callJs<String>("component.getText()", runInEdt = true) }
+
+    fun width(name: String): Int = byName(name).callJs("component.getWidth()", runInEdt = true)
+
+    fun height(name: String): Int = byName(name).callJs("component.getHeight()", runInEdt = true)
+
+    /** The preferred width of the label column cell named [name]. */
+    fun preferredWidth(name: String): Int = byName(name).callJs("component.getPreferredSize().width", runInEdt = true)
+
+    /** The height of the section header whose chevron is named `section-chevron-<key>`. */
+    fun sectionHeaderHeight(key: String): Int =
+        byName("section-chevron-$key").callJs("component.getParent().getParent().getHeight()", runInEdt = true)
+
+    /** The ARGB of the text colour of the field named [name]. */
+    fun foreground(name: String): Int = byName(name).callJs("component.getForeground().getRGB()", runInEdt = true)
+
+    fun isCollapsed(key: String): Boolean =
+        !byName("section-$key").callJs<Boolean>("component.getComponent(1).isVisible()", runInEdt = true)
+
+    fun clickChevron(key: String) = byName("section-chevron-$key").click()
+
+    fun enabledChecked(key: String): Boolean = byName("section-enabled-$key").callJs("component.isSelected()", runInEdt = true)
+
+    fun hasEnabledBox(key: String): Boolean = existing("section-enabled-$key") != null
+
+    fun clickEnabled(key: String) = byName("section-enabled-$key").click()
+
+    fun exists(name: String): Boolean = existing(name) != null
 
     /** Thumbnails (`face-*`, `hdr-preview`) whose image has not loaded yet; empty once every preview is real. */
     fun unloadedPreviews(): List<String> =

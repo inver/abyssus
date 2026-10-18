@@ -13,7 +13,8 @@
 | **Abyssus view** | The Abyssus pane of the Project tool window: the project / scene / asset tree. |
 | **Abyssus Properties** | The tool window for asset metadata and supported asset edits, entity/component fields, and a selected scene's Ray Tracing switch and saved settings. |
 | **Scene view** | The second editor tab of a `.scene`: a libGDX render on an LWJGL3-AWT GL canvas. |
-| **Eye toggle** | The eye icon on a row gated by an `<x>Enabled` boolean. A click flips the boolean in the file. |
+| **Eye toggle** | The eye icon on a row gated by an `<x>Enabled` boolean, or by the `enabled` flag of an entity or togglable component. A click flips the flag in the file as one undoable edit; the Properties `Enabled` box is the same action. |
+| **Enabled flag** | The optional `enabled: false` on an `ecs` entity entry or component entry (`EnabledState` in `lib-core`). A disabled entity or component is present as data and absent as behavior. A missing key means enabled. Scene settings keep their own `<x>Enabled` booleans (see Eye toggle). |
 | **Skybox chooser** | The "Choose" button on a project scene's `skybox` row. It opens a dialog listing the project's `SKYBOX`, `SKYBOX_PROCEDURAL` and `SKYBOX_HDR` assets. |
 | **Gizmo** | The handles on the object selected in the scene view: X/Y/Z arrows (Move, key W) or rings (Rotate, key E). A drag previews live and writes on release. |
 | **Look-through camera** | Rendering the scene view from a camera entity, chosen in the view's camera selector, instead of the free orbit camera. |

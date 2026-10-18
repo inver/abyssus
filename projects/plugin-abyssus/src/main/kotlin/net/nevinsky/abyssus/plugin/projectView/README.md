@@ -152,3 +152,14 @@ owns one VFS connection for the tree, footer and Game UI resource watcher. Nativ
 directory and rename candidates and retain their own project/path filters; the resource channel lets Game UI retain
 its image/font folder filter. Each subscription is disposed with its original consumer. Other VFS subscribers keep
 their own connections and filters.
+
+## Eye on entities and components
+
+An entity row (not a `GROUP`) and a togglable component row (everything except Name, Parent and Position, the rule of
+`SetEnabledAction`) carry the same eye as a scene setting, built into `DtoRow.enabled` by `ecsRows` / `entityRows`: on when the
+entry has no `enabled` key or `enabled: true`, off for `enabled: false`. A click calls `toggleRow`, which for these rows runs
+`setEnabled` (`filetype/SceneEnabledEdits.kt`): one undoable `editSceneJson` command that writes `enabled: false` on that entry or
+removes the key, the same action as the `Enabled` box of the Properties section. A disabled entity grays its row, its component rows
+and their icons (`DtoEntryNode.isDisabled` passes the state down; the icon is `IconLoader.getDisabledIcon`). A merely unused asset
+keeps its normal icon.
+

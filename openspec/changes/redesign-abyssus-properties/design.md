@@ -28,6 +28,15 @@ stays read-only JSON), not a silent clash. *Alternatives:* an entity-level `disa
 a component then leaves a stale name, and two places to read); a wrapper object around component fields (breaks every existing
 file). Rejected for risk or churn.
 
+**Spike result (task 1.1).** Fields are bound in `EcsLoader.readEntity` (`readerAndWarnings.first.readValue(value, type)`, a Jackson
+`ObjectReader` from `JsonProcessor.ecsReader()`); `JsonFormat` disables `FAIL_ON_UNKNOWN_PROPERTIES`, so today an `enabled` key in a
+component object is silently skipped by binding, and `SourceBackedComponent.adoptSource` would keep it only if it saw the raw node.
+Strip-before-bind is feasible: the loader copies the object, removes `enabled`, binds and adopts the stripped copy. The flag lives
+in an `EnabledState` Ashley component on the entity (entity flag plus the set of disabled component classes) so no component class
+changes. `lib-core` forbids `object`, so `EnabledFlag` is top-level functions (`isEnabled(node)`), not an object. The writer
+(`EcsWriter.writeEntity`) puts `enabled: false` after `components` on the entity and as the last key of a component object. Placement
+in D1 stands; no delta spec changes.
+
 ### D2. Runtime semantics
 Disabled means "absent behavior, present data". `EcsLoader` still builds the entity and keeps the data so `EcsWriter` round
 trips it. Systems filter with one predicate on the entity (`EntityState.isActive(component)`), not per-system checks of the

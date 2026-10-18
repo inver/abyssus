@@ -20,6 +20,7 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMatrices
 import net.nevinsky.abyssus.lib.core.assets.foliage.layerKind
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.ecs.SceneFoliageListing
+import net.nevinsky.abyssus.lib.core.ecs.activeComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
@@ -211,17 +212,18 @@ class PhysicsWorld internal constructor(
         val ids = engine.ids.ids.sorted()
         for (id in ids) {
             val entity = engine.ids[id] ?: continue
-            val body = entity.getComponent(RigidBodyComponent::class.java)
-            val collider = entity.getComponent(ColliderComponent::class.java)
+            // a disabled entity or component creates nothing, and says nothing: it is data the file keeps
+            val body = entity.activeComponent(RigidBodyComponent::class.java)
+            val collider = entity.activeComponent(ColliderComponent::class.java)
             if (collider == null) {
-                if (body != null) warn(entity, "has a rigid body but no collider, so it is left out of the simulation")
+                if (body != null && entity.getComponent(ColliderComponent::class.java) == null) warn(entity, "has a rigid body but no collider, so it is left out of the simulation")
                 continue
             }
             createBody(entity, body, collider)?.let { problem -> warn(entity, "$problem; it is left out of the simulation") }
         }
         for (id in ids) {
             val entity = engine.ids[id] ?: continue
-            val c = entity.getComponent(ConstraintComponent::class.java) ?: continue
+            val c = entity.activeComponent(ConstraintComponent::class.java) ?: continue
             val other = if (c.other == NO_ENTITY) null else engine.ids[c.other]
             if (c.other != NO_ENTITY && other == null) {
                 warn(entity, "its constraint names entity ${c.other}, which is not in the scene; the constraint is left out")

@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
+import net.nevinsky.abyssus.lib.core.format.isEnabled
 import net.nevinsky.abyssus.lib.core.editor.document.isSceneComponentEntry
 import net.nevinsky.abyssus.lib.core.editor.document.isSceneEcsEntry
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementCopyCount
@@ -184,8 +186,17 @@ private fun entityText(entry: DtoEntry, entity: JsonNode): RowText {
 fun ecsRows(ecs: JsonNode): List<DtoRow> {
     // the linked copies of a path arrangement are squashed into its row, which counts them
     val copies = arrangementCopyIds(ecs)
-    return sceneEcsRows(ecs).filter { it.name !in copies }.map { DtoRow(it.name, it.node, via = it.via) }
+    return sceneEcsRows(ecs).filter { it.name !in copies }.map { DtoRow(it.name, it.node, enabled = entityEye(it.node), via = it.via) }
 }
 
+private val toggles = SetEnabledAction()
+
+/** The eye state of an entity row: on or off for an entity that can be switched (not a `GROUP`), else null for no eye. */
+private fun entityEye(node: JsonNode): Boolean? =
+    if (node.isObject && node.get("components")?.isObject == true && toggles.isTogglable(node)) isEnabled(node) else null
+
 /** The component rows retain their skipped JSON path. */
-fun entityRows(entity: JsonNode): List<DtoRow> = sceneComponentRows(entity).map { DtoRow(it.name, it.node, via = it.via) }
+fun entityRows(entity: JsonNode): List<DtoRow> = sceneComponentRows(entity).map {
+    // a component that can be switched (all but Name, Parent and Position) gets the eye, on unless its entry says `enabled: false`
+    DtoRow(it.name, it.node, enabled = if (it.node.isObject && toggles.isTogglable(it.name)) isEnabled(it.node) else null, via = it.via)
+}
