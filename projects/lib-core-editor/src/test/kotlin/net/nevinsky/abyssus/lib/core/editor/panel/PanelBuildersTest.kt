@@ -134,7 +134,7 @@ class PanelBuildersTest {
         assertEquals("Entity (3) · OBJECT", panel.header.subtitle)
         assertEquals("object", panel.header.iconKey)
         assertEquals(
-            listOf("Name", "Type", "Position", "Render", "Rigid body", "Collider", "Plane"), panel.titles(),
+            listOf("Name", "Position", "Render", "Rigid body", "Collider", "Plane"), panel.titles(),
         )
         val name = panel.sections.first()
         assertEquals(listOf("Name"), name.labels())
@@ -145,13 +145,13 @@ class PanelBuildersTest {
     fun positionIsVectorsWithAxes() {
         val position = builders.entity(field, "3", read("3"), "ControlLine.abss").sections.first { it.title == "Position" }
         assertNull(position.enable)
-        val pos = position.row<VectorRow>("localPosition")
+        val pos = position.row<VectorRow>("Local position")
         assertEquals(listOf("x", "y", "z"), pos.axes.map { it.name })
         assertEquals(listOf("4", "0.1329", "-2.5"), pos.axes.map { it.value })
         assertFalse(pos.dim)
         assertEquals(FieldRef("PositionComponent", "localPosition.x"), pos.axes.first().field)
-        assertEquals(listOf("x", "y", "z", "w"), position.row<VectorRow>("localRotation").axes.map { it.name })
-        assertTrue(position.row<VectorRow>("localScale").dim)
+        assertEquals(listOf("x", "y", "z", "w"), position.row<VectorRow>("Local rotation").axes.map { it.name })
+        assertTrue(position.row<VectorRow>("Local scale").dim)
     }
 
     @Test
@@ -160,7 +160,7 @@ class PanelBuildersTest {
         assertEquals("RenderComponent", render.classHint)
         assertNotNull(render.enable)
         assertEquals(EnabledTarget.Component("3", "RenderComponent"), render.enable?.target)
-        val asset = render.row<AssetRow>("assetName")
+        val asset = render.row<AssetRow>("Asset name")
         assertEquals("model_racer", asset.name)
         assertTrue(asset.browse)
     }

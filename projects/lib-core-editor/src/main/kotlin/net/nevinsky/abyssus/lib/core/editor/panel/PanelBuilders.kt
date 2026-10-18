@@ -274,6 +274,15 @@ class PanelBuilders(
         return words.take(1) + words.drop(1).lowercase()
     }
 
+    /** "localPosition" as "Local position", "lookAtId" as "Look at Id": a camelCase field name read as words; other labels stay. */
+    private fun readable(label: String): String {
+        if (' ' in label || !CAMEL.containsMatchIn(label)) {
+            return label
+        }
+        val words = label.split(CAMEL).map { if (it == "Id") it else it.lowercase() }
+        return words.first().replaceFirstChar { it.uppercase() } + words.drop(1).joinToString("") { " $it" }
+    }
+
     private fun rows(section: ComponentSection, entityId: String, entityName: String, type: String?): List<Row> {
         if (section.kind == "NameComponent") return nameRows(section)
         val out = mutableListOf<Row>()
@@ -312,7 +321,7 @@ class PanelBuilders(
     }
 
     private fun vectorRow(kind: String, prefix: String, run: List<FieldValue>): Row {
-        val label = prefix.substringAfterLast('.')
+        val label = readable(prefix.substringAfterLast('.'))
         val axes = run.map { Axis(AXIS.matchEntire(it.field)!!.groupValues[2], it.value, FieldRef(kind, it.field)) }
         val dim = run.all { it.isDefault }
         if (label == "color" && axes.map { it.name }.containsAll(listOf("r", "g", "b"))) {
@@ -325,11 +334,11 @@ class PanelBuilders(
     private fun rowOf(kind: String, f: FieldValue): Row {
         val ref = FieldRef(kind, f.field)
         return when {
-            f.kind == FieldKind.BOOLEAN -> CheckRow(f.label, f.value == "true", "", f.isDefault, ref)
-            f.kind == FieldKind.CHOICE -> ChoiceRow(f.label, f.value, f.choices, f.isDefault, ref, f.optional)
+            f.kind == FieldKind.BOOLEAN -> CheckRow(readable(f.label), f.value == "true", "", f.isDefault, ref)
+            f.kind == FieldKind.CHOICE -> ChoiceRow(readable(f.label), f.value, f.choices, f.isDefault, ref, f.optional)
             f.kind == FieldKind.ASSET_NAME ->
                 AssetRow(
-                    f.label,
+                    readable(f.label),
                     f.value,
                     assetIconKey(f.assetType ?: "MODEL"),
                     f.choices.size > 1,
@@ -339,7 +348,7 @@ class PanelBuilders(
                 )
 
             f.kind == FieldKind.FLOAT || f.kind == FieldKind.INT -> NumberRow(
-                f.label,
+                readable(f.label),
                 f.value,
                 f.unit,
                 f.isDefault,
@@ -347,7 +356,7 @@ class PanelBuilders(
                 f.tooltip
             )
 
-            else -> TextRow(f.label, f.value, f.isDefault, ref, f.optional, f.tooltip)
+            else -> TextRow(readable(f.label), f.value, f.isDefault, ref, f.optional, f.tooltip)
         }
     }
 
@@ -588,6 +597,7 @@ class PanelBuilders(
 private val MISSING: JsonNode = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.textNode("")
 
 private val AXIS = Regex("(.+)\\.([xyzwrgba])")
+private val CAMEL = Regex("(?<=[a-z])(?=[A-Z])")
 
 private val EMPTY_OBJECT = Regex("\\s*\\{\\s*}\\s*")
 

@@ -56,7 +56,7 @@ fun errorName(ref: FieldRef): String =
 fun fieldRow(label: String, control: JComponent, error: JComponent? = null, labelName: String? = null): JComponent =
     JPanel(GridBagLayout()).apply {
         isOpaque = false
-        border = JBUI.Borders.empty(3, 0)
+        border = JBUI.Borders.empty(1, 0)
         val labelView = JBLabel(label).apply {
             labelName?.let { name = it }
             preferredSize = Dimension(PanelMetrics.scaled(PanelMetrics.LABEL_COLUMN), preferredSize.height)
