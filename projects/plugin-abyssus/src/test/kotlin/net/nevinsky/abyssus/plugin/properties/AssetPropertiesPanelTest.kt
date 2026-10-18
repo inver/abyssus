@@ -63,7 +63,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
     private fun abss() = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
     private fun asset(name: String) =
-        children(children(abss()).single { label(it) == "assets" }).single { (it as DtoEntryNode).label == name }
+        children(children(abss()).single { label(it) == "assets" }).flatMap { children(it) }.single { (it as DtoEntryNode).label == name }
 
     private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
 
@@ -173,7 +173,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     fun testUnknownTypeUsesTheGenericIconAndTypeText() {
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
         myFixture.addFileToProject("p/assets/w/meta.json", """{"format":"abyssus","formatVersion":1,"type":"WIDGET","additional":{"a":1}}""")
-        val node = children(children(abss()).single { label(it) == "assets" }).single()
+        val node = children(children(abss()).single { label(it) == "assets" }).flatMap { children(it) }.single()
         val p = panel()
         p.show(node)
         val details = p.state as PanelState.Details
@@ -203,7 +203,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     fun testBrokenMetaShowsACannotReadMessage() {
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
         myFixture.addFileToProject("p/assets/w/meta.json", """{"format":"abyssus","formatVersion":1,"type":"MODEL"}""")
-        val node = children(children(abss()).single { label(it) == "assets" }).single()
+        val node = children(children(abss()).single { label(it) == "assets" }).flatMap { children(it) }.single()
         val p = panel()
         p.show(node)
         val meta = myFixture.findFileInTempDir("p/assets/w/meta.json")
@@ -360,7 +360,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
         myFixture.addFileToProject("p/assets/sky/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f"}}""")
         val p = panel()
-        p.show(children(children(abss()).single { label(it) == "assets" }).single())
+        p.show(children(children(abss()).single { label(it) == "assets" }).flatMap { children(it) }.single())
         assertEquals("20.0", (field(p, "sunIntensity") as JBTextField).text)
         assertEquals("0.76", (field(p, "mieG") as JBTextField).text)
         assertEquals("6360000.0", (field(p, "planetRadius") as JBTextField).text)

@@ -10,8 +10,11 @@ import com.intellij.ide.impl.ProjectViewSelectInTarget
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.projectView.impl.*
 import com.intellij.ide.util.treeView.AbstractTreeNode
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.ui.SimpleTextAttributes
@@ -19,8 +22,8 @@ import com.intellij.ui.render.RenderingUtil
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
 import net.nevinsky.abyssus.plugin.filetype.EyeIcons
+import net.nevinsky.abyssus.plugin.filetype.TreeActionIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneViewIcons
 import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
@@ -76,6 +79,14 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
 
     override fun addToolbarActions(actionGroup: DefaultActionGroup) {
         super.addToolbarActions(actionGroup)
+        // the platform's Expand All and Collapse All keep working; only their glyphs are the design's
+        val icons = mapOf("ExpandAll" to TreeActionIcons.EXPAND_ALL, "CollapseAll" to TreeActionIcons.COLLAPSE_ALL)
+        val children = actionGroup.getChildren(null)
+        actionGroup.removeAll()
+        for (child in children) {
+            val icon = ActionManager.getInstance().getId(child)?.let(icons::get)
+            actionGroup.add(if (icon != null) IconOverride(child, icon) else child)
+        }
         actionGroup.add(UnusedFilterAction())
     }
 
@@ -104,6 +115,33 @@ internal fun publishSelectionOf(tree: JTree, project: Project) {
  * clicked). Keep the gray for those fragments.
  */
 private class GrayKeepingRenderer : ProjectViewRenderer() {
+    override fun customizeCellRenderer(
+        tree: JTree, value: Any?, selected: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean,
+    ) {
+        super.customizeCellRenderer(tree, value, selected, expanded, leaf, row, hasFocus)
+        val entry = (TreeUtil.getUserObject(value) as? DtoEntryNode)?.value
+        if (entry != null && entry.isGame) {
+            append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
+            append(GameBadge.TEXT, GameBadge.ATTRIBUTES, GameBadge.TAG)
+        }
+    }
+
+    /** The outline of the `game` badge, around the text fragment that [customizeCellRenderer] tagged. */
+    override fun paintComponent(g: Graphics) {
+        super.paintComponent(g)
+        val index = (0 until fragmentCount).firstOrNull { getFragmentTag(it) === GameBadge.TAG } ?: return
+        val xs = (0 until width).filter { findFragmentAt(it) == index }
+        if (xs.isEmpty()) return
+        val g2 = g.create() as Graphics2D
+        try {
+            val h = g2.getFontMetrics(font).height
+            GameBadge.paintOutline(g2, xs.first(), (height - h) / 2, xs.last() - xs.first() + 1, h)
+        } finally {
+            g2.dispose()
+        }
+    }
+
+
     override fun append(fragment: String, attributes: SimpleTextAttributes, isMainText: Boolean) {
         if (mySelected && attributes.fgColor == SimpleTextAttributes.GRAYED_ATTRIBUTES.fgColor) {
             mySelected = false
@@ -129,7 +167,7 @@ private class AbyssusSelectInTarget(project: Project) : ProjectViewSelectInTarge
 
 /**
  * Paints clickable icons at the right edge of rows that have actions: the eye on entries gated by an `xxxEnabled`
- * toggle, "View" on scenes, and "..." left of the eye on a project scene's skybox.
+ * toggle, "View" on scenes; `unused` sits left of the eye.
  */
 internal class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
@@ -146,7 +184,7 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
             })
         }
         val entry = (node as? DtoEntryNode)?.value ?: return emptyList()
-        return listOfNotNull(eyeAction(entry), skyboxAction(entry), unusedBadgeFor(entry))
+        return listOfNotNull(eyeAction(entry), unusedBadgeFor(entry))
     }
 
     private fun eyeAction(entry: DtoEntry): RowAction? {
@@ -155,14 +193,6 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
         return IconAction(icon, null) { r ->
             val wasExpanded = isExpanded(getPathForRow(r))
             if (toggleRow(project, entry)) reselect(entry.path, wasExpanded)
-        }
-    }
-
-    private fun skyboxAction(entry: DtoEntry): RowAction? {
-        val abss = skyboxProjectOf(entry) ?: return null
-        return ChooseButton(AbyssusBundle.message("skyboxChooserTooltip")) {
-            val assets = service<AbyssusCore>().assets
-            if (chooseSkybox(project, entry, abss, assets.metaFiles, assets.hdrPreviews)) reselect(entry.path, false)
         }
     }
 
@@ -250,4 +280,21 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
         }
     }
 
+}
+
+/** A platform toolbar action that behaves as [delegate] but shows [icon]. */
+internal class IconOverride(private val delegate: AnAction, private val icon: Icon) : AnAction(), DumbAware {
+    init {
+        templatePresentation.copyFrom(delegate.templatePresentation)
+        templatePresentation.icon = icon
+    }
+
+    override fun getActionUpdateThread(): ActionUpdateThread = delegate.actionUpdateThread
+
+    override fun update(e: AnActionEvent) {
+        delegate.update(e)
+        e.presentation.icon = icon
+    }
+
+    override fun actionPerformed(e: AnActionEvent) = delegate.actionPerformed(e)
 }

@@ -20,6 +20,7 @@ import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
 import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
+import net.nevinsky.abyssus.plugin.dto.ProjectDto
 import net.nevinsky.abyssus.plugin.dto.SceneError
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
@@ -64,6 +65,9 @@ fun isScalar(value: Any?): Boolean = when (value) {
  */
 fun childrenOf(value: Any?): List<DtoRow> = when {
     value is SceneEntry -> childrenOf(value.scene)
+    value is ProjectDto -> projectRows(value)
+    value is FolderRow -> folderRows(value)
+    value is TypeGroup -> groupRows(value)
     value is UiMeta -> (value.admission as? UiAdmission.Admitted)?.collection?.screens.orEmpty().map { DtoRow(it.id, it) }
     value is UiScreen -> emptyList()
     value is SceneDto -> sceneRows(value)
@@ -137,12 +141,24 @@ fun isEntityEntry(entry: DtoEntry) = isSceneEntityEntry(entry.name, entry.parent
 fun isComponentEntry(entry: DtoEntry) = isSceneComponentEntry(entry.parentKeys)
 private fun entityName(entry: DtoEntry): String = sceneEntityView(entry.name, entry.value as JsonNode).name
 
+/** `Models`, `Skyboxes`, ...; a type without a label shows its capitalised name. */
+fun groupLabel(group: String): String = when (group) {
+    "MODEL" -> AbyssusBundle.message("treeGroup.MODEL")
+    "TERRAIN" -> AbyssusBundle.message("treeGroup.TERRAIN")
+    "FOLIAGE" -> AbyssusBundle.message("treeGroup.FOLIAGE")
+    "TEXTURE" -> AbyssusBundle.message("treeGroup.TEXTURE")
+    "SKYBOX" -> AbyssusBundle.message("treeGroup.SKYBOX")
+    "CLOUDS" -> AbyssusBundle.message("treeGroup.CLOUDS")
+    else -> group.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+}
+
 /** The label and secondary text of [entry]; [label] is what its parent already named it (a list element). */
 fun rowText(entry: DtoEntry, label: String? = null): RowText {
     val v = entry.value
     return when {
         v is List<*> && entry.name == "scenes" -> RowText(AbyssusBundle.message("treeScenes"), v.size.toString())
-        v is List<*> && entry.name == "assets" -> RowText(AbyssusBundle.message("treeAssets"), v.size.toString())
+        v is FolderRow -> RowText(AbyssusBundle.message(if (v.kind == FolderKind.UI) "treeUi" else "treeAssets"), v.assets.size.toString())
+        v is TypeGroup -> RowText(groupLabel(v.group), v.assets.size.toString())
         v is UiScreen -> RowText(v.name.ifBlank { v.id }, v.kind.json)
         v is WaterGroup -> RowText(AbyssusBundle.message("treeWater"), v.surfaces.size.toString())
         v is ValidWater -> RowText(v.name, AbyssusBundle.message("treeWaterAbyssusOnly"))

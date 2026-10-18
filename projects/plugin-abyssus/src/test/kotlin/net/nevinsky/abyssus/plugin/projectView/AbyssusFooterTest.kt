@@ -70,4 +70,9 @@ class AbyssusFooterTest : BasePlatformTestCase() {
             Disposer.dispose(pane)
         }
     }
+
+    fun testFooterIsTwentyEightPixelsHigh() {
+        val footer = AbyssusFooter(project, testRootDisposable)
+        assertEquals(28, footer.preferredSize.height)
+    }
 }

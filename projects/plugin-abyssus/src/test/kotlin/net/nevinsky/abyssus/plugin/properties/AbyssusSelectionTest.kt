@@ -40,7 +40,10 @@ class AbyssusSelectionTest : BasePlatformTestCase() {
     private fun abssNode(): AbyssusAssetNode =
         children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") } as AbyssusAssetNode
 
-    private fun assetNodes() = children(children(abssNode()).single { label(it) == "assets" })
+    private fun assetNodes() =
+        children(abssNode()).filter { label(it) == "assets" || label(it) == "ui" }.flatMap { folder ->
+            children(folder).flatMap { if ((it as DtoEntryNode).value.value is net.nevinsky.abyssus.lib.core.assets.Asset<*>) listOf(it) else children(it) }
+        }
 
     // 2.1 publishing
 

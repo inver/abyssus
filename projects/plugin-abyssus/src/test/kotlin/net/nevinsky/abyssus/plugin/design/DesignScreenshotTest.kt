@@ -92,7 +92,7 @@ class DesignScreenshotTest : BasePlatformTestCase() {
         names.fold(from) { node, name -> children(node).single { label(it) == name } }
     private fun abss() = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
     private fun entity(id: String) = descend(children(descend(abss(), "scenes")).single(), "ecs", id)
-    private fun asset(name: String) = children(descend(abss(), "assets")).single { (it as DtoEntryNode).label == name }
+    private fun asset(name: String) = children(descend(abss(), "assets")).flatMap { children(it) }.single { (it as DtoEntryNode).label == name }
 
     private fun copyProject() {
         val dir = "Untitled"
@@ -207,8 +207,8 @@ class DesignScreenshotTest : BasePlatformTestCase() {
         }
         shot("empty", null)
         shot("skybox", asset("skybox_default"))
-        shot("model", children(descend(abss(), "assets")).first { (it as DtoEntryNode).value.value.let { v -> v is Asset<*> && v.meta.type.name == "MODEL" } })
-        shot("terrain", children(descend(abss(), "assets")).first { (it as DtoEntryNode).value.value.let { v -> v is Asset<*> && v.meta.type.name == "TERRAIN" } })
+        shot("model", children(descend(abss(), "assets")).flatMap { children(it) }.first { (it as DtoEntryNode).value.value.let { v -> v is Asset<*> && v.meta.type.name == "MODEL" } })
+        shot("terrain", children(descend(abss(), "assets")).flatMap { children(it) }.first { (it as DtoEntryNode).value.value.let { v -> v is Asset<*> && v.meta.type.name == "TERRAIN" } })
         shot("entity", entity("0"))
         shot("entity-camera", entity("4"))
         shot("component", descend(entity("4"), "CameraComponent"))

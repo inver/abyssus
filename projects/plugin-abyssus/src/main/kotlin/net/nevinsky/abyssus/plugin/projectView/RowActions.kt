@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.assets.Asset
-import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import net.nevinsky.abyssus.plugin.AbyssusBundle
@@ -42,61 +41,27 @@ private fun Graphics2D.smooth() = setRenderingHint(RenderingHints.KEY_ANTIALIASI
 
 private fun JComponent.sized(px: Float) = font.deriveFont(JBUI.scale(px))
 
-/** The design's amber `unused` tag: small text in a thin rounded outline, 18px high. */
+/** The design's `unused` mark: small amber text at the right edge (the row itself is dimmed by the node). */
 internal class UnusedBadge : RowAction(null, null) {
     private fun text() = AbyssusBundle.message("assetUnused")
 
-    override fun width(c: JComponent) = c.getFontMetrics(c.sized(FONT)).stringWidth(text()) + 2 * JBUI.scale(PADDING) + 2
+    override fun width(c: JComponent) = c.getFontMetrics(c.sized(FONT)).stringWidth(text())
 
-    override fun height(c: JComponent) = JBUI.scale(HEIGHT)
+    override fun height(c: JComponent) = c.getFontMetrics(c.sized(FONT)).height
 
     override fun paint(g: Graphics2D, bounds: Rectangle, c: JComponent) {
         g.smooth()
-        g.color = BORDER
-        g.drawRoundRect(bounds.x, bounds.y, bounds.width - 1, bounds.height - 1, JBUI.scale(4), JBUI.scale(4))
         g.font = c.sized(FONT)
         g.color = TEXT
         val fm = g.fontMetrics
-        g.drawString(text(), bounds.x + 1 + JBUI.scale(PADDING), bounds.y + (bounds.height - fm.height) / 2 + fm.ascent)
+        g.drawString(text(), bounds.x, bounds.y + (bounds.height - fm.height) / 2 + fm.ascent)
     }
 
     companion object {
         const val FONT = 11f
-        const val PADDING = 6
-        const val HEIGHT = 18
 
-        /** `#e0a458` text on `#6b5230` on dark themes; darker amber on light ones. */
+        /** `#e0a458` on dark themes; darker amber on light ones. */
         val TEXT: Color = JBColor(0xA8741A, 0xE0A458)
-        val BORDER: Color = JBColor(0xD9B26A, 0x6B5230)
-    }
-}
-
-/** The design's "Choose" button: swap icon and label in a thin rounded outline, 24px high. */
-internal class ChooseButton(tooltip: String?, run: (row: Int) -> Unit) : RowAction(tooltip, run) {
-    private fun text() = AbyssusBundle.message("skyboxChooseButton")
-
-    override fun width(c: JComponent) =
-        2 + JBUI.scale(6) + SWAP.iconWidth + JBUI.scale(4) + c.getFontMetrics(c.sized(FONT)).stringWidth(text()) + JBUI.scale(8)
-
-    override fun height(c: JComponent) = JBUI.scale(HEIGHT)
-
-    override fun paint(g: Graphics2D, bounds: Rectangle, c: JComponent) {
-        g.smooth()
-        g.color = BORDER
-        g.drawRoundRect(bounds.x, bounds.y, bounds.width - 1, bounds.height - 1, JBUI.scale(6), JBUI.scale(6))
-        SWAP.paintIcon(c, g, bounds.x + 1 + JBUI.scale(6), bounds.y + (bounds.height - SWAP.iconHeight) / 2)
-        g.font = c.sized(FONT)
-        g.color = c.foreground
-        val fm = g.fontMetrics
-        g.drawString(text(), bounds.x + 1 + JBUI.scale(6) + SWAP.iconWidth + JBUI.scale(4), bounds.y + (bounds.height - fm.height) / 2 + fm.ascent)
-    }
-
-    companion object {
-        const val FONT = 12f
-        const val HEIGHT = 24
-
-        val BORDER: Color = JBColor(0xC9CCD6, 0x4E5157)
-        val SWAP: Icon = IconLoader.getIcon("/icons/choose_swap_icon.svg", ChooseButton::class.java)
     }
 }
 

@@ -2,7 +2,7 @@
 
 | Term | Meaning |
 |---|---|
-| **Project** | A native Abyssus project: an `.abss` file with `scenes/` and `assets/` beside it. Shown as a top-level node of the Abyssus view. |
+| **Project** | A native Abyssus project: an `.abss` file with `scenes/` and `assets/` beside it. Shown as a top-level node of the Abyssus view, expanding to the folder rows **Scenes**, **UI** and **Assets** (Assets holds one type group per asset type; folder and group rows exist only in the view). |
 | **Scene** | A `.scene` file: environment settings (ambient light, fog, skybox) plus an `ecs` block of entities. |
 | **Asset** | A folder under `assets/` described by its `meta.json` (`type`, `uuid`, `additional`). Scenes name assets by folder; asset references use `uuid` or, for foliage, terrain/model folder names. |
 | **Unused asset** | An asset no scene of its project reaches (see `docs/ai/file-formats.md`). Grayed and tagged `unused` in the tree. |

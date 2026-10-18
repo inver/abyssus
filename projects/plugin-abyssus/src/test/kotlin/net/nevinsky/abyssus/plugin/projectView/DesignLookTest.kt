@@ -87,16 +87,16 @@ class DesignLookTest : BasePlatformTestCase() {
 
     // enable / disable eye
 
-    fun testEyeIsTealWhenOnAndGrayWhenOff() {
-        assertEquals(16, EyeIcons.ON.iconWidth)
+    fun testEyeIsBlueWhenOnAndGrayWhenOff() {
+        assertEquals(14, EyeIcons.ON.iconWidth)
         assertNotSame(EyeIcons.ON, EyeIcons.OFF)
         fun dominant(icon: javax.swing.Icon): Color {
-            val image = BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB)
+            val image = BufferedImage(14, 14, BufferedImage.TYPE_INT_ARGB)
             val g = image.createGraphics()
             icon.paintIcon(null, g, 0, 0)
             g.dispose()
             var r = 0L; var gr = 0L; var b = 0L; var n = 0
-            for (x in 0 until 16) for (y in 0 until 16) {
+            for (x in 0 until 14) for (y in 0 until 14) {
                 val c = Color(image.getRGB(x, y), true)
                 if (c.alpha > 128) { r += c.red; gr += c.green; b += c.blue; n++ }
             }
@@ -105,7 +105,7 @@ class DesignLookTest : BasePlatformTestCase() {
         }
         val on = dominant(EyeIcons.ON)
         val off = dominant(EyeIcons.OFF)
-        assertTrue("on is teal (blue/green over red): $on", on.blue > on.red + 60 && on.green > on.red + 60)
+        assertTrue("on is blue: $on", on.blue > on.red + 100 && on.blue > on.green + 60)
         assertTrue("off is gray: $off", Math.abs(off.red - off.blue) < 30 && Math.abs(off.red - off.green) < 30)
     }
 }

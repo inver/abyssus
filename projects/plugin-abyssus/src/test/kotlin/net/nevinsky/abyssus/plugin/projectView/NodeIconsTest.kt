@@ -79,10 +79,13 @@ class NodeIconsTest : BasePlatformTestCase() {
     fun testComponentNamesMapToKindsAndUnknownOnesAreGeneric() {
         assertSame(ComponentIcons.TRANSFORM, ComponentIcons.forComponent("PositionComponent"))
         assertSame(ComponentIcons.TRANSFORM, ComponentIcons.forComponent("Transform"))
-        assertSame(AssetIcons.forType("MODEL"), ComponentIcons.forComponent("RenderComponent"))
-        assertSame(ComponentIcons.PHYSICS, ComponentIcons.forComponent("PhysicsComponent"))
+        assertSame(ComponentIcons.RENDER, ComponentIcons.forComponent("RenderComponent"))
+        assertSame(ComponentIcons.RIGID_BODY, ComponentIcons.forComponent("PhysicsComponent"))
+        assertSame(ComponentIcons.COLLIDER, ComponentIcons.forComponent("ColliderComponent"))
+        assertSame(ComponentIcons.PLANE, ComponentIcons.forComponent("PlaneComponent"))
+        assertSame(ComponentIcons.PILOT, ComponentIcons.forComponent("PilotComponent"))
         assertSame(ComponentIcons.PARTICLES, ComponentIcons.forComponent("ParticlesComponent"))
-        assertSame(ComponentIcons.GENERIC, ComponentIcons.forComponent("NameComponent"))
+        assertSame(ComponentIcons.NAME, ComponentIcons.forComponent("NameComponent"))
         assertSame(ComponentIcons.GENERIC, ComponentIcons.forComponent("SomethingNew"))
         assertEquals(4, setOf(ComponentIcons.TRANSFORM, ComponentIcons.PHYSICS, ComponentIcons.PARTICLES, ComponentIcons.GENERIC).size)
     }
@@ -98,8 +101,8 @@ class NodeIconsTest : BasePlatformTestCase() {
         assertSame(EntityIcons.forType(TypeComponent.Type.OBJECT), icon(entity))
         val components = children(entity).associateBy { text(it) }
         assertSame(ComponentIcons.TRANSFORM, icon(components.getValue("Position")))
-        assertSame(ComponentIcons.GENERIC, icon(components.getValue("Name")))
-        assertSame(AssetIcons.forType("MODEL"), icon(components.getValue("Render")))
+        assertSame(ComponentIcons.NAME, icon(components.getValue("Name")))
+        assertSame(ComponentIcons.RENDER, icon(components.getValue("Render")))
     }
 
     fun testCloudAssetsHaveTheirOwnIcon() {
@@ -116,7 +119,9 @@ class NodeIconsTest : BasePlatformTestCase() {
         fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
         val abss = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
         val assets = children(abss).single { label(it) == "assets" }
-        val row = children(assets).single()
+        val group = children(assets).single()
+        assertEquals("Clouds  1", text(group))
+        val row = children(group).single()
         assertTrue(text(row), text(row).contains("clouds_storm"))
         assertSame(preset, icon(row))
     }

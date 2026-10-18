@@ -141,11 +141,19 @@ fun skyboxProjectOf(entry: DtoEntry): VirtualFile? =
 /** Opens the skybox chooser for [entry] and writes the assigned skybox; true when the scene file changed. */
 fun chooseSkybox(project: Project, entry: DtoEntry, abss: VirtualFile, metaFiles: MetaFiles, hdrSource: HdrPreviewSource): Boolean {
     val file = entry.source ?: return false
+    return chooseSkyboxFor(project, file, abss, scalarOf(entry.value) as? String, metaFiles, hdrSource)
+}
+
+/**
+ * Opens the skybox chooser for the scene [file] of the project [abss], preselecting [current], and writes the assigned
+ * skybox through [setSkybox]; true when the scene file changed. Used by the Browse button of Abyssus Properties.
+ */
+fun chooseSkyboxFor(project: Project, file: VirtualFile, abss: VirtualFile, current: String?, metaFiles: MetaFiles, hdrSource: HdrPreviewSource): Boolean {
     // reads meta.json files and HDR headers, which the EDT must not do
     val choices = ProgressManager.getInstance().runProcessWithProgressSynchronously<List<SkyboxChoice>?, RuntimeException>(
         { runReadAction { loadSkyboxChoices(project, abss, metaFiles, hdrSource) } },
         AbyssusBundle.message("skyboxChooserLoading"), true, project,
     ) ?: return false
-    val dialog = SkyboxChooserDialog(project, choices, scalarOf(entry.value) as? String, hdrSource.preview)
+    val dialog = SkyboxChooserDialog(project, choices, current, hdrSource.preview)
     return dialog.showAndGet() && setSkybox(project, file, dialog.chosen)
 }

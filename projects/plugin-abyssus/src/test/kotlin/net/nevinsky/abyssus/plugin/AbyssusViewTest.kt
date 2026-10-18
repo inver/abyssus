@@ -107,7 +107,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
     }
 
     fun testRowNamesAndOrderAreStable() {
-        assertEquals(listOf("name", "scenes", "assets"), childrenOf(ProjectDto("n", emptyList(), emptyList())).map { it.name })
+        assertEquals(listOf("scenes", "ui", "assets"), childrenOf(ProjectDto("n", emptyList(), emptyList())).map { it.name })
         val asset = testAsset("a", "u", "MODEL", listOf("r"), true)
         val assetRows = childrenOf(asset).map { it.name }
         // JVM reflection may discover the derived getters before or after uuid.
@@ -148,7 +148,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
     fun testProjectReaderLoadsScenesFolder() {
         val file = fixture().findChild("Untitled.abss")!!
         val root = project.service<ProjectReader>().read(file).obj!!
-        assertEquals(listOf("name", "scenes", "assets"), childrenOf(root).map { it.name })
+        assertEquals(listOf("scenes", "ui", "assets"), childrenOf(root).map { it.name })
         val scenes = (root as ProjectDto).scenes
         assertEquals(listOf("$fixtureSceneName (0)"), scenes.mapIndexed { i, it -> elementLabel("scenes", it, i) })
     }
@@ -209,7 +209,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         fixture()
         val project = asset("Untitled.abss")
         val props = children(project)
-        assertEquals("name: Untitled", text(props[0]))
+        assertEquals(listOf("Scenes", "UI", "Assets"), props.map { text(it).substringBefore("  ") })
         val scenes = props.first { text(it).startsWith("Scenes") }
         val items = children(scenes)
         assertEquals(listOf("$fixtureSceneName (0)"), items.map { text(it) })
@@ -262,8 +262,9 @@ class AbyssusViewTest : BasePlatformTestCase() {
 
     fun testToggleWithoutEnabledGateDoesNothing() {
         fixture()
-        val name = children(asset("Untitled.abss")).first { text(it).startsWith("name") } as DtoEntryNode
-        assertFalse(toggleEnabled(project, name.value))
+        val scenes = children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }
+        val id = children(children(scenes).single()).first { text(it).startsWith("ecs") } as DtoEntryNode
+        assertFalse(toggleEnabled(project, id.value))
     }
 
     fun testDisabledParameterAndItsChildrenAreGray() {
@@ -311,7 +312,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
             add("foliage/assets/$folder/meta.json", """{"format":"abyssus","formatVersion":1,"type":"$type","additional":{}}""")
         }
         val assets = children(asset("P.abss")).single { text(it).startsWith("Assets") }
-        val icons = children(assets).associate { text(it).substringBefore("  ") to it.presentation.getIcon(false) }
+        val icons = children(assets).flatMap { children(it) }.associate { text(it).substringBefore("  ") to it.presentation.getIcon(false) }
         val foliage = icons.getValue("foliage_meadow")!!
         assertSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType("FOLIAGE"), foliage)
         assertNotSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.UNKNOWN, foliage)
