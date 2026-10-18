@@ -34,7 +34,7 @@ class PropertiesLayoutUiTest : UiTestBase() {
         assertEquals("ecs", panel.breadcrumb().last())
         assertTrue(panel.breadcrumb().first().endsWith(".abss"))
         assertEquals(150, panel.preferredWidth("label-NameComponent-name"))
-        assertEquals(24, panel.height("field-NameComponent-name"))
+        assertTrue("field height", panel.height("field-NameComponent-name") >= 24) // the look and feel's own height
         assertEquals(34, panel.sectionHeaderHeight("0.NameComponent"))
         assertTrue("sections ${panel.sectionTitles()}", panel.sectionTitles().containsAll(listOf("Name", "Position", "Render")))
         assertFalse("Name has no Enabled box", panel.hasEnabledBox("0.NameComponent"))

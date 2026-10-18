@@ -10,6 +10,7 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.panel.pinFieldHeight
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.filetype.TreeActionIcons
 import net.nevinsky.abyssus.plugin.panel.fieldRow
@@ -31,6 +32,7 @@ internal class SkyboxRow(
 ) {
     val field = JBTextField(text(value)).apply {
         name = "scene-skybox"; isEditable = false; columns = 16
+        pinFieldHeight()
         accessibleContext.accessibleName = AbyssusBundle.message("propertiesSceneSkybox")
     }
 

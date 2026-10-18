@@ -25,11 +25,10 @@ import java.awt.event.MouseEvent
 import javax.swing.*
 import javax.swing.border.AbstractBorder
 
-/** The sizes of the panel's design (at scale 1): a 150 px label column, 24 px fields, a 26 px Browse, a 34 px section header. */
+/** The sizes of the panel's design (at scale 1): a 150 px label column, fields at the look and feel's height, a 26 px Browse, a 34 px section header. */
 object PanelMetrics {
     const val LABEL_COLUMN = 150
-    const val FIELD_HEIGHT = 24
-    const val BROWSE = 26
+        const val BROWSE = 26
     const val SECTION_HEADER = 34
     const val BODY_INDENT = 20
     const val HEADER_ICON = 24
@@ -41,6 +40,20 @@ object PanelMetrics {
 }
 
 private const val HAIRLINE_PX = 1
+
+/**
+ * Gives a text box or combo the height the look and feel draws it at, at [width], or at the width it already has when
+ * negative. Every field of the panel then has one height, a field that was never sized included.
+ */
+internal fun JComponent.pinFieldHeight(width: Int = -1) {
+    val keep = if (isPreferredSizeSet) preferredSize.width else -1
+    preferredSize = null
+    minimumSize = null
+    val height = maxOf(preferredSize.height, minimumSize.height)
+    preferredSize = Dimension(if (width >= 0) width else if (keep >= 0) keep else preferredSize.width, height)
+    minimumSize = Dimension(minimumSize.width, height)
+    maximumSize = Dimension(maximumSize.width, height)
+}
 
 /** The monospace font of values, in the label size. */
 internal fun monoFont(): Font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size)

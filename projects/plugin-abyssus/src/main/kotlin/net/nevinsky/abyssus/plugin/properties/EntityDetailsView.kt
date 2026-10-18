@@ -102,7 +102,8 @@ internal class EntityDetailsView @JvmOverloads constructor(
         val label = AbyssusBundle.message("propertiesRemoveComponent")
         return listOf(object : JButton(AllIcons.Actions.GC) {
             /** Square, as wide as the button is high. */
-            override fun getPreferredSize(): Dimension = super.getPreferredSize().let { Dimension(it.height, it.height) }
+            override fun getPreferredSize(): Dimension =
+                super.getPreferredSize().let { Dimension(it.height, it.height) }
         }.apply {
             name = "remove-$kind"
             toolTipText = label

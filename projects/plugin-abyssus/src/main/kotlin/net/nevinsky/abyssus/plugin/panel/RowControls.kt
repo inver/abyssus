@@ -73,7 +73,7 @@ fun fieldName(ref: FieldRef): String = if (ref.kind == "asset") "asset-field-${r
 fun errorName(ref: FieldRef): String = if (ref.kind == "asset") "asset-error-${ref.field}" else "error-${ref.kind}-${ref.field}"
 
 /**
- * One row of a section: a 150 px label column, the control at 24 px, and the reason a value was refused beside it. A row
+ * One row of a section: a 150 px label column, the control at the look and feel's field height, and the reason a value was refused beside it. A row
  * that spans the width (a note, a sub-heading, a table) has no label.
  */
 fun fieldRow(label: String, control: JComponent, error: JComponent? = null, labelName: String? = null): JComponent =
@@ -99,7 +99,7 @@ fun rowComponent(row: Row, hooks: RowHooks): JComponent = (row as? TextRow)?.fie
 
     is NumberRow -> editable(row.label, row.field, row.dim, row.tooltip, hooks) { ref, error ->
         val field = textEditor(row.value, error) { hooks.commit(ref, it) }.also { it.styled(row.dim) }
-        field.preferredSize = Dimension(PanelMetrics.scaled(150), PanelMetrics.scaled(PanelMetrics.FIELD_HEIGHT))
+        field.pinFieldHeight(PanelMetrics.scaled(150))
         if (row.unit.isEmpty()) field else unitBox(field, row.unit)
     } ?: fieldRow(row.label, readonlyValue(row.value + unitSuffix(row.unit), row.dim))
 
@@ -107,7 +107,7 @@ fun rowComponent(row: Row, hooks: RowHooks): JComponent = (row as? TextRow)?.fie
     is ChoiceRow -> editable(row.label, row.field, row.dim, null, hooks) { ref, error ->
         val choices = (if (row.optional) listOf("") else emptyList()) + row.choices
         choiceEditor(choices.ifEmpty { listOf(row.value) }, row.value, error) { hooks.commit(ref, it) }
-            .also { it.preferredSize = Dimension(PanelMetrics.scaled(220), PanelMetrics.scaled(PanelMetrics.FIELD_HEIGHT)) }
+            .also { it.pinFieldHeight(PanelMetrics.scaled(220)) }
     } ?: fieldRow(row.label, readonlyValue(row.value, row.dim))
 
     is CheckRow -> editable(row.label, row.field, row.dim, null, hooks) { ref, error ->
@@ -173,9 +173,9 @@ private fun editable(
     ref ?: return null
     val error = JBLabel("").apply { foreground = Color.RED; name = errorName(ref) }
     val editor = build(ref, error)
-    // every text box and combo is 24 px high, whatever the look and feel prefers
+    // every text box and combo has the same height
     if (editor is JBTextField || editor is ComboBox<*>)
-        editor.preferredSize = Dimension(editor.preferredSize.width, PanelMetrics.scaled(PanelMetrics.FIELD_HEIGHT))
+        editor.pinFieldHeight()
     nameEditor(editor, ref)
     tooltip?.let { editor.toolTipText = it }
     return fieldRow(label, editor, error, labelName = "label-${ref.kind}-${ref.field}")
@@ -198,7 +198,7 @@ private fun vectorRow(label: String, axes: List<Axis>, dim: Boolean, hooks: RowH
             else textEditor(axis.value, error) { hooks.commit(ref, it) }.also { it.name = fieldName(ref) }
             field.font = monoFont()
             if (dim) field.foreground = DesignColors.SECONDARY
-            field.preferredSize = Dimension(PanelMetrics.scaled(AXIS_BOX), PanelMetrics.scaled(PanelMetrics.FIELD_HEIGHT))
+            field.pinFieldHeight(PanelMetrics.scaled(AXIS_BOX))
             add(field)
         }
     }
@@ -242,7 +242,7 @@ private fun assetRow(row: AssetRow, hooks: RowHooks): JComponent {
         val typedError = JBLabel("").apply { foreground = Color.RED; name = errorName(ref) }
         val typed = textEditor(row.name, typedError) { hooks.commit(ref, it) }.also {
             it.name = fieldName(ref); it.font = monoFont()
-            it.preferredSize = Dimension(PanelMetrics.scaled(300), PanelMetrics.scaled(PanelMetrics.FIELD_HEIGHT))
+            it.pinFieldHeight(PanelMetrics.scaled(300))
         }
         val line = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply { isOpaque = false; add(icon); add(typed) }
         return fieldRow(row.label, line, typedError, labelName = "label-${ref.kind}-${ref.field}")
@@ -251,7 +251,7 @@ private fun assetRow(row: AssetRow, hooks: RowHooks): JComponent {
     val choices = (listOf("") + row.choices + row.name).distinct().ifEmpty { listOf(row.name) }
     val combo: ComboBox<String> = choiceEditor(choices, row.name, error) { hooks.commit(ref, it) }
     combo.name = fieldName(ref)
-    combo.preferredSize = Dimension(PanelMetrics.scaled(300), PanelMetrics.scaled(PanelMetrics.FIELD_HEIGHT))
+    combo.pinFieldHeight(PanelMetrics.scaled(300))
     val line = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply {
         isOpaque = false
         add(icon)

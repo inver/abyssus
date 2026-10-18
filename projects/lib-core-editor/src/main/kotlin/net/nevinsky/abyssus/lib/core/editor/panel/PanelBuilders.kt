@@ -273,7 +273,7 @@ class PanelBuilders(
     }
 
     private fun rows(section: ComponentSection, entityId: String, entityName: String, type: String?): List<Row> {
-        if (section.kind == "NameComponent") return nameRows(section, entityId, type)
+        if (section.kind == "NameComponent") return nameRows(section)
         val out = mutableListOf<Row>()
         var group = ""
         var i = 0
@@ -298,13 +298,15 @@ class PanelBuilders(
         return out
     }
 
-    private fun nameRows(section: ComponentSection, entityId: String, type: String?): List<Row> {
+    /** The Name section is the one name field, labeled `Name`. */
+    private fun nameRows(section: ComponentSection): List<Row> {
         val name = section.fields.firstOrNull { it.field == "name" }
-        return listOfNotNull(
-            name?.let { rowOf(section.kind, it) },
-            ReadonlyRow("type", type ?: "OBJECT"),
-            ReadonlyRow("id", entityId),
-        )
+        return listOfNotNull((name?.let {
+            rowOf(
+                section.kind,
+                it
+            )
+        } as? TextRow)?.copy(label = messages.message("panelNameLabel")))
     }
 
     private fun vectorRow(kind: String, prefix: String, run: List<FieldValue>): Row {

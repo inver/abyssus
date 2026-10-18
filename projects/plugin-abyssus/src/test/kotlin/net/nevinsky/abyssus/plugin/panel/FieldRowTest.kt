@@ -72,7 +72,8 @@ class FieldRowTest : BasePlatformTestCase() {
         assertEquals("kg", find<JBLabel>(view, "unit").text)
         val field = find<JBTextField>(view, "field-RigidBodyComponent-mass")
         assertEquals("0.5", field.text)
-        assertEquals(JBUI.scale(PanelMetrics.FIELD_HEIGHT), field.preferredSize.height)
+        assertEquals(field.minimumSize.height, field.preferredSize.height)
+        assertEquals(JBUI.scale(150), field.preferredSize.width)
     }
 
     fun testLabelColumnIs150Pixels() {

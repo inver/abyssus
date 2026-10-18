@@ -137,9 +137,8 @@ class PanelBuildersTest {
             listOf("Name", "Type", "Position", "Render", "Rigid body", "Collider", "Plane"), panel.titles(),
         )
         val name = panel.sections.first()
-        assertEquals(listOf("name", "type", "id"), name.labels())
+        assertEquals(listOf("Name"), name.labels())
         assertNull(name.enable)
-        assertEquals("OBJECT", name.row<ReadonlyRow>("type").value)
     }
 
     @Test

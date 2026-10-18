@@ -4,15 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.panel.CustomRow
-import net.nevinsky.abyssus.lib.core.editor.panel.FieldRef
-import net.nevinsky.abyssus.lib.core.editor.panel.PanelBuilders
-import net.nevinsky.abyssus.lib.core.editor.panel.Section
-import net.nevinsky.abyssus.plugin.filetype.setSceneToggle
-import net.nevinsky.abyssus.plugin.ui.CommitOutcome
-import net.nevinsky.abyssus.plugin.panel.RowHooks
-import net.nevinsky.abyssus.plugin.panel.fieldRow
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
@@ -24,24 +17,27 @@ import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRayField
+import net.nevinsky.abyssus.lib.core.editor.panel.CustomRow
+import net.nevinsky.abyssus.lib.core.editor.panel.FieldRef
+import net.nevinsky.abyssus.lib.core.editor.panel.PanelBuilders
+import net.nevinsky.abyssus.lib.core.editor.panel.Section
 import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
+import net.nevinsky.abyssus.lib.core.editor.scene.scenePanelModel
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.SceneRayControls
+import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.facts.SceneFacts
-import net.nevinsky.abyssus.plugin.filetype.SceneIcons
-import net.nevinsky.abyssus.plugin.filetype.TreeActionIcons
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.lib.core.editor.scene.scenePanelModel
-import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.filetype.SceneRayEdits
+import net.nevinsky.abyssus.plugin.filetype.setSceneToggle
+import net.nevinsky.abyssus.plugin.panel.RowHooks
+import net.nevinsky.abyssus.plugin.panel.pinFieldHeight
+import net.nevinsky.abyssus.plugin.ui.CommitOutcome
 import net.nevinsky.abyssus.plugin.ui.RayModeText
 import java.awt.BorderLayout
-import java.awt.Dimension
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
-import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -136,6 +132,7 @@ internal class SceneDetailsView @JvmOverloads constructor(
         var expected = state.rayRoot.get("rayTracing")?.get(field.key)
         val editor = JBTextField(expected?.toString() ?: field.default.toString()).apply {
             name = "ray-setting-${field.key}"; columns = 10
+            pinFieldHeight()
             // a non-object block cannot take a targeted edit; the scene JSON must be corrected first
             isEnabled = "rayTracing" !in state.raySettings.errors
         }
