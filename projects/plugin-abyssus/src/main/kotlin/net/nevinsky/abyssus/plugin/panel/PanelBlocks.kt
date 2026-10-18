@@ -84,7 +84,8 @@ class HeaderPanel(header: Header, icon: Icon, titleName: String = "header-title"
     init {
         name = "header"
         border = BorderFactory.createCompoundBorder(
-            JBUI.Borders.customLine(DesignColors.HAIRLINE, 0, 0, 1, 0), JBUI.Borders.empty(0, 12, 8, 12),
+            JBUI.Borders.customLine(Color.BLACK, 0, 0, 1, 0),
+            JBUI.Borders.empty(0, 12, 8, 12),
         )
         val column = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
