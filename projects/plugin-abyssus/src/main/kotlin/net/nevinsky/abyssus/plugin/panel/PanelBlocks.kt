@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.plugin.panel
 
 import com.intellij.icons.AllIcons
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.IconUtil
@@ -84,7 +85,7 @@ class HeaderPanel(header: Header, icon: Icon, titleName: String = "header-title"
     init {
         name = "header"
         border = BorderFactory.createCompoundBorder(
-            JBUI.Borders.customLine(Color.BLACK, 0, 0, 1, 0),
+            JBUI.Borders.customLine(JBColor.BLACK, 0, 0, 1, 0),
             JBUI.Borders.empty(0, 12, 8, 12),
         )
         val column = JPanel().apply {
@@ -98,11 +99,15 @@ class HeaderPanel(header: Header, icon: Icon, titleName: String = "header-title"
                 alignmentX = LEFT_ALIGNMENT; border = JBUI.Borders.emptyBottom(6)
             },
         )
+        // The icon spans the title and subtitle rows; the text sits to its right.
+        val text = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            isOpaque = false
+        }
         val title = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
             isOpaque = false; alignmentX = LEFT_ALIGNMENT
-            add(JBLabel(sized(icon, PanelMetrics.HEADER_ICON)).apply { name = "header-icon" })
             add(JBLabel(header.title).apply {
-                name = titleName; font = JBFont.label().asBold().biggerOn(2f); border = JBUI.Borders.emptyLeft(8)
+                name = titleName; font = JBFont.label().asBold().biggerOn(2f)
                 if (dim) foreground = DesignColors.SECONDARY
             })
             header.badges.forEach {
@@ -110,19 +115,31 @@ class HeaderPanel(header: Header, icon: Icon, titleName: String = "header-title"
                 add(BadgeLabel.of(it))
             }
         }
-        column.add(title)
-        column.add(
+        text.add(title)
+        text.add(
             JBLabel(header.subtitle).apply {
                 name = "header-subtitle"; foreground = DesignColors.SECONDARY; alignmentX = LEFT_ALIGNMENT
                 border = JBUI.Borders.emptyTop(2)
             },
         )
-        if (header.note.isNotEmpty()) column.add(
+        if (header.note.isNotEmpty()) text.add(
             JBLabel(header.note).apply {
                 name = "shared-asset-note"; font = JBFont.small(); foreground = DesignColors.SECONDARY
                 alignmentX = LEFT_ALIGNMENT; border = JBUI.Borders.emptyTop(2)
             },
         )
+        val row = JPanel(BorderLayout()).apply {
+            isOpaque = false; alignmentX = LEFT_ALIGNMENT
+            add(
+                JBLabel(sized(icon, PanelMetrics.HEADER_ICON)).apply {
+                    name = "header-icon"; border = JBUI.Borders.emptyRight(10)
+                    verticalAlignment = SwingConstants.CENTER
+                },
+                BorderLayout.WEST,
+            )
+            add(text, BorderLayout.CENTER)
+        }
+        column.add(row)
         add(column, BorderLayout.CENTER)
     }
 
