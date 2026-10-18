@@ -4,43 +4,38 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.plugin.EditorBundle
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.components.LightPreset
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
+import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
+import net.nevinsky.abyssus.plugin.ui.showActionGroup
 
 /** The same three choices in the tree and toolbar; placement is read when a choice is made. */
 class AddLightGroup(
-    project: Project,
-    file: VirtualFile,
-    position: () -> Vec3,
-    select: (String) -> Unit = { selectCreatedEntity(project, file, it) },
-) : DefaultActionGroup(AbyssusBundle.message("addLightTitle"), true), DumbAware {
+    private val project: Project,
+    private val file: VirtualFile,
+    private val position: () -> Vec3,
+    private val select: (String) -> Unit = { selectCreatedEntity(project, file, it) },
+) : AddChildGroup<LightPreset>(AbyssusBundle.message("addLightTitle")) {
     init {
-        for (preset in LightPreset.entries) add(object : AnAction(EditorBundle.message(preset.labelKey)), DumbAware {
-            override fun getActionUpdateThread() = ActionUpdateThread.BGT
-            override fun update(e: AnActionEvent) {
-                e.presentation.isEnabled = canAddLight(file, SceneDocumentCache.of(project))
-            }
-            override fun actionPerformed(e: AnActionEvent) {
-                val added = SceneComponentEdits.addLight(project, file, preset, position(), SceneDocumentCache.of(project))
-                reportRejection(project, added.result)
-                added.entityId?.let(select)
-            }
-        })
+        for (preset in LightPreset.entries) addChild(preset, EditorBundle.message(preset.labelKey))
+    }
+
+    override fun canAdd(target: LightPreset) = canAddLight(file, SceneDocumentCache.of(project))
+
+    override fun addTarget(target: LightPreset) {
+        val added = SceneComponentEdits.addLight(project, file, target, position(), SceneDocumentCache.of(project))
+        reportRejection(project, added.result)
+        added.entityId?.let(select)
     }
 }
 
@@ -60,17 +55,16 @@ internal fun canAddLight(file: VirtualFile, cache: SceneDocumentCache): Boolean 
 
 /** Only scene rows can create an entity; the tree uses the origin as its placement point. */
 open class AddLightAction : AbyssusTreeAction<VirtualFile>() {
-    init { templatePresentation.text = AbyssusBundle.message("addLightTitle") }
+    init {
+        templatePresentation.text = AbyssusBundle.message("addLightTitle")
+    }
 
     override fun targetOf(node: Any?): VirtualFile? = viewableSceneFile(node)
 
-    override fun isEnabled(e: AnActionEvent, target: VirtualFile) = e.project?.let { canAddLight(target, SceneDocumentCache.of(it)) } ?: false
+    override fun isEnabled(e: AnActionEvent, target: VirtualFile) =
+        e.project?.let { canAddLight(target, SceneDocumentCache.of(it)) } ?: false
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
-        JBPopupFactory.getInstance().createActionGroupPopup(
-            AbyssusBundle.message("addLightTitle"),
-            AddLightGroup(project, target, { Vec3(0f, 0f, 0f) }),
-            e.dataContext, JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
-        ).showInBestPositionFor(e.dataContext)
+        showActionGroup(e, AddLightGroup(project, target, { Vec3(0f, 0f, 0f) }), AbyssusBundle.message("addLightTitle"))
     }
 }

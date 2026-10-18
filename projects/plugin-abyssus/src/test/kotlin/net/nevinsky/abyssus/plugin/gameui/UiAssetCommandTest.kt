@@ -17,7 +17,7 @@ import net.nevinsky.abyssus.lib.core.editor.ui.UiEditError
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditResult
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.ProjectReader
 import java.io.File
@@ -42,7 +42,7 @@ class UiAssetCommandTest : BasePlatformTestCase() {
         abss.parent.refresh(false, true)
     }
 
-    private fun factory() = NewUiAssetFactory(service<AbyssusCore>().documents.json)
+    private fun factory() = NewUiAssetFactory(service<AbyssusPluginCtx>().documents.json)
 
     private fun create(name: String = "menus", store: AssetFileStore = LocalAssetFileStore(dir)): AssetCommandResult =
         AssetFileCommand(project, store).execute(factory().stage(abss, name).transaction)

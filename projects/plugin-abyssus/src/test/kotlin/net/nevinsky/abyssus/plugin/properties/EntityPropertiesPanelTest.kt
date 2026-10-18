@@ -13,7 +13,6 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
@@ -23,6 +22,7 @@ import net.nevinsky.abyssus.plugin.projectView.AbyssusSelection
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
 import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
 import net.nevinsky.abyssus.plugin.projectView.componentTargetOf
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import java.awt.Component
 import java.awt.Container
 import java.io.File
@@ -259,7 +259,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
 
     fun testLightRangeEditorWritesThirty() {
         copyProject()
-        net.nevinsky.abyssus.plugin.projectView.SceneComponentEdits.add(project, sceneFile(), "0", "LightComponent", testMetaFiles())
+        SceneComponentEdits.add(project, sceneFile(), "0", "LightComponent", testMetaFiles())
         val p = panel()
         p.show(entity("0"))
         val field = named(p, "field-LightComponent-range") as JBTextField
@@ -272,7 +272,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
     fun testBeamEditorsAreSpotlightOnlyAndUsePercent() {
         copyProject()
         val f = sceneFile()
-        val edits = net.nevinsky.abyssus.plugin.projectView.SceneComponentEdits
+        val edits = SceneComponentEdits
         edits.add(project, f, "0", "LightComponent", testMetaFiles())
         val p = panel()
         for (type in listOf("LIGHT_POINT", "LIGHT_DIRECTIONAL", "LIGHT_SPOT")) {

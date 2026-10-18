@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.MetaAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
@@ -17,11 +17,11 @@ import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
  * one step per frame ([HdrEnvironmentBuild]).
  */
 class HdrSkyLoader(
-    private val metaLoader: AssetMetaLoader,
+    metaLoader: AssetMetaLoader,
     private val exrLoader: ExrLoader,
     private val shaders: ShaderStorage,
     private val curve: ToneCurve,
-) : AssetLoader<Unit, PreparedHdrSky, HdrSky> {
+) : MetaAssetLoader<Unit, PreparedHdrSky, HdrSky>(metaLoader) {
 
     override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedHdrSky> = Prepared(read(meta))
 
@@ -30,9 +30,6 @@ class HdrSkyLoader(
         val image = exrLoader.loadExr(meta.name, additional.file)
         return PreparedHdrSky(meta.name, additional.file!!, image)
     }
-
-    override fun prepare(name: String): Prepared<Unit, PreparedHdrSky>? =
-        metaLoader.loadBaseMeta(name)?.let(::loadPrepared)
 
     override fun upload(staged: PreparedHdrSky): Boolean =
         (staged.build ?: HdrEnvironmentBuild(staged.image, shaders).also { staged.build = it }).step()
@@ -43,7 +40,6 @@ class HdrSkyLoader(
         return HdrSky(environment, shaders, curve)
     }
 
-    override fun discard(model: Unit) = Unit
 
     /** Releases a half-done build; nothing to do before the first upload step (the decoded image is plain JVM memory). */
     override fun discardStaged(staged: PreparedHdrSky) {

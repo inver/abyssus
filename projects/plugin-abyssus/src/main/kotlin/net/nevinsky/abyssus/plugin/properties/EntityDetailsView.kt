@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.lib.core.editor.util.numberText
+import net.nevinsky.abyssus.lib.core.editor.util.NumberTextStyle
+
 import net.nevinsky.abyssus.plugin.ui.CommitOutcome
 import net.nevinsky.abyssus.plugin.ui.checkEditor
 import net.nevinsky.abyssus.plugin.ui.choiceEditor
@@ -15,7 +18,7 @@ import net.nevinsky.abyssus.lib.core.editor.meta.RenderOptics
 import net.nevinsky.abyssus.plugin.EditorBundle
 import com.intellij.ide.DataManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.popup.JBPopupFactory
+import net.nevinsky.abyssus.plugin.ui.showActionGroup
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
@@ -29,7 +32,7 @@ import net.nevinsky.abyssus.lib.core.editor.components.FieldKind
 import net.nevinsky.abyssus.lib.core.editor.components.FieldValue
 import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
 import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
-import net.nevinsky.abyssus.plugin.projectView.SceneComponentEdits
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
 import net.nevinsky.abyssus.plugin.projectView.reportRejection
 import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
@@ -49,8 +52,6 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JTextArea
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
-import java.math.BigDecimal
-import java.math.MathContext
 
 /**
  * An entity (or one component) of a scene with an editor for every field of the components the plugin models. Editors
@@ -255,7 +256,7 @@ internal class EntityDetailsView(
     private fun percent(fraction: Double) = number(fraction * 100)
 
     private fun number(value: Double): String =
-        BigDecimal(value).round(MathContext(10)).stripTrailingZeros().toPlainString()
+        numberText(value, NumberTextStyle.DETAIL)
 
     private fun fieldRow(section: ComponentSection, field: FieldValue): JComponent {
         val error = JBLabel("").apply { foreground = JBColor.RED; name = "error-${section.kind}-${field.field}" }
@@ -311,15 +312,7 @@ internal class EntityDetailsView(
             toolTipText = if (state.addable.isEmpty()) AbyssusBundle.message("propertiesNothingToAdd") else null
             addActionListener {
                 val group = addComponentGroup(project, target.file, target.entityId, state.addable, metaFiles)
-                JBPopupFactory.getInstance()
-                    .createActionGroupPopup(
-                        null,
-                        group,
-                        DataManager.getInstance().getDataContext(this),
-                        JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
-                        true
-                    )
-                    .showUnderneathOf(this)
+                showActionGroup(DataManager.getInstance().getDataContext(this), group, null, underneath = this)
             }
         }, BorderLayout.WEST)
     }

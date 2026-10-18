@@ -4,6 +4,10 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.editor.util.numberText
+import net.nevinsky.abyssus.lib.core.editor.util.NumberTextStyle
+import net.nevinsky.abyssus.lib.core.editor.util.uiNumberNode
+
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
@@ -14,7 +18,7 @@ import net.nevinsky.abyssus.lib.core.ui.style.parseUiColor
 
 /** A number as a document would hold it: whole values without a fraction. */
 private fun jsonNumber(v: Double): com.fasterxml.jackson.databind.JsonNode =
-    if (v == Math.rint(v) && Math.abs(v) < 1e9) JsonNodeFactory.instance.numberNode(v.toInt()) else JsonNodeFactory.instance.numberNode(v)
+    uiNumberNode(v)
 
 /** What is wrong with one form field, as the key of its message (`uiFormError.<key>`). */
 data class FormError(val field: String, val message: String)
@@ -38,7 +42,7 @@ data class BindingForm(
             b.min?.let(::trim).orEmpty(), b.max?.let(::trim).orEmpty(), b.step?.let(::trim).orEmpty(), b.maxLength?.toString().orEmpty(),
             b.fields.joinToString(", ") { "${it.name}:${it.type.json}" })
 
-        private fun trim(v: Double) = if (v == Math.rint(v)) v.toLong().toString() else v.toString()
+        private fun trim(v: Double) = numberText(v, NumberTextStyle.UI)
     }
 }
 

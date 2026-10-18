@@ -15,11 +15,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.document.SceneDocument
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaintMode
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.dto.textOf
@@ -31,7 +29,7 @@ class FoliageEditing(private val project: Project, private val scope: CoroutineS
              ready: (FoliagePaintSession?) -> Unit) {
         val root = SceneDocumentCache.of(project).read(scene)?.root
         val document = root?.let(::SceneDocument)
-        val terrain = document?.renderAsset(entity)?.takeIf { it.type == "TERRAIN" }
+        val terrain = document?.renderAsset(entity)?.takeIf { it.type == net.nevinsky.abyssus.lib.core.assets.MetaType.TERRAIN.name }
         val name = document?.components(entity)?.get("FoliageComponent")?.get("assetName")?.textValue()
         val abss = ProjectLayout.abssFor(scene)
         val folder = abss?.parent?.findChild("assets")?.findChild(name ?: "")
@@ -40,15 +38,15 @@ class FoliageEditing(private val project: Project, private val scope: CoroutineS
         val text = textOf(metadata)
         val projectText = textOf(abss)
         val projectDir = java.io.File(abss.parent.path)
-        val json = service<AbyssusCore>().json
+        val documents = service<AbyssusPluginCtx>().documents
+        val json = documents.json
+        val parsing = documents.parsing
         scope.launch {
             val source = withContext(Dispatchers.IO) {
                 runCatchingKeepingCancellation {
-                    AbyssusDocumentFormat().requireSupported(SceneJson().parseObject(projectText), DocumentKind.PROJECT)
-                    val meta = SceneJson().parseObject(text)
-                    AbyssusDocumentFormat().requireSupported(meta, DocumentKind.ASSET)
-                    if (meta["type"]?.textValue() != "FOLIAGE") return@runCatchingKeepingCancellation null
-                    readFoliageSource(name, projectDir, json, text, meta["additional"]) as? FoliageSource.Ready
+                    parsing.requireSupported(projectText, DocumentKind.PROJECT)
+                    if (parsing.assetFields(text).type != net.nevinsky.abyssus.lib.core.assets.MetaType.FOLIAGE) return@runCatchingKeepingCancellation null
+                    readFoliageSource(name, projectDir, json, text, parsing.foliageMeta(text)) as? FoliageSource.Ready
                 }.getOrNull()
             }
             withContext(Dispatchers.EDT) {
@@ -57,7 +55,7 @@ class FoliageEditing(private val project: Project, private val scope: CoroutineS
                     source.read.problems.isNotEmpty() || textOf(metadata) != text || textOf(abss) != projectText) {
                     ready(null); return@withContext
                 }
-                val stroke = FoliageStrokeCommand(project, scene, folder, source, project.service<FoliageDrafts>(), mode,
+                val stroke = FoliageStrokeCommand(project, scene, folder, source, project.service<FoliageDrafts>(), documents, project.service<FoliageUndoCache>(), mode,
                     background = { task -> scope.launch(Dispatchers.Default) { task.run() } },
                     ui = { task -> scope.launch(Dispatchers.EDT) { task.run() } }, report = report)
                 ready(FoliagePaintSession(source.settings.layers.map { it.id }, stroke, stroke::dispose))

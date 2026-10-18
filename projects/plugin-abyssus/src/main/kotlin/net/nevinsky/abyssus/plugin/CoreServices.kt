@@ -17,7 +17,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.plugin.projectView.HdrPreviewSource
+import net.nevinsky.abyssus.plugin.projectView.HdrPreviewService
 import net.nevinsky.abyssus.lib.raytracing.MetalRayBackendFactory
 import net.nevinsky.abyssus.lib.raytracing.VulkanRayBackendFactory
 import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendService
@@ -38,9 +38,9 @@ class AssetServices(json: JsonProcessor, format: AbyssusDocumentFormat, log: Log
     val metaFiles = MetaFiles(AssetMetaReader(json, format))
     val fields = AssetFieldDescriptions()
     val editor = AssetMetaEditor(fields)
-    val sceneShaders = ShaderStorage().withResources("/shader/scene", AbyssusCore::class.java)
+    val sceneShaders = ShaderStorage().withResources("/shader/scene", AbyssusPluginCtx::class.java)
     val loading = AssetLoading(json, log, AppExecutorUtil.getAppExecutorService(), ShaderStorage())
-    val hdrPreviews = object : HdrPreviewSource { override val preview get() = loading.hdrPreview }
+    val hdrPreviews: HdrPreviewService get() = loading.hdrPreviews
 }
 
 class TerrainServices(json: JsonProcessor) {

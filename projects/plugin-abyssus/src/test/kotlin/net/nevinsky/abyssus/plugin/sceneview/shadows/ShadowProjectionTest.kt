@@ -39,6 +39,16 @@ class ShadowProjectionTest {
         assertNull(ShadowProjection().spot(Vector3.Zero,Vector3.Zero,60f,20f))
         assertNull(ShadowProjection().spot(Vector3.Zero,Vector3.Z,180f,20f))
     }
+    @Test fun directionalFitContainsEveryCornerForAnObliqueAndAPolarLight() {
+        val receiver = bounds(Vector3(-3f, -2f, -4f), Vector3(5f, 6f, 7f))
+        for (direction in listOf(Vector3(0.3f, -0.8f, 0.4f), Vector3(0f, -1f, 0f))) {
+            val fitted = ShadowProjection().directional(direction, receiver, emptyList())!!
+            for (x in listOf(receiver.min.x, receiver.max.x))
+                for (y in listOf(receiver.min.y, receiver.max.y))
+                    for (z in listOf(receiver.min.z, receiver.max.z))
+                        assertTrue("$direction: ($x, $y, $z)", inside(fitted, Vector3(x, y, z)))
+        }
+    }
     @Test fun directionalIncludesUpstreamOffscreenCastersWithoutUnrelatedExpansion() {
         val receivers=bounds(Vector3(-2f,-1f,-2f),Vector3(2f,1f,2f))
         val caster=bounds(Vector3(-1f,8f,-1f),Vector3(1f,10f,1f))

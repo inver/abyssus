@@ -7,7 +7,7 @@ import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.MetaAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import net.nevinsky.abyssus.lib.gdx.loader.Pixmaps
@@ -19,8 +19,8 @@ import net.nevinsky.abyssus.lib.gdx.loader.Pixmaps
  */
 class TextureLoader(
     private val fileLoader: FileLoader,
-    private val metaLoader: AssetMetaLoader,
-) : AssetLoader<Unit, PreparedTexture, Texture> {
+    metaLoader: AssetMetaLoader,
+) : MetaAssetLoader<Unit, PreparedTexture, Texture>(metaLoader) {
     /** The decoded image of [meta]; null when [meta] is not a texture asset. Throws when the image cannot be read. */
     override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedTexture>? {
         if (meta.type != MetaType.TEXTURE && meta.type != MetaType.PIXMAP_TEXTURE) {
@@ -29,9 +29,6 @@ class TextureLoader(
         val file = fileLoader.loadAssetFile(meta.name, meta.typedAdditional<TextureMeta>().file)
         return Prepared(PreparedTexture(Pixmaps.load(FileHandle(file))))
     }
-
-    override fun prepare(name: String): Prepared<Unit, PreparedTexture>? =
-        metaLoader.loadBaseMeta(name)?.let(::loadPrepared)
 
     override fun build(staged: PreparedTexture, assets: BuiltAssets): Texture {
         val pixmap = staged.release()
@@ -45,7 +42,6 @@ class TextureLoader(
         }
     }
 
-    override fun discard(model: Unit) = Unit
 
     override fun discardStaged(staged: PreparedTexture) = staged.dispose()
 }

@@ -76,9 +76,19 @@ fun readFoliageSource(
     metaText: String,
     additional: JsonNode?,
 ): FoliageSource {
+    return readFoliageSource(folderName, projectDir, json, metaText,
+        additional?.let { net.nevinsky.abyssus.lib.core.editor.document.FoliageSettingsBinding().read(it) } ?: FoliageMeta())
+}
+
+fun readFoliageSource(
+    folderName: String,
+    projectDir: File,
+    json: JsonProcessor,
+    metaText: String,
+    settings: FoliageMeta,
+): FoliageSource {
     val modelAssets = foliageModelAssets(projectDir, json)
-    val read = FoliageSettingsReader(EditorBundle).read(additional, modelAssets)
-    val settings = read.settings
+    val read = FoliageSettingsReader(EditorBundle).read(settings, modelAssets)
     val terrain = foliageTerrainData(projectDir, json, settings.terrain)
         ?: return FoliageSource.Unusable(AbyssusBundle.message("foliageTerrainUnreadable", settings.terrain))
     val files = FileLoader(projectDir)

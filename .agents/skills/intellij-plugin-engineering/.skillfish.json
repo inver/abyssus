@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "intellij-plugin-engineering",
+  "owner": "inver",
+  "repo": "ai-skills",
+  "path": "skills/intellij-plugin-engineering",
+  "branch": "main",
+  "sha": "459881a2e0325e8cc61cb4a60a734de06e8c1fa0",
+  "source": "manual"
+}

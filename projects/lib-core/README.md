@@ -9,7 +9,7 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 - **No IntelliJ or plugin imports.** Depends on `:lib-gdx`, libGDX, Ashley, SLF4J, Jackson and LWJGL TinyEXR for OpenEXR decoding.
 - **Wired by constructors.** No `object` or `companion object` in `src/main` (a `data object` case of a sealed type is a
   value and is fine); pure constants are top-level `const val`. `./gradlew :lib-core:checkNoSingletons`, part of `check`,
-  enforces it; `AbyssusProjectLayout` and `GeometryUtils` are its only exceptions. Collaborators are passed in; nothing
+  enforces it; `AbyssusProjectLayout` is its only exception. Collaborators are passed in; nothing
   is looked up globally.
 - **Files go through `FileLoader`, metas through `AssetMetaLoader`.** Loaders and stores take them (one pair per project
   folder) instead of reading paths themselves.
@@ -20,10 +20,10 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 
 | Package | What |
 |---|---|
-| `core.io`, `core.util` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `NativeJsonTree` (the lossless reader: key order, nulls and number text such as `2.50` and `1.0E-4` kept; `SceneJson` and `SceneLoader` both read through it), `SourceBackedComponent` (a component written back from the object it was read from), `GeometryUtils` |
+| `core.io`, `core.util` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `NativeJsonTree` (the lossless reader: key order, nulls and number text such as `2.50` and `1.0E-4` kept; `SceneJson` and `SceneLoader` both read through it), `SourceBackedComponent` (a component written back from the object it was read from), `createFullscreenTriangle` (GL-thread mesh factory), shared digest/angle helpers and GL constants |
 | `core.defaults` | Top-level `NO_ENTITY` reference sentinel |
 | `core.dto` | `ProjectDto`, `SceneDto`, camera, light and fog DTOs |
-| `project`, `scene` (under `lib-core`) | `ProjectLoader`, `SceneLoader`, `RuntimeSceneLoader`, `SceneContext` and `SceneEnvironment` |
+| `project`, `scene` (under `lib-core`) | `ProjectLoader`, `SceneLoader`, `RuntimeSceneLoader`, `SceneContext` |
 | `core.ecs` | Component registration and loading, `SceneEngine`, `SceneEntityIds`, `SceneFoliageListing` (the terrain-bound foliage of a loaded engine: components only, no files or GL); `component/` holds Ashley classes and render-asset lookup, `system/` holds look-at and camera synchronization |
 | `core.assets` | `AssetMeta` and `MetaType` (the `meta.json` model; `uuid` is null when a meta declares none), `AssetMetaBinder` (one injectable settings-class registration map and metadata binding rule), `AssetMetaLoader` (validates and reads saved `meta.json`, binds through the binder, caches by timestamp and size), `AssetIndex` (the asset folder of a `uuid`), `Asset`, `runCatchingKeepingCancellation`, `Throwables` |
 | `core.ui` | The native UI asset: `ui.model` holds the immutable screen, widget, binding and resource definitions, `UiMeta` (the typed `additional` of a `UI` asset) and `UiAdmission`; `ui.validation` holds `UiCollectionDecoder`, which admits a `meta.json` tree (native markers, schema version 1, ids, geometry, limits) without IO. `project.UiProjectRegistry` resolves the project's `uiAssetNames`; `ui.layout` is the pure layout engine; `ui.state` holds typed bindings, validated write-back and navigation; `ui.render` is the shared Scene2D presenter; `ui.style` resolves styles; `assets.ui` prepares and owns the GL resources. See *UI assets*, *UI host contract* and *UI renderer and resources* below |
@@ -167,7 +167,7 @@ fun runHost(metaTree: com.fasterxml.jackson.databind.JsonNode, settings: HostSet
     // 2. The host owns the callbacks. Writes are synchronous; schedule slow work yourself and answer now.
     val session = UiBindingSession(collection) { write ->
         if (write.binding == "volume" && write.value is UiValue.Num) {
-            settings.volume = (write.value as UiValue.Num).value
+            settings.volume = write.value.value
             UiWriteResult.Accepted(UiValue.Num(settings.volume))
         } else UiWriteResult.Rejected("read-only")
     }
@@ -226,6 +226,15 @@ decodes with no GL and returns a `Prepared(model, staged)`, `dependencies(staged
 `upload` does one slice of GPU work, `build(staged, assets)` creates the object, `discard(model)` frees the model after
 the `onPrepared` hooks have seen it (loaders with nothing to hand them use `Unit` and `Prepared(staged)`), and
 `discardStaged` frees the staged value: after a successful build, or when it is dropped unbuilt.
+
+`MetaAssetLoader` implements the shared metadata lookup and delegates to `loadPrepared` for model, texture, terrain,
+skybox, HDR sky, procedural sky and clouds. Its constructor is internal; the base is public so the existing public
+loaders can inherit it. `discard` defaults to no work for loaders with no prepared model to release.
+
+`FoliageLoader` takes a CPU-only `FoliageReadPolicy`. `EditorFoliageReadPolicy` reads masks and computes the current
+fingerprint so a stale bake can be regenerated; `RuntimeFoliageReadPolicy` uses `FoliageRuntimeLoad`, retaining saved
+copies and reporting warnings without generating anything. The original editor constructor and the delegating
+`RuntimeFoliageLoader` entry point remain available. Both policies share `foliageDependencies` and the same build path.
 
 One `AssetStorage(log, executor, metas)` loads every kind of asset of a project. It reads an asset's base `meta.json`
 through `metas` and hands the asset to the loader registered for its `MetaType` (`register(loader, MetaType.X)` or

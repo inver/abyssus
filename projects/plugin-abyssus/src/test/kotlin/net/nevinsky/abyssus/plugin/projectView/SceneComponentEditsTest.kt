@@ -14,6 +14,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.editor.components.LightPreset
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import java.io.File
 import net.nevinsky.abyssus.plugin.testMetaFiles
 

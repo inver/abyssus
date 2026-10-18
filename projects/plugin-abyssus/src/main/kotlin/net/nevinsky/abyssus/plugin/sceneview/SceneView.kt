@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
+
 import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
@@ -92,6 +94,9 @@ interface SceneView : Disposable {
 
     /** Turns the frame rate in the view's stats strip on or off (the project's `Show FPS`); a view without one ignores it. */
     fun setFpsEnabled(enabled: Boolean) {}
+
+    /** Changes the canvas pixel format on EDT, retaining this view's editing and simulation state. */
+    fun setAntialiasing(level: AntialiasingLevel) {}
 
     /** Whether the view is in Play, when nothing may be added to its scene. */
     val playing: Boolean get() = false

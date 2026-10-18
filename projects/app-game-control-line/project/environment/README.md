@@ -102,7 +102,9 @@ A project whose vegetation, rest of the scene or inputs differ from the manifest
 migrated project is accepted too, and a run on it writes the same bytes as a run on the original: tests in
 `toolsTest/` (`./gradlew :app-game-control-line:testFieldFoliageTools`, part of `check`) start from the original scene
 kept in `toolsTest/fixtures/Field.original.scene` and check that the committed project is exactly what the tool makes
-of it.
+of it, followed by the later authored ray settings recorded in the test harness. The original fixture stays unchanged
+so its full-scene hash still verifies the immutable manifest's provenance; the migration itself preserves those later
+settings when rerun on the committed project.
 
 **Limits.** The copies are a statistical match, not the old positions: they follow the old weighting but can stand where
 the old placements did not (nothing keeps them off the facilities, only off the clear areas). Species totals hold on each

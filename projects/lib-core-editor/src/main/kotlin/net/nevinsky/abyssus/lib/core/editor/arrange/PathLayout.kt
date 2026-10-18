@@ -8,7 +8,8 @@ package net.nevinsky.abyssus.lib.core.editor.arrange
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathPoint
 import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
-import kotlin.math.atan2
+import net.nevinsky.abyssus.lib.core.util.azimuthOf
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
@@ -37,8 +38,8 @@ class PathLayout {
         val points = arrangement.points
         val spacing = arrangement.spacing.toDouble()
         val usable = points.size >= 2 && spacing.isFinite() && spacing > 0.0 && arrangement.offset.isFinite() &&
-            arrangement.offset >= 0f && arrangement.yawOffset.isFinite() &&
-            points.all { it.x.isFinite() && it.y.isFinite() && it.z.isFinite() }
+                arrangement.offset >= 0f && arrangement.yawOffset.isFinite() &&
+                points.all { it.x.isFinite() && it.y.isFinite() && it.z.isFinite() }
         if (!usable) return emptyList()
 
         val segments = segments(points, arrangement.closed)
@@ -73,7 +74,12 @@ class PathLayout {
         return out
     }
 
-    private fun station(segments: List<Segment>, distance: Double, a: PathArrangementComponent, out: MutableList<PathSlot>) {
+    private fun station(
+        segments: List<Segment>,
+        distance: Double,
+        a: PathArrangementComponent,
+        out: MutableList<PathSlot>
+    ) {
         val segment = segments.firstOrNull { distance < it.start + it.length - EPS } ?: segments.lastOrNull()
         val x: Double
         val z: Double
@@ -91,7 +97,7 @@ class PathLayout {
             z = segment.from.z + (segment.to.z - segment.from.z) * t
             y = segment.from.y + (segment.to.y - segment.from.y) * t
         }
-        val heading = if (a.alignToPath) Math.toDegrees(atan2(-dz, dx)) else 0.0
+        val heading = if (a.alignToPath) azimuthOf(dx, dz) else 0.0
         val offset = a.offset.toDouble()
         // left is up x direction
         val leftX = dz
@@ -101,7 +107,7 @@ class PathLayout {
                 (x + leftX * offset * side).toFloat(),
                 (z + leftZ * offset * side).toFloat(),
                 y.toFloat(),
-                wrap(heading + extraTurn + a.yawOffset).toFloat(),
+                wrapDegrees(heading + extraTurn + a.yawOffset).toFloat(),
             )
         }
         when (a.sides) {
@@ -113,14 +119,6 @@ class PathLayout {
                 add(-1.0, if (a.alignToPath) 180.0 else 0.0)
             }
         }
-    }
-
-    /** [degrees] turned into (-180, 180]. */
-    private fun wrap(degrees: Double): Double {
-        var d = degrees % 360.0
-        if (d > 180.0) d -= 360.0
-        if (d <= -180.0) d += 360.0
-        return d
     }
 
 }

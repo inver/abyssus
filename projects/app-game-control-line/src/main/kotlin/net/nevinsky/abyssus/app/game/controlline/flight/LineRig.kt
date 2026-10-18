@@ -10,12 +10,12 @@ import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.util.azimuthOf
 import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
 import net.nevinsky.abyssus.lib.physics.PhysicsConstraint
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import kotlin.math.asin
-import kotlin.math.atan2
 
 /** The lines' combined tension (N) at or above which the elevator follows the handle. */
 const val CONTROL_TENSION = 1f
@@ -31,8 +31,10 @@ class LineRig(private val world: PhysicsWorld, val pilot: Entity, val plane: Ent
     val pilotSettings: PilotComponent = pilot.getComponent(PilotComponent::class.java)
     val planeSettings: PlaneComponent = plane.getComponent(PlaneComponent::class.java)
 
-    private val pilotBody = requireNotNull(world.bodyOf(pilot)) { "the pilot has no body: give it a kinematic rigid body and a collider" }
-    private val planeBody = requireNotNull(world.bodyOf(plane)) { "the plane has no body: give it a rigid body and a collider" }
+    private val pilotBody =
+        requireNotNull(world.bodyOf(pilot)) { "the pilot has no body: give it a kinematic rigid body and a collider" }
+    private val planeBody =
+        requireNotNull(world.bodyOf(plane)) { "the plane has no body: give it a rigid body and a collider" }
     private val pilotPosition = Vector3(pilot.getComponent(PositionComponent::class.java).localPosition)
 
     /** The plane's pitch (rad) and height above the ground as parked, which takeoff keeps. */
@@ -77,23 +79,29 @@ class LineRig(private val world: PhysicsWorld, val pilot: Entity, val plane: Ent
      * with; turns the pilot to it and attaches new lines, taut.
      */
     fun takeoff(azimuth: Float = 0f) {
-        for (line in lines) world.remove(line)
+        for (line in lines) {
+            world.remove(line)
+        }
         lines = emptyList()
         tilt = 0f
         val a = azimuth * MathUtils.degreesToRadians
-        val rotation = Quaternion(Vector3.Y, azimuth + 180f).mul(Quaternion(Vector3.X, -parkedPitch * MathUtils.radiansToDegrees))
+        val rotation =
+            Quaternion(Vector3.Y, azimuth + 180f).mul(Quaternion(Vector3.X, -parkedPitch * MathUtils.radiansToDegrees))
         val leadouts = listOf(planeSettings.leadoutUp, planeSettings.leadoutDown)
         val points = handlePoints().map { Vector3(it).add(pilotPosition) }
+
         // the radius at which the longer line is exactly its length
         fun position(radius: Float): Vector3 {
             val x = pilotPosition.x + radius * MathUtils.cos(a)
             val z = pilotPosition.z - radius * MathUtils.sin(a)
             return Vector3(x, ground.heightAt(x, z) + parkedClearance, z)
         }
+
         fun longest(radius: Float): Float {
             val p = position(radius)
             return points.indices.maxOf { i -> rotation.transform(Vector3(leadouts[i])).add(p).dst(points[i]) }
         }
+
         var low = 0f
         var high = planeSettings.lineLength * 2f
         repeat(40) {
@@ -102,7 +110,8 @@ class LineRig(private val world: PhysicsWorld, val pilot: Entity, val plane: Ent
         }
         planeBody.setPose(position(low), rotation)
         pilotBody.setPose(pilotPosition, facing(azimuth))
-        lines = handlePoints().zip(leadouts) { from, to -> world.addRope(pilot, from, plane, to, planeSettings.lineLength) }
+        lines =
+            handlePoints().zip(leadouts) { from, to -> world.addRope(pilot, from, plane, to, planeSettings.lineLength) }
     }
 
     /** Before a step: turns the pilot and the handle to face the plane. */
@@ -113,7 +122,7 @@ class LineRig(private val world: PhysicsWorld, val pilot: Entity, val plane: Ent
     /** The plane's azimuth around the pilot, in degrees (anticlockwise seen from above). */
     fun azimuthOfPlane(): Float {
         val p = plane.getComponent(PositionComponent::class.java).localPosition
-        return atan2(-(p.z - pilotPosition.z), p.x - pilotPosition.x) * MathUtils.radiansToDegrees
+        return azimuthOf(p.x - pilotPosition.x, p.z - pilotPosition.z)
     }
 
     /** The pilot's rotation facing azimuth [degrees]: the figure looks along +Z. */

@@ -20,7 +20,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.terrainData
-import net.nevinsky.abyssus.plugin.projectView.SceneComponentEdits
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.testMetaFiles
 import java.io.File
 

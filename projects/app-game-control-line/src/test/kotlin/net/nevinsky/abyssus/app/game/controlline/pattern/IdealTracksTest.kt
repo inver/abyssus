@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
+
 import com.badlogic.gdx.math.Vector3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -20,7 +22,7 @@ class IdealTracksTest {
     /** The azimuth span (degrees) the track flies, summing its signed azimuth steps. */
     private fun IdealTrack.azimuthTravelled(): Float {
         var sum = 0f
-        for (i in 1 until points.size) if (sphere.latitude(points[i].u) < 85f) sum += wrapDeg(sphere.azimuth(points[i].u) - sphere.azimuth(points[i - 1].u))
+        for (i in 1 until points.size) if (sphere.latitude(points[i].u) < 85f) sum += wrapDegrees(sphere.azimuth(points[i].u) - sphere.azimuth(points[i - 1].u))
         return sum
     }
 
@@ -55,7 +57,7 @@ class IdealTracksTest {
         val track = ideal.takeoff(release = 10f, roll = 8f)
         assertEquals(ideal.groundLatitude, track.lat(0), 0.01f)
         val base = track.points.filter { it.tag == Tag.BASE }
-        assertEquals(720f, abs(base.zipWithNext().sumOf { (a, b) -> wrapDeg(sphere.azimuth(b.u) - sphere.azimuth(a.u)).toDouble() }.toFloat()), 1f)
+        assertEquals(720f, abs(base.zipWithNext().sumOf { (a, b) -> wrapDegrees(sphere.azimuth(b.u) - sphere.azimuth(a.u)).toDouble() }.toFloat()), 1f)
         assertEquals(10f, sphere.azimuth(base.first().u), 0.5f)
         assertEquals(1080f, track.azimuthTravelled(), 1f)
         assertTrue(track.points.first { it.tag == Tag.ROLL }.let { sphere.lapsToMetres(0.0f) } == 0f)
@@ -102,7 +104,7 @@ class IdealTracksTest {
     fun theHourglassCrossesOnTheFortyFiveParallelAndIsSymmetric() {
         val track = ideal.hourglass(axis = 150f)
         val legs = track.points.filter { it.tag == Tag.LEG }
-        val onAxis = legs.filter { abs(wrapDeg(sphere.azimuth(it.u) - 150f)) < 0.5f }
+        val onAxis = legs.filter { abs(wrapDegrees(sphere.azimuth(it.u) - 150f)) < 0.5f }
         assertTrue(onAxis.isNotEmpty())
         assertEquals(45f, onAxis.map { sphere.latitude(it.u) }.average().toFloat(), 1f)
         // symmetric about the axis: for each point there is one mirrored in azimuth with the same latitude
@@ -146,7 +148,7 @@ class IdealTracksTest {
         assertTrue("leaf sizes $sizes", sizes.max() - sizes.min() <= 1)
         // the leaves' arcs are about 270 degrees of turn: their ends are a quarter turn apart round the zenith
         val firstArc = track.repeat(0).filter { it.tag == Tag.ARC }
-        assertEquals(90f, abs(wrapDeg(sphere.azimuth(firstArc.last().u) - sphere.azimuth(firstArc.first().u))), 2f)
+        assertEquals(90f, abs(wrapDegrees(sphere.azimuth(firstArc.last().u) - sphere.azimuth(firstArc.first().u))), 2f)
     }
 
     @Test

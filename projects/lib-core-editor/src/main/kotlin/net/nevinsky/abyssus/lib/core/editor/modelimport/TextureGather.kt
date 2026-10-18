@@ -9,8 +9,7 @@ import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
-import java.security.MessageDigest
-import java.util.Locale
+import net.nevinsky.abyssus.lib.core.util.sha256Hex
 import javax.imageio.ImageIO
 
 /** The textures of an import: [files] by their path in the asset folder, [uris] from texture file name to that path. */
@@ -45,7 +44,7 @@ class TextureGather {
                 leftOut += LeftOutItem(source.name, LeftOutReason.UNSUPPORTED_TEXTURE)
                 continue
             }
-            val path = byContent.getOrPut(sha256(png)) {
+            val path = byContent.getOrPut(sha256Hex(png)) {
                 val stem = source.nameWithoutExtension.replace(Regex("[^A-Za-z0-9_.-]+"), "_").trim('_', '.').ifEmpty { "texture" }
                 var candidate = "$TEXTURES_DIR/$stem.png"
                 var n = 2
@@ -67,9 +66,6 @@ class TextureGather {
         if (!ImageIO.write(image, "png", out)) return null
         return out.toByteArray()
     }
-
-    private fun sha256(bytes: ByteArray): String =
-        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(Locale.ROOT, it) }
 }
 
 /** The folder of an imported asset that holds its textures. */

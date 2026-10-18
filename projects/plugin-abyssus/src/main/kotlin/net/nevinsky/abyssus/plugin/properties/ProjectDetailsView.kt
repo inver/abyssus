@@ -4,6 +4,10 @@
  */
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
+import net.nevinsky.abyssus.plugin.filetype.projectSettingsProblems
+import com.intellij.openapi.ui.ComboBox
+import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.openapi.Disposable
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
@@ -33,6 +37,20 @@ internal class ProjectDetailsView(
             addActionListener { settings.setPhysicsEnabled(state.file, isSelected) }
         })
         add(JBLabel(AbyssusBundle.message("propertiesProjectPhysicsHint")).apply { foreground = UIUtil.getContextHelpForeground() })
+        val antialiasing = ComboBox(AntialiasingLevel.entries.toTypedArray()).apply {
+            name = "scene-view-antialiasing"
+            renderer = SimpleListCellRenderer.create("") { level ->
+                level?.let { AbyssusBundle.message("antialiasingLevel${it.name}") } ?: ""
+            }
+            selectedItem = state.settings.antialiasing
+            isEnabled = state.settings.supported
+            addActionListener {
+                if (isEnabled) (selectedItem as? AntialiasingLevel)?.let { settings.setAntialiasing(state.file, it) }
+            }
+        }
+        add(JBLabel(AbyssusBundle.message("propertiesProjectAntialiasing")).apply { labelFor = antialiasing })
+        add(antialiasing)
+        add(JBLabel(AbyssusBundle.message("propertiesProjectAntialiasingHint")).apply { foreground = UIUtil.getContextHelpForeground() })
         // an IDE view setting, not a field of the .abss: it works for an unsupported project too
         val showFps = JBCheckBox(AbyssusBundle.message("propertiesProjectShowFps"), viewSettings.showFps).apply {
             name = "show-fps"
@@ -42,7 +60,7 @@ internal class ProjectDetailsView(
         add(showFps)
         add(JBLabel(AbyssusBundle.message("propertiesProjectShowFpsHint")).apply { foreground = UIUtil.getContextHelpForeground() })
         if (state.settings.problems.isNotEmpty()) add(JBLabel(
-            if (state.settings.supported) AbyssusBundle.message("physicsEnabledNotBoolean")
+            if (state.settings.supported) projectSettingsProblems(state.settings)
             else AbyssusBundle.message("propertiesProjectUnsupported", state.settings.problems.joinToString())
         ).apply { name = "project-settings-problem" })
     }

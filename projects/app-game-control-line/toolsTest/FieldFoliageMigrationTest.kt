@@ -27,6 +27,7 @@ class FieldFoliageMigrationTest {
         repeat(2) {
             withOriginal { project ->
                 tool.generate(project, committedManifest())
+                applyPostMigrationSceneEdits(project)
                 results += checksums(project)
             }
         }

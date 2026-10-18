@@ -12,7 +12,7 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.ui.popup.JBPopupFactory
+import net.nevinsky.abyssus.plugin.ui.showActionGroup
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
@@ -75,17 +75,11 @@ class AddWaterGroup(
     private val file: VirtualFile,
     private val position: () -> Vec3,
     private val select: (String) -> Unit = { selectCreatedWater(project, file, it) },
-) : DefaultActionGroup(AbyssusBundle.message("addWaterTitle"), true), DumbAware {
-    init {
-        for (preset in WaterPreset.entries) add(object : AnAction(waterPresetLabel(preset)), DumbAware {
-            override fun getActionUpdateThread() = ActionUpdateThread.BGT
-            override fun update(e: AnActionEvent) {
-                e.presentation.isEnabled = canAddWater(file, SceneDocumentCache.of(project))
-            }
+) : AddChildGroup<WaterPreset>(AbyssusBundle.message("addWaterTitle")) {
+    init { for (preset in WaterPreset.entries) addChild(preset, waterPresetLabel(preset)) }
 
-            override fun actionPerformed(e: AnActionEvent) = addWater(preset)
-        })
-    }
+    override fun canAdd(target: WaterPreset) = canAddWater(file, SceneDocumentCache.of(project))
+    override fun addTarget(target: WaterPreset) = addWater(target)
 
     /** Adds a [preset] surface at the position, reports a refusal and selects the new one. */
     internal fun addWater(preset: WaterPreset) {
@@ -108,11 +102,7 @@ open class AddWaterAction : AbyssusTreeAction<VirtualFile>() {
         e.project?.let { canAddWater(target, SceneDocumentCache.of(it)) } ?: false
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
-        JBPopupFactory.getInstance().createActionGroupPopup(
-            AbyssusBundle.message("addWaterTitle"),
-            AddWaterGroup(project, target, { Vec3(0f, 0f, 0f) }),
-            e.dataContext, JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
-        ).showInBestPositionFor(e.dataContext)
+        showActionGroup(e, AddWaterGroup(project, target, { Vec3(0f, 0f, 0f) }), AbyssusBundle.message("addWaterTitle"))
     }
 }
 

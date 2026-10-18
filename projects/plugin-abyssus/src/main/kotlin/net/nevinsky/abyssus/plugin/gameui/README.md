@@ -7,11 +7,11 @@ the IDE glue: tabs, panels, the GL canvas and the commands that write files.
 | File | What |
 |---|---|
 | `UiFileEditor.kt` | `UiFileEditorProvider` (accepts a `meta.json` of type `UI` inside a project, an unsupported version included so its reason can be shown), `UiFileEditor` (one tab; re-reads the document, typing after a pause, Undo / Redo at once) |
-| `UiEditorController.kt` | The model of one tab with no Swing: parsed state, selection, screen, mode and every edit. Parsing runs on a background executor and a result is dropped when a newer read was requested; writes are `editUiMeta` commands. `UiCanvasModel` is the slice the canvas sees |
+| `UiEditorController.kt` | The model of one tab with no Swing: parsed state, selection, screen, mode and every edit. Parsing runs on a background executor and a result is dropped when a newer read was requested; writes are `editUiMeta` commands. `UiCanvasModel` is the slice the canvas sees. `UiCanvasGestures` (the canvas drag and its one command) and `UiViewSettings` (preview size and backdrop per viewer) are plain classes it delegates to |
 | `UiEditorPanel.kt`, `UiEditorViews.kt` | The panel and its parts: screen list, widget tree (drag and drop uses the pure `treeDrop`), palette |
 | `UiPropertiesModel.kt`, `UiPropertiesPanel.kt` | Which rows a widget has (from its kind and its parent's layout policy) and the panel that renders them; rows are rebuilt only when their structure changes |
 | `UiDeclarationForms.kt`, `UiDeclarationsPanel.kt` | Bindings, styles and resources: validated forms (pure) and the panel with Import Image / Font |
-| `UiCanvasView.kt` | The GL canvas: one `UiPresenter` per document revision, selection / hover / drag-ghost overlay, pointer and key input |
+| `UiCanvasView.kt` | The GL canvas: one `UiPresenter` per document revision, selection / hover / drag-ghost overlay. `UiCanvasInput` turns pointer and key events into gestures or presenter input (Swing, no GL); `PreviewFit` holds how the preview sits in the panel |
 | `UiAssetCommands.kt`, `UiResourceImport.kt` | Writes: `editUiMeta`, registry edits, `NewUiAssetFactory` + `createUiAsset`, `UiResourceImporter` + `importUiResource` |
 | `UiAssetActions.kt` | Tree actions: New UI Asset, Register, Unregister; `ProjectUiSource` (other registered UI assets for navigation) |
 

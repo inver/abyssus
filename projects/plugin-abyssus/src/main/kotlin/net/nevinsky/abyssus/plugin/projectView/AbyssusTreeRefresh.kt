@@ -16,8 +16,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.VirtualFileManager
-import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent
 import com.intellij.util.ui.tree.TreeUtil
@@ -26,6 +24,7 @@ import net.nevinsky.abyssus.lib.core.editor.refresh.NavigationState
 import net.nevinsky.abyssus.lib.core.editor.refresh.RefreshCoalescer
 import net.nevinsky.abyssus.lib.core.editor.refresh.restoreNavigation
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout
+import net.nevinsky.abyssus.plugin.dto.NativeFileChanges
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.filetype.AbyssusSceneEdited
 import javax.swing.JTree
@@ -63,13 +62,11 @@ internal class AbyssusTreeRefresh(
         Disposer.register(parent, this)
         val connection = project.messageBus.connect(this)
         connection.subscribe(AbyssusSceneEdited.TOPIC, AbyssusSceneEdited { file -> changed(file.path) })
-        connection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
-            override fun after(events: List<VFileEvent>) {
-                for (event in events) {
-                    if (isRelevant(event)) changed(event.path)
-                }
+        project.getService(NativeFileChanges::class.java).subscribe(this) { events ->
+            for (event in events) {
+                if (isRelevant(event)) changed(event.path)
             }
-        })
+        }
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
                 val file = FileDocumentManager.getInstance().getFile(event.document) ?: return
@@ -180,8 +177,7 @@ internal class AbyssusTreeRefresh(
         fun isTreePath(path: String, directory: Boolean): Boolean {
             val name = path.substringAfterLast('/')
             if (!directory) {
-                val extension = name.substringAfterLast('.', "")
-                return extension in ProjectLayout.ASSET_EXTENSIONS || name == AbyssusProjectLayout.META_FILE
+                return net.nevinsky.abyssus.plugin.dto.isNativeDocumentPath(path)
             }
             val assets = AbyssusProjectLayout.ASSETS_DIR
             return name == assets || path.contains("/$assets/")

@@ -95,40 +95,24 @@ class SceneInteraction(
             stateChanged()
         }
 
-    /** Where the current press-drag-release stands. */
-    private sealed interface Gesture {
-        /** Nothing special: a drag orbits or pans, a release without a drag is a click. */
-        data object Idle : Gesture
-
-        /** A gizmo handle of [entityId] is being dragged; [result] is where it is now. */
-        class Dragging(val drag: GizmoDrag, val entityId: String) : Gesture {
-            var result: DragResult? = null
-        }
-
-        /** A move handle of the water surface [waterId] is being dragged; [result] is where its centre is now. */
-        class DraggingWater(val drag: GizmoDrag, val waterId: String) : Gesture {
-            var result: DragResult? = null
-        }
-
-        /** Set by Esc (or by the dragged entity leaving the scene): the rest of the gesture, up to the release, does nothing. */
-        data object Cancelled : Gesture
-
-        /** Point [index] of the arrangement [entityId] is being dragged; [original] are its points before, [points] now. */
-        class DraggingPathPoint(val entityId: String, val index: Int, val original: List<Vec3>) : Gesture {
-            var points: List<Vec3> = original
-            var moved = false
-        }
-
-        /** The Paint Foliage stroke on the terrain of [entityId]; the caller's [FoliagePaint] does the painting. */
-        class Painting(val entityId: String) : Gesture
-    }
-
     private val click = ClickGesture()
     private var lastX = 0
     private var lastY = 0
-    private var gesture: Gesture = Gesture.Idle
 
-    val isDragging: Boolean get() = gesture is Gesture.Dragging || gesture is Gesture.DraggingWater
+    private val host = object : GestureHost {
+        override val size: ViewSize get() = this@SceneInteraction.size
+        override val foliagePaint: FoliagePaint? get() = this@SceneInteraction.foliagePaint
+        override val onTransform: ((String, TransformEdit) -> Boolean)? get() = this@SceneInteraction.onTransform
+        override val onWaterMove: ((String, Vec3) -> Boolean)? get() = this@SceneInteraction.onWaterMove
+        override val onArrangementEdit: ((String, List<Vec3>) -> Boolean)? get() = this@SceneInteraction.onArrangementEdit
+        override val selectedId: String? get() = this@SceneInteraction.selectedId
+        override fun editOf(entityId: String, result: DragResult) = this@SceneInteraction.editOf(entityId, result)
+        override fun stateChanged() = this@SceneInteraction.stateChanged()
+    }
+    private val gestures = GestureDriver(state, queries, host)
+    private val drawingSession = DrawingSession(state, queries, { size }, { onArrangementCreate }, { onArrangementEdit }, ::stateChanged)
+
+    val isDragging: Boolean get() = gestures.isDragging
 
     /** The arrangement being drawn, or null outside the drawing mode. */
     val drawing: PathDrawing? get() = state.drawing
@@ -185,63 +169,12 @@ class SceneInteraction(
     fun pressed(x: Int, y: Int, left: Boolean) {
         lastX = x
         lastY = y
-        gesture = Gesture.Idle
+        gestures.reset()
         click.pressed(x, y)
         val id = selectedId
         // Drawing mode: a press only starts a click that adds a point (or a camera drag).
         if (!left || state.drawing != null || size.isEmpty) return
-        state.selectedWater?.let { startWaterDrag(it, x, y); return }
-        if (id == null) return
-        val at = size.toFramebuffer(x, y)
-        if (startPathDrag(id, at)) return
-        val paint = state.paint
-        if (paint != null) {
-            startStroke(paint, at)
-            return
-        }
-        val axis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-        val started = queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-        gesture = Gesture.Dragging(started, id)
-        state.hoveredAxis = axis
-        stateChanged()
-    }
-
-    /** The left press on a move handle of the selected water surface starts a drag of its centre. */
-    private fun startWaterDrag(waterId: String, x: Int, y: Int) {
-        val at = size.toFramebuffer(x, y)
-        val axis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-        val started = queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-        gesture = Gesture.DraggingWater(started, waterId)
-        state.hoveredAxis = axis
-        stateChanged()
-    }
-
-    /** The left press on a handle of the selected arrangement's line: a point drag, or an insert from a middle handle. */
-    private fun startPathDrag(id: String, at: FramebufferPoint): Boolean {
-        val points = queries.pathPoints(id) ?: return false
-        val hit = queries.pathHandleAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return false
-        when (hit) {
-            is PathHit.Point -> gesture = Gesture.DraggingPathPoint(id, hit.index, points)
-            is PathHit.Middle -> {
-                val closed = queries.content.arrangements.firstOrNull { it.entityId == id }?.arrangement?.closed == true
-                val middle = PathHandles(points, closed).middle(hit.segment)
-                val inserted = points.toMutableList().also { it.add(hit.segment + 1, middle) }
-                gesture = Gesture.DraggingPathPoint(id, hit.segment + 1, points).also { it.points = inserted }
-            }
-        }
-        stateChanged()
-        return true
-    }
-
-    /** The left press of Paint Foliage mode: a stroke starts only where the ray hits the painted terrain. */
-    private fun startStroke(paint: FoliagePaintMode, at: FramebufferPoint) {
-        if (paint.entityId != selectedId) return
-        val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-        val terrain = queries.terrainOf(paint.entityId) ?: return
-        val hit = queries.terrainHit(paint.entityId, ray) ?: return
-        if (foliagePaint?.pressed(terrain, hit) != true) return
-        gesture = Gesture.Painting(paint.entityId)
-        stateChanged()
+        gestures.press(id, x, y)
     }
 
     fun dragged(x: Int, y: Int, left: Boolean) {
@@ -250,155 +183,36 @@ class SceneInteraction(
         val dy = (y - lastY).toFloat()
         lastX = x
         lastY = y
-        if (size.isEmpty) return
-        when (val g = gesture) {
-            Gesture.Cancelled -> return
-            is Gesture.Dragging -> {
-                val at = size.toFramebuffer(x, y)
-                val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-                val result = g.drag.update(ray)
-                g.result = result
-                state.preview = mapOf(g.entityId to result)
-            }
-            is Gesture.DraggingWater -> {
-                val at = size.toFramebuffer(x, y)
-                val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-                val result = g.drag.update(ray)
-                g.result = result
-                state.waterPreview = mapOf(g.waterId to result.transform.position)
-            }
-            is Gesture.DraggingPathPoint -> {
-                val at = size.toFramebuffer(x, y)
-                val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-                val hit = queries.groundHit(ray) ?: return
-                val moved = g.points.toMutableList().also { it[g.index] = Vec3(hit.x, hit.y, hit.z) }
-                g.points = moved
-                g.moved = true
-                state.pathEdit = PathEdit(g.entityId, moved)
-            }
-            is Gesture.Painting -> {
-                val mode = state.paint?.takeIf { it.entityId == g.entityId } ?: return
-                val at = size.toFramebuffer(x, y)
-                val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-                val hit = queries.terrainHit(g.entityId, ray) ?: return
-                foliagePaint?.dragged(hit, mode.erase)
-            }
-            Gesture.Idle -> {
-                if (state.viewCamera != null) return
-                // The left button paints in Paint Foliage mode; only the other buttons and the wheel navigate.
-                if (left) {
-                    if (state.paint == null) orbit.orbit(dx, dy)
-                } else orbit.pan(dx, dy)
-            }
-        }
+        if (size.isEmpty || gestures.drag(x, y)) return
+        if (state.viewCamera != null) return
+        // The left button paints in Paint Foliage mode; only the other buttons and the wheel navigate.
+        if (left) {
+            if (state.paint == null) orbit.orbit(dx, dy)
+        } else orbit.pan(dx, dy)
     }
 
     fun released(x: Int, y: Int, left: Boolean, clickCount: Int = 1) {
         val wasClick = click.released(x, y)
-        val ended = gesture
-        gesture = Gesture.Idle
-        state.hoveredAxis = null
-        when (ended) {
-            Gesture.Cancelled -> stateChanged()
-            is Gesture.DraggingPathPoint -> {
-                if (ended.moved && ended.points != ended.original) {
-                    val written = onArrangementEdit?.invoke(ended.entityId, ended.points) ?: false
-                    if (!written) state.pathEdit = null
-                } else {
-                    state.pathEdit = null
-                }
-                stateChanged()
-            }
-            is Gesture.Painting -> {
-                foliagePaint?.released()
-                stateChanged()
-            }
-            is Gesture.DraggingWater -> {
-                val result = ended.result
-                if (result != null && result.transform != ended.drag.start) {
-                    val written = onWaterMove?.invoke(ended.waterId, result.transform.position) ?: false
-                    if (!written) state.waterPreview = emptyMap()
-                } else {
-                    state.waterPreview = emptyMap()
-                }
-                stateChanged()
-            }
-            is Gesture.Dragging -> {
-                val result = ended.result
-                if (result != null && result.transform != ended.drag.start) {
-                    val written = onTransform?.invoke(ended.entityId, editOf(ended.entityId, result)) ?: false
-                    if (!written) state.preview = emptyMap()
-                } else {
-                    state.preview = emptyMap()
-                }
-                stateChanged()
-            }
-            Gesture.Idle -> if (left && wasClick) {
-                if (state.drawing != null) drawingClick(x, y, clickCount) else pickAt(x, y)
-            }
+        if (gestures.release()) return
+        if (left && wasClick) {
+            if (state.drawing != null) drawingSession.click(x, y, clickCount) else pickAt(x, y)
         }
     }
 
     /** Starts drawing a path arrangement of the model [asset]: each click on the terrain adds a point. */
-    fun startDrawing(asset: RenderAsset) {
-        state.drawing = PathDrawing(asset)
-        state.paint = null
-        stateChanged()
-    }
-
-    /** A click in drawing mode: closes the loop on the first point, finishes on a double click, else adds a point where it hits the terrain. */
-    private fun drawingClick(x: Int, y: Int, clickCount: Int) {
-        val drawing = state.drawing ?: return
-        if (size.isEmpty) return
-        // the first click of a double click already added its point
-        if (clickCount >= 2) {
-            finishDrawing(closed = false)
-            return
-        }
-        val at = size.toFramebuffer(x, y)
-        if (drawing.points.size >= 3) {
-            val distance = queries.screenDistance(drawing.points.first(), at.x, at.y, size.framebufferWidth, size.framebufferHeight)
-            if (distance != null && distance <= PATH_HANDLE_PX) {
-                finishDrawing(closed = true)
-                return
-            }
-        }
-        val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-        val hit = queries.groundHit(ray) ?: return
-        drawing.points += Vec3(hit.x, hit.y, hit.z)
-        stateChanged()
-    }
+    fun startDrawing(asset: RenderAsset) = drawingSession.start(asset)
 
     /** Enter: finishes the drawing as an open line; nothing happens, and drawing continues, with fewer than two points. */
-    fun enter() = finishDrawing(closed = false)
-
-    private fun finishDrawing(closed: Boolean) {
-        val drawing = state.drawing ?: return
-        if (drawing.points.size < 2) return
-        val written = onArrangementCreate?.invoke(drawing.asset, drawing.points.toList(), closed) ?: false
-        if (written) {
-            state.drawing = null
-            stateChanged()
-        }
-    }
+    fun enter() = drawingSession.enter()
 
     /** Backspace: drops the last point of the drawing. */
-    fun backspace() {
-        val drawing = state.drawing ?: return
-        if (drawing.points.isEmpty()) return
-        drawing.points.removeAt(drawing.points.lastIndex)
-        stateChanged()
-    }
+    fun backspace() = drawingSession.backspace()
 
     /** Whether point [index] of the arrangement [entityId] can be removed: at least two points must remain. */
-    fun canRemovePoint(entityId: String): Boolean = (queries.pathPoints(entityId)?.size ?: 0) > 2
+    fun canRemovePoint(entityId: String): Boolean = drawingSession.canRemovePoint(entityId)
 
     /** Removes point [index] of the arrangement [entityId] through [onArrangementEdit]; false when it cannot be removed or was not written. */
-    fun removePoint(entityId: String, index: Int): Boolean {
-        val points = queries.pathPoints(entityId) ?: return false
-        if (points.size <= 2 || index !in points.indices) return false
-        return onArrangementEdit?.invoke(entityId, points.toMutableList().also { it.removeAt(index) }) ?: false
-    }
+    fun removePoint(entityId: String, index: Int): Boolean = drawingSession.removePoint(entityId, index)
 
     private fun editOf(id: String, result: DragResult): TransformEdit {
         if (state.gizmoMode == GizmoMode.MOVE) return TransformEdit(position = result.transform.position)
@@ -423,29 +237,11 @@ class SceneInteraction(
 
     /** Esc: puts the dragged object back, or discards the paint stroke; neither writes anything. */
     fun escape() {
-        if (gesture is Gesture.DraggingPathPoint) {
-            gesture = Gesture.Cancelled
-            state.pathEdit = null
-            stateChanged()
+        if (state.drawing != null && gestures.isIdle) {
+            drawingSession.cancel()
             return
         }
-        if (state.drawing != null && gesture == Gesture.Idle) {
-            state.drawing = null
-            stateChanged()
-            return
-        }
-        if (gesture is Gesture.Painting) {
-            gesture = Gesture.Cancelled
-            foliagePaint?.cancelled()
-            stateChanged()
-            return
-        }
-        if (!isDragging) return
-        gesture = Gesture.Cancelled
-        state.preview = emptyMap()
-        state.waterPreview = emptyMap()
-        state.hoveredAxis = null
-        stateChanged()
+        gestures.escape()
     }
 
     private fun pickAt(x: Int, y: Int) {
@@ -484,29 +280,21 @@ class SceneInteraction(
         refreshDropAfterFrame = true
         state.preview = emptyMap()
         state.waterPreview = emptyMap()
-        if (gesture !is Gesture.DraggingPathPoint) state.pathEdit = null
+        if (!gestures.isDraggingPathPoint) state.pathEdit = null
         var changed = false
         selectedId?.let { if (!ScenePreview().contains(params.content, it)) { selectedId = null; changed = true } }
         // a surface deleted (or made invalid) elsewhere leaves nothing selected rather than another target
         state.selectedWater?.let { id ->
             if (params.content.water.none { it.id == id }) { state.selection = null; changed = true }
         }
-        (gesture as? Gesture.DraggingWater)?.let { if (params.content.water.none { w -> w.id == it.waterId }) gesture = Gesture.Cancelled }
         state.viewCamera?.let { id -> if (params.content.cameras.none { it.entityId == id }) { state.viewCamera = null; changed = true } }
-        val dragging = gesture as? Gesture.Dragging
-        if (dragging != null && !ScenePreview().contains(params.content, dragging.entityId)) gesture = Gesture.Cancelled
-        (gesture as? Gesture.DraggingPathPoint)?.let {
-            if (!ScenePreview().contains(params.content, it.entityId)) {
-                gesture = Gesture.Cancelled
-                state.pathEdit = null
-            }
-        }
+        gestures.contentChanged(params.content) { ScenePreview().contains(params.content, it) }
         state.paint?.let { mode ->
             if (!ScenePreview().contains(params.content, mode.entityId)) {
                 state.paint = null
                 changed = true
-                if (gesture is Gesture.Painting) {
-                    gesture = Gesture.Cancelled
+                if (gestures.isPainting) {
+                    gestures.cancel()
                     foliagePaint?.cancelled()
                 }
             }

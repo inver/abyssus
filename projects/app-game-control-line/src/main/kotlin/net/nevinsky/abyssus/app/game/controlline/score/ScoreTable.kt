@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
+import net.nevinsky.abyssus.app.game.controlline.io.AtomicJsonStore
 
 /** How many flights the table keeps. */
 const val TABLE_SIZE = 10
@@ -41,6 +41,8 @@ fun defaultScoresFile(home: String = System.getProperty("user.home")): Path =
  * is renamed to `scores.json.bad` (replacing an older one) and the table starts empty with [damaged] set.
  */
 class ScoreTable(private val file: Path, private val json: ObjectMapper = jacksonObjectMapper()) {
+    private val store = AtomicJsonStore()
+
     var entries: List<ScoreEntry> = emptyList()
         private set
 
@@ -49,17 +51,12 @@ class ScoreTable(private val file: Path, private val json: ObjectMapper = jackso
         private set
 
     init {
-        if (Files.exists(file)) {
-            try {
-                val read = json.copy().configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, true)
-                    .readValue(file.toFile(), ScoresFile::class.java)
-                require(read.version == SCORES_VERSION) { "unknown version ${read.version}" }
-                entries = ranked(read.entries)
-            } catch (_: Exception) {
-                Files.move(file, file.resolveSibling(file.fileName.toString() + ".bad"), StandardCopyOption.REPLACE_EXISTING)
-                damaged = true
-            }
-        }
+        entries = store.read(file, {
+            val read = json.copy().configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, true)
+                .readValue(it.toFile(), ScoresFile::class.java)
+            require(read.version == SCORES_VERSION) { "unknown version ${read.version}" }
+            ranked(read.entries)
+        }, { damaged = true }).orEmpty()
     }
 
     /** Whether a flight scoring [score] would enter the table. */
@@ -77,14 +74,9 @@ class ScoreTable(private val file: Path, private val json: ObjectMapper = jackso
     private fun ranked(list: List<ScoreEntry>) = list.sortedByDescending { it.score }.take(TABLE_SIZE)
 
     private fun save() {
-        Files.createDirectories(file.parent)
-        val temp = Files.createTempFile(file.parent, "scores", ".tmp")
-        try {
+        store.save(file, "scores") { temp ->
             Files.writeString(temp, json.copy().enable(SerializationFeature.INDENT_OUTPUT)
                 .writeValueAsString(ScoresFile(SCORES_VERSION, entries)).replace("\r\n", "\n") + "\n")
-            Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        } finally {
-            Files.deleteIfExists(temp)
         }
     }
 }

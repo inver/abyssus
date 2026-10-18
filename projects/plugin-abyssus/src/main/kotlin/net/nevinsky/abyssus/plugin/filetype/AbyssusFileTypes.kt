@@ -98,8 +98,10 @@ object AssetIcons {
     val UNKNOWN: Icon = load("unknown")
 
     private val byType: Map<String, Icon> by lazy {
-        listOf("MODEL", "TERRAIN", "FOLIAGE", "SKYBOX", "SKYBOX_HDR", "TEXTURE", "PIXMAP_TEXTURE", "MATERIAL", "SHADER", "CLOUDS")
-            .associateWith { load(it.lowercase()) } + ("SKYBOX_PROCEDURAL" to load("skybox"))
+        listOf(
+            MetaType.MODEL, MetaType.TERRAIN, MetaType.FOLIAGE, MetaType.SKYBOX, MetaType.SKYBOX_HDR, MetaType.TEXTURE,
+            MetaType.PIXMAP_TEXTURE, MetaType.MATERIAL, MetaType.SHADER, MetaType.CLOUDS,
+        ).associate { it.name to load(it.name.lowercase()) } + (MetaType.SKYBOX_PROCEDURAL.name to load("skybox"))
     }
 
     fun forType(type: String?): Icon = type?.let { byType[it] } ?: UNKNOWN

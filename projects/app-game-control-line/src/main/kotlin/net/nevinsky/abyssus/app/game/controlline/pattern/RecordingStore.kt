@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
+import net.nevinsky.abyssus.app.game.controlline.io.AtomicJsonStore
 import java.util.UUID
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
@@ -23,16 +23,13 @@ fun defaultRecordingsFolder(home: String = System.getProperty("user.home")): Pat
  * added. The recording's JSON is `version: 1`, gzipped.
  */
 class RecordingStore(private val folder: Path, private val json: ObjectMapper = jacksonObjectMapper()) {
+    private val store = AtomicJsonStore()
+
     /** Saves [recording] under a new id and returns the id. */
     fun save(recording: FlightRecording): String {
-        Files.createDirectories(folder)
         val id = UUID.randomUUID().toString()
-        val temp = Files.createTempFile(folder, "flight", TEMP)
-        try {
+        store.save(fileOf(id), "flight") { temp ->
             GZIPOutputStream(Files.newOutputStream(temp)).use { json.writeValue(it, recording) }
-            Files.move(temp, fileOf(id), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        } finally {
-            Files.deleteIfExists(temp)
         }
         return id
     }
@@ -41,17 +38,13 @@ class RecordingStore(private val folder: Path, private val json: ObjectMapper = 
     fun load(id: String): FlightRecording? {
         if (!valid(id)) return null
         val file = fileOf(id)
-        if (!Files.exists(file)) return null
-        return try {
-            val read = GZIPInputStream(Files.newInputStream(file)).use { json.readValue(it, FlightRecording::class.java) }
+        return store.read(file, { path ->
+            val read = GZIPInputStream(Files.newInputStream(path)).use { json.readValue(it, FlightRecording::class.java) }
             require(read.version == RECORDING_VERSION) { "unknown version ${read.version}" }
             require(read.samples.size % SAMPLE_STRIDE == 0) { "samples are not whole" }
             require(read.judgements.all { it.index in SCHEDULE.indices && it.ideal.size % 3 == 0 }) { "a judgement is not whole" }
             read
-        } catch (_: Exception) {
-            Files.move(file, file.resolveSibling(file.fileName.toString() + BAD), StandardCopyOption.REPLACE_EXISTING)
-            null
-        }
+        })
     }
 
     /** Deletes the recording [id], if there is one. */
@@ -87,7 +80,6 @@ class RecordingStore(private val folder: Path, private val json: ObjectMapper = 
 
     private companion object {
         const val SUFFIX = ".json.gz"
-        const val BAD = ".bad"
         const val TEMP = ".tmp"
     }
 }

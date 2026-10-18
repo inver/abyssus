@@ -20,9 +20,10 @@ import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.projectView.asset.selectAssetInAbyssusView
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.awt.BorderLayout
 import java.io.File
@@ -47,10 +48,10 @@ internal fun weatherPresetTarget(node: Any?, reader: AssetMetaReader): WeatherPr
 
 open class NewWeatherPresetAction : AbyssusTreeAction<WeatherPresetTarget>() {
     init { templatePresentation.text = AbyssusBundle.message("newWeatherPresetAction") }
-    override fun targetOf(node: Any?) = weatherPresetTarget(node, AssetMetaReader(service<AbyssusCore>().documents.json))
+    override fun targetOf(node: Any?) = weatherPresetTarget(node, AssetMetaReader(service<AbyssusPluginCtx>().documents.json))
 
     override fun perform(project: Project, target: WeatherPresetTarget, e: AnActionEvent) {
-        val factory = NewWeatherPresetFactory(service<AbyssusCore>().documents.json)
+        val factory = NewWeatherPresetFactory(service<AbyssusPluginCtx>().documents.json)
         val valid = runCatchingKeepingCancellation { factory.validateSource(target.abss, target.sky) }
         valid.exceptionOrNull()?.let { reportWeatherFailure(project, it.documentDisplayMessage()); return }
         val dialog = NewWeatherPresetDialog(project, File(target.abss.parent.path, "assets"), target.sky.parent.name)
@@ -97,7 +98,7 @@ fun createWeatherPreset(
         { if (!project.isDisposed) selectAssetInAbyssusView(project, abss, created) }, ModalityState.nonModal()) },
 ): AssetCommandResult? {
     val staged = runCatchingKeepingCancellation {
-        NewWeatherPresetFactory(service<AbyssusCore>().documents.json).stage(abss, sky, name)
+        NewWeatherPresetFactory(service<AbyssusPluginCtx>().documents.json).stage(abss, sky, name)
     }.getOrElse { report(it.documentDisplayMessage()); return null }
     val result = AssetFileCommand(project, LocalAssetFileStore(File(abss.parent.path))).execute(staged.transaction, onDone = { select(staged.name) })
     val reason = when (result) {

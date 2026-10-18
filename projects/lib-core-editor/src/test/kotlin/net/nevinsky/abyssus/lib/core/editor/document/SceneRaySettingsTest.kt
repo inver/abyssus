@@ -20,9 +20,9 @@ class SceneRaySettingsTest {
     }
     @Test fun allLimitsAreAcceptedAndAdjacentValuesRejected() {
         for (field in SceneRayField.entries) {
-            for (value in listOf(field.minimum, field.maximum)) {
+            for (value in listOf(field.minimum.toLong(), field.maximum)) {
                 val r = root(",\"rayTracing\":{\"${field.key}\":$value}")
-                assertEquals(value, codec.read(r).values[field])
+                assertEquals(value, codec.read(r).values.getValue(field).toLong())
                 assertTrue(codec.read(r).errors.isEmpty())
             }
             for (value in listOf(field.minimum - 1, field.maximum + 1)) {

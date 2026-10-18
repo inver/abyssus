@@ -168,6 +168,7 @@ changelog {
 
 tasks {
     test {
+        systemProperty("abyssus.pluginSources", file("src/main/kotlin").absolutePath)
         // GL render tests open a real window: opt in with -Dabyssus.glTests=true
         System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
         System.getProperty("abyssus.rayTimingTests")?.let { systemProperty("abyssus.rayTimingTests", it) }
@@ -186,6 +187,9 @@ tasks {
         providers.gradleProperty("rayExperiment").orNull?.let { jvmArgs("-Dabyssus.raytracing.experiment=$it") }
         // The sandbox IDE trusts every project (no "Trust project?" dialog) and opens the Abyssus view.
         jvmArgs("-Didea.trust.all.projects=true", "-Dabyssus.openView=true")
+        // Kotlin 2.4 emits coroutine debug metadata v2, but the sandbox IDE's bundled stdlib reads v1; its coroutine debug
+        // probes then fail every resume ("Debug metadata version mismatch"). Turn the probes off.
+        jvmArgs("-Dkotlinx.coroutines.debug=off")
     }
 
     patchPluginXml {

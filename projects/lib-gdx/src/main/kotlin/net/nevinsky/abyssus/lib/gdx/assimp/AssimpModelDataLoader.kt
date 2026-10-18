@@ -9,12 +9,7 @@ import com.badlogic.gdx.files.FileHandle
 import net.nevinsky.abyssus.lib.gdx.ModelLogging
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
-import org.lwjgl.assimp.AICamera
-import org.lwjgl.assimp.AILight
-import org.lwjgl.assimp.AIMaterial
-import org.lwjgl.assimp.AIMesh
-import org.lwjgl.assimp.AIScene
-import org.lwjgl.assimp.Assimp
+import org.lwjgl.assimp.*
 import org.slf4j.Logger
 
 private val log: Logger get() = ModelLogging.logger
@@ -62,7 +57,10 @@ class AssimpModelDataLoader
                 convert(modelId, scene, parentDir(file), embeddedTextureDir, convertUnits, normalize)
             if (!normalize) {
                 val root = data.nodes.first()
-                SceneNormalizer.unapply(root, SceneNormalizer.importerCorrection(scene, root, file.extension().lowercase()))
+                SceneNormalizer.unapply(
+                    root,
+                    SceneNormalizer.importerCorrection(scene, root, file.extension().lowercase())
+                )
             }
             log.atDebug().log { "Model $modelId loaded in ${System.currentTimeMillis() - start} ms" }
             return LoadedScene(data, SceneNormalizer.stated(scene), leftOut(scene))
@@ -125,10 +123,20 @@ class AssimpModelDataLoader
         private fun leftOut(scene: AIScene): List<LeftOut> {
             val result = ArrayList<LeftOut>()
             for (i in 0..<scene.mNumCameras()) {
-                result.add(LeftOut(named(AICamera.create(scene.mCameras()!!.get(i)).mName().dataString(), "camera_$i"), LeftOut.Kind.CAMERA))
+                result.add(
+                    LeftOut(
+                        named(AICamera.create(scene.mCameras()!!.get(i)).mName().dataString(), "camera_$i"),
+                        LeftOut.Kind.CAMERA
+                    )
+                )
             }
             for (i in 0..<scene.mNumLights()) {
-                result.add(LeftOut(named(AILight.create(scene.mLights()!!.get(i)).mName().dataString(), "light_$i"), LeftOut.Kind.LIGHT))
+                result.add(
+                    LeftOut(
+                        named(AILight.create(scene.mLights()!!.get(i)).mName().dataString(), "light_$i"),
+                        LeftOut.Kind.LIGHT
+                    )
+                )
             }
             for (i in 0..<scene.mNumMeshes()) {
                 val mesh = AIMesh.create(scene.mMeshes()!!.get(i))

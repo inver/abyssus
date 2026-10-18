@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -16,11 +15,13 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.asset.selectAssetInAbyssusView
 import net.nevinsky.abyssus.plugin.terrain.NewTerrainForm
 import net.nevinsky.abyssus.plugin.terrain.NewTerrainRequest
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
@@ -57,7 +58,7 @@ internal class NewTerrainDialog(project: Project, val form: NewTerrainForm) : Di
 }
 
 private fun createInteractively(project: Project, abss: VirtualFile) {
-    val core = service<AbyssusCore>()
+    val core = service<AbyssusPluginCtx>()
     val terrain = core.terrain
     val projectDir = File(abss.parent.path)
     val form = NewTerrainForm(
@@ -73,10 +74,10 @@ private fun createInteractively(project: Project, abss: VirtualFile) {
 
 /** Writes the terrain of [request] under [abss]'s project as one undoable command, then selects it in the view. */
 fun createTerrain(project: Project, abss: VirtualFile, request: NewTerrainRequest, report: (String) -> Unit = { Messages.showErrorDialog(project, it, AbyssusBundle.message("newTerrainTitle")) }): AssetCommandResult? {
-    val core = service<AbyssusCore>()
+    val core = service<AbyssusPluginCtx>()
     val terrain = core.terrain
     val accepted = net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation {
-        core.documents.format.requireSupported(core.documents.json.readObject(textOf(abss)), net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)
+        core.documents.parsing.requireSupported(textOf(abss), net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)
     }
     accepted.exceptionOrNull()?.let { report(it.documentDisplayMessage()); return null }
     val projectDir = File(abss.parent.path)
@@ -87,7 +88,13 @@ fun createTerrain(project: Project, abss: VirtualFile, request: NewTerrainReques
     }
     val result = AssetFileCommand(project, LocalAssetFileStore(projectDir)).execute(
         staged.transaction,
-        onDone = { ApplicationManager.getApplication().invokeLater({ selectAssetInAbyssusView(project, abss, staged.name) }, ModalityState.nonModal()) },
+        onDone = { ApplicationManager.getApplication().invokeLater({
+            selectAssetInAbyssusView(
+                project,
+                abss,
+                staged.name
+            )
+        }, ModalityState.nonModal()) },
     )
     val problem = when (result) {
         AssetCommandResult.Done -> null

@@ -5,9 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.shadows
 
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightKind
+
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 
-enum class ShadowLightKind { DIRECTIONAL, POINT, SPOT }
 
 data class ShadowTile(val index: Int, val x: Int, val y: Int, val size: Int = 1024, val atlasSize: Int = 4096)
 
