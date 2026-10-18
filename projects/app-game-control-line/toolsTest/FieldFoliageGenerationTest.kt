@@ -46,6 +46,7 @@ class FieldFoliageGenerationTest {
     @Test
     fun theCommittedProjectIsExactlyWhatTheMigrationMakesOfTheOriginal() = withOriginal { project ->
         FieldFoliageTool().generate(project, committedManifest())
+        applyPostMigrationSceneEdits(project)
         val made = checksums(project)
         val committed = checksums(committedProject())
         for (path in made.keys.filter { it.startsWith("assets/foliage_airfield_") || it.startsWith("assets/model_airfield_grass/") || it == "scenes/Field.scene" }) {

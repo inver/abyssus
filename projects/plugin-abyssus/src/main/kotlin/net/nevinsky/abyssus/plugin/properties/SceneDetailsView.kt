@@ -217,7 +217,7 @@ internal class SceneDetailsView(
 /** Opens the skybox chooser for [file], the scene Abyssus Properties shows; true when a skybox was assigned. */
 private fun chooseSceneSkybox(project: com.intellij.openapi.project.Project, file: VirtualFile): Boolean {
     val abss = ProjectLayout.abssFor(file) ?: return false
-    val assets = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusCore>().assets
+    val assets = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().assets
     val current = SceneJson().parse(textOf(file)).get("skyboxName")?.takeIf { it.isTextual }?.textValue()
     return net.nevinsky.abyssus.plugin.projectView.chooseSkyboxFor(project, file, abss, current, assets.metaFiles, assets.hdrPreviews)
 }

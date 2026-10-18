@@ -42,6 +42,7 @@ import java.awt.image.BufferedImage
 import java.io.File
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 
 /** What the panel shows. */
 sealed interface PanelState {
@@ -129,7 +130,7 @@ fun readAssetState(folder: VirtualFile, services: PanelServices): PanelState {
 }
 
 /** The preview of an HDR sky: its image decoded and tone mapped here, so off the EDT like the rest of the state. */
-private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreviewSource): HdrCell {
+private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreviewService): HdrCell {
     val info = hdrSkyInfo(folder, meta.json, hdr)
     val file = info.file ?: return HdrCell(AbyssusBundle.message("propertiesHdrNoFile"), null)
     val image = runCatchingKeepingCancellation {

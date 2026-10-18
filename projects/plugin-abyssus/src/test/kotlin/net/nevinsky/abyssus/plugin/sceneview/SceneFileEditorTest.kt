@@ -5,11 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
+
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-
-import net.nevinsky.abyssus.plugin.SceneRayControls
 
 import net.nevinsky.abyssus.plugin.SceneFileEditorProvider
 
@@ -18,7 +17,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.Quat
 
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.testPanelServices
 import net.nevinsky.abyssus.plugin.testMetaFiles
 
@@ -81,6 +80,8 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         var disposed = false
         var stops = 0
         override fun stopPlay() { stops++ }
+        val antialiasingCalls = mutableListOf<AntialiasingLevel>()
+        override fun setAntialiasing(level: AntialiasingLevel) { antialiasingCalls += level }
         val fpsCalls = mutableListOf<Boolean>()
         override fun setFpsEnabled(enabled: Boolean) { fpsCalls += enabled }
         var updates = 0
@@ -281,7 +282,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val (editor, f) = fakeEditor("edit/Main Scene.scene", mainScene, views)
         try {
             val old = views[0].current.content.models.first { it.entityId == "0" }.transform.position
-            val result = net.nevinsky.abyssus.plugin.projectView.SceneComponentEdits
+            val result = SceneComponentEdits
                 .update(project, f, "0", "PositionComponent", "localPosition.x", (old.x + 3f).toString(), testMetaFiles())
             assertEquals(net.nevinsky.abyssus.lib.core.editor.components.EditResult.Changed, result)
             assertEquals(old.x + 3f, views[0].current.content.models.first { it.entityId == "0" }.transform.position.x, 1e-4f)
@@ -522,5 +523,71 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         } finally {
             com.intellij.openapi.util.Disposer.dispose(editor)
         }
+    }
+    fun testProjectAntialiasingFollowsOwningDocumentAndDoesNotStopPlay() {
+        val abss = file("aa/P.abss", """{"format":"abyssus","formatVersion":1,"sceneViewAntialiasing":"X8"}""")
+        val other = file("other/Q.abss", """{"format":"abyssus","formatVersion":1,"sceneViewAntialiasing":"X2"}""")
+        val settings = project.getService(net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings::class.java)
+        val views = mutableListOf<FakeView>()
+        val (one, f) = fakeEditor("aa/scenes/one.scene", """{"format":"abyssus","formatVersion":1}""", views)
+        val (two, _) = fakeEditor("aa/scenes/two.scene", """{"format":"abyssus","formatVersion":1}""", views)
+        val (three, _) = fakeEditor("other/scenes/three.scene", """{"format":"abyssus","formatVersion":1}""", views)
+        var twoDisposed = false
+        try {
+            assertEquals(listOf(AntialiasingLevel.X8), views[0].antialiasingCalls)
+            assertEquals(listOf(AntialiasingLevel.X8), views[1].antialiasingCalls)
+            assertEquals(listOf(AntialiasingLevel.X2), views[2].antialiasingCalls)
+            val stops = views.take(2).map { it.stops }
+            settings.setAntialiasing(abss, AntialiasingLevel.OFF)
+            assertEquals(AntialiasingLevel.OFF, views[0].antialiasingCalls.last())
+            assertEquals(AntialiasingLevel.OFF, views[1].antialiasingCalls.last())
+            assertEquals(stops, views.take(2).map { it.stops })
+            assertEquals(listOf(AntialiasingLevel.X2), views[2].antialiasingCalls)
+            setText(f, "not json")
+            one.afterThePause()
+            settings.setAntialiasing(abss, AntialiasingLevel.X2)
+            setText(f, """{"format":"abyssus","formatVersion":1}""")
+            one.afterThePause()
+            assertEquals(listOf(AntialiasingLevel.X2), views[3].antialiasingCalls)
+            com.intellij.openapi.util.Disposer.dispose(two)
+            twoDisposed = true
+            val calls = views[1].antialiasingCalls.toList()
+            settings.setAntialiasing(abss, AntialiasingLevel.X4)
+            assertEquals(calls, views[1].antialiasingCalls)
+            assertEquals(AntialiasingLevel.X4, views[3].antialiasingCalls.last())
+            settings.setAntialiasing(other, AntialiasingLevel.X8)
+            assertEquals(AntialiasingLevel.X8, views[2].antialiasingCalls.last())
+            assertEquals(AntialiasingLevel.X4, views[3].antialiasingCalls.last())
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(one)
+            if (!twoDisposed) com.intellij.openapi.util.Disposer.dispose(two)
+            com.intellij.openapi.util.Disposer.dispose(three)
+        }
+    }
+
+    fun testStandaloneAntialiasingDefaultsToFourSamples() {
+        val views = mutableListOf<FakeView>()
+        val (editor, _) = fakeEditor("standalone.scene", """{"format":"abyssus","formatVersion":1}""", views)
+        try { assertEquals(listOf(AntialiasingLevel.X4), views.single().antialiasingCalls) }
+        finally { com.intellij.openapi.util.Disposer.dispose(editor) }
+    }
+
+    fun testProjectAntialiasingUndoRedoAndUnsavedTextReachAnOpenView() {
+        val abss = file("undo/P.abss")
+        myFixture.openFileInEditor(abss)
+        val textEditor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+        val views = mutableListOf<FakeView>()
+        val (editor, _) = fakeEditor("undo/scenes/a.scene", """{"format":"abyssus","formatVersion":1}""", views)
+        val settings = project.getService(net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings::class.java)
+        try {
+            settings.setAntialiasing(abss, AntialiasingLevel.OFF)
+            com.intellij.openapi.command.undo.UndoManager.getInstance(project).undo(textEditor)
+            com.intellij.openapi.command.undo.UndoManager.getInstance(project).redo(textEditor)
+            assertEquals(listOf(AntialiasingLevel.X4, AntialiasingLevel.OFF, AntialiasingLevel.X4, AntialiasingLevel.OFF), views.single().antialiasingCalls)
+            val doc = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(abss)!!
+            setText(abss, doc.text.replace("\"OFF\"", "\"X8\""))
+            assertEquals(AntialiasingLevel.X8, views.single().antialiasingCalls.last())
+            assertEquals(0, views.single().stops)
+        } finally { com.intellij.openapi.util.Disposer.dispose(editor) }
     }
 }

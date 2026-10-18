@@ -26,6 +26,10 @@ import net.nevinsky.abyssus.plugin.filetype.EyeIcons
 import net.nevinsky.abyssus.plugin.filetype.TreeActionIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneViewIcons
+import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.asset.showAssetsMenu
+import net.nevinsky.abyssus.plugin.projectView.scene.sceneNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.scene.showSceneMenu
 import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
 import net.nevinsky.abyssus.plugin.sceneview.openSceneView
 import java.awt.*
@@ -169,7 +173,7 @@ private class AbyssusSelectInTarget(project: Project) : ProjectViewSelectInTarge
  * Paints clickable icons at the right edge of rows that have actions: the eye on entries gated by an `xxxEnabled`
  * toggle, "View" on scenes; `unused` sits left of the eye.
  */
-internal class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
+class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
 
     /** The row's actions, rightmost first. */
@@ -239,6 +243,40 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
             }
         })
     }
+
+    /**
+     * The Assets row's right-click menu holds only Import Model and New, not the platform's project-view actions;
+     * every other row keeps the platform popup.
+     */
+    override fun processMouseEvent(e: MouseEvent) {
+        if (e.isPopupTrigger) {
+            val row = rowOf(e)
+            val node = row?.let { TreeUtil.getUserObject(getPathForRow(it)?.lastPathComponent) }
+            if (row == null) {
+                super.processMouseEvent(e)
+                return
+            }
+            if (assetsNodeProjectFile(node) != null) {
+                if (e.id == MouseEvent.MOUSE_PRESSED || e.id == MouseEvent.MOUSE_RELEASED) {
+                    requestFocusInWindow()
+                    setSelectionRow(row)
+                    showAssetsMenu(this, e.x, e.y)
+                }
+                e.consume()
+                return
+            } else if (sceneNodeProjectFile(node) != null) {
+                if (e.id == MouseEvent.MOUSE_PRESSED || e.id == MouseEvent.MOUSE_RELEASED) {
+                    requestFocusInWindow()
+                    setSelectionRow(row)
+                    showSceneMenu(this, e.x, e.y)
+                }
+                e.consume()
+                return
+            }
+        }
+        super.processMouseEvent(e)
+    }
+
 
     override fun getToolTipText(event: MouseEvent): String? =
         actionAt(event)?.second?.tooltip ?: super.getToolTipText(event)

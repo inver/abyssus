@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 import net.nevinsky.abyssus.lib.core.assets.AssetIndex
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.MetaAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
@@ -25,11 +25,11 @@ import org.slf4j.helpers.NOPLogger
  */
 class ProceduralSkyLoader(
     private val fileLoader: FileLoader,
-    private val metaLoader: AssetMetaLoader,
+    metaLoader: AssetMetaLoader,
     shaders: ShaderStorage = ShaderStorage(),
     private val log: Logger = NOPLogger.NOP_LOGGER,
     private val index: AssetIndex = AssetIndex(fileLoader, metaLoader),
-) : AssetLoader<Unit, PreparedProceduralSky, ProceduralSky> {
+) : MetaAssetLoader<Unit, PreparedProceduralSky, ProceduralSky>(metaLoader) {
     /** The sky's own shader files come from its asset folder; the cloud shaders from the resources and defaults. */
     private val shaders = shaders.withAssets(fileLoader)
 
@@ -52,14 +52,10 @@ class ProceduralSkyLoader(
         return shaders.read(file, asset).also { check(it.isNotBlank()) { "Asset '$asset' has no file '$file'" } }
     }
 
-    override fun prepare(name: String): Prepared<Unit, PreparedProceduralSky>? =
-        metaLoader.loadBaseMeta(name)?.let(::loadPrepared)
-
     override fun dependencies(staged: PreparedProceduralSky): Set<String> = setOfNotNull(staged.clouds)
 
     override fun build(staged: PreparedProceduralSky, assets: BuiltAssets) = ProceduralSky(staged, assets, shaders, log)
 
-    override fun discard(model: Unit) = Unit
 }
 
 /**

@@ -131,12 +131,11 @@ class UiEditorController(
 
     private val prefKey: String get() = "abyssus.ui.${file.path}"
 
-    override var previewViewport: UiViewport = (preferences.get("$prefKey.viewport")?.split("x")?.mapNotNull { it.toIntOrNull() }
-        ?.takeIf { it.size == 2 }?.let { UiViewport(it[0], it[1]) }?.takeIf { it.valid }) ?: UiViewport(1280, 720)
-        private set
+    private val viewSettings = UiViewSettings(preferences, prefKey)
 
-    override var backdropScene: String? = preferences.get("$prefKey.backdrop")
-        private set
+    override val previewViewport: UiViewport get() = viewSettings.viewport
+
+    override val backdropScene: String? get() = viewSettings.backdropScene
 
     override var resourceRevision: Long = 0
         private set
@@ -243,18 +242,14 @@ class UiEditorController(
 
     /** Sets what the preview lays out for; false (nothing changes) for a size that is not positive or is above [MAX_PREVIEW_SIDE]. */
     fun setPreviewViewport(width: Int, height: Int): Boolean {
-        val next = UiViewport(width, height)
-        if (!next.valid) return false
-        previewViewport = next
-        preferences.set("$prefKey.viewport", "${width}x$height")
+        if (!viewSettings.setViewport(width, height)) return false
         changed()
         return true
     }
 
     /** Chooses the scene drawn behind the preview (a file name in `scenes`), or none; remembered for this viewer only. */
     fun setBackdropScene(name: String?) {
-        backdropScene = name
-        preferences.set("$prefKey.backdrop", name)
+        viewSettings.setBackdrop(name)
         changed()
     }
 
@@ -367,38 +362,29 @@ class UiEditorController(
 
     // ---- canvas gestures ----
 
-    private var gesture: UiLayoutGesture? = null
+    private val gestures = UiCanvasGestures(
+        { collection }, { text }, { layoutProvider(it) }, ::select,
+        { baseText, edit -> perform(AbyssusBundle.message("uiCommandDrag"), baseText, edit) is UiEditOutcome.Edited },
+    )
 
-    override val gestureActive: Boolean get() = gesture != null
+    override val gestureActive: Boolean get() = gestures.active
 
     override val selectedWidgetId: String? get() = selection.widgetId
 
     /** A press on [widgetId] in the edit canvas: selects it and starts a drag at viewport point ([x], [y]). */
-    override fun beginGesture(widgetId: String, x: Float, y: Float) {
-        val c = collection ?: return
-        val screen = UiTree(c).screenOf(widgetId) ?: return
-        select(widgetId)
-        val layout = layoutProvider(screen.id) ?: return
-        gesture = UiLayoutGesture(c, layout, widgetId, x, y, text)
-    }
+    override fun beginGesture(widgetId: String, x: Float, y: Float) = gestures.begin(widgetId, x, y)
 
     /** Transient preview only; nothing is written. */
-    override fun updateGesture(x: Float, y: Float): UiGesturePreview = gesture?.update(x, y) ?: UiGesturePreview.None
+    override fun updateGesture(x: Float, y: Float): UiGesturePreview = gestures.update(x, y)
 
     /** The release: one command for the whole drag, refused when the document changed since the press. */
-    override fun endGesture(x: Float, y: Float): Boolean {
-        val g = gesture ?: return false
-        gesture = null
-        g.update(x, y)
-        val commit = g.commit() ?: return false
-        return perform(AbyssusBundle.message("uiCommandDrag"), commit.baseText, commit.edit) is UiEditOutcome.Edited
-    }
+    override fun endGesture(x: Float, y: Float): Boolean = gestures.end(x, y)
 
-    fun cancelGesture() { gesture = null }
+    fun cancelGesture() = gestures.cancel()
 
     override fun dispose() {
         disposed = true
         listeners.clear()
-        gesture = null
+        gestures.cancel()
     }
 }

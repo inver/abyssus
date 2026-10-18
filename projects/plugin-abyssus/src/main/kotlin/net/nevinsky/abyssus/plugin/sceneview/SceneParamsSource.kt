@@ -33,7 +33,7 @@ fun interface SceneParamsSource {
         fun editorText(reader: SceneReader) = SceneParamsSource { file ->
             val camera = ProjectLayout.abssFor(file)?.let { abss ->
                 val text = textOf(abss)
-                net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat().requireSupported(net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(text), net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)
+                com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.requireSupported(text, net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)
                 MainCamera().parse(text)
             } ?: CameraParams.DEFAULT
             val parsed = SceneDocumentCache.parsedScene(reader, textOf(file))

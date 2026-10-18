@@ -40,6 +40,7 @@ import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayTerrainSnapshot
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.TerrainRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.plugin.projectView.HdrPreviewService
 import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 import org.slf4j.Logger
 import java.io.File
@@ -57,10 +58,13 @@ class AssetLoading(
     private val executor: Executor,
     private val shaders: ShaderStorage,
 ) {
-    val toneCurve = ToneCurve()
+    private val toneCurve = ToneCurve()
 
     /** Thumbnails of HDR skies. The decoder reads whatever file it is given, so it needs no project of its own. */
-    val hdrPreview = HdrPreview(ExrLoader(FileLoader(File("."))), toneCurve)
+    val hdrPreviews: HdrPreviewService = object : HdrPreviewService {
+        override val preview = HdrPreview(ExrLoader(FileLoader(File("."))), toneCurve)
+        override val exposure: Float get() = toneCurve.exposure
+    }
 
     private val assimp = AssimpModelLoader()
 

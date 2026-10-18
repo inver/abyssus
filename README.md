@@ -22,6 +22,9 @@ remain readable in the text editor; plugin editing and loading are refused. No i
   aircraft from a FlightGear `.zip` into a model asset.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
+  Edges and lines use 4× antialiasing by default; select the project in the Abyssus tree and use
+  **Abyssus Properties | Scene view antialiasing** to choose Off, 2×, 4× or 8×. The choice is saved in its `.abss`
+  and applies to that project's open views, with automatic fallback for unsupported GPUs.
 - **Water**: **Add Water** (a Lake or a Sea, from the Scene view toolbar or a scene's right-click menu) adds a finite
   horizontal surface that is drawn from above with animated waves, reflections of the sky and the scene, wave-distorted
   refraction that fades to a tint with depth and animated foam where terrain meets it. Terrain above the level defines

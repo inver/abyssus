@@ -63,6 +63,26 @@ class FoliageLoaderTest {
     }
 
     @Test
+    fun aStaleBakeTriggersEditorGenerationButRuntimeKeepsItsSavedCopies() {
+        val saved = FoliageBake(
+            ByteArray(FOLIAGE_FINGERPRINT_BYTES), 32f,
+            listOf(FoliageLayerBake(1, 2, 1, 1, listOf(listOf(FoliageCopy(0, 1f, 1f, 0f, 1f))))),
+        )
+        bake(saved)
+        val warnings = mutableListOf<String>()
+        val runtime = RuntimeFoliageLoader(metas, FoliageRuntimeLoad(files, metas, terrains), warnings::add)
+        val editorPrepared = loader.prepare("foliage_meadow")!!.staged
+        val runtimePrepared = runtime.prepare("foliage_meadow")!!.staged
+        assertTrue(editorPrepared.stale)
+        assertFalse(runtimePrepared.stale)
+        assertEquals(1, runtimePrepared.copyCount)
+        assertEquals(saved.layers.single().chunks, runtimePrepared.bake!!.layers.single().chunks)
+        assertEquals(setOf("terr", "tree", "rock"), runtime.dependencies(runtimePrepared))
+        assertEquals(loader.dependencies(editorPrepared), runtime.dependencies(runtimePrepared))
+        assertTrue(warnings.single(), warnings.single().contains("saved copies"))
+    }
+
+    @Test
     fun aModelWithoutAFolderIsNotADependency() {
         foliage(TWO_MODEL_LAYER.replace(""""asset":"rock","weight":1.0""", """"asset":"gone","weight":1.0"""))
         val prepared = loader.prepare("foliage_meadow")!!.staged

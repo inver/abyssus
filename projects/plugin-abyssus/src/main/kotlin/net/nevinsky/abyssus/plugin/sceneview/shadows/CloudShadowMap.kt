@@ -19,7 +19,11 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SUN_OCCLUSION_FLOOR
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.bandDistance
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.GpuTexture
-import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.core.util.GL_HALF_FLOAT
+import net.nevinsky.abyssus.lib.core.util.GL_RED
+import net.nevinsky.abyssus.lib.core.util.checkFramebufferComplete
+import net.nevinsky.abyssus.lib.core.util.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.render.shadow.ShadowGlState
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 import kotlin.math.abs
@@ -33,8 +37,6 @@ const val CLOUD_SHADOW_SIZE = 512
 const val CLOUD_SHADOW_EXTENT = 4000f
 
 private const val GL_R16F = 0x822D
-private const val GL_RED = 0x1903
-private const val GL_HALF_FLOAT = 0x140B
 private const val GL_FRAMEBUFFER_BINDING = 0x8CA6
 private const val BANDS = 3
 
@@ -84,21 +86,13 @@ class CloudShadowMap(
         check(!disposed)
         if (failed) return false
         val gl = Gdx.gl
-        val ints = BufferUtils.newIntBuffer(16)
+        val state = ShadowGlState()
         val caps = listOf(GL20.GL_BLEND, GL20.GL_DEPTH_TEST, GL20.GL_CULL_FACE, GL20.GL_SCISSOR_TEST)
-        var previous = 0
-        var viewport = IntArray(4)
-        var enabled = emptyList<Boolean>()
         try {
             checkNotNull(Gdx.gl30) { "The cloud shadow map needs OpenGL 3" }
             if (texture == null) allocate()
             snapOrigin(centerX, centerZ)
             fillBands(clouds, sun, planetRadius, cameraHeight, timeSeconds)
-            gl.glGetIntegerv(GL_FRAMEBUFFER_BINDING, ints)
-            previous = ints.get(0)
-            gl.glGetIntegerv(GL20.GL_VIEWPORT, ints)
-            viewport = IntArray(4) { ints.get(it) }
-            enabled = caps.map(gl::glIsEnabled)
             caps.forEach(gl::glDisable)
             gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, framebuffer)
             gl.glViewport(0, 0, size, size)
@@ -117,11 +111,7 @@ class CloudShadowMap(
             fail(failure)
             return false
         } finally {
-            if (enabled.isNotEmpty()) {
-                gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, previous)
-                gl.glViewport(viewport[0], viewport[1], viewport[2], viewport[3])
-                caps.zip(enabled).forEach { (cap, on) -> if (on) gl.glEnable(cap) else gl.glDisable(cap) }
-            }
+            state.restore()
         }
     }
 
@@ -183,7 +173,13 @@ class CloudShadowMap(
         originZ = floor(centerZ / texel + 0.5f) * texel - extent / 2f
     }
 
-    private fun fillBands(clouds: CloudMeta, sun: Vector3, planetRadius: Float, cameraHeight: Float, timeSeconds: Double) {
+    private fun fillBands(
+        clouds: CloudMeta,
+        sun: Vector3,
+        planetRadius: Float,
+        cameraHeight: Float,
+        timeSeconds: Double
+    ) {
         bandC.fill(0f)
         val bands = listOf(clouds.low, clouds.mid, clouds.high)
         for ((i, band) in bands.withIndex()) {
@@ -218,9 +214,14 @@ class CloudShadowMap(
         val previous = ints.get(0)
         try {
             gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, framebuffer)
-            gl.glFramebufferTexture2D(GL20.GL_FRAMEBUFFER, GL20.GL_COLOR_ATTACHMENT0, GL20.GL_TEXTURE_2D, map.textureObjectHandle, 0)
-            val status = gl.glCheckFramebufferStatus(GL20.GL_FRAMEBUFFER)
-            check(status == GL20.GL_FRAMEBUFFER_COMPLETE) { "The cloud shadow framebuffer is incomplete (status 0x${status.toString(16)})" }
+            gl.glFramebufferTexture2D(
+                GL20.GL_FRAMEBUFFER,
+                GL20.GL_COLOR_ATTACHMENT0,
+                GL20.GL_TEXTURE_2D,
+                map.textureObjectHandle,
+                0
+            )
+            checkFramebufferComplete("The cloud shadow framebuffer")
         } finally {
             gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, previous)
         }

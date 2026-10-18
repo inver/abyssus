@@ -24,12 +24,12 @@ import kotlin.coroutines.cancellation.CancellationException
  * of the prepared model's data, never for building one.
  */
 class ModelLoader(
-    private val metaLoader: AssetMetaLoader,
+    metaLoader: AssetMetaLoader,
     private val assimp: AssimpModelLoader,
     private val fileLoader: FileLoader,
     private val preparation: ModelPreparationTap? = null,
     private val decodeTextures: Boolean = true,
-) : AssetLoader<Unit, PreparedModel, Model> {
+) : MetaAssetLoader<Unit, PreparedModel, Model>(metaLoader) {
     override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedModel> = Prepared(read(meta))
 
     private fun read(meta: AssetMeta<Any>): PreparedModel {
@@ -47,15 +47,11 @@ class ModelLoader(
         }
     }
 
-    override fun prepare(name: String): Prepared<Unit, PreparedModel>? =
-        metaLoader.loadBaseMeta(name)?.let(::loadPrepared)
-
     override fun upload(staged: PreparedModel) = staged.uploadNext()
 
     override fun build(staged: PreparedModel, assets: BuiltAssets): Model =
         assimp.buildIntModel(staged.data, staged.file, staged.textures).also { staged.dispose() }
 
-    override fun discard(model: Unit) = Unit
 
     override fun discardStaged(staged: PreparedModel) = staged.dispose()
 }

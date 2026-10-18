@@ -5,17 +5,18 @@
 
 package net.nevinsky.abyssus.lib.core.water
 
+import net.nevinsky.abyssus.lib.core.util.WATER_DIRECTIONAL_CAPACITY
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
-import com.badlogic.gdx.graphics.Cubemap
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GLTexture
 import com.badlogic.gdx.graphics.Mesh
-import com.badlogic.gdx.graphics.Pixmap
-import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.utils.Disposable
+import net.nevinsky.abyssus.lib.core.util.newSolidTexture
+import net.nevinsky.abyssus.lib.core.util.newSolidCubemap
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 
 /** The classpath folder of the water shaders, for [ShaderStorage.withResources]. */
@@ -64,9 +65,9 @@ class WaterTextures(
  */
 class WaterDrawable(shaders: ShaderStorage, private val planner: WaterMeshPlanner = WaterMeshPlanner()) : Disposable {
     private val program = shaders.withWaterShaders().program("water")
-    private val blank = Texture(Pixmap(1, 1, Pixmap.Format.RGBA8888).also { it.setColor(1f, 1f, 1f, 1f); it.fill() }, false)
+    private val blank = newSolidTexture()
     /** Bound to the sky cube's unit when there is no sky cube, so no cube sampler is left without a cube. */
-    private val blankCube = Cubemap(blankPixmap(), blankPixmap(), blankPixmap(), blankPixmap(), blankPixmap(), blankPixmap())
+    private val blankCube = newSolidCubemap()
     private val meshes = object : LinkedHashMap<String, Mesh>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Mesh>): Boolean {
             val drop = size > MAX_MESHES
@@ -193,10 +194,8 @@ class WaterDrawable(shaders: ShaderStorage, private val planner: WaterMeshPlanne
     }
 }
 
-private fun blankPixmap() = Pixmap(1, 1, Pixmap.Format.RGBA8888).also { it.setColor(0f, 0f, 0f, 1f); it.fill() }
-
 /** The most directional lights the water shader reads. */
-const val MAX_DIRECTIONAL = 5
+const val MAX_DIRECTIONAL = WATER_DIRECTIONAL_CAPACITY
 
 private const val MAX_MESHES = 16
 

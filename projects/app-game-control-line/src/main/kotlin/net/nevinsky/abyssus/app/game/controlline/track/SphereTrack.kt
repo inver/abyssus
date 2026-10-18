@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.asin
+import net.nevinsky.abyssus.lib.core.util.azimuthRadiansOf
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -42,12 +43,7 @@ data class TrackSample(
 )
 
 /** [degrees] wrapped into (-180, 180]. */
-fun wrapDegrees(degrees: Float): Float {
-    var d = degrees % 360f
-    if (d > 180f) d -= 360f
-    if (d <= -180f) d += 360f
-    return d
-}
+fun wrapDegrees(degrees: Float): Float = net.nevinsky.abyssus.lib.core.util.wrapDegrees(degrees)
 
 /**
  * Turns a plane's pose and velocity, relative to the handle, into a [TrackSample]. The sphere's frame at the plane: `n`
@@ -70,7 +66,7 @@ class SphereTrack {
     ): TrackSample {
         relative.set(position).sub(handle)
         val radius = relative.len()
-        val azimuth = atan2(-relative.z, relative.x)
+        val azimuth = azimuthRadiansOf(relative.x, relative.z)
         val elevation = if (radius > 0f) asin((relative.y / radius).coerceIn(-1f, 1f)) else 0f
         out.set(relative).scl(if (radius > 0f) 1f / radius else 0f)
         east.set(-sin(azimuth), 0f, -cos(azimuth))

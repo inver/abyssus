@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.plugin.testMetaFiles
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.actionSystem.ActionManager
@@ -52,7 +53,7 @@ class AddAssetActionTest : BasePlatformTestCase() {
         return event.presentation.isEnabledAndVisible
     }
 
-    private fun group(selected: (String) -> Unit = {}, at: Vec3 = Vec3(0f, 0f, 0f)) = AddAssetGroup(project, scene(), { at }, selected).getChildren(null)
+    private fun group(selected: (String) -> Unit = {}, at: Vec3 = Vec3(0f, 0f, 0f)) = AddAssetGroup(project, scene(), testMetaFiles(), { at }, selected).getChildren(null)
 
     fun testTheGroupListsTheProjectsModelsAndTerrainsOnly() {
         copyProject()
@@ -107,7 +108,7 @@ class AddAssetActionTest : BasePlatformTestCase() {
 
     fun testASceneOutsideAProjectHasNothingToAdd() {
         val loose = myFixture.addFileToProject("loose/Alone.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
-        assertFalse(hasRenderAssets(loose))
-        assertTrue(AddAssetGroup(project, loose, { Vec3(0f, 0f, 0f) }).getChildren(null).isEmpty())
+        assertFalse(hasRenderAssets(loose, testMetaFiles()))
+        assertTrue(AddAssetGroup(project, loose, testMetaFiles(), { Vec3(0f, 0f, 0f) }).getChildren(null).isEmpty())
     }
 }

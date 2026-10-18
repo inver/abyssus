@@ -4,11 +4,14 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
+
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.acos
 import kotlin.math.asin
 import kotlin.math.atan
+import net.nevinsky.abyssus.lib.core.util.azimuthRadiansOf
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -258,7 +261,7 @@ class IdealTracks(val radius: Float, cornerMetres: Float = 1f) {
         repeat(40) {
             val top = (low + high) / 2f
             val leg = greatCircle(place(0f, axis + w), place(top, axis - w), Tag.LEG)
-            val crossing = leg.points.minBy { kotlin.math.abs(wrapAzimuth(atan2(-it.z, it.x) / D2R - axis)) }
+            val crossing = leg.points.minBy { kotlin.math.abs(wrapDegrees(azimuthRadiansOf(it.x, it.z) / D2R - axis)) }
             if (asin(crossing.y.coerceIn(-1f, 1f)) / D2R > 45f) high = top else low = top
         }
         val top = (low + high) / 2f
@@ -364,4 +367,3 @@ class IdealTracks(val radius: Float, cornerMetres: Float = 1f) {
 }
 
 /** [degrees] wrapped into (-180, 180]. */
-internal fun wrapAzimuth(degrees: Float): Float = wrapDeg(degrees)

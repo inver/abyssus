@@ -5,38 +5,31 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.document.scalarOf
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.plugin.EditorBundle
-
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.icons.AllIcons
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ProjectViewNode
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.ui.SimpleTextAttributes
-import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
-import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectIcons
-import net.nevinsky.abyssus.plugin.filetype.AssetIcons
-import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
-import net.nevinsky.abyssus.plugin.filetype.EntityIcons
-import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
-import net.nevinsky.abyssus.plugin.filetype.SceneIcons
-import net.nevinsky.abyssus.plugin.filetype.ScenesIcons
-import net.nevinsky.abyssus.plugin.dto.SceneEntry
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.editor.document.scalarOf
 import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
+import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.EditorBundle
+import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.dto.SceneEntry
+import net.nevinsky.abyssus.plugin.filetype.*
 import net.nevinsky.abyssus.plugin.water.WaterGroup
 import javax.swing.Icon
 
@@ -100,7 +93,10 @@ class AbyssusAssetNode(project: Project, file: VirtualFile, settings: ViewSettin
         presentation.addText(value.name, SimpleTextAttributes.REGULAR_ATTRIBUTES)
         presentation.setIcon(assetIcon(value))
         AssetReadCache.of(project!!).read(value)?.takeIf { !it.success }?.let {
-            presentation.addText("  " + AbyssusBundle.message("assetParseError", it.message.orEmpty()), SimpleTextAttributes.ERROR_ATTRIBUTES)
+            presentation.addText(
+                "  " + AbyssusBundle.message("assetParseError", it.message.orEmpty()),
+                SimpleTextAttributes.ERROR_ATTRIBUTES
+            )
         }
     }
 }
@@ -239,7 +235,8 @@ class DtoEntryNode(
         val v = value
         val shown = rowText(v, label)
         val attrs = if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES
-        val secondaryAttrs = if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.GRAY_ATTRIBUTES
+        val secondaryAttrs =
+            if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.GRAY_ATTRIBUTES
         if (isScalar(v.value)) {
             presentation.addText("${shown.label}: ", attrs)
             presentation.addText((scalarOf(v.value) ?: EditorBundle.message("dtoNullValue")).toString(), secondaryAttrs)

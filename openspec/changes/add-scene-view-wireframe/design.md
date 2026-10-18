@@ -24,9 +24,9 @@ Keeps the dropdown simple (one value controls everything) and matches the user's
 
 Alternatives: an independent wireframe toggle beside Shadows/Fog/Grid — rejected because it needs combinations (lit wireframe, unlit wireframe) that were not requested.
 
-### 2. `glPolygonMode(GL_LINE)` wraps the content pass
+### 2. `glPolygonMode(GL_LINE)` scopes each geometry pass
 
-`SceneRenderer.renderContent()` and the water/reflection paths switch to `GL_LINE` around the content batch when `shading == WIREFRAME`, then restore `GL_FILL`. The skybox is drawn through the same content batch path so it also draws wireframe. The grid (already a `ModelInstance` of lines) and `LineBatch` markers/gizmos are unaffected by polygon mode.
+`GL20.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)` scopes, in `SceneRenderer.render()`/`renderContent()` when `shading == Shading.WIREFRAME`: the skybox draw, the terrain pass (`TerrainPass` via `TerrainShader`), the content batch (models and foliage OBJECT layers), and the water surfaces; each pass restores `GL_FILL` in a `finally`. The ray-tracing branch is left untouched — while a ray frame is presented the ray image shows as usual, so wireframe is raster only. The grid (line geometry), markers, selection box and gizmos (`LineBatch`) are unaffected by polygon mode.
 
 Alternatives: per-shader wireframe (rejected, touches every shader); post-process edge detect (rejected, softens one-pixel gizmo/grid lines).
 
@@ -36,7 +36,8 @@ Follows `ViewDisplay`'s existing pattern: set on the EDT, read on the next frame
 
 ## Risks / Trade-offs
 
-[Wireframe skybox looks like a cube outline] → acceptable; wireframe is an inspection mode, not a final look.
+[Skybox draws as a cube outline] → acceptable; wireframe is an inspection mode. The skybox is wrapped at its own draw calls (`render()`:420, `drawReflected()`:696), not through the content batch, so it needs its own `GL_LINE` scope.
 [Water in wireframe is hard to read] → accepted; requested scope covers all geometry.
-[`glPolygonMode` state leaks if not restored] → mitigated by restoring `GL_FILL` in a `finally` block around the pass.
-[Depth/shadow atlas from wireframe geometry is noisy] → shadows keep running off the current `frameLights`; shadow depth is still generated from the poses. No change to shadow behavior required by spec.
+[`glPolygonMode` state leaks if not restored] → mitigated by restoring `GL_FILL` in a `finally` block around each pass; `GL20` is available on the libGDX 3.3 core context.
+[Shadows disappear in Wireframe] → by design: `ViewDisplay.drawsShadows` stays `shadows && shading == LIT`, so the shadow pass does not run in Wireframe and the Shadows toggle has no effect until Lit is chosen again; no noisy wireframe shadow atlas.
+[Mode switch leaves stale lights] → `SceneRenderer.display`'s setter already clears `lightsKey`/`frameLightsKey` when `shading` changes (SceneRenderer.kt:164-168), so the next frame re-applies lights.

@@ -10,10 +10,7 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderProblem
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderRead
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderReader
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerKind
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageScale
 import net.nevinsky.abyssus.lib.core.assets.foliage.layerKind
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 
@@ -61,47 +58,20 @@ class FoliageRead(val settings: FoliageMeta, val problems: List<FoliageProblem>)
 class FoliageSettingsReader(
     private val messages: EditorMessages,
     private val colliders: FoliageColliderReader = FoliageColliderReader(),
+    private val binding: net.nevinsky.abyssus.lib.core.editor.document.FoliageSettingsBinding = net.nevinsky.abyssus.lib.core.editor.document.FoliageSettingsBinding(),
 ) {
 
     fun read(node: JsonNode?, modelAssets: Set<String>): FoliageRead {
-        val settings = parse(node ?: return FoliageRead(FoliageMeta(), emptyList()))
+        val settings = binding.read(node ?: return FoliageRead(FoliageMeta(), emptyList()))
+        return read(settings, modelAssets)
+    }
+
+    fun read(settings: FoliageMeta, modelAssets: Set<String>): FoliageRead {
         return FoliageRead(settings, problems(settings, modelAssets))
     }
 
     /** The reason shown for [error]; the text comes from `AbyssusEditorBundle`. */
     fun reason(error: FoliageError): String = messages.message("foliageError.${error.name}")
-
-    private fun parse(node: JsonNode): FoliageMeta = FoliageMeta(
-        terrain = node.text(FOLIAGE_TERRAIN) ?: "",
-        dataFile = node.text(FOLIAGE_DATA_FILE_KEY),
-        maskResolution = node.int(FOLIAGE_MASK_RESOLUTION) ?: FOLIAGE_MASK_RESOLUTION_DEFAULT,
-        layers = node.get(FOLIAGE_LAYERS)?.takeIf { it.isArray }?.mapNotNull(::layer) ?: emptyList(),
-    )
-
-    private fun layer(node: JsonNode): FoliageLayerMeta? {
-        val id = node.int(FOLIAGE_ID) ?: return null
-        return FoliageLayerMeta(
-            id = id,
-            kind = node.text(FOLIAGE_KIND) ?: FoliageLayerKind.OBJECT.name,
-            models = node.get(FOLIAGE_MODELS)?.takeIf { it.isArray }
-                ?.mapNotNull { model ->
-                    val asset = model.text(FOLIAGE_ASSET) ?: return@mapNotNull null
-                    FoliageModelMeta(asset, model.float(FOLIAGE_WEIGHT) ?: 1f)
-                } ?: emptyList(),
-            density = node.float(FOLIAGE_DENSITY) ?: FOLIAGE_DENSITY_DEFAULT,
-            scale = FoliageScale(
-                min = node.get(FOLIAGE_SCALE)?.float(FOLIAGE_MIN) ?: FOLIAGE_SCALE_MIN_DEFAULT,
-                max = node.get(FOLIAGE_SCALE)?.float(FOLIAGE_MAX) ?: FOLIAGE_SCALE_MAX_DEFAULT,
-            ),
-            alignToNormal = node.float(FOLIAGE_ALIGN_TO_NORMAL) ?: FOLIAGE_ALIGN_DEFAULT,
-            minHeight = node.float(FOLIAGE_MIN_HEIGHT),
-            maxHeight = node.float(FOLIAGE_MAX_HEIGHT),
-            maxSlope = node.float(FOLIAGE_MAX_SLOPE),
-            drawDistance = node.float(FOLIAGE_DRAW_DISTANCE) ?: FOLIAGE_DRAW_DISTANCE_DEFAULT,
-            seed = node.int(FOLIAGE_SEED) ?: 0,
-            collider = node.get(FOLIAGE_COLLIDER)?.takeUnless { it.isNull },
-        )
-    }
 
     private fun problems(settings: FoliageMeta, modelAssets: Set<String>): List<FoliageProblem> = buildList {
         val seen = mutableSetOf<Int>()
@@ -144,13 +114,9 @@ class FoliageSettingsReader(
             .map { FoliageProblem(it.id, FOLIAGE_COLLIDER, FoliageError.COLLIDER_KIND, reason(FoliageError.COLLIDER_KIND)) }
     }
 
-    private fun JsonNode.obj(name: String): JsonNode? = get(name)?.takeIf { it.isObject }
 
-    private fun JsonNode.text(name: String): String? = get(name)?.takeIf { it.isTextual }?.asText()
 
-    private fun JsonNode.int(name: String): Int? = get(name)?.takeIf { it.isIntegralNumber }?.asInt()
 
-    private fun JsonNode.float(name: String): Float? = get(name)?.takeIf { it.isNumber }?.floatValue()
 }
 
 /** The documented keys and defaults of a foliage `additional` block. */

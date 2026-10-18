@@ -43,43 +43,61 @@ class PreparedFoliage(
  * copies when the drawable is built.
  */
 class FoliageLoader(
-    private val fileLoader: FileLoader,
     private val metaLoader: AssetMetaLoader,
-    private val terrains: TerrainLoader,
-    private val fingerprint: FoliageFingerprint = FoliageFingerprint(),
-    private val dataFile: FoliageDataFile = FoliageDataFile(),
-    private val masks: FoliageMaskFile = FoliageMaskFile(fileLoader),
+    private val policy: FoliageReadPolicy,
 ) : AssetLoader<Unit, PreparedFoliage, FoliageDrawable> {
+    constructor(
+        fileLoader: FileLoader,
+        metaLoader: AssetMetaLoader,
+        terrains: TerrainLoader,
+        fingerprint: FoliageFingerprint = FoliageFingerprint(),
+        dataFile: FoliageDataFile = FoliageDataFile(),
+        masks: FoliageMaskFile = FoliageMaskFile(fileLoader),
+    ) : this(metaLoader, EditorFoliageReadPolicy(fileLoader, metaLoader, terrains, fingerprint, dataFile, masks))
 
-    override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedFoliage>? {
-        val additional = meta.additional as? FoliageMeta ?: return null
-        return Prepared(prepare(meta.name, additional))
-    }
+    override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedFoliage>? = policy.read(meta)?.let { Prepared(it) }
 
     override fun prepare(name: String): Prepared<Unit, PreparedFoliage>? {
         val meta = metaLoader.loadBaseMeta(name) ?: return null
         if (meta.type != MetaType.FOLIAGE) return null
-        val additional = meta.additional as? FoliageMeta ?: return null
-        return Prepared(prepare(name, additional))
-    }
-
-    private fun prepare(name: String, meta: FoliageMeta): PreparedFoliage {
-        val terrain = terrains.prepare(meta.terrain)?.staged?.data
-        val layerMasks = meta.layers.associate { it.id to masks.read(name, it.id, meta.maskResolution) }
-        val bake = fileLoader.findAssetFile(name, meta.dataFileName())
-            ?.let { file -> runCatchingKeepingCancellation { file.readBytes() }.getOrNull() }
-            ?.let(dataFile::read)
-        val declared = (listOf(meta.terrain) + meta.layers.flatMap { layer -> layer.models.map { it.asset } })
-            .filter { it.isNotBlank() && metaLoader.loadBaseMeta(it) != null }
-            .toSet()
-        return PreparedFoliage(meta, terrain, layerMasks, bake, fingerprint.of(meta, terrain, layerMasks), declared)
+        return loadPrepared(meta)
     }
 
     override fun dependencies(staged: PreparedFoliage): Set<String> = staged.dependencies
 
     override fun build(staged: PreparedFoliage, assets: BuiltAssets) = FoliageDrawable(staged, assets)
 
-    override fun discard(model: Unit) = Unit
 }
 
 
+/** CPU-only preparation policy; the runtime keeps the bake, while the editor may regenerate stale copies. */
+fun interface FoliageReadPolicy {
+    fun read(meta: AssetMeta<Any>): PreparedFoliage?
+}
+
+internal class EditorFoliageReadPolicy(
+    private val fileLoader: FileLoader,
+    private val metaLoader: AssetMetaLoader,
+    private val terrains: TerrainLoader,
+    private val fingerprint: FoliageFingerprint,
+    private val dataFile: FoliageDataFile,
+    private val masks: FoliageMaskFile,
+) : FoliageReadPolicy {
+    override fun read(meta: AssetMeta<Any>): PreparedFoliage? {
+        val name = meta.name
+        val meta = meta.additional as? FoliageMeta ?: return null
+        val terrain = terrains.prepare(meta.terrain)?.staged?.data
+        val layerMasks = meta.layers.associate { it.id to masks.read(name, it.id, meta.maskResolution) }
+        val bake = fileLoader.findAssetFile(name, meta.dataFileName())
+            ?.let { file -> runCatchingKeepingCancellation { file.readBytes() }.getOrNull() }
+            ?.let(dataFile::read)
+        val declared = foliageDependencies(meta, metaLoader)
+        return PreparedFoliage(meta, terrain, layerMasks, bake, fingerprint.of(meta, terrain, layerMasks), declared)
+    }
+
+}
+
+internal fun foliageDependencies(meta: FoliageMeta, metaLoader: AssetMetaLoader): Set<String> =
+    (listOf(meta.terrain) + meta.layers.flatMap { layer -> layer.models.map { it.asset } })
+        .filter { it.isNotBlank() && metaLoader.loadBaseMeta(it) != null }
+        .toSet()

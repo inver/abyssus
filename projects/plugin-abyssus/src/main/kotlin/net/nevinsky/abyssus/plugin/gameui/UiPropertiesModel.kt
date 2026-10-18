@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.editor.util.uiNumberNode
+
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditResult
@@ -177,7 +179,7 @@ class UiPropertiesModel {
     }
 
     private fun number(v: Double): JsonNode =
-        if (v == Math.rint(v) && Math.abs(v) < 1e9) JsonNodeFactory.instance.numberNode(v.toInt()) else JsonNodeFactory.instance.numberNode(v)
+        uiNumberNode(v)
 
     /** The edit that sets (or with a null [type] removes) the `click` action. [target] is a screen id, or an action name for `emitAction`. */
     fun actionEdit(widgetId: String, type: UiActionType?, target: String?, assetName: String? = null): (net.nevinsky.abyssus.lib.core.editor.ui.UiDocumentEdits, JsonNode) -> UiEditResult {

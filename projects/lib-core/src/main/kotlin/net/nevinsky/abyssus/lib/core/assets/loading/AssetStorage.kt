@@ -6,20 +6,15 @@
 package net.nevinsky.abyssus.lib.core.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.core.assets.loading.exception.AmbiguousLoaderException
 import net.nevinsky.abyssus.lib.core.assets.loading.exception.AssetAbsentException
 import net.nevinsky.abyssus.lib.core.assets.loading.exception.AssetPipelineException
 import net.nevinsky.abyssus.lib.core.assets.loading.exception.CyclicDependencyException
 import net.nevinsky.abyssus.lib.core.assets.loading.exception.DependencyFailedException
-import net.nevinsky.abyssus.lib.core.assets.loading.exception.MissingDependencyException
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import org.slf4j.Logger
-import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.*
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.collections.iterator
 import kotlin.concurrent.withLock
@@ -55,44 +50,7 @@ private class AbsentLoader : AssetLoader<Unit, Unit, Disposable> {
     override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, Unit>? = null
     override fun prepare(name: String): Prepared<Unit, Unit>? = null
     override fun build(staged: Unit, assets: BuiltAssets): Disposable = error("nothing to build")
-    override fun discard(model: Unit) = Unit
 }
-
-private class OffGlExecutor(val executor: ExecutorService, val virtualThreads: Boolean)
-
-private val prepareThreadIds = AtomicInteger()
-
-/**
- * Virtual threads when `Executors.newVirtualThreadPerTaskExecutor` exists and does not throw
- * (JDK 21+ desktop). Otherwise a daemon fixed pool named `asset-prepare-*`.
- * The public [AssetStorage] API does not change between the two.
- */
-private fun createOffGlExecutor(
-    parallelism: Int = Runtime.getRuntime().availableProcessors().coerceAtLeast(1),
-): OffGlExecutor {
-    try {
-        val method = Executors::class.java.getMethod("newVirtualThreadPerTaskExecutor")
-        val executor = method.invoke(null) as ExecutorService
-        return OffGlExecutor(executor, virtualThreads = true)
-    } catch (e: NoSuchMethodException) {
-        return OffGlExecutor(platformPreparePool(parallelism), virtualThreads = false)
-    } catch (e: UnsupportedOperationException) {
-        return OffGlExecutor(platformPreparePool(parallelism), virtualThreads = false)
-    } catch (e: InvocationTargetException) {
-        val cause = e.cause
-        if (cause is UnsupportedOperationException || cause is NoSuchMethodError) {
-            return OffGlExecutor(platformPreparePool(parallelism), virtualThreads = false)
-        }
-        throw e
-    } catch (e: NoSuchMethodError) {
-        return OffGlExecutor(platformPreparePool(parallelism), virtualThreads = false)
-    }
-}
-
-private fun platformPreparePool(parallelism: Int): ExecutorService =
-    Executors.newFixedThreadPool(parallelism) { runnable ->
-        Thread(runnable, "asset-prepare-${prepareThreadIds.incrementAndGet()}").apply { isDaemon = true }
-    }
 
 /** A storage with [loader] registered for every name, for assets that need no `meta.json` to pick their loader. */
 fun <P : Any, U : Any, T : Disposable> AssetStorage(
@@ -168,8 +126,7 @@ class AssetStorage(
         }
     }
 
-    private val glThread = AtomicReference<Thread?>(null)
-    private var callDepth = 0
+    private val callGuard = StorageCallGuard()
 
     private val publishLock = ReentrantLock()
 
@@ -184,6 +141,9 @@ class AssetStorage(
 
     /** Stands in for a name nothing can load: it prepares to nothing, so the asset fails as absent. */
     private val absent = LoaderRegistration(AbsentLoader(), { _, _ -> false })
+    private val dependencies = DependencyResolver(metas, registrations, absent) { registration, name, type ->
+        registration.handles(name, type)
+    }
 
     private val book = LoadBook<Live>()
 
@@ -504,24 +464,11 @@ class AssetStorage(
             }
         }
         return try {
-            val route = route(dependent, name)
+            val route = dependencies.route(dependent, name)
             startLoad(route.registration, name, route.meta)
             null
         } catch (e: Exception) {
             e
-        }
-    }
-
-    /** The loader of [name], and the meta it prepares from when [metas] read one. */
-    private class Route(val registration: LoaderRegistration<*, *, *>, val meta: AssetMeta<Any>?)
-
-    private fun route(dependent: String?, name: String): Route {
-        val meta = metas?.invoke(name)
-        val matches = registrations.filter { it.handles(name, meta?.type) }
-        return when (matches.size) {
-            0 -> if (metas != null) Route(absent, null) else throw MissingDependencyException(dependent ?: name, name)
-            1 -> Route(matches[0], meta)
-            else -> throw AmbiguousLoaderException(name)
         }
     }
 
@@ -550,7 +497,7 @@ class AssetStorage(
     /** Loads the replacement of the built [current]; it takes its place when built. */
     private fun startRevision(current: Live) {
         val name = current.name
-        val route = route(null, name)
+        val route = dependencies.route(null, name)
         val revision = Live(nextId.incrementAndGet(), name, route.registration, Phase.Preparing, revision = true)
         revisions[name] = revision
         log.atDebug().log { "Reloading asset '$name'" }
@@ -846,35 +793,9 @@ class AssetStorage(
         throw error
     }
 
-    private fun bindThread() {
-        val current = Thread.currentThread()
-        while (true) {
-            val expected = glThread.get()
-            if (expected == null) {
-                if (glThread.compareAndSet(null, current)) {
-                    return
-                }
-            } else {
-                if (expected === current) {
-                    return
-                }
-                throw IllegalStateException(
-                    "AssetStorage is bound to '${expected.name}' but was called from '${current.name}'",
-                )
-            }
-        }
-    }
+    private fun bindThread() = callGuard.bindThread()
 
-    private inline fun <T> onGl(block: () -> T): T {
-        bindThread()
-        check(callDepth == 0) { "AssetStorage must not be re-entered from a loader or a hook" }
-        callDepth++
-        try {
-            return block()
-        } finally {
-            callDepth--
-        }
-    }
+    private inline fun <T> onGl(block: () -> T): T = callGuard.onGl(block)
 
     private class Live(
         override val id: Long,
@@ -916,14 +837,10 @@ class AssetStorage(
         internal val loader: AssetLoader<P, U, T>,
         internal val handles: (String, MetaType?) -> Boolean,
     ) {
-        private val preparedHooks = CopyOnWriteArrayList<(String, P) -> Unit>()
-        private val preparedByName = ConcurrentHashMap<String, CopyOnWriteArrayList<(P) -> Unit>>()
-        private val uploadedHooks = CopyOnWriteArrayList<(String, U) -> Unit>()
-        private val uploadedByName = ConcurrentHashMap<String, CopyOnWriteArrayList<(U) -> Unit>>()
-        private val builtHooks = CopyOnWriteArrayList<(String, T) -> Unit>()
-        private val builtByName = ConcurrentHashMap<String, CopyOnWriteArrayList<(T) -> Unit>>()
-        private val discardedHooks = CopyOnWriteArrayList<(String, T) -> Unit>()
-        private val discardedByName = ConcurrentHashMap<String, CopyOnWriteArrayList<(T) -> Unit>>()
+        private val preparedHooks = HookRegistry<P>(::bindThread)
+        private val uploadedHooks = HookRegistry<U>(::bindThread)
+        private val builtHooks = HookRegistry<T>(::bindThread)
+        private val discardedHooks = HookRegistry<T>(::bindThread)
 
         fun load(name: String) = onGl { startLoad(this, name, null) }
 
@@ -935,48 +852,25 @@ class AssetStorage(
             HookScope().block()
         }
 
-        fun onPrepared(handler: (name: String, model: P) -> Unit): Subscription = add(preparedHooks, handler)
+        fun onPrepared(handler: (name: String, model: P) -> Unit): Subscription = preparedHooks.add(handler)
 
         fun onPrepared(name: String, handler: (model: P) -> Unit): Subscription =
-            addNamed(preparedByName, name, handler)
+            preparedHooks.add(name, handler)
 
-        fun onUploaded(handler: (name: String, staged: U) -> Unit): Subscription = add(uploadedHooks, handler)
+        fun onUploaded(handler: (name: String, staged: U) -> Unit): Subscription = uploadedHooks.add(handler)
 
         fun onUploaded(name: String, handler: (staged: U) -> Unit): Subscription =
-            addNamed(uploadedByName, name, handler)
+            uploadedHooks.add(name, handler)
 
-        fun onBuilt(handler: (name: String, asset: T) -> Unit): Subscription = add(builtHooks, handler)
+        fun onBuilt(handler: (name: String, asset: T) -> Unit): Subscription = builtHooks.add(handler)
 
-        fun onBuilt(name: String, handler: (asset: T) -> Unit): Subscription = addNamed(builtByName, name, handler)
+        fun onBuilt(name: String, handler: (asset: T) -> Unit): Subscription = builtHooks.add(name, handler)
 
         /** Runs on the GL thread when a built asset is unloaded or the storage is disposed, before [T.dispose]. */
-        fun onDiscarded(handler: (name: String, asset: T) -> Unit): Subscription = add(discardedHooks, handler)
+        fun onDiscarded(handler: (name: String, asset: T) -> Unit): Subscription = discardedHooks.add(handler)
 
         fun onDiscarded(name: String, handler: (asset: T) -> Unit): Subscription =
-            addNamed(discardedByName, name, handler)
-
-        private fun <H : Any> add(list: CopyOnWriteArrayList<H>, handler: H): Subscription {
-            bindThread()
-            list.add(handler)
-            return Subscription {
-                bindThread()
-                list.remove(handler)
-            }
-        }
-
-        private fun <H : Any> addNamed(
-            lists: ConcurrentHashMap<String, CopyOnWriteArrayList<H>>,
-            name: String,
-            handler: H,
-        ): Subscription {
-            bindThread()
-            val list = lists.computeIfAbsent(name) { CopyOnWriteArrayList() }
-            list.add(handler)
-            return Subscription {
-                bindThread()
-                list.remove(handler)
-            }
-        }
+            discardedHooks.add(name, handler)
 
         inner class HookScope {
             fun onPrepared(handler: (name: String, model: P) -> Unit) {
@@ -1049,46 +943,23 @@ class AssetStorage(
 
         internal fun firePrepared(name: String, model: Any): List<Throwable> {
             @Suppress("UNCHECKED_CAST")
-            return fire(preparedHooks.toList(), preparedByName[name]?.toList().orEmpty(), name, model as P)
+            return preparedHooks.fire(name, model as P)
         }
 
         internal fun fireUploaded(name: String, staged: Any): List<Throwable> {
             @Suppress("UNCHECKED_CAST")
-            return fire(uploadedHooks.toList(), uploadedByName[name]?.toList().orEmpty(), name, staged as U)
+            return uploadedHooks.fire(name, staged as U)
         }
 
         internal fun fireBuilt(name: String, asset: Disposable): List<Throwable> {
             @Suppress("UNCHECKED_CAST")
-            return fire(builtHooks.toList(), builtByName[name]?.toList().orEmpty(), name, asset as T)
+            return builtHooks.fire(name, asset as T)
         }
 
         internal fun fireDiscarded(name: String, asset: Disposable): List<Throwable> {
             @Suppress("UNCHECKED_CAST")
-            return fire(discardedHooks.toList(), discardedByName[name]?.toList().orEmpty(), name, asset as T)
+            return discardedHooks.fire(name, asset as T)
         }
 
-        private fun <V> fire(
-            global: List<(String, V) -> Unit>,
-            named: List<(V) -> Unit>,
-            name: String,
-            value: V,
-        ): List<Throwable> {
-            val errors = ArrayList<Throwable>()
-            for (handler in global) {
-                try {
-                    handler(name, value)
-                } catch (e: Exception) {
-                    errors += e
-                }
-            }
-            for (handler in named) {
-                try {
-                    handler(value)
-                } catch (e: Exception) {
-                    errors += e
-                }
-            }
-            return errors
-        }
     }
 }

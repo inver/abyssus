@@ -304,8 +304,22 @@ The `design-review-refactor` change closed every finding above except these:
 
 - **L1** (Ashley code that only tests use): a non-goal of that change; the classes are untouched.
 - **L8** (`DtoEntry.equals`): needs its own tree-refresh decision.
-- **The number-text question** (transform writes use `1.0`, component writes use `1`): deferred until it is checked against
-  what the Mundus editor writes.
+- **The number-text question** (transform writes use `1.0`, component writes use `1`): decided by the
+  `reduce-code-duplication` change as pinning today's text. Transform writes keep `1.0` and component edits keep `1`.
+  Mundus compatibility is gone, so nothing remains to check it against.
 - **L9** (`scripts/check-docs.sh` failing): already fixed before that change.
 - **`TerrainPreviewRunner`** keeps its own `try`/`catch` instead of `runCatchingKeepingCancellation`: its "superseded"
   cancellation is the run's outcome, so it must be captured.
+
+The `reduce-code-duplication` change closed or narrowed these findings:
+
+- **L7** (`AssetLoading`'s public preview members): `toneCurve` and `hdrPreview` (there was never a public `decoder` or
+  `hdrFiles`) are replaced by one `HdrPreviewService` (`preview` and `exposure`); `ToneCurve` is private to
+  `AssetLoading` and `project(...)`.
+- **Service lookups in domain classes**: `FoliageStrokeCommand`, `AddAssetGroup`, `NewFoliageAction`'s dialog and
+  `createFoliage`, `SceneBackdrop`, `ProjectReader`, `AssetReadCache`, `ArrangementHeights` and the add-component
+  choices take their collaborators as constructor or function parameters. The IntelliJ entry points (actions, project
+  services, editor providers) resolve them once.
+- **Overloaded classes**: `AssetStorage`, `SceneRenderer`, `SceneViewPanel`, `SceneInteraction`, `PhysicsWorld`,
+  `FlightGearImport`, `UiCanvasView` and `UiEditorController` delegate to constructor-wired collaborators; see
+  "Collaborating classes" in `docs/ai/architecture.md`.

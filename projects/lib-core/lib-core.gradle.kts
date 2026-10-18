@@ -58,8 +58,7 @@ tasks.register<JavaExec>("comparePerf") {
 }
 
 extra["abyssusSingletonExcludes"] = listOf(
-    "net/nevinsky/abyssus/lib/core/io/AbyssusProjectLayout.kt",
-    "net/nevinsky/abyssus/lib/core/util/GeometryUtils.kt"
+    "net/nevinsky/abyssus/lib/core/io/AbyssusProjectLayout.kt"
 )
 
 // Games ship this library: `checkNoEditorCode` keeps editor imports and ray-tracing snapshot types out of it.

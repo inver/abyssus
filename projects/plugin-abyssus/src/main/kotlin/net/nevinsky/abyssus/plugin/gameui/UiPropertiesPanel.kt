@@ -4,6 +4,9 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.editor.util.numberText
+import net.nevinsky.abyssus.lib.core.editor.util.NumberTextStyle
+
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -133,7 +136,7 @@ class UiPropertiesPanel(private val controller: UiEditorController, private val 
         is UiField.Action -> actionRow(widgetId, field)
     }
 
-    private fun formatNumber(v: Double) = if (v == Math.rint(v)) v.toLong().toString() else v.toString()
+    private fun formatNumber(v: Double) = numberText(v, NumberTextStyle.UI)
 
     private fun textRow(key: String, widgetId: String, value: String): JTextField = JTextField(value, 12).also { field ->
         val normal = field.background

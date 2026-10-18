@@ -20,11 +20,8 @@ import net.nevinsky.abyssus.lib.core.assets.ui.UiBundledFont
 import net.nevinsky.abyssus.lib.core.assets.ui.UiPreparedResources
 import net.nevinsky.abyssus.lib.core.assets.ui.UiResourcePreparer
 import net.nevinsky.abyssus.lib.core.assets.ui.UiResourceResolver
-import net.nevinsky.abyssus.lib.core.editor.ui.UiGesturePreview
-import net.nevinsky.abyssus.lib.core.editor.ui.UiHitTest
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.ui.layout.UiLayoutResult
-import net.nevinsky.abyssus.lib.core.ui.layout.UiRect
 import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
 import net.nevinsky.abyssus.lib.core.ui.render.UiEditOverlay
 import net.nevinsky.abyssus.lib.core.ui.render.UiGlKit
@@ -32,7 +29,6 @@ import net.nevinsky.abyssus.lib.core.ui.render.UiPresenter
 import net.nevinsky.abyssus.lib.core.ui.state.UiBindingSession
 import net.nevinsky.abyssus.lib.core.ui.state.UiCollectionSource
 import net.nevinsky.abyssus.lib.core.ui.state.UiScreenRef
-import net.nevinsky.abyssus.lib.core.ui.state.uiBaseId
 import net.nevinsky.abyssus.lib.core.ui.state.UiWriteResult
 import net.nevinsky.abyssus.plugin.sceneview.CanvasOverlayHost
 import net.nevinsky.abyssus.plugin.sceneview.GdxContext
@@ -43,13 +39,9 @@ import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GLCapabilities
 import org.lwjgl.opengl.awt.GLData
 import java.awt.BorderLayout
-import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
 import java.io.File
 import javax.swing.JPanel
-import javax.swing.SwingUtilities
 import javax.swing.Timer
 
 /**
@@ -88,9 +80,7 @@ class UiCanvasView(
     private var buffer: FrameBuffer? = null
     private var backdrop: UiBackdrop? = null
     private var backdropName: String? = null
-    private var previewOffsetX = 0f
-    private var previewOffsetY = 0f
-    private var previewScale = 1f
+    private val fit = PreviewFit()
 
     /** Told (on the AWT thread) why the chosen backdrop could not be shown, or null when it can. */
     var onBackdropProblem: ((String?) -> Unit)? = null
@@ -99,8 +89,8 @@ class UiCanvasView(
     @Volatile
     internal var released = false
         private set
-    private val hits = UiHitTest()
     private val overlay = UiEditOverlay()
+    private val input = UiCanvasInput(this, controller, { presenter }, ::layoutOf, overlay, fit) { scale() }
 
     /** What the last preparation reported about the asset's image and font files; for diagnostics. */
     @Volatile
@@ -170,21 +160,8 @@ class UiCanvasView(
     init {
         isFocusable = true
         add(host, BorderLayout.CENTER)
-        attachInput(canvas)
-        addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(e: KeyEvent) {
-                if (controller.mode == UiEditorMode.PREVIEW) {
-                    if (presenter?.keyDown(toGdxKey(e.keyCode), e.isShiftDown) == true) e.consume()
-                } else when {
-                    e.keyCode == KeyEvent.VK_DELETE || e.keyCode == KeyEvent.VK_BACK_SPACE -> controller.deleteSelected()
-                    e.keyCode == KeyEvent.VK_D && (e.isControlDown || e.isMetaDown) -> controller.duplicateSelected()
-                }
-            }
-
-            override fun keyTyped(e: KeyEvent) {
-                if (controller.mode == UiEditorMode.PREVIEW) presenter?.keyTyped(e.keyChar)
-            }
-        })
+        input.attach(canvas)
+        addKeyListener(input.keyListener())
         controller.layoutProvider = ::layoutOf
         controller.addListener { repaint() }
     }
@@ -232,15 +209,15 @@ class UiCanvasView(
         target.end(0, 0, frame.width, frame.height)
         // fit the offscreen picture into the panel, centred, without stretching
         val scale = minOf(frame.width.toFloat() / size.width, frame.height.toFloat() / size.height)
-        previewScale = scale
-        previewOffsetX = (frame.width - size.width * scale) / 2f
-        previewOffsetY = (frame.height - size.height * scale) / 2f
+        fit.scale = scale
+        fit.offsetX = (frame.width - size.width * scale) / 2f
+        fit.offsetY = (frame.height - size.height * scale) / 2f
         val kit = kit ?: return
         gl.glViewport(0, 0, frame.width, frame.height)
         val region = TextureRegion(target.colorBufferTexture).also { it.flip(false, true) }
         kit.batch.projectionMatrix.setToOrtho2D(0f, 0f, frame.width.toFloat(), frame.height.toFloat())
         kit.batch.begin()
-        kit.batch.draw(region, previewOffsetX, frame.height - previewOffsetY - size.height * scale, size.width * scale, size.height * scale)
+        kit.batch.draw(region, fit.offsetX, frame.height - fit.offsetY - size.height * scale, size.width * scale, size.height * scale)
         kit.batch.end()
     }
 
@@ -322,62 +299,8 @@ class UiCanvasView(
 
     private fun scale(): Float = if (canvas.width > 0) canvas.framebufferWidth.toFloat() / canvas.width else 1f
 
-    /** A pointer coordinate in the preview's own pixels, undoing the panel scale and the centring of the fitted picture. */
-    private fun previewX(x: Float) = (x - previewOffsetX) / previewScale
-    private fun previewY(y: Float) = (y - previewOffsetY) / previewScale
-
-    private fun attachInput(target: GuardedGLCanvas) {
-        // The panel takes focus instead of the heavyweight canvas, which breaks IDE popups as the focus owner.
-        target.isFocusable = false
-        val input = object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) {
-                requestFocusInWindow()
-                if (!SwingUtilities.isLeftMouseButton(e)) return
-                val x = e.x * scale(); val y = e.y * scale()
-                if (controller.mode == UiEditorMode.PREVIEW) { presenter?.touchDown(previewX(x), previewY(y)); return }
-                val id = controller.screenId?.let(::layoutOf)?.let { hits.pick(it, x, y) }?.let(::uiBaseId) // any row stands for its template
-                if (id != null) controller.beginGesture(id, x, y) else controller.select(null)
-            }
-
-            override fun mouseDragged(e: MouseEvent) {
-                val x = e.x * scale(); val y = e.y * scale()
-                if (controller.mode == UiEditorMode.PREVIEW) { presenter?.touchDragged(previewX(x), previewY(y)); return }
-                if (!controller.gestureActive) return
-                overlay.ghost = ghostOf(controller.updateGesture(x, y))
-            }
-
-            override fun mouseReleased(e: MouseEvent) {
-                val x = e.x * scale(); val y = e.y * scale()
-                if (controller.mode == UiEditorMode.PREVIEW) { presenter?.touchUp(previewX(x), previewY(y)); return }
-                if (controller.gestureActive) controller.endGesture(x, y)
-                overlay.ghost = null
-            }
-
-            override fun mouseMoved(e: MouseEvent) {
-                val x = e.x * scale(); val y = e.y * scale()
-                if (controller.mode == UiEditorMode.PREVIEW) { presenter?.pointerMoved(previewX(x), previewY(y)); return }
-                overlay.hoverId = controller.screenId?.let(::layoutOf)?.let { hits.pick(it, x, y) }?.let(::uiBaseId)
-            }
-
-            override fun mouseExited(e: MouseEvent) { overlay.hoverId = null }
-        }
-        target.addMouseListener(input)
-        target.addMouseMotionListener(input)
-    }
-
-    /** The drop target a drag would use now, as a frame in reference space. */
-    private fun ghostOf(preview: UiGesturePreview): UiRect? {
-        val layout = controller.screenId?.let(::layoutOf) ?: return null
-        return when (preview) {
-            is UiGesturePreview.Move -> preview.bounds
-            is UiGesturePreview.Reorder -> layout.nodes[preview.parentId]?.bounds
-            is UiGesturePreview.Reparent -> layout.nodes[preview.parentId]?.bounds
-            UiGesturePreview.None -> null
-        }
-    }
-
     /** How the preview picture sits in the panel: its scale and the offsets (framebuffer pixels); for tests. */
-    internal fun previewSnapshotScale(): Triple<Float, Float, Float> = Triple(previewScale, previewOffsetX, previewOffsetY)
+    internal fun previewSnapshotScale(): Triple<Float, Float, Float> = Triple(fit.scale, fit.offsetX, fit.offsetY)
 
     /** The frame as displayed, for tests: read back after the canvas has drawn at least once. */
     internal fun snapshot(): java.awt.image.BufferedImage? = canvas.captureFrame { capabilities?.let { GL.setCapabilities(it) } }
@@ -390,7 +313,7 @@ class UiCanvasView(
         abandoned = false
         remove(host)
         canvas = newCanvas()
-        attachInput(canvas)
+        input.attach(canvas)
         host = newHost()
         add(host, BorderLayout.CENTER)
     }

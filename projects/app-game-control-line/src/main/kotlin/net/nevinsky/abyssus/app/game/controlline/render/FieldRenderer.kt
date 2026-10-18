@@ -30,7 +30,7 @@ import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.scene.SceneEnvironment
+import com.badlogic.gdx.graphics.g3d.Environment
 import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
 import net.nevinsky.abyssus.lib.render.frame.FrameInputs
 import net.nevinsky.abyssus.lib.render.frame.RenderFog
@@ -112,7 +112,7 @@ class FieldRenderer(private val ctx: BaseCtx) : FieldView, Disposable {
 
     /** Seconds of play drawn so far: the sky's clouds drift by it. */
     private var skyTime = 0.0
-    private val environment = SceneEnvironment()
+    private val environment = Environment()
     private val sun = DirectionalLight()
     private val shadows = FieldShadows()
 

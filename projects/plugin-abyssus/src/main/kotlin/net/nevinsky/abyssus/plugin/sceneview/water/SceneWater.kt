@@ -9,8 +9,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GLTexture
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import com.badlogic.gdx.graphics.g3d.utils.DefaultTextureBinder
-import com.badlogic.gdx.graphics.g3d.utils.RenderContext
+import com.badlogic.gdx.graphics.g3d.Renderable
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Disposable
@@ -21,18 +20,10 @@ import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.core.water.MAX_DIRECTIONAL
-import net.nevinsky.abyssus.lib.core.water.WaterDrawable
-import net.nevinsky.abyssus.lib.core.water.WaterFrame
-import net.nevinsky.abyssus.lib.core.water.WaterPassPlan
-import net.nevinsky.abyssus.lib.core.water.WaterPassPlanner
-import net.nevinsky.abyssus.lib.core.water.WaterReflectionCamera
-import net.nevinsky.abyssus.lib.core.water.WaterScreenArea
-import net.nevinsky.abyssus.lib.core.water.WaterSettings
-import net.nevinsky.abyssus.lib.core.water.WaterTextures
-import com.badlogic.gdx.graphics.g3d.Renderable
+import net.nevinsky.abyssus.lib.core.water.*
 import net.nevinsky.abyssus.lib.gdx.g3d.ModelDepthShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowDepthPass
+import net.nevinsky.abyssus.lib.render.shadow.DepthSubmission
 import net.nevinsky.abyssus.plugin.sceneview.TerrainEntity
 import net.nevinsky.abyssus.plugin.sceneview.shadows.FoliageCastSource
 import net.nevinsky.abyssus.plugin.sceneview.shadows.ShadowCaster
@@ -81,8 +72,10 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
     private val mirrors = arrayOfNulls<MirroredCamera>(MAX_REFLECTION_TARGETS)
     private val depthPass = ShadowDepthPass()
     private var depthShaders = ModelDepthShaderProvider(depthPass)
-    private val context = RenderContext(DefaultTextureBinder(DefaultTextureBinder.LRU, 1))
-    private val pool = object : Pool<Renderable>() { override fun newObject() = Renderable() }
+    private val depthSubmission = DepthSubmission { depthShaders.get(it) }
+    private val pool = object : Pool<Renderable>() {
+        override fun newObject() = Renderable()
+    }
     private val renderables = Array<Renderable>()
     private val casterBounds = ShadowCasterBounds()
     private val surfaceFailures = HashSet<String>()
@@ -142,7 +135,10 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
         if (drawable == null) {
             drawable = runCatchingKeepingCancellation { WaterDrawable(shaders) }.getOrElse { e ->
                 drawableFailed = true
-                log.warn("The water shader could not be made (${e.message ?: e.javaClass.simpleName}); no water is drawn in this view", e)
+                log.warn(
+                    "The water shader could not be made (${e.message ?: e.javaClass.simpleName}); no water is drawn in this view",
+                    e
+                )
                 null
             }
             if (drawable == null) return null
@@ -162,7 +158,11 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
         for ((i, group) in plan.reflected.withIndex()) {
             val target = resources.reflection(i) ?: continue
             val level = group.level.toFloat()
-            val mirrored = mirrors[i]?.also { it.level = level } ?: MirroredCamera(input.camera, level, reflection).also { mirrors[i] = it }
+            val mirrored = mirrors[i]?.also { it.level = level } ?: MirroredCamera(
+                input.camera,
+                level,
+                reflection
+            ).also { mirrors[i] = it }
             mirrored.update()
             val amplitude = group.surfaces.maxOf { it.waveAmplitude }
             val distance = kotlin.math.abs(input.camera.position.y - level)
@@ -183,7 +183,8 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
         plan.fallback.isNotEmpty() || plan.reflected.indices.any { !reflectionOk[it] }
 
     /** The reflection image of level group [slot] if its pass succeeded, for tests and drawing. */
-    private fun reflectionTexture(slot: Int): FrameBuffer? = if (slot >= 0 && reflectionOk.getOrElse(slot) { false }) resources.reflection(slot) else null
+    private fun reflectionTexture(slot: Int): FrameBuffer? =
+        if (slot >= 0 && reflectionOk.getOrElse(slot) { false }) resources.reflection(slot) else null
 
     /**
      * Draws the surfaces of [plan] far to near over the opaque scene already on the canvas: copies the canvas, draws the
@@ -200,7 +201,8 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
                 pool.freeAll(renderables); renderables.clear()
                 val all = shadowCasters(input.models, input.terrains, input.foliage, renderables, pool, casterBounds)
                 val terrainOnly = shadowCasters(emptyList(), input.terrains, null, renderables, pool, casterBounds)
-                haveDepth = depthTarget(sceneDepth, input.camera, all) && depthTarget(terrainDepth, input.camera, terrainOnly)
+                haveDepth =
+                    depthTarget(sceneDepth, input.camera, all) && depthTarget(terrainDepth, input.camera, terrainOnly)
             }
         }
         if (!haveDepth && !degraded) degraded = true
@@ -209,12 +211,21 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
             val group = plan.reflectionOf(surface)
             val reflectionImage = reflectionTexture(group?.let { plan.reflected.indexOf(it) } ?: -1)?.colorBufferTexture
             val textures = if (haveDepth) {
-                WaterTextures(resources.sceneColor, resources.sceneDepth?.colorBufferTexture, resources.terrainDepth?.colorBufferTexture, reflectionImage, skyCube)
+                WaterTextures(
+                    resources.sceneColor,
+                    resources.sceneDepth?.colorBufferTexture,
+                    resources.terrainDepth?.colorBufferTexture,
+                    reflectionImage,
+                    skyCube
+                )
             } else WaterTextures(null, null, null, reflectionImage, skyCube)
             val ok = runCatchingKeepingCancellation { drawable.draw(surface, frame, textures) }
             if (ok.isSuccess) drawnSurfaces++
             else if (surfaceFailures.add(surface.id)) {
-                log.warn("Water surface '${surface.name}' could not be drawn (${ok.exceptionOrNull()?.message}); the rest of the scene is unaffected", ok.exceptionOrNull())
+                log.warn(
+                    "Water surface '${surface.name}' could not be drawn (${ok.exceptionOrNull()?.message}); the rest of the scene is unaffected",
+                    ok.exceptionOrNull()
+                )
             }
         }
         // leave the state a content pass starts from
@@ -228,17 +239,9 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
         depthPass.clipPlane = null
         depthPass.linearFar = camera.far
         val ok = resources.render(target, Rgba(1f, 1f, 1f, 1f)) {
-            context.begin()
-            try {
-                for (caster in casters) {
-                    if (!camera.frustum.boundsInFrustum(caster.bounds)) continue
-                    val shader = depthShaders.get(caster.renderable) ?: continue
-                    shader.begin(camera, context)
-                    try { shader.render(caster.renderable) } finally { shader.end() }
-                }
-            } finally {
-                context.end()
-            }
+            depthSubmission.submit(
+                camera,
+                casters.filter { camera.frustum.boundsInFrustum(it.bounds) }.map { it.renderable })
         }
         if (ok) depthPasses++
         return ok
@@ -250,7 +253,8 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
         val count = input.lights.directional.size.coerceAtMost(MAX_DIRECTIONAL)
         for (i in 0 until count) {
             val d = input.lights.directional[i]
-            directions[i * 3] = d.direction.x; directions[i * 3 + 1] = d.direction.y; directions[i * 3 + 2] = d.direction.z
+            directions[i * 3] = d.direction.x; directions[i * 3 + 1] = d.direction.y; directions[i * 3 + 2] =
+                d.direction.z
             colors[i * 3] = d.color.r; colors[i * 3 + 1] = d.color.g; colors[i * 3 + 2] = d.color.b
         }
         val ambient = input.ambient

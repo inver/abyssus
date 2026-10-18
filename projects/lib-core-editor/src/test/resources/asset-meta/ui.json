@@ -1,0 +1,36 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1234,
+  "uuid": "11111111-2222-3333-4444-555555555555",
+  "type": "UI",
+  "additional": {
+    "ui": {
+      "schemaVersion": 1,
+      "entryScreen": "main",
+      "screens": [
+        {
+          "id": "main",
+          "name": "Main",
+          "root": {
+            "id": "root",
+            "type": "panel",
+            "children": [
+              {
+                "id": "title",
+                "type": "label",
+                "layout": {
+                  "anchor": "center"
+                },
+                "properties": {
+                  "text": "Hello"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

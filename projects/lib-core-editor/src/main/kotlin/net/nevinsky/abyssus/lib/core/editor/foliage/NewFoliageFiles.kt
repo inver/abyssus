@@ -5,9 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.assets.META_VERSION_DEFAULT
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaDocument
+import net.nevinsky.abyssus.lib.core.editor.document.FoliageAssetAdditional
+
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDataFile
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageFingerprint
@@ -70,20 +71,9 @@ class FoliageAssetWriter(
     }
 
     private fun metaText(terrainFolder: String, maskResolution: Int, uuid: UUID, lastModified: Long): String {
-        val nodes = JsonNodeFactory.instance
-        val additional = nodes.objectNode().apply {
-            put(FOLIAGE_TERRAIN, terrainFolder)
-            put(FOLIAGE_MASK_RESOLUTION, maskResolution)
-        }
-        val root = nodes.objectNode().apply {
-            put("format", "abyssus")
-            put("formatVersion", 1)
-            put("version", META_VERSION_DEFAULT)
-            put("lastModified", lastModified)
-            put("uuid", uuid.toString())
-            put("type", MetaType.FOLIAGE.name)
-            set<ObjectNode>("additional", additional)
-        }
-        return json.toString(root)
+        return SceneJson().compact(AssetMetaDocument(
+            lastModified = lastModified, uuid = uuid.toString(), type = MetaType.FOLIAGE,
+            additional = FoliageAssetAdditional(terrainFolder, maskResolution),
+        ))
     }
 }

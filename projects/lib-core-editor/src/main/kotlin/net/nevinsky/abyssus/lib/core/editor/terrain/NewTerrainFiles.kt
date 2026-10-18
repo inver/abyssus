@@ -1,21 +1,19 @@
 package net.nevinsky.abyssus.lib.core.editor.terrain
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.node.NullNode
-import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.assets.META_VERSION_DEFAULT
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaDocument
+import net.nevinsky.abyssus.lib.core.editor.document.TerrainAssetAdditional
+
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.meta.NEW_TERRAIN_UV_DEFAULT
 import net.nevinsky.abyssus.lib.core.editor.meta.TERRAIN_META_FILE_NAME_DEFAULT
-import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
 import java.nio.ByteBuffer
-import java.security.MessageDigest
 import java.util.*
 
 
 fun sha256Hex(bytes: ByteArray): String =
-    MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    net.nevinsky.abyssus.lib.core.util.sha256Hex(bytes)
 
 /**
  * Writes terrain heights: no header, each height a big-endian 32-bit float, row after row (z-major), as
@@ -43,22 +41,9 @@ class TerrainAssetWriter(private val json: JsonProcessor, private val encoder: T
 
     fun meta(uuid: UUID, lastModified: Long, size: Int, uv: Float = NEW_TERRAIN_UV_DEFAULT): String {
         require(size > 0) { "size must be positive" }
-        val nodes = JsonNodeFactory.instance
-        val additional = nodes.objectNode().apply {
-            put("terrainFile", TERRAIN_META_FILE_NAME_DEFAULT)
-            put("size", size)
-            put("uv", uv)
-            SPLAT_FIELDS.forEach { set<NullNode>(it, NullNode.instance) }
-        }
-        val root = nodes.objectNode().apply {
-            put("format", "abyssus")
-            put("formatVersion", 1)
-            put("version", META_VERSION_DEFAULT)
-            put("lastModified", lastModified)
-            put("uuid", uuid.toString())
-            put("type", MetaType.TERRAIN.name)
-            set<ObjectNode>("additional", additional)
-        }
-        return json.toString(root)
+        return SceneJson().compact(AssetMetaDocument(
+            lastModified = lastModified, uuid = uuid.toString(), type = MetaType.TERRAIN,
+            additional = TerrainAssetAdditional(TERRAIN_META_FILE_NAME_DEFAULT, size, uv),
+        ))
     }
 }

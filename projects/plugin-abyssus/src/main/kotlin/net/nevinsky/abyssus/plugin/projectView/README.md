@@ -13,9 +13,9 @@ the row actions that call `editSceneJson` (`projects/plugin-abyssus/src/main/kot
 | `ProjectRows.kt` | The Swing-free folder model: `projectRows` gives a project's three rows `scenes`, `ui` and `assets`; `FolderRow` (UI or Assets, holding assets) expands to the UI assets or to one `TypeGroup` per type (`folderRows`, `groupRows`); `typeGroupOrder` is MODEL, TERRAIN, FOLIAGE, TEXTURE, SKYBOX, CLOUDS, then the rest alphabetically, and the three skybox types share the SKYBOX group. Folder rows exist only in the view and write nothing |
 | `DtoTree.kt` | DTO → rows: `childrenOf`, `foldToggles` (`<x>Enabled` → eye), display names (`skyboxName` → `skybox`), labels |
 | `AbyssusTreeRefresh` | The pane's refresh coordinator, alive as long as the pane: plugin edits (`AbyssusSceneEdited`), document changes (typing, Undo/Redo, unsaved text) and this project's VFS create/delete/move/rename/content events for `.scene`, `.abss`, `meta.json` and folders under `assets` mark the tree stale; `lib-core-editor`'s `RefreshCoalescer` turns a burst into one `updateFromRoot`, plus one more when an event arrives during it; selection and expansion are captured on the EDT as row identities (`NavigationState`: the entry or asset path, never a label) and restored with `restoreNavigation`, so a removed selection stays cleared. Unrelated files do not rebuild; a refresh writes nothing and adds no undo entry; disposal cancels pending work |
-| `AssetReadCache` | Parsed files per project, re-read when the reader's `stamp` changes |
+| `AssetReadCache` | Parsed files per project, re-read when the reader's `stamp` changes. It takes its readers by constructor; only the one-argument constructor the platform calls looks them up. `AddAssetGroup`, `addComponentGroup` and the add-component choices take `MetaFiles` the same way, resolved in the action's `perform` |
 | `RowActions.kt` | What a row paints at its right edge: eye, "View", the amber `unused` text; the `game` badge is painted by the row renderer (`GameBadge.kt`, decided by `isGameComponent`) |
-| `SceneComponentEdits.kt` | Add, update and remove a component as undoable `editSceneJson` commands; also lists a project's model and terrain assets |
+| `scene/SceneComponentEdits.kt` | Add, update and remove a component as undoable `editSceneJson` commands; also lists a project's model and terrain assets |
 | `ComponentActions.kt`, `ComponentTarget.kt` | The **Add Component...** / **Remove Component** tree actions and the entity or component a row stands for; `AddComponentOnEcsAction` is Add Component... on a scene's `ecs` row, creating a new `Entity <id>` with the chosen component (`SceneComponentEdits.addAsNewEntity`, inserted by `SceneEntities`) |
 | `EnabledToggle.kt` | The writes built on `editSceneJson`: `toggleEnabled`, `renameScene`, `setSkybox` |
 | `AbyssusTreeAction` | The Template Method of a right-click action: `targetOf` (the node it applies to), `isEnabled`, `perform`; `update` and `actionPerformed` are final and read the one selection lookup, `selectedNode`. Rename Scene, New Terrain, New Foliage, Import Model, Import FlightGear, New UI Asset and the component and light actions extend it; tests replace `selected` |
@@ -139,3 +139,16 @@ stable on Redo. Source cloud metadata, the sky, scenes and project are never edi
 entities an arrangement lists in `slots` that point back to it with a `ParentComponent`), and the arrangement's row reads
 `N components, M copies`. A detached copy is listed as an ordinary entity. Only the tree changes: a hidden copy has no row,
 so picking it in the Scene view selects nothing in the tree (`selectEntityInAbyssusView` does nothing for a missing row).
+
+## Shared action and refresh flows
+
+`ui.showActionGroup` creates the searchable action popup for tree actions and the Properties Add Component button.
+`AddChildGroup<T>` supplies background enablement and dispatch for light, asset, path-arrangement and water choices;
+each group supplies its target check and add operation. `TreeSelection.selectInAbyssusView` owns switching to the
+Abyssus pane and selecting a visitor, with an optional refresh for newly created assets.
+
+`dto.isNativeDocumentPath` recognizes `.scene`, `.abss` and `meta.json`. The project service `dto.NativeFileChanges`
+owns one VFS connection for the tree, footer and Game UI resource watcher. Native subscribers receive document,
+directory and rename candidates and retain their own project/path filters; the resource channel lets Game UI retain
+its image/font folder filter. Each subscription is disposed with its original consumer. Other VFS subscribers keep
+their own connections and filters.

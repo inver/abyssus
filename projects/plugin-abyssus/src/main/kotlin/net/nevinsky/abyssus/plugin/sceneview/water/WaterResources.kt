@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.plugin.sceneview.water
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
@@ -16,14 +17,23 @@ import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.water.WaterPassPlan
-import net.nevinsky.abyssus.plugin.sceneview.shadows.ShadowGlState
+import net.nevinsky.abyssus.lib.render.shadow.GlRenderTarget
+import net.nevinsky.abyssus.lib.render.shadow.ShadowGlState
 import org.slf4j.Logger
 
 /** How many planar reflection targets can exist; the planner never asks for more (see `DEFAULT_MAX_REFLECTIONS`). */
 internal const val MAX_REFLECTION_TARGETS = 4
 
 /** What [WaterResources.ensure] was asked for; a failed allocation is not retried until this changes. */
-private data class Wanted(val viewW: Int, val viewH: Int, val depthW: Int, val depthH: Int, val reflW: Int, val reflH: Int, val reflections: Int)
+private data class Wanted(
+    val viewW: Int,
+    val viewH: Int,
+    val depthW: Int,
+    val depthH: Int,
+    val reflW: Int,
+    val reflH: Int,
+    val reflections: Int
+)
 
 /**
  * The offscreen targets of one view's water passes, kept between frames and made again only when the sizes change: a
@@ -53,7 +63,12 @@ internal class WaterResources(private val log: Logger) : Disposable {
     fun reflection(slot: Int): FrameBuffer? = reflectionTargets.getOrNull(slot)
 
     /** How many targets are alive, for tests. */
-    val targetCount: Int get() = listOfNotNull(sceneColor, sceneDepth, terrainDepth).size + reflectionTargets.count { it != null }
+    val targetCount: Int
+        get() = listOfNotNull(
+            sceneColor,
+            sceneDepth,
+            terrainDepth
+        ).size + reflectionTargets.count { it != null }
 
     /**
      * Makes the targets [plan] needs for a frame of [viewWidth] by [viewHeight]: allocates what is missing or the wrong
@@ -70,15 +85,29 @@ internal class WaterResources(private val log: Logger) : Disposable {
         val state = ShadowGlState()
         return try {
             val max = maxTextureSize()
-            if (listOf(viewWidth, viewHeight, wanted.depthW, wanted.depthH, wanted.reflW, wanted.reflH).any { it !in 1..max }) {
+            if (listOf(
+                    viewWidth,
+                    viewHeight,
+                    wanted.depthW,
+                    wanted.depthH,
+                    wanted.reflW,
+                    wanted.reflH
+                ).any { it !in 1..max }
+            ) {
                 release()
                 fail(wanted, "a target is larger than the supported texture size $max")
                 false
             } else runCatchingKeepingCancellation {
                 // only what is missing or the wrong size is made again, so a change in how many levels reflect keeps the rest
-                if (sceneColor?.let { it.width != viewWidth || it.height != viewHeight } == true) { sceneColor?.dispose(); sceneColor = null }
+                if (sceneColor?.let { it.width != viewWidth || it.height != viewHeight } == true) {
+                    sceneColor?.dispose(); sceneColor = null
+                }
                 if (sceneColor == null) {
-                    sceneColor = Texture(viewWidth, viewHeight, Pixmap.Format.RGBA8888).also { it.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear) }
+                    sceneColor = Texture(
+                        viewWidth,
+                        viewHeight,
+                        Pixmap.Format.RGBA8888
+                    ).also { it.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear) }
                 }
                 sceneDepth = packedTargetOf(sceneDepth, wanted.depthW, wanted.depthH)
                 terrainDepth = packedTargetOf(terrainDepth, wanted.depthW, wanted.depthH)
@@ -116,14 +145,15 @@ internal class WaterResources(private val log: Logger) : Disposable {
 
     private fun present(wanted: Wanted): Boolean =
         sceneColor != null && sceneDepth != null && terrainDepth != null &&
-            (0 until wanted.reflections).all { reflectionTargets[it] != null } &&
-            (wanted.reflections until MAX_REFLECTION_TARGETS).all { reflectionTargets[it] == null }
+                (0 until wanted.reflections).all { reflectionTargets[it] != null } &&
+                (wanted.reflections until MAX_REFLECTION_TARGETS).all { reflectionTargets[it] == null }
 
-    private fun packedTarget(width: Int, height: Int): FrameBuffer = FrameBuffer(Pixmap.Format.RGBA8888, width, height, true).also {
-        // packed depth is numbers, not colours: no filtering between texels
-        it.colorBufferTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest)
-        it.colorBufferTexture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge)
-    }
+    private fun packedTarget(width: Int, height: Int): FrameBuffer =
+        FrameBuffer(Pixmap.Format.RGBA8888, width, height, true).also {
+            // packed depth is numbers, not colours: no filtering between texels
+            it.colorBufferTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest)
+            it.colorBufferTexture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge)
+        }
 
     private fun fail(wanted: Wanted, reason: String) {
         failedFor = wanted
@@ -142,32 +172,16 @@ internal class WaterResources(private val log: Logger) : Disposable {
      * framebuffer, viewport and GL state afterwards. False when [block] or the target failed; nothing is thrown.
      */
     fun render(target: FrameBuffer, clear: Rgba, block: () -> Unit): Boolean {
-        val gl = Gdx.gl
-        val state = ShadowGlState()
-        return try {
-            runCatchingKeepingCancellation {
-                target.bind()
-                gl.glViewport(0, 0, target.width, target.height)
-                gl.glDisable(GL20.GL_SCISSOR_TEST)
-                gl.glEnable(GL20.GL_DEPTH_TEST); gl.glDepthMask(true); gl.glDepthFunc(GL20.GL_LEQUAL)
-                gl.glColorMask(true, true, true, true)
-                gl.glDisable(GL20.GL_BLEND)
-                // packed depth is numerical data: no dithering and no colour-space conversion
-                gl.glDisable(GL20.GL_DITHER)
-                gl.glDisable(0x8DB9) // GL_FRAMEBUFFER_SRGB
-                gl.glClearColor(clear.r, clear.g, clear.b, clear.a)
-                gl.glClearDepthf(1f)
-                gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
-                block()
-                true
-            }.getOrElse { e ->
-                log.warn("A water pass failed (${e.message ?: e.javaClass.simpleName}); the water is drawn without it", e)
+        return GlRenderTarget(target).render(Color(clear.r, clear.g, clear.b, clear.a), block).fold(
+            onSuccess = { true },
+            onFailure = { e ->
+                log.warn(
+                    "A water pass failed (${e.message ?: e.javaClass.simpleName}); the water is drawn without it",
+                    e
+                )
                 false
-            }
-        } finally {
-            gl.glFrontFace(GL20.GL_CCW)
-            state.restore()
-        }
+            },
+        )
     }
 
     /** Copies the colour of the current framebuffer, [width] by [height], into [sceneColor]. False when there is no such texture. */
@@ -186,7 +200,9 @@ internal class WaterResources(private val log: Logger) : Disposable {
         sceneColor?.dispose(); sceneColor = null
         sceneDepth?.dispose(); sceneDepth = null
         terrainDepth?.dispose(); terrainDepth = null
-        for (i in reflectionTargets.indices) { reflectionTargets[i]?.dispose(); reflectionTargets[i] = null }
+        for (i in reflectionTargets.indices) {
+            reflectionTargets[i]?.dispose(); reflectionTargets[i] = null
+        }
         current = null
     }
 

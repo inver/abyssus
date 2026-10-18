@@ -24,10 +24,11 @@ import net.nevinsky.abyssus.lib.core.editor.modelimport.ImportSettings
 import net.nevinsky.abyssus.lib.core.editor.modelimport.LengthUnit
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSource
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSourceOpener
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.dto.ProjectReader
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import java.io.File
 
 /** Import Model into a copy of the Untitled fixture, with and without placement in `Main Scene.scene`. */
@@ -191,7 +192,7 @@ class ImportModelTest : BasePlatformTestCase() {
     fun testUndoStaysRefusedWhenTheModelWasAlsoPlacedByAddAsset() {
         importModel(project, abss, source("crate.obj"), crate, placement()) { fail(it) }
         val other = SceneComponentEdits.addAsset(project, scene, RenderAsset("MODEL", "model_crate"), Vec3(1f, 0f, 1f),
-            SceneDocumentCache.of(project), service<AbyssusCore>().assets.metaFiles)
+            SceneDocumentCache.of(project), service<AbyssusPluginCtx>().assets.metaFiles)
         assertNotNull(other.entityId)
         assertUndoRefused("Main Scene.scene")
         assertTrue(File(projectDir, "assets/model_crate/meta.json").isFile)
@@ -204,7 +205,7 @@ class ImportModelTest : BasePlatformTestCase() {
         val secondFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(second)!!
         importModel(project, abss, source("crate.obj"), crate, placement()) { fail(it) }
         SceneComponentEdits.addAsset(project, secondFile, RenderAsset("MODEL", "model_crate"), Vec3(1f, 0f, 1f),
-            SceneDocumentCache.of(project), service<AbyssusCore>().assets.metaFiles)
+            SceneDocumentCache.of(project), service<AbyssusPluginCtx>().assets.metaFiles)
         FileDocumentManager.getInstance().saveAllDocuments()
         assertUndoRefused("Second.scene uses model_crate")
         assertTrue(File(projectDir, "assets/model_crate/meta.json").isFile)

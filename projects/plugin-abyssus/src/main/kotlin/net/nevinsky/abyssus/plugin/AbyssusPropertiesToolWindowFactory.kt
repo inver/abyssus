@@ -23,7 +23,7 @@ class AbyssusPropertiesToolWindowFactory : ToolWindowFactory, DumbAware {
     private val tables = ConcurrentHashMap<File, Pair<Long, List<RayMaterialIdentity>>>()
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val core = service<AbyssusCore>()
+        val core = service<AbyssusPluginCtx>()
         val assets = core.assets
         val terrain = core.terrain
         val services = PanelServices(

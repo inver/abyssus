@@ -56,7 +56,7 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
         return readFoliageSource(folder.name, disk, json, text, net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(text)["additional"]) as FoliageSource.Ready
     }
     private fun command(background: (Runnable) -> Unit = { it.run() }, ui: (Runnable) -> Unit = { it.run() }) = FoliageStrokeCommand(
-        project, scene, folder, source(), drafts, { mode }, background, ui, reports::add,
+        project, scene, folder, source(), drafts, net.nevinsky.abyssus.plugin.testCore.documents, project.service<FoliageUndoCache>(), { mode }, background, ui, reports::add,
     )
     private fun target() = TerrainTarget("1", source().terrain, Matrix4())
     private fun bytes(name: String) = File(folder.path, name).readBytes().toList()

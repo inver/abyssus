@@ -72,7 +72,7 @@ writers from `ObjectNode` building to DTO mapping must leave every produced file
   and the game both use.
 - `plugin-abyssus`: `sceneview` (shadows, water), `projectView`, `properties`, `gameui`, `foliage`, `dto`; the
   `AssetStorage` collaborators, the `service<…>` call sites, and the action/selection boilerplate.
-- `app-game-control-line` / `lib-physics`: the game-local angle/azimuth helper and atomic JSON store, the `PhysicsWorld` split and the Jolt sub-shape builder.
+- `app-game-control-line` / `lib-physics`: the shared angle/azimuth helper and game-local atomic JSON store, the `PhysicsWorld` split and the Jolt sub-shape builder.
 - Docs: `docs/ai/architecture.md`, the affected package/module `README.md`s and `AGENTS.md` where a class moves or a
   helper gets a new home; `docs/reviews/design-review-2026-10.md` gains a status line for the findings this closes.
 - Verification: existing unit tests are the acceptance gate, plus `-Dabyssus.glTests=true` for the shadow/water/terrain

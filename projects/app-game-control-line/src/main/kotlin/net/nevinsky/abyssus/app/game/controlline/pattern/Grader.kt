@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
+
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.abs
@@ -204,14 +206,14 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
                 for (pair in verticals.chunked(2)) if (pair.size == 2) {
                     val a = azimuthOf(pair[0], segment)
                     val b = azimuthOf(pair[1], segment)
-                    worst = max(worst, abs(abs(wrapDeg(a - b)) - SQUARE_WIDTH) / 360f)
+                    worst = max(worst, abs(abs(wrapDegrees(a - b)) - SQUARE_WIDTH) / 360f)
                 }
             }
             Figure.INSIDE_TRIANGLES -> {
                 for (pair in all.chunked(2)) if (pair.size == 2) {
                     val a = equatorAzimuth(pair[0], segment)
                     val b = equatorAzimuth(pair[1], segment)
-                    if (a != null && b != null) worst = max(worst, abs(abs(wrapDeg(a - b)) - TRIANGLE_BASE) / 360f)
+                    if (a != null && b != null) worst = max(worst, abs(abs(wrapDegrees(a - b)) - TRIANGLE_BASE) / 360f)
                 }
             }
             else -> {}
@@ -331,7 +333,6 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
         const val BACK = 4
         const val AHEAD = 90
         const val BOTTOM_BAND = 6f
-        const val SUPERIMPOSITION_BINS = 24
         const val CROSSING_BAND = 4f
         const val QUARTER_LAP = 0.5f * MathUtils.PI
     }

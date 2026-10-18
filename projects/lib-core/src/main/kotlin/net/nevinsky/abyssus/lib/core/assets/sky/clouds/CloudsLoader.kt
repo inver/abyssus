@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
+import net.nevinsky.abyssus.lib.core.util.GL_RED
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GL30
@@ -12,12 +14,11 @@ import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.MetaAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 
 private const val GL_R8 = 0x8229
-private const val GL_RED = 0x1903
 internal const val GL_TEXTURE_3D = 0x806F
 private const val GL_TEXTURE_WRAP_R = 0x8072
 
@@ -27,21 +28,17 @@ private const val GL_TEXTURE_WRAP_R = 0x8072
  * dependency.
  */
 class CloudsLoader(
-    private val metaLoader: AssetMetaLoader,
+    metaLoader: AssetMetaLoader,
     private val noise: CloudNoiseGenerator = CloudNoiseGenerator(),
-) : AssetLoader<Unit, PreparedClouds, Clouds> {
+) : MetaAssetLoader<Unit, PreparedClouds, Clouds>(metaLoader) {
     override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedClouds> {
         val additional = meta.typedAdditional<CloudMeta>()
         return Prepared(PreparedClouds(meta.name, additional, if (additional.visible) noise.generate() else null))
     }
 
-    override fun prepare(name: String): Prepared<Unit, PreparedClouds>? =
-        metaLoader.loadBaseMeta(name)?.let(::loadPrepared)
-
     override fun build(staged: PreparedClouds, assets: BuiltAssets) =
         Clouds(staged.name, staged.meta, staged.noise)
 
-    override fun discard(model: Unit) = Unit
 }
 
 /** A `CLOUDS` asset read from disk: its [meta] and the volumetric technique's [noise]; no GL resources. */

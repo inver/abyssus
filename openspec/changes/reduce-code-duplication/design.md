@@ -43,12 +43,24 @@ Three homes, chosen by dependency direction, not convenience:
 | Kind of helper | Home | Why |
 |---|---|---|
 | Editor logic used by the editor or the plugin only (number text, `AssetMetaDocument` and its per-kind DTOs, typed read seam) | `lib-core-editor` (`util`/`document`) | GL-free and Swing-free, so it is unit-testable headless; the plugin already depends on it |
-| A helper that `lib-core` or a shipped game also needs (SHA-256 hex, shared GL constants, the shader-budget contract) | `lib-core` | Lowest module every consumer reaches; `lib-core-editor`, `lib-render` and the plugin all depend on it, and the game must not reach `lib-core-editor` (`checkShippedClasspath`) |
-| A helper only the Control Line game needs (angle wrap/azimuth, atomic JSON store) | `app-game-control-line` | Every copy is in the game; no shared module is needed or allowed |
+| A helper that `lib-core` or a shipped game also needs (SHA-256 hex, angle wrap/azimuth, shared GL constants, the shader-budget contract) | `lib-core` | Lowest module every consumer reaches; `lib-core-editor`, `lib-render` and the plugin all depend on it, and the game must not reach `lib-core-editor` (`checkShippedClasspath`) |
+| A helper only the Control Line game needs (atomic JSON store) | `app-game-control-line` | Every copy is in the game; no shared module is needed or allowed |
 | Runtime rendering primitives (shadow helpers, GL target renderer, light packing) | `lib-render` | Both the plugin and the game already depend on it; `lib-core` must not depend back on it |
 | Values that describe a shader ABI shared with `lib-gdx` (`ShadowLightKind`, face keys) | `lib-gdx` (the enum/attribute that already declares them) | The enum already lives there; the plugin imports it, the game does not need a second copy |
 
 Helpers that pure math or JSON needs and `lib-core` owns stay in `lib-core`. Nothing is moved "up" into the plugin.
+
+The digest helper exposes binary SHA-256 and lowercase hex output, with byte-array and input-stream entry points.
+`FoliageFingerprint` keeps its binary digest; model and archive hashing keep bounded-memory streaming with caller-owned
+streams. Existing public terrain digest entry points delegate to the shared implementation to preserve source compatibility.
+
+Angle helpers live in `lib-core` because `PathLayout` is editor code and cannot depend on the game. Float and double
+overloads retain each caller's precision; radians remain available for trigonometry and existing conversion order.
+
+Number text is shared through explicit styles rather than a changed spelling: foliage keeps ordinary float text
+(`1.0`) and expands exponents, entity details round to ten significant digits, component limits use plain decimals,
+UI fields omit integral fractions, and UI JSON retains its integer-node threshold of absolute value below `1e9`.
+Transform writers continue to write float nodes (`1.0`); component edits continue to write whole values as `1`.
 
 ### D2. The typed read seam
 
@@ -62,12 +74,21 @@ checks, and `project`/`assetMeta`/`scene` returning the existing DTOs (`ProjectD
 an integral `1`, so `1.0`, `"1"` and `1e0` are refused exactly as today (pinned by a table test; a lenient DTO int
 coercion would silently accept them).
 
+The typed migration also covers the remaining asset reads in `FoliageEditing`, `FoliageStrokeCommand` and
+`NewWeatherPreset`, so the guard can cover the whole consumer file. Admission adapters retain the existing editor
+foliage defaults and malformed-entry filtering, raw collider extension payloads, and the weather reader's strict
+cloud reference plus scalar UUID text. A full runtime DTO bind must not replace a narrow projection when it would
+reject unrelated fields or coerce a value the editor previously ignored. Private mapper adapters inside the document
+admission layer preserve these semantics; consumers receive typed results and never a tree. This preservation scope
+was explicitly selected during apply.
+
 ### D3. Loaders: Template Method plus one Strategy
 
-`AssetLoader.discard` gets a default `{}`, so the ten no-op overrides go. A package-internal base implements
+`AssetLoader.discard` gets a default `{}`, so the ten no-op overrides go. A public abstract base with an internal constructor implements
 `prepare(name) = metaLoader.loadBaseMeta(name)?.let(::loadPrepared)` once and leaves `loadPrepared` abstract; the seven
 loaders keep only their real work. `FoliageLoader` and `RuntimeFoliageLoader` collapse to one loader taking a read
-policy (Strategy), matching the existing `FoliageRuntimeLoad`. This is package-internal; `AssetLoader`'s public shape
+policy (Strategy), matching the existing `FoliageRuntimeLoad`. The base constructor is internal because Kotlin forbids a public loader from exposing an internal superclass;
+existing public loader constructors stay unchanged. `AssetLoader`'s public shape
 and `AssetStorage`'s contract do not change.
 
 ### D4. One shader-budget contract
@@ -77,6 +98,10 @@ them once in `lib-core`. `WaterDrawable` and `TerrainMesh` live there and cannot
 `lib-core`), and `lib-core-editor`'s `SceneLighting` does not depend on `lib-render` either, so `lib-render` cannot own the
 contract; `lib-render`'s `LightProfile`, `TerrainPass`, and `SceneLighting` derive from the `lib-core` definition instead.
 `SceneRenderer` also sets `numSpotLights = MAX_POINT`; it gets its own spot constant (equal today, so no rendered change).
+
+The constants live in `lib-core`'s `util/ShaderBudgets.kt`. `TerrainPass.MAX` derives from
+`LightProfile.EDITOR_MULTI_LIGHT`'s per-kind maxima; `ShaderBudgetsTest` reads the bundled fragment shader to check
+that the upload capacity covers every declared light array. The editor retains its combined local-light ceiling.
 
 Per-kind maxima and array capacity are different quantities. `TerrainPass.MAX` is the capacity of each of the three
 uploaded light arrays (the editor fragment shader declares all three as `[5]`), so it is the maximum of the profile's
