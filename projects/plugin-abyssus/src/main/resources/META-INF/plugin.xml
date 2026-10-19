@@ -153,6 +153,7 @@
         <action id="Abyssus.NewUiAsset" class="net.nevinsky.abyssus.plugin.gameui.NewUiAssetAction">
             <add-to-group group-id="Abyssus.Menu.New" anchor="first"/>
         </action>
+        <action id="Abyssus.NewScene" class="net.nevinsky.abyssus.plugin.projectView.scene.NewSceneAction"/>
         <action id="Abyssus.NewUiScreen" class="net.nevinsky.abyssus.plugin.projectView.action.ui.NewUiScreenAction"/>
         <action id="Abyssus.NewUiOverlay" class="net.nevinsky.abyssus.plugin.projectView.action.ui.NewUiOverlayAction"/>
         <action id="Abyssus.RegisterUiAsset" class="net.nevinsky.abyssus.plugin.gameui.RegisterUiAssetAction">

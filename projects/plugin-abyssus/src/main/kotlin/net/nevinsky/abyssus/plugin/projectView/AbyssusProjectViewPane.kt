@@ -25,6 +25,7 @@ import net.nevinsky.abyssus.plugin.filetype.SceneIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneViewIcons
 import net.nevinsky.abyssus.plugin.projectView.action.asset.AssetDropdownAction
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneDropdownAction
+import net.nevinsky.abyssus.plugin.projectView.scene.ScenesDropdownAction
 import net.nevinsky.abyssus.plugin.projectView.action.ui.UiDropdownAction
 import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
 import net.nevinsky.abyssus.plugin.sceneview.openSceneView
@@ -175,6 +176,7 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
     private val dropdownActions: List<DropdownAction> = listOf(
         AssetDropdownAction(),
         SceneDropdownAction(),
+        ScenesDropdownAction(),
         UiDropdownAction(),
     )
 
