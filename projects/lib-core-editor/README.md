@@ -29,11 +29,12 @@ namespace, including extension providers that use editor value types, must updat
 | `ecs` | `EcsWriter` (Jackson serialization of components and engines; a `SourceBackedComponent` such as `FoliageComponent` is written from its source object) |
 | `content` | Leaf value types: `Vec3`, `Quat`, `Pose`, the placements, `RenderAsset`, `PlacementTransform.toMatrix` |
 | `scene` | The read model: `SceneContent` / `sceneContentOf`, `FoliagePlacement`, `SceneRenderParams` / `renderParamsOf`, `PlacementMapper`, `CameraFrustum`, `LightSet`, `ModelEntity`, `AssetRevisions` |
-| `pick` | `ScenePicker`, `SnapshotSceneQueries` (incl. `terrainOf` / `terrainHit` for painting), `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction` (incl. the `Gesture.Painting` stroke and `FoliagePaint`), `FoliagePaintMode` in `SceneViewState`, `ScenePreview`, `SceneTransformWriter`, `SceneMarkers` / `LineSink` |
+| `pick` | `ScenePicker`, `SnapshotSceneQueries` (incl. `terrainOf` / `terrainHit` for painting), `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction` (with `GestureDriver` for the press-drag-release gestures, incl. the `Gesture.Painting` stroke and `FoliagePaint`, and `DrawingSession` for path drawing; both plain JVM), `FoliagePaintMode` in `SceneViewState`, `ScenePreview`, `SceneTransformWriter`, `SceneMarkers` / `LineSink` |
 | `arrange` | Path arrangements: `PathLayout` (stations along a line on X/Z arc length, sides, offset, yaw, the 1000-slot cap), `ArrangementEdits` (`create`, `regenerate`, `detach` over the scene JSON), the `GroundHeight` interface that gives the copies their heights (`GroundHeights` in `pick` implements it from terrains) |
 | `terrain` | Terrain generation, noise, recipe, new-terrain files and checks |
 | `foliage` | Terrain foliage authoring: `FoliageSettingsReader` / `FoliageRead` (typed settings from an `additional` node with validation), the field keys and defaults, `FoliageScatter` (deterministic copy generation), `FoliageBrush` / `MaskRect` (the density-mask brush and its dirty rectangles), `FoliageDraft` (uncommitted settings, masks and dirty chunks), `FoliageMetaEdits` (settings diffs as `DocumentTextEditor` edits), `FoliageColliderEdits` (a layer's `collider` member patched from the edited collider, nested unknown members kept, and the collider-only classification of a diff; `FoliageSettingsReader` validates colliders and `transitions` refuses OBJECT to DETAIL with one) and `NewFoliageFiles` / `FoliageAssetWriter` (planning a new `FOLIAGE` asset) |
 | `meta` | `AssetMetaEditor` and field descriptions, `MetaRows`, `AssetReferenceChoices`, the panel's entity sections and asset field states |
+| `panel` | The Abyssus Properties panel model, with no Swing: `PanelModel` (`Header`, `Section`, the `Row` kinds, `FieldRef`, `EnableToggle`) and `PanelBuilders`, one pure builder per selection (project, folder, scene, scene setting, `ecs`, entity, component, UI screen, asset by type). A row is dim when the file does not write its value (`FieldValue.isDefault` is key absence, never equality with the default); units come from `ComponentField.unit`; a component section is togglable by `SetEnabledAction`'s rule; `CustomRow` marks where the plugin hosts an existing typed editor (terrain, foliage, faces, HDR, antialiasing). `PanelIcons` names the design's icon keys |
 | `ray` | The ray tracing bridge: `RayBackendService`, `RayBackendSelector`, `RayViewRuntime`, `RayViewFeed`, `RaySceneSnapshots`, `RaySkyBaker` (a display-value sky bake with clouds at a given sky time and a revision per bake), `RayModeState`, diagnostics. The CPU snapshots of models, terrains and skies are in `ray.snapshot` (see Optional CPU companions below). A `RayFrameContext` carries the sky light (six axis colours), the baked sky and the cloud shade on the sun (`sunVisibility`, a `RaySunVisibility` from `raytracing`); a changed light, bake revision or visibility is an `ENVIRONMENT` change that restarts accumulation |
 | `headless` | `HeadlessEditing` (spec `headless-scene-editing`) |
 | `flightgear` | The FlightGear aircraft import: archive, model XML, AC3D and SGI readers, `FlightGearImport` |
@@ -45,6 +46,20 @@ build on it, `scene` reads the document through the component codecs, `foliage` 
 and `pick` and `ray` build on `scene`. `arrange` builds on `document` and `ecs`; `pick` and `components` call it (`SceneTransformWriter` and
 `ComponentEditor` detach a moved copy), so it names no type from them.
 
+## Typed document admission
+
+`DocumentParsing.requireSupported(text, kind)` validates header-only reads; `project`, `assetMeta` and `scene` return
+typed DTOs after validation. `assetFields` is a narrow projection for editor reads that must ignore unrelated invalid
+fields, and `foliageMeta` uses `FoliageSettingsBinding` to preserve the editor's wrong-type defaults, skipped malformed
+entries and raw collider payloads. The tree stays inside admission and lossless editing. `FoliageSettingsReader`
+validates either these typed settings or an existing edit tree through the same binding. Registry queries retain only
+textual `uiAssetNames`, in order, and ignore malformed unrelated project fields.
+
+The plugin's `assetfiles/AssetResultMessages.kt` maps all six `AssetCommandResult` outcomes in one place. Callers
+supply their existing cancellation key and, where needed, conflict or exception formatting. This mapper is IDE glue;
+the plain editing library does not depend on it. `NoManualJsonBuildingTest` in both modules guards the listed new-asset
+writers and known-field read sites; D9's lossless-edit and generic-payload exceptions remain explicit.
+
 ## Imports
 
 Both imports stage the files of a new asset folder, without GL or the IDE; the plugin writes them as one undoable
@@ -54,9 +69,12 @@ command.
 `FlightGearArchive` (the zip, read lazily; `<archive>/Aircraft/` paths, zip-slip and size limits), `FlightGearModelXmlReader`
 (model XML: AC3D path, offsets, nested models, panels, `select` animations), `RestState` (conditions with every
 property 0), `Ac3dReader`, `SgiImage` (SGI to PNG, encoded with `Deflater`: no AWT) and
-`FlightGearImport` (inspection, then staging: frame, scale, textures, `meta.json`, `source.json`), which builds a
-`ModelData` and writes it with `lib-gdx`'s `GltfWriter` (glTF 2.0 binary with external images). The plugin's Import
-FlightGear Aircraft and the Control Line trainer tool use it.
+`FlightGearImport` (the public inspection/staging facade). It constructor-wires `FlightGearCollection` (nested
+model placements, rest-state parts, texture lookup and licence inspection), `FlightGearGeometry` (frame, scale,
+triangles and materials as CPU `ModelData`) and `FlightGearStaging` (textures, GLB, licence files, typed
+`AssetMetaDocument` and `FlightGearImportRecord`). Staging keeps all bytes in memory until the complete result is
+returned and writes the model with `lib-gdx`'s `GltfWriter` (glTF 2.0 binary with external images). These collaborators
+need no GL context, Swing or IntelliJ. The plugin's Import FlightGear Aircraft and the Control Line trainer tool use it.
 
 `modelimport` converts an OBJ, FBX, 3DS, DAE, glTF or GLB file into the files of one native `MODEL` asset, without
 GL, so the plugin's Import Model dialog can preview exactly what it writes:
@@ -97,6 +115,16 @@ ordinary `OBJECT` entities with a `ParentComponent` to it. `regenerate` rewrites
 and adds or removes the rest. A moved, turned or position-edited copy is detached in the same edit (`SceneTransformWriter`
 and `ComponentEditor` call `detach`), so the headless edits match. Updating a setting of an arrangement through
 `ComponentEditor.update` regenerates in the same edit, on the `GroundHeight` passed in (the line's own height by default).
+
+## Enabled flag
+
+`SetEnabledAction` (with `EnabledTarget`) writes or removes the optional `enabled: false` on one entity entry or one
+component entry of a scene tree: disabling adds the key, enabling removes it, and no other value, key order or number text
+changes. A `GROUP` entity and the Name, Parent and Position components are not togglable. `HeadlessEditing.setEnabled` runs it
+as text, and the plugin runs it through `editSceneJson` as one undoable command. `sceneContentOf` reads the flag: a disabled
+entity has no placements (so it is not drawn, shadowed, picked, gizmoed or put in a ray snapshot, while its position still
+answers a look-at), and a disabled `RenderComponent`, `LightComponent`, `CameraComponent`, `FoliageComponent` or
+`PathArrangementComponent` leaves out only its own placement. `EcsWriter` writes the flag back from `EnabledState`.
 
 ## UI documents
 

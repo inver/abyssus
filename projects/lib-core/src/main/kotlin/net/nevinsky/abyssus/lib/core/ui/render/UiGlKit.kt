@@ -4,8 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.core.ui.render
 
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.Pixmap
+import net.nevinsky.abyssus.lib.core.util.newSolidTexture
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import net.nevinsky.abyssus.lib.core.ui.layout.UiRect
@@ -17,10 +16,7 @@ import net.nevinsky.abyssus.lib.core.ui.layout.UiRect
  */
 class UiGlKit {
     val batch = SpriteBatch()
-    val pixel: Texture = Pixmap(1, 1, Pixmap.Format.RGBA8888).let { p ->
-        p.setColor(Color.WHITE); p.fill()
-        Texture(p).also { p.dispose() }
-    }
+    val pixel: Texture = newSolidTexture()
 
     fun dispose() {
         batch.dispose()

@@ -5,6 +5,11 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_DIRECTIONAL
+import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_POINT
+import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_SPOT
+import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_LOCAL
+
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.attributes.DirectionalLightsAttribute
@@ -119,9 +124,11 @@ class LightSet(
     }
 }
 
-const val MAX_DIRECTIONAL = 2
+const val MAX_DIRECTIONAL = EDITOR_MAX_DIRECTIONAL
 
-const val MAX_POINT = 5
+const val MAX_POINT = EDITOR_MAX_POINT
+
+const val MAX_SPOT = EDITOR_MAX_SPOT
 
 val NO_LIGHTS = LightSet(emptyList(), emptyList())
 
@@ -133,7 +140,7 @@ fun lightSetOf(lights: List<LightPlacement>, target: Vec3): LightSet {
         .map { DirectionalSource(it.direction, scaled(it), it.entityId, it.position) }
     val local = lights.filter { it.kind != LightKind.DIRECTIONAL && usable(it) }
         .sortedWith(compareBy<LightPlacement> { distance(it.position, target) }.thenBy { it.entityId })
-        .take(MAX_POINT)
+        .take(EDITOR_MAX_LOCAL)
     val point =
         local.filter { it.kind == LightKind.POINT }.map { PointSource(it.position, scaled(it), it.range, it.entityId) }
     val spot = local.filter { it.kind == LightKind.SPOT }.map {

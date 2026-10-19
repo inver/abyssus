@@ -7,10 +7,8 @@ package net.nevinsky.abyssus.plugin.projectView
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
 import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
 import net.nevinsky.abyssus.lib.core.editor.weather.WeatherPresetDraft
@@ -32,30 +30,29 @@ class NewWeatherPresetFactory(
     private val clock: () -> Long = System::currentTimeMillis,
     private val randomUuid: () -> UUID = UUID::randomUUID,
 ) {
-    private val json = SceneJson()
-    private val reader = AssetMetaReader(processor)
+    private val parsing = DocumentParsing(processor, org.slf4j.helpers.NOPLogger.NOP_LOGGER)
 
     private fun texts(abss: VirtualFile, sky: VirtualFile): Pair<String, String> {
-        AbyssusDocumentFormat().requireSupported(json.parseObject(textOf(abss)), DocumentKind.PROJECT)
+        parsing.requireSupported(textOf(abss), DocumentKind.PROJECT)
         val assets = abss.parent.findChild("assets")
         require(assets != null && sky.name == "meta.json" && sky.parent.parent == assets) {
             AbyssusBundle.message("weatherSourceUnavailable")
         }
         val skyText = textOf(sky)
-        val skyMeta = reader.read(json.parseObject(skyText))
+        val skyMeta = parsing.assetFields(skyText)
         require(skyMeta.type == net.nevinsky.abyssus.lib.core.assets.MetaType.SKYBOX_PROCEDURAL) {
             EditorBundle.message("weatherSourceSky")
         }
-        val reference = skyMeta.json["additional"]?.get("clouds")
-        require(reference != null && reference.isTextual && reference.textValue().isNotBlank()) {
+        val reference = skyMeta.clouds
+        require(reference != null && reference.isNotBlank()) {
             EditorBundle.message("weatherSourceReference")
         }
         val matches = ProjectLayout.assetFolders(abss).mapNotNull { folder ->
             val file = folder.findChild("meta.json") ?: return@mapNotNull null
             runCatchingKeepingCancellation {
                 val text = textOf(file)
-                val meta = reader.read(json.parseObject(text))
-                text.takeIf { meta.json["uuid"]?.asText() == reference.textValue() }
+                val meta = parsing.assetFields(text)
+                text.takeIf { meta.uuidText == reference }
             }.getOrNull()
         }
         return skyText to requireNotNull(matches.singleOrNull()) { AbyssusBundle.message("weatherSourceUnavailable") }
@@ -75,7 +72,7 @@ class NewWeatherPresetFactory(
         checkFolderName(assetsDir, name)?.let { throw IllegalArgumentException(AbyssusBundle.message("newTerrainNameError.$it")) }
         val used = ProjectLayout.assetFolders(abss).mapNotNull { folder ->
             runCatchingKeepingCancellation {
-                folder.findChild("meta.json")?.let { reader.read(json.parseObject(textOf(it))).json["uuid"]?.asText() }
+                folder.findChild("meta.json")?.let { parsing.assetFields(textOf(it)).uuidText }
             }.getOrNull()
         }.toSet()
         var uuid = uniqueAssetUuid(processor, assetsDir, randomUuid)

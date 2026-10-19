@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.plugin.testMetaFiles
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.actionSystem.ActionGroup
@@ -53,7 +54,7 @@ class AddComponentOnEcsTest : BasePlatformTestCase() {
         return event.presentation.isEnabledAndVisible
     }
 
-    private fun choices() = AddOn(null).choices(project, scene()).getChildren(null)
+    private fun choices() = AddOn(null).choices(project, scene(), testMetaFiles()).getChildren(null)
 
     fun testOfferedOnTheEcsRowOnly() {
         copyProject()
@@ -98,7 +99,7 @@ class AddComponentOnEcsTest : BasePlatformTestCase() {
         copyProject()
         val entityRow = children(ecsRow()).first { componentTargetOf(it)?.entityId == "0" }
         val target = componentTargetOf(entityRow)!!
-        val light = AddComponentAction().choices(project, target).getChildren(null).first { it.templatePresentation.text == "Light" }
+        val light = AddComponentAction().choices(project, target, testMetaFiles()).getChildren(null).first { it.templatePresentation.text == "Light" }
         light.actionPerformed(TestActionEvent.createTestEvent(light))
         val ecs = root()["ecs"]
         assertTrue(ecs["0"]["components"].has("LightComponent"))

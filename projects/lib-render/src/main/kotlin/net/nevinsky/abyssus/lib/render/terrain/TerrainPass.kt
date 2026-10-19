@@ -5,9 +5,14 @@
 
 package net.nevinsky.abyssus.lib.render.terrain
 
+import net.nevinsky.abyssus.lib.core.util.TERRAIN_SHADOW_TEXTURE_UNIT
+import net.nevinsky.abyssus.lib.core.util.TERRAIN_IRRADIANCE_TEXTURE_UNIT
+import net.nevinsky.abyssus.lib.core.util.TERRAIN_IRRADIANCE_TO_TEXTURE_UNIT
+import net.nevinsky.abyssus.lib.core.util.TERRAIN_SUN_VISIBILITY_TEXTURE_UNIT
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.Pixmap
+import net.nevinsky.abyssus.lib.core.util.newSolidTexture
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix3
@@ -45,7 +50,7 @@ enum class TerrainVariant(internal val program: String, val profile: LightProfil
 class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Texture? = null) : Disposable {
     private val program: ShaderProgram =
         shaders.withResources(RENDER_SHADER_ROOT, TerrainPass::class.java).program(variant.program)
-    private val ownedBlank: Texture? = if (blank == null) newBlank() else null
+    private val ownedBlank: Texture? = if (blank == null) newSolidTexture() else null
     private val blank: Texture = blank ?: ownedBlank!!
     private val binding: Binding = when (variant) {
         TerrainVariant.EDITOR_MULTI_LIGHT -> EditorBinding()
@@ -179,21 +184,14 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
         }
     }
 
-    private fun newBlank(): Texture {
-        val pixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888)
-        try {
-            pixmap.setColor(1f, 1f, 1f, 1f)
-            pixmap.fill()
-            return Texture(pixmap, false)
-        } finally {
-            pixmap.dispose()
-        }
-    }
+
 }
 
-private const val MAX = 5 // at least the editor profile's budget; the array size in terrain_editor.frag
-private const val SHADOW_UNIT = 6 // after the splat units (0 to 5), before the HDR cube
-private const val IRRADIANCE_UNIT = 7
-private const val IRRADIANCE_TO_UNIT = 8 // the cube a sky light fades to; bound only while fading
-private const val SUN_VISIBILITY_UNIT = 9 // a directional light's visibility map (cloud shadows); bound only when set
+internal val MAX = LightProfile.EDITOR_MULTI_LIGHT.let { maxOf(it.maxDirectional, it.maxPoint, it.maxSpot) }
+internal const val SHADOW_UNIT = TERRAIN_SHADOW_TEXTURE_UNIT // after the splat units (0 to 5), before the HDR cube
+private const val IRRADIANCE_UNIT = TERRAIN_IRRADIANCE_TEXTURE_UNIT
+private const val IRRADIANCE_TO_UNIT =
+    TERRAIN_IRRADIANCE_TO_TEXTURE_UNIT // the cube a sky light fades to; bound only while fading
+private const val SUN_VISIBILITY_UNIT =
+    TERRAIN_SUN_VISIBILITY_TEXTURE_UNIT // a directional light's visibility map (cloud shadows); bound only when set
 private const val OUTSIDE_SHADOW_OFFSET = 10f // past the clip volume's edge at 1

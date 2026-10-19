@@ -50,7 +50,7 @@ class SceneViewUiTest : UiTestBase() {
         assertTrue("Move is the pressed tool", toolbar.isPressed("Move (W)"))
         assertFalse(toolbar.isPressed("Rotate (E)"))
         // no OpenGL here: every control is disabled and nothing can be written
-        assertTrue(expected.none { toolbar.isEnabled(it) })
+        assertTrue("enabled controls: ${expected.filter { toolbar.isEnabled(it) }}", expected.none { toolbar.isEnabled(it) })
         shot("scene-toolbar-default", toolbar.component, focusTree = false)
         assertEquals("opening the view writes nothing", original, Files.readString(project.resolve(scenePath)))
     }

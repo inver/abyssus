@@ -13,7 +13,6 @@ import com.badlogic.gdx.math.Vector3
 import com.github.stephengold.joltjni.*
 import com.github.stephengold.joltjni.enumerate.EActivation
 import com.github.stephengold.joltjni.enumerate.EMotionType
-import com.github.stephengold.joltjni.enumerate.EOverrideMassProperties
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderRead
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderReader
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerKind
@@ -21,8 +20,8 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMatrices
 import net.nevinsky.abyssus.lib.core.assets.foliage.layerKind
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.ecs.SceneFoliageListing
+import net.nevinsky.abyssus.lib.core.ecs.activeComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.physics.*
@@ -72,7 +71,9 @@ class PhysicsWorld internal constructor(
     private val bodies: BodyInterface
     private val allocator: TempAllocatorImpl
     private val jobs: JobSystemSingleThreaded
-    private val shapes: ShapeFactory
+    private val bodyFactory: PhysicsBodyFactory
+    private val poseWriter: PhysicsPoseWriter
+    private val stepper: PhysicsStepper
 
     private val records = LinkedHashMap<Entity, BodyRecord>()
     private val byBodyId = HashMap<Int, BodyRecord>()
@@ -82,7 +83,6 @@ class PhysicsWorld internal constructor(
     private val constraintList = ArrayList<ConstraintRecord>()
     private val stepContacts = LinkedHashMap<Pair<Int, Int>, Contact>()
     private val ropeTension = RopeTension(this)
-    private val clock = FixedStepClock()
     private var closed = false
 
     private val removal = object : EntityListener {
@@ -109,7 +109,13 @@ class PhysicsWorld internal constructor(
         allocator = own(TempAllocatorImpl(16 * 1024 * 1024))
         jobs = own(JobSystemSingleThreaded(Jolt.cMaxPhysicsJobs))
         bodies = system.getBodyInterface()
-        shapes = ShapeFactory(assets, ::own)
+        bodyFactory = PhysicsBodyFactory(
+            bodies, ShapeFactory(assets, ::own), LAYER_STATIC, LAYER_MOVING, ::own, ::entityId, ::warn,
+        )
+        poseWriter = PhysicsPoseWriter(bodies, records.values)
+        stepper = PhysicsStepper(
+            system, bodies, allocator, jobs, records.values, constraintList, stepContacts, ropeTension, poseWriter, FixedStepClock(),
+        )
         system.setContactListener(own(ContactCollector()))
         build()
         engine.addEntityListener(removal)
@@ -136,13 +142,11 @@ class PhysicsWorld internal constructor(
      * dropped. Returns the number of steps run.
      */
     fun advance(seconds: Float): Int = open {
-        val steps = clock.advance(seconds)
-        runSteps(steps)
-        steps
+        stepper.advance(seconds)
     }
 
     /** Runs exactly one fixed step and writes poses back (Step while paused). */
-    fun step() = open { runSteps(1) }
+    fun step() = open { stepper.step() }
 
     /** A rope from [anchorA] on [a] to [anchorB] on [b] (local points), or to the world point [anchorB] when [b] is null. */
     fun addRope(a: Entity, anchorA: Vector3, b: Entity?, anchorB: Vector3, length: Float): PhysicsConstraint =
@@ -208,17 +212,18 @@ class PhysicsWorld internal constructor(
         val ids = engine.ids.ids.sorted()
         for (id in ids) {
             val entity = engine.ids[id] ?: continue
-            val body = entity.getComponent(RigidBodyComponent::class.java)
-            val collider = entity.getComponent(ColliderComponent::class.java)
+            // a disabled entity or component creates nothing, and says nothing: it is data the file keeps
+            val body = entity.activeComponent(RigidBodyComponent::class.java)
+            val collider = entity.activeComponent(ColliderComponent::class.java)
             if (collider == null) {
-                if (body != null) warn(entity, "has a rigid body but no collider, so it is left out of the simulation")
+                if (body != null && entity.getComponent(ColliderComponent::class.java) == null) warn(entity, "has a rigid body but no collider, so it is left out of the simulation")
                 continue
             }
             createBody(entity, body, collider)?.let { problem -> warn(entity, "$problem; it is left out of the simulation") }
         }
         for (id in ids) {
             val entity = engine.ids[id] ?: continue
-            val c = entity.getComponent(ConstraintComponent::class.java) ?: continue
+            val c = entity.activeComponent(ConstraintComponent::class.java) ?: continue
             val other = if (c.other == NO_ENTITY) null else engine.ids[c.other]
             if (c.other != NO_ENTITY && other == null) {
                 warn(entity, "its constraint names entity ${c.other}, which is not in the scene; the constraint is left out")
@@ -388,69 +393,17 @@ class PhysicsWorld internal constructor(
         group.shapes.clear()
     }
 
-    /** Creates [entity]'s body; returns why it cannot instead. */
-    private fun createBody(entity: Entity, body: RigidBodyComponent?, collider: ColliderComponent): String? {
-        val motion = body?.motionType ?: MotionType.STATIC
-        // a moving body's pose is written back, so it needs a position component
-        val position = entity.getComponent(PositionComponent::class.java)
-            ?: PositionComponent().also { if (motion != MotionType.STATIC) entity.add(it) }
-        listOfNotNull(
-            nonFinite("PositionComponent.localPosition", position.localPosition),
-            nonFinite("PositionComponent.localScale", position.localScale),
-            nonFinite("PositionComponent.localRotation", position.localRotation.x, position.localRotation.y, position.localRotation.z, position.localRotation.w),
-        ).firstOrNull()?.let { return it }
-        if (body != null) {
-            listOf("mass" to body.mass, "friction" to body.friction, "restitution" to body.restitution,
-                "linearDamping" to body.linearDamping, "angularDamping" to body.angularDamping, "gravityFactor" to body.gravityFactor,
-            ).firstOrNull { !it.second.isFinite() }?.let { return "RigidBodyComponent.${it.first} is not finite (${it.second})" }
-            if (motion == MotionType.DYNAMIC && body.mass <= 0f) return "RigidBodyComponent.mass ${body.mass} is not greater than 0"
-            if (body.friction < 0f || body.linearDamping < 0f || body.angularDamping < 0f || body.restitution < 0f) {
-                return "RigidBodyComponent has a negative friction, restitution or damping"
+    /** Registers a successfully built body, preserving the scene's entity and contact lookup order. */
+    private fun createBody(entity: Entity, body: RigidBodyComponent?, collider: ColliderComponent): String? =
+        when (val built = bodyFactory.create(entity, body, collider)) {
+            is PhysicsBodyFactory.Built.Refused -> built.reason
+            is PhysicsBodyFactory.Built.Created -> {
+                val record = BodyRecord(entity, built.id, built.body, built.motion, built.mass, built.gravityFactor)
+                records[entity] = record
+                byBodyId[built.id] = record
+                null
             }
         }
-        if (collider.shape == ColliderShape.HEIGHT_FIELD && motion != MotionType.STATIC) return "a height field can only be static, not $motion"
-        val rotation = Quaternion(position.localRotation).nor()
-        val shape = when (val built = shapes.build(entity, collider, position.localScale)) {
-            is ShapeFactory.Built.Refused -> return built.reason
-            is ShapeFactory.Built.Shape -> {
-                built.warning?.let { warn(entity, it) }
-                built.ref
-            }
-        }
-        if (entity.getComponent(ParentComponent::class.java)?.parentEntityId?.let { it != NO_ENTITY } == true) {
-            warn(entity, "has a parent, which physics ignores: its body moves in world space")
-        }
-        val p = position.localPosition
-        val settings = own(BodyCreationSettings(
-            shape, RVec3(p.x.toDouble(), p.y.toDouble(), p.z.toDouble()), Quat(rotation.x, rotation.y, rotation.z, rotation.w),
-            jolt(motion), if (motion == MotionType.STATIC) LAYER_STATIC else LAYER_MOVING,
-        ))
-        settings.setFriction(body?.friction ?: 0.2f)
-        settings.setRestitution(body?.restitution ?: 0f)
-        if (body != null) {
-            settings.setLinearDamping(body.linearDamping)
-            settings.setAngularDamping(body.angularDamping)
-            settings.setGravityFactor(body.gravityFactor)
-            if (motion == MotionType.DYNAMIC) {
-                settings.setOverrideMassProperties(EOverrideMassProperties.CalculateInertia)
-                settings.setMassPropertiesOverride(own(MassProperties()).setMass(body.mass))
-            }
-        }
-        settings.setUserData(entityId(entity).toLong())
-        val created = bodies.createBody(settings)
-        val id = created.getId()
-        bodies.addBody(id, if (motion == MotionType.STATIC) EActivation.DontActivate else EActivation.Activate)
-        val record = BodyRecord(entity, id, created, motion, if (motion == MotionType.DYNAMIC) body!!.mass else 0f, body?.gravityFactor ?: 1f)
-        records[entity] = record
-        byBodyId[id] = record
-        return null
-    }
-
-    private fun jolt(motion: MotionType) = when (motion) {
-        MotionType.STATIC -> EMotionType.Static
-        MotionType.KINEMATIC -> EMotionType.Kinematic
-        MotionType.DYNAMIC -> EMotionType.Dynamic
-    }
 
     private class ConstraintSpec(
         val kind: ConstraintKind, val a: Entity, val b: Entity?, val anchorA: Vector3, val anchorB: Vector3,
@@ -516,33 +469,6 @@ class PhysicsWorld internal constructor(
         return Vector3(axis).crs(helper).nor()
     }
 
-    // ---- stepping ----
-
-    private fun runSteps(steps: Int) {
-        stepContacts.clear()
-        repeat(steps) {
-            for (r in records.values) r.applyPending(bodies)
-            val ropes = ropeTension.before(constraintList)
-            val error = system.update(PHYSICS_STEP, 1, allocator, jobs)
-            check(error == 0) { "Jolt failed to step (error $error)" }
-            ropes.after()
-        }
-        for (r in records.values) r.clearPending()
-        writeBack()
-    }
-
-    private fun writeBack() {
-        val p = RVec3()
-        val q = Quat()
-        for (r in records.values) {
-            if (r.motion == MotionType.STATIC) continue
-            bodies.getPositionAndRotation(r.id, p, q)
-            val position = r.entity.getComponent(PositionComponent::class.java) ?: continue
-            position.localPosition.set(p.x(), p.y(), p.z())
-            position.localRotation.set(q.getX(), q.getY(), q.getZ(), q.getW())
-        }
-    }
-
     // ---- what rope tension needs ----
 
     internal fun recordOf(entity: Entity?): BodyRecord? = entity?.let { records[it] }
@@ -551,17 +477,9 @@ class PhysicsWorld internal constructor(
         return out.set(v.getX(), v.getY(), v.getZ())
     }
     internal fun anchorsOf(c: ConstraintRecord, a: Vector3, b: Vector3) {
-        a.set(c.anchor).mul(bodyTransform(records.getValue(c.entity)))
+        a.set(c.anchor).mul(poseWriter.transformOf(records.getValue(c.entity)))
         val other = c.other?.let { records[it] }
-        if (other != null) b.set(c.otherAnchor).mul(bodyTransform(other)) else b.set(c.otherAnchor)
-    }
-
-    private fun bodyTransform(record: BodyRecord): Matrix4 {
-        val p = RVec3()
-        val q = Quat()
-        bodies.getPositionAndRotation(record.id, p, q)
-        val scale = record.entity.getComponent(PositionComponent::class.java)?.localScale ?: Vector3(1f, 1f, 1f)
-        return Matrix4().set(Vector3(p.x(), p.y(), p.z()), Quaternion(q.getX(), q.getY(), q.getZ(), q.getW()), scale)
+        if (other != null) b.set(c.otherAnchor).mul(poseWriter.transformOf(other)) else b.set(c.otherAnchor)
     }
 
     // ---- helpers ----

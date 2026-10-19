@@ -10,19 +10,28 @@ import com.intellij.ide.impl.ProjectViewSelectInTarget
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.projectView.impl.*
 import com.intellij.ide.util.treeView.AbstractTreeNode
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.render.RenderingUtil
 import com.intellij.ui.tree.TreeVisitor
+import com.intellij.ui.RelativeFont
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
 import net.nevinsky.abyssus.plugin.filetype.EyeIcons
+import net.nevinsky.abyssus.plugin.filetype.TreeActionIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneViewIcons
+import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.asset.showAssetsMenu
+import net.nevinsky.abyssus.plugin.projectView.scene.sceneNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.scene.showSceneMenu
 import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
 import net.nevinsky.abyssus.plugin.sceneview.openSceneView
 import java.awt.*
@@ -57,6 +66,14 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
         override fun isToBuildChildrenInBackground(element: Any) = true
     }
 
+    /** The platform sorts siblings by name; `Scenes`, `UI`, `Assets` and the type groups keep their specified order. */
+    override fun createComparator(): java.util.Comparator<com.intellij.ide.util.treeView.NodeDescriptor<*>> {
+        val platform = super.createComparator()
+        fun rank(d: com.intellij.ide.util.treeView.NodeDescriptor<*>) =
+            (d as? DtoEntryNode)?.value?.let { fixedRank(it.value, it.name) }
+        return java.util.Comparator { a, b -> compareFixed(rank(a), rank(b)) ?: platform.compare(a, b) }
+    }
+
     // The platform requires the target's minor view id to equal the pane id; the inherited one is "ProjectPane".
     override fun createSelectInTarget(): SelectInTarget = AbyssusSelectInTarget(myProject)
 
@@ -74,9 +91,10 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
         }
     }
 
+    // the platform's own header buttons stay as they are; the unused filter is the first item of the Options menu
     override fun addToolbarActions(actionGroup: DefaultActionGroup) {
         super.addToolbarActions(actionGroup)
-        actionGroup.add(UnusedFilterAction())
+        actionGroup.add(UnusedFilterAction(), com.intellij.openapi.actionSystem.Constraints.FIRST)
     }
 
     override fun createTree(treeModel: DefaultTreeModel): ProjectViewTree =
@@ -104,6 +122,33 @@ internal fun publishSelectionOf(tree: JTree, project: Project) {
  * clicked). Keep the gray for those fragments.
  */
 private class GrayKeepingRenderer : ProjectViewRenderer() {
+    override fun customizeCellRenderer(
+        tree: JTree, value: Any?, selected: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean,
+    ) {
+        super.customizeCellRenderer(tree, value, selected, expanded, leaf, row, hasFocus)
+        val entry = (TreeUtil.getUserObject(value) as? DtoEntryNode)?.value
+        if (entry != null && entry.isGame) {
+            append(" ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
+            append(GameBadge.TEXT, GameBadge.ATTRIBUTES, GameBadge.TAG)
+        }
+    }
+
+    /** The outline of the `game` badge, around the text fragment that [customizeCellRenderer] tagged. */
+    override fun paintComponent(g: Graphics) {
+        super.paintComponent(g)
+        val index = (0 until fragmentCount).firstOrNull { getFragmentTag(it) === GameBadge.TAG } ?: return
+        val xs = (0 until width).filter { findFragmentAt(it) == index }
+        if (xs.isEmpty()) return
+        val g2 = g.create() as Graphics2D
+        try {
+            val h = g2.getFontMetrics(RelativeFont.SMALL.derive(font)).height
+            GameBadge.paintOutline(g2, xs.first(), (height - h) / 2, xs.last() - xs.first() + 1, h)
+        } finally {
+            g2.dispose()
+        }
+    }
+
+
     override fun append(fragment: String, attributes: SimpleTextAttributes, isMainText: Boolean) {
         if (mySelected && attributes.fgColor == SimpleTextAttributes.GRAYED_ATTRIBUTES.fgColor) {
             mySelected = false
@@ -129,10 +174,20 @@ private class AbyssusSelectInTarget(project: Project) : ProjectViewSelectInTarge
 
 /**
  * Paints clickable icons at the right edge of rows that have actions: the eye on entries gated by an `xxxEnabled`
- * toggle, "View" on scenes, and "..." left of the eye on a project scene's skybox.
+ * toggle, "View" on scenes; `unused` sits left of the eye.
  */
-internal class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
+class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
+
+    /** Each level's icon starts [LEVEL_INDENT] px right of its parent's, whatever indent the platform's tree UI brings. */
+    override fun updateUI() {
+        super.updateUI()
+        (ui as? javax.swing.plaf.basic.BasicTreeUI)?.let { it.rightChildIndent = JBUI.scale(LEVEL_INDENT) - it.leftChildIndent }
+    }
+
+    companion object {
+        const val LEVEL_INDENT = 16
+    }
 
     /** The row's actions, rightmost first. */
     private fun actionsFor(row: Int): List<RowAction> {
@@ -146,7 +201,7 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
             })
         }
         val entry = (node as? DtoEntryNode)?.value ?: return emptyList()
-        return listOfNotNull(eyeAction(entry), skyboxAction(entry), unusedBadgeFor(entry))
+        return listOfNotNull(eyeAction(entry), unusedBadgeFor(entry))
     }
 
     private fun eyeAction(entry: DtoEntry): RowAction? {
@@ -158,18 +213,19 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
         }
     }
 
-    private fun skyboxAction(entry: DtoEntry): RowAction? {
-        val abss = skyboxProjectOf(entry) ?: return null
-        return ChooseButton(AbyssusBundle.message("skyboxChooserTooltip")) {
-            val assets = service<AbyssusCore>().assets
-            if (chooseSkybox(project, entry, abss, assets.metaFiles, assets.hdrPreviews)) reselect(entry.path, false)
-        }
-    }
-
     /** Where [actions] of [row] sit: from the right edge of the visible area, rightmost first, [ACTION_GAP] apart. */
     private fun actionBounds(row: Int, actions: List<RowAction>): List<Rectangle>? {
         val rowBounds = getRowBounds(row) ?: return null
         return layoutActions(rowBounds, visibleRect.let { it.x + it.width }, actions, this)
+    }
+
+    /** The painted actions of [row] as `name=x..x2;...` (`unused`, `icon`), rightmost first; the UI tests read it to check spacing. */
+    fun actionLayout(row: Int): String {
+        val actions = actionsFor(row)
+        val bounds = actionBounds(row, actions) ?: return ""
+        return actions.indices.joinToString(";") { i ->
+            "${if (actions[i] is UnusedBadge) "unused" else "icon"}=${bounds[i].x}..${bounds[i].x + bounds[i].width - 1}"
+        }
     }
 
     private fun rowOf(e: MouseEvent): Int? {
@@ -210,6 +266,40 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
         })
     }
 
+    /**
+     * The Assets row's right-click menu holds only Import Model and New, not the platform's project-view actions;
+     * every other row keeps the platform popup.
+     */
+    override fun processMouseEvent(e: MouseEvent) {
+        if (e.isPopupTrigger) {
+            val row = rowOf(e)
+            val node = row?.let { TreeUtil.getUserObject(getPathForRow(it)?.lastPathComponent) }
+            if (row == null) {
+                super.processMouseEvent(e)
+                return
+            }
+            if (assetsNodeProjectFile(node) != null) {
+                if (e.id == MouseEvent.MOUSE_PRESSED || e.id == MouseEvent.MOUSE_RELEASED) {
+                    requestFocusInWindow()
+                    setSelectionRow(row)
+                    showAssetsMenu(this, e.x, e.y)
+                }
+                e.consume()
+                return
+            } else if (sceneNodeProjectFile(node) != null) {
+                if (e.id == MouseEvent.MOUSE_PRESSED || e.id == MouseEvent.MOUSE_RELEASED) {
+                    requestFocusInWindow()
+                    setSelectionRow(row)
+                    showSceneMenu(this, e.x, e.y)
+                }
+                e.consume()
+                return
+            }
+        }
+        super.processMouseEvent(e)
+    }
+
+
     override fun getToolTipText(event: MouseEvent): String? =
         actionAt(event)?.second?.tooltip ?: super.getToolTipText(event)
 
@@ -249,5 +339,4 @@ internal class EyeTree(model: DefaultTreeModel, private val project: Project) : 
             }
         }
     }
-
 }

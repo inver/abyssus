@@ -346,4 +346,50 @@ class SceneContentTest {
         val broken = """{"format":"abyssus","formatVersion":1,"abyssus":[]}"""
         assertTrue(content(broken).water.isEmpty())
     }
+
+    private val pilot = """"PositionComponent":{"localPosition":{"x":1,"y":0,"z":0}},"RenderComponent":{"shaderKey":"defaultShader","type":"MODEL","assetName":"model_pilot"}"""
+
+    @Test
+    fun aDisabledEntityIsNeitherPlacedNorPickedButItsPositionStays() {
+        val c = content(
+            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
+              "1":{"enabled":false,"components":{$pilot,"LightComponent":{"light":{}}}},
+              "2":{"components":{$pilot}}}}}""",
+        )
+        assertEquals(listOf("2"), c.models.map { it.entityId })
+        assertTrue(c.lights.isEmpty())
+        assertTrue("1" in c.entityPositions)
+    }
+
+    @Test
+    fun aDisabledRenderComponentLeavesTheEntityWithoutAModel() {
+        val c = content(
+            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
+              "1":{"components":{"PositionComponent":{},"RenderComponent":{"type":"MODEL","assetName":"model_pilot","enabled":false}}}}}}""",
+        )
+        assertTrue(c.models.isEmpty())
+        assertTrue("1" in c.entityPositions)
+    }
+
+    @Test
+    fun aDisabledLightComponentIsNotALight() {
+        val c = content(
+            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
+              "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{},"enabled":false}}},
+              "2":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{}}}}}}}""",
+        )
+        assertEquals(listOf("2"), c.lights.map { it.entityId })
+    }
+
+    @Test
+    fun aDisabledCameraAndFoliageAreNotPlaced() {
+        val c = content(
+            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
+              "1":{"components":{"CameraComponent":{"camera":{}, "enabled":false}}},
+              "2":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"t"},"FoliageComponent":{"assetName":"f","enabled":false}}}}}}""",
+        )
+        assertTrue(c.cameras.isEmpty())
+        assertEquals(listOf("2"), c.terrains.map { it.entityId })
+        assertTrue(c.foliages.isEmpty())
+    }
 }

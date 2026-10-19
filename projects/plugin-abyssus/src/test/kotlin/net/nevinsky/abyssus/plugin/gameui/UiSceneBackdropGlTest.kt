@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.plugin.testCore
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
@@ -50,7 +52,7 @@ class UiSceneBackdropGlTest : BasePlatformTestCase() {
             override fun initGL() {
                 GL.createCapabilities()
                 ctx = GdxRuntime.newContext(frame, GdxGlBridge.gl20(), GdxGlBridge.gl30(), Lwjgl3Files())
-                GdxRuntime.withContext(ctx!!) { backdrop = SceneBackdrop(project, scene) }
+                GdxRuntime.withContext(ctx!!) { backdrop = SceneBackdrop(scene, testCore.assets, project.service<net.nevinsky.abyssus.plugin.foliage.FoliageDrafts>(), service<net.nevinsky.abyssus.plugin.dto.SceneReader>(), testCore.loggers.getLogger("uibackdrop")) }
             }
 
             override fun paintGL() {

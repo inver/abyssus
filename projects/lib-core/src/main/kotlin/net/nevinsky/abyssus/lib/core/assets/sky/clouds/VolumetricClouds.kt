@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
+import net.nevinsky.abyssus.lib.core.util.checkFramebufferComplete
+
+import net.nevinsky.abyssus.lib.core.util.GL_HALF_FLOAT
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
@@ -15,11 +19,10 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.core.util.createFullscreenTriangle
 import kotlin.math.abs
 
 private const val GL_RGBA16F = 0x881A
-private const val GL_HALF_FLOAT = 0x140B
 private const val GL_FRAMEBUFFER_BINDING = 0x8CA6
 
 /** How much of the resolved image comes from this frame; the rest is the reprojected history. */
@@ -191,14 +194,7 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
         latest = 0
         Gdx.gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, framebuffer)
         attach(current)
-        val status = Gdx.gl.glCheckFramebufferStatus(GL20.GL_FRAMEBUFFER)
-        check(status == GL20.GL_FRAMEBUFFER_COMPLETE) {
-            "16-bit float cloud target is incomplete (status 0x${
-                status.toString(
-                    16
-                )
-            })"
-        }
+        checkFramebufferComplete("16-bit float cloud target")
         resetHistory()
     }
 

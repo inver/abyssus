@@ -37,7 +37,7 @@ class AbyssusTreeUiTest : UiTestBase() {
     fun expandsProjectScenesAssetsAndEcs() {
         val facts = scene()
         val tree = openHierarchy()
-        tree.expand("Assets")
+        tree.expandAssets()
         val rows = tree.rows()
         assertTrue("project row in $rows", rows.first().startsWith("Untitled.abss"))
         assertTrue("scene row ${facts.treeLabel} in $rows", facts.treeLabel in rows)

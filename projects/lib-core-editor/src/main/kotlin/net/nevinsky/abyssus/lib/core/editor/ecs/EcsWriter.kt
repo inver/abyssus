@@ -8,7 +8,9 @@ import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.format.ENABLED_KEY
 import net.nevinsky.abyssus.lib.core.ecs.EcsLoadingWarns
+import net.nevinsky.abyssus.lib.core.ecs.EnabledState
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
@@ -75,8 +77,15 @@ class EcsWriter(
 
     private fun writeEntity(id: Long, entity: Entity, document: EcsLoadingWarns): ObjectNode {
         val components = nodes.objectNode()
+        val state = entity.getComponent(EnabledState::class.java)
         for (type in registry.types) {
-            entity.getComponent(type)?.let { components.set<JsonNode>(registry.nameOf(type), writeComponent(it)) }
+            entity.getComponent(type)?.let {
+                val node = writeComponent(it)
+                components.set<JsonNode>(
+                    registry.nameOf(type),
+                    if (state != null && type in state.disabledComponents) disabled(node) else node,
+                )
+            }
         }
         // what the loader could not bind, after the components: unless the entity has a component of that class now
         document.carried[id]?.forEach { (key, node) ->
@@ -86,6 +95,12 @@ class EcsWriter(
                 node
             )
         }
-        return nodes.objectNode().set("components", components)
+        val out = nodes.objectNode().set<ObjectNode>("components", components)
+        if (state != null && !state.entityEnabled) out.put(ENABLED_KEY, false)
+        return out
     }
+
+    /** [node] with `enabled: false` as its last key; the source object is not changed. */
+    private fun disabled(node: JsonNode): JsonNode =
+        if (node is ObjectNode) node.deepCopy().also { it.put(ENABLED_KEY, false) } else node
 }

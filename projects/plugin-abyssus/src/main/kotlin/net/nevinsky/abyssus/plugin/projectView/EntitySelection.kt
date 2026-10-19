@@ -5,12 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.wm.ToolWindowId
-import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
@@ -67,12 +64,8 @@ private fun isSceneRoot(node: Any, sceneFile: VirtualFile): Boolean = when (node
  */
 fun selectEntityInAbyssusView(project: Project, sceneFile: VirtualFile, entityId: String) {
     try {
-        ToolWindowManager.getInstance(project).getToolWindow(ToolWindowId.PROJECT_VIEW)?.show()
-        val view = ProjectView.getInstance(project)
-        view.changeView(AbyssusProjectViewPane.ID)
-        val tree = view.getProjectViewPaneById(AbyssusProjectViewPane.ID)?.tree ?: return
         val visitor = TreeVisitor { path -> entityVisitAction(sceneFile, entityId, path.path.map(TreeUtil::getUserObject)) }
-        TreeUtil.promiseSelect(tree, visitor)
+        selectInAbyssusView(project, visitor)
     } catch (e: Throwable) {
         LOG.warn("Could not select entity $entityId in the Abyssus view", e)
     }
@@ -81,13 +74,9 @@ fun selectEntityInAbyssusView(project: Project, sceneFile: VirtualFile, entityId
 /** Like [selectEntityInAbyssusView] for the water surface [waterId] of [sceneFile]. */
 fun selectWaterInAbyssusView(project: Project, sceneFile: VirtualFile, waterId: String) {
     try {
-        ToolWindowManager.getInstance(project).getToolWindow(ToolWindowId.PROJECT_VIEW)?.show()
-        val view = ProjectView.getInstance(project)
-        view.changeView(AbyssusProjectViewPane.ID)
-        val tree = view.getProjectViewPaneById(AbyssusProjectViewPane.ID)?.tree ?: return
         val wanted = listOf(WATER_ROW, waterId)
         val visitor = TreeVisitor { path -> rowVisitAction(sceneFile, wanted, path.path.map(TreeUtil::getUserObject)) }
-        TreeUtil.promiseSelect(tree, visitor)
+        selectInAbyssusView(project, visitor)
     } catch (e: Throwable) {
         LOG.warn("Could not select water $waterId in the Abyssus view", e)
     }

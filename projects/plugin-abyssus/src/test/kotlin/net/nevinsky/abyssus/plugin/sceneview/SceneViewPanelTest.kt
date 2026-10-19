@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
+import net.nevinsky.abyssus.plugin.testMetaFiles
 import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
@@ -66,8 +67,8 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         var selected: String? = null
         val documents = net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)
         val panel = SceneViewPanel(params, testRenderer(),
-            assetMenu = PlacementMenu({ canAddAsset(file, documents) && hasRenderAssets(file) }) { position ->
-                AddAssetGroup(project, file, position, { selected = it })
+            assetMenu = PlacementMenu({ canAddAsset(file, documents) && hasRenderAssets(file, testMetaFiles()) }) { position ->
+                AddAssetGroup(project, file, testMetaFiles(), position, { selected = it })
             })
         try {
             val button = named(panel, "add-asset") as JButton

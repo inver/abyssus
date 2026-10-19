@@ -1,0 +1,32 @@
+{
+  "importer": "flightgear",
+  "archive": "fixture.zip",
+  "archiveSha256": "DIGEST",
+  "aircraft": "fixture",
+  "description": "Fixture Plane",
+  "authors": "Test Author (3D model)",
+  "model": "Models/fixture.xml",
+  "license": "unknown",
+  "licenseFiles": [],
+  "size": {
+    "span": 1.0
+  },
+  "excludedParts": [
+    "PropDisc"
+  ],
+  "skipped": [
+    {
+      "item": "1 instrument panel(s) in fixture.xml",
+      "reason": "panels are not imported"
+    },
+    {
+      "item": "missing.rgb",
+      "reason": "texture missing from the archive"
+    },
+    {
+      "item": "Body: 1 line surfaces",
+      "reason": "lines are not imported"
+    }
+  ],
+  "frame": "nose +Z, up +Y, left wing +X; centred on span and length; lowest point at y = 0"
+}

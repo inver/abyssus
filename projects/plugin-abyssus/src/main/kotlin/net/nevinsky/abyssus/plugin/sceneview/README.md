@@ -13,6 +13,8 @@ the toolbar, Play and the view's asset storage.
 | Class | Role |
 |---|---|
 | `SceneFileEditor` / `SceneFileEditorProvider` | The tab, the second editor of the file after the text editor: the IDE's own `Text` and `Scene View` tabs switch between the JSON and the render on one shared document (unsaved text and Undo shared), and `openSceneView` selects Scene View. There is no custom preview/source switch. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo. The provider in the root package is where the tab's collaborators are looked up and passed in; `SceneViewHost` carries tree selection and Add actions |
+| `AntialiasingLevel`, `SampleFallback`, `CanvasAntialiasing` | Plain setting values and canvas lifecycle decisions: default 4×, fallback 8 → 4 → 2 → Off; hidden changes coalesce until shown. `SceneViewPanel` supplies replacement, warning and terminal failure callbacks |
+| `AbyssusProjectSettings` (filetype package) | The native project's `sceneViewAntialiasing` field, edited in project Properties through `editSceneJson`. `SceneFileEditor` reads its owning `.abss` for new views and subscribes to `ProjectSettingsListener` for live updates, including unsaved text and Undo/Redo. The preference is excluded from content comparisons so Play keeps running. Standalone scenes use 4×; there is no application setting |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
 | `SceneContent`, `PlacementMapper` *(lib-core-editor)* | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. The components are decoded by the same codecs the Properties panel uses (`DecodedEntity`), so both show the same values and defaults; `PlacementMapper` (pure) maps them. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
 | `LightSet`, `SpotCone` *(lib-core-editor)* | Deterministic light selection and CPU cone/range attenuation math |
@@ -32,6 +34,8 @@ the toolbar, Play and the view's asset storage.
 | `SceneViewState` *(lib-core-editor)* | What the user chose: selection, gizmo mode and hovered handle, the camera looked through, the drag/drop preview. The panel changes it; the renderer and the queries read it |
 | `SceneInteraction` *(lib-core-editor)* | Mouse and key logic without Swing or GL, over a `SceneViewState` and `SceneQueries`: click → pick/select, drag → gizmo or orbit/pan (one `Gesture`: Idle, Dragging or Cancelled), Drop → a Y-only move |
 | `FrameSnapshot`, `SceneQueries`, `SnapshotSceneQueries` *(lib-core-editor)* | What the last frame drew (camera copy, model boxes, terrain targets, `drawnVersion`), and the CPU-only questions asked of it: pick, ray, ground below, lowest point, gizmo handles and hits, drag start. Tested with hand-built snapshots |
+| `SceneContentPass`, `SceneSkyPass` | The two passes `SceneRenderer` runs over `SceneViewState`: models, terrains, foliage and the gizmo; the sky, fog and clouds (it packs the snapshot it reads). GL only |
+| `SceneViewToolbar`, `SceneGlLifecycle`, `SceneFrameDriver` | What `SceneViewPanel` delegates to: the toolbar and its control sync (Swing); the canvas, libGDX context and capabilities of one GL context (GL, EDT); the frame timer and idle throttle (Swing) |
 | `SceneRenderer` | One frame: environment, skybox, grid, terrains, models, markers, highlight, gizmo. GL only: it publishes a `FrameSnapshot` after each frame and exposes `queries`. `GridModel` and `SelectionBox` build the grid and the highlight |
 | `PlacedAssets`, `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (an `AssetView` each over the view's `ViewAssets`, whose `ProjectAssets` from `AssetLoading` hold the one `lib-core` `AssetStorage`) and per-entity instances (`PlacedEntities`); `SceneModels` and `SceneTerrains` extend `PlacedAssets` and `SceneSkybox` has the same `abandon` |
 | `skybox` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights (`sunLight` is the light clouds dim). `SkyClock`: the view's sky time, which clouds drift by. `CloudViewState` (the toolbar's Clouds choice and the automatic fallbacks) and `CloudFrameBudget` (2 s over 33 ms per frame while volumetric clouds draw) are pure and per view; nothing is written. The cloud techniques and `SunOcclusion` are in `lib-core`'s `assets.sky.clouds`. The sky loaders, the HDR environment and the sky shaders are in `lib-core` (`net.nevinsky.abyssus.lib.core.assets.sky`) |
@@ -51,6 +55,14 @@ the toolbar, Play and the view's asset storage.
   `gl*` / `files` and the GLSL 150 prefixes under a lock, and restores the old values afterwards. Every libGDX call
   must be inside it. Clicks arrive outside it, so `ScenePicker.pickRay` unprojects by hand instead of using
   `Camera.getPickRay`.
+- **Multisampled default framebuffer.** `glData(samples)` requests a GL 3.3 core canvas with 24-bit depth, no swap
+  interval, and sample buffers only when the count is positive. Default 4× smooths raster edges and overlays; shadow,
+  water and ray targets retain their own formats and the ray image retains its own accumulation. Test harness formats
+  stay unchanged. Applying a level replaces only the native canvas through guarded `disposeCanvas`, reattaches input
+  and rebuilds renderer resources in `initGL`; camera, selection, tools, look-through camera, Play and Ray Tracing mode
+  stay in the view. The ray feed resets accumulation on context loss. Hidden views defer replacement until `addNotify`
+  or a showing hierarchy event. A failure before `initGL` retries lower sample counts down to Off, warns once per view,
+  and leaves the requested preference intact. A renderer failure after `initGL`, or a failed Off format, uses `onFailure`.
 - **GL only on a safe surface.** `GuardedGLCanvas.glSafe` needs the canvas showing, non-empty, not minimized, and
   stable for 250 ms. On macOS a zero-sized surface aborts the JVM. A canvas disposed while hidden drops its context
   without making it current, so its GL objects can't be released. macOS also stops sizing that canvas's native
@@ -125,6 +137,14 @@ the toolbar, Play and the view's asset storage.
   changes also refresh availability. Params invalidate the next frame's query as well, because a transform update
   leaves drawn entity ids unchanged.
 
+## Disabled entities and components
+
+The view's content comes from `sceneContentOf`, which leaves out a disabled entity entirely and a disabled component's own
+placement (see "Enabled flag" in `lib-core-editor/README.md`). So a disabled entity is not drawn, does not cast a shadow, is
+not picked (a click goes through it to the enabled entity behind), has no gizmo and is left out of the ray snapshot. Selecting
+it in the tree still shows it in Properties. A toggle is a scene file edit, so the view refreshes through
+`AbyssusSceneEdited` like any other edit and needs no reload.
+
 ## Add Light
 
 The toolbar's Add Light menu offers Directional, Sun and Spot through `AddLightGroup`. `SceneFileEditor` supplies
@@ -184,7 +204,8 @@ Budget and failure rules: a level beyond the reflection budget, or whose pass fa
 sky with clouds the view holds an `EnvironmentLease` only while some level needs that fallback and samples the cloudy
 lighting cube (an HDR sky's cube needs none); the lease is released when no level falls back and with the view, and just
 forgotten when the context is replaced. `WaterResources` allocates once per size, releases surplus reflection targets,
-restores the caller's framebuffer, viewport and state after every pass (`ShadowGlState`, plus the winding), refuses an
+restores the caller's framebuffer, viewport and state after every pass (`lib-render`'s `GlRenderTarget` and
+`ShadowGlState`, including the winding), refuses an
 unusable size without retrying until the size changes, and is abandoned without GL calls on context loss. A shader or mesh
 that cannot be made skips the water in that view (logged once, retried after the context is replaced); targets that cannot
 be made leave plain tinted water; a failing surface is skipped while the rest draw. The animation time advances with the
@@ -246,6 +267,13 @@ only its direct contribution, leaving other lights, ambient, HDR environment lig
 `ShadowCasterBounds` caches per-bone mesh boxes and transforms them with the current pose and node transform for
 fitting and culling, so movement outside a model's initial pose does not clip its shadows. Skin weights use the
 model runtime's normalized-weight convention.
+
+`lib-render` owns `DepthSubmission` for both the atlas and water depth passes, `sunShadowBias` (with a guarded depth
+range), and `cameraUp` (each host retains its pole threshold). The receiver-plus-caster fit stays in `ShadowProjection`.
+The atlas uses `lib-gdx`'s `ShadowLightKind` directly. `ShadowResources` and `WaterResources` borrow their targets through
+`GlRenderTarget`: atlas tiles override its viewport/scissor step, while water draws the whole target. Its
+`ShadowGlState` restores caller state after success or failure; `CloudShadowMap` uses the same snapshot around its
+draw. These helpers require the current safe canvas GL context and own none of the host's targets or shaders.
 
 The atlas is RGBA8888 with a depth buffer, 4096 square, with at most sixteen views. A single shadow uses a
 4096-square tile; two to four views use 2048-square tiles, five to nine use 1365-square tiles, and larger sets use

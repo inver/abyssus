@@ -98,7 +98,21 @@ class ComponentEditor(
                 it.group,
                 it.assetType,
                 it.tooltipKey?.let(messages::message),
+                it.unit,
+                !isWritten(node, it.name),
             )
+        }
+    }
+
+    /**
+     * Whether the file holds a value for the field [name] of a component entry [node]. It is the presence of the key,
+     * never a comparison with the default, so a default that was written explicitly is not dim. A few components keep
+     * their values one level down (`light`, `camera`), and the render component calls its `type` key `assetType`.
+     */
+    private fun isWritten(node: JsonNode, name: String): Boolean {
+        val path = (FILE_KEYS[name] ?: name).split('.')
+        return listOf(node, node.get("light"), node.get("camera")).any { base ->
+            base != null && path.fold(base as JsonNode?) { n, key -> n?.get(key) } != null
         }
     }
 
@@ -114,9 +128,9 @@ class ComponentEditor(
         assets: Set<String>? = null,
         assetsByType: Map<String, Set<String>>? = null,
     ): EditResult {
-        val components = componentsOf(root, entityId) ?: return rejected("componentEntityMissing", entityId)
-        val kind = byName[kindName] ?: return rejected("componentKindUnknown", kindName)
-        if (components.fieldNames().asSequence().any { byName[it] === kind }) return rejected(
+        val components = componentsOf(root, entityId) ?: return reject("componentEntityMissing", entityId)
+        val kind = byName[kindName] ?: return reject("componentKindUnknown", kindName)
+        if (components.fieldNames().asSequence().any { byName[it] === kind }) return reject(
             "componentAlreadyPresent",
             entityId,
             kind.label
@@ -133,7 +147,7 @@ class ComponentEditor(
     ): EditResult {
         val component = kind.create()
         for ((name, text) in initial) {
-            val field = kind.fields.firstOrNull { it.name == name } ?: return rejected(
+            val field = kind.fields.firstOrNull { it.name == name } ?: return reject(
                 "componentFieldUnknown",
                 kind.label,
                 name
@@ -142,7 +156,7 @@ class ComponentEditor(
             field.set(component, text)
         }
         if (kind.name == "RenderComponent" && (component as RenderComponent).assetName.isEmpty()) {
-            return rejected("componentAssetRequired")
+            return reject("componentAssetRequired")
         }
         components.set<JsonNode>(kind.name, kind.codec.write(component))
         return EditResult.Changed
@@ -163,9 +177,9 @@ class ComponentEditor(
         assetsByType: Map<String, Set<String>>? = null,
         heights: GroundHeight? = null,
     ): EditResult {
-        val components = componentsOf(root, entityId) ?: return rejected("componentEntityMissing", entityId)
-        val kind = byName[kindName] ?: return rejected("componentKindUnknown", kindName)
-        val node = components.get(kindName) ?: return rejected("componentMissing", entityId, kind.label)
+        val components = componentsOf(root, entityId) ?: return reject("componentEntityMissing", entityId)
+        val kind = byName[kindName] ?: return reject("componentKindUnknown", kindName)
+        val node = components.get(kindName) ?: return reject("componentMissing", entityId, kind.label)
         return updateIn(root, components, node, entityId, kind, field, text, Assets(assets, assetsByType), heights ?: LineHeights())
     }
 
@@ -173,7 +187,7 @@ class ComponentEditor(
         root: JsonNode, components: ObjectNode, node: JsonNode, entityId: String, kind: ComponentKind<C>,
         fieldName: String, text: String, assets: Assets, heights: GroundHeight,
     ): EditResult {
-        val field = kind.fields.firstOrNull { it.name == fieldName } ?: return rejected(
+        val field = kind.fields.firstOrNull { it.name == fieldName } ?: return reject(
             "componentFieldUnknown",
             kind.label,
             fieldName
@@ -251,11 +265,11 @@ class ComponentEditor(
 
     /** Removes the component [kindName] from [entityId], unless another entity still refers to the position it holds. */
     fun remove(root: JsonNode, entityId: String, kindName: String): EditResult {
-        val components = componentsOf(root, entityId) ?: return rejected("componentEntityMissing", entityId)
-        val kind = byName[kindName] ?: return rejected("componentKindUnknown", kindName)
-        if (!components.has(kindName)) return rejected("componentMissing", entityId, kind.label)
+        val components = componentsOf(root, entityId) ?: return reject("componentEntityMissing", entityId)
+        val kind = byName[kindName] ?: return reject("componentKindUnknown", kindName)
+        if (!components.has(kindName)) return reject("componentMissing", entityId, kind.label)
         if (kindName == "PositionComponent") {
-            referrer(root, entityId)?.let { return rejected("componentReferencedBy", kind.label, entityId, it) }
+            referrer(root, entityId)?.let { return reject("componentReferencedBy", kind.label, entityId, it) }
         }
         components.remove(kindName)
         return EditResult.Changed
@@ -362,7 +376,7 @@ class ComponentEditor(
         }
     }
 
-    private fun limitText(limit: Double) = java.math.BigDecimal(limit.toString()).stripTrailingZeros().toPlainString()
+    private fun limitText(limit: Double) = net.nevinsky.abyssus.lib.core.editor.util.numberText(limit)
 
     private fun checkReference(
         root: JsonNode,
@@ -393,5 +407,7 @@ class ComponentEditor(
 
     private fun reject(key: String, vararg params: Any) = EditResult.Rejected(messages.message(key, *params))
 
-    private fun rejected(key: String, vararg params: Any): EditResult = reject(key, *params)
 }
+
+/** Fields whose key in the file differs from the field's name. */
+private val FILE_KEYS = mapOf("assetType" to "type")

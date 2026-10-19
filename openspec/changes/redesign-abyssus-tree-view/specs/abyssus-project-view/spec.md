@@ -189,8 +189,8 @@ lose or duplicate nodes.
 
 ### Requirement: Unused assets filter
 
-The view SHALL offer a "Show Only Unused Assets" toggle among its toolbar options; while on, the button SHALL show the
-pressed amber state. While it is on, each type group of `Assets` and the `UI` folder SHALL contain only assets marked
+The view SHALL offer a "Show Only Unused Assets" toggle as the first item of its Options menu; the item SHALL use the Icon
+set glyph, and the amber selected state while the filter is on. While it is on, each type group of `Assets` and the `UI` folder SHALL contain only assets marked
 `unused`, type groups with none SHALL be hidden, and the counts of the remaining groups and of `Assets` SHALL match what is
 listed; scenes and other rows SHALL be unaffected. The choice SHALL persist for the project and default to off.
 
@@ -224,13 +224,14 @@ files change and SHALL NOT be affected by the unused filter.
 
 ### Requirement: Tree header toolbar
 
-The Abyssus view's header SHALL offer, as icon buttons with tooltips and accessible names, Expand All, Collapse All, the
-unused filter, Options and Hide, in that order, using the Icon set glyphs.
+The Abyssus view's header SHALL keep the platform's own buttons with their platform glyphs, with Collapse All, Options and
+Hide in that order, each with a tooltip and accessible name. Its Options menu SHALL offer the unused filter as its first
+item, and the view SHALL NOT add buttons to the header by hand.
 
 #### Scenario: Header buttons
 - **WHEN** the Abyssus view is shown
-- **THEN** its header holds buttons named Expand All, Collapse All, Show Only Unused Assets, Options and Hide in that order
+- **THEN** its header holds buttons named Collapse All, Options and Hide in that order, and the Options menu lists Show Only Unused Assets first
 
-#### Scenario: Expand and collapse all
-- **WHEN** the user presses Collapse All and then Expand All
-- **THEN** the tree first shows only the project row's children collapsed, then every folder, scene, entity and asset expanded
+#### Scenario: Collapse all
+- **WHEN** the user presses Collapse All with a scene expanded
+- **THEN** the tree shows only the project row's children, collapsed

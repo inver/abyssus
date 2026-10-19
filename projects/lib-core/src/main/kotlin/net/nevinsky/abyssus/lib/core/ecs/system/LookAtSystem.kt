@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.lib.core.ecs.system
 
+import net.nevinsky.abyssus.lib.core.ecs.isActive
 import com.badlogic.ashley.core.ComponentMapper
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.Family
@@ -20,6 +21,7 @@ class LookAtSystem(private val ids: SceneEntityIds, priority: Int = 0) :
     private val quat = Quaternion()
 
     override fun processEntity(entity: Entity, deltaTime: Float) {
+        if (!entity.isActive(PositionComponent::class.java)) return
         val component = mapper[entity]
         if (component.lookAtId < 0) {
             return

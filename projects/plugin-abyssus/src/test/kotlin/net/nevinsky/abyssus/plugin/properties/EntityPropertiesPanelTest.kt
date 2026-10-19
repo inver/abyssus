@@ -13,7 +13,6 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
@@ -23,6 +22,7 @@ import net.nevinsky.abyssus.plugin.projectView.AbyssusSelection
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
 import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
 import net.nevinsky.abyssus.plugin.projectView.componentTargetOf
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import java.awt.Component
 import java.awt.Container
 import java.io.File
@@ -130,13 +130,15 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         assertTrue(all(p, JBTextField::class.java).isEmpty())
     }
 
-    fun testProjectRootShowsSettingsWhileScenesGroupRemainsEmpty() {
+    fun testProjectRootShowsSettingsWhileScenesGroupShowsAReadOnlyFolder() {
         copyProject()
         val p = panel()
         p.show(children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") })
         assertFalse((p.state as PanelState.Project).settings.physicsEnabled)
         p.show(descend(children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }, "scenes"))
-        assertTrue(p.state is PanelState.Empty)
+        val folder = p.state as PanelState.StructuralDetails
+        assertEquals("Folder · 1 item", folder.model.header.subtitle)
+        assertTrue(all(p, JBTextField::class.java).isEmpty())
     }
 
     private fun leave(c: Component) = c.focusListeners.forEach { it.focusLost(java.awt.event.FocusEvent(c, java.awt.event.FocusEvent.FOCUS_LOST)) }
@@ -259,7 +261,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
 
     fun testLightRangeEditorWritesThirty() {
         copyProject()
-        net.nevinsky.abyssus.plugin.projectView.SceneComponentEdits.add(project, sceneFile(), "0", "LightComponent", testMetaFiles())
+        SceneComponentEdits.add(project, sceneFile(), "0", "LightComponent", testMetaFiles())
         val p = panel()
         p.show(entity("0"))
         val field = named(p, "field-LightComponent-range") as JBTextField
@@ -272,7 +274,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
     fun testBeamEditorsAreSpotlightOnlyAndUsePercent() {
         copyProject()
         val f = sceneFile()
-        val edits = net.nevinsky.abyssus.plugin.projectView.SceneComponentEdits
+        val edits = SceneComponentEdits
         edits.add(project, f, "0", "LightComponent", testMetaFiles())
         val p = panel()
         for (type in listOf("LIGHT_POINT", "LIGHT_DIRECTIONAL", "LIGHT_SPOT")) {
@@ -310,10 +312,10 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         copyProject()
         val p = panel()
         p.show(entity("0"))
-        (named(p, "remove-TypeComponent") as JButton).doClick()
-        assertFalse(components(sceneFile(), "0").has("TypeComponent"))
-        assertFalse((p.state as PanelState.EntityDetails).sections.any { it.kind == "TypeComponent" })
-        assertNull(named(p, "field-TypeComponent-type"))
+        (named(p, "remove-PositionComponent") as JButton).doClick()
+        assertFalse(components(sceneFile(), "0").has("PositionComponent"))
+        assertFalse((p.state as PanelState.EntityDetails).sections.any { it.kind == "PositionComponent" })
+        assertNull(named(p, "field-PositionComponent-localPosition.x"))
     }
 
     fun testPanelFollowsTextEdits() {

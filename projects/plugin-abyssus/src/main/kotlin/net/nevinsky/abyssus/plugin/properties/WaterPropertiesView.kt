@@ -5,6 +5,15 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.lib.core.editor.panel.Header
+import net.nevinsky.abyssus.lib.core.editor.panel.Section
+import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.projectView.DesignColors
+import net.nevinsky.abyssus.plugin.panel.HeaderPanel
+import net.nevinsky.abyssus.plugin.panel.PropertySection
+import net.nevinsky.abyssus.plugin.panel.fieldRow
+import net.nevinsky.abyssus.plugin.panel.panelIcon
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBCheckBox
@@ -41,7 +50,11 @@ import javax.swing.JPanel
  * those names. A confirmed valid edit is one undoable scene command; an invalid one shows its reason and puts the stored
  * value back.
  */
-internal class WaterPropertiesView(private val project: Project, private val state: PanelState.WaterDetails) : JPanel(BorderLayout()) {
+internal class WaterPropertiesView @JvmOverloads constructor(
+    private val project: Project,
+    private val state: PanelState.WaterDetails,
+    private val collapsed: MutableMap<String, Boolean> = HashMap(),
+) : JPanel(BorderLayout()) {
     private val edits = WaterSceneEdits(project)
     private val input = WaterText()
     private val target = state.target
@@ -62,30 +75,31 @@ internal class WaterPropertiesView(private val project: Project, private val sta
         add(box, BorderLayout.NORTH)
     }
 
-    private fun secondary() = UIUtil.getContextHelpForeground()
-
     private fun header(): JComponent {
         val nameError = JBLabel("").apply { foreground = JBColor.RED; name = "water-name-error" }
         val nameField = textEditor(state.surface.name, nameError) { text ->
             outcome(edits.rename(target.file, target.id, text))
         }.apply { name = "water-name" }
         val enabled = state.enabled
+        val subtitle = state.preset?.let { AbyssusBundle.message("waterPropertiesSubtitle", waterPresetLabel(it)) }
+            ?: AbyssusBundle.message("waterPropertiesSubtitleUnknown")
+        val sceneName = ProjectLayout.abssFor(target.file)?.let { net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(textOf(target.file)).get("name")?.asText() }
+        val top = HeaderPanel(
+            Header(
+                listOfNotNull(ProjectLayout.abssFor(target.file)?.name, sceneName ?: target.file.nameWithoutExtension),
+                "fog", state.surface.name, subtitle,
+            ),
+            panelIcon("fog"), titleName = "water-title",
+        )
         val rows = JPanel(VerticalLayout(JBUI.scale(2))).apply {
-            add(JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
-                isOpaque = false
-                add(JBLabel(AbyssusBundle.message("waterNameLabel")), BorderLayout.WEST)
-                add(nameField, BorderLayout.CENTER)
-                add(nameError, BorderLayout.EAST)
-            })
-            add(JBLabel(state.preset?.let { AbyssusBundle.message("waterPropertiesSubtitle", waterPresetLabel(it)) }
-                ?: AbyssusBundle.message("waterPropertiesSubtitleUnknown")).apply { foreground = secondary(); name = "water-subtitle" })
-            add(JBLabel(AbyssusBundle.message("waterAbyssusOnlyNote")).apply { foreground = secondary(); font = JBFont.small(); name = "water-abyssus-only" })
+            isOpaque = false
+            border = JBUI.Borders.empty(8, 16, 4, 16)
+            add(fieldRow(AbyssusBundle.message("waterNameLabel"), nameField, nameError))
+            add(JBLabel(subtitle).apply { foreground = DesignColors.SECONDARY; name = "water-subtitle"; isVisible = false })
+            add(JBLabel(AbyssusBundle.message("waterAbyssusOnlyNote")).apply { foreground = DesignColors.SECONDARY; font = JBFont.small(); name = "water-abyssus-only" })
             if (enabled != null) add(visibilityRow(enabled))
         }
-        return JPanel(BorderLayout()).apply {
-            border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0), JBUI.Borders.empty(12, 16))
-            add(rows, BorderLayout.CENTER)
-        }
+        return JPanel(VerticalLayout(0)).apply { add(top); add(rows) }
     }
 
     private fun visibilityRow(enabled: Boolean): JComponent {
@@ -97,10 +111,13 @@ internal class WaterPropertiesView(private val project: Project, private val sta
     }
 
     private fun section(titleKey: String, vararg fields: WaterField): JComponent {
-        val box = JPanel(VerticalLayout(0)).apply { border = JBUI.Borders.empty(4, 0) }
-        box.add(JBLabel(AbyssusBundle.message(titleKey)).apply { font = JBFont.label().asBold(); border = JBUI.Borders.empty(6, 16, 2, 16) })
-        for (field in fields) box.add(fieldRow(field))
-        return box
+        val body = JPanel(VerticalLayout(0)).apply { isOpaque = false; border = JBUI.Borders.empty(2, 0) }
+        for (field in fields) body.add(fieldRow(field))
+        val key = "water.$titleKey"
+        return PropertySection(
+            Section(key, AbyssusBundle.message(titleKey), null, emptyList()), null, body, collapsed[key] == true,
+            { collapsed[key] = it }, null,
+        )
     }
 
     private fun fieldRow(field: WaterField): JComponent {
@@ -109,16 +126,7 @@ internal class WaterPropertiesView(private val project: Project, private val sta
             name = "water-field-${field.name}"
             font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size)
         }
-        val editorAndError = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
-            isOpaque = false
-            add(editor, BorderLayout.CENTER)
-            add(error, BorderLayout.EAST)
-        }
-        return JPanel(GridBagLayout()).apply {
-            border = JBUI.Borders.empty(4, 16)
-            add(JBLabel(waterFieldLabel(field)), GridBagConstraints().apply { weightx = 0.4; fill = GridBagConstraints.HORIZONTAL; anchor = GridBagConstraints.WEST })
-            add(editorAndError, GridBagConstraints().apply { weightx = 0.6; fill = GridBagConstraints.HORIZONTAL })
-        }
+        return fieldRow(waterFieldLabel(field), editor, error)
     }
 
     /** Parses [text], checks it and writes it; anything refused leaves the file as it was. */

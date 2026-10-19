@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.plugin.testCore
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.components.service
@@ -55,7 +56,7 @@ class NewFoliageActionTest : BasePlatformTestCase() {
         resolution: Int = FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT,
         select: (String) -> Unit = {},
         report: (String) -> Unit = { fail(it) },
-    ) = createFoliage(project, abss, terrainFolder, name, resolution, report, select)
+    ) = createFoliage(project, abss, terrainFolder, name, resolution, testCore.documents, testCore.foliage, report, select)
 
     private fun metaOf(name: String) = processor.readObject(File(projectDir, "assets/$name/meta.json").readText())
 
@@ -201,7 +202,7 @@ class NewFoliageActionTest : BasePlatformTestCase() {
 
     fun testTheDialogSuggestsTheTerrainNameAndValidatesEveryChoice() {
         useFixture("Foliage")
-        val dialog = NewFoliageDialog(project, projectDir, foliageTerrains(projectDir, processor))
+        val dialog = NewFoliageDialog(project, projectDir, foliageTerrains(projectDir, processor), testCore.newFoliages)
         try {
             assertEquals("foliage_$terrain", dialog.nameField.text)
             assertEquals(FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT, dialog.resolutionField.text.toInt())

@@ -25,7 +25,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.VolumetricClouds
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
-import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.core.util.createFullscreenTriangle
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 

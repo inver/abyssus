@@ -1,0 +1,26 @@
+{
+  "importer": "model",
+  "source": "crate_missing.obj",
+  "sourcePath": "missing/crate_missing.obj",
+  "sourceSha256": "DIGEST",
+  "sourceFormat": "OBJ",
+  "stated": {
+    "unit": null,
+    "upAxis": null
+  },
+  "chosen": {
+    "unit": "cm",
+    "upAxis": "Y"
+  },
+  "size": {
+    "height": 2.0
+  },
+  "animations": [],
+  "skipped": [
+    {
+      "item": "wood.png",
+      "reason": "missing"
+    }
+  ],
+  "approximated": []
+}

@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.assets.sky.cube
 import com.badlogic.gdx.graphics.Pixmap
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.MetaAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
@@ -18,9 +18,9 @@ import net.nevinsky.abyssus.lib.gdx.loader.Pixmaps
 /** Skybox assets: the six face images decoded off the GL thread, then uploaded as one cube map. */
 class SkyboxLoader(
     private val fileLoader: FileLoader,
-    private val metaLoader: AssetMetaLoader,
+    metaLoader: AssetMetaLoader,
     private val shaders: ShaderStorage
-) : AssetLoader<Unit, PreparedSkybox, SkyboxCube> {
+) : MetaAssetLoader<Unit, PreparedSkybox, SkyboxCube>(metaLoader) {
     override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedSkybox> = Prepared(read(meta))
 
     private fun read(meta: AssetMeta<Any>): PreparedSkybox {
@@ -40,13 +40,9 @@ class SkyboxLoader(
         return PreparedSkybox(faces, additional.shader ?: "skybox")
     }
 
-    override fun prepare(name: String): Prepared<Unit, PreparedSkybox>? =
-        metaLoader.loadBaseMeta(name)?.let(::loadPrepared)
-
     override fun build(staged: PreparedSkybox, assets: BuiltAssets) =
         SkyboxCube(staged, shaders.program(staged.shaderName))
 
-    override fun discard(model: Unit) = Unit
 
     override fun discardStaged(staged: PreparedSkybox) = staged.dispose()
 }

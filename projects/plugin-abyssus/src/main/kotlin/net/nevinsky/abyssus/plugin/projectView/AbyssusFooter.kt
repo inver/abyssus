@@ -9,22 +9,20 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFileManager
-import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.dto.NativeFileChanges
+import net.nevinsky.abyssus.plugin.dto.ProjectDto
+import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import java.awt.Color
 import java.awt.FlowLayout
 import javax.swing.BorderFactory
 import javax.swing.JPanel
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.plugin.dto.ProjectDto
 
 /** The numbers under the tree. */
 data class FooterCounts(val scenes: Int, val assets: Int, val unused: Int)
@@ -44,6 +42,7 @@ fun footerCounts(project: Project): FooterCounts {
                 assets += root.assets.size
                 unused += root.assets.count { it.unused }
             }
+
             is SceneDto -> scenes++
             else -> if (file.extension == ProjectLayout.SCENE_EXTENSION) scenes++
         }
@@ -52,7 +51,7 @@ fun footerCounts(project: Project): FooterCounts {
 }
 
 /** `N scenes · N assets · N unused` strip under the tree; recounts when scene, project or `meta.json` files change. */
-class AbyssusFooter(private val project: Project, private val parent: Disposable) : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(16), JBUI.scale(6))) {
+class AbyssusFooter(private val project: Project, private val parent: Disposable) : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(16), JBUI.scale(5))) {
     private val scenes = JBLabel()
     private val assets = JBLabel()
     private val unused = JBLabel().apply { foreground = AMBER }
@@ -70,18 +69,18 @@ class AbyssusFooter(private val project: Project, private val parent: Disposable
         scenes.foreground = SECONDARY
         assets.foreground = SECONDARY
         com.intellij.openapi.util.Disposer.register(parent, Disposable { disposed = true })
-        project.messageBus.connect(parent).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
-            override fun after(events: List<VFileEvent>) {
-                if (events.any { relevant(it) }) refresh()
-            }
-        })
+        project.getService(NativeFileChanges::class.java).subscribe(parent) { events ->
+            if (events.any { relevant(it) }) refresh()
+        }
         refresh()
     }
 
+    /** The design's 28 px strip. */
+    override fun getPreferredSize(): java.awt.Dimension = super.getPreferredSize().also { it.height = JBUI.scale(FOOTER_HEIGHT) }
+
     private fun relevant(event: VFileEvent): Boolean {
-        val name = event.path.substringAfterLast('/')
-        return name == META_FILE || name.substringAfterLast('.', "") in ProjectLayout.ASSET_EXTENSIONS ||
-            event.file?.isDirectory == true || event.file == null
+        return net.nevinsky.abyssus.plugin.dto.isNativeDocumentPath(event.path) ||
+                event.file?.isDirectory == true || event.file == null
     }
 
     /** Recounts in the background and shows the result; later requests replace earlier ones. */
@@ -103,7 +102,8 @@ class AbyssusFooter(private val project: Project, private val parent: Disposable
     /** The texts shown, for tests. */
     internal fun texts() = listOf(scenes.text, assets.text, unused.text)
 
-    private companion object {
+    internal companion object {
+        const val FOOTER_HEIGHT = 28
         val SECONDARY: Color = JBColor.GRAY
         val AMBER: Color = JBColor(Color(0xB07A1F), Color(0xE0A458))
     }

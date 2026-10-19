@@ -168,6 +168,7 @@ changelog {
 
 tasks {
     test {
+        systemProperty("abyssus.pluginSources", file("src/main/kotlin").absolutePath)
         // GL render tests open a real window: opt in with -Dabyssus.glTests=true
         System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
         System.getProperty("abyssus.rayTimingTests")?.let { systemProperty("abyssus.rayTimingTests", it) }
@@ -186,6 +187,9 @@ tasks {
         providers.gradleProperty("rayExperiment").orNull?.let { jvmArgs("-Dabyssus.raytracing.experiment=$it") }
         // The sandbox IDE trusts every project (no "Trust project?" dialog) and opens the Abyssus view.
         jvmArgs("-Didea.trust.all.projects=true", "-Dabyssus.openView=true")
+        // Kotlin 2.4 emits coroutine debug metadata v2, but the sandbox IDE's bundled stdlib reads v1; its coroutine debug
+        // probes then fail every resume ("Debug metadata version mismatch"). Turn the probes off.
+        jvmArgs("-Dkotlinx.coroutines.debug=off")
     }
 
     patchPluginXml {
@@ -234,7 +238,8 @@ tasks.register<Test>("uiTest") {
     providers.gradleProperty("uiTestFilter").orNull?.let { filter.includeTestsMatching(it) }
     providers.gradleProperty("uiProject").orNull?.let { systemProperty("abyssus.ui.project", it) }
     systemProperty("abyssus.ui.reportsDir", layout.buildDirectory.dir("reports/ui-tests").get().asFile.absolutePath)
-    systemProperty("abyssus.ui.fixtureSource", file("src/test/testData/project/Untitled").absolutePath)
+    // -PuiFixtureSource=<project folder> swaps the project the IDE opened (scripts/run-ui-tests.sh passes it from ABYSSUS_UI_FIXTURE)
+    systemProperty("abyssus.ui.fixtureSource", providers.gradleProperty("uiFixtureSource").orNull ?: file("src/test/testData/project/Untitled").absolutePath)
     // Screenshots: -PuiScreenshots=compare|update|off (default compare); -PupdateUiScreenshots=true with
     // -PuiScreenshotScenarios=a,b rewrites only those baselines (canonical environment, never on CI).
     systemProperty("abyssus.ui.baselines", file("src/uiTest/resources/screenshots/linux").absolutePath)

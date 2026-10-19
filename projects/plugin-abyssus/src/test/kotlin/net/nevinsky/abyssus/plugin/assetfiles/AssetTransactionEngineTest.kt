@@ -12,6 +12,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AssetTransactionEngineTest {
+    @Test
+    fun `transaction hashes keep the established lowercase SHA-256 text`() {
+        assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", sha256Hex("abc".toByteArray()))
+    }
+
     /** Files and folders in memory; [failAt] makes the n-th mutation (0 based) throw, before or after it took effect. */
     private class MemoryStore(
         val files: MutableMap<String, ByteArray> = linkedMapOf(),

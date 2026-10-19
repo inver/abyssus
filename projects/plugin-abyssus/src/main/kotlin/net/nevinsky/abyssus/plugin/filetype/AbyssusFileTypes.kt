@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.lib.core.assets.MetaType
 
 object SceneIcons {
     @JvmField
-    val FILE: Icon = IconLoader.getIcon("/icons/scene_file_icon.svg", SceneIcons::class.java)
+    val FILE: Icon = TreeIcons.load("scene")
 }
 
 object SceneViewIcons {
@@ -21,27 +21,43 @@ object SceneViewIcons {
     val VIEW: Icon = IconLoader.getIcon("/icons/view_scene.svg", SceneViewIcons::class.java)
 }
 
+/** Loader for the tree glyphs under `/icons/tree/` (the design's Icon set; `TreeIconInventoryTest` lists them). */
+object TreeIcons {
+    fun load(name: String): Icon = IconLoader.getIcon("/icons/tree/$name.svg", TreeIcons::class.java)
+}
+
 object ScenesIcons {
-    /** The `scenes` list of a project; individual scenes use [SceneIcons.FILE]. */
+    /** The `Scenes` folder of a project; individual scenes use [SceneIcons.FILE]. */
     @JvmField
-    val LIST: Icon = IconLoader.getIcon("/icons/scenes_icon.svg", ScenesIcons::class.java)
+    val LIST: Icon = TreeIcons.load("folder_scenes")
+
+    @JvmField
+    val UI: Icon = TreeIcons.load("folder_ui")
+
+    @JvmField
+    val ASSETS: Icon = TreeIcons.load("folder_assets")
+
+    /** A type group such as Models or Terrains. */
+    @JvmField
+    val FOLDER: Icon = TreeIcons.load("folder")
+
+    @JvmField
+    val UI_SCREEN: Icon = TreeIcons.load("ui_screen")
 }
 
 /** Icons for well-known scene properties, looked up by property name. */
 object PropertyIcons {
-    private fun load(name: String): Icon = IconLoader.getIcon("/icons/${name}_icon.svg", PropertyIcons::class.java)
+    @JvmField
+    val LIGHT: Icon = TreeIcons.load("ambient_light")
 
     @JvmField
-    val LIGHT: Icon = load("light")
+    val ECS: Icon = TreeIcons.load("ecs")
 
     @JvmField
-    val ECS: Icon = load("ecs")
+    val FOG: Icon = TreeIcons.load("fog")
 
     @JvmField
-    val FOG: Icon = load("fog")
-
-    @JvmField
-    val SKYBOX: Icon = load("skybox")
+    val SKYBOX: Icon = TreeIcons.load("skybox")
 
     fun forProperty(name: String): Icon? = when (name) {
         "ambientLight" -> LIGHT
@@ -52,13 +68,26 @@ object PropertyIcons {
     }
 }
 
-/** The enable / disable eye at the right of a row: teal when enabled, gray and crossed out when disabled. */
+/** The 14 px enable / disable eye at the right of a row: blue when enabled, gray and crossed out when disabled. */
 object EyeIcons {
     @JvmField
-    val ON: Icon = IconLoader.getIcon("/icons/eye_on_icon.svg", EyeIcons::class.java)
+    val ON: Icon = TreeIcons.load("eye_on")
 
     @JvmField
-    val OFF: Icon = IconLoader.getIcon("/icons/eye_off_icon.svg", EyeIcons::class.java)
+    val OFF: Icon = TreeIcons.load("eye_off")
+}
+
+/** The glyphs of the Abyssus pane's Options-menu filter and the Properties Browse button. */
+object TreeActionIcons {
+    @JvmField
+    val UNUSED_FILTER: Icon = TreeIcons.load("action_unused_filter")
+
+    @JvmField
+    val UNUSED_FILTER_SELECTED: Icon = TreeIcons.load("action_unused_filter_selected")
+
+    /** The Browse button of an asset field. */
+    @JvmField
+    val BROWSE: Icon = TreeIcons.load("action_browse")
 }
 
 /** Icons of an entity's components, by component name without the `Component` suffix; anything else gets [GENERIC]. */
@@ -70,22 +99,65 @@ object ComponentIcons {
     val GENERIC: Icon = load("generic")
 
     @JvmField
-    val TRANSFORM: Icon = load("transform")
-
-    @JvmField
-    val PHYSICS: Icon = load("physics")
-
-    @JvmField
     val PARTICLES: Icon = load("particles")
 
+    /** Kept for existing callers: the transform kinds use the Position glyph. */
+    val TRANSFORM: Icon get() = POSITION
+
+    val PHYSICS: Icon get() = RIGID_BODY
+
+    @JvmField
+    val NAME: Icon = TreeIcons.load("component_name")
+
+    @JvmField
+    val POSITION: Icon = TreeIcons.load("component_position")
+
+    @JvmField
+    val RENDER: Icon = TreeIcons.load("component_render")
+
+    @JvmField
+    val PARENT: Icon = TreeIcons.load("component_parent")
+
+    @JvmField
+    val RIGID_BODY: Icon = TreeIcons.load("component_rigid_body")
+
+    @JvmField
+    val COLLIDER: Icon = TreeIcons.load("component_collider")
+
+    @JvmField
+    val CONSTRAINT: Icon = TreeIcons.load("component_constraint")
+
+    @JvmField
+    val LIGHT: Icon = TreeIcons.load("component_light")
+
+    @JvmField
+    val FOLIAGE: Icon = TreeIcons.load("component_foliage")
+
+    @JvmField
+    val PATH_ARRANGEMENT: Icon = TreeIcons.load("component_path_arrangement")
+
+    @JvmField
+    val PLANE: Icon = TreeIcons.load("component_plane")
+
+    @JvmField
+    val PILOT: Icon = TreeIcons.load("component_pilot")
+
     fun forComponent(name: String): Icon = when (name.removeSuffix("Component")) {
-        "Position", "Rotation", "Scale", "Transform" -> TRANSFORM
-        "Render", "Model", "Mesh" -> AssetIcons.forType("MODEL")
+        "Name" -> NAME
+        "Position", "Rotation", "Scale", "Transform" -> POSITION
+        "Render", "Model", "Mesh" -> RENDER
+        "Parent" -> PARENT
+        "Physics", "RigidBody" -> RIGID_BODY
+        "Collider" -> COLLIDER
+        "Constraint" -> CONSTRAINT
+        "Light", "AmbientLight" -> LIGHT
+        "Foliage" -> FOLIAGE
+        "PathArrangement" -> PATH_ARRANGEMENT
+        "Plane" -> PLANE
+        "Pilot" -> PILOT
         "Terrain" -> AssetIcons.forType("TERRAIN")
         "Material" -> AssetIcons.forType("MATERIAL")
-        "Physics", "RigidBody", "Collider" -> PHYSICS
         "Particles", "ParticleSystem" -> PARTICLES
-        "Light", "AmbientLight" -> PropertyIcons.LIGHT
         else -> GENERIC
     }
 }
@@ -98,8 +170,20 @@ object AssetIcons {
     val UNKNOWN: Icon = load("unknown")
 
     private val byType: Map<String, Icon> by lazy {
-        listOf("MODEL", "TERRAIN", "FOLIAGE", "SKYBOX", "SKYBOX_HDR", "TEXTURE", "PIXMAP_TEXTURE", "MATERIAL", "SHADER", "CLOUDS")
-            .associateWith { load(it.lowercase()) } + ("SKYBOX_PROCEDURAL" to load("skybox"))
+        mapOf(
+            "MODEL" to TreeIcons.load("asset_model"),
+            "TERRAIN" to TreeIcons.load("asset_terrain"),
+            "FOLIAGE" to TreeIcons.load("asset_foliage"),
+            "TEXTURE" to TreeIcons.load("asset_texture"),
+            "CLOUDS" to TreeIcons.load("asset_clouds"),
+            "SKYBOX_PROCEDURAL" to TreeIcons.load("asset_skybox_procedural"),
+            "UI" to TreeIcons.load("asset_ui"),
+            "SHADER" to TreeIcons.load("asset_shader"),
+            "SKYBOX" to load("skybox"),
+            "SKYBOX_HDR" to load("skybox_hdr"),
+            "PIXMAP_TEXTURE" to load("pixmap_texture"),
+            "MATERIAL" to load("material"),
+        )
     }
 
     fun forType(type: String?): Icon = type?.let { byType[it] } ?: UNKNOWN
@@ -108,6 +192,10 @@ object AssetIcons {
 }
 
 object AbyssusProjectIcons {
+    /** The project row at the top of the tree. */
+    @JvmField
+    val PROJECT: Icon = TreeIcons.load("project")
+
     @JvmField
     val FILE: Icon = IconLoader.getIcon("/icons/abss_file_icon.svg", AbyssusProjectIcons::class.java)
 }

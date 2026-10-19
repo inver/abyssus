@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.lib.core.ecs
 
+import net.nevinsky.abyssus.lib.core.format.ENABLED_KEY
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
@@ -39,6 +40,15 @@ class ComponentRegistry {
         }
     }
 
+    /** Registered classes that declare a field named `enabled`, which the scene format reserves; they stay read-only raw JSON. */
+    private val reserved = LinkedHashSet<Class<out Component>>()
+
+    /** True when [type] declares a field named `enabled` and so cannot be bound or edited as a component. */
+    fun isReserved(type: Class<out Component>): Boolean = type in reserved
+
+    /** The registered classes that clash with the reserved `enabled` key, for reporting. */
+    val reservedClashes: List<Class<out Component>> get() = reserved.toList()
+
     /** The class [name] names, fully qualified or by its short class name; null for a name nobody registered. */
     fun get(name: String): Class<out Component>? {
         return componentMap[name] ?: shortNames[name]
@@ -52,6 +62,7 @@ class ComponentRegistry {
             )
         }
         componentMap[name] = clazz
+        if (declaresEnabled(clazz)) reserved.add(clazz)
         shortNames.putIfAbsent(clazz.simpleName, clazz)
         writtenNames.putIfAbsent(clazz, name)
     }
@@ -64,5 +75,14 @@ class ComponentRegistry {
 
     fun registerAll(map: Map<String, Class<out Component>>) {
         map.forEach { (key, value) -> register(key, value) }
+    }
+
+    private fun declaresEnabled(type: Class<*>): Boolean {
+        var c: Class<*>? = type
+        while (c != null && c != Any::class.java) {
+            if (c.declaredFields.any { it.name == ENABLED_KEY }) return true
+            c = c.superclass
+        }
+        return false
     }
 }

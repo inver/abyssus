@@ -29,9 +29,12 @@ import java.awt.image.BufferedImage
 /** The `meta.json` types of the assets a scene's `skyboxName` can name. */
 private val SKY_TYPES = setOf(MetaType.SKYBOX, MetaType.SKYBOX_PROCEDURAL, MetaType.SKYBOX_HDR)
 
-/** The OpenEXR sky pieces the chooser and the Properties panel need: header dimensions and a thumbnail. */
-interface HdrPreviewSource {
+/** The OpenEXR sky pieces the chooser and the Properties panel need: header dimensions and a thumbnail, and the exposure both use. */
+interface HdrPreviewService {
     val preview: HdrPreview
+
+    /** The tone curve's current exposure; the ray tracing frame presenter applies the same one. */
+    val exposure: Float
 }
 
 /** What the chooser shows of an HDR sky: its image [file] (null when the folder has none) and size (0 when unreadable). */
@@ -105,7 +108,7 @@ fun skyboxChoices(project: ProjectDto, metas: Map<String, JsonNode?>, hdr: Map<S
 }
 
 /** The skybox choices of the `.abss` project [abss], read as the Abyssus view reads it; null when the project cannot be read. */
-fun loadSkyboxChoices(project: Project, abss: VirtualFile, metaFiles: MetaFiles, hdrSource: HdrPreviewSource): List<SkyboxChoice>? {
+fun loadSkyboxChoices(project: Project, abss: VirtualFile, metaFiles: MetaFiles, hdrSource: HdrPreviewService): List<SkyboxChoice>? {
     val dto = AssetReadCache.of(project).read(abss)?.obj as? ProjectDto ?: return null
     val skyboxes = dto.assets.filter { it.meta.type in SKY_TYPES }.map { it.name }.toSet()
     val metas = ProjectLayout.assetFolders(abss).filter { it.name in skyboxes }.associate { dir ->
@@ -124,7 +127,7 @@ fun loadSkyboxChoices(project: Project, abss: VirtualFile, metaFiles: MetaFiles,
  * The `.exr` image an HDR sky folder uses: the file its `meta.json` names when the folder has it, else the first `.exr`
  * by name. Reads only its header for the original size; no image pixels are decoded. Call off the EDT.
  */
-fun hdrSkyInfo(folder: VirtualFile, meta: JsonNode?, source: HdrPreviewSource): HdrSkyInfo {
+fun hdrSkyInfo(folder: VirtualFile, meta: JsonNode?, source: HdrPreviewService): HdrSkyInfo {
     val files = folder.children.filter { !it.isDirectory }.map { it.name }
     val named = meta?.obj("additional")?.text("file")?.takeIf { it in files }
     val file = named ?: files.sorted().firstOrNull { it.endsWith(".exr", ignoreCase = true) } ?: return HdrSkyInfo(null)
@@ -139,13 +142,21 @@ fun skyboxProjectOf(entry: DtoEntry): VirtualFile? =
     entry.takeIf { it.name == SKYBOX_KEY && it.parentKeys.isEmpty() }?.source?.let(ProjectLayout::abssFor)
 
 /** Opens the skybox chooser for [entry] and writes the assigned skybox; true when the scene file changed. */
-fun chooseSkybox(project: Project, entry: DtoEntry, abss: VirtualFile, metaFiles: MetaFiles, hdrSource: HdrPreviewSource): Boolean {
+fun chooseSkybox(project: Project, entry: DtoEntry, abss: VirtualFile, metaFiles: MetaFiles, hdrSource: HdrPreviewService): Boolean {
     val file = entry.source ?: return false
+    return chooseSkyboxFor(project, file, abss, scalarOf(entry.value) as? String, metaFiles, hdrSource)
+}
+
+/**
+ * Opens the skybox chooser for the scene [file] of the project [abss], preselecting [current], and writes the assigned
+ * skybox through [setSkybox]; true when the scene file changed. Used by the Browse button of Abyssus Properties.
+ */
+fun chooseSkyboxFor(project: Project, file: VirtualFile, abss: VirtualFile, current: String?, metaFiles: MetaFiles, hdrSource: HdrPreviewService): Boolean {
     // reads meta.json files and HDR headers, which the EDT must not do
     val choices = ProgressManager.getInstance().runProcessWithProgressSynchronously<List<SkyboxChoice>?, RuntimeException>(
         { runReadAction { loadSkyboxChoices(project, abss, metaFiles, hdrSource) } },
         AbyssusBundle.message("skyboxChooserLoading"), true, project,
     ) ?: return false
-    val dialog = SkyboxChooserDialog(project, choices, scalarOf(entry.value) as? String, hdrSource.preview)
+    val dialog = SkyboxChooserDialog(project, choices, current, hdrSource.preview)
     return dialog.showAndGet() && setSkybox(project, file, dialog.chosen)
 }

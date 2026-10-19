@@ -16,7 +16,7 @@ class ScreenshotReadinessUiTest : UiTestBase() {
     private fun openHdr(): PropertiesPanel {
         val tree = frame.selectAbyssusView()
         frame.openProperties()
-        tree.expand("Assets")
+        tree.expandAssets()
         frame.normalizeLayout(ide)
         tree.clickRow(hdrAsset().name)
         return frame.properties()
@@ -43,7 +43,7 @@ class ScreenshotReadinessUiTest : UiTestBase() {
         ide.refresh(project.dir.toString())
         val tree = frame.selectAbyssusView()
         frame.openProperties()
-        tree.expand("Assets")
+        tree.expandAssets()
         tree.clickRow("tree") // a different asset first, so the panel is rebuilt for the HDR one
         tree.clickRow(hdrAsset().name)
         val failure = runCatching { frame.properties().awaitPreviewsLoaded(Duration.ofSeconds(10)) }.exceptionOrNull()

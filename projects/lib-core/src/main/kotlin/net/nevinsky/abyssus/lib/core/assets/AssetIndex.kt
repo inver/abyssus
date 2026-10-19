@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.lib.core.assets
 
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import java.util.UUID
+import java.util.*
 
 /**
  * Finds the asset folder of a `uuid`, which is how one asset's `meta.json` refers to another (a terrain's splat

@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.assets.terrain
 
+import net.nevinsky.abyssus.lib.core.util.TERRAIN_SPLAT_TEXTURE_UNIT
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Texture
@@ -19,7 +21,7 @@ import net.nevinsky.abyssus.lib.gdx.g3d.IntMesh
 
 
 /** The texture unit of the splat map; the layers take the units before it. */
-const val SPLAT_UNIT = 5
+const val SPLAT_UNIT = TERRAIN_SPLAT_TEXTURE_UNIT
 
 private val HAS_UNIFORMS = SPLAT_LAYERS.map { "u_has_$it" }
 private val LAYER_UNIFORMS = SPLAT_LAYERS.map { "u_$it" }

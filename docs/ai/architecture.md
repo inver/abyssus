@@ -340,6 +340,23 @@ requires one settings-class registration in its constructor map. Runtime raw ECS
 checks reserved fields before engine mutation; ECS writing and direct render binding use the same validator.
 The editor retains source aliases in its `format` package. None of these checks writes or normalizes input files.
 
+## Collaborating classes
+
+Large classes keep their public API and delegate to collaborators wired by constructors. The platform column says what a
+collaborator may import: **plain** is a plain JVM class, **GL** needs a libGDX or GL context (EDT, inside
+`GdxRuntime.withContext`), **Swing** needs Swing or AWT, **IDE** needs the IntelliJ Platform.
+
+| Owner | Collaborator | Role | Platform |
+|---|---|---|---|
+| `AssetStorage` (`lib-core`) | `OffGlExecutor`, `StorageCallGuard`, `DependencyResolver`, `HookRegistry` | The off-GL executor factory, the thread and call-depth guard, dependency satisfaction and the hook registry; `AssetStorage` owns upload, build and discard | plain |
+| `SceneRenderer` (plugin) | `SceneContentPass`, `SceneSkyPass` | The model, terrain, foliage and gizmo pass; the sky, fog and cloud pass, with the snapshot packing that pass reads | GL |
+| `SceneViewPanel` (plugin) | `SceneViewToolbar`, `SceneGlLifecycle`, `SceneFrameDriver` | The toolbar and its control sync; the canvas, libGDX context and capabilities of one GL context; the frame timer with its idle throttle | Swing (toolbar, driver), GL (lifecycle) |
+| `SceneInteraction` (`lib-core-editor`) | `GestureDriver`, `DrawingSession` | The press-drag-release gestures (gizmo, water, path point, paint stroke); drawing and editing a path arrangement | plain |
+| `PhysicsWorld` (`lib-physics`) | `PhysicsBodyFactory`, `PhysicsStepper`, `PhysicsPoseWriter` | Body creation and refusal, the fixed-step advance, the pose write-back; Jolt stays in the module's `jolt` package | plain (Jolt) |
+| `FlightGearImport` (`lib-core-editor`) | `FlightGearCollection`, `FlightGearGeometry`, `FlightGearStaging` | Reading the source files, building the geometry, staging the new MODEL folder; the facade stays | plain |
+| `UiEditorController` (plugin) | `UiCanvasGestures`, `UiViewSettings` | The canvas drag and its one command; the preview size and backdrop per viewer. The controller keeps the document, the selection and the edits | plain |
+| `UiCanvasView` (plugin) | `UiCanvasInput`, `PreviewFit` | The pointer and key handling and the preview's fit into the panel; the view keeps the GL drawing | Swing |
+
 ## Threading
 
 - **Play:** `PlayState` and the play toolbar run on the EDT. A provider's callbacks are brought there with `invokeLater`.
@@ -365,6 +382,11 @@ The editor retains source aliases in its `format` package. None of these checks 
 - **GL safety:** `GuardedGLCanvas` refuses GL until the canvas has been on screen with a non-zero size for 250 ms.
   When disposed while hidden, it drops the context without making it current, because on macOS that would abort the
   JVM.
+- **Scene antialiasing:** `AbyssusProjectSettings` reads `sceneViewAntialiasing` from each native `.abss`, and the
+  project's Properties combo writes through `editSceneJson`. `ProjectSettingsListener` delivers document/VFS changes
+  on EDT, scoped by the scene's owning `.abss`; Undo/Redo follows the same path. Antialiasing is excluded from the
+  render-content comparison so changing it keeps Play running. Canvas replacement and fallback stay on EDT, and
+  hidden views wait until shown. There is no application preference or IDE configurable.
 - **Ray tracing:** the EDT only copies state, offers requests and uploads completed frames (inside the safe canvas
   context). Scene conversion and skin deformation run on one converter thread fed by a latest-wins mailbox; native
   preparation, submission, completion polling and disposal run on the ray service's serial worker. Mode transitions

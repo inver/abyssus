@@ -60,10 +60,11 @@ scale 1); the platform's own tree UI supplies the 16 px level indent through `JB
 verifies instead of the code forcing values. If the test finds a mismatch the renderer sets `ui.indent` on the tree UI.
 
 ### D7. Header toolbar
-`addToolbarActions` keeps the platform actions the pane inherits (Expand All, Collapse All, Options, Hide are platform
-actions) and gets their icons replaced via the pane's presentation, plus the unused toggle with the amber pressed state
-(`ToggleAction.Presentation` selected icon). The order and names are asserted by a UI test; nothing in the platform
-toolbar is rebuilt by hand.
+The header's buttons (New File, Select Opened File, Expand Selected, Collapse All, Options, Hide) belong to the platform's
+Project tool window, and `addToolbarActions` actions land in the Options menu, not the header. So the pane keeps the platform
+buttons and glyphs as they are and adds the unused toggle there, as the first item, with the design glyph and the amber selected
+icon (`ToggleAction.Presentation` selected icon). The header order and the filter's place are asserted by a UI test; nothing
+in the platform toolbar is rebuilt by hand.
 
 ### D8. Skybox Browse in Properties
 The scene section of Abyssus Properties (Swing view over `lib-core-editor`'s panel model) gets a `skybox` row model with

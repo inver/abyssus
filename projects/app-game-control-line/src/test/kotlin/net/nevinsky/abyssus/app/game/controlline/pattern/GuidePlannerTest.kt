@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
+
 import com.badlogic.gdx.math.Vector3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -62,7 +64,7 @@ class GuidePlannerTest {
             val planner = planner()
             planner.input(figure, azimuth = here, engine = figure != Figure.LANDING)
             assertEquals(figure.label, figure, planner.figure)
-            val expectedGate = wrapAzimuth(here + 90f)
+            val expectedGate = wrapDegrees(here + 90f)
             assertEquals(figure.label, expectedGate, planner.gateAzimuth!!, 1e-3f)
             val bar = gate(planner)
             assertEquals(0f, bar.from.y, 0f)
@@ -136,7 +138,7 @@ class GuidePlannerTest {
     /** The loops' track as the planner places it for a plane at azimuth 0. */
     private fun placedLoops(): List<Vector3> {
         val points = IdealTracks(radius).loops(0f, 3).points
-        val turn = wrapAzimuth(90f - sphere.azimuth(points.first().u))
+        val turn = wrapDegrees(90f - sphere.azimuth(points.first().u))
         return points.map { Vector3(it.u).rotate(Vector3.Y, turn) }
     }
 
@@ -209,7 +211,7 @@ class GuidePlannerTest {
         schedule.pause(1f)
         assertTrue(seen.map { it.first }.containsAll(listOf(Figure.TAKEOFF, Figure.REVERSE_WINGOVER, Figure.INSIDE_LOOPS)))
         val (_, plane) = seen.first { it.first == Figure.INSIDE_LOOPS }
-        assertEquals(wrapAzimuth(plane + 90f), checkNotNull(appeared), 1e-2f)
+        assertEquals(wrapDegrees(plane + 90f), checkNotNull(appeared), 1e-2f)
         // the pilot flew the loops where the guide was not, and they were scored: the guide is gone and the next is waiting
         assertNotNull(schedule.judge.sheet[Figure.INSIDE_LOOPS])
         assertFalse(planner.figure == Figure.INSIDE_LOOPS)

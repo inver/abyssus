@@ -14,7 +14,7 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.tree.TreeVisitor
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileStore
@@ -31,6 +31,8 @@ import net.nevinsky.abyssus.plugin.terrain.NewTerrainFactory
 import net.nevinsky.abyssus.plugin.terrain.NewTerrainRequest
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkGeometry
+import net.nevinsky.abyssus.plugin.projectView.asset.assetVisitAction
+import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
 import java.io.File
 import java.nio.file.Files
 
@@ -52,12 +54,12 @@ class NewTerrainActionTest : BasePlatformTestCase() {
     }
 
     private fun preview(size: Int = 400, resolution: Int = 17, settings: TerrainGenerationSettings = TerrainGenerationSettings()): TerrainPreview {
-        val core = service<AbyssusCore>()
+        val core = service<AbyssusPluginCtx>()
         return TerrainPreview(settings, size, resolution, core.terrainGenerator.generate(resolution, size, settings))
     }
 
     private fun create(name: String = "hills", preview: TerrainPreview = preview(), store: AssetFileStore = LocalAssetFileStore(projectDir)): AssetCommandResult {
-        val staged = service<AbyssusCore>().newTerrains.stage(projectDir, name, preview)!!
+        val staged = service<AbyssusPluginCtx>().newTerrains.stage(projectDir, name, preview)!!
         return AssetFileCommand(project, store).execute(staged.transaction)
     }
 
@@ -82,7 +84,8 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         val owner = assetsNodeProjectFile(assets)
         assertEquals("P.abss", owner!!.name)
         assertNull(assetsNodeProjectFile(children(abssNode).single { label(it) == "scenes" }))
-        assertNull("an asset row is not the Assets node", assetsNodeProjectFile(children(assets).single()))
+        assertNull("a type group is not the Assets node", assetsNodeProjectFile(children(assets).single()))
+        assertNull("an asset row is not the Assets node", assetsNodeProjectFile(children(children(assets).single()).single()))
         assertNull("the project node", assetsNodeProjectFile(abssNode))
         assertNull(assetsNodeProjectFile(null))
         assertNull(assetsNodeProjectFile("not a node"))
@@ -115,13 +118,15 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         val abssNode = projectNode() as AbyssusAssetNode
         val file = abssNode.virtualFile
         val assets = children(abssNode).single { label(it) == "assets" }
-        val tree = children(assets).single()
+        val group = children(assets).single()
+        val tree = children(group).single()
         val root = AbyssusRootNode(project, ViewSettings.DEFAULT)
         assertEquals(TreeVisitor.Action.CONTINUE, assetVisitAction(file, "tree", listOf(root)))
         assertEquals(TreeVisitor.Action.CONTINUE, assetVisitAction(file, "tree", listOf(root, abssNode)))
         assertEquals(TreeVisitor.Action.CONTINUE, assetVisitAction(file, "tree", listOf(root, abssNode, assets)))
-        assertEquals(TreeVisitor.Action.INTERRUPT, assetVisitAction(file, "tree", listOf(root, abssNode, assets, tree)))
-        assertEquals(TreeVisitor.Action.SKIP_CHILDREN, assetVisitAction(file, "other", listOf(root, abssNode, assets, tree)))
+        assertEquals(TreeVisitor.Action.CONTINUE, assetVisitAction(file, "tree", listOf(root, abssNode, assets, group)))
+        assertEquals(TreeVisitor.Action.INTERRUPT, assetVisitAction(file, "tree", listOf(root, abssNode, assets, group, tree)))
+        assertEquals(TreeVisitor.Action.SKIP_CHILDREN, assetVisitAction(file, "other", listOf(root, abssNode, assets, group, tree)))
         val scenes = children(abssNode).single { label(it) == "scenes" }
         assertEquals(TreeVisitor.Action.SKIP_CHILDREN, assetVisitAction(file, "tree", listOf(root, abssNode, scenes)))
     }
@@ -238,8 +243,8 @@ class NewTerrainActionTest : BasePlatformTestCase() {
     }
 
     fun testACollidingFolderIsRejectedWithoutChangingAnything() {
-        assertNull("staging re-checks the name", service<AbyssusCore>().newTerrains.stage(projectDir, "existing", preview()))
-        assertNull(service<AbyssusCore>().newTerrains.stage(projectDir, "../escape", preview()))
+        assertNull("staging re-checks the name", service<AbyssusPluginCtx>().newTerrains.stage(projectDir, "existing", preview()))
+        assertNull(service<AbyssusPluginCtx>().newTerrains.stage(projectDir, "../escape", preview()))
         assertEquals(java.util.UUID.nameUUIDFromBytes("fixed-uuid".toByteArray()).toString(), com.fasterxml.jackson.databind.ObjectMapper().readTree(File(projectDir, "assets/existing/meta.json")).get("uuid").asText())
         File(projectDir, "assets/hills").mkdirs()
         File(projectDir, "assets/hills/mine.txt").writeText("keep")
@@ -251,7 +256,7 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         assertEquals("keep", File(projectDir, "assets/hills-staged/mine.txt").readText())
     }
 
-    private fun NewTerrainFactoryFor(name: String) = service<AbyssusCore>().newTerrains.stage(projectDir, name, preview())
+    private fun NewTerrainFactoryFor(name: String) = service<AbyssusPluginCtx>().newTerrains.stage(projectDir, name, preview())
 
     fun testAFailedWriteLeavesNothingBehind() {
         val real = LocalAssetFileStore(projectDir)
@@ -273,7 +278,7 @@ class NewTerrainActionTest : BasePlatformTestCase() {
     }
 
     fun testFreshUuidsAreUniqueInTheProject() {
-        val core = service<AbyssusCore>()
+        val core = service<AbyssusPluginCtx>()
         val fixed = java.util.UUID.nameUUIDFromBytes("fixed-uuid".toByteArray())
         val brandNew = java.util.UUID.nameUUIDFromBytes("brand-new".toByteArray())
         val sequence = ArrayDeque(listOf(fixed, fixed, brandNew))

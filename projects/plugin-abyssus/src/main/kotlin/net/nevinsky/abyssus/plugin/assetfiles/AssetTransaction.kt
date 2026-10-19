@@ -6,11 +6,10 @@
 package net.nevinsky.abyssus.plugin.assetfiles
 
 import net.nevinsky.abyssus.lib.core.editor.foliage.MaskRect
-import java.security.MessageDigest
 
 /** The lower-case hex SHA-256 of [bytes]; the one digest both sides of a derived file or a mask patch are named by. */
 internal fun sha256Hex(bytes: ByteArray): String =
-    MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    net.nevinsky.abyssus.lib.core.util.sha256Hex(bytes)
 
 /**
  * The bytes of one dirty rectangle of a mask file ([width] apart, z-major like the file itself), together with the

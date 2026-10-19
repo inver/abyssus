@@ -48,6 +48,9 @@ fun assetFolderOf(node: Any?): VirtualFile? {
     return ProjectLayout.assetFolders(abss).firstOrNull { it.name == info.name }
 }
 
+/** True when the selected asset row is an asset that no scene of its project uses. */
+fun assetUnusedOf(node: Any?): Boolean = ((node as? DtoEntryNode)?.value?.value as? Asset<*>)?.unused == true
+
 /** The name and kind (`a scene`, `the project file`, `an entity or setting`) of a selected node that is not an asset; null for no node. */
 fun describeNonAsset(node: Any?): Pair<String, String>? = when (node) {
     is AbyssusAssetNode -> if (!node.virtualFile.isValid) null else

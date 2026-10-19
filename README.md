@@ -2,8 +2,17 @@
 
 ![Build](https://github.com/inver/abyssus/workflows/Build/badge.svg)
 
-An independent libGDX scene editor in the IntelliJ Platform:
-browse a project's scenes and assets, inspect asset metadata, and view and lay out a scene in a 3D view.
+Abyssus is an independent libGDX scene editor plugin for IntelliJ-based IDEs.
+
+- **Projects and assets:** browse native Abyssus projects, scenes and assets, and edit asset properties.
+- **3D scene editing:** select and arrange objects with undoable move and rotate gizmos.
+- **Model import:** import models and FlightGear aircraft.
+- **Terrain and foliage:** generate terrain and paint trees, rocks and grass.
+- **Environments:** build scenes with water, procedural skies, lighting and cloud shadows.
+- **Game UI:** author menus and HUDs in a visual editor with interactive previews.
+- **Physics and Play:** test physics and game logic in a separate process.
+- **GPU ray tracing:** preview scenes with optional ray tracing.
+
 Contributors and coding agents: start at [AGENTS.md](AGENTS.md).
 
 <!-- Plugin description -->
@@ -23,6 +32,9 @@ remain readable in the text editor; plugin editing and loading are refused. No i
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
   objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera. The toolbar's shading
   dropdown offers Lit, Unlit and Wireframe (per view, never saved); Wireframe draws every content drawable as edges only.
+  Edges and lines use 4× antialiasing by default; select the project in the Abyssus tree and use
+  **Abyssus Properties | Scene view antialiasing** to choose Off, 2×, 4× or 8×. The choice is saved in its `.abss`
+  and applies to that project's open views, with automatic fallback for unsupported GPUs.
 - **Water**: **Add Water** (a Lake or a Sea, from the Scene view toolbar or a scene's right-click menu) adds a finite
   horizontal surface that is drawn from above with animated waves, reflections of the sky and the scene, wave-distorted
   refraction that fades to a tint with depth and animated foam where terrain meets it. Terrain above the level defines

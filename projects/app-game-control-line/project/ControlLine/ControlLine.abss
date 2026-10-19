@@ -5,10 +5,23 @@
   "activeSceneName": "Field",
   "selectedCamera": -1,
   "mainCamera": {
-    "position": { "x": -6.0, "y": 4.0, "z": 10.0 },
-    "viewPointPosition": { "x": 0.6, "y": -0.25, "z": -0.75 },
+    "position": {
+      "x": -6.0,
+      "y": 4.0,
+      "z": 10.0
+    },
+    "viewPointPosition": {
+      "x": 0.6,
+      "y": -0.25,
+      "z": -0.75
+    },
     "near": 0.1,
     "far": 500.0,
     "fieldOfView": 67.0
-  }
-,"physicsEnabled":true,"uiAssetNames":["screens"]}
+  },
+  "physicsEnabled": true,
+  "uiAssetNames": [
+    "screens"
+  ],
+  "sceneViewAntialiasing": "X4"
+}

@@ -16,6 +16,8 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.setEnabled
+import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
@@ -48,6 +50,10 @@ fun toggleEnabled(project: Project, entry: DtoEntry): Boolean {
 
 /** Flips the eye of [entry]: a water surface's own `enabled`, else the `<x>Enabled` toggle that gates it. */
 fun toggleRow(project: Project, entry: DtoEntry): Boolean {
+    entityOrComponentTarget(entry)?.let { (file, target) ->
+        val enabled = entry.enabled ?: return false
+        return setEnabled(project, file, target, !enabled)
+    }
     val surface = entry.value as? WaterSurface ?: return toggleEnabled(project, entry)
     val file = entry.source ?: return false
     val enabled = entry.enabled ?: return false
@@ -79,3 +85,14 @@ fun renameScene(project: Project, file: VirtualFile, newName: String): Boolean =
         scene.set<JsonNode>("name", TextNode.valueOf(newName))
         true
     }
+
+
+/** The scene file and target an entity row or a component row of a scene switches, or null for any other row. */
+private fun entityOrComponentTarget(entry: DtoEntry): Pair<VirtualFile, EnabledTarget>? {
+    val file = entry.source?.takeIf { it.isValid } ?: return null
+    return when {
+        isEntityEntry(entry) -> file to EnabledTarget.Entity(entry.name)
+        isComponentEntry(entry) -> file to EnabledTarget.Component(entry.parentKeys[entry.parentKeys.size - 2], entry.name)
+        else -> null
+    }
+}

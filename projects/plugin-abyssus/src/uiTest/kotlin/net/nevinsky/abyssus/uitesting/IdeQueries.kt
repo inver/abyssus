@@ -43,8 +43,9 @@ class IdeQueries(private val robot: RemoteRobot) {
     fun documentText(absolutePath: String): String? = robot.callJs<String>(
         js("importPackage(com.intellij.openapi.fileEditor);" +
             "var vf = LocalFileSystem.getInstance().findFileByPath(${quote(absolutePath)});" +
+            "com.intellij.openapi.application.ReadAction.compute(new com.intellij.openapi.util.ThrowableComputable({ compute: function () {" +
             "var d = vf == null ? null : FileDocumentManager.getInstance().getDocument(vf);" +
-            "d == null ? '\u0000none' : String(d.getText())"),
+            "return d == null ? '\u0000none' : String(d.getText()); } }))"),
         runInEdt = true,
     ).takeUnless { it == "\u0000none" }
 

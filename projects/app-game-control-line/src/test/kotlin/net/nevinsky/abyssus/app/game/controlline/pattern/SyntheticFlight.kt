@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
+
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.track.TrackSample
@@ -65,7 +67,7 @@ class SyntheticFlight(private val radius: Float = 18f, private val speed: Float 
     /** Flies level at the base from the current place to azimuth [to] (going on east), at least [laps] laps, [inverted] or not; the last point is not repeated. */
     fun level(to: Float, laps: Float = 0f, inverted: Boolean = false, from: Float? = null): List<TrackSample> {
         val from = from ?: if (samples.isEmpty()) to else endAzimuth
-        var span = wrapDeg(to - from)
+        var span = wrapDegrees(to - from)
         if (span < 0f) span += 360f
         while (span < laps * 360f) span += 360f
         val points = parallel(0f, from, from + span, Tag.BASE).points.map { it to inverted }

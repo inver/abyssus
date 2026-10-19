@@ -9,7 +9,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.track.TrackSample
 import kotlin.math.acos
 import kotlin.math.asin
-import kotlin.math.atan2
+import net.nevinsky.abyssus.lib.core.util.azimuthOf
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -40,7 +40,7 @@ class HemisphereGeometry(val radius: Float) {
     fun latitude(u: Vector3): Float = asin(u.y.coerceIn(-1f, 1f)) * MathUtils.radiansToDegrees
 
     /** The azimuth of [u] in degrees, (-180, 180]; meaningless at the poles. */
-    fun azimuth(u: Vector3): Float = atan2(-u.z, u.x) * MathUtils.radiansToDegrees
+    fun azimuth(u: Vector3): Float = azimuthOf(u.x, u.z)
 
     /** The azimuth of [u] in laps, (-0.5, 0.5]. */
     fun azimuthLaps(u: Vector3): Float = azimuth(u) / 360f

@@ -12,7 +12,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import net.nevinsky.abyssus.app.game.controlline.score.TABLE_SIZE
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
+import net.nevinsky.abyssus.app.game.controlline.io.AtomicJsonStore
 
 /** How much help an F2B flight gets: Pro none, Mid the next manoeuvre and a toast per mark, Noob that and the ideal track drawn ahead. */
 enum class AssistLevel(val label: String, val key: String) {
@@ -66,6 +66,8 @@ class PatternScoreTable(
     /** The recordings of the flights on the boards, in `f2b-flights` beside [file]. */
     val recordings: RecordingStore = RecordingStore(file.resolveSibling("f2b-flights")),
 ) {
+    private val store = AtomicJsonStore()
+
     private var boards: Map<String, List<PatternScoreEntry>> = emptyMap()
 
     /** The file there was could not be read; the F2B tabs of the score table screen say so. */
@@ -74,16 +76,13 @@ class PatternScoreTable(
 
     init {
         if (Files.exists(file)) {
-            try {
+            boards = store.read(file, {
                 val read = json.copy().configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, true)
                     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                    .readValue(file.toFile(), PatternScoresFile::class.java)
+                    .readValue(it.toFile(), PatternScoresFile::class.java)
                 require(read.version == F2B_SCORES_VERSION) { "unknown version ${read.version}" }
-                boards = read.boards.mapValues { ranked(it.value) }
-            } catch (_: Exception) {
-                Files.move(file, file.resolveSibling(file.fileName.toString() + ".bad"), StandardCopyOption.REPLACE_EXISTING)
-                damaged = true
-            }
+                read.boards.mapValues { ranked(it.value) }
+            }, { damaged = true }).orEmpty()
             // a table that could not be read names nothing, but its recordings may still be wanted
             if (!damaged) prune()
         }
@@ -145,14 +144,9 @@ class PatternScoreTable(
     private fun ranked(list: List<PatternScoreEntry>) = list.sortedByDescending { it.score }.take(TABLE_SIZE)
 
     private fun save() {
-        Files.createDirectories(file.parent)
-        val temp = Files.createTempFile(file.parent, "f2b-scores", ".tmp")
-        try {
+        store.save(file, "f2b-scores") { temp ->
             Files.writeString(temp, json.copy().enable(SerializationFeature.INDENT_OUTPUT)
                 .writeValueAsString(PatternScoresFile(F2B_SCORES_VERSION, boards)).replace("\r\n", "\n") + "\n")
-            Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        } finally {
-            Files.deleteIfExists(temp)
         }
     }
 }

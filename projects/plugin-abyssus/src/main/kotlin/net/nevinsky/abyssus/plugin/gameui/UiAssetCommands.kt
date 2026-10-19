@@ -36,12 +36,11 @@ import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.model.UiIssue
 import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.AbyssusCore
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.*
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
-import net.nevinsky.abyssus.plugin.projectView.selectAssetInAbyssusView
+import net.nevinsky.abyssus.plugin.projectView.asset.selectAssetInAbyssusView
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.io.File
 import java.util.UUID
@@ -115,7 +114,7 @@ class NewUiAssetFactory(
         require(abss.isWritable) { AbyssusBundle.message("uiProjectReadOnly") }
         require(!FileDocumentManager.getInstance().isFileModified(abss)) { AbyssusBundle.message("uiProjectUnsaved") }
         val projectText = textOf(abss)
-        AbyssusDocumentFormat().requireSupported(SceneJson().parseObject(projectText), DocumentKind.PROJECT)
+        net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing(processor, org.slf4j.helpers.NOPLogger.NOP_LOGGER).requireSupported(projectText, DocumentKind.PROJECT)
         checkFolderName(assetsDir, name)?.let { throw IllegalArgumentException(AbyssusBundle.message("newTerrainNameError.$it")) }
         val uuid = uniqueAssetUuid(processor, assetsDir, randomUuid)
         val meta = template.create(uuid, clock())
@@ -172,18 +171,11 @@ fun createUiAsset(
         { if (!project.isDisposed) selectAssetInAbyssusView(project, abss, created) }, ModalityState.nonModal()) },
 ): AssetCommandResult? {
     val staged = runCatchingKeepingCancellation {
-        NewUiAssetFactory(service<AbyssusCore>().documents.json).stage(abss, name)
+        NewUiAssetFactory(service<AbyssusPluginCtx>().documents.json).stage(abss, name)
     }.getOrElse { report(it.documentDisplayMessage()); return null }
     val result = AssetFileCommand(project, LocalAssetFileStore(File(abss.parent.path)))
         .execute(staged.transaction, onDone = { select(staged.name) })
-    val reason = when (result) {
-        AssetCommandResult.Done -> null
-        is AssetCommandResult.Collision -> AbyssusBundle.message("newTerrainNameError.EXISTS")
-        is AssetCommandResult.Conflict -> AbyssusBundle.message("uiAssetConflict", result.path)
-        is AssetCommandResult.Blocked -> result.reason
-        AssetCommandResult.Cancelled -> AbyssusBundle.message("uiAssetCancelled")
-        is AssetCommandResult.Failed -> result.cause.documentDisplayMessage()
-    }
+    val reason = assetResultMessage(result, "uiAssetCancelled", conflict = { AbyssusBundle.message("uiAssetConflict", it) })
     reason?.let(report)
     return result
 }

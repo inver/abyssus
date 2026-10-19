@@ -4,6 +4,10 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.tools
 
+import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
+import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import java.io.File
 import java.nio.file.Files
 import java.security.MessageDigest
@@ -30,8 +34,23 @@ fun checksums(project: File): Map<String, String> = project.walkTopDown().filter
     it.relativeTo(project).path to MessageDigest.getInstance("SHA-256").digest(it.readBytes()).joinToString("") { b -> "%02x".format(b) }
 }
 
-/** The original field scene, from before the migration: the migration removes the vegetation from the committed one. */
+/** Historic source recorded by the immutable manifest; later scene edits are replayed separately. */
 fun originalScene(): File = File(committedProject().parentFile.parentFile, "toolsTest/fixtures/Field.original.scene")
+
+/** Replays the ray settings authored after migration (d49555f4) when reproducing the current committed project. */
+fun applyPostMigrationSceneEdits(project: File) {
+    val scene = File(project, "scenes/Field.scene")
+    val outcome = DocumentTextEditor().edit(scene.readText(), DocumentKind.SCENE) { root ->
+        (root as ObjectNode).putObject("rayTracing")
+            .put("maxRaysPerFrame", 268435456)
+            .put("targetSamplesPerPixel", 4096)
+            .put("maxReflectionBounces", 4)
+            .put("maxRefractionBounces", 1)
+        true
+    }
+    check(outcome is TextEditOutcome.Edited) { "could not replay post-migration ray settings: $outcome" }
+    scene.writeText(outcome.text)
+}
 
 /**
  * A copy of the committed project with the original scene put back (the generated assets stay and are rewritten by a

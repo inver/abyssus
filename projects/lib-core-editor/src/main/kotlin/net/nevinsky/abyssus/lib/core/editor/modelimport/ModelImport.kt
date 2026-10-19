@@ -5,9 +5,20 @@
 
 package net.nevinsky.abyssus.lib.core.editor.modelimport
 
+import net.nevinsky.abyssus.lib.core.editor.document.ModelImportRecord
+import net.nevinsky.abyssus.lib.core.editor.document.ImportFrameRecord
+import net.nevinsky.abyssus.lib.core.editor.document.ImportItemRecord
+import net.nevinsky.abyssus.lib.core.editor.document.OriginalImportSize
+import net.nevinsky.abyssus.lib.core.editor.document.ImportLargestExtent
+import net.nevinsky.abyssus.lib.core.editor.document.ImportHeight
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaDocument
+import net.nevinsky.abyssus.lib.core.editor.document.ModelAssetAdditional
+import net.nevinsky.abyssus.lib.core.editor.document.validateAssetDocument
+
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriteException
 import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -72,34 +83,32 @@ class ModelImport(
         val leftOut = (source.leftOut + gathered.leftOut).distinct()
 
         val files = LinkedHashMap<String, ByteArray>()
-        val meta = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode()
-        meta.put("format", "abyssus").put("formatVersion", 1).put("version", 1).put("lastModified", lastModified)
-            .put("uuid", uuid.toString()).put("type", "MODEL")
-        meta.putObject("additional").put("file", MODEL_FILE).put("format", "GLTF").put("binary", true)
-            .putArray("materials")
-        format.validate(meta, DocumentKind.ASSET)?.let { throw IllegalStateException("the staged meta.json is not native: $it") }
-        files["meta.json"] = json.pretty(meta).toByteArray()
+        val meta = AssetMetaDocument(
+            lastModified = lastModified, uuid = uuid.toString(), type = MetaType.MODEL,
+            additional = ModelAssetAdditional(file = MODEL_FILE),
+        )
+        validateAssetDocument(meta, format)?.let { throw IllegalStateException("the staged meta.json is not native: $it") }
+        files["meta.json"] = SceneJson().pretty(meta).toByteArray()
         files[MODEL_FILE] = glb
         files.putAll(gathered.files)
 
-        val record = linkedMapOf<String, Any?>(
-            "importer" to "model",
-            "source" to source.file.name,
-            "sourcePath" to sourcePath(source.file, projectDir),
-            "sourceSha256" to source.sha256,
-            "sourceFormat" to source.format.id,
-            "stated" to linkedMapOf("unit" to source.frame.unit?.id, "upAxis" to source.frame.upAxis?.name),
-            "chosen" to linkedMapOf("unit" to settings.unit.id, "upAxis" to settings.upAxis.name),
-            "size" to when (val fit = settings.fit) {
-                FitSize.Original -> "original"
-                is FitSize.LargestExtent -> mapOf("largestExtent" to fit.metres)
-                is FitSize.Height -> mapOf("height" to fit.metres)
+        val record = ModelImportRecord(
+            source = source.file.name,
+            sourcePath = sourcePath(source.file, projectDir),
+            sourceSha256 = source.sha256,
+            sourceFormat = source.format.id,
+            stated = ImportFrameRecord(source.frame.unit?.id, source.frame.upAxis?.name),
+            chosen = ImportFrameRecord(settings.unit.id, settings.upAxis.name),
+            size = when (val fit = settings.fit) {
+                FitSize.Original -> OriginalImportSize.ORIGINAL
+                is FitSize.LargestExtent -> ImportLargestExtent(fit.metres)
+                is FitSize.Height -> ImportHeight(fit.metres)
             },
-            "animations" to source.animations.map { it.name },
-            "skipped" to leftOut.map { linkedMapOf("item" to it.item, "reason" to it.reason.id) },
-            "approximated" to source.approximated.map { linkedMapOf("item" to it.item, "reason" to it.reason) },
+            animations = source.animations.map { it.name },
+            skipped = leftOut.map { ImportItemRecord(it.item, it.reason.id) },
+            approximated = source.approximated.map { ImportItemRecord(it.item, it.reason) },
         )
-        files[SOURCE_FILE] = json.pretty(record).toByteArray()
+        files[SOURCE_FILE] = SceneJson().pretty(record).toByteArray()
 
         val report = ImportReport(transformed.size, source.animations, gathered.files.size, leftOut, source.approximated)
         return StagedModelImport(settings.folderName, uuid, files, report)

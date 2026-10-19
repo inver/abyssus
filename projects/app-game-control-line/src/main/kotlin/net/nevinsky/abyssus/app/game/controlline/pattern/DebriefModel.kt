@@ -9,7 +9,7 @@ import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.track.wrapDegrees
 import java.util.Locale
-import kotlin.math.atan2
+import net.nevinsky.abyssus.lib.core.util.azimuthOf
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -43,7 +43,7 @@ class DebriefFrame(val points: List<Vector3>, val lineLength: Float = 18f) {
     }
 
     /** The azimuth of [centre] round the pilot, in degrees as the track measures it (anticlockwise seen from above). */
-    val azimuth: Float = if (centre.x == 0f && centre.z == 0f) 0f else atan2(-centre.z, centre.x) * MathUtils.radiansToDegrees
+    val azimuth: Float = if (centre.x == 0f && centre.z == 0f) 0f else azimuthOf(centre.x, centre.z)
 }
 
 /** The speeds the replay runs at. */
@@ -200,7 +200,7 @@ class DebriefModel(val title: String, val rows: List<DebriefRow>, val recording:
     /** The base and the 45° parallel over the azimuth span of [track] plus the margin. */
     private fun guides(radius: Float, track: List<Vector3>): List<TrackLine> {
         val geometry = HemisphereGeometry(radius)
-        val azimuths = track.filter { it.x != 0f || it.z != 0f }.map { atan2(-it.z, it.x) * MathUtils.radiansToDegrees }
+        val azimuths = track.filter { it.x != 0f || it.z != 0f }.map { azimuthOf(it.x, it.z) }
         if (azimuths.isEmpty()) return emptyList()
         // spread round the first, so a figure over the seam at 180° is still one span
         val reference = azimuths[azimuths.size / 2]

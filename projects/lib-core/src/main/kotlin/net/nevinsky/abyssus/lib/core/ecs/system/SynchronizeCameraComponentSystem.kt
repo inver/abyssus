@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.lib.core.ecs.system
 
+import net.nevinsky.abyssus.lib.core.ecs.isActive
 import com.badlogic.ashley.core.ComponentMapper
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.Family
@@ -14,6 +15,7 @@ class SynchronizeCameraComponentSystem(private val ids: SceneEntityIds, priority
     private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
 
     override fun processEntity(entity: Entity, deltaTime: Float) {
+        if (!entity.isActive(CameraComponent::class.java)) return
         val camera = cameraMapper[entity].camera
         val position = positionMapper[entity]
         camera.position.set(position.localPosition)

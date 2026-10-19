@@ -28,7 +28,7 @@ The toolbar SHALL have Shadows, Fog and Grid toggles, each on by default. Turnin
 
 ### Requirement: Shading choice
 
-The toolbar SHALL have a shading drop-down with Lit and Unlit, Lit by default. Unlit SHALL draw models and terrains with their base colors and textures and without scene lighting or shadows. The choice SHALL apply to the view only.
+The toolbar SHALL have a shading drop-down with Lit, Unlit and Wireframe, Lit by default. Unlit SHALL draw models and terrains with their base colors and textures and without scene lighting or shadows. The choice SHALL apply to the view only.
 
 #### Scenario: Unlit
 - **WHEN** the user chooses Unlit
@@ -37,6 +37,26 @@ The toolbar SHALL have a shading drop-down with Lit and Unlit, Lit by default. U
 #### Scenario: Back to Lit
 - **WHEN** the user chooses Lit again
 - **THEN** lighting and the previous Shadows toggle state are restored
+
+### Requirement: Wireframe shading mode
+
+The shading drop-down SHALL offer Wireframe as a third mode alongside Lit and Unlit. In Wireframe mode models, terrain meshes, foliage OBJECT layers, the skybox cube and water surfaces SHALL draw as edge lines instead of filled surfaces; lights, shadows, fog, the grid, markers, selection box and gizmos are unchanged, and no shadow atlas is produced while shading is Wireframe (shadows run only under Lit). Wireframe SHALL apply to the raster path only: while Ray Tracing presents a frame, the ray image is drawn as usual.
+
+#### Scenario: Wireframe is a third shading mode
+- **WHEN** the user opens the scene view's shading dropdown
+- **THEN** it lists Lit, Unlit and Wireframe
+
+#### Scenario: Wireframe draws edges only
+- **WHEN** shading is Wireframe and the scene has a model, a terrain, a skybox and water
+- **THEN** those draw as edge lines instead of filled surfaces, and the grid, markers, selection box and gizmos are still drawn
+
+#### Scenario: Ray Tracing keeps showing the ray image
+- **WHEN** Ray Tracing is presenting a frame and the user chooses Wireframe
+- **THEN** the ray-traced image is shown as usual
+
+#### Scenario: Wireframe is per view and never saved
+- **WHEN** the user sets shading to Wireframe, closes the scene view and reopens it
+- **THEN** shading is Lit again
 
 ### Requirement: Frame selection
 

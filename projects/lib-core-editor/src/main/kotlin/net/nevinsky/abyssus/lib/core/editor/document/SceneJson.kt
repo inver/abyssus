@@ -41,6 +41,11 @@ class SceneJson {
 
     fun compact(node: JsonNode): String = mapper.writeValueAsString(node)
 
+    /** Serializes a new typed document directly; edit paths keep using their lossless trees. */
+    fun pretty(document: Any): String = mapper.writer(prettyPrinter).writeValueAsString(document) + "\n"
+
+    fun compact(document: Any): String = mapper.writeValueAsString(document)
+
     /** [node] in the style of [original]: indented when the original spans several lines, else on one line. */
     fun inStyleOf(original: String, node: JsonNode): String =
         if (original.contains('\n')) pretty(node) else compact(node)

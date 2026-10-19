@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
+import net.nevinsky.abyssus.lib.core.util.checkFramebufferComplete
+
+import net.nevinsky.abyssus.lib.core.util.GL_HALF_FLOAT
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GL30
@@ -21,7 +25,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudScene
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.LinearShellClouds
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.GpuTexture
-import net.nevinsky.abyssus.lib.core.util.GeometryUtils.Companion.createFullscreenTriangle
+import net.nevinsky.abyssus.lib.core.util.createFullscreenTriangle
 
 const val PROCEDURAL_LIGHTING_SIZE = 64
 const val PROCEDURAL_LIGHTING_LEVELS = 7
@@ -66,9 +70,7 @@ class ProceduralLightingCube(
             for (face in 0..5) {
                 gl.glFramebufferTexture2D(GL20.GL_FRAMEBUFFER, GL20.GL_COLOR_ATTACHMENT0,
                     GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, texture.textureObjectHandle, 0)
-                check(gl.glCheckFramebufferStatus(GL20.GL_FRAMEBUFFER) == GL20.GL_FRAMEBUFFER_COMPLETE) {
-                    "Procedural lighting RGBA16F framebuffer is incomplete"
-                }
+                checkFramebufferComplete("Procedural lighting RGBA16F framebuffer")
                 orient(face)
                 inverse.set(camera.combined).inv()
                 atmosphere.bind()
@@ -106,7 +108,7 @@ class ProceduralLightingCube(
         for (level in 0 until PROCEDURAL_LIGHTING_LEVELS) for (face in 0..5) {
             val size = PROCEDURAL_LIGHTING_SIZE shr level
             gl.glTexImage2D(GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level, 0x881A,
-                size, size, 0, GL20.GL_RGBA, 0x140B, null)
+                size, size, 0, GL20.GL_RGBA, GL_HALF_FLOAT, null)
         }
         gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL30.GL_TEXTURE_MAX_LEVEL, PROCEDURAL_LIGHTING_LEVELS - 1)
         gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR_MIPMAP_LINEAR)

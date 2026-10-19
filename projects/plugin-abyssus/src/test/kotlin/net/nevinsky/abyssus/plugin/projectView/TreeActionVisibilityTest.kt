@@ -26,6 +26,8 @@ class TreeActionVisibilityTest : BasePlatformTestCase() {
     private lateinit var sceneRow: AbstractTreeNode<*>
     private lateinit var assetsRow: AbstractTreeNode<*>
     private lateinit var assetRow: AbstractTreeNode<*>
+    private lateinit var groupRow: AbstractTreeNode<*>
+    private lateinit var uiRow: AbstractTreeNode<*>
 
     override fun setUp() {
         super.setUp()
@@ -35,7 +37,9 @@ class TreeActionVisibilityTest : BasePlatformTestCase() {
         projectRow = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
         sceneRow = children(children(projectRow).single { label(it) == "scenes" }).single()
         assetsRow = children(projectRow).single { label(it) == "assets" }
-        assetRow = children(assetsRow).single()
+        groupRow = children(assetsRow).single()
+        assetRow = children(groupRow).single()
+        uiRow = children(projectRow).single { label(it) == "ui" }
     }
 
     /** Whether [action] is visible and enabled with [node] selected; visible and enabled never differ for these. */
@@ -50,6 +54,8 @@ class TreeActionVisibilityTest : BasePlatformTestCase() {
         assertTrue("Assets row", offered(make(assetsRow), assetsRow))
         assertFalse("scene row", offered(make(sceneRow), sceneRow))
         assertFalse("an asset row", offered(make(assetRow), assetRow))
+        assertFalse("a type group", offered(make(groupRow), groupRow))
+        assertFalse("the UI folder", offered(make(uiRow), uiRow))
         assertFalse("the project row", offered(make(projectRow), projectRow))
         assertFalse("nothing selected", offered(make(null), null))
     }
@@ -59,6 +65,8 @@ class TreeActionVisibilityTest : BasePlatformTestCase() {
         assertTrue(offered(make(sceneRow), sceneRow))
         assertFalse(offered(make(assetsRow), assetsRow))
         assertFalse(offered(make(assetRow), assetRow))
+        assertFalse("folder rows have no rename", offered(make(groupRow), groupRow))
+        assertFalse("folder rows have no rename", offered(make(uiRow), uiRow))
         assertFalse(offered(make(projectRow), projectRow))
         assertFalse(offered(make(null), null))
     }
@@ -74,6 +82,11 @@ class TreeActionVisibilityTest : BasePlatformTestCase() {
 
     fun testNewUiAssetIsOfferedOnTheAssetsRowOnly() =
         assertOnlyOnAssetsRow { node -> object : NewUiAssetAction() { override fun selected(e: AnActionEvent) = node } }
+
+    fun testFolderRowsOfferNoComponentActions() {
+        val add = { node: Any? -> object : AddComponentOnEcsAction() { override fun selected(e: AnActionEvent) = node } }
+        for (row in listOf(assetsRow, groupRow, uiRow)) assertFalse(label(row), offered(add(row), row))
+    }
 
     private fun groupOf(id: String): NonTrivialActionGroup =
         ActionManager.getInstance().getAction(id) as NonTrivialActionGroup

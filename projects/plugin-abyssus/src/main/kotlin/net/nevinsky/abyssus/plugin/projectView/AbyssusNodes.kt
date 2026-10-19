@@ -5,38 +5,31 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.document.scalarOf
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.plugin.EditorBundle
-
 import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.icons.AllIcons
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ProjectViewNode
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.ui.SimpleTextAttributes
-import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
-import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectIcons
-import net.nevinsky.abyssus.plugin.filetype.AssetIcons
-import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
-import net.nevinsky.abyssus.plugin.filetype.EntityIcons
-import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
-import net.nevinsky.abyssus.plugin.filetype.SceneIcons
-import net.nevinsky.abyssus.plugin.filetype.ScenesIcons
-import net.nevinsky.abyssus.plugin.dto.SceneEntry
+import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.editor.document.scalarOf
 import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
+import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.EditorBundle
+import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.dto.SceneEntry
+import net.nevinsky.abyssus.plugin.filetype.*
 import net.nevinsky.abyssus.plugin.water.WaterGroup
 import javax.swing.Icon
 
@@ -64,7 +57,7 @@ fun findTopLevelAssets(project: Project): List<VirtualFile> {
 }
 
 private fun assetIcon(file: VirtualFile): Icon =
-    if (file.extension == ProjectLayout.PROJECT_EXTENSION) AbyssusProjectIcons.FILE else SceneIcons.FILE
+    if (file.extension == ProjectLayout.PROJECT_EXTENSION) AbyssusProjectIcons.PROJECT else SceneIcons.FILE
 
 /** Top level of the view: every `.abss` project (and any scene outside a project), with no folder nodes. */
 class AbyssusRootNode(project: Project, settings: ViewSettings?) :
@@ -76,7 +69,7 @@ class AbyssusRootNode(project: Project, settings: ViewSettings?) :
 
     override fun update(presentation: PresentationData) {
         presentation.presentableText = project!!.name
-        presentation.setIcon(AllIcons.Nodes.Project)
+        presentation.setIcon(AbyssusProjectIcons.PROJECT)
     }
 }
 
@@ -100,7 +93,10 @@ class AbyssusAssetNode(project: Project, file: VirtualFile, settings: ViewSettin
         presentation.addText(value.name, SimpleTextAttributes.REGULAR_ATTRIBUTES)
         presentation.setIcon(assetIcon(value))
         AssetReadCache.of(project!!).read(value)?.takeIf { !it.success }?.let {
-            presentation.addText("  " + AbyssusBundle.message("assetParseError", it.message.orEmpty()), SimpleTextAttributes.ERROR_ATTRIBUTES)
+            presentation.addText(
+                "  " + AbyssusBundle.message("assetParseError", it.message.orEmpty()),
+                SimpleTextAttributes.ERROR_ATTRIBUTES
+            )
         }
     }
 }
@@ -124,8 +120,12 @@ class DtoEntry(
     override fun equals(other: Any?) =
         other is DtoEntry && other.path == path && other.enabled == enabled && rowText(other) == rowText(this) &&
             (if (isScalar(value)) scalarOf(value) == scalarOf(other.value) else !isScalar(other.value)) &&
-            (value as? Asset<*>)?.unused == (other.value as? Asset<*>)?.unused && entityType() == other.entityType()
+            (value as? Asset<*>)?.unused == (other.value as? Asset<*>)?.unused && entityType() == other.entityType() &&
+            isGame == other.isGame
     override fun hashCode() = path.hashCode()
+
+    /** A component row of a component the game project registers; it carries the `game` badge. */
+    val isGame: Boolean get() = isComponentEntry(this) && isGameComponent(name)
 }
 
 /** Reads only the admitted row's JSON, without loading runtime components or assets. */
@@ -141,8 +141,9 @@ private fun entryIcon(entry: DtoEntry): Icon {
     val dto = entry.value
     return when {
         dto is List<*> && entry.name == "scenes" -> ScenesIcons.LIST
-        dto is List<*> && entry.name == "assets" -> AllIcons.Nodes.Folder
-        dto is UiScreen -> AllIcons.Actions.PreviewDetails
+        dto is FolderRow -> if (dto.kind == FolderKind.UI) ScenesIcons.UI else ScenesIcons.ASSETS
+        dto is TypeGroup -> ScenesIcons.FOLDER
+        dto is UiScreen -> ScenesIcons.UI_SCREEN
         dto is WaterGroup -> AllIcons.Nodes.Folder
         dto is WaterSurface -> AllIcons.Nodes.Variable
         dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
@@ -220,14 +221,22 @@ class DtoEntryNode(
             isEntityEntry(v) -> entityRows(dto as JsonNode)
             else -> childrenOf(dto)
         }.filterNot { sceneFileOf(v) != null && it.name in SCENE_HEADER }.foldToggles()
-        return rows.mapIndexed { i, row -> child(row, if (dto is List<*>) elementLabel(v.name, row.value, i) else null) }
+        return rows.mapIndexed { i, row ->
+            val label = when {
+                dto is List<*> -> elementLabel(v.name, row.value, i)
+                row.value is Asset<*> -> row.value.name // an asset in a type group or under UI is named by its folder
+                else -> null
+            }
+            child(row, label)
+        }
     }
 
     override fun update(presentation: PresentationData) {
         val v = value
         val shown = rowText(v, label)
         val attrs = if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES
-        val secondaryAttrs = if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.GRAY_ATTRIBUTES
+        val secondaryAttrs =
+            if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.GRAY_ATTRIBUTES
         if (isScalar(v.value)) {
             presentation.addText("${shown.label}: ", attrs)
             presentation.addText((scalarOf(v.value) ?: EditorBundle.message("dtoNullValue")).toString(), secondaryAttrs)
@@ -235,6 +244,7 @@ class DtoEntryNode(
             presentation.addText(shown.label, attrs)
             shown.secondary?.let { presentation.addText("  $it", secondaryAttrs) }
         }
-        presentation.setIcon(entryIcon(v))
+        // a disabled row, and everything under a disabled one, shows a dimmed icon
+        presentation.setIcon(entryIcon(v).let { if (isDisabled) com.intellij.openapi.util.IconLoader.getDisabledIcon(it) else it })
     }
 }

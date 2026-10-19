@@ -63,4 +63,24 @@ class AbyssusDocumentFormatTest {
         assertTrue(failure.message!!.contains("componentIdentifiers"))
         assertThrows(UnsupportedDocumentFormat::class.java) { format.requireEcs(node["ecs"]) }
     }
+
+    private fun sceneWith(entity: String) =
+        json.readObject("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":$entity}}}""")
+
+    @Test fun enabledFlagIsAdmittedWhenMissingOrBoolean() {
+        for (entity in listOf(
+            """{"components":{"NameComponent":{"name":"a"}}}""",
+            """{"enabled":false,"components":{"NameComponent":{"name":"a","enabled":true}}}""",
+            """{"components":{"NameComponent":{"name":"a","enabled":false}}}""",
+        )) assertNull(entity, format.validate(sceneWith(entity), DocumentKind.SCENE))
+    }
+
+    @Test fun nonBooleanEnabledFlagMakesTheSceneUnsupported() {
+        val component = format.validate(sceneWith("""{"components":{"NameComponent":{"enabled":"no"}}}"""), DocumentKind.SCENE)
+        assertEquals(FormatProblem.ENABLED_FLAG, component?.problem)
+        assertEquals("ecs.entities.0.components.NameComponent.enabled", component?.path)
+        val entity = format.validate(sceneWith("""{"enabled":0,"components":{}}"""), DocumentKind.SCENE)
+        assertEquals(FormatProblem.ENABLED_FLAG, entity?.problem)
+        assertEquals("ecs.entities.0.enabled", entity?.path)
+    }
 }

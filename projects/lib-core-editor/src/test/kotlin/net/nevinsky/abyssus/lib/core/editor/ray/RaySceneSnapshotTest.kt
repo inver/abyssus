@@ -65,6 +65,16 @@ class RaySceneSnapshotTest {
         assertEquals(setOf(RaySceneChange.TRANSFORM), raySceneDiff(before, after).changes)
     }
 
+    @Test fun `the snapshot skips a disabled entity`() {
+        val content = net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf(net.nevinsky.abyssus.lib.core.editor.parseScene(
+            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
+              "1":{"enabled":false,"components":{"RenderComponent":{"type":"MODEL","assetName":"model"}}},
+              "2":{"components":{"RenderComponent":{"type":"MODEL","assetName":"model"}}}}}}""",
+        ))
+        val instances = ready(params(content)).scene.instances
+        assertTrue(instances.toString(), instances.isNotEmpty() && instances.all { it.id.startsWith("2/") })
+    }
+
     @Test fun `a scene with foliage gives the same ray snapshot as without`() {
         val plain = ready(params(SceneContent(models = listOf(placement))))
         val foliage = FoliagePlacement("entity", "foliage_meadow", "terrain", PlacementTransform.IDENTITY)

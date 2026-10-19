@@ -60,6 +60,12 @@ Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored
 properties writes only `physicsEnabled` through `editSceneJson` as one undoable command; off is explicit `false`.
 Reads never insert the key or repair malformed values. `SceneFormatListener` may also format a supported `.abss`.
 
+`sceneViewAntialiasing` is an optional editor preference for this native project's scene views: `OFF`, `X2`, `X4`
+or `X8`. Missing means 4×; saving 4× removes the key. Invalid present values are reported and displayed as 4× without
+rewriting the file. Select the project in Abyssus Properties to edit it through `editSceneJson` as one undoable command.
+Text edits and Undo/Redo update its open views; other projects are independent. Unsupported native documents cannot be
+edited. The runtime ignores this editor preference; `.scene` and asset metadata are unaffected.
+
 ## `.scene`
 
 Top level, bound to `SceneDto` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/dto/SceneDto.kt`):
@@ -75,6 +81,14 @@ Top level, bound to `SceneDto` (`projects/lib-core/src/main/kotlin/net/nevinsky/
 
 **Toggles:** an `<x>Enabled` boolean gates `<x>` (or `<x>Name`). The tree folds it into an eye on the gated row. The
 tree shows `skyboxName` as `skybox`, but the key in the file stays `skyboxName`.
+
+An entity entry and a component entry of `ecs` may also carry an optional boolean `enabled`, written only as `false` (a
+missing key means enabled). On an entity it sits beside `components`; on a component it is the last key of the component
+object and is reserved: `EcsLoader` strips it before binding, so a component class never sees it, and a registered class
+that declares a field named `enabled` is kept as read-only raw JSON with a warning. A disabled entity or component loads as
+data but does nothing (no rendering, light, camera, foliage, body or shape) and is neither drawn nor picked in the scene
+view. A non-boolean `enabled` makes the scene unsupported for editing. `formatVersion` stays 1; a file that never uses the
+key is unchanged by any edit.
 
 ### `ecs`
 
