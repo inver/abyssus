@@ -88,6 +88,9 @@ interface UiCanvasModel {
     var layoutProvider: (String) -> UiLayoutResult?
 
     fun addListener(listener: () -> Unit)
+
+    /** Told by the canvas how large the displayed screen is drawn, as a fraction of its own size (1 = 100%). */
+    fun reportZoom(zoom: Float) {}
     fun select(widgetId: String?)
     fun beginGesture(widgetId: String, x: Float, y: Float)
     fun updateGesture(x: Float, y: Float): UiGesturePreview
@@ -153,6 +156,20 @@ class UiEditorController(
     override fun addListener(listener: () -> Unit) { listeners += listener }
 
     private fun changed() = listeners.toList().forEach { it() }
+
+    /** How large the canvas draws the displayed screen (1 = 100%); set by the canvas, shown in the toolbar. */
+    var zoom: Float = 1f
+        private set
+
+    private val zoomListeners = mutableListOf<() -> Unit>()
+
+    fun addZoomListener(listener: () -> Unit) { zoomListeners += listener }
+
+    override fun reportZoom(zoom: Float) {
+        if (zoom <= 0f || kotlin.math.abs(zoom - this.zoom) < 0.005f) return
+        this.zoom = zoom
+        zoomListeners.toList().forEach { it() }
+    }
 
     val collection: UiCollection? get() = (state as? UiEditorState.Editable)?.collection
 
@@ -282,12 +299,17 @@ class UiEditorController(
 
     private fun added(outcome: UiEditOutcome): String? = ((outcome as? UiEditOutcome.Edited)?.result as? UiEditResult.Added)?.id
 
+    /** The container [addWidget] adds into: the selected container, else the selected widget's parent, else the screen's root; null when there is none. */
+    fun addTarget(): UiWidget? {
+        val c = collection ?: return null
+        val tree = UiTree(c)
+        val selected = selection.widgetId?.let(tree::widget) ?: c.screen(screenId ?: return null)?.root ?: return null
+        return if (tree.isContainer(selected)) selected else tree.parentOf(selected.id)
+    }
+
     /** Adds a widget of [type] into the selected container (or the selected widget's parent), and selects it. */
     fun addWidget(type: String): Boolean {
-        val c = collection ?: return false
-        val tree = UiTree(c)
-        val selected = selection.widgetId?.let(tree::widget) ?: c.screen(screenId ?: return false)?.root ?: return false
-        val parent = if (tree.isContainer(selected)) selected else tree.parentOf(selected.id) ?: return false
+        val parent = addTarget() ?: return false
         val id = added(perform(AbyssusBundle.message("uiCommandAddWidget")) { e, m -> e.addWidget(m, parent.id, type) }) ?: return false
         select(id)
         return true
@@ -385,6 +407,7 @@ class UiEditorController(
     override fun dispose() {
         disposed = true
         listeners.clear()
+        zoomListeners.clear()
         gestures.cancel()
     }
 }

@@ -43,6 +43,23 @@ object ScenesIcons {
 
     @JvmField
     val UI_SCREEN: Icon = TreeIcons.load("ui_screen")
+
+    /** The `Screens` and `Overlays` folders under UI. */
+    @JvmField
+    val UI_SCREENS: Icon = TreeIcons.load("folder_screens")
+
+    @JvmField
+    val UI_OVERLAYS: Icon = TreeIcons.load("folder_overlays")
+
+    /** The Water group of a scene. */
+    @JvmField
+    val WATER: Icon = TreeIcons.load("folder_water")
+
+    @JvmField
+    val WATER_LAKE: Icon = TreeIcons.load("water_lake")
+
+    @JvmField
+    val WATER_SEA: Icon = TreeIcons.load("water_sea")
 }
 
 /** Icons for well-known scene properties, looked up by property name. */

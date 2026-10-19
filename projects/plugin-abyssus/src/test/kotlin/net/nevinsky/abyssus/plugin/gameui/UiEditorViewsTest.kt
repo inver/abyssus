@@ -89,35 +89,69 @@ class UiEditorViewsTest : BasePlatformTestCase() {
         assertEquals(listOf("p-root"), rows)
     }
 
-    fun testTheScreenListMarksTheEntryAndSelectsScreens() {
+    private fun menu(c: UiEditorController, answer: String? = null) = UiScreensMenu(c, null) { _, _ -> answer }
+
+    private fun texts(menu: UiScreensMenu) = menu.group().getChildren(null).filter { it !is com.intellij.openapi.actionSystem.Separator }.map { it.templateText }
+
+    fun testTheScreensMenuMarksTheEntryAndSwitchesScreens() {
         val c = controller()
-        val panel = UiScreensPanel(null, c)
-        assertEquals(2, panel.list.model.size)
-        assertTrue(panel.list.model.getElementAt(0).contains("[entry]"))
-        assertTrue(panel.list.model.getElementAt(1).contains("(overlay)"))
-        assertEquals(0, panel.list.selectedIndex)
-        panel.list.selectedIndex = 1
+        val menu = menu(c)
+        assertEquals("Main  [entry]", menu.text)
+        val items = texts(menu)
+        assertEquals("Main  [entry]", items[0])
+        assertEquals("Pause (overlay)", items[1])
+        val pause = menu.group().getChildren(null)[1] as com.intellij.openapi.actionSystem.ToggleAction
+        pause.setSelected(com.intellij.testFramework.TestActionEvent.createTestEvent(pause), true)
         assertEquals("pause", c.screenId)
+        assertEquals("Pause (overlay)", menu.text)
         c.selectScreen("main")
-        assertEquals(0, panel.list.selectedIndex)
+        assertEquals("Main  [entry]", menu.text)
     }
 
-    fun testThePaletteAddsIntoTheSelectedContainerAndMovesAndDeletes() {
+    fun testTheScreensMenuAddsRenamesAndDeletesAScreen() {
         val c = controller()
-        val palette = UiPalettePanel(c)
+        menu(c, "HUD").addScreen("overlay")
+        assertEquals("hud", c.screenId)
+        assertEquals(3, c.collection!!.screens.size)
+        menu(c, "Heads Up").rename()
+        assertEquals("Heads Up", c.collection!!.screen("hud")!!.name)
+        menu(c).delete()
+        assertEquals(2, c.collection!!.screens.size)
+        val m = menu(c)
+        assertFalse(m.arrows)
+        m.setArrows(true)
+        assertTrue(m.arrows)
+    }
+
+    fun testAddingNamesItsTargetAndTheOldPaletteGridIsGone() {
+        val c = controller()
+        val tree = UiWidgetTreePanel(c)
         c.select("list")
-        palette.buttons.getValue("slider").doClick()
+        assertEquals("Add to Column  (list)", tree.addTitle())
+        c.select("a")
+        assertEquals("a leaf names its parent", "Add to Column  (list)", tree.addTitle())
+        assertEquals(UiWidgetKinds, tree.addKinds.toSet())
+        assertEquals(UiWidgetKinds.size, tree.addGroup().getChildren(null).size)
+    }
+
+    fun testTheWidgetsHeaderAddsIntoTheSelectedContainerAndMovesDuplicatesAndDeletes() {
+        val c = controller()
+        val tree = UiWidgetTreePanel(c)
+        c.select("list")
+        tree.add("slider")
         assertEquals(listOf("root", "free", "list", "a", "b", "c", "slider", "odd"), ids())
         assertEquals("slider", c.selection.widgetId)
-        findButton(palette, "up").doClick()
+        findButton(tree, "up").doClick()
         assertEquals(listOf("root", "free", "list", "a", "b", "slider", "c", "odd"), ids())
-        findButton(palette, "down").doClick()
+        findButton(tree, "down").doClick()
         assertEquals(listOf("root", "free", "list", "a", "b", "c", "slider", "odd"), ids())
-        findButton(palette, "duplicate").doClick()
+        findButton(tree, "duplicate").doClick()
         assertEquals("slider-2", c.selection.widgetId)
-        findButton(palette, "delete").doClick()
+        findButton(tree, "delete").doClick()
         assertEquals(listOf("root", "free", "list", "a", "b", "c", "slider", "odd"), ids())
-        assertEquals(UiWidgetKinds, palette.buttons.keys)
+        c.select("a")
+        tree.add("label")
+        assertEquals("a leaf selection adds into its parent", 5, c.collection!!.screen("main")!!.root.children[1].children.size)
     }
 
     private val UiWidgetKinds = net.nevinsky.abyssus.lib.core.ui.model.UiWidgetType.entries.map { it.json }.toSet()
@@ -148,13 +182,36 @@ class UiEditorViewsTest : BasePlatformTestCase() {
         (if (child is javax.swing.JLabel) listOf(child.text.orEmpty()) else emptyList()) + ((child as? java.awt.Container)?.let(::collectLabels) ?: emptyList())
     }
 
-    fun testScreensCanBeAddedRenamedAndDeletedThroughTheController() {
+    fun testAllThreePartsAreVisibleAndTheCanvasIsWidestAt1190By880() {
         val c = controller()
-        assertTrue(c.addScreen("HUD", "overlay"))
-        val panel = UiScreensPanel(null, c)
-        assertEquals(3, panel.list.model.size)
-        assertEquals("hud", c.screenId)
-        assertTrue(c.deleteScreen("hud"))
-        assertEquals(2, UiScreensPanel(null, c).list.model.size)
+        val canvas = JPanel()
+        val editor = UiEditorPanel(null, c, canvas)
+        editor.setSize(1190, 880)
+        fun layoutAll(x: java.awt.Container) { x.doLayout(); x.components.forEach { (it as? java.awt.Container)?.let(::layoutAll) } }
+        layoutAll(editor)
+        fun widthOf(x: java.awt.Component) = x.width
+        val widgets = widthOf(editor.widgets)
+        val side = widthOf(editor.properties.parent)
+        val middle = widthOf(canvas)
+        assertTrue("widgets $widgets", widgets in 150..260)
+        assertTrue("side $side", side in 240..340)
+        assertTrue("canvas $middle is the widest", middle > widgets && middle > side)
+        assertTrue("tree owns the column: ${editor.widgets.height}", editor.widgets.height >= 800)
+    }
+
+    fun testTheResolutionPickerSetsThePreviewViewportAndTheStripFollowsTheMode() {
+        val c = controller()
+        val editor = UiEditorPanel(null, c, JPanel())
+        assertEquals(PREVIEW_PRESETS.size, editor.resolution.itemCount)
+        editor.resolution.selectedIndex = 2
+        assertEquals(PREVIEW_PRESETS[2], c.previewViewport)
+        c.setPreviewViewport(1000, 500)
+        assertEquals("a custom size is listed and selected", "1000 \u00d7 500", editor.resolution.selectedItem)
+        val strip = collectLabels(editor)
+        assertTrue(strip.toString(), strip.contains(net.nevinsky.abyssus.plugin.AbyssusBundle.message("uiKeysEdit")))
+        editor.previewButton.doClick()
+        assertTrue(collectLabels(editor).contains(net.nevinsky.abyssus.plugin.AbyssusBundle.message("uiKeysPreview")))
+        c.reportZoom(0.5f)
+        assertTrue(collectLabels(editor).contains(net.nevinsky.abyssus.plugin.AbyssusBundle.message("uiCanvasZoom", 50)))
     }
 }

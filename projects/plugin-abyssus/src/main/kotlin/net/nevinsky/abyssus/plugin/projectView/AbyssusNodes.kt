@@ -23,7 +23,9 @@ import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.editor.document.scalarOf
+import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
 import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
+import net.nevinsky.abyssus.lib.core.water.WaterPreset
 import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
@@ -142,9 +144,11 @@ private fun entryIcon(entry: DtoEntry): Icon {
     return when {
         dto is List<*> && entry.name == "scenes" -> ScenesIcons.LIST
         dto is FolderRow -> if (dto.kind == FolderKind.UI) ScenesIcons.UI else ScenesIcons.ASSETS
+        dto is UiScreenGroup -> if (dto.kind == net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind.OVERLAY) ScenesIcons.UI_OVERLAYS else ScenesIcons.UI_SCREENS
         dto is TypeGroup -> ScenesIcons.FOLDER
-        dto is UiScreen -> ScenesIcons.UI_SCREEN
-        dto is WaterGroup -> AllIcons.Nodes.Folder
+        dto is UiScreen || dto is UiScreenEntry -> ScenesIcons.UI_SCREEN
+        dto is WaterGroup -> ScenesIcons.WATER
+        dto is ValidWater -> if (dto.settings.preset == WaterPreset.SEA) ScenesIcons.WATER_SEA else ScenesIcons.WATER_LAKE
         dto is WaterSurface -> AllIcons.Nodes.Variable
         dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
         isEntityEntry(entry) -> EntityIcons.forType(entry.entityType())
@@ -183,6 +187,7 @@ class DtoEntryNode(
     /** The Game UI asset this row is, or the one it is a screen of, with the screen to show. */
     private fun uiTarget(): Pair<Asset<*>, String?>? {
         val own = value.value
+        if (own is UiScreenEntry) return own.asset to own.screen.id
         if (own is Asset<*>) return own.takeIf { it.type == MetaType.UI }?.let { it to null }
         if (own !is UiScreen) return null
         var node: AbstractTreeNode<*>? = parent

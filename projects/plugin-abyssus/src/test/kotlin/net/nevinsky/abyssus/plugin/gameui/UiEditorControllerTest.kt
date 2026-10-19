@@ -208,4 +208,14 @@ class UiEditorControllerTest : BasePlatformTestCase() {
         assertEquals("a", c.selection.widgetId)
         assertEquals(before, text())
     }
+
+    fun testTheAddTargetIsTheSelectedContainerOrTheParentOfALeaf() {
+        val c = controller()
+        c.select("list")
+        assertEquals("list", c.addTarget()?.id)
+        c.select("a")
+        assertEquals("list", c.addTarget()?.id)
+        c.select("root")
+        assertEquals("root", c.addTarget()?.id)
+    }
 }

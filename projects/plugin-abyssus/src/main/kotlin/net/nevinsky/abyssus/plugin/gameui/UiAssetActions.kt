@@ -57,7 +57,7 @@ class UiAssetTarget(val abss: VirtualFile, val name: String, val registered: Boo
 
 internal fun uiAssetTarget(node: Any?): UiAssetTarget? = runCatchingKeepingCancellation {
     val entry = (node as? DtoEntryNode)?.value ?: return null
-    val asset = entry.value as? Asset<*> ?: return null
+    val asset = (entry.value as? Asset<*>) ?: (entry.value as? net.nevinsky.abyssus.plugin.projectView.UiScreenEntry)?.asset ?: return null
     val abss = entry.source?.takeIf { it.isValid && it.extension == "abss" } ?: return null
     if (asset.type != MetaType.UI) return null
     UiAssetTarget(abss, asset.name, asset.name in registeredUiAssets(abss))

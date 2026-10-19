@@ -8,8 +8,10 @@ package net.nevinsky.abyssus.plugin.projectView.preview
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import kotlin.math.atan
 import kotlin.math.max
 import kotlin.math.sin
+import kotlin.math.tan
 
 /** Where the preview camera looks from: an orbit [target] and [distance], and the clip planes. */
 data class PreviewFrame(val target: Vec3, val distance: Float, val near: Float, val far: Float)
@@ -36,10 +38,15 @@ class PreviewFraming(private val fovDegrees: Float = FOV_DEGREES) {
         val centre = box.getCenter(Vector3())
         val radius = max(box.getDimensions(Vector3()).len() / 2f, MIN_RADIUS)
         val vertical = Math.toRadians(fovDegrees / 2.0)
-        val horizontal = Math.atan(Math.tan(vertical) * aspect.coerceAtLeast(0.1f))
+        val horizontal = atan(tan(vertical) * aspect.coerceAtLeast(0.1f))
         val half = minOf(vertical, horizontal)
         val distance = (radius / sin(half)).toFloat() * MARGIN
-        return PreviewFrame(Vec3(centre.x, centre.y, centre.z), distance, max(distance / 1000f, 0.001f), distance + radius * 4f)
+        return PreviewFrame(
+            Vec3(centre.x, centre.y, centre.z),
+            distance,
+            max(distance / 1000f, 0.001f),
+            distance + radius * 4f
+        )
     }
 
     companion object {

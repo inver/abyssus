@@ -367,9 +367,9 @@ they navigate to.
 
 | Area | What it does |
 |---|---|
-| Screens | Add a screen or an overlay, rename, delete; the entry screen is marked |
-| Palette and widget tree | Add a widget to the selected container, duplicate, delete, move up or down, or drag it onto another row (beside it, or into a container) |
-| Canvas | Click to select, drag a panel child to move it, drag a row or column child to reorder it, release over another container to move it there. One drag is one undo step; a drag started on older text is refused |
+| Screens menu (canvas toolbar) | Switch screens; Add Screen, Add Overlay, rename, delete and the Up / Down focus switch; the entry screen is marked |
+| Widget tree | **Add** opens a menu of widget kinds that adds to the selected container (the menu names it); duplicate, delete, move up or down, or drag a row onto another row (beside it, or into a container) |
+| Canvas | The toolbar has the preview resolution and the fit zoom. Click to select, drag a panel child to move it, drag a row or column child to reorder it, release over another container to move it there. One drag is one undo step; a drag started on older text is refused |
 | Properties | Layout (anchor and offsets inside a panel; `grow` in a row or column; padding, spacing, alignment), text, style, bindings and the button's click action. A binding that cannot work is flagged: undeclared, the wrong type, or read-only on a control that writes back |
 | Declarations | Bindings (typed, read-only or writable, with a sample and limits), styles (font size, colours, a font, hover / pressed / disabled backgrounds) and resources: **Import Image...** (PNG or JPEG, at most 8192 pixels a side) and **Import Font...** (a text BMFont `.fnt` with its PNG pages) copy the files into the asset folder without overwriting anything |
 

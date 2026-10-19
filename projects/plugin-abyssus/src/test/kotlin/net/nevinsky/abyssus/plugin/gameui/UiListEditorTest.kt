@@ -49,25 +49,29 @@ class UiListEditorTest : BasePlatformTestCase() {
         return checkNotNull(walk(root)) { name }
     }
 
-    // ---- palette and tree ----
+    // ---- header and tree ----
+
+    private fun run(group: com.intellij.openapi.actionSystem.DefaultActionGroup, index: Int) {
+        val action = group.getChildren(null)[index]
+        action.actionPerformed(com.intellij.testFramework.TestActionEvent.createTestEvent(action))
+    }
 
     fun testThePaletteAddsAListWithItsRowAndTheTreeShowsRowAndEmptyState() {
         val c = controller()
-        val palette = UiPalettePanel(c)
-        assertTrue(palette.buttons.containsKey("list"))
+        val tree = UiWidgetTreePanel(c)
+        assertTrue(tree.addKinds.contains("list"))
         c.select("root")
-        palette.buttons.getValue("list").doClick()
+        tree.add("list")
         assertEquals("list", c.selection.widgetId)
         val added = collection.screens[0].root.children.last()
         assertEquals(UiWidgetType.LIST, added.type)
         assertEquals("list-row", added.template!!.id)
         c.select("table")
-        (find(palette, "add-empty") as JButton).doClick()
-        val tree = UiWidgetTreePanel(c)
+        run(tree.moreGroup(), 0)
         val labels = (tree.tree.model.root as DefaultMutableTreeNode).depthFirstEnumeration().toList().filterIsInstance<DefaultMutableTreeNode>().mapNotNull { (it.userObject as? UiTreeItem)?.label }
         assertTrue(labels.toString(), labels.any { it.startsWith("Row: ") && it.endsWith("(row)") })
         assertTrue(labels.any { it.startsWith("Empty state: ") })
-        c.select("who"); (find(palette, "remove-empty") as JButton).doClick()
+        c.select("who"); run(tree.moreGroup(), 1)
         assertNull("removing from inside the list's row works too", collection.screens[0].root.children[1].empty)
         c.select("head"); assertFalse("outside a list there is nothing to remove", c.removeListEmpty())
     }
@@ -136,14 +140,14 @@ class UiListEditorTest : BasePlatformTestCase() {
 
     fun testTheScreenPanelTogglesArrowNavigationAndRestoresTheTextExactly() {
         val c = controller()
-        val screens = UiScreensPanel(null, c)
+        val screens = UiScreensMenu(c, null) { _, _ -> null }
         val before = doc
-        assertFalse(screens.arrows.isSelected)
-        screens.arrows.doClick()
+        assertFalse(screens.arrows)
+        screens.setArrows(true)
         assertTrue(doc.contains("\"navigation\": \"arrows\""))
         assertTrue(collection.screens[0].navigation == net.nevinsky.abyssus.lib.core.ui.model.UiNavigation.ARROWS)
-        assertTrue(screens.arrows.isSelected)
-        screens.arrows.doClick()
+        assertTrue(screens.arrows)
+        screens.setArrows(false)
         assertEquals(before, doc)
     }
 

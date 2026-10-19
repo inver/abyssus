@@ -7,6 +7,10 @@ package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
+import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
+import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
+import net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind
 import net.nevinsky.abyssus.plugin.dto.ProjectDto
 
 /** The two asset folders under a project row; `Scenes` stays the project's own `scenes` list. */
@@ -39,13 +43,31 @@ fun projectRows(project: ProjectDto): List<DtoRow> {
     )
 }
 
-/** The rows under a folder: `UI` lists its assets, `Assets` one [TypeGroup] per type present. */
+/** The rows under a folder: `UI` lists the screens and overlays of all its assets (flat, no asset rows), `Assets` one [TypeGroup] per type present. */
 fun folderRows(folder: FolderRow): List<DtoRow> = when (folder.kind) {
-    FolderKind.UI -> folder.assets.sortedBy { it.name }.map { DtoRow(it.name, it) }
+    FolderKind.UI -> listOf(UiScreenKind.SCREEN, UiScreenKind.OVERLAY).mapNotNull { kind ->
+        screenEntries(folder.assets, kind).takeIf { it.isNotEmpty() }?.let { DtoRow(kind.json, UiScreenGroup(kind, it)) }
+    }
     FolderKind.ASSETS -> folder.assets.groupBy { groupOf(it.meta.type) }.toSortedMap(typeGroupOrder).map { (group, assets) ->
         DtoRow(group, TypeGroup(group, assets))
     }
 }
+
+/** One screen of a UI [asset]; the row remembers its asset so opening and the Properties link need no asset row above it. */
+data class UiScreenEntry(val asset: Asset<*>, val screen: UiScreen)
+
+/** The screens of every UI asset that are of one [kind], listed under a `Screens` or `Overlays` row. */
+data class UiScreenGroup(val kind: UiScreenKind, val entries: List<UiScreenEntry>)
+
+/** The screens of [assets] of [kind], assets in name order and screens in document order. */
+private fun screenEntries(assets: List<Asset<Any>>, kind: UiScreenKind): List<UiScreenEntry> =
+    assets.sortedBy { it.name }.flatMap { asset ->
+        val screens = ((asset.meta.additional as? UiMeta)?.admission as? UiAdmission.Admitted)?.collection?.screens.orEmpty()
+        screens.filter { it.kind == kind }.map { UiScreenEntry(asset, it) }
+    }
+
+/** The screens of a group; a row's name is the screen id, so equal ids in two assets would collide only in the path. */
+fun screenRows(group: UiScreenGroup): List<DtoRow> = group.entries.map { DtoRow(it.screen.id, it) }
 
 /** The assets of a type group, by asset folder name. */
 fun groupRows(group: TypeGroup): List<DtoRow> = group.assets.sortedBy { it.name }.map { DtoRow(it.name, it) }

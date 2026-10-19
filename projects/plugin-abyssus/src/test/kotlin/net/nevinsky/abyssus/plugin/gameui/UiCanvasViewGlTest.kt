@@ -57,7 +57,7 @@ class UiCanvasViewGlTest {
         val listeners = mutableListOf<() -> Unit>()
         override fun addListener(listener: () -> Unit) { listeners += listener }
         override fun select(widgetId: String?) { selectedWidgetId = widgetId }
-        override fun beginGesture(widgetId: String, x: Float, y: Float) {}
+        override fun beginGesture(widgetId: String, x: Float, y: Float) { selectedWidgetId = widgetId }
         override fun updateGesture(x: Float, y: Float): UiGesturePreview = UiGesturePreview.None
         override fun endGesture(x: Float, y: Float) = false
         override fun deleteSelected() = false
@@ -127,6 +127,24 @@ class UiCanvasViewGlTest {
         model.listeners.forEach { it() }
         waitFor("preview without the frame") { atPreview(canvas, canvas.snapshot()!!, layout, 100f, 150f) != 0x2d8cff }
         assertEquals(0x3a4a5c, atPreview(canvas, snapshot(), layout, 200f, 110f))
+    }
+
+    @Test fun aClickPicksTheWidgetUnderItAtAReducedZoom() {
+        val model = FakeModel(state(root))
+        val canvas = open(model)
+        SwingUtilities.invokeAndWait { window!!.setSize(260, 220) }
+        waitFor("a smaller layout") { canvas.layoutOf("main")?.fit?.scale?.let { it < 1f } == true }
+        val layout = canvas.layoutOf("main")!!
+        val fit = layout.fit!!
+        fun gl(c: java.awt.Container): java.awt.Component? = c.components.firstNotNullOfOrNull { if (it is net.nevinsky.abyssus.plugin.sceneview.GuardedGLCanvas) it else (it as? java.awt.Container)?.let(::gl) }
+        val surface = checkNotNull(gl(canvas)) { "no GL surface" }
+        // the framebuffer is not scaled here, so AWT pixels are viewport pixels
+        val px = fit.toViewportX(200f).toInt()
+        val py = fit.toViewportY(150f).toInt()
+        SwingUtilities.invokeAndWait {
+            surface.dispatchEvent(java.awt.event.MouseEvent(surface, java.awt.event.MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(), 0, px, py, 1, false, java.awt.event.MouseEvent.BUTTON1))
+        }
+        assertEquals("box", model.selectedWidgetId)
     }
 
     @Test fun aChangedDocumentIsDrawnWithoutRestartingTheCanvas() {

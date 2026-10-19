@@ -5,9 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.projectView.asset
 
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionPlaces
-import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -30,7 +27,9 @@ internal val ASSETS_MENU_ACTION_IDS = listOf("Abyssus.Menu.ImportModel", "Abyssu
 /** The project file (`.abss`) a selected Assets node belongs to, or null for any other node. */
 fun assetsNodeProjectFile(node: Any?): VirtualFile? {
     val entry = (node as? DtoEntryNode)?.value ?: return null
-    if ((entry.value as? FolderRow)?.kind != FolderKind.ASSETS) return null
+    if ((entry.value as? FolderRow)?.kind != FolderKind.ASSETS) {
+        return null
+    }
     return entry.source?.takeIf {
         it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
                 runCatchingKeepingCancellation {
@@ -40,12 +39,6 @@ fun assetsNodeProjectFile(node: Any?): VirtualFile? {
                     ) == null
                 }.getOrDefault(false)
     }
-}
-
-fun showAssetsMenu(invoker: EyeTree, x: Int, y: Int) {
-    val actions = ActionManager.getInstance()
-    val group = DefaultActionGroup(ASSETS_MENU_ACTION_IDS.mapNotNull { actions.getAction(it) })
-    actions.createActionPopupMenu(ActionPlaces.PROJECT_VIEW_POPUP, group).component.show(invoker, x, y)
 }
 
 /**

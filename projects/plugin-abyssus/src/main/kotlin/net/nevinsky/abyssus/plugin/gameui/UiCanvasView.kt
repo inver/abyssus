@@ -178,12 +178,15 @@ class UiCanvasView(
         gl.glClearColor(0.11f, 0.12f, 0.14f, 1f)
         gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
         val p = presenter ?: return
-        if (controller.mode == UiEditorMode.PREVIEW) { drawPreview(p); return }
+        val dpi = scale()
+        if (controller.mode == UiEditorMode.PREVIEW) { drawPreview(p); controller.reportZoom(fit.scale / dpi); return }
         releasePreviewBuffers()
         overlay.selectedId = controller.selectedWidgetId
         p.overlay = overlay
         p.resize(frame.width, frame.height)
         p.render(frame.deltaSeconds)
+        // the screen's own fit into the panel: reference units to framebuffer pixels
+        controller.screenId?.let(::layoutOf)?.fit?.let { controller.reportZoom(it.scale / dpi) }
     }
 
     /**

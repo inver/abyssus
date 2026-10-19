@@ -16,6 +16,7 @@ import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
 import net.nevinsky.abyssus.plugin.projectView.FolderRow
 import net.nevinsky.abyssus.plugin.projectView.TypeGroup
+import net.nevinsky.abyssus.plugin.projectView.UiScreenEntry
 import net.nevinsky.abyssus.plugin.projectView.isEcsEntry
 import net.nevinsky.abyssus.plugin.projectView.rowText
 import net.nevinsky.abyssus.lib.core.editor.panel.FolderKind as PanelFolderKind
@@ -55,6 +56,12 @@ internal fun structuralOf(node: Any?): Structural? {
         value is TypeGroup -> Structural.Folder(PanelFolderKind.GROUP, tree.label ?: rowText(entry).label, value.assets.size, abss)
         value is List<*> && entry.name == "scenes" && abss != null ->
             Structural.Folder(PanelFolderKind.SCENES, tree.label ?: rowText(entry).label, value.size, abss)
+
+        value is UiScreenEntry -> value.asset.let { asset ->
+            Structural.Screen(value.screen.name, asset.name, value.screen.id, java.io.File(asset.baseDir, "meta.json").let {
+                com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByIoFile(it)
+            }, abss)
+        }
 
         value is UiScreen -> uiAsset(tree)?.let { asset ->
             Structural.Screen(value.name, asset.name, value.id, java.io.File(asset.baseDir, "meta.json").let {

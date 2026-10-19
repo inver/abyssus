@@ -10,28 +10,21 @@ import com.intellij.ide.impl.ProjectViewSelectInTarget
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.projectView.impl.*
 import com.intellij.ide.util.treeView.AbstractTreeNode
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
+import com.intellij.ui.RelativeFont
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.render.RenderingUtil
 import com.intellij.ui.tree.TreeVisitor
-import com.intellij.ui.RelativeFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.filetype.EyeIcons
-import net.nevinsky.abyssus.plugin.filetype.TreeActionIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneViewIcons
-import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
-import net.nevinsky.abyssus.plugin.projectView.asset.showAssetsMenu
-import net.nevinsky.abyssus.plugin.projectView.scene.sceneNodeProjectFile
-import net.nevinsky.abyssus.plugin.projectView.scene.showSceneMenu
+import net.nevinsky.abyssus.plugin.projectView.asset.AssetDropdownAction
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneDropdownAction
 import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
 import net.nevinsky.abyssus.plugin.sceneview.openSceneView
 import java.awt.*
@@ -177,12 +170,20 @@ private class AbyssusSelectInTarget(project: Project) : ProjectViewSelectInTarge
  * toggle, "View" on scenes; `unused` sits left of the eye.
  */
 class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
+
+    private val dropdownActions: List<DropdownAction> = listOf(
+        AssetDropdownAction(),
+        SceneDropdownAction(),
+    )
+
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
 
     /** Each level's icon starts [LEVEL_INDENT] px right of its parent's, whatever indent the platform's tree UI brings. */
     override fun updateUI() {
         super.updateUI()
-        (ui as? javax.swing.plaf.basic.BasicTreeUI)?.let { it.rightChildIndent = JBUI.scale(LEVEL_INDENT) - it.leftChildIndent }
+        (ui as? javax.swing.plaf.basic.BasicTreeUI)?.let {
+            it.rightChildIndent = JBUI.scale(LEVEL_INDENT) - it.leftChildIndent
+        }
     }
 
     companion object {
@@ -273,32 +274,13 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
     override fun processMouseEvent(e: MouseEvent) {
         if (e.isPopupTrigger) {
             val row = rowOf(e)
-            val node = row?.let { TreeUtil.getUserObject(getPathForRow(it)?.lastPathComponent) }
-            if (row == null) {
-                super.processMouseEvent(e)
-                return
-            }
-            if (assetsNodeProjectFile(node) != null) {
-                if (e.id == MouseEvent.MOUSE_PRESSED || e.id == MouseEvent.MOUSE_RELEASED) {
-                    requestFocusInWindow()
-                    setSelectionRow(row)
-                    showAssetsMenu(this, e.x, e.y)
-                }
-                e.consume()
-                return
-            } else if (sceneNodeProjectFile(node) != null) {
-                if (e.id == MouseEvent.MOUSE_PRESSED || e.id == MouseEvent.MOUSE_RELEASED) {
-                    requestFocusInWindow()
-                    setSelectionRow(row)
-                    showSceneMenu(this, e.x, e.y)
-                }
-                e.consume()
-                return
+            if (row != null) {
+                val node = TreeUtil.getUserObject(getPathForRow(row)?.lastPathComponent)
+                if (dropdownActions.any { it.openDropdown(this, e, row, node) }) return
             }
         }
         super.processMouseEvent(e)
     }
-
 
     override fun getToolTipText(event: MouseEvent): String? =
         actionAt(event)?.second?.tooltip ?: super.getToolTipText(event)

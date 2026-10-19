@@ -16,7 +16,7 @@ import org.junit.Test
 class TreeIconInventoryTest {
     /** Hue glyphs that read the same in both themes: one file each. */
     private val neutral = listOf(
-        "project", "folder_scenes", "folder_ui", "folder_assets", "scene", "ui_screen", "ambient_light", "skybox", "ecs",
+        "project", "folder_scenes", "folder_ui", "folder_screens", "folder_overlays", "folder_assets", "scene", "ui_screen", "ambient_light", "skybox", "ecs",
         "entity_object", "entity_group", "entity_light_directional", "entity_terrain",
         "asset_model", "asset_terrain", "asset_foliage", "asset_clouds", "asset_texture", "asset_skybox_procedural",
         "asset_ui", "asset_shader",
