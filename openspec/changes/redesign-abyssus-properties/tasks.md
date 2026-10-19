@@ -49,5 +49,5 @@
 
 ## 8. Integration
 
-- [ ] 8.1 runIde on a copy of the Control Line project (never the committed folder): compare each selection kind with the board in dark and light themes, toggle components and entities, undo, edit a dim field. Record the result and the accepted font differences in the PR.
-- [ ] 8.2 Run `openspec validate redesign-abyssus-properties --strict`, then `./gradlew check`, `./gradlew :plugin-abyssus:verifyPlugin`, the full UI suite twice in fresh canonical sandboxes without baseline writes, and `scripts/check-docs.sh`. Report unrelated failures explicitly without silently fixing them.
+- [x] 8.1 runIde on a copy of the Control Line project (never the committed folder): compare each selection kind with the board in dark and light themes, toggle components and entities, undo, edit a dim field. Record the result and the accepted font differences in the PR.
+- [x] 8.2 Run `openspec validate redesign-abyssus-properties --strict`, then `./gradlew check`, `./gradlew :plugin-abyssus:verifyPlugin`, the full UI suite twice in fresh canonical sandboxes without baseline writes, and `scripts/check-docs.sh`. Report unrelated failures explicitly without silently fixing them.

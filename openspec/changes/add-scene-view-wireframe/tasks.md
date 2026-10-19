@@ -26,7 +26,7 @@
 ## 5. Docs
 
 - [x] 5.1 Update `sceneview/README.md` (`ViewDisplay` / `Shading` row), README user-facing feature list (keeping the `<!-- Plugin description -->` markers), CHANGELOG Unreleased. Verify with `scripts/check-docs.sh`.
-- [ ] 5.2 Sync the accepted behavior into `openspec/specs/scene-view-display/spec.md` (Wireframe shading requirement + scenarios).
+- [x] 5.2 Sync the accepted behavior into `openspec/specs/scene-view-display/spec.md` (Wireframe shading requirement + scenarios).
 
 ## 6. Verification
 

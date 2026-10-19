@@ -35,6 +35,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
+import org.lwjgl.opengl.GL11
 import java.io.File
 import kotlin.math.abs
 
@@ -182,6 +183,30 @@ class SceneRenderGlTest {
         assertTrue("scene drew almost nothing: ${GlHarness.coverage(r.image, p)}", GlHarness.coverage(r.image, p) > 0.2)
         val folder = File("build/screenshots/shadows").also { it.mkdirs() }
         GlHarness.save(r.image, File(folder, "main-scene.png"))
+    }
+
+    @Test
+    fun wireframeDrawsEdgesOnlyAndRestoresFillMode() {
+        val p = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.putNull("skyboxName") } }
+        fun covered(shading: Shading, mode: IntArray): Double {
+            val r = GlHarness.render(p, 240) { renderer, _ ->
+                renderer.display = ViewDisplay(grid = false, shading = shading)
+                mode[0] = GL11.glGetInteger(GL11.GL_POLYGON_MODE)
+            }
+            assertNull(r.error)
+            GlHarness.save(r.image, File(File("build/screenshots/wireframe").also { it.mkdirs() }, "$shading.png"))
+            // the background is the most common colour (the clear colour is tone-mapped on the way to the screen)
+            val counts = HashMap<Int, Int>()
+            for (y in 0 until r.image.height) for (x in 0 until r.image.width) counts.merge(r.image.getRGB(x, y), 1, Int::plus)
+            return 1.0 - counts.values.max().toDouble() / (r.image.width * r.image.height)
+        }
+        val litMode = IntArray(1)
+        val wireMode = IntArray(1)
+        val lit = covered(Shading.LIT, litMode)
+        val wire = covered(Shading.WIREFRAME, wireMode)
+        assertTrue("wireframe should cover far less than filled surfaces: lit=$lit wire=$wire", wire < lit)
+        assertTrue("wireframe drew nothing", wire > 0.0)
+        assertEquals("polygon mode must be restored after a wireframe frame", GL11.GL_FILL, wireMode[0])
     }
 
     @Test
