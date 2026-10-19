@@ -26,7 +26,7 @@ fun isGameComponent(key: String): Boolean = builtInRegistry.get(key) == null && 
 
 /** The `game` badge painted after the name of a game component's row. */
 internal object GameBadge {
-    const val TEXT = "game"
+    const val TEXT = " game "
 
     /** Marks the badge's fragment in the row renderer, so its outline is painted around exactly that text. */
     val TAG = Any()
@@ -38,7 +38,6 @@ internal object GameBadge {
     fun paintOutline(g: Graphics2D, x: Int, y: Int, width: Int, height: Int) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         g.color = BORDER
-        val pad = JBUI.scale(3)
-        g.drawRoundRect(x - pad, y, width + 2 * pad - 1, height - 1, JBUI.scale(4), JBUI.scale(4))
+        g.drawRoundRect(x, y, width - 1, height - 1, JBUI.scale(4), JBUI.scale(4))
     }
 }

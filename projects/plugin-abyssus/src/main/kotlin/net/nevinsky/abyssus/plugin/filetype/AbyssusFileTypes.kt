@@ -77,25 +77,13 @@ object EyeIcons {
     val OFF: Icon = TreeIcons.load("eye_off")
 }
 
-/** The glyphs of the Abyssus pane's header toolbar. */
+/** The glyphs of the Abyssus pane's Options-menu filter and the Properties Browse button. */
 object TreeActionIcons {
-    @JvmField
-    val EXPAND_ALL: Icon = TreeIcons.load("action_expand_all")
-
-    @JvmField
-    val COLLAPSE_ALL: Icon = TreeIcons.load("action_collapse_all")
-
     @JvmField
     val UNUSED_FILTER: Icon = TreeIcons.load("action_unused_filter")
 
     @JvmField
     val UNUSED_FILTER_SELECTED: Icon = TreeIcons.load("action_unused_filter_selected")
-
-    @JvmField
-    val OPTIONS: Icon = TreeIcons.load("action_options")
-
-    @JvmField
-    val HIDE: Icon = TreeIcons.load("action_hide")
 
     /** The Browse button of an asset field. */
     @JvmField

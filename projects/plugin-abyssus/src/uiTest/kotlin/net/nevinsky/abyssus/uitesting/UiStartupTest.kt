@@ -54,9 +54,20 @@ class UiStartupTest : UiTestBase() {
         tree.expand("ecs")
         tree.clickRow(tree.rows().first { it.contains("Model 0") }.substringBefore("  "))
         com.intellij.remoterobot.utils.waitFor(java.time.Duration.ofSeconds(15), java.time.Duration.ofMillis(300), "entity header") {
-            frame.properties().subtitle().startsWith("Entity 0 ·")
+            frame.properties().subtitle().startsWith("Entity (0) ·")
         }
         assertEquals("Ololo", frame.properties().breadcrumb().getOrNull(1)?.substringBefore(" ("))
+    }
+
+    @Test
+    fun treePageObjectReadsDepthAndIconOfTheFirstRows() {
+        val frame = robot.find<IdeFrame>(java.time.Duration.ofSeconds(10))
+        val tree = frame.selectAbyssusView()
+        tree.expand("Untitled.abss")
+        val rows = tree.rowInfo()
+        assertEquals(listOf(0, 1, 1, 1), rows.take(4).map { it.depth })
+        assertEquals(listOf("Scenes", "UI", "Assets"), rows.drop(1).take(3).map { it.label })
+        assertTrue("icon paths in $rows", rows.take(4).all { it.icon.contains("tree/") })
     }
 
     @Test

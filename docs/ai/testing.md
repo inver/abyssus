@@ -40,6 +40,7 @@ classpath, and `check` never runs it. Nothing under `uiTest` ships in the plugin
 | What | Command |
 |---|---|
 | Complete run in the canonical Linux/Xvfb container | `scripts/run-ui-tests-docker.sh [--tests '*UiStartupTest']` |
+| A run on another project (a class runs only on its own project) | `ABYSSUS_UI_FIXTURE=projects/app-game-control-line/project/ControlLine scripts/run-ui-tests-docker.sh --tests '*ControlLineTreeUiTest'` |
 | Complete run on the host (needs a usable desktop) | `scripts/run-ui-tests.sh [--tests <pattern>]` |
 | Headless helper tests only (`...uitesting.headless`), part of `check` | `./gradlew :plugin-abyssus:uiHelperTest` |
 | Attach to an IDE you started | `./gradlew :plugin-abyssus:uiTest -PuiProject=<copy of Untitled> -PuiRobotUrl=http://127.0.0.1:8082` |
@@ -76,7 +77,7 @@ hierarchies, expected/actual/diff images, IDE logs and the JUnit report); downlo
 
 ### UI screenshot baselines
 
-Twenty Swing captures (the tree, the Properties panels, two dialogs and the Scene View toolbar) are compared pixel for pixel with PNGs in
+Twenty-seven Swing captures (the tree, the Properties panels, two dialogs and the Scene View toolbar) are compared pixel for pixel with PNGs in
 `projects/plugin-abyssus/src/uiTest/resources/screenshots/linux/`, named `<scenario>.png`. The scenario list is
 `SCREENSHOT_SCENARIOS` (`ScreenshotInventory.kt`); `BaselineInventoryTest` fails on a missing or orphaned file. Captures are
 component images (the tool window or dialog), never the 3D viewport or the whole desktop.
@@ -111,14 +112,22 @@ every test), checks disk bytes, and where it edits, presses Undo and checks the 
 | Class | Scenarios |
 |---|---|
 | `UiStartupTest` | robot connection and project loaded; the header of a selected entity is readable (`PropertiesPanel.subtitle` / `breadcrumb`); Abyssus installed, no scene editor open; Properties window opens and closes; Abyssus tree, entity 0 and the Camera component of entity 4 are found; fixture reset restores the IDE document and the tree |
-| `AbyssusTreeUiTest` | Project, Scenes, Assets and ECS expand; the fog eye toggles only `fogEnabled` and Undo restores the bytes; switching views does not duplicate nodes |
+| `AbyssusTreeUiTest` | Project, Scenes, type groups under Assets and ECS expand; the fog eye toggles only `fogEnabled` and Undo restores the bytes; switching views does not duplicate nodes |
 | `PropertiesLayoutUiTest` | the redesigned panel in the real IDE: label column 150 px, one field height (the look and feel's), section header 34 px, dim defaults in the secondary colour, collapse, breadcrumb / subtitle / badges for an entity, a folder, `ecs`, the project and a read-only unused asset (the `game` badge and the 26 px Browse are covered by plugin tests: the fixture has no game component). Scenarios `props-entity-design`, `props-folder`, `props-ecs`, `props-project` |
 | `PropertiesEnabledUiTest` | the section `Enabled` box writes `enabled: false` on one entry and one Undo restores the bytes; the tree eye on an entity writes and removes the flag. That a disabled entity is not picked needs the Scene view, which cannot draw in the container, so `SceneViewPanelTest` and the `lib-core-editor` content tests cover it |
-| `PropertiesUiTest` | the Assets folder layout; model and terrain assets; cube (editable, previews loaded), procedural (editable) and HDR (read-only, preview loaded) skyboxes; entity 0 and Camera fields; entity name edit and Undo; an invalid Camera number shows a field error and leaves the scene unedited |
+| `PropertiesUiTest` | a scene row offers the skybox field with its Browse button; the Assets folder layout; model and terrain assets; cube (editable, previews loaded), procedural (editable) and HDR (read-only, preview loaded) skyboxes; entity 0 and Camera fields; entity name edit and Undo; an invalid Camera number shows a field error and leaves the scene unedited |
+| `TreeStructureUiTest` | Scenes, UI, Assets in that order under the project row and no `name` row; type groups with counts under Assets and every asset once; scene, ECS and entity rows; switching views does not duplicate rows (captures `tree-collapsed`, `tree-assets-groups`) |
+| `TreeIconsUiTest` | the icon resource of the project, folder, group, scene, ECS, skybox and asset rows, and that distinct kinds do not share an icon |
+| `TreeGeometryUiTest` | 24 px rows, 16 px level indent, the 14 px eye, painted row actions that never overlap |
+| `TreeHeaderUiTest` | the header's buttons in order, Collapse All, and the unused filter in the Options menu hiding used assets (captures `tree-header`, `tree-unused-filter`) |
+| `ControlLineTreeUiTest` | the tree on a copy of the Control Line project (186 entities, six type groups, a Game UI asset, the game's `Plane` / `Pilot` components): order, group counts from the metas, the `game` badge, grid geometry, the unused filter. Skipped unless the IDE opened that project (`ABYSSUS_UI_FIXTURE`, below); captures `controlline-tree-assets`, `controlline-tree-game` |
+| `TreeStatesUiTest` | the selected row, a disabled row (the fog eye off, grayed text; capture `tree-selected-disabled`), unused assets dimmed with the amber mark, and the `game` badge on a game component |
 | `RenameSceneUiTest` | Rename Scene opens from the scene's context menu; Cancel is byte-identical; applying changes only `name`, refreshes the tree, and Undo restores the bytes |
-| `SkyboxChooserUiTest` | Choose opens the chooser with None and the three fixture skyboxes; the `hdr` filter and the no-match state; Cancel is byte-identical; Assign `skybox_default` changes only `skyboxName`, leaves `skyboxEnabled`, updates the tree, and Undo restores the bytes |
+| `SkyboxChooserUiTest` | the Browse button of the scene's skybox field in Abyssus Properties (the tree row has none) opens the chooser with None and the three fixture skyboxes; the `hdr` filter and the no-match state; Cancel is byte-identical; Assign `skybox_default` changes only `skyboxName`, leaves `skyboxEnabled`, updates the tree, and Undo restores the bytes |
 | `SceneViewUiTest` | the Scene View toolbar in the order `Select, Move, Rotate, Snap, Shadows, Fog, Grid, Frame selection` with Move pressed and `Move · World` in the tool status; it wraps without overlapping buttons at a 900 px editor; opening the view writes nothing. The container has no usable OpenGL, so the view shows the unavailable message and the toolbar is disabled above it: the tools' behavior is covered by the plugin tests, and the captures show layout and icons (dimmed) only |
 | `...uitesting.headless.*` | helper unit tests (`FixtureIsolationTest`), run by `uiHelperTest` |
+
+The tree page object (`AbyssusTree` in `PageObjects.kt`) reads rows without desktop coordinates: `rowInfo()` gives each visible row's text, depth below the project row, icon resource path, bounds and text colour; `actionBounds()` the painted eye and `unused` ranges; `expandAssets()` opens the type groups. The header buttons are read from the Project tool window header (`headerButtons()`); the unused filter sits in the Options menu, not in the header.
 
 The Scene View toolbar baselines (`scene-toolbar-default`, `scene-toolbar-narrow`) capture the toolbar component only. They are also the icon check: every toolbar icon is drawn in them, and `IconInventoryTest` (`:plugin-abyssus:test`) fails on a missing or unlisted icon resource. The orientation widget and stats strip are shown through GL, so their pixels are checked by `CornerPaintersTest` and, with `-Dabyssus.glTests=true`, `SceneRenderGlTest.cornerOverlaysPaintTheirCornersOnly`.
 

@@ -238,7 +238,8 @@ tasks.register<Test>("uiTest") {
     providers.gradleProperty("uiTestFilter").orNull?.let { filter.includeTestsMatching(it) }
     providers.gradleProperty("uiProject").orNull?.let { systemProperty("abyssus.ui.project", it) }
     systemProperty("abyssus.ui.reportsDir", layout.buildDirectory.dir("reports/ui-tests").get().asFile.absolutePath)
-    systemProperty("abyssus.ui.fixtureSource", file("src/test/testData/project/Untitled").absolutePath)
+    // -PuiFixtureSource=<project folder> swaps the project the IDE opened (scripts/run-ui-tests.sh passes it from ABYSSUS_UI_FIXTURE)
+    systemProperty("abyssus.ui.fixtureSource", providers.gradleProperty("uiFixtureSource").orNull ?: file("src/test/testData/project/Untitled").absolutePath)
     // Screenshots: -PuiScreenshots=compare|update|off (default compare); -PupdateUiScreenshots=true with
     // -PuiScreenshotScenarios=a,b rewrites only those baselines (canonical environment, never on CI).
     systemProperty("abyssus.ui.baselines", file("src/uiTest/resources/screenshots/linux").absolutePath)

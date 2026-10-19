@@ -57,7 +57,7 @@ fun findTopLevelAssets(project: Project): List<VirtualFile> {
 }
 
 private fun assetIcon(file: VirtualFile): Icon =
-    if (file.extension == ProjectLayout.PROJECT_EXTENSION) AbyssusProjectIcons.FILE else SceneIcons.FILE
+    if (file.extension == ProjectLayout.PROJECT_EXTENSION) AbyssusProjectIcons.PROJECT else SceneIcons.FILE
 
 /** Top level of the view: every `.abss` project (and any scene outside a project), with no folder nodes. */
 class AbyssusRootNode(project: Project, settings: ViewSettings?) :

@@ -36,7 +36,7 @@ class PropertiesEnabledUiTest : UiTestBase() {
         val original = disk()
         val name = scene().entityName(0)!!
         tree().clickRow(name)
-        await("entity header") { frame.properties().subtitle().startsWith("Entity 0 ·") }
+        await("entity header") { frame.properties().subtitle().startsWith("Entity (0) ·") }
         assertTrue(frame.properties().enabledChecked("0.RenderComponent"))
         frame.properties().clickEnabled("0.RenderComponent")
         await("flag on disk") { disk().contains("\"enabled\": false") }
@@ -54,7 +54,7 @@ class PropertiesEnabledUiTest : UiTestBase() {
         tree.clickRowEye(name)
         await("entity flag on disk") { disk().contains("\"enabled\": false") }
         tree.clickRow(name)
-        await("entity header") { frame.properties().subtitle().startsWith("Entity 0 ·") }
+        await("entity header") { frame.properties().subtitle().startsWith("Entity (0) ·") }
         // the entity is off; its components keep their own box state
         assertTrue(frame.properties().enabledChecked("0.RenderComponent"))
         assertFalse(frame.properties().hasEnabledBox("0.NameComponent"))

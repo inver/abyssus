@@ -29,3 +29,16 @@ class TypeGroupOrderTest {
         assertEquals("Pixmap texture", groupLabel("PIXMAP_TEXTURE"))
     }
 }
+
+class FixedRankTest {
+    @Test
+    fun foldersAndGroupsKeepTheirOrderAgainstNameSorting() {
+        val scenes = fixedRank(emptyList<Any>(), "scenes")
+        val ui = fixedRank(FolderRow(FolderKind.UI, emptyList()), "ui")
+        val assets = fixedRank(FolderRow(FolderKind.ASSETS, emptyList()), "assets")
+        org.junit.Assert.assertTrue(compareFixed(scenes, ui)!! < 0)
+        org.junit.Assert.assertTrue(compareFixed(ui, assets)!! < 0)
+        org.junit.Assert.assertTrue(compareFixed(fixedRank(TypeGroup("TERRAIN", emptyList()), "TERRAIN"), fixedRank(TypeGroup("SKYBOX", emptyList()), "SKYBOX"))!! < 0)
+        org.junit.Assert.assertNull(compareFixed(scenes, fixedRank("x", "ecs")))
+    }
+}

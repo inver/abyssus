@@ -20,6 +20,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.render.RenderingUtil
 import com.intellij.ui.tree.TreeVisitor
+import com.intellij.ui.RelativeFont
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.filetype.EyeIcons
@@ -64,6 +66,14 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
         override fun isToBuildChildrenInBackground(element: Any) = true
     }
 
+    /** The platform sorts siblings by name; `Scenes`, `UI`, `Assets` and the type groups keep their specified order. */
+    override fun createComparator(): java.util.Comparator<com.intellij.ide.util.treeView.NodeDescriptor<*>> {
+        val platform = super.createComparator()
+        fun rank(d: com.intellij.ide.util.treeView.NodeDescriptor<*>) =
+            (d as? DtoEntryNode)?.value?.let { fixedRank(it.value, it.name) }
+        return java.util.Comparator { a, b -> compareFixed(rank(a), rank(b)) ?: platform.compare(a, b) }
+    }
+
     // The platform requires the target's minor view id to equal the pane id; the inherited one is "ProjectPane".
     override fun createSelectInTarget(): SelectInTarget = AbyssusSelectInTarget(myProject)
 
@@ -81,17 +91,10 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
         }
     }
 
+    // the platform's own header buttons stay as they are; the unused filter is the first item of the Options menu
     override fun addToolbarActions(actionGroup: DefaultActionGroup) {
         super.addToolbarActions(actionGroup)
-        // the platform's Expand All and Collapse All keep working; only their glyphs are the design's
-        val icons = mapOf("ExpandAll" to TreeActionIcons.EXPAND_ALL, "CollapseAll" to TreeActionIcons.COLLAPSE_ALL)
-        val children = actionGroup.childActionsOrStubs
-        actionGroup.removeAll()
-        for (child in children) {
-            val icon = ActionManager.getInstance().getId(child)?.let(icons::get)
-            actionGroup.add(if (icon != null) IconOverride(child, icon) else child)
-        }
-        actionGroup.add(UnusedFilterAction())
+        actionGroup.add(UnusedFilterAction(), com.intellij.openapi.actionSystem.Constraints.FIRST)
     }
 
     override fun createTree(treeModel: DefaultTreeModel): ProjectViewTree =
@@ -125,7 +128,7 @@ private class GrayKeepingRenderer : ProjectViewRenderer() {
         super.customizeCellRenderer(tree, value, selected, expanded, leaf, row, hasFocus)
         val entry = (TreeUtil.getUserObject(value) as? DtoEntryNode)?.value
         if (entry != null && entry.isGame) {
-            append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
+            append(" ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
             append(GameBadge.TEXT, GameBadge.ATTRIBUTES, GameBadge.TAG)
         }
     }
@@ -138,7 +141,7 @@ private class GrayKeepingRenderer : ProjectViewRenderer() {
         if (xs.isEmpty()) return
         val g2 = g.create() as Graphics2D
         try {
-            val h = g2.getFontMetrics(font).height
+            val h = g2.getFontMetrics(RelativeFont.SMALL.derive(font)).height
             GameBadge.paintOutline(g2, xs.first(), (height - h) / 2, xs.last() - xs.first() + 1, h)
         } finally {
             g2.dispose()
@@ -176,6 +179,16 @@ private class AbyssusSelectInTarget(project: Project) : ProjectViewSelectInTarge
 class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
 
+    /** Each level's icon starts [LEVEL_INDENT] px right of its parent's, whatever indent the platform's tree UI brings. */
+    override fun updateUI() {
+        super.updateUI()
+        (ui as? javax.swing.plaf.basic.BasicTreeUI)?.let { it.rightChildIndent = JBUI.scale(LEVEL_INDENT) - it.leftChildIndent }
+    }
+
+    companion object {
+        const val LEVEL_INDENT = 16
+    }
+
     /** The row's actions, rightmost first. */
     private fun actionsFor(row: Int): List<RowAction> {
         val node = TreeUtil.getUserObject(getPathForRow(row)?.lastPathComponent)
@@ -204,6 +217,15 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
     private fun actionBounds(row: Int, actions: List<RowAction>): List<Rectangle>? {
         val rowBounds = getRowBounds(row) ?: return null
         return layoutActions(rowBounds, visibleRect.let { it.x + it.width }, actions, this)
+    }
+
+    /** The painted actions of [row] as `name=x..x2;...` (`unused`, `icon`), rightmost first; the UI tests read it to check spacing. */
+    fun actionLayout(row: Int): String {
+        val actions = actionsFor(row)
+        val bounds = actionBounds(row, actions) ?: return ""
+        return actions.indices.joinToString(";") { i ->
+            "${if (actions[i] is UnusedBadge) "unused" else "icon"}=${bounds[i].x}..${bounds[i].x + bounds[i].width - 1}"
+        }
     }
 
     private fun rowOf(e: MouseEvent): Int? {
@@ -317,22 +339,4 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
             }
         }
     }
-
-}
-
-/** A platform toolbar action that behaves as [delegate] but shows [icon]. */
-internal class IconOverride(private val delegate: AnAction, private val icon: Icon) : AnAction(), DumbAware {
-    init {
-        templatePresentation.copyFrom(delegate.templatePresentation)
-        templatePresentation.icon = icon
-    }
-
-    override fun getActionUpdateThread(): ActionUpdateThread = delegate.actionUpdateThread
-
-    override fun update(e: AnActionEvent) {
-        delegate.update(e)
-        e.presentation.icon = icon
-    }
-
-    override fun actionPerformed(e: AnActionEvent) = delegate.actionPerformed(e)
 }

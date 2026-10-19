@@ -4,6 +4,13 @@ package net.nevinsky.abyssus.uitesting.screenshot
 val SCREENSHOT_SCENARIOS: Set<String> = linkedSetOf(
     "tree-expanded",
     "tree-fog-off",
+    "tree-collapsed",
+    "tree-assets-groups",
+    "tree-unused-filter",
+    "tree-selected-disabled",
+    "tree-header",
+    "controlline-tree-assets",
+    "controlline-tree-game",
     "props-asset-model",
     "props-asset-terrain",
     "props-asset-sky-cube",

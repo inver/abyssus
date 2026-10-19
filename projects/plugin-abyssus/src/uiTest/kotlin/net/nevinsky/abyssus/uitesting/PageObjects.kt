@@ -102,6 +102,22 @@ class IdeFrame(remoteRobot: RemoteRobot, remoteComponent: RemoteComponent) : Com
     /** Clicks the named item of the context menu that is open. */
     fun clickMenuItem(text: String) = find<ComponentFixture>(byXpath("//div[@class='ActionMenuItem' and @text='$text']"), SHORT).click()
 
+    private val headerButtonXpath =
+        "//div[(@accessiblename='Project Tool Window' or @accessiblename='Abyssus Tool Window')]//div[@class='ToolWindowHeader']//div[@class='ActionButton' and @visible='true']"
+
+    /** The visible action buttons of the Project tool window header, left to right: accessible name and icon resource path. */
+    fun headerButtons(): List<Pair<String, String>> = remoteRobot.findAll<ComponentFixture>(byXpath(headerButtonXpath)).map { b ->
+        val raw = b.callJs<String>(
+            "var ic = component.getIcon(); var path = ''; if (ic != null) { path = String(ic.toString()); try { var o = ic.getOriginalPath(); if (o != null) path = String(o); } catch (e) {} }" +
+                "String(component.getLocationOnScreen().x) + '\\u001f' + String(component.getAccessibleContext().getAccessibleName()) + '\\u001f' + path", runInEdt = true)
+        raw.split("\u001f").let { f -> Triple(f[0].toInt(), f[1], f[2]) }
+    }.sortedBy { it.first }.map { it.second to it.third }
+
+    /** Clicks the Project tool window header button with this accessible name. */
+    fun clickHeaderButton(name: String) {
+        remoteRobot.findAll<ComponentFixture>(byXpath("//div[(@accessiblename='Project Tool Window' or @accessiblename='Abyssus Tool Window')]//div[@class='ToolWindowHeader']//div[@class='ActionButton' and @accessiblename='$name']")).first().click()
+    }
+
     fun properties(): PropertiesPanel = PropertiesPanel(this)
 
     fun propertiesStripeButton() = find<ComponentFixture>(byXpath("//div[@class='SquareStripeButton' and @accessiblename='Abyssus Properties']"), SHORT)
@@ -193,12 +209,93 @@ class AbyssusTree(private val frame: IdeFrame) {
 
     fun clickRowEye(text: String) = clickRowAction(text, EYE_FROM_RIGHT)
 
-    fun clickRowChoose(text: String) = clickRowAction(text, CHOOSE_FROM_RIGHT)
+    /** Opens the folders and type groups under Assets so every asset row is visible, and folds the assets themselves. */
+    fun expandAssets() {
+        expand("Assets")
+        repeat(2) { underAssets(1).forEach { expand(it.text) } }
+        val assets = underAssets(2).filter { it.expanded }
+        assets.forEach { fixture.callJs<Boolean>("component.collapseRow(${indexOf(it.text)}); true", runInEdt = true) }
+    }
+
+    /** The rows [level] levels below the Assets row. */
+    private fun underAssets(level: Int): List<TreeRowInfo> {
+        val all = rowInfo()
+        val start = all.indexOfFirst { it.label == "Assets" }
+        if (start < 0) return emptyList()
+        return all.drop(start + 1).takeWhile { it.depth > all[start].depth }.filter { it.depth == all[start].depth + level }
+    }
+
+    /**
+     * Every visible row with what the tree paints for it: text, depth below the project row (0 is the project), the icon's
+     * resource path, the row bounds, the eye bounds and the text of the `unused` and `game` fragments. No desktop coordinates.
+     */
+    fun rowInfo(): List<TreeRowInfo> {
+        val raw = fixture.callJs<String>(ROW_INFO_JS, runInEdt = true)
+        return raw.lines().filter { it.isNotBlank() }.map { line ->
+            val f = line.split("\u001f")
+            val fragments = if (f[9].isEmpty()) emptyList() else f[9].split("\u001e")
+            val spoken = fragments.map { it.trim() }.filter { it.isNotEmpty() }
+            TreeRowInfo(
+                text = if (spoken.isEmpty()) f[0].trim() else spoken.joinToString(" "), label = spoken.firstOrNull() ?: f[0].trim(), depth = f[1].toInt(), icon = f[2], x = f[3].toInt(), y = f[4].toInt(), width = f[5].toInt(),
+                height = f[6].toInt(), expanded = f[7].toBoolean(), selected = f[8].toBoolean(),
+                fragments = fragments, textColor = f[10],
+            )
+        }
+    }
+
+    fun rowInfo(text: String): TreeRowInfo = rowInfo().let { all ->
+        all.firstOrNull { it.text == text } ?: all.firstOrNull { it.text.startsWith("$text ") } ?: all.firstOrNull { it.text.contains(text) }
+            ?: throw IllegalStateException("no row '$text' in ${all.map { it.text }}")
+    }
+
+    /** The row's enable toggle state (which the eye shows): `on`, `off`, or `none` for a row without an eye. */
+    fun eye(text: String): String = fixture.callJs<String>(
+        "var e = component.getPathForRow(${indexOf(text)}).getLastPathComponent().getUserObject().getValue().getEnabled(); e == null ? 'none' : (e.booleanValue() ? 'on' : 'off')", runInEdt = true)
+
+    /** The tree's indent per level in pixels and its row height, as Swing reports them. */
+    fun metrics(): Pair<Int, Int> {
+        val raw = fixture.callJs<String>("var ui = component.getUI(); var ind = ui.getLeftChildIndent() + ui.getRightChildIndent(); ind + ',' + component.getRowHeight()", runInEdt = true)
+        val (indent, height) = raw.split(',').map { it.toInt() }
+        return indent to height
+    }
+
+    /** Where the painted actions of the row are: `icon` (eye or view) and `unused` to their x-range in the tree. */
+    fun actionBounds(text: String): Map<String, IntRange> {
+        val raw = fixture.callJs<String>("component.actionLayout(${indexOf(text)})", runInEdt = true)
+        return raw.split(';').filter { it.isNotBlank() }.associate { e ->
+            val (name, range) = e.split('=')
+            val (a, b) = range.split("..").map { it.toInt() }
+            name to (a..b)
+        }
+    }
 
     private companion object {
         const val EYE_FROM_RIGHT = 14
-        const val CHOOSE_FROM_RIGHT = 70
+
+        /** Joined with U+001F between fields and U+001E between fragments, one row per line. */
+        val ROW_INFO_JS = """
+            var t = component; var out = []; var root = t.getPathForRow(0).getPathCount();
+            for (var i = 0; i < t.getRowCount(); i++) {
+              var p = t.getPathForRow(i); var b = t.getRowBounds(i); var v = p.getLastPathComponent();
+              var c = t.getCellRenderer().getTreeCellRendererComponent(t, v, t.isRowSelected(i), t.isExpanded(i), t.getModel().isLeaf(v), i, false);
+              var icon = c.getIcon(); var path = '';
+              if (icon != null) { path = String(icon.toString()); try { var o = icon.getOriginalPath(); if (o != null) path = String(o); } catch (e) {} }
+              var color = ''; try { var n = v.getUserObject(); var ct = n.getPresentation().getColoredText(); if (ct.size() > 0) color = String(ct.get(0).getAttributes().getFgColor()); } catch (e) {}
+              var fr = []; var it = c.iterator(); while (it.hasNext()) fr.push(String(it.next()));
+              out.push([String(c.toString()).replace(/\n/g, ' '), p.getPathCount() - root, path, b.x, b.y, b.width, b.height, t.isExpanded(i), t.isRowSelected(i), fr.join('\u001e'), color].join('\u001f'));
+            }
+            out.join('\n')
+        """.trimIndent()
     }
+}
+
+/** One visible row of the Abyssus tree as painted. [depth] 0 is the project row; [icon] is the icon's resource path; [fragments] are the colored text fragments. */
+data class TreeRowInfo(
+    val text: String, val label: String, val depth: Int, val icon: String, val x: Int, val y: Int, val width: Int, val height: Int,
+    val expanded: Boolean, val selected: Boolean, val fragments: List<String>, val textColor: String,
+) {
+    /** The icon's file name without the `_dark` twin suffix, e.g. `folder_assets`. */
+    val iconName: String get() = icon.substringAfterLast('/').removeSuffix(".svg").removeSuffix("_dark")
 }
 
 /** The Abyssus Properties tool window's content. Re-resolve after the selection changes; the panel is rebuilt. */
@@ -232,6 +329,13 @@ class PropertiesPanel(private val frame: IdeFrame) {
             enter()
         }
     }
+
+    /** The scene skybox field's text (read-only) and its Browse button, shown when a project scene is selected. */
+    fun skyboxText(): String = fieldText("scene-skybox")
+
+    fun clickBrowseSkybox() = window.find<ComponentFixture>(byXpath("//div[@name='scene-skybox-browse']"), SHORT).click()
+
+    fun hasBrowseSkybox(): Boolean = window.findAll<ComponentFixture>(byXpath("//div[@name='scene-skybox-browse']")).isNotEmpty()
 
     fun errorText(kind: String, field: String): String =
         window.findAll<ComponentFixture>(byXpath("//div[@class='JBLabel' and @name='error-$kind-$field']")).firstOrNull()

@@ -49,3 +49,20 @@ fun folderRows(folder: FolderRow): List<DtoRow> = when (folder.kind) {
 
 /** The assets of a type group, by asset folder name. */
 fun groupRows(group: TypeGroup): List<DtoRow> = group.assets.sortedBy { it.name }.map { DtoRow(it.name, it) }
+
+/**
+ * The place of a row that keeps a fixed order under the platform's sorting: `Scenes`, `UI`, `Assets`, then the type groups in
+ * [typeGroupOrder]. Null for every other row, which sorts as the platform sorts.
+ */
+internal fun fixedRank(value: Any?, name: String): Pair<Int, String>? = when {
+    value is List<*> && name == "scenes" -> 0 to ""
+    value is FolderRow -> (if (value.kind == FolderKind.UI) 1 else 2) to ""
+    value is TypeGroup -> 3 to value.group
+    else -> null
+}
+
+/** Orders [a] and [b] by [fixedRank] when both have one; null when the platform's comparator decides. */
+internal fun compareFixed(a: Pair<Int, String>?, b: Pair<Int, String>?): Int? {
+    if (a == null || b == null) return null
+    return if (a.first != b.first) a.first.compareTo(b.first) else typeGroupOrder.compare(a.second, b.second)
+}

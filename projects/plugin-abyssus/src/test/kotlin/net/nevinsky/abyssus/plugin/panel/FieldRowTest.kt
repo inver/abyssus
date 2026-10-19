@@ -73,7 +73,7 @@ class FieldRowTest : BasePlatformTestCase() {
         val field = find<JBTextField>(view, "field-RigidBodyComponent-mass")
         assertEquals("0.5", field.text)
         assertEquals(field.minimumSize.height, field.preferredSize.height)
-        assertEquals(JBUI.scale(150), field.preferredSize.width)
+        assertEquals(JBUI.scale(120), field.preferredSize.width) // INPUT_WIDTH: a component's inputs share one width
     }
 
     fun testLabelColumnIs150Pixels() {

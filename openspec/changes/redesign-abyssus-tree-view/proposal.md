@@ -24,8 +24,8 @@ can be verified instead of eyeballed.
   constraint, light, foliage, path arrangement, plane, pilot), each with a dark variant where the glyph is not theme-neutral.
 - **BREAKING (UI)**: the skybox **Choose** button leaves the tree row. The chooser opens from a new **Browse** button on the
   skybox field in Abyssus Properties (the same `SkyboxChooserDialog`, same write). The eye on the skybox row stays.
-- **Header.** The pane's toolbar shows expand all, collapse all, the unused filter (pressed state in amber), options and hide,
-  with the Icon set glyphs.
+- **Header.** The platform's header buttons (Collapse All, Options, Hide) stay as the platform draws them; the unused filter is
+  the first item of the Options menu, with the Icon set glyph and the amber selected state while on.
 - **UI tests** on the existing Remote Robot harness: structure and order, per-row icon, painted geometry, row states
   (selected, disabled, unused, game), header and footer, the Browse flow, an icon inventory test, and regenerated tree
   baselines.

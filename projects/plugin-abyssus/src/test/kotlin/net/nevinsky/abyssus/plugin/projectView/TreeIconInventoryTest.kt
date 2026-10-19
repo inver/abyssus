@@ -28,7 +28,7 @@ class TreeIconInventoryTest {
     /** Gray and text-colored glyphs: a light file and a `_dark` twin. */
     private val themed = listOf(
         "folder", "fog", "component_name", "component_parent",
-        "action_expand_all", "action_collapse_all", "action_unused_filter", "action_options", "action_hide", "action_browse",
+        "action_unused_filter", "action_browse",
     )
 
     private fun resource(name: String) = TreeIcons::class.java.getResource("/icons/tree/$name")

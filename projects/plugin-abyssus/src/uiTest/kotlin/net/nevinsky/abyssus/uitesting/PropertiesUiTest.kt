@@ -21,8 +21,7 @@ class PropertiesUiTest : UiTestBase() {
         tree.expand("Scenes")
         tree.expand(scene().treeLabel)
         tree.expand("ecs")
-        tree.expand("Assets")
-        tree.expandAssetGroups()
+        tree.expandAssets()
         frame.normalizeLayout(ide)
         return tree
     }
@@ -37,6 +36,14 @@ class PropertiesUiTest : UiTestBase() {
     private fun waitForPreviews() = waitFor(Duration.ofSeconds(30), Duration.ofMillis(500), "previews loaded") {
         val panel = frame.properties()
         panel.previewCount() > 0 && panel.unloadedPreviews().isEmpty()
+    }
+
+    @Test
+    fun sceneRowOffersBrowseForTheSkybox() {
+        val tree = tree()
+        tree.clickRow(scene().treeLabel)
+        waitFor(Duration.ofSeconds(15), Duration.ofMillis(300), "Browse button in Properties") { frame.properties().hasBrowseSkybox() }
+        assertEquals(SceneFacts.read(project.resolve(scenePath)).skyboxName, frame.properties().skyboxText())
     }
 
     @Test
@@ -88,17 +95,17 @@ class PropertiesUiTest : UiTestBase() {
         val tree = tree()
         val entityName = facts.entityName(0)!!
         tree.clickRow(entityName)
-        waitForTexts("entity 0") { texts -> entityName in texts && texts.any { it.startsWith("Entity 0 ·") } }
+        waitForTexts("entity 0") { texts -> entityName in texts && texts.any { it.startsWith("Entity (0) ·") } }
         assertEquals(entityName, frame.properties().fieldText("field-NameComponent-name"))
         shot("props-entity", frame.properties().component)
 
         tree.expand("Camera 4")
         tree.clickRow("Camera 4")
-        waitForTexts("camera entity") { texts -> "Camera 4" in texts && texts.any { it.startsWith("Entity 4 ·") } }
+        waitForTexts("camera entity") { texts -> "Camera 4" in texts && texts.any { it.startsWith("Entity (4) ·") } }
         val fields = frame.properties().fieldNames("field-CameraComponent-")
         assertTrue("camera fields in $fields", "field-CameraComponent-camera.fieldOfView" in fields)
         tree.clickRow("Camera") // the Camera component row under Camera 4
-        waitForTexts("camera component") { texts -> "camera.fieldOfView" in texts }
+        waitForTexts("camera component") { texts -> "Camera.field of view" in texts }
         shot("props-camera", frame.properties().component)
     }
 
@@ -110,7 +117,7 @@ class PropertiesUiTest : UiTestBase() {
         assertEquals(1, Regex("\"name\": \"$oldName\"").findAll(original).count())
         val tree = tree()
         tree.clickRow(oldName)
-        waitForTexts("entity 0") { texts -> texts.any { it.startsWith("Entity 0 ·") } }
+        waitForTexts("entity 0") { texts -> texts.any { it.startsWith("Entity (0) ·") } }
 
         frame.properties().enter("field-NameComponent-name", "Renamed 0")
         val expected = original.replace("\"name\": \"$oldName\"", "\"name\": \"Renamed 0\"")
@@ -139,7 +146,7 @@ class PropertiesUiTest : UiTestBase() {
         val tree = tree()
         tree.expand("Camera 4")
         tree.clickRow("Camera") // the Camera component row: only the Camera section, so the error is in view
-        waitForTexts("camera component") { texts -> "camera.fieldOfView" in texts }
+        waitForTexts("camera component") { texts -> "Camera.field of view" in texts }
 
         frame.properties().enter("field-CameraComponent-camera.fieldOfView", "not a number")
         waitFor(Duration.ofSeconds(10), Duration.ofMillis(300), "field error shown") {

@@ -28,7 +28,7 @@ class PropertiesLayoutUiTest : UiTestBase() {
     fun entityHeaderAndGeometryFollowTheBoard() {
         val entityName = scene().entityName(0)!!
         tree().clickRow(entityName)
-        await("entity header") { frame.properties().subtitle().startsWith("Entity 0 ·") }
+        await("entity header") { frame.properties().subtitle().startsWith("Entity (0) ·") }
         val panel = frame.properties()
         assertEquals(entityName, panel.headerTitle())
         assertEquals("ecs", panel.breadcrumb().last())
@@ -45,7 +45,7 @@ class PropertiesLayoutUiTest : UiTestBase() {
     @Test
     fun dimDefaultsAreDrawnInTheSecondaryColor() {
         tree().clickRow(scene().entityName(0)!!)
-        await("entity header") { frame.properties().subtitle().startsWith("Entity 0 ·") }
+        await("entity header") { frame.properties().subtitle().startsWith("Entity (0) ·") }
         val panel = frame.properties()
         // localScale is not written in the fixture, so its boxes are the defaults and are dim; the position is written
         assertEquals(0xFF868A91.toInt(), panel.foreground("field-PositionComponent-localScale.x"))
@@ -55,7 +55,7 @@ class PropertiesLayoutUiTest : UiTestBase() {
     @Test
     fun collapsingASectionHidesItsFieldsAndKeepsItAfterARefresh() {
         tree().clickRow(scene().entityName(0)!!)
-        await("entity header") { frame.properties().subtitle().startsWith("Entity 0 ·") }
+        await("entity header") { frame.properties().subtitle().startsWith("Entity (0) ·") }
         val panel = frame.properties()
         assertFalse(panel.isCollapsed("0.PositionComponent"))
         panel.clickChevron("0.PositionComponent")

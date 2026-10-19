@@ -27,7 +27,7 @@ the row actions that call `editSceneJson` (`projects/plugin-abyssus/src/main/kot
 | `SkyboxChoices.kt`, `SkyboxPickerModel`, `SkyboxChooserDialog` | The skybox list, its filter and selection logic, and the dialog. The dialog opens from the **Browse** button of the skybox field in Abyssus Properties (`SceneDetailsView`, `chooseSkyboxFor`, project scenes only; the tree row has only its eye). Assigning writes only `skyboxName` through `setSkybox` / `editSceneJson`, one undo step, and the tree row follows the `AbyssusSceneEdited` refresh |
 | `EntitySelection.kt` | Selects an entity's row when the scene view picks it |
 | `AbyssusSelection` | Publishes the selected node on `AbyssusSelectionListener.TOPIC` (the properties panel listens) |
-| `UnusedFilter`, `AbyssusFooter` | "Show Only Unused Assets" (per project) and the counts footer |
+| `UnusedFilter`, `AbyssusFooter` | "Show Only Unused Assets" (per project; the first item of the Options menu, design glyph, amber icon while on; the platform header buttons stay as the platform draws them) and the counts footer |
 | `OpenAbyssusViewActivity` | Switches to this pane on startup only under `-Dabyssus.openView=true` (set by `runIde`) |
 
 Selecting a `.abss` root shows project settings in Abyssus Properties, including the built-in **Physics** checkbox.
@@ -39,7 +39,7 @@ Physics component add/edit choices follow the selected scene's native project se
 The tree glyphs are the design's Icon set (board "Icon set" of the Abyssus design canvas), copied as 16 px SVGs on a 24 px grid
 (1.8 stroke, round caps) into `projects/plugin-abyssus/src/main/resources/icons/tree/<name>.svg`. A hue glyph reads the same
 in both themes and has one file; a gray or text-colored glyph (`folder`, `fog`, `component_name`, `component_parent`, the
-header `action_*` icons) has a light file and a `<name>_dark.svg` twin that the platform picks in dark themes. The eye is 14 px
+`action_*` icons) has a light file and a `<name>_dark.svg` twin that the platform picks in dark themes. The eye is 14 px
 (`eye_on` blue `#548af7`, `eye_off` gray `#6f737a`). `TreeIcons.load(name)` loads one; the holders in `filetype/AbyssusFileTypes.kt`
 (`ScenesIcons`, `PropertyIcons`, `EyeIcons`, `TreeActionIcons`, `ComponentIcons`, `AssetIcons`) and `EntityIcons` map node kinds to
 them. Asset types and entity types that the board does not draw (SKYBOX, SKYBOX_HDR, PIXMAP_TEXTURE, MATERIAL, point and spot

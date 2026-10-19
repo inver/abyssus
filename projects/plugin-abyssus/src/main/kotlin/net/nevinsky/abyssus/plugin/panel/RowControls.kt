@@ -29,6 +29,9 @@ import javax.swing.*
 /** The width of a single-line input and of one axis box. */
 private const val INPUT_WIDTH = 120
 
+/** The width of one axis box of a vector: wider than a plain input so a signed eight-digit value shows whole beside its tag. */
+private const val AXIS_WIDTH = 150
+
 /** What the rows of a section need from the view that hosts them: saving a field, the hosted editors and links. */
 interface RowHooks {
     /** Saves [text] for [ref]; the editor shows a refusal and puts the stored value back. */
@@ -148,7 +151,7 @@ private fun readonlyValue(text: String, dim: Boolean): JComponent = JBLabel(text
 }
 
 /** [field] followed by its unit (`kg`, `m`, `N`, `s`, `m²`, `°`). */
-private fun unitBox(field: JComponent, unit: String): JComponent = JPanel(BorderLayout(JBUI.scale(6), 0)).apply {
+private fun unitBox(field: JComponent, unit: String): JComponent = JPanel(BorderLayout(JBUI.scale(4), 0)).apply {
     isOpaque = false
     add(field, BorderLayout.WEST)
     add(JBLabel(unit).apply { name = "unit"; foreground = DesignColors.SECONDARY }, BorderLayout.CENTER)
@@ -202,7 +205,7 @@ private fun axisBox(tag: JBLabel, field: JBTextField): JComponent {
     field.horizontalAlignment = SwingConstants.RIGHT
     field.border = JBUI.Borders.empty()
     field.isOpaque = false
-    val box = object : JPanel(BorderLayout(JBUI.scale(6), 0)) {
+    val box = object : JPanel(BorderLayout(JBUI.scale(4), 0)) {
         override fun paintComponent(g: Graphics) {
             val g2 = g.create() as Graphics2D
             try {
@@ -222,7 +225,7 @@ private fun axisBox(tag: JBLabel, field: JBTextField): JComponent {
         }
     }.apply {
         isOpaque = false
-        border = JBUI.Borders.empty(0, 10)
+        border = JBUI.Borders.empty(0, 8)
         add(tag, BorderLayout.WEST)
         add(field, BorderLayout.CENTER)
     }
@@ -232,7 +235,7 @@ private fun axisBox(tag: JBLabel, field: JBTextField): JComponent {
     })
     // the height of every other text box, from a plain field in the same look and feel
     val height = JBTextField().apply { font = monoFont(); pinFieldHeight() }.preferredSize.height
-    box.preferredSize = Dimension(PanelMetrics.scaled(INPUT_WIDTH), height)
+    box.preferredSize = Dimension(PanelMetrics.scaled(AXIS_WIDTH), height)
     box.minimumSize = box.preferredSize
     box.maximumSize = box.preferredSize
     return box

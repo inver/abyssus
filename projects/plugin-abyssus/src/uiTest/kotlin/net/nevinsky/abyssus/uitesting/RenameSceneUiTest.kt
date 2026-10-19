@@ -17,7 +17,7 @@ class RenameSceneUiTest : UiTestBase() {
         frame.normalizeLayout(ide)
         tree.expand("Scenes")
         tree.rightClickRow(sceneLabel)
-        frame.clickMenuItem("Rename Scene...")
+        frame.clickMenuItem("Rename")
         return frame.dialog(title).awaitOpen()
     }
 
