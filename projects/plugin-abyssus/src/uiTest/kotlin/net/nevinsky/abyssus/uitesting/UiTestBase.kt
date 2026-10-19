@@ -2,6 +2,7 @@ package net.nevinsky.abyssus.uitesting
 
 import com.intellij.remoterobot.RemoteRobot
 import org.junit.After
+import org.junit.Assume
 import org.junit.Before
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
@@ -17,6 +18,9 @@ import net.nevinsky.abyssus.uitesting.screenshot.ScreenshotSuite
  * the committed fixture was not touched.
  */
 abstract class UiTestBase {
+    /** The project the IDE opened that this class is written for; the others skip (see ABYSSUS_UI_FIXTURE in scripts/run-ui-tests.sh). */
+    protected open val projectName: String = "Untitled"
+
     /** Moves the pointer off every control, then compares (or queues, or just keeps) a capture of [target]. */
     protected fun shot(scenario: String, target: com.intellij.remoterobot.fixtures.ComponentFixture, focusTree: Boolean = true) {
         val frame = robot.find<IdeFrame>(java.time.Duration.ofSeconds(10))
@@ -28,6 +32,7 @@ abstract class UiTestBase {
     /** Every test starts from the pristine project on disk and a freshly shown Abyssus tree. */
     @Before
     fun resetProjectAndView() {
+        Assume.assumeTrue("needs the $projectName project, the IDE opened ${project.source.fileName}", project.source.fileName.toString() == projectName)
         project.restore()
         ide.refresh(project.dir.toString())
         ide.refreshProjectView()

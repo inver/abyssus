@@ -22,7 +22,10 @@ class SkyboxChooserUiTest : UiTestBase() {
         frame.normalizeLayout(ide)
         tree.expand("Scenes")
         tree.expand(SceneFacts.read(project.resolve(scenePath)).treeLabel)
-        tree.clickRowChoose("skybox:")
+        assertTrue("the tree row paints only its eye, no Choose button: ${tree.actionBounds("skybox:")}", tree.actionBounds("skybox:").size <= 1)
+        tree.clickRow(SceneFacts.read(project.resolve(scenePath)).treeLabel)
+        waitFor(Duration.ofSeconds(15), Duration.ofMillis(300), "Browse button in Properties") { frame.properties().hasBrowseSkybox() }
+        frame.properties().clickBrowseSkybox()
         return frame.dialog(title).awaitOpen()
     }
 

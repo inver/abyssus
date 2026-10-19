@@ -33,6 +33,8 @@ class ComponentField<C : Component>(
     /** Keys of [EditorMessages] for the label and tooltip the panel shows instead of [label] (no tooltip when null). */
     val labelKey: String? = null,
     val tooltipKey: String? = null,
+    /** The unit the panel shows after a number (`kg`, `m`, `N`, `s`, `m²`, `°`), or empty. */
+    val unit: String = "",
 )
 
 /** Reads and writes one kind of component as the native scene format holds it, under its short [name]. */
@@ -76,5 +78,9 @@ data class FieldValue(
     val label: String = field, val group: String = "", val assetType: String? = null,
     /** Help text for the field, or null. */
     val tooltip: String? = null,
+    /** The unit shown after a number, or empty. */
+    val unit: String = "",
+    /** True when the file does not write this value, so the default applies; never true for a value the file holds. */
+    val isDefault: Boolean = false,
 )
 

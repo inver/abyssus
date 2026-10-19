@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.core.format
 import com.fasterxml.jackson.databind.JsonNode
 
 enum class DocumentKind { PROJECT, SCENE, ASSET }
-enum class FormatProblem { MARKER, VERSION, LEGACY_FIELD }
+enum class FormatProblem { MARKER, VERSION, LEGACY_FIELD, ENABLED_FLAG }
 data class FormatRejection(val problem: FormatProblem, val path: String)
 
 class UnsupportedDocumentFormat(val kind: DocumentKind, val reason: FormatRejection) :
@@ -33,7 +33,16 @@ class AbyssusDocumentFormat {
         val entities = wrapped ?: ecs
         if (!entities.isObject) return null
         for ((id, entity) in entities.properties()) {
+            if (!isEnabledFlagValid(entity))
+                return FormatRejection(FormatProblem.ENABLED_FLAG, (if (wrapped != null) "ecs.entities.$id" else "ecs.$id") + ".enabled")
             val components = entity.get("components") ?: continue
+            for ((name, component) in components.properties()) {
+                if (!isEnabledFlagValid(component))
+                    return FormatRejection(
+                        FormatProblem.ENABLED_FLAG,
+                        (if (wrapped != null) "ecs.entities.$id" else "ecs.$id") + ".components.$name.enabled"
+                    )
+            }
             for (name in listOf("RenderComponent", "net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent")) {
                 val renderable = components.get(name)?.get("renderable")
                 if (renderable?.has("class") == true)

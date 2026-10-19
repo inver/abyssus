@@ -207,7 +207,8 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         val root = AbyssusRootNode(project, ViewSettings.DEFAULT)
         val projectNode = root.children.single { it is AbyssusAssetNode }
         val assetsNode = projectNode.children.map { it as AbstractTreeNode<*> }.single { text(it).startsWith("Assets") }
-        val rows = assetsNode.children.map { it as AbstractTreeNode<*> }.associateBy { text(it).substringBefore("  ") }
+        val rows = assetsNode.children.map { it as AbstractTreeNode<*> }.flatMap { g -> g.children.map { it as AbstractTreeNode<*> } }
+            .associateBy { text(it).substringBefore("  ") }
         assertEquals(setOf("dead", "used"), rows.keys)
         // the badge is painted at the right edge of the row, not part of its text
         assertFalse(text(rows.getValue("dead")).contains("unused"))
@@ -240,7 +241,7 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         )
         val projectNode = AbyssusRootNode(project, ViewSettings.DEFAULT).children.single { it is AbyssusAssetNode }
         val assetsNode = projectNode.children.map { it as AbstractTreeNode<*> }.single { text(it).startsWith("Assets") }
-        val icons = assetsNode.children.map { it as AbstractTreeNode<*> }.associate { text(it).substringBefore("  ") to it.presentation.getIcon(false) }
+        val icons = assetsNode.children.map { it as AbstractTreeNode<*> }.flatMap { g -> g.children.map { it as AbstractTreeNode<*> } }.associate { text(it).substringBefore("  ") to it.presentation.getIcon(false) }
         assertSame(AssetIcons.forType("MODEL"), icons["m"])
         assertSame(AssetIcons.forType("TERRAIN"), icons["t"])
         assertSame(AssetIcons.UNKNOWN, icons["x"])

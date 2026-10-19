@@ -137,6 +137,14 @@ the toolbar, Play and the view's asset storage.
   changes also refresh availability. Params invalidate the next frame's query as well, because a transform update
   leaves drawn entity ids unchanged.
 
+## Disabled entities and components
+
+The view's content comes from `sceneContentOf`, which leaves out a disabled entity entirely and a disabled component's own
+placement (see "Enabled flag" in `lib-core-editor/README.md`). So a disabled entity is not drawn, does not cast a shadow, is
+not picked (a click goes through it to the enabled entity behind), has no gizmo and is left out of the ray snapshot. Selecting
+it in the tree still shows it in Properties. A toggle is a scene file edit, so the view refreshes through
+`AbyssusSceneEdited` like any other edit and needs no reload.
+
 ## Add Light
 
 The toolbar's Add Light menu offers Directional, Sun and Spot through `AddLightGroup`. `SceneFileEditor` supplies

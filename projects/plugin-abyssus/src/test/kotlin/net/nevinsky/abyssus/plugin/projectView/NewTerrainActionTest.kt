@@ -84,7 +84,8 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         val owner = assetsNodeProjectFile(assets)
         assertEquals("P.abss", owner!!.name)
         assertNull(assetsNodeProjectFile(children(abssNode).single { label(it) == "scenes" }))
-        assertNull("an asset row is not the Assets node", assetsNodeProjectFile(children(assets).single()))
+        assertNull("a type group is not the Assets node", assetsNodeProjectFile(children(assets).single()))
+        assertNull("an asset row is not the Assets node", assetsNodeProjectFile(children(children(assets).single()).single()))
         assertNull("the project node", assetsNodeProjectFile(abssNode))
         assertNull(assetsNodeProjectFile(null))
         assertNull(assetsNodeProjectFile("not a node"))
@@ -117,15 +118,15 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         val abssNode = projectNode() as AbyssusAssetNode
         val file = abssNode.virtualFile
         val assets = children(abssNode).single { label(it) == "assets" }
-        val tree = children(assets).single()
+        val group = children(assets).single()
+        val tree = children(group).single()
         val root = AbyssusRootNode(project, ViewSettings.DEFAULT)
         assertEquals(TreeVisitor.Action.CONTINUE, assetVisitAction(file, "tree", listOf(root)))
         assertEquals(TreeVisitor.Action.CONTINUE, assetVisitAction(file, "tree", listOf(root, abssNode)))
         assertEquals(TreeVisitor.Action.CONTINUE, assetVisitAction(file, "tree", listOf(root, abssNode, assets)))
-        assertEquals(TreeVisitor.Action.INTERRUPT, assetVisitAction(file, "tree", listOf(root, abssNode, assets, tree)))
-        assertEquals(TreeVisitor.Action.SKIP_CHILDREN,
-            assetVisitAction(file, "other", listOf(root, abssNode, assets, tree))
-        )
+        assertEquals(TreeVisitor.Action.CONTINUE, assetVisitAction(file, "tree", listOf(root, abssNode, assets, group)))
+        assertEquals(TreeVisitor.Action.INTERRUPT, assetVisitAction(file, "tree", listOf(root, abssNode, assets, group, tree)))
+        assertEquals(TreeVisitor.Action.SKIP_CHILDREN, assetVisitAction(file, "other", listOf(root, abssNode, assets, group, tree)))
         val scenes = children(abssNode).single { label(it) == "scenes" }
         assertEquals(TreeVisitor.Action.SKIP_CHILDREN, assetVisitAction(file, "tree", listOf(root, abssNode, scenes)))
     }

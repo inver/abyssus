@@ -40,7 +40,9 @@ class UnusedFilterTest : BasePlatformTestCase() {
         return abss.children.map { it as AbstractTreeNode<*> }.single { text(it).startsWith("Assets") }
     }
 
-    private fun listed() = assetsNode().children.map { text(it as AbstractTreeNode<*>).substringBefore("  ") }
+    private fun groups() = assetsNode().children.map { it as AbstractTreeNode<*> }
+
+    private fun listed() = groups().flatMap { it.children.map { c -> c as AbstractTreeNode<*> } }.map { text(it).substringBefore("  ") }
 
     fun testOffByDefaultListsEveryAsset() {
         assertEquals(listOf("dead1", "dead2", "dead3", "used"), listed())
@@ -77,5 +79,28 @@ class UnusedFilterTest : BasePlatformTestCase() {
         action.setSelected(event(), false)
         assertFalse(UnusedFilter.isOn(project))
         assertEquals("Show Only Unused Assets", action.templatePresentation.text)
+    }
+
+    fun testGroupWithoutUnusedAssetsIsHiddenAndCountsFollow() {
+        val scene = myFixture.findFileInTempDir("p/scenes/S.scene")
+        com.intellij.openapi.application.runWriteAction {
+            com.intellij.openapi.vfs.VfsUtil.saveText(scene, """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"used"}}}}},"1":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"TERRAIN","assetName":"hills"}}}}}}}}""")
+        }
+        myFixture.addFileToProject("p/assets/hills/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"${java.util.UUID.nameUUIDFromBytes("h1".toByteArray())}","type":"TERRAIN","additional":{}}""")
+        assertEquals(listOf("Models  4", "Terrains  1"), groups().map { text(it) })
+        UnusedFilter.set(project, true)
+        assertEquals(listOf("Models  3"), groups().map { text(it) })
+        assertEquals("Assets  3", text(assetsNode()))
+    }
+
+    fun testPressedStateShowsTheAmberIcon() {
+        val action = UnusedFilterAction()
+        val off = TestActionEvent.createTestEvent(action)
+        action.update(off)
+        assertSame(net.nevinsky.abyssus.plugin.filetype.TreeActionIcons.UNUSED_FILTER, off.presentation.icon)
+        UnusedFilter.set(project, true)
+        val on = TestActionEvent.createTestEvent(action)
+        action.update(on)
+        assertSame(net.nevinsky.abyssus.plugin.filetype.TreeActionIcons.UNUSED_FILTER_SELECTED, on.presentation.icon)
     }
 }

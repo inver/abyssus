@@ -57,7 +57,7 @@ fun findTopLevelAssets(project: Project): List<VirtualFile> {
 }
 
 private fun assetIcon(file: VirtualFile): Icon =
-    if (file.extension == ProjectLayout.PROJECT_EXTENSION) AbyssusProjectIcons.FILE else SceneIcons.FILE
+    if (file.extension == ProjectLayout.PROJECT_EXTENSION) AbyssusProjectIcons.PROJECT else SceneIcons.FILE
 
 /** Top level of the view: every `.abss` project (and any scene outside a project), with no folder nodes. */
 class AbyssusRootNode(project: Project, settings: ViewSettings?) :
@@ -69,7 +69,7 @@ class AbyssusRootNode(project: Project, settings: ViewSettings?) :
 
     override fun update(presentation: PresentationData) {
         presentation.presentableText = project!!.name
-        presentation.setIcon(AllIcons.Nodes.Project)
+        presentation.setIcon(AbyssusProjectIcons.PROJECT)
     }
 }
 
@@ -119,10 +119,13 @@ class DtoEntry(
     // row looks (the toggle state, a scalar's value, the entity type) must take part to avoid stale rows.
     override fun equals(other: Any?) =
         other is DtoEntry && other.path == path && other.enabled == enabled && rowText(other) == rowText(this) &&
-                (if (isScalar(value)) scalarOf(value) == scalarOf(other.value) else !isScalar(other.value)) &&
-                (value as? Asset<*>)?.unused == (other.value as? Asset<*>)?.unused && entityType() == other.entityType()
-
+            (if (isScalar(value)) scalarOf(value) == scalarOf(other.value) else !isScalar(other.value)) &&
+            (value as? Asset<*>)?.unused == (other.value as? Asset<*>)?.unused && entityType() == other.entityType() &&
+            isGame == other.isGame
     override fun hashCode() = path.hashCode()
+
+    /** A component row of a component the game project registers; it carries the `game` badge. */
+    val isGame: Boolean get() = isComponentEntry(this) && isGameComponent(name)
 }
 
 /** Reads only the admitted row's JSON, without loading runtime components or assets. */
@@ -138,8 +141,9 @@ private fun entryIcon(entry: DtoEntry): Icon {
     val dto = entry.value
     return when {
         dto is List<*> && entry.name == "scenes" -> ScenesIcons.LIST
-        dto is List<*> && entry.name == "assets" -> AllIcons.Nodes.Folder
-        dto is UiScreen -> AllIcons.Actions.PreviewDetails
+        dto is FolderRow -> if (dto.kind == FolderKind.UI) ScenesIcons.UI else ScenesIcons.ASSETS
+        dto is TypeGroup -> ScenesIcons.FOLDER
+        dto is UiScreen -> ScenesIcons.UI_SCREEN
         dto is WaterGroup -> AllIcons.Nodes.Folder
         dto is WaterSurface -> AllIcons.Nodes.Variable
         dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
@@ -218,10 +222,12 @@ class DtoEntryNode(
             else -> childrenOf(dto)
         }.filterNot { sceneFileOf(v) != null && it.name in SCENE_HEADER }.foldToggles()
         return rows.mapIndexed { i, row ->
-            child(
-                row,
-                if (dto is List<*>) elementLabel(v.name, row.value, i) else null
-            )
+            val label = when {
+                dto is List<*> -> elementLabel(v.name, row.value, i)
+                row.value is Asset<*> -> row.value.name // an asset in a type group or under UI is named by its folder
+                else -> null
+            }
+            child(row, label)
         }
     }
 
@@ -238,6 +244,7 @@ class DtoEntryNode(
             presentation.addText(shown.label, attrs)
             shown.secondary?.let { presentation.addText("  $it", secondaryAttrs) }
         }
-        presentation.setIcon(entryIcon(v))
+        // a disabled row, and everything under a disabled one, shows a dimmed icon
+        presentation.setIcon(entryIcon(v).let { if (isDisabled) com.intellij.openapi.util.IconLoader.getDisabledIcon(it) else it })
     }
 }

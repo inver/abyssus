@@ -32,13 +32,16 @@ class PhysicsComponentKinds(private val messages: EditorMessages) {
                                       min: Double? = null, exclusive: Boolean = false) =
         ComponentField(name, FieldKind.FLOAT, { c: C -> get(c).let { if (it == it.toInt().toFloat()) it.toInt().toString() else it.toString() } },
             { c, text -> set(c, text.trim().toFloat()) }, label = messages.message("physics.${name.substringBefore('.')}"),
-            min = min, minExclusive = exclusive)
+            min = min, minExclusive = exclusive, unit = UNITS[name].orEmpty())
 
     private fun <C : Component> vector(name: String, get: (C) -> Vector3, positive: Boolean = false) = listOf(
         number<C>("$name.x", { get(it).x }, { c, v -> get(c).x = v }, if (positive) 0.0 else null, positive),
         number<C>("$name.y", { get(it).y }, { c, v -> get(c).y = v }, if (positive) 0.0 else null, positive),
         number<C>("$name.z", { get(it).z }, { c, v -> get(c).z = v }, if (positive) 0.0 else null, positive),
     )
+
+    /** The unit the panel shows after a number. */
+    private val UNITS = mapOf("mass" to "kg", "radius" to "m", "halfHeight" to "m", "minDistance" to "m", "maxDistance" to "m")
 
     val kinds: List<ComponentKind<*>> = listOf(
         kind(RigidBodyComponent::class.java, listOf(

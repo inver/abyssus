@@ -2,8 +2,17 @@
 
 ![Build](https://github.com/inver/abyssus/workflows/Build/badge.svg)
 
-An independent libGDX scene editor in the IntelliJ Platform:
-browse a project's scenes and assets, inspect asset metadata, and view and lay out a scene in a 3D view.
+Abyssus is an independent libGDX scene editor plugin for IntelliJ-based IDEs.
+
+- **Projects and assets:** browse native Abyssus projects, scenes and assets, and edit asset properties.
+- **3D scene editing:** select and arrange objects with undoable move and rotate gizmos.
+- **Model import:** import models and FlightGear aircraft.
+- **Terrain and foliage:** generate terrain and paint trees, rocks and grass.
+- **Environments:** build scenes with water, procedural skies, lighting and cloud shadows.
+- **Game UI:** author menus and HUDs in a visual editor with interactive previews.
+- **Physics and Play:** test physics and game logic in a separate process.
+- **GPU ray tracing:** preview scenes with optional ray tracing.
+
 Contributors and coding agents: start at [AGENTS.md](AGENTS.md).
 
 <!-- Plugin description -->

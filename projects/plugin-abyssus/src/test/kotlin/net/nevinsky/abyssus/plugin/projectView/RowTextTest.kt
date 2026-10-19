@@ -17,7 +17,9 @@ class RowTextTest : BasePlatformTestCase() {
 
     fun testFoldersAreLabelledAndCounted() {
         assertEquals(RowText("Scenes", "2"), rowText(entry("scenes", listOf(1, 2))))
-        assertEquals(RowText("Assets", "0"), rowText(entry("assets", emptyList<Asset<Any>>())))
+        assertEquals(RowText("Assets", "0"), rowText(entry("assets", FolderRow(FolderKind.ASSETS, emptyList()))))
+        assertEquals(RowText("UI", "0"), rowText(entry("ui", FolderRow(FolderKind.UI, emptyList()))))
+        assertEquals(RowText("Skyboxes", "0"), rowText(entry("SKYBOX", TypeGroup("SKYBOX", emptyList()))))
     }
 
     fun testEcsShowsItsEntityCount() {

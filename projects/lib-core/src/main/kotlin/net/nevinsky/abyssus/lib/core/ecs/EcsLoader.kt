@@ -5,10 +5,13 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
+import net.nevinsky.abyssus.lib.core.format.isEnabled
+import net.nevinsky.abyssus.lib.core.format.ENABLED_KEY
 import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
+import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
@@ -85,15 +88,21 @@ class EcsLoader(
     ): Entity {
         val entity = Entity()
         entity.add(IdComponent(id.toLong()))
+        val state = EnabledState(entityEnabled = isEnabled(node))
         node.obj("components")?.properties()?.forEach { (name, value) ->
             val type = componentRegistry.get(name)
-            if (type == null) {
+            if (type == null || componentRegistry.isReserved(type)) {
                 carried[name] = value
-                readerAndWarnings.second.warn("component $name is not modeled and is kept unchanged")
+                readerAndWarnings.second.warn(
+                    if (type == null) "component $name is not modeled and is kept unchanged"
+                    else "component $name declares a field named '$ENABLED_KEY', which the scene format reserves; it is kept unchanged"
+                )
                 return@forEach
             }
+            // the flag is the file's, not the component's: strip it before binding so a class never sees it
+            val bound = stripEnabled(value)
             val component = try {
-                readerAndWarnings.first.readValue(value, type)
+                readerAndWarnings.first.readValue(bound, type)
             } catch (e: Exception) {
                 carried[name] = value
                 readerAndWarnings.second.warn(
@@ -103,10 +112,18 @@ class EcsLoader(
                 )
                 return@forEach
             }
-            if (component is SourceBackedComponent) component.adoptSource(value)
+            if (component is SourceBackedComponent) component.adoptSource(bound)
+            if (!isEnabled(value)) state.disabledComponents.add(type)
             entity.add(component)
         }
+        if (!state.isDefault) entity.add(state)
         return entity
+    }
+
+    /** [value] without its `enabled` flag; the same node when it has none. */
+    private fun stripEnabled(value: JsonNode): JsonNode {
+        if (!value.isObject || !value.has(ENABLED_KEY)) return value
+        return (value.deepCopy<ObjectNode>()).also { it.remove(ENABLED_KEY) }
     }
 
     private fun resolveReferences(engine: SceneEngine, warnings: Pair<ObjectReader, EcsReadWarnings>) {

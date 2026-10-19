@@ -22,6 +22,19 @@ class PhysicsComponentKindsTest {
         assertEquals("""{"mass":2,"extension":{"n":0.123450}}""", preserved.at("/ecs/entities/0/components/RigidBodyComponent").toString())
     }
 
+    @Test fun unitsAndDimDefaultsComeFromTheKindsAndTheFile() {
+        val root = scene(""""RigidBodyComponent":{"mass":0.5},"ColliderComponent":{"shape":"SPHERE","radius":0.15}""")
+        val body = editor.read(root, "0", "RigidBodyComponent")!!.associateBy { it.field }
+        assertEquals("kg", body.getValue("mass").unit)
+        assertFalse(body.getValue("mass").isDefault)
+        assertTrue(body.getValue("friction").isDefault)
+        assertEquals("", body.getValue("friction").unit)
+        val collider = editor.read(root, "0", "ColliderComponent")!!.associateBy { it.field }
+        assertEquals("m", collider.getValue("radius").unit)
+        assertFalse(collider.getValue("radius").isDefault)
+        assertTrue(collider.getValue("halfHeight").isDefault)
+    }
+
     @Test fun returningNestedFieldsToDefaultsPreservesUnknownChildren() {
         val root = scene(""""ColliderComponent":{"offset":{"x":1,"extension":{"n":0.123450}},"halfExtents":{"x":1,"y":0.5000,"extension":42}}""")
         assertEquals(EditResult.Changed, editor.update(root,"0","ColliderComponent","offset.x","0"))

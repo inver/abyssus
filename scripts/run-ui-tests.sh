@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
-# Runs the Remote Robot UI tests end to end: copies the Untitled fixture, starts a sandbox IDE with robot-server,
+# Runs the Remote Robot UI tests end to end: copies the Untitled fixture (or ABYSSUS_UI_FIXTURE), starts a sandbox IDE with robot-server,
 # waits for it, runs :plugin-abyssus:uiTest, and stops the IDE it started (and only that one).
 #
 #   scripts/run-ui-tests.sh [--tests <class-or-pattern>] [-- <extra gradle args>]
 #
 # Environment: ABYSSUS_UI_PORT (default 8082), ABYSSUS_UI_STARTUP_TIMEOUT seconds (default 300),
 # ABYSSUS_UI_KEEP_WORK=1 keeps the temporary project and sandbox.
+# ABYSSUS_UI_FIXTURE=<project folder, absolute or relative to the repository> runs against that project instead of Untitled
+# (e.g. projects/app-game-control-line/project/ControlLine with --tests '*ControlLine*'); each test class runs only on its own project.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="${ABYSSUS_UI_PORT:-8082}"
 STARTUP_TIMEOUT="${ABYSSUS_UI_STARTUP_TIMEOUT:-300}"
-FIXTURE="$ROOT/projects/plugin-abyssus/src/test/testData/project/Untitled"
+FIXTURE="${ABYSSUS_UI_FIXTURE:-$ROOT/projects/plugin-abyssus/src/test/testData/project/Untitled}"
+[[ "$FIXTURE" == /* ]] || FIXTURE="$ROOT/$FIXTURE"
+FIXTURE="$(cd "$FIXTURE" && pwd)"
 REPORTS="$ROOT/projects/plugin-abyssus/build/reports/ui-tests"
 LOCK="${TMPDIR:-/tmp}/abyssus-ui-tests-$PORT.lock"
 
@@ -26,7 +30,7 @@ if ! mkdir "$LOCK" 2>/dev/null; then
 fi
 
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/abyssus-ui.XXXXXX")"
-PROJECT="$WORK/project/Untitled"
+PROJECT="$WORK/project/$(basename "$FIXTURE")"
 SANDBOX="$WORK/sandbox"
 IDE_LOG="$WORK/ide-gradle.log"
 IDE_PID=""
@@ -72,7 +76,7 @@ until curl -fs -o /dev/null "http://127.0.0.1:$PORT"; do
   sleep 3
 done
 
-./gradlew --console=plain :plugin-abyssus:uiTest "-PuiProject=$PROJECT" "-PuiRobotUrl=http://127.0.0.1:$PORT" ${FILTER[@]+"${FILTER[@]}"} "$@"
+./gradlew --console=plain :plugin-abyssus:uiTest "-PuiProject=$PROJECT" "-PuiFixtureSource=$FIXTURE" "-PuiRobotUrl=http://127.0.0.1:$PORT" ${FILTER[@]+"${FILTER[@]}"} "$@"
 
 after="$(hash_fixture)"
 [[ "$before" == "$after" ]] || { echo "The committed Untitled fixture changed during the run" >&2; exit 6; }

@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.headless
 
+import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
+import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.format.FormatRejection
@@ -56,6 +58,7 @@ class HeadlessEditing(
     private val components = ComponentEditor(messages)
     private val assetMeta = AssetMetaEditor(AssetFieldDescriptions(), format)
     private val foliageEdits = FoliageComponentEdits()
+    private val enabledAction = SetEnabledAction()
 
     /** Null when [text] is a supported native document of [kind], else why it is refused. */
     fun validate(text: String, kind: DocumentKind): Refusal? {
@@ -90,6 +93,14 @@ class HeadlessEditing(
         }
         return rejected?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome
     }
+
+    /**
+     * Disables or enables an entity or one of its components in [sceneText]: `enabled: false` is written on that entry
+     * only, and enabling removes the key, as the Properties check box and the tree eye do. Unchanged when the target is
+     * missing, cannot be switched, or already has that state.
+     */
+    fun setEnabled(sceneText: String, target: EnabledTarget, enabled: Boolean): HeadlessEdit =
+        edit(sceneText, DocumentKind.SCENE) { root -> enabledAction.apply(root, target, enabled) }
 
     /** Gives the terrain entity [entityId] of [sceneText] a foliage component naming [foliage], as Add Foliage does. */
     fun setFoliage(sceneText: String, entityId: String, foliage: String): HeadlessEdit =

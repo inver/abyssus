@@ -51,8 +51,7 @@ fun footerCounts(project: Project): FooterCounts {
 }
 
 /** `N scenes · N assets · N unused` strip under the tree; recounts when scene, project or `meta.json` files change. */
-class AbyssusFooter(private val project: Project, private val parent: Disposable) :
-    JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(16), JBUI.scale(6))) {
+class AbyssusFooter(private val project: Project, private val parent: Disposable) : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(16), JBUI.scale(5))) {
     private val scenes = JBLabel()
     private val assets = JBLabel()
     private val unused = JBLabel().apply { foreground = AMBER }
@@ -75,6 +74,9 @@ class AbyssusFooter(private val project: Project, private val parent: Disposable
         }
         refresh()
     }
+
+    /** The design's 28 px strip. */
+    override fun getPreferredSize(): java.awt.Dimension = super.getPreferredSize().also { it.height = JBUI.scale(FOOTER_HEIGHT) }
 
     private fun relevant(event: VFileEvent): Boolean {
         return net.nevinsky.abyssus.plugin.dto.isNativeDocumentPath(event.path) ||
@@ -100,7 +102,8 @@ class AbyssusFooter(private val project: Project, private val parent: Disposable
     /** The texts shown, for tests. */
     internal fun texts() = listOf(scenes.text, assets.text, unused.text)
 
-    private companion object {
+    internal companion object {
+        const val FOOTER_HEIGHT = 28
         val SECONDARY: Color = JBColor.GRAY
         val AMBER: Color = JBColor(Color(0xB07A1F), Color(0xE0A458))
     }

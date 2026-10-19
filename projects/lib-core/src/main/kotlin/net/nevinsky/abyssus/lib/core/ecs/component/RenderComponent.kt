@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.lib.core.ecs.component
 
+import net.nevinsky.abyssus.lib.core.ecs.activeComponent
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -12,6 +13,6 @@ class RenderComponent(
 
 /** The asset folder an entity renders, when its render component has the requested type. */
 fun assetName(entity: Entity, type: MetaType): String? {
-    val renderable = entity.getComponent(RenderComponent::class.java) ?: return null
+    val renderable = entity.activeComponent(RenderComponent::class.java) ?: return null
     return renderable.assetName.takeIf { renderable.type == type }
 }

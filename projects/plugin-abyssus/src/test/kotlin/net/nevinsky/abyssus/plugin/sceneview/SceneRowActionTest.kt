@@ -45,7 +45,7 @@ class SceneRowActionTest : BasePlatformTestCase() {
         assertNull(viewableSceneFile(projectNode))
         val scenes = children(projectNode).single { text(it).startsWith("Scenes") }
         assertNull(viewableSceneFile(scenes))
-        assertNull(viewableSceneFile(children(projectNode).single { text(it).startsWith("name") }))
+        assertNull(viewableSceneFile(children(projectNode).single { text(it).startsWith("Assets") }))
     }
 
     fun testSceneEntryInsideProjectHasViewTarget() {
