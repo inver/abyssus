@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.plugin.projectView.asset
+package net.nevinsky.abyssus.plugin.projectView.action.asset
 
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -21,8 +21,12 @@ import net.nevinsky.abyssus.plugin.projectView.*
 
 private val LOG = Logger.getInstance("net.nevinsky.abyssus.projectView.AssetSelection")
 
-/** The only actions offered on the Assets folder row, in order. */
-internal val ASSETS_MENU_ACTION_IDS = listOf("Abyssus.Menu.ImportModel", "Abyssus.Menu.New")
+
+class AssetDropdownAction : DropdownAction {
+    override val actionIds = listOf("Abyssus.Menu.ImportModel", "Abyssus.Menu.New")
+
+    override fun appliesTo(node: Any?) = assetsNodeProjectFile(node) != null
+}
 
 /** The project file (`.abss`) a selected Assets node belongs to, or null for any other node. */
 fun assetsNodeProjectFile(node: Any?): VirtualFile? {
@@ -76,7 +80,7 @@ fun selectAssetInAbyssusView(project: Project, abss: VirtualFile, assetName: Str
     try {
         selectInAbyssusView(
             project,
-            TreeVisitor { path -> assetVisitAction(abss, assetName, path.path.map(TreeUtil::getUserObject)) },
+            { path -> assetVisitAction(abss, assetName, path.path.map(TreeUtil::getUserObject)) },
             refresh = true
         )
     } catch (e: Throwable) {

@@ -23,8 +23,9 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.filetype.EyeIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneViewIcons
-import net.nevinsky.abyssus.plugin.projectView.asset.AssetDropdownAction
+import net.nevinsky.abyssus.plugin.projectView.action.asset.AssetDropdownAction
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneDropdownAction
+import net.nevinsky.abyssus.plugin.projectView.action.ui.UiDropdownAction
 import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
 import net.nevinsky.abyssus.plugin.sceneview.openSceneView
 import java.awt.*
@@ -174,6 +175,7 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
     private val dropdownActions: List<DropdownAction> = listOf(
         AssetDropdownAction(),
         SceneDropdownAction(),
+        UiDropdownAction(),
     )
 
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
@@ -276,7 +278,9 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
             val row = rowOf(e)
             if (row != null) {
                 val node = TreeUtil.getUserObject(getPathForRow(row)?.lastPathComponent)
-                if (dropdownActions.any { it.openDropdown(this, e, row, node) }) return
+                if (dropdownActions.any { it.openDropdown(this, e, row, node) }) {
+                    return
+                }
             }
         }
         super.processMouseEvent(e)
