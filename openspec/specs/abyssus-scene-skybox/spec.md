@@ -30,30 +30,30 @@ for `skyboxEnabled`.
 
 ### Requirement: Skybox chooser button
 
-The skybox row of a scene that belongs to a `.abss` project SHALL show a clickable `Choose` button (a thin rounded outline with a swap icon and the label "Choose") at the right edge of the
-row, to the left of the eye icon. A scene outside any project SHALL NOT show the `Choose` button. Clicking the eye SHALL keep
-flipping `skyboxEnabled`; clicking `Choose` SHALL NOT.
+The skybox row of a scene SHALL NOT show a `Choose` button. The chooser SHALL be opened from the skybox field of Abyssus
+Properties (see the `object-properties-panel` capability) for a scene that belongs to a `.abss` project. A scene outside any
+project SHALL offer no way to open the chooser. Clicking the eye on the skybox row SHALL keep flipping `skyboxEnabled`.
 
 #### Scenario: Project scene shows the button and the eye
 
 - **WHEN** a user expands a scene listed under a `.abss` project
-- **THEN** its `skybox` row shows the `Choose` button and, to its right, the eye icon, each with a hand cursor on hover
+- **THEN** its `skybox` row shows the eye icon at the right edge, with a hand cursor on hover, and no `Choose` button
 
 #### Scenario: Standalone scene has no chooser
 
-- **WHEN** a user expands a `.scene` file that is not in a project's `scenes` folder
-- **THEN** its `skybox` row shows the eye icon but no `Choose` button
+- **WHEN** a user selects a `.scene` file that is not in a project's `scenes` folder
+- **THEN** its skybox field in Abyssus Properties shows no Browse button
 
 ### Requirement: Skybox chooser dialog
 
-Clicking `Choose` SHALL open a modal dialog titled "Choose a skybox" whose header shows how many skyboxes the current filter
-matches ("N found"). Its list SHALL hold a "None" entry, described as "clear the field", followed by every asset folder
-of the scene's project whose `meta.json` type is `SKYBOX`, `SKYBOX_PROCEDURAL` or `SKYBOX_HDR`, by folder name in
-alphabetical order.
+Pressing the Browse button of the skybox field SHALL open a modal dialog titled "Choose a skybox" whose header shows how
+many skyboxes the current filter matches ("N found"). Its list SHALL hold a "None" entry, described as "clear the field",
+followed by every asset folder of the scene's project whose `meta.json` type is `SKYBOX`, `SKYBOX_PROCEDURAL` or
+`SKYBOX_HDR`, by folder name in alphabetical order.
 
 #### Scenario: Lists the project's skyboxes
 
-- **WHEN** the user clicks `Choose` on a scene of the `Untitled` test project
+- **WHEN** the user presses Browse on the skybox field of a scene of the `Untitled` test project
 - **THEN** the dialog is titled "Choose a skybox", reads "3 found", and lists "None", `skybox_default`, `skybox_hdr`
   and `skybox_physical`, and no model, terrain, texture, material or shader asset
 

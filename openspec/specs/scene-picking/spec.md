@@ -50,3 +50,17 @@ itself SHALL NOT modify the scene file or any project file.
 - **WHEN** the clicked entity's node cannot be found in the Abyssus view (for example the project
   view is not showing the Abyssus pane)
 - **THEN** the Abyssus view is opened if possible, otherwise nothing happens and nothing fails
+
+## ADDED Requirements
+
+### Requirement: Disabled entities are not picked
+
+A disabled entity, and the models of its disabled components, SHALL NOT be drawn in the scene view and SHALL NOT be picked by a click. Selecting the entity in the tree SHALL still show it in Properties.
+
+#### Scenario: Click through a disabled entity
+- **WHEN** a disabled entity lies in front of an enabled one and the user clicks there
+- **THEN** the enabled entity is picked
+
+#### Scenario: Tree selection
+- **WHEN** a disabled entity is selected in the tree
+- **THEN** Properties shows it with its sections dim and no gizmo is drawn

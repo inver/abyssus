@@ -4,7 +4,7 @@
 
 Defines how the Scene view shades what it draws, adding a Wireframe mode alongside Lit and Unlit so the user can inspect the edge topology of models, terrain, foliage, skybox and water.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Wireframe shading mode exists
 
