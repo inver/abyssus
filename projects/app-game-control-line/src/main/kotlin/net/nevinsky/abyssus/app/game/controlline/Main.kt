@@ -16,7 +16,7 @@ private val log = LoggerFactory.getLogger("control-line")
 
 /**
  * Starts the game on the project in the `controlLine.project` system property (`./gradlew :games:control-line:run`
- * sets it to the bundled project), or `project/ControlLine` under the working folder.
+ * sets it to the bundled project), or the bundled `project/ControlLine` of the distribution (see `defaultProjectFolder`).
  *
  * The opt-in ray-traced field view is chosen with `controlLine.fieldView=ray`. It lives in the `ray` source set and is
  * loaded reflectively here so the shipped main classpath never sees it. On `Unavailable` (classes absent, probe refused,
@@ -24,7 +24,7 @@ private val log = LoggerFactory.getLogger("control-line")
  * crashes and never switches silently. Without the option the field renders exactly as before.
  */
 fun main() {
-    val project = Path.of(System.getProperty("controlLine.project") ?: "project/ControlLine").toAbsolutePath()
+    val project = (System.getProperty("controlLine.project")?.let { Path.of(it) } ?: defaultProjectFolder()).toAbsolutePath()
     val config = Lwjgl3ApplicationConfiguration().apply {
         setTitle("Control Line")
         setWindowedMode(1280, 720)
@@ -51,6 +51,20 @@ fun main() {
         }
     }
     Lwjgl3Application(game, config)
+}
+
+/**
+ * The project folder without the property: `project/ControlLine` beside the distribution's `lib` folder when the game
+ * runs from its jars, otherwise under the working folder.
+ */
+internal fun defaultProjectFolder(): Path {
+    val bundled = try {
+        val jar = Path.of(ControlLineGame::class.java.protectionDomain.codeSource.location.toURI())
+        jar.parent?.parent?.resolve("project/ControlLine")
+    } catch (unresolvable: Exception) {
+        null
+    }
+    return bundled?.takeIf { java.nio.file.Files.isDirectory(it) } ?: Path.of("project/ControlLine")
 }
 
 /** The result of resolving the optional ray-traced field view at launch. */

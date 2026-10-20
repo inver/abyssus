@@ -13,6 +13,9 @@ plugins {
     id("abyssus.dependency-platforms")
 }
 
+/** Builds one distribution for every OS: Jolt natives of all platforms, `-XstartOnFirstThread` chosen at launch. */
+val universalDist: Boolean = providers.gradleProperty("abyssus.universalDist").orNull == "true"
+
 /** The jolt-jni platform of the machine running the build. */
 val joltJniBuildPlatform: String = run {
     val os = System.getProperty("os.name").lowercase()
@@ -35,6 +38,12 @@ dependencies {
         }
     }
     runtimeOnly("com.github.stephengold:jolt-jni-$joltJniBuildPlatform:${libs.versions.jolt.get()}:ReleaseSp")
+    // the universal distribution (-Pabyssus.universalDist=true) carries Jolt's natives of every desktop platform
+    if (universalDist) {
+        listOf("Linux64", "Windows64", "MacOSX64", "MacOSX_ARM64").filter { it != joltJniBuildPlatform }.forEach {
+            runtimeOnly("com.github.stephengold:jolt-jni-$it:${libs.versions.jolt.get()}:ReleaseSp")
+        }
+    }
     testImplementation(libs.junit4)
     testImplementation(testFixtures(project(":lib-core")))
     testImplementation(testFixtures(project(":lib-gdx")))
@@ -135,9 +144,29 @@ tasks.named("check") { dependsOn(checkShippedClasspath) }
 
 application {
     mainClass.set("net.nevinsky.abyssus.app.game.controlline.MainKt")
-    // GLFW needs the process's first thread on macOS
-    if (System.getProperty("os.name").lowercase().contains("mac")) applicationDefaultJvmArgs =
+    // GLFW needs the process's first thread on macOS; the universal distribution's start script adds it on Darwin only
+    if (!universalDist && System.getProperty("os.name").lowercase().contains("mac")) applicationDefaultJvmArgs =
         listOf("-XstartOnFirstThread")
+}
+
+if (universalDist) {
+    tasks.named<CreateStartScripts>("startScripts") {
+        doLast {
+            unixScript.writeText(
+                unixScript.readText().replace(
+                    "\nDEFAULT_JVM_OPTS=\"\"\n",
+                    "\nDEFAULT_JVM_OPTS=\"\"\n\$darwin && DEFAULT_JVM_OPTS='\"-XstartOnFirstThread\"'\n"
+                )
+            )
+        }
+    }
+}
+
+// the distribution carries the game's project, which the game finds beside its lib folder
+distributions.main {
+    contents {
+        from(gameProject) { into("project/ControlLine") }
+    }
 }
 
 tasks.named<JavaExec>("run") {

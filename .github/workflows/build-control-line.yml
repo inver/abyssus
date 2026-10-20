@@ -1,4 +1,4 @@
-name: Build Control Line distributives
+name: Build Control Line universal distribution
 
 on:
   push:
@@ -9,16 +9,16 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # A running main build may be mid-release; only superseded pull request builds are cancelled
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: write
 
 jobs:
   build:
-    name: Build ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+    name: Build universal distribution
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,15 +30,27 @@ jobs:
           java-version: 21
           cache: gradle
 
+      # One archive for Windows, macOS and Linux: natives of every platform, the macOS launch flag chosen at start
       - name: Build Control Line distribution
-        run: ./gradlew :app-game-control-line:installDist --no-daemon
-
-      - name: List built distribution
-        run: find projects/app-game-control-line/build/install/app-game-control-line -type f | sort
+        run: ./gradlew :app-game-control-line:distZip -Pabyssus.universalDist=true --no-daemon
 
       - name: Upload distribution
         uses: actions/upload-artifact@v4
         with:
-          name: control-line-${{ matrix.os }}
-          path: projects/app-game-control-line/build/install/app-game-control-line
+          name: control-line-universal
+          path: projects/app-game-control-line/build/distributions/*.zip
           retention-days: 30
+
+      # Rolling pre-release: the previous canary and its tag are replaced by the build of this commit
+      - name: Publish canary release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          short_sha="${GITHUB_SHA::7}"
+          gh release delete canary --cleanup-tag --yes || true
+          gh release create canary projects/app-game-control-line/build/distributions/*.zip \
+            --target "$GITHUB_SHA" \
+            --title "Control Line canary ($short_sha)" \
+            --notes "Automated build of \`main\` at $GITHUB_SHA. Universal archive for Windows, macOS and Linux; may be unstable." \
+            --prerelease
