@@ -1,0 +1,44 @@
+name: Build Control Line distributives
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Build Control Line distribution
+        run: ./gradlew :app-game-control-line:installDist --no-daemon
+
+      - name: List built distribution
+        run: find projects/app-game-control-line/build/install/app-game-control-line -type f | sort
+
+      - name: Upload distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-line-${{ matrix.os }}
+          path: projects/app-game-control-line/build/install/app-game-control-line
+          retention-days: 30
