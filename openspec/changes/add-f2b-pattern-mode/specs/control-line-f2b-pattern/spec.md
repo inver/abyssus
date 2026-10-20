@@ -128,8 +128,9 @@ the landing can be flown with the engine stopped.
 
 The game SHALL keep `~/.abyssus-control-line/f2b-scores.json` with one board of the 10 best F2B flights per assist
 level. Each flight SHALL have name, plane, score, flight time, date and its 15 marks. A board SHALL rank best score
-first, earlier flights first among equal scores. A flight SHALL enter its level's board when that board has fewer than
-10 flights or the flight beats its lowest score.
+first, earlier flights first among equal scores. A human flight SHALL enter its level's board when that board has fewer
+than 10 flights or the flight beats its lowest score. An AI demonstration (`add-f2b-ai-demonstration`) SHALL NOT enter a
+board.
 
 #### Scenario: A Mid flight
 

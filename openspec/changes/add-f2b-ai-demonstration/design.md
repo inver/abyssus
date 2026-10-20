@@ -43,7 +43,7 @@ Alternative: open-loop timed handle commands. Rejected because small phase error
 
 ### 3. Landing uses the existing fuel and outcome rules
 
-Complete airborne figures with enough time before the 360 s fuel cutoff, wait at the base if early, and begin the landing sequence from base flight when thrust ends. Use airspeed, height and descent feedback to manage the glide and flare while staying on the lines. Do not add an AI-only engine cutoff or change scene fuel. Full success means all 15 rows positive, `FlightEnd.LANDED`, time <= 420 s, upright touchdown and horizontal distance <= line length + 0.5 m (18.5 m for Stunter).
+Complete airborne figures with enough time before the 360 s fuel cutoff, wait at the base if early, and begin the landing sequence from base flight when thrust ends. Use airspeed, height and descent feedback to manage the glide and flare while staying on the lines. Do not add an AI-only engine cutoff or change scene fuel. Full success means all 15 rows positive, `FlightEnd.LANDED`, time <= 420 s, upright touchdown and the line ends' horizontal distance <= line length + 0.5 m (18.5 m for Stunter). The distance is measured where the lines meet the plane (its leadouts), not at its centre of gravity: the Stunter's leadouts are 0.75 m inboard, so with taut lines its centre of gravity rests about 18.7 m from the pilot even parked at takeoff (measured during apply), which no control can change.
 
 The early physical milestone must prove glide/flare and full-schedule feasibility against the committed aircraft. If the current model cannot satisfy it, report the concrete limiting measurement and revisit scope explicitly; do not loosen scoring, alter aircraft values or mark the task complete to make the demo pass.
 

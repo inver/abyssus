@@ -65,9 +65,9 @@ Apply after `add-f2b-pattern-mode`. All code is in `projects/app-game-control-li
   - Free flight has no Debrief;
   - Replaying the best Pro flight, where Escape returns to the Pro tab with the first row selected;
   - a missing recording opens sheet-only.
-- [ ] 3.2 Add the optional `width` to `LineSegment`, and batch by width in `FieldRenderer`. Verify by compiling, and
+- [x] 3.2 Add the optional `width` to `LineSegment`, and batch by width in `FieldRenderer`. Verify by compiling, and
   with M1: control lines still look the same in Free flight.
-- [ ] 3.3 Draw the debrief in `ControlLineGame`: a fresh field scene, the recorded plane posed from `planePose()`
+- [x] 3.3 Draw the debrief in `ControlLineGame`: a fresh field scene, the recorded plane posed from `planePose()`
   (or a cross when no plane has that name), the pilot hidden in the pilot view, and segments coloured by tag. Wire
   the keys: Up and Down, Space, R, 1, 2, 3, V and Escape. Add the debrief layout to `GameUi`: the sheet with the
   selected row, a legend, the deductions panel and the key help. Verify with manual checks:
@@ -83,7 +83,7 @@ Apply after `add-f2b-pattern-mode`. All code is in `projects/app-game-control-li
 
 ## 4. Integration
 
-- [ ] 4.1 Run `./gradlew check` and `scripts/check-docs.sh`. Verify that both pass.
+- [x] 4.1 Run `./gradlew check` and `scripts/check-docs.sh`. Verify that both pass.
 
 ## Workflow follow-up
 

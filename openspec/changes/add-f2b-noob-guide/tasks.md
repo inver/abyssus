@@ -37,7 +37,7 @@ single tests with `./gradlew :app-game-control-line:test --tests '<class>'`. Man
   - Choosing Noob: F2B → Noob → `Stunter` flies a Noob flight;
   - A Noob flight on the board: it enters only the Noob board, its tab highlights it, and its row opens the debrief;
   - Retry keeps Noob.
-- [ ] 2.2 In `GameUi`, give Noob Mid's HUD, the assist entry text and the Noob tab. In `ControlLineGame`, update the
+- [x] 2.2 In `GameUi`, give Noob Mid's HUD, the assist entry text and the Noob tab. In `ControlLineGame`, update the
   `GuidePlanner` after each advance of a Noob session and append its segments to the lines, coloured and sized by tag.
   In `FieldRenderer`, blend segments with alpha below 1. Verify with manual checks:
   - M1: a Noob flight shows the rings and the take-off guide at start;

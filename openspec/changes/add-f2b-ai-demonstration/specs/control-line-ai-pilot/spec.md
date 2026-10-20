@@ -14,11 +14,11 @@ Watch AI SHALL start the selected stunt plane stationary at its normal takeoff p
 - **THEN** the plane accelerates from rest, takes off, flies every scheduled figure and required pause, and lands by 7:00 with all 15 score-sheet rows positively marked
 
 ### Requirement: Landing in the circle
-After the final airborne figure the bot SHALL hold controlled base flight until the engine stops under the normal fuel rule, then glide to an upright landing in the flying circle. For the bundled Stunter it SHALL land within its line-length radius from the pilot's ground position, allowing 0.5 m physical tolerance, and meet the normal landing criteria.
+After the final airborne figure the bot SHALL hold controlled base flight until the engine stops under the normal fuel rule, then glide to an upright landing in the flying circle. For the bundled Stunter it SHALL land with its line ends (where the lines meet the plane, its leadouts) within its line-length radius from the pilot's ground position, allowing 0.5 m physical tolerance, and meet the normal landing criteria. The plane's centre of gravity lies outboard of its leadouts (0.75 m for the Stunter, about 18.7 m from the pilot with taut lines), so it is not the measured point.
 
 #### Scenario: Fuel exhaustion and landing
 - **WHEN** Stunter has completed the figures and reaches 360 seconds of flight
-- **THEN** its engine stops normally and the bot glides to an upright touchdown within 18.5 m horizontally of the pilot, with a Landed outcome by 7:00
+- **THEN** its engine stops normally and the bot glides to an upright touchdown with its line ends within 18.5 m horizontally of the pilot, with a Landed outcome by 7:00
 
 ### Requirement: Actual flight and independent judging
 The bot SHALL act through the same handle authority and flight rules as a human. It SHALL NOT move the plane along a prerecorded or ideal path, override fuel, bypass line tension, inject judged samples or assign marks. The normal judge SHALL score the actual flight; a perfect score is not required.

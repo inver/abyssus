@@ -76,9 +76,11 @@ class GameUiHost(
         val field = screen is Screen.NameEntry && presenter.navigator.focus == NAME_FIELD
         // the typed name reaches the model when the field commits, which Enter in the field does first
         if (enter && field) presenter.keyDown(keycode)
-        if (model.key(keycode, field)) return true
+        if (model.key(keycode, field, presenter.navigator.focus)) return true
         if (enter && field) return true
-        return presenter.keyDown(keycode, Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT))
+        // no input device in a test without a window: no shift
+        val input: Input? = Gdx.input
+        return presenter.keyDown(keycode, input != null && (input.isKeyPressed(Input.Keys.SHIFT_LEFT) || input.isKeyPressed(Input.Keys.SHIFT_RIGHT)))
     }
 
     /** Pointer and text input for the screens; the game puts it behind its own key processor. */

@@ -64,6 +64,9 @@ fun planeChoices(entities: Map<Int, Entity>): List<PlaneChoice> = entities.mapNo
     )
 }.sortedWith(compareBy<PlaneChoice> { it.name }.thenBy { it.entityId })
 
+/** Who holds the handle in a flight: the player, or the Watch AI bot (an F2B demonstration). */
+enum class Control { HUMAN, AI }
+
 /** The screens of the game and what each one holds. */
 sealed interface Screen {
     data object MainMenu : Screen
@@ -74,8 +77,11 @@ sealed interface Screen {
     /** Choosing a plane for a flight of [mode]; [index] into [GameFlow.choices] of the mode. */
     data class PlaneSelect(val index: Int, val mode: Mode = Mode.Free) : Screen
 
-    /** Flying [plane] in [mode]; [attempt] counts from 1 and grows with each retry, so a retry is a new flight. */
-    data class Flying(val plane: PlaneChoice, val attempt: Int = 1, val mode: Mode = Mode.Free) : Screen
+    /**
+     * Flying [plane] in [mode] with the handle held by [control]; [attempt] counts from 1 and grows with each retry, so a
+     * retry is a new flight.
+     */
+    data class Flying(val plane: PlaneChoice, val attempt: Int = 1, val mode: Mode = Mode.Free, val control: Control = Control.HUMAN) : Screen
 
     data class Paused(val flying: Flying) : Screen
 
@@ -219,6 +225,18 @@ class GameFlow(
         screen = Screen.Flying(choices(s.mode)[s.index], 1, s.mode)
     }
 
+    /** Whether plane select offers Watch AI: an F2B pattern with a stunt plane shown. */
+    val watchAiOffered: Boolean
+        get() = (screen as? Screen.PlaneSelect)?.let { it.mode is Mode.Pattern && choices(it.mode).getOrNull(it.index) != null } == true
+
+    /** Watch AI on F2B plane select: the bot flies the shown plane at the chosen assist level. Not offered in Free flight. */
+    fun watchAi() {
+        val s = screen as? Screen.PlaneSelect ?: return
+        if (s.mode !is Mode.Pattern) return
+        val plane = choices(s.mode).getOrNull(s.index) ?: return
+        screen = Screen.Flying(plane, 1, s.mode, Control.AI)
+    }
+
     // flying
 
     fun pause() {
@@ -231,9 +249,16 @@ class GameFlow(
         screen = s.flying
     }
 
-    /** The flight ended: GAME OVER, after the name entry when the score enters its table or board. */
+    /**
+     * The flight ended: GAME OVER, after the name entry when the score enters its table or board. An AI demonstration
+     * enters no board: straight to GAME OVER, with its report kept for the debrief.
+     */
     fun flightEnded(report: FlightReport) {
         val flying = screen as? Screen.Flying ?: return
+        if (flying.control == Control.AI) {
+            screen = Screen.GameOver(flying, report, null)
+            return
+        }
         val enters = when (val r = report.result) {
             is FlightResult.Free -> table.qualifies(r.score)
             is FlightResult.Pattern -> patternTable.qualifies(r.level, r.sheet.tenths / 10.0)
@@ -259,10 +284,10 @@ class GameFlow(
         screen = Screen.GameOver(s.flying, r, rank)
     }
 
-    /** Retry on GAME OVER: the same plane again, in the same mode and level, from takeoff. */
+    /** Retry on GAME OVER: the same plane again, in the same mode and level and by the same pilot, from takeoff. */
     fun retry() {
         val s = screen as? Screen.GameOver ?: return
-        screen = Screen.Flying(s.flying.plane, s.flying.attempt + 1, s.flying.mode)
+        screen = Screen.Flying(s.flying.plane, s.flying.attempt + 1, s.flying.mode, s.flying.control)
     }
 
     /** Main menu, from GAME OVER or the pause menu. */

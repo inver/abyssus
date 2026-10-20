@@ -4,15 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.projectView.action.ui
 
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.core.editor.ui.UiEditResult
-import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.plugin.gameui.UiEditOutcome
-import net.nevinsky.abyssus.plugin.gameui.editUiMeta
 import net.nevinsky.abyssus.plugin.projectView.*
 
 class UiDropdownAction : DropdownAction {
@@ -20,6 +13,7 @@ class UiDropdownAction : DropdownAction {
 
     override fun appliesTo(node: Any?) = uiFolder(node) != null
 }
+
 /** The UI folder row of the Abyssus view, with the project file that owns it and the names of its UI assets. */
 class UiFolder(val abss: VirtualFile, val assetNames: List<String>)
 
@@ -29,46 +23,3 @@ fun uiFolder(node: Any?): UiFolder? {
     val abss = entry.source?.takeIf { it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION } ?: return null
     return UiFolder(abss, row.assets.map { it.name }.sorted())
 }
-
-/** Right-click on the UI folder: add a screen (or an overlay) to one of its UI assets. */
-abstract class NewUiScreenActionBase(private val kind: String, textKey: String) : AbyssusTreeAction<UiFolder>() {
-    init {
-        templatePresentation.text = AbyssusBundle.message(textKey)
-    }
-
-    override fun targetOf(node: Any?): UiFolder? = uiFolder(node)
-
-    override fun isEnabled(e: AnActionEvent, target: UiFolder) = target.assetNames.isNotEmpty()
-
-    override fun perform(project: Project, target: UiFolder, e: AnActionEvent) {
-        val asset = chooseAsset(project, target.assetNames) ?: return
-        val meta = target.abss.parent?.findChild("assets")?.findChild(asset)?.findChild("meta.json") ?: return
-        val name = Messages.showInputDialog(
-            project, AbyssusBundle.message("uiScreenNamePrompt"), AbyssusBundle.message("uiCommandAddScreen"), null,
-        )?.takeIf { it.isNotBlank() } ?: return
-        val outcome = editUiMeta(project, meta, AbyssusBundle.message("uiCommandAddScreen")) { edits, json ->
-            edits.addScreen(json, name, kind)
-        }
-        if (outcome !is UiEditOutcome.Edited || outcome.result !is UiEditResult.Added) {
-            Messages.showErrorDialog(
-                project,
-                AbyssusBundle.message("uiScreenAddFailed", asset),
-                AbyssusBundle.message("uiCommandAddScreen")
-            )
-        }
-    }
-
-    /** The only UI asset, or the one the user picks; null when cancelled. */
-    private fun chooseAsset(project: Project, names: List<String>): String? {
-        if (names.size == 1) return names.single()
-        val index = Messages.showChooseDialog(
-            project, AbyssusBundle.message("uiScreenAssetPrompt"), AbyssusBundle.message("uiCommandAddScreen"),
-            null, names.toTypedArray(), names.first(),
-        )
-        return names.getOrNull(index)
-    }
-}
-
-open class NewUiScreenAction : NewUiScreenActionBase("screen", "uiCreateScreen")
-
-open class NewUiOverlayAction : NewUiScreenActionBase("overlay", "uiCreateOverlay")

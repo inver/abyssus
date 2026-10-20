@@ -55,10 +55,11 @@ SHALL start the flight with it, and Escape SHALL return to the screen before it.
 
 The flight screen SHALL show the scene from the pilot's eyes, turning to follow the plane, and a HUD. In Free flight the
 HUD SHALL show line tension, laps, score, combo multiplier and fuel left. In an F2B pattern it SHALL show line tension,
-fuel left and the flight time against 7:00, plus what the assist level adds. W or Up SHALL tilt the handle up and S or
-Down down, reaching full tilt in 0.15 s and returning to neutral when released; moving the mouse vertically SHALL set
-the tilt by its distance from the window's centre, and whichever was used last SHALL control the handle. Escape SHALL
-pause, offering Resume and Main menu.
+fuel left and the flight time against 7:00, plus what the assist level adds. In a human flight, W or Up SHALL tilt the
+handle up and S or Down down, reaching full tilt in 0.15 s and returning to neutral when released; moving the mouse
+vertically SHALL set the tilt by its distance from the window's centre, and whichever was used last SHALL control the
+handle. In an AI demonstration (`add-f2b-ai-demonstration`) only the bot SHALL control the handle. Escape SHALL pause,
+offering Resume and Main menu.
 
 #### Scenario: Pause
 
@@ -67,20 +68,20 @@ pause, offering Resume and Main menu.
 
 #### Scenario: A Pro HUD
 
-- **WHEN** an F2B flight at Pro has flown 1:12
+- **WHEN** a human F2B flight at Pro has flown 1:12
 - **THEN** the HUD shows tension, fuel left and `1:12 / 7:00`, and no manoeuvre names, laps or marks
 
 ### Requirement: GAME OVER
 
 When a flight ends, the game SHALL show GAME OVER with the reason (crashed, lines went slack or landed). For Free flight
 it SHALL show the score, laps, best combo and flight time. For an F2B pattern it SHALL show the assist level, the score
-sheet (each manoeuvre's mark, K and points, or 0 with its reason), the score and the flight time. When the score enters
-its table or board, it SHALL first ask for a name of up to 12 characters, offering the last name entered. It SHALL then
-offer Retry, Scores and Main menu.
+sheet (each manoeuvre's mark, K and points, or 0 with its reason), the score and the flight time. When a human flight's
+score enters its table or board, it SHALL first ask for a name of up to 12 characters, offering the last name entered.
+An AI demonstration SHALL bypass name entry and board qualification. It SHALL then offer Retry, Scores and Main menu.
 
 #### Scenario: Crash with a high score
 
-- **WHEN** a Free flight with `Stunter` crashes with a score that enters the table
+- **WHEN** a human Free flight with `Stunter` crashes with a score that enters the table
 - **THEN** GAME OVER shows "Crashed" and the score, asks for a name, saves the flight, then offers Retry, Scores and
   Main menu
 
@@ -92,8 +93,9 @@ offer Retry, Scores and Main menu.
 
 ### Requirement: Retry flies the same plane again
 
-Retry SHALL start a new flight with the same plane, in the same mode and assist level, straight away, from takeoff,
-with the score, laps, combo, clock and score sheet reset.
+Retry SHALL start a new flight with the same plane, in the same mode and assist level and with the same human or AI
+controller, straight away, from takeoff, with the fuel, controller state, score, laps, combo, clock and score sheet
+reset.
 
 #### Scenario: Retry
 

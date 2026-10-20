@@ -7,6 +7,9 @@ package net.nevinsky.abyssus.app.game.controlline.screens
 /** The folder of the UI asset in the bundled project that holds every screen of the game. */
 const val SCREENS_ASSET = "screens"
 
+/** The Watch AI button of plane select: Enter on it watches the bot instead of flying. */
+const val WATCH_AI_BUTTON = "ps-watch-ai"
+
 /** Screen and overlay ids of the UI asset, as the game shows them. */
 const val SCREEN_MAIN_MENU = "mainMenu"
 const val SCREEN_ASSIST = "assistSelect"
@@ -33,6 +36,9 @@ val PUBLISHED_BINDINGS: Map<String, String> = mapOf(
     "freeEnabled" to "boolean", "patternEnabled" to "boolean", "hasMessage" to "boolean", "message" to "string",
     // plane select
     "hasModeLabel" to "boolean", "modeLabel" to "string", "planeCount" to "string", "planeName" to "string", "planeFacts" to "string",
+    "watchAiVisible" to "boolean",
+    // who flies: an AI demonstration on the HUD, the pause menu, GAME OVER and the debrief, or the player
+    "isAi" to "boolean", "isHuman" to "boolean",
     // the HUD
     "tensionText" to "string", "tensionValue" to "number", "fuel" to "string", "laps" to "string", "score" to "string",
     "combo" to "string", "time" to "string", "next" to "string", "pauseLaps" to "string", "warning" to "string",
@@ -55,5 +61,5 @@ val PUBLISHED_BINDINGS: Map<String, String> = mapOf(
 /** The named actions the asset emits; `openRow` arrives as `openRow#<row>` from the board rows. */
 val ACTIONS = listOf(
     "freeFlight", "f2bPattern", "scores", "quit", "assistPro", "assistMid", "assistNoob", "back", "previousPlane", "nextPlane",
-    "choosePlane", "resume", "mainMenu", "saveName", "retry", "debrief", "tabFree", "tabPro", "tabMid", "tabNoob", "openRow",
+    "choosePlane", "watchAi", "resume", "mainMenu", "saveName", "retry", "debrief", "tabFree", "tabPro", "tabMid", "tabNoob", "openRow",
 )

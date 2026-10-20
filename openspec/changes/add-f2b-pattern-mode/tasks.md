@@ -141,7 +141,7 @@ All code is in `projects/app-game-control-line`, with new code in the package `p
   - retry keeps Pro;
   - a Pro flight that ranks first opens Scores on the Pro tab, highlighted;
   - Free flight is saved to `scores.json` only.
-- [ ] 6.2 Update `GameUi`:
+- [x] 6.2 Update `GameUi`:
   - the main menu entries;
   - the assist select screen;
   - the HUD per mode: Free as today; Pro with tension, fuel and `m:ss / 7:00`; Mid adding the next manoeuvre with K,
@@ -172,9 +172,14 @@ All code is in `projects/app-game-control-line`, with new code in the package `p
 
 ## 7. Integration
 
-- [ ] 7.1 Fly a whole F2B pattern at Mid with `Stunter` (M6). Check that every manoeuvre flown appears on the sheet
+- [x] 7.1 Fly a whole F2B pattern at Mid with `Stunter` (M6). Check that every manoeuvre flown appears on the sheet
   with a non-zero mark, the engine stops before 7:00, and a gentle dead-stick landing is marked. Tune `MarkWeights`
   if marks feel off, keeping `GraderTest` green.
+
+  Status (2026-10-20): automated evidence only. `F2bAiRoutineTest` (change `add-f2b-ai-demonstration`) flies the
+  whole schedule at Mid with the unmodified `Stunter` through real physics and this judge. Every manoeuvre is on the
+  sheet with a positive mark, the engine stops at 6:00, and the dead-stick landing at 6:09 is marked 10.0. `MarkWeights`
+  is unchanged and `GraderTest` passes. M6, a person flying it and judging whether the marks feel right, is still open.
 - [x] 7.2 Run `./gradlew check` and `scripts/check-docs.sh`. Verify that both pass.
 
   Status (2026-10-14): `scripts/check-docs.sh` passes (269 paths in 6 files), and `./gradlew check` passes

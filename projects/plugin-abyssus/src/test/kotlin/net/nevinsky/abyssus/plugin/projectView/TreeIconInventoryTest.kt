@@ -22,6 +22,7 @@ class TreeIconInventoryTest {
         "asset_ui", "asset_shader",
         "component_position", "component_render", "component_rigid_body", "component_collider", "component_constraint",
         "component_light", "component_foliage", "component_path_arrangement", "component_plane", "component_pilot",
+        "folder_water", "water_lake", "water_sea",
         "eye_on", "eye_off", "action_unused_filter_selected",
     )
 

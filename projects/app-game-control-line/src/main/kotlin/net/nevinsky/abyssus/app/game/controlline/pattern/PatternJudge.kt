@@ -174,7 +174,8 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
     private fun invertedLaps(open: Level) {
         val points = path.points
         val from = open.from
-        val end = (from until points.size).first { points[it].azimuth - points[from].azimuth >= 720f }
+        // on its lines a plane flies level inverted only clockwise, so the laps are counted either way round
+        val end = (from until points.size).first { abs(points[it].azimuth - points[from].azimuth) >= 720f }
         val recognition = Recognition(Figure.INVERTED_LAPS, Verdict.COMPLETE, from, end, 2, geometry.azimuth(points[from].u))
         score(recognition, listOf(open))
     }

@@ -51,10 +51,10 @@ the game falls back to the raster field and states the reason the same way.
 | Where | Keys and mouse |
 |---|---|
 | Menus | Up / Down and Enter, or the mouse; Escape goes back |
-| Plane select | Left / Right change the plane, Enter flies it, Escape returns to the screen before it (the main menu, or the assist level for an F2B pattern) |
+| Plane select | Left / Right change the plane, Enter flies it, Escape returns to the screen before it (the main menu, or the assist level for an F2B pattern). For an F2B pattern, A or the **Watch AI** button (Tab to it, then Enter) has the AI fly the shown plane, see [Watch AI](#watch-ai) |
 | Scores | Left / Right change the tab (Free flight, Pro, Mid, Noob), Escape or Back returns. On the F2B tabs, Up / Down select a flight and Enter or a click opens its debrief |
 | Debrief | Up / Down: manoeuvre; Space: pause or resume; R: restart; 1 / 2 / 3: speed ½× / 1× / 2×; V: pilot view or outside view; Escape returns |
-| Flying | W or Up: handle up; S or Down: handle down (full tilt in 0.15 s, back to neutral on release). Moving the mouse up or down sets the tilt by its distance from the window's centre; whichever was used last wins. Escape pauses |
+| Flying | W or Up: handle up; S or Down: handle down (full tilt in 0.15 s, back to neutral on release). Moving the mouse up or down sets the tilt by its distance from the window's centre; whichever was used last wins. Escape pauses. In a Watch AI demonstration the keys and the mouse do not move the handle; Escape still pauses |
 
 In Free flight, laps score 10. Inside and outside loops score 50, an inverted lap 80, a wingover 100 and a figure 8 150, times the
 combo multiplier (up to x5 for maneuvers within 10 s of each other). A landing with the engine stopped adds 200.
@@ -123,6 +123,10 @@ A manoeuvre scores 0, with its reason on the score sheet, when it is:
 - **after 7:00**: it ends after 7:00 (the flight goes on until it lands or crashes);
 - **crashed**: a crash, or lines that go slack, scores 0 from the manoeuvre in progress on; the ones before keep their marks.
 
+On its lines a plane's up always points across them, so it flies level inverted only clockwise: the inverted laps are
+counted either way round (two laps of azimuth, whatever its sign). The pause before a manoeuvre is counted in the flying
+direction, so azimuth flown clockwise does not count towards it.
+
 A landing scores 0 when it ends after 7:00 or as a crash. Flying between the clover and the landing is not judged.
 
 ### How a manoeuvre is marked
@@ -171,7 +175,7 @@ is no Starting (K 0) or preparation time; one judge, no attempts, rounds or clas
 
 ### Scores
 
-`f2b-scores.json` is `{version: 1, boards: {pro: [...], mid: [...], noob: [...]}}`: the 10 best flights of each level,
+The F2B score file is `{version: 1, boards: {pro: [...], mid: [...], noob: [...]}}`: the 10 best flights of each level,
 best first, earlier flights first among equal scores. Each entry has `name`, `plane`, `score` (two decimals),
 `flightTime`, `date` and the 15 `marks`. A missing board reads as empty. The score table screen has a tab per board next
 to Free flight. An entry may also have a `flight`: the id of its recording (see below). Entries saved without one, and
@@ -199,6 +203,99 @@ mark and deductions or zero reason) and the entry's `flight` names it. A flight 
 recording is deleted when its flight leaves the board, and at start recordings no entry names (and leftover `.tmp` files)
 are deleted. A recording that is missing, or that cannot be read (it is renamed with `.bad` added), leaves the entry and
 its marks in place: its debrief shows the sheet with "Replay not available". Each recording is about 0.3 MB.
+
+### Watch AI
+
+On F2B plane select, **Watch AI** (the button, or A) has a bot fly the shown stunt plane at the chosen assist level: from
+rest at its takeoff place with the engine running, the take-off, all 13 figures in schedule order with their repeats and
+the pauses between them, a wait on the base until the engine stops under the normal fuel rule, and the glide to a
+landing. Required behaviour: `control-line-ai-pilot` and `control-line-game-flow` (OpenSpec change
+`add-f2b-ai-demonstration`). Free flight does not offer it.
+
+- **The flight is real.** The bot holds the same handle a player does, through the same physics, lines and fuel; nothing
+  moves the plane along a path, and the normal judge marks what it flew. Its marks are not perfect.
+- **Only the bot flies.** The HUD, the pause menu, GAME OVER and the debrief say "AI demonstration". Keys and the mouse do
+  not reach the handle; Escape pauses, and a paused demonstration stands still (plane, fuel, clock and bot) until
+  Resume. Main menu ends it, and the next flight is the player's again.
+- **Results are not kept.** GAME OVER shows the real sheet straight away, with no name entry: a demonstration enters no
+  board and saves no recording, whatever it scores. Debrief replays it from memory until the attempt is left; Retry
+  flies a fresh demonstration of the same plane at the same level.
+
+The bundled, unchanged `Stunter` flies the whole schedule with every mark positive (`F2bAiRoutineTest`):
+
+| | Take-off | Wingover | Inside loops | Inverted laps | Outside loops | Inside squares | Outside squares | Triangles |
+|---|---|---|---|---|---|---|---|---|
+| Mark | 9.6 | 3.4 | 10.0 | 6.0 | 6.0 | 7.7 | 5.6 | 7.8 |
+
+| | Horizontal eights | Square eights | Vertical eights | Hourglass | Overhead eights | Clover | Landing |
+|---|---|---|---|---|---|---|---|
+| Mark | 10.0 | 7.4 | 10.0 | 2.9 | 10.0 | 10.0 | 10.0 |
+
+The clover is done at 4:55; the engine stops at 6:00 and the plane lands at 6:09, upright. It lands inside the circle
+where its lines meet it: the leadouts are 17.95 m from the pilot, within the line length and 0.5 m. Its centre of gravity
+is 18.70 m out, because the `Stunter`'s leadouts are 0.75 m inboard of it; that is where it stands parked at takeoff, too.
+The lines may dip below the elevator's 1 N for a moment near the top of the square eights and the hourglass (0.6 N at
+the least, for no more than 0.07 s; slack lines end a flight after 2 s).
+
+Another stunt plane is flown by the same bot with its own settings and may fail; the result is honest. The `Stunter` on
+15 m lines, for one, crashes in its triangles at 2:30: the flight ends there, the marks before it stand and the rest
+score 0 for the crash (`F2bAiFailureTest`).
+
+#### How the bot flies
+
+`ControlLineGame` leaves the flight to `FlightRunner` (no GL): it starts a `FlightSession` when the flow flies a plane,
+with `flight.HumanControl` over the keys and mouse or a fresh `ai.F2bBot`, advances it while flying, hands its report to
+the flow, and closes it when the flow leaves the flight. The session asks its `flight.FlightControlSource` once per fixed
+step, before that step's forces, for the tilt, giving it a `FlightObservation` of the state the last step left (copies;
+never the interpolated pose the plane is drawn at). A tilt outside -1..1 is clamped and one that is not finite is
+neutral; the source is not asked once the flight has ended, nor while the game is paused, since a paused flight is not
+advanced. Everything runs on the game's main thread. The `flight` package knows nothing of the bot or the pattern.
+
+The bot is two GL-free halves in the `ai` package:
+
+- `F2bRoutinePlanner` decides what to fly: the take-off course, then for each manoeuvre the pause on the base until the
+  judge's own pause count (read through `PatternJudge.guideInput`, never changed) is 1.58 laps and at least 170° have
+  been flown level, then the figure's course, and after the clover the base until the engine stops, then the glide. It
+  moves on when a course is flown, not on the clock. A course that does not move on for 3 s is given up with a
+  diagnostic (`diagnostics`); the bot flies the base and goes on with the next manoeuvre, and the judge's reading stands.
+- `F2bPilot` steers along a course (`Course`: `PathCourse`, a path flown once, or `Parallel`, the base). The plane only
+  pitches and its up stays across the lines, so the elevator turns it within the sphere's tangent plane: a pull turns it
+  left seen from outside, a push right. The pilot works in the plane's place on the flight hemisphere, with nothing
+  singular over the pilot: it wants the course's own curvature a little ahead plus a pursuit of the course's tangent,
+  limited to 85% of what the wing gives before the stall, and `Handling` turns that into a tilt from the plane's
+  `PlaneComponent` and mass, with the measured turn rate damping the rest. A path's progress only moves on, and by at most
+  4 m a step, so the eights' crossings and repeated loops are never skipped.
+
+Because the plane flies inverted only clockwise, the courses (`F2bFigures`) fly the inside figures as `IdealTracks`
+draws them, and the wingover's inverted half lap, the inverted laps, the outside loops and the outside squares clockwise
+along the same places. The bot turns over between the two directions with half a wingover (up a meridian, over the
+zenith, down the other side); once the wingover itself is behind, the judge reads that as half a wingover and passes it
+by. It takes it as over only after 300° of level flight inverted, so before an outside figure the bot flies 270° more
+on the inverted base after the turn-over's 60° lead-out, and pauses that much longer before turning over (the judge counts
+only anticlockwise azimuth as pause). Corners are rounded to 3.5 m, a little wider than the `Stunter`'s tightest turn. The
+hourglass is the bot's own: its top edge is on the 50° parallel, 130° of azimuth wide, so that its two top corners (2.8 m
+circular fillets, `Fillets.kt`) are separate turns; `IdealTracks`' top near the zenith puts them 3.6 m apart, which the
+plane flies as one turn the judge does not read as an hourglass. The landing flies down over a lap to 0.4 m above the
+ground and holds that height while the plane slows and settles.
+
+The tracker's numbers were chosen by flying the whole routine: 0.2 s of look-ahead (at least 2.5 m), the curvature 0.06 s
+ahead, a turn-rate gain of 1.2. Anticipating more (0.1 s) rounded the square loops' corners until the judge no longer
+read them as whole squares.
+
+#### Testing it
+
+```
+./gradlew :app-game-control-line:test --tests '*F2bAiRoutineTest'
+```
+
+flies the whole demonstration with real physics through the production session and bot, judged normally, and checks
+every mark, the schedule order, the engine stopping at 360 s and the landing by 7:00 inside the circle, also with
+irregular frames and a pause in the loops (the outcome is the same). `F2bAiFiguresTest` flies each figure after the
+take-off (and after the wingover for those that turn over), `F2bAiLandingTest` the take-off, fuel wait and landing,
+`F2bAiFailureTest` a modified plane, and `AiFlightLifecycleTest` pause, held keys, retry, main menu and results through
+`FlightRunner`. `F2bPilotTest` and `F2bRoutinePlannerTest` test the halves on made-up observations. These differ from the
+judge's own tests (`PatternJudgeTest` with `SyntheticSchedule`), which feed it ideal tracks to check its reading; those
+show nothing about what a plane can fly.
 
 ## The project in Abyssus
 
@@ -245,11 +342,13 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 | Package (`net.nevinsky.abyssus.app.game.controlline.`) | Holds | GL |
 |---|---|---|
 | `components` | `PilotComponent`, `PlaneComponent`, `GameComponents`, `ControlLineComponents` (with the physics components) | no |
-| `flight` | `Aero`, `LineRig`, `Ground`, `Flight` / `FlightSystem`, `FlightOutcome`, `FlightSession`, `FlightJudge` | no |
+| `flight` | `Aero`, `LineRig`, `Ground`, `Flight` / `FlightSystem`, `FlightOutcome`, `FlightSession`, `FlightJudge`, and who holds the handle: `FlightControlSource`, `FlightObservation`, `HumanControl` | no |
 | `track` | `SphereTrack`, `Maneuvers`, `Laps` | no |
 | `score` | `ScoreKeeper`, `FlightScoring`, `ScoreTable` | no |
 | `pattern` | the F2B pattern: `Schedule` (`Figure`), `HemisphereGeometry`, `PathTokens`, `TrackBuilder`, `IdealTracks`, `IdealSampler`, `Matchers`, `Grader` / `MarkWeights`, `PatternJudge`, `ScoreSheet`, `PatternScoreTable`, and the debrief's `FlightRecording`, `RecordingStore`, `DebriefModel`, and the Noob guide `GuidePlanner` | no |
-| `flow` | `GameFlow` (the screen state machine, with the mode and assist level), `FlightReport` | no |
+| `flow` | `GameFlow` (the screen state machine, with the mode, the assist level and who flies, `Control`), `FlightReport` | no |
+| `ai` | the Watch AI bot: `F2bBot`, `F2bRoutinePlanner`, `F2bPilot`, `Handling`, `Course`, `F2bFigures`, `Fillets` | no |
+| (the package itself) | `ControlLineGame`, `FlightRunner` (the flight lifecycle, without GL), `Main` | `ControlLineGame` |
 | `input` | `HandleInput` (keyboard and mouse tilt) | no |
 | `render`, `screens` | `FieldScene`, `FieldRenderer` (terrain through `lib-render`'s `TerrainPass`, variant `GAME_SINGLE_SUN`), `FieldShadows` (the sun's shadow map, drawn by `lib-render`'s `DepthSubmission`), `Cameras`, `GameUiHost` (the authored screens over `lib-core`'s `UiPresenter`), `GameUiModel` (what the screens show and the actions and keys they send; no GL), `GameUiContract` | yes |
 | `play` (own source set, `src/play`) | `ControlLinePlay : PlayModule` | no |
@@ -278,7 +377,7 @@ Passes: the sun's depth pass calls `updateCasters` with the shadow camera's frus
 keeps, so a tree outside the viewer's frustum still shades visible ground; DETAIL copies (grass) never enter the depth
 pass but receive the shadow through the same shadow attribute and shaders as models. The caster buffers are separate
 from the viewer's, filled by `update(camera, …)` after the light pass, so the light pass never changes what the viewer
-draws. Ray traced views leave foliage out (the game has none). `render/FieldRendererGlTest` and `render/FieldShadowsGlTest`
+draws. Ray traced views leave foliage out (the game has none). `render/FieldRendererGlTest.kt` and `render/FieldShadowsGlTest.kt`
 check this on a GL context (with `-Dabyssus.glTests=true`); `FieldFoliageTest` checks the listing and the terminal
 failure without a window.
 
@@ -333,9 +432,14 @@ Every screen, the HUD and the pause menu are the `screens` UI asset of the bundl
 asserted on by tests. The asset's contract with the game is `screens/GameUiContract.kt`: the bindings `GameUiModel`
 publishes every frame (lists carry the fields of their rows) and the named actions the asset may emit. When you change
 a screen, keep `ControlLineUiAssetTest` green (it admits the asset and checks both lists against the contract), and run the
-GL tests (`-Dabyssus.glTests=true`): `GameScreensCharacterizationTest` compares the text of 23 steps through a whole session
-with `characterization/screens.golden`, recorded from the original hand-written screens. Re-record it
-(`-Dabyssus.recordScreens=true`) only when a screen is meant to change.
+GL tests (`-Dabyssus.glTests=true`): `GameScreensCharacterizationTest` compares the text of 30 steps through a whole session
+with `characterization/screens.golden`, recorded from the original hand-written screens (the Watch AI steps were added to
+it later). Re-record it (`-Dabyssus.recordScreens=true`) only when a screen is meant to change.
+
+Watch AI: plane select's `ps-watch-ai` button sends the `watchAi` action and shows while `watchAiVisible` (an F2B pattern
+with a stunt plane); `isAi` shows the "AI demonstration" labels on the F2B HUD (in place of the player's hint, which
+`isHuman` shows), the pause menu, GAME OVER and the debrief. The labels are the asset's own text. Enter on plane select
+flies unless the focus is on `ps-watch-ai`, and A watches.
 
 Look: a dark navy ground (`#0E1A23`), an orange accent (`#FF6A2B`) and muted blue-greys, from a design made in Claude's design canvas. The styles are in the asset: backgrounds `bg`, `dim`, `pane` (translucent HUD and table panels) and `card`; text `hero`, `title`, `big`, `mid`, `toast`, `body`, `hudLabel`, `hudValue`, `hudBig`, `tabLabel`; the roles the game publishes per row (`normal`, `highlight`, `muted`, `fail`, `selected`, `ideal`, `flown`); controls `primary`, `outline`, `tab`, `tabSelected`, `field`, `bar`. A style's `fontSize` is a font's line height (see `assets/screens/fonts/index.json`), and `uppercase` shows a label in capitals without changing its text. The renderer has no rounded corners or letter-spacing, so those parts of the design are left out. A screen's root fills the window: centre or edge-anchor content with a column inside a root panel, and give a label the height of its font's line (it is measured by cap height, which would clip descenders).
 

@@ -109,7 +109,7 @@ open class NewSceneAction : AbyssusTreeAction<VirtualFile>() {
 /** Creates `scenes/<name>.scene` beside [abss] as one undoable command; null when it could not be written. EDT. */
 fun createScene(project: Project, abss: VirtualFile, name: String): VirtualFile? {
     val root = abss.parent ?: return null
-    return runCatching {
+    return runCatchingKeepingCancellation {
         WriteCommandAction.writeCommandAction(project).withName(AbyssusBundle.message("newSceneAction"))
             .compute<VirtualFile, Exception> {
                 val dir = root.findChild(ProjectLayout.SCENES_DIR) ?: root.createChildDirectory(
