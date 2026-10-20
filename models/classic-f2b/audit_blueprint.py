@@ -37,6 +37,9 @@ def poly(points,kind):
 for name in [body,'Wing inboard | 740 mm','Stabilizer left']:
     rr=rings(name,0 if name==body else 1)
     if name==body:
+        # Boolean well intersections introduce x stations containing only interior
+        # vertices. They are not the exterior outline of the fuselage.
+        rr=[(x,v) for x,v in rr if len(v)>=32]
         poly([(x,min(p[1] for p in v)) for x,v in rr]+[(x,max(p[1] for p in v)) for x,v in reversed(rr)],'top')
         poly([(x,min(p[2] for p in v)) for x,v in rr]+[(x,max(p[2] for p in v)) for x,v in reversed(rr)],'side')
     else:poly([(min(p[0] for p in v),y) for y,v in rr]+[(max(p[0] for p in v),y) for y,v in reversed(rr)],'top')

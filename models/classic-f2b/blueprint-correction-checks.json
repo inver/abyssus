@@ -231,9 +231,37 @@
     "passed": true
   },
   {
-    "check": "Canopy rise",
-    "measured": 65.00002,
+    "check": "Canopy rise above fuselage deck",
+    "measured": 65.00005,
     "blueprint": 65,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Canopy sill recess (traced estimate)",
+    "measured": 15.99995,
+    "blueprint": 16,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Canopy crest x (traced estimate)",
+    "measured": 310.79996,
+    "blueprint": 310.8,
+    "tolerance": 0.2,
+    "passed": true
+  },
+  {
+    "check": "Fin height above aft deck",
+    "measured": 125.00014,
+    "blueprint": 125,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Fuselage width at wing leading edge",
+    "measured": 75.0,
+    "blueprint": 75,
     "tolerance": 0.05,
     "passed": true
   },
@@ -330,6 +358,34 @@
   },
   {
     "check": "Packed primary photo",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed reference classic-opposite.jpg",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed reference cockpit-reference.jpg",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Cockpit centre deck removed",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Seat vertices beneath canopy",
     "measured": 1,
     "blueprint": 1,
     "tolerance": 0,
