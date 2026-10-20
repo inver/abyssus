@@ -52,9 +52,9 @@ def on_plane(name,pixel,z_mm):
 # Pixel coordinates in the unmodified 1200x900 photographs.
 paired={
  'check: spinner centre':({'primary':(935,713),'opposite':(235,614)},[-25,0,10]),
- 'check: spinner nose (livery 2)':({'img.png':(902,357),'img_1.png':(703,127)},[-48,2,10]),
- 'fin aft top corner (livery 2)':({'img.png':(241,133),'opposite':(818,50)},None),
- 'spat +y nose (livery 2)':({'img.png':(690,497),'primary':(615,755)},None),
+ 'check: spinner nose (livery 2)':({'img_4.png':(902,357),'img_1.png':(703,127)},[-48,2,10]),
+ 'fin aft top corner (livery 2)':({'img_4.png':(241,133),'opposite':(818,50)},None),
+ 'spat +y nose (livery 2)':({'img_4.png':(690,497),'primary':(615,755)},None),
  'check: canopy nose':({'primary':(773,517),'opposite':(400,447)},[210,0,53]),
  'fin crown front':({'primary':(365,61),'opposite':(795,57)},None),
  'fin top aft corner':({'primary':(336,50),'opposite':(818,50)},None),

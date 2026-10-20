@@ -56,8 +56,8 @@ check('Tail wheel x',sum(q.x for q in points('Tail wheel'))/len(points('Tail whe
 for name in ['Fuselage | moulded outer envelope','Wing inboard | 740 mm','Wing outboard | 710 mm','Stabilizer left','Stabilizer right','Vertical fin and rudder']:
     bm=bmesh.new();bm.from_mesh(bpy.data.objects[name].data)
     check(name+' nonmanifold edges',sum(not e.is_manifold for e in bm.edges),0,0);bm.free()
-check('Packed primary photo',int(any(i.packed_file and i.name=='classic-photo.jpg' for i in bpy.data.images)),1,0)
-for name in ['classic-opposite.jpg','cockpit-reference.jpg','img.png','img_1.png','img_2.png','img_3.png']:
+check('Packed primary photo',int(any(i.packed_file and i.name=='img_5.png' for i in bpy.data.images)),1,0)
+for name in ['img.png','cockpit-reference.jpg','img_1.png','img_2.png','img_3.png','img_4.png']:
     check('Packed reference '+name,int(any(i.packed_file and i.name==name for i in bpy.data.images)),1,0)
 # The centre of the canopy must expose the well, not a solid fuselage deck.
 p=points('Fuselage | moulded outer envelope')

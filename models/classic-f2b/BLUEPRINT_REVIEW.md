@@ -1,6 +1,6 @@
 # Blueprint and local photograph comparison
 
-The saved model is rebuilt from `build_classic.py`. The supplied `plan-reference.jpg` sets explicit dimensions; `textures/classic-photo.jpg`, `classic-opposite.jpg` and `cockpit-reference.jpg` inform the visible contours and cockpit. The photographs are unchanged and all three are packed in the Blender file.
+The saved model is rebuilt from `build_classic.py`. The supplied `plan-reference.jpg` sets explicit dimensions; `textures/img_5.png` (photo 7), `img.png` (photo 8; both with their backgrounds removed) and `cockpit-reference.jpg` inform the visible contours and cockpit. The photographs are unchanged and all three are packed in the Blender file.
 
 ## Photo triangulation revision
 
@@ -12,9 +12,9 @@ The saved model is rebuilt from `build_classic.py`. The supplied `plan-reference
 
 ### Second-livery photographs
 
-`textures/img.png`, `img_1.png`, `img_2.png` and `img_3.png` show the same model in a red/blue livery. They are used for geometry only. `fit_livery2_photos.py` fits cameras to wing tip, stabilizer tip, spinner and fin landmarks (`img.png` 9.6 px RMS, `img_1.png` 11.5 px RMS). The left/right ambiguity of a nearly flat target is resolved by requiring the camera to sit above the aircraft. With that constraint, the engine-side wing is the near wing in `img.png` and `img_1.png`, and the far one in `img_2.png`, as the visible engine requires.
+`textures/img_1.png`, `img_2.png`, `img_3.png` and `img_4.png` show the same model in a red/blue livery. They are used for geometry only. `fit_livery2_photos.py` fits cameras to wing tip, stabilizer tip, spinner and fin landmarks (`img_4.png` 9.6 px RMS, `img_1.png` 11.5 px RMS). The left/right ambiguity of a nearly flat target is resolved by requiring the camera to sit above the aircraft. With that constraint, the engine-side wing is the near wing in `img.png` and `img_1.png`, and the far one in `img_2.png`, as the visible engine requires.
 
-- The wings, stabilizers, fuselage, fin, wing tips and visible spat fall on the photographed outlines in `img.png` and `img_1.png` (`photo-overlay-livery2-img.png`, `photo-overlay-livery2-img_1.png`). No geometry change was needed.
+- The wings, stabilizers, fuselage, fin, wing tips and visible spat fall on the photographed outlines in `img_4.png` and `img_1.png` (`photo-overlay-livery2-img_4.png`, `photo-overlay-livery2-img_1.png`). No geometry change was needed.
 - Independent triangulation agrees with the first-livery result: the +y spat nose is at (183, 227, −159) mm against (175, 230, −152), and the fin's aft top corner is within about 20 mm of x=1064. This is consistent with the 450 mm track.
 - `img_2.png` (low front view) has only four reliable landmarks, which leave the camera underdetermined: its held-out wing-tip checks miss by 50–65 px. It is used qualitatively. `img_3.png` (cockpit close-up) and photo 9 show a light grey cockpit tub and seat, a dark glare shield, a broad white canopy rim, and an instrument panel with a round gauge left, a blue attitude indicator centre, a round gauge right and one gauge below. The model's cockpit now follows that: a light grey tub and seat instead of a dark interior, a rim 2.4 mm thick instead of 1.3 mm, and the four-gauge layout with a blue centre indicator. These are colour, rim and layout changes only, with no dimensional effect.
 

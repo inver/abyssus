@@ -5,7 +5,8 @@ straight-edge intersections, so 'virtual'), the spinner nose and the fin's aft t
 corner. Which wing is the 740 mm one is not visible in every photo, so both
 left/right assignments are fitted and the lower residual wins. A weak prior keeps
 the focal length near that of the first-livery fits. The photographs are not
-modified and not used as textures.
+modified and not used as textures. (img.png and img_5.png are the first-livery photographs 8 and 7 with
+their backgrounds removed; they were registered by fit_photo_overlays.py.)
 
 Run: blender -b --python fit_livery2_photos.py
 """
@@ -26,7 +27,8 @@ def tips(long_sign,stab_sign):
      'stab -y tip LE':[921,-stab_sign*345,5],'stab -y tip TE':[1036,-stab_sign*345,5]}
 # Pixel landmarks per photo: (name, pixel). The first wing/stab named is the near one in the image.
 photos={
- 'img.png':{
+ # img_4.png is registered at 1024x766; the file is the same photograph at twice the size.
+ 'img_4.png':{
   'near_is_long':True,
   'marks':{'near wing tip LE':(470,703),'near wing tip TE':(287,611),
            'far wing tip LE':(795,72),'far wing tip TE':(668,50),

@@ -1,0 +1,16 @@
+[project]
+name = "classic-f2b-cad"
+version = "0.1.0"
+description = "Parametric CadQuery model of the Classic F2B and a genetic fit to photographs"
+requires-python = ">=3.12,<3.14"
+dependencies = ["cadquery>=2.5", "numpy", "scipy", "opencv-python-headless", "pillow"]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools]
+packages = ["f2b"]
