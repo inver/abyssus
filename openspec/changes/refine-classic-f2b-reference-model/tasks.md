@@ -15,4 +15,5 @@ overlay were visually inspected. `./gradlew check` passed (185 actionable tasks)
 
 - [x] 2.1 Fit photo cameras to wing, tail and spinner landmarks only. Triangulate the fin and main gear from both photographs (`photo_triangulation.py`), with spinner and canopy-nose checks.
 - [x] 2.2 Rebuild with the photographed fin, a 450 mm gear track and teardrop spats. Update `verify_blueprint_corrections.py` (66 checks pass) and run `verify_blend.py`.
-- [x] 2.3 Regenerate photo overlays, orthographic views, comparisons and the blueprint audit. Update the model docs, then run `scripts/check-docs.sh` and `./gradlew check`.
+- [x] 2.3 Fit cameras to the second-livery photographs (`img*.png`), overlay the model silhouette and cross-check the gear and fin by triangulation. Pack them as references without using them as textures; the saved-file checks now number 70.
+- [x] 2.4 Regenerate photo overlays, orthographic views, comparisons and the blueprint audit. Update the model docs, then run `scripts/check-docs.sh` and `./gradlew check`.

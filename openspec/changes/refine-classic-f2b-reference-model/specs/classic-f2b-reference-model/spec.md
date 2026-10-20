@@ -19,10 +19,11 @@ Where both aircraft photographs contradict the plan, the asset SHALL follow the 
 - **AND** the documentation names the plan value that was overridden
 
 ### Requirement: Local photographic comparison
-The asset SHALL include reproducible comparison views using both aircraft photographs and the cockpit photograph supplied in its textures directory.
+The asset SHALL include reproducible comparison views using both aircraft photographs and the cockpit photograph supplied in its textures directory, and SHALL also use the supplied second-livery photographs for geometry checks only.
 
 #### Scenario: Review a shape correction
 - **WHEN** a model correction is delivered
 - **THEN** fresh model renders and blueprint outlines are available for visual comparison
-- **AND** all three photographs are packed in the editable model
+- **AND** all three photographs and the four second-livery photographs are packed in the editable model
+- **AND** the second-livery photographs are never applied as textures
 - **AND** the documentation distinguishes checked dimensions from traced or photographically inferred details
