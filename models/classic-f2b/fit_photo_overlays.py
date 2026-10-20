@@ -2,7 +2,9 @@
 
 No image warping or model deformation is used by the camera fit. Coordinates
 marked 'virtual' are intersections of straight planform-edge tangents, so they
-are explicitly less certain than visible features.
+are explicitly less certain than visible features. Only wing, tail and spinner
+landmarks constrain the cameras, so the gear and fin can be checked against them
+(photo_triangulation.py).
 """
 import bpy, json, math, os
 import numpy as np
@@ -33,8 +35,7 @@ views={
    ['far tail virtual LE',[921,-345,5],[601,91]],
    ['far tail virtual TE',[1036,-345,5],[565,51]],
    ['spinner centre',[-25,1,10],[935,713]],
-   ['near wheel spat centre',[296,185,-156],[576,708]],
-   ['far wheel spat centre',[296,-185,-156],[865,511]],
+
   ]},
  'opposite':{
   'location':[-1.9,-1.4,3.2],
@@ -52,8 +53,7 @@ views={
    ['far tail virtual LE',[921,345,5],[570,80]],
    ['far tail virtual TE',[1036,345,5],[597,50]],
    ['spinner centre',[-25,1,10],[235,614]],
-   ['near wheel spat centre',[296,-185,-156],[581,636]],
-   ['far wheel spat centre',[296,185,-156],[294,451]],
+
   ]},
 }
 

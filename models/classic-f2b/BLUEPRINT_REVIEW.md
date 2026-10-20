@@ -2,18 +2,36 @@
 
 The saved model is rebuilt from `build_classic.py`. The supplied `plan-reference.jpg` sets explicit dimensions; `textures/classic-photo.jpg`, `classic-opposite.jpg` and `cockpit-reference.jpg` inform the visible contours and cockpit. The photographs are unchanged and all three are packed in the Blender file.
 
-## This revision
+## Photo triangulation revision
+
+`fit_photo_overlays.py` fits a physical perspective camera to each overall photograph using only wing, tail and spinner landmarks (about 18–20 px RMS). `photo_triangulation.py` then triangulates features seen in both photographs. The checks agree with the model: spinner centre within 5 mm, canopy nose (210, 0, 53) measured at (212, 3, 54). Height is the least certain coordinate (about ±15 mm), because both cameras look down from the front.
+
+- **Main gear:** the photographed aircraft differs from the plan. The spat centres triangulate to x≈245 mm and |y|≈216–234 mm, and the legs leave the wing just behind its leading edge (x≈255–265 mm). The model now uses a 450 mm track, with leg exits at (260, ±168) and axles at x=240. The plan's 370 mm track and its 65 mm aft leg position describe the drawn build, not the photographed one.
+- **Spats:** blunt-nosed teardrops 160 mm long (nose x=170), widest at 35% of their length, with a tapered, slightly raised tail. The plan side view and both photos show this shape; the previous model used symmetric ellipsoids. Outlines now fall on the photographed spats in all four views.
+- **Fin:** the photographed fin has a straight, more strongly swept leading edge. Its crown front triangulates near x≈992 mm, its tight aft top corner near x≈1064 mm, and its trailing edge is near-vertical. The plan's broader, forward-peaked "79" fin differs. The 125 mm height above the aft deck is kept.
+
+### Second-livery photographs
+
+`textures/img.png`, `img_1.png`, `img_2.png` and `img_3.png` show the same model in a red/blue livery. They are used for geometry only. `fit_livery2_photos.py` fits cameras to wing tip, stabilizer tip, spinner and fin landmarks (`img.png` 9.6 px RMS, `img_1.png` 11.5 px RMS). The left/right ambiguity of a nearly flat target is resolved by requiring the camera to sit above the aircraft. With that constraint, the engine-side wing is the near wing in `img.png` and `img_1.png`, and the far one in `img_2.png`, as the visible engine requires.
+
+- The wings, stabilizers, fuselage, fin, wing tips and visible spat fall on the photographed outlines in `img.png` and `img_1.png` (`photo-overlay-livery2-img.png`, `photo-overlay-livery2-img_1.png`). No geometry change was needed.
+- Independent triangulation agrees with the first-livery result: the +y spat nose is at (183, 227, −159) mm against (175, 230, −152), and the fin's aft top corner is within about 20 mm of x=1064. This is consistent with the 450 mm track.
+- `img_2.png` (low front view) has only four reliable landmarks, which leave the camera underdetermined: its held-out wing-tip checks miss by 50–65 px. It is used qualitatively. `img_3.png` (cockpit close-up) and photo 9 show a light grey cockpit tub and seat, a dark glare shield, a broad white canopy rim, and an instrument panel with a round gauge left, a blue attitude indicator centre, a round gauge right and one gauge below. The model's cockpit now follows that: a light grey tub and seat instead of a dark interior, a rim 2.4 mm thick instead of 1.3 mm, and the four-gauge layout with a blue centre indicator. These are colour, rim and layout changes only, with no dimensional effect.
+
+`photo-overlay-*.png` shows the new silhouette over each photograph; the `-before` files show the previous revision.
+
+## Previous revision
 
 - **Canopy:** the previous crest was 53% aft of the nose. The drawing places it around 42%; the new profile follows that position. Its sill now dips below the deck as shown in the side view, while its dimensioned length remains 240 mm and rise above the deck remains 65 mm. The forward frame is placed closer to the crest, consistent with the cockpit photograph. Shoulder fairings connect the glazing rim to the fuselage instead of leaving a gap.
 - **Fuselage:** shape-preserving cubic interpolation replaces linear transitions between cross sections. The 75 mm width continues to the wing leading-edge station. The two checked aft stations retain 95 mm depth.
-- **Fin:** the swept leading edge flows into a rounded crown, replacing the angular, flat-topped outline. Both overall photographs support this shape. The crown remains 125 mm above the 48 mm aft deck.
+- **Fin:** (superseded by the photo triangulation revision) the swept leading edge flowed into a rounded crown, replacing the angular, flat-topped outline. The crown remains 125 mm above the 48 mm aft deck.
 - **Wing tips:** smooth interpolation replaces angular transitions between the existing traced outline landmarks. Root and outer section dimensions, semispans and straight flap hinges are retained.
 - **Cockpit:** the fuselage now has an actual recessed well instead of a solid deck behind the glazing. The close-up informed the thin reclined seat back and its eight lightening holes. Instruments and control stick remain simplified.
 - **Reference retention:** the opposite-side and cockpit photographs are retained in the saved file even though they are not used as surface textures.
 
 ## Verification and review artifacts
 
-`verify_blueprint_corrections.py` checks the saved file's world-space dimensions, principal mesh closure, canopy position, well opening, seat clearance beneath the glazing and packed references. Its 56 results are written to `blueprint-correction-checks.json`. Checks labeled “traced estimate” are reconstruction constraints, not dimensions printed on the drawing. `verify_blend.py` independently checks that the saved principal airframe meshes have positive volume and no nonmanifold edges.
+`verify_blueprint_corrections.py` checks the saved file's world-space dimensions, principal mesh closure, canopy position, well opening, seat clearance beneath the glazing and packed references. Its 70 results are written to `blueprint-correction-checks.json`. Checks labeled “traced estimate” are reconstruction constraints, not dimensions printed on the drawing. `verify_blend.py` independently checks that the saved principal airframe meshes have positive volume and no nonmanifold edges.
 
 `blueprint-overlay.png` and `.svg` show actual mesh outlines over the supplied drawing. `orthographic-side.png` and `orthographic-top.png` show the complete assembly. `photo-comparison.jpg` places each unmodified source photograph beside a fresh render from an approximately corresponding direction. The underlying renders are `comparison-primary.png`, `comparison-opposite.png` and `comparison-cockpit.png`.
 

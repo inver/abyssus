@@ -36,18 +36,28 @@ check('Canopy rise above fuselage deck',max(v.z for v in p)-53,65)
 check('Canopy sill recess (traced estimate)',53-min(v.z for v in p),16)
 check('Canopy crest x (traced estimate)',max(p,key=lambda v:v.z).x,310.8,.2)
 check('Fin height above aft deck',max(v.z for v in points('Vertical fin and rudder'))-48,125)
+fin=points('Vertical fin and rudder')
+check('Fin top aft corner x (photo triangulated)',max(v.x for v in fin if v.z>130),1066,2)
+check('Fin crown x (photo triangulated, traced estimate)',max(fin,key=lambda v:v.z).x,1000,15)
 check('Fuselage width at wing leading edge',extent(at(points('Fuselage | moulded outer envelope'),0,250),1),75)
 o=bpy.data.objects['Retro 60 crankcase'];axis=o.matrix_world.to_3x3()@Vector((0,0,1));yaw=math.degrees(math.atan2(abs(axis.y),abs(axis.x)));check('Engine yaw magnitude',yaw,3,.01)
-check('Gear track',abs(bpy.data.objects['Main tyre -1'].location.y-bpy.data.objects['Main tyre 1'].location.y)*1000,370)
+def centre(name):
+    p=points(name);return Vector([sum(q[k] for q in p)/len(p) for k in range(3)])
+check('Gear track (photo triangulated; plan 370)',abs(centre('Main tyre -1').y-centre('Main tyre 1').y),450,.5)
 for sg in ['-1','1']:
-    p=points('Main gear leg '+sg);check('Gear leg root |y|',abs(p[0].y if False else sum(q.y for q in p)/len(p)),165,25)
-    t=bpy.data.objects['Main tyre '+sg];check('Tyre x (axle) '+sg,t.matrix_world.translation.x*1000 if False else sum(q.x for q in points('Main tyre '+sg))/len(points('Main tyre '+sg)),286,1)
+    p=points('Wheel spat '+sg);check('Wheel spat '+sg+' length (plan side view)',extent(p,0),160,.5)
+    check('Wheel spat '+sg+' nose x (photo triangulated)',min(v.x for v in p),170,.5)
+    check('Wheel spat '+sg+' widest at 35% (teardrop)',max((abs(v.y-centre('Main tyre '+sg).y),v.x) for v in p)[1],226,3)
+for sg in ['-1','1']:
+    p=points('Main gear leg '+sg);check('Gear leg mean |y|',abs(centre('Main gear leg '+sg).y),192,25)
+    check('Gear leg wing exit x (photo triangulated)',max(v.x for v in p),264,3)
+    check('Tyre x (axle) '+sg,centre('Main tyre '+sg).x,240,1)
 check('Tail wheel x',sum(q.x for q in points('Tail wheel'))/len(points('Tail wheel')),919,1)
 for name in ['Fuselage | moulded outer envelope','Wing inboard | 740 mm','Wing outboard | 710 mm','Stabilizer left','Stabilizer right','Vertical fin and rudder']:
     bm=bmesh.new();bm.from_mesh(bpy.data.objects[name].data)
     check(name+' nonmanifold edges',sum(not e.is_manifold for e in bm.edges),0,0);bm.free()
 check('Packed primary photo',int(any(i.packed_file and i.name=='classic-photo.jpg' for i in bpy.data.images)),1,0)
-for name in ['classic-opposite.jpg','cockpit-reference.jpg']:
+for name in ['classic-opposite.jpg','cockpit-reference.jpg','img.png','img_1.png','img_2.png','img_3.png']:
     check('Packed reference '+name,int(any(i.packed_file and i.name==name for i in bpy.data.images)),1,0)
 # The centre of the canopy must expose the well, not a solid fuselage deck.
 p=points('Fuselage | moulded outer envelope')

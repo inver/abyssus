@@ -259,6 +259,20 @@
     "passed": true
   },
   {
+    "check": "Fin top aft corner x (photo triangulated)",
+    "measured": 1064.0,
+    "blueprint": 1066,
+    "tolerance": 2,
+    "passed": true
+  },
+  {
+    "check": "Fin crown x (photo triangulated, traced estimate)",
+    "measured": 1010.0,
+    "blueprint": 1000,
+    "tolerance": 15,
+    "passed": true
+  },
+  {
     "check": "Fuselage width at wing leading edge",
     "measured": 75.0,
     "blueprint": 75,
@@ -273,37 +287,93 @@
     "passed": true
   },
   {
-    "check": "Gear track",
-    "measured": 370.0,
-    "blueprint": 370,
-    "tolerance": 0.05,
+    "check": "Gear track (photo triangulated; plan 370)",
+    "measured": 450.00003,
+    "blueprint": 450,
+    "tolerance": 0.5,
     "passed": true
   },
   {
-    "check": "Gear leg root |y|",
-    "measured": 165.00001,
-    "blueprint": 165,
+    "check": "Wheel spat -1 length (plan side view)",
+    "measured": 160.0,
+    "blueprint": 160,
+    "tolerance": 0.5,
+    "passed": true
+  },
+  {
+    "check": "Wheel spat -1 nose x (photo triangulated)",
+    "measured": 170.00003,
+    "blueprint": 170,
+    "tolerance": 0.5,
+    "passed": true
+  },
+  {
+    "check": "Wheel spat -1 widest at 35% (teardrop)",
+    "measured": 225.27867,
+    "blueprint": 226,
+    "tolerance": 3,
+    "passed": true
+  },
+  {
+    "check": "Wheel spat 1 length (plan side view)",
+    "measured": 160.0,
+    "blueprint": 160,
+    "tolerance": 0.5,
+    "passed": true
+  },
+  {
+    "check": "Wheel spat 1 nose x (photo triangulated)",
+    "measured": 170.00003,
+    "blueprint": 170,
+    "tolerance": 0.5,
+    "passed": true
+  },
+  {
+    "check": "Wheel spat 1 widest at 35% (teardrop)",
+    "measured": 225.27867,
+    "blueprint": 226,
+    "tolerance": 3,
+    "passed": true
+  },
+  {
+    "check": "Gear leg mean |y|",
+    "measured": 192.50002,
+    "blueprint": 192,
     "tolerance": 25,
+    "passed": true
+  },
+  {
+    "check": "Gear leg wing exit x (photo triangulated)",
+    "measured": 263.96158,
+    "blueprint": 264,
+    "tolerance": 3,
     "passed": true
   },
   {
     "check": "Tyre x (axle) -1",
-    "measured": 286.00001,
-    "blueprint": 286,
+    "measured": 240.00002,
+    "blueprint": 240,
     "tolerance": 1,
     "passed": true
   },
   {
-    "check": "Gear leg root |y|",
-    "measured": 165.00001,
-    "blueprint": 165,
+    "check": "Gear leg mean |y|",
+    "measured": 192.50002,
+    "blueprint": 192,
     "tolerance": 25,
     "passed": true
   },
   {
+    "check": "Gear leg wing exit x (photo triangulated)",
+    "measured": 263.96158,
+    "blueprint": 264,
+    "tolerance": 3,
+    "passed": true
+  },
+  {
     "check": "Tyre x (axle) 1",
-    "measured": 286.00001,
-    "blueprint": 286,
+    "measured": 240.00002,
+    "blueprint": 240,
     "tolerance": 1,
     "passed": true
   },
@@ -372,6 +442,34 @@
   },
   {
     "check": "Packed reference cockpit-reference.jpg",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed reference img.png",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed reference img_1.png",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed reference img_2.png",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed reference img_3.png",
     "measured": 1,
     "blueprint": 1,
     "tolerance": 0,
