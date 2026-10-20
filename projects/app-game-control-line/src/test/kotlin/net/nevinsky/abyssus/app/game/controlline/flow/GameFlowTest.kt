@@ -489,4 +489,122 @@ class GameFlowTest {
         assertEquals(net.nevinsky.abyssus.app.game.controlline.pattern.NO_REPLAY_MESSAGE, model.notice)
         assertEquals(1, flow.patternTable.board(AssistLevel.PRO).size)
     }
+
+    // Watch AI
+
+    private fun GameFlow.watchPattern(level: AssistLevel): Screen.Flying {
+        f2bPattern()
+        chooseAssist(level)
+        watchAi()
+        return screen as Screen.Flying
+    }
+
+    @Test
+    fun watchAiOnF2bPlaneSelectStartsADemonstrationOfTheShownPlaneAtThatLevel() {
+        val flow = flow()
+        flow.f2bPattern()
+        flow.chooseAssist(AssistLevel.MID)
+        assertTrue(flow.watchAiOffered)
+        flow.watchAi()
+        val flying = flow.screen as Screen.Flying
+        assertEquals("Stunter", flying.plane.name)
+        assertEquals(Mode.Pattern(AssistLevel.MID), flying.mode)
+        assertEquals(Control.AI, flying.control)
+        assertEquals(1, flying.attempt)
+    }
+
+    @Test
+    fun theExistingLaunchStillFliesItYourself() {
+        val flying = flow().flyPattern(AssistLevel.PRO)
+        assertEquals(Control.HUMAN, flying.control)
+        assertEquals(Control.HUMAN, flow().flyStunter().control)
+    }
+
+    @Test
+    fun freeFlightOffersNoWatchAi() {
+        val flow = flow()
+        flow.freeFlight()
+        assertFalse(flow.watchAiOffered)
+        val select = flow.screen
+        flow.watchAi()
+        assertEquals(select, flow.screen)
+    }
+
+    @Test
+    fun withoutAStuntPlaneThereIsNoDemonstrationEither() {
+        val flow = flow(planes = planes.filter { it.planeClass != PlaneClass.STUNT })
+        flow.f2bPattern()
+        flow.chooseAssist(AssistLevel.MID)
+        flow.watchAi()
+        assertEquals(Screen.MainMenu, flow.screen)
+        assertFalse(flow.watchAiOffered)
+    }
+
+    @Test
+    fun aDemonstrationKeepsWhoFliesItThroughPause() {
+        val flow = flow()
+        val flying = flow.watchPattern(AssistLevel.NOOB)
+        flow.pause()
+        assertEquals(Screen.Paused(flying), flow.screen)
+        flow.resume()
+        assertEquals(flying, flow.screen)
+    }
+
+    @Test
+    fun aDemonstrationAboveEveryBoardEntersNoneAndAsksForNoName() {
+        val flow = flow()
+        // a populated board, then a demonstration that beats it
+        flow.flyAndSave(AssistLevel.MID, 50)
+        flow.mainMenu()
+        val boards = temp.root.toPath().resolve("f2b-scores.json")
+        val before = java.nio.file.Files.readAllBytes(boards)
+        val recordings = temp.root.toPath().resolve("f2b-flights").toFile().list()?.sorted()
+        val flying = flow.watchPattern(AssistLevel.MID)
+        val report = recordedReport(AssistLevel.MID, 100)
+        flow.flightEnded(report)
+        assertEquals(Screen.GameOver(flying, report, null), flow.screen)
+        assertEquals(1, flow.patternTable.board(AssistLevel.MID).size)
+        assertTrue(java.util.Arrays.equals(before, java.nio.file.Files.readAllBytes(boards)))
+        assertEquals(recordings, temp.root.toPath().resolve("f2b-flights").toFile().list()?.sorted())
+        // its own flight, kept in memory, opens in the debrief
+        flow.debrief()
+        val debrief = flow.screen as Screen.Debrief
+        assertTrue(debrief.model.recording === (report.result as FlightResult.Pattern).recording)
+        flow.back()
+        assertEquals(Screen.GameOver(flying, report, null), flow.screen)
+    }
+
+    @Test
+    fun aCrashedDemonstrationGoesStraightToGameOverToo() {
+        val flow = flow()
+        flow.watchPattern(AssistLevel.PRO)
+        val report = recordedReport(AssistLevel.PRO, 0).let { it.copy(end = FlightEnd.CRASHED) }
+        flow.flightEnded(report)
+        val over = flow.screen as Screen.GameOver
+        assertNull(over.rank)
+        assertEquals(FlightEnd.CRASHED, over.report.end)
+        assertTrue(flow.patternTable.board(AssistLevel.PRO).isEmpty())
+    }
+
+    @Test
+    fun retryAfterADemonstrationIsAFreshDemonstrationOfTheSamePlaneAndLevel() {
+        val flow = flow()
+        val first = flow.watchPattern(AssistLevel.MID)
+        flow.flightEnded(recordedReport(AssistLevel.MID, 100))
+        flow.retry()
+        assertEquals(first.copy(attempt = 2), flow.screen)
+        flow.flightEnded(recordedReport(AssistLevel.MID, 100))
+        flow.retry()
+        assertEquals(first.copy(attempt = 3), flow.screen)
+        assertTrue(flow.patternTable.board(AssistLevel.MID).isEmpty())
+    }
+
+    @Test
+    fun afterADemonstrationTheNextFlightIsYoursAgain() {
+        val flow = flow()
+        flow.watchPattern(AssistLevel.MID)
+        flow.flightEnded(recordedReport(AssistLevel.MID, 100))
+        flow.mainMenu()
+        assertEquals(Control.HUMAN, flow.flyPattern(AssistLevel.MID).control)
+    }
 }

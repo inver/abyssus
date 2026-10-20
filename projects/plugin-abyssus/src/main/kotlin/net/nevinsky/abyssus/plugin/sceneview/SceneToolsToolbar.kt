@@ -155,7 +155,11 @@ internal class SceneToolsToolbar(
     }
 
     private fun spaceLabel(space: GizmoSpace) = AbyssusBundle.message(if (space == GizmoSpace.WORLD) "sceneViewSpaceWorld" else "sceneViewSpaceLocal")
-    private fun shadingLabel(shading: Shading) = AbyssusBundle.message(if (shading == Shading.LIT) "sceneViewShadingLit" else "sceneViewShadingUnlit")
+    private fun shadingLabel(shading: Shading) = AbyssusBundle.message(when (shading) {
+        Shading.LIT -> "sceneViewShadingLit"
+        Shading.UNLIT -> "sceneViewShadingUnlit"
+        Shading.WIREFRAME -> "sceneViewShadingWireframe"
+    })
 
     companion object {
         /** The component name of a divider between toolbar groups. */

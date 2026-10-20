@@ -232,6 +232,21 @@
           "sample": true
         },
         {
+          "name": "watchAiVisible",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "isAi",
+          "type": "boolean",
+          "sample": false
+        },
+        {
+          "name": "isHuman",
+          "type": "boolean",
+          "sample": true
+        },
+        {
           "name": "tabFreeStyle",
           "type": "string",
           "sample": "tab"
@@ -1231,6 +1246,27 @@
                           }
                         },
                         "style": "outline"
+                      },
+                      {
+                        "id": "ps-watch-ai",
+                        "type": "button",
+                        "layout": {
+                          "width": 180,
+                          "height": 52
+                        },
+                        "properties": {
+                          "text": "Watch AI  (A)"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "watchAi"
+                          }
+                        },
+                        "bindings": {
+                          "visible": "watchAiVisible"
+                        },
+                        "style": "outline"
                       }
                     ]
                   }
@@ -1751,6 +1787,9 @@
                   "y": -16,
                   "padding": 8
                 },
+                "bindings": {
+                  "visible": "isHuman"
+                },
                 "children": [
                   {
                     "id": "hudPattern-hint",
@@ -1758,6 +1797,33 @@
                     "style": "muted",
                     "properties": {
                       "text": "W / S or Up / Down or the mouse: handle    Esc: pause"
+                    },
+                    "layout": {
+                      "height": 19
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "hudPattern-ai-panel",
+                "type": "panel",
+                "style": "pane",
+                "layout": {
+                  "anchor": "bottomLeft",
+                  "x": 16,
+                  "y": -16,
+                  "padding": 8
+                },
+                "bindings": {
+                  "visible": "isAi"
+                },
+                "children": [
+                  {
+                    "id": "hudPattern-ai",
+                    "type": "label",
+                    "style": "highlight",
+                    "properties": {
+                      "text": "AI demonstration: the bot holds the handle    Esc: pause"
                     },
                     "layout": {
                       "height": 19
@@ -1831,6 +1897,20 @@
                     },
                     "properties": {
                       "text": "Paused"
+                    }
+                  },
+                  {
+                    "id": "pa-ai",
+                    "type": "label",
+                    "style": "highlight",
+                    "properties": {
+                      "text": "AI demonstration"
+                    },
+                    "bindings": {
+                      "visible": "isAi"
+                    },
+                    "layout": {
+                      "height": 19
                     }
                   },
                   {
@@ -2219,6 +2299,20 @@
                             },
                             "layout": {
                               "height": 54
+                            }
+                          },
+                          {
+                            "id": "go-ai",
+                            "type": "label",
+                            "style": "highlight",
+                            "properties": {
+                              "text": "AI demonstration: no board entry"
+                            },
+                            "bindings": {
+                              "visible": "isAi"
+                            },
+                            "layout": {
+                              "height": 19
                             }
                           }
                         ]
@@ -3181,6 +3275,20 @@
                             "style": "highlight",
                             "bindings": {
                               "text": "debriefTitle"
+                            },
+                            "layout": {
+                              "height": 19
+                            }
+                          },
+                          {
+                            "id": "db-ai",
+                            "type": "label",
+                            "style": "highlight",
+                            "properties": {
+                              "text": "AI demonstration"
+                            },
+                            "bindings": {
+                              "visible": "isAi"
                             },
                             "layout": {
                               "height": 19

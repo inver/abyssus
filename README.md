@@ -30,7 +30,8 @@ remain readable in the text editor; plugin editing and loading are refused. No i
   3DS, DAE, glTF or GLB file into a model asset with a live preview, and **Import FlightGear Aircraft** turns an
   aircraft from a FlightGear `.zip` into a model asset.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
-  objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
+  objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera. The toolbar's shading
+  dropdown offers Lit, Unlit and Wireframe (per view, never saved); Wireframe draws every content drawable as edges only.
   Edges and lines use 4× antialiasing by default; select the project in the Abyssus tree and use
   **Abyssus Properties | Scene view antialiasing** to choose Off, 2×, 4× or 8×. The choice is saved in its `.abss`
   and applies to that project's open views, with automatic fallback for unsupported GPUs.
@@ -366,9 +367,9 @@ they navigate to.
 
 | Area | What it does |
 |---|---|
-| Screens | Add a screen or an overlay, rename, delete; the entry screen is marked |
-| Palette and widget tree | Add a widget to the selected container, duplicate, delete, move up or down, or drag it onto another row (beside it, or into a container) |
-| Canvas | Click to select, drag a panel child to move it, drag a row or column child to reorder it, release over another container to move it there. One drag is one undo step; a drag started on older text is refused |
+| Screens menu (canvas toolbar) | Switch screens; Add Screen, Add Overlay, rename, delete and the Up / Down focus switch; the entry screen is marked |
+| Widget tree | **Add** opens a menu of widget kinds that adds to the selected container (the menu names it); duplicate, delete, move up or down, or drag a row onto another row (beside it, or into a container) |
+| Canvas | The toolbar has the preview resolution and the fit zoom. Click to select, drag a panel child to move it, drag a row or column child to reorder it, release over another container to move it there. One drag is one undo step; a drag started on older text is refused |
 | Properties | Layout (anchor and offsets inside a panel; `grow` in a row or column; padding, spacing, alignment), text, style, bindings and the button's click action. A binding that cannot work is flagged: undeclared, the wrong type, or read-only on a control that writes back |
 | Declarations | Bindings (typed, read-only or writable, with a sample and limits), styles (font size, colours, a font, hover / pressed / disabled backgrounds) and resources: **Import Image...** (PNG or JPEG, at most 8192 pixels a side) and **Import Font...** (a text BMFont `.fnt` with its PNG pages) copy the files into the asset folder without overwriting anything |
 

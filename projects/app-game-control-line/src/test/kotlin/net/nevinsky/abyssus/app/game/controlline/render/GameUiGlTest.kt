@@ -17,7 +17,6 @@ import net.nevinsky.abyssus.app.game.controlline.flow.FlightResult
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
 import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.flow.planeChoices
-import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
 import net.nevinsky.abyssus.app.game.controlline.loadField
 import net.nevinsky.abyssus.app.game.controlline.named
 import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
@@ -83,7 +82,7 @@ class GameUiGlTest {
             val judge = PatternJudge(flying.plane.lineLength)
             FlightSession(scene.engine, pilot, plane, PhysicsAssets(bundledProject().toFile()), failOnWarnings(), JoltNatives(), judge).use { session ->
                 show(session, judge)
-                session.advance(0.5f, HandleInput())
+                session.advance(0.5f)
                 show(session, judge)
                 assertShows("label|normal|Time", "label|normal|Next")
                 flow.pause()

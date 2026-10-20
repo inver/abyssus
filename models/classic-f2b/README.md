@@ -1,6 +1,6 @@
 # Yatsenko Classic F2B — reference reconstruction
 
-Open **Classic_F2B.blend**. This is the blueprint-corrected revision; see `BLUEPRINT_REVIEW.md` and the updated overlay for the corrections and verification. The scene is full size, with metric display in millimetres and internal coordinates in metres. The primary photograph is packed inside the blend file; no external texture installation is required. Components are organized into named collections: fuselage, wings, stabilizer, landing gear, engine/propeller, cockpit, and studio. The camera and lights are included.
+Open **Classic_F2B.blend**. This revision refines the blueprint-corrected model against all three local photographs; see `BLUEPRINT_REVIEW.md` and the updated overlay for the corrections and verification. The scene is full size, with metric display in millimetres and internal coordinates in metres. All three photographs are packed inside the blend file; no external texture installation is required. Components are organized into named collections: fuselage, wings, stabilizer, landing gear, engine/propeller, cockpit, and studio. The camera and lights are included.
 
 ## Reference basis
 
@@ -24,10 +24,11 @@ Upper wing and stabilizer markings, including the photographed registration lett
 | Stabilizer span | 690 mm |
 | Stabilizer root chord | 161 mm |
 | Canopy length / rise | 240 / 65 mm |
+| Fin height above aft deck | 125 mm |
 | Propeller diameter / nominal pitch | 340 / 140 mm |
-| Main gear track | 370 mm |
+| Main gear track | 450 mm (photo-triangulated; plan shows 370) |
 
-The symmetric airfoil is an analytic approximation scaled to the drawing thickness. Rounded tips, fuselage cross sections, canopy curvature, fin outline and small details are estimated from the views. Wing flaps and elevator hinge lines are represented, but control surfaces are not mechanically articulated. The engine has a horizontal cylinder and visually reconstructed cooling fins, head, plug and silencer; this is not a manufacturer's dimensioned Retro 60 model.
+The symmetric airfoil is an analytic approximation scaled to the drawing thickness. Rounded tips, fuselage cross sections, canopy curvature, fin outline and small details are estimated from the views. The canopy's 65 mm rise is measured above the fuselage deck; its recessed sill makes the complete glazing envelope 81 mm tall. Its crest is approximately 42% aft of the canopy nose. An open cockpit well exposes the seat, perforated seat back, instruments and controls. Wing flaps and elevator hinge lines are represented, but control surfaces are not mechanically articulated. The engine has a horizontal cylinder and visually reconstructed cooling fins, head, plug and silencer; this is not a manufacturer's dimensioned Retro 60 model.
 
 The original model's **1600 ±20 g** flying weight and **10 cc Discovery Retro 60** engine are recorded as scene metadata. Neither flying mass nor a low-inertia composite layup is established by this mesh. Ball-lock sockets and detents are schematic external representations: no undocumented internal Petrov mechanism, release action or manufacturing tolerances are asserted. Separate components express the demountable layout without inventing functional joints.
 
@@ -38,9 +39,18 @@ The original model's **1600 ±20 g** flying weight and **10 cc Discovery Retro 6
 - `wireframe.png`: topology preview from the same camera.
 - `stl/`: separate principal airframe solids and landing-gear components, in millimetres and their assembly positions. STL carries no color.
 - `validation.json`: principal mesh dimensions and edge-manifold checks.
-- `blueprint-correction-checks.json`: 48 saved-file dimensional and topology checks.
+- `blueprint-correction-checks.json`: 70 saved-file dimensional, topology and reference-retention checks; traced estimates are explicitly labeled.
 - `blueprint-overlay.png`: corrected airframe outline over the supplied drawing.
 - `orthographic-side.png` / `orthographic-top.png`: assembly views without perspective.
 - `build_classic.py`: reproducible Blender 5.2+ build script.
+- `fit_photo_overlays.py` / `photo-registration.json`: perspective cameras fitted to wing, tail and spinner landmarks in photos 7 and 8; renders `aligned-*.png` and silhouette masks.
+- `photo_triangulation.py` / `photo-triangulation.json`: 3D positions of the fin and gear triangulated from both photographs, with spinner and canopy-nose checks.
+- `textures/img.png`, `img_1.png`, `img_2.png`, `img_3.png`: the same model in a red/blue livery (overall views and a cockpit close-up). Used for geometry only, never as texture; packed in the blend file.
+- `fit_livery2_photos.py` / `photo-registration-livery2.json` / `photo-overlay-livery2-*.png`: cameras fitted to `img.png` (9.6 px RMS) and `img_1.png` (11.5 px RMS) with the model silhouette over each photograph. `img_2.png` has too few usable landmarks for a reliable camera and `img_3.png` is a close-up, so both are qualitative references.
+- `photo-overlay-primary.png` / `photo-overlay-opposite.png`: model silhouette (magenta) over each photograph; `-before` files show the previous revision.
+- `photo-comparison.jpg`: source photographs beside fresh model renders, including a cockpit close-up.
+- `render_photo_comparisons.py`: recreates the three `comparison-*.png` views from the saved model.
+
+Rebuild with `blender -b --python-exit-code 1 --python build_classic.py`. Then run `verify_blueprint_corrections.py`, `verify_blend.py`, `fit_photo_overlays.py`, `photo_triangulation.py`, `audit_blueprint.py`, `render_orthographic.py` and `render_photo_comparisons.py` with the same Blender invocation. `compose_comparisons.sh` converts the updated overlay SVG to PNG and assembles the labeled photo comparison sheet using ImageMagick. Camera directions approximate the photographs; these are qualitative comparisons, not camera-calibrated measurements.
 
 Principal airframe solids are closed meshes. Fuselage and fin are separate intersecting parts; gear components are separate bodies. These are reference solids, not hollow flightworthy structures or a printer-bed layout. Full-size fabrication requires wall thickness/structural design, mating joints, clearances and segmentation appropriate to the chosen process. The clear canopy and decorative curves are display details, not included in the principal airframe STL exports.

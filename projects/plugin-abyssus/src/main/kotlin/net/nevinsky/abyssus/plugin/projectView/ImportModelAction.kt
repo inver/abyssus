@@ -44,8 +44,8 @@ import net.nevinsky.abyssus.plugin.assetfiles.AssetFileUndoAction
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.plugin.assetfiles.PlacedEntity
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
-import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
-import net.nevinsky.abyssus.plugin.projectView.asset.selectAssetInAbyssusView
+import net.nevinsky.abyssus.plugin.projectView.action.asset.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetInAbyssusView
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.sceneview.SceneFileEditor
 import java.io.File

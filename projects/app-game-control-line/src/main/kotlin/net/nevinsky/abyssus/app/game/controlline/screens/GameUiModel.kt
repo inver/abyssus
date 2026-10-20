@@ -6,6 +6,7 @@ package net.nevinsky.abyssus.app.game.controlline.screens
 
 import com.badlogic.gdx.Input
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
+import net.nevinsky.abyssus.app.game.controlline.flow.Control
 import net.nevinsky.abyssus.app.game.controlline.flow.FlightReport
 import net.nevinsky.abyssus.app.game.controlline.flow.FlightResult
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
@@ -102,6 +103,9 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
         menus(values)
         planeSelect(values, screen)
         hudValues(values, modeOf(screen))
+        val ai = demonstration(screen)
+        values["isAi"] = flag(ai)
+        values["isHuman"] = flag(!ai)
         summary(values, (screen as? Screen.NameEntry)?.report ?: (screen as? Screen.GameOver)?.report)
         values["playerName"] = text(playerName)
         val over = screen as? Screen.GameOver
@@ -111,6 +115,15 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
         scores(values, screen as? Screen.Scores)
         debrief(values, (screen as? Screen.Debrief)?.model)
         return UiSnapshot(values)
+    }
+
+    /** Whether [screen] shows an AI demonstration: flying it, paused in it, its GAME OVER, or the debrief opened from that. */
+    private fun demonstration(screen: Screen): Boolean = when (screen) {
+        is Screen.Flying -> screen.control == Control.AI
+        is Screen.Paused -> screen.flying.control == Control.AI
+        is Screen.GameOver -> screen.flying.control == Control.AI
+        is Screen.Debrief -> demonstration(screen.from)
+        else -> false
     }
 
     private fun text(value: String) = UiValue.Text(value)
@@ -135,6 +148,7 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
         values["modeLabel"] = text(label.orEmpty())
         values["planeCount"] = text(select?.let { "Choose a plane  (${it.index + 1} of ${choices.size})" }.orEmpty())
         values["planeName"] = text(plane?.name.orEmpty())
+        values["watchAiVisible"] = flag(flow.watchAiOffered)
         values["planeFacts"] = text(plane?.let {
             String.format(Locale.ROOT, "%s    Lines %.0f m    Mass %.2f kg    Fuel %.0f s",
                 it.planeClass.name.lowercase().replaceFirstChar { c -> c.uppercase() }, it.lineLength, it.mass, it.fuelTime)
@@ -337,6 +351,7 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
             "previousPlane" -> flow.previousPlane()
             "nextPlane" -> flow.nextPlane()
             "choosePlane" -> flow.choosePlane()
+            "watchAi" -> flow.watchAi()
             "resume" -> flow.resume()
             "mainMenu" -> flow.mainMenu()
             "saveName" -> flow.nameEntered(playerName)
@@ -359,11 +374,12 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
 
     /**
      * Whether [keycode] is one of the game's keys on the current screen, done here: Escape, Left and Right on plane
-     * select and the score table, Up, Down and Enter on an F2B board, Enter on plane select, and all of the debrief's.
-     * The rest (focus movement, pressing the focused button) belongs to the presenter. [fieldFocused] is whether the
-     * name field has the focus: Enter there saves the name.
+     * select and the score table, Up, Down and Enter on an F2B board, Enter and A on plane select, and all of the
+     * debrief's. The rest (focus movement, pressing the focused button) belongs to the presenter. [fieldFocused] is
+     * whether the name field has the focus: Enter there saves the name. [focus] is the focused widget's id: Enter on the
+     * Watch AI button watches the bot, anywhere else on plane select it flies.
      */
-    fun key(keycode: Int, fieldFocused: Boolean = false): Boolean {
+    fun key(keycode: Int, fieldFocused: Boolean = false, focus: String? = null): Boolean {
         val screen = flow.screen
         if (screen is Screen.Debrief) return debriefKey(screen.model, keycode)
         val board = (screen as? Screen.Scores)?.tab?.level != null
@@ -381,8 +397,10 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
             }
             Input.Keys.UP -> if (board) flow.selectRow(-1) else return false
             Input.Keys.DOWN -> if (board) flow.selectRow(1) else return false
+            Input.Keys.A -> if (screen is Screen.PlaneSelect && flow.watchAiOffered) flow.watchAi() else return false
             Input.Keys.ENTER, Input.Keys.NUMPAD_ENTER -> when {
                 screen is Screen.NameEntry && fieldFocused -> flow.nameEntered(playerName)
+                screen is Screen.PlaneSelect && focus == WATCH_AI_BUTTON && flow.watchAiOffered -> flow.watchAi()
                 screen is Screen.PlaneSelect -> flow.choosePlane()
                 board -> flow.openRow()
                 else -> return false

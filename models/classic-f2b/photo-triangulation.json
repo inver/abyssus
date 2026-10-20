@@ -1,0 +1,358 @@
+{
+  "method": "Linear two-view triangulation with the fitted photo cameras; single-view rays intersect a stated z plane.",
+  "limitations": "Hand-marked silhouette extremes; camera landmark residuals are about 20 px. Height is least certain.",
+  "paired": {
+    "check: spinner centre": {
+      "photo_px": {
+        "primary": [
+          935,
+          713
+        ],
+        "opposite": [
+          235,
+          614
+        ]
+      },
+      "world_mm": [
+        -30.5,
+        4.1,
+        6.9
+      ],
+      "reprojection_px": {
+        "primary": 2.6,
+        "opposite": 4.2
+      },
+      "model_mm": [
+        -25,
+        0,
+        10
+      ]
+    },
+    "check: spinner nose (livery 2)": {
+      "photo_px": {
+        "img.png": [
+          902,
+          357
+        ],
+        "img_1.png": [
+          703,
+          127
+        ]
+      },
+      "world_mm": [
+        -54.1,
+        19.9,
+        11.4
+      ],
+      "reprojection_px": {
+        "img.png": 6.4,
+        "img_1.png": 5.8
+      },
+      "model_mm": [
+        -48,
+        2,
+        10
+      ]
+    },
+    "fin aft top corner (livery 2)": {
+      "photo_px": {
+        "img.png": [
+          241,
+          133
+        ],
+        "opposite": [
+          818,
+          50
+        ]
+      },
+      "world_mm": [
+        1044.1,
+        1.6,
+        151.2
+      ],
+      "reprojection_px": {
+        "img.png": 0.2,
+        "opposite": 0.3
+      },
+      "model_mm": null
+    },
+    "spat +y nose (livery 2)": {
+      "photo_px": {
+        "img.png": [
+          690,
+          497
+        ],
+        "primary": [
+          615,
+          755
+        ]
+      },
+      "world_mm": [
+        183.4,
+        227.0,
+        -159.0
+      ],
+      "reprojection_px": {
+        "img.png": 0.7,
+        "primary": 0.8
+      },
+      "model_mm": null
+    },
+    "check: canopy nose": {
+      "photo_px": {
+        "primary": [
+          773,
+          517
+        ],
+        "opposite": [
+          400,
+          447
+        ]
+      },
+      "world_mm": [
+        211.9,
+        2.8,
+        53.9
+      ],
+      "reprojection_px": {
+        "primary": 4.6,
+        "opposite": 7.4
+      },
+      "model_mm": [
+        210,
+        0,
+        53
+      ]
+    },
+    "fin crown front": {
+      "photo_px": {
+        "primary": [
+          365,
+          61
+        ],
+        "opposite": [
+          795,
+          57
+        ]
+      },
+      "world_mm": [
+        991.6,
+        7.4,
+        165.1
+      ],
+      "reprojection_px": {
+        "primary": 2.3,
+        "opposite": 3.3
+      },
+      "model_mm": null
+    },
+    "fin top aft corner": {
+      "photo_px": {
+        "primary": [
+          336,
+          50
+        ],
+        "opposite": [
+          818,
+          50
+        ]
+      },
+      "world_mm": [
+        1064.1,
+        9.5,
+        142.2
+      ],
+      "reprojection_px": {
+        "primary": 1.1,
+        "opposite": 1.5
+      },
+      "model_mm": null
+    },
+    "spat +y nose": {
+      "photo_px": {
+        "primary": [
+          615,
+          755
+        ],
+        "opposite": [
+          262,
+          485
+        ]
+      },
+      "world_mm": [
+        175.0,
+        230.3,
+        -152.2
+      ],
+      "reprojection_px": {
+        "primary": 4.3,
+        "opposite": 6.0
+      },
+      "model_mm": null
+    },
+    "spat +y tail": {
+      "photo_px": {
+        "primary": [
+          532,
+          657
+        ],
+        "opposite": [
+          350,
+          407
+        ]
+      },
+      "world_mm": [
+        326.2,
+        233.8,
+        -142.8
+      ],
+      "reprojection_px": {
+        "primary": 0.8,
+        "opposite": 1.1
+      },
+      "model_mm": null
+    },
+    "spat +y centre": {
+      "photo_px": {
+        "primary": [
+          576,
+          708
+        ],
+        "opposite": [
+          294,
+          451
+        ]
+      },
+      "world_mm": [
+        237.7,
+        234.4,
+        -140.7
+      ],
+      "reprojection_px": {
+        "primary": 6.6,
+        "opposite": 9.2
+      },
+      "model_mm": null
+    },
+    "spat -y nose": {
+      "photo_px": {
+        "primary": [
+          907,
+          550
+        ],
+        "opposite": [
+          532,
+          685
+        ]
+      },
+      "world_mm": [
+        174.4,
+        -212.5,
+        -148.1
+      ],
+      "reprojection_px": {
+        "primary": 6.7,
+        "opposite": 11.8
+      },
+      "model_mm": null
+    },
+    "spat -y tail": {
+      "photo_px": {
+        "primary": [
+          825,
+          470
+        ],
+        "opposite": [
+          625,
+          585
+        ]
+      },
+      "world_mm": [
+        328.5,
+        -216.2,
+        -143.4
+      ],
+      "reprojection_px": {
+        "primary": 0.4,
+        "opposite": 0.7
+      },
+      "model_mm": null
+    },
+    "spat -y centre": {
+      "photo_px": {
+        "primary": [
+          865,
+          511
+        ],
+        "opposite": [
+          581,
+          636
+        ]
+      },
+      "world_mm": [
+        251.9,
+        -215.5,
+        -150.9
+      ],
+      "reprojection_px": {
+        "primary": 3.3,
+        "opposite": 5.9
+      },
+      "model_mm": null
+    }
+  },
+  "single_view": {
+    "gear leg +y wing exit": {
+      "photo": "primary",
+      "photo_px": [
+        607,
+        615
+      ],
+      "plane_z_mm": -27,
+      "world_mm": [
+        264.3,
+        179.9,
+        -27.0
+      ]
+    },
+    "gear leg -y wing exit": {
+      "photo": "opposite",
+      "photo_px": [
+        550,
+        542
+      ],
+      "plane_z_mm": -27,
+      "world_mm": [
+        253.3,
+        -162.0,
+        -27.0
+      ]
+    },
+    "gear leg +y at z=-130": {
+      "photo": "primary",
+      "photo_px": [
+        585,
+        690
+      ],
+      "plane_z_mm": -130,
+      "world_mm": [
+        252.6,
+        215.7,
+        -130.0
+      ]
+    },
+    "gear leg -y at z=-130": {
+      "photo": "opposite",
+      "photo_px": [
+        565,
+        627
+      ],
+      "plane_z_mm": -130,
+      "world_mm": [
+        231.9,
+        -202.3,
+        -130.0
+      ]
+    }
+  }
+}

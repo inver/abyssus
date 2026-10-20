@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.projectView.AbyssusTreeAction
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
-import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.action.asset.assetsNodeProjectFile
 import java.io.File
 
 /** The names in the project file's `uiAssetNames`, from its current text; empty when it is missing or malformed. */
@@ -57,7 +57,7 @@ class UiAssetTarget(val abss: VirtualFile, val name: String, val registered: Boo
 
 internal fun uiAssetTarget(node: Any?): UiAssetTarget? = runCatchingKeepingCancellation {
     val entry = (node as? DtoEntryNode)?.value ?: return null
-    val asset = entry.value as? Asset<*> ?: return null
+    val asset = (entry.value as? Asset<*>) ?: (entry.value as? net.nevinsky.abyssus.plugin.projectView.UiScreenEntry)?.asset ?: return null
     val abss = entry.source?.takeIf { it.isValid && it.extension == "abss" } ?: return null
     if (asset.type != MetaType.UI) return null
     UiAssetTarget(abss, asset.name, asset.name in registeredUiAssets(abss))

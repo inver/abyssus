@@ -60,6 +60,14 @@ class SceneViewToolsModelTest {
         assertTrue(m.display.drawsShadows)
     }
 
+    @Test fun wireframeIsInTheShadingEntriesAndDrawsNoShadows() {
+        assertTrue(Shading.entries.contains(Shading.WIREFRAME))
+        val m = SceneViewToolsModel()
+        m.setShading(Shading.WIREFRAME)
+        assertFalse(m.display.drawsShadows)
+        assertTrue("the toggle itself stays on", m.display.shadows)
+    }
+
     @Test fun selectIsPressedInSelectMode() {
         val s = state(GizmoMode.SELECT)
         assertTrue(s.selectSelected)

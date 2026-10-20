@@ -54,6 +54,24 @@ class PatternJudgeTest {
         assertEquals(100, flight.entry(Figure.INSIDE_LOOPS).tenths)
     }
 
+    /** On its lines a plane's up stays across them, so it flies level inverted clockwise; its laps count as inverted laps. */
+    @Test
+    fun invertedLapsFlownClockwiseAreMarked() {
+        val flight = SyntheticSchedule()
+        flight.takeoff()
+        flight.figure { flight.tracks.reverseWingover(it) }
+        flight.figure { flight.tracks.loops(it, 3) }
+        flight.pause()
+        val from = flight.flight.endAzimuth
+        // the plane's up is u x heading, as the physics keeps it: flying clockwise it points to the ground
+        flight.flight.flyPoints(parallel(0f, from, from - 760f, Tag.BASE).points.map { it to false })
+        flight.feed()
+        val laps = flight.entry(Figure.INVERTED_LAPS)
+        assertNull(flight.describe(), laps.reason)
+        assertTrue(flight.describe(), laps.tenths >= 10)
+        assertEquals(Figure.OUTSIDE_LOOPS, flight.judge.expected)
+    }
+
     @Test
     fun aLoopFlownAgainLaterChangesNothing() {
         val flight = SyntheticSchedule()

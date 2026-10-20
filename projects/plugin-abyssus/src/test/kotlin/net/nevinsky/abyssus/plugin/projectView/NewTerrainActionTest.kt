@@ -31,8 +31,8 @@ import net.nevinsky.abyssus.plugin.terrain.NewTerrainFactory
 import net.nevinsky.abyssus.plugin.terrain.NewTerrainRequest
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkGeometry
-import net.nevinsky.abyssus.plugin.projectView.asset.assetVisitAction
-import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.action.asset.assetVisitAction
+import net.nevinsky.abyssus.plugin.projectView.action.asset.assetsNodeProjectFile
 import java.io.File
 import java.nio.file.Files
 

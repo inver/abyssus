@@ -8,6 +8,7 @@ import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.lib.core.ui.model.UiWidget
 import net.nevinsky.abyssus.lib.core.ui.model.UiWidgetType
+import net.nevinsky.abyssus.lib.core.ui.state.UiScreenRef
 import net.nevinsky.abyssus.lib.core.ui.state.expandLists
 import java.util.Locale
 
@@ -29,6 +30,16 @@ class GameUiHostDriver(private val host: GameUiHost) : ScreenDriver {
     }
 
     override fun keyDown(keycode: Int) = host.keyDown(keycode)
+
+    override val focus: String? get() = presenter.navigator.focus
+
+    override fun click(screen: String, widget: String) {
+        val bounds = checkNotNull(presenter.layout(UiScreenRef(SCREENS_ASSET, screen))?.nodes?.get(widget)) { "$widget is not laid out on $screen" }.bounds
+        val x = (bounds.x + bounds.width / 2f).toInt()
+        val y = (bounds.y + bounds.height / 2f).toInt()
+        host.inputProcessor.touchDown(x, y, 0, 0)
+        host.inputProcessor.touchUp(x, y, 0, 0)
+    }
 
     override fun dump(): List<String> {
         val view = presenter.view

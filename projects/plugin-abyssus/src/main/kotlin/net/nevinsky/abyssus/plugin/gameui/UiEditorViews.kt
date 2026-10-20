@@ -4,21 +4,24 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.Messages
-import com.intellij.ui.JBSplitter
+import com.intellij.icons.AllIcons
+import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
-import net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind
+import com.intellij.util.ui.JBUI
 import net.nevinsky.abyssus.lib.core.ui.model.UiWidget
 import net.nevinsky.abyssus.lib.core.ui.model.UiWidgetType
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.FlowLayout
-import java.awt.GridLayout
+import java.awt.Insets
 import javax.swing.*
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeCellRenderer
@@ -57,9 +60,78 @@ class UiWidgetTreePanel(private val controller: UiEditorController) : JPanel(Bor
             ((tree.lastSelectedPathComponent as? DefaultMutableTreeNode)?.userObject as? UiTreeItem)?.let { controller.select(it.id) }
         }
         tree.transferHandler = TreeMoveHandler()
+        add(header(), BorderLayout.NORTH)
         add(JBScrollPane(tree), BorderLayout.CENTER)
         controller.addListener(::rebuild)
         rebuild()
+    }
+
+    // ---- header: Add, Duplicate, Delete, Up, Down and the list empty-state actions ----
+
+    private fun iconButton(name: String, icon: Icon, tip: String, run: () -> Unit) = JButton(icon).apply {
+        this.name = name
+        toolTipText = tip
+        margin = Insets(2, 4, 2, 4)
+        addActionListener { run() }
+    }
+
+    private fun header(): JComponent {
+        val add = JButton(AbyssusBundle.message("uiAddWidget"), AllIcons.General.ArrowDown).apply {
+            name = "add-widget"
+            horizontalTextPosition = SwingConstants.LEADING
+            addActionListener { openAddPopup(this) }
+        }
+        val more = iconButton("more", AllIcons.Actions.More, AbyssusBundle.message("uiMoreWidgetActions")) { }
+        more.addActionListener { openMorePopup(more) }
+        return JPanel(BorderLayout()).apply {
+            add(JBLabel(AbyssusBundle.message("uiWidgets")).apply { border = JBUI.Borders.empty(0, 4) }, BorderLayout.NORTH)
+            add(JPanel(FlowLayout(FlowLayout.LEFT, 2, 2)).apply {
+                add(add)
+                add(iconButton("duplicate", AllIcons.Actions.Copy, AbyssusBundle.message("uiDuplicate")) { controller.duplicateSelected() })
+                add(iconButton("delete", AllIcons.General.Remove, AbyssusBundle.message("uiDelete")) { controller.deleteSelected() })
+                add(iconButton("up", AllIcons.Actions.MoveUp, AbyssusBundle.message("uiMoveUp")) { shift(-1) })
+                add(iconButton("down", AllIcons.Actions.MoveDown, AbyssusBundle.message("uiMoveDown")) { shift(1) })
+                add(more)
+            }, BorderLayout.CENTER)
+        }
+    }
+
+    /** The Add popup's title: names the container the widget is added into. */
+    internal fun addTitle(): String = controller.addTarget()?.let { AbyssusBundle.message("uiAddTo", labelOfWidget(it)) } ?: AbyssusBundle.message("uiAddWidget")
+
+    /** The widget kinds the Add popup offers. */
+    internal val addKinds: List<String> get() = UiWidgetType.entries.map { it.json }
+
+    internal fun add(type: String): Boolean = controller.addWidget(type)
+
+    private fun action(text: String, run: () -> Unit): AnAction = object : AnAction(text) {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        override fun actionPerformed(e: AnActionEvent) = run()
+    }
+
+    internal fun addGroup() = DefaultActionGroup().apply {
+        addKinds.forEach { type -> add(action(AbyssusBundle.message("uiWidgetType.$type")) { add(type) }) }
+    }
+
+    internal fun moreGroup() = DefaultActionGroup().apply {
+        add(action(AbyssusBundle.message("uiAddEmpty")) { controller.addListEmpty() })
+        add(action(AbyssusBundle.message("uiRemoveEmpty")) { controller.removeListEmpty() })
+    }
+
+    private fun openAddPopup(owner: JComponent) = JBPopupFactory.getInstance()
+        .createActionGroupPopup(addTitle(), addGroup(), DataManager.getInstance().getDataContext(owner), JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true)
+        .showUnderneathOf(owner)
+
+    private fun openMorePopup(owner: JComponent) = JBPopupFactory.getInstance()
+        .createActionGroupPopup(null, moreGroup(), DataManager.getInstance().getDataContext(owner), JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true)
+        .showUnderneathOf(owner)
+
+    internal fun shift(delta: Int) {
+        val c = controller.collection ?: return
+        val id = controller.selection.widgetId ?: return
+        val parent = net.nevinsky.abyssus.lib.core.editor.ui.UiTree(c).parentOf(id) ?: return
+        val at = parent.children.indexOfFirst { it.id == id }
+        controller.reorderSelected(at + delta)
     }
 
     /** Rebuilds the nodes for the displayed screen, keeping expansion and re-selecting the controller's widget. */
@@ -132,94 +204,5 @@ class UiWidgetTreePanel(private val controller: UiEditorController) : JPanel(Bor
             }
             return treeDrop(c, dragged, over, position)
         }
-    }
-}
-
-/** The screens of the asset, with add, rename and delete; the entry screen is marked. */
-class UiScreensPanel(private val project: Project?, private val controller: UiEditorController) : JPanel(BorderLayout()) {
-    private val model = DefaultListModel<String>()
-    internal val list = JBList(model)
-    private var ids: List<String> = emptyList()
-    private var syncing = false
-
-    /** Whether the selected screen moves focus with Up and Down instead of Tab. */
-    internal val arrows = JCheckBox(AbyssusBundle.message("uiScreenArrows")).apply { name = "screen-arrows" }
-
-    init {
-        list.addListSelectionListener {
-            if (syncing || it.valueIsAdjusting) return@addListSelectionListener
-            ids.getOrNull(list.selectedIndex)?.let(controller::selectScreen)
-        }
-        val buttons = JPanel(FlowLayout(FlowLayout.LEFT, 2, 2)).apply {
-            add(JButton(AbyssusBundle.message("uiAddScreen")).apply { name = "add-screen"; addActionListener { askName("uiScreenNamePrompt", "")?.let { n -> controller.addScreen(n, "screen") } } })
-            add(JButton(AbyssusBundle.message("uiAddOverlay")).apply { name = "add-overlay"; addActionListener { askName("uiScreenNamePrompt", "")?.let { n -> controller.addScreen(n, "overlay") } } })
-            add(JButton(AbyssusBundle.message("uiRenameScreen")).apply { name = "rename-screen"; addActionListener {
-                controller.screenId?.let { id -> askName("uiScreenRenamePrompt", controller.collection?.screen(id)?.name.orEmpty())?.let { n -> controller.renameScreen(id, n) } } } })
-            add(JButton(AbyssusBundle.message("uiDeleteScreen")).apply { name = "delete-screen"; addActionListener { controller.screenId?.let(controller::deleteScreen) } })
-        }
-        add(JBLabel(AbyssusBundle.message("uiScreens")), BorderLayout.NORTH)
-        add(JBScrollPane(list), BorderLayout.CENTER)
-        add(JPanel(BorderLayout()).apply {
-            add(buttons, BorderLayout.NORTH)
-            add(arrows, BorderLayout.SOUTH)
-        }, BorderLayout.SOUTH)
-        arrows.addActionListener { if (!syncing) controller.screenId?.let { controller.setNavigation(it, arrows.isSelected) } }
-        controller.addListener(::rebuild)
-        rebuild()
-    }
-
-    private fun askName(prompt: String, initial: String): String? =
-        Messages.showInputDialog(project, AbyssusBundle.message(prompt), AbyssusBundle.message("uiScreens"), null, initial, null)?.trim()?.takeIf { it.isNotEmpty() }
-
-    internal fun rebuild() {
-        val c = controller.collection
-        syncing = true
-        try {
-            ids = c?.screens?.map { it.id }.orEmpty()
-            model.clear()
-            c?.screens?.forEach { s ->
-                val mark = if (s.id == c.entryScreen || (c.entryScreen == null && s === c.screens.firstOrNull { it.kind == UiScreenKind.SCREEN })) "  [${AbyssusBundle.message("uiEntryScreen")}]" else ""
-                model.addElement("${s.name}${if (s.kind == UiScreenKind.OVERLAY) " (overlay)" else ""}$mark")
-            }
-            list.selectedIndex = ids.indexOf(controller.screenId)
-            arrows.isSelected = c?.screen(controller.screenId ?: "")?.navigation == net.nevinsky.abyssus.lib.core.ui.model.UiNavigation.ARROWS
-            arrows.isEnabled = c != null
-        } finally {
-            syncing = false
-        }
-    }
-}
-
-/** Buttons that add a widget of each kind to the selected container, and act on the selected widget. */
-class UiPalettePanel(private val controller: UiEditorController) : JPanel(BorderLayout()) {
-    internal val buttons: Map<String, JButton>
-
-    init {
-        val grid = JPanel(GridLayout(0, 2, 2, 2))
-        buttons = UiWidgetType.entries.associate { type ->
-            type.json to JButton(AbyssusBundle.message("uiWidgetType.${type.json}")).apply {
-                name = "add-${type.json}"
-                addActionListener { controller.addWidget(type.json) }
-            }.also(grid::add)
-        }
-        val actions = JPanel(FlowLayout(FlowLayout.LEFT, 2, 2)).apply {
-            add(JButton(AbyssusBundle.message("uiDuplicate")).apply { name = "duplicate"; addActionListener { controller.duplicateSelected() } })
-            add(JButton(AbyssusBundle.message("uiDelete")).apply { name = "delete"; addActionListener { controller.deleteSelected() } })
-            add(JButton(AbyssusBundle.message("uiMoveUp")).apply { name = "up"; addActionListener { shift(-1) } })
-            add(JButton(AbyssusBundle.message("uiMoveDown")).apply { name = "down"; addActionListener { shift(1) } })
-            add(JButton(AbyssusBundle.message("uiAddEmpty")).apply { name = "add-empty"; addActionListener { controller.addListEmpty() } })
-            add(JButton(AbyssusBundle.message("uiRemoveEmpty")).apply { name = "remove-empty"; addActionListener { controller.removeListEmpty() } })
-        }
-        add(JBLabel(AbyssusBundle.message("uiPalette")), BorderLayout.NORTH)
-        add(grid, BorderLayout.CENTER)
-        add(actions, BorderLayout.SOUTH)
-    }
-
-    private fun shift(delta: Int) {
-        val c = controller.collection ?: return
-        val id = controller.selection.widgetId ?: return
-        val parent = net.nevinsky.abyssus.lib.core.editor.ui.UiTree(c).parentOf(id) ?: return
-        val at = parent.children.indexOfFirst { it.id == id }
-        controller.reorderSelected(at + delta)
     }
 }

@@ -57,6 +57,11 @@ class HandleInput {
         tilt = if (tilt < target) minOf(target, tilt + step) else maxOf(target, tilt - step)
     }
 
+    companion object {
+        /** Whether [name] is one of the handle's keys (W, S, Up, Down), in any case. */
+        fun isHandleKey(name: String): Boolean = name.uppercase() in listOf("W", "UP", "S", "DOWN")
+    }
+
     /** Back to neutral with nothing held (a new flight). */
     fun reset() {
         up = false

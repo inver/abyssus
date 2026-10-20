@@ -1,8 +1,14 @@
 {
   "blender_version": "5.2.2 LTS",
-  "mesh_objects": 61,
+  "mesh_objects": 63,
   "packed_images": [
-    "classic-photo.jpg"
+    "classic-opposite.jpg",
+    "classic-photo.jpg",
+    "cockpit-reference.jpg",
+    "img.png",
+    "img_1.png",
+    "img_2.png",
+    "img_3.png"
   ],
   "collections": [
     "01 Fuselage",
@@ -16,19 +22,19 @@
   "airframe": {
     "Fuselage | moulded outer envelope": {
       "non_manifold_edges": 0,
-      "volume_m3": 0.004457557623952771
+      "volume_m3": 0.004472353876302939
     },
     "Vertical fin and rudder": {
       "non_manifold_edges": 0,
-      "volume_m3": 0.00020597147040671363
+      "volume_m3": 0.00020497804000860957
     },
     "Wing inboard | 740 mm": {
       "non_manifold_edges": 0,
-      "volume_m3": 0.008530137161842453
+      "volume_m3": 0.008542160817151109
     },
     "Wing outboard | 710 mm": {
       "non_manifold_edges": 0,
-      "volume_m3": 0.008173426709234304
+      "volume_m3": 0.008184550534430401
     },
     "Flap hinge": {
       "non_manifold_edges": 0,

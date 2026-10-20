@@ -23,6 +23,7 @@ enum class SceneViewIcon(val resourceName: String) {
     SHADOWS("shadows"),
     FOG("fog"),
     GRID("grid"),
+    WIREFRAME("wireframe"),
     CAMERA("camera"),
     PREVIEW("preview"),
     SOURCE("source");

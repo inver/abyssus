@@ -1,29 +1,42 @@
-# Blueprint correction verification
+# Blueprint and local photograph comparison
 
-The saved Blender model has been rebuilt to address the prior review. The earlier findings are retained in `BLUEPRINT_REVIEW-before-correction.md` as history; they do not describe the current model.
+The saved model is rebuilt from `build_classic.py`. The supplied `plan-reference.jpg` sets explicit dimensions; `textures/classic-photo.jpg`, `classic-opposite.jpg` and `cockpit-reference.jpg` inform the visible contours and cockpit. The photographs are unchanged and all three are packed in the Blender file.
 
-## Corrections applied
+## Photo triangulation revision
 
-- Aft fuselage depth is now 95 mm at the 895 and 1000 mm stations. The body retains its depth into the tail instead of converging into a thin boom. The fin/body junction follows the revised silhouette.
-- Flap hinges are straight at x=514 mm, with centreline-to-end spans of 600 and 570 mm. End seams identify the correct span. Root flap chord is 76 mm and narrows outward.
-- Elevator hinges are straight at x=971 mm. Root fixed/elevator chords are 76/85 mm; the outer dimension station has 50/65 mm chords.
-- Wing outer sections explicitly measure 275 mm chord and 52 mm thickness, at 660/630 mm span stations. Beyond those stations, the rounded tip contour follows sampled blueprint outline landmarks. Root section remains 340 mm chord and 62 mm thick.
-- Stabilizer outer chord is 115 mm at a 315 mm semispan station, with a short rounded tip extending to 345 mm.
-- Engine, spinner, propeller and exhaust assembly have 3 degrees of yaw relative to the fuselage. The engine cylinder remains horizontal.
-- Canopy uses an asymmetric side profile with its crest approximately 53% aft of its nose, and preserves 240 mm length and 65 mm rise. Position was re-registered to the drawing.
-- Main landing gear legs now leave the wing underside 144 mm off the centreline (front view) and splay to the 370 mm track, 65 mm behind the wing leading edge, raking ~30 mm forward to the axle; the spat sits at x≈296 mm. Tail wheel moved to x≈919 mm with its wire starting at x≈880 mm (previously 960 mm). Earlier text: Gear height and tail-wheel placement were adjusted from the side-view silhouette; 370 mm wheel track is retained.
-- Primary-photo texture is still packed into the file. Principal airframe parts remain separate closed meshes.
+`fit_photo_overlays.py` fits a physical perspective camera to each overall photograph using only wing, tail and spinner landmarks (about 18–20 px RMS). `photo_triangulation.py` then triangulates features seen in both photographs. The checks agree with the model: spinner centre within 5 mm, canopy nose (210, 0, 53) measured at (212, 3, 54). Height is the least certain coordinate (about ±15 mm), because both cameras look down from the front.
 
-## Verification
+- **Main gear:** the photographed aircraft differs from the plan. The spat centres triangulate to x≈245 mm and |y|≈216–234 mm, and the legs leave the wing just behind its leading edge (x≈255–265 mm). The model now uses a 450 mm track, with leg exits at (260, ±168) and axles at x=240. The plan's 370 mm track and its 65 mm aft leg position describe the drawn build, not the photographed one.
+- **Spats:** blunt-nosed teardrops 160 mm long (nose x=170), widest at 35% of their length, with a tapered, slightly raised tail. The plan side view and both photos show this shape; the previous model used symmetric ellipsoids. Outlines now fall on the photographed spats in all four views.
+- **Fin:** the photographed fin has a straight, more strongly swept leading edge. Its crown front triangulates near x≈992 mm, its tight aft top corner near x≈1064 mm, and its trailing edge is near-vertical. The plan's broader, forward-peaked "79" fin differs. The 125 mm height above the aft deck is kept.
 
-`verify_blueprint_corrections.py` opens the saved `.blend` and checks actual world-space geometry. Its 48 checks cover spans, chords, thicknesses, straight hinge stations, flap lengths, aft-body depth, canopy envelope, engine yaw, gear track, principal mesh closure and the packed source photo. See `blueprint-correction-checks.json` for measured values and results.
+### Second-livery photographs
 
-`blueprint-overlay.png` / `.svg` show the current model's airframe outlines in orange over the supplied plan. `orthographic-side.png` and `orthographic-top.png` show the actual assembly without perspective distortion.
+`textures/img.png`, `img_1.png`, `img_2.png` and `img_3.png` show the same model in a red/blue livery. They are used for geometry only. `fit_livery2_photos.py` fits cameras to wing tip, stabilizer tip, spinner and fin landmarks (`img.png` 9.6 px RMS, `img_1.png` 11.5 px RMS). The left/right ambiguity of a nearly flat target is resolved by requiring the camera to sit above the aircraft. With that constraint, the engine-side wing is the near wing in `img.png` and `img_1.png`, and the far one in `img_2.png`, as the visible engine requires.
 
-## Remaining interpretation limits
+- The wings, stabilizers, fuselage, fin, wing tips and visible spat fall on the photographed outlines in `img.png` and `img_1.png` (`photo-overlay-livery2-img.png`, `photo-overlay-livery2-img_1.png`). No geometry change was needed.
+- Independent triangulation agrees with the first-livery result: the +y spat nose is at (183, 227, −159) mm against (175, 230, −152), and the fin's aft top corner is within about 20 mm of x=1064. This is consistent with the 450 mm track.
+- `img_2.png` (low front view) has only four reliable landmarks, which leave the camera underdetermined: its held-out wing-tip checks miss by 50–65 px. It is used qualitatively. `img_3.png` (cockpit close-up) and photo 9 show a light grey cockpit tub and seat, a dark glare shield, a broad white canopy rim, and an instrument panel with a round gauge left, a blue attitude indicator centre, a round gauge right and one gauge below. The model's cockpit now follows that: a light grey tub and seat instead of a dark interior, a rim 2.4 mm thick instead of 1.3 mm, and the four-gauge layout with a blue centre indicator. These are colour, rim and layout changes only, with no dimensional effect.
 
-The source is a raster drawing with broken views and locally inconsistent scale. Written dimensions take priority; undimensioned contour stations, canopy placement and gear height are traced estimates. The selected outer-section stations distinguish the dimensioned outer profile from the rounded cap; their spanwise locations are inferred from the drawing. The airfoil is symmetric and thickness-constrained, but original coordinate ordinates are unavailable. Texture projection contains photographed reflections and photographic hinge details, which can differ from the corrected geometric seams.
+`photo-overlay-*.png` shows the new silhouette over each photograph; the `-before` files show the previous revision.
 
-The model is a blueprint-guided external reference reconstruction, not a certified flightworthy design. Internal demountable joints, Petrov ball-lock internals, materials and the 1600 ±20 g mass distribution are not defined by the supplied views. Control-surface seams are visual geometry, not mechanically articulated flaps/elevators.
+## Previous revision
 
-Source: http://discovery-aeromodels.com/images/classic/yatsenko-control-line-classic-f2b-aeromodel-15.jpg
+- **Canopy:** the previous crest was 53% aft of the nose. The drawing places it around 42%; the new profile follows that position. Its sill now dips below the deck as shown in the side view, while its dimensioned length remains 240 mm and rise above the deck remains 65 mm. The forward frame is placed closer to the crest, consistent with the cockpit photograph. Shoulder fairings connect the glazing rim to the fuselage instead of leaving a gap.
+- **Fuselage:** shape-preserving cubic interpolation replaces linear transitions between cross sections. The 75 mm width continues to the wing leading-edge station. The two checked aft stations retain 95 mm depth.
+- **Fin:** (superseded by the photo triangulation revision) the swept leading edge flowed into a rounded crown, replacing the angular, flat-topped outline. The crown remains 125 mm above the 48 mm aft deck.
+- **Wing tips:** smooth interpolation replaces angular transitions between the existing traced outline landmarks. Root and outer section dimensions, semispans and straight flap hinges are retained.
+- **Cockpit:** the fuselage now has an actual recessed well instead of a solid deck behind the glazing. The close-up informed the thin reclined seat back and its eight lightening holes. Instruments and control stick remain simplified.
+- **Reference retention:** the opposite-side and cockpit photographs are retained in the saved file even though they are not used as surface textures.
+
+## Verification and review artifacts
+
+`verify_blueprint_corrections.py` checks the saved file's world-space dimensions, principal mesh closure, canopy position, well opening, seat clearance beneath the glazing and packed references. Its 70 results are written to `blueprint-correction-checks.json`. Checks labeled “traced estimate” are reconstruction constraints, not dimensions printed on the drawing. `verify_blend.py` independently checks that the saved principal airframe meshes have positive volume and no nonmanifold edges.
+
+`blueprint-overlay.png` and `.svg` show actual mesh outlines over the supplied drawing. `orthographic-side.png` and `orthographic-top.png` show the complete assembly. `photo-comparison.jpg` places each unmodified source photograph beside a fresh render from an approximately corresponding direction. The underlying renders are `comparison-primary.png`, `comparison-opposite.png` and `comparison-cockpit.png`.
+
+## Limits
+
+The raster drawing has broken views and inconsistent local scale. Written dimensions take priority over an exact pixel overlay; neither a numeric image-matching tolerance nor exact equality to every drawn contour is claimed. Photo camera poses and focal lengths are unknown. Fin curvature, canopy sill depth, cockpit details and fuselage sections remain estimates.
+
+The original projected livery is preserved, including photographed sky reflections and some perspective distortion. The comparison images therefore expose remaining texture differences as well as geometry. Exact original airfoil ordinates, internal construction, engine dimensions and mechanical joints are unavailable. The control surfaces remain visual seams.

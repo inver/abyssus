@@ -9,20 +9,20 @@ import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectLocator
 import com.intellij.openapi.ui.Messages
-import net.nevinsky.abyssus.plugin.ui.showActionGroup
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.ui.tree.TreeUtil
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import com.intellij.openapi.project.ProjectLocator
-import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.plugin.dto.MetaFiles
-import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
+import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
+import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
+import net.nevinsky.abyssus.plugin.ui.showActionGroup
 
 /** Tells the user why an edit was refused; anything else needs no word. */
 internal fun reportRejection(project: Project, result: EditResult) {
@@ -35,7 +35,13 @@ internal fun reportRejection(project: Project, result: EditResult) {
  * The choices for adding a component to [entityId] of [file]: one action per modeled kind the entity lacks, a Render
  * component being offered once per model or terrain of the project. Empty when the entity has everything.
  */
-fun addComponentGroup(project: Project, file: VirtualFile, entityId: String, kinds: List<String>, metaFiles: MetaFiles): DefaultActionGroup =
+fun addComponentGroup(
+    project: Project,
+    file: VirtualFile,
+    entityId: String,
+    kinds: List<String>,
+    metaFiles: MetaFiles
+): DefaultActionGroup =
     addComponentGroup(project, file, kinds, metaFiles) { name, initial ->
         reportRejection(project, SceneComponentEdits.add(project, file, entityId, name, metaFiles, initial))
     }
@@ -55,12 +61,14 @@ fun addComponentGroup(
         if (name == "RenderComponent") {
             val sub = DefaultActionGroup(label, true)
             val assets = SceneComponentEdits.renderAssets(file, metaFiles)
-            if (assets.isEmpty()) sub.add(object : AnAction(AbyssusBundle.message("addComponentNoAssets")) {
-                override fun actionPerformed(e: AnActionEvent) = Unit
-                override fun update(e: AnActionEvent) {
-                    e.presentation.isEnabled = false
-                }
-            })
+            if (assets.isEmpty()) {
+                sub.add(object : AnAction(AbyssusBundle.message("addComponentNoAssets")) {
+                    override fun actionPerformed(e: AnActionEvent) = Unit
+                    override fun update(e: AnActionEvent) {
+                        e.presentation.isEnabled = false
+                    }
+                })
+            }
             for (asset in assets) {
                 // asset folders have underscores, which the menu would take for mnemonics
                 sub.add(object : AnAction() {
@@ -96,7 +104,8 @@ open class AddComponentAction : AbyssusTreeAction<ComponentTarget>() {
     /** What can be added to the entity [target] stands for: the modeled kinds it lacks in the scene's current text. */
     internal fun choices(project: Project, target: ComponentTarget, metaFiles: MetaFiles): DefaultActionGroup {
         val root = SceneDocumentCache.of(project).read(target.file)?.root ?: return DefaultActionGroup()
-        val kinds = ComponentSchemas.of(project).editorFor(target.file).missingKinds(root, target.entityId).map { it.name }
+        val kinds =
+            ComponentSchemas.of(project).editorFor(target.file).missingKinds(root, target.entityId).map { it.name }
         return addComponentGroup(project, target.file, target.entityId, kinds, metaFiles)
     }
 
@@ -118,7 +127,9 @@ internal fun ecsRowSceneOf(node: Any?): VirtualFile? {
  * entity (`Entity <id>`) holding it, as one undoable edit, and selects it.
  */
 open class AddComponentOnEcsAction : AbyssusTreeAction<VirtualFile>() {
-    init { templatePresentation.text = AbyssusBundle.message("addComponentAction") }
+    init {
+        templatePresentation.text = AbyssusBundle.message("addComponentAction")
+    }
 
     override fun targetOf(node: Any?): VirtualFile? = ecsRowSceneOf(node)
 
@@ -127,7 +138,8 @@ open class AddComponentOnEcsAction : AbyssusTreeAction<VirtualFile>() {
 
     /** The kinds a new entity can start with, each creating one when chosen. */
     internal fun choices(project: Project, target: VirtualFile, metaFiles: MetaFiles): DefaultActionGroup {
-        val kinds = ComponentSchemas.of(project).editorFor(target).kinds.map { it.name }.filter { it != "NameComponent" }
+        val kinds =
+            ComponentSchemas.of(project).editorFor(target).kinds.map { it.name }.filter { it != "NameComponent" }
         return addComponentGroup(project, target, kinds, metaFiles) { name, initial ->
             val added = SceneComponentEdits.addAsNewEntity(project, target, name, metaFiles, initial)
             reportRejection(project, added.result)
@@ -136,7 +148,11 @@ open class AddComponentOnEcsAction : AbyssusTreeAction<VirtualFile>() {
     }
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
-        showActionGroup(e, choices(project, target, service<AbyssusPluginCtx>().assets.metaFiles), AbyssusBundle.message("addComponentTitle"))
+        showActionGroup(
+            e,
+            choices(project, target, service<AbyssusPluginCtx>().assets.metaFiles),
+            AbyssusBundle.message("addComponentTitle")
+        )
     }
 }
 

@@ -20,8 +20,8 @@ import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.plugin.dto.textOf
-import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
-import net.nevinsky.abyssus.plugin.projectView.asset.selectAssetInAbyssusView
+import net.nevinsky.abyssus.plugin.projectView.action.asset.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetInAbyssusView
 import net.nevinsky.abyssus.plugin.terrain.NewTerrainForm
 import net.nevinsky.abyssus.plugin.terrain.NewTerrainRequest
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage

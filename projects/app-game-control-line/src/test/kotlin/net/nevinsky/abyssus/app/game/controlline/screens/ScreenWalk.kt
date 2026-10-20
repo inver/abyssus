@@ -31,6 +31,12 @@ interface ScreenDriver {
     fun update(session: FlightSession?, judge: PatternJudge?, seconds: Float)
     fun keyDown(keycode: Int): Boolean
     fun dump(): List<String>
+
+    /** A click in the middle of [widget] of [screen], as the mouse gives one. */
+    fun click(screen: String, widget: String)
+
+    /** The id of the widget with the keyboard focus, or null. */
+    val focus: String?
 }
 
 /**
@@ -54,6 +60,15 @@ class ScreenWalk(private val scene: SceneContext, private val dir: Path) {
         fun show(name: String, session: FlightSession? = null, judge: PatternJudge? = null) {
             ui.update(session, judge, 1f / 60f)
             steps[name] = ui.dump()
+        }
+        /** Tab until the focus is on [widget]; the presenter moves focus in the screen's order. */
+        fun tabTo(widget: String) {
+            repeat(10) {
+                if (ui.focus == widget) return
+                ui.keyDown(Input.Keys.TAB)
+                ui.update(null, null, 1f / 60f)
+            }
+            error("no focus on $widget but on ${ui.focus}")
         }
         fun flying(name: String, level: AssistLevel?, check: (FlightSession, PatternJudge?) -> Unit) {
             val plane = (flow.screen as Screen.Flying).plane
@@ -103,6 +118,25 @@ class ScreenWalk(private val scene: SceneContext, private val dir: Path) {
             flying(name, level) { _, _ -> }
             flow.pause(); flow.mainMenu()
         }
+        // Watch AI: Tab to it and Enter, then the demonstration's HUD, pause, GAME OVER with no name entry and its debrief
+        flow.f2bPattern(); flow.chooseAssist(AssistLevel.MID); show("plane-select-watch-ai")
+        tabTo(WATCH_AI_BUTTON); show("plane-select-watch-ai-focused")
+        ui.keyDown(Input.Keys.ENTER)
+        flying("hud-mid-ai", AssistLevel.MID) { session, judge ->
+            flow.pause(); show("paused-mid-ai", session, judge)
+            flow.resume()
+        }
+        val demo = SyntheticSchedule().also { it.everythingBeforeTheLanding(); it.landing(); it.end(FlightEnd.LANDED) }
+        flow.flightEnded(FlightReport("Stunter", FlightEnd.LANDED, 370f,
+            FlightResult.Pattern(AssistLevel.MID, demo.judge.sheet, demo.judge.recording("Stunter", AssistLevel.MID))))
+        show("game-over-mid-ai")
+        flow.debrief(); show("debrief-ai")
+        ui.keyDown(Input.Keys.ESCAPE); flow.mainMenu()
+        // and by the mouse, at Pro
+        flow.f2bPattern(); flow.chooseAssist(AssistLevel.PRO); ui.update(null, null, 1f / 60f)
+        ui.click(SCREEN_PLANE, WATCH_AI_BUTTON)
+        flying("hud-pro-ai", AssistLevel.PRO) { _, _ -> }
+        flow.pause(); flow.mainMenu()
         // a field without planes
         val empty = GameFlow(emptyList(), ScoreTable(dir.resolve("none.json")), PatternScoreTable(dir.resolve("none-f2b.json")), clock)
         driver(empty).let { other -> other.update(null, null, 1f / 60f); steps["main-menu-no-planes"] = other.dump() }

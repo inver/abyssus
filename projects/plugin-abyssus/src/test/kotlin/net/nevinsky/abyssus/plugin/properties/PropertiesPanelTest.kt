@@ -214,26 +214,17 @@ class PropertiesPanelTest : BasePlatformTestCase() {
         myFixture.addFileToProject("Ui/assets/screens/meta.json", File(fixture, "assets/screens/meta.json").readText())
     }
 
-    fun testAUiScreenShowsItsAssetAndTheLink() {
+    fun testScreensAndOverlaysAreListedFlatUnderUiAndAScreenShowsItsAssetAndTheLink() {
         uiProject()
         val abssNode = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
-        val screens = children(row(abssNode, "ui")).single()
-        val screen = children(row(row(screens, "meta"), "additional")).first()
+        val groups = children(row(abssNode, "ui"))
+        assertTrue("no asset rows: $groups", groups.all { label(it) in setOf("screen", "overlay") })
+        val screen = children(groups.first()).first()
         val p = panel()
         p.show(screen)
         assertEquals("UI screen · assets/screens", (find(p, "header-subtitle") as JBLabel).text)
         assertEquals(listOf("Screen"), sections(p))
         assertNotNull(find(p, "link-screen-editor"))
         assertEquals("Ui.abss  ›  screens", (find(p, "header-breadcrumb") as JBLabel).text)
-    }
-
-    fun testAUiAssetShowsMetaAndAdditionalWithItsScreensTable() {
-        uiProject()
-        val abssNode = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
-        val p = panel()
-        p.show(children(row(abssNode, "ui")).single())
-        assertEquals(listOf("meta.json", "additional.ui"), sections(p))
-        assertTrue(texts(p).any { it.startsWith("Screens (") })
-        assertNotNull(find(p, "link-screen-editor"))
     }
 }

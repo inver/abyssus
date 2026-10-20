@@ -8,7 +8,6 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
 import net.nevinsky.abyssus.lib.physics.MAX_STEPS_PER_ADVANCE
 import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
@@ -22,17 +21,20 @@ private const val MAX_FRAME = 0.1f
 
 /**
  * One flight in the game: a physics world over its own load of the field scene, [plane] on its lines and the fixed-step
- * loop. Each step reads the handle from the input, updates the [flight] and steps the world. After the flight ends
- * the world goes on, so a crashed plane comes to rest. Lives on the game's main thread; [close] releases the world.
+ * loop. Each step asks [control] for the handle's tilt from the state the last step left, updates the [flight] and
+ * steps the world. After the flight ends the world goes on, so a crashed plane comes to rest, and [control] is no longer
+ * asked. Lives on the game's main thread; [close] releases the world.
  */
 class FlightSession(
     engine: SceneEngine, pilot: Entity, val plane: Entity, assets: PhysicsAssets, log: Logger, natives: JoltNatives,
     judge: FlightJudge? = null,
+    private val control: FlightControlSource = FlightControlSource { 0f },
 ) : AutoCloseable {
     private val world = PhysicsWorld(engine, assets, log, natives)
     private val ground = groundOf(engine, assets)
     val rig = LineRig(world, pilot, plane, ground)
     val flight = Flight(world, rig, ground).also { it.takeoff(0f, judge) }
+    private val planeBody = requireNotNull(world.bodyOf(plane))
     private var carried = 0f
 
     // The plane is drawn between its last two simulated poses: a frame holds a whole number of 1/120 s steps plus a
@@ -47,8 +49,8 @@ class FlightSession(
     /** Where the plane is drawn minus where it is simulated (m): the lines' plane ends move with it. */
     private val offset = Vector3()
 
-    /** Runs the fixed steps [seconds] of frame time hold, with the handle from [input]. */
-    fun advance(seconds: Float, input: HandleInput) {
+    /** Runs the fixed steps [seconds] of frame time hold, with the handle from [control]. */
+    fun advance(seconds: Float) {
         if (shown) body?.let {
             it.localPosition.set(after)
             it.localRotation.set(afterTurn)
@@ -57,8 +59,7 @@ class FlightSession(
         var steps = 0
         while (carried >= PHYSICS_STEP && steps < MAX_STEPS_PER_ADVANCE) {
             body?.let { before.set(it.localPosition); beforeTurn.set(it.localRotation) }
-            input.update(PHYSICS_STEP)
-            rig.tilt = input.tilt
+            if (!flight.finished) rig.tilt = control.tilt(observe()).takeIf { it.isFinite() } ?: 0f
             flight.update(PHYSICS_STEP)
             world.step()
             carried -= PHYSICS_STEP
@@ -66,6 +67,28 @@ class FlightSession(
         }
         if (steps == MAX_STEPS_PER_ADVANCE) carried = 0f
         show()
+    }
+
+    /** The simulated state, for [control]: only called within [advance], after the drawn pose is put back. */
+    private fun observe(): FlightObservation {
+        val position = plane.getComponent(PositionComponent::class.java)
+        val p = Vector3(position.localPosition)
+        val rotation = Quaternion(position.localRotation).nor()
+        val handle = rig.handle
+        return FlightObservation(
+            flight.time,
+            Vector3(p).sub(handle.x, handle.y - rig.pilotSettings.handleHeight, handle.z),
+            planeBody.velocity(Vector3()),
+            planeBody.angularVelocity(Vector3()),
+            rotation.transform(Vector3(0f, 0f, 1f)),
+            rotation.transform(Vector3(0f, 1f, 0f)),
+            p.y - ground.heightAt(p.x, p.z),
+            flight.tension,
+            flight.fuelLeft,
+            flight.fuelLeft > 0f,
+            rig.planeSettings.lineLength,
+            flight.result,
+        )
     }
 
     /** Puts the plane [carried] of the way from its previous pose to its latest, keeping the latest to restore. */

@@ -43,6 +43,10 @@ class GameScreenshotsGlTest {
 
         override fun keyDown(keycode: Int) = inner.keyDown(keycode)
 
+        override fun click(screen: String, widget: String) = inner.click(screen, widget)
+
+        override val focus: String? get() = inner.focus
+
         override fun dump(): List<String> {
             val fbo = FrameBuffer(Pixmap.Format.RGBA8888, 1280, 720, false)
             fbo.begin()

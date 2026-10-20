@@ -40,8 +40,8 @@ import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImportRequest
 import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearInspection
 import net.nevinsky.abyssus.plugin.terrain.message
 import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
-import net.nevinsky.abyssus.plugin.projectView.asset.assetsNodeProjectFile
-import net.nevinsky.abyssus.plugin.projectView.asset.selectAssetInAbyssusView
+import net.nevinsky.abyssus.plugin.projectView.action.asset.assetsNodeProjectFile
+import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetInAbyssusView
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.io.File
