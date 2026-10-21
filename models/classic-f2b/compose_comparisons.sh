@@ -44,7 +44,7 @@ for pair in primary:img_5 opposite:img; do
 done
 # Second-livery photographs: silhouette through the cameras from fit_livery2_photos.py.
 # img_4.png is the 1024x766 registered photograph at twice the size, with its background removed.
-for view in img_1 img_4; do
+for view in img_6 img_4; do
   magick "textures/$view.png" -background '#6b6e73' -alpha remove -alpha off -resize 1024x766! "/tmp/f2b-$view.png"
   magick "aligned-livery2-$view-mask.png" -alpha extract -threshold 50% \
     -morphology EdgeOut Disk:1.2 -fill magenta -opaque white -transparent black \

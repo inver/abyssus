@@ -17,10 +17,10 @@ with open(os.path.join(ROOT,'photo-registration.json')) as stream:
     for name,view in json.load(stream)['views'].items():
         cameras[name]=(np.array(view['camera_position_m']),np.array(Euler(view['camera_euler_rad'],'XYZ').to_matrix()),
                        view['lens_mm']*1200/36,(600,450))
-# Second-livery photographs (textures/img*.png); img_2 is too weakly registered to use.
+# Second-livery photographs (textures/img*.png); img_1 is too weakly registered to use.
 with open(os.path.join(ROOT,'photo-registration-livery2.json')) as stream:
     for name,view in json.load(stream)['photos'].items():
-        if name!='img_2.png':
+        if name!='img_1.png':
             cameras[name]=(np.array(view['camera_position_m']),np.array(Euler(view['camera_euler_rad'],'XYZ').to_matrix()),
                            view['focal_px'],(view['image_size'][0]/2,view['image_size'][1]/2))
 
@@ -52,7 +52,7 @@ def on_plane(name,pixel,z_mm):
 # Pixel coordinates in the unmodified 1200x900 photographs.
 paired={
  'check: spinner centre':({'primary':(935,713),'opposite':(235,614)},[-25,0,10]),
- 'check: spinner nose (livery 2)':({'img_4.png':(902,357),'img_1.png':(703,127)},[-48,2,10]),
+ 'check: spinner nose (livery 2)':({'img_4.png':(902,357),'img_6.png':(703,127)},[-48,2,10]),
  'fin aft top corner (livery 2)':({'img_4.png':(241,133),'opposite':(818,50)},None),
  'spat +y nose (livery 2)':({'img_4.png':(690,497),'primary':(615,755)},None),
  'check: canopy nose':({'primary':(773,517),'opposite':(400,447)},[210,0,53]),

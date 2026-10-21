@@ -22,6 +22,6 @@
 
 ## 5. Fit, report and documentation
 
-- [ ] 5.1 Add `f2b/report.py` and `python -m f2b.fit`: run the fit, write fitted parameters JSON, loss history CSV, per-view loss for defaults and result, before and after overlays and the fitted STEP to `out/`, then the four leave-one-view-out fits with their held-out losses. Verify with `tests/test_report.py` (all files written for a short run) and by running the full fit, then recording the loss before and after in the documentation.
-- [ ] 5.2 Review the overlays, state the per-view and held-out results honestly (including genes that hit a bound), and document the cad tooling in `models/classic-f2b/README.md` and `BLUEPRINT_REVIEW.md`. Verify with `scripts/check-docs.sh`.
-- [ ] 5.3 Run `uv run pytest -q` in `models/classic-f2b/cad`, `./gradlew check` and `scripts/check-docs.sh`, and `openspec validate add-classic-f2b-parametric-cad-fit --strict`.
+- [x] 5.1 Add `f2b/report.py` and `python -m f2b.fit`: run the fit, write fitted parameters JSON, loss history CSV, per-view loss for defaults and result, before and after overlays and the fitted STEP to `out/`, then the four leave-one-view-out fits with their held-out losses. Verify with `tests/test_report.py` (all files written for a short run) and by running the full fit, then recording the loss before and after in the documentation.
+- [x] 5.2 Review the overlays, state the per-view and held-out results honestly (including genes that hit a bound), and document the cad tooling in `models/classic-f2b/README.md` and `BLUEPRINT_REVIEW.md`. Verify with `scripts/check-docs.sh`.
+- [x] 5.3 Run `uv run pytest -q` in `models/classic-f2b/cad`, `./gradlew check` and `scripts/check-docs.sh`, and `openspec validate add-classic-f2b-parametric-cad-fit --strict`.

@@ -42,7 +42,7 @@ def photo(name,file):
     return m
 paint=photo('SOURCE 07 | photographed upper-surface livery','img_5.png')   # photograph 7, background removed
 # img*.png: the same model in a red/blue livery, used for geometry only (never as texture).
-for reference in ['img.png','cockpit-reference.jpg','img_1.png','img_2.png','img_3.png','img_4.png']:   # img.png is photograph 8
+for reference in ['img.png','cockpit-reference.jpg','img_1.png','img_3.png','img_4.png','img_6.png']:   # img.png is photograph 8
     reference_image=bpy.data.images.load(os.path.join(ROOT,'textures',reference))
     reference_image.pack();reference_image.use_fake_user=True
 def smooth_samples(x,xs,ys):

@@ -58,11 +58,12 @@ def euler_xyz(angles) -> np.ndarray:
     return rz @ ry @ rx
 
 
-# Views usable as fitting targets. img_2.png (weak camera) and the close-ups are excluded.
+# Views usable as fitting targets. img_1.png (low front view, weak camera) and the close-ups are excluded.
 # img_5.png and img.png are photographs 7 and 8 with their backgrounds removed; img_4.png is the
-# red/blue photograph, registered at 1024x766 (the file is the same photograph at twice the size).
+# red/blue photograph, registered at 1024x766 (the file is the same photograph at twice the size);
+# img_6.png is the behind-the-tail view. All four are cut-outs.
 FIRST_LIVERY = {"photo7": ("primary", "img_5.png"), "photo8": ("opposite", "img.png")}
-SECOND_LIVERY = {"img_1": "img_1.png", "img_4": "img_4.png"}
+SECOND_LIVERY = {"img_6": "img_6.png", "img_4": "img_4.png"}
 
 
 def load_cameras(model_dir: Path = MODEL_DIR) -> dict[str, Camera]:

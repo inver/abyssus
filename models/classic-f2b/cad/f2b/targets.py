@@ -18,7 +18,7 @@ from .params import Params
 CAD_DIR = Path(__file__).resolve().parents[1]
 TARGET_DIR = CAD_DIR / "targets"
 # Camera registration error, pixels, per view: sets how far the seed may be off.
-BAND = {"photo7": (10, 26), "photo8": (10, 26), "img_4": (8, 16), "img_1": (8, 16)}   # only img_1 is not a cut-out
+BAND = {"photo7": (10, 26), "photo8": (10, 26), "img_4": (8, 16), "img_6": (8, 16)}   # GrabCut band; used only for photographs without transparency
 
 
 def grabcut(photo: np.ndarray, seed: np.ndarray, inner: int, outer: int, iterations: int = 8) -> np.ndarray:

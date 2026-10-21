@@ -2,183 +2,6 @@
   "method": "Multi-start Levenberg-Marquardt perspective camera fit, centre fixed at the image centre.",
   "limitations": "Hand-marked corners; wing/stab tip corners are virtual straight-edge intersections.",
   "photos": {
-    "img_1.png": {
-      "near_wing_is_long": true,
-      "alternative_rms_px": [
-        199.78503007370935
-      ],
-      "landmark_rms_px": 11.505022024323802,
-      "camera_position_m": [
-        1.4169391066268981,
-        1.184424112142023,
-        1.3550781254014523
-      ],
-      "camera_euler_rad": [
-        0.7399238676064389,
-        0.1001897433811599,
-        2.3578094490182493
-      ],
-      "focal_px": 1188.9218025670577,
-      "image_size": [
-        1024,
-        766
-      ],
-      "held_out_checks": [],
-      "landmarks": [
-        {
-          "name": "near wing tip LE",
-          "photo_px": [
-            930,
-            418
-          ],
-          "error_px": 14.797320954441677
-        },
-        {
-          "name": "near wing tip TE",
-          "photo_px": [
-            845,
-            527
-          ],
-          "error_px": 17.226536356646687
-        },
-        {
-          "name": "far wing tip LE",
-          "photo_px": [
-            310,
-            76
-          ],
-          "error_px": 12.533126296027072
-        },
-        {
-          "name": "far wing tip TE",
-          "photo_px": [
-            226,
-            137
-          ],
-          "error_px": 11.1150286735424
-        },
-        {
-          "name": "near stab tip LE",
-          "photo_px": [
-            434,
-            553
-          ],
-          "error_px": 8.30535934366499
-        },
-        {
-          "name": "near stab tip TE",
-          "photo_px": [
-            368,
-            604
-          ],
-          "error_px": 7.715867186902186
-        },
-        {
-          "name": "far stab tip LE",
-          "photo_px": [
-            158,
-            322
-          ],
-          "error_px": 5.543065428965105
-        },
-        {
-          "name": "far stab tip TE",
-          "photo_px": [
-            112,
-            357
-          ],
-          "error_px": 6.797982169105485
-        },
-        {
-          "name": "spinner nose",
-          "photo_px": [
-            703,
-            127
-          ],
-          "error_px": 13.765924247413858
-        }
-      ]
-    },
-    "img_2.png": {
-      "near_wing_is_long": false,
-      "alternative_rms_px": [
-        100.26919634188455
-      ],
-      "landmark_rms_px": 2.0466114010584797,
-      "camera_position_m": [
-        -0.6279852245534349,
-        -0.800037993365803,
-        0.545128502825275
-      ],
-      "camera_euler_rad": [
-        1.1142169035523406,
-        -0.01553955635454297,
-        -0.9303452671924718
-      ],
-      "focal_px": 1249.3551615366896,
-      "image_size": [
-        1024,
-        766
-      ],
-      "held_out_checks": [
-        {
-          "name": "far wing tip LE",
-          "photo_px": [
-            52,
-            190
-          ],
-          "predicted_px": [
-            2.8893226642348395,
-            202.61989934220045
-          ]
-        },
-        {
-          "name": "far wing tip TE",
-          "photo_px": [
-            97,
-            152
-          ],
-          "predicted_px": [
-            162.95751348185235,
-            159.4515349250298
-          ]
-        }
-      ],
-      "landmarks": [
-        {
-          "name": "far stab tip centre",
-          "photo_px": [
-            532,
-            146
-          ],
-          "error_px": 2.0220119135788646
-        },
-        {
-          "name": "near stab tip centre",
-          "photo_px": [
-            957,
-            236
-          ],
-          "error_px": 1.5279361123286175
-        },
-        {
-          "name": "spinner nose",
-          "photo_px": [
-            160,
-            452
-          ],
-          "error_px": 0.14438738213218852
-        },
-        {
-          "name": "fin aft top corner",
-          "photo_px": [
-            762,
-            78
-          ],
-          "error_px": 3.2109973917209085
-        }
-      ]
-    },
     "img_4.png": {
       "near_wing_is_long": true,
       "alternative_rms_px": [],
@@ -282,6 +105,185 @@
         }
       ],
       "note": "Registered on the 1024x766 version; textures/img_4.png is the same photograph at 2048x1532 with its background removed."
+    },
+    "img_6.png": {
+      "near_wing_is_long": true,
+      "alternative_rms_px": [
+        199.78503007370935
+      ],
+      "landmark_rms_px": 11.505022024323802,
+      "camera_position_m": [
+        1.4169391066268981,
+        1.184424112142023,
+        1.3550781254014523
+      ],
+      "camera_euler_rad": [
+        0.7399238676064389,
+        0.1001897433811599,
+        2.3578094490182493
+      ],
+      "focal_px": 1188.9218025670577,
+      "image_size": [
+        1024,
+        766
+      ],
+      "held_out_checks": [],
+      "landmarks": [
+        {
+          "name": "near wing tip LE",
+          "photo_px": [
+            930,
+            418
+          ],
+          "error_px": 14.797320954441677
+        },
+        {
+          "name": "near wing tip TE",
+          "photo_px": [
+            845,
+            527
+          ],
+          "error_px": 17.226536356646687
+        },
+        {
+          "name": "far wing tip LE",
+          "photo_px": [
+            310,
+            76
+          ],
+          "error_px": 12.533126296027072
+        },
+        {
+          "name": "far wing tip TE",
+          "photo_px": [
+            226,
+            137
+          ],
+          "error_px": 11.1150286735424
+        },
+        {
+          "name": "near stab tip LE",
+          "photo_px": [
+            434,
+            553
+          ],
+          "error_px": 8.30535934366499
+        },
+        {
+          "name": "near stab tip TE",
+          "photo_px": [
+            368,
+            604
+          ],
+          "error_px": 7.715867186902186
+        },
+        {
+          "name": "far stab tip LE",
+          "photo_px": [
+            158,
+            322
+          ],
+          "error_px": 5.543065428965105
+        },
+        {
+          "name": "far stab tip TE",
+          "photo_px": [
+            112,
+            357
+          ],
+          "error_px": 6.797982169105485
+        },
+        {
+          "name": "spinner nose",
+          "photo_px": [
+            703,
+            127
+          ],
+          "error_px": 13.765924247413858
+        }
+      ],
+      "note": "Registered on the behind-the-tail photograph that was img_1.png; the file is now textures/img_6.png with its background removed."
+    },
+    "img_1.png": {
+      "near_wing_is_long": false,
+      "alternative_rms_px": [
+        100.26919634188455
+      ],
+      "landmark_rms_px": 2.0466114010584797,
+      "camera_position_m": [
+        -0.6279852245534349,
+        -0.800037993365803,
+        0.545128502825275
+      ],
+      "camera_euler_rad": [
+        1.1142169035523406,
+        -0.01553955635454297,
+        -0.9303452671924718
+      ],
+      "focal_px": 1249.3551615366896,
+      "image_size": [
+        1024,
+        766
+      ],
+      "held_out_checks": [
+        {
+          "name": "far wing tip LE",
+          "photo_px": [
+            52,
+            190
+          ],
+          "predicted_px": [
+            2.8893226642348395,
+            202.61989934220045
+          ]
+        },
+        {
+          "name": "far wing tip TE",
+          "photo_px": [
+            97,
+            152
+          ],
+          "predicted_px": [
+            162.95751348185235,
+            159.4515349250298
+          ]
+        }
+      ],
+      "landmarks": [
+        {
+          "name": "far stab tip centre",
+          "photo_px": [
+            532,
+            146
+          ],
+          "error_px": 2.0220119135788646
+        },
+        {
+          "name": "near stab tip centre",
+          "photo_px": [
+            957,
+            236
+          ],
+          "error_px": 1.5279361123286175
+        },
+        {
+          "name": "spinner nose",
+          "photo_px": [
+            160,
+            452
+          ],
+          "error_px": 0.14438738213218852
+        },
+        {
+          "name": "fin aft top corner",
+          "photo_px": [
+            762,
+            78
+          ],
+          "error_px": 3.2109973917209085
+        }
+      ],
+      "note": "Weak camera (4 landmarks); the low front photograph that was img_2.png, now textures/img_1.png with its background removed."
     }
   }
 }

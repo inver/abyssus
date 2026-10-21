@@ -7,7 +7,7 @@ from f2b.cameras import MODEL_DIR, load_cameras
 from f2b.params import Params
 
 BLENDER_MASKS = {"photo7": "aligned-primary-mask.png", "photo8": "aligned-opposite-mask.png",
-                 "img_4": "aligned-livery2-img_4-mask.png", "img_1": "aligned-livery2-img_1-mask.png"}
+                 "img_4": "aligned-livery2-img_4-mask.png", "img_6": "aligned-livery2-img_6-mask.png"}
 
 
 @pytest.fixture(scope="module")

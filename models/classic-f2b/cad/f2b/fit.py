@@ -11,9 +11,12 @@ import numpy as np
 from . import ga, report, silhouette, targets
 from .cameras import load_cameras
 from .fitness import PRIOR_WEIGHT, Evaluator
-from .params import NAMES, Params
+from .params import GENES, NAMES, Params
 
 OUT = Path(__file__).resolve().parents[1] / "out" / "fit"
+# Gene subsets: "physical" frees the parts the silhouette constrains directly (gear, fin, canopy, engine) and keeps
+# the fuselage cross-section, wing and stabilizer tips at their defaults, where camera error is easiest to absorb.
+PRESETS = {"all": None, "physical": tuple(g.name for g in GENES if g.group in ("gear", "fin", "canopy", "engine"))}
 
 
 def build_evaluator(views: tuple[str, ...], prior_weight: float = PRIOR_WEIGHT, target_dir: Path | None = None) -> Evaluator:
@@ -55,12 +58,13 @@ def holdout_check(views: tuple[str, ...], config: ga.GAConfig, prior_weight: flo
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=OUT)
-    parser.add_argument("--views", default="photo7,photo8,img_4,img_1")
+    parser.add_argument("--views", default="photo7,photo8,img_4,img_6")
     parser.add_argument("--population", type=int, default=48)
     parser.add_argument("--generations", type=int, default=60)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
-    parser.add_argument("--free", help="comma separated gene names to fit (default: all)")
+    parser.add_argument("--preset", choices=sorted(PRESETS), default="all", help="gene subset to fit")
+    parser.add_argument("--free", help="comma separated gene names to fit (overrides --preset)")
     parser.add_argument("--prior-weight", type=float, default=PRIOR_WEIGHT)
     parser.add_argument("--holdout-population", type=int, default=32)
     parser.add_argument("--holdout-generations", type=int, default=30)
@@ -68,7 +72,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--no-step", action="store_true", help="skip the fitted STEP export")
     args = parser.parse_args(argv)
     views = tuple(args.views.split(","))
-    free = tuple(args.free.split(",")) if args.free else None
+    free = tuple(args.free.split(",")) if args.free else PRESETS[args.preset]
     if free and not set(free) <= set(NAMES):
         parser.error(f"unknown gene(s): {sorted(set(free) - set(NAMES))}")
     config = ga.GAConfig(args.population, args.generations, args.seed, free=free, workers=args.workers)
