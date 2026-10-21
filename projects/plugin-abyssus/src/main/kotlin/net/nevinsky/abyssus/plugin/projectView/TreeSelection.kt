@@ -19,5 +19,9 @@ fun selectInAbyssusView(project: Project, visitor: TreeVisitor, refresh: Boolean
     val pane = view.getProjectViewPaneById(AbyssusProjectViewPane.ID) ?: return
     if (refresh) pane.updateFromRoot(true)
     val tree = pane.tree ?: return
+    // after a plugin edit the rebuild is still to come: it selects the row once the tree has it (see selectAfterRebuild)
+    if (!refresh && (pane as? AbyssusProjectViewPane)?.refresh?.selectAfterRebuild(visitor) == true) {
+        return
+    }
     TreeUtil.promiseSelect(tree, visitor)
 }

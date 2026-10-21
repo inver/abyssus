@@ -150,6 +150,10 @@
                 class="net.nevinsky.abyssus.plugin.projectView.RemoveComponentAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
+        <action id="Abyssus.RemoveEntity"
+                class="net.nevinsky.abyssus.plugin.projectView.RemoveEntityAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.RemoveComponent"/>
+        </action>
         <action id="Abyssus.NewUiAsset" class="net.nevinsky.abyssus.plugin.gameui.NewUiAssetAction">
             <add-to-group group-id="Abyssus.Menu.New" anchor="first"/>
         </action>

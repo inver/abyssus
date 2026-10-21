@@ -277,8 +277,6 @@ A native spotlight SHALL store `coneAngle` as full degrees and `edgeSoftness` as
 - **WHEN** beam settings are reset to 45 degrees and 20-percent softness
 - **THEN** those keys are omitted and the effective values remain the defaults
 
-## ADDED Requirements
-
 ### Requirement: Enable and disable an entity or component
 
 The editor SHALL offer to enable or disable an entity or a component of an entity. Disabling SHALL write `enabled: false` on that entry only; enabling SHALL remove the key. Each change SHALL be one undoable edit that preserves the rest of the scene file, and it SHALL refuse a document that is unsupported for editing.

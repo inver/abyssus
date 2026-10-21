@@ -1,0 +1,30 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A hand holding a control line handle, with two lines running to a model airplane flying in a circle">
+<defs>
+<clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath>
+</defs>
+<rect width="512" height="512" rx="112" fill="#0B2A3C"/>
+<g clip-path="url(#tile)">
+<path d="M352.7 156.5 A262 262 0 0 1 432 302.5" fill="none" stroke="#1F5470" stroke-width="5" stroke-dasharray="3 14" stroke-linecap="round"/>
+<path d="M241.8 95 A262 262 0 0 1 352.7 156.5" fill="none" stroke="#9FD3E6" stroke-width="8" stroke-linecap="round" opacity="0.45"/>
+<line x1="166" y1="350" x2="346" y2="152" stroke="#9FD3E6" stroke-width="3" stroke-linecap="round"/>
+<line x1="182" y1="350" x2="359" y2="161" stroke="#9FD3E6" stroke-width="3" stroke-linecap="round"/>
+<path d="M132 432 L84 520 L176 520 L210 446Z" fill="#F4F1EA"/>
+<rect x="168" y="350" width="12" height="60" rx="5" fill="#9FD3E6"/>
+<rect x="156" y="344" width="36" height="12" rx="6" fill="#9FD3E6"/>
+<rect x="128" y="384" width="92" height="68" rx="26" fill="#F4F1EA"/>
+<g stroke="#0B2A3C" stroke-width="4" stroke-linecap="round" fill="none">
+<path d="M172 400 H218"/>
+<path d="M172 418 H218"/>
+<path d="M172 436 H214"/>
+</g>
+<ellipse cx="156" cy="388" rx="26" ry="12" transform="rotate(-12 156 388)" fill="#F4F1EA" stroke="#0B2A3C" stroke-width="4"/>
+<g transform="translate(352.7 156.5) rotate(133) scale(1.25)">
+<path d="M0 -40 C6 -30 6 20 3 38 L-3 38 C-6 20 -6 -30 0 -40Z" fill="#FF8A3D"/>
+<path d="M-5 -8 L-44 6 L-44 15 L-5 9Z" fill="#FF8A3D"/>
+<path d="M5 -8 L44 6 L44 15 L5 9Z" fill="#FF8A3D"/>
+<path d="M-3 30 L-18 38 L-18 43 L-2 40Z" fill="#FF8A3D"/>
+<path d="M3 30 L18 38 L18 43 L2 40Z" fill="#FF8A3D"/>
+<ellipse cx="0" cy="-8" rx="2.6" ry="7" fill="#0B2A3C"/>
+</g>
+</g>
+</svg>

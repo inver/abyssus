@@ -33,10 +33,25 @@ abstract class UiTestBase {
     @Before
     fun resetProjectAndView() {
         Assume.assumeTrue("needs the $projectName project, the IDE opened ${project.source.fileName}", project.source.fileName.toString() == projectName)
+        resetScenario()
+    }
+
+    /**
+     * Brings the IDE and the disposable project back to the pristine state: dialogs and editors close first (which also
+     * stops Play and background previews of those views), unsaved buffers are dropped next, and only then are the files
+     * restored and refreshed. Restoring first would make the IDE see a file that changed under an edited buffer (a modal
+     * "File Cache Conflict") and let that buffer be saved over the restored files or keep history for the next scenario.
+     */
+    protected fun resetScenario() {
+        val frame = robot.find<IdeFrame>(java.time.Duration.ofSeconds(10))
+        runCatching { frame.closeStrayDialogs() }
+        reset.closeAllEditors()
+        reset.discardUnsavedDocuments()
         project.restore()
         ide.refresh(project.dir.toString())
+        reset.dropUndoHistory()
         ide.refreshProjectView()
-        robot.find<IdeFrame>(java.time.Duration.ofSeconds(10)).reopenAbyssusView()
+        reset.reshowAbyssusView()
     }
 
     @After
@@ -85,6 +100,7 @@ abstract class UiTestBase {
         lateinit var robot: RemoteRobot
         lateinit var project: FixtureProject
         lateinit var ide: IdeQueries
+        lateinit var reset: IdeReset
         private lateinit var sourceBefore: Map<String, String>
 
         @JvmStatic
@@ -95,12 +111,14 @@ abstract class UiTestBase {
             sourceBefore = project.sourceHashes()
             robot = env.connect()
             ide = IdeQueries(robot)
+            reset = IdeReset(robot)
         }
 
         @JvmStatic
         @AfterClass
         fun sourceFixtureUntouched() {
             assertEquals("the committed Untitled fixture changed during the run", sourceBefore, project.sourceHashes())
+            assertEquals("committed fixture profiles changed during the run", emptyList<java.nio.file.Path>(), project.untouchedProfiles())
         }
     }
 }

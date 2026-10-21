@@ -1,0 +1,8 @@
+# The Java modules of the bundled runtime (jlink --add-modules). One per line.
+# Derived with `jdeps --print-module-deps --ignore-missing-deps --multi-release 21` over the shipped jars: java.sql brings in
+# java.xml, java.logging, java.prefs, java.datatransfer and java.transaction.xa. `jlinkRuntime` fails when jdeps reports a
+# module that is missing here; add modules that are only loaded reflectively by hand, with the reason.
+java.base
+java.desktop
+java.sql
+jdk.unsupported

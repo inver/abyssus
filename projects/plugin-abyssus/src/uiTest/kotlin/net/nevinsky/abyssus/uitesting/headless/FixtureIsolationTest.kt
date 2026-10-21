@@ -60,4 +60,73 @@ class FixtureIsolationTest {
         project.restore()
         assertTrue(Files.exists(project.resolve(".idea/workspace.xml")))
     }
+
+    @Test
+    fun restoreRemovesFoldersAScenarioCreated() {
+        val project = copy()
+        Files.createDirectories(project.resolve("assets/New Model/nested"))
+        Files.write(project.resolve("assets/New Model/nested/meta.json"), "{}".toByteArray())
+        Files.createDirectories(project.resolve("assets/Empty Leftover"))
+
+        project.restore()
+
+        assertFalse(Files.exists(project.resolve("assets/New Model")))
+        assertFalse("an empty folder would collide with the next creation of that name", Files.exists(project.resolve("assets/Empty Leftover")))
+        assertTrue("the project's own folders stay", Files.isDirectory(project.resolve("scenes")))
+        assertTrue(project.differences().isEmpty())
+    }
+
+    @Test
+    fun restoreKeepsIdeStateFoldersEvenWhenEmpty() {
+        val project = copy()
+        Files.createDirectories(project.resolve(".idea/empty"))
+        project.restore()
+        assertTrue(Files.isDirectory(project.resolve(".idea/empty")))
+    }
+
+    @Test
+    fun switchingProfilesRebuildsTheCopyAndLeavesBothSourcesAlone() {
+        val project = copy()
+        val physics = source().parent.resolve("Physics")
+        val untitledBefore = project.sourceHashes()
+        Files.createDirectories(project.resolve("assets/Leftover"))
+
+        project.switchTo(physics)
+
+        assertEquals(physics, project.profile)
+        assertTrue("the Physics project file is there", Files.exists(project.resolve("Physics.abss")))
+        assertFalse("the previous profile's files are gone", Files.exists(project.resolve("Untitled.abss")))
+        assertFalse(Files.exists(project.resolve("assets/Leftover")))
+        assertTrue(project.differences().isEmpty())
+        Files.write(project.resolve("Physics.abss"), "edited".toByteArray())
+        assertEquals(setOf("Physics.abss"), project.differences())
+
+        project.switchTo(source())
+
+        assertEquals(untitledBefore, project.hashes())
+        assertTrue(project.untouchedProfiles().isEmpty())
+    }
+
+    @Test
+    fun repeatedRestorationIsStable() {
+        val project = copy()
+        repeat(3) {
+            Files.write(project.resolve("scenes/Main Scene.scene"), "edited $it".toByteArray())
+            Files.createDirectories(project.resolve("assets/Made $it"))
+            project.restore()
+            assertTrue(project.differences().isEmpty())
+            assertFalse(Files.exists(project.resolve("assets/Made $it")))
+        }
+        assertEquals(project.sourceHashes(), project.hashes())
+    }
+
+    @Test
+    fun aChangedCommittedProfileIsReported() {
+        val folder = tmp.newFolder("profileSource").toPath()
+        Files.write(folder.resolve("a.txt"), "a".toByteArray())
+        val project = FixtureProject(folder, tmp.newFolder("copy").toPath()).also { it.create() }
+        assertTrue(project.untouchedProfiles().isEmpty())
+        Files.write(folder.resolve("a.txt"), "tampered".toByteArray())
+        assertEquals(listOf(folder), project.untouchedProfiles())
+    }
 }

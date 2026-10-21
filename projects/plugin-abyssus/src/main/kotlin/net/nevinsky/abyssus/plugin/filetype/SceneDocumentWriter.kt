@@ -9,6 +9,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
@@ -29,8 +30,17 @@ fun interface AbyssusSceneEdited {
  * Parses [file]'s document, lets [mutate] edit the tree (returning false to abort), and saves it in the file's own
  * style as one undoable command named [commandName]. Publishes [AbyssusSceneEdited.TOPIC] once the command is done.
  * Returns whether anything was written. This is the only way the plugin writes a scene or project file.
+ *
+ * The command is undone from the scene's own editor.
  */
-fun editSceneJson(project: Project, file: VirtualFile, commandName: String, mutate: (JsonNode) -> Boolean): Boolean {
+fun editSceneJson(project: Project, file: VirtualFile, commandName: String, mutate: (JsonNode) -> Boolean): Boolean =
+    editSceneJson(project, file, commandName, false, mutate)
+
+/**
+ * [editSceneJson] that, with [global], is also a project-level command: Undo and Redo reach it from any focus, such as
+ * the Abyssus tree that started it, not only from the scene's editor.
+ */
+fun editSceneJson(project: Project, file: VirtualFile, commandName: String, global: Boolean, mutate: (JsonNode) -> Boolean): Boolean {
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
     val kind = documentKind(file) ?: return false
     val original = document.text
@@ -42,6 +52,7 @@ fun editSceneJson(project: Project, file: VirtualFile, commandName: String, muta
     WriteCommandAction.runWriteCommandAction(project, commandName, null, {
         document.setText(text)
         FileDocumentManager.getInstance().saveDocument(document)
+        if (global) CommandProcessor.getInstance().markCurrentCommandAsGlobal(project)
     })
     if (!project.isDisposed) {
         project.messageBus.syncPublisher(AbyssusSceneEdited.TOPIC).sceneEdited(file)

@@ -116,6 +116,19 @@ and adds or removes the rest. A moved, turned or position-edited copy is detache
 and `ComponentEditor` call `detach`), so the headless edits match. Updating a setting of an arrangement through
 `ComponentEditor.update` regenerates in the same edit, on the `GroundHeight` passed in (the line's own height by default).
 
+## Entity removal
+
+`EntityRemoval` (in `components`) removes one entity entry from a scene tree and nothing else: assets, other entities and a
+wrapped scene's `archetypes` and `metadata` keep their text. It is refused, leaving the tree as it was and naming the
+relationship, when the entity is missing; when a remaining entity names it through `ParentComponent.parentEntityId`,
+`PositionComponent.lookAtId` or `Point2PointPositionComponent.entity1Id` / `entity2Id` (short or fully qualified component
+key); when it is listed in the `slots` of a `PathArrangementComponent`; when it is itself an arrangement that still owns
+existing copies; or when a component kind passed to the constructor (a registered schema or physics kind) has an
+`ENTITY_REF` field naming it. Unknown components are opaque: no reference is guessed from their numbers, and nothing is
+cleared, detached or retargeted for the caller. `HeadlessEditing.removeEntity` runs it as text; the plugin's Remove Entity
+tree action runs it through `editSceneJson`. `HeadlessEditing.removeEntities` (the foliage helper's built-in-only check)
+remains for removing several entities at once.
+
 ## Enabled flag
 
 `SetEnabledAction` (with `EnabledTarget`) writes or removes the optional `enabled: false` on one entity entry or one

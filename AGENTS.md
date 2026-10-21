@@ -23,6 +23,7 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | Also run GL tests (open a window) | add `-Dabyssus.glTests=true` |
 | Sandbox IDE | `./gradlew :plugin-abyssus:runIde` (open a project with `-PideProject=/path/to/project`) |
 | Control Line game: play / tests | `./gradlew :app-game-control-line:run` / `./gradlew :app-game-control-line:test` |
+| Control Line native package payload (per OS; installers come in later tasks) | `./gradlew :app-game-control-line:packageApplication` / `:app-game-control-line:packageDmg` (see the game's README, "Packages") |
 | Control Line launch file for Play (use a copy of the project) | `./gradlew :app-game-control-line:exportPlay -PplayProject=<folder>` |
 | Plugin zip | `./gradlew :plugin-abyssus:buildPlugin` (to `projects/plugin-abyssus/build/distributions/`) |
 | UI tests (real IDE, Remote Robot), canonical Linux container | `scripts/run-ui-tests-docker.sh` (see `docs/ai/testing.md`) |

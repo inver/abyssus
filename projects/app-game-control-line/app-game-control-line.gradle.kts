@@ -11,6 +11,8 @@ plugins {
     id("org.jetbrains.kotlin.jvm")
     // LWJGL, libGDX and JUnit versions from the catalog (build-logic)
     id("abyssus.dependency-platforms")
+    // native packages (deb, rpm, AppImage, msi, dmg) with a bundled runtime: build-logic's abyssus.control-line-packaging
+    id("abyssus.control-line-packaging")
 }
 
 /** Builds one distribution for every OS: Jolt natives of all platforms, `-XstartOnFirstThread` chosen at launch. */
