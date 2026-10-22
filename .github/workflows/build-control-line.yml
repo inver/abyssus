@@ -66,11 +66,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends fakeroot rpm desktop-file-utils xvfb libgl1-mesa-dri libgl1 libasound2
 
-      # jpackage 21 builds an .msi with WiX 3.x
+      # jpackage 21 builds an .msi with WiX 3.x; the runner image may already ship a 3.14.1 build
       - name: Install WiX Toolset
         if: runner.os == 'Windows'
         shell: bash
-        run: choco install wixtoolset --version=3.14.1 --no-progress -y
+        run: |
+          if choco list --local-only --exact wixtoolset | grep -q '^wixtoolset 3\.'; then
+            echo "WiX 3.x already installed"
+          else
+            choco install wixtoolset --version=3.14.1 --no-progress -y
+          fi
 
       # The package version must be numeric (.msi) and a newer canary must upgrade an installed one: 1.0.<run number>
       - name: Build packages
