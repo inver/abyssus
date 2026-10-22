@@ -71,8 +71,11 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          if choco list --local-only --exact wixtoolset | grep -q '^wixtoolset 3\.'; then
+          if command -v candle.exe >/dev/null 2>&1 || ls -d "/c/Program Files (x86)"/WiX*3*/bin/candle.exe >/dev/null 2>&1; then
             echo "WiX 3.x already installed"
+            for d in "/c/Program Files (x86)"/WiX*3*/bin; do
+              [ -d "$d" ] && cygpath -w "$d" >> "$GITHUB_PATH"
+            done
           else
             choco install wixtoolset --version=3.14.1 --no-progress -y
           fi
