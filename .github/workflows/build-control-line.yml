@@ -134,9 +134,11 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           short_sha="${GITHUB_SHA::7}"
-          ls -l dist
+          ls -lR dist
+          # Some artifacts keep a subfolder (appimage/, deb/, rpm/); gh needs files, not directories
+          mapfile -t assets < <(find dist -type f | sort)
           gh release delete canary --cleanup-tag --yes || true
-          gh release create canary dist/* \
+          gh release create canary "${assets[@]}" \
             --target "$GITHUB_SHA" \
             --title "Control Line canary ($short_sha)" \
             --notes "Automated build of \`main\` at $GITHUB_SHA: .deb, .rpm and .AppImage (Linux x64), .msi (Windows x64), .dmg (macOS arm64 and Intel), each with its own Java runtime, and a universal .zip that needs Java. The packages are not signed, so Windows SmartScreen and macOS Gatekeeper warn on first start; see the game's README. May be unstable." \
