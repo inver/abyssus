@@ -2,7 +2,7 @@
   "method": "Multi-start Levenberg-Marquardt perspective camera fit, centre fixed at the image centre.",
   "limitations": "Hand-marked corners; wing/stab tip corners are virtual straight-edge intersections.",
   "photos": {
-    "img.png": {
+    "img_4.png": {
       "near_wing_is_long": true,
       "alternative_rms_px": [],
       "landmark_rms_px": 9.552401295816733,
@@ -103,9 +103,10 @@
           ],
           "error_px": 8.82515167602232
         }
-      ]
+      ],
+      "note": "Registered on the 1024x766 version; textures/img_4.png is the same photograph at 2048x1532 with its background removed."
     },
-    "img_1.png": {
+    "img_6.png": {
       "near_wing_is_long": true,
       "alternative_rms_px": [
         199.78503007370935
@@ -200,9 +201,10 @@
           ],
           "error_px": 13.765924247413858
         }
-      ]
+      ],
+      "note": "Registered on the behind-the-tail photograph that was img_1.png; the file is now textures/img_6.png with its background removed."
     },
-    "img_2.png": {
+    "img_1.png": {
       "near_wing_is_long": false,
       "alternative_rms_px": [
         100.26919634188455
@@ -280,7 +282,8 @@
           ],
           "error_px": 3.2109973917209085
         }
-      ]
+      ],
+      "note": "Weak camera (4 landmarks); the low front photograph that was img_2.png, now textures/img_1.png with its background removed."
     }
   }
 }

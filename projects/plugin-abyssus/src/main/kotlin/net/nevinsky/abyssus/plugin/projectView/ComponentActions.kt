@@ -168,3 +168,15 @@ open class RemoveComponentAction : AbyssusTreeAction<ComponentTarget>() {
         reportRejection(project, SceneComponentEdits.remove(project, target.file, target.entityId, target.kind!!))
     }
 }
+
+/**
+ * Right-click "Remove Entity" on an entity row of a native scene: removes that entity only, as one undoable command.
+ * Another entity that still refers to it, or an arrangement that owns copies, refuses the removal with a message.
+ */
+open class RemoveEntityAction : AbyssusTreeAction<ComponentTarget>() {
+    override fun targetOf(node: Any?) = componentTargetOf(node)?.takeIf { it.kind == null }
+
+    override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) {
+        reportRejection(project, SceneComponentEdits.removeEntity(project, target.file, target.entityId))
+    }
+}

@@ -89,7 +89,7 @@ If a context still cannot be created, the affected scenarios are recorded as env
 
 When a scenario fails, retain diagnostics, distinguish fixture/locator/environment failures from product failures, and record the trigger, expected contract and affected file. For a confirmed product defect, keep the UI reproduction and add a focused lower-level regression when it tests the underlying rule. Fix the owner, rerun the reproduction, affected test group and relevant module checks, then run the complete canonical suite. Do not change a main spec merely to bless observed broken behavior. If a fix requires a new behavior decision, revise this change's delta before implementing it.
 
-The `redesign-project-view-menus` proposal states entity menus are unchanged. Adding Remove Entity is a deliberate exception; amend that open delta/proposal during apply to say its grouping work leaves the action set defined here intact. Other unimplemented redesign proposals remain out of scope. Existing unrelated workspace work and failures must be preserved/reported, not folded into these fixes.
+The archived `redesign-project-view-menus` change states entity menus are unchanged. Adding Remove Entity is a deliberate exception; note in the project-view README that Remove Entity supersedes that statement for entity rows, without editing the archive. Other unimplemented redesign proposals remain out of scope. Existing unrelated workspace work and failures must be preserved/reported, not folded into these fixes.
 
 Keep real-IDE execution serial per sandbox/port. Expand CI capacity or split sequential groups with independent sandboxes only when measured duration requires it; do not immediately increase timeouts to hide hangs. Existing diagnostics and JUnit reports remain uploaded on failure. The complete suite must pass twice from fresh disposable state to provide initial evidence against order/reset failures; no open required matrix rows may be called complete.
 
@@ -100,7 +100,8 @@ Keep real-IDE execution serial per sandbox/port. Expand CI capacity or split seq
 - Unknown extensions can contain undocumented references → preserve opaque data; guarantee guards only for supported/registered relationships, without guessing from numbers.
 - GPU backends differ from Linux software GL → provision software GL in the canonical container for interaction coverage with a smoke check, keep exact rendered pixels out (GL tests and separately recorded hardware checks), and record native rendering checks separately.
 - Undo and project reset can leak state across tests → close owners before reset, verify empty-folder cleanup and repeat the full suite from fresh state.
-- Entity deletion overlaps pending menu and refresh changes → integrate current code at apply time, amend the conflicting open menu text, and retain selection/refresh regression coverage.
+- Entity deletion overlaps pending menu and refresh changes → integrate current code at apply time, document the exception to the archived menu redesign, and retain selection/refresh regression coverage.
+- The main `scene-component-editing` spec has a stray `## ADDED Requirements` header that would make archive refuse this change's delta → repair it before archiving (task 3.6).
 
 ## Migration Plan
 

@@ -5,7 +5,9 @@ straight-edge intersections, so 'virtual'), the spinner nose and the fin's aft t
 corner. Which wing is the 740 mm one is not visible in every photo, so both
 left/right assignments are fitted and the lower residual wins. A weak prior keeps
 the focal length near that of the first-livery fits. The photographs are not
-modified and not used as textures.
+modified and not used as textures. (img.png and img_5.png are the first-livery photographs 8 and 7 with
+their backgrounds removed, registered by fit_photo_overlays.py. img_6.png is the behind-the-tail view and
+img_1.png the low front view with a weak camera, both also with backgrounds removed.)
 
 Run: blender -b --python fit_livery2_photos.py
 """
@@ -26,20 +28,21 @@ def tips(long_sign,stab_sign):
      'stab -y tip LE':[921,-stab_sign*345,5],'stab -y tip TE':[1036,-stab_sign*345,5]}
 # Pixel landmarks per photo: (name, pixel). The first wing/stab named is the near one in the image.
 photos={
- 'img.png':{
+ # img_4.png is registered at 1024x766; the file is the same photograph at twice the size.
+ 'img_4.png':{
   'near_is_long':True,
   'marks':{'near wing tip LE':(470,703),'near wing tip TE':(287,611),
            'far wing tip LE':(795,72),'far wing tip TE':(668,50),
            'near stab tip LE':(190,350),'near stab tip TE':(147,332),
            'far stab tip LE':(408,118),'far stab tip TE':(360,107),
            'spinner nose':(902,357),'fin aft top corner':(241,133)}},
- 'img_1.png':{
+ 'img_6.png':{
   'marks':{'near wing tip LE':(930,418),'near wing tip TE':(845,527),
            'far wing tip LE':(310,76),'far wing tip TE':(226,137),
            'near stab tip LE':(434,553),'near stab tip TE':(368,604),
            'far stab tip LE':(158,322),'far stab tip TE':(112,357),
            'spinner nose':(703,127)}},
- 'img_2.png':{
+ 'img_1.png':{
   'marks':{'far stab tip centre':(532,146),'near stab tip centre':(957,236),
            'spinner nose':(160,452),'fin aft top corner':(762,78)},
   # At the frame edge of a wide, close shot: reported, not fitted (lens distortion).

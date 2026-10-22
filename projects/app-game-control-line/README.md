@@ -18,6 +18,90 @@ Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json` a
 `<user-home>/.abyssus-control-line/f2b-scores.json`; a file that cannot be read is renamed to `scores.json.bad` or
 `f2b-scores.json.bad`.
 
+## Packages
+
+Native packages bundle a trimmed Java runtime, so the player needs no Java. They are built with the JDK's `jpackage`
+(spec: `game-distribution`, OpenSpec change `add-control-line-native-packages`). `jpackage` cannot cross-build: a package is
+built on the OS and architecture it targets, and CI builds each one on a runner of its own.
+
+```
+./gradlew :app-game-control-line:packageApplication        # the application folder, the payload of every package of this OS
+./gradlew :app-game-control-line:jlinkRuntime            # only the bundled runtime
+./gradlew :app-game-control-line:checkPackagePayload     # only the editor-code check of the payload
+```
+
+- `stagePackageInput` copies the distribution's jars and `project/ControlLine` into `build/packaging/input`. The launcher
+  gets `-DcontrolLine.project=$APPDIR/project/ControlLine`, which the launcher expands to the folder of the jars on every OS, so
+  the game finds its project wherever it is installed. macOS packages also start with `-XstartOnFirstThread`.
+- `jlinkRuntime` builds the runtime from `packaging/modules.txt` and fails when the jars use a module the list lacks (`jdeps`
+  decides). Add a module there only with the reason, for example when it is loaded reflectively.
+- `packageApplication` runs `jpackage --type app-image`; every installer is built `--app-image` from that folder. The
+  application's version is `controlLineVersion` in `gradle.properties` (`-PcontrolLineVersion=1.0.7` overrides it); `.msi` needs
+  a numeric `x.y.z` and `.dmg` a major version above 0.
+- `checkPackagePayload` runs after `packageApplication`. It fails, naming the jar, when the payload holds an editor-only
+  library or class (the editing library, the Play bridge, the ray tracing modules, the ray view) or its jars differ from
+  `installDist`'s `lib/`. It is the package-side twin of `checkShippedClasspath`.
+- The packages carry the Control Line icon from `packaging/icons/` (see "Assets and licences").
+
+### macOS disk image
+
+```
+./gradlew :app-game-control-line:packageDmg
+```
+
+On a Mac this writes `build/packaging/dmg/control-line-<version>-macos-<arm64|x64>.dmg` for the Mac's own architecture; build
+on an Intel Mac for the Intel image. Open it, drag **Control Line** to Applications.
+
+### Linux packages
+
+```
+./gradlew :app-game-control-line:packageDeb :app-game-control-line:packageRpm :app-game-control-line:packageAppImage
+```
+
+Run on x64 Linux with a JDK 21; `packageDeb` needs `dpkg-deb` and `fakeroot`, `packageRpm` needs `rpmbuild`, and `packageAppImage`
+downloads `appimagetool` and the AppImage runtime (versions and SHA-256 in `packaging/appimage/tools.properties`; a file
+whose hash differs is deleted and the build fails). The files are `build/packaging/{deb,rpm,appimage}/control-line-<version>-linux-x64.<ext>`.
+
+- `.deb`: `sudo apt install ./control-line-<version>-linux-x64.deb`, `.rpm`: `sudo dnf install ./control-line-<version>-linux-x64.rpm`.
+  Both install under `/opt/control-line` and add a menu entry (group *Game*).
+- `.AppImage`: `chmod +x control-line-<version>-linux-x64.AppImage` and run it. It needs no installation and no Java.
+  An AppImage needs FUSE 2 (`libfuse2`), which Ubuntu 22.04 and later do not install by default; without it run
+  `APPIMAGE_EXTRACT_AND_RUN=1 ./control-line-<version>-linux-x64.AppImage` (or pass `--appimage-extract-and-run`), which unpacks it to a
+  temporary folder instead.
+- The packages are built on Ubuntu 22.04, so they need glibc 2.35 or newer. The game needs OpenGL 3.3.
+- The bundled natives are those of x64 Linux (LWJGL's Assimp natives have no arm64 Linux build), so arm64 Linux is not supported.
+- `scripts/smoke-control-line-linux.sh` (run by CI after the build) unpacks the `.deb`, checks its jars with `checkExtractedPackage`, and starts the
+  unpacked game and the AppImage for 20 seconds each under Xvfb on Mesa software GL; it fails on an early exit or a logged exception.
+
+### Windows installer
+
+```
+gradlew :app-game-control-line:packageMsi
+```
+
+Run on Windows with a JDK 21 and the WiX Toolset 3.x (`candle.exe` and `light.exe`) installed; it writes
+`build/packaging/msi/control-line-<version>-windows-x64.msi`. The installer adds a Start menu entry and a desktop shortcut and lets
+the player pick the folder. Its upgrade code is fixed in `abyssus.control-line-packaging`, so installing a higher
+`controlLineVersion` upgrades an installed Control Line in place, and the version must stay numeric (`x.y.z`).
+
+### Unsigned packages
+
+The packages are not code-signed or notarized, so the first start meets the operating system's warning.
+
+- **macOS:** the app is ad-hoc signed by `jpackage`, which Apple silicon requires, but not by a developer certificate, so Gatekeeper
+  refuses the first start ("cannot be opened because the developer cannot be verified"). On macOS 15 and later open
+  **System Settings > Privacy & Security**, scroll to *Security*, press **Open Anyway** beside Control Line and confirm. On
+  macOS 14 and earlier Control-click the app and choose **Open**. From Terminal, clear the download flag of the app (not
+  recursively: the bundled runtime's files are read-only, so `-r` prints permission errors, and Gatekeeper looks only at the
+  bundle):
+
+  ```
+  xattr -d com.apple.quarantine "/Applications/Control Line.app"
+  ```
+
+- **Windows:** SmartScreen shows "Windows protected your PC" for the unsigned `.msi`. Press **More info**, then **Run anyway**.
+
+
 ## Ray mode (development aid)
 
 The game supports an opt-in ray-traced field view, chosen at launch with the `controlLine.fieldView=ray` system
@@ -416,6 +500,9 @@ kinematic body; the plane is put at takeoff with `PhysicsBody.setPose`.
 - `terrain_field`, `texture_grass`, `texture_mown`, `texture_field_splat`: generated by `tools/FieldAssets.kt`
   (`./gradlew :app-game-control-line:generateField`) with `lib-core`'s terrain generator.
 - `skybox_physical`: copied from the `Untitled` test fixture.
+- The application icon (`packaging/icons/`): `control-line-icon.svg` is the source, and `control-line.png`, `control-line.ico`
+  and `control-line.icns` are rendered from it by `scripts/generate-control-line-icons.sh` (needs `rsvg-convert` or Inkscape,
+  ImageMagick and macOS's `iconutil`) and committed, so builds need none of those tools. Re-run it only when the SVG changes.
 - The airfield (`*_airfield_*`) reconstructs the real control-line circle in Samara from reference images and site notes (the original reference files are not in this checkout). It has a 50 m asphalt pad with rings at the 15, 18 and 21 m line radii, a 300 m
   splat-mapped site terrain (`terrain_airfield_site`, level within 30 m of the pilot) and a 600 m outer ground. The
   scenery includes the WC and staff building, the preparation area, the street, the DK "Plamya", the blue-roof

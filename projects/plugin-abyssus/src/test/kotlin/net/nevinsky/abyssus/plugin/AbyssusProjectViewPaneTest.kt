@@ -278,6 +278,36 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
     private fun keyOfEntity(path: TreePath): String? =
         (TreeUtil.getUserObject(path.lastPathComponent) as? DtoEntryNode)?.value?.takeIf { isEntityEntry(it) }?.name
 
+    /**
+     * The plugin selects the row an edit created right after the edit, before the rebuild that publishes it has run:
+     * the new row, not the row the rebuild would restore, must end up selected (ENT-01 in EntityLifecycleUiTest).
+     */
+    fun testRowCreatedByAnEditWinsOverTheSelectionTheRebuildRestores() {
+        val dir = fixture()
+        val file = sceneFile(dir)
+        val pane = open()
+        pane.tree.selectionPath = entityPath(pane, "0")!!
+        PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        assertTrue(editSceneJson(project, file, "Add entity 99") { root ->
+            val ecs = root.get("ecs") as ObjectNode
+            ecs.set<ObjectNode>("99", ecs.get("0").deepCopy())
+            true
+        })
+        val visitor = com.intellij.ui.tree.TreeVisitor { path -> net.nevinsky.abyssus.plugin.projectView.entityVisitAction(file, "99", path.path.map(TreeUtil::getUserObject)) }
+        assertTrue("a rebuild is pending after the edit", pane.refresh.selectAfterRebuild(visitor))
+        settle(pane, 1)
+        PlatformTestUtil.waitWithEventsDispatching("the new entity is selected", { pane.tree.selectionPath?.let { keyOfEntity(it) } == "99" }, 30)
+        assertNotNull("entity 99 has a row", entityPath(pane, "99"))
+    }
+
+    fun testSelectAfterRebuildDoesNothingWhenNoRebuildIsPending() {
+        fixture()
+        val pane = open()
+        PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        assertTrue("no rebuild is pending after opening", pane.refresh.idle)
+        assertFalse(pane.refresh.selectAfterRebuild(com.intellij.ui.tree.TreeVisitor { com.intellij.ui.tree.TreeVisitor.Action.INTERRUPT }))
+    }
+
     fun testRemovedSelectedEntityDisappearsAndLeavesNoStaleSelection() {
         val dir = fixture()
         val file = sceneFile(dir)

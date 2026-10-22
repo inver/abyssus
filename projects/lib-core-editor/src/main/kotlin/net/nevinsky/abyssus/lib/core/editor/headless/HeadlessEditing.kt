@@ -15,6 +15,7 @@ import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
+import net.nevinsky.abyssus.lib.core.editor.components.EntityRemoval
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
@@ -59,6 +60,7 @@ class HeadlessEditing(
     private val assetMeta = AssetMetaEditor(AssetFieldDescriptions(), format)
     private val foliageEdits = FoliageComponentEdits()
     private val enabledAction = SetEnabledAction()
+    private val entityRemoval = EntityRemoval(messages)
 
     /** Null when [text] is a supported native document of [kind], else why it is refused. */
     fun validate(text: String, kind: DocumentKind): Refusal? {
@@ -118,6 +120,22 @@ class HeadlessEditing(
             removal.changed
         }
         return blocked?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome
+    }
+
+    /**
+     * Removes the single entity [entityId] from [sceneText], as the tree's Remove Entity does. Refused, with the
+     * relationship named, when the entity is missing, still referred to, or an arrangement that owns copies.
+     */
+    fun removeEntity(sceneText: String, entityId: String): HeadlessEdit {
+        var rejected: String? = null
+        val outcome = edit(sceneText, DocumentKind.SCENE) { root ->
+            when (val result = entityRemoval.remove(root, entityId)) {
+                EditResult.Changed -> true
+                EditResult.Unchanged -> false
+                is EditResult.Rejected -> false.also { rejected = result.reason }
+            }
+        }
+        return rejected?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome
     }
 
     /**

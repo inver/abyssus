@@ -33,7 +33,7 @@ docker run --rm "${PLATFORM[@]+"${PLATFORM[@]}"}" --shm-size=1g \
   ${CI:+-e CI="$CI"} \
   ${ABYSSUS_UI_FIXTURE:+-e ABYSSUS_UI_FIXTURE="$ABYSSUS_UI_FIXTURE"} \
   "$IMAGE" bash -c '
-    rsync -a --delete --exclude .git --exclude build --exclude .gradle --exclude .intellijPlatform --exclude .kotlin /src/ /workspace/
+    rsync -a --delete --exclude .git --exclude /build --exclude /build-logic/build --exclude '"'"'/projects/*/build'"'"' --exclude .gradle --exclude .intellijPlatform --exclude .kotlin /src/ /workspace/
     cd /workspace
     scripts/run-ui-tests.sh "$@"
     status=$?

@@ -53,6 +53,21 @@ internal class AbyssusTreeRefresh(
 ) : Disposable {
     private val coalescer = RefreshCoalescer()
 
+    /** A row to select instead of the captured selection when the pending rebuild restores the tree. EDT only. */
+    private var selectAfter: TreeVisitor? = null
+
+    /**
+     * Asks for [visitor]'s row to be selected once the rebuild that is pending or running has restored the tree, and
+     * returns true. A plugin edit publishes [AbyssusSceneEdited] and the rebuild follows later on the EDT, so selecting
+     * the row an edit just created right away would look for it in the old tree, find nothing, and then lose to the
+     * selection the rebuild restores. Returns false, doing nothing, when no rebuild is pending: select directly then.
+     */
+    fun selectAfterRebuild(visitor: TreeVisitor): Boolean {
+        if (idle) return false
+        selectAfter = visitor
+        return true
+    }
+
     /** How many rebuilds this coordinator started; tests read it to tell a rebuild from none. */
     @Volatile
     var rebuilds: Int = 0
@@ -99,6 +114,7 @@ internal class AbyssusTreeRefresh(
         val keys = coalescer.begin() ?: return
         val tree = tree()
         if (keys.isEmpty() || project.isDisposed || tree == null) {
+            selectAfter = null
             finishRun()
             return
         }
@@ -137,6 +153,16 @@ internal class AbyssusTreeRefresh(
     }
 
     private fun select(tree: JTree, state: NavigationState, found: MutableSet<String>) {
+        selectAfter?.let { wanted ->
+            selectAfter = null
+            // a row that cannot be found (the entity is gone again) falls back to what the rebuild would have restored
+            TreeUtil.promiseSelect(tree, wanted).onError { if (!project.isDisposed) selectCaptured(tree, state, found) }
+            return
+        }
+        selectCaptured(tree, state, found)
+    }
+
+    private fun selectCaptured(tree: JTree, state: NavigationState, found: MutableSet<String>) {
         val restore = restoreNavigation(state, found + state.selected.toSet())
         if (restore.select.isEmpty()) {
             if (state.selected.isNotEmpty()) tree.clearSelection()

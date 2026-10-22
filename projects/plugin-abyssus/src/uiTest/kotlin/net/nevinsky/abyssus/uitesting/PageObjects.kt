@@ -29,9 +29,14 @@ class IdeFrame(remoteRobot: RemoteRobot, remoteComponent: RemoteComponent) : Com
     /** Chooses a Project tool window view ("Project", "Abyssus", ...) through the selector popup, using the mouse. */
     fun selectView(name: String) {
         if (currentView() == name) return
-        viewSelector.click()
-        val popup = find<JListFixture>(byXpath("//div[@class='HeavyWeightWindow']//div[@class='MyList']"), SHORT)
-        popup.clickItem(name, fullMatch = true)
+        // the first click can go to focusing the frame (after editors closed); click again until the popup is really there
+        val popupXpath = byXpath("//div[@class='HeavyWeightWindow']//div[@class='MyList' or @class='JBList']")
+        repeat(3) {
+            if (findAll<JListFixture>(popupXpath).isNotEmpty()) return@repeat
+            viewSelector.click()
+            runCatching { waitFor(Duration.ofSeconds(3), Duration.ofMillis(200), "the view selector popup") { findAll<JListFixture>(popupXpath).isNotEmpty() } }
+        }
+        find<JListFixture>(popupXpath, SHORT).clickItem(name, fullMatch = true)
         waitFor(SHORT, Duration.ofMillis(200), "$name view selected") { currentView() == name }
     }
 
@@ -52,6 +57,55 @@ class IdeFrame(remoteRobot: RemoteRobot, remoteComponent: RemoteComponent) : Com
 
     /** The IDE's Undo shortcut. */
     fun undo() = keyboard { hotKey(java.awt.event.KeyEvent.VK_CONTROL, java.awt.event.KeyEvent.VK_Z) }
+
+    fun redo() = keyboard { hotKey(java.awt.event.KeyEvent.VK_CONTROL, java.awt.event.KeyEvent.VK_SHIFT, java.awt.event.KeyEvent.VK_Z) }
+
+    /**
+     * Chooses [item] in a popup list that is open. A group choice (Render, Add Asset) opens a second list, so the lists
+     * are searched for the item: an exact row first, else a row containing it, else a row drawn elided (`Dir...`) whose
+     * visible start is the start of [item]; the row is clicked by the text the list draws.
+     */
+    fun choosePopupItem(item: String) {
+        val xpath = byXpath("//div[@class='HeavyWeightWindow']//div[@class='MyList' or @class='JBList']")
+        fun rank(row: String): Int = when {
+            row == item -> 0
+            row.contains(item) -> 1
+            row.endsWith("...") && row.length > 3 && item.startsWith(row.removeSuffix("...")) -> 2
+            else -> -1
+        }
+        fun best(): Pair<JListFixture, String>? = findAll<JListFixture>(xpath)
+            .flatMap { list -> list.collectItems().map { row -> Triple(list, row, rank(row)) } }
+            .filter { it.third >= 0 }.minByOrNull { it.third }?.let { it.first to it.second }
+        try {
+            waitFor(SHORT, Duration.ofMillis(200), "a popup list with '$item'") { best() != null }
+        } catch (e: Exception) {
+            throw AssertionError("no popup list offers '$item'; the lists show ${findAll<JListFixture>(xpath).map { it.collectItems() }}", e)
+        }
+        val (list, row) = best()!!
+        list.clickItem(row, fullMatch = true)
+    }
+
+    /** Every row of every open popup list, in order; empty when none is open. */
+    fun popupItems(): List<String> =
+        findAll<JListFixture>(byXpath("//div[@class='HeavyWeightWindow']//div[@class='MyList' or @class='JBList']")).flatMap { it.collectItems() }
+
+    /** Closes any open popup with Escape. */
+    fun dismissPopup() = keyboard { escape() }
+
+    /** Clicks through context menu submenus: every step but the last is a submenu, the last a menu item. */
+    fun clickMenuPath(vararg path: String) {
+        path.dropLast(1).forEach { clickShowing("ActionMenu", it) }
+        clickShowing("ActionMenuItem", path.last())
+    }
+
+    /** Clicks the last showing menu component of [type] with [text]; a submenu opened last is the one meant, and a closed menu can linger. */
+    private fun clickShowing(type: String, text: String) {
+        val xpath = byXpath("//div[@class='$type' and @text='$text']")
+        waitFor(SHORT, Duration.ofMillis(200), "the $type '$text' is showing") {
+            findAll<ComponentFixture>(xpath).any { it.callJs<Boolean>("component.isShowing()", runInEdt = true) }
+        }
+        findAll<ComponentFixture>(xpath).last { it.callJs<Boolean>("component.isShowing()", runInEdt = true) }.click()
+    }
 
     fun tree(): AbyssusTree = AbyssusTree(this)
 
@@ -185,7 +239,21 @@ class AbyssusTree(private val frame: IdeFrame) {
 
     fun rightClickRow(text: String) = fixture.rightClickRow(indexOf(text))
 
+    /** Add Component... on the `ecs` row, choosing [kind]: creates a new entity holding it. */
+    fun addComponentOnEcs(kind: String) {
+        rightClickRow("ecs")
+        frame.clickMenuItem("Add Component...")
+        frame.choosePopupItem(kind)
+    }
+
     fun clickRow(text: String) = fixture.clickRow(indexOf(text))
+
+    /** The texts of the selected rows, as the tree draws them. */
+    fun selectedRows(): List<String> {
+        val all = rows()
+        val selected = fixture.callJs<String>("var r = component.getSelectionRows(); r == null ? '' : java.util.Arrays.toString(r)", runInEdt = true)
+        return selected.trim('[', ']').split(',').map(String::trim).filter(String::isNotEmpty).map { all[it.toInt()] }
+    }
 
     /** Expands the type groups under Assets (Models, Skyboxes, Terrains, ...) so asset rows are listed. */
     fun expandAssetGroups() {
@@ -328,6 +396,66 @@ class PropertiesPanel(private val frame: IdeFrame) {
             enterText(text)
             enter()
         }
+    }
+
+    /** Clicks the Remove button of the section of component [kind] (`remove-<Kind>`). */
+    fun clickRemove(kind: String) = byName("remove-$kind").click()
+
+    fun hasRemove(kind: String): Boolean = existing("remove-$kind") != null
+
+    /** Opens the combo [name] and picks [item] from its popup, as a user does. */
+    fun choose(name: String, item: String) {
+        window.find<ComponentFixture>(byXpath("//div[@name='$name']"), SHORT).click()
+        frame.choosePopupItem(item)
+    }
+
+    /**
+     * Picks the item next to the current one of the combo [name] with the keyboard (the popup opens, Down or Up moves,
+     * Enter commits) and returns it. The combo's items are read from the component.
+     */
+    fun pickOther(name: String): String {
+        val items = byName(name).callJs<String>(
+            "var out = []; for (var i = 0; i < component.getItemCount(); i++) out.push(String(component.getItemAt(i))); out.join('\\n')",
+            runInEdt = true,
+        ).lines()
+        val index = byName(name).callJs<Int>("component.getSelectedIndex()", runInEdt = true)
+        val target = if (index + 1 < items.size) index + 1 else index - 1
+        require(target in items.indices) { "the combo $name has no other item: $items" }
+        byName(name).click()
+        frame.keyboard {
+            if (target > index) repeat(target - index) { down() } else repeat(index - target) { up() }
+            enter()
+        }
+        return items[target]
+    }
+
+    /** The selected item of the combo [name]. */
+    fun choiceText(name: String): String =
+        byName(name).callJs("String(component.getSelectedItem() == null ? '' : component.getSelectedItem())", runInEdt = true)
+
+    /** Whether the check box [name] is ticked. */
+    fun checked(name: String): Boolean = byName(name).callJs("component.isSelected()", runInEdt = true)
+
+    fun clickCheck(name: String) = byName(name).click()
+
+    /** Clicks the component named [name] (a button such as `asset-undo`). */
+    fun click(name: String) = byName(name).click()
+
+    fun isEnabled(name: String): Boolean = byName(name).callJs("component.isEnabled()", runInEdt = true)
+
+    /** Types [text] into the named field without committing it: no Enter, focus stays in the field. */
+    fun type(name: String, text: String) {
+        val f = field(name)
+        f.click()
+        frame.keyboard {
+            hotKey(java.awt.event.KeyEvent.VK_CONTROL, java.awt.event.KeyEvent.VK_A)
+            enterText(text)
+        }
+    }
+
+    /** Moves the focus to the named field with a click, which ends the edit of the field that had it. */
+    fun focus(name: String) = waitFor(SHORT, Duration.ofMillis(300), "the field $name takes a click") {
+        runCatching { field(name).click() }.isSuccess
     }
 
     /** The scene skybox field's text (read-only) and its Browse button, shown when a project scene is selected. */
@@ -495,7 +623,7 @@ class SceneViewToolbar(private val frame: IdeFrame) {
     /** Chooses [item] in the drop-down whose current text is [current] (Local-World, shading). */
     fun choose(current: String, item: String) {
         component.find<ComponentFixture>(byXpath("//div[@class='ComboBoxButton' and @visible_text='$current']"), SHORT).click()
-        frame.find<JListFixture>(byXpath("//div[@class='HeavyWeightWindow']//div[@class='MyList']"), SHORT).clickItem(item, fullMatch = true)
+        frame.find<JListFixture>(byXpath("//div[@class='HeavyWeightWindow']//div[@class='MyList' or @class='JBList']"), SHORT).clickItem(item, fullMatch = true)
     }
 }
 

@@ -33,19 +33,33 @@ sealed interface CommitOutcome {
 internal fun settle(outcome: CommitOutcome, error: JBLabel, revert: () -> Unit) {
     when (outcome) {
         CommitOutcome.Saved -> error.text = ""
-        CommitOutcome.Unchanged -> { error.text = ""; revert() }
-        is CommitOutcome.Refused -> { error.text = outcome.reason; revert() }
+        CommitOutcome.Unchanged -> {
+            error.text = ""; revert()
+        }
+
+        is CommitOutcome.Refused -> {
+            error.text = outcome.reason; revert()
+        }
     }
 }
 
 /**
- * A text field showing [current] that commits on Enter and when focus leaves, never for text equal to [current]; a
- * value that is not saved goes back to [current]. EDT only, like every Swing component.
+ * A text field showing [current] that commits on Enter and when focus leaves, never for text equal to the value it
+ * last showed or saved; a value that is not saved goes back to that value. EDT only, like every Swing component.
  */
 internal fun textEditor(current: String, error: JBLabel, commit: (String) -> CommitOutcome): JBTextField {
     val field = JBTextField(current)
+    // what the file holds as far as this editor knows: a saved value is the new baseline, so the focus loss that
+    // follows Enter does not commit it again (a panel that rebuilds on save leaves this editor with its old value)
+    var stored = current
     val save = {
-        if (field.text != current) settle(commit(field.text), error) { field.text = current }
+        if (field.text != stored) {
+            val outcome = commit(field.text)
+            settle(outcome, error) { field.text = stored }
+            if (outcome == CommitOutcome.Saved) {
+                stored = field.text
+            }
+        }
     }
     field.addActionListener { save() }
     field.addFocusListener(object : FocusAdapter() {

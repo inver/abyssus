@@ -125,14 +125,14 @@ every test), checks disk bytes, and where it edits, presses Undo and checks the 
 | `RenameSceneUiTest` | Rename Scene opens from the scene's context menu; Cancel is byte-identical; applying changes only `name`, refreshes the tree, and Undo restores the bytes |
 | `SkyboxChooserUiTest` | the Browse button of the scene's skybox field in Abyssus Properties (the tree row has none) opens the chooser with None and the three fixture skyboxes; the `hdr` filter and the no-match state; Cancel is byte-identical; Assign `skybox_default` changes only `skyboxName`, leaves `skyboxEnabled`, updates the tree, and Undo restores the bytes |
 | `SceneViewUiTest` | the Scene View toolbar in the order `Select, Move, Rotate, Snap, Shadows, Fog, Grid, Frame selection` with Move pressed and `Move · World` in the tool status; it wraps without overlapping buttons at a 900 px editor; opening the view writes nothing. The container has no usable OpenGL, so the view shows the unavailable message and the toolbar is disabled above it: the tools' behavior is covered by the plugin tests, and the captures show layout and icons (dimmed) only |
+| `SceneViewSmokeUiTest` | whether the Scene View got an OpenGL context: skipped as environment-blocked when the view shows `scene-unavailable`, which is the state in the canonical container (a software GLX works there, `glxinfo` reports llvmpipe 4.5 core, but LWJGL's AWT canvas finds no framebuffer configuration in the IDE). Scenarios that need the viewport or an enabled toolbar are therefore not covered here |
 | `...uitesting.headless.*` | helper unit tests (`FixtureIsolationTest`), run by `uiHelperTest` |
 
 The tree page object (`AbyssusTree` in `PageObjects.kt`) reads rows without desktop coordinates: `rowInfo()` gives each visible row's text, depth below the project row, icon resource path, bounds and text colour; `actionBounds()` the painted eye and `unused` ranges; `expandAssets()` opens the type groups. The header buttons are read from the Project tool window header (`headerButtons()`); the unused filter sits in the Options menu, not in the header.
 
 The Scene View toolbar baselines (`scene-toolbar-default`, `scene-toolbar-narrow`) capture the toolbar component only. They are also the icon check: every toolbar icon is drawn in them, and `IconInventoryTest` (`:plugin-abyssus:test`) fails on a missing or unlisted icon resource. The orientation widget and stats strip are shown through GL, so their pixels are checked by `CornerPaintersTest` and, with `-Dabyssus.glTests=true`, `SceneRenderGlTest.cornerOverlaysPaintTheirCornersOnly`.
 
-Out of scope: the 3D viewport (GL under Xvfb is not deterministic), gizmos, the Game UI editor, the Asset Library, and
-add/remove component and terrain creation workflows.
+Out of scope: exact 3D viewport pixels (rendering quality stays with the GL tests and separately recorded hardware checks; the container also has no GL context today, see `SceneViewSmokeUiTest`). Everything else the plugin implements is in scope and tracked in the coverage inventory below, as `unverified` until its test exists.
 
 The Abyssus tree is refreshed by the plugin's own edits (`AbyssusSceneEdited`), not by Undo or by changes made outside the IDE, so scenarios assert Undo through the document and disk bytes, and each test starts with a Project view refresh and the view shown again (the tree otherwise keeps a name that Undo has already reverted).
 
@@ -405,3 +405,243 @@ Water has pure checks and GL checks, all named for the capability they pin down.
 
 The empty state (`Nothing is selected.`) has no UI scenario: the Abyssus tree restores its selection after a `clearSelection`, so it is checked by `PropertiesPanelTest.testNothingSelectedShowsTheEmptyState`. `PropertiesPanel` page-object helpers: `headerTitle`, `breadcrumb`, `subtitle`, `badges`, `hasGameBadge`, `sectionTitles`, `width` / `height` / `preferredWidth`, `sectionHeaderHeight`, `foreground`, `isCollapsed`, `clickChevron`, `enabledChecked`, `clickEnabled`. `AbyssusTree.expandAssetGroups` opens the type groups under Assets.
 
+## Plugin UI coverage inventory
+
+<!-- ui-coverage:begin -->
+Status is `passed`, `failed` or `unverified` (always with the reason). A `passed` row names `Class.method` of a test that
+exists in `projects/plugin-abyssus/src/uiTest` (or a plugin or library test for a lower-level rule); `CoverageInventoryTest`
+(`uiHelperTest`, part of `check`) fails on a scenario ID of `plugin-ui-regression-coverage` without a row, on a row for an
+unknown ID, on `passed` without an existing test, on `unverified` without a reason, and on an entry point below that is not
+listed. Planned class names are proposals, not claims that the tests exist. Execution is the canonical Linux container
+unless a row says otherwise; baseline of 2026-10-21 (before this change's tests): 55 tests, 1 failed
+(`SceneViewUiTest.theToolbarWrapsAtANarrowEditor`: the committed baseline shows an enabled toolbar, the container has no
+OpenGL), 5 skipped.
+
+### Scenarios
+
+| ID | Scenario | Test | Status | Reason or evidence |
+|---|---|---|---|---|
+| COV-01 | Complete a component cycle | CoverageInventoryTest / LifecycleHarnessUiTest | unverified | not implemented yet (task 1.1, 1.4, 11.x) |
+| COV-02 | Retain a demonstrated regression | CoverageInventoryTest / LifecycleHarnessUiTest | unverified | not implemented yet (task 1.1, 1.4, 11.x) |
+| COV-03 | Report actual coverage | CoverageInventoryTest / LifecycleHarnessUiTest | unverified | not implemented yet (task 1.1, 1.4, 11.x) |
+| JRN-01 | Model instance from placement to removal | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
+| JRN-02 | Edited component survives removal undo | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
+| JRN-03 | Shared model instances remain independent | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
+| JRN-04 | Two water surfaces retain independent edits | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
+| JRN-05 | Generated terrain remains reusable after instance removal | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
+| JRN-06 | Foliage layer removal preserves the remaining composition | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
+| JRN-07 | Imported model remains reusable after its instance is removed | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
+| JRN-08 | Menu button retains its authored behavior through history | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
+| JRN-09 | Clear a dependency before removing its target | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
+| JRN-10 | Continue authoring after project reopen | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
+| CMP-01 | Add from both editing surfaces | ComponentLifecycleUiTest.parentCameraAndLightCyclesFromTheTree, ComponentLifecycleUiTest.renderChoiceTypeEditorAndTreeRowRemoval | passed | tree menu add of Parent, Camera, Light, Render on entity 7; the Properties Add button is not yet driven (task 4.1 open) |
+| CMP-02 | Choose a render asset | ComponentLifecycleUiTest.renderChoiceTypeEditorAndTreeRowRemoval | passed | Render on entity 7 with the `tree` model, then the asset type choice (task 4.1 open) |
+| CMP-03 | Remove from both editing surfaces | ComponentLifecycleUiTest.parentCameraAndLightCyclesFromTheTree, ComponentLifecycleUiTest.renderChoiceTypeEditorAndTreeRowRemoval | passed | Properties Remove button (Parent, Camera, Light) and the tree row menu (Render); undo and redo through the scene document |
+| CMP-04 | Reject references and cycles | ComponentLifecycleUiTest | unverified | not implemented yet (task 4.1, 4.2) |
+| CMP-05 | Clear an optional reference | ComponentLifecycleUiTest | unverified | not implemented yet (task 4.1, 4.2) |
+| CMP-06 | Preserve read-only components | ComponentLifecycleUiTest | unverified | not implemented yet (task 4.1, 4.2) |
+| CMP-07 | Respect registered field constraints | ComponentLifecycleUiTest | unverified | not implemented yet (task 4.1, 4.2) |
+| FLD-01 | Commit by Enter | FieldCommitUiTest.enterCommitsOnceAndOneUndoRestoresThePriorText, AssetPropertyLifecycleUiTest.sizeAndUvCommitOnEnterAndOnFocusLossWithAssetUndoAndRedo | passed | component fields of Model 0 and the terrain size and uv |
+| FLD-02 | Commit by leaving the field | FieldCommitUiTest.leavingTheFieldCommitsWithoutEnter, AssetPropertyLifecycleUiTest.sizeAndUvCommitOnEnterAndOnFocusLossWithAssetUndoAndRedo | passed | component fields of Model 0 and the terrain size and uv |
+| FLD-03 | Do not double-commit | FieldCommitUiTest.enterCommitsOnceAndOneUndoRestoresThePriorText, AssetPropertyLifecycleUiTest.invalidSizeAndUvAreRefusedWithAReasonAndWriteNothing | passed | component fields of Model 0 and the terrain size and uv |
+| FLD-04 | Reject and recover | FieldCommitUiTest.rejectionShowsTheReasonAndAValidValueRecovers, AssetPropertyLifecycleUiTest.invalidSizeAndUvAreRefusedWithAReasonAndWriteNothing | passed | component fields of Model 0 and the terrain size and uv |
+| FLD-05 | No-op and selection changes | FieldCommitUiTest.noOpSubmissionsAndSelectionChangesWriteNothing, AssetPropertyLifecycleUiTest.resubmittingTheStoredValuesWritesNothing | passed | component fields of Model 0 and the terrain size and uv |
+| ENT-01 | Create from ecs | EntityLifecycleUiTest.newCameraFromEcsEditedReopenedAndRemoved, EntityLifecycleUiTest.newRenderFromEcsKeepsTheModelAssetWhenRemoved | passed | 2026-10-21, canonical amd64 container: Camera and Render added through ecs (new id 11, `Entity 11`, entities 0 to 10 unchanged, new row selected); the selection assertion exposed a defect, fixed in `AbyssusTreeRefresh.selectAfterRebuild` (platform regression `AbyssusProjectViewPaneTest.testRowCreatedByAnEditWinsOverTheSelectionTheRebuildRestores`) |
+| ENT-02 | Add models and terrain | EntityLifecycleUiTest.modelAndTerrainFromTheAddMenuKeepTheirAssetsWhenRemoved | unverified | the tree entry passes (model `tree` and the fixture terrain, identity and removal with the assets intact); the Scene View toolbar entry is environment-blocked: no OpenGL context (task 1.5) |
+| ENT-03 | Add each light choice | EntityLifecycleUiTest.everyLightChoiceFromTheAddMenuCanBeRemoved | unverified | the tree entry passes for Directional, Sun and Spot (entity, row, removal back to the original scene); the toolbar entry is environment-blocked (task 1.5) and edit and reopen of a new light is not covered yet |
+| ENT-04 | Remove an instance | EntityLifecycleUiTest.modelAndTerrainFromTheAddMenuKeepTheirAssetsWhenRemoved | unverified | row, Properties and saved scene follow and the source assets stay intact (also `removeUndoRedoFromTreeClearsStaleSelection`); clearing the scene view selection needs the view, environment-blocked (task 1.5) |
+| ENT-05 | Guard referenced removal | EntityLifecycleUiTest.referencedEntitiesAreRefusedUntilTheReferencesAreCleared | passed | 2026-10-21, canonical amd64 container: entity 3 refused while Camera 4 looks at it (entity and field named, scene byte-identical), entity 4 refused as the parent of entity 3, entity 3 refused as an endpoint of entity 5 after the look-at is cleared through Properties; registered and arrangement relationships are covered by `EntityRemovalTest` |
+| ENT-06 | Undo from the initiating surface | EntityLifecycleUiTest.removeUndoRedoFromTreeClearsStaleSelection | passed | 2026-10-21, canonical amd64 container: Remove Entity from the tree menu, Undo and Redo with the tree focused (not a text editor); rows, Properties header, document and saved file follow; lower level `RemoveEntityActionTest.testUndoAndRedoReachTheRemovalWithoutAnEditor` |
+| AST-01 | Terrain metadata fields | AssetPropertyLifecycleUiTest.sizeAndUvCommitOnEnterAndOnFocusLossWithAssetUndoAndRedo | passed | terrain size and uv; the texture fields and reopen are not driven yet (task 4.5 open) |
+| AST-02 | Cube face choices | AssetPropertyLifecycleUiTest | unverified | not implemented yet (task 4.5) |
+| AST-03 | Omitted procedural defaults | AssetPropertyLifecycleUiTest | unverified | not implemented yet (task 4.5) |
+| AST-04 | Invalid combinations | AssetPropertyLifecycleUiTest.invalidSizeAndUvAreRefusedWithAReasonAndWriteNothing | passed | terrain size and uv; procedural radii are not driven yet (task 4.5 open) |
+| AST-05 | Unresolved and stale values | AssetPropertyLifecycleUiTest | unverified | not implemented yet (task 4.5) |
+| AST-06 | Preview and read-only states | AssetPropertyLifecycleUiTest | unverified | not implemented yet (task 4.5) |
+| OPT-01 | Percentage and IOR round trip | OpticalMaterialUiTest.transmissionPercentAndIorRoundTripWithUndoAndRedo | passed | Model 6 first material; two Undos restore the scene |
+| OPT-02 | Instance isolation and defaults | OpticalMaterialUiTest.editingOneInstanceLeavesAnotherInstanceOfTheModelAndTheModelFilesAlone | passed | a second instance is staged on disk (entity 9 pointed at entity 6's model) |
+| OPT-03 | Invalid optical values | OpticalMaterialUiTest.outOfRangeAndNonNumericValuesAreRefusedAndWriteNothing | passed | 101, -1, abc, IOR 0.5, 4, NaN |
+| OPT-04 | Material diagnostics | OpticalMaterialUiTest | unverified | not implemented yet (task 4.5) |
+| OPT-05 | Optical conflict | OpticalMaterialUiTest | unverified | not implemented yet (task 4.5) |
+| TRE-01 | Stable navigation and refresh | TreeLifecycleUiTest.switchingViewsAfterAnEditKeepsRowsSingleAndTheEditVisible | passed | a project close and reopen is JRN-10 (task 10.2) |
+| TRE-02 | Rename and visibility cycles | TreeLifecycleUiTest.fogEyeReturnCycle, TreeLifecycleUiTest.skyboxEyeReturnCycle, TreeLifecycleUiTest.renameRedoReopenAndCancelKeepTheHistoryHonest | passed | the ambient eye is not driven yet (task 4.3 open) |
+| TRE-03 | Unused filter and counts | TreeLifecycleUiTest.unusedFilterFollowsUsageWhileScenesStayAndFooterIsIndependent | passed | the filter is toggled with the fixture as is; usage changes while it is on are not driven yet (task 4.3 open) |
+| TRE-04 | Chooser filtering and None | AbyssusTreeUiTest, RenameSceneUiTest, SkyboxChooserUiTest | unverified | not implemented yet (task 4.3, 4.4) |
+| TRE-05 | Cancel and current selection | TreeLifecycleUiTest.renameRedoReopenAndCancelKeepTheHistoryHonest | passed | the skybox cancel half stays with task 4.4 |
+| GES-01 | Pick and clear | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
+| GES-02 | Mode and navigation | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
+| GES-03 | World and local transforms | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
+| GES-04 | Camera and look-at transforms | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
+| GES-05 | Snap and cancellation | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
+| GES-06 | Drop and framing | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
+| GES-07 | Camera chooser and orientation widget | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
+| PTH-01 | Draw and finish | ArrangementLifecycleUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.4 |
+| PTH-02 | Cancel and insufficient points | ArrangementLifecycleUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.4 |
+| PTH-03 | Edit and regenerate | ArrangementLifecycleUiTest | unverified | not implemented yet (task 5.4) |
+| PTH-04 | Detach a copy | ArrangementLifecycleUiTest | unverified | not implemented yet (task 5.4) |
+| PTH-05 | Guard ownership on removal | ArrangementLifecycleUiTest | unverified | not implemented yet (task 5.4) |
+| DSP-01 | View-only toggles | SceneViewUiTest | unverified | not implemented yet (task 5.2) |
+| DSP-02 | Shared FPS preference | SceneViewUiTest | unverified | not implemented yet (task 5.2) |
+| DSP-03 | Remember and resume FPS | SceneViewUiTest | unverified | not implemented yet (task 5.2) |
+| DSP-04 | Narrow and unavailable views | SceneViewUiTest | unverified | not implemented yet (task 5.2) |
+| DSP-05 | Close and reopen the canvas | SceneViewUiTest | unverified | not implemented yet (task 5.2) |
+| RAY-01 | Request without an open view | RayControlsUiTest | unverified | not implemented yet (task 9.3) |
+| RAY-02 | Cancel and close requests | RayControlsUiTest | unverified | not implemented yet (task 9.3) |
+| RAY-03 | Unavailable and failed modes | RayControlsUiTest | unverified | not implemented yet (task 9.3) |
+| RAY-04 | Five saved limits | RayControlsUiTest | unverified | not implemented yet (task 9.3) |
+| RAY-05 | Invalid and conflicting limits | RayControlsUiTest | unverified | not implemented yet (task 9.3) |
+| RAY-06 | Malformed saved data and foliage note | RayControlsUiTest | unverified | not implemented yet (task 9.3) |
+| WAT-01 | Create both presets | WaterLifecycleUiTest | unverified | not implemented yet (task 5.3) |
+| WAT-02 | Edit and remove | WaterLifecycleUiTest | unverified | not implemented yet (task 5.3) |
+| WAT-03 | Invalid input and surface | WaterLifecycleUiTest | unverified | not implemented yet (task 5.3) |
+| WAT-04 | Incompatible extension | WaterLifecycleUiTest | unverified | not implemented yet (task 5.3) |
+| TER-01 | Matching preview before creation | TerrainLifecycleUiTest | unverified | not implemented yet (task 6.1) |
+| TER-02 | Invalidate and randomize | TerrainLifecycleUiTest | unverified | not implemented yet (task 6.1) |
+| TER-03 | Validate and cancel | TerrainLifecycleUiTest | unverified | not implemented yet (task 6.1) |
+| TER-04 | Regenerate existing terrain | TerrainLifecycleUiTest | unverified | not implemented yet (task 6.1) |
+| TER-05 | Source changes after preview | TerrainLifecycleUiTest | unverified | not implemented yet (task 6.1) |
+| TER-06 | Unusable or superseded work | TerrainLifecycleUiTest | unverified | not implemented yet (task 6.1) |
+| FOL-01 | Create and attach | FoliageLifecycleUiTest | unverified | not implemented yet (task 6.2) |
+| FOL-02 | Layer and model cycles | FoliageLifecycleUiTest | unverified | not implemented yet (task 6.2) |
+| FOL-03 | Drafts, limits and cancellation | FoliageLifecycleUiTest | unverified | not implemented yet (task 6.2) |
+| FOL-04 | Rebake stale data | FoliageLifecycleUiTest | unverified | not implemented yet (task 6.2) |
+| FOL-05 | Collider-only Apply | FoliageLifecycleUiTest | unverified | not implemented yet (task 6.2) |
+| FOL-06 | Collider availability and validation | FoliageLifecycleUiTest | unverified | not implemented yet (task 6.2) |
+| PNT-01 | Brush controls and availability | FoliageLifecycleUiTest (painting) | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 6.3 |
+| PNT-02 | Paint and erase | FoliageLifecycleUiTest (painting) | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 6.3 |
+| PNT-03 | Cancel and no-op strokes | FoliageLifecycleUiTest (painting) | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 6.3 |
+| PNT-04 | Selection, Play and concurrent changes | FoliageLifecycleUiTest (painting) | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 6.3 |
+| IMP-01 | Model settings and preview | ImportLifecycleUiTest, WeatherPresetLifecycleUiTest | unverified | not implemented yet (task 7.2, 7.3, 6.4) |
+| IMP-02 | Model import and placement | ImportLifecycleUiTest, WeatherPresetLifecycleUiTest | unverified | not implemented yet (task 7.2, 7.3, 6.4) |
+| IMP-03 | Placement availability and cancellation | ImportLifecycleUiTest, WeatherPresetLifecycleUiTest | unverified | not implemented yet (task 7.2, 7.3, 6.4) |
+| IMP-04 | Aircraft import settings | ImportLifecycleUiTest, WeatherPresetLifecycleUiTest | unverified | not implemented yet (task 7.2, 7.3, 6.4) |
+| IMP-05 | Weather snapshot | ImportLifecycleUiTest, WeatherPresetLifecycleUiTest | unverified | not implemented yet (task 7.2, 7.3, 6.4) |
+| IMP-06 | Guarded asset history | ImportLifecycleUiTest, WeatherPresetLifecycleUiTest | unverified | not implemented yet (task 7.2, 7.3, 6.4) |
+| GUI-01 | Asset and screen cycles | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
+| GUI-02 | Every widget kind | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
+| GUI-03 | Ordering, parenting and canvas gestures | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
+| GUI-04 | Invalid hierarchy and stale gestures | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
+| GUI-05 | Bindings, styles and actions | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
+| GUI-06 | Image and font import | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
+| GUI-07 | List authoring | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
+| PRV-01 | Selection versus interaction | GameUiPreviewLifecycleUiTest | unverified | not implemented yet (task 8.4) |
+| PRV-02 | Typed samples and reset | GameUiPreviewLifecycleUiTest | unverified | not implemented yet (task 8.4) |
+| PRV-03 | Actions and focus | GameUiPreviewLifecycleUiTest | unverified | not implemented yet (task 8.4) |
+| PRV-04 | Lists and clickable rows | GameUiPreviewLifecycleUiTest | unverified | not implemented yet (task 8.4) |
+| PRV-05 | Sizes and backdrop | GameUiPreviewLifecycleUiTest | unverified | not implemented yet (task 8.4) |
+| PRV-06 | Refresh, recovery and close | GameUiPreviewLifecycleUiTest | unverified | not implemented yet (task 8.4) |
+| PHY-01 | Project toggle and catalog | PhysicsPlayLifecycleUiTest | unverified | not implemented yet (task 9.1, 9.2) |
+| PHY-02 | Components and overlay | PhysicsPlayLifecycleUiTest | unverified | not implemented yet (task 9.1, 9.2) |
+| PHY-03 | Play control cycle | PhysicsPlayLifecycleUiTest | unverified | not implemented yet (task 9.1, 9.2) |
+| PHY-04 | Edit and physics-off transitions | PhysicsPlayLifecycleUiTest | unverified | not implemented yet (task 9.1, 9.2) |
+| PHY-05 | Input, failure and cleanup | PhysicsPlayLifecycleUiTest | unverified | not implemented yet (task 9.1, 9.2) |
+| DOC-01 | Reject unsupported documents | NativeAdmissionUiTest, LifecycleIsolationUiTest | unverified | not implemented yet (task 9.4, 1.3) |
+| DOC-02 | Preserve unrelated native data | NativeAdmissionUiTest, LifecycleIsolationUiTest | unverified | not implemented yet (task 9.4, 1.3) |
+| DOC-03 | Text-tab formatting | NativeAdmissionUiTest, LifecycleIsolationUiTest | unverified | not implemented yet (task 9.4, 1.3) |
+| DOC-04 | Current unsaved text and read-only documents | NativeAdmissionUiTest, LifecycleIsolationUiTest | unverified | not implemented yet (task 9.4, 1.3) |
+| DOC-05 | Repeatable fresh scenarios | LifecycleIsolationUiTest.aSecondScenarioStartsPristineAfterContentAndAnOpenEditor | passed | 2026-10-21, canonical amd64 container: content created, an editor left open with unsaved text, then the reset leaves disk, document, editors, unsaved buffers, undo history and tree pristine; `everyScenarioStartsPristine` checks the start state |
+| DOC-06 | File recognition and diagnostics | NativeAdmissionUiTest, LifecycleIsolationUiTest | unverified | not implemented yet (task 9.4, 1.3) |
+
+### Lifecycle helper rules
+
+Shared by every lifecycle scenario (`LifecycleHarness`, `IdeReset`, the page objects in `PageObjects.kt`):
+
+- **Reset order matters.** `UiTestBase.resetScenario` closes dialogs, closes every editor (which also stops Play and background previews of those views), drops unsaved buffers, and only then restores and refreshes the files and drops the undo history. Restoring files under an edited buffer makes the IDE raise a modal "File Cache Conflict" that blocks every later step, and reloading a document from disk leaves its undo history available.
+- **The reset views the pane by id** (`IdeReset.reshowAbyssusView`); a mouse click on the view selector is unreliable right after editors close. Scenarios that test the selector use `IdeFrame.selectView`.
+- **Reopen means what it says.** `IdeReset.reopenTextEditor` is an editor reopen (save with Ctrl+S first; the helper writes nothing). `IdeReset.reopenProject` closes and reopens the project in the same IDE process, so documents, editors and history are new; it is not an IDE restart.
+- **Undo and Redo** go through the scene document (`undoThroughSceneDocument`, `IdeFrame.redo` with the text editor focused) for edits whose command is scoped to the scene's editor. Remove Entity is a global command (`editSceneJson(..., global = true)`), so `EntityLifecycleUiTest` undoes and redoes it with the tree focused; a new tree-started edit that should behave the same opts in the same way.
+- **Bounded readiness only.** `LifecycleHarness.awaitState(stage, expected) { observe }` polls, then fails naming the stage with expected and observed values; no fixed sleeps, and a failing scenario is never retried until it passes.
+- **Preservation is checked twice.** `LifecycleHarness.lineDiff` shows exactly which lines an edit removed and added (byte level, for text that must stay as written); `LifecycleHarness.sameExcept(before, after, "/ecs/11")` compares the JSON semantically with one value left out, with number text compared as written. After Undo the exact original text is required.
+- **Remote queries stay read-only** (`IdeQueries`); `IdeReset` only closes, reloads and reopens, and never applies a plugin edit. All workflow writes come from the UI.
+- **Profiles:** `FixtureProject.switchTo(profileFolder)` turns the disposable copy into another committed project (Custom, Physics, Foliage) and `untouchedProfiles()` proves no committed profile changed; reset removes folders a scenario created.
+
+### Entry points
+
+Plugin actions (`plugin.xml`); the scenario IDs say where each is exercised.
+
+| Action | Scenarios | Status |
+|---|---|---|
+| `Abyssus.RenameScene` | TRE-02 | unverified |
+| `Abyssus.NewTerrain` | TER-01..06, JRN-05 | unverified |
+| `Abyssus.NewFoliage` | FOL-01 | unverified |
+| `Abyssus.NewWeatherPreset` | IMP-05 | unverified |
+| `Abyssus.ImportFlightGear` | IMP-04 | unverified |
+| `Abyssus.ImportModel` | IMP-01..03, JRN-07 | unverified |
+| `Abyssus.AddLight` | ENT-03 | unverified |
+| `Abyssus.AddWater` | WAT-01, JRN-04 | unverified |
+| `Abyssus.RenameWater` | WAT-02 | unverified |
+| `Abyssus.RemoveWater` | WAT-02 | unverified |
+| `Abyssus.AddAsset` | ENT-02, JRN-01 | unverified |
+| `Abyssus.AddPathArrangement` | PTH-01, PTH-02 | unverified |
+| `Abyssus.RegenerateArrangement` | PTH-03 | unverified |
+| `Abyssus.AddFoliage` | FOL-01 | unverified |
+| `Abyssus.AddComponent` | CMP-01, JRN-02 | unverified |
+| `Abyssus.AddComponentOnEcs` | ENT-01 | unverified |
+| `Abyssus.RemoveComponent` | CMP-03 | unverified |
+| `Abyssus.RemoveEntity` | ENT-04..06 (menu removal, tree-focused Undo and Redo: `EntityLifecycleUiTest`, passed; lower level: `RemoveEntityActionTest`, passed) | partial: ENT-06 passed |
+| `Abyssus.NewUiAsset` | GUI-01 | unverified |
+| `Abyssus.NewScene` | GUI-01 | unverified |
+| `Abyssus.NewUiScreen` | GUI-01 | unverified |
+| `Abyssus.NewUiOverlay` | GUI-01 | unverified |
+| `Abyssus.RegisterUiAsset` | GUI-01 | unverified |
+| `Abyssus.UnregisterUiAsset` | GUI-01 | unverified |
+
+Scene View toolbar controls (`SceneToolsToolbar`): all need a GL context for their enabled behavior (task 1.5, blocked).
+
+| Control | Scenarios | Status |
+|---|---|---|
+| `Select` | GES-01, GES-02 | unverified |
+| `Move` | GES-02, GES-03 | unverified |
+| `Rotate` | GES-02, GES-03 | unverified |
+| `Snap` | GES-05 | unverified |
+| `Space` | GES-03 | unverified |
+| `Shading` | DSP-01 | unverified |
+| `Shadows` | DSP-01 | unverified |
+| `Fog` | DSP-01 | unverified |
+| `Grid` | DSP-01 | unverified |
+| `Frame` | GES-06 | unverified |
+
+Modeled component kinds (`ComponentSchemas`: built-in, plus the physics kinds when the project enables physics).
+
+| Kind | Scenarios | Status |
+|---|---|---|
+| `NameComponent` | CMP-06 | unverified |
+| `TypeComponent` | CMP-07 | unverified |
+| `ParentComponent` | CMP-04, CMP-05 | unverified |
+| `PositionComponent` | CMP-04, GES-03, GES-04 | unverified |
+| `CameraComponent` | ENT-01, GES-04 | unverified |
+| `LightComponent` | ENT-03, CMP-07 | unverified |
+| `RenderComponent` | CMP-02, ENT-02 | unverified |
+| `PathArrangementComponent` | PTH-03 | unverified |
+| `RigidBodyComponent` | PHY-02 | unverified |
+| `ColliderComponent` | PHY-02 | unverified |
+| `ConstraintComponent` | PHY-02, CMP-04 | unverified |
+
+Field editor types (`FieldKind`); one case per type, with per-kind tables covering the catalog.
+
+| Type | Scenarios | Status |
+|---|---|---|
+| `FLOAT` | FLD-01..05, CMP-07 | unverified |
+| `INT` | FLD-01, CMP-07 | unverified |
+| `BOOLEAN` | FLD-01 | unverified |
+| `TEXT` | FLD-01, FLD-02 | unverified |
+| `CHOICE` | CMP-07, AST-02 | unverified |
+| `ENTITY_REF` | CMP-04, CMP-05 | unverified |
+| `ASSET_NAME` | CMP-02, AST-02 | unverified |
+
+Game UI widget kinds (`UiWidgetType`).
+
+| Widget | Scenarios | Status |
+|---|---|---|
+| `PANEL` | GUI-02 | unverified |
+| `ROW` | GUI-02 | unverified |
+| `COLUMN` | GUI-02 | unverified |
+| `LABEL` | GUI-02 | unverified |
+| `IMAGE` | GUI-02 | unverified |
+| `BUTTON` | GUI-02 | unverified |
+| `PROGRESS_BAR` | GUI-02 | unverified |
+| `SLIDER` | GUI-02 | unverified |
+| `CHECKBOX` | GUI-02 | unverified |
+| `TEXT_FIELD` | GUI-02 | unverified |
+| `LIST` | GUI-02, GUI-07 | unverified |
+<!-- ui-coverage:end -->
