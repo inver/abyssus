@@ -67,4 +67,13 @@ class SceneJsonTest {
         val element = SceneJson().parse("""{"a":null,"b":{"c":null},"d":"<x>"}""")
         assertEquals("""{"a":null,"b":{"c":null},"d":"<x>"}""", SceneJson().compact(element))
     }
+
+    @Test fun anEditKeepsTheAbsenceOfATrailingNewline() {
+        // a terrain meta.json is written without a final newline; an edit used to add one (found by AssetPropertyLifecycleUiTest)
+        val json = SceneJson()
+        val without = "{\n  \"a\": 1,\n  \"b\": 2\n}"
+        assertEquals(without, json.inStyleOf(without, json.parse(without)))
+        val with = without + "\n"
+        assertEquals(with, json.inStyleOf(with, json.parse(with)))
+    }
 }

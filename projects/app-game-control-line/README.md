@@ -52,6 +52,38 @@ built on the OS and architecture it targets, and CI builds each one on a runner 
 On a Mac this writes `build/packaging/dmg/control-line-<version>-macos-<arm64|x64>.dmg` for the Mac's own architecture; build
 on an Intel Mac for the Intel image. Open it, drag **Control Line** to Applications.
 
+### Linux packages
+
+```
+./gradlew :app-game-control-line:packageDeb :app-game-control-line:packageRpm :app-game-control-line:packageAppImage
+```
+
+Run on x64 Linux with a JDK 21; `packageDeb` needs `dpkg-deb` and `fakeroot`, `packageRpm` needs `rpmbuild`, and `packageAppImage`
+downloads `appimagetool` and the AppImage runtime (versions and SHA-256 in `packaging/appimage/tools.properties`; a file
+whose hash differs is deleted and the build fails). The files are `build/packaging/{deb,rpm,appimage}/control-line-<version>-linux-x64.<ext>`.
+
+- `.deb`: `sudo apt install ./control-line-<version>-linux-x64.deb`, `.rpm`: `sudo dnf install ./control-line-<version>-linux-x64.rpm`.
+  Both install under `/opt/control-line` and add a menu entry (group *Game*).
+- `.AppImage`: `chmod +x control-line-<version>-linux-x64.AppImage` and run it. It needs no installation and no Java.
+  An AppImage needs FUSE 2 (`libfuse2`), which Ubuntu 22.04 and later do not install by default; without it run
+  `APPIMAGE_EXTRACT_AND_RUN=1 ./control-line-<version>-linux-x64.AppImage` (or pass `--appimage-extract-and-run`), which unpacks it to a
+  temporary folder instead.
+- The packages are built on Ubuntu 22.04, so they need glibc 2.35 or newer. The game needs OpenGL 3.3.
+- The bundled natives are those of x64 Linux (LWJGL's Assimp natives have no arm64 Linux build), so arm64 Linux is not supported.
+- `scripts/smoke-control-line-linux.sh` (run by CI after the build) unpacks the `.deb`, checks its jars with `checkExtractedPackage`, and starts the
+  unpacked game and the AppImage for 20 seconds each under Xvfb on Mesa software GL; it fails on an early exit or a logged exception.
+
+### Windows installer
+
+```
+gradlew :app-game-control-line:packageMsi
+```
+
+Run on Windows with a JDK 21 and the WiX Toolset 3.x (`candle.exe` and `light.exe`) installed; it writes
+`build/packaging/msi/control-line-<version>-windows-x64.msi`. The installer adds a Start menu entry and a desktop shortcut and lets
+the player pick the folder. Its upgrade code is fixed in `abyssus.control-line-packaging`, so installing a higher
+`controlLineVersion` upgrades an installed Control Line in place, and the version must stay numeric (`x.y.z`).
+
 ### Unsigned packages
 
 The packages are not code-signed or notarized, so the first start meets the operating system's warning.
@@ -66,6 +98,8 @@ The packages are not code-signed or notarized, so the first start meets the oper
   ```
   xattr -d com.apple.quarantine "/Applications/Control Line.app"
   ```
+
+- **Windows:** SmartScreen shows "Windows protected your PC" for the unsigned `.msi`. Press **More info**, then **Run anyway**.
 
 
 ## Ray mode (development aid)

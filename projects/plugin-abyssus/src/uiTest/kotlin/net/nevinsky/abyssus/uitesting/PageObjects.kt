@@ -438,6 +438,11 @@ class PropertiesPanel(private val frame: IdeFrame) {
 
     fun clickCheck(name: String) = byName(name).click()
 
+    /** Clicks the component named [name] (a button such as `asset-undo`). */
+    fun click(name: String) = byName(name).click()
+
+    fun isEnabled(name: String): Boolean = byName(name).callJs("component.isEnabled()", runInEdt = true)
+
     /** Types [text] into the named field without committing it: no Enter, focus stays in the field. */
     fun type(name: String, text: String) {
         val f = field(name)

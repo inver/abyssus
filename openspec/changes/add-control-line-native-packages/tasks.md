@@ -27,11 +27,11 @@
 
 ## 5. Linux deb, rpm and AppImage
 
-- [ ] 5.1 Add `packageDeb` and `packageRpm` (`jpackage --type deb|rpm --app-image` with package name `control-line`, menu group, shortcut, license, `png` icon). Verify in an `ubuntu-22.04` container or the CI job: `dpkg-deb -I` and `rpm -qpi` show the name and version, and a Linux install launches the entry.
-- [ ] 5.2 Add `packaging/appimage/` templates (`AppRun`, `control-line.desktop`) and `assembleAppDir`. Verify the AppDir holds `AppRun` (executable), the `.desktop` file, `control-line.png`, `.DirIcon` and `ControlLine/bin/ControlLine`, and that `desktop-file-validate` accepts the `.desktop` file.
+- [x] 5.1 Add `packageDeb` and `packageRpm` (`jpackage --type deb|rpm --app-image` with package name `control-line`, menu group, shortcut, license, `png` icon). Verify in an `ubuntu-22.04` container or the CI job: `dpkg-deb -I` and `rpm -qpi` show the name and version, and a Linux install launches the entry.
+- [x] 5.2 Add `packaging/appimage/` templates (`AppRun`, `control-line.desktop`) and `assembleAppDir`. Verify the AppDir holds `AppRun` (executable), the `.desktop` file, `control-line.png`, `.DirIcon` and `ControlLine/bin/ControlLine`, and that `desktop-file-validate` accepts the `.desktop` file.
 - [ ] 5.3 Add `appimageTool` (download of pinned `appimagetool` and runtime file, SHA-256 check from the repository, `--appimage-extract-and-run`) and `packageAppImage`. Verify in the Linux job: the `.AppImage` is produced, a wrong checksum fails the task, and `./Control*.AppImage --appimage-extract-and-run` starts the game.
 - [ ] 5.4 Add the Linux startup smoke script (`scripts/smoke-control-line-linux.sh`): unpacks the `.deb` with `dpkg-deb -x`, runs the payload check on its jars (`checkExtractedPackage`), then starts the unpacked launcher and the `.AppImage` under `xvfb-run` with Mesa software GL for 20 seconds each and fails on early exit or an exception in the log. Verify in the Linux job with a good package (passes) and with one whose project folder is removed (fails).
-- [ ] 5.5 Document the Linux packages in the README: install commands, the `.AppImage` run steps, the FUSE 2 note with `--appimage-extract-and-run`, and the glibc floor. Verify `scripts/check-docs.sh` passes.
+- [x] 5.5 Document the Linux packages in the README: install commands, the `.AppImage` run steps, the FUSE 2 note with `--appimage-extract-and-run`, and the glibc floor. Verify `scripts/check-docs.sh` passes.
 
 ## 6. Windows msi
 

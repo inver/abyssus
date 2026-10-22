@@ -35,7 +35,7 @@ Facts that shape the approach:
 ## Decisions
 
 - **`jpackage` driven by typed Gradle tasks in a `build-logic` convention plugin, not a third-party plugin.** The task classes
-  (`JlinkRuntime`, `JPackage`, `CheckPackagePayload`) are plain Kotlin in `build-logic/src/main/kotlin/net/nevinsky/abyssus/build/packaging/`,
+  (`JlinkRuntime`, `JPackage`, `CheckPackagePayload`) are plain Kotlin in `build-logic/src/main/kotlin/net/nevinsky/abyssus/buildlogic/packaging/`,
   registered by the precompiled script plugin `abyssus.control-line-packaging`, which the game's build applies after
   `application`; the game's `packaging/` folder holds only its data (modules list, icons, AppImage templates). Task classes
   cannot live in an applied `packaging.gradle.kts`: Kotlin scripts compile them as inner classes, which Gradle cannot

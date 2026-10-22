@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import net.nevinsky.abyssus.build.packaging.BuildAppImage
-import net.nevinsky.abyssus.build.packaging.CheckPackagePayload
-import net.nevinsky.abyssus.build.packaging.DownloadVerified
-import net.nevinsky.abyssus.build.packaging.JPackage
-import net.nevinsky.abyssus.build.packaging.JlinkRuntime
+import net.nevinsky.abyssus.buildlogic.packaging.BuildAppImage
+import net.nevinsky.abyssus.buildlogic.packaging.CheckPackagePayload
+import net.nevinsky.abyssus.buildlogic.packaging.DownloadVerified
+import net.nevinsky.abyssus.buildlogic.packaging.JPackage
+import net.nevinsky.abyssus.buildlogic.packaging.JlinkRuntime
 import java.util.Properties
 
 // Native packages of Control Line (deb, rpm, AppImage, msi, dmg): a convention plugin the game's build applies after
@@ -135,8 +135,8 @@ if (isMac) {
 }
 
 if (!isMac && !isWindows) {
-    // the package maintainer: a placeholder address, since the field is public in the .deb
-    val maintainer = "Alexey Nevinsky <noreply@invalid.example>"
+    // the package maintainer's address (jpackage writes it after the vendor's name): a placeholder, since the field is public in the .deb
+    val maintainer = "noreply@invalid.example"
     val linuxCommon = listOf("--linux-package-name", "control-line", "--linux-menu-group", "Game", "--linux-app-category", "games", "--linux-shortcut")
 
     tasks.register<JPackage>("packageDeb") {

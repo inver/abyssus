@@ -46,9 +46,18 @@ class SceneJson {
 
     fun compact(document: Any): String = mapper.writeValueAsString(document)
 
-    /** [node] in the style of [original]: indented when the original spans several lines, else on one line. */
+    /**
+     * [node] in the style of [original]: indented when the original spans several lines, else on one line, and ending
+     * with a newline only when the original does (an asset `meta.json` written without one stays without one).
+     */
     fun inStyleOf(original: String, node: JsonNode): String =
-        if (original.contains('\n')) pretty(node) else compact(node)
+        if (original.contains('\n')) {
+            pretty(node).let {
+                if (original.endsWith('\n')) {
+                    it
+                } else it.removeSuffix("\n")
+            }
+        } else compact(node)
 
     /** The scene as indented JSON; null when [text] is not a JSON object (so a half-edited or foreign file is never rewritten). */
     fun pretty(text: String): String? = runCatchingKeepingCancellation {

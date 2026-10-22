@@ -62,6 +62,8 @@
 - Template sample tool window, frame listener and project service
 
 ### Fixed
+- Asset properties: a value saved with Enter was committed again when focus left the field and reported as "changed elsewhere".
+- Editing an asset `meta.json` that has no final newline no longer adds one.
 - The new entity's row is selected after Add Component on an `ecs` row (the previously selected row stayed selected because the tree rebuild after the edit restored it).
 - Saved water surfaces are read from the native `abyssus.waterSurfaces` extension again, restoring their scene rendering,
   tree rows, properties and editing without rewriting scene files.
