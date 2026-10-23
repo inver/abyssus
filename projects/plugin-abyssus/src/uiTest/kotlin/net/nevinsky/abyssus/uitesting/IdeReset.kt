@@ -80,6 +80,11 @@ class IdeReset(private val robot: RemoteRobot) {
         )
     }
 
+    /** Puts the project's Show FPS view preference back to its default (off), so no scenario inherits it. */
+    fun clearShowFps() {
+        robot.runJs(js("com.intellij.ide.util.PropertiesComponent.getInstance(ProjectManager.getInstance().getOpenProjects()[0]).setValue('net.nevinsky.abyssus.sceneView.showFps', false, false)"), runInEdt = true)
+    }
+
     /**
      * Closes the open project and opens the same folder again in the same IDE process (a project reopen, not an IDE
      * restart): documents, editors and edit history are new afterwards. Save first (Ctrl+S): nothing here writes. The IDE shows the project again when this returns.

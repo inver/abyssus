@@ -25,7 +25,7 @@ class WaterSceneEdits(private val project: Project, private val edits: WaterEdit
     /** Adds a [preset] surface centred on ([x], [z]) at [level]; its id is known only when the edit was written. */
     fun add(file: VirtualFile, preset: WaterPreset, x: Double, level: Double, z: Double): WaterAdded {
         var id: String? = null
-        val result = run(file, "commandAddWater") { root ->
+        val result = run(file, "commandAddWater", global = true) { root ->
             val settings = edits.create(root, preset, x, level, z)
             edits.add(root, settings).also { if (it == WaterEdit.Changed) id = settings.id }
         }
@@ -43,17 +43,18 @@ class WaterSceneEdits(private val project: Project, private val edits: WaterEdit
         run(file, "commandMoveWater") { edits.setFields(it, id, values) }
 
     fun rename(file: VirtualFile, id: String, name: String): WaterEdit =
-        run(file, "commandRenameWater") { edits.rename(it, id, name) }
+        run(file, "commandRenameWater", global = true) { edits.rename(it, id, name) }
 
     fun setEnabled(file: VirtualFile, id: String, enabled: Boolean): WaterEdit =
         run(file, "commandToggleWater") { edits.setEnabled(it, id, enabled) }
 
     fun remove(file: VirtualFile, id: String): WaterEdit =
-        run(file, "commandRemoveWater") { edits.remove(it, id) }
+        run(file, "commandRemoveWater", global = true) { edits.remove(it, id) }
 
-    private fun run(file: VirtualFile, command: String, edit: (com.fasterxml.jackson.databind.JsonNode) -> WaterEdit): WaterEdit {
+    /** [global]: the edit starts from the Abyssus tree, so Undo and Redo must reach it with the tree focused, not only from the scene's editor. */
+    private fun run(file: VirtualFile, command: String, global: Boolean = false, edit: (com.fasterxml.jackson.databind.JsonNode) -> WaterEdit): WaterEdit {
         var result: WaterEdit = WaterEdit.Unchanged
-        val written = editSceneJson(project, file, AbyssusBundle.message(command)) { root ->
+        val written = editSceneJson(project, file, AbyssusBundle.message(command), global) { root ->
             result = edit(root)
             result == WaterEdit.Changed
         }

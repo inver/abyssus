@@ -56,15 +56,21 @@ internal class AbyssusTreeRefresh(
     /** A row to select instead of the captured selection when the pending rebuild restores the tree. EDT only. */
     private var selectAfter: TreeVisitor? = null
 
+    /** When an idle-time [selectAfter] request lapses, so it cannot redirect an unrelated later rebuild. */
+    private var selectUntil = Long.MAX_VALUE
+
     /**
      * Asks for [visitor]'s row to be selected once the rebuild that is pending or running has restored the tree, and
      * returns true. A plugin edit publishes [AbyssusSceneEdited] and the rebuild follows later on the EDT, so selecting
      * the row an edit just created right away would look for it in the old tree, find nothing, and then lose to the
      * selection the rebuild restores. Returns false, doing nothing, when no rebuild is pending: select directly then.
+     * With [evenIfIdle], the request is kept for a short window even when none is pending: asset creation writes files
+     * whose VFS events start a rebuild after the direct selection ran against a tree that did not have the row yet.
      */
-    fun selectAfterRebuild(visitor: TreeVisitor): Boolean {
-        if (idle) return false
+    fun selectAfterRebuild(visitor: TreeVisitor, evenIfIdle: Boolean = false): Boolean {
+        if (idle && !evenIfIdle) return false
         selectAfter = visitor
+        selectUntil = System.nanoTime() + SELECT_AFTER_WINDOW_NANOS
         return true
     }
 
@@ -153,7 +159,7 @@ internal class AbyssusTreeRefresh(
     }
 
     private fun select(tree: JTree, state: NavigationState, found: MutableSet<String>) {
-        selectAfter?.let { wanted ->
+        selectAfter?.takeIf { System.nanoTime() <= selectUntil }?.let { wanted ->
             selectAfter = null
             // a row that cannot be found (the entity is gone again) falls back to what the rebuild would have restored
             TreeUtil.promiseSelect(tree, wanted).onError { if (!project.isDisposed) selectCaptured(tree, state, found) }
@@ -189,6 +195,8 @@ internal class AbyssusTreeRefresh(
     override fun dispose() = coalescer.dispose()
 
     companion object {
+        private const val SELECT_AFTER_WINDOW_NANOS = 5_000_000_000L
+
         /** The identity of the row [path] ends at: a DTO entry's path or an asset folder's path; null for the view root. */
         fun keyOf(path: TreePath): String? = when (val node = TreeUtil.getUserObject(path.lastPathComponent)) {
             is DtoEntryNode -> node.value.path

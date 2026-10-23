@@ -300,6 +300,25 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         assertNotNull("entity 99 has a row", entityPath(pane, "99"))
     }
 
+    /** Asset creation requests the selection while the tree is idle: the VFS events that start the rebuild come after it. */
+    fun testAnIdleRequestSelectsTheRowTheNextRebuildCreates() {
+        val dir = fixture()
+        val file = sceneFile(dir)
+        val pane = open()
+        pane.tree.selectionPath = entityPath(pane, "0")!!
+        PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        assertTrue("no rebuild is pending", pane.refresh.idle)
+        val visitor = com.intellij.ui.tree.TreeVisitor { path -> net.nevinsky.abyssus.plugin.projectView.entityVisitAction(file, "99", path.path.map(TreeUtil::getUserObject)) }
+        assertTrue("the request is kept although the tree is idle", pane.refresh.selectAfterRebuild(visitor, evenIfIdle = true))
+        assertTrue(editSceneJson(project, file, "Add entity 99") { root ->
+            val ecs = root.get("ecs") as ObjectNode
+            ecs.set<ObjectNode>("99", ecs.get("0").deepCopy())
+            true
+        })
+        settle(pane, 1)
+        PlatformTestUtil.waitWithEventsDispatching("the new entity is selected", { pane.tree.selectionPath?.let { keyOfEntity(it) } == "99" }, 30)
+    }
+
     fun testSelectAfterRebuildDoesNothingWhenNoRebuildIsPending() {
         fixture()
         val pane = open()

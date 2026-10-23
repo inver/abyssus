@@ -51,7 +51,7 @@ internal class SceneGlLifecycle(
     /** True once the current canvas ran `initGL`: a failure after that is a renderer error, not a refused pixel format. */
     var contextInitialized = false
 
-    fun newCanvas(samples: Int): GuardedGLCanvas = object : GuardedGLCanvas(glData(samples)) {
+    fun newCanvas(samples: Int, swapControl: Boolean = true): GuardedGLCanvas = object : GuardedGLCanvas(glData(samples, swapControl)) {
         override fun initGL() {
             // Even a failure in capability/resource creation is a renderer error, not a refused pixel format.
             contextInitialized = true
@@ -91,7 +91,7 @@ internal class SceneGlLifecycle(
     }
 
     private companion object {
-        fun glData(sampleCount: Int) = GLData().apply {
+        fun glData(sampleCount: Int, swapControl: Boolean) = GLData().apply {
             samples = sampleCount
             sampleBuffers = if (sampleCount > 0) 1 else 0
             majorVersion = 3
@@ -100,7 +100,8 @@ internal class SceneGlLifecycle(
             profile = GLData.Profile.CORE
             forwardCompatible = true
             depthSize = 24
-            swapInterval = 0 // the Swing timer paces frames; a vsync-blocked swap would stall the IDE thread
+            // the Swing timer paces frames; a vsync-blocked swap would stall the IDE thread. Left unset when the GLX server has no swap control.
+            swapInterval = if (swapControl) 0 else null
         }
     }
 }

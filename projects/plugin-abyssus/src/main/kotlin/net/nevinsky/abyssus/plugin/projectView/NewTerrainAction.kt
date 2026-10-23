@@ -39,8 +39,15 @@ open class NewTerrainAction : AbyssusTreeAction<VirtualFile>() {
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) = createInteractively(project, target)
 }
 
-/** The dialog around a [NewTerrainForm]; OK is enabled only while the form has a request to create from. */
+/**
+ * The dialog around a [NewTerrainForm]; OK is enabled only while the form has a request to create from. The request is taken
+ * when OK is pressed: closing disposes the form, which discards its draft.
+ */
 internal class NewTerrainDialog(project: Project, val form: NewTerrainForm) : DialogWrapper(project) {
+    /** What OK was pressed on, or null when the dialog was cancelled. */
+    var accepted: NewTerrainRequest? = null
+        private set
+
     init {
         title = AbyssusBundle.message("newTerrainTitle")
         setOKButtonText(AbyssusBundle.message("newTerrainCreate"))
@@ -50,6 +57,11 @@ internal class NewTerrainDialog(project: Project, val form: NewTerrainForm) : Di
     }
 
     override fun createCenterPanel(): JComponent = form
+
+    override fun doOKAction() {
+        accepted = form.request()
+        super.doOKAction()
+    }
 
     override fun dispose() {
         form.dispose()
@@ -68,7 +80,7 @@ private fun createInteractively(project: Project, abss: VirtualFile) {
     )
     val dialog = NewTerrainDialog(project, form)
     if (!dialog.showAndGet()) return
-    val request = form.request() ?: return
+    val request = dialog.accepted ?: return
     createTerrain(project, abss, request)
 }
 

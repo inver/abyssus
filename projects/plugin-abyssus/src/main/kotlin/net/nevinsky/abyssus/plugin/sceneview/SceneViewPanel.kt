@@ -205,7 +205,7 @@ class SceneViewPanel internal constructor(
         override fun framePresented() = fpsFrameCompleted()
     })
 
-    private var canvas: GuardedGLCanvas = lifecycle.newCanvas(antialiasing.samples)
+    private var canvas: GuardedGLCanvas = lifecycle.newCanvas(antialiasing.samples, antialiasing.swapControl)
     private fun newCanvasHost() = CanvasOverlayHost(canvas) {
         try {
             canvas.captureFrame { lifecycle.capabilities?.let { GL.setCapabilities(it) } }
@@ -351,7 +351,7 @@ class SceneViewPanel internal constructor(
         canvas.disposeCanvas()
         remove(canvasHost)
         lifecycle.contextInitialized = false
-        canvas = lifecycle.newCanvas(samples)
+        canvas = lifecycle.newCanvas(samples, antialiasing.swapControl)
         input.attach(canvas)
         canvasHost = newCanvasHost()
         add(canvasHost, BorderLayout.CENTER)

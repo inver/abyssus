@@ -55,13 +55,13 @@ the toolbar, Play and the view's asset storage.
   `gl*` / `files` and the GLSL 150 prefixes under a lock, and restores the old values afterwards. Every libGDX call
   must be inside it. Clicks arrive outside it, so `ScenePicker.pickRay` unprojects by hand instead of using
   `Camera.getPickRay`.
-- **Multisampled default framebuffer.** `glData(samples)` requests a GL 3.3 core canvas with 24-bit depth, no swap
-  interval, and sample buffers only when the count is positive. Default 4× smooths raster edges and overlays; shadow,
+- **Multisampled default framebuffer.** `glData(samples)` requests a GL 3.3 core canvas with 24-bit depth, swap
+  interval 0 (dropped for the last attempt when the GLX server has no swap control, as Xvfb), and sample buffers only when the count is positive. Default 4× smooths raster edges and overlays; shadow,
   water and ray targets retain their own formats and the ray image retains its own accumulation. Test harness formats
   stay unchanged. Applying a level replaces only the native canvas through guarded `disposeCanvas`, reattaches input
   and rebuilds renderer resources in `initGL`; camera, selection, tools, look-through camera, Play and Ray Tracing mode
   stay in the view. The ray feed resets accumulation on context loss. Hidden views defer replacement until `addNotify`
-  or a showing hierarchy event. A failure before `initGL` retries lower sample counts down to Off, warns once per view,
+  or a showing hierarchy event. A failure before `initGL` retries lower sample counts down to Off, then Off without swap interval, warns once per view,
   and leaves the requested preference intact. A renderer failure after `initGL`, or a failed Off format, uses `onFailure`.
 - **GL only on a safe surface.** `GuardedGLCanvas.glSafe` needs the canvas showing, non-empty, not minimized, and
   stable for 250 ms. On macOS a zero-sized surface aborts the JVM. A canvas disposed while hidden drops its context

@@ -429,6 +429,33 @@ class PropertiesPanel(private val frame: IdeFrame) {
         return items[target]
     }
 
+    /**
+     * Picks [item] of the combo [name] with the keyboard, one step at a time: an arrow key in the popup already selects the
+     * neighbouring item, which can rebuild the panel and replace the combo, so each step opens the current combo again.
+     */
+    fun chooseWithKeyboard(name: String, item: String) {
+        val items = byName(name).callJs<String>(
+            "var out = []; for (var i = 0; i < component.getItemCount(); i++) out.push(String(component.getItemAt(i))); out.join('\\n')",
+            runInEdt = true,
+        ).lines()
+        val target = items.indexOf(item)
+        require(target >= 0) { "the combo $name offers $items, not $item" }
+        repeat(items.size) {
+            val index = byName(name).callJs<Int>("component.getSelectedIndex()", runInEdt = true)
+            if (index == target) return
+            byName(name).click()
+            Thread.sleep(300)
+            frame.keyboard { if (target > index) down() else up() }
+            Thread.sleep(300)
+            frame.keyboard { enter() }
+            Thread.sleep(700)
+        }
+        check(byName(name).callJs<Int>("component.getSelectedIndex()", runInEdt = true) == target) { "the combo $name did not reach $item" }
+    }
+
+    /** Clicks the first of several components named [name] (a Properties window can hold more than one Undo row). */
+    fun clickFirst(name: String) = window.findAll<ComponentFixture>(byXpath("//div[@name='$name']")).first().click()
+
     /** The selected item of the combo [name]. */
     fun choiceText(name: String): String =
         byName(name).callJs("String(component.getSelectedItem() == null ? '' : component.getSelectedItem())", runInEdt = true)
@@ -468,6 +495,10 @@ class PropertiesPanel(private val frame: IdeFrame) {
     fun errorText(kind: String, field: String): String =
         window.findAll<ComponentFixture>(byXpath("//div[@class='JBLabel' and @name='error-$kind-$field']")).firstOrNull()
             ?.callJs<String>("component.getText()", runInEdt = true).orEmpty()
+
+    /** The text of the label named [name] (an inline error such as `water-error-WIDTH`), empty when it is blank or absent. */
+    fun labelText(name: String): String =
+        window.findAll<ComponentFixture>(byXpath("//div[@name='$name']")).firstOrNull()?.callJs<String>("component.getText()", runInEdt = true).orEmpty()
 
     private fun byName(name: String) = window.find<ComponentFixture>(byXpath("//div[@name='$name']"), SHORT)
 
@@ -563,6 +594,29 @@ class IdeDialog(private val frame: IdeFrame, val title: String) {
     fun awaitClosed() = waitFor(SHORT, Duration.ofMillis(200), "dialog '$title' closed") { !isOpen() }
 
     fun click(button: String) = root.find<ComponentFixture>(byXpath("//div[@class='JButton' and @text='$button']"), SHORT).click()
+
+    private fun named(name: String) = root.find<ComponentFixture>(byXpath("//div[@name='$name']"), SHORT)
+
+    /** The text of the named text field or label. */
+    fun namedText(name: String): String =
+        root.findAll<ComponentFixture>(byXpath("//div[@name='$name']")).firstOrNull()?.callJs<String>("component.getText()", runInEdt = true)?.trim() ?: ""
+
+    /** Replaces the text of the named field with the keyboard and commits it with Tab (focus loss), as a user does. */
+    fun typeNamed(name: String, text: String) {
+        named(name).click()
+        frame.keyboard {
+            hotKey(java.awt.event.KeyEvent.VK_CONTROL, java.awt.event.KeyEvent.VK_A)
+            enterText(text)
+            key(java.awt.event.KeyEvent.VK_TAB)
+        }
+    }
+
+    fun clickNamed(name: String) = named(name).click()
+
+    fun isNamedEnabled(name: String): Boolean = named(name).callJs("component.isEnabled()", runInEdt = true)
+
+    fun isButtonEnabled(button: String): Boolean =
+        root.find<ComponentFixture>(byXpath("//div[@class='JButton' and @text='$button']"), SHORT).callJs("component.isEnabled()", runInEdt = true)
 
     /** Every text the dialog draws, including painted list rows. */
     fun texts(): List<String> = root.findAllText().map { it.text }

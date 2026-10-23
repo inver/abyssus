@@ -10,9 +10,9 @@ class SceneFacts(val text: String) {
 
     val id: Int = root.get("id").asInt()
     val name: String = root.get("name").asText()
-    val fogEnabled: Boolean = root.get("fogEnabled").asBoolean()
-    val skyboxName: String = root.get("skyboxName").asText()
-    val skyboxEnabled: Boolean = root.get("skyboxEnabled").asBoolean()
+    val fogEnabled: Boolean = root.get("fogEnabled")?.asBoolean() ?: false
+    val skyboxName: String = root.get("skyboxName")?.asText() ?: ""
+    val skyboxEnabled: Boolean = root.get("skyboxEnabled")?.asBoolean() ?: false
 
     /** How the tree labels the scene row. */
     val treeLabel: String get() = "$name ($id)"

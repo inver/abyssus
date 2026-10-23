@@ -246,9 +246,16 @@ class FoliageController(
         onChange()
     }
 
-    /** The panel re-read the asset: changed files invalidate the preview, an open draft keeps its settings. */
+    /**
+     * The panel re-read the asset: changed files invalidate the preview. An open draft keeps its settings while only the
+     * bake or the masks changed; when `meta.json` itself changed, the draft is dropped and the newer settings shown, because
+     * applying it would write its older values over the other edit.
+     */
     fun sourceRead(fresh: FoliageSource.Ready) {
         if (source.sameAs(fresh)) return
+        val metaChanged = fresh.metaText != source.metaText
+        val hadDraft = drafts.of(fresh.folderName) != null
+        if (metaChanged && hadDraft) drafts.discard(fresh.folderName)
         val keepDraft = drafts.of(fresh.folderName) != null
         source = fresh
         if (!keepDraft) {
@@ -256,7 +263,7 @@ class FoliageController(
             problems = fresh.read.problems
         }
         editedText = editedText()
-        message = null
+        message = if (metaChanged && hadDraft) AbyssusBundle.message("foliageSourceChanged") else null
         generate()
         onChange()
     }

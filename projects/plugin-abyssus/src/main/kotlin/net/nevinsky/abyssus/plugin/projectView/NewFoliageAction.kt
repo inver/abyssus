@@ -130,10 +130,10 @@ internal class NewFoliageDialog(
     private val terrains: List<String>,
     private val writer: FoliageAssetWriter,
 ) : DialogWrapper(project) {
-    val terrainCombo = ComboBox(terrains.toTypedArray())
-    val nameField = JBTextField(foliageFolderName(terrains.first()))
-    val resolutionField = JBTextField(FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT.toString(), 8)
-    val reason = JBLabel()
+    val terrainCombo = ComboBox(terrains.toTypedArray()).apply { name = "new-foliage-terrain" }
+    val nameField = JBTextField(foliageFolderName(terrains.first())).apply { name = "new-foliage-name" }
+    val resolutionField = JBTextField(FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT.toString(), 8).apply { name = "new-foliage-resolution" }
+    val reason = JBLabel().apply { name = "new-foliage-reason" }
 
     private var suggested = foliageFolderName(terrains.first())
 

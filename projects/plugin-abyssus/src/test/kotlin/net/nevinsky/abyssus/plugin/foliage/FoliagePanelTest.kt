@@ -75,6 +75,30 @@ class FoliagePanelTest : BasePlatformTestCase() {
         } finally { com.intellij.openapi.util.Disposer.dispose(editor) }
         c.dispose()
     }
+    fun testADraftIsDroppedWhenTheMetadataChangedUnderIt() {
+        val c = controller()
+        assertNull(c.edit { it.copy(layers = it.layers.map { l -> l.copy(density = l.density * 2) }) })
+        assertNotNull(drafts.of(folder.name))
+        val file = File(folder.path, "meta.json")
+        val newer = file.readText().replace("\"seed\": 7", "\"seed\": 8")
+        assertTrue(newer != file.readText())
+        file.writeText(newer)
+        c.sourceRead(source())
+        assertNull("applying the older draft would write its seed over the newer one", drafts.of(folder.name))
+        assertEquals(8, c.settings.layers.first().seed)
+        assertEquals("the draft's density is gone too", 0.0002f, c.settings.layers.first().density)
+        c.dispose()
+    }
+    fun testADraftSurvivesAChangeThatLeavesTheMetadataAlone() {
+        val c = controller()
+        assertNull(c.edit { it.copy(layers = it.layers.map { l -> l.copy(density = l.density * 2) }) })
+        val doubled = c.settings.layers.first().density
+        File(folder.path, "foliage.data").appendBytes(byteArrayOf(0))
+        c.sourceRead(source())
+        assertNotNull(drafts.of(folder.name))
+        assertEquals(doubled, c.settings.layers.first().density)
+        c.dispose()
+    }
     fun testSelectingAnotherAssetDiscardsTheDraft() {
         val p = panel()
         val field = find(p, "foliage-0-density") as JBTextField
