@@ -441,8 +441,15 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 
 The game window is an OpenGL 3.2 core context (`Main.kt` asks for it, and `ControlLineGame.create` gives the legacy GLSL of
 the terrain and model shaders their version line and defines), because foliage is drawn with instanced rendering.
-The sky is drawn with layered clouds (`FieldRenderer`, `GAME_CLOUDS`): the asset's shell clouds, eight noise layers per band at
-the full window size, left the game GPU-bound at about 35 frames a second in that context.
+The sky is drawn with the technique its cloud asset names (`clouds_fair`: `VOLUMETRIC`, each band ray-marched at half
+resolution, a heaped cumulus band with round heads on flat bases; `FieldRenderer` takes an optional technique to override it).
+If the clouds hold the game over 33 ms a frame for two seconds in a row, `FieldRenderer` (through `CloudStepDown`) draws the
+next simpler technique for the rest of the session (volumetric, shells, cumulus, layered) and writes one warning to the log.
+`FieldSkyGlTest` (`-Dabyssus.glTests=true`) draws the field's sky with each technique into a 1280 x 720 target, writes
+`build/sky-shots/<technique>-<view>.png` and prints the time of a frame: on an RTX 3070 Ti, layered 0.6 ms, cumulus
+0.9 ms, volumetric 2.6 ms and shells 3.1 ms for the pilot's view of the sky (shells, eight noise layers per band, is what
+held the game near 35 frames a second in the 3.2 core context). The test draws only the sky: the field's foliage needs
+instanced drawing, which the test context lacks, so the game's frame rate with the whole field is not measured there.
 
 A terrain entity's `FoliageComponent` is drawn by `FieldRenderer` from the committed bake, with no scatter or write.
 `FieldScene.foliages` lists the foliage of the loaded scene (`SceneFoliageListing`; a component on an entity that draws

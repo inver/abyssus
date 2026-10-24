@@ -352,7 +352,7 @@ asset `sky.frag`. Nothing is written back.
 
 - A sky without `clouds`, with a `uuid` no asset declares (logged), or naming an asset with no valid band draws as
   without clouds. A `clouds` value that is not text is ignored.
-- `technique`: `layered`, `shells` (the default) or `volumetric`. The scene view's Clouds toolbar choice can override
+- `technique`: `layered`, `cumulus` (heaped flat layer: lit tops, grey bases, ragged edges), `shells` (the default) or `volumetric` (ray-marched; heaped bands show round heads on flat bases). The scene view's Clouds toolbar choice can override
   it per view without writing it.
 - `low`, `mid`, `high`: bands. `type` is required; every other field takes the type's default when omitted.
   `base` / `top` are altitudes in metres, `base` below `top`, both inside the level's limits; `coverage` is 0 to 1;

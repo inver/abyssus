@@ -19,6 +19,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudScene
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechniques
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CumulusClouds
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.LayeredClouds
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.ShellClouds
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.VolumetricClouds
@@ -77,6 +78,7 @@ class ProceduralSky(
     private val techniques = CloudTechniques(prepared.name, log, cloudFactory ?: { technique ->
         when (technique) {
             CloudTechnique.LAYERED -> LayeredClouds(shaders, field)
+            CloudTechnique.CUMULUS -> CumulusClouds(shaders, field)
             CloudTechnique.SHELLS -> ShellClouds(shaders, field)
             CloudTechnique.VOLUMETRIC -> VolumetricClouds(shaders, field)
         }

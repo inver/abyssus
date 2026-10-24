@@ -2,6 +2,7 @@ package net.nevinsky.abyssus.app.game.controlline
 
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
@@ -23,6 +24,7 @@ class CloudsAssetTest {
         assertEquals(MetaType.CLOUDS, meta.type)
         val clouds = checkNotNull(CloudsLoader(metas).prepare("clouds_fair")).staged
         assertTrue("the clouds have a band to draw", clouds.meta.visible)
+        assertEquals("the game draws volumetric clouds", CloudTechnique.VOLUMETRIC, clouds.meta.technique)
         assertNotNull(clouds.noise)
 
         val sky = checkNotNull(ProceduralSkyLoader(files, metas).prepare("skybox_physical")).staged

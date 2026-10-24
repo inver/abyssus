@@ -107,8 +107,8 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    noise (FastNoiseLite) on the pool thread, and its build uploads the noise. The sky reads the built `Clouds` from
    `BuiltAssets` on every draw, as `TerrainMesh` reads its splat textures, and never owns it. Every `SkyRenderer.draw` takes a `SkyFrame(sun, timeSeconds, technique, clouds)`;
    `ProceduralSky` draws the asset's atmosphere, then a core-owned cloud pass blended premultiplied over it through a
-   `CloudRenderer` strategy (`LayeredClouds`, `ShellClouds`, `VolumetricClouds`, built lazily by `CloudTechniques`, which
-   steps down volumetric to shells to layered to none when one cannot be built). All techniques and `SunOcclusion` share
+   `CloudRenderer` strategy (`LayeredClouds`, `CumulusClouds`, `ShellClouds`, `VolumetricClouds`, built lazily by `CloudTechniques`, which
+   steps down volumetric to shells to cumulus to layered to none when one cannot be built). All techniques and `SunOcclusion` share
    one coverage field, `CloudField` in Kotlin and `clouds_common.glsl` (kept equal by `CloudFieldParityGlTest`).
    A procedural sky whose asset has `additional.lightsScene: true` (parsed as a strict boolean by
    `ProceduralSkyMeta`, staged in `PreparedProceduralSky`) also lights the content. `ProceduralSky` then owns a

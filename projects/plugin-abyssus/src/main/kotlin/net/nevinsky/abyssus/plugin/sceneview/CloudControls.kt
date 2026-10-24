@@ -95,6 +95,7 @@ internal class CloudChoiceItem(val choice: CloudChoice) {
         when (choice) {
             CloudChoice.ASSET -> "sceneViewCloudsAsset"
             CloudChoice.LAYERED -> "sceneViewCloudsLayered"
+            CloudChoice.CUMULUS -> "sceneViewCloudsCumulus"
             CloudChoice.SHELLS -> "sceneViewCloudsShells"
             CloudChoice.VOLUMETRIC -> "sceneViewCloudsVolumetric"
         }

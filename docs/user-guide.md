@@ -201,7 +201,7 @@ project's `assets` folder beside the `.abss`:
   animated models stay in their rest pose, and a click passes through a copy to the terrain behind it;
 - the **skybox** named by `skyboxName` when `skyboxEnabled`; a procedural sky's **clouds** (the `CLOUDS` asset its `meta.json`
   `additional.clouds` names by `uuid`: low, mid and high bands and a technique, shared by every sky naming it) drift with their wind and dim the sun light when they cover it. The toolbar's
-  **Clouds** choice (*Asset*, *Layered*, *Shells*, *Volumetric*) overrides the sky's technique in that view only and
+  **Clouds** choice (*Asset*, *Layered*, *Cumulus*, *Shells*, *Volumetric*) overrides the sky's technique in that view only and
   writes nothing; volumetric clouds that keep the view slower than 30 frames per second switch to shells with a note;
 - the **light entities** (directional, point and spot, with cone and edge softness) on top of the scene's
   ambient light and fog, each with a small marker (and a direction line for directional and spot lights);

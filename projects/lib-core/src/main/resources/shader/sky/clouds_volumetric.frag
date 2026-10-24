@@ -39,16 +39,23 @@ vec3 cloudNoiseCoord(vec3 p, float altitude) {
     return vec3(p.x / u_bandScale.x + u_bandOffset.x, altitude / u_bandScale.y * 2.0, p.z / u_bandScale.y + u_bandOffset.y);
 }
 
-// density at p where the band's coverage is `coverage`: the shape eroded by the noise, never more than the shape
+// density at p where the band's coverage is `coverage`: the shape eroded by the noise, never more than the shape. Heaped
+// bands (cumulus) get a stronger lift from the base noise, a harder detail erosion and a sharpened edge, so the heads
+// stand round on a flat base; other profiles keep the soft shape.
 float cloudVolumeDensity(vec3 p, float coverage, bool detail) {
     float altitude = cloudAltitude(p);
     float h = (altitude - u_bandBase) / (u_bandTop - u_bandBase);
     float shape = cloudShape(u_bandProfile, coverage, h);
     if (shape <= 0.0) return 0.0;
     vec3 q = cloudNoiseCoord(p, altitude);
-    float base = texture(u_baseNoise, q * 0.25).r;
-    float eroded = shape * (0.55 + 0.45 * base);
-    if (detail) eroded -= (1.0 - texture(u_detailNoise, q * 1.7).r) * 0.2 * (1.0 - shape);
+    bool heaped = u_bandProfile == CLOUD_PROFILE_HEAPED;
+    float base = texture(u_baseNoise, q * (heaped ? 0.4 : 0.25)).r;
+    float eroded = shape * (heaped ? 0.3 + 0.7 * base : 0.55 + 0.45 * base);
+    if (detail) {
+        float fine = 1.0 - texture(u_detailNoise, q * (heaped ? 2.4 : 1.7)).r;
+        eroded -= fine * (heaped ? 0.3 : 0.2) * (heaped ? 1.0 - 0.5 * shape : 1.0 - shape);
+    }
+    if (heaped) eroded = smoothstep(0.1, 0.45, eroded);
     return u_bandDensity * max(eroded, 0.0);
 }
 
@@ -84,9 +91,13 @@ void main() {
         }
         sunTau *= CLOUD_EXTINCTION * lightStep;
         float h = clamp((cloudAltitude(p) - u_bandBase) / thickness, 0.0, 1.0);
-        float alpha = (1.0 - exp(-CLOUD_EXTINCTION * density * step)) * cloudDistanceFade(t) * keep;
+        float extinction = u_bandProfile == CLOUD_PROFILE_HEAPED ? CLOUD_EXTINCTION * 2.5 : CLOUD_EXTINCTION;
+        float alpha = (1.0 - exp(-extinction * density * step)) * cloudDistanceFade(t) * keep;
         float skyTau = CLOUD_EXTINCTION * u_bandDensity * coverage * (1.0 - h) * thickness;
-        vec3 radiance = cloudAerial(cloudRadiance(d, sunTau, skyTau, 1.0 - h, density, cloudUp(d, t)), t, d);
+        vec3 lit = cloudRadiance(d, sunTau, skyTau, 1.0 - h, density, cloudUp(d, t));
+        // heaped tops and sun-facing sides shine: the more sun reaches a point, the brighter it is than the plain model
+        if (u_bandProfile == CLOUD_PROFILE_HEAPED) lit *= 1.0 + 0.9 * exp(-sunTau * 2.0);
+        vec3 radiance = cloudAerial(lit, t, d);
         color += transmittance * alpha * cloudToneMap(radiance);
         transmittance *= 1.0 - alpha;
         if (transmittance < 0.01) break;

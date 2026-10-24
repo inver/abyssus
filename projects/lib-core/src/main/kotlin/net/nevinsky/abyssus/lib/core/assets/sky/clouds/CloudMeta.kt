@@ -51,6 +51,7 @@ data class CloudMeta(
 
 enum class CloudTechnique(val key: String) {
     LAYERED("layered"),
+    CUMULUS("cumulus"),
     SHELLS("shells"),
     VOLUMETRIC("volumetric"),
 }

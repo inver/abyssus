@@ -26,6 +26,7 @@ import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
 import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.io.FileLoader
@@ -85,19 +86,16 @@ interface FailableFieldView : FieldView {
 }
 
 /**
- * The cloud technique the game draws its sky with. The asset's own (shells: eight noise layers per band at the full
- * window resolution, every frame) keeps a 3.2 core context under 40 frames a second; layered clouds cost almost
- * nothing.
- */
-private val GAME_CLOUDS = CloudTechnique.LAYERED
-
-/**
  * Draws a [FieldScene] (design decision 8): the sky, the terrain with the game's own shader, the models with the
  * default shader lit by the scene's sun and ambient light, and the control lines. The sun casts shadows from models and
  * terrain onto both ([FieldShadows]), aimed at the pilot. Assets load through `core`'s [AssetStorage] ([fieldAssets]):
  * prepared off the GL thread, built here. GL thread only.
  */
-class FieldRenderer(private val ctx: BaseCtx) : FieldView, Disposable {
+class FieldRenderer(
+    private val ctx: BaseCtx,
+    /** The cloud technique to draw the sky with; null: the sky's cloud asset's own. */
+    clouds: CloudTechnique? = null,
+) : FieldView, Disposable {
     private val modelShaders = ModelShaderProvider()
     private val batch = ModelBatch(modelShaders)
     private val terrainPass = TerrainPass(ctx.shaderStorage, TerrainVariant.GAME_SINGLE_SUN)
@@ -106,9 +104,24 @@ class FieldRenderer(private val ctx: BaseCtx) : FieldView, Disposable {
     private val playing = HashMap<Entity, Pair<String, AnimationController>>()
     private var scene: FieldScene? = null
 
+    /** After a frame: if the clouds held the game too slow, draws the next simpler technique from now on. */
+    private fun stepDownClouds(sky: SkyRenderer, seconds: Float) {
+        val drawn = (sky as? ProceduralSky)?.drawnTechnique
+        val next = cloudStepDown.frame(seconds, drawn) ?: return
+        clouds = next
+        ctx.log.warn("${drawn?.key} clouds held the game under 30 frames a second for two seconds; drawing ${next.key} clouds instead")
+    }
+
     /** One drawable per terrain placement, made from the shared asset it was copied from and released before it. */
     private val placements = HashMap<Entity, Placement>()
     private val reported = HashSet<String>()
+
+    /**
+     * The cloud technique the sky is drawn with: the caller's or the cloud asset's own (null) until volumetric clouds
+     * hold the game too slow, then the next simpler one each time (never back up, never written to a file).
+     */
+    private var clouds: CloudTechnique? = clouds
+    private val cloudStepDown = CloudStepDown()
 
     /** Seconds of play drawn so far: the sky's clouds drift by it. */
     private var skyTime = 0.0
@@ -163,8 +176,9 @@ class FieldRenderer(private val ctx: BaseCtx) : FieldView, Disposable {
             Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
             Gdx.gl.glDepthMask(false)
             Gdx.gl.glDisable(GL20.GL_CULL_FACE)
-            sky.draw(camera, SkyFrame(field.sunDirection, skyTime, technique = GAME_CLOUDS))
+            sky.draw(camera, SkyFrame(field.sunDirection, skyTime, technique = clouds))
             Gdx.gl.glDepthMask(true)
+            stepDownClouds(sky, seconds)
         }
 
         val drawn = drawnModels(field)

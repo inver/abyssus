@@ -381,7 +381,7 @@ class PanelBuildersTest {
         assertEquals("technique", additional.rows.first().label)
         val table = additional.rows.filterIsInstance<TableRow>().single()
         assertEquals(listOf("layer", "type", "coverage", "density", "wind x, z"), table.columns)
-        assertEquals(listOf("low", "CUMULUS", "0.3", "0.7", "4.0, 1.0"), table.rows[0])
+        assertEquals(listOf("low", "CUMULUS", "0.33", "0.7", "4.0, 1.0"), table.rows[0])
         assertEquals(listOf("high", "CIRRUS", "0.25", "0.1", "20.0, 4.0"), table.rows[1])
     }
 

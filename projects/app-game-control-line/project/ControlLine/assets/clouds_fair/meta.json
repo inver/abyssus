@@ -6,11 +6,11 @@
   "uuid": "c3797a9e-e833-5bcb-adf6-39c34853496e",
   "type": "CLOUDS",
   "additional": {
-    "technique": "SHELLS",
+    "technique": "VOLUMETRIC",
     "low": {
       "level": "LOW",
       "type": "CUMULUS",
-      "coverage": 0.3,
+      "coverage": 0.33,
       "density": 0.7,
       "windX": 4.0,
       "windZ": 1.0

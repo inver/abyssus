@@ -54,6 +54,10 @@ Sky shaders are in `src/main/resources/shader/sky/`: the defaults of `ShaderStor
 asset's own folder first (`withAssets`), then in classpath folders the host adds (`withResources(path, anchor)`), then in those defaults,
 and compiles programs from it. `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and
 storm examples of `CLOUDS` metas. The IDE does not create cloud assets from these templates.
+Cloud techniques are `CloudRenderer`s chosen by `CloudTechnique`: `layered` (one flat layer per band), `cumulus`
+(`clouds_cumulus.frag`: the same flat layer shaded as heaped cloud, with an eroded ragged edge, a dome from the coverage
+and a tap toward the sun that brightens the sun-facing side and greys the base; one pass per band), `shells` and
+`volumetric` (`clouds_volumetric.frag`: a ray-marched band; a heaped band gets a stronger lift from the base noise, a harder detail erosion, a sharpened edge, a higher extinction and a brightened sunlit side, so cumulus heads stand round on a flat base, while other profiles keep the soft shape). A technique that cannot be built falls back volumetric, shells, cumulus, layered, none.
 
 **Sky lighting and the cloudy-sky environment.** A procedural sky with `additional.lightsScene: true` owns a
 `ProceduralSkyLighting` (a linear 64²-per-face cube from `atmosphere_linear.frag` and the shell clouds, turned into specular

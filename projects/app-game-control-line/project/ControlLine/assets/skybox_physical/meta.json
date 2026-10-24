@@ -9,7 +9,7 @@
     "fragment": "sky.frag",
     "planetRadius": 6360000.0,
     "atmosphereRadius": 6420000.0,
-    "betaRayleigh": [5.8e-6, 13.5e-6, 33.1e-6],
+    "betaRayleigh": [4.6e-6, 12.5e-6, 42e-6],
     "betaMie": 21e-6,
     "heightRayleigh": 8000.0,
     "heightMie": 1200.0,
