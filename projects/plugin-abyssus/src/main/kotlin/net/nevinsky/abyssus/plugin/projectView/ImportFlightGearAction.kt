@@ -42,6 +42,7 @@ import net.nevinsky.abyssus.plugin.terrain.message
 import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
 import net.nevinsky.abyssus.plugin.projectView.action.asset.assetsNodeProjectFile
 import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetInAbyssusView
+import net.nevinsky.abyssus.plugin.ui.chooseFileOrOverride
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.io.File
@@ -65,7 +66,7 @@ open class ImportFlightGearAction : AbyssusTreeAction<VirtualFile>() {
         val report = { message: String -> Messages.showErrorDialog(project, message, title) }
         projectRefusal(abss)?.let { report(AbyssusBundle.message("importFlightGearFailed", it)); return }
         val descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor("zip").withTitle(title)
-        val chosen = FileChooser.chooseFile(descriptor, project, null) ?: return
+        val chosen = chooseFileOrOverride(descriptor, project) ?: return
         val archiveFile = File(chosen.path)
         val inspections = runCatchingKeepingCancellation {
             ProgressManager.getInstance().runProcessWithProgressSynchronously<List<FlightGearInspection>, Exception>({
@@ -132,16 +133,16 @@ fun importFlightGear(
 /** The dialog over [FlightGearImportSettings]: aircraft, licence, folder name, size, parts and what is skipped. */
 internal class ImportFlightGearDialog(project: Project, private val assetsDir: File, private val inspections: List<FlightGearInspection>) : DialogWrapper(project) {
     private var settings: FlightGearImportSettings? = inspections.firstOrNull()?.let { FlightGearImportSettings(assetsDir, it) }
-    private val aircraft = ComboBox(inspections.map { it.aircraft.description ?: it.aircraft.id }.toTypedArray())
-    private val details = JBLabel()
-    private val license = JBLabel()
-    private val name = JBTextField()
-    private val nameError = JBLabel().apply { foreground = JBColor.RED }
-    private val original = JBRadioButton(AbyssusBundle.message("importFlightGearOriginal"))
-    private val scaled = JBRadioButton(AbyssusBundle.message("importFlightGearSpan"))
-    private val span = JBTextField(6)
+    private val aircraft = ComboBox(inspections.map { it.aircraft.description ?: it.aircraft.id }.toTypedArray()).apply { name = "import-flightgear-aircraft" }
+    private val details = JBLabel().apply { name = "import-flightgear-details" }
+    private val license = JBLabel().apply { name = "import-flightgear-license" }
+    private val name = JBTextField().apply { this.name = "import-flightgear-name" }
+    private val nameError = JBLabel().apply { foreground = JBColor.RED; name = "import-flightgear-name-error" }
+    private val original = JBRadioButton(AbyssusBundle.message("importFlightGearOriginal")).apply { name = "import-flightgear-original" }
+    private val scaled = JBRadioButton(AbyssusBundle.message("importFlightGearSpan")).apply { name = "import-flightgear-scaled" }
+    private val span = JBTextField(6).apply { this.name = "import-flightgear-span" }
     private val parts = CheckBoxList<String>()
-    private val skipped = JBLabel()
+    private val skipped = JBLabel().apply { name = "import-flightgear-skipped" }
 
     init {
         title = AbyssusBundle.message("importFlightGearTitle")

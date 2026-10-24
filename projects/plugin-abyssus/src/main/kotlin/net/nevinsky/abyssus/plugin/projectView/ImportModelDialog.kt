@@ -46,22 +46,23 @@ import javax.swing.event.DocumentListener
  * preview's GL is released before the window closes, whichever way it closes.
  */
 internal class ImportModelDialog(project: Project, private val form: ModelImportForm) : DialogWrapper(project) {
-    private val name = JBTextField(form.folderName)
-    private val problems = JBLabel().apply { foreground = JBColor.RED }
+    private val name = JBTextField(form.folderName).apply { this.name = "import-model-name" }
+    private val problems = JBLabel().apply { foreground = JBColor.RED; name = "import-model-problems" }
     private val unit = ComboBox(LengthUnit.entries.toTypedArray()).apply {
         renderer = SimpleListCellRenderer.create("") { it.id }
+        name = "import-model-unit"
     }
     private val unitMark = JBLabel().apply { foreground = JBColor.GRAY }
-    private val upAxis = ComboBox(arrayOf(UpAxis.Y, UpAxis.Z))
+    private val upAxis = ComboBox(arrayOf(UpAxis.Y, UpAxis.Z)).apply { name = "import-model-up-axis" }
     private val upMark = JBLabel().apply { foreground = JBColor.GRAY }
-    private val original = JBRadioButton(AbyssusBundle.message("importModelSizeOriginal"))
-    private val largest = JBRadioButton(AbyssusBundle.message("importModelSizeLargest"))
-    private val height = JBRadioButton(AbyssusBundle.message("importModelSizeHeight"))
-    private val size = JBTextField(form.sizeText, 6)
-    private val addToScene = JBCheckBox()
+    private val original = JBRadioButton(AbyssusBundle.message("importModelSizeOriginal")).apply { name = "import-model-fit-original" }
+    private val largest = JBRadioButton(AbyssusBundle.message("importModelSizeLargest")).apply { name = "import-model-fit-largest" }
+    private val height = JBRadioButton(AbyssusBundle.message("importModelSizeHeight")).apply { name = "import-model-fit-height" }
+    private val size = JBTextField(form.sizeText, 6).apply { name = "import-model-size" }
+    private val addToScene = JBCheckBox().apply { name = "import-model-add-to-scene" }
     private val animation = ComboBox<String>()
-    private val status = JBLabel()
-    private val notes = JBLabel()
+    private val status = JBLabel().apply { name = "import-model-status" }
+    private val notes = JBLabel().apply { name = "import-model-notes" }
     private val preview = ModelPreviewCanvas()
     private var generation = 0
     private var closed = false

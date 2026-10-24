@@ -67,6 +67,8 @@ dependencies {
     "uiTestImplementation"("com.intellij.remoterobot:remote-fixtures:$remoteRobotVersion")
     // SceneJson / AbyssusDocumentFormat for assertions on the copied fixture documents
     "uiTestImplementation"(project(":lib-core-editor"))
+    // fixtureArchive: the deterministic FlightGear aircraft archive the import scenarios read
+    "uiTestImplementation"(testFixtures(project(":lib-core-editor")))
     // HdrFixtures: Radiance test images from a pixel function
     testImplementation(testFixtures(project(":lib-core")))
     // parseScene, testProject and the other scene helpers shared with editor-core's tests

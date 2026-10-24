@@ -48,6 +48,7 @@ import net.nevinsky.abyssus.plugin.projectView.action.asset.assetsNodeProjectFil
 import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetInAbyssusView
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.sceneview.SceneFileEditor
+import net.nevinsky.abyssus.plugin.ui.chooseFileOrOverride
 import java.io.File
 
 /**
@@ -67,7 +68,7 @@ open class ImportModelAction : AbyssusTreeAction<VirtualFile>() {
         val extensions = SourceFormat.entries.map { it.extension }.toTypedArray()
         val descriptor = FileChooserDescriptor(true, false, false, false, false, false).withTitle(title)
             .withExtensionFilter(AbyssusBundle.message("importModelFilter"), *extensions)
-        val chosen = FileChooser.chooseFile(descriptor, project, null) ?: return
+        val chosen = chooseFileOrOverride(descriptor, project) ?: return
         sourceRefusal(chosen.name)?.let { report(it); return }
 
         val placement = selectedScenePlacement(project)

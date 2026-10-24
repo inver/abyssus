@@ -86,6 +86,15 @@ class IdeReset(private val robot: RemoteRobot) {
     }
 
     /**
+     * Makes the next file chooser pick of the plugin (Import Model, Import FlightGear Aircraft, a Game UI image or font)
+     * return [absolutePath] without showing the chooser: IntelliJ's chooser does not confirm a typed path reliably. The
+     * setting serves one pick and is cleared by it.
+     */
+    fun chooseNextFile(absolutePath: String) {
+        robot.runJs(js("java.lang.System.setProperty('abyssus.test.chosenFile', ${quote(absolutePath)})"), runInEdt = false)
+    }
+
+    /**
      * Closes the open project and opens the same folder again in the same IDE process (a project reopen, not an IDE
      * restart): documents, editors and edit history are new afterwards. Save first (Ctrl+S): nothing here writes. The IDE shows the project again when this returns.
      */
