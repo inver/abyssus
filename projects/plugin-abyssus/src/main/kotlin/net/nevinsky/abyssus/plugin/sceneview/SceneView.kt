@@ -53,6 +53,21 @@ interface SceneView : Disposable {
         get() = null
         set(_) {}
 
+    /** Called with the id of the selected entity when the user presses Copy in the view. */
+    var onCopy: ((String) -> Unit)?
+        get() = null
+        set(_) {}
+
+    /** Called with the point under the cursor when the user presses Paste in the view. Returns whether an entity was added. */
+    var onPaste: ((Vector3) -> Boolean)?
+        get() = null
+        set(_) {}
+
+    /** Called with the id of the selected entity when the user presses Delete in the view. Returns whether it was removed. */
+    var onDelete: ((String) -> Boolean)?
+        get() = null
+        set(_) {}
+
     /** Called when a path point was dragged, inserted or removed, with the arrangement's id and its new points. Returns whether it was written. */
     var onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
         get() = null

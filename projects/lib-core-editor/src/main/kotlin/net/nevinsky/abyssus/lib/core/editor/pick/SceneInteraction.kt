@@ -5,10 +5,12 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import kotlin.math.abs
 
 
 /** The size of the view in Swing pixels and of its framebuffer, which is larger on HiDPI screens. */
@@ -65,6 +67,15 @@ class SceneInteraction(
     /** Called when the selection, the mode or the looked-through camera changed by the user or by new scene params. */
     var onStateChanged: (() -> Unit)? = null
 
+    /** Called with the selected entity's id on Copy; the host puts the entity on the clipboard. */
+    var onCopy: ((String) -> Unit)? = null
+
+    /** Called on Paste with the point under the cursor; returns whether an entity was added. */
+    var onPaste: ((Vector3) -> Boolean)? = null
+
+    /** Called on Delete with the selected entity's id; returns whether it was removed. */
+    var onDelete: ((String) -> Boolean)? = null
+
     /** What paints while the Paint Foliage mode in [state] strokes the terrain, or null when nothing implements it. */
     var foliagePaint: FoliagePaint? = null
 
@@ -114,7 +125,8 @@ class SceneInteraction(
         override fun stateChanged() = this@SceneInteraction.stateChanged()
     }
     private val gestures = GestureDriver(state, queries, host)
-    private val drawingSession = DrawingSession(state, queries, { size }, { onArrangementCreate }, { stagedEdit }, ::stateChanged)
+    private val drawingSession =
+        DrawingSession(state, queries, { size }, { onArrangementCreate }, { stagedEdit }, ::stateChanged)
 
     val isDragging: Boolean get() = gestures.isDragging
 
@@ -193,7 +205,8 @@ class SceneInteraction(
         val id = state.pathEditing ?: return false
         val ground = groundHeights?.invoke() ?: return false
         val points = queries.pathPoints(id) ?: return false
-        val dropped = points.mapIndexed { i, p -> if (which(i)) Vector3(p.x, ground.heightAt(p.x, p.z, p.y), p.z) else p }
+        val dropped =
+            points.mapIndexed { i, p -> if (which(i)) Vector3(p.x, ground.heightAt(p.x, p.z, p.y), p.z) else p }
         if (dropped == points) return false
         return stagedEdit(id, dropped)
     }
@@ -282,7 +295,42 @@ class SceneInteraction(
     /** Enter: finishes the drawing as an open line; nothing happens, and drawing continues, with fewer than two points. */
     fun enter() = drawingSession.enter()
 
-    /** Backspace / Delete: drops the last point of the drawing, or removes the selected control point of the arrangement being edited. */
+    /** Copy: hands the selected entity to [onCopy]. */
+    fun copy() {
+        val id = selectedId ?: return
+        if (state.drawing == null && id != state.viewCamera) {
+            onCopy?.invoke(id)
+        }
+    }
+
+    /** Paste: adds the copied entity where the ray through the cursor meets the terrain, else the ground plane. */
+    fun paste() {
+        if (size.isEmpty || state.drawing != null || isDragging) {
+            return
+        }
+        val ray = queries.rayFrom(size, lastX, lastY) ?: return
+        val point = queries.groundHit(ray) ?: planeHit(ray) ?: return
+        val written = onPaste?.invoke(point) ?: false
+        if (written) {
+            stateChanged()
+        }
+    }
+
+    /** Where [ray] meets the plane `y = 0`, or null when it runs parallel to it or away from it. */
+    private fun planeHit(ray: Ray): Vector3? {
+        if (abs(ray.direction.y) < 1e-6f) {
+            return null
+        }
+        val t = -ray.origin.y / ray.direction.y
+        return if (t > 0f) {
+            Vector3(ray.origin).mulAdd(ray.direction, t)
+        } else null
+    }
+
+    /**
+     * Backspace / Delete: drops the last point of the drawing, removes the selected control point of the arrangement
+     * being edited, or otherwise removes the selected entity through [onDelete].
+     */
     fun backspace() {
         val id = state.pathEditing
         val index = state.selectedPathPoint
@@ -291,6 +339,11 @@ class SceneInteraction(
                 state.selectedPathPoint = null
                 stateChanged()
             }
+            return
+        }
+        if (state.drawing == null) {
+            val id = selectedId
+            if (id != null && id != state.viewCamera && state.pathEditing == null && !isDragging) onDelete?.invoke(id)
             return
         }
         drawingSession.backspace()
@@ -309,15 +362,24 @@ class SceneInteraction(
         // A rotate drag on a light aimed at a direction handle moves the handle instead of the light's own rotation.
         val handleAt = handleId?.let { ScenePreview().aimedTarget(content, id, result) }
         if (handleId != null && handleAt != null) return TransformEdit(target = TargetMove(handleId, handleAt))
-        return TransformEdit(rotation = result.transform.rotation, direction = result.direction.takeIf { ScenePreview().isCamera(content, id) })
+        return TransformEdit(
+            rotation = result.transform.rotation,
+            direction = result.direction.takeIf { ScenePreview().isCamera(content, id) })
     }
 
     /** The cursor moved without a button: brightens the handle under it. */
     fun moved(x: Int, y: Int) {
+        lastX = x
+        lastY = y
         if (size.isEmpty || isDragging) return
         val at = size.toFramebuffer(x, y)
         state.hoveredAxis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
-        state.hoveredPlane = if (state.hoveredAxis == null) queries.gizmoPlaneHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) else null
+        state.hoveredPlane = if (state.hoveredAxis == null) queries.gizmoPlaneHit(
+            at.x,
+            at.y,
+            size.framebufferWidth,
+            size.framebufferHeight
+        ) else null
     }
 
     fun wheel(clicks: Float) {
@@ -376,14 +438,28 @@ class SceneInteraction(
         state.waterPreview = emptyMap()
         if (!gestures.isDraggingPathPoint) state.pathEdit = null
         var changed = false
-        selectedId?.let { if (!ScenePreview().contains(params.content, it)) { selectedId = null; changed = true } }
+        selectedId?.let {
+            if (!ScenePreview().contains(params.content, it)) {
+                selectedId = null; changed = true
+            }
+        }
         // a surface deleted (or made invalid) elsewhere leaves nothing selected rather than another target
         state.selectedWater?.let { id ->
-            if (params.content.water.none { it.id == id }) { state.selection = null; changed = true }
+            if (params.content.water.none { it.id == id }) {
+                state.selection = null; changed = true
+            }
         }
-        state.viewCamera?.let { id -> if (params.content.cameras.none { it.entityId == id }) { state.viewCamera = null; changed = true } }
+        state.viewCamera?.let { id ->
+            if (params.content.cameras.none { it.entityId == id }) {
+                state.viewCamera = null; changed = true
+            }
+        }
         gestures.contentChanged(params.content) { ScenePreview().contains(params.content, it) }
-        state.pathEditing?.let { id -> if (params.content.arrangements.none { it.entityId == id }) { state.selection = null; changed = true } }
+        state.pathEditing?.let { id ->
+            if (params.content.arrangements.none { it.entityId == id }) {
+                state.selection = null; changed = true
+            }
+        }
         state.paint?.let { mode ->
             if (!ScenePreview().contains(params.content, mode.entityId)) {
                 state.paint = null

@@ -391,6 +391,24 @@ class SceneViewPanel internal constructor(
             interaction.onArrangementCreate = value
         }
 
+    override var onCopy: ((String) -> Unit)?
+        get() = interaction.onCopy
+        set(value) {
+            interaction.onCopy = value
+        }
+
+    override var onPaste: ((Vector3) -> Boolean)?
+        get() = interaction.onPaste
+        set(value) {
+            interaction.onPaste = value
+        }
+
+    override var onDelete: ((String) -> Boolean)?
+        get() = interaction.onDelete
+        set(value) {
+            interaction.onDelete = value
+        }
+
     override var onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
         get() = interaction.onArrangementEdit
         set(value) {

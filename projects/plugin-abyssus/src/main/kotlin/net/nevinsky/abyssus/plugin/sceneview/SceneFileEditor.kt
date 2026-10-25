@@ -63,7 +63,17 @@ import net.nevinsky.abyssus.plugin.filetype.AbyssusSceneEdited
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import net.nevinsky.abyssus.plugin.water.WaterSceneEdits
+import com.intellij.openapi.ide.CopyPasteManager
+import net.nevinsky.abyssus.lib.core.editor.components.AddedEntity
+import net.nevinsky.abyssus.lib.core.editor.components.CopyResult
+import net.nevinsky.abyssus.lib.core.editor.components.EditResult
+import net.nevinsky.abyssus.lib.core.editor.components.EntityClipboard
+import net.nevinsky.abyssus.plugin.EditorBundle
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
+import net.nevinsky.abyssus.plugin.projectView.reportRejection
 import java.awt.BorderLayout
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.StringSelection
 import java.beans.PropertyChangeListener
 import java.io.File
 import javax.swing.JComponent
@@ -271,6 +281,9 @@ class SceneFileEditor(
         created.onWaterMove = ::applyWaterMove
         created.onTransform = ::applyTransform
         created.onArrangementCreate = ::createArrangement
+        created.onCopy = ::copyEntity
+        created.onPaste = ::pasteEntity
+        created.onDelete = ::deleteEntity
         created.onArrangementEdit = ::editArrangement
         created.onRegenerate = ::regenerateArrangement
         created.onPathEditEnded = { project.service<PathEditSession>().stop(file) }
@@ -303,6 +316,42 @@ class SceneFileEditor(
         }
         if (moved.isEmpty()) return false
         return WaterSceneEdits(project).move(file, waterId, moved) == WaterEdit.Changed
+    }
+
+    /** Puts entity [entityId] on the clipboard as text; a refusal is shown to the user. */
+    internal fun copyEntity(entityId: String) {
+        val root = runCatchingKeepingCancellation { SceneJson().parse(textOf(file)) }.getOrNull() ?: return
+        when (val copied = EntityClipboard(EditorBundle).copy(root, entityId)) {
+            is CopyResult.Copied -> CopyPasteManager.getInstance().setContents(StringSelection(copied.text))
+            is CopyResult.Refused -> reportRejection(project, EditResult.Rejected(copied.reason))
+        }
+    }
+
+    /**
+     * Adds the entity on the clipboard at [point] as one undoable command and selects it. False, with nothing shown,
+     * when the clipboard holds no copied entity.
+     */
+    internal fun pasteEntity(point: Vector3): Boolean {
+        val clipboard = EntityClipboard(EditorBundle)
+        val text = CopyPasteManager.getInstance().getContents<String>(DataFlavor.stringFlavor)
+        if (!clipboard.holdsEntity(text)) return false
+        var added = AddedEntity(EditResult.Unchanged)
+        editSceneJson(project, file, AbyssusBundle.message("commandPasteEntity")) { root ->
+            added = clipboard.paste(root, text, point)
+            added.result == EditResult.Changed
+        }
+        reportRejection(project, added.result)
+        val id = added.entityId?.takeIf { added.result == EditResult.Changed } ?: return false
+        host.select(file, id)
+        view?.selectEntity(id)
+        return true
+    }
+
+    /** Removes entity [entityId] as one undoable command; refused, and shown to the user, while another entity refers to it. */
+    internal fun deleteEntity(entityId: String): Boolean {
+        val result = SceneComponentEdits.removeEntity(project, file, entityId)
+        reportRejection(project, result)
+        return result == EditResult.Changed
     }
 
     /** The ground to place copies on: the view's, else one read from the project; null when the user cancelled the read. */

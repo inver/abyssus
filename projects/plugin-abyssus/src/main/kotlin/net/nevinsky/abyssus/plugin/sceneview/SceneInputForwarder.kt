@@ -11,6 +11,7 @@ import java.awt.event.*
 import javax.swing.JComponent
 import javax.swing.JMenuItem
 import javax.swing.JPopupMenu
+import java.awt.Toolkit
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 
@@ -48,6 +49,14 @@ internal class SceneInputForwarder(
         bind(KeyEvent.VK_ENTER) { if (!play.active) interaction.enter() }
         bind(KeyEvent.VK_BACK_SPACE) { if (!play.active) interaction.backspace() }
         bind(KeyEvent.VK_DELETE) { if (!play.active) interaction.backspace() }
+        // Copy and Paste of the selected object: Ctrl on Windows and Linux, Cmd on macOS
+        fun bindShortcut(key: Int, action: () -> Unit) {
+            val stroke = KeyStroke.getKeyStroke(key, Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx)
+            panel.registerKeyboardAction({ if (!experimenting() && !play.active) action() }, stroke, JComponent.WHEN_FOCUSED)
+            panel.registerKeyboardAction({ if (!experimenting() && !play.active) action() }, stroke, JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+        }
+        bindShortcut(KeyEvent.VK_C) { interaction.copy() }
+        bindShortcut(KeyEvent.VK_V) { interaction.paste() }
     }
 
     /** While playing, every key but Escape goes to the simulation and is consumed, so no editor shortcut fires. */

@@ -389,15 +389,15 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": 40.912216,
-              "y": -0.008000001,
-              "z": 0.83919716
+              "x": 40.20356,
+              "y": 0.05413297,
+              "z": -0.93996716
             },
             "localRotation": {
               "x": 0.0,
-              "y": 0.0,
+              "y": 0.107470974,
               "z": 0.0,
-              "w": 1.0
+              "w": 0.9942082
             },
             "localScale": {
               "x": 1.0,
@@ -422,9 +422,9 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": 29.319378,
-              "y": 2.834713E-4,
-              "z": -8.155735
+              "x": 28.345604,
+              "y": -0.005833217,
+              "z": -9.793559
             },
             "localRotation": {
               "x": 0.0,
@@ -478,39 +478,6 @@
           }
         }
       },
-      "305": {
-        "components": {
-          "NameComponent": {
-            "name": "Preparation table 3"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 31.5,
-              "y": 0.007,
-              "z": -17.5
-            },
-            "localRotation": {
-              "x": 0.0,
-              "y": 0.707107,
-              "z": 0.0,
-              "w": 0.707107
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_table_work"
-          }
-        }
-      },
       "306": {
         "components": {
           "NameComponent": {
@@ -521,9 +488,9 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": 43.5,
-              "y": -0.024,
-              "z": -8.0
+              "x": 26.777893,
+              "y": -0.034884483,
+              "z": -21.139702
             },
             "localRotation": {
               "x": 0.0,
@@ -541,171 +508,6 @@
             "shaderKey": "defaultShader",
             "type": "MODEL",
             "assetName": "model_airfield_table_work"
-          }
-        }
-      },
-      "307": {
-        "components": {
-          "NameComponent": {
-            "name": "Model stand 1"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 30.5,
-              "y": 0.029,
-              "z": -21.5
-            },
-            "localRotation": {
-              "x": 0.0,
-              "y": 0.0,
-              "z": 0.0,
-              "w": 1.0
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_model_stand"
-          }
-        }
-      },
-      "308": {
-        "components": {
-          "NameComponent": {
-            "name": "Model stand 2"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 33.0,
-              "y": 0.057,
-              "z": -22.0
-            },
-            "localRotation": {
-              "x": 0.0,
-              "y": 0.07493,
-              "z": 0.0,
-              "w": 0.997189
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_model_stand"
-          }
-        }
-      },
-      "309": {
-        "components": {
-          "NameComponent": {
-            "name": "Model stand 3"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 29.562004,
-              "y": 9.536743E-7,
-              "z": 6.6132555
-            },
-            "localRotation": {
-              "x": 0.0,
-              "y": 0.681639,
-              "z": 0.0,
-              "w": 0.731689
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_model_stand"
-          }
-        }
-      },
-      "310": {
-        "components": {
-          "NameComponent": {
-            "name": "Model stand 4"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 31.5,
-              "y": -0.0,
-              "z": 7.0
-            },
-            "localRotation": {
-              "x": 0.0,
-              "y": 0.717356,
-              "z": 0.0,
-              "w": 0.696707
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_model_stand"
-          }
-        }
-      },
-      "311": {
-        "components": {
-          "NameComponent": {
-            "name": "Model stand 5"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 36.5,
-              "y": 0.05,
-              "z": -20.5
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.099833,
-              "z": 0.0,
-              "w": 0.995004
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_model_stand"
           }
         }
       },
@@ -6401,6 +6203,40 @@
           },
           "ParentComponent": {
             "parentEntityId": 659
+          }
+        }
+      },
+      "720": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Preparation table 1"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 26.647362,
+              "y": -0.1004521,
+              "z": -16.144058
+            },
+            "localRotation": {
+              "x": 0.0,
+              "y": -0.051189564,
+              "z": 0.0,
+              "w": -0.998689
+            },
+            "localScale": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_airfield_table_picnic"
           }
         }
       }
