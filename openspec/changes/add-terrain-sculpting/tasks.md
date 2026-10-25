@@ -2,27 +2,27 @@
 
 ## 1. Sculpt storage and state (lib-core-editor)
 
-- [ ] 1.1 Add `SculptManifest` codec and file layout (delta/base grids, hashes) in `net.nevinsky.abyssus.lib.core.editor.terrain.sculpt`; verify with `SculptManifestTest` (round trip, unsupported schema, malformed, wrong resolution) via `./gradlew :lib-core-editor:test --tests '*SculptManifestTest'`
-- [ ] 1.2 Add `SculptState` reader (None / Sculpted(recipe|stored) / Unsafe(reason)) resolving the base from the recipe or the stored base and checking all fingerprints; verify with `SculptStateTest` covering matching, external `terrain.data` edit, missing delta, mismatched recipe, no recipe
-- [ ] 1.3 Add composition `compose(base, delta)` and `SculptDraft` (composed + delta copies, dirty rectangle); verify with `SculptDraftTest` that composed equals base + delta exactly after strokes
-- [ ] 1.4 Update `docs/ai/file-formats.md` terrain section (new files, recipe `heightsSha256` now means base), `projects/lib-core-editor/README.md`; run `scripts/check-docs.sh`
+- [x] 1.1 Add `SculptManifest` codec and file layout (delta/base grids, hashes) in `net.nevinsky.abyssus.lib.core.editor.terrain.sculpt`; verify with `SculptManifestTest` (round trip, unsupported schema, malformed, wrong resolution) via `./gradlew :lib-core-editor:test --tests '*SculptManifestTest'`
+- [x] 1.2 Add `SculptState` reader (None / Sculpted(recipe|stored) / Unsafe(reason)) resolving the base from the recipe or the stored base and checking all fingerprints; verify with `SculptStateTest` covering matching, external `terrain.data` edit, missing delta, mismatched recipe, no recipe
+- [x] 1.3 Add composition `compose(base, delta)` and `SculptDraft` (composed + delta copies, dirty rectangle); verify with `SculptDraftTest` that composed equals base + delta exactly after strokes
+- [x] 1.4 Update `docs/ai/file-formats.md` terrain section (new files, recipe `heightsSha256` now means base), `projects/lib-core-editor/README.md`; run `scripts/check-docs.sh`
 
 ## 2. Brush path and tools (lib-core-editor)
 
-- [ ] 2.1 Extract the stamp walker from `FoliageBrush` into a shared `BrushPath` that takes a stamp callback (foliage keeps its mask writes in the callback), and add the sealed `SculptTool` interface the tools below implement; keep `FoliageBrush` behaviour; verify with the existing `FoliageBrushTest` and `SceneInteractionPaintTest` unchanged and passing
-- [ ] 2.2 Raise/Lower with Shift invert and smoothstep falloff incl. rotated and scaled entity matrix; verify with `SculptRaiseTest` (centre rises, outside radius unchanged, scaled entity matches drawn circle)
-- [ ] 2.3 Smooth, Flatten and Set height (relative-delta writes, neighbour snapshot); verify with `SculptSmoothFlattenTest` (flat area is empty stroke, flatten converges to start height, delta equals target minus base)
-- [ ] 2.4 Noise (deterministic, resolution independent) and Slope limit; verify with `SculptNoiseTest` (same stroke twice gives identical bytes; two resolutions agree at world points) and `SculptSlopeLimitTest` (no slope above the limit within strength 1)
-- [ ] 2.5 Thermal erosion (fixed order, iterations, talus) ; verify with `SculptErosionTest` (deterministic, mass conserved within float tolerance, slopes decrease)
-- [ ] 2.6 Stamp from heightmap (Add/Max/Min, size, rotation, height scale, bilinear sampling); verify with `SculptStampTest` against a small synthetic image
-- [ ] 2.7 Document tools in `projects/lib-core-editor/README.md`; run `scripts/check-docs.sh`
+- [x] 2.1 Extract the stamp walker from `FoliageBrush` into a shared `BrushPath` that takes a stamp callback (foliage keeps its mask writes in the callback), and add the sealed `SculptTool` interface the tools below implement; keep `FoliageBrush` behaviour; verify with the existing `FoliageBrushTest` and `SceneInteractionPaintTest` unchanged and passing
+- [x] 2.2 Raise/Lower with Shift invert and smoothstep falloff incl. rotated and scaled entity matrix; verify with `SculptRaiseTest` (centre rises, outside radius unchanged, scaled entity matches drawn circle)
+- [x] 2.3 Smooth, Flatten and Set height (relative-delta writes, neighbour snapshot); verify with `SculptSmoothFlattenTest` (flat area is empty stroke, flatten converges to start height, delta equals target minus base)
+- [x] 2.4 Noise (deterministic, resolution independent) and Slope limit; verify with `SculptNoiseTest` (same stroke twice gives identical bytes; two resolutions agree at world points) and `SculptSlopeLimitTest` (no slope above the limit within strength 1)
+- [x] 2.5 Thermal erosion (fixed order, iterations, talus) ; verify with `SculptErosionTest` (deterministic, mass conserved within float tolerance, slopes decrease)
+- [x] 2.6 Stamp from heightmap (Add/Max/Min, size, rotation, height scale, bilinear sampling); verify with `SculptStampTest` against a small synthetic image
+- [x] 2.7 Document tools in `projects/lib-core-editor/README.md`; run `scripts/check-docs.sh`
 
 ## 3. Regenerate, reset and forget (lib-core-editor and plugin terrain panel)
 
-- [ ] 3.1 Make regeneration compose `base' + delta` unless Discard, replace a stored base with the recipe, and write sculpt files; verify with `TerrainRegenerateSculptTest` (keep gives new noise plus the same delta bytes; discard removes files) in `:lib-core-editor:test`
-- [ ] 3.2 Add Reset sculpting and Forget sculpting as `AssetTransaction` `FileChange` sets; verify with `SculptResetTest` (recipe base, stored base, unsafe state, undo restores exact bytes)
-- [ ] 3.3 Terrain panel: sculpted state line, Reset, Forget, Discard sculpting option, updated regenerate text and strings in `AbyssusBundle.properties`; verify with the plugin test `TerrainGenerationSectionTest` extended (`./gradlew :plugin-abyssus:test --tests '*TerrainGenerationSectionTest'`)
-- [ ] 3.4 Update `docs/ai/architecture.md` and `terrain-authoring` notes; run `scripts/check-docs.sh`
+- [x] 3.1 Make regeneration compose `base' + delta` unless Discard, replace a stored base with the recipe, and write sculpt files; verify with `TerrainRegenerateSculptTest` (keep gives new noise plus the same delta bytes; discard removes files) in `:lib-core-editor:test`
+- [x] 3.2 Add Reset sculpting and Forget sculpting as `AssetTransaction` `FileChange` sets; verify with `SculptResetTest` (recipe base, stored base, unsafe state, undo restores exact bytes)
+- [x] 3.3 Terrain panel: sculpted state line, Reset, Forget, Discard sculpting option, updated regenerate text and strings in `AbyssusBundle.properties`; verify with the plugin test `TerrainGenerationSectionTest` extended (`./gradlew :plugin-abyssus:test --tests '*TerrainGenerationSectionTest'`)
+- [x] 3.4 Update `docs/ai/architecture.md` and `terrain-authoring` notes; run `scripts/check-docs.sh`
 
 ## 4. Live heights and mesh update (lib-core, plugin sceneview)
 
