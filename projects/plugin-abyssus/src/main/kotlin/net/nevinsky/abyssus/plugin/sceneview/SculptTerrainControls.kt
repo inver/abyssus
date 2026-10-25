@@ -24,7 +24,6 @@ import javax.swing.DefaultComboBoxModel
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JSpinner
-import javax.swing.JToggleButton
 import javax.swing.SpinnerNumberModel
 import javax.swing.SwingUtilities
 
@@ -43,8 +42,9 @@ internal class SculptTerrainControls(
     private val tools: SculptToolFactory,
     private val endFoliage: () -> Unit,
     private val onChanged: () -> Unit,
+    private val onEnded: () -> Unit,
+    private val report: (String) -> Unit,
 ) {
-    private val button = JToggleButton(AbyssusBundle.message("sculptTitle")).apply { name = "sculpt-terrain" }
     private val toolBox = ComboBox(DefaultComboBoxModel(SculptToolKind.entries.toTypedArray())).apply {
         name = "sculpt-tool"
         renderer = javax.swing.ListCellRenderer { list, value, index, selected, focus ->
@@ -81,6 +81,8 @@ internal class SculptTerrainControls(
     private var entity: String? = null
     private var load = 0
     private var closed = false
+    private var requested = false
+    private var opened = false
     private var stampImage: StampImage? = null
     private var stampDecode = 0
     private var updatingStamp = false
@@ -89,10 +91,6 @@ internal class SculptTerrainControls(
     val sculpting: Boolean get() = renderer.state.sculpt != null
 
     init {
-        button.addActionListener {
-            if (button.isSelected) { endFoliage(); update() } else end()
-            onChanged()
-        }
         toolBox.addActionListener { showOptions(); update() }
         for (s in listOf(radius, strength, targetHeight, amplitude, featureSize, seed, maxAngle, talus, iterations, stampSize, stampHeight, stampRotation)) {
             s.addChangeListener { update() }
@@ -139,9 +137,22 @@ internal class SculptTerrainControls(
     /** The tool the strip stands for now; null for a Stamp without a readable image. */
     fun tool(): SculptTool? = tools.create(toolBox.selectedItem as SculptToolKind, values())
 
-    /** Adds the Sculpt toggle and its strip to [toolbar] when the host can sculpt at all. */
+    /** Adds the strip to [toolbar] when the host can sculpt at all; the toggle is in the Properties panel. */
     fun addTo(toolbar: JPanel) {
-        if (sculptSession != null) { toolbar.add(button); toolbar.add(strip) }
+        if (sculptSession != null) toolbar.add(strip)
+    }
+
+    /** Puts the brush on [entityId], the selected terrain (the Properties panel's toggle); ends the sculpting when it cannot be. */
+    fun begin(entityId: String) {
+        if (play.active || entityId != interaction.selectedId) { end(); return }
+        endFoliage()
+        requested = true
+        val session = loaded
+        when {
+            session?.stroke != null -> { update(); onChanged() }
+            session?.reason != null -> { end(); report(session.reason) }
+            opened -> end()
+        }
     }
 
     /** Before the toolbar is synced: leaves the brush while playing or when Paint Foliage took the view, follows the selection. */
@@ -150,15 +161,8 @@ internal class SculptTerrainControls(
         refreshSession()
     }
 
-    /** Brings the toggle and strip in line with the brush and with whether this entity can be sculpted. */
+    /** Brings the strip in line with the brush. */
     fun sync() {
-        val available = !play.active && loaded?.reason == null && loaded?.stroke != null
-        button.isEnabled = available
-        button.toolTipText = when {
-            loaded == null -> AbyssusBundle.message("sculptNotTerrain")
-            else -> loaded?.reason
-        }
-        button.isSelected = sculpting
         strip.isVisible = sculpting
     }
 
@@ -166,21 +170,24 @@ internal class SculptTerrainControls(
     fun refreshSession(force: Boolean = false) {
         val selected = interaction.selectedId
         if (!force && selected == entity) return
-        val wasSculpting = sculpting && selected == entity
-        end()
+        val wasRequested = requested && selected == entity
+        end(notify = false)
         loaded?.dispose()
         loaded = null
+        opened = false
         entity = selected
         val token = ++load
         if (closed || selected == null) return
         sculptSession?.invoke(selected, { renderer.state.sculpt }, ::tool) { session ->
             if (closed || token != load || interaction.selectedId != selected) { session?.dispose(); return@invoke }
             loaded = session
+            opened = true
             interaction.terrainSculpt = session?.stroke
             listStampImages(session)
-            if (wasSculpting && session?.stroke != null) {
-                button.isSelected = true
-                update()
+            requested = wasRequested
+            when {
+                wasRequested && session?.stroke != null -> update()
+                wasRequested -> { end(); session?.reason?.let(report) }
             }
             onChanged()
         }
@@ -189,18 +196,21 @@ internal class SculptTerrainControls(
     /** Puts the brush on the view from the strip's values ([shift] inverts); leaves it while playing. */
     fun update(shift: Boolean = false) {
         if (play.active) { end(); return }
-        if (!button.isSelected || loaded?.stroke == null) return
+        if (!requested || loaded?.stroke == null) return
         val selected = interaction.selectedId ?: return
         renderer.state.sculpt = SculptMode(selected, num(radius), num(strength).coerceIn(0f, 1f), shift)
         strip.isVisible = true
     }
 
-    fun end() {
+    /** Takes the brush off the view; [notify] tells the host the sculpting is over (not when the session is only reloaded). */
+    fun end(notify: Boolean = true) {
+        val was = requested
         interaction.terrainSculpt?.cancelled()
         renderer.state.sculpt = null
         renderer.brushCursor = null
-        button.isSelected = false
+        requested = false
         strip.isVisible = false
+        if (notify && was) onEnded()
     }
 
     /** Releases the session when the view is disposed. */

@@ -107,7 +107,8 @@ class SceneViewPanel internal constructor(
     private val sculpt: SculptTerrainControls = SculptTerrainControls(
         renderer, interaction, play, sculptSession,
         net.nevinsky.abyssus.plugin.terrain.SculptToolFactory(net.nevinsky.abyssus.lib.core.editor.terrain.FastNoiseSamplerFactory()),
-        { paint.end() }, ::syncControls,
+        { paint.end() }, ::syncControls, { onSculptEnded?.invoke() },
+        { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(reason, AbyssusBundle.message("sculptTitle")) },
     )
     private val playStrip = PlayControlsStrip(play, renderer, simulationRequest, { endBrushes() }, { requestFocusInWindow() })
     private val clouds = CloudControls(renderer) { experimenting }
@@ -441,6 +442,12 @@ class SceneViewPanel internal constructor(
         if (entityId != null) requestFocusInWindow()
         syncControls()
     }
+
+    override fun setSculpting(entityId: String?) {
+        if (entityId == null) sculpt.end(notify = false) else sculpt.begin(entityId)
+    }
+
+    override var onSculptEnded: (() -> Unit)? = null
 
     override fun applyPathEdit(): Boolean = interaction.applyPathDraft()
 

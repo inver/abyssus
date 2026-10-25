@@ -189,6 +189,9 @@ class SceneFileEditor(
                 if (target.file == file) view?.dropPathToTerrain()
             }
         })
+        project.messageBus.connect(this).subscribe(SculptRequestListener.TOPIC, SculptRequestListener { target ->
+            view?.setSculpting(target?.takeIf { it.file == file }?.entityId)
+        })
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 if (events.any { it is VFileContentChangeEvent && isSource(it.file) && hasRenderChange(it.file) }) {
@@ -289,6 +292,7 @@ class SceneFileEditor(
         created.onArrangementEdit = ::editArrangement
         created.onRegenerate = ::regenerateArrangement
         created.onPathEditEnded = { project.service<PathEditSession>().stop(file) }
+        created.onSculptEnded = { project.service<SculptRequests>().stop(file) }
         (created as? RayControlProvider)?.rayControl?.let { rayControls.register(file, it, created) }
         view = created
         project.service<PathEditSession>().current?.takeIf { it.file == file }?.let { created.setPathEditing(it.entityId) }

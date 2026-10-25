@@ -86,6 +86,14 @@ interface SceneView : Disposable {
     /** Starts (with an id) or ends (null) editing the control points of an arrangement; the view selects it. */
     fun setPathEditing(entityId: String?) {}
 
+    /** Puts the Sculpt Terrain brush on the terrain with this id, or takes it off for null. */
+    fun setSculpting(entityId: String?) {}
+
+    /** Called when the view ended the sculpting itself (the selection moved on, play started, or the terrain cannot be sculpted). */
+    var onSculptEnded: (() -> Unit)?
+        get() = null
+        set(_) {}
+
     /** Writes the control point changes made since Edit (Apply); false when there was nothing to write or the write failed. */
     fun applyPathEdit(): Boolean = false
 

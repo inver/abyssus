@@ -5,12 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.sculpt
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.lib.core.assets.displayMessage
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.assets.terrain.MAX_TERRAIN_RESOLUTION
-import net.nevinsky.abyssus.lib.core.editor.terrain.MIN_TERRAIN_RESOLUTION
 import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainHeightEncoder
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.nio.ByteBuffer
@@ -50,21 +46,12 @@ data class SculptManifest(
 
 /** Reads and writes [SculptManifest] text. */
 class SculptManifestCodec(private val json: JsonProcessor) {
-    fun encode(manifest: SculptManifest): String {
-        val root = JsonNodeFactory.instance.objectNode().apply {
-            put("schemaVersion", manifest.schemaVersion)
-            put("baseKind", if (manifest.baseKind == SculptBaseKind.RECIPE) RECIPE_KIND else STORED_KIND)
-            put("resolution", manifest.resolution)
-            put("deltaSha256", manifest.deltaSha256)
-            put("composedSha256", manifest.composedSha256)
-            manifest.baseSha256?.let { put("baseSha256", it) }
-        }
-        return json.pretty(root)
-    }
+    fun encode(manifest: SculptManifest) = json.toString(manifest)
 
     /** The manifest in [text], or why it is not usable. */
-    fun decode(text: String): Decoded = runCatchingKeepingCancellation { read(json.readObject(text)) }
-        .getOrElse { Decoded.Malformed(it.displayMessage()) }
+    fun decode(text: String): Decoded = runCatchingKeepingCancellation {
+        Decoded.Manifest(json.parse(text, SculptManifest::class.java))
+    }.getOrElse { Decoded.Malformed(it.displayMessage()) }
 
     sealed interface Decoded {
         data class Manifest(val manifest: SculptManifest) : Decoded
@@ -74,32 +61,6 @@ class SculptManifestCodec(private val json: JsonProcessor) {
 
         /** The manifest is from a layout this code does not have; [what] names it. */
         data class Unsupported(val what: String) : Decoded
-    }
-
-    private fun read(root: JsonNode): Decoded {
-        val version = int(root, "schemaVersion")
-        if (version != SCULPT_SCHEMA_VERSION) return Decoded.Unsupported("schemaVersion $version")
-        val kind = when (val text = string(root, "baseKind")) {
-            RECIPE_KIND -> SculptBaseKind.RECIPE
-            STORED_KIND -> SculptBaseKind.STORED
-            else -> return Decoded.Unsupported("baseKind $text")
-        }
-        val resolution = int(root, "resolution")
-        check(resolution in MIN_TERRAIN_RESOLUTION..MAX_TERRAIN_RESOLUTION) { "resolution is out of range" }
-        val base = if (kind == SculptBaseKind.STORED) sha(root, "baseSha256") else null
-        return Decoded.Manifest(
-            SculptManifest(kind, resolution, sha(root, "deltaSha256"), sha(root, "composedSha256"), base, version),
-        )
-    }
-
-    private fun int(node: JsonNode, key: String): Int =
-        node.get(key)?.takeIf { it.isIntegralNumber && it.canConvertToInt() }?.intValue() ?: error("$key is missing or not an integer")
-
-    private fun string(node: JsonNode, key: String): String =
-        node.get(key)?.takeIf { it.isTextual }?.asText() ?: error("$key is missing or not text")
-
-    private fun sha(node: JsonNode, key: String): String = string(node, key).also {
-        check(it.length == SHA_HEX_LENGTH && it.all { c -> c in "0123456789abcdef" }) { "$key is not a SHA-256" }
     }
 }
 

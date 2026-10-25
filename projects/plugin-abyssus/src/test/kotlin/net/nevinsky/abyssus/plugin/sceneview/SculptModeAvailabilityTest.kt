@@ -46,16 +46,26 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
     private fun session(reason: String? = null, onClose: () -> Unit = {}) =
         SculptSession(reason, if (reason == null) stroke else null, null, StampImages(net.nevinsky.abyssus.plugin.testCore.json), onClose)
 
+    private fun controls(renderer: SceneRenderer, play: PlayState = PlayState(null), onEnded: () -> Unit = {}, report: (String) -> Unit = {},
+                         sessionOf: () -> SculptSession? = { session() }): SculptTerrainControls {
+        val interaction = SceneInteraction(renderer.state, renderer.queries, OrbitCamera(Vector3(), 10f, 0f, 0.5f))
+        return SculptTerrainControls(renderer, interaction, play, { _, _, _, ready -> ready(sessionOf()) },
+            SculptToolFactory(FastNoiseSamplerFactory()), {}, {}, onEnded, report).also {
+            renderer.state.selectedId = "1"
+        }
+    }
+
     fun testEnteringTheModeShowsTheStripAndEndsWithTheSelection() {
         val renderer = testRenderer()
         var closed = false
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, renderer,
             sculptSession = { id, _, _, ready -> ready(if (id == "1") session { closed = true } else null) })
+        var ended = 0
+        panel.onSculptEnded = { ended++ }
         try {
             panel.selectEntity("1")
-            val button = named(panel, "sculpt-terrain") as JToggleButton
-            assertTrue(button.isEnabled)
-            button.doClick()
+            assertNull("the toggle is in the Properties panel, not the toolbar", named(panel, "sculpt-terrain"))
+            panel.setSculpting("1")
             val mode = renderer.state.sculpt!!
             assertEquals("1", mode.entityId)
             assertEquals(10f, mode.radius, 0f)
@@ -66,28 +76,31 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
             panel.selectEntity("2")
             assertNull(renderer.state.sculpt)
             assertTrue(closed)
-            assertFalse(button.isSelected)
+            assertEquals("the host is told when the view ends it", 1, ended)
         } finally { panel.dispose() }
     }
 
-    fun testItIsDisabledForANonTerrainWithAReason() {
-        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer(), sculptSession = { _, _, _, ready -> ready(null) })
-        try {
-            panel.selectEntity("1")
-            val button = named(panel, "sculpt-terrain") as JToggleButton
-            assertFalse(button.isEnabled)
-            assertTrue(button.toolTipText.contains("Select a terrain"))
-        } finally { panel.dispose() }
+    fun testItEndsAndSaysWhyForANonTerrain() {
+        val renderer = testRenderer()
+        var ended = 0
+        val reasons = mutableListOf<String>()
+        val controls = controls(renderer, onEnded = { ended++ }, report = { reasons += it }, sessionOf = { null })
+        controls.refreshSession(force = true)
+        controls.begin("1")
+        assertNull(renderer.state.sculpt)
+        assertEquals("a toggle with nothing to sculpt is switched back off", 1, ended)
     }
 
-    fun testItIsDisabledWithTheSessionsReasonForAnUnreadableOrUnsafeTerrain() {
-        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer(), sculptSession = { _, _, _, ready -> ready(session("cannot be trusted")) })
-        try {
-            panel.selectEntity("1")
-            val button = named(panel, "sculpt-terrain") as JToggleButton
-            assertFalse(button.isEnabled)
-            assertEquals("cannot be trusted", button.toolTipText)
-        } finally { panel.dispose() }
+    fun testItEndsWithTheSessionsReasonForAnUnreadableOrUnsafeTerrain() {
+        val renderer = testRenderer()
+        var ended = 0
+        val reasons = mutableListOf<String>()
+        val controls = controls(renderer, onEnded = { ended++ }, report = { reasons += it }, sessionOf = { session("cannot be trusted") })
+        controls.refreshSession(force = true)
+        controls.begin("1")
+        assertNull(renderer.state.sculpt)
+        assertEquals(listOf("cannot be trusted"), reasons)
+        assertEquals(1, ended)
     }
 
     fun testSculptAndPaintFoliageNeverHoldAtOnce() {
@@ -103,26 +116,24 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
             paintSession = { _, _, ready -> ready(FoliagePaintSession(listOf(3), paintStroke) {}) })
         try {
             panel.selectEntity("1")
-            (named(panel, "sculpt-terrain") as JToggleButton).doClick()
+            panel.setSculpting("1")
             assertNotNull(renderer.state.sculpt)
             (named(panel, "paint-foliage") as JToggleButton).doClick()
             assertNotNull(renderer.state.paint)
             assertNull(renderer.state.sculpt)
-            (named(panel, "sculpt-terrain") as JToggleButton).doClick()
+            panel.setSculpting("1")
             assertNotNull(renderer.state.sculpt)
             assertNull(renderer.state.paint)
+            panel.setSculpting(null)
+            assertNull(renderer.state.sculpt)
         } finally { panel.dispose() }
     }
 
     fun testShiftInvertsAndPlayEndsTheBrush() {
         val renderer = testRenderer()
-        val play = PlayState(null)
-        val interaction = SceneInteraction(renderer.state, renderer.queries, OrbitCamera(Vector3(), 10f, 0f, 0.5f))
-        val controls = SculptTerrainControls(renderer, interaction, play, { _, _, _, ready -> ready(session()) },
-            SculptToolFactory(FastNoiseSamplerFactory()), {}, {})
-        renderer.state.selectedId = "1"
+        val controls = controls(renderer)
         controls.refreshSession(force = true)
-        (named(JPanel().also { controls.addTo(it) }, "sculpt-terrain") as JToggleButton).doClick()
+        controls.begin("1")
         assertFalse(renderer.state.sculpt!!.inverted)
         controls.update(shift = true)
         assertTrue(renderer.state.sculpt!!.inverted)
@@ -136,7 +147,7 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
         val renderer = testRenderer()
         val interaction = SceneInteraction(renderer.state, renderer.queries, OrbitCamera(Vector3(), 10f, 0f, 0.5f))
         val controls = SculptTerrainControls(renderer, interaction, PlayState(null), { _, _, _, ready -> ready(session()) },
-            SculptToolFactory(FastNoiseSamplerFactory()), {}, {})
+            SculptToolFactory(FastNoiseSamplerFactory()), {}, {}, {}, {})
         val bar = JPanel().also { controls.addTo(it) }
         @Suppress("UNCHECKED_CAST")
         val box = named(bar, "sculpt-tool") as JComboBox<SculptToolKind>

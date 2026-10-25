@@ -343,10 +343,13 @@ Foliage is drawn, and it is deliberately left out of everything else the view an
 ## Sculpt Terrain
 
 Sculpt Terrain is a brush mode of a view beside Paint Foliage, and the two never hold at once. `SculptTerrainControls` is the
-toggle and the strip (tool, radius, strength, the options of the chosen tool; Shift inverts); like `FoliagePaintControls` it
+strip (tool, radius, strength, the options of the chosen tool; Shift inverts); like `FoliagePaintControls` it
 sets a mode on the view's state (`SceneViewState.sculpt`, a `SculptMode`), which hides the gizmos, gives the left button to the
-brush and ends when another entity is selected. The toggle is disabled with a reason as its tooltip when the entity is not a
-terrain, the terrain data cannot be read or its sculpt state is unsafe (`SculptEditing` reads the files off the EDT).
+brush and ends when another entity is selected. The on/off toggle is in the Abyssus Properties panel, in the Render section of
+a terrain entity (`EntityDetailsView`): it starts the project's `SculptRequests`, `SceneFileEditor` passes that to the view
+(`setSculpting`), and the view tells the session when it ended the brush itself (`onSculptEnded`), as with `PathEditSession`.
+The view ends the sculpting and reports why when the terrain data cannot be read or its sculpt state is unsafe
+(`SculptEditing` reads the files off the EDT).
 The pick layer calls a `TerrainSculpt` (`pressed` / `dragged` / `released` / `cancelled`), which `SculptStrokeCommand` implements.
 
 A stroke lives in the project's `SculptDrafts` (one `SculptDraft` per terrain folder) only while the button is down. The

@@ -16,7 +16,9 @@ import com.intellij.ui.components.panels.VerticalLayout
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.editor.document.SceneDocument
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
@@ -33,6 +35,7 @@ import net.nevinsky.abyssus.lib.core.editor.util.numberText
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
+import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.filetype.SceneRayEdits
 import net.nevinsky.abyssus.plugin.filetype.setEnabled
 import net.nevinsky.abyssus.plugin.panel.RowHooks
@@ -40,6 +43,8 @@ import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
 import net.nevinsky.abyssus.plugin.projectView.reportRejection
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.sceneview.PathEditListener
+import net.nevinsky.abyssus.plugin.sceneview.SculptRequestListener
+import net.nevinsky.abyssus.plugin.sceneview.SculptRequests
 import net.nevinsky.abyssus.plugin.sceneview.PathEditSession
 import net.nevinsky.abyssus.plugin.ui.CommitOutcome
 import net.nevinsky.abyssus.plugin.ui.showActionGroup
@@ -49,6 +54,7 @@ import java.awt.event.FocusEvent
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.JToggleButton
 
 /**
  * An entity (or one component) of a scene with an editor for every field of the components the plugin models. Editors
@@ -79,7 +85,14 @@ internal class EntityDetailsView @JvmOverloads constructor(
             sectionActions = { removeButton(it) },
             sectionExtra = { section ->
                 when (section.kind) {
-                    "RenderComponent" -> state.optics?.let { opticsView(it) }
+                    "RenderComponent" -> {
+                        val optics = state.optics?.let { opticsView(it) }
+                        val sculpt = if (isTerrain()) sculptBar() else null
+                        when {
+                            optics != null && sculpt != null -> JPanel(VerticalLayout(0)).apply { isOpaque = false; add(sculpt); add(optics) }
+                            else -> sculpt ?: optics
+                        }
+                    }
                     PathArrangementComponent::class.simpleName -> pathEditBar()
                     else -> null
                 }
@@ -93,6 +106,50 @@ internal class EntityDetailsView @JvmOverloads constructor(
             }
         }
         add(view, BorderLayout.CENTER)
+    }
+
+    /** Whether the entity renders a terrain asset, which can be sculpted. */
+    private fun isTerrain(): Boolean {
+        val root = SceneDocumentCache.of(project).read(target.file)?.root ?: return false
+        return SceneDocument(root).renderAsset(target.entityId)?.type == MetaType.TERRAIN.name
+    }
+
+    /** The Sculpt Terrain toggle: it puts the brush on the terrain in the Scene view; the project's [SculptRequests] follow it. */
+    private fun sculptBar(): JComponent {
+        val requests = project.service<SculptRequests>()
+        val toggle = JToggleButton(AbyssusBundle.message("sculptTitle")).apply { name = "sculpt-terrain"; isFocusable = false }
+        fun on() = requests.current?.let { it.file == target.file && it.entityId == target.entityId } == true
+        var syncing = false
+        fun sync() {
+            syncing = true
+            toggle.isSelected = on()
+            syncing = false
+        }
+        toggle.addActionListener {
+            if (syncing) return@addActionListener
+            if (toggle.isSelected) requests.start(target.file, target.entityId) else requests.stop(target.file)
+        }
+        sync()
+        return object : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), JBUI.scale(4))) {
+            private var connection: com.intellij.util.messages.MessageBusConnection? = null
+
+            override fun addNotify() {
+                super.addNotify()
+                sync()
+                connection = project.messageBus.connect().also {
+                    it.subscribe(SculptRequestListener.TOPIC, SculptRequestListener { sync() })
+                }
+            }
+
+            override fun removeNotify() {
+                connection?.disconnect()
+                connection = null
+                super.removeNotify()
+            }
+        }.apply {
+            isOpaque = false
+            add(toggle)
+        }
     }
 
     /**
