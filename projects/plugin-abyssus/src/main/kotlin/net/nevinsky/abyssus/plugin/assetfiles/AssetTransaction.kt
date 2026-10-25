@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.assetfiles
 
-import net.nevinsky.abyssus.lib.core.editor.foliage.MaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
 
 /** The lower-case hex SHA-256 of [bytes]; the one digest both sides of a derived file or a mask patch are named by. */
 internal fun sha256Hex(bytes: ByteArray): String =

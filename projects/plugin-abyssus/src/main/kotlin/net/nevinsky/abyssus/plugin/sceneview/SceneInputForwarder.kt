@@ -19,7 +19,7 @@ import javax.swing.SwingUtilities
  * Keyboard and mouse input of the Scene view: W/E/D/Esc/Enter/Backspace on the [panel], the canvas mouse into the
  * [interaction] (select, gizmo, orbit, the arrangement point menu, the foliage brush) and, while [play] runs, into the
  * simulation. [experimenting] and [experimentOrbit] stand for the ray feasibility experiment, which takes the mouse over;
- * [updatePaintMode] re-reads the foliage brush (the Shift key erases). AWT thread.
+ * [updatePaintMode] re-reads the terrain brush, Paint Foliage or Sculpt Terrain (the Shift key erases or inverts). AWT thread.
  */
 internal class SceneInputForwarder(
     private val panel: JComponent,
@@ -140,14 +140,17 @@ internal class SceneInputForwarder(
             override fun mouseExited(e: MouseEvent) { renderer.brushCursor = null }
 
             private fun cursor(e: MouseEvent) {
-                val mode = renderer.state.paint
+                val paint = renderer.state.paint
+                val sculpt = renderer.state.sculpt
+                val entityId = paint?.entityId ?: sculpt?.entityId
+                val radius = paint?.radius ?: sculpt?.radius
                 val size = interaction.size
-                if (mode == null || size.isEmpty) { renderer.brushCursor = null; return }
+                if (entityId == null || radius == null || size.isEmpty) { renderer.brushCursor = null; return }
                 val at = size.toFramebuffer(e.x, e.y)
                 val ray = renderer.queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
-                val terrain = renderer.queries.terrainOf(mode.entityId)
-                val hit = ray?.let { renderer.queries.terrainHit(mode.entityId, it) }
-                renderer.brushCursor = if (terrain != null && hit != null) FoliageBrushCursor(terrain, hit, mode.radius) else null
+                val terrain = renderer.queries.terrainOf(entityId)
+                val hit = ray?.let { renderer.queries.terrainHit(entityId, it) }
+                renderer.brushCursor = if (terrain != null && hit != null) FoliageBrushCursor(terrain, hit, radius) else null
             }
 
             override fun mouseWheelMoved(e: MouseWheelEvent) {

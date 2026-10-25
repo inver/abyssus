@@ -17,6 +17,7 @@ import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.facts.SceneFacts
 import net.nevinsky.abyssus.plugin.projectView.HdrPreviewService
 import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
+import net.nevinsky.abyssus.plugin.terrain.SculptServices
 import java.io.File
 
 /**
@@ -33,6 +34,7 @@ class PanelServices(
     val terrainGenerator: TerrainGenerator,
     val heightEncoder: TerrainHeightEncoder,
     val terrainRecipes: TerrainRecipeCodec,
+    val terrainSculpt: SculptServices,
     val rayControls: SceneRayControls,
     /** The component editor of each scene, from the project's and the contributed component schemas. */
     val schemas: ComponentSchemas,

@@ -82,6 +82,9 @@ class SceneInteraction(
     /** What paints while the Paint Foliage mode in [state] strokes the terrain, or null when nothing implements it. */
     var foliagePaint: FoliagePaint? = null
 
+    /** What sculpts while the Sculpt Terrain mode in [state] strokes the terrain, or null when nothing implements it. */
+    var terrainSculpt: TerrainSculpt? = null
+
     var selectedId: String?
         get() = state.selectedId
         private set(value) {
@@ -95,7 +98,7 @@ class SceneInteraction(
     fun selectWater(id: String) {
         if (state.selectedWater == id) return
         state.selectedWater = id
-        state.paint = null
+        state.endBrush()
         stateChanged()
     }
 
@@ -120,6 +123,7 @@ class SceneInteraction(
     private val host = object : GestureHost {
         override val size: ViewSize get() = this@SceneInteraction.size
         override val foliagePaint: FoliagePaint? get() = this@SceneInteraction.foliagePaint
+        override val terrainSculpt: TerrainSculpt? get() = this@SceneInteraction.terrainSculpt
         override val onTransform: ((String, TransformEdit) -> Boolean)? get() = this@SceneInteraction.onTransform
         override val onWaterMove: ((String, Vector3) -> Boolean)? get() = this@SceneInteraction.onWaterMove
         override val onArrangementEdit: ((String, List<Vector3>) -> Boolean)? get() = this@SceneInteraction.stagedEdit
@@ -225,7 +229,7 @@ class SceneInteraction(
         state.pathEditing = id
         if (id != null) {
             state.selectedId = id
-            state.paint = null
+            state.endBrush()
         }
         stateChanged()
     }
@@ -280,7 +284,7 @@ class SceneInteraction(
         if (state.viewCamera != null) return
         // The left button paints in Paint Foliage mode; only the other buttons and the wheel navigate.
         if (left) {
-            if (state.paint == null) orbit.orbit(dx, dy)
+            if (!state.brushing) orbit.orbit(dx, dy)
         } else orbit.pan(dx, dy)
     }
 
@@ -416,9 +420,9 @@ class SceneInteraction(
         val at = size.toFramebuffer(x, y)
         val target = queries.pickTarget(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
         if (target is SceneTarget.Water) {
-            val changed = state.selectedWater != target.id || state.paint != null
+            val changed = state.selectedWater != target.id || state.brushing
             state.selectedWater = target.id
-            state.paint = null
+            state.endBrush()
             onPickWater?.invoke(target.id)
             if (changed) stateChanged()
             return
@@ -432,6 +436,12 @@ class SceneInteraction(
         state.paint?.let { mode ->
             if (hit != mode.entityId) {
                 state.paint = null
+                changed = true
+            }
+        }
+        state.sculpt?.let { mode ->
+            if (hit != mode.entityId) {
+                state.sculpt = null
                 changed = true
             }
         }
@@ -475,6 +485,16 @@ class SceneInteraction(
                 if (gestures.isPainting) {
                     gestures.cancel()
                     foliagePaint?.cancelled()
+                }
+            }
+        }
+        state.sculpt?.let { mode ->
+            if (!ScenePreview().contains(params.content, mode.entityId)) {
+                state.sculpt = null
+                changed = true
+                if (gestures.isSculpting) {
+                    gestures.cancel()
+                    terrainSculpt?.cancelled()
                 }
             }
         }

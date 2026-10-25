@@ -24,7 +24,7 @@ import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageScatter
-import net.nevinsky.abyssus.lib.core.editor.foliage.MaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
 import net.nevinsky.abyssus.lib.core.editor.foliage.mergeFoliageChunks
 import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
 import net.nevinsky.abyssus.lib.core.assets.testProject

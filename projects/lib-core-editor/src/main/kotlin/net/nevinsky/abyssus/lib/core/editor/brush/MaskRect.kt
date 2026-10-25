@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.foliage
+package net.nevinsky.abyssus.lib.core.editor.brush
 
 /**
  * A rectangle of mask texels: [minX]..[maxX] along x and [minZ]..[maxZ] along z, both inclusive; empty when either

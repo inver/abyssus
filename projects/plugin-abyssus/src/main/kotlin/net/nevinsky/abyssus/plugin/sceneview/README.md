@@ -340,6 +340,27 @@ Foliage is drawn, and it is deliberately left out of everything else the view an
   `SceneRayControls` into the `ray-tracing-foliage` label of the Properties panel's Ray Tracing section, while the
   shown scene has any.
 
+## Sculpt Terrain
+
+Sculpt Terrain is a brush mode of a view beside Paint Foliage, and the two never hold at once. `SculptTerrainControls` is the
+toggle and the strip (tool, radius, strength, the options of the chosen tool; Shift inverts); like `FoliagePaintControls` it
+sets a mode on the view's state (`SceneViewState.sculpt`, a `SculptMode`), which hides the gizmos, gives the left button to the
+brush and ends when another entity is selected. The toggle is disabled with a reason as its tooltip when the entity is not a
+terrain, the terrain data cannot be read or its sculpt state is unsafe (`SculptEditing` reads the files off the EDT).
+The pick layer calls a `TerrainSculpt` (`pressed` / `dragged` / `released` / `cancelled`), which `SculptStrokeCommand` implements.
+
+A stroke lives in the project's `SculptDrafts` (one `SculptDraft` per terrain folder) only while the button is down. The
+command writes nothing before the release: it then plans the files with `SculptPlanner.commitStroke` and stages them
+through `SculptTransactions` as one undoable `AssetTransaction`. An empty stroke writes nothing and adds no undo step.
+
+Every view follows a stroke through `SculptViewSync` (called each frame after `terrains.update`): when a draft has a new
+revision, the draft's changed rectangle of heights is copied **in place** into that view's own `TerrainData.heights`
+(each view loads its own copy of the terrain) and `TerrainMesh.updateRegion` sends those vertices again (one-vertex border
+for the normals; the whole buffer past half the grid). When a draft a view followed is gone, because the stroke was
+committed or discarded, the view loads the terrain again from the files. Picking, foliage and ray snapshots read the
+view's `TerrainData`, so they follow the new heights; a ray snapshot is dropped by the existing asset refresh when
+`terrain.data` changes. The Stamp tool decodes its image with a libGDX `Pixmap` off the AWT thread (`StampImages`), no GL.
+
 ## Ray tracing scene conversion
 
 The ray classes named here (`RaySceneSnapshots`, `RayViewFeed`, `RayViewRuntime`, `RayBackendService`, `RayModeState`) are in

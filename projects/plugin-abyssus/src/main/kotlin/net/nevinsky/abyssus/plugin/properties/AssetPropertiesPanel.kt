@@ -267,6 +267,7 @@ class AssetPropertiesPanel(
             services.terrainGenerator,
             services.heightEncoder,
             services.terrainRecipes,
+            services.terrainSculpt,
             background,
             ui,
             readCurrent = { readTerrainSourceNow(folder, services) },

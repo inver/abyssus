@@ -10,6 +10,8 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.foliage.*
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.emptyMaskRect
 import net.nevinsky.abyssus.lib.core.editor.foliage.*
 import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaint
 import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaintMode

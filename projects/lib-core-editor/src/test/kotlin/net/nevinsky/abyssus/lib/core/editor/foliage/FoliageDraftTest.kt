@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
+import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.emptyMaskRect
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta

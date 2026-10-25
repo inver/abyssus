@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.plugin.terrain
 
 import com.intellij.ui.JBColor
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.panels.VerticalLayout
@@ -14,6 +15,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.editor.terrain.HeightmapImage
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptState
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
@@ -82,11 +84,16 @@ internal class TerrainGenerationSection(private val controller: TerrainGeneratio
         box.add(JBLabel(AbyssusBundle.message("terrainSection").uppercase()).apply { foreground = UIUtil.getContextHelpForeground(); font = JBFont.small() })
         box.add(JBLabel(AbyssusBundle.message("terrainResolution", controller.resolution.toString())).apply { name = "terrain-resolution" })
         box.add(JBLabel("<html>${controller.recipeText()}</html>").apply { name = "terrain-recipe-status"; foreground = UIUtil.getContextHelpForeground() })
+        controller.sculptText()?.let { text ->
+            box.add(JBLabel("<html>$text</html>").apply { name = "terrain-sculpt-status"; foreground = if (controller.sculptState is SculptState.Unsafe) JBColor.RED else UIUtil.getContextHelpForeground() })
+        }
         TerrainSettingField.entries.forEach { box.add(settingRow(it)) }
         val problems = controller.problems
         if (problems.isNotEmpty()) box.add(JBLabel("<html>${problems.joinToString("<br>")}</html>").apply { name = "terrain-problems"; foreground = JBColor.RED })
+        if (controller.sculptState is SculptState.Sculpted) box.add(discardOption())
         box.add(buttons())
-        box.add(HeightmapView(controller.draft.preview?.image).apply { name = "terrain-heightmap" })
+        if (controller.sculptState !is SculptState.None) box.add(sculptButtons())
+        box.add(HeightmapView(controller.previewImage).apply { name = "terrain-heightmap" })
         controller.message?.let { text ->
             box.add(JBLabel("<html>$text</html>").apply { name = "terrain-message"; foreground = UIUtil.getContextHelpForeground() })
         }
@@ -120,6 +127,28 @@ internal class TerrainGenerationSection(private val controller: TerrainGeneratio
             add(editor, GridBagConstraints().apply { gridx = 1; weightx = 1.0; fill = GridBagConstraints.HORIZONTAL })
             add(error, GridBagConstraints().apply { gridx = 2; insets = JBUI.insetsLeft(8) })
         }
+    }
+
+    private fun discardOption(): JComponent = JPanel(VerticalLayout(JBUI.scale(2))).apply {
+        add(JBCheckBox(AbyssusBundle.message("terrainDiscardSculpt"), controller.discardSculpting).also { box ->
+            box.name = "terrain-discard-sculpt"
+            box.addActionListener { controller.discardSculpting = box.isSelected }
+        })
+        add(JBLabel("<html>${AbyssusBundle.message("terrainSculptNote")}</html>").apply { name = "terrain-sculpt-note"; foreground = UIUtil.getContextHelpForeground() })
+    }
+
+    private fun sculptButtons(): JComponent = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
+        val state = controller.sculptState
+        add(JButton(AbyssusBundle.message("terrainSculptReset")).also {
+            it.name = "terrain-sculpt-reset"
+            it.isEnabled = state is SculptState.Sculpted
+            it.addActionListener { controller.resetSculpting() }
+        })
+        add(JButton(AbyssusBundle.message("terrainSculptForget")).also {
+            it.name = "terrain-sculpt-forget"
+            it.isEnabled = state is SculptState.Unsafe
+            it.addActionListener { controller.forgetSculpting() }
+        })
     }
 
     private fun buttons(): JComponent = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {

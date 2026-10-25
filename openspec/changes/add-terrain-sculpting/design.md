@@ -80,10 +80,12 @@ Every Scene view showing the terrain compares its seen revision on each frame an
 `GdxRuntime.withContext`, copies the dirty rectangle of the draft's composed heights into **its own**
 `TerrainData.heights` in place (`heights` is a `val` array, so the array is mutated, never swapped) and calls
 `TerrainMesh.updateRegion(rect)`. That recomputes positions and normals for the rect plus a one-vertex border and
-re-uploads that vertex range, falling back to a full upload if the rect exceeds a fraction of the grid. Whether `IntMesh`
-(`lib-gdx`) supports a partial vertex upload is unverified: task 4.2 checks it first, and if it does not, the full path
-(rebuild or re-set all vertices; 255² is only 65k vertices) is the implementation, with partial upload left as an
-optimisation. On commit, or when the stroke is discarded, the registry entry is dropped and views reload from the
+re-uploads that vertex range, falling back to a full upload if the rect exceeds a fraction of the grid. `IntMesh`
+(`lib-gdx`) extends libGDX `Mesh`, so `Mesh.updateVertices(offset, floats, srcOffset, count)` works on its
+`VertexBufferObjectWithVAO`: it copies the rows into the mesh's buffer and the whole buffer is re-sent on the next bind
+(checked in task 4.2, `TerrainMeshUpdateTest`). The partial part is therefore the CPU work (positions and normals of the
+rectangle plus border), not the GPU transfer; 255² vertices is about 2 MB per frame while dragging. Beyond half the grid the
+update rebuilds all vertices. On commit, or when the stroke is discarded, the registry entry is dropped and views reload from the
 written files. Picking uses each view's CPU `TerrainData`, no GL.
 
 **9. Commit.** On release, the plugin builds an `AssetTransaction` of `FileChange`s for `terrain.data`, the delta,

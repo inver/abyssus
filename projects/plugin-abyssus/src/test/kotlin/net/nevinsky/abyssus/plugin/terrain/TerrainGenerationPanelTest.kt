@@ -248,4 +248,103 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         assertFalse(recipeExists())
         assertTrue(p.state is PanelState.Details)
     }
+
+    /** Makes the folder a terrain sculpted over a stored base: the fixture heights plus a bump, as the files hold it. */
+    private fun sculpt(): ByteArray {
+        val core = net.nevinsky.abyssus.plugin.testCore
+        val base = bytes("terrain.data")
+        val baseHeights = net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.decodeSculptGrid(base, 180)!!
+        val delta = FloatArray(baseHeights.size) { if (it % 181 == 0) 4f else 0f }
+        val deltaBytes = core.heightEncoder.encode(delta)
+        val composed = core.heightEncoder.encode(net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.composeSculpt(baseHeights, delta))
+        val sha = { bytes: ByteArray -> net.nevinsky.abyssus.lib.core.editor.terrain.sha256Hex(bytes) }
+        val manifest = net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptManifest(
+            net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptBaseKind.STORED, 180, sha(deltaBytes), sha(composed), sha(base),
+        )
+        File(folder.path, "abyssus-terrain.base").writeBytes(base)
+        File(folder.path, "abyssus-terrain.sculpt").writeBytes(deltaBytes)
+        File(folder.path, "abyssus-terrain.sculpt.json").writeText(net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptManifestCodec(core.json).encode(manifest))
+        File(folder.path, "terrain.data").writeBytes(composed)
+        folder.refresh(false, true)
+        return base
+    }
+
+    private fun sculptFiles() = listOf("abyssus-terrain.base", "abyssus-terrain.sculpt", "abyssus-terrain.sculpt.json").filter { File(folder.path, it).exists() }
+
+    fun testASculptedTerrainShowsItsStateAndOffersReset() {
+        sculpt()
+        val p = shown()
+        assertTrue(label(p, "terrain-sculpt-status")!!.contains("Sculpted by hand"))
+        assertTrue(button(p, "terrain-sculpt-reset").isEnabled)
+        assertFalse(button(p, "terrain-sculpt-forget").isEnabled)
+        assertNotNull(find(p, "terrain-discard-sculpt"))
+    }
+
+    fun testAnUnsculptedTerrainHasNoSculptControls() {
+        val p = shown()
+        assertNull(find(p, "terrain-sculpt-status"))
+        assertNull(find(p, "terrain-sculpt-reset"))
+        assertNull(find(p, "terrain-discard-sculpt"))
+    }
+
+    fun testResetReturnsTheBaseAndRemovesTheSculptFilesAndUndoRestoresThem() {
+        val base = sculpt()
+        val sculpted = bytes("terrain.data")
+        val p = shown()
+        button(p, "terrain-sculpt-reset").doClick()
+        assertEquals(base.toList(), bytes("terrain.data").toList())
+        assertTrue(sculptFiles().isEmpty())
+        val undo = UndoManager.getInstance(project)
+        val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().createEditor(project, folder.findChild("meta.json")!!)
+        try {
+            assertTrue(undo.isUndoAvailable(editor))
+            undo.undo(editor)
+            assertEquals(sculpted.toList(), bytes("terrain.data").toList())
+            assertEquals(3, sculptFiles().size)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
+    }
+
+    fun testRegenerateKeepsTheSculptingOnTopOfTheNewNoise() {
+        sculpt()
+        val delta = bytes("abyssus-terrain.sculpt")
+        val p = shown()
+        type(field(p, "seed"), "2024")
+        button(p, "terrain-preview").doClick()
+        button(p, "terrain-apply").doClick()
+        assertEquals("the delta is untouched", delta.toList(), bytes("abyssus-terrain.sculpt").toList())
+        assertFalse("a stored base is replaced by the recipe's", File(folder.path, "abyssus-terrain.base").exists())
+        assertTrue(text("abyssus-terrain.sculpt.json").contains("\"baseKind\": \"recipe\""))
+        assertTrue(text(TERRAIN_RECIPE_FILE).contains("\"seed\": 2024"))
+        val reopened = shown()
+        assertTrue(label(reopened, "terrain-sculpt-status")!!.contains("generated heights"))
+    }
+
+    fun testRegenerateWithDiscardGivesTheNewNoiseAlone() {
+        sculpt()
+        val p = shown()
+        type(field(p, "seed"), "2024")
+        button(p, "terrain-preview").doClick()
+        (find(p, "terrain-discard-sculpt") as com.intellij.ui.components.JBCheckBox).doClick()
+        button(p, "terrain-apply").doClick()
+        assertTrue(sculptFiles().isEmpty())
+        val reopened = shown()
+        assertNull(find(reopened, "terrain-sculpt-status"))
+    }
+
+    fun testAnExternalHeightEditMakesTheSculptStateUnsafeAndForgetKeepsTheHeights() {
+        sculpt()
+        val external = ByteArray(180 * 180 * 4) { 2 }
+        File(folder.path, "terrain.data").writeBytes(external)
+        folder.refresh(false, true)
+        val p = shown()
+        assertTrue(label(p, "terrain-sculpt-status")!!.contains("changed outside Abyssus"))
+        assertFalse(button(p, "terrain-preview").isEnabled)
+        assertTrue(button(p, "terrain-sculpt-forget").isEnabled)
+        assertFalse(button(p, "terrain-sculpt-reset").isEnabled)
+        button(p, "terrain-sculpt-forget").doClick()
+        assertEquals(external.toList(), bytes("terrain.data").toList())
+        assertTrue(sculptFiles().isEmpty())
+    }
 }

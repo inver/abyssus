@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
+import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.emptyMaskRect
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.foliageChunkSize
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData

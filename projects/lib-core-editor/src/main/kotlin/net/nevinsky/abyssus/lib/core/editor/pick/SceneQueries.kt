@@ -315,8 +315,8 @@ class SnapshotSceneQueries(
 /** The gizmo of the selected entity of [c], seen by [eyeCamera] in a view [height] pixels tall; shared with the renderer's drawing. */
 fun gizmoHandlesFor(c: SceneContent, eyeCamera: PerspectiveCamera, state: SceneViewState, height: Int): GizmoHandles? {
     if (!state.gizmosEnabled) return null
-    // Paint Foliage mode hides the move and rotate gizmos of the painted terrain.
-    if (state.paint != null) return null
+    // Paint Foliage and Sculpt Terrain modes hide the move and rotate gizmos of the brushed terrain.
+    if (state.brushing) return null
     // Select mode highlights the selection without handles.
     if (state.gizmoMode == GizmoMode.SELECT) return null
     // Water only moves: it has no rotation to turn, and its handles follow the world axes.

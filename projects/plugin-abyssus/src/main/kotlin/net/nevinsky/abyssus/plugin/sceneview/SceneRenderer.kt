@@ -35,6 +35,7 @@ import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.render.shadow.cameraUp
 import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
+import net.nevinsky.abyssus.plugin.terrain.SculptDrafts
 import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
 import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw
 import net.nevinsky.abyssus.plugin.sceneview.shadows.SceneShadows
@@ -56,6 +57,8 @@ class SceneRenderer(
     private val shaders: ShaderStorage,
     /** The project's uncommitted foliage drafts, shared with the properties panel and the brush (decision 7). */
     private val foliageDrafts: FoliageDrafts,
+    /** The project's sculpting strokes in progress; every view follows them so a stroke shows in each (decision 8). */
+    private val sculptDrafts: SculptDrafts = SculptDrafts(),
     /** What the user selected, previews and looks through; the view panel changes it, this draws from it. */
     val state: SceneViewState = SceneViewState(),
     /** Where problems that leave the view working (for example, no cloud shadow map) are logged, once each. */
@@ -76,6 +79,7 @@ class SceneRenderer(
     private val contentPass = SceneContentPass(assets, shaders, foliageDrafts)
     private val models get() = contentPass.models
     private val terrains get() = contentPass.terrains
+    private val sculptSync = SculptViewSync(sculptDrafts) { names -> assets.invalidate(names) }
     private val foliage get() = contentPass.foliage
     private val environment get() = contentPass.environment
     private var batch: ModelBatch? = null
@@ -257,6 +261,7 @@ class SceneRenderer(
         if (unlit) NO_LIGHTS.applyTo(environment)
         models.update(c.models, p.projectDir, deltaSeconds)
         terrains.update(c.terrains, p.projectDir)
+        sculptSync.apply(terrains.drawn.map { it.sculptTarget() })
         foliage.update(c.foliages, p.projectDir, camera)
         updateDrawnVersion()
         skybox?.update(c.skybox, p.projectDir)
@@ -422,7 +427,7 @@ class SceneRenderer(
         lines.begin(displayCamera, depthTest = true)
         SceneMarkers().draw(lines, c, aspect, state.viewCamera)
         drawPaths(lines, c)
-        if (state.paint != null) brushCursor?.draw(lines)
+        if (state.brushing) brushCursor?.draw(lines)
         overlays?.draw(overlayView(c, displayCamera, height, onTop = false), lines)
         lines.end()
         lines.begin(displayCamera, depthTest = false)

@@ -24,7 +24,7 @@ internal class DrawingSession(
     /** Starts drawing a path arrangement of the model [asset]. */
     fun start(asset: RenderAsset) {
         state.drawing = PathDrawing(asset)
-        state.paint = null
+        state.endBrush()
         changed()
     }
 

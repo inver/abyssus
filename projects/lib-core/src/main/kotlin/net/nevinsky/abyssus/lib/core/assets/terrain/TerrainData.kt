@@ -29,8 +29,17 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
     /** Interleaved position (3), normal (3), texture coordinate (2) per vertex, in the terrain mesh. */
     fun vertices(): FloatArray {
         val out = FloatArray(resolution * resolution * TERRAIN_FLOATS_PER_VERTEX)
-        for (z in 0 until resolution) for (x in 0 until resolution) {
-            val i = (z * resolution + x) * TERRAIN_FLOATS_PER_VERTEX
+        for (z in 0 until resolution) vertexRow(z, 0, resolution - 1, out, z * resolution * TERRAIN_FLOATS_PER_VERTEX)
+        return out
+    }
+
+    /**
+     * Writes the interleaved vertices of row [z], columns [fromX] through [toX], into [out] from index [at]. The mesh
+     * is built from whole rows of this, and a changed rectangle is re-sent as the rows of it.
+     */
+    fun vertexRow(z: Int, fromX: Int, toX: Int, out: FloatArray, at: Int) {
+        var i = at
+        for (x in fromX..toX) {
             val dx = x.toFloat() / (resolution - 1)
             val dz = z.toFloat() / (resolution - 1)
             out[i] = dx * size
@@ -39,8 +48,19 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
             normalAt(x, z, out, i + 3)
             out[i + 6] = dx * uv
             out[i + 7] = dz * uv
+            i += TERRAIN_FLOATS_PER_VERTEX
         }
-        return out
+    }
+
+    /**
+     * Copies the heights of the rectangle [minX]..[maxX] by [minZ]..[maxZ] (both inclusive) of [source], a grid of the same
+     * resolution, over this terrain's heights, in place: the array this terrain was built with is the one that changes,
+     * so everything holding it sees the new heights.
+     */
+    fun copyHeights(source: FloatArray, minX: Int, minZ: Int, maxX: Int, maxZ: Int) {
+        require(source.size == heights.size) { "source has ${source.size} heights, not ${heights.size}" }
+        require(minX in 0..maxX && maxX < resolution && minZ in 0..maxZ && maxZ < resolution) { "rectangle outside the terrain" }
+        for (z in minZ..maxZ) System.arraycopy(source, z * resolution + minX, heights, z * resolution + minX, maxX - minX + 1)
     }
 
     /** Central differences, clamped at the edges. */

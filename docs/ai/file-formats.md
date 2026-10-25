@@ -219,7 +219,7 @@ heights (`TERRAIN_RECIPE_FILE`; a terrain loads without it):
 { "schemaVersion": 1,
   "generator": { "id": "opensimplex2-fbm-v1", "sourceRevision": "<FastNoiseLite commit>" },
   "settings": { "seed": 12345, "featureSize": 200.0, "minHeight": 0.0, "maxHeight": 120.0, "octaves": 5, "persistence": 0.5, "lacunarity": 2.0 },
-  "size": 1600, "resolution": 180, "heightsSha256": "<SHA-256 of terrain.data>" }
+  "size": 1600, "resolution": 180, "heightsSha256": "<SHA-256 of the base heights>" }
 ```
 
 The recipe is a fingerprint, not a source of truth: if the size, the resolution or the height bytes no longer match,
@@ -227,6 +227,25 @@ or the schema or generator identifier is unknown, or the file is malformed, the 
 why, and a draft starts from the defaults above. An identifier is never reinterpreted: new noise gets a new
 identifier. Heights come from world-local OpenSimplex2 fractal noise (`x / (resolution - 1) * size`), mapped onto
 `minHeight..maxHeight`, so a height means the same at any resolution.
+
+#### Sculpting
+
+A terrain shaped by hand in Sculpt Terrain mode keeps its sculpting as an additive delta over the base heights, in
+three optional Abyssus-only files beside `terrain.data` (a terrain loads with none of them, and `meta.json` does not change):
+
+```
+abyssus-terrain.sculpt.json  { "schemaVersion": 1, "baseKind": "recipe" | "stored", "resolution": 180,
+                               "deltaSha256": "...", "composedSha256": "...", "baseSha256": "..." (stored only) }
+abyssus-terrain.sculpt       resolution² big-endian floats: the delta in world units, one per vertex
+abyssus-terrain.base         same layout; only when baseKind is "stored" (a terrain with no usable recipe)
+```
+
+`terrain.data` always holds the composed heights, `base + delta`, one float add per vertex. `composedSha256` must equal
+the hash of `terrain.data` and `deltaSha256` the hash of the delta file, else the sculpt state is unsafe: sculpting is
+off and the panel offers Forget sculpting. For a sculpted terrain the recipe's `heightsSha256` fingerprints the **base**
+(what the generator produced), so a recipe base is regenerated from the recipe and checked against it; with no sculpt
+state that is `terrain.data`, so existing recipes stay valid. The code is `SculptManifestCodec` and `SculptStateReader`
+in `lib-core-editor`'s `terrain.sculpt`.
 
 ### Foliage
 

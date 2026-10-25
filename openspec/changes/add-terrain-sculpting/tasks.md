@@ -26,20 +26,20 @@
 
 ## 4. Live heights and mesh update (lib-core, plugin sceneview)
 
-- [ ] 4.1 `TerrainData` dirty-region normal recompute and an in-place copy of a rectangle of heights (the `heights` array is mutated, not swapped); verify with `TerrainDataTest` (normals match a full rebuild after a region edit)
-- [ ] 4.2 First check whether `IntMesh` in `lib-gdx` supports a partial vertex upload (record the answer in design decision 8; if not, use the full upload); then `TerrainMesh.updateRegion` with one-vertex border and full-upload fallback; verify with a GL test `TerrainMeshUpdateTest` run with `-Dabyssus.glTests=true` (vertex buffer equals a fresh mesh) and a headless test of the region/border computation
-- [ ] 4.3 Refresh the ray-tracing terrain snapshot after commit; verify with the existing ray terrain snapshot test extended for changed heights (`:lib-core:test`)
+- [x] 4.1 `TerrainData` dirty-region normal recompute and an in-place copy of a rectangle of heights (the `heights` array is mutated, not swapped); verify with `TerrainDataTest` (normals match a full rebuild after a region edit)
+- [x] 4.2 First check whether `IntMesh` in `lib-gdx` supports a partial vertex upload (record the answer in design decision 8; if not, use the full upload); then `TerrainMesh.updateRegion` with one-vertex border and full-upload fallback; verify with a GL test `TerrainMeshUpdateTest` run with `-Dabyssus.glTests=true` (vertex buffer equals a fresh mesh) and a headless test of the region/border computation
+- [x] 4.3 Refresh the ray-tracing terrain snapshot after commit; verify with the existing ray terrain snapshot test extended for changed heights (`:lib-core:test`)
 
 ## 5. Sculpt Terrain mode (plugin sceneview)
 
-- [ ] 5.0 `SculptDrafts` registry in the plugin (counterpart of `FoliageDrafts`: open, of, discard, discardAll, `revision` and per-view dirty rectangle), passed to each view's renderer; each view copies dirty rectangles into its own `TerrainData` and calls `TerrainMesh.updateRegion` on the render thread; verify with `SculptDraftsTest` (two views see one stroke, a view opened mid-stroke gets the whole array, discard drops the entry)
-- [ ] 5.1 Stroke command modelled on `FoliageStrokeCommand`: press, drag, release, discard, one commit through the regeneration `AssetTransaction` and `AssetTransactionEngine`, first-stroke stored base; verify with `SculptStrokeCommandTest` (empty stroke writes nothing, failed write restores files, undo/redo, conflict rejection)
-- [ ] 5.2 Toolbar toggle, availability and disabled reasons, brush strip with per-tool options, cursor circle, input forwarding and Shift handling; verify with `SculptModeAvailabilityTest` and the UI helper tests
-- [ ] 5.3 Stamp image chooser and decode off the AWT thread without GL; verify with `StampImageSourceTest` (missing asset disables tool)
-- [ ] 5.4 Headless check that foliage on the Untitled terrain follows raised heights and a stale bake keeps its x/z; verify with `FoliageFollowsSculptTest`
-- [ ] 5.5 Update `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md`; run `scripts/check-docs.sh`
+- [x] 5.0 `SculptDrafts` registry in the plugin (counterpart of `FoliageDrafts`: open, of, discard, discardAll, `revision` and per-view dirty rectangle), passed to each view's renderer; each view copies dirty rectangles into its own `TerrainData` and calls `TerrainMesh.updateRegion` on the render thread; verify with `SculptDraftsTest` (two views see one stroke, a view opened mid-stroke gets the whole array, discard drops the entry)
+- [x] 5.1 Stroke command modelled on `FoliageStrokeCommand`: press, drag, release, discard, one commit through the regeneration `AssetTransaction` and `AssetTransactionEngine`, first-stroke stored base; verify with `SculptStrokeCommandTest` (empty stroke writes nothing, failed write restores files, undo/redo, conflict rejection)
+- [x] 5.2 Toolbar toggle, availability and disabled reasons, brush strip with per-tool options, cursor circle, input forwarding and Shift handling; verify with `SculptModeAvailabilityTest` and the UI helper tests
+- [x] 5.3 Stamp image chooser and decode off the AWT thread without GL; verify with `StampImageSourceTest` (missing asset disables tool)
+- [x] 5.4 Headless check that foliage on the Untitled terrain follows raised heights and a stale bake keeps its x/z; verify with `FoliageFollowsSculptTest`
+- [x] 5.5 Update `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md`; run `scripts/check-docs.sh`
 
 ## 6. Manual and integration checks
 
 - [ ] 6.1 runIde check on a copy of Untitled (never the committed folder): 1) select entity 1 Terrain, turn on Sculpt Terrain; 2) drag Raise, release; 3) open a second Scene view and confirm live update; 4) Undo and Redo; 5) Regenerate keep and Discard; 6) Reset; 7) rotate and scale the terrain entity and sculpt under the circle
-- [ ] 6.2 Run `./gradlew check` and `scripts/check-docs.sh`; report any failures outside this change instead of fixing them silently
+- [x] 6.2 Run `./gradlew check` and `scripts/check-docs.sh`; report any failures outside this change instead of fixing them silently

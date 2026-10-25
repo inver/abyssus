@@ -22,6 +22,17 @@ data class FoliagePaintMode(
     val erase: Boolean = false,
 )
 
+/**
+ * The Sculpt Terrain mode of a view: the terrain [entityId] (the selected entity) whose heights are sculpted, the brush
+ * [radius] in world units, the [strength] from 0 through 1, and whether the tool is [inverted] (Shift flips it).
+ */
+data class SculptMode(
+    val entityId: String,
+    val radius: Float,
+    val strength: Float,
+    val inverted: Boolean = false,
+)
+
 /** What the view has selected: an entity of the scene, or a water surface (separate namespaces, so an id is never confused). */
 sealed interface SceneTarget {
     data class Entity(val id: String) : SceneTarget
@@ -89,6 +100,21 @@ class SceneViewState {
      * Selecting another entity (or nothing) ends it.
      */
     var paint: FoliagePaintMode? = null
+
+    /**
+     * The Sculpt Terrain mode this view is in, or null; like [paint] it hides the gizmos, takes the left button and ends
+     * when another entity is selected. The two brush modes never hold at once.
+     */
+    var sculpt: SculptMode? = null
+
+    /** Whether a terrain brush, Paint Foliage or Sculpt Terrain, is on the view. */
+    val brushing: Boolean get() = paint != null || sculpt != null
+
+    /** Ends whichever terrain brush is on the view. */
+    fun endBrush() {
+        paint = null
+        sculpt = null
+    }
 
     /** The path arrangement being drawn (the model and the points clicked so far), or null; the left click adds points. */
     var drawing: PathDrawing? = null

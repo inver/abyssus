@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.assetfiles
 
-import net.nevinsky.abyssus.lib.core.editor.foliage.MaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

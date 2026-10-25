@@ -59,6 +59,7 @@ internal class SceneViewToolbar(
     private val tools: SceneViewToolsModel,
     private val play: PlayState,
     private val paint: FoliagePaintControls,
+    private val sculpt: SculptTerrainControls,
     private val playStrip: PlayControlsStrip,
     private val clouds: CloudControls,
     private val experimentButton: JToggleButton?,
@@ -130,6 +131,7 @@ internal class SceneViewToolbar(
             add(drawingHint)
             if (sources.foliageActions != null) add(addFoliageButton)
             paint.addTo(this)
+            sculpt.addTo(this)
             add(clouds.combo)
             add(clouds.note)
             playStrip.addTo(this)
@@ -184,6 +186,7 @@ internal class SceneViewToolbar(
             if (tools.snapOn) AbyssusBundle.message("sceneViewSnap", formatStep(tools.snapStep)) else null,
         )
         paint.beforeSync()
+        sculpt.beforeSync()
         updatingControls = true
         try {
             val toolbar = toolbarState(
@@ -194,7 +197,7 @@ internal class SceneViewToolbar(
             )
             lastToolbar = when {
                 sources.unavailable() -> toolbar.disabled()
-                paint.painting -> toolbar.copy(gizmoEnabled = false, spaceEnabled = false, snapEnabled = false)
+                paint.painting || sculpt.sculpting -> toolbar.copy(gizmoEnabled = false, spaceEnabled = false, snapEnabled = false)
                 else -> toolbar
             }
             cameraCombo.isEnabled = toolbar.cameraEnabled
@@ -213,7 +216,8 @@ internal class SceneViewToolbar(
             addFoliageButton.isEnabled = !play.active && hasChoices
             addFoliageButton.toolTipText = if (foliage != null && !hasChoices) AbyssusBundle.message("addFoliageNone") else null
             paint.sync()
-            if (paint.painting) dropButton.isEnabled = false
+            sculpt.sync()
+            if (paint.painting || sculpt.sculpting) dropButton.isEnabled = false
             playStrip.sync()
             cameraCombo.selectedItem = choices.firstOrNull { it.id == interaction.viewCamera } ?: choices.firstOrNull()
         } finally {

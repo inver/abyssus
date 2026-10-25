@@ -45,7 +45,7 @@ loaders from one table, `StandardAssetLoaders` (`projects/lib-core/src/main/kotl
 one place. A host differs only by what it passes in (model preparation tap, logger, and the plugin's `FoliageLoader` in
 place of the game's `RuntimeFoliageLoader`).
 `AbyssusCore` creates four groups independently on first access: `documents` owns JSON, native validation and parsing;
-`assets` owns metadata, loading, property descriptions and previews; `terrain` owns generation and file staging;
+`assets` owns metadata, loading, property descriptions and previews; `terrain` owns generation, sculpting (`SculptStateReader` reads a terrain's sculpt state, `SculptPlanner` plans the height-layer files of Regenerate, Reset and Forget as a `SculptFileSet`, and `SculptTransactions` stages it as one undoable `AssetTransaction`) and file staging;
 `ray` owns the backend service and conversion worker. Actions, providers and factories pass the group collaborators
 they need. Disposal closes only initialized ray resources; reading a document does not create native workers.
 The plugin's `SceneReader` and `ProjectReader` use `DocumentParsing` and `JsonProcessor` to validate and bind

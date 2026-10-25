@@ -229,7 +229,8 @@ private fun readTerrainNow(
         text,
         meta.json,
         AssetReferenceChoices(services.json),
-        services.terrainRecipes
+        services.terrainRecipes,
+        services.terrainSculpt.reader,
     )
 }
 

@@ -5,8 +5,13 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
+import net.nevinsky.abyssus.lib.core.editor.terrain.HeightmapImage
 import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainHeightEncoder
-import net.nevinsky.abyssus.lib.core.editor.terrain.sha256Hex
+import net.nevinsky.abyssus.lib.core.editor.terrain.heightmapImage
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptBaseKind
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptFileSet
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptState
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.composeSculpt
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -40,6 +45,7 @@ class TerrainGenerationController(
     private val generator: TerrainGenerator,
     private val encoder: TerrainHeightEncoder,
     private val recipes: TerrainRecipeCodec,
+    private val sculpt: SculptServices,
     background: (Runnable) -> Unit,
     ui: (Runnable) -> Unit,
     private val readCurrent: () -> TerrainSource,
@@ -70,7 +76,28 @@ class TerrainGenerationController(
     /** Settings problems that stop a preview, localized; empty when it can start. */
     val problems: List<String> get() = settingsProblems(draft.settings)
 
-    val canPreview: Boolean get() = !disposed && problems.isEmpty()
+    val canPreview: Boolean get() = !disposed && problems.isEmpty() && source.sculpt !is SculptState.Unsafe
+
+    /** What the sculpt files say about this terrain. */
+    val sculptState: SculptState get() = source.sculpt
+
+    /** True to make the next Apply give the new noise alone and remove the sculpting; the default keeps it. */
+    var discardSculpting: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            onChange()
+        }
+
+    /** The preview as the next Apply would leave the terrain: the new base, plus the kept sculpting. */
+    val previewImage: HeightmapImage?
+        get() {
+            val preview = draft.preview ?: return null
+            val state = source.sculpt as? SculptState.Sculpted
+            if (state == null || discardSculpting) return preview.image
+            val composed = composeSculpt(preview.heights, state.delta)
+            return heightmapImage(composed, preview.resolution, preview.settings.minHeight, preview.settings.maxHeight)
+        }
 
     /** True only for a finished preview of exactly the current settings, of the terrain as it still is. */
     val canApply: Boolean get() = !disposed && !draft.generating && draft.applicable(currentSnapshot()) != null
@@ -93,7 +120,13 @@ class TerrainGenerationController(
 
     /** Starts a background preview of the current settings; nothing is written. */
     fun preview() {
-        if (!canPreview) return
+        if (!canPreview) {
+            if (!disposed && source.sculpt is SculptState.Unsafe) {
+                message = AbyssusBundle.message("terrainSculptBlocksRegenerate")
+                onChange()
+            }
+            return
+        }
         val fresh = readCurrent()
         if (fresh is TerrainSource.Unusable) {
             runner.invalidate()
@@ -163,25 +196,46 @@ class TerrainGenerationController(
             onChange()
             return null
         }
-        val heights = encoder.encode(preview.heights)
-        val recipe = TerrainRecipe(preview.settings, current.size, current.resolution, sha256Hex(heights))
-        fun change(path: String, before: FileSnapshot, after: FileSnapshot) = if (before == after) null else FileChange(path, before, after)
-        val changes = listOfNotNull(
-            change(current.dataPath, current.heights, FileSnapshot.Bytes(heights)),
-            change(current.recipePath, current.recipeBytes, FileSnapshot.Bytes(recipes.encode(recipe).toByteArray())),
+        val files = checkNotNull(current.files) { "a ready terrain keeps the files it was read from" }
+        val set = sculpt.planner.regenerate(files, current.sculpt, preview, discardSculpting)
+        return commit("commandRegenerateTerrain", current, set, command, onDone)
+    }
+
+    /** Reset sculpting: the heights return to the base and the sculpt files go, as one undoable command. */
+    fun resetSculpting(command: AssetFileCommand? = null, onDone: () -> Unit = {}): AssetCommandResult? {
+        val current = readCurrent() as? TerrainSource.Ready ?: return null
+        val files = current.files ?: return null
+        if (current.sculpt !is SculptState.Sculpted) return null
+        return commit("commandResetSculpting", current, sculpt.planner.reset(files, current.sculpt), command, onDone)
+    }
+
+    /** Forget sculpting: the sculpt files go and the current heights stay, as one undoable command. */
+    fun forgetSculpting(command: AssetFileCommand? = null, onDone: () -> Unit = {}): AssetCommandResult? {
+        val current = readCurrent() as? TerrainSource.Ready ?: return null
+        val files = current.files ?: return null
+        if (current.sculpt is SculptState.None) return null
+        return commit("commandForgetSculpting", current, sculpt.planner.forget(files, current.sculpt), command, onDone)
+    }
+
+    private fun commit(
+        commandKey: String,
+        current: TerrainSource.Ready,
+        set: SculptFileSet,
+        command: AssetFileCommand?,
+        onDone: () -> Unit,
+    ): AssetCommandResult? {
+        val projectDir = File(folder.path).parentFile.parentFile
+        val store = LocalAssetFileStore(projectDir)
+        val txn = SculptTransactions(store).plan(
+            AbyssusBundle.message(commandKey), current.folderName, current.dataName, set,
+            expected = mapOf(current.metaPath to current.metaBytes),
         )
-        if (changes.isEmpty()) { // the same heights and recipe are already there
+        if (txn == null) { // the same files are already there
             message = null
             onChange()
             return AssetCommandResult.Done
         }
-        val txn = AssetTransaction(
-            AbyssusBundle.message("commandRegenerateTerrain"),
-            changes = changes,
-            expectedFiles = mapOf(current.metaPath to current.metaBytes),
-        )
-        val projectDir = File(folder.path).parentFile.parentFile
-        val runner = command ?: AssetFileCommand(project, LocalAssetFileStore(projectDir))
+        val runner = command ?: AssetFileCommand(project, store)
         val result = runner.execute(
             txn,
             affected = { listOfNotNull(folder.findChild("meta.json"), LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(folder.path, current.dataName))) },
@@ -201,6 +255,13 @@ class TerrainGenerationController(
             onChange()
         }
         return result
+    }
+
+    /** The localized text for the sculpt state; null for a terrain that is not sculpted. */
+    fun sculptText(): String? = when (val s = source.sculpt) {
+        SculptState.None -> null
+        is SculptState.Sculpted -> AbyssusBundle.message(if (s.kind == SculptBaseKind.RECIPE) "terrainSculptedRecipe" else "terrainSculptedStored")
+        is SculptState.Unsafe -> AbyssusBundle.message("terrainSculptUnsafe", AbyssusBundle.message("terrainSculptProblem." + s.problem.name) + if (s.detail.isEmpty()) "" else " (${s.detail})")
     }
 
     /** The localized text for the recipe's status. */

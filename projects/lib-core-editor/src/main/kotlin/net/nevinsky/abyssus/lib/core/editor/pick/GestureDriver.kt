@@ -19,6 +19,7 @@ internal fun SceneQueries.rayFrom(size: ViewSize, x: Int, y: Int): Ray? {
 internal interface GestureHost {
     val size: ViewSize
     val foliagePaint: FoliagePaint?
+    val terrainSculpt: TerrainSculpt?
     val onTransform: ((String, TransformEdit) -> Boolean)?
     val onWaterMove: ((String, Vector3) -> Boolean)?
     val onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
@@ -57,6 +58,9 @@ internal sealed interface Gesture {
 
     /** The Paint Foliage stroke on the terrain of [entityId]; the caller's [FoliagePaint] does the painting. */
     class Painting(val entityId: String) : Gesture
+
+    /** The Sculpt Terrain stroke on the terrain of [entityId]; the caller's [TerrainSculpt] does the sculpting. */
+    class Sculpting(val entityId: String) : Gesture
 }
 
 /**
@@ -75,6 +79,7 @@ internal class GestureDriver(
     val isIdle: Boolean get() = current == Gesture.Idle
     val isDragging: Boolean get() = current is Gesture.Dragging || current is Gesture.DraggingWater
     val isPainting: Boolean get() = current is Gesture.Painting
+    val isSculpting: Boolean get() = current is Gesture.Sculpting
     val isDraggingPathPoint: Boolean get() = current is Gesture.DraggingPathPoint
 
     /** Ends whatever gesture is under way without writing; the rest of the press does nothing. */
@@ -101,6 +106,11 @@ internal class GestureDriver(
         val paint = state.paint
         if (paint != null) {
             startStroke(paint, at)
+            return
+        }
+        val sculpt = state.sculpt
+        if (sculpt != null) {
+            startSculpt(sculpt, at)
             return
         }
         val started = grab(at) ?: return
@@ -176,6 +186,18 @@ internal class GestureDriver(
         host.stateChanged()
     }
 
+    /** The left press of Sculpt Terrain mode: a stroke starts only where the ray hits the sculpted terrain. */
+    private fun startSculpt(sculpt: SculptMode, at: FramebufferPoint) {
+        val size = host.size
+        if (sculpt.entityId != host.selectedId) return
+        val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
+        val terrain = queries.terrainOf(sculpt.entityId) ?: return
+        val hit = queries.terrainHit(sculpt.entityId, ray) ?: return
+        if (host.terrainSculpt?.pressed(terrain, hit) != true) return
+        current = Gesture.Sculpting(sculpt.entityId)
+        host.stateChanged()
+    }
+
     /**
      * The mouse moved to ([x], [y]) with a button down. True when a gesture took the move (or cancelled it); false in
      * [Gesture.Idle], where the caller orbits or pans.
@@ -211,6 +233,12 @@ internal class GestureDriver(
                 val hit = queries.terrainHit(g.entityId, ray) ?: return true
                 host.foliagePaint?.dragged(hit, mode.erase)
             }
+            is Gesture.Sculpting -> {
+                val mode = state.sculpt?.takeIf { it.entityId == g.entityId } ?: return true
+                val ray = queries.rayFrom(size, x, y) ?: return true
+                val hit = queries.terrainHit(g.entityId, ray) ?: return true
+                host.terrainSculpt?.dragged(hit, mode.inverted)
+            }
         }
         return true
     }
@@ -233,6 +261,7 @@ internal class GestureDriver(
                 }
             }
             is Gesture.Painting -> host.foliagePaint?.released()
+            is Gesture.Sculpting -> host.terrainSculpt?.released()
             is Gesture.DraggingWater -> {
                 val result = ended.result
                 if (result != null && result.transform != ended.drag.start) {
@@ -266,6 +295,10 @@ internal class GestureDriver(
             is Gesture.Painting -> {
                 current = Gesture.Cancelled
                 host.foliagePaint?.cancelled()
+            }
+            is Gesture.Sculpting -> {
+                current = Gesture.Cancelled
+                host.terrainSculpt?.cancelled()
             }
             is Gesture.Dragging, is Gesture.DraggingWater -> {
                 current = Gesture.Cancelled
