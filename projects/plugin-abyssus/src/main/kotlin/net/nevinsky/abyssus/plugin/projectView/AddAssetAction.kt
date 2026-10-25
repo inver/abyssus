@@ -10,7 +10,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
@@ -26,7 +26,7 @@ class AddAssetGroup(
     private val project: Project,
     private val file: VirtualFile,
     private val metaFiles: MetaFiles,
-    private val position: () -> Vec3,
+    private val position: () -> Vector3,
     private val select: (String) -> Unit = { selectCreatedEntity(project, file, it) },
 ) : AddChildGroup<net.nevinsky.abyssus.lib.core.editor.content.RenderAsset>(AbyssusBundle.message("addAssetTitle")) {
     init {
@@ -75,6 +75,6 @@ open class AddAssetAction : AbyssusTreeAction<VirtualFile>() {
         e.project?.let { canAddAsset(target, SceneDocumentCache.of(it)) && hasRenderAssets(target, service<AbyssusPluginCtx>().assets.metaFiles) } ?: false
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
-        showActionGroup(e, AddAssetGroup(project, target, service<AbyssusPluginCtx>().assets.metaFiles, { Vec3(0f, 0f, 0f) }), AbyssusBundle.message("addAssetTitle"))
+        showActionGroup(e, AddAssetGroup(project, target, service<AbyssusPluginCtx>().assets.metaFiles, { Vector3(0f, 0f, 0f) }), AbyssusBundle.message("addAssetTitle"))
     }
 }

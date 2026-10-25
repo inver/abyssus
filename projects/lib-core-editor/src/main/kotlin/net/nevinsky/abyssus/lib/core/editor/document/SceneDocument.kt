@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 
@@ -86,13 +86,13 @@ class SceneDocument(private val root: JsonNode, private val decoder: SceneCompon
         root.get("skyboxName")?.takeIf { root.get("skyboxEnabled")?.booleanValue() == true && it.isTextual }
             ?.textValue()?.takeIf(String::isNotBlank)
 
-    fun lookAtTarget(id: String): Vec3? {
+    fun lookAtTarget(id: String): Vector3? {
         val position = entity(id)?.component(PositionComponent::class.java) ?: return null
         val targetId = position.lookAtId.toString()
         if (targetId == id) return null
         val target = entity(targetId)?.component(PositionComponent::class.java)?.localPosition ?: return null
         if (!target.x.isFinite() || !target.y.isFinite() || !target.z.isFinite() || target.dst2(position.localPosition) < 1e-12f) return null
-        return Vec3(target.x, target.y, target.z)
+        return Vector3(target.x, target.y, target.z)
     }
 }
 

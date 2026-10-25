@@ -11,8 +11,6 @@ import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.scene.toVec3
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -42,13 +40,13 @@ object GizmoDraw {
     private fun arrow(out: LineSink, handles: GizmoHandles, axis: GizmoAxis, color: Rgba) {
         out.line(handles.origin, handles.tip(axis), color)
         val a = handles.axisVector(axis)
-        val tip = handles.tip(axis).toVector3()
+        val tip = handles.tip(axis).cpy()
         val base = Vector3(tip).mulAdd(a, -HEAD_LENGTH * handles.size)
         val side = sideOf(a)
         val u = Vector3(a).crs(side).nor().scl(HEAD_RADIUS * handles.size)
         val v = Vector3(a).crs(u).nor().scl(HEAD_RADIUS * handles.size)
         for ((su, sv) in listOf(1f to 0f, -1f to 0f, 0f to 1f, 0f to -1f)) {
-            out.line(tip.toVec3(), Vector3(base).mulAdd(u, su).mulAdd(v, sv).toVec3(), color)
+            out.line(tip, Vector3(base).mulAdd(u, su).mulAdd(v, sv), color)
         }
     }
 
@@ -60,11 +58,11 @@ object GizmoDraw {
         val side = sideOf(n)
         val u = Vector3(n).crs(side).nor()
         val v = Vector3(n).crs(u).nor()
-        val center = handles.origin.toVector3()
+        val center = handles.origin.cpy()
         fun at(i: Int): Vector3 {
             val angle = 2.0 * PI * i / RING_SEGMENTS
             return Vector3(center).mulAdd(u, cos(angle).toFloat() * handles.size).mulAdd(v, sin(angle).toFloat() * handles.size)
         }
-        for (i in 0 until RING_SEGMENTS) out.line(at(i).toVec3(), at(i + 1).toVec3(), color)
+        for (i in 0 until RING_SEGMENTS) out.line(at(i), at(i + 1), color)
     }
 }

@@ -8,22 +8,17 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.physics.*
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import org.slf4j.helpers.NOPLogger
-import kotlin.math.abs
+import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.max
-import kotlin.math.sin
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.physics.*
+import org.slf4j.helpers.NOPLogger
+import kotlin.math.*
 
 /** A segment of the physics overlay; [selected] segments belong to the selected entity and are drawn on top. */
-data class OverlaySegment(val from: Vec3, val to: Vec3, val color: Rgba, val selected: Boolean)
+data class OverlaySegment(val from: Vector3, val to: Vector3, val color: Rgba, val selected: Boolean)
 
 /** Colors by motion type, and of constraints. The selected entity's are brighter. */
 internal object PhysicsColors {
@@ -215,7 +210,7 @@ class PhysicsOverlayGeometry(private val terrainSize: (String) -> Float? = { nul
         return Matrix4().set(at, authored.rotation, authored.scale)
     }
 
-    private fun matrix(p: Vec3, q: Quaternion, s: Vec3) =
+    private fun matrix(p: Vector3, q: Quaternion, s: Vector3) =
         Matrix4().set(Vector3(p.x, p.y, p.z), q.nor(), Vector3(s.x, s.y, s.z))
 
     private class PositionValues(node: JsonNode?) {
@@ -230,7 +225,7 @@ class PhysicsOverlayGeometry(private val terrainSize: (String) -> Float? = { nul
 
     private class Sink(val out: MutableList<OverlaySegment>, val color: Rgba, val selected: Boolean) {
         fun line(a: Vector3, b: Vector3) {
-            out += OverlaySegment(Vec3(a.x, a.y, a.z), Vec3(b.x, b.y, b.z), color, selected)
+            out += OverlaySegment(Vector3(a.x, a.y, a.z), Vector3(b.x, b.y, b.z), color, selected)
         }
 
         fun dashed(a: Vector3, b: Vector3) {

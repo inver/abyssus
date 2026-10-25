@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.core.format.isEnabled
 import com.badlogic.ashley.core.Component
+import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
@@ -18,6 +18,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.renderAssetOf
 import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
 import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
 import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
+import net.nevinsky.abyssus.lib.core.format.isEnabled
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.util.opt
 import org.slf4j.helpers.NOPLogger
@@ -44,7 +45,7 @@ data class SceneContent(
     val skybox: String? = null,
     val cameras: List<CameraPlacement> = emptyList(),
     /** `localPosition` of every entity with a `PositionComponent` (entity id to position), for look-at targets. */
-    val entityPositions: Map<String, Vec3> = emptyMap(),
+    val entityPositions: Map<String, Vector3> = emptyMap(),
     /** The ids of entities whose `TypeComponent.type` is `HANDLE` (the direction handles of look-at lights). */
     val handleIds: Set<String> = emptySet(),
     /** The path arrangements: the lines the view shows handles on when one is selected. */
@@ -77,8 +78,14 @@ private fun decode(entity: EntityView): DecodedEntity {
     // a disabled entity is present as data (its position still answers a look-at) and absent as behavior
     if (!entity.enabled) {
         return DecodedEntity(
-            entity.id, entity.name, position?.let { read<PositionComponent>(it) }, position?.opt("localPosition") != null,
-            null, null, null, null,
+            entity.id,
+            entity.name,
+            position?.let { read<PositionComponent>(it) },
+            position?.opt("localPosition") != null,
+            null,
+            null,
+            null,
+            null,
         )
     }
     /** A component's node, or null when the entry is missing or disabled. */
@@ -86,7 +93,8 @@ private fun decode(entity: EntityView): DecodedEntity {
     val asset = renderAssetOf(active("RenderComponent"))
     val light = active("LightComponent")
     // a light entity whose light is disabled is not a light: without the component it would still shine with defaults
-    val lightDisabled = type?.name?.startsWith("LIGHT") == true && components.opt("LightComponent")?.let { !isEnabled(it) } == true
+    val lightDisabled =
+        type?.name?.startsWith("LIGHT") == true && components.opt("LightComponent")?.let { !isEnabled(it) } == true
     return DecodedEntity(
         entity.id,
         entity.name,
@@ -109,27 +117,27 @@ private inline fun <reified C : Component> read(node: JsonNode): C? =
     runCatchingKeepingCancellation { components.read(C::class.java, node) }.getOrNull()
 
 /** The libGDX forward axis (-Z) rotated by [q]. */
-fun forwardOf(q: Quat): Vec3 {
+fun forwardOf(q: Quat): Vector3 {
     val len = kotlin.math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w)
-    if (len < 1e-6f) return Vec3(0f, 0f, -1f)
+    if (len < 1e-6f) return Vector3(0f, 0f, -1f)
     val x = q.x / len
     val y = q.y / len
     val z = q.z / len
     val w = q.w / len
     // q * (0, 0, -1) * q^-1
-    return Vec3(0f - 2f * (x * z + w * y), 0f - 2f * (y * z - w * x), 0f - (1f - 2f * (x * x + y * y)))
+    return Vector3(0f - 2f * (x * z + w * y), 0f - 2f * (y * z - w * x), 0f - (1f - 2f * (x * x + y * y)))
 }
 
 /**
  * The unit direction from [from] toward [to], or null when the two are (almost) the same point. Shared by
  * look-at lights and look-at cameras so the two can't drift apart.
  */
-fun aimDirection(from: Vec3, to: Vec3): Vec3? {
+fun aimDirection(from: Vector3, to: Vector3): Vector3? {
     val dx = to.x - from.x
     val dy = to.y - from.y
     val dz = to.z - from.z
     val len2 = dx * dx + dy * dy + dz * dz
     if (len2 < 1e-12f || !len2.isFinite()) return null
     val len = kotlin.math.sqrt(len2)
-    return Vec3(dx / len, dy / len, dz / len)
+    return Vector3(dx / len, dy / len, dz / len)
 }

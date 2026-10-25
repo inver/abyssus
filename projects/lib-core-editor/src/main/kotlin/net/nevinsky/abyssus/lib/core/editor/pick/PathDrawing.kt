@@ -9,16 +9,15 @@ import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.arrange.PathCurve
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import kotlin.math.hypot
 
 /** A path arrangement being drawn: the model [asset] to place and the [points] clicked so far. */
 class PathDrawing(val asset: RenderAsset) {
-    val points: MutableList<Vec3> = mutableListOf()
+    val points: MutableList<Vector3> = mutableListOf()
 }
 
 /** The points of the arrangement [entityId] while one of its handles is dragged, shown over the file's. */
-data class PathEdit(val entityId: String, val points: List<Vec3>)
+data class PathEdit(val entityId: String, val points: List<Vector3>)
 
 /** A handle of a selected arrangement's line, or the line itself. */
 sealed interface PathHit {
@@ -37,7 +36,7 @@ class ScreenProjection(private val camera: PerspectiveCamera, private val width:
     private val scratch = Vector3()
 
     /** Where [p] is on the screen (origin top-left), or null behind the camera. */
-    fun at(p: Vec3): ScreenPoint? {
+    fun at(p: Vector3): ScreenPoint? {
         scratch.set(p.x - camera.position.x, p.y - camera.position.y, p.z - camera.position.z)
         if (scratch.dot(camera.direction) <= camera.near) return null
         scratch.set(p.x, p.y, p.z).prj(camera.combined)
@@ -53,12 +52,12 @@ const val PATH_LINE_PX = 8f
  * Hit tests for the line of an arrangement: the handle on each point, the handle in the middle of each segment, and
  * the segments themselves. Distances are in screen pixels, so a handle is as easy to grab far away as near.
  */
-class PathHandles(private val points: List<Vec3>, private val closed: Boolean) {
+class PathHandles(private val points: List<Vector3>, private val closed: Boolean) {
     /** Number of segments: one fewer than the points, or as many when the line closes. */
     val segmentCount: Int get() = PathCurve.spanCount(points.size, closed)
 
     /** The middle of segment [segment], on the smooth line. */
-    fun middle(segment: Int): Vec3 = PathCurve.at(points, closed, segment, 0.5f)
+    fun middle(segment: Int): Vector3 = PathCurve.at(points, closed, segment, 0.5f)
 
     /**
      * The handle under the pixel ([x], [y]), a point handle before a middle one; null when no edge of any handle's diamond
@@ -86,7 +85,7 @@ class PathHandles(private val points: List<Vec3>, private val closed: Boolean) {
     }
 
     /** The distance in pixels from ([x], [y]) to the nearest edge of the diamond at [at] that is on screen, or null when none is. */
-    private fun edgeDistance(projection: ScreenProjection, at: Vec3, half: Float, x: Float, y: Float): Float? {
+    private fun edgeDistance(projection: ScreenProjection, at: Vector3, half: Float, x: Float, y: Float): Float? {
         var best: Float? = null
         for ((a, b) in diamondEdges(at, half)) {
             val sa = projection.at(a) ?: continue

@@ -8,25 +8,24 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
+import kotlin.collections.contains
 import kotlin.math.tan
 
 enum class GizmoMode { SELECT, MOVE, ROTATE }
 
 /** A world axis and the color its handle is drawn in. */
-enum class GizmoAxis(val direction: Vec3, val red: Float, val green: Float, val blue: Float) {
-    X(Vec3(1f, 0f, 0f), 0.9f, 0.2f, 0.2f),
-    Y(Vec3(0f, 1f, 0f), 0.3f, 0.85f, 0.3f),
-    Z(Vec3(0f, 0f, 1f), 0.25f, 0.45f, 0.95f),
+enum class GizmoAxis(val direction: Vector3, val red: Float, val green: Float, val blue: Float) {
+    X(Vector3(1f, 0f, 0f), 0.9f, 0.2f, 0.2f),
+    Y(Vector3(0f, 1f, 0f), 0.3f, 0.85f, 0.3f),
+    Z(Vector3(0f, 0f, 1f), 0.25f, 0.45f, 0.95f),
 }
 
 /** The handles' length (or ring radius) on screen. */
 const val GIZMO_SIZE_PIXELS = 90f
 
 /** One pixel's worth of world units at [origin] seen from [eye] with a vertical [fovDegrees] over [viewHeight] pixels. */
-fun worldPerPixel(eye: Vec3, origin: Vec3, fovDegrees: Float, viewHeight: Int): Float {
-    val distance = eye.toVector3().dst(origin.toVector3())
+fun worldPerPixel(eye: Vector3, origin: Vector3, fovDegrees: Float, viewHeight: Int): Float {
+    val distance = eye.cpy().dst(origin.cpy())
     return distance * 2f * tan(Math.toRadians(fovDegrees.toDouble() / 2.0)).toFloat() / viewHeight.coerceAtLeast(1)
 }
 
@@ -35,23 +34,23 @@ fun worldPerPixel(eye: Vec3, origin: Vec3, fovDegrees: Float, viewHeight: Int): 
  * [GizmoMode.ROTATE] a circle of radius [size] around each axis. [worldPerPixel] is what one screen pixel is worth at
  * the origin's distance, so [size] and every tolerance stay constant on screen. No GL needed.
  */
-class GizmoHandles(val origin: Vec3, val mode: GizmoMode, val worldPerPixel: Float, val axes: GizmoAxes = WORLD_AXES) {
+class GizmoHandles(val origin: Vector3, val mode: GizmoMode, val worldPerPixel: Float, val axes: GizmoAxes = WORLD_AXES) {
     /** The gizmo at [origin] seen from [eye] with a vertical [fovDegrees] over [viewHeight] pixels. */
-    constructor(origin: Vec3, mode: GizmoMode, eye: Vec3, fovDegrees: Float, viewHeight: Int, axes: GizmoAxes = WORLD_AXES) :
+    constructor(origin: Vector3, mode: GizmoMode, eye: Vector3, fovDegrees: Float, viewHeight: Int, axes: GizmoAxes = WORLD_AXES) :
         this(origin, mode, worldPerPixel(eye, origin, fovDegrees, viewHeight), axes)
 
     val size: Float = GIZMO_SIZE_PIXELS * worldPerPixel
 
     /** The end of the arrow along [axis]. */
-    fun tip(axis: GizmoAxis): Vec3 {
+    fun tip(axis: GizmoAxis): Vector3 {
         val d = direction(axis)
-        return Vec3(origin.x + d.x * size, origin.y + d.y * size, origin.z + d.z * size)
+        return Vector3(origin.x + d.x * size, origin.y + d.y * size, origin.z + d.z * size)
     }
 
     /** The unit axis as a vector. */
-    fun axisVector(axis: GizmoAxis): Vector3 = direction(axis).toVector3()
+    fun axisVector(axis: GizmoAxis): Vector3 = direction(axis).cpy()
 
-    private fun direction(axis: GizmoAxis): Vec3 = axes[axis] ?: axis.direction
+    private fun direction(axis: GizmoAxis): Vector3 = axes[axis] ?: axis.direction
 }
 
 /**

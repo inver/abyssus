@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
 import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.*
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -14,7 +15,6 @@ import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import net.nevinsky.abyssus.lib.core.editor.ecs.floatNode
@@ -51,7 +51,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
     fun create(
         root: JsonNode,
         asset: RenderAsset,
-        points: List<Vec3>,
+        points: List<Vector3>,
         closed: Boolean,
         heights: GroundHeight,
     ): ArrangementResult {
@@ -135,7 +135,9 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
             if (isCopy(tree, id, arrangementId)) (tree.entities() as? ObjectNode)?.remove(id.toString())
         }
         setSlots(node, written)
-        return if (root == snapshot) ArrangementResult.Unchanged else ArrangementResult.Changed()
+        return if (root == snapshot) {
+            ArrangementResult.Unchanged
+        } else ArrangementResult.Changed()
     }
 
     /**
@@ -143,7 +145,12 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
      * or removing a path point does. Rejected, leaving [root] as it was, for fewer than two points or a line that would
      * make too many copies.
      */
-    fun setPoints(root: JsonNode, arrangementId: String, points: List<Vec3>, heights: GroundHeight): ArrangementResult {
+    fun setPoints(
+        root: JsonNode,
+        arrangementId: String,
+        points: List<Vector3>,
+        heights: GroundHeight
+    ): ArrangementResult {
         val node = SceneEntityTree(root).components(arrangementId)
             ?.get(PathArrangementComponent::class.simpleName) as? ObjectNode
             ?: return ArrangementResult.Rejected(messages.message("arrangementMissing", arrangementId))
@@ -165,7 +172,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
     }
 
     /** A point as the file writes it; the node [old] keeps its text when the point is unchanged. */
-    private fun pointNode(p: Vec3, old: JsonNode?): ObjectNode {
+    private fun pointNode(p: Vector3, old: JsonNode?): ObjectNode {
         if (old is ObjectNode && listOf("x", "y", "z").all { old.get(it)?.isNumber == true } &&
             old.get("x").floatValue() == p.x && old.get("y").floatValue() == p.y && old.get("z").floatValue() == p.z
         ) return old

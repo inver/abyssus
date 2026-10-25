@@ -7,14 +7,13 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class GizmoHitTest {
     /** One world unit per pixel keeps sizes readable: arrows are 90 long, tolerance 8. */
-    private fun handles(mode: GizmoMode) = GizmoHandles(Vec3(0f, 0f, 0f), mode, 1f)
+    private fun handles(mode: GizmoMode) = GizmoHandles(Vector3(0f, 0f, 0f), mode, 1f)
 
     private fun ray(from: Vector3, to: Vector3) = Ray(from, Vector3(to).sub(from).nor())
 

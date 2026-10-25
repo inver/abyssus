@@ -17,9 +17,8 @@ import net.nevinsky.abyssus.lib.core.editor.pick.ScenePreview
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneQueries
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.editor.pick.ViewSize
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-
 import com.badlogic.gdx.math.Vector3
+
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
@@ -65,7 +64,7 @@ class SceneInteractionTest {
         }
     }
 
-    private fun screenOf(r: SceneRenderer, p: Vec3): Pair<Int, Int> {
+    private fun screenOf(r: SceneRenderer, p: Vector3): Pair<Int, Int> {
         val v = Vector3(p.x, p.y, p.z)
         r.frameCamera.project(v, 0f, 0f, width.toFloat(), height.toFloat())
         return v.x.toInt() to (height - v.y.toInt())
@@ -133,7 +132,7 @@ class SceneInteractionTest {
         s.interaction.drop()
         val (id, edit) = s.transforms.single()
         assertEquals("4", id)
-        assertEquals(Vec3(cameraPosition.x, 2.5f, cameraPosition.z), edit.position)
+        assertEquals(Vector3(cameraPosition.x, 2.5f, cameraPosition.z), edit.position)
         assertNull(edit.rotation); assertNull(edit.direction)
         assertEquals(mainParams.content.cameras.single().rotation, s.renderer.content.cameras.single().rotation)
         assertEquals(edit.position, s.renderer.content.cameras.single().position)
@@ -191,7 +190,7 @@ class SceneInteractionTest {
         val s = droppingCamera(1.234f)
         val original = mainParams.content.cameras.single()
         s.renderer.params = mainParams.copy(content = mainParams.content.copy(
-            cameras = listOf(original.copy(position = original.position.copy(y = 10000f)))))
+            cameras = listOf(original.copy(position = Vector3(original.position).apply { y = 10000f }))))
         s.interaction.drop()
         assertEquals(1.734f, s.transforms.single().second.position!!.y, 1e-5f)
         assertFalse(s.interaction.canDrop)
@@ -281,7 +280,7 @@ class SceneInteractionTest {
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val origin = handles.origin
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
-        val farther = screenOf(s.renderer, Vec3(origin.x + 2 * handles.size, origin.y, origin.z))
+        val farther = screenOf(s.renderer, Vector3(origin.x + 2 * handles.size, origin.y, origin.z))
         val yaw = s.orbit.yaw
         val pitch = s.orbit.pitch
         s.interaction.pressed(tip.first, tip.second, true)
@@ -326,7 +325,7 @@ class SceneInteractionTest {
         assertEquals(origin.x, tipVector.x, 1e-4f)
         assertEquals(origin.z - handles.size, tipVector.z, 1e-4f)
         val tip = screenOf(s.renderer, tipVector)
-        val farther = screenOf(s.renderer, Vec3(origin.x, origin.y, origin.z - 2 * handles.size))
+        val farther = screenOf(s.renderer, Vector3(origin.x, origin.y, origin.z - 2 * handles.size))
         s.interaction.pressed(tip.first, tip.second, true)
         assertTrue(s.interaction.isDragging)
         s.interaction.dragged(farther.first, farther.second, true)
@@ -344,7 +343,7 @@ class SceneInteractionTest {
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val origin = handles.origin
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
-        val farther = screenOf(s.renderer, Vec3(origin.x + 2 * handles.size, origin.y, origin.z))
+        val farther = screenOf(s.renderer, Vector3(origin.x + 2 * handles.size, origin.y, origin.z))
         s.interaction.pressed(tip.first, tip.second, true)
         s.interaction.dragged(farther.first, farther.second, true)
         s.interaction.escape()
@@ -359,7 +358,7 @@ class SceneInteractionTest {
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val origin = handles.origin
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
-        val farther = screenOf(s.renderer, Vec3(origin.x + 1.37f * handles.size, origin.y, origin.z))
+        val farther = screenOf(s.renderer, Vector3(origin.x + 1.37f * handles.size, origin.y, origin.z))
         s.interaction.pressed(tip.first, tip.second, true)
         s.interaction.dragged(farther.first, farther.second, true)
         s.interaction.released(farther.first, farther.second, true)
@@ -396,7 +395,7 @@ class SceneInteractionTest {
         val s = movingModel()
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
-        val farther = screenOf(s.renderer, Vec3(handles.origin.x + 2 * handles.size, handles.origin.y, handles.origin.z))
+        val farther = screenOf(s.renderer, Vector3(handles.origin.x + 2 * handles.size, handles.origin.y, handles.origin.z))
         val start = mainParams.content.models.first { it.entityId == "0" }.transform.position
         s.interaction.pressed(tip.first, tip.second, true)
         s.interaction.dragged(farther.first, farther.second, true)
@@ -415,7 +414,7 @@ class SceneInteractionTest {
         s.interaction.onTransform = { _, _ -> false }
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
-        val farther = screenOf(s.renderer, Vec3(handles.origin.x + 2 * handles.size, handles.origin.y, handles.origin.z))
+        val farther = screenOf(s.renderer, Vector3(handles.origin.x + 2 * handles.size, handles.origin.y, handles.origin.z))
         s.interaction.pressed(tip.first, tip.second, true)
         s.interaction.dragged(farther.first, farther.second, true)
         s.interaction.released(farther.first, farther.second, true)
@@ -429,8 +428,8 @@ class SceneInteractionTest {
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val o = handles.origin
         // a quarter turn about Y: from +X on the ring to +Z... in screen terms, between two points of the Y ring
-        val from = screenOf(s.renderer, Vec3(o.x + handles.size, o.y, o.z))
-        val to = screenOf(s.renderer, Vec3(o.x, o.y, o.z + handles.size))
+        val from = screenOf(s.renderer, Vector3(o.x + handles.size, o.y, o.z))
+        val to = screenOf(s.renderer, Vector3(o.x, o.y, o.z + handles.size))
         s.interaction.pressed(from.first, from.second, true)
         s.interaction.dragged(to.first, to.second, true)
         s.interaction.released(to.first, to.second, true)
@@ -455,8 +454,8 @@ class SceneInteractionTest {
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val o = handles.origin
         // a quarter turn about X on the X ring: from +Y to +Z
-        val from = screenOf(s.renderer, Vec3(o.x, o.y + handles.size, o.z))
-        val to = screenOf(s.renderer, Vec3(o.x, o.y, o.z + handles.size))
+        val from = screenOf(s.renderer, Vector3(o.x, o.y + handles.size, o.z))
+        val to = screenOf(s.renderer, Vector3(o.x, o.y, o.z + handles.size))
         s.interaction.pressed(from.first, from.second, true)
         s.interaction.dragged(to.first, to.second, true)
         s.interaction.released(to.first, to.second, true)

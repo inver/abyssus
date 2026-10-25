@@ -16,7 +16,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
@@ -52,7 +52,7 @@ class RaySceneDiffTest {
     ): RaySceneFrame = (snapshots.capture(SceneRenderParams.DEFAULT.copy(content = content, projectDir = File(project), fog = fog), view, lights,
         state, preview, environment = environment, poses = poses, environmentRevision = environmentRevision) as RaySceneConversion.Ready).frame
 
-    private fun moved(x: Float) = mapOf("entity" to DragResult(PlacementTransform(Vec3(x, 0f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f)), null))
+    private fun moved(x: Float) = mapOf("entity" to DragResult(PlacementTransform(Vector3(x, 0f, 0f), Quat.IDENTITY, Vector3(1f, 1f, 1f)), null))
 
     @Test fun theFirstFrameIsAStructuralRebuild() {
         val diff = raySceneDiff(null, frame())

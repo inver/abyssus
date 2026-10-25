@@ -9,7 +9,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
 import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
@@ -36,7 +36,7 @@ class RayFrameContext(
 )
 
 data class RayDisplayCamera(
-    val position: Vec3, val direction: Vec3, val up: Vec3,
+    val position: Vector3, val direction: Vector3, val up: Vector3,
     val fieldOfView: Float, val near: Float, val far: Float,
 ) {
     fun applyTo(camera: PerspectiveCamera, width: Int, height: Int) {
@@ -61,7 +61,7 @@ data class RayDisplayMetadata(
 
 fun captureRayDisplay(context: RayFrameContext): RayDisplayMetadata {
     val camera = context.camera
-    fun vec(value: com.badlogic.gdx.math.Vector3) = Vec3(value.x, value.y, value.z)
+    fun vec(value: com.badlogic.gdx.math.Vector3) = Vector3(value.x, value.y, value.z)
     fun <T> frozen(values: List<T>) = Collections.unmodifiableList(values.toList())
     val content = context.content.copy(
         models = frozen(context.content.models), terrains = frozen(context.content.terrains),

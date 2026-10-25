@@ -5,18 +5,18 @@
 
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PathCurveTest {
-    private val bend = listOf(Vec3(0f, 0f, 0f), Vec3(10f, 0f, 0f), Vec3(10f, 0f, 10f))
+    private val bend = listOf(Vector3(0f, 0f, 0f), Vector3(10f, 0f, 0f), Vector3(10f, 0f, 10f))
 
     @Test
     fun twoPointsStayAStraightLine() {
-        val a = Vec3(0f, 0f, 0f)
-        val b = Vec3(20f, 0f, 0f)
+        val a = Vector3(0f, 0f, 0f)
+        val b = Vector3(20f, 0f, 0f)
         assertEquals(listOf(a, b), PathCurve.sample(listOf(a, b), closed = false))
     }
 

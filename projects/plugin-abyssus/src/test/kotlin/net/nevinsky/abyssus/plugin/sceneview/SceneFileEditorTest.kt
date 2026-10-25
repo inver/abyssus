@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 
 import net.nevinsky.abyssus.plugin.SceneFileEditorProvider
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
 
 import com.intellij.openapi.fileEditor.FileEditorPolicy
@@ -107,8 +107,8 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val host = object : SceneViewHost {
             override fun listen(file: com.intellij.openapi.vfs.VirtualFile, parent: com.intellij.openapi.Disposable, selected: (String) -> Unit) { treeSelection = selected }
             override fun select(file: com.intellij.openapi.vfs.VirtualFile, entityId: String) { picked = entityId }
-            override fun lightActions(file: com.intellij.openapi.vfs.VirtualFile, position: () -> Vec3) = com.intellij.openapi.actionSystem.DefaultActionGroup()
-            override fun assetActions(file: com.intellij.openapi.vfs.VirtualFile, position: () -> Vec3) = com.intellij.openapi.actionSystem.DefaultActionGroup()
+            override fun lightActions(file: com.intellij.openapi.vfs.VirtualFile, position: () -> Vector3) = com.intellij.openapi.actionSystem.DefaultActionGroup()
+            override fun assetActions(file: com.intellij.openapi.vfs.VirtualFile, position: () -> Vector3) = com.intellij.openapi.actionSystem.DefaultActionGroup()
             override fun canAddLight(file: com.intellij.openapi.vfs.VirtualFile) = false
             override fun canAddAsset(file: com.intellij.openapi.vfs.VirtualFile) = false
         }
@@ -162,7 +162,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val views = mutableListOf<FakeView>()
         val (editor, file) = fakeEditor("selection/new-light.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""", views)
         try {
-            val actions = net.nevinsky.abyssus.plugin.projectView.AddLightGroup(project, file, { Vec3(0f, 0f, 0f) }).getChildren(null)
+            val actions = net.nevinsky.abyssus.plugin.projectView.AddLightGroup(project, file, { Vector3(0f, 0f, 0f) }).getChildren(null)
             actions[0].actionPerformed(com.intellij.testFramework.TestActionEvent.createTestEvent(actions[0]))
             assertEquals("0", views.single().selected)
             assertEquals("0", net.nevinsky.abyssus.plugin.projectView.componentTargetOf(net.nevinsky.abyssus.plugin.projectView.AbyssusSelection.of(project).current)?.entityId)
@@ -297,7 +297,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         try {
             val before = textOf(f)
             val old = views[0].current.content.models.first { it.entityId == "0" }.transform.position
-            val moved = Vec3(old.x + 2f, old.y, old.z)
+            val moved = Vector3(old.x + 2f, old.y, old.z)
             assertTrue(views[0].onTransform!!.invoke("0", TransformEdit(position = moved)))
             val after = textOf(f)
             val changed = before.lines().indices.filter { before.lines()[it] != after.lines()[it] }
@@ -327,7 +327,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         try {
             val before = textOf(f)
             val old = views[0].current.content.models.first { it.entityId == "0" }.transform.position
-            val dropped = old.copy(y = old.y + 1.5f)
+            val dropped = Vector3(old).add(0f, 1.5f, 0f)
             assertTrue(editor.applyTransform("0", TransformEdit(position = dropped)))
             assertEquals(listOf("Move Entity"), commands)
             assertEquals(1, before.lines().indices.count { before.lines()[it] != textOf(f).lines()[it] })
@@ -350,7 +350,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             val before = textOf(f)
             val old = views[0].current.content.models.first { it.entityId == "0" }.transform.position
             assertFalse(views[0].onTransform!!.invoke("0", TransformEdit(position = old)))
-            assertFalse(views[0].onTransform!!.invoke("99", TransformEdit(position = Vec3(1f, 1f, 1f))))
+            assertFalse(views[0].onTransform!!.invoke("99", TransformEdit(position = Vector3(1f, 1f, 1f))))
             assertEquals(before, textOf(f))
         } finally {
             com.intellij.openapi.util.Disposer.dispose(editor)

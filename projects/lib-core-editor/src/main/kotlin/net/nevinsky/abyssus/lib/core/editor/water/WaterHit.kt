@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.water
 
 import com.badlogic.gdx.math.collision.Ray
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.water.WaterSettings
 
 /** The surface a ray meets first and how far along the ray that is. */
@@ -60,7 +60,7 @@ private const val PARALLEL = 1e-5f
 /** A water move shown before it is written: the new centre of each surface being moved. */
 class WaterPreview {
     /** [water] with the previewed surfaces at their new centre; invalid rows are left as they are. */
-    fun apply(water: List<WaterSurface>, moved: Map<String, Vec3>): List<WaterSurface> =
+    fun apply(water: List<WaterSurface>, moved: Map<String, Vector3>): List<WaterSurface> =
         if (moved.isEmpty()) water else water.map { surface ->
             val at = moved[surface.id]
             if (surface is ValidWater && at != null) ValidWater(

@@ -4,8 +4,6 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ray
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
@@ -13,9 +11,9 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySkySnapshot
-import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
+import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySkySnapshot
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -47,7 +45,7 @@ class RaySkyBaker(private val faceSize: Int = 512) {
      * Bakes [sky] for the sun toward [sun]; with [clouds] it draws the sky's clouds as they are at [timeSeconds] (the
      * view's sky clock), without it the bare atmosphere.
      */
-    fun bake(sky: SkyRenderer, sun: Vec3, timeSeconds: Double = 0.0, clouds: Boolean = false): RaySkySnapshot {
+    fun bake(sky: SkyRenderer, sun: Vector3, timeSeconds: Double = 0.0, clouds: Boolean = false): RaySkySnapshot {
         val viewport = BufferUtils.newIntBuffer(16).also { Gdx.gl.glGetIntegerv(GL20.GL_VIEWPORT, it) }
         val bound = BufferUtils.newIntBuffer(16).also { Gdx.gl.glGetIntegerv(GL20.GL_FRAMEBUFFER_BINDING, it) }
         val buffer = FrameBuffer(Pixmap.Format.RGBA8888, faceSize, faceSize, false)

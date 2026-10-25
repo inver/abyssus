@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.lib.gamelink.play.PlayFrame
 import net.nevinsky.abyssus.lib.gamelink.play.PlayProtocol
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.net.Socket
@@ -82,7 +82,7 @@ class PlayClient internal constructor(
             while (true) {
                 when (val frame = protocol.read(input)) {
                     is PlayFrame.Poses -> latest = frame.poses.associate {
-                        it.id.toString() to Pose(Vec3(it.x, it.y, it.z), Quat(it.qx, it.qy, it.qz, it.qw))
+                        it.id.toString() to Pose(Vector3(it.x, it.y, it.z), Quat(it.qx, it.qy, it.qz, it.qw))
                     }
                     PlayFrame.Ready -> if (state == State.CONNECTED) {
                         state = State.READY

@@ -15,7 +15,6 @@ import net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -48,8 +47,8 @@ class SceneInteractionPathTest {
         val interaction: SceneInteraction,
         val camera: PerspectiveCamera,
     ) {
-        val created = mutableListOf<Triple<RenderAsset, List<Vec3>, Boolean>>()
-        val edits = mutableListOf<Pair<String, List<Vec3>>>()
+        val created = mutableListOf<Triple<RenderAsset, List<Vector3>, Boolean>>()
+        val edits = mutableListOf<Pair<String, List<Vector3>>>()
         var accept = true
 
         /** The Swing pixel of the world point ([x], [y], [z]). */
@@ -66,7 +65,7 @@ class SceneInteractionPathTest {
         }
     }
 
-    private fun fixture(arrangement: Boolean = false, copy: Boolean = false, closed: Boolean = false, points: List<Vec3> = line()): Fixture {
+    private fun fixture(arrangement: Boolean = false, copy: Boolean = false, closed: Boolean = false, points: List<Vector3> = line()): Fixture {
         val state = SceneViewState()
         val content = SceneContent(
             terrains = listOf(AssetPlacement("1", "terrain", PlacementTransform.IDENTITY)),
@@ -80,7 +79,7 @@ class SceneInteractionPathTest {
         val terrain = TerrainTarget("1", TerrainData(3, FloatArray(9), 100, 1f), Matrix4())
         val frame = FrameSnapshot(camera(), boxes, listOf(snapshotTerrainOf(terrain)), 7L)
         val queries = SnapshotSceneQueries({ frame }, state) { content }
-        val interaction = SceneInteraction(state, queries, OrbitCamera(Vec3(50f, 0f, 50f), 60f, 0f, 0.6f)).also {
+        val interaction = SceneInteraction(state, queries, OrbitCamera(Vector3(50f, 0f, 50f), 60f, 0f, 0.6f)).also {
             it.size = ViewSize(W, H, W, H)
         }
         return Fixture(state, queries, interaction, frame.camera).also { f ->
@@ -89,9 +88,9 @@ class SceneInteractionPathTest {
         }
     }
 
-    private fun line() = listOf(Vec3(20f, 0f, 50f), Vec3(80f, 0f, 50f))
+    private fun line() = listOf(Vector3(20f, 0f, 50f), Vector3(80f, 0f, 50f))
 
-    private fun assertNear(x: Float, z: Float, p: Vec3) {
+    private fun assertNear(x: Float, z: Float, p: Vector3) {
         assertEquals(x, p.x, 0.6f)
         assertEquals(0f, p.y, 0.01f)
         assertEquals(z, p.z, 0.6f)
@@ -218,7 +217,7 @@ class SceneInteractionPathTest {
         assertTrue(f.edits.isEmpty())
     }
 
-    private fun editing(points: List<Vec3> = line()): Fixture =
+    private fun editing(points: List<Vector3> = line()): Fixture =
         fixture(arrangement = true, points = points).also { it.interaction.setPathEditing("5") }
 
     /** Presses the handle of point [index] and releases it: the click that gives the point its gizmo. */
@@ -323,10 +322,10 @@ class SceneInteractionPathTest {
         val two = fixture(arrangement = true)
         assertFalse(two.interaction.canRemovePoint("5"))
         assertFalse(two.interaction.removePoint("5", 0))
-        val three = fixture(arrangement = true, points = listOf(Vec3(20f, 0f, 50f), Vec3(50f, 0f, 60f), Vec3(80f, 0f, 50f)))
+        val three = fixture(arrangement = true, points = listOf(Vector3(20f, 0f, 50f), Vector3(50f, 0f, 60f), Vector3(80f, 0f, 50f)))
         assertTrue(three.interaction.canRemovePoint("5"))
         assertTrue(three.interaction.removePoint("5", 1))
-        assertEquals(listOf(Vec3(20f, 0f, 50f), Vec3(80f, 0f, 50f)), three.edits.single().second)
+        assertEquals(listOf(Vector3(20f, 0f, 50f), Vector3(80f, 0f, 50f)), three.edits.single().second)
     }
 
     @Test

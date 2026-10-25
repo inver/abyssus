@@ -5,21 +5,19 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.gdx.graphics.Color
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import net.nevinsky.abyssus.lib.core.editor.EditorMessages
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.core.dto.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.dto.LightDto
-import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import org.slf4j.helpers.NOPLogger
 
 /** Sun is a directional light with different initial values, never a separate file type. */
 enum class LightPreset(
@@ -61,7 +59,7 @@ class LightEntities(private val messages: EditorMessages) {
 
     fun canAdd(root: JsonNode): Boolean = SceneEntityTree(root).canAdd()
 
-    fun add(root: JsonNode, preset: LightPreset, position: Vec3): AddedLight {
+    fun add(root: JsonNode, preset: LightPreset, position: Vector3): AddedLight {
         fun rejected() = AddedLight(EditResult.Rejected(messages.message("componentSceneUnreadable")))
         if (!canAdd(root) || listOf(
                 position.x,

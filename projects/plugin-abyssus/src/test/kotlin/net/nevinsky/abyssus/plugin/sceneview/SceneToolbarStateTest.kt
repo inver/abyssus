@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,8 +18,8 @@ import org.junit.Test
 class SceneToolbarStateTest {
     @Test fun freeCameraComesFirstThenTheSceneCamerasByName() {
         val content = SceneContent(cameras = listOf(
-            CameraPlacement("4", "Main", Vec3(0f, 0f, 0f), Vec3(0f, 0f, -1f), null),
-            CameraPlacement("9", "9", Vec3(0f, 0f, 0f), Vec3(0f, 0f, -1f), null),
+            CameraPlacement("4", "Main", Vector3(0f, 0f, 0f), Vector3(0f, 0f, -1f), null),
+            CameraPlacement("9", "9", Vector3(0f, 0f, 0f), Vector3(0f, 0f, -1f), null),
         ))
         assertEquals(
             listOf(CameraChoice(null, "Free"), CameraChoice("4", "Main"), CameraChoice("9", "9")),

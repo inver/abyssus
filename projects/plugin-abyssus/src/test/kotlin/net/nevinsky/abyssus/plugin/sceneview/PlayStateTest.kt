@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
 
 import com.intellij.openapi.project.Project
@@ -58,7 +58,7 @@ class PlayStateTest {
 
     private class FakeSimulation : SceneSimulation {
         val commands = mutableListOf<String>()
-        var poses: Map<String, Pose>? = mapOf("0" to Pose(Vec3(0f, 1f, 0f), Quat.IDENTITY))
+        var poses: Map<String, Pose>? = mapOf("0" to Pose(Vector3(0f, 1f, 0f), Quat.IDENTITY))
         override fun pause() { commands += "pause" }
         override fun resume() { commands += "resume" }
         override fun step() { commands += "step" }

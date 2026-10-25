@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.scene
 
 import net.nevinsky.abyssus.lib.core.editor.scene.SpotCone
 import net.nevinsky.abyssus.lib.core.editor.scene.forwardOf
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
 
 import org.junit.Assert.*
@@ -16,8 +16,8 @@ import kotlin.math.*
 
 class SpotConeTest {
     @Test fun coneEdgesAndSoftnessMatchAngularRadius() {
-        fun ray(degrees: Double) = Vec3(sin(Math.toRadians(degrees)).toFloat(), 0f, -cos(Math.toRadians(degrees)).toFloat())
-        val axis = Vec3(0f, 0f, -1f)
+        fun ray(degrees: Double) = Vector3(sin(Math.toRadians(degrees)).toFloat(), 0f, -cos(Math.toRadians(degrees)).toFloat())
+        val axis = Vector3(0f, 0f, -1f)
         val cone = SpotCone(60f, 0.5f)
         assertEquals(1f, cone.attenuation(axis, ray(0.0)), 0f)
         assertEquals(1f, cone.attenuation(axis, ray(14.0)), 0f)
@@ -33,8 +33,8 @@ class SpotConeTest {
     @Test fun rotatedBeamAndRangeCutoff() {
         val cone = SpotCone(60f, 0.25f)
         val axis = forwardOf(Quat(0.70710677f, 0f, 0f, 0.70710677f))
-        assertEquals(1f, cone.attenuation(axis, Vec3(0f, 1f, 0f)), 1e-5f)
-        assertEquals(0f, cone.attenuation(axis, Vec3(0f, -1f, 0f)), 0f)
+        assertEquals(1f, cone.attenuation(axis, Vector3(0f, 1f, 0f)), 1e-5f)
+        assertEquals(0f, cone.attenuation(axis, Vector3(0f, -1f, 0f)), 0f)
         assertEquals(1f, cone.rangeAttenuation(5f, 10f), 0f)
         assertTrue(cone.rangeAttenuation(9f, 10f) in 0.01f..0.99f)
         assertEquals(0f, cone.rangeAttenuation(10f, 10f), 0f)
@@ -46,7 +46,7 @@ class SpotConeTest {
             assertThrows(IllegalArgumentException::class.java) { SpotCone(angle, softness) }
         }
         val cone = SpotCone(60f, 0f)
-        assertEquals(0f, cone.attenuation(Vec3(0f,0f,0f), Vec3(1f,0f,0f)), 0f)
+        assertEquals(0f, cone.attenuation(Vector3(0f,0f,0f), Vector3(1f,0f,0f)), 0f)
         assertEquals(0f, cone.rangeAttenuation(Float.NaN, 10f), 0f)
         assertEquals(0f, cone.rangeAttenuation(1f, 0f), 0f)
     }

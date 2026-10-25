@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.pick
 
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.water.WaterSettings
 
 /** The highlight of a selected water surface: its extent as a rectangle at the mean level. Pure; draws through a [LineSink]. */
@@ -17,7 +17,7 @@ class WaterOutline {
         val x = surface.x.toFloat()
         val y = surface.level.toFloat()
         val z = surface.z.toFloat()
-        val corners = listOf(Vec3(x - hw, y, z - hl), Vec3(x + hw, y, z - hl), Vec3(x + hw, y, z + hl), Vec3(x - hw, y, z + hl))
+        val corners = listOf(Vector3(x - hw, y, z - hl), Vector3(x + hw, y, z - hl), Vector3(x + hw, y, z + hl), Vector3(x - hw, y, z + hl))
         for (i in corners.indices) out.line(corners[i], corners[(i + 1) % corners.size], color)
     }
 }

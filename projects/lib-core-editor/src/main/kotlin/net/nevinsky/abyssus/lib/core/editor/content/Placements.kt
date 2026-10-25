@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.lib.core.editor.content
 
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_CONE_ANGLE
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_EDGE_SOFTNESS
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_RANGE
@@ -8,10 +9,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_NEAR
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 
-data class Vec3(val x: Float, val y: Float, val z: Float)
-
-/** An entity's simulated position and rotation; its authored scale is kept. */
-data class Pose(val position: Vec3, val rotation: Quat)
+data class Pose(val position: Vector3, val rotation: Quat)
 
 data class Rgba(val r: Float, val g: Float, val b: Float, val a: Float)
 
@@ -23,9 +21,9 @@ data class Quat(val x: Float, val y: Float, val z: Float, val w: Float) {
 }
 
 /** Native `PositionComponent`: position 0, identity rotation and unit scale unless the file says otherwise. */
-data class PlacementTransform(val position: Vec3, val rotation: Quat, val scale: Vec3) {
+data class PlacementTransform(val position: Vector3, val rotation: Quat, val scale: Vector3) {
     companion object {
-        val IDENTITY = PlacementTransform(Vec3(0f, 0f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f))
+        val IDENTITY = PlacementTransform(Vector3(0f, 0f, 0f), Quat.IDENTITY, Vector3(1f, 1f, 1f))
     }
 }
 
@@ -43,8 +41,8 @@ data class LightPlacement(
     val kind: LightKind,
     val color: Rgba,
     val intensity: Float,
-    val position: Vec3,
-    val direction: Vec3,
+    val position: Vector3,
+    val direction: Vector3,
     val range: Float = LIGHT_RANGE,
     val rotation: Quat = Quat.IDENTITY,
     val coneAngle: Float = LIGHT_CONE_ANGLE,
@@ -61,8 +59,8 @@ data class LightPlacement(
 data class CameraPlacement(
     val entityId: String,
     val name: String,
-    val position: Vec3,
-    val direction: Vec3,
+    val position: Vector3,
+    val direction: Vector3,
     val lookAtId: String?,
     val near: Float = CAMERA_NEAR,
     val far: Float = CAMERA_FAR,

@@ -7,7 +7,6 @@ package net.nevinsky.abyssus.plugin.sceneview
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import kotlin.math.cos
 import kotlin.math.sin
@@ -19,13 +18,13 @@ internal class FoliageBrushCursor(val terrain: TerrainTarget, val at: Vector3, v
         val sz = Vector3(0f, 0f, 1f).rot(terrain.world).len()
         if (sx <= 0f || sz <= 0f || terrain.world.det() == 0f) return
         val centre = Vector3(at).mul(Matrix4(terrain.world).inv())
-        fun point(i: Int): Vec3? {
+        fun point(i: Int): Vector3? {
             val angle = i * Math.PI * 2.0 / 64
             val x = centre.x + radius * cos(angle).toFloat() / sx
             val z = centre.z + radius * sin(angle).toFloat() / sz
             val y = terrain.data.heightAt(x, z) ?: return null
             val p = Vector3(x, y + 0.03f, z).mul(terrain.world)
-            return Vec3(p.x, p.y, p.z)
+            return Vector3(p.x, p.y, p.z)
         }
         var previous = point(0)
         for (i in 1..64) {

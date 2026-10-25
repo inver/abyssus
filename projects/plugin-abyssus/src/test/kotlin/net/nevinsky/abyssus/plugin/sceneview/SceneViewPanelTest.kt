@@ -8,7 +8,7 @@ import net.nevinsky.abyssus.plugin.testMetaFiles
 import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -34,7 +34,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
 
     fun testToolbarPlacesLightAtOrbitTargetAndDisablesForUnreadableScene() {
         val file = myFixture.addFileToProject("Lights.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""").virtualFile
-        val params = SceneRenderParams.DEFAULT.copy(camera = CameraParams.DEFAULT.copy(position = Vec3(10f, 0f, 6f), direction = Vec3(0f, 0f, -1f)))
+        val params = SceneRenderParams.DEFAULT.copy(camera = CameraParams.DEFAULT.copy(position = Vector3(10f, 0f, 6f), direction = Vector3(0f, 0f, -1f)))
         var selected: String? = null
         val panel = SceneViewPanel(params, testRenderer(),
             lightMenu = PlacementMenu({ canAddLight(file, net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)) }) { position ->
@@ -49,7 +49,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             assertEquals("0", selected)
             val document = FileDocumentManager.getInstance().getDocument(file)!!
             val light = sceneContentOf(net.nevinsky.abyssus.lib.core.editor.parseScene(document.text)).lights.single()
-            assertEquals(Vec3(10f, 0f, -4f), light.position)
+            assertEquals(Vector3(10f, 0f, -4f), light.position)
             WriteCommandAction.runWriteCommandAction(project) { document.setText("not json") }
             panel.setParams(params)
             assertFalse(button.isEnabled)
@@ -63,7 +63,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         myFixture.addFileToProject("p/assets/hills/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"0c9e7f21-3b4a-4d85-a6f1-7e2d9b8c5a10","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":100}}""")
         myFixture.addFileToProject("p/assets/sky/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"9d2c4b6e-1f8a-4e37-b5c0-3a7f6e1d2b98","type":"SKYBOX","additional":{}}""")
         val file = myFixture.addFileToProject("p/scenes/S.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
-        val params = SceneRenderParams.DEFAULT.copy(camera = CameraParams.DEFAULT.copy(position = Vec3(10f, 0f, 6f), direction = Vec3(0f, 0f, -1f)))
+        val params = SceneRenderParams.DEFAULT.copy(camera = CameraParams.DEFAULT.copy(position = Vector3(10f, 0f, 6f), direction = Vector3(0f, 0f, -1f)))
         var selected: String? = null
         val documents = net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)
         val panel = SceneViewPanel(params, testRenderer(),
@@ -81,10 +81,10 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             val document = FileDocumentManager.getInstance().getDocument(file)!!
             val ecs = SceneJson().parse(document.text)["ecs"]
             fun at(id: String) = ecs[id]["components"]["PositionComponent"]["localPosition"].let {
-                Vec3(it.path("x").floatValue(), it.path("y").floatValue(), it.path("z").floatValue())
+                Vector3(it.path("x").floatValue(), it.path("y").floatValue(), it.path("z").floatValue())
             }
-            assertEquals(Vec3(10f, 0f, -4f), at("0"))
-            assertEquals(Vec3(-40f, 0f, -54f), at("1")) // the 100-unit terrain is centred on the orbit target
+            assertEquals(Vector3(10f, 0f, -4f), at("0"))
+            assertEquals(Vector3(-40f, 0f, -54f), at("1")) // the 100-unit terrain is centred on the orbit target
             WriteCommandAction.runWriteCommandAction(project) { document.setText("not json") }
             panel.setParams(params)
             assertFalse(button.isEnabled)
@@ -132,7 +132,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         val editor = newSceneEditor(project, file) { params -> SceneViewPanel(params, renderer).also { panel = it } }
         try {
             val before = document.text
-            val points = listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f))
+            val points = listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f))
             assertTrue(panel.onArrangementCreate!!(net.nevinsky.abyssus.lib.core.editor.content.RenderAsset("MODEL", "tree"), points, false))
             val ecs = SceneJson().parse(document.text)["ecs"]
             assertEquals("Path 11", ecs["11"]["components"]["NameComponent"]["name"].asText())
@@ -150,8 +150,8 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         lateinit var panel: SceneViewPanel
         val editor = newSceneEditor(project, file) { params -> SceneViewPanel(params, renderer).also { panel = it } }
         try {
-            panel.onArrangementCreate!!(net.nevinsky.abyssus.lib.core.editor.content.RenderAsset("MODEL", "tree"), listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f)), false)
-            assertTrue(panel.onArrangementEdit!!("11", listOf(Vec3(0f, 0f, 0f), Vec3(60f, 0f, 0f))))
+            panel.onArrangementCreate!!(net.nevinsky.abyssus.lib.core.editor.content.RenderAsset("MODEL", "tree"), listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)), false)
+            assertTrue(panel.onArrangementEdit!!("11", listOf(Vector3(0f, 0f, 0f), Vector3(60f, 0f, 0f))))
             val slots = SceneJson().parse(FileDocumentManager.getInstance().getDocument(file)!!.text)["ecs"]["11"]["components"]["PathArrangementComponent"]["slots"]
             assertEquals(7, slots.size())
         } finally { editor.dispose() }

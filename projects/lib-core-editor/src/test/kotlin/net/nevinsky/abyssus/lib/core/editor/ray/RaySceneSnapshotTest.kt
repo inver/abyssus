@@ -17,7 +17,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
 
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
@@ -54,7 +54,7 @@ class RaySceneSnapshotTest {
     @Test fun `drag preview changes only instance transforms and keeps shared geometry`() {
         val p = params(SceneContent(models = listOf(placement, placement.copy(entityId = "other"))))
         val before = ready(p)
-        val transform = PlacementTransform(Vec3(20f, 3f, -2f), Quat.IDENTITY, Vec3(2f, 2f, 2f))
+        val transform = PlacementTransform(Vector3(20f, 3f, -2f), Quat.IDENTITY, Vector3(2f, 2f, 2f))
         val after = ready(p, mapOf("entity" to DragResult(transform, null)))
         assertEquals(2, after.scene.meshes.size) // two material parts, shared by both entities
         val moved = after.scene.instances.first { it.id.startsWith("entity/") }.transform()
@@ -100,8 +100,8 @@ class RaySceneSnapshotTest {
 
     @Test fun `selected light identities and order are copied from raster light set`() {
         val sources = (0..7).map { i -> LightPlacement("light-$i", LightKind.POINT, Rgba(1f, .5f, 0f, 1f), 2f,
-            Vec3(i.toFloat(), 0f, 0f), Vec3(0f, -1f, 0f), range = 10f) }
-        val set = lightSetOf(sources.reversed(), Vec3(0f, 0f, 0f))
+            Vector3(i.toFloat(), 0f, 0f), Vector3(0f, -1f, 0f), range = 10f) }
+        val set = lightSetOf(sources.reversed(), Vector3(0f, 0f, 0f))
         val frame = ready(params(SceneContent(lights = sources)), lights = set)
         assertEquals(set.point.map { it.entityId }, frame.scene.lights.map { it.id })
         assertEquals(5, frame.scene.lights.size)

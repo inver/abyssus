@@ -15,7 +15,7 @@ import com.intellij.openapi.ui.Messages
 import net.nevinsky.abyssus.plugin.ui.showActionGroup
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
 import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
@@ -73,7 +73,7 @@ internal fun selectCreatedWater(project: Project, file: VirtualFile, id: String)
 class AddWaterGroup(
     private val project: Project,
     private val file: VirtualFile,
-    private val position: () -> Vec3,
+    private val position: () -> Vector3,
     private val select: (String) -> Unit = { selectCreatedWater(project, file, it) },
 ) : AddChildGroup<WaterPreset>(AbyssusBundle.message("addWaterTitle")) {
     init { for (preset in WaterPreset.entries) addChild(preset, waterPresetLabel(preset)) }
@@ -102,7 +102,7 @@ open class AddWaterAction : AbyssusTreeAction<VirtualFile>() {
         e.project?.let { canAddWater(target, SceneDocumentCache.of(it)) } ?: false
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
-        showActionGroup(e, AddWaterGroup(project, target, { Vec3(0f, 0f, 0f) }), AbyssusBundle.message("addWaterTitle"))
+        showActionGroup(e, AddWaterGroup(project, target, { Vector3(0f, 0f, 0f) }), AbyssusBundle.message("addWaterTitle"))
     }
 }
 

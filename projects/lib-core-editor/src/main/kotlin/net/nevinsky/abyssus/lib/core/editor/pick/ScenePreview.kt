@@ -5,18 +5,18 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.content.LightKind
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.content.Pose
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.aimDirection
 import net.nevinsky.abyssus.lib.core.editor.scene.cameraDirectionOf
 import net.nevinsky.abyssus.lib.core.editor.scene.forwardOf
-import net.nevinsky.abyssus.lib.core.editor.content.Pose
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 
 
 /** The entity a gizmo acts on: where it is, and the direction it faces when it has one (a camera, a directional or spot light). */
-class Selected(val transform: PlacementTransform, val direction: Vec3?)
+class Selected(val transform: PlacementTransform, val direction: Vector3?)
 
 /** Applies the transform an in-progress drag proposes over the scene's placements, and finds the selection's transform. No GL needed. */
 class ScenePreview {
@@ -25,7 +25,7 @@ class ScenePreview {
      * times the start distance from the light to its handle (1 when that distance is 0). Null when [entityId] is not a
      * handle-aimed light or has no turned direction, so callers can leave the handle where it is.
      */
-    fun aimedTarget(content: SceneContent, entityId: String, result: DragResult): Vec3? {
+    fun aimedTarget(content: SceneContent, entityId: String, result: DragResult): Vector3? {
         val light = content.lights.firstOrNull { it.entityId == entityId } ?: return null
         val handleId = content.aimHandleOf(light) ?: return null
         val handle = content.entityPositions[handleId] ?: return null
@@ -35,7 +35,7 @@ class ScenePreview {
         val dz = handle.z - light.position.z
         val distance = kotlin.math.sqrt(dx * dx + dy * dy + dz * dz).takeIf { it > 1e-6f } ?: 1f
         val p = result.transform.position
-        return Vec3(p.x + direction.x * distance, p.y + direction.y * distance, p.z + direction.z * distance)
+        return Vector3(p.x + direction.x * distance, p.y + direction.y * distance, p.z + direction.z * distance)
     }
 
     /** [content] with the entity [entityId] shown at [result]; [content] itself when there is no such entity. */
@@ -81,7 +81,7 @@ class ScenePreview {
      */
     fun withPoses(content: SceneContent, poses: Map<String, Pose>): SceneContent = poses.entries.fold(content) { c, (id, pose) ->
         val scale = c.models.firstOrNull { it.entityId == id }?.transform?.scale
-            ?: c.terrains.firstOrNull { it.entityId == id }?.transform?.scale ?: Vec3(1f, 1f, 1f)
+            ?: c.terrains.firstOrNull { it.entityId == id }?.transform?.scale ?: Vector3(1f, 1f, 1f)
         apply(c, id, DragResult(PlacementTransform(pose.position, pose.rotation, scale), null))
     }
 
@@ -91,11 +91,11 @@ class ScenePreview {
         content.terrains.firstOrNull { it.entityId == entityId }?.let { return Selected(it.transform, null) }
         content.cameras.firstOrNull { it.entityId == entityId }?.let {
             val direction = cameraDirectionOf(it, content.entityPositions)
-            return Selected(PlacementTransform(it.position, it.rotation, Vec3(1f, 1f, 1f)), direction)
+            return Selected(PlacementTransform(it.position, it.rotation, Vector3(1f, 1f, 1f)), direction)
         }
         content.lights.firstOrNull { it.entityId == entityId }?.let {
             val facing = if (it.kind == LightKind.POINT) null else it.direction
-            return Selected(PlacementTransform(it.position, it.rotation, Vec3(1f, 1f, 1f)), facing)
+            return Selected(PlacementTransform(it.position, it.rotation, Vector3(1f, 1f, 1f)), facing)
         }
         return null
     }

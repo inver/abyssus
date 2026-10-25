@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.plugin.sceneview.perf
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.utils.GdxNativesLoader
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
@@ -204,11 +204,11 @@ class EditorPerfRunner(private val options: PerfOptions = PerfOptions.fromProper
 
         /** High over the middle of the 1600 m stress terrain, looking at it. */
         fun stressCamera(@Suppress("UNUSED_PARAMETER") dir: File): CameraParams {
-            val from = Vec3(0f, 450f, -1100f)
-            val to = Vec3(0f, 0f, 0f)
-            val d = Vec3(to.x - from.x, to.y - from.y, to.z - from.z)
+            val from = Vector3(0f, 450f, -1100f)
+            val to = Vector3(0f, 0f, 0f)
+            val d = Vector3(to.x - from.x, to.y - from.y, to.z - from.z)
             val len = sqrt(d.x * d.x + d.y * d.y + d.z * d.z)
-            return CameraParams(from, Vec3(d.x / len, d.y / len, d.z / len), 1f, 6000f, 60f)
+            return CameraParams(from, Vector3(d.x / len, d.y / len, d.z / len), 1f, 6000f, 60f)
         }
 
         fun workloads(): List<EditorWorkload> = listOf(

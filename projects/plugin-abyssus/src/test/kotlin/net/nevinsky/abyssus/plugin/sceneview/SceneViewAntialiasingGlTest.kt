@@ -8,7 +8,7 @@ import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL11
@@ -67,7 +67,7 @@ class SceneViewAntialiasingGlTest : BasePlatformTestCase() {
             if (panel.effectiveSampleCount > 0) assertTrue("multisampled format: $count", count >= 1)
             else assertEquals(0, count) // no supported multisampled pixel format on this machine
             panel.selectEntity("selected")
-            panel.orbit.lookAlong(Vec3(1f, 0f, 0f))
+            panel.orbit.lookAlong(Vector3(1f, 0f, 0f))
             val target = panel.orbit.target
             val original = canvas(panel)
             panel.setAntialiasing(AntialiasingLevel.OFF)

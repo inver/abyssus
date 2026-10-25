@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.PointSource
 import net.nevinsky.abyssus.lib.core.editor.scene.SpotCone
 import net.nevinsky.abyssus.lib.core.editor.scene.SpotSource
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 
 import net.nevinsky.abyssus.plugin.sceneview.*
@@ -21,9 +21,9 @@ import org.junit.Test
 class ShadowLayoutTest {
     private val color = Rgba(1f,1f,1f,1f)
     private fun lights(points: List<String>, spots: List<String> = emptyList(), dirs: List<String> = emptyList()) = LightSet(
-        dirs.map { DirectionalSource(Vec3(0f,-1f,0f),color,it) },
-        points.map { PointSource(Vec3(0f,0f,0f),color,10f,it) },
-        spots.map { SpotSource(it,Vec3(0f,0f,0f),Vec3(0f,0f,-1f),color,10f,SpotCone(45f,0.2f)) })
+        dirs.map { DirectionalSource(Vector3(0f,-1f,0f),color,it) },
+        points.map { PointSource(Vector3(0f,0f,0f),color,10f,it) },
+        spots.map { SpotSource(it,Vector3(0f,0f,0f),Vector3(0f,0f,-1f),color,10f,SpotCone(45f,0.2f)) })
 
     @Test fun budgetsAndUniqueTilesAreBounded() {
         val allocated = ShadowLayout().allocate(lights(listOf("p3","p1","p2"),listOf("s4","s3","s2","s1"),listOf("d2","d1")))

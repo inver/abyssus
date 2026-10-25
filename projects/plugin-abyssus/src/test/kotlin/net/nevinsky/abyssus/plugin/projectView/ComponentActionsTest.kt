@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import com.badlogic.gdx.math.Vector3
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.actionSystem.ActionManager
@@ -71,7 +72,7 @@ class ComponentActionsTest : BasePlatformTestCase() {
         assertFalse(visible(LightOn(abss())))
         assertTrue(ActionManager.getInstance().getAction("Abyssus.AddLight") is AddLightAction)
         var selected: String? = null
-        val choices = AddLightGroup(project, scene(), { net.nevinsky.abyssus.lib.core.editor.content.Vec3(0f, 0f, 0f) }, { selected = it }).getChildren(null)
+        val choices = AddLightGroup(project, scene(), { com.badlogic.gdx.math.Vector3(0f, 0f, 0f) }, { selected = it }).getChildren(null)
         assertEquals(listOf("Directional", "Sun", "Spot"), choices.map { it.templatePresentation.text })
         choices[2].actionPerformed(TestActionEvent.createTestEvent(choices[2]))
         assertEquals("7", selected)

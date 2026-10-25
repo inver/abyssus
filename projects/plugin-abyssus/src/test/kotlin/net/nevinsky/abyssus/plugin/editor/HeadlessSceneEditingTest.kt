@@ -10,7 +10,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEdit
@@ -43,7 +43,7 @@ class HeadlessSceneEditingTest : BasePlatformTestCase() {
     fun testMovingAnEntityWritesWhatTheGizmoDragWrites() {
         val file = myFixture.addFileToProject("p/scenes/Main Scene.scene", sceneText).virtualFile
         val position = SceneJson().parse(sceneText)["ecs"]["0"]["components"]["PositionComponent"]["localPosition"]
-        val edit = TransformEdit(position = Vec3(1f, position["y"].floatValue(), position["z"].floatValue()))
+        val edit = TransformEdit(position = Vector3(1f, position["y"].floatValue(), position["z"].floatValue()))
         // what SceneFileEditor.applyTransform runs for a drag of Model 0
         assertTrue(editSceneJson(project, file, "Move Entity") { root -> SceneTransformWriter().apply(root, "0", edit) })
         assertEquals(HeadlessEdit.Edited(textOf(file)), headless.transform(sceneText, "0", edit))
@@ -56,10 +56,10 @@ class HeadlessSceneEditingTest : BasePlatformTestCase() {
         val shown = readEntityState(ComponentTarget(file, "0", null), testPanelServices(project)) as PanelState.Empty
         assertEquals(AbyssusBundle.message("propertiesSceneUnreadable", refusal.message), shown.message)
         assertFalse(editSceneJson(project, file, "Move Entity") { root ->
-            SceneTransformWriter().apply(root, "0", TransformEdit(position = Vec3(1f, 0f, 0f)))
+            SceneTransformWriter().apply(root, "0", TransformEdit(position = Vector3(1f, 0f, 0f)))
         })
         assertEquals(legacy, textOf(file))
-        assertEquals(HeadlessEdit.Refused(refusal), headless.transform(legacy, "0", TransformEdit(position = Vec3(1f, 0f, 0f))))
+        assertEquals(HeadlessEdit.Refused(refusal), headless.transform(legacy, "0", TransformEdit(position = Vector3(1f, 0f, 0f))))
     }
 
     fun testAnAssetPropertyEditWritesWhatThePanelWrites() {

@@ -24,7 +24,6 @@ import com.badlogic.gdx.utils.Pool
 import com.intellij.openapi.diagnostic.Logger
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
 import net.nevinsky.abyssus.lib.gdx.g3d.ModelDepthShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.*
 import net.nevinsky.abyssus.lib.render.shadow.DepthSubmission
@@ -79,10 +78,10 @@ class SceneShadows : Disposable {
                     val index = lights.directional.indexOfFirst { it.entityId == allocation.entityId }
                     val source = lights.directional[index]
                     light = dirs?.get(index) ?: continue
-                    sourcePosition = source.position.toVector3(); range = 1f
+                    sourcePosition = source.position.cpy(); range = 1f
                     views = receiver?.let {
                         projection.directional(
-                            source.direction.toVector3(),
+                            source.direction.cpy(),
                             it,
                             casters.map(ShadowCaster::bounds)
                         )
@@ -93,7 +92,7 @@ class SceneShadows : Disposable {
                     val index = lights.point.indexOfFirst { it.entityId == allocation.entityId }
                     val source = lights.point[index]
                     light = points?.get(index) ?: continue
-                    sourcePosition = source.position.toVector3(); range = source.range
+                    sourcePosition = source.position.cpy(); range = source.range
                     views = projection.point(sourcePosition, range)
                 }
 
@@ -101,8 +100,8 @@ class SceneShadows : Disposable {
                     val index = lights.spot.indexOfFirst { it.entityId == allocation.entityId }
                     val source = lights.spot[index]
                     light = spots?.get(index) ?: continue
-                    sourcePosition = source.position.toVector3(); range = source.range
-                    views = projection.spot(sourcePosition, source.direction.toVector3(), source.cone.angle, range)
+                    sourcePosition = source.position.cpy(); range = source.range
+                    views = projection.spot(sourcePosition, source.direction.cpy(), source.cone.angle, range)
                         ?.let(::listOf) ?: continue
                 }
             }

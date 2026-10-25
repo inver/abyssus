@@ -10,7 +10,7 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import com.badlogic.gdx.math.Matrix4
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.*
 import net.nevinsky.abyssus.lib.raytracing.*
@@ -81,9 +81,9 @@ class RaySceneConverter(private val limits: RaySnapshotLimits = RaySnapshotLimit
 
         fun visit(node: RayModelNode, parent: Matrix4, path: String) {
             val local = PlacementTransform(
-                Vec3(node.translation.x, node.translation.y, node.translation.z),
+                Vector3(node.translation.x, node.translation.y, node.translation.z),
                 Quat(node.rotation.x, node.rotation.y, node.rotation.z, node.rotation.w),
-                Vec3(node.scale.x, node.scale.y, node.scale.z)
+                Vector3(node.scale.x, node.scale.y, node.scale.z)
             ).toMatrix()
             val global = Matrix4(parent).mul(local)
             for ((ordinal, part) in node.parts.withIndex()) {

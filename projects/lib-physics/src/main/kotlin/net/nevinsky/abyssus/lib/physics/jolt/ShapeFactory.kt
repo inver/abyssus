@@ -57,8 +57,12 @@ internal class ShapeFactory(
             }
 
             ColliderShape.CAPSULE -> {
-                if (collider.radius <= 0f) return Built.Refused("ColliderComponent.radius ${collider.radius} is not greater than 0")
-                if (collider.halfHeight <= 0f) return Built.Refused("ColliderComponent.halfHeight ${collider.halfHeight} is not greater than 0")
+                if (collider.radius <= 0f) {
+                    return Built.Refused("ColliderComponent.radius ${collider.radius} is not greater than 0")
+                }
+                if (collider.halfHeight <= 0f) {
+                    return Built.Refused("ColliderComponent.halfHeight ${collider.halfHeight} is not greater than 0")
+                }
                 if (!uniform) warning = "has a non-uniform scale; its capsule takes the largest axis"
                 CapsuleShapeSettings(collider.halfHeight * largest, collider.radius * largest)
             }

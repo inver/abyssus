@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 
 /** The Swing-pixel ray through ([x], [y]) in the view [size], or null while the view is empty or the camera has no ray. */
@@ -20,8 +20,8 @@ internal interface GestureHost {
     val size: ViewSize
     val foliagePaint: FoliagePaint?
     val onTransform: ((String, TransformEdit) -> Boolean)?
-    val onWaterMove: ((String, Vec3) -> Boolean)?
-    val onArrangementEdit: ((String, List<Vec3>) -> Boolean)?
+    val onWaterMove: ((String, Vector3) -> Boolean)?
+    val onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
 
     /** The selected entity, or null. */
     val selectedId: String?
@@ -50,8 +50,8 @@ internal sealed interface Gesture {
     data object Cancelled : Gesture
 
     /** A move handle of control point [index] of the arrangement [entityId] is dragged; [original] are its points before, [points] now. */
-    class DraggingPathPoint(val drag: GizmoDrag, val entityId: String, val index: Int, val original: List<Vec3>) : Gesture {
-        var points: List<Vec3> = original
+    class DraggingPathPoint(val drag: GizmoDrag, val entityId: String, val index: Int, val original: List<Vector3>) : Gesture {
+        var points: List<Vector3> = original
         var moved = false
     }
 

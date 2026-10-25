@@ -1,5 +1,6 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
+import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
@@ -23,7 +24,7 @@ class SceneExtensionsAvailabilityTest : BasePlatformTestCase() {
                             public void input($pkg.SimulationInput e) {}
                             public java.util.Map<String, net.nevinsky.abyssus.lib.core.editor.content.Pose> poses() {
                                 return java.util.Map.of("0",new net.nevinsky.abyssus.lib.core.editor.content.Pose(
-                                    new net.nevinsky.abyssus.lib.core.editor.content.Vec3(1f,2f,3f),
+                                    new com.badlogic.gdx.math.Vector3(1f,2f,3f),
                                     new net.nevinsky.abyssus.lib.core.editor.content.Quat(0f,0f,0f,1f)));
                             }
                         };
@@ -34,8 +35,8 @@ class SceneExtensionsAvailabilityTest : BasePlatformTestCase() {
                     public $pkg.SceneOverlay create(com.intellij.openapi.project.Project p, com.intellij.openapi.vfs.VirtualFile f) { return this; }
                     public void draw($pkg.OverlayView view, net.nevinsky.abyssus.lib.core.editor.pick.LineSink lines) {
                         positions = view.getContent().getEntityPositions().size();
-                        lines.line(new net.nevinsky.abyssus.lib.core.editor.content.Vec3(1f,2f,3f),
-                            new net.nevinsky.abyssus.lib.core.editor.content.Vec3(2f,2f,3f),
+                        lines.line(new com.badlogic.gdx.math.Vector3(1f,2f,3f),
+                            new com.badlogic.gdx.math.Vector3(2f,2f,3f),
                             new net.nevinsky.abyssus.lib.core.editor.content.Rgba(1f,1f,1f,1f));
                     }
                 }""",
@@ -72,8 +73,8 @@ class SceneExtensionsAvailabilityTest : BasePlatformTestCase() {
                     null,null,com.badlogic.gdx.graphics.PerspectiveCamera(),600,false,false)
                 var lines = 0
                 overlay.create(project,file).draw(view, object : net.nevinsky.abyssus.lib.core.editor.pick.LineSink {
-                    override fun line(from: net.nevinsky.abyssus.lib.core.editor.content.Vec3,
-                        to: net.nevinsky.abyssus.lib.core.editor.content.Vec3, color: net.nevinsky.abyssus.lib.core.editor.content.Rgba) { lines++ }
+                    override fun line(from: com.badlogic.gdx.math.Vector3,
+                        to: com.badlogic.gdx.math.Vector3, color: net.nevinsky.abyssus.lib.core.editor.content.Rgba) { lines++ }
                 })
                 assertEquals(1,lines)
                 assertEquals(0,overlay.javaClass.getField("positions").getInt(overlay))

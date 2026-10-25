@@ -13,6 +13,7 @@ plugins {
 dependencies {
     implementation(kotlin("stdlib"))
     api(libs.slf4j.api)
+    api(libs.gdx)
     // Vulkan bindings load nothing until a probe runs. lwjgl-vulkan publishes natives only for macOS (MoltenVK);
     // Windows and Linux use the system loader. lwjgl-vma has natives for every target.
     implementation(libs.lwjgl)

@@ -5,12 +5,11 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
@@ -36,7 +35,7 @@ class SceneSkybox(private val assets: AssetView<SkyRenderer>) : Disposable {
      * by the sun toward [sun], and its clouds drift to [timeSeconds] and are drawn with [technique] (null: the asset's).
      */
     fun draw(
-        camera: Camera, name: String?, projectDir: File?, sun: Vec3 = SunDirection.DEFAULT, timeSeconds: Double = 0.0,
+        camera: Camera, name: String?, projectDir: File?, sun: Vector3 = SunDirection.DEFAULT, timeSeconds: Double = 0.0,
         technique: CloudTechnique? = null,
     ) {
         assets.update(projectDir, setOfNotNull(name))
@@ -77,7 +76,7 @@ class SceneSkybox(private val assets: AssetView<SkyRenderer>) : Disposable {
      * Moves the sky light of the procedural sky [name] one frame (nothing for any other sky): the sun toward [sun] and
      * the clouds at [timeSeconds] decide when it rebuilds, [deltaSeconds] fades a new result in.
      */
-    fun updateLighting(name: String?, sun: Vec3, timeSeconds: Double, visible: Boolean, deltaSeconds: Double) {
+    fun updateLighting(name: String?, sun: Vector3, timeSeconds: Double, visible: Boolean, deltaSeconds: Double) {
         val sky = name?.let(assets::get) as? ProceduralSky ?: return
         sky.updateLighting(sunDirection.set(sun.x, sun.y, sun.z), timeSeconds, visible, deltaSeconds)
     }

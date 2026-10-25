@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.water.WaterSettings
@@ -126,17 +125,17 @@ class SceneWaterFoamGlTest {
     @Test fun deepWaterModelsAndTheSurfaceEdgeMakeNoFoam() {
         // a flat floor two units under the lake: models stand in it, and its edges end over open floor
         fun scene(foam: Double) = WaterGlScenes.flatLake(listOf(WaterGlScenes.lake().copy(foamAmount = foam, foamWidth = 1.5)))
-        val with = WaterGlRig.shoot(scene(1.0), OrbitCamera(Vec3(0f, 0f, 0f), 25f, 0.6f, 0.35f))
-        val without = WaterGlRig.shoot(scene(0.0), OrbitCamera(Vec3(0f, 0f, 0f), 25f, 0.6f, 0.35f))
+        val with = WaterGlRig.shoot(scene(1.0), OrbitCamera(Vector3(0f, 0f, 0f), 25f, 0.6f, 0.35f))
+        val without = WaterGlRig.shoot(scene(0.0), OrbitCamera(Vector3(0f, 0f, 0f), 25f, 0.6f, 0.35f))
         assertTrue("no foam anywhere over a deep floor, round models or at the edge", identical(with.image, without.image))
         // the edge itself is on screen: a lake that fits inside the view
         val small = WaterGlRig.shoot(
             WaterGlScenes.flatLake(listOf(WaterGlScenes.lake().copy(width = 20.0, length = 20.0, foamAmount = 1.0, foamWidth = 1.5))),
-            OrbitCamera(Vec3(0f, 0f, 0f), 40f, 0.6f, 0.6f),
+            OrbitCamera(Vector3(0f, 0f, 0f), 40f, 0.6f, 0.6f),
         )
         val smallOff = WaterGlRig.shoot(
             WaterGlScenes.flatLake(listOf(WaterGlScenes.lake().copy(width = 20.0, length = 20.0, foamAmount = 0.0, foamWidth = 1.5))),
-            OrbitCamera(Vec3(0f, 0f, 0f), 40f, 0.6f, 0.6f),
+            OrbitCamera(Vector3(0f, 0f, 0f), 40f, 0.6f, 0.6f),
         )
         assertTrue("an extent edge over empty floor shows no foam", identical(small.image, smallOff.image))
     }

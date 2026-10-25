@@ -51,7 +51,7 @@ and rejection reasons stay unchanged. Neither `core` nor `runtime` depends on `e
 | `editor-core` `…editor` | `EditorMessages`, `ResourceEditorMessages` (D11) |
 | `…editor.document` | `SceneJson`, `JsonFormat`, editor-facing format type aliases, `DocumentParsing`, `AssetMetaReader`, `SceneDocument` and `SceneEntityTree` (stage 2), `SceneRaySettings` and `RayMaterialOverrides` (the `rayTracing` blocks), `scalarOf` |
 | `…editor.components` | `ComponentCodec`, built-in kinds, `SchemaCodec`, `ComponentEditor`, `ComponentReader`, `LightEntities`, schema merge |
-| `…editor.content` | leaf value types: `Vec3`, `Quat`, `Pose`, placements, `RenderAsset`, `PlacementTransform.toMatrix` |
+| `…editor.content` | leaf value types: `Vector3`, `Quat`, `Pose`, placements, `RenderAsset`, `PlacementTransform.toMatrix` |
 | `…editor.scene` | the read model built from the document: `SceneContent`, `SceneRenderParams`, `PlacementMapper`, `CameraFrustum`, `SceneLighting` (`LightSet`), `SpotCone`, `ModelEntity`, `PlacedEntities`, `AssetRevisions` |
 | `…editor.pick` | `ScenePicker`, `SceneQueries`, `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction`, `ScenePreview`, `SceneTransformWriter`, `SceneMarkers` with `LineSink`, `FrameSnapshot`, `SceneViewState` |
 | `…editor.terrain` | generation, noise, recipe, new-terrain file logic |
@@ -95,7 +95,7 @@ before the switch (same entities, same values), then switch callers one at a tim
 
 ### D5. Breaking the cycles (stage 1)
 
-- `Vec3`, `Quat`, `PlacementTransform` and the placement records move to `…content` (a leaf package).
+- `Vector3`, `Quat`, `PlacementTransform` and the placement records move to `…content` (a leaf package).
 - `SceneFileEditor` asks `projectView` for four things (Add Light actions, selection topic, `componentTargetOf`,
   `selectEntityInAbyssusView`). Replace them with `SceneViewHost`, an interface the view receives by constructor and
   the pane implements. The editor does not import `projectView`.

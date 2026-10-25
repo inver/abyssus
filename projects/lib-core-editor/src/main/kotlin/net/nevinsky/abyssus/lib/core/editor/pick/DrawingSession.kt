@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.pick
 
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 
 /**
  * Drawing a path arrangement and editing its points: each click on the terrain adds a point, a click on the first point
@@ -17,8 +17,8 @@ internal class DrawingSession(
     private val state: SceneViewState,
     private val queries: SceneQueries,
     private val size: () -> ViewSize,
-    private val onCreate: () -> ((RenderAsset, List<Vec3>, Boolean) -> Boolean)?,
-    private val onEdit: () -> ((String, List<Vec3>) -> Boolean)?,
+    private val onCreate: () -> ((RenderAsset, List<Vector3>, Boolean) -> Boolean)?,
+    private val onEdit: () -> ((String, List<Vector3>) -> Boolean)?,
     private val changed: () -> Unit,
 ) {
     /** Starts drawing a path arrangement of the model [asset]. */
@@ -48,7 +48,7 @@ internal class DrawingSession(
         }
         val ray = queries.rayFrom(view, x, y) ?: return
         val hit = queries.groundHit(ray) ?: return
-        drawing.points += Vec3(hit.x, hit.y, hit.z)
+        drawing.points += Vector3(hit.x, hit.y, hit.z)
         changed()
     }
 

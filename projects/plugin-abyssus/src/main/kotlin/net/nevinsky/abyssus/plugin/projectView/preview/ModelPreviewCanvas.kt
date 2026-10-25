@@ -27,7 +27,6 @@ import com.intellij.util.ui.JBUI
 import com.badlogic.gdx.graphics.g3d.utils.AnimationController
 import com.badlogic.gdx.graphics.g3d.ModelInstance
 import net.nevinsky.abyssus.lib.core.assets.model.PreparedModel
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import com.badlogic.gdx.graphics.g3d.Model
@@ -69,7 +68,7 @@ class PreviewModel(val data: ModelData, val pixmaps: MutableMap<String, Pixmap>,
 class ModelPreviewCanvas : JPanel(CardLayout()) {
     private val frame = GdxFrame()
     private val framing = PreviewFraming()
-    private val orbit = OrbitCamera(Vec3(0f, 0.5f, 0f), 3f, 30f, 20f)
+    private val orbit = OrbitCamera(Vector3(0f, 0.5f, 0f), 3f, 30f, 20f)
     private val message = JBLabel("", SwingConstants.CENTER)
     private var gdx: GdxContext? = null
     private var capabilities: GLCapabilities? = null

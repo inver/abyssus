@@ -5,24 +5,18 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.scene.cameraFrustumOf
-import net.nevinsky.abyssus.lib.core.editor.scene.cameraSideAxes
-import net.nevinsky.abyssus.lib.core.editor.scene.toVec3
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
-import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.math.collision.BoundingBox
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.PathCurve
 import net.nevinsky.abyssus.lib.core.editor.arrange.PathLayout
 import net.nevinsky.abyssus.lib.core.editor.arrange.pointsOf
-import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
-
-import com.badlogic.gdx.math.Vector3
-import com.badlogic.gdx.math.collision.BoundingBox
+import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.LightKind
+import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import net.nevinsky.abyssus.lib.core.editor.scene.*
 
 private const val CAMERA_BOUNDS_HALF = 0.5f
 private const val LIGHT_BOUNDS_HALF = 0.3f
@@ -40,10 +34,10 @@ const val PATH_MIDDLE_HALF = PATH_POINT_HALF / 2f
 const val PATH_HANDLE_WIDTH_PX = 3f
 
 /** The 12 edges of the diamond (octahedron) of half-size [r] at [p]; every tip joins every tip that is not opposite. */
-fun diamondEdges(p: Vec3, r: Float): List<Pair<Vec3, Vec3>> {
+fun diamondEdges(p: Vector3, r: Float): List<Pair<Vector3, Vector3>> {
     val tips = listOf(
-        Vec3(p.x + r, p.y, p.z), Vec3(p.x - r, p.y, p.z), Vec3(p.x, p.y + r, p.z),
-        Vec3(p.x, p.y - r, p.z), Vec3(p.x, p.y, p.z + r), Vec3(p.x, p.y, p.z - r),
+        Vector3(p.x + r, p.y, p.z), Vector3(p.x - r, p.y, p.z), Vector3(p.x, p.y + r, p.z),
+        Vector3(p.x, p.y - r, p.z), Vector3(p.x, p.y, p.z + r), Vector3(p.x, p.y, p.z - r),
     )
     return buildList { for (i in tips.indices) for (j in i + 1 until tips.size) if (i / 2 != j / 2) add(tips[i] to tips[j]) }
 }
@@ -64,11 +58,11 @@ private val FRUSTUM_COLOR = Rgba(0.55f, 0.7f, 0.95f, 1f)
  */
 class SceneMarkers {
 
-    fun cameraBounds(position: Vec3): BoundingBox = boundsAround(position, CAMERA_BOUNDS_HALF)
+    fun cameraBounds(position: Vector3): BoundingBox = boundsAround(position, CAMERA_BOUNDS_HALF)
 
-    fun lightBounds(position: Vec3): BoundingBox = boundsAround(position, LIGHT_BOUNDS_HALF)
+    fun lightBounds(position: Vector3): BoundingBox = boundsAround(position, LIGHT_BOUNDS_HALF)
 
-    private fun boundsAround(p: Vec3, half: Float) =
+    private fun boundsAround(p: Vector3, half: Float) =
         BoundingBox(Vector3(p.x - half, p.y - half, p.z - half), Vector3(p.x + half, p.y + half, p.z + half))
 
     /** Pick targets for every camera and light except the camera [skipCamera] (the one being looked through). */
@@ -90,7 +84,7 @@ class SceneMarkers {
         for (light in content.lights) drawLight(out, light)
     }
 
-    fun drawCamera(out: LineSink, camera: CameraPlacement, positions: Map<String, Vec3>, aspect: Float) {
+    fun drawCamera(out: LineSink, camera: CameraPlacement, positions: Map<String, Vector3>, aspect: Float) {
         val frustum = cameraFrustumOf(camera, positions, aspect)
         val c = frustum.corners
         for (ring in 0..1) for (i in 0 until 4) out.line(c[ring * 4 + i], c[ring * 4 + (i + 1) % 4], FRUSTUM_COLOR)
@@ -99,11 +93,11 @@ class SceneMarkers {
     }
 
     /** A box with a lens pyramid on the front, facing [direction]. */
-    private fun drawBody(out: LineSink, position: Vec3, direction: Vec3) {
-        val d = direction.toVector3()
+    private fun drawBody(out: LineSink, position: Vector3, direction: Vector3) {
+        val d = direction.cpy()
         val (right, up) = cameraSideAxes(d)
-        val eye = position.toVector3()
-        fun at(r: Float, u: Float, f: Float) = Vector3(eye).mulAdd(right, r).mulAdd(up, u).mulAdd(d, f).toVec3()
+        val eye = position.cpy()
+        fun at(r: Float, u: Float, f: Float) = Vector3(eye).mulAdd(right, r).mulAdd(up, u).mulAdd(d, f).cpy()
         val w = 0.3f
         val h = 0.2f
         val l = 0.3f
@@ -127,14 +121,14 @@ class SceneMarkers {
         )
         val r = LIGHT_RADIUS
         val tips = listOf(
-            Vec3(p.x + r, p.y, p.z), Vec3(p.x - r, p.y, p.z),
-            Vec3(p.x, p.y + r, p.z), Vec3(p.x, p.y - r, p.z),
-            Vec3(p.x, p.y, p.z + r), Vec3(p.x, p.y, p.z - r),
+            Vector3(p.x + r, p.y, p.z), Vector3(p.x - r, p.y, p.z),
+            Vector3(p.x, p.y + r, p.z), Vector3(p.x, p.y - r, p.z),
+            Vector3(p.x, p.y, p.z + r), Vector3(p.x, p.y, p.z - r),
         )
         // an octahedron: every tip joins every tip that is not opposite
         for (i in tips.indices) for (j in i + 1 until tips.size) if (i / 2 != j / 2) out.line(tips[i], tips[j], color)
         if (light.kind != LightKind.POINT) {
-            val end = Vector3(p.x, p.y, p.z).mulAdd(light.direction.toVector3(), DIRECTION_LINE_LENGTH).toVec3()
+            val end = Vector3(p.x, p.y, p.z).mulAdd(light.direction.cpy(), DIRECTION_LINE_LENGTH).cpy()
             out.line(p, end, color)
         }
     }
@@ -160,16 +154,16 @@ class SceneMarkers {
         if (slots) for (slot in PathLayout().slots(path).orEmpty()) {
             val y = ground.heightAt(slot.x, slot.z, slot.fallbackY)
             val r = SLOT_MARKER_HALF
-            out.line(Vec3(slot.x - r, y, slot.z), Vec3(slot.x + r, y, slot.z), SLOT_COLOR)
-            out.line(Vec3(slot.x, y, slot.z - r), Vec3(slot.x, y, slot.z + r), SLOT_COLOR)
-            out.line(Vec3(slot.x, y, slot.z), Vec3(slot.x, y + SLOT_MARKER_HEIGHT, slot.z), SLOT_COLOR)
+            out.line(Vector3(slot.x - r, y, slot.z), Vector3(slot.x + r, y, slot.z), SLOT_COLOR)
+            out.line(Vector3(slot.x, y, slot.z - r), Vector3(slot.x, y, slot.z + r), SLOT_COLOR)
+            out.line(Vector3(slot.x, y, slot.z), Vector3(slot.x, y + SLOT_MARKER_HEIGHT, slot.z), SLOT_COLOR)
         }
         if (!handles) return
         for ((i, p) in points.withIndex()) drawDiamond(out, p, PATH_POINT_HALF, if (i == selectedPoint) SELECTED_HANDLE_COLOR else POINT_HANDLE_COLOR, PATH_HANDLE_WIDTH_PX)
         for (i in 0 until count) drawDiamond(out, PathCurve.at(points, path.closed, i, 0.5f), PATH_MIDDLE_HALF, MIDDLE_HANDLE_COLOR, PATH_HANDLE_WIDTH_PX)
     }
 
-    private fun drawDiamond(out: LineSink, p: Vec3, r: Float, color: Rgba, widthPx: Float) {
+    private fun drawDiamond(out: LineSink, p: Vector3, r: Float, color: Rgba, widthPx: Float) {
         for ((a, b) in diamondEdges(p, r)) out.thickLine(a, b, color, widthPx)
     }
 }

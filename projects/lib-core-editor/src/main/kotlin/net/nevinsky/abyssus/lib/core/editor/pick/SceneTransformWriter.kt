@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -19,14 +19,14 @@ import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
  * A null part is left as it is. [target] moves another entity (a light's direction handle) instead of the light itself.
  */
 data class TransformEdit(
-    val position: Vec3? = null,
+    val position: Vector3? = null,
     val rotation: Quat? = null,
-    val direction: Vec3? = null,
+    val direction: Vector3? = null,
     val target: TargetMove? = null,
 )
 
 /** A move of another entity's `PositionComponent.localPosition`: [entityId] is the target, [position] is its new position. */
-data class TargetMove(val entityId: String, val position: Vec3)
+data class TargetMove(val entityId: String, val position: Vector3)
 
 /** Writes a [TransformEdit] into a scene's JSON tree, touching only the values that change. */
 class SceneTransformWriter(private val arrangements: ArrangementEdits = ArrangementEdits()) {
@@ -71,7 +71,7 @@ class SceneTransformWriter(private val arrangements: ArrangementEdits = Arrangem
     private fun placementOf(components: ObjectNode): ObjectNode =
         components.get("PositionComponent") as? ObjectNode ?: components.putObject("PositionComponent")
 
-    private fun setVec(parent: ObjectNode, name: String, v: Vec3) =
+    private fun setVec(parent: ObjectNode, name: String, v: Vector3) =
         setFields(parent, name, listOf(Field("x", v.x, 0f), Field("y", v.y, 0f), Field("z", v.z, 0f)))
 
     private fun setQuat(parent: ObjectNode, name: String, q: Quat) =

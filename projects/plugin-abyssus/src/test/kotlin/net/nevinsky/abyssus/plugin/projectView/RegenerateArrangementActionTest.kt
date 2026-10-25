@@ -15,7 +15,7 @@ import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.plugin.sceneview.ArrangementEditing
@@ -32,7 +32,7 @@ class RegenerateArrangementActionTest : BasePlatformTestCase() {
         FileUtil.copyDir(File("src/test/testData/project/Untitled"), dir)
         scene = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(dir, "scenes/Main Scene.scene"))!!
         // drawn at height 0 over a terrain that is not flat: Regenerate has work to do
-        ArrangementEditing.create(project, scene, RenderAsset("MODEL", "tree"), listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f)), false, LineHeights())
+        ArrangementEditing.create(project, scene, RenderAsset("MODEL", "tree"), listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)), false, LineHeights())
     }
 
     private fun text() = FileDocumentManager.getInstance().getDocument(scene)!!.text

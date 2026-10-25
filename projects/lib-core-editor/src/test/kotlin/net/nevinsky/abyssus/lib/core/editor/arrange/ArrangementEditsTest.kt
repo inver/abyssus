@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.pick.GroundHeights
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
@@ -52,7 +52,7 @@ class ArrangementEditsTest {
     private fun z(root: JsonNode, id: Int) =
         components(root, id)!!["PositionComponent"]["localPosition"].path("z").floatValue()
 
-    private fun point(x: Float, z: Float) = Vec3(x, heights.heightAt(x, z, 0f), z)
+    private fun point(x: Float, z: Float) = Vector3(x, heights.heightAt(x, z, 0f), z)
 
     /** A fresh line of trees from (0, 0) to (40, 0) written to Main Scene: arrangement 11, copies 12 to 16. */
     private fun drawn(): ObjectNode {
@@ -75,7 +75,7 @@ class ArrangementEditsTest {
         return edits.regenerate(root, id.toString(), if (refillAware) before else null, heights)
     }
 
-    private fun setPoints(node: ObjectNode, vararg points: Vec3) {
+    private fun setPoints(node: ObjectNode, vararg points: Vector3) {
         val array = node.putArray("points")
         for (p in points) array.addObject().put("x", p.x).put("y", p.y).put("z", p.z)
     }
@@ -130,7 +130,7 @@ class ArrangementEditsTest {
     fun aTooLongLineIsRefusedAndWritesNothing() {
         val root = mainScene()
         val before = root.toString()
-        val result = edits.create(root, tree, listOf(Vec3(0f, 0f, 0f), Vec3(20000f, 0f, 0f)), false, heights)
+        val result = edits.create(root, tree, listOf(Vector3(0f, 0f, 0f), Vector3(20000f, 0f, 0f)), false, heights)
         assertTrue(result is ArrangementResult.Rejected)
         assertEquals(before, root.toString())
     }
@@ -320,7 +320,7 @@ class ArrangementEditsTest {
     fun setPointsKeepsTheTextOfPointsThatDidNotMove() {
         val root = drawn()
         val first = component(root).points[0]
-        edits.setPoints(root, "11", listOf(Vec3(first.x, first.y, first.z), point(60f, 0f)), heights)
+        edits.setPoints(root, "11", listOf(Vector3(first.x, first.y, first.z), point(60f, 0f)), heights)
         assertEquals(first.y, component(root).points[0].y, 0f)
     }
 }

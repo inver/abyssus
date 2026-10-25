@@ -12,7 +12,6 @@ import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageBrush
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageBrushMode
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
@@ -120,7 +119,7 @@ class SceneInteractionPaintTest {
         val frame = FrameSnapshot(camera(), emptyList(), terrains.map { snapshotTerrainOf(it) }, 7L)
         val queries = SnapshotSceneQueries({ frame }, state) { content }
         val paint = RecordingPaint(resolution)
-        val orbit = OrbitCamera(Vec3(50f, 0f, 50f), 60f, 0f, 0.6f)
+        val orbit = OrbitCamera(Vector3(50f, 0f, 50f), 60f, 0f, 0.6f)
         val interaction = SceneInteraction(state, queries, orbit).also {
             it.size = ViewSize(WIDTH, HEIGHT, WIDTH, HEIGHT)
             it.foliagePaint = paint
@@ -197,7 +196,7 @@ class SceneInteractionPaintTest {
                 AssetPlacement(
                     "2",
                     "terrain_meadow",
-                    PlacementTransform(Vec3(0f, 0f, -size.toFloat()), Quat.IDENTITY, Vec3(1f, 1f, 1f)),
+                    PlacementTransform(Vector3(0f, 0f, -size.toFloat()), Quat.IDENTITY, Vector3(1f, 1f, 1f)),
                 ),
             ),
         )
@@ -247,7 +246,7 @@ class SceneInteractionPaintTest {
     fun rightDragsAndTheWheelNavigateWithoutPainting() {
         val f = fixture()
         f.paintOn()
-        val target = Vec3(f.orbit.target.x, f.orbit.target.y, f.orbit.target.z)
+        val target = Vector3(f.orbit.target.x, f.orbit.target.y, f.orbit.target.z)
         val distance = f.orbit.distance
         val (x, y) = f.pixelOf(50f, 50f)
         f.interaction.pressed(x, y, false)
@@ -298,9 +297,9 @@ class SceneInteractionPaintTest {
         // yaw of 30 degrees, twice the size along x and z, moved off the origin
         val world = Matrix4().setToTranslation(10f, 0f, 30f).rotate(Vector3.Y, 30f).scale(2f, 1f, 2f)
         val transform = PlacementTransform(
-            Vec3(10f, 0f, 30f),
+            Vector3(10f, 0f, 30f),
             Quat(0f, 0.25881905f, 0f, 0.96592583f),
-            Vec3(2f, 1f, 2f),
+            Vector3(2f, 1f, 2f),
         )
         val f = fixture(
             content = terrainContent(transform),

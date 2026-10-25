@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
@@ -351,7 +351,7 @@ class ComponentEditorTest {
     /** Main Scene with a line of trees: arrangement 11 and copies 12 to 16. */
     private fun arranged(): JsonNode {
         val root = SceneJson().parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
-        val points = listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f))
+        val points = listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f))
         ArrangementEdits(ResourceEditorMessages()).create(root, RenderAsset("MODEL", "tree"), points, false, LineHeights())
         return root
     }

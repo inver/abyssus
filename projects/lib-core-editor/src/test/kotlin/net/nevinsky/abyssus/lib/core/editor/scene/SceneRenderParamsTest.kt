@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 
@@ -96,7 +96,7 @@ class SceneRenderParamsTest {
         val abss = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":-0.5,"y":0.0,"z":-0.5},"position":{"x":4.0,"y":3.0,"z":6.0},
             "far":100.0,"near":1.0,"fieldOfView":67.0},"name":"Untitled"}"""
         val cam = MainCamera().parse(abss)!!
-        assertEquals(Vec3(4f, 3f, 6f), cam.position)
+        assertEquals(Vector3(4f, 3f, 6f), cam.position)
         assertEquals(100f, cam.far, 0f)
         assertEquals(67f, cam.fieldOfView, 0f)
         val d = cam.direction
@@ -146,7 +146,7 @@ class SceneRenderParamsTest {
     fun nullNearKeepsTheRestOfTheCamera() {
         val abss = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3},"near":null,"far":50.0}}"""
         val cam = MainCamera().parse(abss)!!
-        assertEquals(Vec3(1f, 2f, 3f), cam.position)
+        assertEquals(Vector3(1f, 2f, 3f), cam.position)
         assertEquals(CameraParams.DEFAULT.near, cam.near, 0f)
         assertEquals(50f, cam.far, 0f)
     }

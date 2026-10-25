@@ -10,13 +10,10 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.scene.toVec3
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
 import kotlin.math.atan2
 
 /** What a drag has done to the object so far; [direction] is the turned direction for objects that have one. */
-data class DragResult(val transform: PlacementTransform, val direction: Vec3?)
+data class DragResult(val transform: PlacementTransform, val direction: Vector3?)
 
 internal class GizmoMath {
     /** The distance along [ray] to the plane through [point] with [normal], or null when parallel or behind. */
@@ -49,12 +46,12 @@ class GizmoDrag(
     private val axis: GizmoAxis,
     val start: PlacementTransform,
     startRay: Ray,
-    private val startDirection: Vec3? = null,
-    axisDirection: Vec3 = axis.direction,
+    private val startDirection: Vector3? = null,
+    axisDirection: Vector3 = axis.direction,
     private val snap: GizmoSnap? = null,
 ) {
-    private val origin = start.position.toVector3()
-    private val axisVector = axisDirection.toVector3()
+    private val origin = start.position.cpy()
+    private val axisVector = axisDirection.cpy()
     private val startParameter: Float? = when (mode) {
         GizmoMode.MOVE -> GizmoMath().rayLine(startRay, origin, axisVector)
         GizmoMode.ROTATE, GizmoMode.SELECT -> null
@@ -90,7 +87,7 @@ class GizmoDrag(
         val p = Vector3(origin).add(shift)
         // Snapping rounds the coordinate along the axis, not the distance dragged.
         snap?.let { p.mulAdd(axisVector, it.move(p.dot(axisVector)) - p.dot(axisVector)) }
-        return DragResult(start.copy(position = p.toVec3()), startDirection)
+        return DragResult(start.copy(position = p.cpy()), startDirection)
     }
 
     private fun rotate(ray: Ray): DragResult? {
@@ -100,7 +97,7 @@ class GizmoDrag(
         val degrees = Math.toDegrees(angle.toDouble()).toFloat()
         val delta = Quaternion(axisVector, snap?.rotate(degrees) ?: degrees)
         val q = Quaternion(start.rotation.x, start.rotation.y, start.rotation.z, start.rotation.w).mulLeft(delta).nor()
-        val direction = startDirection?.let { delta.transform(it.toVector3()).toVec3() }
+        val direction = startDirection?.let { delta.transform(it.cpy()).cpy() }
         return DragResult(start.copy(rotation = Quat(q.x, q.y, q.z, q.w)), direction)
     }
 

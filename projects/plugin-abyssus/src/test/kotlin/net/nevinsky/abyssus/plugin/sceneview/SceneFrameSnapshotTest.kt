@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
@@ -59,7 +59,7 @@ class SceneFrameSnapshotTest {
         fun advance(params: SceneRenderParams): Pair<Float, Int> {
             var step = 0f
             var passes = 0
-            val orbit = OrbitCamera(Vec3(first.x, first.y, first.z), 14f, 0.4f, 0.4f)
+            val orbit = OrbitCamera(Vector3(first.x, first.y, first.z), 14f, 0.4f, 0.4f)
             val r = GlHarness.render(params, 70, orbit, framebufferSize = 480 to 320) { renderer, index ->
                 if (index < 60) {
                     Thread.sleep(15)
@@ -83,7 +83,7 @@ class SceneFrameSnapshotTest {
     }
 
     private fun image(params: SceneRenderParams, configure: (SceneRenderer) -> Unit = {}): WaterShot =
-        WaterGlRig.shoot(params, OrbitCamera(Vec3(0f, 0f, 0f), 25f, 0.6f, 0.35f), configure = configure)
+        WaterGlRig.shoot(params, OrbitCamera(Vector3(0f, 0f, 0f), 25f, 0.6f, 0.35f), configure = configure)
 
     private fun identical(a: BufferedImage, b: BufferedImage): Boolean {
         if (a.width != b.width || a.height != b.height) return false
@@ -94,7 +94,7 @@ class SceneFrameSnapshotTest {
     @Test fun aTransformPreviewShowsTheSamePoseInTheViewAndTheReflection() {
         val base = withWater("Untitled", "Main Scene.scene", 0.0, 0.0, 0.0)
         val model = base.content.models.first { it.entityId == "2" }
-        val moved = Vec3(model.transform.position.x + 4f, model.transform.position.y, model.transform.position.z - 2f)
+        val moved = Vector3(model.transform.position.x + 4f, model.transform.position.y, model.transform.position.z - 2f)
         val previewed = image(base) { renderer ->
             renderer.state.preview = mapOf("2" to DragResult(model.transform.copy(position = moved), null))
         }

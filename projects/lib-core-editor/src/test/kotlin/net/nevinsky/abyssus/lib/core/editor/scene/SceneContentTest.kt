@@ -62,9 +62,9 @@ class SceneContentTest {
             )
         )
         val t = c.models.single().transform
-        assertEquals(Vec3(0f, 2f, 0f), t.position)
+        assertEquals(Vector3(0f, 2f, 0f), t.position)
         assertEquals(Quat(-0.5f, 0f, 0f, 0.5f), t.rotation)
-        assertEquals(Vec3(1f, 1f, 1f), t.scale)
+        assertEquals(Vector3(1f, 1f, 1f), t.scale)
     }
 
     @Test
@@ -110,8 +110,8 @@ class SceneContentTest {
         assertEquals(LightKind.DIRECTIONAL, l.kind)
         assertEquals(Rgba(1f, 0.5f, 0f, 1f), l.color)
         assertEquals(0.8f, l.intensity, 0f)
-        assertEquals(Vec3(1f, 10f, 2f), l.position)
-        assertEquals(Vec3(0f, 0f, -1f), l.direction)
+        assertEquals(Vector3(1f, 10f, 2f), l.position)
+        assertEquals(Vector3(0f, 0f, -1f), l.direction)
     }
 
     @Test
@@ -158,7 +158,7 @@ class SceneContentTest {
         val l = c.lights.single()
         assertEquals("0", l.lookAtId)
         assertEquals("0", c.aimHandleOf(l))
-        assertEquals(Vec3(0f, -1f, 0f), l.direction)
+        assertEquals(Vector3(0f, -1f, 0f), l.direction)
     }
 
     @Test
@@ -202,7 +202,7 @@ class SceneContentTest {
         assertEquals(1f, cam.near, 0f)
         assertEquals(100f, cam.far, 0f)
         assertEquals(67f, cam.fieldOfView, 0f)
-        assertEquals(Vec3(0f, 0f, 0f), c.entityPositions["3"])
+        assertEquals(Vector3(0f, 0f, 0f), c.entityPositions["3"])
         assertEquals(listOf("7", "8"), c.lights.map { it.entityId })
         assertEquals(3, c.models.size)
     }
@@ -214,13 +214,13 @@ class SceneContentTest {
         val byId = c.lights.associateBy { it.entityId }
         val directional = byId["1"]!!
         assertEquals(LightKind.DIRECTIONAL, directional.kind)
-        assertEquals(Vec3(0f, 10f, 0f), directional.position)
-        assertEquals(Vec3(0f, -1f, 0f), directional.direction)
+        assertEquals(Vector3(0f, 10f, 0f), directional.position)
+        assertEquals(Vector3(0f, -1f, 0f), directional.direction)
         assertEquals("0", directional.lookAtId)
         val spot = byId["4"]!!
         assertEquals(LightKind.SPOT, spot.kind)
-        assertEquals(Vec3(0f, 5f, 0f), spot.position)
-        assertEquals(Vec3(0f, -1f, 0f), spot.direction)
+        assertEquals(Vector3(0f, 5f, 0f), spot.position)
+        assertEquals(Vector3(0f, -1f, 0f), spot.direction)
         assertEquals("3", spot.lookAtId)
     }
 
@@ -249,7 +249,7 @@ class SceneContentTest {
             "2":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
                 "PositionComponent":{"lookAtId":1,"localPosition":{"x":3}}}}}}}"""
         )
-        assertEquals(Vec3(0f, 0f, -1f), c.lights.single { it.entityId == "2" }.direction)
+        assertEquals(Vector3(0f, 0f, -1f), c.lights.single { it.entityId == "2" }.direction)
     }
 
     @Test
@@ -260,15 +260,15 @@ class SceneContentTest {
             "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{},
                 "PositionComponent":{"lookAtId":0,"localPosition":{"y":10}}}}}}}"""
         )
-        assertEquals(Vec3(0f, 0f, -1f), c.lights.single().direction)
+        assertEquals(Vector3(0f, 0f, -1f), c.lights.single().direction)
     }
 
     @Test
     fun anEmptyCameraObjectGetsDefaults() {
         val cam =
             content(entity("""{"CameraComponent":{"camera":{}},"PositionComponent":{"localPosition":{"x":1,"y":2,"z":3}}}""")).cameras.single()
-        assertEquals(Vec3(1f, 2f, 3f), cam.position)
-        assertEquals(Vec3(0f, 0f, -1f), cam.direction)
+        assertEquals(Vector3(1f, 2f, 3f), cam.position)
+        assertEquals(Vector3(0f, 0f, -1f), cam.direction)
         assertEquals(CAMERA_NEAR, cam.near, 0f)
         assertEquals(CAMERA_FAR, cam.far, 0f)
         assertEquals(CAMERA_FOV, cam.fieldOfView, 0f)
@@ -285,14 +285,14 @@ class SceneContentTest {
             )
         ).cameras.single()
         assertNull(cam.lookAtId)
-        assertEquals(Vec3(1f, 0f, 0f), cam.direction)
+        assertEquals(Vector3(1f, 0f, 0f), cam.direction)
     }
 
     @Test
     fun cameraPositionFallsBackToTheCameraObject() {
         val cam =
             content(entity("""{"CameraComponent":{"camera":{"position":{"x":4,"y":5,"z":6}}}}""")).cameras.single()
-        assertEquals(Vec3(4f, 5f, 6f), cam.position)
+        assertEquals(Vector3(4f, 5f, 6f), cam.position)
     }
 
     @Test
@@ -323,7 +323,7 @@ class SceneContentTest {
         assertEquals("foliage_meadow", f.foliageName)
         assertEquals("terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b", f.terrainName)
         assertEquals(c.terrains.single().transform, f.transform)
-        assertEquals(Vec3(-38.25267f, 0f, -32.7754f), f.transform.position)
+        assertEquals(Vector3(-38.25267f, 0f, -32.7754f), f.transform.position)
     }
 
     @Test

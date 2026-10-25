@@ -8,7 +8,7 @@ See proposal.md - Why. The code today:
   `AssetResolver`, `RenderableObjectDelegate`), `ecs/system/Systems.kt`, `EcsConfigurator` (with an
   `object WorldUtils`), and `ecs/scene/` (`SceneEngine`, `SceneEcsLoader`, `SceneEcsWriter`, `ComponentCodecs`,
   `SceneEcsWarnings`, `ComponentEditor`, `LightEntities`). Only `SceneEcsWarnings` imports IntelliJ (its `Logger`).
-  `ComponentEditor` imports `SceneJson` and `AbyssusBundle`; `LightEntities` imports `sceneview.Vec3`.
+  `ComponentEditor` imports `SceneJson` and `AbyssusBundle`; `LightEntities` imports `sceneview.Vector3`.
 - Singletons in the code that moves: `object WorldUtils`, the `SceneEcsWarnings` logger companion, the
   `AssetResolver` companion (`ofFolders`) and the `RenderableObjectDelegate` companion (the Mundus class name).
 - `scene/SceneDto` (`id`, `name`, ambient light, fog, sky, `ecs` as a `JsonNode`) carries an ignored `file:

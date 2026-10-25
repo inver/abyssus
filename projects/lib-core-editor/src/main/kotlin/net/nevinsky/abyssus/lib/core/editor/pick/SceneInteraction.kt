@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.pick
 
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 
 
@@ -44,7 +44,7 @@ class SceneInteraction(
     var onPickWater: ((String) -> Unit)? = null
 
     /** Called when a water move ends with the surface at a new centre; returns whether it was written to the scene. */
-    var onWaterMove: ((String, Vec3) -> Boolean)? = null
+    var onWaterMove: ((String, Vector3) -> Boolean)? = null
 
     /** Called when a drag ends with a changed transform; returns whether it was written to the scene. */
     var onTransform: ((String, TransformEdit) -> Boolean)? = null
@@ -53,10 +53,10 @@ class SceneInteraction(
      * Called when a drawing is finished with the model, the points on the terrain and whether the line is closed;
      * returns whether the arrangement was written. A refused write keeps the drawing.
      */
-    var onArrangementCreate: ((RenderAsset, List<Vec3>, Boolean) -> Boolean)? = null
+    var onArrangementCreate: ((RenderAsset, List<Vector3>, Boolean) -> Boolean)? = null
 
     /** Called when a point drag, an insert or a removal ends with new points for the arrangement; returns whether it was written. */
-    var onArrangementEdit: ((String, List<Vec3>) -> Boolean)? = null
+    var onArrangementEdit: ((String, List<Vector3>) -> Boolean)? = null
 
     /** Called when the edit of an arrangement's control points ended because the selection moved on or the arrangement went. */
     var onPathEditEnded: (() -> Unit)? = null
@@ -106,8 +106,8 @@ class SceneInteraction(
         override val size: ViewSize get() = this@SceneInteraction.size
         override val foliagePaint: FoliagePaint? get() = this@SceneInteraction.foliagePaint
         override val onTransform: ((String, TransformEdit) -> Boolean)? get() = this@SceneInteraction.onTransform
-        override val onWaterMove: ((String, Vec3) -> Boolean)? get() = this@SceneInteraction.onWaterMove
-        override val onArrangementEdit: ((String, List<Vec3>) -> Boolean)? get() = this@SceneInteraction.onArrangementEdit
+        override val onWaterMove: ((String, Vector3) -> Boolean)? get() = this@SceneInteraction.onWaterMove
+        override val onArrangementEdit: ((String, List<Vector3>) -> Boolean)? get() = this@SceneInteraction.onArrangementEdit
         override val selectedId: String? get() = this@SceneInteraction.selectedId
         override fun editOf(entityId: String, result: DragResult) = this@SceneInteraction.editOf(entityId, result)
         override fun stateChanged() = this@SceneInteraction.stateChanged()
@@ -126,7 +126,7 @@ class SceneInteraction(
 
     val canDrop: Boolean get() = dropPosition() != null
 
-    private fun dropPosition(): Vec3? {
+    private fun dropPosition(): Vector3? {
         val id = selectedId ?: return null
         val content = queries.content
         if (isDragging || id == state.viewCamera || content.terrains.any { it.entityId == id }) return null
@@ -135,7 +135,7 @@ class SceneInteraction(
         val height = queries.groundBelow(id) ?: return null
         if (!height.isFinite() || ScenePicker().isResting(lowest, height)) return null
         val p = selected.transform.position
-        return Vec3(p.x, (p.y.toDouble() + height.toDouble() - lowest.toDouble()).toFloat(), p.z)
+        return Vector3(p.x, (p.y.toDouble() + height.toDouble() - lowest.toDouble()).toFloat(), p.z)
     }
 
     /** A drop uses the move's preview and write callback, including its rejected-write behaviour. */

@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.Disposable
 import javax.swing.JComponent
 
@@ -35,7 +35,7 @@ interface SceneView : Disposable {
      * Called on the AWT thread when a move of a water surface ends, with its id and new centre. Returns whether it was
      * written to the scene.
      */
-    var onWaterMove: ((String, Vec3) -> Boolean)?
+    var onWaterMove: ((String, Vector3) -> Boolean)?
         get() = null
         set(_) {}
 
@@ -49,12 +49,12 @@ interface SceneView : Disposable {
      * Called on the AWT thread when a drawing is finished: the model, the points on the terrain and whether the line is
      * closed. Returns whether the arrangement was written.
      */
-    var onArrangementCreate: ((RenderAsset, List<Vec3>, Boolean) -> Boolean)?
+    var onArrangementCreate: ((RenderAsset, List<Vector3>, Boolean) -> Boolean)?
         get() = null
         set(_) {}
 
     /** Called when a path point was dragged, inserted or removed, with the arrangement's id and its new points. Returns whether it was written. */
-    var onArrangementEdit: ((String, List<Vec3>) -> Boolean)?
+    var onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
         get() = null
         set(_) {}
 
@@ -92,7 +92,7 @@ interface SceneView : Disposable {
     fun stopPlay() {}
 
     /** Where a new object is placed (the point the camera orbits around); null when the view places nothing. */
-    fun placementPoint(): Vec3? = null
+    fun placementPoint(): Vector3? = null
 
     /**
      * Rendering cannot continue: shows [message] in place of the viewport and keeps whatever else the view has (its toolbar,

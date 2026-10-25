@@ -12,7 +12,6 @@ import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.render.frame.FrameInputs
@@ -64,9 +63,9 @@ class TerrainShader(shaders: ShaderStorage) : Disposable {
 
 /** The view's lights in `lib-render`'s host-neutral form. */
 internal fun renderLights(lights: LightSet) = RenderLights(
-    lights.directional.map { DirectionalInput(it.entityId, it.direction.toVector3(), it.color.r, it.color.g, it.color.b) },
-    lights.point.map { PointInput(it.entityId, it.position.toVector3(), it.color.r, it.color.g, it.color.b, it.range) },
+    lights.directional.map { DirectionalInput(it.entityId, it.direction.cpy(), it.color.r, it.color.g, it.color.b) },
+    lights.point.map { PointInput(it.entityId, it.position.cpy(), it.color.r, it.color.g, it.color.b, it.range) },
     lights.spot.map {
-        SpotInput(it.entityId, it.position.toVector3(), it.direction.toVector3(), it.color.r, it.color.g, it.color.b, it.range, it.cone.outerCos, it.cone.innerCos)
+        SpotInput(it.entityId, it.position.cpy(), it.direction.cpy(), it.color.r, it.color.g, it.color.b, it.range, it.cone.outerCos, it.cone.innerCos)
     },
 )

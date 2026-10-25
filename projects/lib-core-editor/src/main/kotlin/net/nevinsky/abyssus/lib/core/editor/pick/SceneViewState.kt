@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
 /**
  * The Paint Foliage mode of a view: the terrain [entityId] (the selected entity) whose layer [layerId] mask is
@@ -53,7 +53,7 @@ class SceneViewState {
         }
 
     /** The new centre of each water surface while it is dragged or just dropped, shown over the file's (water id to where it is now). */
-    var waterPreview: Map<String, Vec3> = emptyMap()
+    var waterPreview: Map<String, Vector3> = emptyMap()
 
     var gizmoMode: GizmoMode = GizmoMode.MOVE
 

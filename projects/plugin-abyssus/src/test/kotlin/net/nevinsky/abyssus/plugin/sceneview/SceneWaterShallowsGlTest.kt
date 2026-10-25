@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import org.junit.Assert.assertEquals
@@ -80,7 +79,7 @@ class SceneWaterShallowsGlTest {
     }
 
     @Test fun waterOverEmptyDepthIsDeepWaterWhateverTheClarity() {
-        val far = Vec3(8000f, 0f, 8000f)
+        val far = Vector3(8000f, 0f, 8000f)
         fun over(clarity: Double): WaterShot {
             val lake = WaterGlScenes.bowlLake { it.copy(x = far.x.toDouble(), z = far.z.toDouble(), clarity = clarity, waveAmplitude = 0.0, foamAmount = 0.0) }
             return WaterGlRig.shoot(WaterGlScenes.bowlScene(lake), OrbitCamera(far, 120f, 0f, 0.8f), size = 400 to 300)

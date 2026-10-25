@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.scene
 
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
@@ -57,7 +57,7 @@ class PlacementMapper {
         val lights = mutableListOf<LightPlacement>()
         val cameras = mutableListOf<CameraPlacement>()
         val arrangements = mutableListOf<ArrangementPlacement>()
-        val positions = linkedMapOf<String, Vec3>()
+        val positions = linkedMapOf<String, Vector3>()
         val handleIds = mutableSetOf<String>()
         for (entity in entities) {
             val transform = entity.position?.let(::transformOf) ?: PlacementTransform.IDENTITY
@@ -95,17 +95,17 @@ class PlacementMapper {
     }
 
     private fun transformOf(position: PositionComponent) = PlacementTransform(
-        Vec3(position.localPosition.x, position.localPosition.y, position.localPosition.z),
+        Vector3(position.localPosition.x, position.localPosition.y, position.localPosition.z),
         Quat(position.localRotation.x, position.localRotation.y, position.localRotation.z, position.localRotation.w),
-        Vec3(position.localScale.x, position.localScale.y, position.localScale.z),
+        Vector3(position.localScale.x, position.localScale.y, position.localScale.z),
     )
 
     /** The position is the entity's own `localPosition`, else the camera's. */
     private fun cameraOf(entity: DecodedEntity, component: CameraComponent, transform: PlacementTransform): CameraPlacement {
         val camera = component.camera
-        val position = if (entity.hasLocalPosition) transform.position else Vec3(camera.position.x, camera.position.y, camera.position.z)
+        val position = if (entity.hasLocalPosition) transform.position else Vector3(camera.position.x, camera.position.y, camera.position.z)
         return CameraPlacement(
-            entity.id, entity.name, position, Vec3(camera.direction.x, camera.direction.y, camera.direction.z), lookAtOf(entity),
+            entity.id, entity.name, position, Vector3(camera.direction.x, camera.direction.y, camera.direction.z), lookAtOf(entity),
             camera.near, camera.far, camera.fieldOfView, transform.rotation,
         )
     }

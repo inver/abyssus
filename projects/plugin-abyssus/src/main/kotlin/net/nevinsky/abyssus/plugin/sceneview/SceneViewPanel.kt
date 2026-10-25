@@ -12,7 +12,7 @@ import com.intellij.openapi.diagnostic.thisLogger
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.lib.core.editor.ray.RayModeSnapshot
 import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
@@ -33,11 +33,11 @@ class SceneViewPanel internal constructor(
     initial: SceneRenderParams,
     private val renderer: SceneRenderer,
     /** The Add Light choices, placed at the orbit target; null: the Add Light button stays disabled. */
-    private val lightMenu: PlacementMenu<() -> Vec3>? = null,
+    private val lightMenu: PlacementMenu<() -> Vector3>? = null,
     /** The project's models and terrains to place at the orbit target; null: no Add Asset button. */
-    private val assetMenu: PlacementMenu<() -> Vec3>? = null,
+    private val assetMenu: PlacementMenu<() -> Vector3>? = null,
     /** The Lake and Sea presets to place at the orbit target; null: no Add Water button. */
-    private val waterMenu: PlacementMenu<() -> Vec3>? = null,
+    private val waterMenu: PlacementMenu<() -> Vector3>? = null,
     ray: RayIntegration? = null,
     /** Play in this view; without a simulation provider there are no play controls. */
     private val play: PlayState = PlayState(null),
@@ -303,7 +303,7 @@ class SceneViewPanel internal constructor(
         if (play.active || experimenting || interaction.viewCamera != null) return true
         orientation.axisAt(x - rect.x, y - rect.y)?.let { axis ->
             val direction = axis.direction
-            orbit.lookAlong(Vec3(-direction.x, -direction.y, -direction.z))
+            orbit.lookAlong(Vector3(-direction.x, -direction.y, -direction.z))
         }
         return true
     }
@@ -319,7 +319,7 @@ class SceneViewPanel internal constructor(
         val aspect = (camera.viewportWidth / camera.viewportHeight).takeIf { it.isFinite() && it > 0f } ?: 1f
         orbit.frame(
             FrameSelection().frame(
-                Vec3(box.min.x, box.min.y, box.min.z), Vec3(box.max.x, box.max.y, box.max.z), camera.fieldOfView, aspect,
+                Vector3(box.min.x, box.min.y, box.min.z), Vector3(box.max.x, box.max.y, box.max.z), camera.fieldOfView, aspect,
             ),
         )
     }
@@ -371,7 +371,7 @@ class SceneViewPanel internal constructor(
             interaction.onPickWater = value
         }
 
-    override var onWaterMove: ((String, Vec3) -> Boolean)?
+    override var onWaterMove: ((String, Vector3) -> Boolean)?
         get() = interaction.onWaterMove
         set(value) {
             interaction.onWaterMove = value
@@ -383,13 +383,13 @@ class SceneViewPanel internal constructor(
             interaction.onTransform = value
         }
 
-    override var onArrangementCreate: ((RenderAsset, List<Vec3>, Boolean) -> Boolean)?
+    override var onArrangementCreate: ((RenderAsset, List<Vector3>, Boolean) -> Boolean)?
         get() = interaction.onArrangementCreate
         set(value) {
             interaction.onArrangementCreate = value
         }
 
-    override var onArrangementEdit: ((String, List<Vec3>) -> Boolean)?
+    override var onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
         get() = interaction.onArrangementEdit
         set(value) {
             interaction.onArrangementEdit = value
@@ -459,7 +459,7 @@ class SceneViewPanel internal constructor(
 
     override fun stopPlay() = play.documentChanging()
 
-    override fun placementPoint(): Vec3 = orbit.target
+    override fun placementPoint(): Vector3 = orbit.target
 
     override val playing: Boolean get() = play.active
 

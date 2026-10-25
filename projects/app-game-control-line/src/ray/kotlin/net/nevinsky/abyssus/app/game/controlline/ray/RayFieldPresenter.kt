@@ -20,7 +20,7 @@ import net.nevinsky.abyssus.lib.raytracing.RayColor
 import net.nevinsky.abyssus.lib.raytracing.RayFog
 import net.nevinsky.abyssus.lib.raytracing.RayLight
 import net.nevinsky.abyssus.lib.raytracing.RayLightKind
-import net.nevinsky.abyssus.lib.raytracing.RayVec3
+import com.badlogic.gdx.math.Vector3
 import java.util.concurrent.ExecutorService
 import org.slf4j.LoggerFactory
 
@@ -95,7 +95,7 @@ class RayFieldPresenter(
             state.terrains[name]?.let { RayPlacedTerrain("t$index", it, Matrix4(field.position(entity).getTransform())) }
         }
         // the light travels against the direction of the sun
-        val sunTravel = RayVec3(-field.sunDirection.x, -field.sunDirection.y, -field.sunDirection.z)
+        val sunTravel = Vector3(-field.sunDirection.x, -field.sunDirection.y, -field.sunDirection.z)
         val sun = RayLight("sun", RayLightKind.DIRECTIONAL, ray(field.sunColor), sunTravel)
         val background = field.fogColor ?: Color(0.6f, 0.7f, 0.85f, 1f)
         return RayFieldInputs(

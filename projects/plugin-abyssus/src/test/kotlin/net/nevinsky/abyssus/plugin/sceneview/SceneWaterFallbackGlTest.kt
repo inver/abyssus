@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.water.WaterSettings
@@ -26,7 +26,7 @@ import java.io.File
 class SceneWaterFallbackGlTest {
     @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", GlHarness.enabled)
 
-    private val orbit = OrbitCamera(Vec3(0f, 0f, 0f), 80f, 0.5f, 0.6f)
+    private val orbit = OrbitCamera(Vector3(0f, 0f, 0f), 80f, 0.5f, 0.6f)
 
     private fun lake(id: String, x: Double, level: Double, size: Double = 40.0): WaterSettings =
         WaterGlScenes.lake(level).copy(id = id, name = id, x = x, z = 0.0, width = size, length = size)
@@ -97,7 +97,7 @@ class SceneWaterFallbackGlTest {
 
     private fun fallbackBrightness(params: SceneRenderParams): Pair<Double, Boolean> {
         var lease = false
-        val shot = WaterGlRig.shoot(params, OrbitCamera(Vec3(50f, 0f, 0f), 70f, 0.4f, 0.4f), frames = 320, each = { renderer, _ -> lease = renderer.skyLeaseActive })
+        val shot = WaterGlRig.shoot(params, OrbitCamera(Vector3(50f, 0f, 0f), 70f, 0.4f, 0.4f), frames = 320, each = { renderer, _ -> lease = renderer.skyLeaseActive })
         // the smallest lake is the one without a reflection view: read its centre
         val screen = com.badlogic.gdx.math.Vector3(50f, 2f, 0f)
         shot.renderer.frameCamera.project(screen, 0f, 0f, shot.image.width.toFloat(), shot.image.height.toFloat())

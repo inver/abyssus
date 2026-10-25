@@ -7,13 +7,12 @@ package net.nevinsky.abyssus.lib.core.editor.ray
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
-import net.nevinsky.abyssus.lib.core.editor.scene.toVec3
 import net.nevinsky.abyssus.lib.core.editor.pick.ScenePreview
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettings
 import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
 import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialOverrides
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 
 import net.nevinsky.abyssus.lib.core.editor.content.Quat
@@ -41,7 +40,7 @@ import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
 
 /** Immutable render-thread camera capture. The actual camera preserves orbit and look-through lens/up conventions. */
 data class RayCameraSnapshot(
-    val position: RayVec3, val direction: RayVec3, val up: RayVec3,
+    val position: Vector3, val direction: Vector3, val up: Vector3,
     val fieldOfView: Float, val near: Float, val far: Float,
     val projection: List<Float>, val view: List<Float>, val activeCameraId: String?,
 ) {
@@ -171,9 +170,9 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 params.fog?.let { RayFog(it.color.ray(), it.density, it.gradient) },
                 sunVisibility)
             val cameraSnapshot = RayCameraSnapshot(
-                camera.position.toVec3().ray(),
-                camera.direction.toVec3().ray(),
-                camera.up.toVec3().ray(),
+                camera.position.cpy().ray(),
+                camera.direction.cpy().ray(),
+                camera.up.cpy().ray(),
                 camera.fieldOfView,
                 camera.near,
                 camera.far,
@@ -255,9 +254,9 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
 
             fun visit(node: RayModelNode, parent: Matrix4, path: String) {
                 val local = PlacementTransform(
-                    Vec3(node.translation.x, node.translation.y, node.translation.z),
+                    Vector3(node.translation.x, node.translation.y, node.translation.z),
                     Quat(node.rotation.x, node.rotation.y, node.rotation.z, node.rotation.w),
-                    Vec3(node.scale.x, node.scale.y, node.scale.z)
+                    Vector3(node.scale.x, node.scale.y, node.scale.z)
                 ).toMatrix()
                 val global = pose?.node(node.id)?.let(::Matrix4) ?: Matrix4(parent).mul(local)
                 for ((ordinal, part) in node.parts.withIndex()) {
@@ -493,6 +492,6 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
 
 private class RaySceneLimitException(message: String) : IllegalArgumentException(message)
 
-private fun Vec3.ray() = RayVec3(x, y, z)
+private fun Vector3.ray() = Vector3(x, y, z)
 private fun Rgba.ray(scale: Float = 1f) = RayColor(r * scale, g * scale, b * scale, a)
-private fun RayVec3.list() = listOf(x, y, z)
+private fun Vector3.list() = listOf(x, y, z)

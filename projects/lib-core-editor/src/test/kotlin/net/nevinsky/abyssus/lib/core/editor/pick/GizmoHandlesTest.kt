@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -17,7 +17,7 @@ import java.io.File
 
 class GizmoHandlesTest {
     private fun handles(eyeZ: Float) =
-        GizmoHandles(Vec3(0f, 0f, 0f), GizmoMode.MOVE, Vec3(0f, 0f, eyeZ), 60f, 600)
+        GizmoHandles(Vector3(0f, 0f, 0f), GizmoMode.MOVE, Vector3(0f, 0f, eyeZ), 60f, 600)
 
     @Test
     fun handleLengthDoublesWhenTheEyeDistanceDoubles() {

@@ -16,7 +16,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -65,7 +65,7 @@ class ImportModelTest : BasePlatformTestCase() {
     private fun tree(dir: File): Map<String, List<Byte>> = dir.walkTopDown().filter { it.isFile }
         .associate { it.relativeTo(dir).path to it.readBytes().toList() }
 
-    private fun placement(point: Vec3 = Vec3(10f, 0f, -4f), playing: Boolean = false) = ScenePlacement(scene, { point }, { playing })
+    private fun placement(point: Vector3 = Vector3(10f, 0f, -4f), playing: Boolean = false) = ScenePlacement(scene, { point }, { playing })
 
     private fun sceneRoot() = SceneJson().parse(FileDocumentManager.getInstance().getDocument(scene)!!.text)
 
@@ -191,7 +191,7 @@ class ImportModelTest : BasePlatformTestCase() {
     /** In the same scene the platform refuses first: the scene changed since the import's own edit of it. */
     fun testUndoStaysRefusedWhenTheModelWasAlsoPlacedByAddAsset() {
         importModel(project, abss, source("crate.obj"), crate, placement()) { fail(it) }
-        val other = SceneComponentEdits.addAsset(project, scene, RenderAsset("MODEL", "model_crate"), Vec3(1f, 0f, 1f),
+        val other = SceneComponentEdits.addAsset(project, scene, RenderAsset("MODEL", "model_crate"), Vector3(1f, 0f, 1f),
             SceneDocumentCache.of(project), service<AbyssusPluginCtx>().assets.metaFiles)
         assertNotNull(other.entityId)
         assertUndoRefused("Main Scene.scene")
@@ -204,7 +204,7 @@ class ImportModelTest : BasePlatformTestCase() {
         File(projectDir, "scenes/Main Scene.scene").copyTo(second)
         val secondFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(second)!!
         importModel(project, abss, source("crate.obj"), crate, placement()) { fail(it) }
-        SceneComponentEdits.addAsset(project, secondFile, RenderAsset("MODEL", "model_crate"), Vec3(1f, 0f, 1f),
+        SceneComponentEdits.addAsset(project, secondFile, RenderAsset("MODEL", "model_crate"), Vector3(1f, 0f, 1f),
             SceneDocumentCache.of(project), service<AbyssusPluginCtx>().assets.metaFiles)
         FileDocumentManager.getInstance().saveAllDocuments()
         assertUndoRefused("Second.scene uses model_crate")

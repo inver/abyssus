@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
@@ -39,7 +39,7 @@ class AssetEntities(private val messages: EditorMessages) {
      * Adds [asset] at [point]. A terrain of [terrainSize] (world units; null when unknown) is centred on [point]; without
      * a size its corner is put there.
      */
-    fun add(root: JsonNode, asset: RenderAsset, point: Vec3, terrainSize: Float? = null): AddedEntity {
+    fun add(root: JsonNode, asset: RenderAsset, point: Vector3, terrainSize: Float? = null): AddedEntity {
         val rejected = AddedEntity(EditResult.Rejected(messages.message("componentSceneUnreadable")))
         val terrain = asset.type == "TERRAIN"
         if (asset.type !in setOf("MODEL", "TERRAIN") || listOf(point.x, point.y, point.z).any { !it.isFinite() }) return rejected

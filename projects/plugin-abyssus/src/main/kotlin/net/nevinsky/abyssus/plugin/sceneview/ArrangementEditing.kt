@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
@@ -32,13 +32,13 @@ object ArrangementEditing {
     }
 
     /** Adds an arrangement of the model [asset] along [points] and its copies; the result names the new arrangement. */
-    fun create(project: Project, file: VirtualFile, asset: RenderAsset, points: List<Vec3>, closed: Boolean, heights: GroundHeight): ArrangementResult =
+    fun create(project: Project, file: VirtualFile, asset: RenderAsset, points: List<Vector3>, closed: Boolean, heights: GroundHeight): ArrangementResult =
         run(project, file, AbyssusBundle.message("commandAddPathArrangement")) {
             ArrangementEdits(EditorBundle).create(it, asset, points, closed, heights)
         }
 
     /** Gives the arrangement [entityId] new [points] (a dragged, inserted or removed point) and regenerates its copies. */
-    fun setPoints(project: Project, file: VirtualFile, entityId: String, points: List<Vec3>, heights: GroundHeight): ArrangementResult =
+    fun setPoints(project: Project, file: VirtualFile, entityId: String, points: List<Vector3>, heights: GroundHeight): ArrangementResult =
         run(project, file, AbyssusBundle.message("commandEditPath")) {
             ArrangementEdits(EditorBundle).setPoints(it, entityId, points, heights)
         }

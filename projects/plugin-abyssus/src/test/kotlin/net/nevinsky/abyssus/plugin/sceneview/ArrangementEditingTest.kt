@@ -17,7 +17,7 @@ import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.terrainData
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
@@ -44,7 +44,7 @@ class ArrangementEditingTest : BasePlatformTestCase() {
     private fun y(id: Int) = ecs()["$id"]["components"]["PositionComponent"]["localPosition"].path("y").floatValue()
 
     private fun draw(heights: GroundHeight = LineHeights()): ArrangementResult =
-        ArrangementEditing.create(project, scene, tree, listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f)), false, heights)
+        ArrangementEditing.create(project, scene, tree, listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)), false, heights)
 
     fun testADrawingIsOneUndoStep() {
         myFixture.openFileInEditor(scene)
@@ -110,7 +110,7 @@ class ArrangementEditingTest : BasePlatformTestCase() {
         myFixture.openFileInEditor(scene)
         draw()
         val before = text()
-        val result = ArrangementEditing.setPoints(project, scene, "11", listOf(Vec3(0f, 0f, 0f), Vec3(60f, 0f, 0f)), LineHeights())
+        val result = ArrangementEditing.setPoints(project, scene, "11", listOf(Vector3(0f, 0f, 0f), Vector3(60f, 0f, 0f)), LineHeights())
         assertEquals(ArrangementResult.Changed(), result)
         assertEquals(7, slots().size)
         UndoManager.getInstance(project).undo(TextEditorProvider.getInstance().getTextEditor(myFixture.editor))

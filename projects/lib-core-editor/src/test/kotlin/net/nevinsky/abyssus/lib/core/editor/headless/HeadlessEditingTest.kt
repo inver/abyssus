@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
 import net.nevinsky.abyssus.lib.core.format.FormatProblem
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
@@ -43,7 +43,7 @@ class HeadlessEditingTest {
 
     @Test fun moveAnEntityChangesOnlyItsXPosition() {
         val model0 = SceneJson().parse(sceneText)["ecs"]["0"]["components"]["PositionComponent"]["localPosition"]
-        val edit = TransformEdit(position = Vec3(1f, model0["y"].floatValue(), model0["z"].floatValue()))
+        val edit = TransformEdit(position = Vector3(1f, model0["y"].floatValue(), model0["z"].floatValue()))
         val moved = editing.transform(sceneText, "0", edit) as HeadlessEdit.Edited
         assertEquals(listOf("\"x\": 1.0,"), changedLines(sceneText, moved.text))
         assertEquals(1.0, SceneJson().parse(moved.text)["ecs"]["0"]["components"]["PositionComponent"]["localPosition"]["x"].doubleValue(), 0.0)
@@ -58,7 +58,7 @@ class HeadlessEditingTest {
             ResourceEditorMessages().message("unsupportedFormat.LEGACY_FIELD", refusal.rejection!!.path),
             refusal.message,
         )
-        val edit = editing.transform(legacy, "0", TransformEdit(position = Vec3(1f, 0f, 0f)))
+        val edit = editing.transform(legacy, "0", TransformEdit(position = Vector3(1f, 0f, 0f)))
         assertEquals(HeadlessEdit.Refused(refusal), edit)
         assertNull(editing.validate(sceneText, DocumentKind.SCENE))
         assertNull(editing.validate(File(project, "Untitled.abss").readText(), DocumentKind.PROJECT))
@@ -87,10 +87,10 @@ class HeadlessEditingTest {
 
     @Test fun movingAnArrangedCopyWritesTheSameTextAsTheSceneViewDoes() {
         val root = SceneJson().parse(sceneText)
-        val points = listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f))
+        val points = listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f))
         ArrangementEdits(ResourceEditorMessages()).create(root, RenderAsset("MODEL", "tree"), points, false, LineHeights())
         val arranged = SceneJson().pretty(root)
-        val edit = TransformEdit(position = Vec3(20f, 0f, 4f))
+        val edit = TransformEdit(position = Vector3(20f, 0f, 4f))
         val headless = (editing.transform(arranged, "14", edit) as HeadlessEdit.Edited).text
         val plugin = DocumentTextEditor().edit(arranged, DocumentKind.SCENE) { SceneTransformWriter().apply(it, "14", edit) }
         assertEquals((plugin as TextEditOutcome.Edited).text, headless)

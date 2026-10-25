@@ -41,7 +41,7 @@ position is known, each directional or spot light whose `lookAtId` names an enti
 
 Resolving at read time gives every existing consumer (lighting, cones, markers, gizmo start direction) the right
 direction without changing them. The rule is the one `CameraFrustum.directionOf` applies. The vector math moves into
-a shared helper in `SceneContent` (for example `SceneContent.aim(from, to): Vec3?`), and both use it.
+a shared helper in `SceneContent` (for example `SceneContent.aim(from, to): Vector3?`), and both use it.
 
 Alternative: resolve in each consumer, as cameras do through `CameraFrustum.directionOf`. Rejected: lights have three
 consumers, and a direction that is already resolved can't be forgotten in one of them.

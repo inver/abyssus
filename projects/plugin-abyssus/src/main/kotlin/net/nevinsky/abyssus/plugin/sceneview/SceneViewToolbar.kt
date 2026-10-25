@@ -12,7 +12,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.util.ui.WrapLayout
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoSnap
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace
@@ -33,9 +33,9 @@ import javax.swing.JToggleButton
 
 /** What [SceneViewToolbar] reads from its view that is not the interaction, the renderer or a control strip. */
 internal class SceneViewToolbarSources(
-    val lightMenu: PlacementMenu<() -> Vec3>?,
-    val assetMenu: PlacementMenu<() -> Vec3>?,
-    val waterMenu: PlacementMenu<() -> Vec3>?,
+    val lightMenu: PlacementMenu<() -> Vector3>?,
+    val assetMenu: PlacementMenu<() -> Vector3>?,
+    val waterMenu: PlacementMenu<() -> Vector3>?,
     val pathMenu: PlacementMenu<(net.nevinsky.abyssus.lib.core.editor.content.RenderAsset) -> Unit>?,
     val foliageActions: ((String) -> DefaultActionGroup?)?,
     val overlays: SceneOverlayHost?,

@@ -9,7 +9,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.components.LightPreset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.plugin.AbyssusBundle
@@ -23,7 +23,7 @@ import net.nevinsky.abyssus.plugin.ui.showActionGroup
 class AddLightGroup(
     private val project: Project,
     private val file: VirtualFile,
-    private val position: () -> Vec3,
+    private val position: () -> Vector3,
     private val select: (String) -> Unit = { selectCreatedEntity(project, file, it) },
 ) : AddChildGroup<LightPreset>(AbyssusBundle.message("addLightTitle")) {
     init {
@@ -65,6 +65,6 @@ open class AddLightAction : AbyssusTreeAction<VirtualFile>() {
         e.project?.let { canAddLight(target, SceneDocumentCache.of(it)) } ?: false
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
-        showActionGroup(e, AddLightGroup(project, target, { Vec3(0f, 0f, 0f) }), AbyssusBundle.message("addLightTitle"))
+        showActionGroup(e, AddLightGroup(project, target, { Vector3(0f, 0f, 0f) }), AbyssusBundle.message("addLightTitle"))
     }
 }

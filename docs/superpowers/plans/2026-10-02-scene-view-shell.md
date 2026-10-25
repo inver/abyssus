@@ -39,7 +39,7 @@ New package `net.nevinsky.abyssus.plugin.sceneview` (`src/main/kotlin/net/nevins
 | File | Responsibility |
 |---|---|
 | `GdxRuntime.kt` | Proxy stubs, `GdxFrame`, `GdxContext`, global install/restore under a lock |
-| `SceneRenderParams.kt` | Pure: `Vec3`, `Rgba`, `CameraParams`, `SceneRenderParams.from(scene, camera)`, `MainCamera` reader |
+| `SceneRenderParams.kt` | Pure: `Vector3`, `Rgba`, `CameraParams`, `SceneRenderParams.from(scene, camera)`, `MainCamera` reader |
 | `OrbitCamera.kt` | Pure: orbit/pan/zoom math, `aspectOf` |
 | `SceneRenderer.kt` | libGDX drawing (grid, environment, camera) |
 | `SceneViewPanel.kt` | Swing panel: `AWTGLCanvas`, timer, mouse input |
@@ -329,9 +329,9 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -- app-game-control-l
 **Interfaces:**
 - Consumes: `SceneDto`, `BaseLightDto`, `FogDto`, `ColorDto` (package `net.nevinsky.abyssus.scene`), `SceneReader.parse(text)` (package `net.nevinsky.abyssus.plugin.dto`).
 - Produces:
-  - `data class Vec3(val x: Float, val y: Float, val z: Float)`
+  - `data class Vector3(val x: Float, val y: Float, val z: Float)`
   - `data class Rgba(val r: Float, val g: Float, val b: Float, val a: Float)`
-  - `data class CameraParams(val position: Vec3, val direction: Vec3, val near: Float, val far: Float, val fieldOfView: Float)` with `companion val DEFAULT`
+  - `data class CameraParams(val position: Vector3, val direction: Vector3, val near: Float, val far: Float, val fieldOfView: Float)` with `companion val DEFAULT`
   - `data class FogParams(val color: Rgba, val near: Float, val far: Float, val exponent: Float)`
   - `data class SceneRenderParams(val clear: Rgba, val ambient: Rgba?, val fog: FogParams?, val camera: CameraParams)` with `companion { val DEFAULT_CLEAR; val DEFAULT: SceneRenderParams; fun from(scene: SceneDto, camera: CameraParams): SceneRenderParams }`
   - `object MainCamera { fun parse(abssText: String): CameraParams?; fun forScene(sceneFile: VirtualFile): CameraParams }`
@@ -411,7 +411,7 @@ class SceneRenderParamsTest {
         val abss = """{"mainCamera":{"viewPointPosition":{"x":-0.5,"y":0.0,"z":-0.5},"position":{"x":4.0,"y":3.0,"z":6.0},
             "far":100.0,"near":1.0,"fieldOfView":67.0},"name":"Untitled"}"""
         val cam = MainCamera.parse(abss)!!
-        assertEquals(Vec3(4f, 3f, 6f), cam.position)
+        assertEquals(Vector3(4f, 3f, 6f), cam.position)
         assertEquals(100f, cam.far, 0f)
         assertEquals(67f, cam.fieldOfView, 0f)
         // direction is normalized
@@ -457,20 +457,20 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.scene.SceneDto
 import kotlin.math.sqrt
 
-data class Vec3(val x: Float, val y: Float, val z: Float)
+data class Vector3(val x: Float, val y: Float, val z: Float)
 
 data class Rgba(val r: Float, val g: Float, val b: Float, val a: Float)
 
 /** [direction] is the unit vector the camera looks along. */
 data class CameraParams(
-    val position: Vec3,
-    val direction: Vec3,
+    val position: Vector3,
+    val direction: Vector3,
     val near: Float,
     val far: Float,
     val fieldOfView: Float,
 ) {
     companion object {
-        val DEFAULT = CameraParams(Vec3(8f, 6f, 8f), normalized(Vec3(-8f, -6f, -8f))!!, 0.1f, 1000f, 67f)
+        val DEFAULT = CameraParams(Vector3(8f, 6f, 8f), normalized(Vector3(-8f, -6f, -8f))!!, 0.1f, 1000f, 67f)
     }
 }
 
@@ -506,9 +506,9 @@ data class SceneRenderParams(val clear: Rgba, val ambient: Rgba?, val fog: FogPa
     }
 }
 
-private fun normalized(v: Vec3): Vec3? {
+private fun normalized(v: Vector3): Vector3? {
     val len = sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
-    return if (len > 1e-6f && len.isFinite()) Vec3(v.x / len, v.y / len, v.z / len) else null
+    return if (len > 1e-6f && len.isFinite()) Vector3(v.x / len, v.y / len, v.z / len) else null
 }
 
 /** The `mainCamera` of the `.abss` project a scene belongs to. */
@@ -534,10 +534,10 @@ object MainCamera {
         return runCatching { parse(String(abss.contentsToByteArray(), abss.charset)) }.getOrNull() ?: CameraParams.DEFAULT
     }
 
-    private fun JsonObject.vec(name: String): Vec3? {
+    private fun JsonObject.vec(name: String): Vector3? {
         val o = get(name)?.takeIf { it.isJsonObject }?.asJsonObject ?: return null
         fun f(k: String) = o.get(k)?.takeIf { !it.isJsonNull }?.asFloat ?: 0f
-        return Vec3(f("x"), f("y"), f("z"))
+        return Vector3(f("x"), f("y"), f("z"))
     }
 }
 ```
@@ -565,9 +565,9 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -- src/main/kotlin/ne
 - Test: `src/test/kotlin/net/nevinsky/abyssus/sceneview/OrbitCameraTest.kt`
 
 **Interfaces:**
-- Consumes: `Vec3`, `CameraParams` (Task 2).
+- Consumes: `Vector3`, `CameraParams` (Task 2).
 - Produces:
-  - `class OrbitCamera(var target: Vec3, var distance: Float, var yaw: Float, var pitch: Float)` with `fun position(): Vec3`, `fun orbit(dxPixels: Float, dyPixels: Float)`, `fun pan(dxPixels: Float, dyPixels: Float)`, `fun zoom(wheelClicks: Float)`, `companion fun from(camera: CameraParams): OrbitCamera`
+  - `class OrbitCamera(var target: Vector3, var distance: Float, var yaw: Float, var pitch: Float)` with `fun position(): Vector3`, `fun orbit(dxPixels: Float, dyPixels: Float)`, `fun pan(dxPixels: Float, dyPixels: Float)`, `fun zoom(wheelClicks: Float)`, `companion fun from(camera: CameraParams): OrbitCamera`
   - `fun aspectOf(width: Int, height: Int): Float?` (null when either side is not positive)
 
 - [ ] **Step 1: Write the failing tests**
@@ -581,7 +581,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OrbitCameraTest {
-    private fun assertVec(expected: Vec3, actual: Vec3, eps: Float = 1e-3f) {
+    private fun assertVec(expected: Vector3, actual: Vector3, eps: Float = 1e-3f) {
         assertEquals(expected.x, actual.x, eps)
         assertEquals(expected.y, actual.y, eps)
         assertEquals(expected.z, actual.z, eps)
@@ -589,7 +589,7 @@ class OrbitCameraTest {
 
     @Test
     fun fromReproducesCameraPosition() {
-        val params = CameraParams(Vec3(4.8f, 3.3f, 6.0f), Vec3(-0.9485f, -0.1088f, -0.2975f), 1f, 100f, 67f)
+        val params = CameraParams(Vector3(4.8f, 3.3f, 6.0f), Vector3(-0.9485f, -0.1088f, -0.2975f), 1f, 100f, 67f)
         assertVec(params.position, OrbitCamera.from(params).position(), 0.05f)
     }
 
@@ -599,12 +599,12 @@ class OrbitCameraTest {
         val p = cam.position()
         val d = CameraParams.DEFAULT.direction
         // target = position + direction * distance
-        assertVec(Vec3(p.x + d.x * cam.distance, p.y + d.y * cam.distance, p.z + d.z * cam.distance), cam.target)
+        assertVec(Vector3(p.x + d.x * cam.distance, p.y + d.y * cam.distance, p.z + d.z * cam.distance), cam.target)
     }
 
     @Test
     fun pitchIsClamped() {
-        val cam = OrbitCamera(Vec3(0f, 0f, 0f), 10f, 0f, 0f)
+        val cam = OrbitCamera(Vector3(0f, 0f, 0f), 10f, 0f, 0f)
         cam.orbit(0f, 1_000_000f)
         assertTrue(cam.pitch < Math.PI.toFloat() / 2)
         cam.orbit(0f, -2_000_000f)
@@ -613,7 +613,7 @@ class OrbitCameraTest {
 
     @Test
     fun orbitKeepsDistanceToTarget() {
-        val cam = OrbitCamera(Vec3(1f, 2f, 3f), 10f, 0.3f, 0.4f)
+        val cam = OrbitCamera(Vector3(1f, 2f, 3f), 10f, 0.3f, 0.4f)
         cam.orbit(120f, -40f)
         val p = cam.position()
         val d = kotlin.math.sqrt((p.x - 1f) * (p.x - 1f) + (p.y - 2f) * (p.y - 2f) + (p.z - 3f) * (p.z - 3f))
@@ -622,7 +622,7 @@ class OrbitCameraTest {
 
     @Test
     fun zoomStaysWithinLimits() {
-        val cam = OrbitCamera(Vec3(0f, 0f, 0f), 10f, 0f, 0f)
+        val cam = OrbitCamera(Vector3(0f, 0f, 0f), 10f, 0f, 0f)
         cam.zoom(10_000f)
         assertTrue(cam.distance > 0f)
         cam.zoom(-10_000f)
@@ -631,7 +631,7 @@ class OrbitCameraTest {
 
     @Test
     fun panMovesTargetAndKeepsDistance() {
-        val cam = OrbitCamera(Vec3(0f, 0f, 0f), 10f, 0f, 0f)
+        val cam = OrbitCamera(Vector3(0f, 0f, 0f), 10f, 0f, 0f)
         val before = cam.target
         cam.pan(50f, 0f)
         assertTrue(cam.target != before)
@@ -671,11 +671,11 @@ fun aspectOf(width: Int, height: Int): Float? = if (width > 0 && height > 0) wid
  * Orbit camera around [target]. The eye sits at `target + (cos p sin y, sin p, cos p cos y) * distance`,
  * so yaw 0 / pitch 0 looks down -Z.
  */
-class OrbitCamera(var target: Vec3, var distance: Float, var yaw: Float, var pitch: Float) {
+class OrbitCamera(var target: Vector3, var distance: Float, var yaw: Float, var pitch: Float) {
 
-    fun position(): Vec3 {
+    fun position(): Vector3 {
         val cp = cos(pitch)
-        return Vec3(
+        return Vector3(
             target.x + cp * sin(yaw) * distance,
             target.y + sin(pitch) * distance,
             target.z + cp * cos(yaw) * distance,
@@ -689,9 +689,9 @@ class OrbitCamera(var target: Vec3, var distance: Float, var yaw: Float, var pit
 
     fun pan(dxPixels: Float, dyPixels: Float) {
         val k = distance * PAN_SPEED
-        val right = Vec3(cos(yaw), 0f, -sin(yaw))
-        val up = Vec3(-sin(pitch) * sin(yaw), cos(pitch), -sin(pitch) * cos(yaw))
-        target = Vec3(
+        val right = Vector3(cos(yaw), 0f, -sin(yaw))
+        val up = Vector3(-sin(pitch) * sin(yaw), cos(pitch), -sin(pitch) * cos(yaw))
+        target = Vector3(
             target.x - right.x * dxPixels * k + up.x * dyPixels * k,
             target.y - right.y * dxPixels * k + up.y * dyPixels * k,
             target.z - right.z * dxPixels * k + up.z * dyPixels * k,
@@ -713,7 +713,7 @@ class OrbitCamera(var target: Vec3, var distance: Float, var yaw: Float, var pit
 
         fun from(camera: CameraParams): OrbitCamera {
             val d = camera.direction
-            val target = Vec3(
+            val target = Vector3(
                 camera.position.x + d.x * DEFAULT_DISTANCE,
                 camera.position.y + d.y * DEFAULT_DISTANCE,
                 camera.position.z + d.z * DEFAULT_DISTANCE,

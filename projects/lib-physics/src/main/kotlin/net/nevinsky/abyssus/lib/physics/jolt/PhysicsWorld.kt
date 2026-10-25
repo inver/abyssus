@@ -13,17 +13,13 @@ import com.badlogic.gdx.math.Vector3
 import com.github.stephengold.joltjni.*
 import com.github.stephengold.joltjni.enumerate.EActivation
 import com.github.stephengold.joltjni.enumerate.EMotionType
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderRead
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderReader
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerKind
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMatrices
-import net.nevinsky.abyssus.lib.core.assets.foliage.layerKind
+import net.nevinsky.abyssus.lib.core.assets.foliage.*
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.ecs.SceneFoliageListing
 import net.nevinsky.abyssus.lib.core.ecs.activeComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.physics.*
 import org.slf4j.Logger
 import kotlin.math.abs
@@ -62,7 +58,7 @@ class PhysicsWorld internal constructor(
     private val injected: FoliageFailure?,
 ) : AutoCloseable {
     constructor(engine: SceneEngine, assets: PhysicsAssets, log: Logger, natives: JoltNatives) :
-        this(engine, assets, log, natives, null)
+            this(engine, assets, log, natives, null)
 
     // [injected] is a seam for tests: it may make a foliage chunk fail to build, as Jolt could.
 
@@ -114,7 +110,16 @@ class PhysicsWorld internal constructor(
         )
         poseWriter = PhysicsPoseWriter(bodies, records.values)
         stepper = PhysicsStepper(
-            system, bodies, allocator, jobs, records.values, constraintList, stepContacts, ropeTension, poseWriter, FixedStepClock(),
+            system,
+            bodies,
+            allocator,
+            jobs,
+            records.values,
+            constraintList,
+            stepContacts,
+            ropeTension,
+            poseWriter,
+            FixedStepClock(),
         )
         system.setContactListener(own(ContactCollector()))
         build()
@@ -161,7 +166,8 @@ class PhysicsWorld internal constructor(
         kind: ConstraintKind, a: Entity, anchorA: Vector3, b: Entity?, anchorB: Vector3,
         minDistance: Float = 0f, maxDistance: Float = 1f, hingeAxis: Vector3 = Vector3.Y,
     ): PhysicsConstraint = open {
-        val spec = ConstraintSpec(kind, a, b, Vector3(anchorA), Vector3(anchorB), minDistance, maxDistance, Vector3(hingeAxis))
+        val spec =
+            ConstraintSpec(kind, a, b, Vector3(anchorA), Vector3(anchorB), minDistance, maxDistance, Vector3(hingeAxis))
         problem(spec)?.let { throw IllegalArgumentException("Cannot add the constraint of ${describe(a)}: $it") }
         create(spec)
     }
@@ -216,20 +222,40 @@ class PhysicsWorld internal constructor(
             val body = entity.activeComponent(RigidBodyComponent::class.java)
             val collider = entity.activeComponent(ColliderComponent::class.java)
             if (collider == null) {
-                if (body != null && entity.getComponent(ColliderComponent::class.java) == null) warn(entity, "has a rigid body but no collider, so it is left out of the simulation")
+                if (body != null && entity.getComponent(ColliderComponent::class.java) == null) warn(
+                    entity,
+                    "has a rigid body but no collider, so it is left out of the simulation"
+                )
                 continue
             }
-            createBody(entity, body, collider)?.let { problem -> warn(entity, "$problem; it is left out of the simulation") }
+            createBody(entity, body, collider)?.let { problem ->
+                warn(
+                    entity,
+                    "$problem; it is left out of the simulation"
+                )
+            }
         }
         for (id in ids) {
             val entity = engine.ids[id] ?: continue
             val c = entity.activeComponent(ConstraintComponent::class.java) ?: continue
             val other = if (c.other == NO_ENTITY) null else engine.ids[c.other]
             if (c.other != NO_ENTITY && other == null) {
-                warn(entity, "its constraint names entity ${c.other}, which is not in the scene; the constraint is left out")
+                warn(
+                    entity,
+                    "its constraint names entity ${c.other}, which is not in the scene; the constraint is left out"
+                )
                 continue
             }
-            val spec = ConstraintSpec(c.kind, entity, other, Vector3(c.anchor), Vector3(c.otherAnchor), c.minDistance, c.maxDistance, Vector3(c.hingeAxis))
+            val spec = ConstraintSpec(
+                c.kind,
+                entity,
+                other,
+                Vector3(c.anchor),
+                Vector3(c.otherAnchor),
+                c.minDistance,
+                c.maxDistance,
+                Vector3(c.hingeAxis)
+            )
             val problem = problem(spec)
             if (problem != null) warn(entity, "$problem; the constraint is left out") else create(spec)
         }
@@ -272,16 +298,25 @@ class PhysicsWorld internal constructor(
                 val declared = colliders.read(layer.collider)
                 if (declared is FoliageColliderRead.Absent) continue
                 if (kind == FoliageLayerKind.DETAIL) {
-                    warn(owner, "foliage '${entry.foliage}' layer ${layer.id} is a detail layer, which never collides; its collider is ignored")
+                    warn(
+                        owner,
+                        "foliage '${entry.foliage}' layer ${layer.id} is a detail layer, which never collides; its collider is ignored"
+                    )
                     continue
                 }
                 if (declared is FoliageColliderRead.Invalid) {
-                    warn(owner, "foliage '${entry.foliage}' layer ${layer.id} has an unusable collider (${declared.reason}); it does not collide")
+                    warn(
+                        owner,
+                        "foliage '${entry.foliage}' layer ${layer.id} has an unusable collider (${declared.reason}); it does not collide"
+                    )
                     continue
                 }
                 val collider = (declared as FoliageColliderRead.Valid).collider
                 if (motion != MotionType.STATIC) {
-                    warn(owner, "foliage '${entry.foliage}' layer ${layer.id} does not collide: its owner is $motion, and foliage bodies do not move")
+                    warn(
+                        owner,
+                        "foliage '${entry.foliage}' layer ${layer.id} does not collide: its owner is $motion, and foliage bodies do not move"
+                    )
                     continue
                 }
                 val baked = runtime.bake.layers.firstOrNull { it.id == layer.id } ?: continue
@@ -304,6 +339,7 @@ class PhysicsWorld internal constructor(
                                 placed += result.placement
                                 approximated = approximated || result.placement.approximated
                             }
+
                             is ColliderPlacementResult.Refused -> {
                                 skipped++
                                 firstReason = firstReason ?: result.reason
@@ -313,22 +349,36 @@ class PhysicsWorld internal constructor(
                     if (placed.isNotEmpty()) chunks += placed
                 }
                 if (skipped > 0) {
-                    warn(owner, "foliage '${entry.foliage}' layer ${layer.id}: $skipped copies get no collider ($firstReason)")
+                    warn(
+                        owner,
+                        "foliage '${entry.foliage}' layer ${layer.id}: $skipped copies get no collider ($firstReason)"
+                    )
                 }
                 if (approximated) {
-                    warn(owner, "foliage '${entry.foliage}' layer ${layer.id} has a non-uniform scale; its ${collider.shape.name.lowercase()} colliders take the largest axis")
+                    warn(
+                        owner,
+                        "foliage '${entry.foliage}' layer ${layer.id} has a non-uniform scale; its ${collider.shape.name.lowercase()} colliders take the largest axis"
+                    )
                 }
                 val copies = chunks.sumOf { it.size.toLong() }
                 if (copies == 0L) continue
                 when (admission.admit(copies, chunks.size)) {
                     FoliageRefusal.COPY_CAP -> {
-                        warn(owner, "foliage '${entry.foliage}' layer ${layer.id} has $copies colliding copies, over the limit of $FOLIAGE_COLLIDER_COPY_CAP in all; it does not collide")
+                        warn(
+                            owner,
+                            "foliage '${entry.foliage}' layer ${layer.id} has $copies colliding copies, over the limit of $FOLIAGE_COLLIDER_COPY_CAP in all; it does not collide"
+                        )
                         continue
                     }
+
                     FoliageRefusal.BODY_CAPACITY -> {
-                        warn(owner, "foliage '${entry.foliage}' layer ${layer.id} needs ${chunks.size} bodies, more than the world has left; it does not collide")
+                        warn(
+                            owner,
+                            "foliage '${entry.foliage}' layer ${layer.id} needs ${chunks.size} bodies, more than the world has left; it does not collide"
+                        )
                         continue
                     }
+
                     null -> Unit
                 }
                 createFoliage(owner, layer.id, entry.foliage, chunks)
@@ -342,12 +392,14 @@ class PhysicsWorld internal constructor(
         try {
             for (placements in chunks) {
                 val forced = injected?.at(layerId, group.ids.size + 1)
-                when (val built = if (forced != null) FoliageCompounds.Built.Failed(forced) else compounds.build(placements)) {
+                when (val built =
+                    if (forced != null) FoliageCompounds.Built.Failed(forced) else compounds.build(placements)) {
                     is FoliageCompounds.Built.Failed -> {
                         warn(owner, "foliage '$name' layer $layerId does not collide: ${built.reason}")
                         releaseFoliageContents(group)
                         return
                     }
+
                     is FoliageCompounds.Built.Shape -> {
                         group.shapes += built
                         val settings = BodyCreationSettings(
@@ -442,6 +494,7 @@ class PhysicsWorld internal constructor(
                 setMinDistance(spec.minDistance)
                 setMaxDistance(spec.maxDistance)
             }
+
             ConstraintKind.HINGE -> own(HingeConstraintSettings()).apply {
                 val axis = Vector3(spec.hingeAxis).mul(rotationOf(spec.a)).nor()
                 val normal = perpendicular(axis)
@@ -452,6 +505,7 @@ class PhysicsWorld internal constructor(
                 setNormalAxis1(normal.x, normal.y, normal.z)
                 setNormalAxis2(normal.x, normal.y, normal.z)
             }
+
             ConstraintKind.FIXED -> own(FixedConstraintSettings()).apply { setAutoDetectPoint(true) }
         }
         val constraint = settings.create(a.body, b?.body ?: Body.sFixedToWorld())
@@ -461,7 +515,15 @@ class PhysicsWorld internal constructor(
         b?.let { bodies.activateBody(it.id) }
         val local = Vector3(spec.anchorA)
         val otherLocal = Vector3(spec.anchorB)
-        return ConstraintRecord(spec.kind, spec.a, spec.b, ref, local, otherLocal, spec.maxDistance).also { constraintList += it }
+        return ConstraintRecord(
+            spec.kind,
+            spec.a,
+            spec.b,
+            ref,
+            local,
+            otherLocal,
+            spec.maxDistance
+        ).also { constraintList += it }
     }
 
     private fun perpendicular(axis: Vector3): Vector3 {
@@ -476,6 +538,7 @@ class PhysicsWorld internal constructor(
         val v = bodies.getLinearVelocity(record.id)
         return out.set(v.getX(), v.getY(), v.getZ())
     }
+
     internal fun anchorsOf(c: ConstraintRecord, a: Vector3, b: Vector3) {
         a.set(c.anchor).mul(poseWriter.transformOf(records.getValue(c.entity)))
         val other = c.other?.let { records[it] }
@@ -517,8 +580,11 @@ class PhysicsWorld internal constructor(
 
     /** Collects contacts during a step, on the stepping thread (the job system is single-threaded). */
     private inner class ContactCollector : CustomContactListener() {
-        override fun onContactAdded(body1Va: Long, body2Va: Long, manifoldVa: Long, settingsVa: Long) = collect(body1Va, body2Va, true)
-        override fun onContactPersisted(body1Va: Long, body2Va: Long, manifoldVa: Long, settingsVa: Long) = collect(body1Va, body2Va, false)
+        override fun onContactAdded(body1Va: Long, body2Va: Long, manifoldVa: Long, settingsVa: Long) =
+            collect(body1Va, body2Va, true)
+
+        override fun onContactPersisted(body1Va: Long, body2Va: Long, manifoldVa: Long, settingsVa: Long) =
+            collect(body1Va, body2Va, false)
 
         private fun collect(body1Va: Long, body2Va: Long, first: Boolean) {
             val b1 = Body(body1Va)
@@ -531,7 +597,8 @@ class PhysicsWorld internal constructor(
             val (a, b) = if (entityId(r1.first) <= entityId(r2.first)) r1 to r2 else r2 to r1
             val key = a.second to b.second
             val previous = stepContacts[key]
-            stepContacts[key] = Contact(a.first, b.first, max(speed, previous?.relativeSpeed ?: 0f), first || previous?.first == true)
+            stepContacts[key] =
+                Contact(a.first, b.first, max(speed, previous?.relativeSpeed ?: 0f), first || previous?.first == true)
         }
     }
 
@@ -566,13 +633,28 @@ class PhysicsWorld internal constructor(
         override fun moveKinematic(position: Vector3, rotation: Quaternion, seconds: Float) = open {
             check(motionType == MotionType.KINEMATIC) { "${describe(entity)} is not kinematic" }
             val q = Quaternion(rotation).nor()
-            bodies.moveKinematic(id, RVec3(position.x.toDouble(), position.y.toDouble(), position.z.toDouble()), Quat(q.x, q.y, q.z, q.w), seconds)
+            bodies.moveKinematic(
+                id,
+                RVec3(position.x.toDouble(), position.y.toDouble(), position.z.toDouble()),
+                Quat(q.x, q.y, q.z, q.w),
+                seconds
+            )
         }
 
         override fun setPose(position: Vector3, rotation: Quaternion) = open {
             check(motionType != MotionType.STATIC) { "${describe(entity)} is static" }
             val q = Quaternion(rotation).nor()
-            bodies.setPositionAndRotation(id, position.x.toDouble(), position.y.toDouble(), position.z.toDouble(), q.x, q.y, q.z, q.w, EActivation.Activate)
+            bodies.setPositionAndRotation(
+                id,
+                position.x.toDouble(),
+                position.y.toDouble(),
+                position.z.toDouble(),
+                q.x,
+                q.y,
+                q.z,
+                q.w,
+                EActivation.Activate
+            )
             bodies.setLinearAndAngularVelocity(id, 0f, 0f, 0f, 0f, 0f, 0f)
             entity.getComponent(PositionComponent::class.java)?.let {
                 it.localPosition.set(position)

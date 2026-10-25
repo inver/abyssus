@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.plugin.sceneview.shadows
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
@@ -32,12 +32,12 @@ class CloudShadowSceneGlTest {
 
     private val fixture = File("src/test/testData/project/Untitled")
     private val cloudsUuid = "3f2a9c1e-7b4d-4e8a-9c6f-1d2e3b4a5c6d"
-    private val origin = Vec3(0f, 0f, 0f)
+    private val origin = Vector3(0f, 0f, 0f)
     private val sun = LightPlacement(
-        "sun", LightKind.DIRECTIONAL, Rgba(1f, 1f, 1f, 1f), 2f, origin, Vec3(-0.3f, -0.8f, -0.5f),
+        "sun", LightKind.DIRECTIONAL, Rgba(1f, 1f, 1f, 1f), 2f, origin, Vector3(-0.3f, -0.8f, -0.5f),
     )
     private val spot = LightPlacement(
-        "8", LightKind.SPOT, Rgba(1f, 0.5f, 0f, 1f), 3f, Vec3(0f, 5f, 0f), Vec3(0f, -1f, 0f), coneAngle = 40f,
+        "8", LightKind.SPOT, Rgba(1f, 0.5f, 0f, 1f), 3f, Vector3(0f, 5f, 0f), Vector3(0f, -1f, 0f), coneAngle = 40f,
     )
 
     /** A project with the fixture's terrain and sky, the sky naming a fair cloud asset; deleted after [test]. */

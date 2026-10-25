@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.plugin.sceneview.skybox
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
@@ -17,16 +17,16 @@ import org.junit.Test
 
 /** Which of the cloud shadow map and the uniform sun dimming applies, so the sun is never dimmed twice. */
 class SunShadingTest {
-    private val origin = Vec3(0f, 0f, 0f)
+    private val origin = Vector3(0f, 0f, 0f)
 
-    private fun directional(id: String, intensity: Float, at: Vec3 = origin) =
-        LightPlacement(id, LightKind.DIRECTIONAL, Rgba(1f, 1f, 1f, 1f), intensity, at, Vec3(0f, -1f, 0f))
+    private fun directional(id: String, intensity: Float, at: Vector3 = origin) =
+        LightPlacement(id, LightKind.DIRECTIONAL, Rgba(1f, 1f, 1f, 1f), intensity, at, Vector3(0f, -1f, 0f))
 
     private val spot = LightPlacement(
-        "8", LightKind.SPOT, Rgba(1f, 1f, 1f, 1f), 3f, origin, Vec3(0f, -1f, 0f), coneAngle = 40f,
+        "8", LightKind.SPOT, Rgba(1f, 1f, 1f, 1f), 3f, origin, Vector3(0f, -1f, 0f), coneAngle = 40f,
     )
 
-    private val set: LightSet = lightSetOf(listOf(directional("7", 2f), directional("3", 1f, Vec3(5f, 0f, 0f)), spot), origin)
+    private val set: LightSet = lightSetOf(listOf(directional("7", 2f), directional("3", 1f, Vector3(5f, 0f, 0f)), spot), origin)
 
     @Test
     fun anActiveMapKeepsTheSunUndimmedAndCarriesTheUniformScaleForOutsideTheMap() {
@@ -60,7 +60,7 @@ class SunShadingTest {
     @Test
     fun aSunOutsideTheRenderedBudgetOrMissingShadesNoOtherLight() {
         val crowded = lightSetOf(
-            listOf(directional("a", 1f, Vec3(1f, 0f, 0f)), directional("b", 1f, Vec3(2f, 0f, 0f)), directional("sun", 9f, Vec3(9f, 0f, 0f))),
+            listOf(directional("a", 1f, Vector3(1f, 0f, 0f)), directional("b", 1f, Vector3(2f, 0f, 0f)), directional("sun", 9f, Vector3(9f, 0f, 0f))),
             origin,
         )
         for (sunId in listOf("sun", null, "missing")) {

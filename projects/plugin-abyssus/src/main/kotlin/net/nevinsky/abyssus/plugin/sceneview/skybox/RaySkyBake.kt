@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.skybox
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import java.io.File
 import kotlin.math.floor
 
@@ -25,7 +25,7 @@ const val RAY_SKY_BAKE_REFRESH_SECONDS = 5.0
 data class RaySkyBakeKey(
     val name: String,
     val projectDir: File?,
-    val sun: Vec3,
+    val sun: Vector3,
     val clouds: Any?,
     val timeBucket: Long,
 )
@@ -35,7 +35,7 @@ data class RaySkyBakeKey(
  * bake the bare atmosphere) and [drifting] says whether any of its bands has wind; a drifting sky is baked again every
  * [RAY_SKY_BAKE_REFRESH_SECONDS] of cloud time, which bounds the rate at which ray accumulation restarts.
  */
-fun raySkyBakeKey(name: String, projectDir: File?, sun: Vec3, clouds: Any?, drifting: Boolean, timeSeconds: Double) =
+fun raySkyBakeKey(name: String, projectDir: File?, sun: Vector3, clouds: Any?, drifting: Boolean, timeSeconds: Double) =
     RaySkyBakeKey(
         name, projectDir, sun, clouds,
         if (clouds != null && drifting) floor(timeSeconds / RAY_SKY_BAKE_REFRESH_SECONDS).toLong() else 0L,

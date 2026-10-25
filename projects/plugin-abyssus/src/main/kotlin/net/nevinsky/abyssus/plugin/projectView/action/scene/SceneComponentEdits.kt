@@ -25,7 +25,7 @@ import net.nevinsky.abyssus.lib.core.editor.components.AssetEntities
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.lib.core.editor.components.LightEntities
 import net.nevinsky.abyssus.lib.core.editor.components.LightPreset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
@@ -78,7 +78,7 @@ object SceneComponentEdits {
         project: Project,
         file: VirtualFile,
         preset: LightPreset,
-        position: Vec3,
+        position: Vector3,
         cache: SceneDocumentCache
     ): AddedLight {
         var added = AddedLight(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
@@ -98,7 +98,7 @@ object SceneComponentEdits {
         project: Project,
         file: VirtualFile,
         asset: RenderAsset,
-        position: Vec3,
+        position: Vector3,
         cache: SceneDocumentCache,
         metaFiles: MetaFiles
     ): AddedEntity {

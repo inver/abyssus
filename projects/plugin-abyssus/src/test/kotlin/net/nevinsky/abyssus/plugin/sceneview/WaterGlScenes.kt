@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
 import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
 import net.nevinsky.abyssus.lib.core.water.WaterSettings
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import java.io.DataOutputStream
 import java.io.File
 import java.nio.file.Files
@@ -144,7 +144,7 @@ internal object WaterGlScenes {
     }
 
     /** World position of the bowl's centre: the terrain's middle plus the terrain entity's own offset in the Untitled scene. */
-    val BOWL_CENTRE = Vec3(SIZE / 2f - 38.25267f, 0f, SIZE / 2f - 32.7754f)
+    val BOWL_CENTRE = Vector3(SIZE / 2f - 38.25267f, 0f, SIZE / 2f - 32.7754f)
 
     /** A lake of [size] around the bowl's centre at [level]. */
     fun bowlLake(level: Double = 0.0, size: Double = 1500.0, configure: (WaterSettings) -> WaterSettings = { it }): WaterSettings =

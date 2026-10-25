@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.raytracing
 
+import com.badlogic.gdx.math.Vector3
+
 import kotlin.math.*
 
 /** Scalar reference for the raster shader's linear material, sampler and light conventions. */
@@ -26,7 +28,7 @@ class RayMaterialReference {
         }
         return value
     }
-    fun attenuation(light:RayLight,position:RayVec3):Float {
+    fun attenuation(light:RayLight,position:Vector3):Float {
         if(light.kind==RayLightKind.DIRECTIONAL) return 1f
         if(light.range<=0) return 0f
         val delta=light.position-position; val d2=delta.dot(delta); val distance=sqrt(d2)
@@ -40,7 +42,7 @@ class RayMaterialReference {
         return value
     }
     /** One light only; ambient and emission are deliberately separate from visibility. */
-    fun direct(material:RayMaterial,base:RayColor,normal:RayVec3,view:RayVec3,light:RayVec3,radiance:RayColor):RayColor {
+    fun direct(material:RayMaterial,base:RayColor,normal:Vector3,view:Vector3,light:Vector3,radiance:RayColor):RayColor {
         val nl=normal.dot(light).coerceIn(0f,1f)
         if(nl<=0) return RayColor(0f,0f,0f)
         val half=(light+view).unit(); val nh=normal.dot(half).coerceIn(0f,1f)
@@ -68,23 +70,23 @@ class RayMaterialReference {
         return base*(1-metal)*diffuseLight+specular*specularLight
     }
     /** Equirectangular lookup matching the raster sky (centre column faces -Z, top row +Y); rotation is about +Y. */
-    fun skyColor(environment:RayEnvironment,textures:List<RayTexture>,direction:RayVec3):RayColor {
+    fun skyColor(environment:RayEnvironment,textures:List<RayTexture>,direction:Vector3):RayColor {
         val index=environment.texture ?: return environment.background
         val angle=Math.toRadians(environment.rotation.toDouble()); val c=cos(angle).toFloat(); val s=sin(angle).toFloat()
-        val d=direction.unit(); val r=RayVec3(c*d.x-s*d.z,d.y,s*d.x+c*d.z).unit()
+        val d=direction.unit(); val r=Vector3(c*d.x-s*d.z,d.y,s*d.x+c*d.z).unit()
         val u=.5f+atan2(r.x,-r.z)/(2f*PI.toFloat()); val v=acos(r.y.coerceIn(-1f,1f))/PI.toFloat()
         val texel=sample(textures[index],u,v)
         return RayColor(texel.r*environment.intensity,texel.g*environment.intensity,texel.b*environment.intensity,1f)
     }
     /** What a primary miss shows: an HDR sky is tone mapped like the raster sky (ACES fit, gamma 1/2.2); reflections use [skyColor]. */
-    fun skyDisplayColor(environment:RayEnvironment,textures:List<RayTexture>,direction:RayVec3):RayColor {
+    fun skyDisplayColor(environment:RayEnvironment,textures:List<RayTexture>,direction:Vector3):RayColor {
         val linear=skyColor(environment,textures,direction)
         if(environment.texture==null || !environment.hdr) return linear
         fun map(c:Float):Float { val x=max(c,0f); return ((x*(2.51f*x+.03f))/(x*(2.43f*x+.59f)+.14f)).coerceIn(0f,1f).pow(1f/2.2f) }
         return RayColor(map(linear.r),map(linear.g),map(linear.b),1f)
     }
     /** Diffuse ambient for a surface normal: the flat colour or the six-colour ambient cube, as the raster shaders blend it. */
-    fun ambientAt(environment:RayEnvironment,normal:RayVec3):RayColor {
+    fun ambientAt(environment:RayEnvironment,normal:Vector3):RayColor {
         val cube=environment.ambientCube ?: return environment.ambient
         fun slot(component:Float,axis:Int)=cube[axis*2+if(component>=0f) 1 else 0]*(component*component)
         val x=slot(normal.x,0); val y=slot(normal.y,1); val z=slot(normal.z,2)
@@ -99,14 +101,14 @@ class RayMaterialReference {
         return Pair(a.toFloat()/4294967296f,b.toFloat()/4294967296f)
     }
     /** GGX-sampled reflection; falls back to the mirror direction when the sample points below the surface. */
-    fun reflectionDirection(normal:RayVec3,view:RayVec3,roughness:Float,x:Int,y:Int):RayVec3 {
-        fun reflect(i:RayVec3,n:RayVec3)=i-n*(2f*n.dot(i))
+    fun reflectionDirection(normal:Vector3,view:Vector3,roughness:Float,x:Int,y:Int):Vector3 {
+        fun reflect(i:Vector3,n:Vector3)=i-n*(2f*n.dot(i))
         val mirror=reflect(view*-1f,normal)
         val a=roughness*roughness; val a2=a*a
         val (xi0,xi1)=random2(x,y)
         val phi=2f*PI.toFloat()*xi0; val cosT=sqrt((1f-xi1)/(1f+(a2-1f)*xi1)); val sinT=sqrt(max(1f-cosT*cosT,0f))
-        val up=if(abs(normal.y)<.999f) RayVec3(0f,1f,0f) else RayVec3(1f,0f,0f)
-        val t=up.cross(normal).unit(); val b=normal.cross(t)
+        val up=if(abs(normal.y)<.999f) Vector3(0f,1f,0f) else Vector3(1f,0f,0f)
+        val t=up.crossed(normal).unit(); val b=normal.crossed(t)
         val h=(t*(sinT*cos(phi))+b*(sinT*sin(phi))+normal*cosT).unit()
         val r=reflect(view*-1f,h)
         return if(r.dot(normal)>0f) r else mirror

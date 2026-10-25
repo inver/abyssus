@@ -42,7 +42,7 @@ import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
@@ -281,7 +281,7 @@ class SceneFileEditor(
      * Writes the new centre of the water surface [waterId] as one undoable command, changing only the coordinates that
      * differ from the saved ones (so a Y drag leaves X and Z's number text alone). False when nothing was written.
      */
-    internal fun applyWaterMove(waterId: String, at: Vec3): Boolean {
+    internal fun applyWaterMove(waterId: String, at: Vector3): Boolean {
         val saved = runCatchingKeepingCancellation {
             WaterCodec().read(SceneJson().parse(textOf(file)).get("abyssus")).valid.firstOrNull { it.id == waterId }
         }.getOrNull() ?: return false
@@ -301,7 +301,7 @@ class SceneFileEditor(
      * Writes a finished drawing as an arrangement and its copies (one undoable command) and selects the new arrangement.
      * False when nothing was written; a refusal is shown to the user.
      */
-    internal fun createArrangement(asset: RenderAsset, points: List<Vec3>, closed: Boolean): Boolean {
+    internal fun createArrangement(asset: RenderAsset, points: List<Vector3>, closed: Boolean): Boolean {
         val heights = ground() ?: return false
         val result = ArrangementEditing.create(project, file, asset, points, closed, heights)
         ArrangementEditing.report(project, result)
@@ -312,7 +312,7 @@ class SceneFileEditor(
     }
 
     /** Writes new points for the arrangement [entityId] and regenerates its copies, as one undoable command. */
-    internal fun editArrangement(entityId: String, points: List<Vec3>): Boolean {
+    internal fun editArrangement(entityId: String, points: List<Vector3>): Boolean {
         val heights = ground() ?: return false
         val result = ArrangementEditing.setPoints(project, file, entityId, points, heights)
         ArrangementEditing.report(project, result)

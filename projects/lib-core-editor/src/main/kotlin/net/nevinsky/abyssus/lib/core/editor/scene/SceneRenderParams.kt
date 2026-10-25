@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.scene
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsState
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -24,14 +24,14 @@ import kotlin.math.sqrt
 
 /** [direction] is the unit vector the camera looks along. */
 data class CameraParams(
-    val position: Vec3,
-    val direction: Vec3,
+    val position: Vector3,
+    val direction: Vector3,
     val near: Float,
     val far: Float,
     val fieldOfView: Float,
 ) {
     companion object {
-        val DEFAULT = CameraParams(Vec3(8f, 6f, 8f), normalized(Vec3(-8f, -6f, -8f))!!, 0.1f, 1000f, 67f)
+        val DEFAULT = CameraParams(Vector3(8f, 6f, 8f), normalized(Vector3(-8f, -6f, -8f))!!, 0.1f, 1000f, 67f)
     }
 }
 
@@ -105,9 +105,9 @@ private fun fogOf(scene: SceneDto): FogParams? {
     return FogParams(Rgba(c.r, c.g, c.b, 1f), density, gradient)
 }
 
-internal fun normalized(v: Vec3): Vec3? {
+internal fun normalized(v: Vector3): Vector3? {
     val len = sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
-    return if (len > 1e-6f && len.isFinite()) Vec3(v.x / len, v.y / len, v.z / len) else null
+    return if (len > 1e-6f && len.isFinite()) Vector3(v.x / len, v.y / len, v.z / len) else null
 }
 
 /** The `mainCamera` of the `.abss` project a scene belongs to. */
@@ -133,8 +133,8 @@ class MainCamera {
         )
     }.getOrNull()
 
-    private fun JsonNode.vec(name: String): Vec3? {
+    private fun JsonNode.vec(name: String): Vector3? {
         val o = obj(name) ?: return null
-        return Vec3(o.float("x") ?: 0f, o.float("y") ?: 0f, o.float("z") ?: 0f)
+        return Vector3(o.float("x") ?: 0f, o.float("y") ?: 0f, o.float("z") ?: 0f)
     }
 }
