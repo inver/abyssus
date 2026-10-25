@@ -435,6 +435,8 @@ class SceneRenderer(
         }
         state.selectedId?.let { id ->
             boundsOf(c, id)?.let { SelectionBox.draw(lines, it) }
+            // selecting a path arrangement selects all of it: every linked copy gets its box
+            for (copy in c.copiesOf(id)) boundsOf(c, copy)?.let { SelectionBox.draw(lines, it) }
             gizmoHandlesFor(c, displayCamera, state, height)?.let {
                 GizmoDraw.draw(lines, it, state.hoveredAxis)
                 drewGizmo = true
@@ -486,7 +488,11 @@ class SceneRenderer(
             val selected = placement.entityId == state.selectedId
             val edited = state.pathEdit?.takeIf { it.entityId == placement.entityId }
             val path = if (edited != null) arrangementAlong(edited.points, placement.arrangement) else placement.arrangement
-            markers.drawPath(lines, path, ground, handles = selected, slots = selected)
+            val editing = placement.entityId == state.pathEditing
+            markers.drawPath(
+                lines, path, ground, handles = editing, slots = selected,
+                selectedPoint = state.selectedPathPoint.takeIf { editing },
+            )
         }
     }
 

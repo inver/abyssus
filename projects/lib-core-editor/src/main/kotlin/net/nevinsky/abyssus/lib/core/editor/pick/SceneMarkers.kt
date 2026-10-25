@@ -16,6 +16,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.arrange.PathCurve
 import net.nevinsky.abyssus.lib.core.editor.arrange.PathLayout
 import net.nevinsky.abyssus.lib.core.editor.arrange.pointsOf
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
@@ -31,11 +32,29 @@ private const val DIRECTION_LINE_LENGTH = 2f
 private val BODY_COLOR = Rgba(0.85f, 0.85f, 0.9f, 1f)
 private const val SLOT_MARKER_HALF = 0.4f
 private const val SLOT_MARKER_HEIGHT = 1.2f
-private const val HANDLE_HALF = 0.5f
+/** The half-size of the diamond on a control point, and of the smaller one halfway along a segment (world units). */
+const val PATH_POINT_HALF = 0.5f
+const val PATH_MIDDLE_HALF = PATH_POINT_HALF / 2f
+
+/** How wide the edges of a control object are drawn, in screen pixels. */
+const val PATH_HANDLE_WIDTH_PX = 3f
+
+/** The 12 edges of the diamond (octahedron) of half-size [r] at [p]; every tip joins every tip that is not opposite. */
+fun diamondEdges(p: Vec3, r: Float): List<Pair<Vec3, Vec3>> {
+    val tips = listOf(
+        Vec3(p.x + r, p.y, p.z), Vec3(p.x - r, p.y, p.z), Vec3(p.x, p.y + r, p.z),
+        Vec3(p.x, p.y - r, p.z), Vec3(p.x, p.y, p.z + r), Vec3(p.x, p.y, p.z - r),
+    )
+    return buildList { for (i in tips.indices) for (j in i + 1 until tips.size) if (i / 2 != j / 2) add(tips[i] to tips[j]) }
+}
 
 private val PATH_COLOR = Rgba(1f, 0.8f, 0.2f, 1f)
 private val SLOT_COLOR = Rgba(0.4f, 0.9f, 0.4f, 1f)
 private val POINT_HANDLE_COLOR = Rgba(1f, 1f, 1f, 1f)
+private val SELECTED_HANDLE_COLOR = Rgba(1f, 0.35f, 0.2f, 1f)
+
+/** How wide the line of a path arrangement is drawn, in screen pixels. */
+const val PATH_WIDTH_PX = 4f
 private val MIDDLE_HANDLE_COLOR = Rgba(0.6f, 0.8f, 1f, 1f)
 private val FRUSTUM_COLOR = Rgba(0.55f, 0.7f, 0.95f, 1f)
 
@@ -126,10 +145,18 @@ class SceneMarkers {
      * cross in the middle of each segment. The copies are laid out by [PathLayout], so they are where regeneration would
      * put them (the crosses are left out when [slots] is false). No model is drawn.
      */
-    fun drawPath(out: LineSink, path: PathArrangementComponent, ground: GroundHeight, handles: Boolean, slots: Boolean = true) {
+    fun drawPath(
+        out: LineSink,
+        path: PathArrangementComponent,
+        ground: GroundHeight,
+        handles: Boolean,
+        slots: Boolean = true,
+        selectedPoint: Int? = null,
+    ) {
         val points = pointsOf(path)
-        val count = if (path.closed && points.size > 2) points.size else points.size - 1
-        for (i in 0 until count) out.line(points[i], points[(i + 1) % points.size], PATH_COLOR)
+        val count = PathCurve.spanCount(points.size, path.closed)
+        val line = PathCurve.sample(points, path.closed)
+        for (i in 0 until line.size - 1) out.thickLine(line[i], line[i + 1], PATH_COLOR, PATH_WIDTH_PX)
         if (slots) for (slot in PathLayout().slots(path).orEmpty()) {
             val y = ground.heightAt(slot.x, slot.z, slot.fallbackY)
             val r = SLOT_MARKER_HALF
@@ -138,19 +165,11 @@ class SceneMarkers {
             out.line(Vec3(slot.x, y, slot.z), Vec3(slot.x, y + SLOT_MARKER_HEIGHT, slot.z), SLOT_COLOR)
         }
         if (!handles) return
-        for (p in points) drawDiamond(out, p, HANDLE_HALF, POINT_HANDLE_COLOR)
-        for (i in 0 until count) {
-            val a = points[i]
-            val b = points[(i + 1) % points.size]
-            drawDiamond(out, Vec3((a.x + b.x) / 2f, (a.y + b.y) / 2f, (a.z + b.z) / 2f), HANDLE_HALF / 2f, MIDDLE_HANDLE_COLOR)
-        }
+        for ((i, p) in points.withIndex()) drawDiamond(out, p, PATH_POINT_HALF, if (i == selectedPoint) SELECTED_HANDLE_COLOR else POINT_HANDLE_COLOR, PATH_HANDLE_WIDTH_PX)
+        for (i in 0 until count) drawDiamond(out, PathCurve.at(points, path.closed, i, 0.5f), PATH_MIDDLE_HALF, MIDDLE_HANDLE_COLOR, PATH_HANDLE_WIDTH_PX)
     }
 
-    private fun drawDiamond(out: LineSink, p: Vec3, r: Float, color: Rgba) {
-        val tips = listOf(
-            Vec3(p.x + r, p.y, p.z), Vec3(p.x - r, p.y, p.z), Vec3(p.x, p.y + r, p.z),
-            Vec3(p.x, p.y - r, p.z), Vec3(p.x, p.y, p.z + r), Vec3(p.x, p.y, p.z - r),
-        )
-        for (i in tips.indices) for (j in i + 1 until tips.size) if (i / 2 != j / 2) out.line(tips[i], tips[j], color)
+    private fun drawDiamond(out: LineSink, p: Vec3, r: Float, color: Rgba, widthPx: Float) {
+        for ((a, b) in diamondEdges(p, r)) out.thickLine(a, b, color, widthPx)
     }
 }

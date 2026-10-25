@@ -10,7 +10,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
+import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementOwnerOf
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.water.WATER_ROW
 
 private val LOG = Logger.getInstance("net.nevinsky.abyssus.projectView.EntitySelection")
@@ -64,7 +66,10 @@ private fun isSceneRoot(node: Any, sceneFile: VirtualFile): Boolean = when (node
  */
 fun selectEntityInAbyssusView(project: Project, sceneFile: VirtualFile, entityId: String) {
     try {
-        val visitor = TreeVisitor { path -> entityVisitAction(sceneFile, entityId, path.path.map(TreeUtil::getUserObject)) }
+        // a linked copy of a path arrangement has no row of its own: its arrangement's row stands for it
+        val rowId = SceneDocumentCache.of(project).read(sceneFile)?.root?.get("ecs")
+            ?.let { arrangementOwnerOf(it, entityId) } ?: entityId
+        val visitor = TreeVisitor { path -> entityVisitAction(sceneFile, rowId, path.path.map(TreeUtil::getUserObject)) }
         selectInAbyssusView(project, visitor)
     } catch (e: Throwable) {
         LOG.warn("Could not select entity $entityId in the Abyssus view", e)

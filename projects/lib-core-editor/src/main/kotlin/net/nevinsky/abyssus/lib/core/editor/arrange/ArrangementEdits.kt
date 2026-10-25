@@ -7,22 +7,11 @@ package net.nevinsky.abyssus.lib.core.editor.arrange
 
 import com.badlogic.gdx.math.Quaternion
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ArrayNode
-import com.fasterxml.jackson.databind.node.FloatNode
-import com.fasterxml.jackson.databind.node.IntNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.databind.node.*
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
-import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PathAsset
-import net.nevinsky.abyssus.lib.core.ecs.component.PathPoint
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
@@ -32,8 +21,6 @@ import net.nevinsky.abyssus.lib.core.editor.ecs.floatNode
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.slf4j.helpers.NOPLogger
 
-/** The file key of the arrangement component. */
-const val ARRANGEMENT_COMPONENT = "PathArrangementComponent"
 
 /** What an arrangement edit did to a scene's JSON tree. The tree is only touched for [Changed]. */
 sealed interface ArrangementResult {
@@ -81,16 +68,21 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
 
         val arrangementId = tree.insert { id ->
             val components = nodes.objectNode()
-            components.set<JsonNode>("NameComponent", writer.writeComponent(NameComponent(messages.message("arrangementName", id))))
+            components.set<JsonNode>(
+                "NameComponent",
+                writer.writeComponent(NameComponent(messages.message("arrangementName", id)))
+            )
             components.set<JsonNode>("TypeComponent", writer.writeComponent(TypeComponent(TypeComponent.Type.GROUP)))
-            components.set<JsonNode>(ARRANGEMENT_COMPONENT, writer.writeComponent(component))
+            components.set<JsonNode>(PathArrangementComponent::class.simpleName, writer.writeComponent(component))
             components
         } ?: return unreadable()
         for ((k, slot) in slots.withIndex()) {
-            val copy = tree.insert { id -> copyComponents(arrangementId, k, slot, component.asset, heights) } ?: return unreadable()
+            val copy = tree.insert { id -> copyComponents(arrangementId, k, slot, component.asset, heights) }
+                ?: return unreadable()
             component.slots.add(copy.toInt())
         }
-        tree.components(arrangementId)?.set<JsonNode>(ARRANGEMENT_COMPONENT, writer.writeComponent(component))
+        tree.components(arrangementId)
+            ?.set<JsonNode>(PathArrangementComponent::class.simpleName, writer.writeComponent(component))
         return ArrangementResult.Changed(arrangementId)
     }
 
@@ -111,10 +103,11 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
     ): ArrangementResult {
         val tree = SceneEntityTree(root)
         val components = tree.components(arrangementId)
-        val node = components?.get(ARRANGEMENT_COMPONENT) as? ObjectNode
+        val node = components?.get(PathArrangementComponent::class.simpleName) as? ObjectNode
             ?: return ArrangementResult.Rejected(messages.message("arrangementMissing", arrangementId))
-        val component = runCatchingKeepingCancellation { json.bindComponent(node, PathArrangementComponent::class.java) }
-            .getOrElse { return ArrangementResult.Rejected(messages.message("arrangementMissing", arrangementId)) }
+        val component =
+            runCatchingKeepingCancellation { json.bindComponent(node, PathArrangementComponent::class.java) }
+                .getOrElse { return ArrangementResult.Rejected(messages.message("arrangementMissing", arrangementId)) }
         if (component.points.size < 2 || !(component.spacing > 0f) || !(component.offset >= 0f)) {
             return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
         }
@@ -122,9 +115,9 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         val snapshot = root.deepCopy<JsonNode>()
 
         val refill = before != null && (
-            before.spacing != component.spacing || before.sides != component.sides || before.closed != component.closed ||
-                before.points.firstOrNull() != component.points.firstOrNull()
-            )
+                before.spacing != component.spacing || before.sides != component.sides || before.closed != component.closed ||
+                        before.points.firstOrNull() != component.points.firstOrNull()
+                )
         val oldSlots = component.slots
         val written = ArrayList<Int>(slots.size)
         for ((k, slot) in slots.withIndex()) {
@@ -151,7 +144,8 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
      * make too many copies.
      */
     fun setPoints(root: JsonNode, arrangementId: String, points: List<Vec3>, heights: GroundHeight): ArrangementResult {
-        val node = SceneEntityTree(root).components(arrangementId)?.get(ARRANGEMENT_COMPONENT) as? ObjectNode
+        val node = SceneEntityTree(root).components(arrangementId)
+            ?.get(PathArrangementComponent::class.simpleName) as? ObjectNode
             ?: return ArrangementResult.Rejected(messages.message("arrangementMissing", arrangementId))
         if (points.size < 2 || points.any { !it.x.isFinite() || !it.y.isFinite() || !it.z.isFinite() }) {
             return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
@@ -190,8 +184,11 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         val tree = SceneEntityTree(root)
         val id = copyId.toIntOrNull() ?: return false
         val components = tree.components(copyId) ?: return false
-        val parent = components.get("ParentComponent")?.get("parentEntityId")?.takeIf { it.isInt }?.asInt() ?: return false
-        val slots = tree.components(parent.toString())?.get(ARRANGEMENT_COMPONENT)?.get("slots") as? ArrayNode ?: return false
+        val parent =
+            components.get("ParentComponent")?.get("parentEntityId")?.takeIf { it.isInt }?.asInt() ?: return false
+        val slots =
+            tree.components(parent.toString())?.get(PathArrangementComponent::class.simpleName)
+                ?.get("slots") as? ArrayNode ?: return false
         val at = slots.indexOfFirst { it.isInt && it.asInt() == id }
         if (at < 0) return false
         slots.set(at, IntNode.valueOf(NO_ENTITY))
@@ -207,11 +204,25 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         return parent != null && parent.isInt && parent.asInt().toString() == arrangementId
     }
 
-    private fun copyComponents(arrangementId: String, slotIndex: Int, slot: PathSlot, asset: PathAsset, heights: GroundHeight): ObjectNode {
+    private fun copyComponents(
+        arrangementId: String,
+        slotIndex: Int,
+        slot: PathSlot,
+        asset: PathAsset,
+        heights: GroundHeight
+    ): ObjectNode {
         val components = nodes.objectNode()
         components.set<JsonNode>(
             "NameComponent",
-            writer.writeComponent(NameComponent(messages.message("arrangementCopyName", arrangementId, slotIndex.toString()))),
+            writer.writeComponent(
+                NameComponent(
+                    messages.message(
+                        "arrangementCopyName",
+                        arrangementId,
+                        slotIndex.toString()
+                    )
+                )
+            ),
         )
         components.set<JsonNode>("TypeComponent", writer.writeComponent(TypeComponent(TypeComponent.Type.OBJECT)))
         val position = PositionComponent(slot.x, heights.heightAt(slot.x, slot.z, slot.fallbackY), slot.z)
@@ -234,9 +245,14 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         val y = heights.heightAt(slot.x, slot.z, slot.fallbackY)
         setFields(placement, "localPosition", listOf(Field("x", slot.x, 0f), Field("y", y, 0f), Field("z", slot.z, 0f)))
         val q = yawQuaternion(slot.yawDegrees)
-        setFields(placement, "localRotation", listOf(Field("x", q.x, 0f), Field("y", q.y, 0f), Field("z", q.z, 0f), Field("w", q.w, 1f)))
+        setFields(
+            placement,
+            "localRotation",
+            listOf(Field("x", q.x, 0f), Field("y", q.y, 0f), Field("z", q.z, 0f), Field("w", q.w, 1f))
+        )
         val render = components.get("RenderComponent") as? ObjectNode ?: return
-        val target = if (render.has("assetName")) render else (render.get("renderable")?.get("asset") as? ObjectNode) ?: return
+        val target =
+            if (render.has("assetName")) render else (render.get("renderable")?.get("asset") as? ObjectNode) ?: return
         if (target.get("assetName")?.asText() != asset.assetName) target.put("assetName", asset.assetName)
         if (target.get("type")?.asText() != asset.type.name) target.put("type", asset.type.name)
     }
@@ -254,7 +270,8 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         val existing = parent.get(name)
         if (existing != null && !existing.isNull && existing !is ObjectNode) return
         val target = existing as? ObjectNode
-        val differing = fields.filter { f -> (target?.get(f.key)?.takeIf { it.isNumber }?.floatValue() ?: f.default) != f.value }
+        val differing =
+            fields.filter { f -> (target?.get(f.key)?.takeIf { it.isNumber }?.floatValue() ?: f.default) != f.value }
         if (differing.isEmpty()) return
         val written = target ?: parent.putObject(name)
         for (f in if (target == null) fields.filter { it.value != it.default } else differing) {
@@ -264,12 +281,14 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
 
     private fun setSlots(node: ObjectNode, slots: List<Int>) {
         val existing = node.get("slots")
-        val same = existing is ArrayNode && existing.size() == slots.size && slots.indices.all { existing[it].isInt && existing[it].asInt() == slots[it] }
+        val same =
+            existing is ArrayNode && existing.size() == slots.size && slots.indices.all { existing[it].isInt && existing[it].asInt() == slots[it] }
         if (same) return
         node.set<JsonNode>("slots", nodes.arrayNode().also { a -> slots.forEach { a.add(it) } })
     }
 
     private fun unreadable() = ArrangementResult.Rejected(messages.message("componentSceneUnreadable"))
 
-    private fun tooMany() = ArrangementResult.Rejected(messages.message("arrangementTooMany", MAX_ARRANGEMENT_SLOTS.toString()))
+    private fun tooMany() =
+        ArrangementResult.Rejected(messages.message("arrangementTooMany", MAX_ARRANGEMENT_SLOTS.toString()))
 }

@@ -223,6 +223,8 @@ class DtoEntryNode(
         val dto = v.value
         val rows = when {
             isEcsEntry(v) -> ecsRows(dto as JsonNode)
+            // a path arrangement is a plain line: its copies are squashed into it and its components are edited in Properties
+            isEntityEntry(v) && isArrangementEntity(dto as JsonNode) -> emptyList()
             isEntityEntry(v) -> entityRows(dto as JsonNode)
             else -> childrenOf(dto)
         }.filterNot { sceneFileOf(v) != null && it.name in SCENE_HEADER }.foldToggles()

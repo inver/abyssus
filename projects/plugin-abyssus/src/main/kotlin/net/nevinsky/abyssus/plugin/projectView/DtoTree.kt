@@ -5,32 +5,25 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
-import net.nevinsky.abyssus.lib.core.format.isEnabled
-import net.nevinsky.abyssus.lib.core.editor.document.isSceneComponentEntry
-import net.nevinsky.abyssus.lib.core.editor.document.isSceneEcsEntry
+import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementCopyCount
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementCopyIds
-import net.nevinsky.abyssus.lib.core.editor.document.isSceneEntityEntry
-import net.nevinsky.abyssus.lib.core.editor.document.sceneComponentRows
-import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
-import net.nevinsky.abyssus.lib.core.editor.document.sceneEcsRows
-import net.nevinsky.abyssus.lib.core.editor.document.sceneEntityView
-import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.lib.core.assets.Asset
-import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
-import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
-import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
-import net.nevinsky.abyssus.plugin.dto.ProjectDto
-import net.nevinsky.abyssus.plugin.dto.SceneError
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.plugin.dto.SceneEntry
+import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
+import net.nevinsky.abyssus.lib.core.editor.document.*
 import net.nevinsky.abyssus.lib.core.editor.water.InvalidWater
 import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
 import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
 import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
+import net.nevinsky.abyssus.lib.core.format.isEnabled
+import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
+import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.dto.ProjectDto
+import net.nevinsky.abyssus.plugin.dto.SceneEntry
+import net.nevinsky.abyssus.plugin.dto.SceneError
 import net.nevinsky.abyssus.plugin.water.WATER_ROW
 import net.nevinsky.abyssus.plugin.water.WaterGroup
 
@@ -78,7 +71,9 @@ fun childrenOf(value: Any?): List<DtoRow> = when {
     value is WaterSurface -> emptyList()
     isScalar(value) -> emptyList()
     value is JsonNode ->
-        if (value.isObject) value.properties().map { (k, v) -> DtoRow(k, v) } else value.mapIndexed { i, v -> DtoRow("$i", v) }
+        if (value.isObject) value.properties()
+            .map { (k, v) -> DtoRow(k, v) } else value.mapIndexed { i, v -> DtoRow("$i", v) }
+
     value is List<*> -> value.mapIndexed { i, v -> DtoRow("$i", v) }
     else -> beanProperties(value!!)
 }
@@ -94,11 +89,12 @@ private fun sceneRows(scene: SceneDto): List<DtoRow> {
 }
 
 private fun beanProperties(bean: Any): List<DtoRow> =
-    SceneJson().mapper.serializationConfig.introspect(SceneJson().mapper.constructType(bean.javaClass)).findProperties().mapNotNull { p ->
-        val accessor = p.accessor ?: return@mapNotNull null
-        accessor.fixAccess(true)
-        DtoRow(p.name, accessor.getValue(bean))
-    }
+    SceneJson().mapper.serializationConfig.introspect(SceneJson().mapper.constructType(bean.javaClass)).findProperties()
+        .mapNotNull { p ->
+            val accessor = p.accessor ?: return@mapNotNull null
+            accessor.fixAccess(true)
+            DtoRow(p.name, accessor.getValue(bean))
+        }
 
 /**
  * Folds each boolean `<x>Enabled` row into the sibling it gates (`<x>` or `<x>Name`), which gets [DtoRow.enabled] set
@@ -115,7 +111,14 @@ fun List<DtoRow>.foldToggles(): List<DtoRow> {
         folded[target.name] = on to toggle.name
         consumed += toggle.name
     }
-    return filter { it.name !in consumed }.map { r -> folded[r.name]?.let { (on, key) -> r.copy(enabled = on, toggleName = key) } ?: r }
+    return filter { it.name !in consumed }.map { r ->
+        folded[r.name]?.let { (on, key) ->
+            r.copy(
+                enabled = on,
+                toggleName = key
+            )
+        } ?: r
+    }
 }
 
 /** `Main Scene (6275127)`: the scene name followed by its id; the index stands in for a missing name. */
@@ -160,20 +163,36 @@ fun rowText(entry: DtoEntry, label: String? = null): RowText {
     val v = entry.value
     return when {
         v is List<*> && entry.name == "scenes" -> RowText(AbyssusBundle.message("treeScenes"), v.size.toString())
-        v is FolderRow -> RowText(AbyssusBundle.message(if (v.kind == FolderKind.UI) "treeUi" else "treeAssets"), v.assets.size.toString())
+        v is FolderRow -> RowText(
+            AbyssusBundle.message(if (v.kind == FolderKind.UI) "treeUi" else "treeAssets"),
+            v.assets.size.toString()
+        )
+
         v is TypeGroup -> RowText(groupLabel(v.group), v.assets.size.toString())
-        v is UiScreenGroup -> RowText(AbyssusBundle.message(if (v.kind == net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind.OVERLAY) "treeOverlays" else "treeScreens"), v.entries.size.toString())
+        v is UiScreenGroup -> RowText(
+            AbyssusBundle.message(if (v.kind == net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind.OVERLAY) "treeOverlays" else "treeScreens"),
+            v.entries.size.toString()
+        )
+
         v is UiScreenEntry -> RowText(v.screen.name.ifBlank { v.screen.id }, v.asset.name)
         v is UiScreen -> RowText(v.name.ifBlank { v.id }, v.kind.json)
         v is WaterGroup -> RowText(AbyssusBundle.message("treeWater"), v.surfaces.size.toString())
         v is ValidWater -> RowText(v.name, AbyssusBundle.message("treeWaterAbyssusOnly"))
         v is InvalidWater -> RowText(v.name, AbyssusBundle.message("treeWaterInvalid"))
-        isEcsEntry(entry) -> RowText(ECS, AbyssusBundle.message("treeEntities", sceneDocumentFromEcs(v as JsonNode).entitiesNode()?.size() ?: 0))
+        isEcsEntry(entry) -> RowText(
+            ECS,
+            AbyssusBundle.message("treeEntities", sceneDocumentFromEcs(v as JsonNode).entitiesNode()?.size() ?: 0)
+        )
+
         isEntityEntry(entry) -> entityText(entry, v as JsonNode)
         isComponentEntry(entry) -> RowText(entry.name.removeSuffix(COMPONENT_SUFFIX).ifEmpty { entry.name })
         else -> RowText(label ?: displayName(entry.name))
     }
 }
+
+/** Whether [entity] carries a `PathArrangementComponent`. */
+fun isArrangementEntity(entity: JsonNode): Boolean =
+    entity.get("components")?.has(PathArrangementComponent::class.simpleName) == true
 
 /** An entity row: its name and `N components`, with `M copies` after it for a path arrangement. */
 private fun entityText(entry: DtoEntry, entity: JsonNode): RowText {
@@ -181,7 +200,11 @@ private fun entityText(entry: DtoEntry, entity: JsonNode): RowText {
     val copies = arrangementCopyCount(entity)
     return RowText(
         entityName(entry),
-        if (copies > 0) AbyssusBundle.message("treeComponentsCopies", components, copies) else AbyssusBundle.message("treeComponents", components),
+        if (copies > 0) AbyssusBundle.message(
+            "treeComponentsCopies",
+            components,
+            copies
+        ) else AbyssusBundle.message("treeComponents", components),
     )
 }
 
@@ -189,7 +212,8 @@ private fun entityText(entry: DtoEntry, entity: JsonNode): RowText {
 fun ecsRows(ecs: JsonNode): List<DtoRow> {
     // the linked copies of a path arrangement are squashed into its row, which counts them
     val copies = arrangementCopyIds(ecs)
-    return sceneEcsRows(ecs).filter { it.name !in copies }.map { DtoRow(it.name, it.node, enabled = entityEye(it.node), via = it.via) }
+    return sceneEcsRows(ecs).filter { it.name !in copies }
+        .map { DtoRow(it.name, it.node, enabled = entityEye(it.node), via = it.via) }
 }
 
 private val toggles = SetEnabledAction()
@@ -201,5 +225,10 @@ private fun entityEye(node: JsonNode): Boolean? =
 /** The component rows retain their skipped JSON path. */
 fun entityRows(entity: JsonNode): List<DtoRow> = sceneComponentRows(entity).map {
     // a component that can be switched (all but Name, Parent and Position) gets the eye, on unless its entry says `enabled: false`
-    DtoRow(it.name, it.node, enabled = if (it.node.isObject && toggles.isTogglable(it.name)) isEnabled(it.node) else null, via = it.via)
+    DtoRow(
+        it.name,
+        it.node,
+        enabled = if (it.node.isObject && toggles.isTogglable(it.name)) isEnabled(it.node) else null,
+        via = it.via
+    )
 }

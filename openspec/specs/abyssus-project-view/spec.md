@@ -330,6 +330,15 @@ is the number of its slots that name an entity. An entity without such a `Parent
 - **WHEN** a copy has been detached, so it has no `ParentComponent` and its slot is `-1`
 - **THEN** it is listed under `ecs` as an ordinary entity
 
+### Requirement: A path arrangement is a plain row that stands for its copies
+
+The row of a path arrangement SHALL have no children and no expand control. Selecting a linked copy of an arrangement in the scene view SHALL select the arrangement's row in the tree.
+
+#### Scenario: Selecting a copy in the scene view
+
+- **WHEN** the user clicks a linked copy of the arrangement `Railway` in the scene view
+- **THEN** the `Railway` row is selected in the tree, and it cannot be expanded
+
 ### Requirement: Water rows in a scene
 
 A scene containing `abyssus.waterSurfaces` SHALL show a Water group with one row per surface in saved order, labelled by name, with a visibility eye and an Abyssus-only indication. Water rows SHALL be distinct from ECS entities and assets and support selection, rename and removal.

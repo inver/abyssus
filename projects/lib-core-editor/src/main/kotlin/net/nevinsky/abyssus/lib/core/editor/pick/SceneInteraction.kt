@@ -58,6 +58,9 @@ class SceneInteraction(
     /** Called when a point drag, an insert or a removal ends with new points for the arrangement; returns whether it was written. */
     var onArrangementEdit: ((String, List<Vec3>) -> Boolean)? = null
 
+    /** Called when the edit of an arrangement's control points ended because the selection moved on or the arrangement went. */
+    var onPathEditEnded: (() -> Unit)? = null
+
     /** Called when the selection, the mode or the looked-through camera changed by the user or by new scene params. */
     var onStateChanged: (() -> Unit)? = null
 
@@ -149,7 +152,33 @@ class SceneInteraction(
         stateChanged()
     }
 
+    /** The arrangement whose control points are being edited, or null. */
+    val pathEditing: String? get() = state.pathEditing
+
+    /** Starts (or, with null, ends) editing the control points of the arrangement [id], selecting it. */
+    fun setPathEditing(id: String?) {
+        state.pathEdit = null
+        state.selectedPathPoint = null
+        state.pathEditing = id
+        if (id != null) {
+            state.selectedId = id
+            state.paint = null
+        }
+        stateChanged()
+    }
+
+    /** Ends the control point edit when the selection is no longer its arrangement. Call after the selection changed. */
+    fun selectionChanged() {
+        val editing = state.pathEditing ?: return
+        if (state.selectedId == editing) return
+        state.pathEditing = null
+        state.selectedPathPoint = null
+        state.pathEdit = null
+        onPathEditEnded?.invoke()
+    }
+
     private fun stateChanged() {
+        selectionChanged()
         lastCanDrop = canDrop
         onStateChanged?.invoke()
     }
@@ -246,6 +275,14 @@ class SceneInteraction(
 
     private fun pickAt(x: Int, y: Int) {
         if (size.isEmpty) return
+        if (state.pathEditing != null) {
+            // editing control points: a click off the handles only lets go of the point; Apply ends the mode
+            if (state.selectedPathPoint != null) {
+                state.selectedPathPoint = null
+                stateChanged()
+            }
+            return
+        }
         val at = size.toFramebuffer(x, y)
         val target = queries.pickTarget(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
         if (target is SceneTarget.Water) {
@@ -261,7 +298,8 @@ class SceneInteraction(
         val line = if (picked == null || queries.content.terrains.any { it.entityId == picked }) {
             queries.pathLineAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
         } else null
-        val hit = line ?: picked
+        // a model that belongs to a path arrangement stands for the whole arrangement
+        val hit = line ?: picked?.let { queries.content.arrangementOf(it) ?: it }
         var changed = hit != selectedId
         selectedId = hit
         // Selecting another entity (or nothing) ends the Paint Foliage mode.
@@ -289,6 +327,7 @@ class SceneInteraction(
         }
         state.viewCamera?.let { id -> if (params.content.cameras.none { it.entityId == id }) { state.viewCamera = null; changed = true } }
         gestures.contentChanged(params.content) { ScenePreview().contains(params.content, it) }
+        state.pathEditing?.let { id -> if (params.content.arrangements.none { it.entityId == id }) { state.selection = null; changed = true } }
         state.paint?.let { mode ->
             if (!ScenePreview().contains(params.content, mode.entityId)) {
                 state.paint = null

@@ -70,7 +70,9 @@ class SceneInteractionPathTest {
         val state = SceneViewState()
         val content = SceneContent(
             terrains = listOf(AssetPlacement("1", "terrain", PlacementTransform.IDENTITY)),
-            arrangements = if (arrangement) listOf(ArrangementPlacement("5", arrangementAlong(points, closed = closed))) else emptyList(),
+            arrangements = if (arrangement) {
+                listOf(ArrangementPlacement("5", arrangementAlong(points, closed = closed).also { if (copy) it.slots = mutableListOf(12) }))
+            } else emptyList(),
         )
         val boxes = if (copy) {
             listOf(snapshotBoxOf("12", BoundingBox(Vector3(-2f, -2f, -2f), Vector3(2f, 2f, 2f)), Matrix4().setToTranslation(50f, 0f, 50f)))
@@ -216,47 +218,87 @@ class SceneInteractionPathTest {
         assertTrue(f.edits.isEmpty())
     }
 
+    private fun editing(points: List<Vec3> = line()): Fixture =
+        fixture(arrangement = true, points = points).also { it.interaction.setPathEditing("5") }
+
+    /** Presses the handle of point [index] and releases it: the click that gives the point its gizmo. */
+    private fun Fixture.selectPoint(x: Float, z: Float) {
+        val (px, py) = pixelOf(x, z)
+        interaction.pressed(px, py, true)
+        interaction.released(px, py, true)
+    }
+
     @Test
-    fun draggingAPointHandleMovesItAndWritesOnRelease() {
+    fun handlesAreNotGrabbedOutsideTheEditMode() {
         val f = fixture(arrangement = true)
         f.state.selectedId = "5"
-        val (x0, y0) = f.pixelOf(80f, 50f)
-        val (x1, y1) = f.pixelOf(60f, 40f)
+        val (x, y) = f.pixelOf(80f, 50f)
+        f.interaction.pressed(x, y, true)
+        f.interaction.released(x, y, true)
+        assertNull(f.state.selectedPathPoint)
+        assertTrue(f.edits.isEmpty())
+    }
+
+    @Test
+    fun clickingAControlPointInTheEditModeGivesItTheMoveGizmo() {
+        val f = editing()
+        f.selectPoint(80f, 50f)
+        assertEquals(1, f.state.selectedPathPoint)
+        val handles = f.queries.gizmoHandles(H)!!
+        assertEquals(GizmoMode.MOVE, handles.mode)
+        assertNear(80f, 50f, handles.origin)
+        assertEquals("5", f.interaction.selectedId)
+    }
+
+    @Test
+    fun draggingTheGizmoMovesThePointAndWritesOnRelease() {
+        val f = editing()
+        f.selectPoint(80f, 50f)
+        val handles = f.queries.gizmoHandles(H)!!
+        val tip = handles.tip(GizmoAxis.X)
+        val (x0, y0) = f.pixelOf((handles.origin.x + tip.x) / 2f, (handles.origin.z + tip.z) / 2f)
+        val (x1, y1) = f.pixelOf((handles.origin.x + tip.x) / 2f - 10f, (handles.origin.z + tip.z) / 2f)
         f.interaction.pressed(x0, y0, true)
         f.interaction.dragged(x1, y1, true)
         val shown = f.state.pathEdit!!
         assertEquals("5", shown.entityId)
-        assertNear(60f, 40f, shown.points[1])
+        assertTrue(shown.points[1].x < 79f)
         assertNear(20f, 50f, shown.points[0])
         assertTrue(f.edits.isEmpty())
         f.interaction.released(x1, y1, true)
         assertEquals(1, f.edits.size)
-        assertEquals("5", f.edits[0].first)
-        assertNear(60f, 40f, f.edits[0].second[1])
+        assertTrue(f.edits[0].second[1].x < 79f)
     }
 
     @Test
-    fun draggingAMiddleHandleInsertsAPoint() {
-        val f = fixture(arrangement = true)
-        f.state.selectedId = "5"
-        val (x0, y0) = f.pixelOf(50f, 50f)
-        val (x1, y1) = f.pixelOf(50f, 70f)
-        f.interaction.pressed(x0, y0, true)
-        f.interaction.dragged(x1, y1, true)
-        f.interaction.released(x1, y1, true)
+    fun aMiddleHandleInsertsAPointAtOnceAndSelectsIt() {
+        val f = editing()
+        f.selectPoint(50f, 50f)
         val points = f.edits.single().second
         assertEquals(3, points.size)
-        assertNear(20f, 50f, points[0])
-        assertNear(50f, 70f, points[1])
-        assertNear(80f, 50f, points[2])
+        assertNear(50f, 50f, points[1])
+        assertEquals(1, f.state.selectedPathPoint)
     }
 
     @Test
-    fun escapeDuringAPointDragRestoresAndWritesNothing() {
-        val f = fixture(arrangement = true)
-        f.state.selectedId = "5"
-        val (x0, y0) = f.pixelOf(80f, 50f)
-        val (x1, y1) = f.pixelOf(60f, 40f)
+    fun aClickOffTheHandlesLetsGoOfThePointButKeepsTheEditMode() {
+        val f = editing()
+        f.selectPoint(80f, 50f)
+        f.click(35f, 80f)
+        assertNull(f.state.selectedPathPoint)
+        assertEquals("5", f.interaction.pathEditing)
+        assertEquals("5", f.interaction.selectedId)
+    }
+
+    @Test
+    fun escapeDuringAGizmoDragRestoresAndWritesNothing() {
+        val f = editing()
+        f.selectPoint(80f, 50f)
+        val handles = f.queries.gizmoHandles(H)!!
+        val tip = handles.tip(GizmoAxis.X)
+        val mid = (handles.origin.x + tip.x) / 2f to (handles.origin.z + tip.z) / 2f
+        val (x0, y0) = f.pixelOf(mid.first, mid.second)
+        val (x1, y1) = f.pixelOf(mid.first - 10f, mid.second)
         f.interaction.pressed(x0, y0, true)
         f.interaction.dragged(x1, y1, true)
         f.interaction.escape()
@@ -266,14 +308,14 @@ class SceneInteractionPathTest {
     }
 
     @Test
-    fun pressingAHandleWithoutMovingWritesNothing() {
-        val f = fixture(arrangement = true)
-        f.state.selectedId = "5"
-        val (x0, y0) = f.pixelOf(80f, 50f)
-        f.interaction.pressed(x0, y0, true)
-        f.interaction.released(x0, y0, true)
-        assertTrue(f.edits.isEmpty())
-        assertNull(f.state.pathEdit)
+    fun selectingSomethingElseEndsTheEditMode() {
+        val f = editing()
+        var ended = 0
+        f.interaction.onPathEditEnded = { ended++ }
+        f.state.selectedId = "1"
+        f.interaction.selectionChanged()
+        assertNull(f.interaction.pathEditing)
+        assertEquals(1, ended)
     }
 
     @Test
@@ -305,16 +347,33 @@ class SceneInteractionPathTest {
     fun aCopyWinsOverTheLine() {
         val f = fixture(arrangement = true, copy = true)
         f.click(50f, 50f)
+        assertEquals("5", f.interaction.selectedId)
+    }
+
+    @Test
+    fun aCopyOfAnArrangementSelectsTheWholeArrangementAndStaysSelectedOnTheNextCopyClick() {
+        val f = fixture(arrangement = true, copy = true)
+        val picked = mutableListOf<String>()
+        f.interaction.onPick = { picked += it }
+        f.click(50f, 50f)
+        f.click(50f, 50f)
+        assertEquals("5", f.interaction.selectedId)
+        assertEquals(listOf("5", "5"), picked)
+        assertEquals(listOf("12"), f.queries.content.copiesOf("5"))
+    }
+
+    @Test
+    fun aModelThatBelongsToNoArrangementSelectsItself() {
+        val f = fixture(arrangement = false, copy = true)
+        f.click(50f, 50f)
         assertEquals("12", f.interaction.selectedId)
     }
 
     @Test
-    fun selectingSomethingElseHidesTheHandles() {
+    fun clickingTheLineKeepsTheHandlesHiddenUntilEdit() {
         val f = fixture(arrangement = true)
         f.click(35f, 50f)
-        val (x, y) = f.pixelOf(80f, 50f)
-        assertTrue(f.queries.pathHandleAt(x, y, W, H) is PathHit.Point)
-        f.click(35f, 80f)
-        assertNull(f.queries.pathHandleAt(x, y, W, H))
+        assertEquals("5", f.interaction.selectedId)
+        assertNull(f.interaction.pathEditing)
     }
 }

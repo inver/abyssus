@@ -49,8 +49,8 @@ internal sealed interface Gesture {
     /** Set by Esc (or by the dragged entity leaving the scene): the rest of the gesture, up to the release, does nothing. */
     data object Cancelled : Gesture
 
-    /** Point [index] of the arrangement [entityId] is being dragged; [original] are its points before, [points] now. */
-    class DraggingPathPoint(val entityId: String, val index: Int, val original: List<Vec3>) : Gesture {
+    /** A move handle of control point [index] of the arrangement [entityId] is dragged; [original] are its points before, [points] now. */
+    class DraggingPathPoint(val drag: GizmoDrag, val entityId: String, val index: Int, val original: List<Vec3>) : Gesture {
         var points: List<Vec3> = original
         var moved = false
     }
@@ -93,7 +93,11 @@ internal class GestureDriver(
         state.selectedWater?.let { startWaterDrag(it, x, y); return }
         if (id == null) return
         val at = size.toFramebuffer(x, y)
-        if (startPathDrag(id, at)) return
+        if (state.pathEditing == id) {
+            // while the control points are edited the selection is the line: only its handles and the point's gizmo react
+            if (!startPathGizmoDrag(id, at)) pressPathHandle(id, at)
+            return
+        }
         val paint = state.paint
         if (paint != null) {
             startStroke(paint, at)
@@ -117,20 +121,37 @@ internal class GestureDriver(
         host.stateChanged()
     }
 
-    /** The left press on a handle of the selected arrangement's line: a point drag, or an insert from a middle handle. */
-    private fun startPathDrag(id: String, at: FramebufferPoint): Boolean {
+    /** The left press on a move handle of the gizmo of the selected control point of [id]. */
+    private fun startPathGizmoDrag(id: String, at: FramebufferPoint): Boolean {
+        val index = state.selectedPathPoint ?: return false
+        val size = host.size
+        val points = queries.pathPoints(id) ?: return false
+        val axis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return false
+        val started = queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return false
+        current = Gesture.DraggingPathPoint(started, id, index, points)
+        state.hoveredAxis = axis
+        host.stateChanged()
+        return true
+    }
+
+    /**
+     * The left press on a handle of the line of [id]: a control point gets the move gizmo, and the middle of a segment
+     * inserts a point there (on the curve) that gets it. The press is consumed, so it neither orbits nor picks.
+     */
+    private fun pressPathHandle(id: String, at: FramebufferPoint): Boolean {
         val size = host.size
         val points = queries.pathPoints(id) ?: return false
         val hit = queries.pathHandleAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return false
         when (hit) {
-            is PathHit.Point -> current = Gesture.DraggingPathPoint(id, hit.index, points)
+            is PathHit.Point -> state.selectedPathPoint = hit.index
             is PathHit.Middle -> {
                 val closed = queries.content.arrangements.firstOrNull { it.entityId == id }?.arrangement?.closed == true
-                val middle = PathHandles(points, closed).middle(hit.segment)
-                val inserted = points.toMutableList().also { it.add(hit.segment + 1, middle) }
-                current = Gesture.DraggingPathPoint(id, hit.segment + 1, points).also { it.points = inserted }
+                val inserted = points.toMutableList().also { it.add(hit.segment + 1, PathHandles(points, closed).middle(hit.segment)) }
+                state.pathEdit = PathEdit(id, inserted)
+                if (host.onArrangementEdit?.invoke(id, inserted) == true) state.selectedPathPoint = hit.segment + 1 else state.pathEdit = null
             }
         }
+        current = Gesture.Cancelled
         host.stateChanged()
         return true
     }
@@ -170,8 +191,8 @@ internal class GestureDriver(
             }
             is Gesture.DraggingPathPoint -> {
                 val ray = queries.rayFrom(size, x, y) ?: return true
-                val hit = queries.groundHit(ray) ?: return true
-                val moved = g.points.toMutableList().also { it[g.index] = Vec3(hit.x, hit.y, hit.z) }
+                val to = g.drag.update(ray).transform.position
+                val moved = g.original.toMutableList().also { it[g.index] = to }
                 g.points = moved
                 g.moved = true
                 state.pathEdit = PathEdit(g.entityId, moved)

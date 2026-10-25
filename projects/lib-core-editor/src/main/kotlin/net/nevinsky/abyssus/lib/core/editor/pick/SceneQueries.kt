@@ -14,7 +14,6 @@ import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
 import net.nevinsky.abyssus.lib.core.editor.water.WaterHit
 import net.nevinsky.abyssus.lib.core.editor.water.WaterPreview
-import net.nevinsky.abyssus.lib.core.editor.arrange.pointsOf
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
@@ -204,8 +203,7 @@ class SnapshotSceneQueries(
     }
 
     override fun pathPoints(entityId: String): List<Vec3>? {
-        state.pathEdit?.takeIf { it.entityId == entityId }?.let { return it.points }
-        return content.arrangements.firstOrNull { it.entityId == entityId }?.arrangement?.let(::pointsOf)
+        return pathPointsIn(content, state, entityId)
     }
 
     override fun pathHandleAt(screenX: Int, screenY: Int, width: Int, height: Int): PathHit? {
@@ -272,6 +270,11 @@ class SnapshotSceneQueries(
 
     override fun beginDrag(axis: GizmoAxis, screenX: Int, screenY: Int, width: Int, height: Int): GizmoDrag? {
         state.selectedWater?.let { return beginWaterDrag(it, axis, screenX, screenY, width, height) }
+        pathPointGizmoAt(content, state)?.let { point ->
+            val ray = rayAt(screenX, screenY, width, height) ?: return null
+            val start = PlacementTransform(point, Quat.IDENTITY, Vec3(1f, 1f, 1f))
+            return GizmoDrag(GizmoMode.MOVE, axis, start, ray, null, axis.direction, state.snap).takeIf { it.isUsable }
+        }
         val id = state.selectedId ?: return null
         val selected = ScenePreview().selected(content, id) ?: return null
         val ray = rayAt(screenX, screenY, width, height) ?: return null
@@ -294,6 +297,13 @@ fun gizmoHandlesFor(c: SceneContent, eyeCamera: PerspectiveCamera, state: SceneV
         val eye = Vec3(eyeCamera.position.x, eyeCamera.position.y, eyeCamera.position.z)
         return GizmoHandles(centre, GizmoMode.MOVE, eye, eyeCamera.fieldOfView, height, WORLD_AXES)
     }
+    // a control point of the arrangement being edited moves along the world axes, like water
+    if (state.pathEditing != null && state.selectedPathPoint != null) {
+        val point = pathPointGizmoAt(c, state) ?: return null
+        if (state.gizmoMode != GizmoMode.MOVE) return null
+        val eye = Vec3(eyeCamera.position.x, eyeCamera.position.y, eyeCamera.position.z)
+        return GizmoHandles(point, GizmoMode.MOVE, eye, eyeCamera.fieldOfView, height, WORLD_AXES)
+    }
     val id = state.selectedId ?: return null
     if (state.gizmoMode == GizmoMode.ROTATE && !canRotate(c, id)) return null
     val selected = ScenePreview().selected(c, id) ?: return null
@@ -302,6 +312,12 @@ fun gizmoHandlesFor(c: SceneContent, eyeCamera: PerspectiveCamera, state: SceneV
     return GizmoHandles(selected.transform.position, state.gizmoMode, eye, eyeCamera.fieldOfView, height, axes)
 }
 
+
+/** Where the selected control point of the arrangement being edited is, or null when none is selected there. */
+fun pathPointGizmoAt(c: SceneContent, state: SceneViewState): Vec3? {
+    val id = state.pathEditing?.takeIf { it == state.selectedId } ?: return null
+    return state.selectedPathPoint?.let { pathPointsIn(c, state, id)?.getOrNull(it) }
+}
 
 /** The centre of the valid water surface [waterId] of [c], or null when the scene has no such drawable surface. */
 fun waterCentre(c: SceneContent, waterId: String): Vec3? =

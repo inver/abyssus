@@ -10,6 +10,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PathPoint
 import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PathLayoutTest {
@@ -42,11 +43,13 @@ class PathLayoutTest {
     }
 
     @Test
-    fun aClosedSquareHasEightStationsAndNoneRepeatsTheFirst() {
-        val s = slots(line(p(0f, 0f), p(20f, 0f), p(20f, 20f), p(0f, 20f), closed = true))
-        assertEquals(8, s.size)
-        assertEquals(listOf(0f to 0f, 10f to 0f, 20f to 0f, 20f to 10f, 20f to 20f, 10f to 20f, 0f to 20f, 0f to 10f),
-            s.map { it.x to it.z })
+    fun aClosedLoopStartsOnTheFirstPointAndNoneRepeatsIt() {
+        val s = slots(line(p(0f, 0f), p(20f, 0f), p(20f, 20f), p(0f, 20f), spacing = 10f, closed = true))
+        assertEquals(0f, s[0].x, 1e-3f)
+        assertEquals(0f, s[0].z, 1e-3f)
+        // a smooth loop through the corners is longer than the chords, shorter than a square's 80 only by its rounding
+        assertTrue(s.size in 7..9)
+        assertTrue(s.drop(1).none { kotlin.math.hypot(it.x, it.z) < 1f })
     }
 
     @Test
@@ -98,9 +101,13 @@ class PathLayoutTest {
     }
 
     @Test
-    fun aStationOnABendTurnsWithTheOutgoingSegment() {
+    fun aStationOnABendTurnsSmoothlyThroughTheCorner() {
         val s = slots(line(p(0f, 0f), p(10f, 0f), p(10f, 10f)))
-        assertEquals(listOf(0f, -90f, -90f), s.map { it.yawDegrees })
+        assertEquals(3, s.size)
+        // the line passes through its control point and the heading turns gradually from 0 towards -90
+        assertEquals(10f, s[1].x, 0.5f)
+        assertEquals(0f, s[1].z, 0.5f)
+        assertTrue(s[1].yawDegrees < 0f && s[1].yawDegrees > -90f)
     }
 
     @Test

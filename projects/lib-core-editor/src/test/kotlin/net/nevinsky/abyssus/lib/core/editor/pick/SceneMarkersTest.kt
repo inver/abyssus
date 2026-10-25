@@ -112,11 +112,11 @@ class SceneMarkersTest {
     }
 
     @Test
-    fun aClosedPathDrawsTheClosingSegment() {
+    fun aClosedPathDrawsTheLineBackToTheFirstPoint() {
         val out = Recorder()
         val path = arrangementAlong(listOf(Vec3(0f, 0f, 0f), Vec3(20f, 0f, 0f), Vec3(20f, 0f, 20f)), closed = true)
-        SceneMarkers().drawPath(out, path, LineHeights(), handles = false)
-        assertEquals(Vec3(20f, 0f, 20f) to Vec3(0f, 0f, 0f), out.lines[2])
+        SceneMarkers().drawPath(out, path, LineHeights(), handles = false, slots = false)
+        assertEquals(Vec3(0f, 0f, 0f), out.lines.last().second)
     }
 
     @Test

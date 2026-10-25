@@ -10,11 +10,11 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 
 /*
  * The only code that knows how a scene file addresses its entities. Readers use [SceneDocument]; writers mutate the
@@ -53,7 +53,8 @@ private class SceneEcsPaths {
 
     /** The `NameComponent.name` in [components] when it is non-blank text, else [id]. */
     fun entityName(components: JsonNode?, id: String): String =
-        components?.get("NameComponent")?.get("name")?.takeIf { it.isTextual }?.asText()?.takeIf { it.isNotBlank() } ?: id
+        components?.get("NameComponent")?.get("name")?.takeIf { it.isTextual }?.asText()?.takeIf { it.isNotBlank() }
+            ?: id
 }
 
 /** Component binding is supplied by the caller's existing runtime-compatible codec reader. */
@@ -65,19 +66,25 @@ interface SceneComponentDecoder {
 class SceneDocument(private val root: JsonNode, private val decoder: SceneComponentDecoder? = null) {
     private val paths = SceneEcsPaths()
 
-    init { AbyssusDocumentFormat().requireSupported(root, DocumentKind.SCENE) }
+    init {
+        AbyssusDocumentFormat().requireSupported(root, DocumentKind.SCENE)
+    }
 
     fun entities(): List<EntityView> = entitiesNode()?.properties().orEmpty().mapNotNull { (id, node) ->
         node.takeIf { it.isObject }?.let { EntityView(id, it, decoder) }
     }
-    fun entity(id: String): EntityView? = entitiesNode()?.get(id)?.takeIf { it.isObject }?.let { EntityView(id, it, decoder) }
+
+    fun entity(id: String): EntityView? =
+        entitiesNode()?.get(id)?.takeIf { it.isObject }?.let { EntityView(id, it, decoder) }
+
     fun entitiesNode(): JsonNode? = paths.entities(root)
     fun entityKeys(): List<String> = paths.entityKeys(root)
     fun components(id: String): ObjectNode? = paths.components(root, id)
     fun locate(id: String): List<String>? = components(id)?.let { entityKeys() + id + COMPONENTS }
     fun renderAsset(id: String): RenderAsset? = entity(id)?.renderAsset()
-    fun skybox(): String? = root.get("skyboxName")?.takeIf { root.get("skyboxEnabled")?.booleanValue() == true && it.isTextual }
-        ?.textValue()?.takeIf(String::isNotBlank)
+    fun skybox(): String? =
+        root.get("skyboxName")?.takeIf { root.get("skyboxEnabled")?.booleanValue() == true && it.isTextual }
+            ?.textValue()?.takeIf(String::isNotBlank)
 
     fun lookAtTarget(id: String): Vec3? {
         val position = entity(id)?.component(PositionComponent::class.java) ?: return null
@@ -100,6 +107,7 @@ class EntityView(val id: String, private val node: JsonNode, private val decoder
         val reader = checkNotNull(decoder) { "Typed component access requires a scene component decoder" }
         runCatchingKeepingCancellation { reader.read(type, value) }.getOrNull()
     }
+
     fun renderAsset(): RenderAsset? = renderAssetOf(componentNode("RenderComponent"))
 }
 
@@ -133,9 +141,10 @@ class SceneEntityTree(private val root: JsonNode) {
     fun components(entityId: String): ObjectNode? = paths.components(root, entityId)
 
     /** The `components` object of every entity, keyed by entity id, in file order; entities without one are skipped. */
-    fun componentsById(): List<Pair<String, ObjectNode>> = entities()?.properties().orEmpty().mapNotNull { (id, entity) ->
-        paths.componentsOf(entity)?.let { id to it }
-    }
+    fun componentsById(): List<Pair<String, ObjectNode>> =
+        entities()?.properties().orEmpty().mapNotNull { (id, entity) ->
+            paths.componentsOf(entity)?.let { id to it }
+        }
 
     /** Whether an entity can be added: a native scene whose `ecs`, when present, is an object with object tables. */
     fun canAdd(): Boolean {
@@ -180,10 +189,11 @@ class SceneEntityTree(private val root: JsonNode) {
         if (!isWrapped(ecs)) return true
         val entity = (ecs.get(ENTITIES) as? ObjectNode)?.get(id) as? ObjectNode ?: return false
         val names = paths.componentsOf(entity)?.fieldNames()?.asSequence()?.toList() ?: return false
-        val archetypes = ecs.get(ARCHETYPES) as? ObjectNode ?: nodes.objectNode().also { ecs.set<JsonNode>(ARCHETYPES, it) }
+        val archetypes =
+            ecs.get(ARCHETYPES) as? ObjectNode ?: nodes.objectNode().also { ecs.set<JsonNode>(ARCHETYPES, it) }
         val matching = archetypes.properties().firstOrNull { (key, value) ->
             key.toIntOrNull()?.toString() == key && value.isArray && value.size() == names.size &&
-                value.all { it.isTextual } && value.map { it.asText() }.toSet() == names.toSet()
+                    value.all { it.isTextual } && value.map { it.asText() }.toSet() == names.toSet()
         }?.key
         val archetype = matching ?: nextId(archetypes)?.also { key ->
             archetypes.set<JsonNode>(key, nodes.arrayNode().also { a -> names.forEach(a::add) })
@@ -219,21 +229,28 @@ fun isSceneEcsEntry(name: String, parents: List<String>, node: JsonNode?): Boole
 
 /** An entity row, listed directly under `ecs`; its JSON key path is `ecs/entities` in a wrapped scene. */
 fun isSceneEntityEntry(name: String, parents: List<String>, node: JsonNode?): Boolean =
-    (parents == listOf(ECS, ENTITIES) || (parents == listOf(ECS) && name.toIntOrNull() != null)) && node?.isObject == true
+    (parents == listOf(
+        ECS,
+        ENTITIES
+    ) || (parents == listOf(ECS) && name.toIntOrNull() != null)) && node?.isObject == true
 
 /** A component row of an entity: its JSON key path ends in `components`. */
 fun isSceneComponentEntry(parents: List<String>): Boolean =
     parents.lastOrNull() == COMPONENTS && parents.firstOrNull() == ECS &&
-        (parents.size == 4 && parents[1] == ENTITIES || parents.size == 3)
+            (parents.size == 4 && parents[1] == ENTITIES || parents.size == 3)
 
 /** An entity read view without typed component access, for tree rows. */
 fun sceneEntityView(id: String, node: JsonNode): EntityView = EntityView(id, node, null)
 
 /** The children of an `ecs` object: its entities directly (a wrapped scene's `entities` level is skipped), then its other keys. */
 fun sceneEcsRows(ecs: JsonNode): List<SceneTreeRow> =
-    if (ecs.get(ENTITIES)?.isObject != true) ecs.properties().map { (k, v) -> SceneTreeRow(k, v) } else
+    if (ecs.get(ENTITIES)?.isObject != true) {
+        ecs.properties().map { (k, v) -> SceneTreeRow(k, v) }
+    } else {
         ecs.get(ENTITIES).properties().map { (id, entity) -> SceneTreeRow(id, entity, listOf(ENTITIES)) } +
-            ecs.properties().filter { it.key != ENTITIES || !it.value.isObject }.map { (k, v) -> SceneTreeRow(k, v) }
+                ecs.properties().filter { it.key != ENTITIES || !it.value.isObject }
+                    .map { (k, v) -> SceneTreeRow(k, v) }
+    }
 
 /** The children of an entity: its components (the `components` level is skipped); its other fields are not rows. */
 fun sceneComponentRows(entity: JsonNode): List<SceneTreeRow> =

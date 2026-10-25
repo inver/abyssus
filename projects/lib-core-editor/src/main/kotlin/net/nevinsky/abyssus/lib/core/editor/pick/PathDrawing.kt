@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.arrange.PathCurve
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import kotlin.math.hypot
@@ -45,7 +46,7 @@ class ScreenProjection(private val camera: PerspectiveCamera, private val width:
 }
 
 /** The pixel radius in which a click grabs a handle, and in which it selects a line. */
-const val PATH_HANDLE_PX = 12f
+const val PATH_HANDLE_PX = PATH_HANDLE_WIDTH_PX / 2f + 3f
 const val PATH_LINE_PX = 8f
 
 /**
@@ -54,22 +55,20 @@ const val PATH_LINE_PX = 8f
  */
 class PathHandles(private val points: List<Vec3>, private val closed: Boolean) {
     /** Number of segments: one fewer than the points, or as many when the line closes. */
-    val segmentCount: Int get() = if (points.size < 2) 0 else if (closed && points.size > 2) points.size else points.size - 1
+    val segmentCount: Int get() = PathCurve.spanCount(points.size, closed)
 
-    /** The middle of segment [segment]. */
-    fun middle(segment: Int): Vec3 {
-        val a = points[segment]
-        val b = points[(segment + 1) % points.size]
-        return Vec3((a.x + b.x) / 2f, (a.y + b.y) / 2f, (a.z + b.z) / 2f)
-    }
+    /** The middle of segment [segment], on the smooth line. */
+    fun middle(segment: Int): Vec3 = PathCurve.at(points, closed, segment, 0.5f)
 
-    /** The handle under the pixel ([x], [y]), a point handle before a middle one; null when none is within [radius]. */
+    /**
+     * The handle under the pixel ([x], [y]), a point handle before a middle one; null when no edge of any handle's diamond
+     * is within [radius] pixels of it (an edge of the drawn control object is what a click has to meet).
+     */
     fun hit(projection: ScreenProjection, x: Float, y: Float, radius: Float = PATH_HANDLE_PX): PathHit? {
         var best: PathHit? = null
         var bestDistance = radius
         for (i in points.indices) {
-            val s = projection.at(points[i]) ?: continue
-            val d = hypot(s.x - x, s.y - y)
+            val d = edgeDistance(projection, points[i], PATH_POINT_HALF, x, y) ?: continue
             if (d <= bestDistance) {
                 bestDistance = d
                 best = PathHit.Point(i)
@@ -77,8 +76,7 @@ class PathHandles(private val points: List<Vec3>, private val closed: Boolean) {
         }
         if (best != null) return best
         for (i in 0 until segmentCount) {
-            val s = projection.at(middle(i)) ?: continue
-            val d = hypot(s.x - x, s.y - y)
+            val d = edgeDistance(projection, middle(i), PATH_MIDDLE_HALF, x, y) ?: continue
             if (d <= bestDistance) {
                 bestDistance = d
                 best = PathHit.Middle(i)
@@ -87,12 +85,25 @@ class PathHandles(private val points: List<Vec3>, private val closed: Boolean) {
         return best
     }
 
+    /** The distance in pixels from ([x], [y]) to the nearest edge of the diamond at [at] that is on screen, or null when none is. */
+    private fun edgeDistance(projection: ScreenProjection, at: Vec3, half: Float, x: Float, y: Float): Float? {
+        var best: Float? = null
+        for ((a, b) in diamondEdges(at, half)) {
+            val sa = projection.at(a) ?: continue
+            val sb = projection.at(b) ?: continue
+            val d = distanceToSegment(x, y, sa, sb)
+            if (best == null || d < best) best = d
+        }
+        return best
+    }
+
     /** The distance in pixels from ([x], [y]) to the nearest segment, or null when no segment is on screen. */
     fun lineDistance(projection: ScreenProjection, x: Float, y: Float): Float? {
         var best: Float? = null
-        for (i in 0 until segmentCount) {
-            val a = projection.at(points[i]) ?: continue
-            val b = projection.at(points[(i + 1) % points.size]) ?: continue
+        val line = PathCurve.sample(points, closed)
+        for (i in 0 until line.size - 1) {
+            val a = projection.at(line[i]) ?: continue
+            val b = projection.at(line[i + 1]) ?: continue
             val d = distanceToSegment(x, y, a, b)
             if (best == null || d < best) best = d
         }

@@ -291,6 +291,8 @@ val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
                 "-Didea.trust.all.projects=true",
                 "-Dide.show.tips.on.startup.default.value=false",
                 "-Dide.no.platform.update=true",
+                // Kotlin 2.4 debug metadata v2 vs the IDE's stdlib v1 (see runIde above)
+                "-Dkotlinx.coroutines.debug=off",
             )
         }
     }

@@ -25,16 +25,21 @@ import net.nevinsky.abyssus.plugin.dto.textOf
 /** Project-owned workers for loading and committing a view's foliage paint session. */
 @Service(Service.Level.PROJECT)
 class FoliageEditing(private val project: Project, private val scope: CoroutineScope) {
-    fun open(scene: VirtualFile, entity: String, mode: () -> FoliagePaintMode?, report: (String) -> Unit,
-             ready: (FoliagePaintSession?) -> Unit) {
+    fun open(
+        scene: VirtualFile, entity: String, mode: () -> FoliagePaintMode?, report: (String) -> Unit,
+        ready: (FoliagePaintSession?) -> Unit
+    ) {
         val root = SceneDocumentCache.of(project).read(scene)?.root
         val document = root?.let(::SceneDocument)
-        val terrain = document?.renderAsset(entity)?.takeIf { it.type == net.nevinsky.abyssus.lib.core.assets.MetaType.TERRAIN.name }
+        val terrain = document?.renderAsset(entity)
+            ?.takeIf { it.type == net.nevinsky.abyssus.lib.core.assets.MetaType.TERRAIN.name }
         val name = document?.components(entity)?.get("FoliageComponent")?.get("assetName")?.textValue()
         val abss = ProjectLayout.abssFor(scene)
         val folder = abss?.parent?.findChild("assets")?.findChild(name ?: "")
         val metadata = folder?.findChild("meta.json")
-        if (terrain == null || name == null || folder == null || metadata == null) { ready(null); return }
+        if (terrain == null || name == null || folder == null || metadata == null) {
+            ready(null); return
+        }
         val text = textOf(metadata)
         val projectText = textOf(abss)
         val projectDir = java.io.File(abss.parent.path)
@@ -50,14 +55,27 @@ class FoliageEditing(private val project: Project, private val scope: CoroutineS
                 }.getOrNull()
             }
             withContext(Dispatchers.EDT) {
-                if (project.isDisposed || !scene.isValid || !folder.isValid) { ready(null); return@withContext }
-                if (source == null || source.settings.terrain != terrain.name || source.settings.layers.isEmpty() ||
-                    source.read.problems.isNotEmpty() || textOf(metadata) != text || textOf(abss) != projectText) {
+                if (project.isDisposed || !scene.isValid || !folder.isValid) {
                     ready(null); return@withContext
                 }
-                val stroke = FoliageStrokeCommand(project, scene, folder, source, project.service<FoliageDrafts>(), documents, project.service<FoliageUndoCache>(), mode,
+                if (source == null || source.settings.terrain != terrain.name || source.settings.layers.isEmpty() ||
+                    source.read.problems.isNotEmpty() || textOf(metadata) != text || textOf(abss) != projectText
+                ) {
+                    ready(null); return@withContext
+                }
+                val stroke = FoliageStrokeCommand(
+                    project,
+                    scene,
+                    folder,
+                    source,
+                    project.service<FoliageDrafts>(),
+                    documents,
+                    project.service<FoliageUndoCache>(),
+                    mode,
                     background = { task -> scope.launch(Dispatchers.Default) { task.run() } },
-                    ui = { task -> scope.launch(Dispatchers.EDT) { task.run() } }, report = report)
+                    ui = { task -> scope.launch(Dispatchers.EDT) { task.run() } },
+                    report = report
+                )
                 ready(FoliagePaintSession(source.settings.layers.map { it.id }, stroke, stroke::dispose))
             }
         }

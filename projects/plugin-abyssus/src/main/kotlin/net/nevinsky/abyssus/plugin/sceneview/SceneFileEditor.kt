@@ -164,6 +164,9 @@ class SceneFileEditor(
             view?.selectEntity(entityId)
         }
         host.listenWater(file, this) { waterId -> view?.selectWater(waterId) }
+        project.messageBus.connect(this).subscribe(PathEditListener.TOPIC, PathEditListener { target ->
+            view?.setPathEditing(target?.takeIf { it.file == file }?.entityId)
+        })
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 if (events.any { it is VFileContentChangeEvent && isSource(it.file) && hasRenderChange(it.file) }) {
@@ -259,8 +262,10 @@ class SceneFileEditor(
         created.onArrangementCreate = ::createArrangement
         created.onArrangementEdit = ::editArrangement
         created.onRegenerate = ::regenerateArrangement
+        created.onPathEditEnded = { project.service<PathEditSession>().stop(file) }
         (created as? RayControlProvider)?.rayControl?.let { rayControls.register(file, it, created) }
         view = created
+        project.service<PathEditSession>().current?.takeIf { it.file == file }?.let { created.setPathEditing(it.entityId) }
         statusText = null
         setContent(created.view)
     }

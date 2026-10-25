@@ -42,7 +42,11 @@ class PathLayout {
                 points.all { it.x.isFinite() && it.y.isFinite() && it.z.isFinite() }
         if (!usable) return emptyList()
 
-        val segments = segments(points, arrangement.closed)
+        // the copies follow the smooth line through the control points, so they are where the view draws it
+        val sampled = PathCurve.sample(pointsOf(arrangement), arrangement.closed)
+        // a closed line of two points goes there and back
+        val line = (if (arrangement.closed && points.size == 2) sampled + sampled.first() else sampled).map { PathPoint(it.x, it.y, it.z) }
+        val segments = segments(line, false)
         val length = segments.sumOf { it.length }
         val perStation = if (arrangement.sides == PathSides.BOTH) 2 else 1
         val stations = if (length <= 0.0) 1.0 else if (arrangement.closed) {

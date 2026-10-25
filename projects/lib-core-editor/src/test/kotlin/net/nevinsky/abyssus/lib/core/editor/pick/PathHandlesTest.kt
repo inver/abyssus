@@ -47,7 +47,9 @@ class PathHandlesTest {
     fun aPointHandleIsHitWithinTheRadius() {
         val handles = PathHandles(points, closed = false)
         val s = pixel(points[1])
-        assertEquals(PathHit.Point(1), handles.hit(projection, s.x + 5, s.y - 5))
+        // a click on an edge of the diamond grabs the point, a click well away from it does not
+        val edge = pixel(Vec3(points[1].x + PATH_POINT_HALF, points[1].y, points[1].z))
+        assertEquals(PathHit.Point(1), handles.hit(projection, edge.x, edge.y))
         assertNull(handles.hit(projection, s.x + 40, s.y))
     }
 

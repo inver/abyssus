@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.plugin.properties
 
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
@@ -16,6 +17,7 @@ import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
 import net.nevinsky.abyssus.lib.core.editor.document.RayDataError
@@ -37,6 +39,8 @@ import net.nevinsky.abyssus.plugin.panel.RowHooks
 import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
 import net.nevinsky.abyssus.plugin.projectView.reportRejection
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
+import net.nevinsky.abyssus.plugin.sceneview.PathEditListener
+import net.nevinsky.abyssus.plugin.sceneview.PathEditSession
 import net.nevinsky.abyssus.plugin.ui.CommitOutcome
 import net.nevinsky.abyssus.plugin.ui.showActionGroup
 import java.awt.*
@@ -73,7 +77,13 @@ internal class EntityDetailsView @JvmOverloads constructor(
             model, hooks, collapsed, titleName = "entity-name",
             onEnabled = { section, checked -> toggle(section, checked) },
             sectionActions = { removeButton(it) },
-            sectionExtra = { section -> if (section.kind == "RenderComponent") state.optics?.let { opticsView(it) } else null },
+            sectionExtra = { section ->
+                when (section.kind) {
+                    "RenderComponent" -> state.optics?.let { opticsView(it) }
+                    PathArrangementComponent::class.simpleName -> pathEditBar()
+                    else -> null
+                }
+            },
             after = if (target.kind == null) listOf(addButton()) else emptyList(),
         )
         // the raw JSON of a component the plugin does not edit is reached by `raw-<Kind>`
@@ -83,6 +93,45 @@ internal class EntityDetailsView @JvmOverloads constructor(
             }
         }
         add(view, BorderLayout.CENTER)
+    }
+
+    /**
+     * Edit and Apply for the spline of a path arrangement: Edit shows the control points in the Scene view (a click on one
+     * gives it the move gizmo), Apply ends the editing. The buttons follow the project's [PathEditSession].
+     */
+    private fun pathEditBar(): JComponent {
+        val session = project.service<PathEditSession>()
+        val edit = JButton(AbyssusBundle.message("arrangementEditSpline")).apply { name = "arrangement-edit"; isFocusable = false }
+        val apply = JButton(AbyssusBundle.message("arrangementApplySpline")).apply { name = "arrangement-apply"; isFocusable = false }
+        fun editing() = session.current?.let { it.file == target.file && it.entityId == target.entityId } == true
+        fun sync() {
+            edit.isEnabled = !editing()
+            apply.isEnabled = editing()
+        }
+        edit.addActionListener { session.start(target.file, target.entityId) }
+        apply.addActionListener { session.stop(target.file) }
+        sync()
+        return object : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), JBUI.scale(4))) {
+            private var connection: com.intellij.util.messages.MessageBusConnection? = null
+
+            override fun addNotify() {
+                super.addNotify()
+                sync()
+                connection = project.messageBus.connect().also {
+                    it.subscribe(PathEditListener.TOPIC, PathEditListener { sync() })
+                }
+            }
+
+            override fun removeNotify() {
+                connection?.disconnect()
+                connection = null
+                super.removeNotify()
+            }
+        }.apply {
+            isOpaque = false
+            add(edit)
+            add(apply)
+        }
     }
 
     private fun allComponents(c: java.awt.Component): List<java.awt.Component> =

@@ -15,14 +15,6 @@ data class PathPoint(var x: Float = 0f, var y: Float = 0f, var z: Float = 0f)
 /** The project model an arrangement places along its line. */
 data class PathAsset(var type: MetaType = MetaType.MODEL, var assetName: String = "")
 
-/** Which side of the line a copy stands on. */
-enum class PathSides {
-    @JsonEnumDefaultValue
-    CENTER,
-    LEFT,
-    RIGHT,
-    BOTH,
-}
 
 /**
  * A line of [points] on the terrain and the settings that place copies of one model [asset] along it. Data only: the
@@ -34,12 +26,23 @@ enum class PathSides {
  */
 class PathArrangementComponent : Component {
     var points: MutableList<PathPoint> = ArrayList()
+    var sides: PathSides = PathSides.CENTER
+
     var closed: Boolean = false
     var asset: PathAsset = PathAsset()
     var spacing: Float = 10f
     var offset: Float = 0f
-    var sides: PathSides = PathSides.CENTER
     var alignToPath: Boolean = true
     var yawOffset: Float = 0f
+
     var slots: MutableList<Int> = ArrayList()
+}
+
+/** Which side of the line a copy stands on. */
+enum class PathSides {
+    @JsonEnumDefaultValue
+    CENTER,
+    LEFT,
+    RIGHT,
+    BOTH,
 }

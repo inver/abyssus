@@ -63,6 +63,14 @@ interface SceneView : Disposable {
         get() = null
         set(_) {}
 
+    /** Starts (with an id) or ends (null) editing the control points of an arrangement; the view selects it. */
+    fun setPathEditing(entityId: String?) {}
+
+    /** Called when the view ended the control point edit itself because the selection moved on. */
+    var onPathEditEnded: (() -> Unit)?
+        get() = null
+        set(_) {}
+
     /** Puts the view in drawing mode for a new path arrangement of the model [asset]. */
     fun startDrawing(asset: RenderAsset) {}
 

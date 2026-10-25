@@ -401,6 +401,20 @@ class SceneViewPanel internal constructor(
             syncControls()
         }
 
+    override fun setPathEditing(entityId: String?) {
+        if (interaction.pathEditing == entityId) return
+        paint.end()
+        interaction.setPathEditing(entityId)
+        if (entityId != null) requestFocusInWindow()
+        syncControls()
+    }
+
+    override var onPathEditEnded: (() -> Unit)?
+        get() = interaction.onPathEditEnded
+        set(value) {
+            interaction.onPathEditEnded = value
+        }
+
     override fun startDrawing(asset: RenderAsset) {
         paint.end()
         interaction.startDrawing(asset)
@@ -412,12 +426,14 @@ class SceneViewPanel internal constructor(
     override fun selectWater(waterId: String) {
         paint.end()
         interaction.selectWater(waterId)
+        interaction.selectionChanged()
         syncControls()
     }
 
     override fun selectEntity(entityId: String) {
         if (renderer.state.selectedId != entityId) paint.end()
         renderer.state.selectedId = entityId
+        interaction.selectionChanged()
         syncControls()
     }
 
