@@ -68,6 +68,11 @@ interface SceneView : Disposable {
         get() = null
         set(_) {}
 
+    /** Called with the id of the selected water surface when the user presses Delete in the view. Returns whether it was removed. */
+    var onWaterDelete: ((String) -> Boolean)?
+        get() = null
+        set(_) {}
+
     /** Called when a path point was dragged, inserted or removed, with the arrangement's id and its new points. Returns whether it was written. */
     var onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
         get() = null

@@ -76,6 +76,9 @@ class SceneInteraction(
     /** Called on Delete with the selected entity's id; returns whether it was removed. */
     var onDelete: ((String) -> Boolean)? = null
 
+    /** Called on Delete with the selected water surface's id; returns whether it was removed. */
+    var onWaterDelete: ((String) -> Boolean)? = null
+
     /** What paints while the Paint Foliage mode in [state] strokes the terrain, or null when nothing implements it. */
     var foliagePaint: FoliagePaint? = null
 
@@ -329,7 +332,7 @@ class SceneInteraction(
 
     /**
      * Backspace / Delete: drops the last point of the drawing, removes the selected control point of the arrangement
-     * being edited, or otherwise removes the selected entity through [onDelete].
+     * being edited, or otherwise removes the selected entity through [onDelete], or the selected water surface through [onWaterDelete].
      */
     fun backspace() {
         val id = state.pathEditing
@@ -342,6 +345,11 @@ class SceneInteraction(
             return
         }
         if (state.drawing == null) {
+            val water = state.selectedWater
+            if (water != null) {
+                if (state.pathEditing == null && !isDragging) onWaterDelete?.invoke(water)
+                return
+            }
             val id = selectedId
             if (id != null && id != state.viewCamera && state.pathEditing == null && !isDragging) onDelete?.invoke(id)
             return

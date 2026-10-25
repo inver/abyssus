@@ -71,6 +71,7 @@ import net.nevinsky.abyssus.lib.core.editor.components.EntityClipboard
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.projectView.reportRejection
+import net.nevinsky.abyssus.plugin.projectView.reportWaterRejection
 import java.awt.BorderLayout
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
@@ -284,6 +285,7 @@ class SceneFileEditor(
         created.onCopy = ::copyEntity
         created.onPaste = ::pasteEntity
         created.onDelete = ::deleteEntity
+        created.onWaterDelete = ::deleteWater
         created.onArrangementEdit = ::editArrangement
         created.onRegenerate = ::regenerateArrangement
         created.onPathEditEnded = { project.service<PathEditSession>().stop(file) }
@@ -352,6 +354,13 @@ class SceneFileEditor(
         val result = SceneComponentEdits.removeEntity(project, file, entityId)
         reportRejection(project, result)
         return result == EditResult.Changed
+    }
+
+    /** Removes water surface [waterId] as one undoable command; a refusal is shown to the user. */
+    internal fun deleteWater(waterId: String): Boolean {
+        val result = WaterSceneEdits(project).remove(file, waterId)
+        reportWaterRejection(project, result)
+        return result == WaterEdit.Changed
     }
 
     /** The ground to place copies on: the view's, else one read from the project; null when the user cancelled the read. */

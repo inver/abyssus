@@ -409,6 +409,12 @@ class SceneViewPanel internal constructor(
             interaction.onDelete = value
         }
 
+    override var onWaterDelete: ((String) -> Boolean)?
+        get() = interaction.onWaterDelete
+        set(value) {
+            interaction.onWaterDelete = value
+        }
+
     override var onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
         get() = interaction.onArrangementEdit
         set(value) {

@@ -232,6 +232,15 @@ class WaterInteractionTest {
         assertNotNull(f.queries.gizmoHandles(H))
     }
 
+    @Test fun deleteKeyRemovesTheSelectedSurfaceThroughTheCallback() {
+        val f = fixture(selected = null)
+        val removed = mutableListOf<String>()
+        f.interaction.onWaterDelete = { removed += it; true }
+        f.interaction.selectWater("lake")
+        f.interaction.backspace()
+        assertEquals(listOf("lake"), removed)
+    }
+
     @Test fun snappingRoundsTheDraggedCoordinate() {
         val f = fixture()
         f.state.snap = GizmoSnap(5f, 15f)

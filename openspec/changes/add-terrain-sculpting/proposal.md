@@ -45,8 +45,9 @@ headless API.
 
 - `lib-core-editor`: new `terrain/sculpt` math (brush tools, delta/base composition, manifest codec, thermal erosion,
   heightmap stamping); `TerrainRecipe` fingerprint semantics; regeneration composes base + delta.
-- `lib-core`: `TerrainData` / `TerrainMesh` need dirty-region height updates; ray-tracing terrain snapshot refresh.
+- `lib-core`: `TerrainData` / `TerrainMesh` need dirty-region height updates (in place, per view); ray-tracing terrain snapshot refresh.
 - `plugin-abyssus`: `sceneview` toolbar mode, brush strip, cursor, input forwarding; `terrain` panel state and Reset
-  sculpting; a stroke command with undo (modelled on `FoliageStrokeCommand`); bundle strings.
+  sculpting; a stroke command with undo (modelled on `FoliageStrokeCommand`); a `SculptDrafts` registry (modelled on
+  `FoliageDrafts`) that carries a stroke's heights to every open Scene view; bundle strings.
 - Docs: `docs/ai/file-formats.md` (terrain section), `docs/ai/architecture.md`, `projects/lib-core-editor/README.md`,
   the sceneview README. Existing specs touched only through this change's delta.
