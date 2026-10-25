@@ -12,14 +12,14 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SpotCone
 import net.nevinsky.abyssus.lib.core.editor.scene.SpotSource
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 
 import net.nevinsky.abyssus.plugin.sceneview.*
 import org.junit.Assert.*
 import org.junit.Test
 
 class ShadowLayoutTest {
-    private val color = Rgba(1f,1f,1f,1f)
+    private val color = Color(1f,1f,1f,1f)
     private fun lights(points: List<String>, spots: List<String> = emptyList(), dirs: List<String> = emptyList()) = LightSet(
         dirs.map { DirectionalSource(Vector3(0f,-1f,0f),color,it) },
         points.map { PointSource(Vector3(0f,0f,0f),color,10f,it) },

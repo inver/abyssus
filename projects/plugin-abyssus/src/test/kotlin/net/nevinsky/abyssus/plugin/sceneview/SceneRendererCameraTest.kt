@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.cameraDirectionOf
 import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 
 import net.nevinsky.abyssus.lib.core.editor.parseScene
@@ -155,7 +155,7 @@ class SceneRendererCameraTest {
         val camera = r.params.content.cameras.single()
         val before = cameraDirectionOf(camera, r.params.content.entityPositions)
         val target = r.params.content.entityPositions.getValue("3")
-        val moved = PlacementTransform(Vector3(target.x, target.y + 20f, target.z), Quat.IDENTITY, Vector3(1f, 1f, 1f))
+        val moved = PlacementTransform(Vector3(target.x, target.y + 20f, target.z), Quaternion(), Vector3(1f, 1f, 1f))
         r.state.preview = mapOf("3" to DragResult(moved, null))
         val c = r.content
         val after = cameraDirectionOf(c.cameras.single(), c.entityPositions)

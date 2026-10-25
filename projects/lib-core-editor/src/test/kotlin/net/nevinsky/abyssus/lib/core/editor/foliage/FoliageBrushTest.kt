@@ -9,7 +9,7 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertFalse
@@ -104,7 +104,7 @@ class FoliageBrushTest {
         // yaw of 45 degrees, twice the size along x and z, moved off the origin
         val world = PlacementTransform(
             Vector3(50f, 0f, 30f),
-            Quat(0f, 0.38268343f, 0f, 0.92387953f),
+            Quaternion(0f, 0.38268343f, 0f, 0.92387953f),
             Vector3(2f, 1f, 2f),
         ).toMatrix()
         val brush = FoliageBrush(flatTerrain(), resolution, world)

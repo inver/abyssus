@@ -7,12 +7,11 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class GizmoSpaceTest {
-    private fun aboutY(degrees: Float): Quat = Quaternion(Vector3.Y, degrees).let { Quat(it.x, it.y, it.z, it.w) }
+    private fun aboutY(degrees: Float): Quaternion = Quaternion(Vector3.Y, degrees)
 
     private fun assertVec(expected: Vector3, actual: Vector3) {
         assertEquals(expected.x, actual.x, 1e-5f)
@@ -25,7 +24,7 @@ class GizmoSpaceTest {
     }
 
     @Test fun anUnrotatedObjectHasTheSameAxesInBothSpaces() {
-        val local = gizmoAxes(GizmoSpace.LOCAL, Quat.IDENTITY)
+        val local = gizmoAxes(GizmoSpace.LOCAL, Quaternion())
         for (axis in GizmoAxis.entries) assertVec(axis.direction, local.getValue(axis))
     }
 

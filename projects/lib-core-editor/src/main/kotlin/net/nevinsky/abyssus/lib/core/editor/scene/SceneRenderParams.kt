@@ -5,11 +5,12 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import net.nevinsky.abyssus.lib.core.editor.content.unclampedColor
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsState
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
@@ -40,7 +41,7 @@ data class CameraParams(
  * g3d's default shader fogs with a fixed quadratic ramp, so only [density] can be matched, at its characteristic
  * distance `1 / density`; [gradient] shapes [amount] but not the on-screen curve.
  */
-data class FogParams(val color: Rgba, val density: Float, val gradient: Float) {
+data class FogParams(val color: Color, val density: Float, val gradient: Float) {
     fun amount(distance: Float): Float =
         (1.0 - exp(-(distance.coerceAtLeast(0f) * density).toDouble().pow(gradient.toDouble()))).toFloat()
             .coerceIn(0f, 1f)
@@ -51,8 +52,8 @@ data class FogParams(val color: Rgba, val density: Float, val gradient: Float) {
 
 /** [content] is what the scene places; [projectDir] is the folder of its `.abss`, whose `assets` folder holds the files. */
 data class SceneRenderParams(
-    val clear: Rgba,
-    val ambient: Rgba?,
+    val clear: Color,
+    val ambient: Color?,
     val fog: FogParams?,
     val camera: CameraParams,
     val content: SceneContent = SceneContent(),
@@ -62,7 +63,7 @@ data class SceneRenderParams(
     val rayTracing: SceneRaySettingsState = SceneRaySettingsCodec().read(SceneJson().mapper.createObjectNode()),
 ) {
     companion object {
-        val DEFAULT_CLEAR = Rgba(0.1f, 0.1f, 0.15f, 1f)
+        val DEFAULT_CLEAR = Color(0.1f, 0.1f, 0.15f, 1f)
         val DEFAULT = SceneRenderParams(DEFAULT_CLEAR, null, null, CameraParams.DEFAULT)
     }
 }
@@ -88,12 +89,12 @@ fun renderParamsOf(
     )
 }
 
-private fun ambientOf(scene: SceneDto): Rgba? {
+private fun ambientOf(scene: SceneDto): Color? {
     if (scene.ambientLightEnabled != true) return null
     val light = scene.ambientLight ?: return null
     val c = light.color ?: return null
     val k = (light.intensity ?: 1f).coerceAtLeast(0f)
-    return Rgba(c.r * k, c.g * k, c.b * k, 1f)
+    return unclampedColor(c.r * k, c.g * k, c.b * k, 1f)
 }
 
 private fun fogOf(scene: SceneDto): FogParams? {
@@ -102,7 +103,7 @@ private fun fogOf(scene: SceneDto): FogParams? {
     val c = fog.color ?: return null
     val density = fog.density?.takeIf { it > 0f && it.isFinite() } ?: return null
     val gradient = fog.gradient?.takeIf { it > 0f && it.isFinite() } ?: 1f
-    return FogParams(Rgba(c.r, c.g, c.b, 1f), density, gradient)
+    return FogParams(Color(c.r, c.g, c.b, 1f), density, gradient)
 }
 
 internal fun normalized(v: Vector3): Vector3? {

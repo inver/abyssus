@@ -13,9 +13,9 @@ import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
 import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialOverrides
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
@@ -255,7 +255,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
             fun visit(node: RayModelNode, parent: Matrix4, path: String) {
                 val local = PlacementTransform(
                     Vector3(node.translation.x, node.translation.y, node.translation.z),
-                    Quat(node.rotation.x, node.rotation.y, node.rotation.z, node.rotation.w),
+                    Quaternion(node.rotation.x, node.rotation.y, node.rotation.z, node.rotation.w),
                     Vector3(node.scale.x, node.scale.y, node.scale.z)
                 ).toMatrix()
                 val global = pose?.node(node.id)?.let(::Matrix4) ?: Matrix4(parent).mul(local)
@@ -493,5 +493,5 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
 private class RaySceneLimitException(message: String) : IllegalArgumentException(message)
 
 private fun Vector3.ray() = Vector3(x, y, z)
-private fun Rgba.ray(scale: Float = 1f) = RayColor(r * scale, g * scale, b * scale, a)
+private fun Color.ray(scale: Float = 1f) = RayColor(r * scale, g * scale, b * scale, a)
 private fun Vector3.list() = listOf(x, y, z)

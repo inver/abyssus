@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.scene
 
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -52,7 +52,7 @@ class SceneEntityParityTest {
         for (light in content.lights) {
             val id = light.entityId
             fun v(field: String) = value(root, id, "LightComponent", field)
-            assertEquals(id, Rgba(v("color.r"), v("color.g"), v("color.b"), 1f), light.color)
+            assertEquals(id, Color(v("color.r"), v("color.g"), v("color.b"), 1f), light.color)
             assertEquals(id, v("intensity"), light.intensity, 0f)
             if (light.kind == LightKind.SPOT) {
                 assertEquals(id, v("range"), light.range, 0f)

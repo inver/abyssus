@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -29,7 +29,7 @@ internal class FoliageBrushCursor(val terrain: TerrainTarget, val at: Vector3, v
         var previous = point(0)
         for (i in 1..64) {
             val next = point(i)
-            if (previous != null && next != null) lines.line(previous, next, Rgba(1f, 0.8f, 0.2f, 1f))
+            if (previous != null && next != null) lines.line(previous, next, Color(1f, 0.8f, 0.2f, 1f))
             previous = next
         }
     }

@@ -306,7 +306,7 @@ class SceneInteractionTest {
         val s = movingModel()
         val q = com.badlogic.gdx.math.Quaternion(Vector3.Y, 90f)
         val turned = mainParams.content.models.map {
-            if (it.entityId == "0") it.copy(transform = it.transform.copy(rotation = net.nevinsky.abyssus.lib.core.editor.content.Quat(q.x, q.y, q.z, q.w))) else it
+            if (it.entityId == "0") it.copy(transform = it.transform.copy(rotation = com.badlogic.gdx.math.Quaternion(q.x, q.y, q.z, q.w))) else it
         }
         s.renderer.params = mainParams.copy(content = mainParams.content.copy(models = turned))
         s.renderer.state.gizmoSpace = space

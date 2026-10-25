@@ -11,7 +11,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
@@ -86,7 +86,7 @@ class WaterInteractionTest {
         }
     }
 
-    private fun paramsOf(content: SceneContent) = SceneRenderParams(Rgba(0f, 0f, 0f, 1f), null, null, CameraParams.DEFAULT, content)
+    private fun paramsOf(content: SceneContent) = SceneRenderParams(Color(0f, 0f, 0f, 1f), null, null, CameraParams.DEFAULT, content)
 
     @Test fun clickingExposedWaterSelectsItAndReportsThePick() {
         val f = fixture(selected = null)

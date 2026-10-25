@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Quaternion
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.FloatNode
@@ -20,7 +20,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
  */
 data class TransformEdit(
     val position: Vector3? = null,
-    val rotation: Quat? = null,
+    val rotation: Quaternion? = null,
     val direction: Vector3? = null,
     val target: TargetMove? = null,
 )
@@ -74,7 +74,7 @@ class SceneTransformWriter(private val arrangements: ArrangementEdits = Arrangem
     private fun setVec(parent: ObjectNode, name: String, v: Vector3) =
         setFields(parent, name, listOf(Field("x", v.x, 0f), Field("y", v.y, 0f), Field("z", v.z, 0f)))
 
-    private fun setQuat(parent: ObjectNode, name: String, q: Quat) =
+    private fun setQuat(parent: ObjectNode, name: String, q: Quaternion) =
         setFields(parent, name, listOf(Field("x", q.x, 0f), Field("y", q.y, 0f), Field("z", q.z, 0f), Field("w", q.w, 1f)))
 
     private class Field(val key: String, val value: Float, val default: Float)

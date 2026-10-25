@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -64,7 +66,7 @@ class SceneContentTest {
         )
         val t = c.models.single().transform
         assertEquals(Vector3(0f, 2f, 0f), t.position)
-        assertEquals(Quat(-0.5f, 0f, 0f, 0.5f), t.rotation)
+        assertEquals(Quaternion(-0.5f, 0f, 0f, 0.5f), t.rotation)
         assertEquals(Vector3(1f, 1f, 1f), t.scale)
     }
 
@@ -109,7 +111,7 @@ class SceneContentTest {
         )
         val l = c.lights.single()
         assertEquals(LightKind.DIRECTIONAL, l.kind)
-        assertEquals(Rgba(1f, 0.5f, 0f, 1f), l.color)
+        assertEquals(Color(1f, 0.5f, 0f, 1f), l.color)
         assertEquals(0.8f, l.intensity, 0f)
         assertEquals(Vector3(1f, 10f, 2f), l.position)
         assertEquals(Vector3(0f, 0f, -1f), l.direction)
@@ -135,7 +137,7 @@ class SceneContentTest {
         assertEquals(1f, noIntensity.lights.single().intensity, 0f)
         val noColor =
             content(entity("""{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{"intensity":0.5}}}""")).lights.single()
-        assertEquals(Rgba(1f, 1f, 1f, 1f), noColor.color)
+        assertEquals(Color(1f, 1f, 1f, 1f), noColor.color)
         assertEquals(0.5f, noColor.intensity, 0f)
     }
 

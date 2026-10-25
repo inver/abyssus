@@ -109,7 +109,7 @@ class WaterHitTest {
 class WaterOutlineTest {
     private class Lines : net.nevinsky.abyssus.lib.core.editor.pick.LineSink {
         val segments = mutableListOf<Pair<Vector3, Vector3>>()
-        override fun line(from: Vector3, to: Vector3, color: net.nevinsky.abyssus.lib.core.editor.content.Rgba) { segments += from to to }
+        override fun line(from: Vector3, to: Vector3, color: com.badlogic.gdx.graphics.Color) { segments += from to to }
     }
 
     @Test fun theOutlineIsTheExtentRectangleAtTheMeanLevel() {

@@ -10,11 +10,10 @@ import net.nevinsky.abyssus.lib.core.editor.scene.MAX_POINT
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 
-import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.SpotLightsAttribute
@@ -30,7 +29,7 @@ class SceneLightingTest {
     private val origin = Vector3(0f, 0f, 0f)
 
     private fun light(
-        kind: LightKind, intensity: Float = 1f, position: Vector3 = origin, color: Rgba = Rgba(1f, 0.5f, 0f, 1f),
+        kind: LightKind, intensity: Float = 1f, position: Vector3 = origin, color: Color = Color(1f, 0.5f, 0f, 1f),
         direction: Vector3 = Vector3(0f, -1f, 0f), id: String = "1",
     ) = LightPlacement(id, kind, color, intensity, position, direction)
 
@@ -40,11 +39,11 @@ class SceneLightingTest {
             light(LightKind.DIRECTIONAL, intensity = 2f, id = "7"),
             light(LightKind.DIRECTIONAL, intensity = 1f, id = "3", position = Vector3(5f, 0f, 0f)),
             light(LightKind.POINT, id = "4"),
-            LightPlacement("8", LightKind.SPOT, Rgba(1f, 1f, 1f, 1f), 3f, origin, Vector3(0f, -1f, 0f), coneAngle = 40f),
+            LightPlacement("8", LightKind.SPOT, Color(1f, 1f, 1f, 1f), 3f, origin, Vector3(0f, -1f, 0f), coneAngle = 40f),
         )
         val set = lightSetOf(lights, origin)
         val dimmed = set.withSunScale("7", 0.25f)
-        assertEquals(Rgba(0.5f, 0.25f, 0f, 1f), dimmed.directional.first { it.entityId == "7" }.color)
+        assertEquals(Color(0.5f, 0.25f, 0f, 1f), dimmed.directional.first { it.entityId == "7" }.color)
         assertEquals(set.directional.first { it.entityId == "3" }, dimmed.directional.first { it.entityId == "3" })
         assertEquals(set.point, dimmed.point)
         assertEquals(set.spot, dimmed.spot)
@@ -81,7 +80,7 @@ class SceneLightingTest {
     @Test
     fun colorIsScaledByIntensity() {
         val set = lightSetOf(listOf(light(LightKind.DIRECTIONAL, intensity = 0.5f)), origin)
-        assertEquals(Rgba(0.5f, 0.25f, 0f, 1f), set.directional.single().color)
+        assertEquals(Color(0.5f, 0.25f, 0f, 1f), set.directional.single().color)
         assertEquals(Vector3(0f, -1f, 0f), set.directional.single().direction)
     }
 
@@ -103,7 +102,7 @@ class SceneLightingTest {
 
     @Test
     fun pointRangeReachesTheEnvironmentAndBadRangeIsSkipped() {
-        val good = LightPlacement("1", LightKind.POINT, Rgba(1f, 1f, 1f, 1f), 1f, origin, origin, range = 12f)
+        val good = LightPlacement("1", LightKind.POINT, Color(1f, 1f, 1f, 1f), 1f, origin, origin, range = 12f)
         val bad = good.copy(entityId = "2", range = 0f)
         val set = lightSetOf(listOf(good, bad), origin)
         assertEquals(listOf(12f), set.point.map { it.range })

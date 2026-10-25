@@ -10,7 +10,7 @@ import com.badlogic.gdx.graphics.*
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
 
 /**
@@ -45,7 +45,7 @@ class LineBatch(shaders: ShaderStorage) : LineSink, Disposable {
      * A line [widthPx] pixels wide: a strip of two triangles across the line, as wide on the screen at both ends however
      * far they are (the camera's viewport height gives the pixel size).
      */
-    override fun thickLine(from: Vector3, to: Vector3, color: Rgba, widthPx: Float) {
+    override fun thickLine(from: Vector3, to: Vector3, color: Color, widthPx: Float) {
         val cam = camera as? PerspectiveCamera ?: return line(from, to, color)
         if (quadCount + 6 > MAX_VERTICES) flush()
         val dx = to.x - from.x
@@ -76,20 +76,20 @@ class LineBatch(shaders: ShaderStorage) : LineSink, Disposable {
         for (corner in listOf(a0, a1, b0, a1, b1, b0)) putQuad(corner, color)
     }
 
-    private fun putQuad(p: Vector3, c: Rgba) {
+    private fun putQuad(p: Vector3, c: Color) {
         val i = quadCount * FLOATS_PER_VERTEX
         quads[i] = p.x; quads[i + 1] = p.y; quads[i + 2] = p.z
         quads[i + 3] = c.r; quads[i + 4] = c.g; quads[i + 5] = c.b; quads[i + 6] = c.a
         quadCount++
     }
 
-    override fun line(from: Vector3, to: Vector3, color: Rgba) {
+    override fun line(from: Vector3, to: Vector3, color: Color) {
         if (count + 2 > MAX_VERTICES) flush()
         put(from, color)
         put(to, color)
     }
 
-    private fun put(p: Vector3, c: Rgba) {
+    private fun put(p: Vector3, c: Color) {
         val i = count * FLOATS_PER_VERTEX
         vertices[i] = p.x
         vertices[i + 1] = p.y

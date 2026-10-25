@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.plugin.SceneFileEditorProvider
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Quaternion
 
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -362,7 +362,7 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val (editor, f) = fakeEditor("rot/Main Scene.scene", mainScene, views)
         try {
             val before = textOf(f)
-            assertTrue(views[0].onTransform!!.invoke("0", TransformEdit(rotation = Quat(0f, 0.7071f, 0f, 0.7071f))))
+            assertTrue(views[0].onTransform!!.invoke("0", TransformEdit(rotation = Quaternion(0f, 0.7071f, 0f, 0.7071f))))
             assertTrue(textOf(f).contains("localRotation"))
             val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
             undo.undo(editor)

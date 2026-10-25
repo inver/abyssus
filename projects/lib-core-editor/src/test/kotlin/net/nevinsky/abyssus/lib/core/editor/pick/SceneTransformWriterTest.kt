@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Quaternion
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
@@ -93,7 +93,7 @@ class SceneTransformWriterTest {
     fun rotatingACameraWritesItsViewPoint() {
         val root = SceneJson().parse(text)
         val dir = Vector3(1f, 0f, 0f)
-        assertTrue(SceneTransformWriter().apply(root, "4", TransformEdit(rotation = Quat(0f, 0.7071f, 0f, 0.7071f), direction = dir)))
+        assertTrue(SceneTransformWriter().apply(root, "4", TransformEdit(rotation = Quaternion(0f, 0.7071f, 0f, 0.7071f), direction = dir)))
         val c = components(root, "4")
         assertEquals(1f, c.get("CameraComponent").get("camera").get("viewPointPosition").get("x").floatValue(), 0f)
         assertEquals(0.7071f, c.get("PositionComponent").get("localRotation").get("y").floatValue(), 0f)
@@ -103,7 +103,7 @@ class SceneTransformWriterTest {
     fun rotatingAnEntityWithoutLocalRotationAddsAllFourFields() {
         val root = SceneJson().parse(text)
         assertNull(components(root, "0").get("PositionComponent").get("localRotation"))
-        assertTrue(SceneTransformWriter().apply(root, "0", TransformEdit(rotation = Quat(0f, 0.7071f, 0f, 0.7071f))))
+        assertTrue(SceneTransformWriter().apply(root, "0", TransformEdit(rotation = Quaternion(0f, 0.7071f, 0f, 0.7071f))))
         val q = components(root, "0").get("PositionComponent").get("localRotation")
         assertEquals(listOf("x", "y", "z", "w"), q.fieldNames().asSequence().toList())
         assertEquals(0.7071f, q.get("w").floatValue(), 0f)
@@ -129,7 +129,7 @@ class SceneTransformWriterTest {
         val p = components(root, "0").get("PositionComponent").get("localPosition")
         val same = Vector3(p.get("x").floatValue(), p.get("y").floatValue(), p.get("z").floatValue())
         assertFalse(SceneTransformWriter().apply(root, "0", TransformEdit(position = same)))
-        assertFalse(SceneTransformWriter().apply(root, "0", TransformEdit(rotation = Quat.IDENTITY)))
+        assertFalse(SceneTransformWriter().apply(root, "0", TransformEdit(rotation = Quaternion())))
         assertEquals(SceneJson().parse(text), root)
     }
 
@@ -180,7 +180,7 @@ class SceneTransformWriterTest {
     fun aHandleMoveToAMissingEntityLeavesTheTreeAsItWas() {
         val mundus = File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()
         val root = SceneJson().parse(mundus)
-        val edit = TransformEdit(rotation = Quat(0f, 1f, 0f, 0f), target = TargetMove("99", Vector3(0f, 10f, -10f)))
+        val edit = TransformEdit(rotation = Quaternion(0f, 1f, 0f, 0f), target = TargetMove("99", Vector3(0f, 10f, -10f)))
         assertFalse(SceneTransformWriter().apply(root, "1", edit))
         assertEquals(SceneJson().compact(SceneJson().parse(mundus)), SceneJson().compact(root))
     }
@@ -191,7 +191,7 @@ class SceneTransformWriterTest {
             "h":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":5}},
             "l":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"PositionComponent":{"lookAtId":"h"}}}}}}"""
         val root = SceneJson().parse(text)
-        val edit = TransformEdit(rotation = Quat(0f, 1f, 0f, 0f), target = TargetMove("h", Vector3(0f, 0f, -1f)))
+        val edit = TransformEdit(rotation = Quaternion(0f, 1f, 0f, 0f), target = TargetMove("h", Vector3(0f, 0f, -1f)))
         assertFalse(SceneTransformWriter().apply(root, "l", edit))
         assertEquals(SceneJson().compact(SceneJson().parse(text)), SceneJson().compact(root))
     }
@@ -217,7 +217,7 @@ class SceneTransformWriterTest {
         val expected = original().replace(
             """"z":-3.2570944}},"RenderComponent""", """"z":-3.2570944},"localRotation":{"x":0.0,"y":0.7071,"z":0.0,"w":0.7071}},"RenderComponent""",
         )
-        assertEquals(expected, written("0", TransformEdit(rotation = Quat(0f, 0.7071f, 0f, 0.7071f))))
+        assertEquals(expected, written("0", TransformEdit(rotation = Quaternion(0f, 0.7071f, 0f, 0.7071f))))
     }
 
     @Test
@@ -249,7 +249,7 @@ class SceneTransformWriterTest {
     @Test
     fun turningAnArrangedCopyDetachesIt() {
         val root = arranged()
-        assertTrue(SceneTransformWriter().apply(root, "13", TransformEdit(rotation = Quat(0f, 1f, 0f, 0f))))
+        assertTrue(SceneTransformWriter().apply(root, "13", TransformEdit(rotation = Quaternion(0f, 1f, 0f, 0f))))
         assertNull(components(root, "13")["ParentComponent"])
         assertEquals(listOf(12, -1, 14, 15, 16), slots(root))
     }

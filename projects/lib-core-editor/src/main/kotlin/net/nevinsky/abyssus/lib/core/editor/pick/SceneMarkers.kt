@@ -15,7 +15,7 @@ import net.nevinsky.abyssus.lib.core.editor.arrange.pointsOf
 import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.scene.*
 
 private const val CAMERA_BOUNDS_HALF = 0.5f
@@ -23,7 +23,7 @@ private const val LIGHT_BOUNDS_HALF = 0.3f
 private const val LIGHT_RADIUS = 0.3f
 private const val DIRECTION_LINE_LENGTH = 2f
 
-private val BODY_COLOR = Rgba(0.85f, 0.85f, 0.9f, 1f)
+private val BODY_COLOR = Color(0.85f, 0.85f, 0.9f, 1f)
 private const val SLOT_MARKER_HALF = 0.4f
 private const val SLOT_MARKER_HEIGHT = 1.2f
 /** The half-size of the diamond on a control point, and of the smaller one halfway along a segment (world units). */
@@ -41,14 +41,14 @@ fun diamondEdges(p: Vector3, r: Float): List<Pair<Vector3, Vector3>> {
     return buildList { for (i in tips.indices) for (j in i + 1 until tips.size) if (i / 2 != j / 2) add(tips[i] to tips[j]) }
 }
 
-private val PATH_COLOR = Rgba(1f, 0.8f, 0.2f, 1f)
-private val SLOT_COLOR = Rgba(0.4f, 0.9f, 0.4f, 1f)
-private val POINT_HANDLE_COLOR = Rgba(1f, 1f, 1f, 1f)
-private val SELECTED_HANDLE_COLOR = Rgba(1f, 0.35f, 0.2f, 1f)
+private val PATH_COLOR = Color(1f, 0.8f, 0.2f, 1f)
+private val SLOT_COLOR = Color(0.4f, 0.9f, 0.4f, 1f)
+private val POINT_HANDLE_COLOR = Color(1f, 1f, 1f, 1f)
+private val SELECTED_HANDLE_COLOR = Color(1f, 0.35f, 0.2f, 1f)
 
 /** How wide the line of a path arrangement is drawn, in screen pixels. */
 const val PATH_WIDTH_PX = 4f
-private val FRUSTUM_COLOR = Rgba(0.55f, 0.7f, 0.95f, 1f)
+private val FRUSTUM_COLOR = Color(0.55f, 0.7f, 0.95f, 1f)
 
 /**
  * The line geometry and pick bounds of the objects a scene places that have no model: cameras (a body and a frustum)
@@ -111,7 +111,7 @@ class SceneMarkers {
 
     fun drawLight(out: LineSink, light: LightPlacement) {
         val p = light.position
-        val color = Rgba(
+        val color = Color(
             (light.color.r * 0.7f + 0.3f).coerceAtMost(1f),
             (light.color.g * 0.7f + 0.3f).coerceAtMost(1f),
             (light.color.b * 0.7f + 0.3f).coerceAtMost(1f),
@@ -159,7 +159,7 @@ class SceneMarkers {
         for ((i, p) in points.withIndex()) drawDiamond(out, p, PATH_POINT_HALF, if (i == selectedPoint) SELECTED_HANDLE_COLOR else POINT_HANDLE_COLOR, PATH_HANDLE_WIDTH_PX)
     }
 
-    private fun drawDiamond(out: LineSink, p: Vector3, r: Float, color: Rgba, widthPx: Float) {
+    private fun drawDiamond(out: LineSink, p: Vector3, r: Float, color: Color, widthPx: Float) {
         for ((a, b) in diamondEdges(p, r)) out.thickLine(a, b, color, widthPx)
     }
 }

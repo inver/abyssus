@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 
 import net.nevinsky.abyssus.lib.core.editor.parseScene
@@ -24,7 +24,7 @@ class ScenePreviewTest {
     @Test
     fun turningAHandleAimedLightMovesItsHandle() {
         val turned = DragResult(
-            PlacementTransform(Vector3(0f, 10f, 0f), Quat(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
+            PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
             Vector3(0f, 0f, -1f),
         )
         val previewed = ScenePreview().apply(mundus, "1", turned)
@@ -41,7 +41,7 @@ class ScenePreviewTest {
     @Test
     fun movingALookAtLightReAimsItAtItsUnmovedTarget() {
         val moved = DragResult(
-            PlacementTransform(Vector3(0f, 20f, 0f), Quat.IDENTITY, Vector3(1f, 1f, 1f)),
+            PlacementTransform(Vector3(0f, 20f, 0f), Quaternion(), Vector3(1f, 1f, 1f)),
             null,
         )
         val previewed = ScenePreview().apply(mundus, "1", moved)
@@ -58,7 +58,7 @@ class ScenePreviewTest {
             "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
                 "PositionComponent":{"localPosition":{"y":10}}}}}}}"""))
         val turned = DragResult(
-            PlacementTransform(Vector3(0f, 10f, 0f), Quat(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
+            PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
             Vector3(0f, 0f, -1f),
         )
         val previewed = ScenePreview().apply(noTarget, "1", turned)
@@ -71,7 +71,7 @@ class ScenePreviewTest {
     @Test
     fun aimedTargetIsANullForALightWithoutATurnedDirection() {
         val moved = DragResult(
-            PlacementTransform(Vector3(0f, 10f, 0f), Quat.IDENTITY, Vector3(1f, 1f, 1f)),
+            PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(), Vector3(1f, 1f, 1f)),
             null,
         )
         assertNull(ScenePreview().aimedTarget(mundus, "1", moved))
@@ -85,7 +85,7 @@ class ScenePreviewTest {
             "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
                 "PositionComponent":{"lookAtId":0,"localPosition":{"x":5}}}}}}}"""))
         val turned = DragResult(
-            PlacementTransform(Vector3(5f, 0f, 0f), Quat(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
+            PlacementTransform(Vector3(5f, 0f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
             Vector3(-1f, 0f, 0f),
         )
         assertNull(ScenePreview().aimedTarget(aimedAtModel, "1", turned))
@@ -98,7 +98,7 @@ class ScenePreviewTest {
             "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
                 "PositionComponent":{"lookAtId":2,"localPosition":{"x":5}}}}}}}"""))
         val turned = DragResult(
-            PlacementTransform(Vector3(5f, 0f, 0f), Quat(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
+            PlacementTransform(Vector3(5f, 0f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
             Vector3(0f, 0f, -1f),
         )
         val target = ScenePreview().aimedTarget(atLight, "1", turned)
@@ -112,7 +112,7 @@ class ScenePreviewTest {
             "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{},
                 "PositionComponent":{"lookAtId":2,"localPosition":{"y":10}}}},
             "2":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{}}}}}}"""))
-        val moved = DragResult(PlacementTransform(Vector3(5f, 10f, 0f), Quat.IDENTITY, Vector3(1f, 1f, 1f)), null)
+        val moved = DragResult(PlacementTransform(Vector3(5f, 10f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null)
         val before = point.lights.single().direction
         assertEquals(before, ScenePreview().apply(point, "1", moved).lights.single().direction)
     }
@@ -124,7 +124,7 @@ class ScenePreviewTest {
     @Test
     fun aPoseOverrideReplacesAPlacementAndKeepsItsScale() {
         val authored = untitled.models.single { it.entityId == "0" }
-        val pose = Pose(Vector3(1f, 0.5f, 2f), Quat(0f, 0.70710677f, 0f, 0.70710677f))
+        val pose = Pose(Vector3(1f, 0.5f, 2f), Quaternion(0f, 0.70710677f, 0f, 0.70710677f))
         val posed = ScenePreview().withPoses(untitled, mapOf("0" to pose))
         val model = posed.models.single { it.entityId == "0" }
         assertEquals(PlacementTransform(pose.position, pose.rotation, authored.transform.scale), model.transform)
@@ -138,8 +138,8 @@ class ScenePreviewTest {
 
     @Test
     fun aDragPreviewStillWorksOverPoses() {
-        val posed = ScenePreview().withPoses(untitled, mapOf("0" to Pose(Vector3(1f, 0.5f, 2f), Quat.IDENTITY)))
-        val dragged = DragResult(PlacementTransform(Vector3(5f, 5f, 5f), Quat.IDENTITY, Vector3(1f, 1f, 1f)), null)
+        val posed = ScenePreview().withPoses(untitled, mapOf("0" to Pose(Vector3(1f, 0.5f, 2f), Quaternion())))
+        val dragged = DragResult(PlacementTransform(Vector3(5f, 5f, 5f), Quaternion(), Vector3(1f, 1f, 1f)), null)
         val previewed = ScenePreview().apply(posed, mapOf("2" to dragged))
         assertEquals(Vector3(5f, 5f, 5f), previewed.models.single { it.entityId == "2" }.transform.position)
         assertEquals(Vector3(1f, 0.5f, 2f), previewed.models.single { it.entityId == "0" }.transform.position)

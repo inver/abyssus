@@ -18,8 +18,8 @@ import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
@@ -54,7 +54,7 @@ class RaySceneSnapshotTest {
     @Test fun `drag preview changes only instance transforms and keeps shared geometry`() {
         val p = params(SceneContent(models = listOf(placement, placement.copy(entityId = "other"))))
         val before = ready(p)
-        val transform = PlacementTransform(Vector3(20f, 3f, -2f), Quat.IDENTITY, Vector3(2f, 2f, 2f))
+        val transform = PlacementTransform(Vector3(20f, 3f, -2f), Quaternion(), Vector3(2f, 2f, 2f))
         val after = ready(p, mapOf("entity" to DragResult(transform, null)))
         assertEquals(2, after.scene.meshes.size) // two material parts, shared by both entities
         val moved = after.scene.instances.first { it.id.startsWith("entity/") }.transform()
@@ -99,7 +99,7 @@ class RaySceneSnapshotTest {
     }
 
     @Test fun `selected light identities and order are copied from raster light set`() {
-        val sources = (0..7).map { i -> LightPlacement("light-$i", LightKind.POINT, Rgba(1f, .5f, 0f, 1f), 2f,
+        val sources = (0..7).map { i -> LightPlacement("light-$i", LightKind.POINT, Color(1f, .5f, 0f, 1f), 2f,
             Vector3(i.toFloat(), 0f, 0f), Vector3(0f, -1f, 0f), range = 10f) }
         val set = lightSetOf(sources.reversed(), Vector3(0f, 0f, 0f))
         val frame = ready(params(SceneContent(lights = sources)), lights = set)
@@ -159,7 +159,7 @@ class RaySceneSnapshotTest {
     }
 
     @Test fun `environment and fog preserve linear ambient and the density gradient`() {
-        val p = params().copy(ambient = Rgba(.2f, .3f, .4f, 1f), fog = FogParams(Rgba(.1f, .2f, .3f, 1f), .02f, 1.7f))
+        val p = params().copy(ambient = Color(.2f, .3f, .4f, 1f), fog = FogParams(Color(.1f, .2f, .3f, 1f), .02f, 1.7f))
         val frame = ready(p)
         assertEquals(RayColor(.2f, .3f, .4f), frame.scene.environment.ambient)
         assertEquals(.02f, frame.scene.fog!!.density, 0f)

@@ -688,7 +688,7 @@ class SceneRenderer(
         const val MIN_NEAR = 0.01f
 
         /** Unlit shading lights every material fully by its own colors: a white ambient and no lights. */
-        val UNLIT_AMBIENT = net.nevinsky.abyssus.lib.core.editor.content.Rgba(1f, 1f, 1f, 1f)
+        val UNLIT_AMBIENT = com.badlogic.gdx.graphics.Color(1f, 1f, 1f, 1f)
 
         /** The outer share of the cloud shadow square over which its shade fades into the uniform sun dimming. */
         const val CLOUD_SHADOW_EDGE_FADE = 0.1f

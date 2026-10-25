@@ -11,7 +11,7 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
@@ -287,8 +287,8 @@ class SnapshotSceneQueries(
         val handles = gizmoHandles(height) ?: return null
         val ray = rayAt(screenX, screenY, width, height) ?: return null
         val start = when {
-            state.selectedWater != null -> PlacementTransform(waterCentre(content, state.selectedWater!!) ?: return null, Quat.IDENTITY, Vector3(1f, 1f, 1f))
-            pathPointGizmoAt(content, state) != null -> PlacementTransform(pathPointGizmoAt(content, state)!!, Quat.IDENTITY, Vector3(1f, 1f, 1f))
+            state.selectedWater != null -> PlacementTransform(waterCentre(content, state.selectedWater!!) ?: return null, Quaternion(), Vector3(1f, 1f, 1f))
+            pathPointGizmoAt(content, state) != null -> PlacementTransform(pathPointGizmoAt(content, state)!!, Quaternion(), Vector3(1f, 1f, 1f))
             else -> ScenePreview().selected(content, state.selectedId ?: return null)?.transform ?: return null
         }
         return GizmoDrag(
@@ -308,7 +308,7 @@ class SnapshotSceneQueries(
     ): GizmoDrag? {
         val centre = waterCentre(content, waterId) ?: return null
         val ray = rayAt(screenX, screenY, width, height) ?: return null
-        val start = PlacementTransform(centre, Quat.IDENTITY, Vector3(1f, 1f, 1f))
+        val start = PlacementTransform(centre, Quaternion(), Vector3(1f, 1f, 1f))
         return GizmoDrag(GizmoMode.MOVE, axis, start, ray, null, axis.direction, state.snap).takeIf { it.isUsable }
     }
 
@@ -316,7 +316,7 @@ class SnapshotSceneQueries(
         state.selectedWater?.let { return beginWaterDrag(it, axis, screenX, screenY, width, height) }
         pathPointGizmoAt(content, state)?.let { point ->
             val ray = rayAt(screenX, screenY, width, height) ?: return null
-            val start = PlacementTransform(point, Quat.IDENTITY, Vector3(1f, 1f, 1f))
+            val start = PlacementTransform(point, Quaternion(), Vector3(1f, 1f, 1f))
             return GizmoDrag(GizmoMode.MOVE, axis, start, ray, null, axis.direction, state.snap).takeIf { it.isUsable }
         }
         val id = state.selectedId ?: return null

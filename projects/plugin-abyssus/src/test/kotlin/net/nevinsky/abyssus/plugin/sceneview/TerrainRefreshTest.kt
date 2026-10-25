@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 import net.nevinsky.abyssus.lib.core.editor.scene.PlacedEntities
 import net.nevinsky.abyssus.lib.core.editor.scene.PlacedEntity
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
@@ -27,7 +27,7 @@ class TerrainRefreshTest {
     private class Entity(override val placement: AssetPlacement, override val asset: Heights) : PlacedEntity<Heights>
 
     private fun placement(entity: String, asset: String, x: Float = 0f) =
-        AssetPlacement(entity, asset, PlacementTransform(Vector3(x, 0f, 0f), Quat.IDENTITY, Vector3(1f, 1f, 1f)))
+        AssetPlacement(entity, asset, PlacementTransform(Vector3(x, 0f, 0f), Quaternion(), Vector3(1f, 1f, 1f)))
 
     private val entities = PlacedEntities<Heights, Entity> { p, asset, _ -> Entity(p, asset) }
 

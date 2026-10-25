@@ -9,7 +9,6 @@ import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import kotlin.math.atan2
 
 /** What a drag has done to the object so far; [direction] is the turned direction for objects that have one. */
@@ -119,7 +118,7 @@ class GizmoDrag(
         val delta = Quaternion(axisVector, snap?.rotate(degrees) ?: degrees)
         val q = Quaternion(start.rotation.x, start.rotation.y, start.rotation.z, start.rotation.w).mulLeft(delta).nor()
         val direction = startDirection?.let { delta.transform(it.cpy()).cpy() }
-        return DragResult(start.copy(rotation = Quat(q.x, q.y, q.z, q.w)), direction)
+        return DragResult(start.copy(rotation = Quaternion(q.x, q.y, q.z, q.w)), direction)
     }
 
     /** The vector from the object to where [ray] crosses the ring's plane. */

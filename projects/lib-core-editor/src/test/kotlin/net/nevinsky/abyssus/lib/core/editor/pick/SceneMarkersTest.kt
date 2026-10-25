@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
@@ -24,7 +24,7 @@ import java.io.File
 class SceneMarkersTest {
     private class Recorder : LineSink {
         val lines = mutableListOf<Pair<Vector3, Vector3>>()
-        override fun line(from: Vector3, to: Vector3, color: Rgba) {
+        override fun line(from: Vector3, to: Vector3, color: Color) {
             lines += from to to
         }
     }

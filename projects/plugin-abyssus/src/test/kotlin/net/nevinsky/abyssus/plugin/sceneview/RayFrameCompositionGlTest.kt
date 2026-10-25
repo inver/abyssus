@@ -8,7 +8,7 @@ import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneDisplay
 import net.nevinsky.abyssus.lib.core.editor.ray.captureRayDisplay
 import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
@@ -65,7 +65,7 @@ class RayFrameCompositionGlTest {
 
     @Test fun alreadyShadedFogAndSkyColorsAreTransferredWithoutAnotherFogPass() {
         assumeTrue(GlHarness.enabled)
-        val params = SceneRenderParams.DEFAULT.copy(fog = FogParams(Rgba(1f, 0f, 0f, 1f), 0.8f, 2f))
+        val params = SceneRenderParams.DEFAULT.copy(fog = FogParams(Color(1f, 0f, 0f, 1f), 0.8f, 2f))
         val rendered = GlHarness.render(params, 2) { renderer, index ->
             if (index == 0) renderer.rayFrameProvider = { context ->
                 RaySceneDisplay(RayFrame(RayFrameKey(1, 1, 1, 1), 1, 1,

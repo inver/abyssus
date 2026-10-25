@@ -9,7 +9,7 @@ import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GLTexture
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
@@ -41,7 +41,7 @@ class TerrainShader(shaders: ShaderStorage) : Disposable {
      * With a [clipPlane] `(a, b, c, d)` (a planar reflection pass), fragments with `a x + b y + c z + d < 0` are discarded.
      */
     fun draw(
-        camera: Camera, terrains: Collection<TerrainEntity>, ambient: Rgba?, fog: FogParams?, lights: LightSet,
+        camera: Camera, terrains: Collection<TerrainEntity>, ambient: Color?, fog: FogParams?, lights: LightSet,
         irradiance: GLTexture? = null, atlas: ShadowAtlasAttribute? = null,
         fadeIrradiance: GLTexture? = null, fade: Float = 0f, sunVisibility: DirectionalVisibilityAttribute? = null,
         clipPlane: FloatArray? = null,

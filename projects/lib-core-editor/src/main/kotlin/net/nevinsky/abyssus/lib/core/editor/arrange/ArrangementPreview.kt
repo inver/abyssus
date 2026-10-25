@@ -9,7 +9,6 @@ import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import net.nevinsky.abyssus.lib.core.editor.pick.PathEdit
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 
@@ -37,7 +36,7 @@ class ArrangementPreview {
                 along.asset.assetName,
                 PlacementTransform(
                     Vector3(slot.x, heights.heightAt(slot.x, slot.z, slot.fallbackY), slot.z),
-                    Quat(q.x, q.y, q.z, q.w),
+                    Quaternion(q.x, q.y, q.z, q.w),
                     scale
                 ),
             )

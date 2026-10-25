@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import org.junit.Assert.assertEquals
@@ -82,7 +82,7 @@ class SceneWaterReflectionGlTest {
         assertTrue("models and floor are all below the level: nothing reaches the reflection ($different of ${a.width * a.height}, ${camera.far})", different < a.width * a.height / 500)
     }
 
-    private val clear = Rgba(0.92f, 0.94f, 0.98f, 1f)
+    private val clear = Color(0.92f, 0.94f, 0.98f, 1f)
 
     /** The scene with no sky, a bright clear colour and no models: a reflection shows the clear colour wherever nothing stands. */
     private fun bareScene(): SceneRenderParams {

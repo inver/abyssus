@@ -2,14 +2,14 @@ package net.nevinsky.abyssus.plugin.sceneview.skybox
 
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.math.sqrt
 
 class SunDirectionTest {
-    private val white = Rgba(1f, 1f, 1f, 1f)
+    private val white = Color(1f, 1f, 1f, 1f)
 
     private fun light(kind: LightKind, intensity: Float, direction: Vector3) =
         LightPlacement("e", kind, white, intensity, Vector3(0f, 0f, 0f), direction)

@@ -9,7 +9,6 @@ import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -19,7 +18,7 @@ import org.junit.Test
 class GizmoDragTest {
     private fun ray(from: Vector3, to: Vector3) = Ray(from, Vector3(to).sub(from).nor())
 
-    private fun at(position: Vector3 = Vector3(0f, 0f, 0f), rotation: Quat = Quat.IDENTITY) =
+    private fun at(position: Vector3 = Vector3(0f, 0f, 0f), rotation: Quaternion = Quaternion()) =
         PlacementTransform(position, rotation, Vector3(1f, 1f, 1f))
 
     private fun assertVec(expected: Vector3, actual: Vector3, delta: Float = 1e-3f) {
@@ -28,7 +27,7 @@ class GizmoDragTest {
         assertEquals(expected.z, actual.z, delta)
     }
 
-    private fun forward(q: Quat): Vector3 {
+    private fun forward(q: Quaternion): Vector3 {
         val v = Quaternion(q.x, q.y, q.z, q.w).transform(Vector3(0f, 0f, -1f))
         return Vector3(v.x, v.y, v.z)
     }
@@ -39,7 +38,7 @@ class GizmoDragTest {
         assertNotNull(drag.isUsable)
         val moved = drag.update(ray(Vector3(5f, 10f, 20f), Vector3(5f, 0f, 0f))).transform
         assertVec(Vector3(5f, 0f, 0f), moved.position)
-        assertEquals(Quat.IDENTITY, moved.rotation)
+        assertEquals(Quaternion(), moved.rotation)
     }
 
     @Test
@@ -93,7 +92,7 @@ class GizmoDragTest {
     @Test
     fun rotationComposesWithTheStartRotation() {
         val half = Quaternion(Vector3.Y, 90f)
-        val start = at(rotation = Quat(half.x, half.y, half.z, half.w))
+        val start = at(rotation = Quaternion(half.x, half.y, half.z, half.w))
         val drag = GizmoDrag(GizmoMode.ROTATE, GizmoAxis.Y, start, ray(Vector3(0f, 10f, 1f), Vector3(0f, 0f, 1f)))
         val turned = drag.update(ray(Vector3(1f, 10f, 0f), Vector3(1f, 0f, 0f))).transform
         assertVec(Vector3(0f, 0f, 1f), forward(turned.rotation)) // 180 degrees about Y
@@ -135,7 +134,7 @@ class GizmoDragTest {
 
     @Test
     fun aLocalMoveGoesAlongTheObjectsOwnAxis() {
-        val axes = gizmoAxes(GizmoSpace.LOCAL, Quaternion(Vector3.Y, 90f).let { Quat(it.x, it.y, it.z, it.w) })
+        val axes = gizmoAxes(GizmoSpace.LOCAL, Quaternion(Vector3.Y, 90f))
         val localX = axes.getValue(GizmoAxis.X)
         val drag = GizmoDrag(GizmoMode.MOVE, GizmoAxis.X, at(), ray(Vector3(10f, 0f, 0f), Vector3(0f, 0f, 0f)), null, localX)
         val moved = drag.update(ray(Vector3(10f, 0f, -2f), Vector3(0f, 0f, -2f))).transform
@@ -145,7 +144,7 @@ class GizmoDragTest {
     @Test
     fun aLocalRotationTurnsAboutTheObjectsOwnAxis() {
         // an object turned 90 degrees about Y: its local X axis is world -Z; turning 90 degrees about it
-        val start = Quaternion(Vector3.Y, 90f).let { Quat(it.x, it.y, it.z, it.w) }
+        val start = Quaternion(Vector3.Y, 90f)
         val localX = gizmoAxes(GizmoSpace.LOCAL, start).getValue(GizmoAxis.X)
         val drag = GizmoDrag(GizmoMode.ROTATE, GizmoAxis.X, at(rotation = start), Ray(Vector3(0f, 1f, 10f), Vector3(0f, 0f, -1f)), null, localX)
         val turned = drag.update(Ray(Vector3(1f, 0f, 10f), Vector3(0f, 0f, -1f))).transform.rotation

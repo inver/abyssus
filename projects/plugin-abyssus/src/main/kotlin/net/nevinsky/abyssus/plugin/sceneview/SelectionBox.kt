@@ -7,13 +7,13 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 
 import com.badlogic.gdx.math.collision.BoundingBox
 
 /** The highlight drawn around the selected entity: the twelve edges of its world bounds. */
 object SelectionBox {
-    private val HIGHLIGHT = Rgba(1f, 0.72f, 0.15f, 1f)
+    private val HIGHLIGHT = Color(1f, 0.72f, 0.15f, 1f)
 
     fun draw(out: LineSink, box: BoundingBox) {
         val a = box.min

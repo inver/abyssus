@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.scene
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
@@ -42,13 +42,13 @@ class SceneRenderParamsTest {
     @Test
     fun ambientIsColorTimesIntensity() {
         val p = renderParamsOf(scene(full), CameraParams.DEFAULT)
-        assertEquals(Rgba(0.5f, 0.25f, 0f, 1f), p.ambient)
+        assertEquals(Color(0.5f, 0.25f, 0f, 1f), p.ambient)
     }
 
     @Test
     fun fogDrivesClearColorAndEquation() {
         val p = renderParamsOf(scene(full), CameraParams.DEFAULT)
-        assertEquals(Rgba(0.2f, 0.3f, 0.4f, 1f), p.clear)
+        assertEquals(Color(0.2f, 0.3f, 0.4f, 1f), p.clear)
         val fog = p.fog!!
         assertEquals(0.01f, fog.density, 0f)
         assertEquals(1.5f, fog.gradient, 0f)
@@ -88,7 +88,7 @@ class SceneRenderParamsTest {
     @Test
     fun missingIntensityDefaultsToOne() {
         val json = """{"format":"abyssus","formatVersion":1,"ambientLightEnabled":true,"ambientLight":{"color":{"r":0.4,"g":0.4,"b":0.4,"a":1}}}"""
-        assertEquals(Rgba(0.4f, 0.4f, 0.4f, 1f), renderParamsOf(scene(json), CameraParams.DEFAULT).ambient)
+        assertEquals(Color(0.4f, 0.4f, 0.4f, 1f), renderParamsOf(scene(json), CameraParams.DEFAULT).ambient)
     }
 
     @Test
@@ -126,7 +126,7 @@ class SceneRenderParamsTest {
     @Test
     fun shaderCoefficientMatchesMundusFogAtCharacteristicDistance() {
         for (gradient in listOf(0.5f, 1f, 1.5f, 3f)) {
-            val fog = FogParams(Rgba(1f, 1f, 1f, 1f), 0.02f, gradient)
+            val fog = FogParams(Color(1f, 1f, 1f, 1f), 0.02f, gradient)
             val d = 1f / fog.density
             val expected = 1f - kotlin.math.exp(-1f)
             assertEquals(expected, fog.amount(d), 1e-5f)
@@ -136,7 +136,7 @@ class SceneRenderParamsTest {
 
     @Test
     fun fogAmountGrowsWithDistanceAndStaysInRange() {
-        val fog = FogParams(Rgba(1f, 1f, 1f, 1f), 0.01f, 1.5f)
+        val fog = FogParams(Color(1f, 1f, 1f, 1f), 0.01f, 1.5f)
         assertEquals(0f, fog.amount(0f), 0f)
         assertTrue(fog.amount(50f) < fog.amount(150f))
         assertTrue(fog.amount(1e9f) <= 1f)

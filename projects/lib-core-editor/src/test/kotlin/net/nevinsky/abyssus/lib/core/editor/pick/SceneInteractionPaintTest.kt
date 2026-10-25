@@ -11,7 +11,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageBrush
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageBrushMode
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
@@ -196,7 +196,7 @@ class SceneInteractionPaintTest {
                 AssetPlacement(
                     "2",
                     "terrain_meadow",
-                    PlacementTransform(Vector3(0f, 0f, -size.toFloat()), Quat.IDENTITY, Vector3(1f, 1f, 1f)),
+                    PlacementTransform(Vector3(0f, 0f, -size.toFloat()), Quaternion(), Vector3(1f, 1f, 1f)),
                 ),
             ),
         )
@@ -298,7 +298,7 @@ class SceneInteractionPaintTest {
         val world = Matrix4().setToTranslation(10f, 0f, 30f).rotate(Vector3.Y, 30f).scale(2f, 1f, 2f)
         val transform = PlacementTransform(
             Vector3(10f, 0f, 30f),
-            Quat(0f, 0.25881905f, 0f, 0.96592583f),
+            Quaternion(0f, 0.25881905f, 0f, 0.96592583f),
             Vector3(2f, 1f, 2f),
         )
         val f = fixture(

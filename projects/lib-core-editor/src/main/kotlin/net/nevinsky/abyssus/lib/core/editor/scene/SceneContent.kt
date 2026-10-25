@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.scene
 
 import com.badlogic.ashley.core.Component
+import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
@@ -117,7 +118,7 @@ private inline fun <reified C : Component> read(node: JsonNode): C? =
     runCatchingKeepingCancellation { components.read(C::class.java, node) }.getOrNull()
 
 /** The libGDX forward axis (-Z) rotated by [q]. */
-fun forwardOf(q: Quat): Vector3 {
+fun forwardOf(q: Quaternion): Vector3 {
     val len = kotlin.math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w)
     if (len < 1e-6f) return Vector3(0f, 0f, -1f)
     val x = q.x / len

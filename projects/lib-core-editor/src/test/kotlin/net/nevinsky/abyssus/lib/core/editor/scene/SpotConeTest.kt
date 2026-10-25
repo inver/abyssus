@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.scene
 import net.nevinsky.abyssus.lib.core.editor.scene.SpotCone
 import net.nevinsky.abyssus.lib.core.editor.scene.forwardOf
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Quaternion
 
 import org.junit.Assert.*
 import org.junit.Test
@@ -32,7 +32,7 @@ class SpotConeTest {
 
     @Test fun rotatedBeamAndRangeCutoff() {
         val cone = SpotCone(60f, 0.25f)
-        val axis = forwardOf(Quat(0.70710677f, 0f, 0f, 0.70710677f))
+        val axis = forwardOf(Quaternion(0.70710677f, 0f, 0f, 0.70710677f))
         assertEquals(1f, cone.attenuation(axis, Vector3(0f, 1f, 0f)), 1e-5f)
         assertEquals(0f, cone.attenuation(axis, Vector3(0f, -1f, 0f)), 0f)
         assertEquals(1f, cone.rangeAttenuation(5f, 10f), 0f)

@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
 import net.nevinsky.abyssus.plugin.ui.RayModeText
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
@@ -97,7 +97,7 @@ class SceneViewPanelRayTest : BasePlatformTestCase() {
         renderer.state.selectedId = "selected-entity"
         renderer.state.viewCamera = "camera-1"
         renderer.state.preview = mapOf("selected-entity" to net.nevinsky.abyssus.lib.core.editor.pick.DragResult(
-            PlacementTransform(Vector3(1f, 2f, 3f), Quat.IDENTITY, Vector3(1f, 1f, 1f)), null))
+            PlacementTransform(Vector3(1f, 2f, 3f), Quaternion(), Vector3(1f, 1f, 1f)), null))
         val preview = renderer.state.preview
         val device = RayFakeDevice()
         val panel = panel(renderer, service("metal" to device))

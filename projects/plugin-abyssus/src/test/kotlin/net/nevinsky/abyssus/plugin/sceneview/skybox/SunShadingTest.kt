@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.plugin.sceneview.skybox
 
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
@@ -20,10 +20,10 @@ class SunShadingTest {
     private val origin = Vector3(0f, 0f, 0f)
 
     private fun directional(id: String, intensity: Float, at: Vector3 = origin) =
-        LightPlacement(id, LightKind.DIRECTIONAL, Rgba(1f, 1f, 1f, 1f), intensity, at, Vector3(0f, -1f, 0f))
+        LightPlacement(id, LightKind.DIRECTIONAL, Color(1f, 1f, 1f, 1f), intensity, at, Vector3(0f, -1f, 0f))
 
     private val spot = LightPlacement(
-        "8", LightKind.SPOT, Rgba(1f, 1f, 1f, 1f), 3f, origin, Vector3(0f, -1f, 0f), coneAngle = 40f,
+        "8", LightKind.SPOT, Color(1f, 1f, 1f, 1f), 3f, origin, Vector3(0f, -1f, 0f), coneAngle = 40f,
     )
 
     private val set: LightSet = lightSetOf(listOf(directional("7", 2f), directional("3", 1f, Vector3(5f, 0f, 0f)), spot), origin)

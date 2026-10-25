@@ -17,8 +17,8 @@ import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
@@ -52,7 +52,7 @@ class RaySceneDiffTest {
     ): RaySceneFrame = (snapshots.capture(SceneRenderParams.DEFAULT.copy(content = content, projectDir = File(project), fog = fog), view, lights,
         state, preview, environment = environment, poses = poses, environmentRevision = environmentRevision) as RaySceneConversion.Ready).frame
 
-    private fun moved(x: Float) = mapOf("entity" to DragResult(PlacementTransform(Vector3(x, 0f, 0f), Quat.IDENTITY, Vector3(1f, 1f, 1f)), null))
+    private fun moved(x: Float) = mapOf("entity" to DragResult(PlacementTransform(Vector3(x, 0f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null))
 
     @Test fun theFirstFrameIsAStructuralRebuild() {
         val diff = raySceneDiff(null, frame())
@@ -106,7 +106,7 @@ class RaySceneDiffTest {
         assertEquals(setOf(RaySceneChange.CAMERA), raySceneDiff(before, frame(view = orbit)).changes)
         val env = RayEnvironment(ambient = RayColor(.3f, .3f, .3f))
         assertEquals(setOf(RaySceneChange.ENVIRONMENT), raySceneDiff(before, frame(environment = env)).changes)
-        val fogged = raySceneDiff(before, frame(fog = FogParams(Rgba(.5f, .5f, .5f, 1f), .02f, 1f)))
+        val fogged = raySceneDiff(before, frame(fog = FogParams(Color(.5f, .5f, .5f, 1f), .02f, 1f)))
         assertEquals(setOf(RaySceneChange.ENVIRONMENT), fogged.changes)
         assertFalse(fogged.rebuild)
     }

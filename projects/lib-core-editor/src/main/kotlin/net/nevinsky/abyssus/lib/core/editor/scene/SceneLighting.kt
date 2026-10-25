@@ -17,7 +17,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_RANGE
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import net.nevinsky.abyssus.lib.core.editor.content.unclampedColor
 import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_DIRECTIONAL
 import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_LOCAL
 import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_POINT
@@ -27,19 +27,19 @@ import kotlin.math.sqrt
 /** A directional light: [color] already multiplied by the light's intensity. */
 data class DirectionalSource(
     val direction: Vector3,
-    val color: Rgba,
+    val color: Color,
     val entityId: String = "",
     val position: Vector3 = Vector3(0f, 0f, 0f)
 )
 
 /** A point light: [color] already multiplied by the light's intensity. */
-data class PointSource(val position: Vector3, val color: Rgba, val range: Float = LIGHT_RANGE, val entityId: String = "")
+data class PointSource(val position: Vector3, val color: Color, val range: Float = LIGHT_RANGE, val entityId: String = "")
 
 data class SpotSource(
     val entityId: String,
     val position: Vector3,
     val direction: Vector3,
-    val color: Rgba,
+    val color: Color,
     val range: Float,
     val cone: SpotCone
 )
@@ -70,7 +70,7 @@ class LightSet(
         if (entityId == null || scale == 1f || directional.none { it.entityId == entityId }) return this
         val scaled = directional.map {
             if (it.entityId != entityId) it else it.copy(
-                color = Rgba(
+                color = unclampedColor(
                     it.color.r * scale,
                     it.color.g * scale,
                     it.color.b * scale,
@@ -173,7 +173,7 @@ private fun usable(l: LightPlacement) =
                 .all { it.isFinite() }
 
 private fun scaled(l: LightPlacement) =
-    Rgba(l.color.r * l.intensity, l.color.g * l.intensity, l.color.b * l.intensity, 1f)
+    unclampedColor(l.color.r * l.intensity, l.color.g * l.intensity, l.color.b * l.intensity, 1f)
 
 private fun distance(a: Vector3, b: Vector3): Float {
     val dx = a.x - b.x

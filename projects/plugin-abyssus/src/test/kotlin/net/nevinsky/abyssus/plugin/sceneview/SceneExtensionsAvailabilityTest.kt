@@ -25,7 +25,7 @@ class SceneExtensionsAvailabilityTest : BasePlatformTestCase() {
                             public java.util.Map<String, net.nevinsky.abyssus.lib.core.editor.content.Pose> poses() {
                                 return java.util.Map.of("0",new net.nevinsky.abyssus.lib.core.editor.content.Pose(
                                     new com.badlogic.gdx.math.Vector3(1f,2f,3f),
-                                    new net.nevinsky.abyssus.lib.core.editor.content.Quat(0f,0f,0f,1f)));
+                                    new com.badlogic.gdx.math.Quaternion(0f,0f,0f,1f)));
                             }
                         };
                     }
@@ -37,7 +37,7 @@ class SceneExtensionsAvailabilityTest : BasePlatformTestCase() {
                         positions = view.getContent().getEntityPositions().size();
                         lines.line(new com.badlogic.gdx.math.Vector3(1f,2f,3f),
                             new com.badlogic.gdx.math.Vector3(2f,2f,3f),
-                            new net.nevinsky.abyssus.lib.core.editor.content.Rgba(1f,1f,1f,1f));
+                            new com.badlogic.gdx.graphics.Color(1f,1f,1f,1f));
                     }
                 }""",
                 "Combined.java" to """package legacy; public class Combined extends OldSimulation implements $pkg.SceneOverlayProvider {
@@ -74,7 +74,7 @@ class SceneExtensionsAvailabilityTest : BasePlatformTestCase() {
                 var lines = 0
                 overlay.create(project,file).draw(view, object : net.nevinsky.abyssus.lib.core.editor.pick.LineSink {
                     override fun line(from: com.badlogic.gdx.math.Vector3,
-                        to: com.badlogic.gdx.math.Vector3, color: net.nevinsky.abyssus.lib.core.editor.content.Rgba) { lines++ }
+                        to: com.badlogic.gdx.math.Vector3, color: com.badlogic.gdx.graphics.Color) { lines++ }
                 })
                 assertEquals(1,lines)
                 assertEquals(0,overlay.javaClass.getField("positions").getInt(overlay))

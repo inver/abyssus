@@ -7,8 +7,8 @@ package net.nevinsky.abyssus.lib.core.editor.scene
 
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
@@ -96,7 +96,7 @@ class PlacementMapper {
 
     private fun transformOf(position: PositionComponent) = PlacementTransform(
         Vector3(position.localPosition.x, position.localPosition.y, position.localPosition.z),
-        Quat(position.localRotation.x, position.localRotation.y, position.localRotation.z, position.localRotation.w),
+        Quaternion(position.localRotation.x, position.localRotation.y, position.localRotation.z, position.localRotation.w),
         Vector3(position.localScale.x, position.localScale.y, position.localScale.z),
     )
 
@@ -125,7 +125,7 @@ class PlacementMapper {
         }
         val light: LightDto = entity.light?.light ?: LightDto()
         return LightPlacement(
-            entity.id, kind, Rgba(light.color.r, light.color.g, light.color.b, 1f), light.intensity.coerceAtLeast(0f),
+            entity.id, kind, Color(light.color.r, light.color.g, light.color.b, 1f), light.intensity.coerceAtLeast(0f),
             transform.position, forwardOf(transform.rotation), light.range, transform.rotation,
             light.coneAngle, light.edgeSoftness, lookAtOf(entity),
         )

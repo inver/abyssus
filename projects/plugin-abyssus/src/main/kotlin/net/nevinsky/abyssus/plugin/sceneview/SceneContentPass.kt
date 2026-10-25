@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.Model
@@ -162,5 +163,5 @@ internal class SceneContentPass(
         }
     }
 
-    private val UNLIT_AMBIENT = Rgba(1f, 1f, 1f, 1f)
+    private val UNLIT_AMBIENT = Color(1f, 1f, 1f, 1f)
 }

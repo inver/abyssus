@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySkySnapshot
@@ -56,7 +56,7 @@ data class RayDisplayCamera(
 data class RayDisplayMetadata(
     val camera: RayDisplayCamera, val content: SceneContent,
     val width: Int, val height: Int, val viewCamera: String?,
-    val projectDir: File?, val ambient: Rgba?, val fog: FogParams?,
+    val projectDir: File?, val ambient: Color?, val fog: FogParams?,
 )
 
 fun captureRayDisplay(context: RayFrameContext): RayDisplayMetadata {

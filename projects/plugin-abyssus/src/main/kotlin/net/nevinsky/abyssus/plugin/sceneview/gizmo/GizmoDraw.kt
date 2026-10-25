@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.gizmo
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw.plane
 import kotlin.math.PI
@@ -20,9 +20,11 @@ object GizmoDraw {
     private const val HEAD_RADIUS = 0.07f
     private const val LINE_WIDTH_PX = 2f
 
-    private fun colorOf(axis: GizmoAxis, hovered: Boolean): Rgba {
-        val k = if (hovered) 0.6f else 0f
-        return Rgba(
+    private fun colorOf(axis: GizmoAxis, hovered: Boolean): Color {
+        val k = if (hovered) {
+            0.6f
+        } else 0f
+        return Color(
             axis.red + (1f - axis.red) * k,
             axis.green + (1f - axis.green) * k,
             axis.blue + (1f - axis.blue) * k,
@@ -39,7 +41,11 @@ object GizmoDraw {
                 GizmoMode.SELECT -> Unit
             }
         }
-        if (handles.mode == GizmoMode.MOVE) for (p in GizmoPlane.entries) plane(out, handles, p, p == hoveredPlane)
+        if (handles.mode == GizmoMode.MOVE) {
+            for (p in GizmoPlane.entries) {
+                plane(out, handles, p, p == hoveredPlane)
+            }
+        }
     }
 
     /** The square of [plane]: its edges along each axis in that axis's color, the whole square brighter while hovered. */
@@ -54,7 +60,7 @@ object GizmoDraw {
         out.thickLine(handles.planePoint(plane, o, i), handles.planePoint(plane, o, o), second, LINE_WIDTH_PX)
     }
 
-    private fun arrow(out: LineSink, handles: GizmoHandles, axis: GizmoAxis, color: Rgba) {
+    private fun arrow(out: LineSink, handles: GizmoHandles, axis: GizmoAxis, color: Color) {
         out.thickLine(handles.origin, handles.tip(axis), color, LINE_WIDTH_PX)
         val a = handles.axisVector(axis)
         val tip = handles.tip(axis).cpy()
@@ -70,7 +76,7 @@ object GizmoDraw {
     /** A world axis that is not parallel to [axis], to build a frame around it (Y, or X for an axis near Y). */
     private fun sideOf(axis: Vector3): Vector3 = if (kotlin.math.abs(axis.y) < 0.9f) Vector3.Y else Vector3.X
 
-    private fun ring(out: LineSink, handles: GizmoHandles, axis: GizmoAxis, color: Rgba) {
+    private fun ring(out: LineSink, handles: GizmoHandles, axis: GizmoAxis, color: Color) {
         val n = handles.axisVector(axis)
         val side = sideOf(n)
         val u = Vector3(n).crs(side).nor()

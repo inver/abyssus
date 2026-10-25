@@ -10,7 +10,7 @@ import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.physics.*
@@ -18,17 +18,17 @@ import org.slf4j.helpers.NOPLogger
 import kotlin.math.*
 
 /** A segment of the physics overlay; [selected] segments belong to the selected entity and are drawn on top. */
-data class OverlaySegment(val from: Vector3, val to: Vector3, val color: Rgba, val selected: Boolean)
+data class OverlaySegment(val from: Vector3, val to: Vector3, val color: Color, val selected: Boolean)
 
 /** Colors by motion type, and of constraints. The selected entity's are brighter. */
 internal object PhysicsColors {
-    val DYNAMIC = Rgba(0.2f, 0.85f, 0.25f, 1f)
-    val KINEMATIC = Rgba(0.3f, 0.5f, 1f, 1f)
-    val STATIC = Rgba(0.6f, 0.6f, 0.6f, 1f)
-    val CONSTRAINT = Rgba(1f, 0.8f, 0.2f, 1f)
+    val DYNAMIC = Color(0.2f, 0.85f, 0.25f, 1f)
+    val KINEMATIC = Color(0.3f, 0.5f, 1f, 1f)
+    val STATIC = Color(0.6f, 0.6f, 0.6f, 1f)
+    val CONSTRAINT = Color(1f, 0.8f, 0.2f, 1f)
 
-    fun brighter(c: Rgba) =
-        Rgba(minOf(1f, c.r * 0.5f + 0.5f), minOf(1f, c.g * 0.5f + 0.5f), minOf(1f, c.b * 0.5f + 0.5f), 1f)
+    fun brighter(c: Color) =
+        Color(minOf(1f, c.r * 0.5f + 0.5f), minOf(1f, c.g * 0.5f + 0.5f), minOf(1f, c.b * 0.5f + 0.5f), 1f)
 }
 
 private const val CIRCLE_SEGMENTS = 24
@@ -223,7 +223,7 @@ class PhysicsOverlayGeometry(private val terrainSize: (String) -> Float? = { nul
             n?.get(key)?.takeIf { it.isNumber }?.floatValue() ?: default
     }
 
-    private class Sink(val out: MutableList<OverlaySegment>, val color: Rgba, val selected: Boolean) {
+    private class Sink(val out: MutableList<OverlaySegment>, val color: Color, val selected: Boolean) {
         fun line(a: Vector3, b: Vector3) {
             out += OverlaySegment(Vector3(a.x, a.y, a.z), Vector3(b.x, b.y, b.z), color, selected)
         }

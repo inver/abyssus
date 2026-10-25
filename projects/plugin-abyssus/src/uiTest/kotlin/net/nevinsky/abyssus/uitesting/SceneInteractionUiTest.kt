@@ -181,7 +181,7 @@ class SceneInteractionUiTest : UiTestBase() {
         val q = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(original).get("ecs").get("2").get("components").get("PositionComponent").get("localRotation")
         val local = net.nevinsky.abyssus.lib.core.editor.pick.gizmoAxes(
             net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.LOCAL,
-            net.nevinsky.abyssus.lib.core.editor.content.Quat(q.get("x").floatValue(), q.get("y").floatValue(), q.get("z").floatValue(), q.get("w").floatValue()),
+            com.badlogic.gdx.math.Quaternion(q.get("x").floatValue(), q.get("y").floatValue(), q.get("z").floatValue(), q.get("w").floatValue()),
         ).getValue(net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis.X)
         val origin = viewport.position(original, 2)
         val (press, direction) = viewport.xHandle(origin, Triple(local.x, local.y, local.z))
@@ -343,7 +343,7 @@ class SceneInteractionUiTest : UiTestBase() {
         val before = rotation(original, 2)
         val localY = net.nevinsky.abyssus.lib.core.editor.pick.gizmoAxes(
             net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.LOCAL,
-            net.nevinsky.abyssus.lib.core.editor.content.Quat(before[0].toFloat(), before[1].toFloat(), before[2].toFloat(), before[3].toFloat()),
+            com.badlogic.gdx.math.Quaternion(before[0].toFloat(), before[1].toFloat(), before[2].toFloat(), before[3].toFloat()),
         ).getValue(net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis.Y)
         val (press, direction) = viewport.ring(viewport.position(original, 2), Triple(localY.x, localY.y, localY.z))
         dragBy(press, direction, 45)
