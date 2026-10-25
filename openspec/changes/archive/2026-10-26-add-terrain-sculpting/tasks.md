@@ -41,5 +41,5 @@
 
 ## 6. Manual and integration checks
 
-- [ ] 6.1 runIde check on a copy of Untitled (never the committed folder): 1) select entity 1 Terrain, turn on Sculpt Terrain; 2) drag Raise, release; 3) open a second Scene view and confirm live update; 4) Undo and Redo; 5) Regenerate keep and Discard; 6) Reset; 7) rotate and scale the terrain entity and sculpt under the circle
+- [x] 6.1 runIde check on a copy of Untitled (never the committed folder): 1) select entity 1 Terrain, turn on Sculpt Terrain; 2) drag Raise, release; 3) open a second Scene view and confirm live update; 4) Undo and Redo; 5) Regenerate keep and Discard; 6) Reset; 7) rotate and scale the terrain entity and sculpt under the circle
 - [x] 6.2 Run `./gradlew check` and `scripts/check-docs.sh`; report any failures outside this change instead of fixing them silently
