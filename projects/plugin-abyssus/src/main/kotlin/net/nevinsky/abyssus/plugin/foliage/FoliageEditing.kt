@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.document.SceneDocument
-import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaintMode
+import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
@@ -26,7 +26,7 @@ import net.nevinsky.abyssus.plugin.dto.textOf
 @Service(Service.Level.PROJECT)
 class FoliageEditing(private val project: Project, private val scope: CoroutineScope) {
     fun open(
-        scene: VirtualFile, entity: String, mode: () -> FoliagePaintMode?, report: (String) -> Unit,
+        scene: VirtualFile, entity: String, mode: () -> BrushMode?, report: (String) -> Unit,
         ready: (FoliagePaintSession?) -> Unit
     ) {
         val root = SceneDocumentCache.of(project).read(scene)?.root

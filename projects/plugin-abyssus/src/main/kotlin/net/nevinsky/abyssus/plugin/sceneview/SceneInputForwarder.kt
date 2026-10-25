@@ -140,17 +140,16 @@ internal class SceneInputForwarder(
             override fun mouseExited(e: MouseEvent) { renderer.brushCursor = null }
 
             private fun cursor(e: MouseEvent) {
-                val paint = renderer.state.paint
-                val sculpt = renderer.state.sculpt
-                val entityId = paint?.entityId ?: sculpt?.entityId
-                val radius = paint?.radius ?: sculpt?.radius
+                val brush = renderer.state.brush
+                val entityId = brush?.entityId
+                val radius = brush?.radius
                 val size = interaction.size
                 if (entityId == null || radius == null || size.isEmpty) { renderer.brushCursor = null; return }
                 val at = size.toFramebuffer(e.x, e.y)
                 val ray = renderer.queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
                 val terrain = renderer.queries.terrainOf(entityId)
                 val hit = ray?.let { renderer.queries.terrainHit(entityId, it) }
-                renderer.brushCursor = if (terrain != null && hit != null) FoliageBrushCursor(terrain, hit, radius) else null
+                renderer.brushCursor = if (terrain != null && hit != null) BrushCursor(terrain, hit, radius) else null
             }
 
             override fun mouseWheelMoved(e: MouseWheelEvent) {

@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.sculpt
 
-import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
-import net.nevinsky.abyssus.lib.core.editor.brush.emptyMaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
+import net.nevinsky.abyssus.lib.core.editor.brush.emptyGridRect
 
 /** The heights of a sculpted terrain: each [base] height plus its [delta], one float add per vertex. */
 fun composeSculpt(base: FloatArray, delta: FloatArray): FloatArray {
@@ -38,7 +38,7 @@ class SculptDraft(
         private set
 
     /** Everything changed since the draft was made; a commit writes files only when this is not empty. */
-    var changed: MaskRect = emptyMaskRect()
+    var changed: GridRect = emptyGridRect()
         private set
 
     /** Moves the vertex at [x],[z] by [change]; a zero change is ignored. */
@@ -47,7 +47,7 @@ class SculptDraft(
         val i = z * resolution + x
         delta[i] += change
         composed[i] += change
-        changed = changed.union(MaskRect(x, z, x, z))
+        changed = changed.union(GridRect(x, z, x, z))
         revision++
     }
 

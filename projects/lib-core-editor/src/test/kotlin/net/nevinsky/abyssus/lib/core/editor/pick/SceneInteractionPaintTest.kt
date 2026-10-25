@@ -55,8 +55,8 @@ class SceneInteractionPaintTest {
     private fun terrainContent(transform: PlacementTransform = PlacementTransform.IDENTITY): SceneContent =
         SceneContent(terrains = listOf(AssetPlacement("1", "terrain_meadow", transform)))
 
-    /** A [FoliagePaint] that paints a real mask with a real brush, remembering the stroke's calls. */
-    private class RecordingPaint(private val resolution: Int) : FoliagePaint {
+    /** A [BrushStroke] that paints a real mask with a real brush, remembering the stroke's calls. */
+    private class RecordingPaint(private val resolution: Int) : BrushStroke {
         val begun = mutableListOf<Vector3>()
         val moved = mutableListOf<Vector3>()
         var released = 0
@@ -74,9 +74,9 @@ class SceneInteractionPaintTest {
             return true
         }
 
-        override fun dragged(to: Vector3, erase: Boolean) {
+        override fun dragged(to: Vector3, reversed: Boolean) {
             moved += Vector3(to)
-            val mode = if (erase) FoliageBrushMode.Erase else FoliageBrushMode.Paint
+            val mode = if (reversed) FoliageBrushMode.Erase else FoliageBrushMode.Paint
             brush!!.stroke(mask, last!!, Vector3(to), RADIUS, 1f, mode)
             last = Vector3(to)
         }
@@ -122,7 +122,7 @@ class SceneInteractionPaintTest {
         val orbit = OrbitCamera(Vector3(50f, 0f, 50f), 60f, 0f, 0.6f)
         val interaction = SceneInteraction(state, queries, orbit).also {
             it.size = ViewSize(WIDTH, HEIGHT, WIDTH, HEIGHT)
-            it.foliagePaint = paint
+            it.setBrushStroke(FOLIAGE_BRUSH, paint)
         }
         return Fixture(state, queries, interaction, orbit, paint, frame.camera)
     }
@@ -130,7 +130,7 @@ class SceneInteractionPaintTest {
     /** The paint mode on the drawn terrain "1". */
     private fun Fixture.paintOn(erase: Boolean = false) {
         state.selectedId = "1"
-        state.paint = FoliagePaintMode("1", 1, RADIUS, 1f, erase)
+        state.brush = BrushMode(FOLIAGE_BRUSH, "1", RADIUS, 1f, erase)
     }
 
     /** Press at ([x0], [y0]) and drag to ([x1], [y1]) in [steps] drag events, like a real drag; the button stays down. */
@@ -166,9 +166,9 @@ class SceneInteractionPaintTest {
         val f = fixture()
         f.state.selectedId = "1"
         assertNotNull("the terrain shows its gizmo", f.queries.gizmoHandles(HEIGHT))
-        f.state.paint = FoliagePaintMode("1", 1, RADIUS, 1f)
+        f.state.brush = BrushMode(FOLIAGE_BRUSH, "1", RADIUS, 1f)
         assertNull(f.queries.gizmoHandles(HEIGHT))
-        f.state.paint = null
+        f.state.brush = null
         assertNotNull(f.queries.gizmoHandles(HEIGHT))
     }
 
@@ -176,7 +176,7 @@ class SceneInteractionPaintTest {
     fun aPaintModeOnAnotherEntityDoesNotPaint() {
         val f = fixture()
         f.state.selectedId = "1"
-        f.state.paint = FoliagePaintMode("missing", 1, RADIUS, 1f)
+        f.state.brush = BrushMode(FOLIAGE_BRUSH, "missing", RADIUS, 1f)
         val (x, y) = f.pixelOf(50f, 50f)
         f.interaction.pressed(x, y, true)
         f.interaction.dragged(x + 20, y, true)
@@ -210,7 +210,7 @@ class SceneInteractionPaintTest {
         assertTrue("the press is off the painted terrain", f.paint.begun.isEmpty())
         f.interaction.released(x, y, true)
         assertEquals("2", f.state.selectedId)
-        assertNull(f.state.paint)
+        assertNull(f.state.brush)
     }
 
     @Test

@@ -6,10 +6,10 @@
 package net.nevinsky.abyssus.lib.core.editor.brush
 
 /**
- * A rectangle of mask texels: [minX]..[maxX] along x and [minZ]..[maxZ] along z, both inclusive; empty when either
- * span is inverted. A brush stroke reports the texels it changed, and the draft turns them into dirty chunks.
+ * A rectangle of grid cells (mask texels, terrain vertices): [minX]..[maxX] along x and [minZ]..[maxZ] along z, both inclusive; empty when either
+ * span is inverted. A brush stroke reports the texels it changed, and a draft turns them into what a view must refresh.
  */
-data class MaskRect(val minX: Int, val minZ: Int, val maxX: Int, val maxZ: Int) {
+data class GridRect(val minX: Int, val minZ: Int, val maxX: Int, val maxZ: Int) {
 
     /** True when the rectangle holds no texel. */
     val isEmpty: Boolean
@@ -24,10 +24,10 @@ data class MaskRect(val minX: Int, val minZ: Int, val maxX: Int, val maxZ: Int) 
         get() = if (isEmpty) 0 else maxZ - minZ + 1
 
     /** The smallest rectangle holding both rectangles; an empty one leaves the other as it is. */
-    fun union(other: MaskRect): MaskRect = when {
+    fun union(other: GridRect): GridRect = when {
         isEmpty -> other
         other.isEmpty -> this
-        else -> MaskRect(
+        else -> GridRect(
             minOf(minX, other.minX),
             minOf(minZ, other.minZ),
             maxOf(maxX, other.maxX),
@@ -36,5 +36,5 @@ data class MaskRect(val minX: Int, val minZ: Int, val maxX: Int, val maxZ: Int) 
     }
 }
 
-/** The rectangle that holds no texel: what a stroke reports when no mask value changed. */
-fun emptyMaskRect(): MaskRect = MaskRect(0, 0, -1, -1)
+/** The rectangle that holds no texel: what a stroke reports when no value changed. */
+fun emptyGridRect(): GridRect = GridRect(0, 0, -1, -1)

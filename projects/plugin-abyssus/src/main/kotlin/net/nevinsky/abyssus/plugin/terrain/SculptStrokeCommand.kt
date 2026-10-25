@@ -9,8 +9,8 @@ import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.core.editor.pick.SculptMode
-import net.nevinsky.abyssus.lib.core.editor.pick.TerrainSculpt
+import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
+import net.nevinsky.abyssus.plugin.brush.TerrainStrokeCommand
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptBrush
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptDraft
@@ -38,11 +38,11 @@ class SculptStrokeCommand(
     private val sculpt: SculptServices,
     private val store: AssetFileStore,
     private val readCurrent: () -> TerrainSource,
-    private val mode: () -> SculptMode?,
+    mode: () -> BrushMode?,
     private val tool: () -> SculptTool?,
     private val report: (String) -> Unit,
-) : TerrainSculpt {
-    private class Stroke(
+) : TerrainStrokeCommand<SculptStrokeCommand.Stroke>(mode) {
+    class Stroke(
         val source: TerrainSource.Ready,
         val draft: SculptDraft,
         val brush: SculptBrush,
@@ -50,38 +50,34 @@ class SculptStrokeCommand(
         var last: Vector3,
     )
 
-    private var active: Stroke? = null
-
-    override fun pressed(terrain: TerrainTarget, at: Vector3): Boolean {
-        val m = mode() ?: return false
-        val picked = tool() ?: return false
-        if (active != null || m.entityId != terrain.entityId) return false
+    override fun begin(terrain: TerrainTarget, at: Vector3, mode: BrushMode): Stroke? {
+        val picked = tool() ?: return null
         val source = when (val read = readCurrent()) {
-            is TerrainSource.Unusable -> { report(read.reason); return false }
+            is TerrainSource.Unusable -> { report(read.reason); return null }
             is TerrainSource.Ready -> read
         }
-        val files = source.files ?: return false
+        val files = source.files ?: return null
         val state = source.sculpt
         if (state is SculptState.Unsafe) {
             report(AbyssusBundle.message("sculptUnavailableUnsafe"))
-            return false
+            return null
         }
-        val composed = decodeSculptGrid(files.terrainBytes, source.resolution) ?: return false
-        if (terrain.data.resolution != source.resolution) return false
+        val composed = decodeSculptGrid(files.terrainBytes, source.resolution) ?: return null
+        if (terrain.data.resolution != source.resolution) return null
         val draft = drafts.open(folder.name) {
             val sculpted = state as? SculptState.Sculpted
             SculptDraft(source.resolution, sculpted?.base ?: composed.copyOf(), composed, sculpted?.delta?.copyOf() ?: FloatArray(composed.size))
         }
-        val stroke = Stroke(source, draft, SculptBrush(draft, source.size, terrain.world), picked, Vector3(at))
-        active = stroke
-        stroke.brush.stroke(at, at, m.radius, m.strength, picked, m.inverted)
-        return true
+        return Stroke(source, draft, SculptBrush(draft, source.size, terrain.world), picked, Vector3(at))
     }
 
-    override fun dragged(to: Vector3, inverted: Boolean) {
-        val stroke = active ?: return
+    override fun press(stroke: Stroke, at: Vector3, mode: BrushMode) {
+        stroke.brush.stroke(at, at, mode.radius, mode.strength, stroke.tool, mode.reversed)
+    }
+
+    override fun drag(stroke: Stroke, to: Vector3, reversed: Boolean) {
         val m = mode() ?: return
-        stroke.brush.stroke(stroke.last, to, m.radius, m.strength, stroke.tool, inverted)
+        stroke.brush.stroke(stroke.last, to, m.radius, m.strength, stroke.tool, reversed)
         stroke.last = Vector3(to)
     }
 
@@ -101,9 +97,6 @@ class SculptStrokeCommand(
         active = null
         drafts.discard(folder.name)
     }
-
-    /** Drops a stroke in progress; the view is closing or the mode ended. */
-    fun dispose() = cancelled()
 
     private fun commit(stroke: Stroke) {
         val current = readCurrent() as? TerrainSource.Ready

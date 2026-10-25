@@ -46,9 +46,9 @@ class SceneViewPanel internal constructor(
     /** Other plugins' overlays for this view. */
     private val overlays: SceneOverlayHost? = null,
     private val foliageActions: ((String) -> DefaultActionGroup?)? = null,
-    private val paintSession: ((String, () -> FoliagePaintMode?, (net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession?) -> Unit) -> Unit)? = null,
+    private val paintSession: ((String, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, (net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession?) -> Unit) -> Unit)? = null,
     /** Opens the Sculpt Terrain session of an entity (the mode and the tool are read by its stroke); null: no Sculpt Terrain button. */
-    private val sculptSession: ((String, () -> net.nevinsky.abyssus.lib.core.editor.pick.SculptMode?, () -> net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptTool?, (net.nevinsky.abyssus.plugin.terrain.SculptSession?) -> Unit) -> Unit)? = null,
+    private val sculptSession: ((String, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, () -> net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptTool?, (net.nevinsky.abyssus.plugin.terrain.SculptSession?) -> Unit) -> Unit)? = null,
     /** The project's models to arrange along a path; the callback starts drawing. Null: no Add Path Arrangement button. */
     private val pathMenu: PlacementMenu<(RenderAsset) -> Unit>? = null,
     /** The project's `Show FPS`, read before every frame so a missed change event cannot leave the counter off; null: only [setFpsEnabled]. */
@@ -103,13 +103,19 @@ class SceneViewPanel internal constructor(
     private var spriteScale = 0.0
     private var orientationSprite: CornerSprite? = null
     private var statsSprite: CornerSprite? = null
-    private val paint: FoliagePaintControls = FoliagePaintControls(renderer, interaction, play, paintSession, ::syncControls)
+    private val brushes = BrushKinds()
+    private val paint: FoliagePaintControls = FoliagePaintControls(renderer, interaction, play, brushes, paintSession, ::syncControls)
     private val sculpt: SculptTerrainControls = SculptTerrainControls(
-        renderer, interaction, play, sculptSession,
+        renderer, interaction, play, brushes, sculptSession,
         net.nevinsky.abyssus.plugin.terrain.SculptToolFactory(net.nevinsky.abyssus.lib.core.editor.terrain.FastNoiseSamplerFactory()),
-        { paint.end() }, ::syncControls, { onSculptEnded?.invoke() },
+        ::syncControls, { onSculptEnded?.invoke() },
         { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(reason, AbyssusBundle.message("sculptTitle")) },
     )
+    init {
+        // toolbar order
+        brushes.register(paint)
+        brushes.register(sculpt)
+    }
     private val playStrip = PlayControlsStrip(play, renderer, simulationRequest, { endBrushes() }, { requestFocusInWindow() })
     private val clouds = CloudControls(renderer) { experimenting }
 
@@ -123,10 +129,10 @@ class SceneViewPanel internal constructor(
         JToggleButton(AbyssusBundle.message("sceneViewRayExperiment")) else null
     private val experiment = experimentButton?.let { RayFeasibilityPreview { message -> thisLogger().info(message) } }
     private val experimenting: Boolean get() = experimentButton?.isSelected == true
-    private val input = SceneInputForwarder(this, renderer, interaction, play, { experimenting }, { experiment?.orbit }, { shift -> paint.update(shift); sculpt.update(shift) }, ::frameSelection, ::pressOnOrientationWidget)
+    private val input = SceneInputForwarder(this, renderer, interaction, play, { experimenting }, { experiment?.orbit }, { shift -> brushes.strips.forEach { it.update(shift) } }, ::frameSelection, ::pressOnOrientationWidget)
 
     private val toolbar: SceneViewToolbar = SceneViewToolbar(
-        this, renderer, interaction, tools, play, paint, sculpt, playStrip, clouds, experimentButton,
+        this, renderer, interaction, tools, play, brushes, playStrip, clouds, experimentButton,
         { experiment?.stop() },
         SceneViewToolbarSources(
             lightMenu, assetMenu, waterMenu, pathMenu, foliageActions, overlays,
@@ -500,8 +506,7 @@ class SceneViewPanel internal constructor(
 
     override fun refreshAssets(revision: AssetRevisionBatch) {
         renderer.queueAssetRevision(revision)
-        paint.refreshSession(force = true)
-        sculpt.refreshSession(force = true)
+        brushes.strips.forEach { it.refreshSession(force = true) }
     }
 
     override fun stopPlay() = play.documentChanging()
@@ -530,13 +535,11 @@ class SceneViewPanel internal constructor(
 
     /** Leaves whichever terrain brush, Paint Foliage or Sculpt Terrain, is on the view. */
     private fun endBrushes() {
-        paint.end()
-        sculpt.end()
+        brushes.strips.forEach { it.end() }
     }
 
     override fun dispose() {
-        paint.close()
-        sculpt.close()
+        brushes.strips.forEach { it.close() }
         driver.stop()
         fpsInterrupted()
         canvasHost.stop()

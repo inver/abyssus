@@ -130,7 +130,7 @@ class SceneRenderer(
     private val unlit: Boolean get() = display.shading == Shading.UNLIT
 
     private var lineBatch: LineBatch? = null
-    internal var brushCursor: FoliageBrushCursor? = null
+    internal var brushCursor: BrushCursor? = null
     private var gridModel: Model? = null
     private var grid: ModelInstance? = null
     private val camera = PerspectiveCamera()

@@ -58,8 +58,7 @@ internal class SceneViewToolbar(
     private val interaction: SceneInteraction,
     private val tools: SceneViewToolsModel,
     private val play: PlayState,
-    private val paint: FoliagePaintControls,
-    private val sculpt: SculptTerrainControls,
+    private val brushes: BrushKinds,
     private val playStrip: PlayControlsStrip,
     private val clouds: CloudControls,
     private val experimentButton: JToggleButton?,
@@ -130,8 +129,7 @@ internal class SceneViewToolbar(
             add(regenerateButton)
             add(drawingHint)
             if (sources.foliageActions != null) add(addFoliageButton)
-            paint.addTo(this)
-            sculpt.addTo(this)
+            brushes.strips.forEach { it.addTo(this) }
             add(clouds.combo)
             add(clouds.note)
             playStrip.addTo(this)
@@ -185,8 +183,7 @@ internal class SceneViewToolbar(
             AbyssusBundle.message(if (tools.space == GizmoSpace.WORLD) "sceneViewSpaceWorld" else "sceneViewSpaceLocal"),
             if (tools.snapOn) AbyssusBundle.message("sceneViewSnap", formatStep(tools.snapStep)) else null,
         )
-        paint.beforeSync()
-        sculpt.beforeSync()
+        brushes.strips.forEach { it.beforeSync() }
         updatingControls = true
         try {
             val toolbar = toolbarState(
@@ -197,7 +194,7 @@ internal class SceneViewToolbar(
             )
             lastToolbar = when {
                 sources.unavailable() -> toolbar.disabled()
-                paint.painting || sculpt.sculpting -> toolbar.copy(gizmoEnabled = false, spaceEnabled = false, snapEnabled = false)
+                brushes.brushing -> toolbar.copy(gizmoEnabled = false, spaceEnabled = false, snapEnabled = false)
                 else -> toolbar
             }
             cameraCombo.isEnabled = toolbar.cameraEnabled
@@ -215,9 +212,8 @@ internal class SceneViewToolbar(
             val hasChoices = foliage != null && foliage.childrenCount > 0
             addFoliageButton.isEnabled = !play.active && hasChoices
             addFoliageButton.toolTipText = if (foliage != null && !hasChoices) AbyssusBundle.message("addFoliageNone") else null
-            paint.sync()
-            sculpt.sync()
-            if (paint.painting || sculpt.sculpting) dropButton.isEnabled = false
+            brushes.strips.forEach { it.sync() }
+            if (brushes.brushing) dropButton.isEnabled = false
             playStrip.sync()
             cameraCombo.selectedItem = choices.firstOrNull { it.id == interaction.viewCamera } ?: choices.firstOrNull()
         } finally {

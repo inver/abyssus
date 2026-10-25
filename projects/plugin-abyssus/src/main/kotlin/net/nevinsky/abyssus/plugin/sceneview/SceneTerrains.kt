@@ -35,7 +35,7 @@ class TerrainEntity(override val placement: AssetPlacement, val terrain: Terrain
         override val key: Any get() = terrain
         override val assetName: String get() = placement.assetName
         override val data get() = terrain.data
-        override fun refresh(rect: net.nevinsky.abyssus.lib.core.editor.brush.MaskRect) {
+        override fun refresh(rect: net.nevinsky.abyssus.lib.core.editor.brush.GridRect) {
             terrain.updateRegion(rect.minX, rect.minZ, rect.maxX, rect.maxZ)
             heightsChanged()
         }

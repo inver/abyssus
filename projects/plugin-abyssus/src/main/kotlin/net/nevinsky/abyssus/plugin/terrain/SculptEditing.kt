@@ -5,19 +5,15 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
-import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.editor.document.SceneDocument
-import net.nevinsky.abyssus.lib.core.editor.pick.SculptMode
-import net.nevinsky.abyssus.lib.core.editor.pick.TerrainSculpt
+import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
+import net.nevinsky.abyssus.lib.core.editor.pick.BrushStroke
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptState
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptTool
 import net.nevinsky.abyssus.plugin.AbyssusBundle
@@ -34,7 +30,7 @@ import java.io.File
  */
 class SculptSession(
     val reason: String?,
-    val stroke: TerrainSculpt?,
+    val stroke: BrushStroke?,
     val assetsDir: File?,
     val images: StampImages,
     private val close: () -> Unit,
@@ -44,7 +40,7 @@ class SculptSession(
 
 /** Project-owned workers that read a terrain's files for a view's Sculpt Terrain mode. */
 @Service(Service.Level.PROJECT)
-class SculptEditing(private val project: Project, private val scope: CoroutineScope) {
+class SculptEditing(private val project: Project) {
     /**
      * Opens the sculpt session of [entity] in [scene] and calls [ready] on the UI thread with it, or with null when the
      * entity is not a terrain. [mode] and [tool] are read by the stroke on every press and drag.
@@ -52,7 +48,7 @@ class SculptEditing(private val project: Project, private val scope: CoroutineSc
     fun open(
         scene: VirtualFile,
         entity: String,
-        mode: () -> SculptMode?,
+        mode: () -> BrushMode?,
         tool: () -> SculptTool?,
         report: (String) -> Unit,
         ready: (SculptSession?) -> Unit,
@@ -69,12 +65,13 @@ class SculptEditing(private val project: Project, private val scope: CoroutineSc
         }
         val core = service<AbyssusPluginCtx>()
         val projectDir = File(abss.parent.path)
-        scope.launch {
-            val source = withContext(Dispatchers.IO) { readTerrainFolder(folder, core.json, core.terrainRecipes, core.terrainSculpt) }
-            withContext(Dispatchers.EDT) {
+        // a pooled thread, not a coroutine: the resume of a coroutine fails under the IDE's own debug probes in the sandbox
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val source = readTerrainFolder(folder, core.json, core.terrainRecipes, core.terrainSculpt)
+            ApplicationManager.getApplication().invokeLater {
                 if (project.isDisposed || !scene.isValid || !folder.isValid) {
                     ready(null)
-                    return@withContext
+                    return@invokeLater
                 }
                 val reason = when {
                     source is TerrainSource.Unusable -> AbyssusBundle.message("sculptUnavailableUnreadable", source.reason)
@@ -83,7 +80,7 @@ class SculptEditing(private val project: Project, private val scope: CoroutineSc
                 }
                 if (reason != null) {
                     ready(SculptSession(reason, null, File(assets.path), StampImages(core.json), {}))
-                    return@withContext
+                    return@invokeLater
                 }
                 val command = SculptStrokeCommand(
                     project, folder, project.service<SculptDrafts>(), core.terrainSculpt, LocalAssetFileStore(projectDir),

@@ -48,7 +48,8 @@ BrushTarget<G>   grid: G; apply(gx, gz, changes: FloatArray, offset): Boolean
 StampBrush<G>    (path, footprint, tool, target): stroke(from, to, radius, strength, reversed): GridRect
 ```
 
-`SculptGrid` implements `BrushGrid`. `SculptTool` stays a sealed interface, now `sealed interface SculptTool :
+`SculptGrid` implements `BrushGrid`, and `SculptTarget(draft, size)` adapts `SculptDraft` (which does not know the
+terrain size) to `BrushTarget<SculptGrid>`. `SculptTool` stays a sealed interface, now `sealed interface SculptTool :
 BrushTool<SculptGrid>`, so the factory's exhaustive `when` and all eight tools keep their names; the tool files change
 their supertype and the stamp type only. `FootprintScratch` and the bilinear `heightAt` stay sculpt-only.
 
@@ -82,7 +83,7 @@ to reuse.
 
 ### 3. `BrushMode`, `BrushStroke`, `Gesture.Brushing`
 
-`BrushMode(entityId, radius, strength, reversed, options)` replaces `FoliagePaintMode` and `SculptMode`.
+`BrushMode(kind, entityId, radius, strength, reversed, options)` replaces `FoliagePaintMode` and `SculptMode`.
 `options: BrushOptions` is a marker interface implemented by the plugin-side or kind-specific records
 (`FoliageBrushOptions(layerId)`); `GestureDriver` never reads it. `reversed` is the already-resolved flag: the strip
 computes it (foliage: `erase || shift`, sculpt: the tool's inversion with Shift flipping it), so the two conventions
@@ -91,22 +92,26 @@ are kept and the driver passes `mode.reversed` through. `BrushStroke` has `press
 
 `SceneViewState` holds `brush: BrushMode?`; `brushing` becomes `brush != null` and `endBrush` sets it to null. The
 gesture driver has one `startBrush` (selected entity matches, ray, `terrainOf`, `terrainHit`, `pressed`) and one drag
-and release path. `SceneInteraction` exposes one `brushStroke: BrushStroke?`.
+and release path. `kind` names which stroke the mode drives (`FOLIAGE_BRUSH`, `SCULPT_BRUSH`). `SceneInteraction` keeps one stroke per kind
+(`setBrushStroke(kind, stroke)`, `brushStroke(kind)`) because both strips are alive for the selected entity at once and each
+registers its own stroke when its session loads; the gesture captures the kind at the press and a drag is applied only
+while the mode still has that kind.
 
 *Alternative: keep two fields and a shared supertype.* Rejected: mutual exclusion would remain a convention
 enforced in two controls instead of a property of the state.
 
-### 4. `BrushKind` is the registration seam for the plugin
+### 4. `BrushStrip` is the plugin's registration seam, and `BrushKinds` is its registry
 
-```
-BrushKind { id, toggle name, strip: BrushStrip, strokeFor(entity) , availability(entity) }
-```
-
-A view builds its brush controls from a list of kinds (`foliage`, `sculpt`, later `splat`), in today's toolbar order.
-Starting one kind ends the others (`endBrush`), which replaces the explicit `endFoliage` callback.
+A brush is one `BrushStrip<S>` subclass (it carries its kind id, its session, its stroke and the mode it builds). The
+view registers its strips in a `BrushKinds` in toolbar order (foliage, sculpt, later splat), and the toolbar, the panel
+and the Shift handler loop over it. Starting one strip ends the others that hold the view (`BrushKinds.endOthers`),
+which replaces the explicit `endFoliage` callback. A separate `BrushKind` record would only have repeated what the
+strip already holds.
 `BrushStrip` is an abstract base for the shared parts: the toggle, radius and strength spinners, the session-load
 token (`entity`, `load`, `closed`, `refreshSession`), `end`, `close`, `beforeSync` and `sync`. Subclasses add their
-controls and build their `BrushMode.options`. Component names (`paint-foliage`, `foliage-brush-radius`,
+controls and build their `BrushMode.options`. Because the view holds one mode, a strip puts its mode on the view only
+when it is its own kind, clears the view only when the mode is still its own, and treats another kind's mode replacing
+its own as the end of its brush (as the sculpt strip's `beforeSync` did when Paint Foliage took the view). Component names (`paint-foliage`, `foliage-brush-radius`,
 `sculpt-radius`, ...) and message keys do not change; the UI tests find controls by them.
 
 *Alternative: one combined brush panel with a kind selector.* That is a UI change and is out of scope.
@@ -118,16 +123,19 @@ controls and build their `BrushMode.options`. Component names (`paint-foliage`, 
 
 ### 6. A stroke lifecycle shell, with the commit pipelines left alone
 
-`TerrainStrokeCommand<S>` implements `BrushStroke` and owns: the `active` stroke, the preconditions of `pressed` (the
-mode's entity matches the terrain, nothing active), `dragged` forwarding, and the dispose path. Subclasses supply
-`begin(terrain, at, mode): S?`, `stamp(stroke, to, reversed)`, `commit(stroke)` and `discard(stroke)`.
+`TerrainStrokeCommand<S>` (package `plugin/brush`, so foliage and terrain gain no edge between them) implements
+`BrushStroke` and owns: the `active` stroke, the preconditions of `pressed` (a mode is on, nothing is active, the mode's
+entity matches the terrain), `dragged` forwarding, and the dispose path. Subclasses supply
+`begin(terrain, at, mode): S?` (null refuses the press), `press`, `drag`, and write their own `released` and `cancelled`,
+which have nothing in common.
 `FoliageStrokeCommand` keeps its `generation`, `releasing` flag, staged backups and background bake, and
 `SculptStrokeCommand` keeps its synchronous commit; those are not generalized.
 
-`StrokeDrafts<D>` is the small concurrent map behind `FoliageDrafts` and `SculptDrafts`. The two `@Service` classes
-stay (services are looked up by class) and delegate to it. They keep their different policies: foliage's draft
-outlives a stroke and is shared with the panel (`getOrOpen`), sculpt's exists while the button is down (`replace`).
-This is the lowest-value piece; if it saves less than it adds when written, it is dropped and the two stay.
+A generic `StrokeDrafts<D>` map behind `FoliageDrafts` and `SculptDrafts` was dropped. Measured, the two `@Service`
+classes are 25 lines of code between them (a concurrent map, `of`, `open`, `discard`, `discardAll`), and services are looked
+up by class, so both would stay as delegating wrappers around a new class of about the same size. Their policies also
+differ (foliage's draft outlives a stroke and is shared with the panel, sculpt's exists while the button is down), which a
+shared class would only expose as two methods. The shell in `plugin/brush` is the only shared stroke code.
 
 ### 7. Threading and purity
 
@@ -143,7 +151,8 @@ touches GL.
   masks for Paint and Erase including half-way rounding, and golden heights for every sculpt tool. They are written
   against the current code before anything moves and must pass unchanged after each slice.
 - [Hot path allocation or boxing while dragging a 255 by 255 sculpt] → Footprint and change arrays are reused and
-  sized by doubling; the tool contract is primitive arrays. Checked by hand while dragging in `runIde`.
+  sized by doubling (the change buffer to twice the first need, because the number of grid points in a circle varies a
+  little with where its centre falls); the tool contract is primitive arrays. Checked by hand while dragging in `runIde`.
 - [UI tests look up controls by name] → `BrushStrip` keeps every component name; `uiHelperTest` runs after the strip
   slice.
 - [The generic contract is designed before its third user] → The engine test suite includes a fake four-channel

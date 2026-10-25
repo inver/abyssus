@@ -29,7 +29,8 @@ the toolbar, Play and the view's asset storage.
 | `ViewDisplay`, `Shading` | The Shadows / Fog / Grid toggles and Lit / Unlit / Wireframe of one view, set on `SceneRenderer.display` and read on the next frame. Per view and never saved; the scene's own `fogEnabled` is untouched. Unlit gives every material a white ambient and no lights or shadow pass; Wireframe draws every content drawable (models, terrains, foliage OBJECT layers, skybox cube, water) as edges only with `glPolygonMode(GL_LINE)` |
 | `SceneInputForwarder` | Keys (Q / W / E / F / D / Esc / Enter / Backspace / Delete) and the canvas mouse: into `SceneInteraction`, into the simulation while playing, the arrangement point menu |
 | `RayControlBinding` | The view's ray feed, the mode the Properties switch shows and its listeners |
-| `CloudControls`, `PlayControlsStrip`, `FoliagePaintControls` | The Clouds choice and fallback, the Play / Pause / Step / Stop buttons, the foliage brush and its paint session |
+| `CloudControls`, `PlayControlsStrip` | The Clouds choice and fallback, the Play / Pause / Step / Stop buttons |
+| `BrushStrip`, `BrushKinds`, `FoliagePaintControls`, `SculptTerrainControls`, `BrushCursor` | The terrain brushes. `BrushStrip<S>` is the base of a brush's controls: the radius and strength spinners, the strip, the session of the selected entity (opened through a hook, replaced with the selection, a token drops a late answer), the stroke it registers with `SceneInteraction.setBrushStroke`, and the one `BrushMode` the view holds. `FoliagePaintControls` (the Paint toggle, layer and erase) and `SculptTerrainControls` (the tool and its options) are its two kinds; `BrushKinds` keeps them in toolbar order, builds, syncs and closes them with the toolbar, and ends the others when one starts. `BrushCursor` draws the radius circle, from `BrushPath`'s terrain-local axes, for every kind |
 | `PlacementMenu` | An "Add ..." menu: whether it can be offered, and its choices (`lightMenu`, `assetMenu`, `pathMenu` of the panel) |
 | `SceneViewState` *(lib-core-editor)* | What the user chose: selection, gizmo mode and hovered handle, the camera looked through, the drag/drop preview. The panel changes it; the renderer and the queries read it |
 | `SceneInteraction` *(lib-core-editor)* | Mouse and key logic without Swing or GL, over a `SceneViewState` and `SceneQueries`: click → pick/select, drag → gizmo or orbit/pan (one `Gesture`: Idle, Dragging or Cancelled), Drop → a Y-only move |
@@ -342,15 +343,16 @@ Foliage is drawn, and it is deliberately left out of everything else the view an
 
 ## Sculpt Terrain
 
-Sculpt Terrain is a brush mode of a view beside Paint Foliage, and the two never hold at once. `SculptTerrainControls` is the
-strip (tool, radius, strength, the options of the chosen tool; Shift inverts); like `FoliagePaintControls` it
-sets a mode on the view's state (`SceneViewState.sculpt`, a `SculptMode`), which hides the gizmos, gives the left button to the
+Sculpt Terrain is a brush mode of a view beside Paint Foliage, and the two never hold at once (starting one ends the other
+through `BrushKinds`). `SculptTerrainControls` is the
+strip (tool, radius, strength, the options of the chosen tool; Shift inverts); like `FoliagePaintControls`, a `BrushStrip`, it
+sets a mode on the view's state (`SceneViewState.brush`, a `BrushMode` of kind `SCULPT_BRUSH`; Paint Foliage uses `FOLIAGE_BRUSH`, so setting one replaces the other), which hides the gizmos, gives the left button to the
 brush and ends when another entity is selected. The on/off toggle is in the Abyssus Properties panel, in the Render section of
 a terrain entity (`EntityDetailsView`): it starts the project's `SculptRequests`, `SceneFileEditor` passes that to the view
 (`setSculpting`), and the view tells the session when it ended the brush itself (`onSculptEnded`), as with `PathEditSession`.
 The view ends the sculpting and reports why when the terrain data cannot be read or its sculpt state is unsafe
 (`SculptEditing` reads the files off the EDT).
-The pick layer calls a `TerrainSculpt` (`pressed` / `dragged` / `released` / `cancelled`), which `SculptStrokeCommand` implements.
+The pick layer calls the `BrushStroke` registered for the kind (`pressed` / `dragged` / `released` / `cancelled`), which `SculptStrokeCommand` implements. Each strip registers its stroke with `SceneInteraction.setBrushStroke` when its session loads, and takes its mode off the view only when the mode is its own.
 
 A stroke lives in the project's `SculptDrafts` (one `SculptDraft` per terrain folder) only while the button is down. The
 command writes nothing before the release: it then plans the files with `SculptPlanner.commitStroke` and stages them

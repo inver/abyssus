@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.sculpt
 
-import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -47,7 +47,7 @@ class SculptDraftTest {
         assertTrue(d.changed.isEmpty)
         d.add(1, 3, 1f)
         d.add(4, 0, 1f)
-        assertEquals(MaskRect(1, 0, 4, 3), d.changed)
+        assertEquals(GridRect(1, 0, 4, 3), d.changed)
     }
 
     @Test

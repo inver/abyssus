@@ -5,13 +5,17 @@
 
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
-import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
-import net.nevinsky.abyssus.lib.core.editor.brush.emptyMaskRect
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.brush.BrushPath
-import net.nevinsky.abyssus.lib.core.editor.brush.smoothFalloff
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.editor.brush.BrushStamp
+import net.nevinsky.abyssus.lib.core.editor.brush.BrushTarget
+import net.nevinsky.abyssus.lib.core.editor.brush.BrushTool
+import net.nevinsky.abyssus.lib.core.editor.brush.ByteGrid
+import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
+import net.nevinsky.abyssus.lib.core.editor.brush.StampBrush
+import net.nevinsky.abyssus.lib.core.editor.brush.smoothFalloff
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -23,13 +27,47 @@ enum class FoliageBrushMode { Paint, Erase }
 private const val BRUSH_UNITS: Float = 64f
 
 /**
- * The brush of the Paint Foliage mode (design decision 8): it stamps along the world-space drag path at intervals of
- * a quarter of the radius, each stamp adding `±strength * 64 * smoothstep(1 - d / radius)` to the mask texels
- * within the radius and clamping the result to 0 through 255.
+ * The tool of the Paint Foliage mode: each texel within the radius gets `strength * 64 * smoothstep(1 - d / radius)`
+ * (design decision 8), negated while the stamp is reversed (Erase). The product is formed in this order, because the
+ * target rounds it and a different order can move a half-way value to the other side.
+ */
+internal class PaintMaskTool : BrushTool<ByteGrid> {
+    override fun changes(stamp: BrushStamp<ByteGrid>, out: FloatArray) {
+        val f = stamp.footprint
+        for (i in 0 until f.count) {
+            val delta = stamp.strength * BRUSH_UNITS * smoothFalloff(f.falloff[i])
+            out[i] = if (stamp.reversed) -delta else delta
+        }
+    }
+}
+
+/**
+ * The mask of one density layer as what a stroke changes: the change of a texel is rounded in magnitude (half up) and
+ * then applied with its sign, added or subtracted, and the result clamped to 0 through 255. A texel whose byte stays
+ * the same reports no change.
+ */
+internal class MaskTarget(override val grid: ByteGrid) : BrushTarget<ByteGrid> {
+    override fun apply(gx: Int, gz: Int, changes: FloatArray, offset: Int): Boolean {
+        val change = changes[offset]
+        val delta = abs(change).roundToInt()
+        if (delta == 0) return false
+        val index = gz * grid.resolution + gx
+        val old = grid.values[index].toInt() and 0xFF
+        val value = if (change > 0f) min(255, old + delta) else max(0, old - delta)
+        if (value == old) return false
+        grid.values[index] = value.toByte()
+        return true
+    }
+}
+
+/**
+ * The brush of the Paint Foliage mode (design decision 8): a [StampBrush] over a density mask that stamps along the
+ * world-space drag path at intervals of a quarter of the radius, each stamp adding `±strength * 64 * smoothstep(1 - d /
+ * radius)` to the mask texels within the radius and clamping the result to 0 through 255.
  *
  * The mask lives in terrain-local space: a stamp's centre goes through the inverse of the entity's [world] matrix,
- * and the distance `d` is measured through the entity's scale along the terrain's own axes. For the translation,
- * yaw rotation and scaling terrain entities are built from, that is exactly the world-space distance on the terrain
+ * and the distance `d` is measured through the entity's scale along the terrain's own axes. For the translation, yaw
+ * rotation and scaling terrain entities are built from, that is exactly the world-space distance on the terrain
  * plane, so a rotated or scaled entity paints under the world-space circle the view draws.
  *
  * Pure math over [TerrainData] and the mask: it runs on the AWT thread and touches no `Gdx.*`.
@@ -42,11 +80,9 @@ class FoliageBrush(
     private val maskResolution: Int,
     world: Matrix4,
 ) {
-    private val path = BrushPath(terrain.size, maskResolution, world)
-
-    init {
-        require(maskResolution >= 2) { "mask resolution needs at least 2" }
-    }
+    private val grid = ByteGrid(maskResolution, terrain.size, 1, ByteArray(0))
+    private val tool = PaintMaskTool()
+    private val brush = StampBrush(MaskTarget(grid), world)
 
     /**
      * Stamps along the segment from [from] to [to] (world-space stroke points) and returns the rectangle of mask
@@ -60,36 +96,9 @@ class FoliageBrush(
         radius: Float,
         strength: Float,
         mode: FoliageBrushMode,
-    ): MaskRect {
+    ): GridRect {
         require(mask.size == maskResolution * maskResolution) { "a $maskResolution by $maskResolution mask" }
-        if (!(strength > 0f) || !path.canStamp(radius)) return emptyMaskRect()
-        var rect = emptyMaskRect()
-        path.walk(from, to, radius) { at -> rect = rect.union(stamp(mask, at, radius, strength, mode)) }
-        return rect
-    }
-
-    /** One stamp at the world point [at]: the changed texels inside the radius, clamped and reported as a rectangle. */
-    private fun stamp(mask: ByteArray, at: Vector3, radius: Float, strength: Float, mode: FoliageBrushMode): MaskRect {
-        var minX = Int.MAX_VALUE
-        var minZ = Int.MAX_VALUE
-        var maxX = -1
-        var maxZ = -1
-        path.forEachInRadius(at, radius) { gx, gz, falloff ->
-            val delta = (strength * BRUSH_UNITS * smoothFalloff(falloff)).roundToInt()
-            if (delta == 0) return@forEachInRadius
-            val index = gz * maskResolution + gx
-            val old = mask[index].toInt() and 0xFF
-            val value = when (mode) {
-                FoliageBrushMode.Paint -> min(255, old + delta)
-                FoliageBrushMode.Erase -> max(0, old - delta)
-            }
-            if (value == old) return@forEachInRadius
-            mask[index] = value.toByte()
-            if (gx < minX) minX = gx
-            if (gz < minZ) minZ = gz
-            if (gx > maxX) maxX = gx
-            if (gz > maxZ) maxZ = gz
-        }
-        return if (minX > maxX) emptyMaskRect() else MaskRect(minX, minZ, maxX, maxZ)
+        grid.values = mask
+        return brush.stroke(from, to, radius, strength, tool, mode == FoliageBrushMode.Erase)
     }
 }

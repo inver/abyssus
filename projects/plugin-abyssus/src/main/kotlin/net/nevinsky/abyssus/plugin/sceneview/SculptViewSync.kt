@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptDraft
 import net.nevinsky.abyssus.plugin.terrain.SculptDrafts
 import java.util.IdentityHashMap
@@ -16,7 +16,7 @@ internal interface SculptTarget {
     val key: Any
     val assetName: String
     val data: TerrainData
-    fun refresh(rect: MaskRect)
+    fun refresh(rect: GridRect)
 }
 
 /**

@@ -24,7 +24,7 @@ import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageScatter
-import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
 import net.nevinsky.abyssus.lib.core.editor.foliage.mergeFoliageChunks
 import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
 import net.nevinsky.abyssus.lib.core.assets.testProject
@@ -155,7 +155,7 @@ class SceneFoliageTest {
         val draft = drafts.open(foliageName, terrain, resolution)
         val editable = draft.editableMask(0, prepared.masks.getValue(0))
         for (z in 0..5) for (x in 0..5) editable[z * resolution + x] = 0
-        val rect = MaskRect(0, 0, 5, 5)
+        val rect = GridRect(0, 0, 5, 5)
         draft.stamped(0, rect)
         val dirty = HashSet(draft.dirtyChunks)
         assertTrue("the stamp touched a handful of chunks", dirty.isNotEmpty() && dirty.size < 64)

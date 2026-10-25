@@ -190,8 +190,9 @@ tasks {
         // The sandbox IDE trusts every project (no "Trust project?" dialog) and opens the Abyssus view.
         jvmArgs("-Didea.trust.all.projects=true", "-Dabyssus.openView=true")
         // Kotlin 2.4 emits coroutine debug metadata v2, but the sandbox IDE's bundled stdlib reads v1; its coroutine debug
-        // probes then fail every resume ("Debug metadata version mismatch"). Turn the probes off.
-        jvmArgs("-Dkotlinx.coroutines.debug=off")
+        // probes (the IDE's own, `idea.enable.coroutine.dump`) then fail every resume ("Debug metadata version mismatch"), so the
+        // plugin's background coroutines (Sculpt Terrain, Paint Foliage sessions) never finish. Turn the probes off.
+        jvmArgs("-Dkotlinx.coroutines.debug=off", "-Didea.enable.coroutine.dump=false")
     }
 
     patchPluginXml {
@@ -293,6 +294,7 @@ val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
                 "-Dide.no.platform.update=true",
                 // Kotlin 2.4 debug metadata v2 vs the IDE's stdlib v1 (see runIde above)
                 "-Dkotlinx.coroutines.debug=off",
+                "-Didea.enable.coroutine.dump=false",
             )
         }
     }

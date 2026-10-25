@@ -90,7 +90,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    target exists and is not at the entity itself; otherwise it uses the entity's `localRotation`. `handleIds` records
    the `HANDLE` entities that a light may be aimed at.
 3. `SceneViewPanel` hosts a `GuardedGLCanvas` and wires small collaborators, each owning one job: `SceneInputForwarder`
-   (keys and mouse), `RayControlBinding`, `CloudControls`, `PlayControlsStrip` and `FoliagePaintControls`; the "Add ..."
+   (keys and mouse), `RayControlBinding`, `CloudControls`, `PlayControlsStrip` and the terrain brush strips (`BrushStrip`: `FoliagePaintControls`, `SculptTerrainControls`); the "Add ..."
    menus come in as `PlacementMenu`s. A Swing `Timer` renders frames through
    `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each holding a
    `lib-core` `AssetStorage` built by `AssetLoading`) and draws markers (`lib-core-editor`'s `SceneMarkers` through a
@@ -261,6 +261,16 @@ simulation. The size and backdrop are viewer preferences (`PropertiesComponent`-
 inside `GdxRuntime.withContext` on the AWT thread behind `GuardedGLCanvas.glSafe()`, and closing the tab releases the
 presenter, the offscreen buffer, the backdrop and the GL kit while the context is current.
 
+Terrain brushes (Paint Foliage, Sculpt Terrain, and later a splat brush) share one path from the mouse to the engine. A
+`BrushStrip` in the Scene view (`FoliagePaintControls`, `SculptTerrainControls`, registered in `BrushKinds`) puts one
+`BrushMode` on `SceneViewState.brush`; `GestureDriver` turns a left press on the mode's terrain into a `Gesture.Brushing`
+and calls the `BrushStroke` registered for the mode's kind (`pressed` / `dragged` / `released` / `cancelled`). That stroke
+is a `TerrainStrokeCommand` (`FoliageStrokeCommand`, `SculptStrokeCommand`): its brush is a `StampBrush` in
+the `brush` package of `lib-core-editor`, which walks the drag with `BrushPath`, has a `BrushTool` compute one change per cell from the
+grid as it was, and has a `BrushTarget` (a density mask, the sculpt draft) apply them, reporting the `GridRect` that
+changed. Nothing is written before the release; each command then commits through its own transaction, and a view shows
+the stroke from the draft meanwhile (`FoliageDrafts`, `SculptDrafts`).
+
 Foliage creation, Re-bake and stroke commits also use asset transactions for their new files, bake and masks.
 Apply combines its binary transaction with an `editSceneJson` metadata edit in one platform command
 (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/foliage/FoliageApplyCommand.kt`): the binary undo action is registered after the document edit, with document-save
@@ -350,7 +360,7 @@ collaborator may import: **plain** is a plain JVM class, **GL** needs a libGDX o
 | `AssetStorage` (`lib-core`) | `OffGlExecutor`, `StorageCallGuard`, `DependencyResolver`, `HookRegistry` | The off-GL executor factory, the thread and call-depth guard, dependency satisfaction and the hook registry; `AssetStorage` owns upload, build and discard | plain |
 | `SceneRenderer` (plugin) | `SceneContentPass`, `SceneSkyPass` | The model, terrain, foliage and gizmo pass; the sky, fog and cloud pass, with the snapshot packing that pass reads | GL |
 | `SceneViewPanel` (plugin) | `SceneViewToolbar`, `SceneGlLifecycle`, `SceneFrameDriver` | The toolbar and its control sync; the canvas, libGDX context and capabilities of one GL context (through `GlCanvasHost`, which the Game UI canvas and the Import Model preview also use); the frame timer with its idle throttle | Swing (toolbar, driver), GL (lifecycle) |
-| `SceneInteraction` (`lib-core-editor`) | `GestureDriver`, `DrawingSession` | The press-drag-release gestures (gizmo, water, path point, paint stroke); drawing and editing a path arrangement | plain |
+| `SceneInteraction` (`lib-core-editor`) | `GestureDriver`, `DrawingSession` | The press-drag-release gestures (gizmo, water, path point, terrain brush stroke); drawing and editing a path arrangement | plain |
 | `PhysicsWorld` (`lib-physics`) | `PhysicsBodyFactory`, `PhysicsStepper`, `PhysicsPoseWriter` | Body creation and refusal, the fixed-step advance, the pose write-back; Jolt stays in the module's `jolt` package | plain (Jolt) |
 | `FlightGearImport` (`lib-core-editor`) | `FlightGearCollection`, `FlightGearGeometry`, `FlightGearStaging` | Reading the source files, building the geometry, staging the new MODEL folder; the facade stays | plain |
 | `UiEditorController` (plugin) | `UiCanvasGestures`, `UiViewSettings` | The canvas drag and its one command; the preview size and backdrop per viewer. The controller keeps the document, the selection and the edits | plain |

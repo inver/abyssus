@@ -79,11 +79,15 @@ class SceneInteraction(
     /** Called on Delete with the selected water surface's id; returns whether it was removed. */
     var onWaterDelete: ((String) -> Boolean)? = null
 
-    /** What paints while the Paint Foliage mode in [state] strokes the terrain, or null when nothing implements it. */
-    var foliagePaint: FoliagePaint? = null
+    private val brushStrokes = HashMap<String, BrushStroke>()
 
-    /** What sculpts while the Sculpt Terrain mode in [state] strokes the terrain, or null when nothing implements it. */
-    var terrainSculpt: TerrainSculpt? = null
+    /** What strokes the terrain while the brush mode of [kind] in [state] is on, or null when nothing implements it. */
+    fun brushStroke(kind: String): BrushStroke? = brushStrokes[kind]
+
+    /** Sets what strokes the terrain for the brush [kind]; null removes it. */
+    fun setBrushStroke(kind: String, stroke: BrushStroke?) {
+        if (stroke == null) brushStrokes.remove(kind) else brushStrokes[kind] = stroke
+    }
 
     var selectedId: String?
         get() = state.selectedId
@@ -122,8 +126,7 @@ class SceneInteraction(
 
     private val host = object : GestureHost {
         override val size: ViewSize get() = this@SceneInteraction.size
-        override val foliagePaint: FoliagePaint? get() = this@SceneInteraction.foliagePaint
-        override val terrainSculpt: TerrainSculpt? get() = this@SceneInteraction.terrainSculpt
+        override fun brushStroke(kind: String): BrushStroke? = this@SceneInteraction.brushStroke(kind)
         override val onTransform: ((String, TransformEdit) -> Boolean)? get() = this@SceneInteraction.onTransform
         override val onWaterMove: ((String, Vector3) -> Boolean)? get() = this@SceneInteraction.onWaterMove
         override val onArrangementEdit: ((String, List<Vector3>) -> Boolean)? get() = this@SceneInteraction.stagedEdit
@@ -432,16 +435,10 @@ class SceneInteraction(
         val hit = picked?.let { queries.content.arrangementOf(it) ?: it }
         var changed = hit != selectedId
         selectedId = hit
-        // Selecting another entity (or nothing) ends the Paint Foliage mode.
-        state.paint?.let { mode ->
+        // Selecting another entity (or nothing) ends the brush mode.
+        state.brush?.let { mode ->
             if (hit != mode.entityId) {
-                state.paint = null
-                changed = true
-            }
-        }
-        state.sculpt?.let { mode ->
-            if (hit != mode.entityId) {
-                state.sculpt = null
+                state.brush = null
                 changed = true
             }
         }
@@ -478,23 +475,13 @@ class SceneInteraction(
                 state.selection = null; changed = true
             }
         }
-        state.paint?.let { mode ->
+        state.brush?.let { mode ->
             if (!ScenePreview().contains(params.content, mode.entityId)) {
-                state.paint = null
+                state.brush = null
                 changed = true
-                if (gestures.isPainting) {
+                if (gestures.isBrushing) {
                     gestures.cancel()
-                    foliagePaint?.cancelled()
-                }
-            }
-        }
-        state.sculpt?.let { mode ->
-            if (!ScenePreview().contains(params.content, mode.entityId)) {
-                state.sculpt = null
-                changed = true
-                if (gestures.isSculpting) {
-                    gestures.cancel()
-                    terrainSculpt?.cancelled()
+                    brushStroke(mode.kind)?.cancelled()
                 }
             }
         }

@@ -8,7 +8,9 @@ package net.nevinsky.abyssus.plugin.sceneview
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneInteraction
-import net.nevinsky.abyssus.lib.core.editor.pick.SculptMode
+import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
+import net.nevinsky.abyssus.lib.core.editor.pick.BrushStroke
+import net.nevinsky.abyssus.lib.core.editor.pick.SCULPT_BRUSH
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptTool
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.StampBlend
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.StampImage
@@ -30,31 +32,32 @@ import javax.swing.SwingUtilities
 /**
  * The Sculpt Terrain brush of one Scene view: the toggle, and the strip with the tool, radius, strength and the options of
  * the chosen tool. [sculptSession] opens the session of the selected entity (why it cannot be sculpted, and the stroke) and
- * calls back with it, null when there is no terrain. While sculpting, the brush is [SceneRenderState.sculpt]; [endFoliage]
- * leaves Paint Foliage first, since the two modes never hold at once; [onChanged] tells the view to bring its toolbar in
- * line. AWT thread.
+ * calls back with it, null when there is no terrain. While sculpting, the brush is the view's
+ * [net.nevinsky.abyssus.lib.core.editor.pick.SceneViewState.brush] of kind [SCULPT_BRUSH]; starting it ends the other
+ * brushes of [kinds], since the view holds one brush at a time; [onChanged] tells the view to bring its toolbar in line.
+ * A [BrushStrip]. AWT thread.
  */
 internal class SculptTerrainControls(
-    private val renderer: SceneRenderer,
-    private val interaction: SceneInteraction,
-    private val play: PlayState,
-    private val sculptSession: ((String, () -> SculptMode?, () -> SculptTool?, (SculptSession?) -> Unit) -> Unit)?,
+    renderer: SceneRenderer,
+    interaction: SceneInteraction,
+    play: PlayState,
+    kinds: BrushKinds,
+    private val sculptSession: ((String, () -> BrushMode?, () -> SculptTool?, (SculptSession?) -> Unit) -> Unit)?,
     private val tools: SculptToolFactory,
-    private val endFoliage: () -> Unit,
     private val onChanged: () -> Unit,
     private val onEnded: () -> Unit,
     private val report: (String) -> Unit,
+) : BrushStrip<SculptSession>(
+    renderer, interaction, play, kinds, SCULPT_BRUSH, onChanged, "sculpt-radius", "sculpt-strength", "sculpt-strip",
 ) {
     private val toolBox = ComboBox(DefaultComboBoxModel(SculptToolKind.entries.toTypedArray())).apply {
         name = "sculpt-tool"
-        renderer = javax.swing.ListCellRenderer { list, value, index, selected, focus ->
+        this.renderer = javax.swing.ListCellRenderer { list, value, index, selected, focus ->
             javax.swing.DefaultListCellRenderer().getListCellRendererComponent(
                 list, value?.let { AbyssusBundle.message("sculptTool.${it.name}") }, index, selected, focus,
             )
         }
     }
-    private val radius = spinner("sculpt-radius", 10.0, 0.01, 100000.0, 1.0)
-    private val strength = spinner("sculpt-strength", 1.0, 0.0, 1.0, 0.05)
     private val targetHeight = spinner("sculpt-height", 0.0, -100000.0, 100000.0, 1.0)
     private val amplitude = spinner("sculpt-amplitude", 5.0, 0.0, 100000.0, 0.5)
     private val featureSize = spinner("sculpt-feature-size", 40.0, 0.01, 100000.0, 1.0)
@@ -67,7 +70,7 @@ internal class SculptTerrainControls(
     private val stampRotation = spinner("sculpt-stamp-rotation", 0.0, -360.0, 360.0, 5.0)
     private val stampBlend = ComboBox(DefaultComboBoxModel(StampBlend.entries.toTypedArray())).apply {
         name = "sculpt-stamp-blend"
-        renderer = javax.swing.ListCellRenderer { list, value, index, selected, focus ->
+        this.renderer = javax.swing.ListCellRenderer { list, value, index, selected, focus ->
             javax.swing.DefaultListCellRenderer().getListCellRendererComponent(
                 list, value?.let { AbyssusBundle.message("sculptBlend.${it.name}") }, index, selected, focus,
             )
@@ -76,11 +79,6 @@ internal class SculptTerrainControls(
     private val stampChoice = ComboBox<StampImageChoice>().apply { name = "sculpt-stamp-image" }
     private val stampNote = JLabel("").apply { name = "sculpt-stamp-note" }
     private val options = JPanel(CardLayout()).apply { name = "sculpt-options" }
-    private val strip = JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply { name = "sculpt-strip"; isVisible = false }
-    private var loaded: SculptSession? = null
-    private var entity: String? = null
-    private var load = 0
-    private var closed = false
     private var requested = false
     private var opened = false
     private var stampImage: StampImage? = null
@@ -88,7 +86,9 @@ internal class SculptTerrainControls(
     private var updatingStamp = false
 
     /** Whether a sculpt brush is on the view now. */
-    val sculpting: Boolean get() = renderer.state.sculpt != null
+    val sculpting: Boolean get() = active
+
+    override val wanted: Boolean get() = requested
 
     init {
         toolBox.addActionListener { showOptions(); update() }
@@ -138,14 +138,14 @@ internal class SculptTerrainControls(
     fun tool(): SculptTool? = tools.create(toolBox.selectedItem as SculptToolKind, values())
 
     /** Adds the strip to [toolbar] when the host can sculpt at all; the toggle is in the Properties panel. */
-    fun addTo(toolbar: JPanel) {
+    override fun addTo(toolbar: JPanel) {
         if (sculptSession != null) toolbar.add(strip)
     }
 
     /** Puts the brush on [entityId], the selected terrain (the Properties panel's toggle); ends the sculpting when it cannot be. */
     fun begin(entityId: String) {
         if (play.active || entityId != interaction.selectedId) { end(); return }
-        endFoliage()
+        kinds.endOthers(this)
         requested = true
         val session = loaded
         when {
@@ -155,72 +155,51 @@ internal class SculptTerrainControls(
         }
     }
 
-    /** Before the toolbar is synced: leaves the brush while playing or when Paint Foliage took the view, follows the selection. */
-    fun beforeSync() {
-        if (sculpting && (play.active || renderer.state.paint != null)) end()
-        refreshSession()
-    }
-
     /** Brings the strip in line with the brush. */
-    fun sync() {
+    override fun sync() {
         strip.isVisible = sculpting
     }
 
-    /** Opens the sculpt session of the selected entity, replacing the last one (always when [force]). */
-    fun refreshSession(force: Boolean = false) {
-        val selected = interaction.selectedId
-        if (!force && selected == entity) return
-        val wasRequested = requested && selected == entity
-        end(notify = false)
-        loaded?.dispose()
-        loaded = null
+    override fun openSession(selected: String, mode: () -> BrushMode?, ready: (SculptSession?) -> Unit) {
+        sculptSession?.invoke(selected, mode, ::tool, ready)
+    }
+
+    override fun disposeSession(session: SculptSession) = session.dispose()
+
+    override fun strokeOf(session: SculptSession?): BrushStroke? = session?.stroke
+
+    override fun sessionCleared() {
         opened = false
-        entity = selected
-        val token = ++load
-        if (closed || selected == null) return
-        sculptSession?.invoke(selected, { renderer.state.sculpt }, ::tool) { session ->
-            if (closed || token != load || interaction.selectedId != selected) { session?.dispose(); return@invoke }
-            loaded = session
-            opened = true
-            interaction.terrainSculpt = session?.stroke
-            listStampImages(session)
-            // the toggle may have been pressed while the session loaded: [begin] has set [requested] since
-            requested = requested || wasRequested
-            when {
-                requested && session?.stroke != null -> update()
-                requested -> { end(); session?.reason?.let(report) }
-            }
-            onChanged()
+    }
+
+    override fun sessionLoaded(session: SculptSession?, wasWanted: Boolean) {
+        opened = true
+        listStampImages(session)
+        // the toggle may have been pressed while the session loaded: [begin] has set [requested] since
+        requested = requested || wasWanted
+        when {
+            requested && session?.stroke != null -> update()
+            requested -> { end(); session?.reason?.let(report) }
         }
     }
 
-    /** Puts the brush on the view from the strip's values ([shift] inverts); leaves it while playing. */
-    fun update(shift: Boolean = false) {
-        if (play.active) { end(); return }
-        if (!requested || loaded?.stroke == null) return
-        val selected = interaction.selectedId ?: return
-        renderer.state.sculpt = SculptMode(selected, num(radius), num(strength).coerceIn(0f, 1f), shift)
-        strip.isVisible = true
-    }
+    override fun canBrush(): Boolean = requested && loaded?.stroke != null
+
+    override fun modeFor(selected: String, shift: Boolean): BrushMode =
+        BrushMode(SCULPT_BRUSH, selected, num(radius), num(strength).coerceIn(0f, 1f), shift)
 
     /** Takes the brush off the view; [notify] tells the host the sculpting is over (not when the session is only reloaded). */
-    fun end(notify: Boolean = true) {
+    override fun end(notify: Boolean) {
         val was = requested
-        interaction.terrainSculpt?.cancelled()
-        renderer.state.sculpt = null
-        renderer.brushCursor = null
+        super.end(notify)
         requested = false
-        strip.isVisible = false
         if (notify && was) onEnded()
     }
 
     /** Releases the session when the view is disposed. */
-    fun close() {
-        closed = true
-        load++
+    override fun close() {
         stampDecode++
-        end()
-        loaded?.dispose()
+        super.close()
     }
 
     private fun listStampImages(session: SculptSession?) {
@@ -256,9 +235,6 @@ internal class SculptTerrainControls(
             }
         }
     }
-
-    private fun spinner(name: String, value: Double, min: Double, max: Double, step: Double) =
-        JSpinner(SpinnerNumberModel(value, min, max, step)).apply { this.name = name }
 
     private fun num(s: JSpinner): Float = (s.value as Number).toFloat()
 }

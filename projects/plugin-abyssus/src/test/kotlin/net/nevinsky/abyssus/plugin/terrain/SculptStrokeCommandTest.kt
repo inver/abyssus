@@ -15,7 +15,8 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.core.editor.pick.SculptMode
+import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
+import net.nevinsky.abyssus.lib.core.editor.pick.SCULPT_BRUSH
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.RaiseLowerTool
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SmoothTool
@@ -57,7 +58,7 @@ class SculptStrokeCommandTest : BasePlatformTestCase() {
     ) = SculptStrokeCommand(
         project, folder, drafts, testCore.terrainSculpt, store,
         { readTerrainFolder(folder, testCore.json, testCore.terrainRecipes, testCore.terrainSculpt) },
-        { SculptMode("1", 30f, 1f) }, { tool }, { reports += it },
+        { BrushMode(SCULPT_BRUSH, "1", 30f, 1f) }, { tool }, { reports += it },
     )
 
     private fun stroke(c: SculptStrokeCommand) {

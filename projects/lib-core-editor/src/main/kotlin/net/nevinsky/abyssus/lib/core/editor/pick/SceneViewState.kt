@@ -9,28 +9,27 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
 
-/**
- * The Paint Foliage mode of a view: the terrain [entityId] (the selected entity) whose layer [layerId] mask is
- * painted, the brush [radius] in world units, the [strength] from 0 through 1, and whether the brush [erase]s
- * instead of painting (the strip's choice, flipped while Shift is held).
- */
-data class FoliagePaintMode(
-    val entityId: String,
-    val layerId: Int,
-    val radius: Float,
-    val strength: Float,
-    val erase: Boolean = false,
-)
+/** The kind of the Paint Foliage brush in [BrushMode.kind]. */
+const val FOLIAGE_BRUSH = "foliage"
+
+/** The kind of the Sculpt Terrain brush in [BrushMode.kind]. */
+const val SCULPT_BRUSH = "sculpt"
+
+/** What a brush kind keeps beside the shared fields of its [BrushMode] (the foliage layer, say); nothing reads it but the kind itself. */
+interface BrushOptions
 
 /**
- * The Sculpt Terrain mode of a view: the terrain [entityId] (the selected entity) whose heights are sculpted, the brush
- * [radius] in world units, the [strength] from 0 through 1, and whether the tool is [inverted] (Shift flips it).
+ * The terrain brush mode of a view: the brush [kind] (which [BrushStroke] strokes), the terrain [entityId] (the
+ * selected entity) it works on, the brush [radius] in world units, the [strength] from 0 through 1, and whether the
+ * brush is [reversed] (erasing, or an inverted tool; the strip resolves it, Shift included). One mode holds at a time.
  */
-data class SculptMode(
+data class BrushMode(
+    val kind: String,
     val entityId: String,
     val radius: Float,
     val strength: Float,
-    val inverted: Boolean = false,
+    val reversed: Boolean = false,
+    val options: BrushOptions? = null,
 )
 
 /** What the view has selected: an entity of the scene, or a water surface (separate namespaces, so an id is never confused). */
@@ -96,24 +95,17 @@ class SceneViewState {
     var cloudTechnique: CloudTechnique? = null
 
     /**
-     * The Paint Foliage mode this view is in, or null; gizmos are hidden and the left button paints while it is set.
-     * Selecting another entity (or nothing) ends it.
+     * The terrain brush mode this view is in, or null; gizmos are hidden and the left button strokes the terrain while it
+     * is set. Selecting another entity (or nothing) ends it. Only one brush holds at a time.
      */
-    var paint: FoliagePaintMode? = null
+    var brush: BrushMode? = null
 
-    /**
-     * The Sculpt Terrain mode this view is in, or null; like [paint] it hides the gizmos, takes the left button and ends
-     * when another entity is selected. The two brush modes never hold at once.
-     */
-    var sculpt: SculptMode? = null
+    /** Whether a terrain brush is on the view. */
+    val brushing: Boolean get() = brush != null
 
-    /** Whether a terrain brush, Paint Foliage or Sculpt Terrain, is on the view. */
-    val brushing: Boolean get() = paint != null || sculpt != null
-
-    /** Ends whichever terrain brush is on the view. */
+    /** Ends the terrain brush on the view. */
     fun endBrush() {
-        paint = null
-        sculpt = null
+        brush = null
     }
 
     /** The path arrangement being drawn (the model and the points clicked so far), or null; the left click adds points. */

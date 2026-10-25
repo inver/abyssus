@@ -18,8 +18,10 @@ internal fun SceneQueries.rayFrom(size: ViewSize, x: Int, y: Int): Ray? {
 /** What [GestureDriver] reads and calls on the view's interaction; the callbacks are read on use. */
 internal interface GestureHost {
     val size: ViewSize
-    val foliagePaint: FoliagePaint?
-    val terrainSculpt: TerrainSculpt?
+
+    /** The stroke of the brush [kind], or null when nothing implements it. */
+    fun brushStroke(kind: String): BrushStroke?
+
     val onTransform: ((String, TransformEdit) -> Boolean)?
     val onWaterMove: ((String, Vector3) -> Boolean)?
     val onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
@@ -56,11 +58,8 @@ internal sealed interface Gesture {
         var moved = false
     }
 
-    /** The Paint Foliage stroke on the terrain of [entityId]; the caller's [FoliagePaint] does the painting. */
-    class Painting(val entityId: String) : Gesture
-
-    /** The Sculpt Terrain stroke on the terrain of [entityId]; the caller's [TerrainSculpt] does the sculpting. */
-    class Sculpting(val entityId: String) : Gesture
+    /** A terrain brush stroke of [kind] on the terrain of [entityId]; the caller's [BrushStroke] of that kind does the work. */
+    class Brushing(val entityId: String, val kind: String) : Gesture
 }
 
 /**
@@ -78,8 +77,7 @@ internal class GestureDriver(
 
     val isIdle: Boolean get() = current == Gesture.Idle
     val isDragging: Boolean get() = current is Gesture.Dragging || current is Gesture.DraggingWater
-    val isPainting: Boolean get() = current is Gesture.Painting
-    val isSculpting: Boolean get() = current is Gesture.Sculpting
+    val isBrushing: Boolean get() = current is Gesture.Brushing
     val isDraggingPathPoint: Boolean get() = current is Gesture.DraggingPathPoint
 
     /** Ends whatever gesture is under way without writing; the rest of the press does nothing. */
@@ -103,14 +101,9 @@ internal class GestureDriver(
             if (!startPathGizmoDrag(id, at)) pressPathHandle(id, at)
             return
         }
-        val paint = state.paint
-        if (paint != null) {
-            startStroke(paint, at)
-            return
-        }
-        val sculpt = state.sculpt
-        if (sculpt != null) {
-            startSculpt(sculpt, at)
+        val brush = state.brush
+        if (brush != null) {
+            startBrush(brush, at)
             return
         }
         val started = grab(at) ?: return
@@ -174,27 +167,15 @@ internal class GestureDriver(
         return true
     }
 
-    /** The left press of Paint Foliage mode: a stroke starts only where the ray hits the painted terrain. */
-    private fun startStroke(paint: FoliagePaintMode, at: FramebufferPoint) {
+    /** The left press of a brush mode: a stroke starts only where the ray hits the brushed terrain. */
+    private fun startBrush(brush: BrushMode, at: FramebufferPoint) {
         val size = host.size
-        if (paint.entityId != host.selectedId) return
+        if (brush.entityId != host.selectedId) return
         val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-        val terrain = queries.terrainOf(paint.entityId) ?: return
-        val hit = queries.terrainHit(paint.entityId, ray) ?: return
-        if (host.foliagePaint?.pressed(terrain, hit) != true) return
-        current = Gesture.Painting(paint.entityId)
-        host.stateChanged()
-    }
-
-    /** The left press of Sculpt Terrain mode: a stroke starts only where the ray hits the sculpted terrain. */
-    private fun startSculpt(sculpt: SculptMode, at: FramebufferPoint) {
-        val size = host.size
-        if (sculpt.entityId != host.selectedId) return
-        val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-        val terrain = queries.terrainOf(sculpt.entityId) ?: return
-        val hit = queries.terrainHit(sculpt.entityId, ray) ?: return
-        if (host.terrainSculpt?.pressed(terrain, hit) != true) return
-        current = Gesture.Sculpting(sculpt.entityId)
+        val terrain = queries.terrainOf(brush.entityId) ?: return
+        val hit = queries.terrainHit(brush.entityId, ray) ?: return
+        if (host.brushStroke(brush.kind)?.pressed(terrain, hit) != true) return
+        current = Gesture.Brushing(brush.entityId, brush.kind)
         host.stateChanged()
     }
 
@@ -227,17 +208,11 @@ internal class GestureDriver(
                 g.moved = true
                 state.pathEdit = PathEdit(g.entityId, moved)
             }
-            is Gesture.Painting -> {
-                val mode = state.paint?.takeIf { it.entityId == g.entityId } ?: return true
+            is Gesture.Brushing -> {
+                val mode = state.brush?.takeIf { it.entityId == g.entityId && it.kind == g.kind } ?: return true
                 val ray = queries.rayFrom(size, x, y) ?: return true
                 val hit = queries.terrainHit(g.entityId, ray) ?: return true
-                host.foliagePaint?.dragged(hit, mode.erase)
-            }
-            is Gesture.Sculpting -> {
-                val mode = state.sculpt?.takeIf { it.entityId == g.entityId } ?: return true
-                val ray = queries.rayFrom(size, x, y) ?: return true
-                val hit = queries.terrainHit(g.entityId, ray) ?: return true
-                host.terrainSculpt?.dragged(hit, mode.inverted)
+                host.brushStroke(g.kind)?.dragged(hit, mode.reversed)
             }
         }
         return true
@@ -260,8 +235,7 @@ internal class GestureDriver(
                     state.pathEdit = null
                 }
             }
-            is Gesture.Painting -> host.foliagePaint?.released()
-            is Gesture.Sculpting -> host.terrainSculpt?.released()
+            is Gesture.Brushing -> host.brushStroke(ended.kind)?.released()
             is Gesture.DraggingWater -> {
                 val result = ended.result
                 if (result != null && result.transform != ended.drag.start) {
@@ -285,20 +259,17 @@ internal class GestureDriver(
         return true
     }
 
-    /** Esc: puts the dragged object back, or discards the paint stroke; neither writes anything. True when a gesture was cancelled. */
+    /** Esc: puts the dragged object back, or discards the brush stroke; neither writes anything. True when a gesture was cancelled. */
     fun escape(): Boolean {
         when (current) {
             is Gesture.DraggingPathPoint -> {
                 current = Gesture.Cancelled
                 state.pathEdit = null
             }
-            is Gesture.Painting -> {
+            is Gesture.Brushing -> {
+                val kind = (current as Gesture.Brushing).kind
                 current = Gesture.Cancelled
-                host.foliagePaint?.cancelled()
-            }
-            is Gesture.Sculpting -> {
-                current = Gesture.Cancelled
-                host.terrainSculpt?.cancelled()
+                host.brushStroke(kind)?.cancelled()
             }
             is Gesture.Dragging, is Gesture.DraggingWater -> {
                 current = Gesture.Cancelled

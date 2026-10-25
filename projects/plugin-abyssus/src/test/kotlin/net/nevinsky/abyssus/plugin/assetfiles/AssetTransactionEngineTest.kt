@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.assetfiles
 
-import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -240,7 +240,7 @@ class AssetTransactionEngineTest {
 
     private val mask = ByteArray(64) { it.toByte() }
 
-    private val rect = MaskRect(2, 2, 4, 3)
+    private val rect = GridRect(2, 2, 4, 3)
 
     /** The mask with the stroke's rectangle painted over it. */
     private val painted = mask.copyOf().also { base ->
@@ -249,7 +249,7 @@ class AssetTransactionEngineTest {
     }
 
     /** The bytes of [rect] of this mask, in the order a [MaskPatch] writes them. */
-    private fun ByteArray.region(rect: MaskRect): ByteArray {
+    private fun ByteArray.region(rect: GridRect): ByteArray {
         val out = ByteArray(rect.width * rect.height)
         var at = 0
         for (z in rect.minZ..rect.maxZ) for (x in rect.minX..rect.maxX) out[at++] = this[z * 8 + x]
@@ -298,7 +298,7 @@ class AssetTransactionEngineTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun `a patch outside the mask is refused`() {
-        MaskPatch(8, MaskRect(6, 6, 9, 9), ByteArray(16), sha256Hex(mask))
+        MaskPatch(8, GridRect(6, 6, 9, 9), ByteArray(16), sha256Hex(mask))
     }
 
     @Test(expected = IllegalArgumentException::class)

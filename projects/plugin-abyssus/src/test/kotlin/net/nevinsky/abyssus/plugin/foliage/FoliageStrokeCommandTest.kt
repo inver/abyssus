@@ -14,7 +14,9 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaintMode
+import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
+import net.nevinsky.abyssus.lib.core.editor.pick.FOLIAGE_BRUSH
+import net.nevinsky.abyssus.plugin.foliage.FoliageBrushOptions
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.slf4j.helpers.NOPLogger
@@ -29,7 +31,7 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
     private val drafts get() = project.service<FoliageDrafts>()
     private val reports = mutableListOf<String>()
-    private var mode = FoliagePaintMode("1", 1, 100f, 1f, true)
+    private var mode = BrushMode(FOLIAGE_BRUSH, "1", 100f, 1f, true, FoliageBrushOptions(1))
     override fun setUp() {
         super.setUp()
         drafts.discardAll()

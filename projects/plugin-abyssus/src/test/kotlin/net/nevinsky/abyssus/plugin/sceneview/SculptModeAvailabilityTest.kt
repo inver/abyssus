@@ -7,10 +7,12 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.math.Vector3
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaint
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneInteraction
-import net.nevinsky.abyssus.lib.core.editor.pick.TerrainSculpt
+import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
+import net.nevinsky.abyssus.lib.core.editor.pick.BrushStroke
+import net.nevinsky.abyssus.lib.core.editor.pick.FOLIAGE_BRUSH
+import net.nevinsky.abyssus.lib.core.editor.pick.SCULPT_BRUSH
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.terrain.FastNoiseSamplerFactory
@@ -36,9 +38,13 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
     private fun named(c: Component, name: String): Component? = if (c.name == name) c else
         (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
 
-    private val stroke = object : TerrainSculpt {
+    private fun sculptMode(r: SceneRenderer): BrushMode? = r.state.brush?.takeIf { it.kind == SCULPT_BRUSH }
+
+    private fun paintMode(r: SceneRenderer): BrushMode? = r.state.brush?.takeIf { it.kind == FOLIAGE_BRUSH }
+
+    private val stroke = object : BrushStroke {
         override fun pressed(terrain: TerrainTarget, at: Vector3) = true
-        override fun dragged(to: Vector3, inverted: Boolean) {}
+        override fun dragged(to: Vector3, reversed: Boolean) {}
         override fun released() {}
         override fun cancelled() {}
     }
@@ -49,8 +55,8 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
     private fun controls(renderer: SceneRenderer, play: PlayState = PlayState(null), onEnded: () -> Unit = {}, report: (String) -> Unit = {},
                          sessionOf: () -> SculptSession? = { session() }): SculptTerrainControls {
         val interaction = SceneInteraction(renderer.state, renderer.queries, OrbitCamera(Vector3(), 10f, 0f, 0.5f))
-        return SculptTerrainControls(renderer, interaction, play, { _, _, _, ready -> ready(sessionOf()) },
-            SculptToolFactory(FastNoiseSamplerFactory()), {}, {}, onEnded, report).also {
+        return SculptTerrainControls(renderer, interaction, play, BrushKinds(), { _, _, _, ready -> ready(sessionOf()) },
+            SculptToolFactory(FastNoiseSamplerFactory()), {}, onEnded, report).also {
             renderer.state.selectedId = "1"
         }
     }
@@ -66,7 +72,7 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
             panel.selectEntity("1")
             assertNull("the toggle is in the Properties panel, not the toolbar", named(panel, "sculpt-terrain"))
             panel.setSculpting("1")
-            val mode = renderer.state.sculpt!!
+            val mode = sculptMode(renderer)!!
             assertEquals("1", mode.entityId)
             assertEquals(10f, mode.radius, 0f)
             assertEquals(1f, mode.strength, 0f)
@@ -74,7 +80,7 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
             assertNull("the gizmos are hidden while sculpting", net.nevinsky.abyssus.lib.core.editor.pick.gizmoHandlesFor(
                 renderer.params.content, com.badlogic.gdx.graphics.PerspectiveCamera(67f, 10f, 10f), renderer.state, 10))
             panel.selectEntity("2")
-            assertNull(renderer.state.sculpt)
+            assertNull(sculptMode(renderer))
             assertTrue(closed)
             assertEquals("the host is told when the view ends it", 1, ended)
         } finally { panel.dispose() }
@@ -87,7 +93,7 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
         val controls = controls(renderer, onEnded = { ended++ }, report = { reasons += it }, sessionOf = { null })
         controls.refreshSession(force = true)
         controls.begin("1")
-        assertNull(renderer.state.sculpt)
+        assertNull(sculptMode(renderer))
         assertEquals("a toggle with nothing to sculpt is switched back off", 1, ended)
     }
 
@@ -98,7 +104,7 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
         val controls = controls(renderer, onEnded = { ended++ }, report = { reasons += it }, sessionOf = { session("cannot be trusted") })
         controls.refreshSession(force = true)
         controls.begin("1")
-        assertNull(renderer.state.sculpt)
+        assertNull(sculptMode(renderer))
         assertEquals(listOf("cannot be trusted"), reasons)
         assertEquals(1, ended)
     }
@@ -108,22 +114,22 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
         var ended = 0
         val pending = mutableListOf<(SculptSession?) -> Unit>()
         val interaction = SceneInteraction(renderer.state, renderer.queries, OrbitCamera(Vector3(), 10f, 0f, 0.5f))
-        val controls = SculptTerrainControls(renderer, interaction, PlayState(null), { _, _, _, ready -> pending += ready },
-            SculptToolFactory(FastNoiseSamplerFactory()), {}, {}, { ended++ }, {})
+        val controls = SculptTerrainControls(renderer, interaction, PlayState(null), BrushKinds(), { _, _, _, ready -> pending += ready },
+            SculptToolFactory(FastNoiseSamplerFactory()), {}, { ended++ }, {})
         renderer.state.selectedId = "1"
         controls.refreshSession(force = true)
         controls.begin("1")
-        assertNull("the session is not here yet", renderer.state.sculpt)
+        assertNull("the session is not here yet", sculptMode(renderer))
         pending.single()(session())
-        assertNotNull("the brush goes on when the session arrives", renderer.state.sculpt)
+        assertNotNull("the brush goes on when the session arrives", sculptMode(renderer))
         assertEquals(0, ended)
     }
 
     fun testSculptAndPaintFoliageNeverHoldAtOnce() {
         val renderer = testRenderer()
-        val paintStroke = object : FoliagePaint {
+        val paintStroke = object : BrushStroke {
             override fun pressed(terrain: TerrainTarget, at: Vector3) = true
-            override fun dragged(to: Vector3, erase: Boolean) {}
+            override fun dragged(to: Vector3, reversed: Boolean) {}
             override fun released() {}
             override fun cancelled() {}
         }
@@ -133,15 +139,15 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
         try {
             panel.selectEntity("1")
             panel.setSculpting("1")
-            assertNotNull(renderer.state.sculpt)
+            assertNotNull(sculptMode(renderer))
             (named(panel, "paint-foliage") as JToggleButton).doClick()
-            assertNotNull(renderer.state.paint)
-            assertNull(renderer.state.sculpt)
+            assertNotNull(paintMode(renderer))
+            assertNull(sculptMode(renderer))
             panel.setSculpting("1")
-            assertNotNull(renderer.state.sculpt)
-            assertNull(renderer.state.paint)
+            assertNotNull(sculptMode(renderer))
+            assertNull(paintMode(renderer))
             panel.setSculpting(null)
-            assertNull(renderer.state.sculpt)
+            assertNull(sculptMode(renderer))
         } finally { panel.dispose() }
     }
 
@@ -150,20 +156,20 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
         val controls = controls(renderer)
         controls.refreshSession(force = true)
         controls.begin("1")
-        assertFalse(renderer.state.sculpt!!.inverted)
+        assertFalse(sculptMode(renderer)!!.reversed)
         controls.update(shift = true)
-        assertTrue(renderer.state.sculpt!!.inverted)
+        assertTrue(sculptMode(renderer)!!.reversed)
         controls.update(shift = false)
-        assertFalse(renderer.state.sculpt!!.inverted)
+        assertFalse(sculptMode(renderer)!!.reversed)
         controls.end()
-        assertNull(renderer.state.sculpt)
+        assertNull(sculptMode(renderer))
     }
 
     fun testTheStripBuildsTheChosenTool() {
         val renderer = testRenderer()
         val interaction = SceneInteraction(renderer.state, renderer.queries, OrbitCamera(Vector3(), 10f, 0f, 0.5f))
-        val controls = SculptTerrainControls(renderer, interaction, PlayState(null), { _, _, _, ready -> ready(session()) },
-            SculptToolFactory(FastNoiseSamplerFactory()), {}, {}, {}, {})
+        val controls = SculptTerrainControls(renderer, interaction, PlayState(null), BrushKinds(), { _, _, _, ready -> ready(session()) },
+            SculptToolFactory(FastNoiseSamplerFactory()), {}, {}, {})
         val bar = JPanel().also { controls.addTo(it) }
         @Suppress("UNCHECKED_CAST")
         val box = named(bar, "sculpt-tool") as JComboBox<SculptToolKind>

@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptDraft
 import net.nevinsky.abyssus.plugin.terrain.SculptDrafts
 import org.junit.Assert.assertEquals
@@ -23,8 +23,8 @@ class SculptViewSyncTest {
     private class View(resolution: Int, override val assetName: String = "terrain") : SculptTarget {
         override val key: Any = Any()
         override val data = TerrainData(resolution, FloatArray(resolution * resolution), 100, 1f)
-        val refreshed = mutableListOf<MaskRect>()
-        override fun refresh(rect: MaskRect) { refreshed += rect }
+        val refreshed = mutableListOf<GridRect>()
+        override fun refresh(rect: GridRect) { refreshed += rect }
     }
 
     private val reloads = mutableListOf<Set<String>>()
@@ -44,7 +44,7 @@ class SculptViewSyncTest {
         syncB.apply(listOf(b))
         assertEquals(5f, a.data.heights[3 * resolution + 2], 0f)
         assertEquals(5f, b.data.heights[3 * resolution + 2], 0f)
-        assertEquals(listOf(MaskRect(2, 3, 2, 3)), a.refreshed)
+        assertEquals(listOf(GridRect(2, 3, 2, 3)), a.refreshed)
     }
 
     @Test
@@ -56,7 +56,7 @@ class SculptViewSyncTest {
         sync().apply(listOf(late))
         assertEquals(2f, late.data.heights[1 * resolution + 1], 0f)
         assertEquals(3f, late.data.heights[4 * resolution + 4], 0f)
-        assertEquals(listOf(MaskRect(1, 1, 4, 4)), late.refreshed)
+        assertEquals(listOf(GridRect(1, 1, 4, 4)), late.refreshed)
     }
 
     @Test

@@ -7,15 +7,18 @@ package net.nevinsky.abyssus.plugin.foliage
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.core.assets.foliage.*
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDataFile
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageFingerprint
+import net.nevinsky.abyssus.lib.core.assets.foliage.foliageMaskFileName
+import net.nevinsky.abyssus.lib.core.assets.foliage.fullMask
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.editor.brush.MaskRect
-import net.nevinsky.abyssus.lib.core.editor.brush.emptyMaskRect
+import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
+import net.nevinsky.abyssus.lib.core.editor.brush.emptyGridRect
 import net.nevinsky.abyssus.lib.core.editor.foliage.*
-import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaint
-import net.nevinsky.abyssus.lib.core.editor.pick.FoliagePaintMode
+import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
+import net.nevinsky.abyssus.plugin.brush.TerrainStrokeCommand
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.DocumentServices
 import net.nevinsky.abyssus.plugin.assetfiles.*
@@ -32,47 +35,49 @@ class FoliageStrokeCommand(
     private val drafts: FoliageDrafts,
     private val documents: DocumentServices,
     private val undoCache: FoliageUndoCache,
-    private val mode: () -> FoliagePaintMode?,
+    mode: () -> BrushMode?,
     private val background: (Runnable) -> Unit,
     private val ui: (Runnable) -> Unit,
     private val report: (String) -> Unit,
     private val readCurrent: (() -> FoliageSource)? = null,
-) : FoliagePaint {
+) : TerrainStrokeCommand<FoliageStrokeCommand.Stroke>(mode) {
     private var source = initial
-    private var active: Stroke? = null
-    @Volatile private var disposed = false
-    @Volatile private var generation = 0
+    @Volatile
+    private var disposed = false
+    @Volatile
+    private var generation = 0
     private val stagedBackups = HashSet<FoliageUndoCache.Handle>()
     private val meta get() = folder.findChild("meta.json")
     private val projectDir = File(folder.path).parentFile.parentFile
 
-    override fun pressed(terrain: TerrainTarget, at: Vector3): Boolean {
-        val selected = mode() ?: return false
-        if (disposed || active != null || terrain.entityId != selected.entityId ||
-            source.settings.layers.none { it.id == selected.layerId } || source.read.problems.isNotEmpty()) return false
+    override fun begin(terrain: TerrainTarget, at: Vector3, mode: BrushMode): Stroke? {
+        val selected = mode
+        if (disposed || source.settings.layers.none { it.id == selected.layerId } || source.read.problems.isNotEmpty()) return null
         val existing = drafts.of(source.folderName)
         if (existing?.settings?.let { it != source.settings } == true || existing?.masks?.isNotEmpty() == true) {
             report(AbyssusBundle.message("foliagePendingSettings"))
-            return false
+            return null
         }
         val draft = drafts.open(source.folderName, source.terrain, source.settings.maskResolution)
         draft.beginStroke()
         val mask = draft.editableMask(selected.layerId, source.masks.getValue(selected.layerId))
-        val stroke = Stroke(source, draft, selected, FoliageBrush(terrain.data, source.settings.maskResolution, terrain.world),
-            Vector3(at), mask, ++generation)
-        active = stroke
-        stamp(stroke, at, selected.erase)
-        return true
+        return Stroke(
+            source, draft, selected, FoliageBrush(terrain.data, source.settings.maskResolution, terrain.world),
+            Vector3(at), mask, ++generation
+        )
     }
 
-    override fun dragged(to: Vector3, erase: Boolean) {
-        val stroke = active ?: return
-        if (!stroke.releasing) stamp(stroke, to, erase)
+    override fun press(stroke: Stroke, at: Vector3, mode: BrushMode) = stamp(stroke, at, mode.reversed)
+
+    override fun drag(stroke: Stroke, to: Vector3, reversed: Boolean) {
+        if (!stroke.releasing) stamp(stroke, to, reversed)
     }
 
-    private fun stamp(stroke: Stroke, to: Vector3, erase: Boolean) {
-        val rect = stroke.brush.stroke(stroke.mask, stroke.point, to, stroke.mode.radius, stroke.mode.strength,
-            if (erase) FoliageBrushMode.Erase else FoliageBrushMode.Paint)
+    private fun stamp(stroke: Stroke, to: Vector3, reversed: Boolean) {
+        val rect = stroke.brush.stroke(
+            stroke.mask, stroke.point, to, stroke.mode.radius, stroke.mode.strength,
+            if (reversed) FoliageBrushMode.Erase else FoliageBrushMode.Paint
+        )
         stroke.point.set(to)
         stroke.rect = stroke.rect.union(rect)
         stroke.draft.stamped(stroke.mode.layerId, rect)
@@ -111,7 +116,13 @@ class FoliageStrokeCommand(
                 expected["assets/${settings.terrain}/$terrainFile"] =
                     FileSnapshot.Bytes(File(terrainFolder, terrainFile).readBytes())
                 val fresh = readCurrent?.invoke() ?: run {
-                    readFoliageSource(folder.name, projectDir, documents.json, currentText, parsing.foliageMeta(currentText))
+                    readFoliageSource(
+                        folder.name,
+                        projectDir,
+                        documents.json,
+                        currentText,
+                        parsing.foliageMeta(currentText)
+                    )
                 }
                 require(fresh is FoliageSource.Ready && fresh.sameAs(stroke.source)) {
                     AbyssusBundle.message("foliageSourceChanged")
@@ -119,10 +130,12 @@ class FoliageStrokeCommand(
                 val counted = FoliageScatter(FoliageFingerprint()).scatter(stroke.source.terrain, settings, masks)
                 if (counted.refusal != null) {
                     val candidate = counted.refusal == ScatterRefusal.CANDIDATE_LIMIT
-                    throw IllegalArgumentException(AbyssusBundle.message(
-                        if (candidate) "foliageOverCandidates" else "foliageOverLimit", counted.estimate,
-                        if (candidate) FOLIAGE_CANDIDATE_LIMIT else FOLIAGE_COPY_LIMIT,
-                    ))
+                    throw IllegalArgumentException(
+                        AbyssusBundle.message(
+                            if (candidate) "foliageOverCandidates" else "foliageOverLimit", counted.estimate,
+                            if (candidate) FOLIAGE_CANDIDATE_LIMIT else FOLIAGE_COPY_LIMIT,
+                        )
+                    )
                 }
                 val bytes = FoliageDataFile().write(counted.bake)
                 val backup = if (stroke.source.stale && stroke.source.dataSha256 != null)
@@ -151,7 +164,13 @@ class FoliageStrokeCommand(
         })
     }
 
-    private fun commit(stroke: Stroke, metadata: VirtualFile, currentText: String, masks: Map<Int, ByteArray>, staged: Staged) {
+    private fun commit(
+        stroke: Stroke,
+        metadata: VirtualFile,
+        currentText: String,
+        masks: Map<Int, ByteArray>,
+        staged: Staged
+    ) {
         if (currentText != stroke.source.metaText || textOf(metadata) != currentText) {
             release(staged.backup)
             report(AbyssusBundle.message("foliageSourceChanged"))
@@ -166,10 +185,12 @@ class FoliageStrokeCommand(
         val afterPatch = patch(after, width, stroke.rect)
         val maskName = foliageMaskFileName(stroke.mode.layerId)
         val base = "assets/${folder.name}"
-        val change = FileChange("$base/$maskName",
+        val change = FileChange(
+            "$base/$maskName",
             if (staged.maskPresent) FileSnapshot.Patch(beforePatch) else FileSnapshot.Absent,
             // A missing mask means full density; the initial write must materialize the whole mask once.
-            if (staged.maskPresent) FileSnapshot.Patch(afterPatch) else FileSnapshot.Bytes(after))
+            if (staged.maskPresent) FileSnapshot.Patch(afterPatch) else FileSnapshot.Bytes(after)
+        )
         val terrain = stroke.source.terrain
         val layer = stroke.mode.layerId
         val folderPath = folder.path
@@ -188,32 +209,56 @@ class FoliageStrokeCommand(
                 val stored = File(folderPath, foliageMaskFileName(layer)).takeIf { it.isFile }?.readBytes()
                     ?: fullMask(width)
                 val chosen = (if (forward) afterPatch else beforePatch).applyTo(stored)
-                FoliageDataFile().write(FoliageScatter(FoliageFingerprint()).scatter(terrain, settings,
-                    otherMasks + (layer to chosen)).bake)
+                FoliageDataFile().write(
+                    FoliageScatter(FoliageFingerprint()).scatter(
+                        terrain, settings,
+                        otherMasks + (layer to chosen)
+                    ).bake
+                )
             }
         }
-        val txn = AssetTransaction(AbyssusBundle.message("commandFoliageStroke"), listOf(change),
+        val txn = AssetTransaction(
+            AbyssusBundle.message("commandFoliageStroke"), listOf(change),
             expectedFiles = staged.expectedFiles,
-            derived = listOf(DerivedFile("$base/${settings.dataFileName()}", oldHash, staged.sha256, rebuild)))
+            derived = listOf(DerivedFile("$base/${settings.dataFileName()}", oldHash, staged.sha256, rebuild))
+        )
         var done = false
         val result = try {
-            AssetFileCommand(project, LocalAssetFileStore(projectDir)).execute(txn, affected = { listOf(scene, metadata) })
+            AssetFileCommand(project, LocalAssetFileStore(projectDir)).execute(
+                txn,
+                affected = { listOf(scene, metadata) })
                 .also { done = it == AssetCommandResult.Done }
         } finally {
             firstWrite = null
             synchronized(stagedBackups) { stagedBackups.remove(backup) }
             if (!done) backup?.close()
         }
-        if (done) source = FoliageSource.Ready(source.folderName, source.metaText, source.modelAssets,
-            source.read, terrain, masks, staged.sha256, false, staged.fingerprint)
-        else report(when (result) {
-            is AssetCommandResult.Conflict -> AbyssusBundle.message("foliageApplyConflict", result.path.substringAfterLast('/'))
-            is AssetCommandResult.Collision -> AbyssusBundle.message("foliageApplyConflict", result.path.substringAfterLast('/'))
-            is AssetCommandResult.Blocked -> result.reason
-            is AssetCommandResult.Failed -> AbyssusBundle.message("foliageApplyFailed", result.cause.documentDisplayMessage())
-            AssetCommandResult.Cancelled -> AbyssusBundle.message("foliageApplyCancelled")
-            AssetCommandResult.Done -> ""
-        })
+        if (done) source = FoliageSource.Ready(
+            source.folderName, source.metaText, source.modelAssets,
+            source.read, terrain, masks, staged.sha256, false, staged.fingerprint
+        )
+        else report(
+            when (result) {
+                is AssetCommandResult.Conflict -> AbyssusBundle.message(
+                    "foliageApplyConflict",
+                    result.path.substringAfterLast('/')
+                )
+
+                is AssetCommandResult.Collision -> AbyssusBundle.message(
+                    "foliageApplyConflict",
+                    result.path.substringAfterLast('/')
+                )
+
+                is AssetCommandResult.Blocked -> result.reason
+                is AssetCommandResult.Failed -> AbyssusBundle.message(
+                    "foliageApplyFailed",
+                    result.cause.documentDisplayMessage()
+                )
+
+                AssetCommandResult.Cancelled -> AbyssusBundle.message("foliageApplyCancelled")
+                AssetCommandResult.Done -> ""
+            }
+        )
         discard(stroke)
     }
 
@@ -241,7 +286,7 @@ class FoliageStrokeCommand(
         }
     }
 
-    fun dispose() {
+    override fun dispose() {
         disposed = true
         cancelled()
     }
@@ -252,7 +297,7 @@ class FoliageStrokeCommand(
     }
 
     private fun owns(stroke: Stroke) = active === stroke && generation == stroke.generation &&
-        drafts.of(stroke.source.folderName) === stroke.draft && stroke.revision == stroke.draft.revision
+            drafts.of(stroke.source.folderName) === stroke.draft && stroke.revision == stroke.draft.revision
 
     private fun discard(stroke: Stroke) {
         stroke.draft.revertStroke()
@@ -261,21 +306,28 @@ class FoliageStrokeCommand(
         abandon(stroke)
     }
 
-    private fun abandon(stroke: Stroke) { if (active === stroke) active = null }
+    private fun abandon(stroke: Stroke) {
+        if (active === stroke) active = null
+    }
 
-    private fun patch(mask: ByteArray, width: Int, rect: MaskRect): MaskPatch {
+    private fun patch(mask: ByteArray, width: Int, rect: GridRect): MaskPatch {
         val values = ByteArray(rect.width * rect.height)
         for (z in rect.minZ..rect.maxZ)
             mask.copyInto(values, (z - rect.minZ) * rect.width, z * width + rect.minX, z * width + rect.maxX + 1)
         return MaskPatch(width, rect, values, sha256Hex(mask))
     }
 
-    private class Stroke(val source: FoliageSource.Ready, val draft: FoliageDraft, val mode: FoliagePaintMode,
-        val brush: FoliageBrush, val point: Vector3, val mask: ByteArray, val generation: Int) {
-        var rect = emptyMaskRect()
+    class Stroke(
+        val source: FoliageSource.Ready, val draft: FoliageDraft, val mode: BrushMode,
+        val brush: FoliageBrush, val point: Vector3, val mask: ByteArray, val generation: Int
+    ) {
+        var rect = emptyGridRect()
         var revision = draft.revision
         var releasing = false
     }
-    private class Staged(val bytes: ByteArray, val sha256: String, val fingerprint: ByteArray,
-        val backup: FoliageUndoCache.Handle?, val expectedFiles: Map<String, FileSnapshot>, val maskPresent: Boolean)
+
+    private class Staged(
+        val bytes: ByteArray, val sha256: String, val fingerprint: ByteArray,
+        val backup: FoliageUndoCache.Handle?, val expectedFiles: Map<String, FileSnapshot>, val maskPresent: Boolean
+    )
 }

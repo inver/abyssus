@@ -41,7 +41,7 @@ class SmoothTool : SculptTool {
  * after Regenerate the pad follows the new noise (design decision 4).
  */
 class FlattenTool : SculptTool {
-    override fun changes(stamp: SculptStamp, out: FloatArray) = towards(stamp, stamp.strokeStartHeight, out)
+    override fun changes(stamp: SculptStamp, out: FloatArray) = towards(stamp, stamp.strokeStart, out)
 }
 
 /** Set height: moves each height toward [target], a height typed into the strip, in world units. */

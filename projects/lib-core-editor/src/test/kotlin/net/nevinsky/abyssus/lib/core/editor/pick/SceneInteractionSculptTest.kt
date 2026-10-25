@@ -38,19 +38,20 @@ class SceneInteractionSculptTest {
         it.update()
     }
 
-    private class RecordingSculpt(var accept: Boolean = true) : TerrainSculpt {
+    private class RecordingSculpt(var accept: Boolean = true) : BrushStroke {
         val pressed = mutableListOf<Vector3>()
         val dragged = mutableListOf<Pair<Vector3, Boolean>>()
         var released = 0
         var cancelled = 0
         override fun pressed(terrain: TerrainTarget, at: Vector3): Boolean = accept.also { if (it) pressed += Vector3(at) }
-        override fun dragged(to: Vector3, inverted: Boolean) { dragged += Vector3(to) to inverted }
+        override fun dragged(to: Vector3, reversed: Boolean) { dragged += Vector3(to) to reversed }
         override fun released() { released++ }
         override fun cancelled() { cancelled++ }
     }
 
     private val state = SceneViewState()
     private val sculpt = RecordingSculpt()
+    private val paint = RecordingSculpt()
     private val content = SceneContent(
         terrains = listOf(AssetPlacement("1", "terrain_meadow", PlacementTransform.IDENTITY)),
     )
@@ -60,7 +61,8 @@ class SceneInteractionSculptTest {
         val queries = SnapshotSceneQueries({ frame }, state) { content }
         SceneInteraction(state, queries, orbit).also {
             it.size = ViewSize(W, H, W, H)
-            it.terrainSculpt = sculpt
+            it.setBrushStroke(SCULPT_BRUSH, sculpt)
+            it.setBrushStroke(FOLIAGE_BRUSH, paint)
         }
     }
 
@@ -72,7 +74,7 @@ class SceneInteractionSculptTest {
 
     private fun sculptOn(inverted: Boolean = false) {
         state.selectedId = "1"
-        state.sculpt = SculptMode("1", 10f, 1f, inverted)
+        state.brush = BrushMode(SCULPT_BRUSH, "1", 10f, 1f, inverted)
     }
 
     @Test
@@ -148,7 +150,7 @@ class SceneInteractionSculptTest {
         val (x, y) = pixelOf(50f, 50f)
         interaction.pressed(x, y, true)
         interaction.paramsChanged(SceneRenderParams(Color(0f, 0f, 0f, 1f), null, null, CameraParams.DEFAULT, SceneContent()))
-        assertNull(state.sculpt)
+        assertNull(state.brush)
         assertEquals(1, sculpt.cancelled)
     }
 
@@ -159,5 +161,24 @@ class SceneInteractionSculptTest {
         assertNull(gizmoHandlesFor(content, camera, state, H))
         state.endBrush()
         assertFalse(state.brushing)
+    }
+
+    @Test
+    fun `a second brush assignment replaces the first, and a stroke follows only the mode it began under`() {
+        state.selectedId = "1"
+        state.brush = BrushMode(FOLIAGE_BRUSH, "1", 10f, 1f)
+        val (x, y) = pixelOf(50f, 50f)
+        interaction.pressed(x, y, true)
+        assertEquals(1, paint.pressed.size)
+        assertTrue(sculpt.pressed.isEmpty())
+        // the other brush is switched on mid-stroke: one mode holds, and the open stroke gets no more drags
+        state.brush = BrushMode(SCULPT_BRUSH, "1", 10f, 1f)
+        assertEquals(SCULPT_BRUSH, state.brush?.kind)
+        interaction.dragged(x + 20, y, true)
+        assertTrue(paint.dragged.isEmpty())
+        assertTrue(sculpt.dragged.isEmpty())
+        interaction.released(x + 20, y, true)
+        assertEquals(1, paint.released)
+        assertEquals(0, sculpt.released)
     }
 }
