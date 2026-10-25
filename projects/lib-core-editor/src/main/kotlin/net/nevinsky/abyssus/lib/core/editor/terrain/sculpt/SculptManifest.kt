@@ -46,11 +46,15 @@ data class SculptManifest(
 
 /** Reads and writes [SculptManifest] text. */
 class SculptManifestCodec(private val json: JsonProcessor) {
-    fun encode(manifest: SculptManifest) = json.toString(manifest)
+    fun encode(manifest: SculptManifest): String = json.pretty(manifest)
 
     /** The manifest in [text], or why it is not usable. */
     fun decode(text: String): Decoded = runCatchingKeepingCancellation {
-        Decoded.Manifest(json.parse(text, SculptManifest::class.java))
+        val res = json.parse(text, SculptManifest::class.java)
+        if (res.schemaVersion < SCULPT_SCHEMA_VERSION) {
+            return Decoded.Unsupported("schemaVersion ${res.schemaVersion}")
+        }
+        return Decoded.Manifest(res)
     }.getOrElse { Decoded.Malformed(it.displayMessage()) }
 
     sealed interface Decoded {
