@@ -1,0 +1,19 @@
+{
+  "importer": "model",
+  "source": "soviet_panel_building.glb",
+  "sourcePath": "/home/inv3r/Downloads/soviet_panel_building.glb",
+  "sourceSha256": "67f79fdf3c3a482ef635aa260fd9ea278c05f5abcee8f7aa017fdfed72c41877",
+  "sourceFormat": "GLB",
+  "stated": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "chosen": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "size": "original",
+  "animations": [],
+  "skipped": [],
+  "approximated": []
+}

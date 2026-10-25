@@ -577,237 +577,6 @@
           }
         }
       },
-      "314": {
-        "components": {
-          "NameComponent": {
-            "name": "Blue-roof warehouse"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -200.0,
-              "y": -1.1,
-              "z": 22.0
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.171919,
-              "z": 0.0,
-              "w": 0.985111
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_warehouse"
-          }
-        }
-      },
-      "315": {
-        "components": {
-          "NameComponent": {
-            "name": "Apartment block 1"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 195.0,
-              "y": -1.1,
-              "z": -100.0
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_apartment_block"
-          }
-        }
-      },
-      "316": {
-        "components": {
-          "NameComponent": {
-            "name": "Apartment block 2"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 195.0,
-              "y": -1.1,
-              "z": -55.0
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_apartment_block"
-          }
-        }
-      },
-      "317": {
-        "components": {
-          "NameComponent": {
-            "name": "Apartment block 3"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 252.0,
-              "y": -1.1,
-              "z": -80.0
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.741453,
-              "z": 0.0,
-              "w": 0.671005
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_apartment_block"
-          }
-        }
-      },
-      "318": {
-        "components": {
-          "NameComponent": {
-            "name": "Apartment block 4"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 205.0,
-              "y": -1.1,
-              "z": -158.0
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_apartment_block"
-          }
-        }
-      },
-      "319": {
-        "components": {
-          "NameComponent": {
-            "name": "Apartment block 5"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 265.0,
-              "y": -1.1,
-              "z": -150.0
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_apartment_block"
-          }
-        }
-      },
-      "320": {
-        "components": {
-          "NameComponent": {
-            "name": "Apartment block 6"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 190.0,
-              "y": -1.1,
-              "z": -10.0
-            },
-            "localRotation": {
-              "x": -0.0,
-              "y": -0.049814,
-              "z": 0.0,
-              "w": 0.998759
-            },
-            "localScale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_airfield_apartment_block"
-          }
-        }
-      },
       "343": {
         "components": {
           "NameComponent": {
@@ -6237,6 +6006,286 @@
             "shaderKey": "defaultShader",
             "type": "MODEL",
             "assetName": "model_airfield_table_picnic"
+          }
+        }
+      },
+      "721": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 721"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 242.47687,
+              "y": -1.1,
+              "z": -22.9113
+            },
+            "localScale": {
+              "x": 1.2,
+              "y": 1.2,
+              "z": 1.2
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_low_poly_-_soviet__apartment_building_8k"
+          }
+        }
+      },
+      "722": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 722"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 187.2143,
+              "y": 0.3999995,
+              "z": -6.096466
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_soviet_panel_building"
+          }
+        }
+      },
+      "723": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 722"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 189.26848,
+              "y": 0.3999995,
+              "z": -50.086826
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_soviet_panel_building"
+          }
+        }
+      },
+      "724": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 722"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 189.62581,
+              "y": 0.3999995,
+              "z": -98.74816
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_soviet_panel_building"
+          }
+        }
+      },
+      "725": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 722"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 191.391,
+              "y": 0.3999995,
+              "z": -141.14688
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_soviet_panel_building"
+          }
+        }
+      },
+      "726": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 721"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 244.69745,
+              "y": -1.1,
+              "z": -70.41881
+            },
+            "localScale": {
+              "x": 1.2,
+              "y": 1.2,
+              "z": 1.2
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_low_poly_-_soviet__apartment_building_8k"
+          }
+        }
+      },
+      "727": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 721"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 238.07248,
+              "y": -1.1,
+              "z": -119.72563
+            },
+            "localScale": {
+              "x": 1.2,
+              "y": 1.2,
+              "z": 1.2
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_low_poly_-_soviet__apartment_building_8k"
+          }
+        }
+      },
+      "728": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 722"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 96.402245,
+              "y": -0.08921051,
+              "z": -75.673195
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_soviet_panel_building"
+          }
+        }
+      },
+      "729": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 722"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -34.961086,
+              "y": 1.7335299,
+              "z": -89.19654
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_soviet_panel_building"
+          }
+        }
+      },
+      "730": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 722"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -119.93552,
+              "y": 1.6211392,
+              "z": 4.7060966
+            },
+            "localRotation": {
+              "x": 0.0,
+              "y": 0.719186,
+              "z": 0.0,
+              "w": -0.6948176
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_soviet_panel_building"
+          }
+        }
+      },
+      "731": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 722"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -127.295135,
+              "y": 1.5272596,
+              "z": -106.947716
+            },
+            "localRotation": {
+              "x": 0.0,
+              "y": 0.70872945,
+              "z": 0.0,
+              "w": 0.7054804
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_soviet_panel_building"
           }
         }
       }
