@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PathPoint
 import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
 import net.nevinsky.abyssus.lib.core.util.azimuthOf
 import net.nevinsky.abyssus.lib.core.util.wrapDegrees
@@ -27,7 +27,7 @@ data class PathSlot(val x: Float, val z: Float, val fallbackY: Float, val yawDeg
  * with no terrain, JSON or GL. Distances are measured on the ground plane (X and Z).
  */
 class PathLayout {
-    private data class Segment(val from: PathPoint, val to: PathPoint, val start: Double, val length: Double)
+    private data class Segment(val from: Vector3, val to: Vector3, val start: Double, val length: Double)
 
     /**
      * The slots of [arrangement] in slot order, or null when it would make more than [MAX_ARRANGEMENT_SLOTS]. A line
@@ -45,7 +45,9 @@ class PathLayout {
         // the copies follow the smooth line through the control points, so they are where the view draws it
         val sampled = PathCurve.sample(pointsOf(arrangement), arrangement.closed)
         // a closed line of two points goes there and back
-        val line = (if (arrangement.closed && points.size == 2) sampled + sampled.first() else sampled).map { PathPoint(it.x, it.y, it.z) }
+        val line = if (arrangement.closed && points.size == 2) {
+            sampled + sampled.first()
+        } else sampled
         val segments = segments(line, false)
         val length = segments.sumOf { it.length }
         val perStation = if (arrangement.sides == PathSides.BOTH) 2 else 1
@@ -63,7 +65,7 @@ class PathLayout {
         return out
     }
 
-    private fun segments(points: List<PathPoint>, closed: Boolean): List<Segment> {
+    private fun segments(points: List<Vector3>, closed: Boolean): List<Segment> {
         val out = ArrayList<Segment>()
         var start = 0.0
         val count = if (closed) points.size else points.size - 1

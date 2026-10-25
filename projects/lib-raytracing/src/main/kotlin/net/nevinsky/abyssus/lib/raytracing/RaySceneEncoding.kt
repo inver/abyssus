@@ -75,9 +75,9 @@ internal class RaySceneEncoding(private val scene: RaySceneSnapshot) {
             val uv = m.uvs();
             val tangent = m.tangents()
             for (i in 0 until m.vertexCount) {
-                if (normals != null) normals.copyInto(out, at, i * 3, i * 3 + 3)
-                if (uv != null) uv.copyInto(out, at + 3, i * 2, i * 2 + 2)
-                if (tangent != null) tangent.copyInto(out, at + 5, i * 4, i * 4 + 4)
+                normals?.copyInto(out, at, i * 3, i * 3 + 3)
+                uv?.copyInto(out, at + 3, i * 2, i * 2 + 2)
+                tangent?.copyInto(out, at + 5, i * 4, i * 4 + 4)
                 out[at + 9] = if (normals != null) 1f else 0f; out[at + 10] = if (tangent != null) 1f else 0f; at += 12
             }
         }

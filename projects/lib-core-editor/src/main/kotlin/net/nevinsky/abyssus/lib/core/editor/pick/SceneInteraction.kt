@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 
 
@@ -107,13 +108,13 @@ class SceneInteraction(
         override val foliagePaint: FoliagePaint? get() = this@SceneInteraction.foliagePaint
         override val onTransform: ((String, TransformEdit) -> Boolean)? get() = this@SceneInteraction.onTransform
         override val onWaterMove: ((String, Vector3) -> Boolean)? get() = this@SceneInteraction.onWaterMove
-        override val onArrangementEdit: ((String, List<Vector3>) -> Boolean)? get() = this@SceneInteraction.onArrangementEdit
+        override val onArrangementEdit: ((String, List<Vector3>) -> Boolean)? get() = this@SceneInteraction.stagedEdit
         override val selectedId: String? get() = this@SceneInteraction.selectedId
         override fun editOf(entityId: String, result: DragResult) = this@SceneInteraction.editOf(entityId, result)
         override fun stateChanged() = this@SceneInteraction.stateChanged()
     }
     private val gestures = GestureDriver(state, queries, host)
-    private val drawingSession = DrawingSession(state, queries, { size }, { onArrangementCreate }, { onArrangementEdit }, ::stateChanged)
+    private val drawingSession = DrawingSession(state, queries, { size }, { onArrangementCreate }, { stagedEdit }, ::stateChanged)
 
     val isDragging: Boolean get() = gestures.isDragging
 
@@ -152,12 +153,58 @@ class SceneInteraction(
         stateChanged()
     }
 
+    /** Where the ground is under the scene, for dropping control points; null when the view has none yet. */
+    var groundHeights: (() -> GroundHeight?)? = null
+
+    /**
+     * New points for an arrangement: while its control points are edited they are only kept as a draft that Apply writes
+     * and Close drops; otherwise they go to [onArrangementEdit].
+     */
+    private val stagedEdit: (String, List<Vector3>) -> Boolean = { id, points ->
+        if (state.pathEditing == id) {
+            state.pathEdit = null
+            state.pathDraft = PathEdit(id, points.toList())
+            stateChanged()
+            true
+        } else {
+            onArrangementEdit?.invoke(id, points) ?: false
+        }
+    }
+
+    /** Whether the edit of the control points holds changes not written yet. */
+    val hasPathDraft: Boolean get() = state.pathDraft != null
+
+    /** Writes the draft points of the arrangement being edited through [onArrangementEdit]; false when there was nothing to write or it failed. */
+    fun applyPathDraft(): Boolean {
+        val draft = state.pathDraft ?: return false
+        val written = onArrangementEdit?.invoke(draft.entityId, draft.points) ?: false
+        if (written) state.pathDraft = null
+        stateChanged()
+        return written
+    }
+
+    /** Drops the point [index] of the arrangement being edited onto the ground, into the draft. */
+    fun dropPathPoint(index: Int): Boolean = dropPath { it == index }
+
+    /** Drops every control point of the arrangement being edited onto the ground, into the draft. */
+    fun dropPath(): Boolean = dropPath { true }
+
+    private fun dropPath(which: (Int) -> Boolean): Boolean {
+        val id = state.pathEditing ?: return false
+        val ground = groundHeights?.invoke() ?: return false
+        val points = queries.pathPoints(id) ?: return false
+        val dropped = points.mapIndexed { i, p -> if (which(i)) Vector3(p.x, ground.heightAt(p.x, p.z, p.y), p.z) else p }
+        if (dropped == points) return false
+        return stagedEdit(id, dropped)
+    }
+
     /** The arrangement whose control points are being edited, or null. */
     val pathEditing: String? get() = state.pathEditing
 
     /** Starts (or, with null, ends) editing the control points of the arrangement [id], selecting it. */
     fun setPathEditing(id: String?) {
         state.pathEdit = null
+        state.pathDraft = null
         state.selectedPathPoint = null
         state.pathEditing = id
         if (id != null) {
@@ -174,6 +221,7 @@ class SceneInteraction(
         state.pathEditing = null
         state.selectedPathPoint = null
         state.pathEdit = null
+        state.pathDraft = null
         onPathEditEnded?.invoke()
     }
 
@@ -234,8 +282,19 @@ class SceneInteraction(
     /** Enter: finishes the drawing as an open line; nothing happens, and drawing continues, with fewer than two points. */
     fun enter() = drawingSession.enter()
 
-    /** Backspace: drops the last point of the drawing. */
-    fun backspace() = drawingSession.backspace()
+    /** Backspace / Delete: drops the last point of the drawing, or removes the selected control point of the arrangement being edited. */
+    fun backspace() {
+        val id = state.pathEditing
+        val index = state.selectedPathPoint
+        if (state.drawing == null && id != null && index != null) {
+            if (drawingSession.removePoint(id, index)) {
+                state.selectedPathPoint = null
+                stateChanged()
+            }
+            return
+        }
+        drawingSession.backspace()
+    }
 
     /** Whether point [index] of the arrangement [entityId] can be removed: at least two points must remain. */
     fun canRemovePoint(entityId: String): Boolean = drawingSession.canRemovePoint(entityId)
@@ -294,12 +353,8 @@ class SceneInteraction(
             return
         }
         val picked = (target as? SceneTarget.Entity)?.id
-        // A line lies on the terrain, so it wins over the terrain under it but not over a model (a copy) in front of it.
-        val line = if (picked == null || queries.content.terrains.any { it.entityId == picked }) {
-            queries.pathLineAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
-        } else null
         // a model that belongs to a path arrangement stands for the whole arrangement
-        val hit = line ?: picked?.let { queries.content.arrangementOf(it) ?: it }
+        val hit = picked?.let { queries.content.arrangementOf(it) ?: it }
         var changed = hit != selectedId
         selectedId = hit
         // Selecting another entity (or nothing) ends the Paint Foliage mode.

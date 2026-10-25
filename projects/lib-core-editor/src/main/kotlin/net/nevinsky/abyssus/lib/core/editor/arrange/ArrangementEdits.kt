@@ -61,7 +61,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
             return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
         }
         val component = PathArrangementComponent()
-        component.points = points.map { PathPoint(it.x, it.y, it.z) }.toMutableList()
+        component.points = points.map { Vector3(it.x, it.y, it.z) }.toMutableList()
         component.closed = closed
         component.asset = PathAsset(MetaType.MODEL, asset.name)
         val slots = layout.slots(component) ?: return tooMany()

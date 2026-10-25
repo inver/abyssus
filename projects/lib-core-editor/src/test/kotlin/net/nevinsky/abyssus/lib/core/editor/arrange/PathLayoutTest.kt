@@ -5,17 +5,15 @@
 
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PathPoint
 import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 
 class PathLayoutTest {
     private fun line(
-        vararg points: PathPoint,
+        vararg points: Vector3,
         closed: Boolean = false,
         spacing: Float = 10f,
         offset: Float = 0f,
@@ -32,7 +30,7 @@ class PathLayoutTest {
         it.yawOffset = yaw
     }
 
-    private fun p(x: Float, z: Float, y: Float = 0f) = PathPoint(x, y, z)
+    private fun p(x: Float, z: Float, y: Float = 0f) = Vector3(x, y, z)
 
     private fun slots(c: PathArrangementComponent) = PathLayout().slots(c)!!
 

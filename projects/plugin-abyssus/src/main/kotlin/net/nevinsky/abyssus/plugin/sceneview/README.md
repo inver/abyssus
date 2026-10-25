@@ -27,7 +27,7 @@ the toolbar, Play and the view's asset storage.
 | `CornerOverlay`, `CornerSprite`, `CornerPainter` (`OrientationWidget`, `StatsStrip`), `cornerRect` | The orientation widget (upper right) and the stats strip (lower left). A Swing component cannot sit over the heavyweight canvas, so Swing paints each into an image (`toImage`, at the display scale) and `CornerOverlay` draws it as a blended quad after the loading overlay, uploading the texture only when the painter's `version` changes. A press on the widget's disc is handled by the panel (`pressOnOrientationWidget`, look along the clicked axis from its side) and never reaches the scene. The geometry is `cornerRect`, tested headless |
 | `FpsCounter`, `SceneViewSettings` | The optional frame rate. `SceneViewSettings` (project service over the IDE's project `PropertiesComponent`, EDT) holds `showFps`; `SceneFileEditor` applies it to every view it creates (`SceneView.setFpsEnabled`) and to open views when it changes, and the panel also reads the setting itself before every frame (`showFps`), so a missed change event cannot leave the counter off. `FpsCounter` is pure: the panel gives it nanosecond timestamps before a frame (`frameStarted`) and after its buffer swap (`frameCompleted`), it publishes a whole number once a window reached a second, and `reset` (disable, unsafe or hidden surface, `removeNotify`, failure, context abandonment, disposal) forgets everything so the next sample never includes inactive time. The value is drawn as the first part of the stats strip (`<n> fps`, `-- fps` before the first sample); sampling adds no timer or render |
 | `ViewDisplay`, `Shading` | The Shadows / Fog / Grid toggles and Lit / Unlit / Wireframe of one view, set on `SceneRenderer.display` and read on the next frame. Per view and never saved; the scene's own `fogEnabled` is untouched. Unlit gives every material a white ambient and no lights or shadow pass; Wireframe draws every content drawable (models, terrains, foliage OBJECT layers, skybox cube, water) as edges only with `glPolygonMode(GL_LINE)` |
-| `SceneInputForwarder` | Keys (Q / W / E / F / D / Esc / Enter / Backspace) and the canvas mouse: into `SceneInteraction`, into the simulation while playing, the arrangement point menu |
+| `SceneInputForwarder` | Keys (Q / W / E / F / D / Esc / Enter / Backspace / Delete) and the canvas mouse: into `SceneInteraction`, into the simulation while playing, the arrangement point menu |
 | `RayControlBinding` | The view's ray feed, the mode the Properties switch shows and its listeners |
 | `CloudControls`, `PlayControlsStrip`, `FoliagePaintControls` | The Clouds choice and fallback, the Play / Pause / Step / Stop buttons, the foliage brush and its paint session |
 | `PlacementMenu` | An "Add ..." menu: whether it can be offered, and its choices (`lightMenu`, `assetMenu`, `pathMenu` of the panel) |
@@ -217,13 +217,12 @@ The toolbar's Add Path Arrangement button (`add-path-arrangement`) lists the pro
 `AddPathArrangementGroup` (`SceneFileEditor` supplies `pathActions` and `canAddPath` through `SceneViewHost`). Choosing one
 calls `SceneView.startDrawing`, which puts `SceneInteraction` in drawing mode (a hint shows in the toolbar). The renderer
 draws the line with a handle on each point and a cross with a post at every copy's ground height (`SceneMarkers.drawPath`);
-no model is drawn in the preview. A selected arrangement shows the same with a handle in the middle of each segment;
-unselected ones show a bare line a click can select (a model in front of it wins over the line, the line over the terrain).
+no model is drawn in the preview. A finished arrangement shows its line, handles and crosses only while its control points are edited; otherwise it shows only its copies, and the line cannot be clicked.
 
-Finishing writes through `SceneFileEditor.createArrangement`, a point drag, insert or Remove Point through `editArrangement`,
+Finishing writes through `SceneFileEditor.createArrangement`, a point drag or Remove Point through `editArrangement`,
 and the Regenerate button (shown while an arrangement is selected) through `regenerateArrangement`. The ground comes from
 `SceneView.groundHeights()` (the last drawn frame's terrains, answers kept per terrain data) and, when the view has no
-frame yet, from `ArrangementHeights`. Remove Point is on the right-click menu of a point handle and is disabled at two points.
+frame yet, from `ArrangementHeights`. Remove Point is on the right-click menu of a point handle and is disabled at two points; Backspace or Delete removes the selected point in the edit mode under the same limit, and Drop to terrain on that menu puts it on the ground. While the edit is on, changes stay in `SceneViewState.pathDraft`, and the renderer lays the copies out along it at the line's own height (`ArrangementPreview`, so the models follow the points, in the air too, before Apply); Apply (`SceneView.applyPathEdit`) writes them, Close drops them, and Drop path to terrain (`dropPathToTerrain`) drops every point. The three buttons replace Edit in the Properties panel and go through `PathEditSession`.
 
 ## Spotlight illumination
 

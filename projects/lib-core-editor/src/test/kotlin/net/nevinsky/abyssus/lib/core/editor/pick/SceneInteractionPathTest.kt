@@ -8,6 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import com.badlogic.gdx.math.collision.BoundingBox
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
@@ -250,7 +251,7 @@ class SceneInteractionPathTest {
     }
 
     @Test
-    fun draggingTheGizmoMovesThePointAndWritesOnRelease() {
+    fun draggingTheGizmoMovesThePointAndKeepsItAsADraftUntilApply() {
         val f = editing()
         f.selectPoint(80f, 50f)
         val handles = f.queries.gizmoHandles(H)!!
@@ -265,17 +266,60 @@ class SceneInteractionPathTest {
         assertNear(20f, 50f, shown.points[0])
         assertTrue(f.edits.isEmpty())
         f.interaction.released(x1, y1, true)
+        assertTrue(f.edits.isEmpty())
+        assertTrue(f.interaction.hasPathDraft)
+        assertTrue(f.state.pathDraft!!.points[1].x < 79f)
+        assertTrue(f.interaction.applyPathDraft())
         assertEquals(1, f.edits.size)
         assertTrue(f.edits[0].second[1].x < 79f)
+        assertFalse(f.interaction.hasPathDraft)
     }
 
     @Test
-    fun aMiddleHandleInsertsAPointAtOnceAndSelectsIt() {
-        val f = editing()
+    fun deleteKeyRemovesTheSelectedControlPointInTheEditMode() {
+        val f = editing(listOf(Vector3(20f, 0f, 50f), Vector3(50f, 0f, 50f), Vector3(80f, 0f, 50f)))
         f.selectPoint(50f, 50f)
-        val points = f.edits.single().second
-        assertEquals(3, points.size)
-        assertNear(50f, 50f, points[1])
+        f.interaction.backspace()
+        assertTrue(f.edits.isEmpty())
+        val points = f.state.pathDraft!!.points
+        assertEquals(2, points.size)
+        assertNear(80f, 50f, points[1])
+        assertNull(f.state.selectedPathPoint)
+    }
+
+    @Test
+    fun closingTheEditDropsTheDraft() {
+        val f = editing(listOf(Vector3(20f, 0f, 50f), Vector3(50f, 0f, 50f), Vector3(80f, 0f, 50f)))
+        f.selectPoint(50f, 50f)
+        f.interaction.backspace()
+        f.interaction.setPathEditing(null)
+        assertFalse(f.interaction.hasPathDraft)
+        assertTrue(f.edits.isEmpty())
+    }
+
+    @Test
+    fun dropPutsEveryPointOnTheGround() {
+        val f = editing(listOf(Vector3(20f, 5f, 50f), Vector3(80f, 7f, 50f)))
+        f.interaction.groundHeights = { GroundHeight { _, _, _ -> 2f } }
+        assertTrue(f.interaction.dropPath())
+        assertEquals(listOf(2f, 2f), f.state.pathDraft!!.points.map { it.y })
+        assertTrue(f.edits.isEmpty())
+    }
+
+    @Test
+    fun dropPointPutsOnlyThatPointOnTheGround() {
+        val f = editing(listOf(Vector3(20f, 5f, 50f), Vector3(80f, 7f, 50f)))
+        f.interaction.groundHeights = { GroundHeight { _, _, _ -> 2f } }
+        assertTrue(f.interaction.dropPathPoint(1))
+        assertEquals(listOf(5f, 2f), f.state.pathDraft!!.points.map { it.y })
+    }
+
+    @Test
+    fun deleteKeyKeepsTheLastTwoControlPoints() {
+        val f = editing()
+        f.selectPoint(80f, 50f)
+        f.interaction.backspace()
+        assertTrue(f.edits.isEmpty())
         assertEquals(1, f.state.selectedPathPoint)
     }
 
@@ -329,10 +373,11 @@ class SceneInteractionPathTest {
     }
 
     @Test
-    fun clickingTheLineSelectsTheArrangement() {
+    fun theLineIsNotClickableOutsideTheEditMode() {
         val f = fixture(arrangement = true)
         f.click(35f, 50f)
-        assertEquals("5", f.interaction.selectedId)
+        assertEquals("1", f.interaction.selectedId)
+        assertNull(f.interaction.pathEditing)
     }
 
     @Test
@@ -366,13 +411,5 @@ class SceneInteractionPathTest {
         val f = fixture(arrangement = false, copy = true)
         f.click(50f, 50f)
         assertEquals("12", f.interaction.selectedId)
-    }
-
-    @Test
-    fun clickingTheLineKeepsTheHandlesHiddenUntilEdit() {
-        val f = fixture(arrangement = true)
-        f.click(35f, 50f)
-        assertEquals("5", f.interaction.selectedId)
-        assertNull(f.interaction.pathEditing)
     }
 }

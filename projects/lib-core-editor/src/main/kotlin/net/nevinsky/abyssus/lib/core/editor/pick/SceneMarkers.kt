@@ -28,7 +28,6 @@ private const val SLOT_MARKER_HALF = 0.4f
 private const val SLOT_MARKER_HEIGHT = 1.2f
 /** The half-size of the diamond on a control point, and of the smaller one halfway along a segment (world units). */
 const val PATH_POINT_HALF = 0.5f
-const val PATH_MIDDLE_HALF = PATH_POINT_HALF / 2f
 
 /** How wide the edges of a control object are drawn, in screen pixels. */
 const val PATH_HANDLE_WIDTH_PX = 3f
@@ -49,7 +48,6 @@ private val SELECTED_HANDLE_COLOR = Rgba(1f, 0.35f, 0.2f, 1f)
 
 /** How wide the line of a path arrangement is drawn, in screen pixels. */
 const val PATH_WIDTH_PX = 4f
-private val MIDDLE_HANDLE_COLOR = Rgba(0.6f, 0.8f, 1f, 1f)
 private val FRUSTUM_COLOR = Rgba(0.55f, 0.7f, 0.95f, 1f)
 
 /**
@@ -148,7 +146,6 @@ class SceneMarkers {
         selectedPoint: Int? = null,
     ) {
         val points = pointsOf(path)
-        val count = PathCurve.spanCount(points.size, path.closed)
         val line = PathCurve.sample(points, path.closed)
         for (i in 0 until line.size - 1) out.thickLine(line[i], line[i + 1], PATH_COLOR, PATH_WIDTH_PX)
         if (slots) for (slot in PathLayout().slots(path).orEmpty()) {
@@ -160,7 +157,6 @@ class SceneMarkers {
         }
         if (!handles) return
         for ((i, p) in points.withIndex()) drawDiamond(out, p, PATH_POINT_HALF, if (i == selectedPoint) SELECTED_HANDLE_COLOR else POINT_HANDLE_COLOR, PATH_HANDLE_WIDTH_PX)
-        for (i in 0 until count) drawDiamond(out, PathCurve.at(points, path.closed, i, 0.5f), PATH_MIDDLE_HALF, MIDDLE_HANDLE_COLOR, PATH_HANDLE_WIDTH_PX)
     }
 
     private fun drawDiamond(out: LineSink, p: Vector3, r: Float, color: Rgba, widthPx: Float) {

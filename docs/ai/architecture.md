@@ -210,8 +210,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 - **Path arrangements:** Add Path Arrangement (tree scene row and toolbar, `AddPathArrangementGroup`) puts the view in
   drawing mode: `SceneViewState.drawing` holds the model and the points, and `SceneInteraction` adds a point where a
   left click hits a terrain (`SceneQueries.groundHit`), closes on the first point, finishes on Enter or a double click,
-  drops the last point on Backspace and cancels on Esc. A selected arrangement shows `PathHandles`: dragging a point or
-  a middle handle is a `DraggingPathPoint` gesture whose points are shown through `SceneViewState.pathEdit` until the
+  drops the last point on Backspace and cancels on Esc. A selected arrangement shows `PathHandles`: dragging a point handle is a `DraggingPathPoint` gesture whose points are shown through `SceneViewState.pathEdit` until the
   release calls `SceneFileEditor.editArrangement`. Both write through `editSceneJson` with `ArrangementEdits`
   (`lib-core-editor`, `editor.arrange`), one undoable command each. The copies' heights come from `GroundHeight`: the
   open view's `GroundHeights` over its drawn terrains, else `ArrangementHeights` (plugin `sceneview`), which reads the scene's

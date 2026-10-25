@@ -96,20 +96,28 @@ internal class EntityDetailsView @JvmOverloads constructor(
     }
 
     /**
-     * Edit and Apply for the spline of a path arrangement: Edit shows the control points in the Scene view (a click on one
-     * gives it the move gizmo), Apply ends the editing. The buttons follow the project's [PathEditSession].
+     * Edit for the spline of a path arrangement shows the control points in the Scene view (a click on one gives it the
+     * move gizmo); while it is on, Drop path to terrain, Close (drops the changes) and Apply (writes them) replace Edit.
+     * The buttons follow the project's [PathEditSession].
      */
     private fun pathEditBar(): JComponent {
         val session = project.service<PathEditSession>()
         val edit = JButton(AbyssusBundle.message("arrangementEditSpline")).apply { name = "arrangement-edit"; isFocusable = false }
+        val drop = JButton(AbyssusBundle.message("arrangementDropSpline")).apply { name = "arrangement-drop"; isFocusable = false }
+        val close = JButton(AbyssusBundle.message("arrangementCloseSpline")).apply { name = "arrangement-close"; isFocusable = false }
         val apply = JButton(AbyssusBundle.message("arrangementApplySpline")).apply { name = "arrangement-apply"; isFocusable = false }
         fun editing() = session.current?.let { it.file == target.file && it.entityId == target.entityId } == true
         fun sync() {
-            edit.isEnabled = !editing()
-            apply.isEnabled = editing()
+            val on = editing()
+            edit.isVisible = !on
+            drop.isVisible = on
+            close.isVisible = on
+            apply.isVisible = on
         }
         edit.addActionListener { session.start(target.file, target.entityId) }
-        apply.addActionListener { session.stop(target.file) }
+        drop.addActionListener { session.drop(target.file) }
+        close.addActionListener { session.stop(target.file) }
+        apply.addActionListener { session.apply(target.file) }
         sync()
         return object : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), JBUI.scale(4))) {
             private var connection: com.intellij.util.messages.MessageBusConnection? = null
@@ -130,6 +138,8 @@ internal class EntityDetailsView @JvmOverloads constructor(
         }.apply {
             isOpaque = false
             add(edit)
+            add(drop)
+            add(close)
             add(apply)
         }
     }

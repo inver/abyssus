@@ -64,9 +64,6 @@ interface SceneQueries {
     /** The handle of the selected arrangement's line under the pixel, or null. */
     fun pathHandleAt(screenX: Int, screenY: Int, width: Int, height: Int): PathHit?
 
-    /** The arrangement whose line passes within a few pixels of the pixel, or null. */
-    fun pathLineAt(screenX: Int, screenY: Int, width: Int, height: Int): String?
-
     /** How many pixels the pixel ([screenX], [screenY]) is from where the world point [at] is drawn; null when it is off screen. */
     fun screenDistance(at: Vector3, screenX: Int, screenY: Int, width: Int, height: Int): Float?
 
@@ -240,27 +237,6 @@ class SnapshotSceneQueries(
         if (width <= 0 || height <= 0) return null
         return PathHandles(points, arrangement.arrangement.closed)
             .hit(ScreenProjection(frame.camera, width, height), screenX.toFloat(), screenY.toFloat())
-    }
-
-    override fun pathLineAt(screenX: Int, screenY: Int, width: Int, height: Int): String? {
-        val frame = snapshot() ?: return null
-        if (width <= 0 || height <= 0) return null
-        val projection = ScreenProjection(frame.camera, width, height)
-        var best: String? = null
-        var bestDistance = PATH_LINE_PX
-        for (placement in content.arrangements) {
-            val points = pathPoints(placement.entityId) ?: continue
-            val d = PathHandles(points, placement.arrangement.closed).lineDistance(
-                projection,
-                screenX.toFloat(),
-                screenY.toFloat()
-            ) ?: continue
-            if (d <= bestDistance) {
-                bestDistance = d
-                best = placement.entityId
-            }
-        }
-        return best
     }
 
     override fun screenDistance(at: Vector3, screenX: Int, screenY: Int, width: Int, height: Int): Float? {

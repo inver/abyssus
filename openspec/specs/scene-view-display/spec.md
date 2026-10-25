@@ -8,11 +8,11 @@ Defines the scene view's display controls (shading, Shadows, Fog, Grid), Frame s
 
 ### Requirement: View layer toggles
 
-The toolbar SHALL have Shadows, Fog and Grid toggles, each on by default. Turning one off SHALL hide that layer in this view only; it SHALL NOT change the scene's `fogEnabled`, any light's shadow setting or any file. A toggle SHALL take effect on the next frame without reopening the view. Shadows and Fog SHALL be disabled when the scene has nothing that uses them.
+The toolbar SHALL have Shadows, Fog and Grid toggles; Shadows and Fog are on by default and Grid is off. Turning one off SHALL hide that layer in this view only; it SHALL NOT change the scene's `fogEnabled`, any light's shadow setting or any file. A toggle SHALL take effect on the next frame without reopening the view. Shadows and Fog SHALL be disabled when the scene has nothing that uses them.
 
-#### Scenario: Hide the grid
-- **WHEN** the user turns Grid off
-- **THEN** the ground grid is not drawn and the scene file is unchanged
+#### Scenario: Show the grid
+- **WHEN** the user turns Grid on
+- **THEN** the ground grid is drawn and the scene file is unchanged
 
 #### Scenario: Fog toggle is separate from the scene setting
 - **WHEN** the scene has `fogEnabled` true and the user turns the Fog toggle off

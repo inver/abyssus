@@ -25,12 +25,12 @@ class SceneViewToolsModelTest {
         throughCamera: Boolean = false,
     ) = toolbarState(mode, experimenting, playing, true, true, true, display, shadowCasters, fog, throughCamera)
 
-    @Test fun aNewViewStartsInWorldWithSnapOffAndEverythingOn() {
+    @Test fun aNewViewStartsInWorldWithSnapAndGridOffAndShadowsAndFogOn() {
         val m = SceneViewToolsModel()
         assertEquals(GizmoSpace.WORLD, m.space)
         assertFalse(m.snapOn)
         assertEquals(DEFAULT_SNAP_STEP, m.snapStep, 0f)
-        assertEquals(ViewDisplay(shadows = true, fog = true, grid = true, shading = Shading.LIT), m.display)
+        assertEquals(ViewDisplay(shadows = true, fog = true, grid = false, shading = Shading.LIT), m.display)
     }
 
     @Test fun onlyRealChangesNotifyTheListener() {
@@ -38,11 +38,11 @@ class SceneViewToolsModelTest {
         var calls = 0
         m.onChanged = { calls++ }
         m.space = GizmoSpace.WORLD
-        m.setGrid(true)
+        m.setGrid(false)
         assertEquals(0, calls)
         m.space = GizmoSpace.LOCAL
         m.snapOn = true
-        m.setGrid(false)
+        m.setGrid(true)
         m.setShading(Shading.UNLIT)
         assertEquals(4, calls)
     }

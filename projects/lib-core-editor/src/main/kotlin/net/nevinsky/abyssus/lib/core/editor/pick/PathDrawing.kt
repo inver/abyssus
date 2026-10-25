@@ -23,9 +23,6 @@ data class PathEdit(val entityId: String, val points: List<Vector3>)
 sealed interface PathHit {
     /** The handle on point [index]. */
     data class Point(val index: Int) : PathHit
-
-    /** The handle in the middle of segment [segment] (from point `segment` to the next, or back to the first). */
-    data class Middle(val segment: Int) : PathHit
 }
 
 /** A point on the screen, in the pixels of the view. */
@@ -44,23 +41,15 @@ class ScreenProjection(private val camera: PerspectiveCamera, private val width:
     }
 }
 
-/** The pixel radius in which a click grabs a handle, and in which it selects a line. */
+/** The pixel radius in which a click grabs a handle. */
 const val PATH_HANDLE_PX = PATH_HANDLE_WIDTH_PX / 2f + 3f
-const val PATH_LINE_PX = 8f
 
 /**
- * Hit tests for the line of an arrangement: the handle on each point, the handle in the middle of each segment, and
- * the segments themselves. Distances are in screen pixels, so a handle is as easy to grab far away as near.
+ * Hit tests for the line of an arrangement: the handle on each point and the segments themselves. Distances are in screen pixels, so a handle is as easy to grab far away as near.
  */
 class PathHandles(private val points: List<Vector3>, private val closed: Boolean) {
-    /** Number of segments: one fewer than the points, or as many when the line closes. */
-    val segmentCount: Int get() = PathCurve.spanCount(points.size, closed)
-
-    /** The middle of segment [segment], on the smooth line. */
-    fun middle(segment: Int): Vector3 = PathCurve.at(points, closed, segment, 0.5f)
-
     /**
-     * The handle under the pixel ([x], [y]), a point handle before a middle one; null when no edge of any handle's diamond
+     * The handle under the pixel ([x], [y]), null when no edge of any handle's diamond
      * is within [radius] pixels of it (an edge of the drawn control object is what a click has to meet).
      */
     fun hit(projection: ScreenProjection, x: Float, y: Float, radius: Float = PATH_HANDLE_PX): PathHit? {
@@ -71,14 +60,6 @@ class PathHandles(private val points: List<Vector3>, private val closed: Boolean
             if (d <= bestDistance) {
                 bestDistance = d
                 best = PathHit.Point(i)
-            }
-        }
-        if (best != null) return best
-        for (i in 0 until segmentCount) {
-            val d = edgeDistance(projection, middle(i), PATH_MIDDLE_HALF, x, y) ?: continue
-            if (d <= bestDistance) {
-                bestDistance = d
-                best = PathHit.Middle(i)
             }
         }
         return best
@@ -96,18 +77,6 @@ class PathHandles(private val points: List<Vector3>, private val closed: Boolean
         return best
     }
 
-    /** The distance in pixels from ([x], [y]) to the nearest segment, or null when no segment is on screen. */
-    fun lineDistance(projection: ScreenProjection, x: Float, y: Float): Float? {
-        var best: Float? = null
-        val line = PathCurve.sample(points, closed)
-        for (i in 0 until line.size - 1) {
-            val a = projection.at(line[i]) ?: continue
-            val b = projection.at(line[i + 1]) ?: continue
-            val d = distanceToSegment(x, y, a, b)
-            if (best == null || d < best) best = d
-        }
-        return best
-    }
 
     private fun distanceToSegment(x: Float, y: Float, a: ScreenPoint, b: ScreenPoint): Float {
         val dx = b.x - a.x

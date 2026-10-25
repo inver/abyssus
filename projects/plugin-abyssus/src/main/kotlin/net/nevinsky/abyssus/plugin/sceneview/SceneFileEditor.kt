@@ -41,6 +41,7 @@ import com.intellij.util.ui.update.Update
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
@@ -164,8 +165,18 @@ class SceneFileEditor(
             view?.selectEntity(entityId)
         }
         host.listenWater(file, this) { waterId -> view?.selectWater(waterId) }
-        project.messageBus.connect(this).subscribe(PathEditListener.TOPIC, PathEditListener { target ->
-            view?.setPathEditing(target?.takeIf { it.file == file }?.entityId)
+        project.messageBus.connect(this).subscribe(PathEditListener.TOPIC, object : PathEditListener {
+            override fun changed(target: PathEditTarget?) {
+                view?.setPathEditing(target?.takeIf { it.file == file }?.entityId)
+            }
+
+            override fun applyRequested(target: PathEditTarget) {
+                if (target.file == file) view?.applyPathEdit()
+            }
+
+            override fun dropRequested(target: PathEditTarget) {
+                if (target.file == file) view?.dropPathToTerrain()
+            }
         })
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
@@ -311,10 +322,12 @@ class SceneFileEditor(
         return true
     }
 
-    /** Writes new points for the arrangement [entityId] and regenerates its copies, as one undoable command. */
+    /**
+     * Writes new points for the arrangement [entityId] and regenerates its copies, as one undoable command. The copies
+     * follow the line's own height, so a raised point raises them; Regenerate puts them back on the terrain.
+     */
     internal fun editArrangement(entityId: String, points: List<Vector3>): Boolean {
-        val heights = ground() ?: return false
-        val result = ArrangementEditing.setPoints(project, file, entityId, points, heights)
+        val result = ArrangementEditing.setPoints(project, file, entityId, points, LineHeights())
         ArrangementEditing.report(project, result)
         return result is ArrangementResult.Changed
     }

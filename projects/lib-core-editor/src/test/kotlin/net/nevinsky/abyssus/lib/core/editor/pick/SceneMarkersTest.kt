@@ -119,14 +119,14 @@ class SceneMarkersTest {
     }
 
     @Test
-    fun handlesAddADiamondOnEachPointAndAMiddleOne() {
+    fun handlesAddADiamondOnEachPoint() {
         val plain = Recorder().also {
             SceneMarkers().drawPath(it, arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))), LineHeights(), handles = false)
         }
         val withHandles = Recorder().also {
             SceneMarkers().drawPath(it, arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))), LineHeights(), handles = true)
         }
-        // an octahedron has twelve edges: two points and one middle
-        assertEquals(3 * 12, withHandles.lines.size - plain.lines.size)
+        // an octahedron has twelve edges: two points
+        assertEquals(2 * 12, withHandles.lines.size - plain.lines.size)
     }
 }

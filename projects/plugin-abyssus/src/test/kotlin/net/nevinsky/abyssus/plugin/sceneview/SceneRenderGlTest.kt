@@ -775,14 +775,14 @@ class SceneRenderGlTest {
     fun everyDisplayModeRendersWithoutAGlError() {
         val p = params("Untitled", "Main Scene.scene")
         for (display in listOf(
-            ViewDisplay(), ViewDisplay(grid = false), ViewDisplay(fog = false), ViewDisplay(shadows = false), ViewDisplay(shading = Shading.UNLIT),
+            ViewDisplay(), ViewDisplay(grid = true), ViewDisplay(fog = false), ViewDisplay(shadows = false), ViewDisplay(shading = Shading.UNLIT),
         )) assertNull("$display", renderWith(p, display).error)
     }
 
     @Test
     fun theGridToggleChangesThePicture() {
         val p = params("Untitled", "Main Scene.scene")
-        assertTrue(differs(renderWith(p, ViewDisplay()).image, renderWith(p, ViewDisplay(grid = false)).image))
+        assertTrue(differs(renderWith(p, ViewDisplay(grid = true)).image, renderWith(p, ViewDisplay(grid = false)).image))
     }
 
     @Test

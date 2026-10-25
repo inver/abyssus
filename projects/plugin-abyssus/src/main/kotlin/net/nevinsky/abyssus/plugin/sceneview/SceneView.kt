@@ -66,6 +66,12 @@ interface SceneView : Disposable {
     /** Starts (with an id) or ends (null) editing the control points of an arrangement; the view selects it. */
     fun setPathEditing(entityId: String?) {}
 
+    /** Writes the control point changes made since Edit (Apply); false when there was nothing to write or the write failed. */
+    fun applyPathEdit(): Boolean = false
+
+    /** Drops every control point of the arrangement being edited onto the terrain, as an unapplied change. */
+    fun dropPathToTerrain() {}
+
     /** Called when the view ended the control point edit itself because the selection moved on. */
     var onPathEditEnded: (() -> Unit)?
         get() = null

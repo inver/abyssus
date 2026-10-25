@@ -320,9 +320,9 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         try {
             val display = actionsOf(panel, "AbyssusSceneDisplay")
             val grid = display.last() as com.intellij.openapi.actionSystem.ToggleAction
-            assertTrue(panel.tools.display.grid)
-            grid.setSelected(TestActionEvent.createTestEvent(grid), false)
             assertFalse(panel.tools.display.grid)
+            grid.setSelected(TestActionEvent.createTestEvent(grid), true)
+            assertTrue(panel.tools.display.grid)
             assertTrue(panel.tools.display.shadows && panel.tools.display.fog)
         } finally { panel.dispose() }
     }

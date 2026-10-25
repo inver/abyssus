@@ -47,6 +47,7 @@ internal class SceneInputForwarder(
         bind(KeyEvent.VK_ESCAPE) { if (!play.escape()) interaction.escape() }
         bind(KeyEvent.VK_ENTER) { if (!play.active) interaction.enter() }
         bind(KeyEvent.VK_BACK_SPACE) { if (!play.active) interaction.backspace() }
+        bind(KeyEvent.VK_DELETE) { if (!play.active) interaction.backspace() }
     }
 
     /** While playing, every key but Escape goes to the simulation and is consumed, so no editor shortcut fires. */
@@ -158,7 +159,7 @@ internal class SceneInputForwarder(
     }
 
     /**
-     * The right-click menu of a point handle of the selected arrangement: Remove Point, disabled while only two points
+     * The right-click menu of a point handle of the selected arrangement: Drop to terrain and Remove Point, disabled while only two points
      * remain. True when the click hit a handle and the menu was shown (the press is then not a pan).
      */
     private fun pointMenu(e: MouseEvent): Boolean {
@@ -169,6 +170,10 @@ internal class SceneInputForwarder(
         val at = size.toFramebuffer(e.x, e.y)
         val hit = renderer.queries.pathHandleAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) as? PathHit.Point ?: return false
         val menu = JPopupMenu()
+        menu.add(JMenuItem(AbyssusBundle.message("dropPathPoint")).apply {
+            name = "drop-path-point"
+            addActionListener { interaction.dropPathPoint(hit.index) }
+        })
         menu.add(JMenuItem(AbyssusBundle.message("removePathPoint")).apply {
             name = "remove-path-point"
             isEnabled = interaction.canRemovePoint(id)

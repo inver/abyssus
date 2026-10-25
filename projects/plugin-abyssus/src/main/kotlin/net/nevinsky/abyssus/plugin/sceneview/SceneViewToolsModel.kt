@@ -14,7 +14,7 @@ enum class Shading { LIT, UNLIT, WIREFRAME }
 data class ViewDisplay(
     val shadows: Boolean = true,
     val fog: Boolean = true,
-    val grid: Boolean = true,
+    val grid: Boolean = false,
     val shading: Shading = Shading.LIT,
 ) {
     /** Whether the shadow pass runs. */

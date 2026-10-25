@@ -5,12 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.render.shadow.cameraUp
-
-import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
-import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
-import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.g3d.Model
@@ -23,32 +19,32 @@ import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
-import net.nevinsky.abyssus.lib.core.editor.content.*
-import net.nevinsky.abyssus.lib.core.editor.water.InvalidWater
-import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
-import net.nevinsky.abyssus.lib.core.editor.water.WaterPreview
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementPreview
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.Pose
+import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.lib.core.editor.ray.RayFrameContext
 import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneDisplay
-import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
-import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.core.editor.scene.PendingAssetRevision
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.scene.cameraDirectionOf
+import net.nevinsky.abyssus.lib.core.editor.scene.*
+import net.nevinsky.abyssus.lib.core.editor.water.InvalidWater
+import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
+import net.nevinsky.abyssus.lib.core.editor.water.WaterPreview
+import net.nevinsky.abyssus.lib.core.water.WaterPassPlan
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
-import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
+import net.nevinsky.abyssus.lib.render.shadow.cameraUp
 import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
+import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
 import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw
 import net.nevinsky.abyssus.plugin.sceneview.shadows.SceneShadows
-import net.nevinsky.abyssus.plugin.sceneview.water.SceneWater
-import net.nevinsky.abyssus.plugin.sceneview.water.WaterFrameInput
-import net.nevinsky.abyssus.lib.core.water.WaterPassPlan
-import com.badlogic.gdx.graphics.Camera
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SunDirection
 import net.nevinsky.abyssus.plugin.sceneview.skybox.blendAxisColors
+import net.nevinsky.abyssus.plugin.sceneview.water.SceneWater
+import net.nevinsky.abyssus.plugin.sceneview.water.WaterFrameInput
 import org.lwjgl.opengl.GL11
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
@@ -96,8 +92,24 @@ class SceneRenderer(
             val p = state.preview
             val moved = if (p.isEmpty()) c else ScenePreview().apply(c, p)
             val water = state.waterPreview
-            return if (water.isEmpty()) moved else moved.copy(water = WaterPreview().apply(moved.water, water))
+            val withWater = if (water.isEmpty()) moved else moved.copy(water = WaterPreview().apply(moved.water, water))
+            return withDraftCopies(withWater)
         }
+
+    private var draftOf: PathEdit? = null
+    private var draftBase: SceneContent? = null
+    private var draftContent: SceneContent? = null
+
+    /** [c] with the copies of the arrangement being edited laid out along its unapplied points. */
+    private fun withDraftCopies(c: SceneContent): SceneContent {
+        val draft = state.pathDraft ?: return c
+        if (draft === draftOf && c === draftBase) draftContent?.let { return it }
+        return ArrangementPreview().apply(c, draft, LineHeights()).also {
+            draftOf = draft
+            draftBase = c
+            draftContent = it
+        }
+    }
 
     /** Other plugins' overlays for this view; drawn after the markers, then again over everything. */
     internal var overlays: SceneOverlayHost? = null
@@ -108,6 +120,7 @@ class SceneRenderer(
     private val foliage get() = contentPass.foliage
     private val environment get() = contentPass.environment
     private var batch: ModelBatch? = null
+
     /** Asset changes waiting for a frame that can safely replace GL resources; merged until [render] takes them. */
     private val pendingRevision = PendingAssetRevision()
 
@@ -130,6 +143,7 @@ class SceneRenderer(
     internal val skyLeaseActive get() = skyPass.skyLeaseActive
     internal var drawnCloudTechnique: CloudTechnique? = null
         private set
+
     internal fun cloudsEnabled(p: SceneRenderParams = params) = skyPass.cloudsEnabled(p)
     private var overlay: LoadingOverlay? = null
     private var corners: CornerOverlay? = null
@@ -137,6 +151,7 @@ class SceneRenderer(
     /** The Swing-painted images drawn in the corners of the view after everything else; set on the AWT thread before a frame. */
     @Volatile
     internal var cornerSprites: List<CornerSprite> = emptyList()
+
     /**
      * What this view draws: the Shadows, Fog and Grid toggles and the shading. Per view and never saved; set on the AWT thread
      * and read on the next frame. Leaving Unlit makes the lights be applied to the environment again.
@@ -286,8 +301,15 @@ class SceneRenderer(
         foliage.update(c.foliages, p.projectDir, camera)
         updateDrawnVersion()
         skybox?.update(c.skybox, p.projectDir)
-        skybox?.updateLighting(c.skybox, SunDirection.of(c.lights), skyClock.seconds, true, skyClock.lastStep.toDouble())
-        val skyLight = (SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) } as? SceneAmbient.Sky)?.environment
+        skybox?.updateLighting(
+            c.skybox,
+            SunDirection.of(c.lights),
+            skyClock.seconds,
+            true,
+            skyClock.lastStep.toDouble()
+        )
+        val skyLight =
+            (SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) } as? SceneAmbient.Sky)?.environment
         val hdrAmbient = skyLight?.let { current ->
             val fading = skybox?.fadingTo(c.skybox)
             blendAxisColors(current.ambient, fading?.environment?.ambient, fading?.weight ?: 0f)
@@ -310,13 +332,28 @@ class SceneRenderer(
             ?.takeIf { compatibleRayDisplay(it, c, width, height) }
         presentedRayFrame = rayDisplay != null
         val atlas =
-            if (rayDisplay == null && display.drawsShadows) shadows?.render(camera, lights, environment, models.drawn, terrains.drawn, foliage) else null
+            if (rayDisplay == null && display.drawsShadows) shadows?.render(
+                camera,
+                lights,
+                environment,
+                models.drawn,
+                terrains.drawn,
+                foliage
+            ) else null
         shadowedLightIds = atlas?.records?.mapTo(HashSet()) { it.lightId } ?: emptySet()
         // water: planned once per frame; null (the ordinary path) when no valid surface above the camera is in view
         val waterInput = if (rayDisplay == null) waterInputOf(p, c, width, height, deltaSeconds) else null
         val waterPlan = waterInput?.let { water().begin(it) }
         if (waterPlan != null) {
-            water().renderReflections(waterPlan, waterInput) { mirrored, clip -> drawReflected(p, c, atlas, mirrored, clip) }
+            water().renderReflections(waterPlan, waterInput) { mirrored, clip ->
+                drawReflected(
+                    p,
+                    c,
+                    atlas,
+                    mirrored,
+                    clip
+                )
+            }
         } else {
             lastWaterPlan = null
         }
@@ -338,7 +375,11 @@ class SceneRenderer(
             }
             if (waterPlan != null) {
                 wireframePass {
-                    water().drawSurfaces(waterPlan, waterInput!!, skyPass.waterSkyCube(c, water().usesSkyFallback(waterPlan)))
+                    water().drawSurfaces(
+                        waterPlan,
+                        waterInput!!,
+                        skyPass.waterSkyCube(c, water().usesSkyFallback(waterPlan))
+                    )
                     renderContent(p, c, atlas, parts = ContentParts.BLENDED)
                 }
             }
@@ -457,7 +498,13 @@ class SceneRenderer(
 
     /** [GroundHeights] over the frame's terrains, with answers kept until a terrain's data or transform changes. */
     private fun ground(frame: FrameSnapshot): GroundHeight {
-        val key = frame.terrains.map { Triple(System.identityHashCode(it.data), it.entityId, it.world.values.contentHashCode()) }
+        val key = frame.terrains.map {
+            Triple(
+                System.identityHashCode(it.data),
+                it.entityId,
+                it.world.values.contentHashCode()
+            )
+        }
         groundMemo?.takeIf { key == groundKey }?.let { return it }
         return MemoizedGround(GroundHeights(frame.terrains)).also {
             groundKey = key
@@ -484,15 +531,13 @@ class SceneRenderer(
         val ground = if (frame != null) ground(frame) else LineHeights()
         val markers = SceneMarkers()
         state.drawing?.let { markers.drawPath(lines, arrangementAlong(it.points), ground, handles = true) }
+        // a line and its handles show only while its control points are edited
         for (placement in c.arrangements) {
-            val selected = placement.entityId == state.selectedId
-            val edited = state.pathEdit?.takeIf { it.entityId == placement.entityId }
-            val path = if (edited != null) arrangementAlong(edited.points, placement.arrangement) else placement.arrangement
-            val editing = placement.entityId == state.pathEditing
-            markers.drawPath(
-                lines, path, ground, handles = editing, slots = selected,
-                selectedPoint = state.selectedPathPoint.takeIf { editing },
-            )
+            if (placement.entityId != state.pathEditing) continue
+            val edited = (state.pathEdit ?: state.pathDraft)?.takeIf { it.entityId == placement.entityId }
+            val path =
+                if (edited != null) arrangementAlong(edited.points, placement.arrangement) else placement.arrangement
+            markers.drawPath(lines, path, ground, handles = true, slots = true, selectedPoint = state.selectedPathPoint)
         }
     }
 
@@ -535,7 +580,8 @@ class SceneRenderer(
         return box.takeIf { it.isValid }
     }
 
-    private fun water(): SceneWater = (water ?: SceneWater(shaders, log).also { water = it }).also { it.frozenSeconds = waterTime }
+    private fun water(): SceneWater =
+        (water ?: SceneWater(shaders, log).also { water = it }).also { it.frozenSeconds = waterTime }
 
     /** Stands the water animation at this time (seconds) instead of letting it run; for tests that compare frames. */
     internal var waterTime: Double? = null
@@ -548,7 +594,13 @@ class SceneRenderer(
     internal val waterStatus: SceneWater? get() = water
 
     /** What the water passes read of this frame; logs each invalid surface once and never draws it. */
-    private fun waterInputOf(p: SceneRenderParams, c: SceneContent, width: Int, height: Int, deltaSeconds: Float): WaterFrameInput? {
+    private fun waterInputOf(
+        p: SceneRenderParams,
+        c: SceneContent,
+        width: Int,
+        height: Int,
+        deltaSeconds: Float
+    ): WaterFrameInput? {
         if (c.water.isEmpty()) return null
         for (surface in c.water) if (surface is InvalidWater && loggedInvalidWater.add(surface.id + surface.problems)) {
             log.warn("Water surface '${surface.name}' (${surface.id}) is skipped: ${surface.problems.joinToString("; ")}")
@@ -563,7 +615,13 @@ class SceneRenderer(
     }
 
     /** The sky and the opaque scene through the mirrored [view], clipped to what is above the water ([clip]). */
-    private fun drawReflected(p: SceneRenderParams, c: SceneContent, atlas: ShadowAtlasAttribute?, view: Camera, clip: FloatArray) {
+    private fun drawReflected(
+        p: SceneRenderParams,
+        c: SceneContent,
+        atlas: ShadowAtlasAttribute?,
+        view: Camera,
+        clip: FloatArray
+    ) {
         wireframePass {
             skyPass.draw(view, p)
             Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)

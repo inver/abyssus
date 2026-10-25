@@ -31,7 +31,7 @@ class PathHandlesTest {
     private fun pixel(p: Vector3): ScreenPoint = projection.at(p)!!
 
     @Test
-    fun aPointAndAMiddleProjectToTheScreen() {
+    fun aPointProjectsToTheScreen() {
         val p = pixel(Vector3(50f, 0f, 40f))
         assertEquals(400f, p.x, 1f)
         assertEquals(300f, p.y, 1f)
@@ -50,38 +50,5 @@ class PathHandlesTest {
         val edge = pixel(Vector3(points[1].x + PATH_POINT_HALF, points[1].y, points[1].z))
         assertEquals(PathHit.Point(1), handles.hit(projection, edge.x, edge.y))
         assertNull(handles.hit(projection, s.x + 40, s.y))
-    }
-
-    @Test
-    fun aMiddleHandleIsHitWhereNoPointIs() {
-        val handles = PathHandles(points, closed = false)
-        val s = pixel(handles.middle(0))
-        assertEquals(PathHit.Middle(0), handles.hit(projection, s.x, s.y))
-        assertEquals(2, handles.segmentCount)
-    }
-
-    @Test
-    fun aPointHandleWinsOverAMiddleHandleUnderTheSamePixel() {
-        val near = listOf(Vector3(50f, 0f, 50f), Vector3(50.2f, 0f, 50f))
-        val handles = PathHandles(near, closed = false)
-        val s = pixel(near[0])
-        assertTrue(handles.hit(projection, s.x, s.y) is PathHit.Point)
-    }
-
-    @Test
-    fun aClosedLineHasAClosingSegment() {
-        val handles = PathHandles(points, closed = true)
-        assertEquals(3, handles.segmentCount)
-        val s = pixel(handles.middle(2))
-        assertEquals(PathHit.Middle(2), handles.hit(projection, s.x, s.y))
-    }
-
-    @Test
-    fun theLineIsHitNearASegmentOnly() {
-        val handles = PathHandles(points, closed = false)
-        val on = pixel(Vector3(35f, 0f, 55f))
-        assertTrue(handles.lineDistance(projection, on.x, on.y + 3)!! < PATH_LINE_PX)
-        assertTrue(handles.lineDistance(projection, on.x, on.y + 100)!! > PATH_LINE_PX)
-        assertNotNull(handles.lineDistance(projection, 0f, 0f))
     }
 }

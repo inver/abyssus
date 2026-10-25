@@ -93,7 +93,10 @@ class SceneViewState {
     /** The points of an arrangement while a handle is dragged or just dropped, shown over the file's; null otherwise. */
     var pathEdit: PathEdit? = null
 
-    /** The arrangement whose control points are being edited (Edit in the Properties panel until Apply), or null. */
+    /** The points of [pathEditing] edited so far and not yet written; Apply writes them, Close drops them. Null before the first change. */
+    var pathDraft: PathEdit? = null
+
+    /** The arrangement whose control points are being edited (Edit in the Properties panel until Apply or Close), or null. */
     var pathEditing: String? = null
 
     /** The control point of [pathEditing] that wears the move gizmo, or null. */

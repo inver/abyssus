@@ -55,7 +55,7 @@ class SceneViewPanel internal constructor(
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     internal val orbit = OrbitCamera(initial.camera)
-    private val interaction = SceneInteraction(renderer.state, renderer.queries, orbit)
+    private val interaction = SceneInteraction(renderer.state, renderer.queries, orbit).also { it.groundHeights = { renderer.groundHeights() } }
 
     private var lastCamera = initial.camera
 
@@ -407,6 +407,12 @@ class SceneViewPanel internal constructor(
         interaction.setPathEditing(entityId)
         if (entityId != null) requestFocusInWindow()
         syncControls()
+    }
+
+    override fun applyPathEdit(): Boolean = interaction.applyPathDraft()
+
+    override fun dropPathToTerrain() {
+        interaction.dropPath()
     }
 
     override var onPathEditEnded: (() -> Unit)?
