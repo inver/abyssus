@@ -27,31 +27,7 @@
   "skyboxEnabled": true,
   "skyboxName": "skybox_physical",
   "abyssus": {
-    "waterSurfaces": {
-      "5b0c6f0e-3c1d-4f4a-9a58-7d2f6a1e9b31": {
-        "name": "Lake",
-        "preset": "LAKE",
-        "enabled": true,
-        "position": {
-          "x": -94.0,
-          "y": -1.2,
-          "z": -106.0
-        },
-        "width": 64.0,
-        "length": 64.0,
-        "tint": {
-          "r": 0.03,
-          "g": 0.22,
-          "b": 0.25
-        },
-        "clarity": 8.0,
-        "waveAmplitude": 0.08,
-        "waveLength": 4.0,
-        "waveSpeed": 0.5,
-        "foamAmount": 0.5,
-        "foamWidth": 0.6
-      }
-    }
+    "waterSurfaces": {}
   },
   "ecs": {
     "entities": {
@@ -6387,35 +6363,6 @@
           }
         }
       },
-      "736": {
-        "archetype": 0,
-        "components": {
-          "NameComponent": {
-            "name": "Model 633"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": -204.19766,
-              "y": -1.1019287,
-              "z": -65.92216
-            },
-            "localRotation": {
-              "x": 0.0,
-              "y": -0.6751551,
-              "z": 0.0,
-              "w": -0.7376758
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "model_3_storey_residential_building"
-          }
-        }
-      },
       "737": {
         "archetype": 0,
         "components": {
@@ -6456,9 +6403,9 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": -242.02716,
+              "x": -229.4398,
               "y": -1.1013489,
-              "z": -138.13026
+              "z": -119.308914
             }
           },
           "RenderComponent": {
@@ -6479,9 +6426,9 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": -244.85701,
+              "x": -219.99637,
               "y": -1.0975494,
-              "z": -45.921112
+              "z": -26.17331
             }
           },
           "RenderComponent": {
@@ -6502,9 +6449,9 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": -252.64316,
+              "x": -249.2311,
               "y": -1.0993347,
-              "z": 17.899757
+              "z": 11.677025
             },
             "localScale": {
               "x": 1.2,
@@ -6530,9 +6477,9 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": -280.28397,
-              "y": -1.1006393,
-              "z": -115.03595
+              "x": -205.37796,
+              "y": -1.1006241,
+              "z": -70.10451
             },
             "localScale": {
               "x": 1.2,
@@ -6614,7 +6561,7 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": 121.73844,
+              "x": 142.35419,
               "y": -1.0989456,
               "z": -205.05853
             },
@@ -6754,9 +6701,9 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": -313.45462,
-              "y": 0.0,
-              "z": -66.07622
+              "x": -287.85785,
+              "y": -1.5258789E-5,
+              "z": -113.502884
             },
             "localScale": {
               "x": 1.2,
@@ -6782,9 +6729,9 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": -295.0699,
-              "y": -1.0992355,
-              "z": -16.158993
+              "x": -291.18103,
+              "y": -1.0992203,
+              "z": -8.645094
             },
             "localScale": {
               "x": 1.2,
@@ -6810,9 +6757,9 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": -298.49136,
+              "x": -278.6217,
               "y": -1.1000595,
-              "z": -227.48332
+              "z": -266.22165
             },
             "localScale": {
               "x": 1.2,
@@ -6838,9 +6785,9 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": -257.4282,
+              "x": -254.19312,
               "y": -1.099266,
-              "z": -296.76862
+              "z": -180.74335
             },
             "localScale": {
               "x": 1.2,
@@ -6852,6 +6799,86 @@
             "shaderKey": "defaultShader",
             "type": "MODEL",
             "assetName": "model_low_poly_-_soviet__apartment_building_8k"
+          }
+        }
+      },
+      "753": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 722"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 196.27525,
+              "y": -1.100769,
+              "z": -227.31879
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_soviet_panel_building"
+          }
+        }
+      },
+      "754": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 721"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -289.94812,
+              "y": -1.0980377,
+              "z": -66.720856
+            },
+            "localScale": {
+              "x": 1.2,
+              "y": 1.2,
+              "z": 1.2
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_low_poly_-_soviet__apartment_building_8k"
+          }
+        }
+      },
+      "755": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 722"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": -212.03177,
+              "y": -1.0996246,
+              "z": -230.59375
+            },
+            "localRotation": {
+              "x": 0.0,
+              "y": 0.70872945,
+              "z": 0.0,
+              "w": 0.7054804
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_soviet_panel_building"
           }
         }
       }
