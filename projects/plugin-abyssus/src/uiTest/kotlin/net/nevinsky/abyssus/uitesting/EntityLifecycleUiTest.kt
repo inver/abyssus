@@ -1,5 +1,7 @@
 package net.nevinsky.abyssus.uitesting
 
+import com.intellij.remoterobot.fixtures.ComponentFixture
+import com.intellij.remoterobot.search.locators.byXpath
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,6 +22,7 @@ class EntityLifecycleUiTest : UiTestBase() {
     @After
     fun closeProperties() {
         runCatching { if (frame.propertiesWindow() != null) frame.closeProperties() }
+        runCatching { ide.closeFile(scene.toString()) }
     }
 
     private fun openEcs(): AbyssusTree {
@@ -196,6 +199,33 @@ class EntityLifecycleUiTest : UiTestBase() {
             removeEntityRow(tree, "$label ${11 + index}", 11 + index)
         }
         assertTrue("the scene is as before", LifecycleHarness.sameExcept(original, Files.readString(scene), "/ecs/11"))
+    }
+
+    private fun toolbarButton(name: String) = frame.find<ComponentFixture>(byXpath("//div[@name='$name' and @class='JButton']"), Duration.ofSeconds(30))
+
+    @Test
+    fun lightAndAssetFromTheSceneToolbarCreateEntitiesLikeTheTreeMenu() {
+        val original = Files.readString(scene)
+        val tree = openEcs()
+        ide.openSceneView(scene.toString())
+        frame.sceneToolbar().also { it.awaitShown() }
+        LifecycleHarness.awaitState("Add Light is enabled", true, Duration.ofSeconds(60)) {
+            toolbarButton("add-light").callJs<Boolean>("component.isEnabled()", runInEdt = true)
+        }
+        toolbarButton("add-light").click()
+        frame.choosePopupItem("Directional")
+        LifecycleHarness.awaitState("the toolbar light is saved as entity 11", true) { entity(11)?.get("components")?.has("LightComponent") == true }
+        LifecycleHarness.awaitState("its row is in the tree", true) { hasRow(tree, "Directional Light 11") }
+
+        toolbarButton("add-asset").click()
+        frame.choosePopupItem("tree")
+        LifecycleHarness.awaitState("the toolbar model is saved as entity 12", "tree") { entity(12)?.get("components")?.get("RenderComponent")?.findValue("assetName")?.asText() }
+        LifecycleHarness.awaitState("its row is in the tree", true) { hasRow(tree, "Model 12") }
+
+        removeEntityRow(tree, "Model 12", 12)
+        removeEntityRow(tree, "Directional Light 11", 11)
+        assertTrue("the scene is as before", LifecycleHarness.sameExcept(original, Files.readString(scene), "/ecs/11"))
+        assertEquals("both source assets are untouched", emptySet<String>(), project.differences() - setOf(scenePath))
     }
 
     @Test

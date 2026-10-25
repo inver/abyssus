@@ -95,6 +95,63 @@ class NativeAdmissionUiTest : UiTestBase() {
         assertTrue("the number spelling survived", after.contains("-3.0353080"))
     }
 
+    @Test
+    fun aPropertiesEditKeepsUnknownDataNumberTextKeyOrderAndOmittedDefaults() {
+        val root = SceneJson().parseObject(Files.readString(scene))
+        root.putObject("x-extension").put("keep", "me").putArray("list").add(1).add(2)
+        val prepared = SceneJson().pretty(root).replaceFirst(Regex("\"x\": -3\\.035308"), "\"x\": -3.0353080")
+        assertTrue("the spelling was prepared", prepared.contains("-3.0353080"))
+        Files.writeString(scene, prepared)
+        ide.refresh(scene.toString())
+        ide.refresh(project.dir.toString())
+        ide.refreshProjectView()
+        runCatching { frame.reopenAbyssusView() }
+        val tree = frame.selectAbyssusView()
+        frame.normalizeLayout(ide)
+        tree.expand("Untitled.abss")
+        tree.expand("Scenes")
+        frame.openProperties()
+        tree.clickRow(SceneFacts.read(scene).treeLabel)
+        LifecycleHarness.awaitState("scene Properties show the ray limits", true) { frame.properties().exists("ray-setting-maxInstances") }
+        // a value equal to the default is not written: the omitted block stays omitted
+        frame.properties().enter("ray-setting-maxInstances", "4096")
+        Thread.sleep(1500)
+        assertEquals("a default for an omitted setting writes nothing", prepared, Files.readString(scene))
+        frame.properties().enter("ray-setting-maxInstances", "512")
+        LifecycleHarness.awaitState("the setting is saved", true) { Files.readString(scene).contains("\"maxInstances\": 512") }
+        val after = Files.readString(scene)
+        assertTrue("only the new settings block differs", LifecycleHarness.sameExcept(prepared, after, "/rayTracing"))
+        assertTrue("the unknown extension survived", after.contains("\"x-extension\"") && after.contains("\"keep\": \"me\""))
+        assertTrue("the number spelling survived", after.contains("-3.0353080"))
+    }
+
+    @Test
+    fun anAssetPropertiesEditKeepsUnknownDataAndKeyOrder() {
+        val terrain = project.dir.resolve("assets").toFile().listFiles()!!.filter { it.isDirectory }.sortedBy { it.name }
+            .first { Regex("\"type\"\\s*:\\s*\"TERRAIN\"").containsMatchIn(Files.readString(it.toPath().resolve("meta.json"))) }
+        val meta = terrain.toPath().resolve("meta.json")
+        val root = SceneJson().parseObject(Files.readString(meta))
+        root.putObject("x-extension").put("keep", "me")
+        val prepared = SceneJson().pretty(root)
+        Files.writeString(meta, prepared)
+        ide.refresh(meta.toString())
+        ide.refreshProjectView()
+        val tree = frame.selectAbyssusView()
+        frame.openProperties()
+        tree.expand("Scenes")
+        tree.expand(SceneFacts.read(scene).treeLabel)
+        tree.expandAssets()
+        frame.normalizeLayout(ide)
+        tree.clickRow(terrain.name)
+        LifecycleHarness.awaitState("the terrain's fields are shown", true) { frame.properties().exists("asset-field-size") }
+        frame.properties().enter("asset-field-size", "777")
+        LifecycleHarness.awaitState("the size is saved", true) { Files.readString(meta).contains("777") }
+        frame.saveAll()
+        val after = Files.readString(meta)
+        assertTrue("only the size member differs", LifecycleHarness.sameExcept(prepared, after, "/additional/size"))
+        assertTrue("the unknown extension survived", after.contains("\"x-extension\"") && after.contains("\"keep\": \"me\""))
+    }
+
     private fun variants(valid: String): Map<String, String> {
         fun edit(change: (ObjectNode) -> Unit): String = SceneJson().parseObject(valid).also(change).let { SceneJson().pretty(it) }
         return linkedMapOf(

@@ -363,6 +363,11 @@ tasks.prepareSandbox {
     from(playHostLibs) { into(pluginName.map { "$it/play-host" }) }
 }
 
+// The IDE the UI tests drive has its own sandbox; Play needs the same bundled host there.
+tasks.matching { it.name == "prepareSandbox_runIdeForUiTests" }.configureEach {
+    (this as org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask).from(playHostLibs) { into(pluginName.map { "$it/play-host" }) }
+}
+
 val checkNoJoltInZip by tasks.registering {
     val archive = tasks.buildPlugin.flatMap { it.archiveFile }
     dependsOn(tasks.buildPlugin)
