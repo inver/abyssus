@@ -182,10 +182,12 @@ class SceneViewPanel internal constructor(
 
         override fun contextLost() = antialiasing.abandoned()
 
-        override fun paintFrame(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame) {
+        override fun frameStarting(canvas: GuardedGLCanvas) {
             updateCornerSprites(canvas.width, canvas.framebufferWidth)
             fpsFrameStarted()
-            frame.tick(canvas.framebufferWidth, canvas.framebufferHeight)
+        }
+
+        override fun paintFrame(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame) {
             renderer.state.poses = play.poses() ?: emptyMap()
             renderer.state.gizmosEnabled = !play.active
             GdxRuntime.withContext(ctx) {

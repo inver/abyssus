@@ -5,10 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
-import com.intellij.openapi.diagnostic.thisLogger
-import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GLCapabilities
 import org.lwjgl.opengl.awt.GLData
 
@@ -26,7 +22,10 @@ internal interface SceneGlHooks {
     /** After [abandoned] and the renderer's own cleanup: the canvas can be replaced. */
     fun contextLost()
 
-    /** Draws one frame into [canvas] with [ctx] current-capable; the lifecycle swaps buffers afterwards. */
+    /** A frame is about to start, before its clock ticks. */
+    fun frameStarting(canvas: GuardedGLCanvas)
+
+    /** Draws one frame into [canvas] with [ctx] current-capable and [frame] ticked; the lifecycle swaps buffers afterwards. */
     fun paintFrame(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame)
 
     /** The frame was presented (after the buffer swap). */
@@ -41,54 +40,34 @@ internal class SceneGlLifecycle(
     private val renderer: SceneRenderer,
     private val hooks: SceneGlHooks,
 ) {
-    private val frame = GdxFrame()
-    private var gdx: GdxContext? = null
+    private val host = GlCanvasHost(object : GlCanvasHooks {
+        // Even a failure in capability/resource creation is a renderer error, not a refused pixel format.
+        override fun beforeCreate() { contextInitialized = true }
+
+        override fun create() = renderer.create()
+
+        override fun beforeFrame(canvas: GuardedGLCanvas) = hooks.frameStarting(canvas)
+
+        override fun paint(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame) = hooks.paintFrame(canvas, ctx, frame)
+
+        override fun framePresented() = hooks.framePresented()
+
+        override fun beforeRelease() = hooks.beforeDispose()
+
+        override fun release() { hooks.disposeInContext(); renderer.dispose() }
+
+        override fun abandoned() { hooks.abandoned(); renderer.abandonShadows() }
+
+        override fun contextLost() = hooks.contextLost()
+    }, "Failed to release scene view GL resources")
 
     /** The capabilities of the current context; the canvas capture re-binds them before reading pixels. */
-    var capabilities: GLCapabilities? = null
-        private set
+    val capabilities: GLCapabilities? get() = host.capabilities
 
     /** True once the current canvas ran `initGL`: a failure after that is a renderer error, not a refused pixel format. */
     var contextInitialized = false
 
-    fun newCanvas(samples: Int, swapControl: Boolean = true): GuardedGLCanvas = object : GuardedGLCanvas(glData(samples, swapControl)) {
-        override fun initGL() {
-            // Even a failure in capability/resource creation is a renderer error, not a refused pixel format.
-            contextInitialized = true
-            capabilities = GL.createCapabilities()
-            val ctx = GdxRuntime.newContext(frame, GdxGlBridge.gl20(), GdxGlBridge.gl30(), Lwjgl3Files())
-            gdx = ctx
-            GdxRuntime.withContext(ctx) { renderer.create() }
-        }
-
-        /** Runs once per GL context, with it current: on `removeNotify` and on `disposeCanvas`. */
-        override fun disposeGL() {
-            val ctx = gdx ?: return
-            gdx = null
-            capabilities?.let { GL.setCapabilities(it) }
-            try {
-                hooks.beforeDispose()
-                GdxRuntime.withContext(ctx) { hooks.disposeInContext(); renderer.dispose() }
-            } catch (e: Throwable) {
-                thisLogger().warn("Failed to release scene view GL resources", e)
-            }
-        }
-
-        override fun onContextAbandoned() {
-            hooks.abandoned()
-            renderer.abandonShadows()
-            gdx = null
-            hooks.contextLost()
-        }
-
-        override fun paintGL() {
-            val ctx = gdx ?: return
-            capabilities?.let { GL.setCapabilities(it) }
-            hooks.paintFrame(this, ctx, frame)
-            swapBuffers()
-            hooks.framePresented()
-        }
-    }
+    fun newCanvas(samples: Int, swapControl: Boolean = true): GuardedGLCanvas = host.newCanvas(glData(samples, swapControl))
 
     private companion object {
         fun glData(sampleCount: Int, swapControl: Boolean) = GLData().apply {

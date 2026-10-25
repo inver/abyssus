@@ -19,12 +19,10 @@ import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
-import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementPreview
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.Pose
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.lib.core.editor.ray.RayFrameContext
@@ -32,7 +30,6 @@ import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneDisplay
 import net.nevinsky.abyssus.lib.core.editor.scene.*
 import net.nevinsky.abyssus.lib.core.editor.water.InvalidWater
 import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
-import net.nevinsky.abyssus.lib.core.editor.water.WaterPreview
 import net.nevinsky.abyssus.lib.core.water.WaterPassPlan
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
@@ -67,49 +64,11 @@ class SceneRenderer(
     @Volatile
     var params: SceneRenderParams = SceneRenderParams.DEFAULT
 
-    private var posedBase: SceneContent? = null
-    private var posedPoses: Map<String, Pose>? = null
-    private var posed: SceneContent? = null
+    /** The unwritten changes laid over the scene; the queries below read the same layers, so picking sees what is drawn. */
+    private val layers = ScenePreviewLayers(state)
 
-    /** The scene's content with the simulated poses applied: the authored content while nothing plays. */
-    internal val posedContent: SceneContent
-        get() {
-            val c = params.content
-            val poses = state.poses
-            if (poses.isEmpty()) return c
-            posed?.takeIf { c === posedBase && poses === posedPoses }?.let { return it }
-            return ScenePreview().withPoses(c, poses).also {
-                posed = it
-                posedBase = c
-                posedPoses = poses
-            }
-        }
-
-    /** The scene's content with simulated poses and then the previewed transforms applied. */
-    internal val content: SceneContent
-        get() {
-            val c = posedContent
-            val p = state.preview
-            val moved = if (p.isEmpty()) c else ScenePreview().apply(c, p)
-            val water = state.waterPreview
-            val withWater = if (water.isEmpty()) moved else moved.copy(water = WaterPreview().apply(moved.water, water))
-            return withDraftCopies(withWater)
-        }
-
-    private var draftOf: PathEdit? = null
-    private var draftBase: SceneContent? = null
-    private var draftContent: SceneContent? = null
-
-    /** [c] with the copies of the arrangement being edited laid out along its unapplied points. */
-    private fun withDraftCopies(c: SceneContent): SceneContent {
-        val draft = state.pathDraft ?: return c
-        if (draft === draftOf && c === draftBase) draftContent?.let { return it }
-        return ArrangementPreview().apply(c, draft, LineHeights()).also {
-            draftOf = draft
-            draftBase = c
-            draftContent = it
-        }
-    }
+    /** The scene's content with simulated poses and then the previewed transforms and draft copies applied. */
+    internal val content: SceneContent get() = layers.apply(layers.posed(params.content))
 
     /** Other plugins' overlays for this view; drawn after the markers, then again over everything. */
     internal var overlays: SceneOverlayHost? = null
@@ -205,7 +164,7 @@ class SceneRenderer(
     private var snapshot: FrameSnapshot? = null
 
     /** CPU-only questions about the scene as the last frame drew it: picking, ground below, gizmo handles. */
-    val queries: SceneQueries = SnapshotSceneQueries({ snapshot }, state) { posedContent }
+    val queries: SceneQueries = SnapshotSceneQueries({ snapshot }, state, layers) { layers.posed(params.content) }
 
     /** Copies what was drawn so the queries need neither this renderer nor GL. */
     internal fun publishSnapshot() {
@@ -661,7 +620,7 @@ class SceneRenderer(
 
     override fun dispose() {
         snapshot = null
-        posed = null
+        layers.clear()
         rayPresenter?.dispose()
         rayPresenter = null
         presentedRayFrame = false

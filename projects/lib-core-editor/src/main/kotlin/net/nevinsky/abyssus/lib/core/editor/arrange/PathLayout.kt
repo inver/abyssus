@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
+import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
@@ -20,7 +21,18 @@ const val MAX_ARRANGEMENT_SLOTS = 1000
 private const val EPS = 1e-4
 
 /** One place for a copy: world [x] and [z], the line's height there as [fallbackY], and the turn about Y in degrees. */
-data class PathSlot(val x: Float, val z: Float, val fallbackY: Float, val yawDegrees: Float)
+data class PathSlot(val x: Float, val z: Float, val fallbackY: Float, val yawDegrees: Float) {
+    /** Where the copy stands on [heights]. */
+    fun position(heights: GroundHeight): Vector3 = Vector3(x, heights.heightAt(x, z, fallbackY), z)
+
+    /** The turn about Y by [yawDegrees] with `w` not negative; libGDX returns the negated, equal rotation for negative angles. */
+    fun rotation(): Quaternion {
+        val q = Quaternion().setFromAxis(0f, 1f, 0f, yawDegrees)
+        return if (q.w < 0f) {
+            q.set(-q.x, -q.y, -q.z, -q.w)
+        } else q
+    }
+}
 
 /**
  * Places the copies of an arrangement: a pure function of the line and the settings of a [PathArrangementComponent],

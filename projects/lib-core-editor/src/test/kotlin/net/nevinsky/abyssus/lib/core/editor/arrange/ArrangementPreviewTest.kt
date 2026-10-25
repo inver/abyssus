@@ -42,4 +42,11 @@ class ArrangementPreviewTest {
         val shorter = ArrangementPreview().apply(scene(), PathEdit("10", listOf(Vector3(0f, 0f, 0f), Vector3(10f, 0f, 0f))), LineHeights())
         assertEquals(listOf("99", "11", "12"), shorter.models.map { it.entityId })
     }
+
+    @Test
+    fun aNegativeYawTurnsAsRegenerateWritesIt() {
+        val q = PathSlot(1f, 2f, 3f, -90f).rotation()
+        assertEquals(true, q.w >= 0f)
+        assertEquals(PathSlot(1f, 2f, 3f, 270f).rotation().y, q.y, 1e-5f)
+    }
 }

@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
-import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
@@ -29,16 +28,10 @@ class ArrangementPreview {
         val copies = slots.mapIndexed { k, slot ->
             val id = old.getOrNull(k)?.takeIf { it >= 0 }?.toString()
             val scale = id?.let { existing[it]?.transform?.scale } ?: Vector3(1f, 1f, 1f)
-            val q = Quaternion().setFromAxis(0f, 1f, 0f, slot.yawDegrees)
-                .let { if (it.w < 0f) it.set(-it.x, -it.y, -it.z, -it.w) else it }
             AssetPlacement(
                 id ?: "preview-${draft.entityId}-$k",
                 along.asset.assetName,
-                PlacementTransform(
-                    Vector3(slot.x, heights.heightAt(slot.x, slot.z, slot.fallbackY), slot.z),
-                    Quaternion(q.x, q.y, q.z, q.w),
-                    scale
-                ),
+                PlacementTransform(slot.position(heights), slot.rotation(), scale),
             )
         }
         return content.copy(models = content.models.filter { it.entityId !in oldIds } + copies)

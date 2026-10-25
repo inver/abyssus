@@ -52,13 +52,17 @@ class ScenePreview {
             models = content.models.map { if (it.entityId == entityId) it.copy(transform = t) else it },
             terrains = content.terrains.map { if (it.entityId == entityId) it.copy(transform = t) else it },
             lights = content.lights.map {
-                if (it.entityId != entityId) it
-                else {
+                if (it.entityId != entityId) {
+                    it
+                } else {
                     // A point light has no direction, so it never re-aims.
-                    val target = it.lookAtId?.takeIf { _ -> it.kind != LightKind.POINT }?.let(content.entityPositions::get)
+                    val target =
+                        it.lookAtId?.takeIf { _ -> it.kind != LightKind.POINT }?.let(content.entityPositions::get)
                     val direction = when {
                         // A move re-aims a look-at light at its unmoved target; a rotate uses the turned direction.
-                        target != null && t.position != it.position -> aimDirection(t.position, target) ?: forwardOf(t.rotation)
+                        target != null && t.position != it.position -> aimDirection(t.position, target)
+                            ?: forwardOf(t.rotation)
+
                         else -> result.direction ?: forwardOf(t.rotation)
                     }
                     it.copy(position = t.position, rotation = t.rotation, direction = direction)
@@ -79,11 +83,12 @@ class ScenePreview {
      * [content] with each entity of [poses] placed at its pose instead of its authored placement, keeping its authored
      * scale; a light faces along its posed rotation unless it looks at a target. Entities the scene lacks are ignored.
      */
-    fun withPoses(content: SceneContent, poses: Map<String, Pose>): SceneContent = poses.entries.fold(content) { c, (id, pose) ->
-        val scale = c.models.firstOrNull { it.entityId == id }?.transform?.scale
-            ?: c.terrains.firstOrNull { it.entityId == id }?.transform?.scale ?: Vector3(1f, 1f, 1f)
-        apply(c, id, DragResult(PlacementTransform(pose.position, pose.rotation, scale), null))
-    }
+    fun withPoses(content: SceneContent, poses: Map<String, Pose>): SceneContent =
+        poses.entries.fold(content) { c, (id, pose) ->
+            val scale = c.models.firstOrNull { it.entityId == id }?.transform?.scale
+                ?: c.terrains.firstOrNull { it.entityId == id }?.transform?.scale ?: Vector3(1f, 1f, 1f)
+            apply(c, id, DragResult(PlacementTransform(pose.position, pose.rotation, scale), null))
+        }
 
     /** The transform of the model, terrain, camera or light [entityId], or null when the scene has no such entity. */
     fun selected(content: SceneContent, entityId: String): Selected? {

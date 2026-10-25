@@ -196,7 +196,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
   heights and marker bounds). It selects in the view, and `selectEntityInAbyssusView` selects the entity's row in
   the tree. Foliage copies are never pick targets: they ride their terrain entity, so a click through them picks
   what they stand on.
-- **Drags:** a drag on a gizmo handle runs a `GizmoDrag`, and `ScenePreview` shows the result live. Esc cancels.
+- **Drags:** a drag on a gizmo handle runs a `GizmoDrag`, and `ScenePreview` shows the result live. Esc cancels. `ScenePreviewLayers` lays every unwritten change (simulated poses, the drag, a water move, the copies of a path being edited) over the file's content in one order, and the renderer and `SnapshotSceneQueries` both read it, so what is drawn and what is picked agree.
   Any other drag orbits or pans `OrbitCamera`.
 - **Drop:** the toolbar button or D calls `SceneInteraction.drop`. `ScenePicker.restHeight` queries the highest
   surface under the selection's oriented-box footprint, using box tops and transformed bilinear terrain cells.
@@ -349,7 +349,7 @@ collaborator may import: **plain** is a plain JVM class, **GL** needs a libGDX o
 |---|---|---|---|
 | `AssetStorage` (`lib-core`) | `OffGlExecutor`, `StorageCallGuard`, `DependencyResolver`, `HookRegistry` | The off-GL executor factory, the thread and call-depth guard, dependency satisfaction and the hook registry; `AssetStorage` owns upload, build and discard | plain |
 | `SceneRenderer` (plugin) | `SceneContentPass`, `SceneSkyPass` | The model, terrain, foliage and gizmo pass; the sky, fog and cloud pass, with the snapshot packing that pass reads | GL |
-| `SceneViewPanel` (plugin) | `SceneViewToolbar`, `SceneGlLifecycle`, `SceneFrameDriver` | The toolbar and its control sync; the canvas, libGDX context and capabilities of one GL context; the frame timer with its idle throttle | Swing (toolbar, driver), GL (lifecycle) |
+| `SceneViewPanel` (plugin) | `SceneViewToolbar`, `SceneGlLifecycle`, `SceneFrameDriver` | The toolbar and its control sync; the canvas, libGDX context and capabilities of one GL context (through `GlCanvasHost`, which the Game UI canvas and the Import Model preview also use); the frame timer with its idle throttle | Swing (toolbar, driver), GL (lifecycle) |
 | `SceneInteraction` (`lib-core-editor`) | `GestureDriver`, `DrawingSession` | The press-drag-release gestures (gizmo, water, path point, paint stroke); drawing and editing a path arrangement | plain |
 | `PhysicsWorld` (`lib-physics`) | `PhysicsBodyFactory`, `PhysicsStepper`, `PhysicsPoseWriter` | Body creation and refusal, the fixed-step advance, the pose write-back; Jolt stays in the module's `jolt` package | plain (Jolt) |
 | `FlightGearImport` (`lib-core-editor`) | `FlightGearCollection`, `FlightGearGeometry`, `FlightGearStaging` | Reading the source files, building the geometry, staging the new MODEL folder; the facade stays | plain |

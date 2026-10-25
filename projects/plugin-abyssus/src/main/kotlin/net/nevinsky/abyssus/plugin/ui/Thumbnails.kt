@@ -25,10 +25,18 @@ internal fun thumbnail(
     scaled(source, maxWidth, maxHeight)
 }.getOrNull()
 
+/**
+ * The size of a [sourceWidth] x [sourceHeight] image fitted inside a [boxWidth] x [boxHeight] box with its aspect kept, at
+ * least 1 x 1; smaller images are enlarged only when [upscale] is true.
+ */
+internal fun fitInside(sourceWidth: Int, sourceHeight: Int, boxWidth: Int, boxHeight: Int, upscale: Boolean): Pair<Int, Int> {
+    val fit = minOf(boxWidth.toDouble() / sourceWidth, boxHeight.toDouble() / sourceHeight)
+    val ratio = if (upscale) fit else minOf(fit, 1.0)
+    return maxOf(1, (sourceWidth * ratio).toInt()) to maxOf(1, (sourceHeight * ratio).toInt())
+}
+
 private fun scaled(source: BufferedImage, maxWidth: Int, maxHeight: Int): BufferedImage {
-    val ratio = minOf(maxWidth.toDouble() / source.width, maxHeight.toDouble() / source.height, 1.0)
-    val w = maxOf(1, (source.width * ratio).toInt())
-    val h = maxOf(1, (source.height * ratio).toInt())
+    val (w, h) = fitInside(source.width, source.height, maxWidth, maxHeight, upscale = false)
     val out = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
     out.createGraphics().apply {
         setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)

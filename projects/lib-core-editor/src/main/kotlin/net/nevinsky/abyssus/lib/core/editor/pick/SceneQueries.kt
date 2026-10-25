@@ -16,7 +16,6 @@ import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
 import net.nevinsky.abyssus.lib.core.editor.water.WaterHit
-import net.nevinsky.abyssus.lib.core.editor.water.WaterPreview
 
 /**
  * The questions the view asks about the scene as the last frame drew it (what is under the cursor, where an object would
@@ -96,6 +95,8 @@ interface SceneQueries {
 class SnapshotSceneQueries(
     private val snapshot: () -> FrameSnapshot?,
     private val state: SceneViewState,
+    /** The layers that put the unwritten changes over the scene; share the view's own so both see the same content. */
+    private val layers: ScenePreviewLayers = ScenePreviewLayers(state),
     private val sceneContentOf: () -> SceneContent,
 ) : SceneQueries {
     override val sceneContent: SceneContent get() = sceneContentOf()
@@ -120,31 +121,7 @@ class SnapshotSceneQueries(
     internal var targetBuilds = 0
         private set
 
-    private var contentOf: SceneContent? = null
-    private var contentBase: SceneContent? = null
-    private var contentPreview: Map<String, DragResult>? = null
-    private var contentWaterPreview: Map<String, Vector3>? = null
-
-    override val content: SceneContent
-        get() {
-            val base = sceneContent
-            val preview = state.preview
-            val waterPreview = state.waterPreview
-            contentOf?.takeIf { base === contentBase && preview === contentPreview && waterPreview === contentWaterPreview }
-                ?.let { return it }
-            val posed = if (preview.isEmpty()) base else ScenePreview().apply(base, preview)
-            return (if (waterPreview.isEmpty()) posed else posed.copy(
-                water = WaterPreview().apply(
-                    posed.water,
-                    waterPreview
-                )
-            )).also {
-                contentOf = it
-                contentBase = base
-                contentPreview = preview
-                contentWaterPreview = waterPreview
-            }
-        }
+    override val content: SceneContent get() = layers.apply(sceneContent)
 
     override val drawnVersion: Long get() = snapshot()?.drawnVersion ?: 0L
 

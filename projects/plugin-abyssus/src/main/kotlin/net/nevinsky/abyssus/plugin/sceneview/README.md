@@ -48,6 +48,7 @@ the toolbar, Play and the view's asset storage.
 | `gizmo` | Drawing (`GizmoDraw`) over the handle geometry (`GizmoHandles`), hit tests (`GizmoHit`) and drag math (`GizmoDrag`) of `lib-core-editor` |
 | `SceneTransformWriter` *(lib-core-editor)* | A finished transform → `PositionComponent` (and camera) fields in the scene JSON |
 | `GdxRuntime`, `GuardedGLCanvas` | The `Gdx.*` shim, and the canvas that refuses unsafe GL |
+| `GlCanvasHost`, `GlFrameTimer` | The create, paint, release and abandoned sequence of one GL context, shared by the scene view (through `SceneGlLifecycle`), the Game UI canvas and the Import Model preview; and the `glSafe()`-guarded frame timer the last two use (GL, EDT) |
 
 ## Things that are not obvious
 
@@ -99,8 +100,8 @@ the toolbar, Play and the view's asset storage.
 - **Play shows poses, never writes them.** With an available `sceneSimulation` provider, the toolbar
   has Play, Pause, Step and Stop. `PlayState` starts the provider's simulation from the scene's document text, the
   project folder and the selection. Each frame the panel copies the simulation's latest poses into
-  `SceneViewState.poses`. The renderer's `posedContent` applies them over the authored placements, keeping each
-  placement's scale, so drawing, picking, markers and overlays all see them. A drag preview applies on top. While a
+  `SceneViewState.poses`. `ScenePreviewLayers.posed` applies them over the authored placements, keeping each
+  placement's scale, so drawing, picking, markers and overlays all see them. A drag preview applies on top (`ScenePreviewLayers.apply`). While a
   simulation is active, gizmos are off (`SceneViewState.gizmosEnabled`), Move/Rotate/Drop are disabled, and every key
   but Escape goes to the simulation and is consumed. Mouse buttons and moves go to it too, and the camera still
   orbits. Escape stops. `SceneFileEditor` stops play before scene edits or changes to project render inputs. A change only

@@ -78,6 +78,25 @@ class SnapshotSceneQueriesTest {
     }
 
     @Test
+    fun theQueriesSeeThePathDraftCopies() {
+        val path = net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))).also {
+            it.asset = net.nevinsky.abyssus.lib.core.ecs.component.PathAsset(assetName = "post")
+            it.spacing = 10f
+            it.slots = mutableListOf(11, 12, 13)
+        }
+        val posts = listOf(11, 12, 13).map { placement(it.toString(), 0f, 0f, 0f) }
+        val content = SceneContent(
+            models = posts,
+            arrangements = listOf(net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement("10", path)),
+        )
+        val f = fixture(emptyList(), content)
+        assertEquals(3, f.queries.content.models.size)
+        f.state.pathDraft = PathEdit("10", listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)))
+        assertEquals(5, f.queries.content.models.size)
+        assertEquals("the file's content is unchanged", 3, f.queries.sceneContent.models.size)
+    }
+
+    @Test
     fun noFrameYetMeansNothingIsFound() {
         val state = SceneViewState()
         val queries = SnapshotSceneQueries({ null }, state) { SceneContent() }

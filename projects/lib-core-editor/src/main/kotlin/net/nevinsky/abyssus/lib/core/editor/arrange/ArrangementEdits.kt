@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
-import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.*
@@ -232,8 +231,9 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
             ),
         )
         components.set<JsonNode>("TypeComponent", writer.writeComponent(TypeComponent(TypeComponent.Type.OBJECT)))
-        val position = PositionComponent(slot.x, heights.heightAt(slot.x, slot.z, slot.fallbackY), slot.z)
-        position.localRotation.set(yawQuaternion(slot.yawDegrees))
+        val at = slot.position(heights)
+        val position = PositionComponent(at.x, at.y, at.z)
+        position.localRotation.set(slot.rotation())
         components.set<JsonNode>("PositionComponent", writer.writeComponent(position))
         components.set<JsonNode>(
             "RenderComponent",
@@ -249,9 +249,9 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         val placement = components.get("PositionComponent").let {
             if (it == null || it.isNull) components.putObject("PositionComponent") else it as? ObjectNode ?: return
         }
-        val y = heights.heightAt(slot.x, slot.z, slot.fallbackY)
-        setFields(placement, "localPosition", listOf(Field("x", slot.x, 0f), Field("y", y, 0f), Field("z", slot.z, 0f)))
-        val q = yawQuaternion(slot.yawDegrees)
+        val at = slot.position(heights)
+        setFields(placement, "localPosition", listOf(Field("x", at.x, 0f), Field("y", at.y, 0f), Field("z", at.z, 0f)))
+        val q = slot.rotation()
         setFields(
             placement,
             "localRotation",
@@ -262,12 +262,6 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
             if (render.has("assetName")) render else (render.get("renderable")?.get("asset") as? ObjectNode) ?: return
         if (target.get("assetName")?.asText() != asset.assetName) target.put("assetName", asset.assetName)
         if (target.get("type")?.asText() != asset.type.name) target.put("type", asset.type.name)
-    }
-
-    /** The turn about Y by [degrees] with `w` not negative; libGDX returns the negated, equal rotation for negative angles. */
-    private fun yawQuaternion(degrees: Float): Quaternion {
-        val q = Quaternion().setFromAxis(0f, 1f, 0f, degrees)
-        return if (q.w < 0f) q.set(-q.x, -q.y, -q.z, -q.w) else q
     }
 
     private class Field(val key: String, val value: Float, val default: Float)

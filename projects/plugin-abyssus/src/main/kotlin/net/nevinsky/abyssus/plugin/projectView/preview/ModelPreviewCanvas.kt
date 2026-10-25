@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.projectView.preview
 
-import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
@@ -34,12 +32,14 @@ import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.sceneview.GdxContext
+import net.nevinsky.abyssus.plugin.sceneview.GlCanvasHooks
+import net.nevinsky.abyssus.plugin.sceneview.GlCanvasHost
+import net.nevinsky.abyssus.plugin.sceneview.GlFrameTimer
 import net.nevinsky.abyssus.plugin.sceneview.GdxFrame
 import net.nevinsky.abyssus.plugin.sceneview.GdxRuntime
 import net.nevinsky.abyssus.plugin.sceneview.GridModel
 import net.nevinsky.abyssus.plugin.sceneview.GuardedGLCanvas
 import org.lwjgl.opengl.GL
-import org.lwjgl.opengl.GLCapabilities
 import org.lwjgl.opengl.awt.GLData
 import java.awt.BorderLayout
 import java.awt.CardLayout
@@ -48,7 +48,6 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
-import javax.swing.Timer
 import com.badlogic.gdx.graphics.g3d.Model as GdxModel
 import com.badlogic.gdx.graphics.g3d.ModelInstance as GdxModelInstance
 
@@ -66,12 +65,19 @@ class PreviewModel(val data: ModelData, val pixmaps: MutableMap<String, Pixmap>,
  * while it is still showing, so the context is current when its resources are freed. Without GL the reason is shown.
  */
 class ModelPreviewCanvas : JPanel(CardLayout()) {
-    private val frame = GdxFrame()
+    private val glHost = GlCanvasHost(object : GlCanvasHooks {
+        override fun create() = this@ModelPreviewCanvas.create()
+
+        override fun paint(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame) = GdxRuntime.withContext(ctx) { draw() }
+
+        override fun release() = disposeResources()
+
+        override fun abandoned() = forgetResources()
+    }, "Failed to release the model preview's GL resources")
+    private val frame get() = glHost.frame
     private val framing = PreviewFraming()
     private val orbit = OrbitCamera(Vector3(0f, 0.5f, 0f), 3f, 30f, 20f)
     private val message = JBLabel("", SwingConstants.CENTER)
-    private var gdx: GdxContext? = null
-    private var capabilities: GLCapabilities? = null
     private var released = false
 
     /** The model to show next; taken by the next frame. AWT thread. */
@@ -106,47 +112,11 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
         add(DirectionalLight().set(0.8f, 0.8f, 0.8f, -0.4f, -1f, -0.3f))
     }
 
-    private val canvas = object : GuardedGLCanvas(glData()) {
-        override fun initGL() {
-            capabilities = GL.createCapabilities()
-            val ctx = GdxRuntime.newContext(frame, GdxGlBridge.gl20(), GdxGlBridge.gl30(), Lwjgl3Files())
-            gdx = ctx
-            GdxRuntime.withContext(ctx) { create() }
-        }
+    private val canvas = glHost.newCanvas(glData())
 
-        override fun disposeGL() {
-            val ctx = gdx ?: return
-            gdx = null
-            capabilities?.let { GL.setCapabilities(it) }
-            try {
-                GdxRuntime.withContext(ctx) { disposeResources() }
-            } catch (e: Throwable) {
-                thisLogger().warn("Failed to release the model preview's GL resources", e)
-            }
-        }
-
-        override fun onContextAbandoned() {
-            gdx = null
-            forgetResources()
-        }
-
-        override fun paintGL() {
-            val ctx = gdx ?: return
-            capabilities?.let { GL.setCapabilities(it) }
-            frame.tick(framebufferWidth, framebufferHeight)
-            GdxRuntime.withContext(ctx) { draw() }
-            swapBuffers()
-        }
-    }
-
-    private val timer = Timer(FRAME_MILLIS) {
-        if (released || !canvas.glSafe()) return@Timer
-        try {
-            canvas.render()
-        } catch (e: Throwable) {
-            thisLogger().warn("Model preview failed", e)
-            stopWith(e.message ?: e.javaClass.simpleName)
-        }
+    private val timer: GlFrameTimer = GlFrameTimer({ canvas }) { e ->
+        thisLogger().warn("Model preview failed", e)
+        stopWith(e.message ?: e.javaClass.simpleName)
     }
 
     init {
@@ -354,7 +324,6 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
     }
 
     private companion object {
-        const val FRAME_MILLIS = 16
         const val CARD_CANVAS = "canvas"
         const val CARD_MESSAGE = "message"
 
