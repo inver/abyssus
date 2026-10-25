@@ -227,7 +227,7 @@ arrangement selected. A model that belongs to no arrangement SHALL select itself
 The Properties panel of an arrangement SHALL offer **Edit** and **Apply** buttons in its `PathArrangementComponent`
 section. Edit starts the control point edit of that arrangement and is replaced by Drop path to terrain, Close and Apply. Changes made while the edit is on are kept as an unwritten draft: Apply writes them and ends the edit, Close drops them and ends the edit, and Drop path to terrain puts every control point of the draft on the ground.
 Only while the edit is on, the Scene view SHALL show a handle on each control point. Pressing a control point handle SHALL give that point the move gizmo (world axes); dragging a
-gizmo handle moves the point and shows the curve following; the points are written only by Apply, as one undoable edit. A click off the handles lets go of the
+gizmo handle moves the point and shows the curve following; the points are written only by Apply, as one undoable edit. Pressing the curve between two control points SHALL insert a control point there, on the curve, and give it the gizmo. A click off the handles and the curve lets go of the
 point and keeps the edit on. Selecting anything else ends the edit, and Esc during a drag restores the point.
 
 #### Scenario: Edit and move

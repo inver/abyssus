@@ -135,14 +135,20 @@ internal class GestureDriver(
     }
 
     /**
-     * The left press on a handle of the line of [id]: a control point gets the move gizmo. The press is consumed, so it
-     * neither orbits nor picks.
+     * The left press on a handle of the line of [id]: a control point gets the move gizmo, and the curve between points
+     * gets a new control point where it was pressed, which gets the gizmo. The press is consumed, so it neither orbits
+     * nor picks.
      */
     private fun pressPathHandle(id: String, at: FramebufferPoint): Boolean {
         val size = host.size
         val hit = queries.pathHandleAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return false
         when (hit) {
             is PathHit.Point -> state.selectedPathPoint = hit.index
+            is PathHit.Line -> {
+                val points = queries.pathPoints(id) ?: return false
+                val inserted = points.toMutableList().also { it.add(hit.span + 1, hit.at) }
+                if (host.onArrangementEdit?.invoke(id, inserted) == true) state.selectedPathPoint = hit.span + 1
+            }
         }
         current = Gesture.Cancelled
         host.stateChanged()

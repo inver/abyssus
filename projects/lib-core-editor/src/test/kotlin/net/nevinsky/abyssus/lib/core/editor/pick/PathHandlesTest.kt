@@ -6,11 +6,11 @@
 package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.arrange.PathCurve
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PathHandlesTest {
@@ -28,7 +28,7 @@ class PathHandlesTest {
     private val projection = ScreenProjection(camera, 800, 600)
     private val points = listOf(Vector3(20f, 0f, 50f), Vector3(50f, 0f, 60f), Vector3(80f, 0f, 50f))
 
-    private fun pixel(p: Vector3): ScreenPoint = projection.at(p)!!
+    private fun pixel(p: Vector3): Vector2 = projection.at(p)!!
 
     @Test
     fun aPointProjectsToTheScreen() {
@@ -49,6 +49,15 @@ class PathHandlesTest {
         // a click on an edge of the diamond grabs the point, a click well away from it does not
         val edge = pixel(Vector3(points[1].x + PATH_POINT_HALF, points[1].y, points[1].z))
         assertEquals(PathHit.Point(1), handles.hit(projection, edge.x, edge.y))
-        assertNull(handles.hit(projection, s.x + 40, s.y))
+        assertNull(handles.hit(projection, s.x, s.y + 150))
+    }
+
+    @Test
+    fun theCurveBetweenPointsIsHitWithItsSpanAndPoint() {
+        val handles = PathHandles(points, closed = false)
+        val on = pixel(PathCurve.at(points, false, 0, 0.5f))
+        val hit = handles.hit(projection, on.x, on.y + 2) as PathHit.Line
+        assertEquals(0, hit.span)
+        assertEquals(PathCurve.at(points, false, 0, 0.5f).x, hit.at.x, 1f)
     }
 }

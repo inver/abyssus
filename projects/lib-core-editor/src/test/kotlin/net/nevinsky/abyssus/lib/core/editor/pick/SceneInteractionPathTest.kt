@@ -324,7 +324,18 @@ class SceneInteractionPathTest {
     }
 
     @Test
-    fun aClickOffTheHandlesLetsGoOfThePointButKeepsTheEditMode() {
+    fun clickingTheSplineInTheEditModeAddsAControlPointThere() {
+        val f = editing()
+        f.selectPoint(50f, 50f)
+        val points = f.state.pathDraft!!.points
+        assertEquals(3, points.size)
+        assertNear(50f, 50f, points[1])
+        assertEquals(1, f.state.selectedPathPoint)
+        assertTrue(f.edits.isEmpty())
+    }
+
+    @Test
+    fun aClickOffHandlesAndSplineLetsGoOfThePointButKeepsTheEditMode() {
         val f = editing()
         f.selectPoint(80f, 50f)
         f.click(35f, 80f)
