@@ -25,11 +25,12 @@ IntelliJ/Swing/AWT imports; lib-core-editor likewise has no platform imports. Sc
 
 ## Decisions
 
-**1. `meshId` lives on the render component, next to `assetName` (JSON: `renderable.asset.meshId`).**
+**1. `meshId` lives on the render component, next to `assetName` (JSON: `renderable.asset.meshId`, or `meshId` in the flat shape).**
 It is an optional non-empty string naming a `ModelMesh.id` of the model asset (unique per model; `ModelData.addMesh`
-rejects duplicates). `RenderComponent` (lib-core) gains `var meshId: String? = null`. The native contract places asset
-fields under `renderable.asset` (`type`, `assetName`), so `meshId` goes there; `renderAssetOf` already reads the flat
-legacy shape too and reads `meshId` from the same node as `assetName`. Absent means the whole model, unchanged.
+rejects duplicates). `RenderComponent` (lib-core) gains `var meshId: String? = null`. `docs/ai/file-formats.md` places asset
+fields under `renderable.asset` (`type`, `assetName`), and new placements write that nested shape; but fixtures (e.g. `Physics`) and
+`renderAssetOf` also use the flat shape (`type`, `assetName` on the component). `meshId` is read and written on the same node as
+`assetName`, whichever shape the entity uses, and an edit never changes the entity's shape. Absent means the whole model, unchanged.
 `meshId` applies only to `MODEL` renders; on a `TERRAIN` it is ignored and preserved.
 - Alternative: a separate component. Rejected: mesh selection is part of how a renderable is shown.
 
@@ -62,9 +63,9 @@ rather than silently drawing everything. The Properties chooser keeps showing th
 **4. Invalidation covers variants inside `AssetStorage`.**
 `invalidate(names)` expands each model name to the base asset plus every cached variant of it (`ModelKey` match), so a
 changed model file replaces all of its variants. This is part of the design, not a follow-up: a stale variant after a
-model re-import would otherwise show geometry the asset no longer has. Eviction of variants no entity uses any more
-follows whatever the existing unused-asset policy is; if there is none, variants live until the storage is disposed
-(bounded by the number of meshes of the placed models).
+model re-import would otherwise show geometry the asset no longer has. `ViewAssets.invalidate` and `RaySceneAssets.invalidate` expand variants the same way. Eviction uses the existing
+`AssetStorage.retain(names)`: the retain sets built by the plugin and the game contain the encoded `ModelKey` names of the
+variants in use, otherwise variants would be disposed on every pass or never released.
 
 **5. The editor reads and writes `meshId` through the existing document layer.**
 `renderAssetOf` / `RenderAsset` gain `meshId`; `PlacementMapper` and `AssetPlacement` carry it; `PlacedEntities` and
@@ -121,4 +122,5 @@ the whole model). `docs/ai/file-formats.md` documents the field.
 
 ## Open Questions
 
-None blocking. The `AssetStorage` call sites that reach `resolveBase` are recorded in this design before archive.
+- Where the nested `renderable.asset` shape is decoded into the flat `RenderComponent` (task 1.1 locates it first); `meshId` must follow the same path.
+- The `AssetStorage` call sites that reach `resolveBase` are recorded in this design before archive.
