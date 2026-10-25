@@ -4034,35 +4034,6 @@
           }
         }
       },
-      "660": {
-        "archetype": 0,
-        "components": {
-          "NameComponent": {
-            "name": "Path 659 #0"
-          },
-          "TypeComponent": {
-            "type": "OBJECT"
-          },
-          "PositionComponent": {
-            "localPosition": {
-              "x": 6.2879195,
-              "y": 0.12880194,
-              "z": 27.271448
-            },
-            "localRotation": {
-              "x": 0,
-              "y": 0.9944027,
-              "z": 0,
-              "w": 0.105656184
-            }
-          },
-          "RenderComponent": {
-            "shaderKey": "defaultShader",
-            "type": "MODEL",
-            "assetName": "fence"
-          }
-        }
-      },
       "661": {
         "archetype": 2,
         "components": {

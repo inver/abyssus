@@ -19,10 +19,6 @@ const val SCULPT_BASE_FILE = "abyssus-terrain.base"
 /** The manifest layout this code reads and writes. */
 const val SCULPT_SCHEMA_VERSION = 1
 
-private const val SHA_HEX_LENGTH = 64
-private const val RECIPE_KIND = "recipe"
-private const val STORED_KIND = "stored"
-
 /** Where the heights under the delta come from. */
 enum class SculptBaseKind { RECIPE, STORED }
 
@@ -73,7 +69,9 @@ class SculptManifestCodec(private val json: JsonProcessor) {
  * the stored base; null when [bytes] hold another number of values.
  */
 fun decodeSculptGrid(bytes: ByteArray, resolution: Int): FloatArray? {
-    if (bytes.size != resolution * resolution * Float.SIZE_BYTES) return null
+    if (bytes.size != resolution * resolution * Float.SIZE_BYTES) {
+        return null
+    }
     return FloatArray(resolution * resolution).also { ByteBuffer.wrap(bytes).asFloatBuffer().get(it) }
 }
 

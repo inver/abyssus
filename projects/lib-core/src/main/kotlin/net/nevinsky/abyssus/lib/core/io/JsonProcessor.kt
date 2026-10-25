@@ -6,24 +6,24 @@
 package net.nevinsky.abyssus.lib.core.io
 
 import com.badlogic.ashley.core.Component
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
+import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
+import com.fasterxml.jackson.databind.*
+import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.node.DecimalNode
 import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import java.math.BigDecimal
-import kotlin.math.abs
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.math.Quaternion
-import com.badlogic.gdx.math.Vector3
-import com.fasterxml.jackson.annotation.JsonAutoDetect
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
-import com.fasterxml.jackson.databind.*
-import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.slf4j.Logger
+import java.math.BigDecimal
+import kotlin.math.abs
 
 /**
  * Mixed into libGDX's `Vector3`, `Quaternion` and `Color`, whose many overloaded `set...` methods Jackson would otherwise
@@ -44,8 +44,10 @@ private interface OmitComponentDefaults
 private class ComponentFloatSerializer : StdSerializer<Any>(Any::class.java) {
     override fun serialize(value: Any, gen: JsonGenerator, provider: SerializerProvider) {
         val v = (value as Number).toFloat().let { if (it.isFinite()) it else 0f }
-        gen.writeTree(if (v == Math.rint(v.toDouble()).toFloat() && abs(v) < 1e9f) IntNode.valueOf(v.toInt())
-            else DecimalNode(BigDecimal(v.toString())))
+        gen.writeTree(
+            if (v == Math.rint(v.toDouble()).toFloat() && abs(v) < 1e9f) IntNode.valueOf(v.toInt())
+            else DecimalNode(BigDecimal(v.toString()))
+        )
     }
 }
 
@@ -61,6 +63,7 @@ class JsonProcessor(internal val log: Logger) {
     private val mapper: JsonMapper = format.mapperBuilder()
         .addModule(KotlinModule.Builder().build())
         .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
+        .defaultPropertyInclusion(JsonInclude.Value.ALL_NON_NULL)
         .addMixIn(Vector3::class.java, PublicFieldsOnly::class.java)
         .addMixIn(Quaternion::class.java, PublicFieldsOnly::class.java)
         .addMixIn(Color::class.java, PublicFieldsOnly::class.java)
@@ -73,16 +76,20 @@ class JsonProcessor(internal val log: Logger) {
 
     private val componentValues = mapper.copy()
         .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true))
-        .registerModule(SimpleModule()
-            .addSerializer(java.lang.Float::class.java, ComponentFloatSerializer())
-            .addSerializer(java.lang.Float.TYPE, ComponentFloatSerializer()))
+        .registerModule(
+            SimpleModule()
+                .addSerializer(java.lang.Float::class.java, ComponentFloatSerializer())
+                .addSerializer(java.lang.Float.TYPE, ComponentFloatSerializer())
+        )
 
     private val componentWriter = mapper.copy()
         .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true))
         .addMixIn(Component::class.java, OmitComponentDefaults::class.java)
-        .registerModule(SimpleModule()
-            .addSerializer(java.lang.Float::class.java, ComponentFloatSerializer())
-            .addSerializer(java.lang.Float.TYPE, ComponentFloatSerializer()))
+        .registerModule(
+            SimpleModule()
+                .addSerializer(java.lang.Float::class.java, ComponentFloatSerializer())
+                .addSerializer(java.lang.Float.TYPE, ComponentFloatSerializer())
+        )
 
     /** Default-aware component binding without exposing the processor's mapper. */
     fun <C : Component> bindComponent(node: JsonNode, type: Class<C>): C =

@@ -110,7 +110,7 @@ class SculptStateTest {
     @Test
     fun `malformed unsupported and other resolution manifests are unsafe`() {
         assertEquals(SculptProblem.MANIFEST_MALFORMED, problem(reader.read(files(manifest = "nope"))))
-        assertEquals(SculptProblem.MANIFEST_UNSUPPORTED, problem(reader.read(files(manifest = manifestText().replace("\"schemaVersion\": 1", "\"schemaVersion\": 3")))))
+        assertEquals(SculptProblem.MANIFEST_UNSUPPORTED, problem(reader.read(files(manifest = manifestText().replace("\"schemaVersion\": 1", "\"schemaVersion\": 0")))))
         assertEquals(SculptProblem.RESOLUTION, problem(reader.read(files(manifest = manifestText().replace("\"resolution\": 9", "\"resolution\": 10")))))
     }
 

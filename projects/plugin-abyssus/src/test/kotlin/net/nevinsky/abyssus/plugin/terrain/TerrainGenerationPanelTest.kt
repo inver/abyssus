@@ -315,7 +315,7 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         button(p, "terrain-apply").doClick()
         assertEquals("the delta is untouched", delta.toList(), bytes("abyssus-terrain.sculpt").toList())
         assertFalse("a stored base is replaced by the recipe's", File(folder.path, "abyssus-terrain.base").exists())
-        assertTrue(text("abyssus-terrain.sculpt.json").contains("\"baseKind\": \"recipe\""))
+        assertTrue(text("abyssus-terrain.sculpt.json").contains("\"baseKind\": \"RECIPE\""))
         assertTrue(text(TERRAIN_RECIPE_FILE).contains("\"seed\": 2024"))
         val reopened = shown()
         assertTrue(label(reopened, "terrain-sculpt-status")!!.contains("generated heights"))

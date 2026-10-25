@@ -184,10 +184,11 @@ internal class SculptTerrainControls(
             opened = true
             interaction.terrainSculpt = session?.stroke
             listStampImages(session)
-            requested = wasRequested
+            // the toggle may have been pressed while the session loaded: [begin] has set [requested] since
+            requested = requested || wasRequested
             when {
-                wasRequested && session?.stroke != null -> update()
-                wasRequested -> { end(); session?.reason?.let(report) }
+                requested && session?.stroke != null -> update()
+                requested -> { end(); session?.reason?.let(report) }
             }
             onChanged()
         }

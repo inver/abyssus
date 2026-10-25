@@ -103,6 +103,22 @@ class SculptModeAvailabilityTest : BasePlatformTestCase() {
         assertEquals(1, ended)
     }
 
+    fun testABrushRequestedWhileTheSessionLoadsIsKept() {
+        val renderer = testRenderer()
+        var ended = 0
+        val pending = mutableListOf<(SculptSession?) -> Unit>()
+        val interaction = SceneInteraction(renderer.state, renderer.queries, OrbitCamera(Vector3(), 10f, 0f, 0.5f))
+        val controls = SculptTerrainControls(renderer, interaction, PlayState(null), { _, _, _, ready -> pending += ready },
+            SculptToolFactory(FastNoiseSamplerFactory()), {}, {}, { ended++ }, {})
+        renderer.state.selectedId = "1"
+        controls.refreshSession(force = true)
+        controls.begin("1")
+        assertNull("the session is not here yet", renderer.state.sculpt)
+        pending.single()(session())
+        assertNotNull("the brush goes on when the session arrives", renderer.state.sculpt)
+        assertEquals(0, ended)
+    }
+
     fun testSculptAndPaintFoliageNeverHoldAtOnce() {
         val renderer = testRenderer()
         val paintStroke = object : FoliagePaint {
