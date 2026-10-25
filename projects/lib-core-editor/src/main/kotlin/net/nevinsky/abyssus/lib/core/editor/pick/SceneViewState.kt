@@ -66,6 +66,9 @@ class SceneViewState {
     /** The gizmo handle under the cursor, drawn brighter. */
     var hoveredAxis: GizmoAxis? = null
 
+    /** The plane handle under the cursor, drawn brighter. */
+    var hoveredPlane: GizmoPlane? = null
+
     /** The camera entity the viewport renders from instead of the orbit view, or null. */
     var viewCamera: String? = null
 

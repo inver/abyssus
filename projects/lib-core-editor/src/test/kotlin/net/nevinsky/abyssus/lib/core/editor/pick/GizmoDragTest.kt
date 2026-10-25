@@ -13,6 +13,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.Quat
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GizmoDragTest {
@@ -152,5 +153,24 @@ class GizmoDragTest {
         val axisAfter = gizmoAxes(GizmoSpace.LOCAL, turned).getValue(GizmoAxis.X)
         assertVec(Vector3(0f, 0f, -1f), axisAfter)
         assertFalse("the rotation changed", turned == start)
+    }
+
+    @Test
+    fun aPlaneDragMovesInBothAxesAndKeepsTheThird() {
+        val x = Vector3(1f, 0f, 0f)
+        val y = Vector3(0f, 1f, 0f)
+        val drag = GizmoDrag(GizmoMode.MOVE, GizmoAxis.X, at(Vector3(0f, 0f, 2f)), ray(Vector3(1f, 1f, 20f), Vector3(1f, 1f, 2f)), null, x, null, x to y)
+        assertTrue(drag.isUsable)
+        val moved = drag.update(ray(Vector3(4f, -3f, 20f), Vector3(4f, -3f, 2f))).transform
+        assertVec(Vector3(3f, -4f, 2f), moved.position)
+    }
+
+    @Test
+    fun aPlaneDragSnapsBothCoordinates() {
+        val x = Vector3(1f, 0f, 0f)
+        val y = Vector3(0f, 1f, 0f)
+        val drag = GizmoDrag(GizmoMode.MOVE, GizmoAxis.X, at(), ray(Vector3(0f, 0f, 20f), Vector3(0f, 0f, 0f)), null, x, GizmoSnap(1f, 15f), x to y)
+        val moved = drag.update(ray(Vector3(2.4f, 3.6f, 20f), Vector3(2.4f, 3.6f, 0f))).transform
+        assertVec(Vector3(2f, 4f, 0f), moved.position)
     }
 }

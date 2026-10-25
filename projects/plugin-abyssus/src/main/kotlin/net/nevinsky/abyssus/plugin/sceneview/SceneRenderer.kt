@@ -470,7 +470,7 @@ class SceneRenderer(
         state.selectedWater?.let { id ->
             (c.water.firstOrNull { it.id == id } as? ValidWater)?.let { WaterOutline().draw(lines, it.settings) }
             gizmoHandlesFor(c, displayCamera, state, height)?.let {
-                GizmoDraw.draw(lines, it, state.hoveredAxis)
+                GizmoDraw.draw(lines, it, state.hoveredAxis, state.hoveredPlane)
                 drewGizmo = true
             }
         }
@@ -479,7 +479,7 @@ class SceneRenderer(
             // selecting a path arrangement selects all of it: every linked copy gets its box
             for (copy in c.copiesOf(id)) boundsOf(c, copy)?.let { SelectionBox.draw(lines, it) }
             gizmoHandlesFor(c, displayCamera, state, height)?.let {
-                GizmoDraw.draw(lines, it, state.hoveredAxis)
+                GizmoDraw.draw(lines, it, state.hoveredAxis, state.hoveredPlane)
                 drewGizmo = true
             }
         }

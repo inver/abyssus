@@ -317,6 +317,7 @@ class SceneInteraction(
         if (size.isEmpty || isDragging) return
         val at = size.toFramebuffer(x, y)
         state.hoveredAxis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
+        state.hoveredPlane = if (state.hoveredAxis == null) queries.gizmoPlaneHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) else null
     }
 
     fun wheel(clicks: Float) {

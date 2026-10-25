@@ -81,6 +81,12 @@ interface SceneQueries {
 
     /** A drag of the [axis] handle of the selected entity's gizmo, started at the pixel; null when it cannot start. */
     fun beginDrag(axis: GizmoAxis, screenX: Int, screenY: Int, width: Int, height: Int): GizmoDrag?
+
+    /** The plane handle of the selected entity's move gizmo under the pixel, or null. */
+    fun gizmoPlaneHit(screenX: Int, screenY: Int, width: Int, height: Int): GizmoPlane?
+
+    /** A drag of the [plane] handle of the selected entity's gizmo, started at the pixel; null when it cannot start. */
+    fun beginPlaneDrag(plane: GizmoPlane, screenX: Int, screenY: Int, width: Int, height: Int): GizmoDrag?
 }
 
 /**
@@ -269,6 +275,26 @@ class SnapshotSceneQueries(
         val handles = gizmoHandles(height) ?: return null
         val ray = rayAt(screenX, screenY, width, height) ?: return null
         return GizmoHit().find(ray, handles)
+    }
+
+    override fun gizmoPlaneHit(screenX: Int, screenY: Int, width: Int, height: Int): GizmoPlane? {
+        val handles = gizmoHandles(height) ?: return null
+        val ray = rayAt(screenX, screenY, width, height) ?: return null
+        return GizmoHit().findPlane(ray, handles)
+    }
+
+    override fun beginPlaneDrag(plane: GizmoPlane, screenX: Int, screenY: Int, width: Int, height: Int): GizmoDrag? {
+        val handles = gizmoHandles(height) ?: return null
+        val ray = rayAt(screenX, screenY, width, height) ?: return null
+        val start = when {
+            state.selectedWater != null -> PlacementTransform(waterCentre(content, state.selectedWater!!) ?: return null, Quat.IDENTITY, Vector3(1f, 1f, 1f))
+            pathPointGizmoAt(content, state) != null -> PlacementTransform(pathPointGizmoAt(content, state)!!, Quat.IDENTITY, Vector3(1f, 1f, 1f))
+            else -> ScenePreview().selected(content, state.selectedId ?: return null)?.transform ?: return null
+        }
+        return GizmoDrag(
+            GizmoMode.MOVE, plane.first, start, ray, null, handles.axisVector(plane.first), state.snap,
+            handles.axisVector(plane.first) to handles.axisVector(plane.second),
+        ).takeIf { it.isUsable }
     }
 
     /** A drag of the move handle [axis] of water surface [waterId]; its transform is the surface centre, unrotated. */

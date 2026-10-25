@@ -49,11 +49,15 @@ class GizmoDrag(
     private val startDirection: Vector3? = null,
     axisDirection: Vector3 = axis.direction,
     private val snap: GizmoSnap? = null,
+    /** Two unit axes: a [GizmoMode.MOVE] drag then slides the object in their plane instead of along [axisDirection]. */
+    private val plane: Pair<Vector3, Vector3>? = null,
 ) {
     private val origin = start.position.cpy()
     private val axisVector = axisDirection.cpy()
+    private val planeNormal: Vector3? = plane?.let { Vector3(it.first).crs(it.second).nor() }
+    private val startPoint: Vector3? = planeNormal?.let { pointOn(startRay, it) }
     private val startParameter: Float? = when (mode) {
-        GizmoMode.MOVE -> GizmoMath().rayLine(startRay, origin, axisVector)
+        GizmoMode.MOVE -> if (planeNormal != null) null else GizmoMath().rayLine(startRay, origin, axisVector)
         GizmoMode.ROTATE, GizmoMode.SELECT -> null
     }
     private val startArm: Vector3? = when (mode) {
@@ -63,7 +67,7 @@ class GizmoDrag(
 
     /** Whether the press could be turned into a drag at all (the ray was not parallel to the axis or the ring). */
     val isUsable: Boolean get() = when (mode) {
-        GizmoMode.MOVE -> startParameter != null
+        GizmoMode.MOVE -> if (planeNormal != null) startPoint != null else startParameter != null
         GizmoMode.ROTATE -> startArm != null
         GizmoMode.SELECT -> false
     }
@@ -81,6 +85,7 @@ class GizmoDrag(
     }
 
     private fun move(ray: Ray): DragResult? {
+        if (plane != null) return moveInPlane(ray, plane)
         val from = startParameter ?: return null
         val to = GizmoMath().rayLine(ray, origin, axisVector) ?: return null
         val shift = Vector3(axisVector).scl(to - from)
@@ -88,6 +93,22 @@ class GizmoDrag(
         // Snapping rounds the coordinate along the axis, not the distance dragged.
         snap?.let { p.mulAdd(axisVector, it.move(p.dot(axisVector)) - p.dot(axisVector)) }
         return DragResult(start.copy(position = p.cpy()), startDirection)
+    }
+
+    /** Slides the object by how far the cursor's point on the plane through the object has travelled; snapping rounds both plane coordinates. */
+    private fun moveInPlane(ray: Ray, axes: Pair<Vector3, Vector3>): DragResult? {
+        val from = startPoint ?: return null
+        val to = pointOn(ray, planeNormal ?: return null) ?: return null
+        val p = Vector3(origin).add(to).sub(from)
+        snap?.let {
+            for (a in listOf(axes.first, axes.second)) p.mulAdd(a, it.move(p.dot(a)) - p.dot(a))
+        }
+        return DragResult(start.copy(position = p.cpy()), startDirection)
+    }
+
+    private fun pointOn(ray: Ray, normal: Vector3): Vector3? {
+        val t = GizmoMath().rayPlane(ray, origin, normal) ?: return null
+        return Vector3(ray.origin).mulAdd(ray.direction, t)
     }
 
     private fun rotate(ray: Ray): DragResult? {

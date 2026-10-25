@@ -103,21 +103,32 @@ internal class GestureDriver(
             startStroke(paint, at)
             return
         }
-        val axis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-        val started = queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
+        val started = grab(at) ?: return
         current = Gesture.Dragging(started, id)
-        state.hoveredAxis = axis
         host.stateChanged()
+    }
+
+    /** The drag of the handle under [at], an axis arrow or ring first, else a plane square; marks it as hovered. */
+    private fun grab(at: FramebufferPoint): GizmoDrag? {
+        val size = host.size
+        val axis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
+        if (axis != null) {
+            val started = queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return null
+            state.hoveredAxis = axis
+            return started
+        }
+        val plane = queries.gizmoPlaneHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return null
+        val started = queries.beginPlaneDrag(plane, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return null
+        state.hoveredPlane = plane
+        return started
     }
 
     /** The left press on a move handle of the selected water surface starts a drag of its centre. */
     private fun startWaterDrag(waterId: String, x: Int, y: Int) {
         val size = host.size
         val at = size.toFramebuffer(x, y)
-        val axis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
-        val started = queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
+        val started = grab(at) ?: return
         current = Gesture.DraggingWater(started, waterId)
-        state.hoveredAxis = axis
         host.stateChanged()
     }
 
@@ -126,10 +137,8 @@ internal class GestureDriver(
         val index = state.selectedPathPoint ?: return false
         val size = host.size
         val points = queries.pathPoints(id) ?: return false
-        val axis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return false
-        val started = queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return false
+        val started = grab(at) ?: return false
         current = Gesture.DraggingPathPoint(started, id, index, points)
-        state.hoveredAxis = axis
         host.stateChanged()
         return true
     }
@@ -211,6 +220,7 @@ internal class GestureDriver(
         val ended = current
         current = Gesture.Idle
         state.hoveredAxis = null
+        state.hoveredPlane = null
         when (ended) {
             Gesture.Idle -> return false
             Gesture.Cancelled -> Unit
@@ -262,6 +272,7 @@ internal class GestureDriver(
                 state.preview = emptyMap()
                 state.waterPreview = emptyMap()
                 state.hoveredAxis = null
+                state.hoveredPlane = null
             }
             else -> return false
         }

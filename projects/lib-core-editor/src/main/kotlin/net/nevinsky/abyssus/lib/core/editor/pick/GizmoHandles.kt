@@ -20,6 +20,17 @@ enum class GizmoAxis(val direction: Vector3, val red: Float, val green: Float, v
     Z(Vector3(0f, 0f, 1f), 0.25f, 0.45f, 0.95f),
 }
 
+/** A pair of gizmo axes whose plane a handle moves the object in. */
+enum class GizmoPlane(val first: GizmoAxis, val second: GizmoAxis) {
+    XY(GizmoAxis.X, GizmoAxis.Y),
+    XZ(GizmoAxis.X, GizmoAxis.Z),
+    YZ(GizmoAxis.Y, GizmoAxis.Z),
+}
+
+/** Where the plane handle's square starts and ends along each of its axes, as fractions of the gizmo size. */
+const val PLANE_INNER = 0.25f
+const val PLANE_OUTER = 0.5f
+
 /** The handles' length (or ring radius) on screen. */
 const val GIZMO_SIZE_PIXELS = 90f
 
@@ -46,6 +57,10 @@ class GizmoHandles(val origin: Vector3, val mode: GizmoMode, val worldPerPixel: 
         val d = direction(axis)
         return Vector3(origin.x + d.x * size, origin.y + d.y * size, origin.z + d.z * size)
     }
+
+    /** The corner of [plane]'s square at [a] and [b] (fractions of [size]) along its first and second axis. */
+    fun planePoint(plane: GizmoPlane, a: Float, b: Float): Vector3 =
+        Vector3(origin).mulAdd(direction(plane.first), a * size).mulAdd(direction(plane.second), b * size)
 
     /** The unit axis as a vector. */
     fun axisVector(axis: GizmoAxis): Vector3 = direction(axis).cpy()

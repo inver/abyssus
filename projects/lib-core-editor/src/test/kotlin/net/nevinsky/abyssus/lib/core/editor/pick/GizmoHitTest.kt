@@ -55,4 +55,22 @@ class GizmoHitTest {
         assertEquals(GizmoAxis.X, GizmoHit().find(ray(Vector3(80f, -40f, 0f), Vector3(0f, 40f, 0f)), h))
         assertEquals(GizmoAxis.Y, GizmoHit().find(ray(Vector3(-40f, 80f, 0f), Vector3(40f, 0f, 0f)), h))
     }
+
+    @Test
+    fun aRayThroughTheXYSquareHitsThatPlane() {
+        val h = handles(GizmoMode.MOVE)
+        assertEquals(GizmoPlane.XY, GizmoHit().findPlane(ray(Vector3(35f, 35f, 500f), Vector3(35f, 35f, 0f)), h))
+    }
+
+    @Test
+    fun aRayInsideTheSquaresInnerCornerHitsNoPlane() {
+        val h = handles(GizmoMode.MOVE)
+        assertNull(GizmoHit().findPlane(ray(Vector3(5f, 5f, 500f), Vector3(5f, 5f, 0f)), h))
+    }
+
+    @Test
+    fun rotateGizmosHaveNoPlaneHandles() {
+        val h = handles(GizmoMode.ROTATE)
+        assertNull(GizmoHit().findPlane(ray(Vector3(35f, 35f, 500f), Vector3(35f, 35f, 0f)), h))
+    }
 }

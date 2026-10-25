@@ -5,19 +5,13 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
-import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.graphics.Camera
-import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.Mesh
-import com.badlogic.gdx.graphics.PerspectiveCamera
-import com.badlogic.gdx.graphics.VertexAttribute
-import com.badlogic.gdx.graphics.VertexAttributes
+import com.badlogic.gdx.graphics.*
+import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
 
 /**
  * Draws colored line segments in world space with the camera given to [begin], batched into one dynamic mesh.
@@ -65,11 +59,14 @@ class LineBatch(shaders: ShaderStorage) : LineSink, Disposable {
         val length = kotlin.math.sqrt(sx * sx + sy * sy + sz * sz)
         if (length < 1e-6f) return line(from, to, color)
         sx /= length; sy /= length; sz /= length
-        val perPixel = 2f * kotlin.math.tan(Math.toRadians(cam.fieldOfView.toDouble() / 2.0)).toFloat() / cam.viewportHeight
+        val perPixel =
+            2f * kotlin.math.tan(Math.toRadians(cam.fieldOfView.toDouble() / 2.0)).toFloat() / cam.viewportHeight
+
         fun half(p: Vector3): Float {
             val depth = (p.x - cam.position.x) * d.x + (p.y - cam.position.y) * d.y + (p.z - cam.position.z) * d.z
             return widthPx / 2f * perPixel * kotlin.math.max(depth, cam.near)
         }
+
         val ha = half(from)
         val hb = half(to)
         val a0 = Vector3(from.x - sx * ha, from.y - sy * ha, from.z - sz * ha)
