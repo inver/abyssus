@@ -23,7 +23,8 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
-import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetInAbyssusView
+import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetLater
+import net.nevinsky.abyssus.plugin.ui.documentChanges
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.awt.BorderLayout
 import java.io.File
@@ -67,11 +68,7 @@ internal class NewWeatherPresetDialog(project: Project, private val assetsDir: F
         setOKButtonText(AbyssusBundle.message("newWeatherPresetCreate"))
         nameField.name = "weather-preset-name"
         init()
-        nameField.document.addDocumentListener(object : DocumentListener {
-            override fun insertUpdate(e: DocumentEvent) = validateName()
-            override fun removeUpdate(e: DocumentEvent) = validateName()
-            override fun changedUpdate(e: DocumentEvent) = validateName()
-        })
+        nameField.document.addDocumentListener(documentChanges(::validateName))
         validateName()
     }
     private fun validateName() {
@@ -94,8 +91,7 @@ private fun reportWeatherFailure(project: Project, reason: String) = Messages.sh
 fun createWeatherPreset(
     project: Project, abss: VirtualFile, sky: VirtualFile, name: String,
     report: (String) -> Unit = { reportWeatherFailure(project, it) },
-    select: (String) -> Unit = { created -> ApplicationManager.getApplication().invokeLater(
-        { if (!project.isDisposed) selectAssetInAbyssusView(project, abss, created) }, ModalityState.nonModal()) },
+    select: (String) -> Unit = selectAssetLater(project, abss),
 ): AssetCommandResult? {
     val staged = runCatchingKeepingCancellation {
         NewWeatherPresetFactory(service<AbyssusPluginCtx>().documents.json).stage(abss, sky, name)

@@ -29,10 +29,8 @@ class ModelLoader(
     private val fileLoader: FileLoader,
     private val preparation: ModelPreparationTap? = null,
     private val decodeTextures: Boolean = true,
-) : MetaAssetLoader<Unit, PreparedModel, Model>(metaLoader) {
-    override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedModel> = Prepared(read(meta))
-
-    private fun read(meta: AssetMeta<Any>): PreparedModel {
+) : StagedMetaAssetLoader<PreparedModel, Model>(metaLoader) {
+    override fun read(meta: AssetMeta<Any>): PreparedModel {
         val capture = preparation?.begin(meta.name)
         val handle = FileHandle(fileLoader.loadAssetFile(meta.name, meta.typedAdditional<ModelMeta>().file))
         val data = assimp.loadData(handle)

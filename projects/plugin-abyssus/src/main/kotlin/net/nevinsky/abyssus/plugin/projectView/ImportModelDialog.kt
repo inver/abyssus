@@ -28,6 +28,7 @@ import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.core.editor.modelimport.LengthUnit
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.ui.documentChanges
 import net.nevinsky.abyssus.plugin.projectView.preview.ModelPreviewCanvas
 import net.nevinsky.abyssus.plugin.projectView.preview.PreviewModel
 import java.awt.BorderLayout
@@ -94,8 +95,8 @@ internal class ImportModelDialog(project: Project, private val form: ModelImport
         form.animation?.let { animation.selectedItem = it }
         notes.text = notesText()
 
-        name.document.addDocumentListener(changes { form.folderName = name.text; refresh(previewChanged = false) })
-        size.document.addDocumentListener(changes { form.sizeText = size.text; refresh() })
+        name.document.addDocumentListener(documentChanges { form.folderName = name.text; refresh(previewChanged = false) })
+        size.document.addDocumentListener(documentChanges { form.sizeText = size.text; refresh() })
         unit.addActionListener { (unit.selectedItem as? LengthUnit)?.let { form.unit = it }; refresh() }
         upAxis.addActionListener { (upAxis.selectedItem as? UpAxis)?.let { form.upAxis = it }; refresh() }
         original.addActionListener { form.fitMode = FitMode.ORIGINAL; refresh() }
@@ -109,12 +110,6 @@ internal class ImportModelDialog(project: Project, private val form: ModelImport
         preview.play(form.animation)
         init()
         refresh()
-    }
-
-    private fun changes(block: () -> Unit) = object : DocumentListener {
-        override fun insertUpdate(e: DocumentEvent) = block()
-        override fun removeUpdate(e: DocumentEvent) = block()
-        override fun changedUpdate(e: DocumentEvent) = block()
     }
 
     /** Shows the form's state; with [previewChanged], recomputes the transform for the preview. */

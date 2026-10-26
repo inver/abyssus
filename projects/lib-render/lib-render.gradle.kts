@@ -19,6 +19,8 @@ dependencies {
     implementation(kotlin("stdlib"))
     api(project(":lib-core"))
     api(project(":lib-gdx"))
+    implementation(libs.lwjgl)
+    implementation(libs.lwjgl.opengl)
     testImplementation(libs.junit4)
     // TestGl: the GL context of the opt-in GL tests
     testImplementation(testFixtures(project(":lib-gdx")))

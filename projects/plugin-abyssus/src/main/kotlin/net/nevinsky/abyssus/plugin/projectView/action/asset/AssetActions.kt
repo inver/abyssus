@@ -6,6 +6,8 @@
 package net.nevinsky.abyssus.plugin.projectView.action.asset
 
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.tree.TreeVisitor
@@ -86,4 +88,11 @@ fun selectAssetInAbyssusView(project: Project, abss: VirtualFile, assetName: Str
     } catch (e: Throwable) {
         LOG.warn("Could not select asset $assetName in the Abyssus view", e)
     }
+}
+
+/** A callback that selects the created asset in the Abyssus view once the current command is done (on the EDT, unless the project closed). */
+fun selectAssetLater(project: Project, abss: VirtualFile): (String) -> Unit = { created ->
+    ApplicationManager.getApplication().invokeLater(
+        { if (!project.isDisposed) selectAssetInAbyssusView(project, abss, created) }, ModalityState.nonModal(),
+    )
 }

@@ -181,18 +181,14 @@ class MetalRaySession internal constructor(
     }
 
     private fun checkOwner() {
-        check(Thread.currentThread() === worker) { "Metal session must stay on its owner worker" }
-        check(handle != 0L) { "Metal session is closed" }
+        checkSessionOwner("Metal", worker, handle != 0L)
     }
 
     /** Upload/build runs on the worker; static geometry survives subsequent instance transform submissions. */
     fun setGeometry(meshes: List<RaySliceMesh>) {
         checkOwner()
         check(pending == null) { "Cannot replace geometry during a render" }
-        require(meshes.isNotEmpty() && meshes.size <= limits.maxInstances)
-        val vertices = meshes.map { it.vertices() }
-        val indices = meshes.map { it.indices() }
-        require(vertices.sumOf { it.size.toLong() * 4 } + indices.sumOf { it.size.toLong() * 4 } <= 32L * 1024 * 1024)
+        val (vertices, indices) = checkedGeometry(meshes, limits).let { it.vertices to it.indices }
         bridge.setGeometry(
             handle,
             vertices.flatMap { it.asIterable() }.toFloatArray(),
@@ -216,7 +212,7 @@ class MetalRaySession internal constructor(
     ) {
         checkOwner()
         check(pending == null) { "A Metal frame is already in flight" }
-        require(width in 1..limits.maxDimension && height in 1..limits.maxDimension && width.toLong() * height <= limits.maxPixels)
+        requireFrameWithin(width, height, limits)
         require(instances.isNotEmpty() && instances.size <= limits.maxInstances && instances.all { it.mesh < meshCount })
         val request = Pending(key, width, height)
         bridge.submit(

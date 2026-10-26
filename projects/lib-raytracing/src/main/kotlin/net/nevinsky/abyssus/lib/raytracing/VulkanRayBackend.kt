@@ -16,7 +16,6 @@ import java.nio.ByteBuffer
 import java.util.concurrent.CancellationException
 
 private const val MAX_RAYS_PER_DISPATCH = 1 shl 19
-private const val MAX_GEOMETRY_BYTES = 32L * 1024 * 1024
 private const val WAIT_TIMEOUT_NS = 10_000_000_000L
 private const val INSTANCE_BYTES = 96
 private const val TLAS_INSTANCE_BYTES = 64
@@ -357,8 +356,7 @@ internal class VulkanRaySession(
     private fun alignUp(value: Long, alignment: Long) = (value + alignment - 1) / alignment * alignment
 
     private fun checkOwner() {
-        check(Thread.currentThread() === worker) { "Vulkan session must stay on its owner worker" }
-        check(!closed) { "Vulkan session is closed" }
+        checkSessionOwner("Vulkan", worker, !closed)
     }
 
     private inline fun <T> guarded(block: () -> T): T = try {
@@ -412,10 +410,7 @@ internal class VulkanRaySession(
     fun setGeometry(meshes: List<RaySliceMesh>) {
         checkOwner()
         check(pending == null) { "Cannot replace geometry during a render" }
-        require(meshes.isNotEmpty() && meshes.size <= limits.maxInstances)
-        val vertices = meshes.map { it.vertices() }
-        val indices = meshes.map { it.indices() }
-        require(vertices.sumOf { it.size.toLong() * 4 } + indices.sumOf { it.size.toLong() * 4 } <= MAX_GEOMETRY_BYTES)
+        val (vertices, indices) = checkedGeometry(meshes, limits).let { it.vertices to it.indices }
         guarded {
             releaseGeometry()
             val vertexFloats = vertices.sumOf { it.size }
@@ -658,7 +653,7 @@ internal class VulkanRaySession(
         scene: Boolean,
         nativeCamera: FloatArray = cameraSpec.uniforms(width, height)
     ) {
-        require(width in 1..limits.maxDimension && height in 1..limits.maxDimension && width.toLong() * height <= limits.maxPixels)
+        requireFrameWithin(width, height, limits)
         require(instances.isNotEmpty() && instances.size <= limits.maxInstances && instances.all { it.mesh < blas.size })
         val target = ensureFrame(width, height)
         writeInstances(instances)

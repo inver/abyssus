@@ -40,6 +40,7 @@ import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetInAbyssusView
+import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetLater
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.io.File
 import java.util.UUID
@@ -166,8 +167,7 @@ private fun reportUiFailure(project: Project, reason: String) = Messages.showErr
 fun createUiAsset(
     project: Project, abss: VirtualFile, name: String,
     report: (String) -> Unit = { reportUiFailure(project, it) },
-    select: (String) -> Unit = { created -> ApplicationManager.getApplication().invokeLater(
-        { if (!project.isDisposed) selectAssetInAbyssusView(project, abss, created) }, ModalityState.nonModal()) },
+    select: (String) -> Unit = selectAssetLater(project, abss),
 ): AssetCommandResult? {
     val staged = runCatchingKeepingCancellation {
         NewUiAssetFactory(service<AbyssusPluginCtx>().documents.json).stage(abss, name)

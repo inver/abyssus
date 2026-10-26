@@ -42,11 +42,7 @@ class SceneDocumentCache(project: Project, private val parse: ((String) -> Parse
     private val entries = ConcurrentHashMap<VirtualFile, Entry>()
 
     init {
-        project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
-            override fun after(events: List<VFileEvent>) {
-                for (e in events) if (e is VFileDeleteEvent || e is VFileMoveEvent) e.file?.let(entries::remove)
-            }
-        })
+        evictOnDeleteOrMove(project, this, entries)
     }
 
     /** The scene in [file], or null when the file is gone or its text is not a readable scene. */

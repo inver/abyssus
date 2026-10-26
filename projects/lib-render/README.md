@@ -14,6 +14,7 @@ presentation; a game's lines and hidden pilot) and adapts its own types at the b
 | `light` | `RenderLights` (directional, point, spot), `LightProfile` (named policies `EDITOR_MULTI_LIGHT` and `GAME_SINGLE_SUN` with their budgets) and `packLights`, which lays lights out for uniform arrays. No GL |
 | `frame` | `FrameInputs` (camera matrices and position, ambient, `RenderFog`, the lights cut to the profile) and `RenderFog`. No GL |
 | `shadow` | `sunShadowCamera` / `sunShadowBias` and `cameraUp` (camera math; no GL), `DepthSubmission` (draws casters through the host's `DepthShaders`), and `GlRenderTarget` / `ShadowGlState` (packed-depth target rendering and caller-state restoration in the current GL context) |
+| `hostframe` | `HostFramePresenter`: uploads a host-produced frame (RGBA floats and GL window depth, e.g. a ray-traced image) into two float textures and draws it as a fullscreen triangle writing `gl_FragDepth`; GLSL is `ray-frame.{vert,frag}` in `src/main/resources/shader/render`. It takes sizes and fill callbacks, so it knows no ray type. GL thread only |
 | `terrain` | `TerrainPass` with `TerrainVariant`: the terrain program's binding and drawing. `TerrainLighting.Editor` (several lights, HDR sky, shadow atlas, cloud shadow map, clip plane) and `TerrainLighting.Sun` (one sun, one shadow map) are the inputs only their variant understands; the GLSL is `terrain_editor.{vert,frag}` and `terrain_game.{vert,frag}` in `src/main/resources/shader/render` |
 
 ## Ownership

@@ -96,19 +96,29 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
         return out
     }
 
-    /** Height at terrain-local [x],[z] (world units from the terrain's corner), bilinear; null outside the terrain. */
-    fun heightAt(x: Float, z: Float): Float? {
+    /**
+     * Runs [use] on the bilinear patch under terrain-local [x],[z]: its four corner heights, the fractions within the cell
+     * and the cell size; null outside the terrain. Inline so the sampling allocates nothing.
+     */
+    private inline fun <R> patch(x: Float, z: Float, use: (h00: Float, h10: Float, h01: Float, h11: Float, fx: Float, fz: Float, cell: Float) -> R): R? {
         if (x < 0f || z < 0f || x > size || z > size) return null
         val cell = size.toFloat() / (resolution - 1)
         val gx = minOf((x / cell).toInt(), resolution - 2)
         val gz = minOf((z / cell).toInt(), resolution - 2)
-        val fx = x / cell - gx
-        val fz = z / cell - gz
-        val h00 = heights[gz * resolution + gx]
-        val h10 = heights[gz * resolution + gx + 1]
-        val h01 = heights[(gz + 1) * resolution + gx]
-        val h11 = heights[(gz + 1) * resolution + gx + 1]
-        return (h00 * (1 - fx) + h10 * fx) * (1 - fz) + (h01 * (1 - fx) + h11 * fx) * fz
+        return use(
+            heights[gz * resolution + gx],
+            heights[gz * resolution + gx + 1],
+            heights[(gz + 1) * resolution + gx],
+            heights[(gz + 1) * resolution + gx + 1],
+            x / cell - gx,
+            z / cell - gz,
+            cell,
+        )
+    }
+
+    /** Height at terrain-local [x],[z] (world units from the terrain's corner), bilinear; null outside the terrain. */
+    fun heightAt(x: Float, z: Float): Float? = patch(x, z) { h00, h10, h01, h11, fx, fz, _ ->
+        (h00 * (1 - fx) + h10 * fx) * (1 - fz) + (h01 * (1 - fx) + h11 * fx) * fz
     }
 
     /**
@@ -117,19 +127,9 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
      * over the grid, so the two agree to within a cell's gradient, which is the same bound the scatter's slope rules
      * work to.
      */
-    fun normalAt(x: Float, z: Float, out: Vector3): Vector3? {
-        if (x < 0f || z < 0f || x > size || z > size) return null
-        val cell = size.toFloat() / (resolution - 1)
-        val gx = minOf((x / cell).toInt(), resolution - 2)
-        val gz = minOf((z / cell).toInt(), resolution - 2)
-        val fx = x / cell - gx
-        val fz = z / cell - gz
-        val h00 = heights[gz * resolution + gx]
-        val h10 = heights[gz * resolution + gx + 1]
-        val h01 = heights[(gz + 1) * resolution + gx]
-        val h11 = heights[(gz + 1) * resolution + gx + 1]
+    fun normalAt(x: Float, z: Float, out: Vector3): Vector3? = patch(x, z) { h00, h10, h01, h11, fx, fz, cell ->
         val slopeX = ((h10 - h00) * (1 - fz) + (h11 - h01) * fz) / cell
         val slopeZ = ((h01 - h00) * (1 - fx) + (h11 - h10) * fx) / cell
-        return out.set(-slopeX, 1f, -slopeZ).nor()
+        out.set(-slopeX, 1f, -slopeZ).nor()
     }
 }

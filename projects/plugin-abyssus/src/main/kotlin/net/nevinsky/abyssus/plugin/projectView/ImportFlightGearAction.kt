@@ -28,6 +28,7 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.ui.documentChanges
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileCommand
@@ -150,19 +151,13 @@ internal class ImportFlightGearDialog(project: Project, private val assetsDir: F
         ButtonGroup().apply { add(original); add(scaled) }
         aircraft.isEnabled = inspections.size > 1
         aircraft.addActionListener { settings = inspections.getOrNull(aircraft.selectedIndex)?.let { FlightGearImportSettings(assetsDir, it) }; showAircraft() }
-        name.document.addDocumentListener(changes { settings?.folderName = name.text; validateNow() })
-        span.document.addDocumentListener(changes { settings?.spanText = span.text; validateNow() })
+        name.document.addDocumentListener(documentChanges { settings?.folderName = name.text; validateNow() })
+        span.document.addDocumentListener(documentChanges { settings?.spanText = span.text; validateNow() })
         original.addActionListener { settings?.originalSize = true; validateNow() }
         scaled.addActionListener { settings?.originalSize = false; validateNow() }
         parts.setCheckBoxListListener { index, value -> settings?.tick(parts.getItemAt(index) ?: return@setCheckBoxListListener, value); validateNow() }
         init()
         showAircraft()
-    }
-
-    private fun changes(block: () -> Unit) = object : DocumentListener {
-        override fun insertUpdate(e: DocumentEvent) = block()
-        override fun removeUpdate(e: DocumentEvent) = block()
-        override fun changedUpdate(e: DocumentEvent) = block()
     }
 
     /** Shows the selected aircraft's settings. */

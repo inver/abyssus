@@ -16,16 +16,8 @@ plugins {
 val joltVersion = libs.versions.jolt.get()
 val joltPlatforms = listOf("Linux64", "Windows64", "MacOSX64", "MacOSX_ARM64")
 
-/** The jolt-jni platform of the machine running the build, for the tests' `DebugSp` natives. */
-val joltJniBuildPlatform: String = run {
-    val os = System.getProperty("os.name").lowercase()
-    val arm = System.getProperty("os.arch").let { it == "aarch64" || it == "arm64" }
-    when {
-        os.contains("mac") -> if (arm) "MacOSX_ARM64" else "MacOSX64"
-        os.contains("win") -> "Windows64"
-        else -> "Linux64"
-    }
-}
+/** The jolt-jni platform of the machine running the build (from `abyssus.dependency-platforms`). */
+val joltJniBuildPlatform: String by extra
 
 /** The four platforms' release natives, bundled in the play host (see `:plugin-abyssus`). */
 val playHost by configurations.creating {

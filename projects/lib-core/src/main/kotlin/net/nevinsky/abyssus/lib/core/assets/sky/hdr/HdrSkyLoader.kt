@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.MetaAssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.StagedMetaAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
@@ -21,11 +21,9 @@ class HdrSkyLoader(
     private val exrLoader: ExrLoader,
     private val shaders: ShaderStorage,
     private val curve: ToneCurve,
-) : MetaAssetLoader<Unit, PreparedHdrSky, HdrSky>(metaLoader) {
+) : StagedMetaAssetLoader<PreparedHdrSky, HdrSky>(metaLoader) {
 
-    override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedHdrSky> = Prepared(read(meta))
-
-    private fun read(meta: AssetMeta<Any>): PreparedHdrSky {
+    override fun read(meta: AssetMeta<Any>): PreparedHdrSky {
         val additional = meta.typedAdditional<HdrSkyMeta>()
         val image = exrLoader.loadExr(meta.name, additional.file)
         return PreparedHdrSky(meta.name, additional.file!!, image)

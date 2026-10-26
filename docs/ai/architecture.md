@@ -325,7 +325,7 @@ poses (`RayModelPoses`), freezes them into a job and offers it to a one-slot mai
 job into an immutable `RaySceneSnapshot` (`RaySceneSnapshots`, including CPU skin deformation) and offers it to the view's
 `RayRenderScheduler`. The native worker keeps one frame in flight and one replaceable pending request per view and polls
 completion, so the EDT never waits on a fence or a conversion. A completed linear RGBA/depth frame returns to the EDT,
-where `RayFramePresenter` uploads it inside the safe canvas context and `SceneRenderer` composes the grid and overlays
+where `RayFramePresenter` (over `lib-render`'s `HostFramePresenter`) uploads it inside the safe canvas context and `SceneRenderer` composes the grid and overlays
 against its depth. Scenes the backend cannot represent, a failed asset, or a device loss restore raster rendering at
 once and surface a reason with a Retry button; no scene file is written by any of this. See `projects/lib-raytracing/README.md` for
 toolchains, the opt-in device test commands (`-Dabyssus.metalTests=true`, `-Dabyssus.vulkanTests=true`), shading rules

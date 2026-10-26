@@ -16,6 +16,7 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
+import net.nevinsky.abyssus.plugin.dto.evictOnDeleteOrMove
 import net.nevinsky.abyssus.plugin.dto.AssetReadResult
 import net.nevinsky.abyssus.plugin.dto.ConfigFileReader
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
@@ -41,17 +42,7 @@ class AssetReadCache(
     private val cache = ConcurrentHashMap<VirtualFile, Entry>()
 
     init {
-        project.messageBus
-            .connect(this)
-            .subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
-                override fun after(events: List<VFileEvent>) {
-                    for (e in events) {
-                        if (e is VFileDeleteEvent || e is VFileMoveEvent) {
-                            e.file?.let(cache::remove)
-                        }
-                    }
-                }
-            })
+        evictOnDeleteOrMove(project, this, cache)
     }
 
     /** Null for a file no reader handles. */
