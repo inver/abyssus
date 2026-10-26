@@ -56,6 +56,7 @@ import net.nevinsky.abyssus.plugin.foliage.FoliageController
 import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
 import net.nevinsky.abyssus.plugin.foliage.FoliageSection
 import net.nevinsky.abyssus.plugin.foliage.FoliageSource
+import net.nevinsky.abyssus.plugin.foliage.FoliageUndoCache
 import net.nevinsky.abyssus.plugin.foliage.foliageUnusableNote
 import net.nevinsky.abyssus.plugin.projectView.*
 import net.nevinsky.abyssus.plugin.schema.ComponentSchemasListener
@@ -299,6 +300,7 @@ class AssetPropertiesPanel(
             ready,
             project.service<FoliageDrafts>(),
             services.json,
+            project.service<FoliageUndoCache>(),
             background,
             ui,
             readCurrent = { readFoliageSourceNow(folder, services) },

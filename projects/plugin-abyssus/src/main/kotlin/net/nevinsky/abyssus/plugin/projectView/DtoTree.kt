@@ -61,10 +61,8 @@ fun isScalar(value: Any?): Boolean = when (value) {
 fun childrenOf(value: Any?): List<DtoRow> = when {
     value is SceneEntry -> childrenOf(value.scene)
     value is ProjectDto -> projectRows(value)
-    value is FolderRow -> folderRows(value)
-    value is TypeGroup -> groupRows(value)
+    value is TreeSource -> value.children()
     value is UiMeta -> emptyList()
-    value is UiScreenGroup -> screenRows(value)
     value is UiScreen || value is UiScreenEntry -> emptyList()
     value is SceneDto -> sceneRows(value)
     value is WaterGroup -> value.surfaces.map { DtoRow(it.id, it, enabled = (it as? ValidWater)?.settings?.enabled) }
@@ -163,17 +161,7 @@ fun rowText(entry: DtoEntry, label: String? = null): RowText {
     val v = entry.value
     return when {
         v is List<*> && entry.name == "scenes" -> RowText(AbyssusBundle.message("treeScenes"), v.size.toString())
-        v is FolderRow -> RowText(
-            AbyssusBundle.message(if (v.kind == FolderKind.UI) "treeUi" else "treeAssets"),
-            v.assets.size.toString()
-        )
-
-        v is TypeGroup -> RowText(groupLabel(v.group), v.assets.size.toString())
-        v is UiScreenGroup -> RowText(
-            AbyssusBundle.message(if (v.kind == net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind.OVERLAY) "treeOverlays" else "treeScreens"),
-            v.entries.size.toString()
-        )
-
+        v is TreeSource -> v.text()
         v is UiScreenEntry -> RowText(v.screen.name.ifBlank { v.screen.id }, v.asset.name)
         v is UiScreen -> RowText(v.name.ifBlank { v.id }, v.kind.json)
         v is WaterGroup -> RowText(AbyssusBundle.message("treeWater"), v.surfaces.size.toString())

@@ -62,6 +62,7 @@ class FoliageController(
     initial: FoliageSource.Ready,
     private val drafts: FoliageDrafts,
     private val json: JsonProcessor,
+    private val undoCache: FoliageUndoCache,
     private val background: (Runnable) -> Unit,
     private val ui: (Runnable) -> Unit,
     private val readCurrent: () -> FoliageSource,
@@ -332,7 +333,7 @@ class FoliageController(
             return AssetCommandResult.Done
         }
         val backup = runCatchingKeepingCancellation {
-            if (source.stale && source.dataSha256 != null) project.service<FoliageUndoCache>().preserve(
+            if (source.stale && source.dataSha256 != null) undoCache.preserve(
                 File(folder.path, source.settings.dataFileName()).toPath(), source.dataSha256!!,
             ) else null
         }.getOrElse {

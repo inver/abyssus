@@ -45,7 +45,7 @@ class FoliagePanelTest : BasePlatformTestCase() {
         val text = File(folder.path, "meta.json").readText()
         return readFoliageSource(folder.name, disk, json, text, net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(text)["additional"]) as FoliageSource.Ready
     }
-    private fun controller() = FoliageController(project, folder, source(), drafts, json,
+    private fun controller() = FoliageController(project, folder, source(), drafts, json, project.service<FoliageUndoCache>(),
         background = { it.run() }, ui = { it.run() }, readCurrent = { source() })
     private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project),
         background = { it.run() }, ui = { it.run() }).also { it.showFolder(folder) }

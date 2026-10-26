@@ -833,10 +833,24 @@ class AssetStorage(
         ) : Inbound
     }
 
+    /** The lifecycle hooks of one loader: each kind has a loader-wide overload and a per-name overload. */
+    interface HookSink<P : Any, U : Any, T : Disposable> {
+        fun onPrepared(handler: (name: String, model: P) -> Unit): Subscription
+        fun onPrepared(name: String, handler: (model: P) -> Unit): Subscription
+        fun onUploaded(handler: (name: String, staged: U) -> Unit): Subscription
+        fun onUploaded(name: String, handler: (staged: U) -> Unit): Subscription
+        fun onBuilt(handler: (name: String, asset: T) -> Unit): Subscription
+        fun onBuilt(name: String, handler: (asset: T) -> Unit): Subscription
+
+        /** Runs on the GL thread when a built asset is unloaded or the storage is disposed, before [T.dispose]. */
+        fun onDiscarded(handler: (name: String, asset: T) -> Unit): Subscription
+        fun onDiscarded(name: String, handler: (asset: T) -> Unit): Subscription
+    }
+
     inner class LoaderRegistration<P : Any, U : Any, T : Disposable> internal constructor(
         internal val loader: AssetLoader<P, U, T>,
         internal val handles: (String, MetaType?) -> Boolean,
-    ) {
+    ) : HookSink<P, U, T> {
         private val preparedHooks = HookRegistry<P>(::bindThread)
         private val uploadedHooks = HookRegistry<U>(::bindThread)
         private val builtHooks = HookRegistry<T>(::bindThread)
@@ -852,59 +866,27 @@ class AssetStorage(
             HookScope().block()
         }
 
-        fun onPrepared(handler: (name: String, model: P) -> Unit): Subscription = preparedHooks.add(handler)
+        override fun onPrepared(handler: (name: String, model: P) -> Unit): Subscription = preparedHooks.add(handler)
 
-        fun onPrepared(name: String, handler: (model: P) -> Unit): Subscription =
+        override fun onPrepared(name: String, handler: (model: P) -> Unit): Subscription =
             preparedHooks.add(name, handler)
 
-        fun onUploaded(handler: (name: String, staged: U) -> Unit): Subscription = uploadedHooks.add(handler)
+        override fun onUploaded(handler: (name: String, staged: U) -> Unit): Subscription = uploadedHooks.add(handler)
 
-        fun onUploaded(name: String, handler: (staged: U) -> Unit): Subscription =
+        override fun onUploaded(name: String, handler: (staged: U) -> Unit): Subscription =
             uploadedHooks.add(name, handler)
 
-        fun onBuilt(handler: (name: String, asset: T) -> Unit): Subscription = builtHooks.add(handler)
+        override fun onBuilt(handler: (name: String, asset: T) -> Unit): Subscription = builtHooks.add(handler)
 
-        fun onBuilt(name: String, handler: (asset: T) -> Unit): Subscription = builtHooks.add(name, handler)
+        override fun onBuilt(name: String, handler: (asset: T) -> Unit): Subscription = builtHooks.add(name, handler)
 
-        /** Runs on the GL thread when a built asset is unloaded or the storage is disposed, before [T.dispose]. */
-        fun onDiscarded(handler: (name: String, asset: T) -> Unit): Subscription = discardedHooks.add(handler)
+        override fun onDiscarded(handler: (name: String, asset: T) -> Unit): Subscription = discardedHooks.add(handler)
 
-        fun onDiscarded(name: String, handler: (asset: T) -> Unit): Subscription =
+        override fun onDiscarded(name: String, handler: (asset: T) -> Unit): Subscription =
             discardedHooks.add(name, handler)
 
-        inner class HookScope {
-            fun onPrepared(handler: (name: String, model: P) -> Unit) {
-                this@LoaderRegistration.onPrepared(handler)
-            }
-
-            fun onPrepared(name: String, handler: (model: P) -> Unit) {
-                this@LoaderRegistration.onPrepared(name, handler)
-            }
-
-            fun onUploaded(handler: (name: String, staged: U) -> Unit) {
-                this@LoaderRegistration.onUploaded(handler)
-            }
-
-            fun onUploaded(name: String, handler: (staged: U) -> Unit) {
-                this@LoaderRegistration.onUploaded(name, handler)
-            }
-
-            fun onBuilt(handler: (name: String, asset: T) -> Unit) {
-                this@LoaderRegistration.onBuilt(handler)
-            }
-
-            fun onBuilt(name: String, handler: (asset: T) -> Unit) {
-                this@LoaderRegistration.onBuilt(name, handler)
-            }
-
-            fun onDiscarded(handler: (name: String, asset: T) -> Unit) {
-                this@LoaderRegistration.onDiscarded(handler)
-            }
-
-            fun onDiscarded(name: String, handler: (asset: T) -> Unit) {
-                this@LoaderRegistration.onDiscarded(name, handler)
-            }
-        }
+        /** The hook overloads of this registration, for use inside [hooks]. */
+        inner class HookScope : HookSink<P, U, T> by this@LoaderRegistration
 
         internal fun prepareNew(name: String): Prepared<Any, Any>? {
             @Suppress("UNCHECKED_CAST")
